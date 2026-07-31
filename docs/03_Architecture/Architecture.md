@@ -1,6 +1,6 @@
-# Architecture — v0.1 (Draft for Agreement)
+# Architecture — v0.1 (Agreed)
 
-**Status:** Draft — pending review
+**Status:** Agreed
 **Version:** 0.1
 **Last updated:** 2026-07-31
 **Related:** [Project Charter](../00_Project/Project_Charter.md) · [Roadmap](../04_Roadmap/Roadmap.md) · [Sprint 001](../05_Sprints/Sprint1.md)
@@ -171,20 +171,21 @@ without touching ingestion or storage.
 
 ---
 
-## 9. Open decisions (need agreement — candidates for ADRs)
+## 9. Decisions & open questions
 
-These come from the Roadmap and gate later architecture. Provisional stances for
-v0.1 are noted, but each deserves a decision record in `docs/06_Decisions/`.
+These come from the Roadmap and gate later architecture. Items 1–2 are now
+**decided** (recorded as ADRs in `docs/06_Decisions/`); items 3–4 remain open.
 
-1. **Internal tool vs multi-user product.** *(Roadmap Phase 1)*
-   Provisional: **single-user / internal** for now. This is the simplest path and
-   fits a learning project. The DB schema already leaves room for multi-manager
-   analysis later. → **ADR-001**
-2. **UI approach.** Console now; FastAPI + (React/Next.js vs Streamlit/Dash) later.
-   Provisional: **console → FastAPI**, UI framework deferred. → **ADR-002**
-3. **Caching strategy.** v0.1 uses "fetch once, then read SQLite" with manual
-   refresh. TTL-based auto-refresh (and whether Redis is ever needed) is deferred.
-4. **Storage engine longevity.** SQLite now; when/whether to move to PostgreSQL.
+1. **Internal tool vs multi-user product.** *(Roadmap Phase 1)* — **Decided:**
+   **single-user / internal**. Simplest path, fits a learning project; the DB schema
+   still leaves room for multi-manager analysis later.
+   → [ADR-001](../06_Decisions/ADR-001-single-user-vs-multi-user.md) (Accepted)
+2. **UI approach.** — **Decided:** **console now → FastAPI later**, with the web-UI
+   framework (React/Next.js vs Streamlit/Dash) deferred to a follow-up ADR.
+   → [ADR-002](../06_Decisions/ADR-002-ui-approach.md) (Accepted)
+3. **Caching strategy.** *(open)* — v0.1 uses "fetch once, then read SQLite" with
+   manual refresh. TTL-based auto-refresh (and whether Redis is ever needed) is deferred.
+4. **Storage engine longevity.** *(open)* — SQLite now; when/whether to move to PostgreSQL.
 
 ---
 
@@ -211,3 +212,5 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 ## 12. Changelog
 
 - **v0.1 (2026-07-31)** — Initial draft for the Sprint 001 foundation slice.
+- **v0.1 agreed (2026-07-31)** — Status → Agreed; §9 decisions 1–2 recorded as
+  ADR-001 and ADR-002.
