@@ -1,0 +1,1 @@
+print("⚽ FPL Assistant starting...")
