@@ -65,15 +65,24 @@ sometimes down) separated from everything that uses the data.
 
 | Component | Responsibility | Does NOT do |
 |---|---|---|
+| **CLI (interaction)** | Parse the user's command and dispatch to a handler (Sprint 002, `src/cli.py`) | Contain FPL logic itself |
 | **API client** | Make HTTP requests to the FPL API, return raw JSON | Interpret or store data |
 | **Parser / mapper** | Turn raw JSON into simple, explicit Python objects (only the fields we use) | Fetch or persist |
 | **Storage (repository)** | Save and load players from SQLite | Know about HTTP or display |
+| **Analytics** | Calculate derived metrics, e.g. Points-per-£m (Sprint 002, `src/analytics/`) | Fetch or store; know about display |
 | **Presentation** | Show players as a table (console for now) | Fetch or store |
 | **Config** | Endpoints, DB path, constants in one place | Business logic |
 
 Each of these becomes a small module (see §7). The boundaries matter more than the
 file names — the point is that the API client knows nothing about SQLite, and the
 display knows nothing about HTTP.
+
+**Sprint 002 additions.** The **CLI** sits on top as a thin interaction layer: it
+decides *what the user asked for* and calls the layers below, but holds no logic of
+its own (see [ADR-003](../06_Decisions/ADR-003-cli-approach.md)). **Analytics** sits
+beside presentation: it reads from storage and computes derived numbers (the first
+being Points-per-£m), never touching the API or the screen. The golden rule still
+holds — only the `refresh` path reaches the network.
 
 ---
 
@@ -214,3 +223,5 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **v0.1 (2026-07-31)** — Initial draft for the Sprint 001 foundation slice.
 - **v0.1 agreed (2026-07-31)** — Status → Agreed; §9 decisions 1–2 recorded as
   ADR-001 and ADR-002.
+- **Sprint 002 (2026-08-01)** — §4 gains two layers: CLI (interaction) and
+  Analytics, per ADR-003. One-way data flow unchanged.

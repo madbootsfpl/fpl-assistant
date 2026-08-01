@@ -38,7 +38,7 @@ FPL insight — let the user refresh, search, filter, and rank players by value
 (Points-per-£m) from the command line.
 
 #### Success Criteria
-- [ ] A CLI decision is agreed (ADR-003) before the interactive code is written
+- [x] A CLI decision is agreed (ADR-003) before the interactive code is written
 - [ ] `refresh` re-fetches and re-stores data as an explicit command (viewing no longer forces a network call)
 - [ ] Players can be **searched** by name
 - [ ] Players can be **filtered** by position, team, and max price
@@ -52,17 +52,17 @@ FPL insight — let the user refresh, search, filter, and rank players by value
 #### User Stories & Features
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-005 | Agree CLI/interaction design + analytics placement (ADR-003) + command skeleton | Critical | Planned | 1 session |
+| US-005 | Agree CLI/interaction design + analytics placement (ADR-003) + command skeleton | Critical | ✅ Complete | 1 session |
 | US-006 | Manual `refresh` command — separate fetching from viewing | High | Planned | 0.5 session |
 | US-007 | Points-per-£m value metric (analytics layer) + value column/sort | High | Planned | 1 session |
 | US-008 | Search & filter players (name, position, team, max price) | Medium | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] Update Architecture doc: add the interaction (CLI) layer + analytics layer - _Planned_
-- [ ] Record ADR-003 (CLI approach) in `06_Decisions/` and add to the ADR index - _Planned_
+- [x] Update Architecture doc: add the interaction (CLI) layer + analytics layer - _Done (US-005)_
+- [x] Record ADR-003 (CLI approach) in `06_Decisions/` and add to the ADR index - _Done (US-005)_
 - [ ] Consider enabling SQLite foreign-key enforcement (Sprint 001 retro action) - _Planned_
 - [ ] Update Handbook (CLI note; bump the analytics chapter when first used) - _Planned_
-- [ ] Update `README.md` with the new commands - _Planned_
+- [x] Update `README.md` with the new commands - _Done (US-005)_
 
 ---
 
@@ -112,10 +112,10 @@ learning tool needs yet. To be confirmed and recorded as **ADR-003** at sprint s
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-01 (US-005: CLI skeleton + ADR-003)
+* **Completed:** ADR-003 (argparse subcommands, in `src/cli.py`, thin `app.py`; analytics → `src/analytics/`). Built `src/cli.py` interaction layer with `refresh`/`table`/`search`/`filter` subcommands; `table` works (reads DB, `--limit`), others stubbed for their stories. Slimmed `app.py` to a launcher. Updated Architecture §4 (two new layers), ADR index, README. 5 new tests (14 total, all passing). Verified: `--help`, `table --limit 5`, `refresh` stub all work. US-005 **complete**.
+* **Issues / Blockers:** None. Note: `python app.py` no longer auto-fetches (by design) — `refresh` (US-006) will restore fetching via its own command.
+* **Next Steps:** US-006 (implement the real `refresh` command).
 
 ---
 
