@@ -31,14 +31,15 @@ class FplClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    def get_bootstrap_static(self) -> dict:
-        """Fetch the bootstrap-static payload (players, teams, gameweeks).
+    def _get_json(self, path: str):
+        """GET one FPL endpoint and return its parsed JSON.
 
-        Returns the parsed JSON as a dict. Any network or HTTP failure is
-        re-raised as FplApiError, so callers get one clear, project-specific
-        error type instead of a raw requests traceback.
+        Shared by the endpoint methods below so the network logic (timeout,
+        User-Agent, error handling) lives in exactly one place. Any network or
+        HTTP failure is re-raised as FplApiError, so callers get one clear,
+        project-specific error type instead of a raw requests traceback.
         """
-        url = self.base_url + config.BOOTSTRAP_STATIC_PATH
+        url = self.base_url + path
         try:
             response = requests.get(
                 url,
@@ -49,3 +50,11 @@ class FplClient:
             return response.json()
         except requests.RequestException as exc:
             raise FplApiError(f"Failed to fetch {url}: {exc}") from exc
+
+    def get_bootstrap_static(self) -> dict:
+        """Fetch the bootstrap-static payload (players, teams, gameweeks)."""
+        return self._get_json(config.BOOTSTRAP_STATIC_PATH)
+
+    def get_fixtures(self) -> list:
+        """Fetch the fixtures payload (all matches)."""
+        return self._get_json(config.FIXTURES_PATH)

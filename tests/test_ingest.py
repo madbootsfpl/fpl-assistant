@@ -9,29 +9,39 @@ from pathlib import Path
 from src import ingest
 from src.storage import Storage
 
-FIXTURE = Path(__file__).parent / "fixtures" / "bootstrap_static_sample.json"
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+BOOTSTRAP = FIXTURES_DIR / "bootstrap_static_sample.json"
+FIXTURES = FIXTURES_DIR / "fixtures_sample.json"
 
 
 class FakeClient:
-    """Stands in for FplClient — returns a saved payload instead of calling the API."""
+    """Stands in for FplClient — returns saved payloads instead of calling the API."""
 
-    def __init__(self, payload: dict):
-        self._payload = payload
+    def __init__(self, bootstrap: dict, fixtures: list):
+        self._bootstrap = bootstrap
+        self._fixtures = fixtures
 
     def get_bootstrap_static(self) -> dict:
-        return self._payload
+        return self._bootstrap
+
+    def get_fixtures(self) -> list:
+        return self._fixtures
 
 
 def test_refresh_maps_and_stores(tmp_path):
-    payload = json.loads(FIXTURE.read_text())
+    bootstrap = json.loads(BOOTSTRAP.read_text())
+    fixtures = json.loads(FIXTURES.read_text())
     store = Storage(db_path=str(tmp_path / "test.db"))
 
-    n_players, n_teams = ingest.refresh(store, client=FakeClient(payload))
+    n_players, n_teams, n_fixtures = ingest.refresh(
+        store, client=FakeClient(bootstrap, fixtures)
+    )
 
-    # Counts reported match the payload...
-    assert n_players == len(payload["elements"])
-    assert n_teams == len(payload["teams"])
-    # ...and the data actually landed in the database and is readable.
+    # Counts reported match the payloads...
+    assert n_players == len(bootstrap["elements"])
+    assert n_teams == len(bootstrap["teams"])
+    assert n_fixtures == len(fixtures)
+    # ...and the data actually landed in the database.
     assert store.count_players() == n_players
-    assert store.get_players()[0]["team"] in {"ARS", "AVL"}
+    assert store.count_fixtures() == n_fixtures
     store.close()

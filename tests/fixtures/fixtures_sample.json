@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "event": 1,
+    "team_h": 1,
+    "team_a": 2,
+    "team_h_difficulty": 2,
+    "team_a_difficulty": 4,
+    "finished": true,
+    "kickoff_time": "2026-08-15T14:00:00Z"
+  },
+  {
+    "id": 2,
+    "event": 2,
+    "team_h": 2,
+    "team_a": 1,
+    "team_h_difficulty": 3,
+    "team_a_difficulty": 3,
+    "finished": false,
+    "kickoff_time": "2026-08-22T14:00:00Z"
+  }
+]

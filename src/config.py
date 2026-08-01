@@ -11,6 +11,9 @@ FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 # Static endpoint: all players, teams and gameweeks in a single payload.
 BOOTSTRAP_STATIC_PATH = "/bootstrap-static/"
 
+# Fixtures endpoint: all matches (home/away teams, difficulty, gameweek).
+FIXTURES_PATH = "/fixtures/"
+
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 

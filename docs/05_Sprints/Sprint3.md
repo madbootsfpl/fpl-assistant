@@ -42,7 +42,7 @@ start accounting for *who they play*, not just past points.
 #### Success Criteria
 - [x] **Carry-over tasks cleared first** (FK enforcement + Handbook bump) — see below
 - [x] Fixtures model + FDR approach agreed (ADR-004) before feature code
-- [ ] `refresh` also fetches and stores fixtures
+- [x] `refresh` also fetches and stores fixtures
 - [x] Foreign-key enforcement enabled on the schema
 - [ ] `fdr` ranks teams by average upcoming fixture difficulty
 - [ ] `fixtures --team ARS` lists a team's upcoming matches
@@ -74,7 +74,7 @@ begin until both are done.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-009 | Agree fixtures data model + FDR approach (ADR-004) | Critical | ✅ Complete | 0.5 session |
-| US-010 | Fixtures ingestion (endpoint, `Fixture` model, table, extend `refresh`) | High | Planned | 1 session |
+| US-010 | Fixtures ingestion (endpoint, `Fixture` model, table, extend `refresh`) | High | ✅ Complete | 1 session |
 | US-011 | First FDR view — teams ranked by upcoming difficulty (`fdr` command) | High | Planned | 1 session |
 | US-012 | Fixtures listing (`fixtures --team ARS`) | Medium | Planned | 0.5 session |
 
@@ -138,6 +138,11 @@ Recorded as **ADR-004** at sprint start.
 * **Completed:** Recorded ADR-004 (FPL difficulty; derive-upcoming, no events table; 8-field fixtures schema) + added to the ADR index. Documented the `fixtures` entity in Architecture §6 (two FKs to teams). US-009 **complete** — no feature code yet.
 * **Issues / Blockers:** None.
 * **Next Steps:** US-010 — fixtures ingestion (Fixture model, table, extend refresh).
+
+#### Session 3 - 2026-08-01 (US-010: fixtures ingestion)
+* **Completed:** Added the fixtures path through every layer — `client.get_fixtures()` (with a shared `_get_json` helper, DRY refactor), `Fixture` model + `from_api`, `fixtures` table (two FKs to teams) + `save_fixtures`/`count_fixtures`, and extended `refresh` to store teams → players → fixtures (returns a 3-tuple now). 4 new tests (34 total). Verified live: refresh stored 564 players, 20 teams and **380 fixtures**; FK enforcement on fixtures tested. US-010 **complete**.
+* **Issues / Blockers:** None. Handbook DoD considered — US-010 reused existing chapters (APIs/JSON/SQLite/models); it introduced no new *tool/topic*, so no new chapter needed.
+* **Next Steps:** US-011 — first FDR view (per-team upcoming difficulty, `fdr` command).
 
 ---
 

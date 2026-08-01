@@ -8,7 +8,7 @@ import sqlite3
 
 import pytest
 
-from src.models import Player, Team
+from src.models import Fixture, Player, Team
 from src.storage import Storage
 
 
@@ -61,11 +61,49 @@ def test_upsert_is_idempotent_and_refreshes_values(tmp_path):
     store.close()
 
 
+def make_fixture(id: int = 1, team_h: int = 1, team_a: int = 2, event: int = 1) -> Fixture:
+    return Fixture(
+        id=id,
+        event=event,
+        team_h=team_h,
+        team_a=team_a,
+        team_h_difficulty=2,
+        team_a_difficulty=4,
+        finished=False,
+        kickoff_time=None,
+    )
+
+
+def two_teams():
+    return [
+        Team(id=1, name="Arsenal", short_name="ARS"),
+        Team(id=2, name="Aston Villa", short_name="AVL"),
+    ]
+
+
 def test_foreign_keys_are_enforced(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     # No teams saved, so this player references a team (999) that doesn't exist.
     with pytest.raises(sqlite3.IntegrityError):
         store.save_players([make_player(id=1, team_id=999)])
+    store.close()
+
+
+def test_save_and_count_fixtures(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([make_fixture(id=1), make_fixture(id=2, team_h=2, team_a=1)])
+
+    assert store.count_fixtures() == 2
+    store.close()
+
+
+def test_fixture_foreign_key_is_enforced(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])   # only team 1 exists
+    # team_a = 999 doesn't exist, so the fixture's FK is violated.
+    with pytest.raises(sqlite3.IntegrityError):
+        store.save_fixtures([make_fixture(id=1, team_h=1, team_a=999)])
     store.close()
 
 

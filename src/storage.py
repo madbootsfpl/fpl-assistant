@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 
 from src import config
-from src.models import Player, Team
+from src.models import Fixture, Player, Team
 
 CREATE_TEAMS = """
 CREATE TABLE IF NOT EXISTS teams (
@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS players (
     position     TEXT,
     price        REAL,
     total_points INTEGER
+)
+"""
+
+CREATE_FIXTURES = """
+CREATE TABLE IF NOT EXISTS fixtures (
+    id                INTEGER PRIMARY KEY,
+    event             INTEGER,
+    team_h            INTEGER REFERENCES teams(id),
+    team_a            INTEGER REFERENCES teams(id),
+    team_h_difficulty INTEGER,
+    team_a_difficulty INTEGER,
+    finished          INTEGER,
+    kickoff_time      TEXT
 )
 """
 
@@ -56,6 +69,20 @@ ON CONFLICT(id) DO UPDATE SET
     total_points = excluded.total_points
 """
 
+UPSERT_FIXTURE = """
+INSERT INTO fixtures
+    (id, event, team_h, team_a, team_h_difficulty, team_a_difficulty, finished, kickoff_time)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    event             = excluded.event,
+    team_h            = excluded.team_h,
+    team_a            = excluded.team_a,
+    team_h_difficulty = excluded.team_h_difficulty,
+    team_a_difficulty = excluded.team_a_difficulty,
+    finished          = excluded.finished,
+    kickoff_time      = excluded.kickoff_time
+"""
+
 
 class Storage:
     """A thin wrapper around the SQLite database."""
@@ -77,6 +104,7 @@ class Storage:
         with self.conn:
             self.conn.execute(CREATE_TEAMS)
             self.conn.execute(CREATE_PLAYERS)
+            self.conn.execute(CREATE_FIXTURES)
 
     def save_teams(self, teams: list[Team]) -> None:
         rows = [(t.id, t.name, t.short_name) for t in teams]
@@ -92,6 +120,15 @@ class Storage:
         ]
         with self.conn:
             self.conn.executemany(UPSERT_PLAYER, rows)
+
+    def save_fixtures(self, fixtures: list[Fixture]) -> None:
+        rows = [
+            (f.id, f.event, f.team_h, f.team_a, f.team_h_difficulty,
+             f.team_a_difficulty, int(f.finished), f.kickoff_time)
+            for f in fixtures
+        ]
+        with self.conn:
+            self.conn.executemany(UPSERT_FIXTURE, rows)
 
     def get_players(
         self,
@@ -140,6 +177,9 @@ class Storage:
 
     def count_teams(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
+
+    def count_fixtures(self) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM fixtures").fetchone()[0]
 
     def close(self) -> None:
         self.conn.close()
