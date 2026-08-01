@@ -1,7 +1,7 @@
 # Sprint 002: Insight & Interaction
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-01 (single day, sessions 1–4)
+**Status:** ✅ Complete
 **Capacity:** ~3–4 working sessions
 **Carried Over:** None
 
@@ -137,19 +137,32 @@ learning tool needs yet. To be confirmed and recorded as **ADR-003** at sprint s
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All four stories — US-005 (CLI skeleton + ADR-003), US-006 (real `refresh` via `src/ingest.py`), US-007 (Points-per-£m — first analytics), US-008 (search & filter). The tool is now genuinely usable: `refresh`, `table --sort value`, `search`, `filter`. Tests grew 9 → 29, all offline.
+* **Carried Forward:** Two technical tasks — SQLite foreign-key enforcement, and a Handbook CLI/analytics note. Rolled to Sprint 003.
+* **Key Artifacts / Decisions:** ADR-003 (argparse subcommands); two new architecture layers (interaction/CLI + analytics); code in `src/{cli,ingest}.py` and `src/analytics/`; commits `1d50a10`→`0199b63`.
 
 #### Retrospective
 * **What Went Well?**
+  - The "add capability at the edge, leave the core untouched" pattern held for *every* story — new commands and a new metric, with client/storage/display essentially unchanged.
+  - Confirm-first surfaced the real structural decisions each time (CLI location, a dedicated ingest module, the undefined-value edge case, SQL-vs-Python filtering).
+  - The first analytics landed cleanly in its own layer and immediately gave insight (value-sort surfaces cheap high-scorers).
+  - Tests stayed fast and offline throughout (injectable client, temp DBs, parameterised queries).
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - Two technical tasks (FK enforcement, Handbook note) slipped again — the same "keep docs/tasks in step as you go" lesson from Sprint 001. Carry and actually do them.
+  - Handbook badges/chapters could be bumped *during* a story rather than in a separate pass.
+* **Lessons Learned?**
+  - A new capability is an *entry point* added on top; the layers below don't change. This is the same move as a future web UI.
+  - Analytics is the first layer that *creates* data rather than moving it — the start of the tool "thinking".
+  - Filtering belongs to storage (the layer that queries) — but only because every filter is a *stored* column. A `value` filter would need Python, because value is computed, not stored. Knowing *why* the boundary sits there matters more than the rule.
+  - Handle undefined honestly (price 0 → "—", sorted last) rather than inventing a number.
+* **Action Items for Next Sprint (003):**
+  - [ ] Fixtures ingestion + a first Fixture Difficulty view (begins Roadmap Phase 2 proper).
+  - [ ] Clear the carried tech tasks: SQLite FK enforcement; Handbook CLI/analytics content.
+  - [ ] Bump Handbook badges as chapters get used, not in a separate sweep.
 
 ---
 
 **Proposed follow-on (Sprint 003):** fixtures ingestion + a first Fixture Difficulty view (begins Roadmap Phase 2 proper).
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-01
+**Final Notes:** The app crossed from "data viewer" to "assistant" — its first calculated metric (Points-per-£m) and an interactive command set. Sprint outcome: **Successful** — 4/4 stories delivered, 2 tech tasks carried.
