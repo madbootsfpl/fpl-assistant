@@ -13,7 +13,7 @@
 
 #### Success Criteria
 - [x] Architecture document (v0.1) exists and is agreed before feature code is written
-- [ ] App fetches live data from the FPL `bootstrap-static` endpoint
+- [x] App fetches live data from the FPL `bootstrap-static` endpoint
 - [ ] Player data is stored locally (SQLite) rather than re-fetched every run
 - [ ] A basic player table can be displayed to the user
 - [ ] Repo hygiene in place (clean git tree, tests run, README updated)
@@ -27,15 +27,15 @@
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-001 | Agree architecture v0.1 (module layout, data flow, SQLite schema) | Critical | ✅ Complete | 1 session |
-| US-002 | FPL API client — fetch `bootstrap-static` player data | High | Planned | 1 session |
+| US-002 | FPL API client — fetch `bootstrap-static` player data | High | ✅ Complete | 1 session |
 | US-003 | Persist players to local SQLite cache | High | Planned | 0.5 session |
 | US-004 | Display a basic player table (name, team, position, price, points) | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
 - [x] Commit the pending docs reorg (deleted root `PROJECT_STATUS.md`, new `docs/00_Project/` copy, untracked `07_Templates/`) - _Owner: Claude / Done (`5b53cef`)_
-- [ ] Confirm venv + `requirements.txt` (add `requests`, `pytest`) - _Planned_
-- [ ] Add first `pytest` test for the API client (against a saved sample response) - _Planned_
-- [ ] Update `README.md` with run instructions - _Planned_
+- [x] Confirm venv + `requirements.txt` (add `requests`, `pytest`) - _Done (US-002)_
+- [x] Add first `pytest` test for the API client (against a saved sample response) - _Done (US-002)_
+- [x] Update `README.md` with run instructions - _Done (US-002)_
 - [x] Record ADR-001 and ADR-002 in `06_Decisions/` for the two open Roadmap questions (internal-tool vs multi-user; UI approach) - _Done (`d67c085`)_
 
 ---
@@ -76,6 +76,11 @@
 * **Next Steps:** Begin US-002 (FPL API client — fetch `bootstrap-static`).
 
 _(Session 1 was environment setup, logged in the [Dev Journal](../01_Journal/FPL_Assistant_Dev_Journal_Session1.md) before this sprint began.)_
+
+#### Session 3 - 2026-08-01 (US-002: FPL API client)
+* **Completed:** Built `src/api/client.py` (`FplClient` + `FplApiError`) and `src/config.py`; added `requests`/`pytest` to `requirements.txt`; wrote first offline `pytest` (2 tests, passing) using a trimmed fixture; wired `app.py` to fetch and report counts; updated README with run instructions. Verified live: fetched 564 players across 20 teams. US-002 **complete**.
+* **Issues / Blockers:** `src/api` existed as a stray empty file rather than a directory — replaced it with a proper package.
+* **Next Steps:** US-003 (persist players to local SQLite).
 
 ---
 

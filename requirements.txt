@@ -1,0 +1,5 @@
+# Runtime dependencies
+requests
+
+# Development / testing
+pytest
