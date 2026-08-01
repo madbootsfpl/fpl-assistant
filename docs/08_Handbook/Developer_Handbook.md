@@ -95,7 +95,7 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 | 3 | [Python](./03_Python.md) | 📖 🧪 💻 | In progress |
 | 4 | [Virtual Environments](./04_Virtual_Environments.md) | 📖 🧪 💻 | In progress |
 | 5 | [Git](./05_Git.md) | 📖 🧪 💻 🧠 | In progress |
-| 6 | [GitHub](./06_GitHub.md) | 📖 | Not started |
+| 6 | [GitHub](./06_GitHub.md) | 📖 🧪 💻 | In progress |
 | 7 | [Visual Studio Code](./07_VS_Code.md) | 📖 🧪 💻 | In progress |
 | 8 | [APIs](./08_APIs.md) | 📖 🧪 💻 | In progress |
 | 9 | [JSON](./09_JSON.md) | 📖 🧪 💻 | In progress |
