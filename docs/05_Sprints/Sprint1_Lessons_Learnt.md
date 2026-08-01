@@ -181,13 +181,13 @@ git log --oneline
 
 | Topic | Before | After |
 |--------|-------:|------:|
-| Python | | |
-| Git | | |
-| VS Code | | |
-| APIs | | |
+| Python | 2|3 |
+| Git |1 | 4|
+| VS Code | 2|4 |
+| APIs | 1|3 |
 | JSON | | |
 | SQLite | | |
-| Testing | | |
+| Testing | 2|4 |
 | Architecture | | |
 | AI-assisted Development | | |
 
@@ -195,13 +195,13 @@ git log --oneline
 
 # Overall Sprint Reflection _(for Tony)_
 
-### What am I most pleased with?
+### What am I most pleased with? that i understand the end to end flow. 
 
-### What was the biggest lesson?
+### What was the biggest lesson? learning how the environment and associated tools work
 
-### What challenged me the most?
+### What challenged me the most? while i understand code, i think my learning needs to be more about the structure of how each modules work and why, the overall architecture, the end to end process, and not how to code, thats claude codes job.
 
-### What am I looking forward to building next?
+### What am I looking forward to building next? just to see th eproject evolve, still more about the learnings
 
 ---
 
@@ -220,9 +220,9 @@ git log --oneline
 
 - None
 
-**Overall Satisfaction (1–10):** ___ _(for Tony)_
+**Overall Satisfaction (1–10):** _8__ _(for Tony)_
 
-**Time Invested:** ___ _(for Tony)_
+**Time Invested:** _2 hrs__ _(for Tony)_
 
 **Version After Sprint:** v0.0.1
 
