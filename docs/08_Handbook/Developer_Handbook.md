@@ -109,6 +109,8 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 |17 | [Software Engineering Principles](./17_Best_Practices.md) | 📖 🧪 💻 | In progress |
 |18 | [Cheat Sheets](./18_Cheat_Sheets.md) | 💻 | In progress |
 |19 | [Glossary Index](./19_Glossary_Index.md) | 💻 | In progress |
+|20 | [CLIs](./20_CLIs.md) | 📖 🧪 💻 | In progress |
+|21 | [Analytics](./21_Analytics.md) | 📖 🧪 💻 | In progress |
 
 Update the badges and status as each chapter grows.
 
