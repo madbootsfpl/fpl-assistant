@@ -1,7 +1,7 @@
-Current Phase: Sprint 002 COMPLETE — between sprints
-Current Sprint: Sprint 002 - Insight & Interaction (✅ Complete, 4/4 stories, retro done)
-Current Story: None active — ready to plan Sprint 003
-Next Milestone: Sprint 003 - fixtures ingestion + first Fixture Difficulty view (Roadmap Phase 2)
+Current Phase: Sprint 003 planned — ready to start
+Current Sprint: Sprint 003 - Fixtures & Difficulty (Planned)
+Current Story: Carry-over first (FK enforcement + Handbook bump), then US-009 (ADR-004)
+Next Milestone: Fixtures ingestion + first Fixture Difficulty (FDR) view — begins Roadmap Phase 2
 Current Version: 0.0.1
 Last Updated: 2026-08-01
-Carried tech tasks: SQLite FK enforcement; Handbook CLI/analytics note
+Carry-over gated first in Sprint 003: SQLite FK enforcement; Handbook CLI/analytics bump
