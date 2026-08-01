@@ -17,3 +17,6 @@ venv/
 
 # Environment variables
 .env
+
+# Local database (generated cache, not source)
+data/*.db
