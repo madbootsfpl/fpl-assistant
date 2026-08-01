@@ -92,15 +92,15 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 |---------|-------|--------|--------|
 | 1 | [Mac Development Environment](./01_Mac_Development.md) | 📖 🧪 💻 | In progress |
 | 2 | [Terminal & Shell](./02_Terminal.md) | 📖 🧪 💻 | In progress |
-| 3 | [Python](./03_Python.md) | 📖 🧪 | In progress |
+| 3 | [Python](./03_Python.md) | 📖 🧪 💻 | In progress |
 | 4 | [Virtual Environments](./04_Virtual_Environments.md) | 📖 🧪 💻 | In progress |
 | 5 | [Git](./05_Git.md) | 📖 🧪 💻 🧠 | In progress |
 | 6 | [GitHub](./06_GitHub.md) | 📖 | Not started |
 | 7 | [Visual Studio Code](./07_VS_Code.md) | 📖 🧪 💻 | In progress |
-| 8 | [APIs](./08_APIs.md) | 📖 | Not started |
-| 9 | [JSON](./09_JSON.md) | 📖 | Not started |
-|10 | [SQLite](./10_SQLite.md) | 📖 | Not started |
-|11 | [Testing](./11_Testing.md) | 📖 | Not started |
+| 8 | [APIs](./08_APIs.md) | 📖 🧪 💻 | In progress |
+| 9 | [JSON](./09_JSON.md) | 📖 🧪 💻 | In progress |
+|10 | [SQLite](./10_SQLite.md) | 📖 🧪 💻 | In progress |
+|11 | [Testing](./11_Testing.md) | 📖 🧪 💻 | In progress |
 |12 | [FastAPI](./12_FastAPI.md) | 📖 | Not started |
 |13 | [Claude Code](./13_Claude_Code.md) | 📖 🧪 💻 | In progress |
 |14 | [ChatGPT](./14_ChatGPT.md) | 📖 🧪 💻 | In progress |

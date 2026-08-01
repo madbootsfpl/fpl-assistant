@@ -1,15 +1,14 @@
 # Chapter 3 — Python
 
-**Badges:** 📖 🧪
-
-*(💻 will be added once we write the first application code in US-002.)*
+**Badges:** 📖 🧪 💻
 
 ---
 
 ## Purpose
 
 Python is the main programming language for the project. This chapter covers how
-it's installed and run — application code will be added here as we write it.
+it's installed and run. As of Sprint 001 the first real application code exists —
+the `src/` package (`api`, `models`, `storage`, `ui`) plus `app.py`.
 
 ---
 
