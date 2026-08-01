@@ -90,17 +90,47 @@ class Storage:
         with self.conn:
             self.conn.executemany(UPSERT_PLAYER, rows)
 
-    def get_players(self) -> list[sqlite3.Row]:
-        # LEFT JOIN so each row carries the team's short_name; LEFT (not inner)
-        # means a player with an unknown team still appears rather than vanishing.
-        return self.conn.execute(
-            """
-            SELECT p.*, t.short_name AS team
-            FROM players p
-            LEFT JOIN teams t ON p.team_id = t.id
-            ORDER BY p.total_points DESC
-            """
-        ).fetchall()
+    def get_players(
+        self,
+        name: str | None = None,
+        position: str | None = None,
+        team: str | None = None,
+        max_price: float | None = None,
+    ) -> list[sqlite3.Row]:
+        """Return stored players (with their team short_name), top points first.
+
+        Any provided argument narrows the result via a parameterised WHERE clause;
+        with no arguments this returns every player (so `table` is unaffected).
+        Filters combine with AND. Values always go through `?` placeholders — never
+        string-formatted into the SQL — so this is safe from injection.
+
+        The LEFT JOIN carries each player's team short_name, and keeps a player even
+        if its team is missing.
+        """
+        clauses: list[str] = []
+        params: list = []
+        if name:
+            clauses.append("p.web_name LIKE ?")  # LIKE is case-insensitive for names
+            params.append(f"%{name}%")
+        if position:
+            clauses.append("p.position = ?")
+            params.append(position)
+        if team:
+            clauses.append("t.short_name = ?")
+            params.append(team)
+        if max_price is not None:
+            clauses.append("p.price <= ?")
+            params.append(max_price)
+
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        sql = (
+            "SELECT p.*, t.short_name AS team "
+            "FROM players p "
+            "LEFT JOIN teams t ON p.team_id = t.id "
+            f"{where} "
+            "ORDER BY p.total_points DESC"
+        )
+        return self.conn.execute(sql, params).fetchall()
 
     def count_players(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]

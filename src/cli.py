@@ -42,11 +42,29 @@ def cmd_refresh(args) -> None:
 
 
 def cmd_search(args) -> None:
-    print(f"`search` is coming in US-008 (would search for: {args.name!r}).")
+    """Find players whose name contains the given text."""
+    store = Storage()
+    rows = store.get_players(name=args.name)
+    if not rows:
+        print(f"No players match '{args.name}'.")
+    else:
+        print(render_player_table(rank_players(rows)))
+    store.close()
 
 
 def cmd_filter(args) -> None:
-    print("`filter` is coming in US-008 (position / team / max price).")
+    """Show players matching the given position / team / max price."""
+    store = Storage()
+    rows = store.get_players(
+        position=args.pos.upper() if args.pos else None,
+        team=args.team.upper() if args.team else None,
+        max_price=args.max_price,
+    )
+    if not rows:
+        print("No players match those filters.")
+    else:
+        print(render_player_table(rank_players(rows)))
+    store.close()
 
 
 def build_parser() -> argparse.ArgumentParser:

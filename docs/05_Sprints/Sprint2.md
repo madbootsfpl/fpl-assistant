@@ -40,10 +40,10 @@ FPL insight — let the user refresh, search, filter, and rank players by value
 #### Success Criteria
 - [x] A CLI decision is agreed (ADR-003) before the interactive code is written
 - [x] `refresh` re-fetches and re-stores data as an explicit command (viewing no longer forces a network call)
-- [ ] Players can be **searched** by name
-- [ ] Players can be **filtered** by position, team, and max price
+- [x] Players can be **searched** by name
+- [x] Players can be **filtered** by position, team, and max price
 - [x] A **Points-per-£m** value column is calculated and can sort the table
-- [ ] Tests cover the new analytics and filtering (offline)
+- [x] Tests cover the new analytics and filtering (offline)
 
 ---
 
@@ -55,7 +55,7 @@ FPL insight — let the user refresh, search, filter, and rank players by value
 | US-005 | Agree CLI/interaction design + analytics placement (ADR-003) + command skeleton | Critical | ✅ Complete | 1 session |
 | US-006 | Manual `refresh` command — separate fetching from viewing | High | ✅ Complete | 0.5 session |
 | US-007 | Points-per-£m value metric (analytics layer) + value column/sort | High | ✅ Complete | 1 session |
-| US-008 | Search & filter players (name, position, team, max price) | Medium | Planned | 1 session |
+| US-008 | Search & filter players (name, position, team, max price) | Medium | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] Update Architecture doc: add the interaction (CLI) layer + analytics layer - _Done (US-005)_
@@ -126,6 +126,11 @@ learning tool needs yet. To be confirmed and recorded as **ADR-003** at sprint s
 * **Completed:** Added `src/analytics/` (`value.py`: `points_per_million` + `rank_players`), the project's first derived metric. Undefined value (price 0/missing) → `None`, shown as "—" and sorted last. Added a Val/£m column to the table and a `--sort points|value` option. 6 new tests (24 total). Verified live: `--sort value` surfaces cheap high-scorers (e.g. Truffert £5.5m, 30.0/£m) that a points-only view hides. US-007 **complete**.
 * **Issues / Blockers:** None.
 * **Next Steps:** US-008 (search & filter players).
+
+#### Session 4 - 2026-08-01 (US-008: search & filter)
+* **Completed:** Extended `Storage.get_players()` with optional, parameterised WHERE filters (name/position/team/max_price; AND-combined; no args = all). Wired `search` and `filter` commands to it, reusing `rank_players` + the table. 5 new storage tests (29 total). Verified live: `search haaland`, `filter --pos DEF --max-price 6`, and the no-match message. US-008 **complete** — all four Sprint 002 stories done.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 002 review & retrospective. (Outstanding tech tasks: SQLite FK enforcement; Handbook CLI/analytics note.)
 
 ---
 
