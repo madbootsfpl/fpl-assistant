@@ -4,6 +4,10 @@ Every test uses a temporary database (tmp_path), so the real data/fpl.db is
 never touched.
 """
 
+import sqlite3
+
+import pytest
+
 from src.models import Player, Team
 from src.storage import Storage
 
@@ -54,6 +58,14 @@ def test_upsert_is_idempotent_and_refreshes_values(tmp_path):
 
     assert store.count_players() == 1                      # no duplicate row
     assert store.get_players()[0]["total_points"] == 120   # value refreshed
+    store.close()
+
+
+def test_foreign_keys_are_enforced(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    # No teams saved, so this player references a team (999) that doesn't exist.
+    with pytest.raises(sqlite3.IntegrityError):
+        store.save_players([make_player(id=1, team_id=999)])
     store.close()
 
 

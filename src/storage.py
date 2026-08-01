@@ -66,6 +66,9 @@ class Storage:
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
         self.conn = sqlite3.connect(db_path)
+        # SQLite has foreign keys OFF by default, per connection — turn them on so
+        # a player/fixture can't reference a team that doesn't exist.
+        self.conn.execute("PRAGMA foreign_keys = ON")
         # Return rows that can be indexed by column name, e.g. row["web_name"].
         self.conn.row_factory = sqlite3.Row
         self._init_schema()
