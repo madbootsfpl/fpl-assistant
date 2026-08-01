@@ -40,10 +40,10 @@ rank teams by how easy or hard their upcoming matches are, so player decisions c
 start accounting for *who they play*, not just past points.
 
 #### Success Criteria
-- [ ] **Carry-over tasks cleared first** (FK enforcement + Handbook bump) — see below
+- [x] **Carry-over tasks cleared first** (FK enforcement + Handbook bump) — see below
 - [ ] Fixtures model + FDR approach agreed (ADR-004) before feature code
 - [ ] `refresh` also fetches and stores fixtures
-- [ ] Foreign-key enforcement enabled on the schema
+- [x] Foreign-key enforcement enabled on the schema
 - [ ] `fdr` ranks teams by average upcoming fixture difficulty
 - [ ] `fixtures --team ARS` lists a team's upcoming matches
 - [ ] Tests cover fixtures ingestion and the FDR calculation
@@ -57,10 +57,10 @@ These two technical tasks slipped in **both** Sprint 001 and Sprint 002. To stop
 third slip they are gated at the **start** of Sprint 003 — US-010 onwards does not
 begin until both are done.
 
-- [ ] **Enable SQLite foreign-key enforcement** — `PRAGMA foreign_keys = ON` in
-  `Storage`; verify the full suite still passes (save order is already teams-first).
-- [ ] **Handbook bump for Sprint 002 work** — document the CLI and analytics that are
-  now used (new chapters or additions), and update the relevant badges.
+- [x] **Enable SQLite foreign-key enforcement** — `PRAGMA foreign_keys = ON` in
+  `Storage`; verified full suite still passes (`0795c15`).
+- [x] **Handbook bump for Sprint 002 work** — added chapters 20 (CLIs) and 21
+  (Analytics) with real Sprint 002 code + badges (`9e143eb`).
 
 > **Definition of Done (this sprint):** a feature story isn't "done" until the Handbook
 > is updated for anything new it introduced. Handbook updates happen *inside* the story,
@@ -129,10 +129,10 @@ Recorded as **ADR-004** at sprint start.
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-01 (Carry-over cleared)
+* **Completed:** Both long-carried tasks done FIRST, per plan: SQLite FK enforcement (`PRAGMA foreign_keys = ON` + test, `0795c15`); Handbook chapters 20 (CLIs) and 21 (Analytics) from real Sprint 002 code (`9e143eb`). 30 tests passing.
+* **Issues / Blockers:** None. The two tasks that slipped both prior sprints are now cleared before any feature work.
+* **Next Steps:** US-009 — record ADR-004 (fixtures model + FDR approach) and design the fixtures schema.
 
 ---
 
