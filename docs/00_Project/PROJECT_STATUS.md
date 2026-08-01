@@ -1,6 +1,6 @@
-Current Phase: Sprint 001 COMPLETE — between sprints
-Current Sprint: Sprint 001 - Foundations & First Data Slice (✅ Complete, 4/4 stories, retro done)
-Current Story: None active — ready to plan Sprint 002
-Next Milestone: Sprint 002 - search, filter, Points-per-£m, manual refresh (+ handbook badge bumps)
+Current Phase: Sprint 002 planned — ready to start
+Current Sprint: Sprint 002 - Insight & Interaction (Planned)
+Current Story: US-005 - Agree CLI/interaction design (ADR-003) — gating story, not yet started
+Next Milestone: Interactive CLI (refresh, search, filter) + first analytics (Points-per-£m)
 Current Version: 0.0.1
 Last Updated: 2026-08-01
