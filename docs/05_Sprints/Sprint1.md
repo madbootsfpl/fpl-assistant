@@ -1,7 +1,7 @@
 # Sprint 001: Foundations & First Data Slice
 
-**Dates:** TBC (proposed 1–2 week / 3–4 session sprint)
-**Status:** Planned
+**Dates:** Started 2026-08-01 (proposed 1–2 week / 3–4 session sprint)
+**Status:** Active
 **Capacity:** ~3–4 working sessions
 **Carried Over:** None (first sprint)
 
@@ -12,7 +12,7 @@
 **Objective:** Establish the project's technical foundation and prove one complete vertical slice — connect to the official FPL API, persist player data locally, and display it — so that every later analytics feature has a working data pipeline to build on.
 
 #### Success Criteria
-- [ ] Architecture document (v0.1) exists and is agreed before feature code is written
+- [x] Architecture document (v0.1) exists and is agreed before feature code is written
 - [ ] App fetches live data from the FPL `bootstrap-static` endpoint
 - [ ] Player data is stored locally (SQLite) rather than re-fetched every run
 - [ ] A basic player table can be displayed to the user
@@ -26,17 +26,17 @@
 #### User Stories & Features
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-001 | Agree architecture v0.1 (module layout, data flow, SQLite schema) | Critical | Planned | 1 session |
+| US-001 | Agree architecture v0.1 (module layout, data flow, SQLite schema) | Critical | ✅ Complete | 1 session |
 | US-002 | FPL API client — fetch `bootstrap-static` player data | High | Planned | 1 session |
 | US-003 | Persist players to local SQLite cache | High | Planned | 0.5 session |
 | US-004 | Display a basic player table (name, team, position, price, points) | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
-- [ ] Commit the pending docs reorg (deleted root `PROJECT_STATUS.md`, new `docs/00_Project/` copy, untracked `07_Templates/`) - _Owner: Claude / Planned_
+- [x] Commit the pending docs reorg (deleted root `PROJECT_STATUS.md`, new `docs/00_Project/` copy, untracked `07_Templates/`) - _Owner: Claude / Done (`5b53cef`)_
 - [ ] Confirm venv + `requirements.txt` (add `requests`, `pytest`) - _Planned_
 - [ ] Add first `pytest` test for the API client (against a saved sample response) - _Planned_
 - [ ] Update `README.md` with run instructions - _Planned_
-- [ ] Record ADR-001 in `06_Decisions/` for the two open Roadmap questions (internal-tool vs multi-user; UI approach) - _Planned_
+- [x] Record ADR-001 and ADR-002 in `06_Decisions/` for the two open Roadmap questions (internal-tool vs multi-user; UI approach) - _Done (`d67c085`)_
 
 ---
 
@@ -70,15 +70,12 @@
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 2 - 2026-08-01 (Planning & Architecture)
+* **Completed:** Sprint 001 plan written; PROJECT_STATUS updated; Architecture v0.1 drafted and **agreed**; ADR-001 and ADR-002 recorded; journal/glossary updated; Developer Handbook created. US-001 **complete**.
+* **Issues / Blockers:** None.
+* **Next Steps:** Begin US-002 (FPL API client — fetch `bootstrap-static`).
 
-#### Session 2 - [Date]
-* **Completed:**
-* **Issues / Blockers:**
-* **Next Steps:**
+_(Session 1 was environment setup, logged in the [Dev Journal](../01_Journal/FPL_Assistant_Dev_Journal_Session1.md) before this sprint began.)_
 
 ---
 
