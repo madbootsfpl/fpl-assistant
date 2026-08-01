@@ -44,7 +44,7 @@ start accounting for *who they play*, not just past points.
 - [x] Fixtures model + FDR approach agreed (ADR-004) before feature code
 - [x] `refresh` also fetches and stores fixtures
 - [x] Foreign-key enforcement enabled on the schema
-- [ ] `fdr` ranks teams by average upcoming fixture difficulty
+- [x] `fdr` ranks teams by average upcoming fixture difficulty
 - [ ] `fixtures --team ARS` lists a team's upcoming matches
 - [ ] Tests cover fixtures ingestion and the FDR calculation
 - [ ] Handbook kept in step with each story (not a end-of-sprint sweep)
@@ -75,7 +75,7 @@ begin until both are done.
 |---|---|---|---|---|
 | US-009 | Agree fixtures data model + FDR approach (ADR-004) | Critical | ✅ Complete | 0.5 session |
 | US-010 | Fixtures ingestion (endpoint, `Fixture` model, table, extend `refresh`) | High | ✅ Complete | 1 session |
-| US-011 | First FDR view — teams ranked by upcoming difficulty (`fdr` command) | High | Planned | 1 session |
+| US-011 | First FDR view — teams ranked by upcoming difficulty (`fdr` command) | High | ✅ Complete | 1 session |
 | US-012 | Fixtures listing (`fixtures --team ARS`) | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
@@ -143,6 +143,11 @@ Recorded as **ADR-004** at sprint start.
 * **Completed:** Added the fixtures path through every layer — `client.get_fixtures()` (with a shared `_get_json` helper, DRY refactor), `Fixture` model + `from_api`, `fixtures` table (two FKs to teams) + `save_fixtures`/`count_fixtures`, and extended `refresh` to store teams → players → fixtures (returns a 3-tuple now). 4 new tests (34 total). Verified live: refresh stored 564 players, 20 teams and **380 fixtures**; FK enforcement on fixtures tested. US-010 **complete**.
 * **Issues / Blockers:** None. Handbook DoD considered — US-010 reused existing chapters (APIs/JSON/SQLite/models); it introduced no new *tool/topic*, so no new chapter needed.
 * **Next Steps:** US-011 — first FDR view (per-team upcoming difficulty, `fdr` command).
+
+#### Session 4 - 2026-08-01 (US-011: first FDR view)
+* **Completed:** First *aggregating* analytics — `storage.get_upcoming_fixtures()` (unfinished, joined to team names), `analytics/fdr.py` `team_fdr()` (per-team average difficulty from each team's own perspective, ranked easiest-first), `ui/fdr.py` renderer, and the `fdr --next N` command. 8 new tests (42 total). Handbook DoD met: updated Chapter 21 (Analytics) with the aggregate/perspective concepts + FDR example. Verified live: `fdr --next 5` ranks teams (LIV easiest, 2.6) with next opponents. US-011 **complete**.
+* **Issues / Blockers:** None.
+* **Next Steps:** US-012 — fixtures listing (`fixtures --team ARS`), the last Sprint 003 story.
 
 ---
 

@@ -61,7 +61,13 @@ def test_upsert_is_idempotent_and_refreshes_values(tmp_path):
     store.close()
 
 
-def make_fixture(id: int = 1, team_h: int = 1, team_a: int = 2, event: int = 1) -> Fixture:
+def make_fixture(
+    id: int = 1,
+    team_h: int = 1,
+    team_a: int = 2,
+    event: int = 1,
+    finished: bool = False,
+) -> Fixture:
     return Fixture(
         id=id,
         event=event,
@@ -69,7 +75,7 @@ def make_fixture(id: int = 1, team_h: int = 1, team_a: int = 2, event: int = 1) 
         team_a=team_a,
         team_h_difficulty=2,
         team_a_difficulty=4,
-        finished=False,
+        finished=finished,
         kickoff_time=None,
     )
 
@@ -104,6 +110,22 @@ def test_fixture_foreign_key_is_enforced(tmp_path):
     # team_a = 999 doesn't exist, so the fixture's FK is violated.
     with pytest.raises(sqlite3.IntegrityError):
         store.save_fixtures([make_fixture(id=1, team_h=1, team_a=999)])
+    store.close()
+
+
+def test_get_upcoming_fixtures_excludes_finished_and_joins_team_names(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([
+        make_fixture(id=1, event=1, finished=True),    # played — excluded
+        make_fixture(id=2, event=2, finished=False),   # upcoming — included
+    ])
+
+    upcoming = store.get_upcoming_fixtures()
+
+    assert len(upcoming) == 1
+    assert upcoming[0]["home"] == "ARS"   # team_h=1
+    assert upcoming[0]["away"] == "AVL"   # team_a=2
     store.close()
 
 

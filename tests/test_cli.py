@@ -4,7 +4,7 @@ These check that commands and options are parsed into the right shape and routed
 to the right handler — no database or network involved.
 """
 
-from src.cli import build_parser, cmd_filter, cmd_search, cmd_table
+from src.cli import build_parser, cmd_fdr, cmd_filter, cmd_search, cmd_table
 
 
 def test_table_command_defaults_to_limit_20():
@@ -41,6 +41,18 @@ def test_filter_options_are_parsed():
     assert args.pos == "MID"
     assert args.max_price == 8.0
     assert args.handler is cmd_filter
+
+
+def test_fdr_defaults_to_next_5():
+    args = build_parser().parse_args(["fdr"])
+    assert args.command == "fdr"
+    assert args.next == 5
+    assert args.handler is cmd_fdr
+
+
+def test_fdr_next_option_is_parsed():
+    args = build_parser().parse_args(["fdr", "--next", "3"])
+    assert args.next == 3
 
 
 def test_no_command_leaves_no_handler():

@@ -33,8 +33,10 @@ together instead of being scattered into queries or formatting code.
 
 - **Derived metric:** a number the app computes (points ÷ price), not read from source.
 - **Pure function:** numbers in, number out — no side effects; trivial to test.
-- **Per-row vs aggregate:** value is per player; fixture difficulty (Sprint 003) will
-  be *per team across several fixtures* — a summary of a group.
+- **Per-row vs aggregate:** value is per player; fixture difficulty (FDR) is *per team
+  across several fixtures* — a summary of a group.
+- **Perspective:** the same input can mean different things to different subjects — a
+  fixture is easy for one team and hard for its opponent, so each team reads its own side.
 - **Undefined results:** some inputs have no sensible answer (divide by zero). Say so
   honestly rather than inventing a value.
 
@@ -59,6 +61,20 @@ enriched.sort(key=lambda d: (d["value"] is not None, d["value"] or 0.0), reverse
 
 **The payoff:** sorting by value surfaces cheap high-scorers a points-only list hides
 — e.g. a £5.5m defender at 30.0 pts/£m ranking above a £15.5m striker at 15.4.
+
+An *aggregating* metric — Fixture Difficulty (`src/analytics/fdr.py`) — summarises a
+group instead of one row. Each fixture is attributed to *both* teams from their own
+perspective, then averaged per team over the next N games:
+
+```python
+for f in fixtures:
+    per_team[f["home"]].append((f["team_h_difficulty"], f["away"]))   # home's view
+    per_team[f["away"]].append((f["team_a_difficulty"], f["home"]))   # away's view
+# then: average each team's next N, rank easiest-first
+```
+
+The boundary from Chapter 10 holds: storage answers "which fixtures are upcoming?";
+analytics does the perspective + averaging + ranking.
 
 ---
 

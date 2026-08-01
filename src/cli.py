@@ -11,9 +11,10 @@ See ADR-003 for why this is argparse + subcommands.
 import argparse
 
 from src import config, ingest
-from src.analytics import rank_players
+from src.analytics import rank_players, team_fdr
 from src.api.client import FplApiError
 from src.storage import Storage
+from src.ui.fdr import render_fdr_table
 from src.ui.table import render_player_table
 
 
@@ -52,6 +53,18 @@ def cmd_search(args) -> None:
         print(f"No players match '{args.name}'.")
     else:
         print(render_player_table(rank_players(rows)))
+    store.close()
+
+
+def cmd_fdr(args) -> None:
+    """Rank teams by how easy their upcoming fixtures are."""
+    store = Storage()
+    upcoming = store.get_upcoming_fixtures()
+    if not upcoming:
+        print("No upcoming fixtures — run `refresh` first.")
+    else:
+        ranked = team_fdr(upcoming, next_n=args.next)
+        print(render_fdr_table(ranked, next_n=args.next))
     store.close()
 
 
@@ -95,6 +108,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_search = sub.add_parser("search", help="Search players by name")
     p_search.add_argument("name", help="Name (or part of a name) to search for")
     p_search.set_defaults(handler=cmd_search)
+
+    p_fdr = sub.add_parser("fdr", help="Rank teams by upcoming fixture difficulty")
+    p_fdr.add_argument(
+        "--next", type=int, default=5,
+        help="How many upcoming fixtures to average (default 5)",
+    )
+    p_fdr.set_defaults(handler=cmd_fdr)
 
     p_filter = sub.add_parser(
         "filter", help="Filter players by position, team or max price"
