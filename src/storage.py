@@ -91,8 +91,15 @@ class Storage:
             self.conn.executemany(UPSERT_PLAYER, rows)
 
     def get_players(self) -> list[sqlite3.Row]:
+        # LEFT JOIN so each row carries the team's short_name; LEFT (not inner)
+        # means a player with an unknown team still appears rather than vanishing.
         return self.conn.execute(
-            "SELECT * FROM players ORDER BY total_points DESC"
+            """
+            SELECT p.*, t.short_name AS team
+            FROM players p
+            LEFT JOIN teams t ON p.team_id = t.id
+            ORDER BY p.total_points DESC
+            """
         ).fetchall()
 
     def count_players(self) -> int:

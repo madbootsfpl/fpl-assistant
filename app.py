@@ -9,6 +9,7 @@ from src import config
 from src.api.client import FplApiError, FplClient
 from src.models import Player, Team
 from src.storage import Storage
+from src.ui.table import render_player_table
 
 
 def main() -> None:
@@ -31,6 +32,10 @@ def main() -> None:
         f"Stored {store.count_players()} players and "
         f"{store.count_teams()} teams in {config.DB_PATH}."
     )
+
+    # Read back from the local database (not the API) and show the top players.
+    print()
+    print(render_player_table(store.get_players()))
     store.close()
 
 

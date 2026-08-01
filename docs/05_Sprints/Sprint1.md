@@ -15,9 +15,9 @@
 - [x] Architecture document (v0.1) exists and is agreed before feature code is written
 - [x] App fetches live data from the FPL `bootstrap-static` endpoint
 - [x] Player data is stored locally (SQLite) rather than re-fetched every run
-- [ ] A basic player table can be displayed to the user
-- [ ] Repo hygiene in place (clean git tree, tests run, README updated)
-- [ ] Developer can explain how the data flows end-to-end
+- [x] A basic player table can be displayed to the user
+- [x] Repo hygiene in place (clean git tree, tests run, README updated)
+- [ ] Developer can explain how the data flows end-to-end _(self-assessed by Tony)_
 
 ---
 
@@ -29,7 +29,7 @@
 | US-001 | Agree architecture v0.1 (module layout, data flow, SQLite schema) | Critical | ✅ Complete | 1 session |
 | US-002 | FPL API client — fetch `bootstrap-static` player data | High | ✅ Complete | 1 session |
 | US-003 | Persist players to local SQLite cache | High | ✅ Complete | 0.5 session |
-| US-004 | Display a basic player table (name, team, position, price, points) | Medium | Planned | 0.5 session |
+| US-004 | Display a basic player table (name, team, position, price, points) | Medium | ✅ Complete | 0.5 session |
 
 #### Technical Tasks & Maintenance
 - [x] Commit the pending docs reorg (deleted root `PROJECT_STATUS.md`, new `docs/00_Project/` copy, untracked `07_Templates/`) - _Owner: Claude / Done (`5b53cef`)_
@@ -86,6 +86,11 @@ _(Session 1 was environment setup, logged in the [Dev Journal](../01_Journal/FPL
 * **Completed:** Added `Team`/`Player` dataclasses with `from_api()` mappers (position label + `now_cost/10` price); `src/storage.py` `Storage` class with upsert on FPL id and `data/fpl.db` (gitignored); wired `app.py` to fetch → map → store. 4 new tests (models + storage, incl. upsert idempotency), 6 passing total. Verified live: stored 564 players / 20 teams; ran twice, counts stayed constant (upsert works). US-003 **complete**.
 * **Issues / Blockers:** None.
 * **Next Steps:** US-004 (display a basic player table from the stored data).
+
+#### Session 5 - 2026-08-01 (US-004: display player table)
+* **Completed:** Added `src/ui/table.py` (`render_player_table`, pure formatting, top-20 default with truncation + footer); `get_players()` now LEFT JOINs teams for the short_name; wired `app.py` to print the table from the DB. 3 new tests (9 passing total). Verified live: full fetch → store → display slice prints an aligned top-20 table. US-004 **complete** — all four sprint stories done.
+* **Issues / Blockers:** None. (Noted: live 2026-season data has several players sharing one team_id — a data quirk, not a code issue.)
+* **Next Steps:** Sprint 001 review & retrospective; then Sprint 002 (search, filter, Points-per-£m, manual refresh).
 
 ---
 
