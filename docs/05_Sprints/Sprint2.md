@@ -39,7 +39,7 @@ FPL insight — let the user refresh, search, filter, and rank players by value
 
 #### Success Criteria
 - [x] A CLI decision is agreed (ADR-003) before the interactive code is written
-- [ ] `refresh` re-fetches and re-stores data as an explicit command (viewing no longer forces a network call)
+- [x] `refresh` re-fetches and re-stores data as an explicit command (viewing no longer forces a network call)
 - [ ] Players can be **searched** by name
 - [ ] Players can be **filtered** by position, team, and max price
 - [ ] A **Points-per-£m** value column is calculated and can sort the table
@@ -53,7 +53,7 @@ FPL insight — let the user refresh, search, filter, and rank players by value
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-005 | Agree CLI/interaction design + analytics placement (ADR-003) + command skeleton | Critical | ✅ Complete | 1 session |
-| US-006 | Manual `refresh` command — separate fetching from viewing | High | Planned | 0.5 session |
+| US-006 | Manual `refresh` command — separate fetching from viewing | High | ✅ Complete | 0.5 session |
 | US-007 | Points-per-£m value metric (analytics layer) + value column/sort | High | Planned | 1 session |
 | US-008 | Search & filter players (name, position, team, max price) | Medium | Planned | 1 session |
 
@@ -116,6 +116,11 @@ learning tool needs yet. To be confirmed and recorded as **ADR-003** at sprint s
 * **Completed:** ADR-003 (argparse subcommands, in `src/cli.py`, thin `app.py`; analytics → `src/analytics/`). Built `src/cli.py` interaction layer with `refresh`/`table`/`search`/`filter` subcommands; `table` works (reads DB, `--limit`), others stubbed for their stories. Slimmed `app.py` to a launcher. Updated Architecture §4 (two new layers), ADR index, README. 5 new tests (14 total, all passing). Verified: `--help`, `table --limit 5`, `refresh` stub all work. US-005 **complete**.
 * **Issues / Blockers:** None. Note: `python app.py` no longer auto-fetches (by design) — `refresh` (US-006) will restore fetching via its own command.
 * **Next Steps:** US-006 (implement the real `refresh` command).
+
+#### Session 2 - 2026-08-01 (US-006: real refresh command)
+* **Completed:** Added `src/ingest.py` (`refresh(store, client=None)` — the ingestion orchestration coordinating client → mapping → storage, injectable client for tests); wired `cmd_refresh` to call it with graceful `FplApiError` handling. 1 new test (15 total). Verified live: `refresh` stored 564 players / 20 teams; `table` shows the refreshed data. US-006 **complete**.
+* **Issues / Blockers:** None.
+* **Next Steps:** US-007 (Points-per-£m value metric — the first analytics).
 
 ---
 

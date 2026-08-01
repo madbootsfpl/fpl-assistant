@@ -10,6 +10,8 @@ See ADR-003 for why this is argparse + subcommands.
 
 import argparse
 
+from src import config, ingest
+from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.table import render_player_table
 
@@ -26,7 +28,15 @@ def cmd_table(args) -> None:
 
 
 def cmd_refresh(args) -> None:
-    print("`refresh` is coming in US-006 (re-fetch and re-store FPL data).")
+    """Fetch the latest FPL data and store it locally."""
+    store = Storage()
+    try:
+        n_players, n_teams = ingest.refresh(store)
+        print(f"Refreshed {n_players} players and {n_teams} teams into {config.DB_PATH}.")
+    except FplApiError as exc:
+        print(f"Could not refresh FPL data: {exc}")
+    finally:
+        store.close()
 
 
 def cmd_search(args) -> None:
