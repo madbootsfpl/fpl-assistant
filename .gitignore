@@ -20,3 +20,6 @@ venv/
 
 # Local database (generated cache, not source)
 data/*.db
+
+# Claude Code local settings
+.claude/settings.local.json

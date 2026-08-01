@@ -41,7 +41,7 @@ start accounting for *who they play*, not just past points.
 
 #### Success Criteria
 - [x] **Carry-over tasks cleared first** (FK enforcement + Handbook bump) — see below
-- [ ] Fixtures model + FDR approach agreed (ADR-004) before feature code
+- [x] Fixtures model + FDR approach agreed (ADR-004) before feature code
 - [ ] `refresh` also fetches and stores fixtures
 - [x] Foreign-key enforcement enabled on the schema
 - [ ] `fdr` ranks teams by average upcoming fixture difficulty
@@ -73,14 +73,14 @@ begin until both are done.
 #### User Stories & Features
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-009 | Agree fixtures data model + FDR approach (ADR-004) | Critical | Planned | 0.5 session |
+| US-009 | Agree fixtures data model + FDR approach (ADR-004) | Critical | ✅ Complete | 0.5 session |
 | US-010 | Fixtures ingestion (endpoint, `Fixture` model, table, extend `refresh`) | High | Planned | 1 session |
 | US-011 | First FDR view — teams ranked by upcoming difficulty (`fdr` command) | High | Planned | 1 session |
 | US-012 | Fixtures listing (`fixtures --team ARS`) | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-004 (fixtures/FDR) recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc: fixtures entity + FK enforcement - _Planned_
+- [x] ADR-004 (fixtures/FDR) recorded + added to the ADR index - _Done (US-009)_
+- [x] Update Architecture doc: fixtures entity + FK enforcement - _Done (US-009)_
 - [ ] Update `README.md` with the new commands - _Planned_
 
 _(FK enforcement and the Handbook bump are tracked under Carry-over above, not here,
@@ -133,6 +133,11 @@ Recorded as **ADR-004** at sprint start.
 * **Completed:** Both long-carried tasks done FIRST, per plan: SQLite FK enforcement (`PRAGMA foreign_keys = ON` + test, `0795c15`); Handbook chapters 20 (CLIs) and 21 (Analytics) from real Sprint 002 code (`9e143eb`). 30 tests passing.
 * **Issues / Blockers:** None. The two tasks that slipped both prior sprints are now cleared before any feature work.
 * **Next Steps:** US-009 — record ADR-004 (fixtures model + FDR approach) and design the fixtures schema.
+
+#### Session 2 - 2026-08-01 (US-009: ADR-004 + fixtures schema)
+* **Completed:** Recorded ADR-004 (FPL difficulty; derive-upcoming, no events table; 8-field fixtures schema) + added to the ADR index. Documented the `fixtures` entity in Architecture §6 (two FKs to teams). US-009 **complete** — no feature code yet.
+* **Issues / Blockers:** None.
+* **Next Steps:** US-010 — fixtures ingestion (Fixture model, table, extend refresh).
 
 ---
 

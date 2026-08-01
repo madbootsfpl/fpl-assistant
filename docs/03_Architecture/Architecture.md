@@ -128,6 +128,24 @@ small explicit subset protects us from schema churn.
 | `price` | REAL | `elements[].now_cost` | Stored as £m (now_cost ÷ 10) |
 | `total_points` | INTEGER | `elements[].total_points` | |
 
+**`fixtures`** *(Sprint 003 — see [ADR-004](../06_Decisions/ADR-004-fixtures-and-fdr.md))*
+
+| Column | Type | Source (FPL field) | Notes |
+|---|---|---|---|
+| `id` | INTEGER PK | `fixtures[].id` | Fixture id |
+| `event` | INTEGER (nullable) | `fixtures[].event` | Gameweek; null = unscheduled |
+| `team_h` | INTEGER FK → teams.id | `fixtures[].team_h` | Home team |
+| `team_a` | INTEGER FK → teams.id | `fixtures[].team_a` | Away team |
+| `team_h_difficulty` | INTEGER | `fixtures[].team_h_difficulty` | FDR from the home team's view |
+| `team_a_difficulty` | INTEGER | `fixtures[].team_a_difficulty` | FDR from the away team's view |
+| `finished` | INTEGER (bool) | `fixtures[].finished` | "Upcoming" = not finished |
+| `kickoff_time` | TEXT (nullable) | `fixtures[].kickoff_time` | For listing a team's fixtures |
+
+A fixture references **two** teams, so it is stored after teams (and FK enforcement,
+now on, guarantees the references are valid). Difficulty is kept per side because FDR
+depends on perspective. "Upcoming" is derived from unfinished fixtures ordered by
+gameweek — no separate gameweek/events table yet.
+
 **Positions** are stored human-readable (GK/DEF/MID/FWD). The 1–4 → label mapping
 lives in config, mapped once at ingestion so the rest of the app never deals with
 magic numbers.
@@ -225,3 +243,5 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   ADR-001 and ADR-002.
 - **Sprint 002 (2026-08-01)** — §4 gains two layers: CLI (interaction) and
   Analytics, per ADR-003. One-way data flow unchanged.
+- **Sprint 003 (2026-08-01)** — §6 gains the `fixtures` entity (two FKs to teams;
+  FK enforcement enabled), per ADR-004. First fixture-based analytics (FDR).

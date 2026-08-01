@@ -8,3 +8,4 @@ new ADR as it is created.
 | [001](./ADR-001-single-user-vs-multi-user.md) | Single-user vs Multi-user architecture | Accepted |
 | [002](./ADR-002-ui-approach.md) | UI approach | Accepted |
 | [003](./ADR-003-cli-approach.md) | Command-line interface approach | Accepted |
+| [004](./ADR-004-fixtures-and-fdr.md) | Fixtures data model & FDR approach | Accepted |
