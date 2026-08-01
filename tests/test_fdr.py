@@ -1,10 +1,11 @@
 """Tests for the Fixture Difficulty (FDR) analytics."""
 
-from src.analytics.fdr import team_fdr
+from src.analytics.fdr import team_fdr, team_schedule
 
 
-def fixture(home, away, h_diff, a_diff):
+def fixture(home, away, h_diff, a_diff, event=1):
     return {
+        "event": event,
         "home": home,
         "away": away,
         "team_h_difficulty": h_diff,
@@ -54,3 +55,15 @@ def test_next_n_limits_the_window():
 def test_undefined_when_no_valid_difficulty():
     ars = next(r for r in team_fdr([fixture("ARS", "X", None, 2)]) if r["team"] == "ARS")
     assert ars["avg_difficulty"] is None
+
+
+def test_team_schedule_reads_each_fixture_from_the_team_view():
+    fixtures = [
+        fixture("ARS", "BUR", 2, 5, event=1),   # ARS at home
+        fixture("MCI", "ARS", 4, 3, event=2),   # ARS away
+    ]
+
+    sched = team_schedule(fixtures, "ARS")
+
+    assert sched[0] == {"event": 1, "opponent": "BUR", "venue": "H", "difficulty": 2}
+    assert sched[1] == {"event": 2, "opponent": "MCI", "venue": "A", "difficulty": 3}

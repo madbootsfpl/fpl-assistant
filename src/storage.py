@@ -172,25 +172,31 @@ class Storage:
         )
         return self.conn.execute(sql, params).fetchall()
 
-    def get_upcoming_fixtures(self) -> list[sqlite3.Row]:
+    def get_upcoming_fixtures(self, team: str | None = None) -> list[sqlite3.Row]:
         """Unfinished fixtures with both team short-names, ordered by gameweek.
 
-        This is the raw material for the FDR view. It answers "which fixtures are
-        upcoming?" (a stored-column filter) — the per-team aggregation and the
-        home/away perspective live in the analytics layer, not here.
+        Answers "which fixtures are upcoming?" (a stored-column filter). With a
+        `team` short-name, only that team's fixtures are returned; without one,
+        all upcoming fixtures. The per-team aggregation and the home/away
+        perspective live in the analytics layer, not here.
         """
-        return self.conn.execute(
-            """
+        clauses = ["f.finished = 0"]
+        params: list = []
+        if team:
+            clauses.append("(th.short_name = ? OR ta.short_name = ?)")
+            params.extend([team, team])
+
+        sql = f"""
             SELECT f.event, f.team_h, f.team_a,
                    f.team_h_difficulty, f.team_a_difficulty,
                    th.short_name AS home, ta.short_name AS away
             FROM fixtures f
             JOIN teams th ON f.team_h = th.id
             JOIN teams ta ON f.team_a = ta.id
-            WHERE f.finished = 0
+            WHERE {" AND ".join(clauses)}
             ORDER BY f.event, f.id
-            """
-        ).fetchall()
+        """
+        return self.conn.execute(sql, params).fetchall()
 
     def count_players(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]

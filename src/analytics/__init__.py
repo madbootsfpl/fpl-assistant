@@ -5,7 +5,7 @@ It reads player data (via the caller, from storage), computes, and hands results
 up to the display. It never touches the API or the screen.
 """
 
-from src.analytics.fdr import team_fdr
+from src.analytics.fdr import team_fdr, team_schedule
 from src.analytics.value import points_per_million, rank_players
 
-__all__ = ["points_per_million", "rank_players", "team_fdr"]
+__all__ = ["points_per_million", "rank_players", "team_fdr", "team_schedule"]

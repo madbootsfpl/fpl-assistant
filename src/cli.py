@@ -11,10 +11,11 @@ See ADR-003 for why this is argparse + subcommands.
 import argparse
 
 from src import config, ingest
-from src.analytics import rank_players, team_fdr
+from src.analytics import rank_players, team_fdr, team_schedule
 from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
+from src.ui.fixtures import render_team_fixtures
 from src.ui.table import render_player_table
 
 
@@ -68,6 +69,18 @@ def cmd_fdr(args) -> None:
     store.close()
 
 
+def cmd_fixtures(args) -> None:
+    """List a single team's upcoming fixtures."""
+    team = args.team.upper()
+    store = Storage()
+    upcoming = store.get_upcoming_fixtures(team=team)
+    schedule = team_schedule(upcoming, team)
+    if args.next is not None:
+        schedule = schedule[: args.next]
+    print(render_team_fixtures(schedule, team))
+    store.close()
+
+
 def cmd_filter(args) -> None:
     """Show players matching the given position / team / max price."""
     store = Storage()
@@ -115,6 +128,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="How many upcoming fixtures to average (default 5)",
     )
     p_fdr.set_defaults(handler=cmd_fdr)
+
+    p_fixtures = sub.add_parser("fixtures", help="List a team's upcoming fixtures")
+    p_fixtures.add_argument("--team", required=True, help="Team short name, e.g. ARS")
+    p_fixtures.add_argument(
+        "--next", type=int, default=None, help="Limit to the next N fixtures",
+    )
+    p_fixtures.set_defaults(handler=cmd_fixtures)
 
     p_filter = sub.add_parser(
         "filter", help="Filter players by position, team or max price"

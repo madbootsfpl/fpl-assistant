@@ -129,6 +129,24 @@ def test_get_upcoming_fixtures_excludes_finished_and_joins_team_names(tmp_path):
     store.close()
 
 
+def test_get_upcoming_fixtures_filtered_by_team(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([
+        Team(id=1, name="Arsenal", short_name="ARS"),
+        Team(id=2, name="Aston Villa", short_name="AVL"),
+        Team(id=3, name="Chelsea", short_name="CHE"),
+    ])
+    store.save_fixtures([
+        make_fixture(id=1, team_h=1, team_a=2),   # ARS vs AVL
+        make_fixture(id=2, team_h=2, team_a=3),   # AVL vs CHE (no ARS)
+    ])
+
+    ars = store.get_upcoming_fixtures(team="ARS")
+    assert len(ars) == 1
+    assert ars[0]["home"] == "ARS"
+    store.close()
+
+
 def test_get_players_filters_by_position(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     store.save_teams([make_team()])

@@ -39,10 +39,12 @@ pytest
 The app is driven by subcommands (see ADR-003):
 
 ```bash
-python app.py refresh                       # re-fetch FPL data and store it locally
-python app.py table --limit 20              # show stored players as a table
-python app.py search haaland                # (coming in US-008)
-python app.py filter --pos MID --max-price 8  # (coming in US-008)
+python app.py refresh                          # fetch FPL data (players, teams, fixtures)
+python app.py table --sort value --limit 20    # players, ranked by points or value (£m)
+python app.py search haaland                   # find players by name
+python app.py filter --pos DEF --max-price 6   # filter players (position / team / max price)
+python app.py fdr --next 5                      # teams ranked by upcoming fixture difficulty
+python app.py fixtures --team ARS              # a team's upcoming fixtures
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

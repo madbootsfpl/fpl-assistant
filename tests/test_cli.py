@@ -4,7 +4,16 @@ These check that commands and options are parsed into the right shape and routed
 to the right handler — no database or network involved.
 """
 
-from src.cli import build_parser, cmd_fdr, cmd_filter, cmd_search, cmd_table
+import pytest
+
+from src.cli import (
+    build_parser,
+    cmd_fdr,
+    cmd_filter,
+    cmd_fixtures,
+    cmd_search,
+    cmd_table,
+)
 
 
 def test_table_command_defaults_to_limit_20():
@@ -53,6 +62,19 @@ def test_fdr_defaults_to_next_5():
 def test_fdr_next_option_is_parsed():
     args = build_parser().parse_args(["fdr", "--next", "3"])
     assert args.next == 3
+
+
+def test_fixtures_requires_a_team():
+    # --team is required, so parsing without it exits (argparse error).
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["fixtures"])
+
+
+def test_fixtures_team_is_parsed():
+    args = build_parser().parse_args(["fixtures", "--team", "ARS"])
+    assert args.command == "fixtures"
+    assert args.team == "ARS"
+    assert args.handler is cmd_fixtures
 
 
 def test_no_command_leaves_no_handler():
