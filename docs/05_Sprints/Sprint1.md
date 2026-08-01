@@ -1,7 +1,7 @@
 # Sprint 001: Foundations & First Data Slice
 
-**Dates:** Started 2026-08-01 (proposed 1–2 week / 3–4 session sprint)
-**Status:** Active
+**Dates:** 2026-08-01 (single-day sprint across sessions 2–5)
+**Status:** ✅ Complete
 **Capacity:** ~3–4 working sessions
 **Carried Over:** None (first sprint)
 
@@ -17,7 +17,7 @@
 - [x] Player data is stored locally (SQLite) rather than re-fetched every run
 - [x] A basic player table can be displayed to the user
 - [x] Repo hygiene in place (clean git tree, tests run, README updated)
-- [ ] Developer can explain how the data flows end-to-end _(self-assessed by Tony)_
+- [x] Developer can explain how the data flows end-to-end _(self-assessed by Tony, 2026-08-01)_
 
 ---
 
@@ -97,19 +97,35 @@ _(Session 1 was environment setup, logged in the [Dev Journal](../01_Journal/FPL
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All four stories — US-001 (architecture v0.1 agreed), US-002 (FPL API client), US-003 (SQLite persistence), US-004 (player table). The complete fetch → store → display vertical slice runs live (`python app.py`: 564 players / 20 teams, top-20 table). 9 tests passing, all offline.
+* **Carried Forward:** None. Full scope delivered.
+* **Key Artifacts / Decisions:** Architecture v0.1; ADR-001 (single-user) & ADR-002 (console-first UI); Developer Handbook; code in `src/{api,models,ui}` + `src/storage.py`; commits `5b53cef`→`12e0860`.
 
 #### Retrospective
 * **What Went Well?**
+  - Design-first paid off: agreeing the architecture and scope before coding kept the sprint to 4 tight stories with zero roll-over.
+  - The layered design held up end-to-end — client/storage/display each stayed ignorant of the others, exactly as drawn in Architecture §3.
+  - Tests are fast and offline (mocked HTTP + temp DBs), so no live API calls or rate-limit risk in CI.
+  - Small, well-messaged commits — one story per commit — kept history readable.
+  - Confirm-first (what/why/risks) before each story surfaced real decisions (mapping location, storage shape, row limit) instead of guessing.
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - The sprint doc drifted from reality mid-way and needed a "sync with reality" pass — better to update status/checkboxes as work lands.
+  - A stray `src/api` placeholder file (not a directory) briefly blocked the package layout — worth a quick scaffold sanity-check next time.
+  - Dates started as "TBC"; setting them up front would have been cleaner.
+* **Lessons Learned?**
+  - Writing decisions down (ADRs) *before* coding made scope obvious and stopped the sprint ballooning.
+  - Upsert-on-id gives idempotent refreshes — proven by running the app twice with unchanged counts.
+  - Keeping the presentation layer pure (returns a string, no I/O) made it trivially testable and swap-able.
+  - "Fetch once, read locally" is the reason the app works offline — the core value of separating fetch/store/display.
+* **Action Items for Next Sprint (002):**
+  - [ ] Build search, filter, Points-per-£m, and manual refresh (the deferred Session 1 journal items).
+  - [ ] Bump Developer Handbook badges to 💻 for topics now genuinely used (APIs, JSON, SQLite, Testing).
+  - [ ] Consider enabling SQLite foreign-key enforcement (currently team_id is unenforced).
+  - [ ] Keep the sprint board in step with the work as it lands, not after.
 
 ---
 
 **Proposed follow-on (Sprint 002):** search, filter, Points-per-£m calculation, and manual data refresh — the remaining items from the Session 1 journal's draft list.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-01
+**Final Notes:** First working slice of the project. Foundation (architecture, decisions, layered code, tests, handbook) is in place for analytics work to build on. Sprint outcome: **Successful** — 4/4 stories delivered, no roll-over.
