@@ -12,6 +12,7 @@ _TEAM_W = 5
 _POS_W = 4
 _PRICE_W = 6
 _PTS_W = 5
+_VAL_W = 7
 
 
 def _truncate(text: str, width: int) -> str:
@@ -33,11 +34,11 @@ def render_player_table(rows, limit: int = 20) -> str:
 
     header = (
         f"{'#':<{_RANK_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
-        f"{'Pos':<{_POS_W}} {'Price':>{_PRICE_W}} {'Pts':>{_PTS_W}}"
+        f"{'Pos':<{_POS_W}} {'Price':>{_PRICE_W}} {'Pts':>{_PTS_W}} {'Val/£m':>{_VAL_W}}"
     )
     divider = (
         f"{'-' * _RANK_W} {'-' * _NAME_W} {'-' * _TEAM_W} "
-        f"{'-' * _POS_W} {'-' * _PRICE_W} {'-' * _PTS_W}"
+        f"{'-' * _POS_W} {'-' * _PRICE_W} {'-' * _PTS_W} {'-' * _VAL_W}"
     )
 
     lines = [header, divider]
@@ -47,9 +48,12 @@ def render_player_table(rows, limit: int = 20) -> str:
         pos = str(row["position"] or "")
         price = f"£{row['price']:.1f}m"
         pts = row["total_points"]
+        # Value is undefined (None) when price is 0/missing — show a dash.
+        value = row.get("value")
+        value_str = f"{value:.1f}" if value is not None else "—"
         lines.append(
             f"{rank:<{_RANK_W}} {name:<{_NAME_W}} {team:<{_TEAM_W}} "
-            f"{pos:<{_POS_W}} {price:>{_PRICE_W}} {pts:>{_PTS_W}}"
+            f"{pos:<{_POS_W}} {price:>{_PRICE_W}} {pts:>{_PTS_W}} {value_str:>{_VAL_W}}"
         )
 
     lines.append("")

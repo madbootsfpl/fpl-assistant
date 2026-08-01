@@ -14,6 +14,16 @@ def test_table_command_defaults_to_limit_20():
     assert args.handler is cmd_table
 
 
+def test_table_defaults_to_sort_by_points():
+    args = build_parser().parse_args(["table"])
+    assert args.sort == "points"
+
+
+def test_table_sort_value_is_parsed():
+    args = build_parser().parse_args(["table", "--sort", "value"])
+    assert args.sort == "value"
+
+
 def test_table_limit_option_is_parsed():
     args = build_parser().parse_args(["table", "--limit", "5"])
     assert args.limit == 5

@@ -11,6 +11,7 @@ See ADR-003 for why this is argparse + subcommands.
 import argparse
 
 from src import config, ingest
+from src.analytics import rank_players
 from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.table import render_player_table
@@ -23,7 +24,8 @@ def cmd_table(args) -> None:
     if not rows:
         print("No data yet — run `refresh` first.")
     else:
-        print(render_player_table(rows, limit=args.limit))
+        ranked = rank_players(rows, sort_by=args.sort)
+        print(render_player_table(ranked, limit=args.limit))
     store.close()
 
 
@@ -60,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_table = sub.add_parser("table", help="Show stored players as a table")
     p_table.add_argument(
         "--limit", type=int, default=20, help="How many players to show (default 20)"
+    )
+    p_table.add_argument(
+        "--sort",
+        choices=["points", "value"],
+        default="points",
+        help="Sort by total points (default) or value (points per £m)",
     )
     p_table.set_defaults(handler=cmd_table)
 
