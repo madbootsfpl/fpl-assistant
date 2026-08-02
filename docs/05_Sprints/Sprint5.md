@@ -1,7 +1,7 @@
 # Sprint 005: Expected Points (xP v0)
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~3–4 working sessions
 **Carried Over:** None (Sprint 004 closed clean)
 
@@ -166,20 +166,34 @@ Settle before building:
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All four stories — US-017 (ADR-006), US-018 (store xP inputs + generalise the migration), US-019 (xP analytics — the cross-domain join), US-020 (the `xp` command). The **xP engine (v0)** is live: it ranks players by expected points (ppg × fixture difficulty), comparable to FPL's own `ep_next`. Tests grew 57 → 73.
+* **Carried Forward:** None. Richer xP (form + expected minutes) and the Attack/Defence FDR split remain deferred — data-dependent, not slipped.
+* **Key Artifacts / Decisions:** ADR-006 (xP v0); `src/analytics/xp.py` (first cross-domain metric); a generalised `_migrate()`; commits `38654c1`→`60ffe84`.
 
 #### Retrospective
 * **What Went Well?**
+  - **The whole sprint was reuse.** xP *composed* five sprints of foundation — `get_players`, `get_upcoming_fixtures`, the FDR `_view` seam, the `--type` source, the migration pattern, the CLI shape. Almost no new domain logic.
+  - Data was verified **at planning** (per the Sprint 004 lesson), so the premise held from the start.
+  - The DoD (tests → smoke → docs) held for every story again.
+  - Generalising the migration (US-018) turned a one-off into a reusable mechanism, safely (teams-migration test stayed green).
+  - Showing FPL's `ep_next` beside our xP made the v0's optimism visible and honest.
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - Our v0 xP runs high vs FPL's `ep_next` (full last-season ppg, no minutes/form dampening) — accurate as a v0, but the gap is a clear signal of what to refine next.
+  - The single-GW horizon + "next fixture only" is a simplification worth revisiting (double/blank gameweeks).
+* **Lessons Learned?**
+  - A well-layered project compounds: by sprint 5, a big feature is mostly *composition* of existing seams.
+  - Verifying data at plan time (not execution) prevents mid-sprint pivots.
+  - Comparing a home-grown metric against a reference (FPL's `ep_next`) keeps you honest about where it stands.
+* **Action Items for Next Sprint (006):**
+  - [ ] Refine xP with `form` + expected minutes once the season populates them.
+  - [ ] Consider double/blank gameweeks for the xP horizon.
+  - [ ] Revisit the deferred Attack/Defence FDR split (data-dependent).
+  - [ ] Keep verifying data at plan time + the 3-part DoD.
 
 ---
 
 **Proposed follow-on (Sprint 006):** richer xP (recent `form` + expected minutes, once
 populated), and/or the deferred Attack/Defence FDR split.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** The app crossed from *describing* players to *predicting* them — its first expected-points estimate, built almost entirely by composing earlier sprints. Sprint outcome: **Successful** — 4/4 stories, zero roll-over, DoD held.

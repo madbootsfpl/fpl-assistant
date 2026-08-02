@@ -1,7 +1,7 @@
-Current Phase: Sprint 005 feature stories COMPLETE — review/retro pending
-Current Sprint: Sprint 005 - Expected Points (xP v0) (all 4 stories done)
-Current Story: US-020 complete — xp command (rank by expected points, vs FPL ep_next)
-Next Milestone: Sprint 005 review & retrospective, then Sprint 006 (form/expected-minutes xP, or Attack/Defence FDR)
+Current Phase: Sprint 005 COMPLETE — between sprints
+Current Sprint: Sprint 005 - Expected Points (xP v0) (✅ Complete, 4/4 stories, retro done)
+Current Story: None active — ready to plan Sprint 006
+Next Milestone: Sprint 006 - richer xP (form + expected minutes) or Attack/Defence FDR (both data-dependent)
 Current Version: 0.0.1
 Last Updated: 2026-08-02
 Commands: refresh · table · search · filter · fdr (--type) · fixtures (--type) · xp (--type)
