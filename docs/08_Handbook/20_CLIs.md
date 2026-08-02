@@ -75,7 +75,7 @@ python app.py search haaland                     # find players by name
 python app.py filter --pos DEF --max-price 6     # narrow the player list
 python app.py fdr --type custom --next 5         # teams by fixture difficulty (fpl or custom)
 python app.py fixtures --team ARS --type custom  # a team's fixtures + difficulty
-python app.py xp --type custom --pos MID         # players by expected points (vs FPL's ep_next)
+python app.py xp --type custom --next 5          # players by expected points over the next N gameweeks
 ```
 
 ---

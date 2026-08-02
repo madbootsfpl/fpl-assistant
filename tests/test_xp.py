@@ -94,28 +94,36 @@ def test_xp_custom_source_uses_strength():
     assert result[0]["xp"] == 5.5
 
 
+def _row(web_name="B.Fernandes", team="MUN", position="MID", xp=7.4, games=1,
+         ep_next=4.0, difficulty=2):
+    return {
+        "web_name": web_name, "team": team, "position": position,
+        "xp": xp, "games": games, "ep_next": ep_next, "difficulty": difficulty,
+    }
+
+
 def test_render_xp_table_empty():
     assert "run `refresh`" in render_xp_table([])
 
 
-def test_render_xp_table_shows_xp_and_fpl_ep():
-    rows = [{
-        "web_name": "B.Fernandes", "team": "MUN", "position": "MID",
-        "xp": 7.4, "ep_next": 4.0, "difficulty": 2,
-    }]
-
-    out = render_xp_table(rows, source="custom")
+def test_render_xp_table_shows_xp_and_fpl_ep_at_horizon_1():
+    out = render_xp_table([_row()], source="custom", horizon=1)
 
     assert "B.Fernandes" in out
     assert "7.4" in out          # our xP
-    assert "4.0" in out          # FPL's ep_next
+    assert "4.0" in out          # FPL's ep_next (shown at horizon 1)
     assert "custom" in out       # source noted in the footer
 
 
 def test_render_xp_table_handles_missing_ep():
-    rows = [{
-        "web_name": "X", "team": "ARS", "position": "MID",
-        "xp": 3.0, "ep_next": None, "difficulty": None,
-    }]
-    out = render_xp_table(rows)
-    assert "—" in out            # None ep_next / difficulty render as a dash
+    out = render_xp_table([_row(ep_next=None)], horizon=1)
+    assert "—" in out            # None ep_next renders as a dash
+
+
+def test_render_xp_table_hides_fpl_over_a_multi_gw_horizon():
+    # ep_next is present, but at horizon > 1 it must be hidden (not comparable).
+    out = render_xp_table([_row(games=5, ep_next=4.0)], horizon=5)
+
+    assert "4.0" not in out            # FPL's next-GW number is not shown
+    assert "not comparable" in out     # footer explains why
+    assert "next 5 gameweeks" in out

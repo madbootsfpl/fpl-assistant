@@ -44,10 +44,10 @@ the next one — so decisions can weigh a *run* of games (and double gameweeks).
 #### Success Criteria
 - [x] Multi-week xP approach agreed (ADR-007) before feature code
 - [x] xP summed correctly over a team's fixtures in the next N gameweeks (DGW-aware)
-- [ ] `xp --next N` works; `--next 1` reproduces today's single-GW behaviour
-- [ ] Output is clearly labelled as a total over N fixtures; `ep_next` handled honestly at N>1
-- [ ] Tests cover the multi-week sum (incl. a team with fewer than N fixtures)
-- [ ] **Manual smoke test** run before the sprint is closed (Definition of Done)
+- [x] `xp --next N` works; `--next 1` reproduces today's single-GW behaviour
+- [x] Output is clearly labelled as a total over N gameweeks; `ep_next` hidden at N>1
+- [x] Tests cover the multi-week sum (incl. a double gameweek and a blank)
+- [x] **Manual smoke test** run before the sprint is closed (Definition of Done)
 
 ---
 
@@ -57,12 +57,12 @@ the next one — so decisions can weigh a *run* of games (and double gameweeks).
 |---|---|---|---|---|
 | US-021 | Agree multi-week xP (ADR-007): sum over next N fixtures; horizon = next N *fixtures* (DGW/BGW alignment deferred); `ep_next` comparable only at N=1; default N | Critical | ✅ Complete | 0.5 session |
 | US-022 | Multi-week xP analytics — next-N difficulties per team, sum per-fixture xP | High | ✅ Complete | 1 session |
-| US-023 | `xp --next N` command + label the horizon + Handbook/README | High | Planned | 1 session |
+| US-023 | `xp --next N` command + label the horizon + Handbook/README | High | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-007 recorded + added to the ADR index - _Done (US-021)_
 - [x] Update Architecture doc (if the xP note needs the horizon) - _Done (US-021)_
-- [ ] Update `README.md` with `xp --next` - _Planned_
+- [x] Update `README.md` with `xp --next` - _Done (US-023)_
 
 ---
 
@@ -129,6 +129,13 @@ Settle before building:
 * **Docs touched:** ADR-007 (corrected), Architecture note/changelog, Sprint6 goal/criteria, PROJECT_STATUS.
 * **Issues / Blockers:** The ADR-007 mislabel — caught before building (per the "check assumptions" lesson), corrected in place.
 * **Next Steps:** US-023 — the `xp --next N` command + label the horizon.
+
+#### Session 3 - 2026-08-02 (US-023: the xp --next command)
+* **Completed:** Added `xp --next N` (default 1); threaded `horizon` to `player_xp` + the renderer. `render_xp_table` gained a **Games** column and shows FPL's `ep_next` only at N=1 (hidden with an explaining note at N>1, per ADR-007). Updated the `--help` example, Ch20 command list, README. 4 tests updated/added (76 total). US-023 **complete** — all Sprint 006 stories done.
+* **Manual smoke test:** ✅ `xp --next 1` (FPL shown, Games 1) vs `xp --next 5` (Games 5, xP ~34, FPL hidden). Rankings reorder by the run of fixtures.
+* **Docs touched:** Handbook Ch20, README, cli `--help`, Sprint6 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 006 review & retrospective.
 
 ---
 

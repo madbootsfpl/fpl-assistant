@@ -103,14 +103,18 @@ def test_xp_defaults():
     assert args.command == "xp"
     assert args.type == "fpl"
     assert args.limit == 20
+    assert args.next == 1          # single-gameweek by default
     assert args.handler is cmd_xp
 
 
 def test_xp_options_are_parsed():
-    args = build_parser().parse_args(["xp", "--type", "custom", "--pos", "MID", "--limit", "5"])
+    args = build_parser().parse_args(
+        ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]
+    )
     assert args.type == "custom"
     assert args.pos == "MID"
     assert args.limit == 5
+    assert args.next == 6
 
 
 def test_no_command_leaves_no_handler():

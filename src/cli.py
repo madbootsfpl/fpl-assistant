@@ -66,8 +66,8 @@ def cmd_xp(args) -> None:
     if not players:
         print("No players to rank — run `refresh` first.")
     else:
-        ranked = player_xp(players, upcoming, source=args.type)
-        print(render_xp_table(ranked, limit=args.limit, source=args.type))
+        ranked = player_xp(players, upcoming, source=args.type, horizon=args.next)
+        print(render_xp_table(ranked, limit=args.limit, source=args.type, horizon=args.next))
     store.close()
 
 
@@ -122,7 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py filter --pos DEF --max-price 6\n"
             "  python app.py fdr --next 5                teams with the easiest upcoming fixtures\n"
             "  python app.py fixtures --team ARS\n"
-            "  python app.py xp --type custom            players by expected points (vs FPL's ep_next)\n"
+            "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
             "\n"
             "Run 'python app.py <command> --help' for a command's options."
         ),
@@ -160,6 +160,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Difficulty source used in the xP calc (default fpl)",
     )
     p_xp.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")
+    p_xp.add_argument(
+        "--next", type=int, default=1,
+        help="Horizon: sum xP over the next N gameweeks (default 1)",
+    )
     p_xp.add_argument(
         "--limit", type=int, default=20, help="How many players to show (default 20)",
     )
