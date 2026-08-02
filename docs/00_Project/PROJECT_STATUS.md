@@ -1,9 +1,9 @@
-Current Phase: Sprint 009 COMPLETE — between sprints
-Current Sprint: Sprint 009 - External Data: ClubElo (✅ Complete, 4/4 stories, retro done)
-Current Story: None active — ready to plan Sprint 010
-Next Milestone: Sprint 010 - FBref xG/xA (player-level) / extend --type elo / data-dependent work once season starts
+Current Phase: Sprint 010 planned — ready to start
+Current Sprint: Sprint 010 - Squad Objective Toggle (Planned)
+Current Story: US-034 - Agree objective-toggle approach (ADR-011) — gating story, not yet started
+Next Milestone: squad --objective points|value|xp — optimise the XI on any metric we built
 Current Version: 0.0.1
 Last Updated: 2026-08-02
-Commands: refresh · table · search · filter · fdr (--type fpl|custom|elo) · fixtures · xp · squad
-Sources: FPL (required) + ClubElo (best-effort, graceful)
-Deferred: FBref xG/xA (player-level); form/attack-defence FPL data (preseason)
+Origin: Tony's Sprint 009 backlog review
+New this sprint: pluggable optimiser objective (connects value/xP to the decision engine)
+Deferred: elo objective (team-level); FBref xG/xA; form/attack-defence FPL data (preseason)

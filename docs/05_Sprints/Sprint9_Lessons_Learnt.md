@@ -106,7 +106,7 @@ data source, and use it to power an Elo-based FDR that works even in preseason.
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- differences between elo and fdr and even custom
 
 ---
 
@@ -185,6 +185,7 @@ python app.py fdr --type elo --next 5 # fixture difficulty from real team Elo
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+reviewing whats next on th ebacklog
 
 ---
 
