@@ -45,7 +45,7 @@ season's `total_points` within a budget, a fixed formation, and the max-3-per-cl
 rule — and display it. (The 4 bench players stay a manual pick with a £20M budget.)
 
 #### Success Criteria
-- [ ] Squad-selector approach agreed (ADR-008) before feature code
+- [x] Squad-selector approach agreed (ADR-008) before feature code
 - [ ] An integer program (PuLP) selects the XI: budget, formation, ≤3-per-club
 - [ ] `squad --budget 80` outputs the XI (players, cost, total points)
 - [ ] Infeasible cases (e.g. budget too low) are reported clearly, not crashed
@@ -58,14 +58,14 @@ rule — and display it. (The 4 bench players stay a manual pick with a £20M bu
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-024 | Agree squad-selector approach (ADR-008): ILP formulation, constraints (budget, 1-4-4-2, ≤3/club), objective (`total_points`), PuLP dependency, output, infeasibility | Critical | Planned | 0.5 session |
+| US-024 | Agree squad-selector approach (ADR-008): ILP formulation, constraints (budget, 1-4-4-2, ≤3/club), objective (`total_points`), PuLP dependency, output, infeasibility | Critical | ✅ Complete | 0.5 session |
 | US-025 | Optimiser — `src/analytics/optimizer.py` builds + solves the ILP (add PuLP to requirements) | High | Planned | 1.5 session |
 | US-026 | `squad` command + display + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-008 recorded + added to the ADR index - _Planned_
+- [x] ADR-008 recorded + added to the ADR index - _Done (US-024)_
 - [ ] Add `pulp` to `requirements.txt` (first dependency beyond `requests`) - _Planned_
-- [ ] Update Architecture doc: optimisation component + the new dependency - _Planned_
+- [x] Update Architecture doc: optimisation component + the new dependency - _Done (US-024)_
 - [ ] Update `README.md` with the `squad` command - _Planned_
 - [ ] New Handbook chapter for optimisation / linear programming - _Planned_
 
@@ -124,12 +124,12 @@ Settle before building:
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-024: ADR-008 — squad selector design)
+* **Completed:** Recorded ADR-008: ILP via PuLP; objective = last-season `total_points`; constraints budget £80M default / 1-4-4-2 / ≤3-per-club; price = current; v0 selects from all players (availability deferred). **Pressure-tested the formulation with a worked example** (2 FWD / £15M where greedy stalls at 10 pts but ILP finds B+C = 17) — per the Sprint 006 lesson. Added to ADR index; Architecture §4 gains an optimisation-component note + changelog. US-024 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-008 (new) + index, Architecture §4/changelog, Sprint7 board, PROJECT_STATUS.
+* **Issues / Blockers:** None. (Data verified at planning; formulation verified with a worked example.)
+* **Next Steps:** US-025 — the optimiser (`src/analytics/optimizer.py`, add PuLP).
 
 ---
 

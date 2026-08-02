@@ -84,6 +84,13 @@ beside presentation: it reads from storage and computes derived numbers (the fir
 being Points-per-£m), never touching the API or the screen. The golden rule still
 holds — only the `refresh` path reaches the network.
 
+**Sprint 007 addition — optimisation.** The squad **optimiser**
+(`src/analytics/optimizer.py`, [ADR-008](../06_Decisions/ADR-008-squad-selector.md))
+is analytics that *chooses a set* under constraints rather than ranking — the first
+feature that makes a decision. It's also the first component with an external
+dependency beyond `requests` (**PuLP**, an integer-programming solver), kept sealed
+inside that one module so the rest of the code is unaffected.
+
 ---
 
 ## 5. Data flow — the Sprint 001 slice
@@ -272,3 +279,6 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **Sprint 006 (2026-08-02)** — xP extended to a gameweek horizon (sum over the next N
   gameweeks), per ADR-007. No schema change; captures DGW (two fixtures in a gameweek
   both count).
+- **Sprint 007 (2026-08-02)** — first optimisation: a squad selector picks the optimal
+  XI via integer programming (PuLP), per ADR-008. First dependency beyond `requests`;
+  no schema change.
