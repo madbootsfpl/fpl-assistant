@@ -1,5 +1,6 @@
 # Runtime dependencies
 requests
+pulp          # integer-programming solver for the squad optimiser (ADR-008)
 
 # Development / testing
 pytest

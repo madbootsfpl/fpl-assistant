@@ -46,7 +46,7 @@ rule — and display it. (The 4 bench players stay a manual pick with a £20M bu
 
 #### Success Criteria
 - [x] Squad-selector approach agreed (ADR-008) before feature code
-- [ ] An integer program (PuLP) selects the XI: budget, formation, ≤3-per-club
+- [x] An integer program (PuLP) selects the XI: budget, formation, ≤3-per-club
 - [ ] `squad --budget 80` outputs the XI (players, cost, total points)
 - [ ] Infeasible cases (e.g. budget too low) are reported clearly, not crashed
 - [ ] Tests cover the optimiser on a small known dataset (optimum + each constraint)
@@ -59,15 +59,15 @@ rule — and display it. (The 4 bench players stay a manual pick with a £20M bu
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-024 | Agree squad-selector approach (ADR-008): ILP formulation, constraints (budget, 1-4-4-2, ≤3/club), objective (`total_points`), PuLP dependency, output, infeasibility | Critical | ✅ Complete | 0.5 session |
-| US-025 | Optimiser — `src/analytics/optimizer.py` builds + solves the ILP (add PuLP to requirements) | High | Planned | 1.5 session |
+| US-025 | Optimiser — `src/analytics/optimizer.py` builds + solves the ILP (add PuLP to requirements) | High | ✅ Complete | 1.5 session |
 | US-026 | `squad` command + display + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-008 recorded + added to the ADR index - _Done (US-024)_
-- [ ] Add `pulp` to `requirements.txt` (first dependency beyond `requests`) - _Planned_
+- [x] Add `pulp` to `requirements.txt` (first dependency beyond `requests`) - _Done (US-025)_
 - [x] Update Architecture doc: optimisation component + the new dependency - _Done (US-024)_
 - [ ] Update `README.md` with the `squad` command - _Planned_
-- [ ] New Handbook chapter for optimisation / linear programming - _Planned_
+- [x] New Handbook chapter for optimisation / linear programming - _Done (US-025, Ch 22)_
 
 ---
 
@@ -130,6 +130,13 @@ Settle before building:
 * **Docs touched:** ADR-008 (new) + index, Architecture §4/changelog, Sprint7 board, PROJECT_STATUS.
 * **Issues / Blockers:** None. (Data verified at planning; formulation verified with a worked example.)
 * **Next Steps:** US-025 — the optimiser (`src/analytics/optimizer.py`, add PuLP).
+
+#### Session 2 - 2026-08-02 (US-025: the optimiser)
+* **Completed:** Added `src/analytics/optimizer.py` `select_squad()` — builds ADR-008's ILP in PuLP and returns the optimal XI (status, selected, totals). Added `pulp` to requirements (first dependency beyond `requests`; installed 3.3.2). Scope-suppressed PuLP-4.0 deprecation notices (logged a migration backlog item). New Handbook Ch 22 (Optimisation / LP). 5 optimiser tests incl. the knapsack + infeasible cases (81 total). US-025 **complete**.
+* **Manual smoke test:** ✅ `select_squad(get_players(), budget=80)` → optimal XI, exactly £80.0m, 2024 pts, valid 1-4-4-2, MCI at the 3-per-club cap.
+* **Docs touched:** Handbook Ch 22 + front-page table, Backlog (PuLP 4.0 tech debt), Sprint7 board, PROJECT_STATUS. (Architecture covered in US-024.)
+* **Issues / Blockers:** PuLP emitted 4.0-deprecation warnings — scope-suppressed with a backlog item to migrate; not a blocker.
+* **Next Steps:** US-026 — the `squad` command + display.
 
 ---
 

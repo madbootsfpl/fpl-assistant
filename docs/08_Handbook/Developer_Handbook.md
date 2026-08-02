@@ -111,6 +111,7 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 |19 | [Glossary Index](./19_Glossary_Index.md) | 💻 | In progress |
 |20 | [CLIs](./20_CLIs.md) | 📖 🧪 💻 | In progress |
 |21 | [Analytics](./21_Analytics.md) | 📖 🧪 💻 | In progress |
+|22 | [Optimisation (Linear Programming)](./22_Optimisation.md) | 📖 🧪 💻 | In progress |
 
 Update the badges and status as each chapter grows.
 

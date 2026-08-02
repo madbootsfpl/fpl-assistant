@@ -14,6 +14,12 @@ Captured ideas not yet scheduled into a sprint.
 - **Full 15-man squad** optimisation (2 GK, 5 DEF, 5 MID, 3 FWD, £100M) once the XI
   selector is proven.
 
+## Tech debt
+
+- **Migrate to the PuLP 4.0 API** — use `prob.add_variable(...)` / `COIN_CMD` instead of
+  `LpVariable(...)` / `PULP_CBC_CMD` (currently the 4.0 deprecation notices are
+  scope-suppressed in `src/analytics/optimizer.py`).
+
 ## Deferred (data-dependent — need season-start data)
 
 - Richer xP: recent `form` + expected minutes.
