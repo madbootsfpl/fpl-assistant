@@ -46,7 +46,7 @@ stores the strengths, analytics computes the rating.
 can explain the rating, and have the foundation to extend to Attack/Defence later.
 
 #### Success Criteria
-- [ ] Custom FDR approach agreed (ADR-005) before feature code
+- [x] Custom FDR approach agreed (ADR-005) before feature code
 - [ ] `strength_overall_home/away` stored (schema evolution handled cleanly)
 - [ ] Custom difficulty computed correctly, home/away aware
 - [ ] `fdr --type custom|fpl` works; FPL's FDR remains the default
@@ -61,14 +61,14 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 #### User Stories & Features
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-013 | Agree custom (overall) FDR approach (ADR-005): formula, home/away, coexistence with FPL FDR, presentation, schema evolution, attack/defence deferral | Critical | Planned | 0.5 session |
+| US-013 | Agree custom (overall) FDR approach (ADR-005): formula, home/away, coexistence with FPL FDR, presentation, schema evolution, attack/defence deferral | Critical | ✅ Complete | 0.5 session |
 | US-014 | Store `strength_overall_home/away` (extend `Team` + teams table + `from_api`) | High | Planned | 1 session |
 | US-015 | Custom FDR analytics + `fdr --type custom\|fpl` | High | Planned | 1 session |
 | US-016 | Show custom difficulty per match in `fixtures --team` + Handbook update | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-005 recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc: team strength fields + custom FDR - _Planned_
+- [x] ADR-005 recorded + added to the ADR index - _Done (US-013)_
+- [x] Update Architecture doc: team strength fields + custom FDR - _Done (US-013)_
 - [ ] Update `README.md` with the new `fdr --type` usage - _Planned_
 
 ---
@@ -137,12 +137,12 @@ Settle before building:
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-013: ADR-005 + preseason data finding)
+* **Completed:** Grounding check found attack/defence strengths all zero in preseason → **descoped** the sprint to a custom *overall* FDR (attack/defence split deferred). Recorded ADR-005 (opponent-strength-only formula, home/away aware; `fdr --type custom|fpl`; 1–5 scale; **light `ALTER TABLE` migration** for the new columns). Added to ADR index; updated Architecture §6 + changelog; saved a memory note on the data constraint. US-013 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-005 (new) + index, Architecture §6/changelog, Sprint4 board, PROJECT_STATUS, memory note.
+* **Issues / Blockers:** None — the descope was the finding, handled at planning time.
+* **Next Steps:** US-014 — store `strength_overall_home/away` (with the light migration).
 
 ---
 

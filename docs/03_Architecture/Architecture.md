@@ -114,6 +114,13 @@ small explicit subset protects us from schema churn.
 | `id` | INTEGER PK | `teams[].id` | FPL team id |
 | `name` | TEXT | `teams[].name` | e.g. "Arsenal" |
 | `short_name` | TEXT | `teams[].short_name` | e.g. "ARS" |
+| `strength_overall_home` | INTEGER | `teams[].strength_overall_home` | 1–5 (Sprint 004, [ADR-005](../06_Decisions/ADR-005-custom-fdr.md)) |
+| `strength_overall_away` | INTEGER | `teams[].strength_overall_away` | 1–5 (Sprint 004, ADR-005) |
+
+The strength columns are added to an existing `teams` table via a light migration
+(`PRAGMA table_info` + `ALTER TABLE ADD COLUMN`), since `CREATE TABLE IF NOT EXISTS`
+won't alter a table that already exists. The granular attack/defence strengths are 0
+in preseason, so the custom FDR uses overall strength for now (ADR-005).
 
 **`players`**
 
@@ -245,3 +252,6 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   Analytics, per ADR-003. One-way data flow unchanged.
 - **Sprint 003 (2026-08-01)** — §6 gains the `fixtures` entity (two FKs to teams;
   FK enforcement enabled), per ADR-004. First fixture-based analytics (FDR).
+- **Sprint 004 (2026-08-02)** — `teams` gains `strength_overall_home/away` (added by a
+  light migration), per ADR-005. Custom overall FDR; Attack/Defence split deferred
+  (preseason strengths are zero).
