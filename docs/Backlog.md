@@ -4,6 +4,12 @@ Captured ideas not yet scheduled into a sprint.
 
 ## Enhancements
 
+- **Squad selector: include / exclude players** — let the user force up to ~4 players
+  IN (favourites) or OUT (dislikes), and have the optimiser build the best legal XI
+  around them. From Tony's Sprint 007 reflection. Clean in ILP: fix `pick[p] = 1` for
+  included players and `pick[p] = 0` for excluded ones, then solve as normal. Data-
+  supported now (no new data). Strong Sprint 008 candidate.
+
 - **`xp` per-gameweek breakdown** — show xP for each gameweek in the horizon, not just
   the total (e.g. a small `GW1 GW2 GW3 …` mini-row per player). From Tony's Sprint 006
   reflection. Note: FPL only publishes `ep_next` (next GW), so there is no FPL
