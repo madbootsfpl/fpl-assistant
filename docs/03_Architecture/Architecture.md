@@ -134,6 +134,15 @@ in preseason, so the custom FDR uses overall strength for now (ADR-005).
 | `position` | TEXT | `elements[].element_type` | Mapped 1–4 → GK/DEF/MID/FWD |
 | `price` | REAL | `elements[].now_cost` | Stored as £m (now_cost ÷ 10) |
 | `total_points` | INTEGER | `elements[].total_points` | |
+| `points_per_game` | REAL | `elements[].points_per_game` | xP baseline; last-season, auto-updates (Sprint 005, [ADR-006](../06_Decisions/ADR-006-expected-points-v0.md)) |
+| `status` | TEXT | `elements[].status` | 'a' = available (Sprint 005) |
+| `ep_next` | REAL | `elements[].ep_next` | FPL's own expected points, for comparison (Sprint 005) |
+
+The Sprint 005 columns are added to the existing `players` table via the same light
+migration as `teams` (§ADR-005). **Expected Points (xP)** is the first *cross-domain*
+metric: it multiplies a player's `points_per_game` by their next fixture's difficulty
+(reusing the FDR from ADR-005), so the analytics layer joins the player and fixture
+threads for the first time (ADR-006).
 
 **`fixtures`** *(Sprint 003 — see [ADR-004](../06_Decisions/ADR-004-fixtures-and-fdr.md))*
 
@@ -255,3 +264,6 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **Sprint 004 (2026-08-02)** — `teams` gains `strength_overall_home/away` (added by a
   light migration), per ADR-005. Custom overall FDR; Attack/Defence split deferred
   (preseason strengths are zero).
+- **Sprint 005 (2026-08-02)** — `players` gains `points_per_game`, `status`, `ep_next`
+  (same light migration), per ADR-006. First cross-domain metric: Expected Points (xP)
+  = player rate × fixture difficulty. Form/expected-minutes deferred.

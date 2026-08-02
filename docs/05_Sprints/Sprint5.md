@@ -54,7 +54,7 @@ xP_next    = points_per_game × multiplier      # 0 if the player isn't availabl
 ```
 
 #### Success Criteria
-- [ ] xP v0 approach agreed (ADR-006) before feature code
+- [x] xP v0 approach agreed (ADR-006) before feature code
 - [ ] xP inputs stored (`points_per_game`, `status`, `ep_next`) via the migration pattern
 - [ ] xP computed by joining a player to their team's next fixture difficulty
 - [ ] `xp` ranks players by expected points; `--type custom|fpl` picks the difficulty
@@ -68,14 +68,14 @@ xP_next    = points_per_game × multiplier      # 0 if the player isn't availabl
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-017 | Agree xP v0 approach (ADR-006): formula, difficulty source, next-GW horizon, availability, deferrals, last-season baseline | Critical | Planned | 0.5 session |
+| US-017 | Agree xP v0 approach (ADR-006): formula, difficulty source, next-GW horizon, availability, deferrals, last-season baseline | Critical | ✅ Complete | 0.5 session |
 | US-018 | Store xP inputs — extend `Player` (`points_per_game`, `status`, `ep_next`) via the `ALTER TABLE` migration | High | Planned | 1 session |
 | US-019 | xP analytics — combine ppg × next-fixture difficulty (the cross-domain join) | High | Planned | 1 session |
 | US-020 | `xp` command — rank by expected points (`--type custom\|fpl`), compare vs FPL `ep_next`, + Handbook | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-006 recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc: player xP fields + xP analytics (cross-domain) - _Planned_
+- [x] ADR-006 recorded + added to the ADR index - _Done (US-017)_
+- [x] Update Architecture doc: player xP fields + xP analytics (cross-domain) - _Done (US-017)_
 - [ ] Update `README.md` with the `xp` command - _Planned_
 
 ---
@@ -133,12 +133,12 @@ Settle before building:
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-017: ADR-006 — xP v0 design)
+* **Completed:** Recorded ADR-006: xP = `points_per_game × (1 + (3 − difficulty) × 0.10)` (gentle ±20%); difficulty via `--type custom|fpl` (default fpl); next single GW; `status != 'a'` → xP 0; compare vs FPL `ep_next`; baseline is last-season ppg that auto-updates on refresh. Added to ADR index; Architecture §6 gains the player xP columns + a cross-domain note + changelog. US-017 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-006 (new) + index, Architecture §6/changelog, Sprint5 board, PROJECT_STATUS.
+* **Issues / Blockers:** None. (Data verified at planning, per the Sprint 004 lesson.)
+* **Next Steps:** US-018 — store `points_per_game`/`status`/`ep_next` (reuse the migration).
 
 ---
 
