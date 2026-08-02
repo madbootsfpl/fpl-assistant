@@ -17,3 +17,4 @@ new ADR as it is created.
 | [010](./ADR-010-clubelo-external-source.md) | ClubElo — first external data source | Accepted |
 | [011](./ADR-011-squad-objective.md) | Squad objective toggle (points/value/xp) | Accepted |
 | [012](./ADR-012-full-squad.md) | The full 15-man squad (`squad --full`) | Accepted |
+| [013](./ADR-013-declared-bench.md) | A declared bench (`squad --bench`) | Accepted |

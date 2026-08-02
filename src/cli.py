@@ -82,6 +82,27 @@ def resolve_squad_budget(budget, full: bool) -> float:
     return FULL_BUDGET if full else DEFAULT_BUDGET
 
 
+BENCH_MAX = 4   # a 15-man squad has 15 − 11 = 4 bench slots
+
+
+def validate_bench(bench_ids, include_ids, exclude_ids) -> list:
+    """Errors for an invalid declared bench (ADR-013): too many, or a double role.
+
+    Pure (ids in, messages out) so it's testable without a database.
+    """
+    errors = []
+    if len(bench_ids) > BENCH_MAX:
+        errors.append(
+            f"You can bench at most {BENCH_MAX} players "
+            f"(a 15-man squad has {BENCH_MAX} bench slots)."
+        )
+    if set(bench_ids) & set(include_ids):
+        errors.append("A player can't be both --include and --bench.")
+    if set(bench_ids) & set(exclude_ids):
+        errors.append("A player can't be both --bench and --exclude.")
+    return errors
+
+
 def cmd_squad(args) -> None:
     """Pick the optimal squad — the starting XI, or the full 15 with `--full`."""
     store = Storage()
@@ -89,18 +110,22 @@ def cmd_squad(args) -> None:
 
     include_ids, errors = resolve_players(players, args.include)
     exclude_ids, exclude_errors = resolve_players(players, args.exclude)
-    errors += exclude_errors
+    bench_ids, bench_errors = resolve_players(players, args.bench)
+    errors += exclude_errors + bench_errors
 
     # A player can't be both forced in and forced out.
     conflict = set(include_ids) & set(exclude_ids)
     if conflict:
         names = ", ".join(p["web_name"] for p in players if p["id"] in conflict)
         errors.append(f"Cannot both include and exclude: {names}.")
+    errors += validate_bench(bench_ids, include_ids, exclude_ids)
 
+    # A declared bench implies the full squad — an XI has no bench (ADR-013).
+    full = args.full or bool(args.bench)
     # `--full` picks the 15-man squad (2/5/5/3, £100m); otherwise the XI (1-4-4-2, £80m).
     # The budget default depends on the mode, so it's resolved here, not in argparse.
-    formation = SQUAD_15 if args.full else None   # None → select_squad's XI default
-    budget = resolve_squad_budget(args.budget, args.full)
+    formation = SQUAD_15 if full else None   # None → select_squad's XI default
+    budget = resolve_squad_budget(args.budget, full)
 
     if errors:
         for message in errors:
@@ -111,10 +136,10 @@ def cmd_squad(args) -> None:
         kwargs = {"formation": formation} if formation is not None else {}
         result = select_squad(
             players, budget=budget,
-            include_ids=include_ids, exclude_ids=exclude_ids, scores=scores,
-            **kwargs,
+            include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
+            scores=scores, **kwargs,
         )
-        print(render_squad(result, budget=budget, objective=args.objective, full=args.full))
+        print(render_squad(result, budget=budget, objective=args.objective, full=full))
     store.close()
 
 
@@ -185,7 +210,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
-            "  python app.py squad --full --include Dubravka Diop  full 15-man squad; pick the bench yourself\n"
+            "  python app.py squad --full --bench Dubravka Diop  full 15-man squad; declare your bench\n"
             "\n"
             "Run 'python app.py <command> --help' for a command's options."
         ),
@@ -248,6 +273,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--exclude", nargs="*", default=[], metavar="NAME",
         help="Keep these players out",
+    )
+    p_squad.add_argument(
+        "--bench", nargs="*", default=[], metavar="NAME",
+        help="Declare 1-4 players as your bench (marked **, shown last); implies --full",
     )
     p_squad.add_argument(
         "--objective", choices=["points", "value", "xp"], default="points",

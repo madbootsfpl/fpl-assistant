@@ -16,6 +16,7 @@ from src.cli import (
     cmd_table,
     cmd_xp,
     resolve_squad_budget,
+    validate_bench,
 )
 
 
@@ -143,6 +144,35 @@ def test_resolve_squad_budget_defaults_by_mode():
 def test_resolve_squad_budget_honours_an_explicit_value():
     assert resolve_squad_budget(90.0, full=False) == 90.0
     assert resolve_squad_budget(90.0, full=True) == 90.0     # explicit wins in both modes
+
+
+def test_squad_bench_is_parsed_as_a_list():
+    args = build_parser().parse_args(["squad", "--bench", "Dubravka", "Diop"])
+    assert args.bench == ["Dubravka", "Diop"]
+
+
+def test_squad_bench_defaults_empty():
+    args = build_parser().parse_args(["squad"])
+    assert args.bench == []
+
+
+def test_validate_bench_accepts_a_clean_bench():
+    assert validate_bench([1, 2], include_ids=[3], exclude_ids=[4]) == []
+
+
+def test_validate_bench_caps_at_four():
+    errors = validate_bench([1, 2, 3, 4, 5], include_ids=[], exclude_ids=[])
+    assert len(errors) == 1 and "at most 4" in errors[0]
+
+
+def test_validate_bench_rejects_include_and_bench():
+    errors = validate_bench([1], include_ids=[1], exclude_ids=[])
+    assert any("--include and --bench" in e for e in errors)
+
+
+def test_validate_bench_rejects_bench_and_exclude():
+    errors = validate_bench([1], include_ids=[], exclude_ids=[1])
+    assert any("--bench and --exclude" in e for e in errors)
 
 
 def test_squad_include_exclude_are_parsed_as_lists():

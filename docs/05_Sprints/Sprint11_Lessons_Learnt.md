@@ -178,6 +178,7 @@ python app.py squad --full --include A B C:TEAM D    # lock a cheap bench; solve
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+i love th eflex in building the squad now. on reflection I think that rather than using include we should use bench and name you 1-4 players that you want in there, double * them and sort to the end of th elist, we can do this for a future sprint. managers may want 2-3 players that are always benched unless using a widlcard. this will add better/clearer visibility,
 
 ### What was the biggest lesson?
 

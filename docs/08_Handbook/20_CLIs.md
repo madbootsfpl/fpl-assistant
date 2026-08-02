@@ -80,6 +80,7 @@ python app.py squad --budget 80                  # pick the optimal starting XI 
 python app.py squad --include Haaland --exclude Salah  # the optimal XI around your picks
 python app.py squad --objective value            # optimise the XI on points / value / xp
 python app.py squad --full --include <4 cheap>   # the full 15-man squad (2/5/5/3, £100m); you pick the bench
+python app.py squad --bench Dubravka Diop         # declare your bench (** , shown last); implies --full
 ```
 
 ---

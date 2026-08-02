@@ -157,6 +157,42 @@ mislead — a small but important piece of intellectual honesty.
 
 ---
 
+## Declaring the bench (`--bench`) — annotation, and an honest number (ADR-013)
+
+`--full` alone doesn't *know* which four are your bench. `--bench` lets the manager
+**declare** it — name 1–4 players and they're marked `**` and sorted to the bottom:
+
+```
+squad --full --bench Dubravka Diop     # (--bench on its own also turns --full on)
+```
+
+The lesson is the same one a third time: **a benched player is forced in exactly like
+`--include`** (`pick == 1`) — the *only* new work is a **tag** on the result, a **`**`
+marker**, and **sorting the bench to the end**. Annotation and display, not optimisation.
+
+### Why this makes the number honest
+
+Because the manager declares the bench, we now know the *starters* — so the output shows
+a **starters' points subtotal** next to the squad total:
+
+```
+Total: £100.0m · 2464 pts
+Starters (13): 2337 pts
+```
+
+That directly answers the ADR-012 caveat: the squad total counts a non-scoring bench, but
+the starters' subtotal doesn't. When you bench a full four, "Starters (11)" *is* your XI's
+points — a fair weekly guide. Below four, it's labelled by count so it never oversells
+itself. The visibility Tony wanted and the honesty problem turned out to be one fix.
+
+### `--include` vs `--bench`
+
+Both force a player into the squad. `--include` means "own this player" (starter or
+bench — we can't tell). `--bench` means "own this player *and* sit them" — a clearer
+intent that earns the `**` marker, the bottom of the list, and the honest subtotal.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.
@@ -185,6 +221,7 @@ mislead — a small but important piece of intellectual honesty.
 
 - [ADR-008 — Squad selector (ILP)](../06_Decisions/ADR-008-squad-selector.md)
 - [ADR-012 — The full 15-man squad](../06_Decisions/ADR-012-full-squad.md)
+- [ADR-013 — A declared bench](../06_Decisions/ADR-013-declared-bench.md)
 - [Architecture §4 (optimisation component)](../03_Architecture/Architecture.md)
 - [Chapter 21 — Analytics](./21_Analytics.md)
 - Code: `src/analytics/optimizer.py`

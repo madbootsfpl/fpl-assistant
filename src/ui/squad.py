@@ -38,11 +38,24 @@ def render_squad(
         f"Optimal {what} — objective: {objective}, budget £{budget:.1f}m", "", header, divider
     ]
     any_forced = False
+    any_bench = False
+    bench_started = False
     for p in result["selected"]:
+        is_bench = bool(p.get("bench"))
+        # A "Bench:" heading before the first bench row (they sort to the end).
+        if is_bench and not bench_started:
+            lines.append("")
+            lines.append("Bench:")
+            bench_started = True
+
         name = str(p["web_name"])[:_NAME_W]
         price = f"£{p['price']:.1f}m"
-        marker = " *" if p.get("forced") else ""
-        any_forced = any_forced or bool(p.get("forced"))
+        if is_bench:
+            marker, any_bench = " **", True
+        elif p.get("forced"):
+            marker, any_forced = " *", True
+        else:
+            marker = ""
         lines.append(
             f"{p['position']:<{_POS_W}} {name:<{_NAME_W}} {str(p['team'] or ''):<{_TEAM_W}} "
             f"{price:>{_PRICE_W}} {p['total_points']:>{_PTS_W}}{marker}"
@@ -50,13 +63,35 @@ def render_squad(
 
     lines.append("")
     lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
+
+    # With a declared bench we know the starters — show their subtotal, the honest number.
+    if any_bench:
+        starters = [p for p in result["selected"] if not p.get("bench")]
+        starters_pts = sum(p["total_points"] for p in starters)
+        lines.append(f"Starters ({len(starters)}): {starters_pts} pts")
+
+    legend = []
     if any_forced:
-        lines.append("* = forced in")
+        legend.append("* = forced in")
+    if any_bench:
+        legend.append("** = benched")
+    if legend:
+        lines.append(" · ".join(legend))
+
     if full:
-        # ADR-012: for the 15, the total counts bench players who won't score — so it's a
-        # squad-strength guide, not a weekly return. Say so, and point at the workflow.
-        lines.append(
-            "Note: Pts totals a bench that won't score — squad strength, not a weekly "
-            "total. Pick your bench with --include."
-        )
+        if any_bench:
+            # ADR-013: the starters' subtotal is a true XI only at a full 4-man bench.
+            if len(starters) == 11:
+                lines.append("Note: Starters (11) is your XI — the bench won't score.")
+            else:
+                lines.append(
+                    f"Note: Starters ({len(starters)}) excludes your bench; bench 4 for "
+                    "a full XI. The bench won't score."
+                )
+        else:
+            # ADR-012: without a declared bench, the 15-total counts non-scorers.
+            lines.append(
+                "Note: Pts totals a bench that won't score — squad strength, not a weekly "
+                "total. Declare your bench with --bench."
+            )
     return "\n".join(lines)

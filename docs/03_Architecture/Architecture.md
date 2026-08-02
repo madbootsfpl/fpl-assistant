@@ -309,3 +309,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   *caller* of the generic `select_squad` (formation + budget already parameters); the
   bench is the manager's via `--include`. The 15-total is a squad-strength proxy, not a
   weekly score (stated caveat).
+- **Sprint 012 (2026-08-02)** — a *declared* bench (`squad --bench`), per ADR-013.
+  Benched players are forced in like `--include` but tagged, marked `**`, and sorted to
+  the end; `--bench` implies `--full` (cap 4). Knowing the bench yields a starters'
+  points subtotal — the honest weekly number that answers ADR-012's caveat. Annotation +
+  display; the optimiser's model is unchanged.

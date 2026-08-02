@@ -28,6 +28,7 @@ def select_squad(
     max_per_club: int = MAX_PER_CLUB,
     include_ids=(),
     exclude_ids=(),
+    bench_ids=(),
     scores=None,
 ) -> dict:
     """Pick the starting XI that maximises a per-player score under the constraints.
@@ -36,11 +37,14 @@ def select_squad(
     (as returned by Storage.get_players()). `scores` is {player_id: score} to
     maximise; it defaults to `total_points` (so the result is unchanged).
     `include_ids`/`exclude_ids` force players into or out of the XI (pick = 1 / 0).
-    Returns a dict with the solver `status`, the `selected` players (each flagged
-    `forced`), and `total_points` / `total_cost`. If no legal XI fits, `status` is not
-    "Optimal" and `selected` is empty.
+    `bench_ids` also force players in (like include) but tag them `bench` and sort them
+    to the end — the manager's declared bench (ADR-013). Returns a dict with the solver
+    `status`, the `selected` players (each flagged `forced` and `bench`), and
+    `total_points` / `total_cost`. If no legal squad fits, `status` is not "Optimal" and
+    `selected` is empty.
     """
     include_set = set(include_ids)
+    bench_set = set(bench_ids)
     if scores is None:
         scores = {p["id"]: p["total_points"] for p in players}
     # We use PuLP 3.x's current API; it emits DeprecationWarnings pointing at the
@@ -73,8 +77,9 @@ def select_squad(
                 <= max_per_club
             )
 
-        # Forced picks: lock chosen players in (1) or out (0).
-        for pid in include_set:
+        # Forced picks: lock chosen players in (1) or out (0). Benched players are
+        # forced in too — they're part of the squad, just declared as bench.
+        for pid in include_set | bench_set:
             if pid in pick:
                 problem += pick[pid] == 1
         for pid in set(exclude_ids):
@@ -92,8 +97,11 @@ def select_squad(
         if pick[p["id"]].value() > 0.5:
             row = dict(p)
             row["forced"] = p["id"] in include_set
+            row["bench"] = p["id"] in bench_set
             selected.append(row)
-    selected.sort(key=lambda p: (_POS_ORDER.get(p["position"], 9), -p["total_points"]))
+    # Bench players sort to the end; within each group, by position then points. With no
+    # bench declared the `bench` key is constant-False, so the order is unchanged.
+    selected.sort(key=lambda p: (p["bench"], _POS_ORDER.get(p["position"], 9), -p["total_points"]))
 
     return {
         "status": status,

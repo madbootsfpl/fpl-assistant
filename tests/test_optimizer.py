@@ -138,6 +138,33 @@ def test_full_squad_forces_a_cheap_bench_in():
     assert next(s for s in result["selected"] if s["id"] == 1)["forced"] is True
 
 
+def test_bench_players_are_forced_in_tagged_and_sorted_last():
+    # ADR-013: --bench forces players into the 15, tags them bench, sorts them to the end.
+    pool = squad_pool()
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, bench_ids=[1, 7])  # GK+DEF
+
+    selected = result["selected"]
+    assert len(selected) == 15
+    benched = [s for s in selected if s["bench"]]
+    assert {s["id"] for s in benched} == {1, 7}          # both forced in
+    assert all(not s["bench"] for s in selected[:-2])    # bench is last
+    assert all(s["bench"] for s in selected[-2:])
+    # A benched player is tagged bench, not "forced" (that flag is for --include).
+    assert benched[0]["bench"] is True and benched[0]["forced"] is False
+
+
+def test_no_bench_leaves_the_order_unchanged():
+    # Regression: with no bench declared, every row is bench=False and the order is the
+    # same position-then-points sort as before (bench sort key is constant-False).
+    pool = squad_pool()
+    plain = select_squad(pool, budget=100.0, formation=SQUAD_15)
+
+    assert all(s["bench"] is False for s in plain["selected"])
+    positions = [s["position"] for s in plain["selected"]]
+    order = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
+    assert positions == sorted(positions, key=lambda x: order[x])   # grouped GK→DEF→MID→FWD
+
+
 def test_objective_scores_points():
     players = [p(1, "MID", 8.0, 100)]
     assert objective_scores(players, "points") == {1: 100}
@@ -313,7 +340,53 @@ def test_render_full_squad_says_15_and_adds_the_caveat():
 
     assert "15-man squad" in out           # names the mode
     assert "not a weekly" in out           # the ADR-012 caveat is shown
-    assert "--include" in out              # points at the bench workflow
+    assert "--bench" in out                # points at the declared-bench workflow
+
+
+def _full_squad_with_bench(bench_count, starter_count):
+    """A result of `starter_count` starters + `bench_count` bench, for render tests."""
+    selected = [
+        {"position": "MID", "web_name": f"S{i}", "team": "ARS",
+         "price": 6.0, "total_points": 100, "forced": False, "bench": False}
+        for i in range(starter_count)
+    ]
+    selected += [
+        {"position": "GK", "web_name": f"B{i}", "team": "TOT",
+         "price": 4.0, "total_points": 5, "forced": False, "bench": True}
+        for i in range(bench_count)
+    ]
+    total = sum(p["total_points"] for p in selected)
+    return {"status": "Optimal", "selected": selected,
+            "total_points": total, "total_cost": round(sum(p["price"] for p in selected), 1)}
+
+
+def test_render_bench_section_marker_and_starters_subtotal():
+    out = render_squad(_full_squad_with_bench(bench_count=2, starter_count=13),
+                       budget=100, full=True)
+
+    assert "Bench:" in out                 # the bench heading
+    assert "**" in out                     # bench marker
+    assert "** = benched" in out           # legend
+    assert "Starters (13): 1300 pts" in out   # the honest subtotal (13 × 100)
+
+
+def test_render_full_four_man_bench_calls_starters_the_xi():
+    out = render_squad(_full_squad_with_bench(bench_count=4, starter_count=11),
+                       budget=100, full=True)
+    assert "Starters (11)" in out
+    assert "is your XI" in out              # caveat softened at a full 4-man bench
+
+
+def test_render_full_no_bench_has_no_bench_section():
+    result = {
+        "status": "Optimal",
+        "selected": [{"position": "GK", "web_name": "Raya", "team": "ARS",
+                      "price": 6.0, "total_points": 162, "forced": False, "bench": False}],
+        "total_points": 162, "total_cost": 6.0,
+    }
+    out = render_squad(result, budget=100, full=True)
+    assert "Bench:" not in out
+    assert "Starters (" not in out
 
 
 def test_render_full_squad_infeasible_message_names_the_squad():
