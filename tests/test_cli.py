@@ -139,6 +139,16 @@ def test_squad_include_exclude_default_empty():
     assert args.exclude == []
 
 
+def test_squad_defaults_to_objective_points():
+    args = build_parser().parse_args(["squad"])
+    assert args.objective == "points"
+
+
+def test_squad_objective_is_parsed():
+    args = build_parser().parse_args(["squad", "--objective", "value"])
+    assert args.objective == "value"
+
+
 def test_xp_options_are_parsed():
     args = build_parser().parse_args(
         ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]

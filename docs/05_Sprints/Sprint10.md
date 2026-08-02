@@ -48,10 +48,10 @@ historical squad" into "best squad for *this* goal".
 - [x] Objective-toggle approach agreed (ADR-011) before feature code
 - [x] The optimiser maximises a per-player score (defaults to points; same result as today)
 - [x] `objective_scores()` computes points / value / xp scores from the players
-- [ ] `squad --objective points|value|xp` works and the output states the objective
-- [ ] Edge cases handled (price 0 for value; no fixtures for xp) — no crash
-- [ ] Tests cover each objective + the edge cases (offline)
-- [ ] **Manual smoke test** run before the sprint is closed (Definition of Done)
+- [x] `squad --objective points|value|xp` works and the output states the objective
+- [x] Edge cases handled (price 0 for value; no fixtures for xp) — no crash
+- [x] Tests cover each objective + the edge cases (offline)
+- [x] **Manual smoke test** run before the sprint is closed (Definition of Done)
 
 ---
 
@@ -61,12 +61,12 @@ historical squad" into "best squad for *this* goal".
 |---|---|---|---|---|
 | US-034 | Agree objective-toggle approach (ADR-011): objectives (points/value/xp), generic optimiser score, xp defaults, display | Critical | ✅ Complete | 0.5 session |
 | US-035 | Optimiser takes a per-player `scores` objective + `objective_scores()` helper (points/value/xp; reuse `player_xp`) | High | ✅ Complete | 1 session |
-| US-036 | `squad --objective …` command + display the objective + Handbook/README | High | Planned | 1 session |
+| US-036 | `squad --objective …` command + display the objective + Handbook/README | High | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-011 recorded + added to the ADR index - _Done (US-034)_
 - [x] Update Architecture doc if needed (pluggable objective note) - _Done (US-034)_
-- [ ] Update `README.md` with `squad --objective` - _Planned_
+- [x] Update `README.md` with `squad --objective` - _Done (US-036)_
 
 ---
 
@@ -135,6 +135,13 @@ Settle before building (pressure-test with a worked example, per the standing le
 * **Docs touched:** Handbook Ch22 (pluggable objective), Sprint10 board, PROJECT_STATUS. (Architecture in US-034.)
 * **Issues / Blockers:** None.
 * **Next Steps:** US-036 — the `squad --objective …` command + display.
+
+#### Session 3 - 2026-08-02 (US-036: the squad --objective command)
+* **Completed:** `squad --objective points|value|xp` (default points) — the handler computes scores (fetching fixtures only for xp) and passes them to `select_squad`; `render_squad` states the objective. Added to `--help`, Ch20, README. 3 tests (parse + render). 114 total. US-036 **complete** — all Sprint 010 stories done.
+* **Manual smoke test:** ✅ `--objective value` (£65.5m/1767), `--objective xp --include Haaland` (composes — Haaland forced, £80.0m/1738), `--help` shows the option.
+* **Docs touched:** Handbook Ch20, README, cli `--help`, Sprint10 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 010 review & retrospective.
 
 ---
 

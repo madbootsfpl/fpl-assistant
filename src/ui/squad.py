@@ -12,7 +12,7 @@ _PRICE_W = 6
 _PTS_W = 5
 
 
-def render_squad(result, budget: float = 80.0) -> str:
+def render_squad(result, budget: float = 80.0, objective: str = "points") -> str:
     if result["status"] != "Optimal":
         return (
             f"No legal XI within £{budget:.1f}m (solver status: {result['status']}). "
@@ -28,7 +28,9 @@ def render_squad(result, budget: float = 80.0) -> str:
         f"{'-' * _PRICE_W} {'-' * _PTS_W}"
     )
 
-    lines = [f"Optimal XI — budget £{budget:.1f}m", "", header, divider]
+    lines = [
+        f"Optimal XI — objective: {objective}, budget £{budget:.1f}m", "", header, divider
+    ]
     any_forced = False
     for p in result["selected"]:
         name = str(p["web_name"])[:_NAME_W]

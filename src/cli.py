@@ -13,6 +13,7 @@ import argparse
 from src import config, ingest
 from src.analytics import (
     elo_difficulty_bands,
+    objective_scores,
     player_xp,
     rank_players,
     resolve_players,
@@ -86,11 +87,13 @@ def cmd_squad(args) -> None:
         for message in errors:
             print(message)
     else:
+        upcoming = store.get_upcoming_fixtures() if args.objective == "xp" else None
+        scores = objective_scores(players, args.objective, upcoming)
         result = select_squad(
             players, budget=args.budget,
-            include_ids=include_ids, exclude_ids=exclude_ids,
+            include_ids=include_ids, exclude_ids=exclude_ids, scores=scores,
         )
-        print(render_squad(result, budget=args.budget))
+        print(render_squad(result, budget=args.budget, objective=args.objective))
     store.close()
 
 
@@ -160,7 +163,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fdr --next 5                teams with the easiest upcoming fixtures\n"
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
-            "  python app.py squad --budget 80           pick the optimal starting XI within a budget\n"
+            "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
             "\n"
             "Run 'python app.py <command> --help' for a command's options."
         ),
@@ -219,6 +222,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--exclude", nargs="*", default=[], metavar="NAME",
         help="Keep these players out",
+    )
+    p_squad.add_argument(
+        "--objective", choices=["points", "value", "xp"], default="points",
+        help="What to maximise: last-season points (default), value (£m), or xP",
     )
     p_squad.set_defaults(handler=cmd_squad)
 
