@@ -301,3 +301,6 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **Sprint 009 (2026-08-02)** — first multi-source design: ClubElo (team Elo) added as a
   best-effort second source with graceful degradation, per ADR-010. `teams.elo`;
   Elo-based FDR. No new pip dependency (requests + stdlib csv).
+- **Sprint 010 (2026-08-02)** — the squad optimiser's objective becomes pluggable
+  (`squad --objective points|value|xp`), per ADR-011. The optimiser maximises any
+  per-player score; the objective (reusing value/xP) is computed outside it.

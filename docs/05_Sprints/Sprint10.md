@@ -45,7 +45,7 @@ points (default), value (points-per-£m), or expected points (xP) — turning "b
 historical squad" into "best squad for *this* goal".
 
 #### Success Criteria
-- [ ] Objective-toggle approach agreed (ADR-011) before feature code
+- [x] Objective-toggle approach agreed (ADR-011) before feature code
 - [ ] The optimiser maximises a per-player score (defaults to points; same result as today)
 - [ ] `objective_scores()` computes points / value / xp scores from the players
 - [ ] `squad --objective points|value|xp` works and the output states the objective
@@ -59,13 +59,13 @@ historical squad" into "best squad for *this* goal".
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-034 | Agree objective-toggle approach (ADR-011): objectives (points/value/xp), generic optimiser score, xp defaults, display | Critical | Planned | 0.5 session |
+| US-034 | Agree objective-toggle approach (ADR-011): objectives (points/value/xp), generic optimiser score, xp defaults, display | Critical | ✅ Complete | 0.5 session |
 | US-035 | Optimiser takes a per-player `scores` objective + `objective_scores()` helper (points/value/xp; reuse `player_xp`) | High | Planned | 1 session |
 | US-036 | `squad --objective …` command + display the objective + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-011 recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc if needed (pluggable objective note) - _Planned_
+- [x] ADR-011 recorded + added to the ADR index - _Done (US-034)_
+- [x] Update Architecture doc if needed (pluggable objective note) - _Done (US-034)_
 - [ ] Update `README.md` with `squad --objective` - _Planned_
 
 ---
@@ -122,12 +122,12 @@ Settle before building (pressure-test with a worked example, per the standing le
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-034: ADR-011 — objective toggle)
+* **Completed:** Recorded ADR-011: objectives points (default) / value (points ÷ price, guard 0) / xp (via `player_xp`, v0 next-GW/fpl); elo excluded (team-level). Generic optimiser `select_squad(..., scores=None)` maximises `Σ scores·pick` (default `total_points`, unchanged); `objective_scores()` computes the per-player score outside the optimiser; output states the objective. **Pressure-tested with a worked example** (2 FWD: points→A(10/£10), value→B(8/£4, ppm 2.0) — different picks; and scores=None reproduces today). Added to ADR index; Architecture §4 changelog note. US-034 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-011 (new) + index, Architecture changelog, Sprint10 board, PROJECT_STATUS.
+* **Issues / Blockers:** None. (Data verified at planning; mechanism pressure-tested.)
+* **Next Steps:** US-035 — generic optimiser score + `objective_scores()`.
 
 ---
 
