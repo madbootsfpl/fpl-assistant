@@ -55,7 +55,7 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 
 #### Success Criteria
 - [x] ClubElo integration approach agreed (ADR-010) before feature code
-- [ ] A ClubElo client fetches Elo; all 20 teams map to FPL (14 exact + 6 mapped)
+- [x] A ClubElo client fetches Elo; all 20 teams map to FPL (14 exact + 6 mapped)
 - [ ] `teams.elo` stored (via the migration pattern)
 - [ ] `refresh` fetches ClubElo **gracefully** — if it fails, FPL data still loads and the app works
 - [ ] `fdr --type elo` ranks teams' upcoming difficulty from opponent Elo
@@ -69,7 +69,7 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-030 | Agree ClubElo approach (ADR-010): endpoint/format, Elo storage, name mapping, graceful degradation, Elo→difficulty | Critical | ✅ Complete | 0.5 session |
-| US-031 | ClubElo client + team-name mapping — fetch Elo, map 20 clubs to FPL teams | High | Planned | 1 session |
+| US-031 | ClubElo client + team-name mapping — fetch Elo, map 20 clubs to FPL teams | High | ✅ Complete | 1 session |
 | US-032 | Store `teams.elo` (migration) + extend `refresh` with graceful degradation | High | Planned | 1 session |
 | US-033 | Elo-based FDR (`fdr --type elo`) + Handbook chapter (external data / graceful degradation) + README | High | Planned | 1 session |
 
@@ -139,6 +139,13 @@ Settle before building (pressure-test with a worked example, per the standing le
 * **Docs touched:** ADR-010 (new) + index, Architecture §4/changelog, Sprint9 board, PROJECT_STATUS.
 * **Issues / Blockers:** None. (Planning verified reachability + the 6-team mapping; formulation pressure-tested.)
 * **Next Steps:** US-031 — the ClubElo client + team-name mapping.
+
+#### Session 2 - 2026-08-02 (US-031: ClubElo client + mapping)
+* **Completed:** Added `src/api/clubelo.py` — `EloClient.get_elo_csv()` (fetch CSV, `ClubEloError` on failure), `parse_english_elo()` (ENG top-division only), the `{ClubElo→FPL}` table + `map_elo_to_teams()` (returns `(elo_by_team_id, unmapped)`). `config.CLUBELO_BASE_URL`. 5 offline tests via a CSV fixture (100 total). Self-contained module — the FPL side is untouched. US-031 **complete**.
+* **Manual smoke test:** ✅ Live ClubElo → mapped **20/20** FPL teams, unmapped empty (ARS 2064, MCI 1971, …).
+* **Docs touched:** Sprint9 board, PROJECT_STATUS. (Handbook external-data chapter comes in US-033; Architecture in US-030.)
+* **Issues / Blockers:** None.
+* **Next Steps:** US-032 — store `teams.elo` (migration) + extend `refresh` with graceful degradation.
 
 ---
 

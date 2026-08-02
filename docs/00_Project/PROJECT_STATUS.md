@@ -1,6 +1,6 @@
 Current Phase: Sprint 009 planned — ready to start
 Current Sprint: Sprint 009 - External Data: ClubElo (team strength) (Planned)
-Current Story: US-030 complete (ADR-010 agreed — ClubElo design, pressure-tested); next up US-031 - ClubElo client + name mapping
+Current Story: US-031 complete (ClubElo client + mapping — 20/20 teams); next up US-032 - store teams.elo + graceful refresh
 Next Milestone: ClubElo as a second (gracefully-degrading) source → an Elo-based FDR (fdr --type elo)
 Current Version: 0.0.1
 Last Updated: 2026-08-02

@@ -14,6 +14,10 @@ BOOTSTRAP_STATIC_PATH = "/bootstrap-static/"
 # Fixtures endpoint: all matches (home/away teams, difficulty, gameweek).
 FIXTURES_PATH = "/fixtures/"
 
+# ClubElo — the second (external) data source: team Elo ratings (ADR-010).
+# The API returns CSV for a given date at CLUBELO_BASE_URL/<YYYY-MM-DD>.
+CLUBELO_BASE_URL = "http://api.clubelo.com"
+
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 
