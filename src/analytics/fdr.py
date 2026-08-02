@@ -8,24 +8,41 @@ that once; `team_fdr` aggregates it, `team_schedule` lists it.
 from collections import defaultdict
 
 
-def _view(fixture, team):
-    """This fixture seen from `team`'s side: (difficulty, opponent, venue)."""
-    if fixture["home"] == team:
-        return fixture["team_h_difficulty"], fixture["away"], "H"
-    return fixture["team_a_difficulty"], fixture["home"], "A"
+def _view(fixture, team, source: str = "fpl"):
+    """This fixture seen from `team`'s side: (difficulty, opponent, venue).
+
+    `source` selects which difficulty number:
+    - "fpl"    → FPL's published team_h/a_difficulty (ADR-004);
+    - "custom" → the opponent's overall strength at the venue the opponent plays
+      (ADR-005). If my team is home, the opponent is away, so I face their *away*
+      strength; if my team is away, I face the home team's *home* strength.
+    """
+    is_home = fixture["home"] == team
+    opponent = fixture["away"] if is_home else fixture["home"]
+    venue = "H" if is_home else "A"
+    if source == "custom":
+        difficulty = (
+            fixture["away_team_strength"] if is_home else fixture["home_team_strength"]
+        )
+    else:
+        difficulty = (
+            fixture["team_h_difficulty"] if is_home else fixture["team_a_difficulty"]
+        )
+    return difficulty, opponent, venue
 
 
-def team_fdr(fixtures, next_n: int = 5) -> list[dict]:
+def team_fdr(fixtures, next_n: int = 5, source: str = "fpl") -> list[dict]:
     """Rank teams by average difficulty over their next `next_n` fixtures.
 
     `fixtures` is a sequence of upcoming-fixture mappings (from
-    Storage.get_upcoming_fixtures()), already ordered by gameweek. Returns a list
-    of dicts sorted easiest-run first; a team with no valid difficulty sorts last.
+    Storage.get_upcoming_fixtures()), already ordered by gameweek. `source` picks
+    FPL's difficulty or our custom one. Returns a list of dicts sorted easiest-run
+    first; a team with no valid difficulty sorts last.
     """
     per_team = defaultdict(list)   # short_name -> list of (difficulty, opponent)
     for f in fixtures:
         for team in (f["home"], f["away"]):
-            difficulty, opponent, _ = _view(f, team)
+            difficulty, opponent, _ = _view(f, team, source)
             per_team[team].append((difficulty, opponent))
 
     results = []

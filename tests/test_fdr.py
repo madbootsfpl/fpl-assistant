@@ -3,13 +3,16 @@
 from src.analytics.fdr import team_fdr, team_schedule
 
 
-def fixture(home, away, h_diff, a_diff, event=1):
+def fixture(home, away, h_diff, a_diff, event=1,
+            home_team_strength=None, away_team_strength=None):
     return {
         "event": event,
         "home": home,
         "away": away,
         "team_h_difficulty": h_diff,
         "team_a_difficulty": a_diff,
+        "home_team_strength": home_team_strength,
+        "away_team_strength": away_team_strength,
     }
 
 
@@ -55,6 +58,33 @@ def test_next_n_limits_the_window():
 def test_undefined_when_no_valid_difficulty():
     ars = next(r for r in team_fdr([fixture("ARS", "X", None, 2)]) if r["team"] == "ARS")
     assert ars["avg_difficulty"] is None
+
+
+def test_custom_fdr_uses_opponent_strength_at_their_venue():
+    # ARS home (home strength 5) vs BUR away (away strength 2).
+    fx = fixture(
+        "ARS", "BUR", h_diff=2, a_diff=5,
+        home_team_strength=5, away_team_strength=2,
+    )
+
+    result = {r["team"]: r for r in team_fdr([fx], source="custom")}
+
+    # ARS faces BUR playing away → difficulty = BUR's away strength = 2.
+    assert result["ARS"]["avg_difficulty"] == 2.0
+    # BUR faces ARS playing home → difficulty = ARS's home strength = 5.
+    assert result["BUR"]["avg_difficulty"] == 5.0
+
+
+def test_fpl_is_the_default_source():
+    # With FPL difficulties (2 home / 5 away) and different strengths, the default
+    # source must use the FPL numbers, not the strengths.
+    fx = fixture(
+        "ARS", "BUR", h_diff=2, a_diff=5,
+        home_team_strength=99, away_team_strength=99,
+    )
+    result = {r["team"]: r for r in team_fdr([fx])}
+    assert result["ARS"]["avg_difficulty"] == 2.0   # team_h_difficulty
+    assert result["BUR"]["avg_difficulty"] == 5.0   # team_a_difficulty
 
 
 def test_team_schedule_reads_each_fixture_from_the_team_view():

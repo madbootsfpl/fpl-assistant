@@ -11,7 +11,7 @@ _GAMES_W = 6
 _AVG_W = 8
 
 
-def render_fdr_table(rows, next_n: int = 5) -> str:
+def render_fdr_table(rows, next_n: int = 5, source: str = "fpl") -> str:
     if not rows:
         return "No upcoming fixtures to rate."
 
@@ -35,5 +35,7 @@ def render_fdr_table(rows, next_n: int = 5) -> str:
         )
 
     lines.append("")
-    lines.append(f"Ranked by easiest run over the next {next_n} fixtures.")
+    lines.append(
+        f"Ranked by easiest run over the next {next_n} fixtures (source: {source})."
+    )
     return "\n".join(lines)

@@ -64,6 +64,16 @@ def test_fdr_next_option_is_parsed():
     assert args.next == 3
 
 
+def test_fdr_defaults_to_type_fpl():
+    args = build_parser().parse_args(["fdr"])
+    assert args.type == "fpl"
+
+
+def test_fdr_type_custom_is_parsed():
+    args = build_parser().parse_args(["fdr", "--type", "custom"])
+    assert args.type == "custom"
+
+
 def test_fixtures_requires_a_team():
     # --team is required, so parsing without it exits (argparse error).
     with pytest.raises(SystemExit):

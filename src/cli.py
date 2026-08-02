@@ -64,8 +64,8 @@ def cmd_fdr(args) -> None:
     if not upcoming:
         print("No upcoming fixtures — run `refresh` first.")
     else:
-        ranked = team_fdr(upcoming, next_n=args.next)
-        print(render_fdr_table(ranked, next_n=args.next))
+        ranked = team_fdr(upcoming, next_n=args.next, source=args.type)
+        print(render_fdr_table(ranked, next_n=args.next, source=args.type))
     store.close()
 
 
@@ -143,6 +143,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_fdr.add_argument(
         "--next", type=int, default=5,
         help="How many upcoming fixtures to average (default 5)",
+    )
+    p_fdr.add_argument(
+        "--type", choices=["fpl", "custom"], default="fpl",
+        help="Difficulty source: FPL's rating (default) or our custom one",
     )
     p_fdr.set_defaults(handler=cmd_fdr)
 

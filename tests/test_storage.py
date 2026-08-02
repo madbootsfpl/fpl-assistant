@@ -170,6 +170,22 @@ def test_get_upcoming_fixtures_excludes_finished_and_joins_team_names(tmp_path):
     store.close()
 
 
+def test_get_upcoming_fixtures_includes_team_strengths(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([
+        Team(id=1, name="Arsenal", short_name="ARS",
+             strength_overall_home=5, strength_overall_away=4),
+        Team(id=2, name="Burnley", short_name="BUR",
+             strength_overall_home=2, strength_overall_away=2),
+    ])
+    store.save_fixtures([make_fixture(id=1, team_h=1, team_a=2)])
+
+    row = store.get_upcoming_fixtures()[0]
+    assert row["home_team_strength"] == 5   # ARS strength_overall_home
+    assert row["away_team_strength"] == 2   # BUR strength_overall_away
+    store.close()
+
+
 def test_get_upcoming_fixtures_filtered_by_team(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     store.save_teams([

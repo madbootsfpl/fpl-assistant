@@ -43,7 +43,7 @@ python app.py refresh                          # fetch FPL data (players, teams,
 python app.py table --sort value --limit 20    # players, ranked by points or value (£m)
 python app.py search haaland                   # find players by name
 python app.py filter --pos DEF --max-price 6   # filter players (position / team / max price)
-python app.py fdr --next 5                      # teams ranked by upcoming fixture difficulty
+python app.py fdr --type custom --next 5        # teams by fixture difficulty (FPL's rating or our custom one)
 python app.py fixtures --team ARS              # a team's upcoming fixtures
 ```
 

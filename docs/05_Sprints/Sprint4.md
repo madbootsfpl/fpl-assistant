@@ -48,8 +48,8 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 #### Success Criteria
 - [x] Custom FDR approach agreed (ADR-005) before feature code
 - [x] `strength_overall_home/away` stored (schema evolution handled cleanly)
-- [ ] Custom difficulty computed correctly, home/away aware
-- [ ] `fdr --type custom|fpl` works; FPL's FDR remains the default
+- [x] Custom difficulty computed correctly, home/away aware
+- [x] `fdr --type custom|fpl` works; FPL's FDR remains the default
 - [ ] A team's fixtures view can show the custom difficulty per match
 - [ ] Tests cover the custom calc, including the home/away perspective
 - [ ] **Manual smoke test** run before the sprint is closed (see Definition of Done)
@@ -63,7 +63,7 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 |---|---|---|---|---|
 | US-013 | Agree custom (overall) FDR approach (ADR-005): formula, home/away, coexistence with FPL FDR, presentation, schema evolution, attack/defence deferral | Critical | ✅ Complete | 0.5 session |
 | US-014 | Store `strength_overall_home/away` (extend `Team` + teams table + `from_api`) | High | ✅ Complete | 1 session |
-| US-015 | Custom FDR analytics + `fdr --type custom\|fpl` | High | Planned | 1 session |
+| US-015 | Custom FDR analytics + `fdr --type custom\|fpl` | High | ✅ Complete | 1 session |
 | US-016 | Show custom difficulty per match in `fixtures --team` + Handbook update | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
@@ -150,6 +150,13 @@ Settle before building:
 * **Docs touched:** Handbook Ch10 (migration concept + example), Sprint4 board, PROJECT_STATUS. (Architecture §6 already covered the columns in US-013.)
 * **Issues / Blockers:** None.
 * **Next Steps:** US-015 — custom FDR analytics + `fdr --type custom|fpl`.
+
+#### Session 3 - 2026-08-02 (US-015: custom FDR + fdr --type)
+* **Completed:** `get_upcoming_fixtures()` now also returns each side's relevant strength; `_view`/`team_fdr` gained a `source` param (fpl|custom); `fdr --type custom|fpl` (default fpl). Custom = opponent's overall strength at their venue (home/away aware). 5 new tests incl. a pinned perspective test + FPL-is-default test (54 total). US-015 **complete**.
+* **Manual smoke test:** ✅ `fdr --type custom` vs `--type fpl` differ sensibly — ARS rises to #1 under custom (not in FPL's top 5), Spurs drop out; both in a plausible 2.6–2.8 range.
+* **Docs touched:** README (`fdr --type`), Handbook Ch21 (metric sources), Sprint4 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** US-016 — show custom difficulty per match in `fixtures --team` + Handbook.
 
 ---
 

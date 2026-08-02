@@ -76,6 +76,11 @@ for f in fixtures:
 The boundary from Chapter 10 holds: storage answers "which fixtures are upcoming?";
 analytics does the perspective + averaging + ranking.
 
+A metric can have more than one **source**. `fdr --type fpl|custom` uses either FPL's
+published difficulty or our own (the opponent's overall strength at their venue,
+ADR-005) — same averaging/ranking machinery, a different input number. Keeping both
+lets us compare our rating against FPL's.
+
 ---
 
 ## Common Mistakes
