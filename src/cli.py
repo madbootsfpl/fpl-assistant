@@ -11,7 +11,14 @@ See ADR-003 for why this is argparse + subcommands.
 import argparse
 
 from src import config, ingest
-from src.analytics import player_xp, rank_players, select_squad, team_fdr, team_schedule
+from src.analytics import (
+    player_xp,
+    rank_players,
+    resolve_players,
+    select_squad,
+    team_fdr,
+    team_schedule,
+)
 from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
@@ -60,10 +67,29 @@ def cmd_search(args) -> None:
 
 
 def cmd_squad(args) -> None:
-    """Pick the optimal starting XI within a budget."""
+    """Pick the optimal starting XI within a budget (optionally around forced picks)."""
     store = Storage()
-    result = select_squad(store.get_players(), budget=args.budget)
-    print(render_squad(result, budget=args.budget))
+    players = store.get_players()
+
+    include_ids, errors = resolve_players(players, args.include)
+    exclude_ids, exclude_errors = resolve_players(players, args.exclude)
+    errors += exclude_errors
+
+    # A player can't be both forced in and forced out.
+    conflict = set(include_ids) & set(exclude_ids)
+    if conflict:
+        names = ", ".join(p["web_name"] for p in players if p["id"] in conflict)
+        errors.append(f"Cannot both include and exclude: {names}.")
+
+    if errors:
+        for message in errors:
+            print(message)
+    else:
+        result = select_squad(
+            players, budget=args.budget,
+            include_ids=include_ids, exclude_ids=exclude_ids,
+        )
+        print(render_squad(result, budget=args.budget))
     store.close()
 
 
@@ -183,6 +209,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--budget", type=float, default=80.0,
         help="Budget in £m for the XI (default 80)",
+    )
+    p_squad.add_argument(
+        "--include", nargs="*", default=[], metavar="NAME",
+        help="Force these players in (web_name, or Name:TEAM; quote multi-word names)",
+    )
+    p_squad.add_argument(
+        "--exclude", nargs="*", default=[], metavar="NAME",
+        help="Keep these players out",
     )
     p_squad.set_defaults(handler=cmd_squad)
 

@@ -163,6 +163,22 @@ def test_render_squad_shows_players_and_totals():
     assert "Total" in out
 
 
+def test_render_squad_marks_forced_players():
+    result = {
+        "status": "Optimal",
+        "selected": [
+            {"position": "MID", "web_name": "Garner", "team": "EVE",
+             "price": 6.0, "total_points": 159, "forced": True},
+        ],
+        "total_points": 159,
+        "total_cost": 6.0,
+    }
+    out = render_squad(result, budget=80)
+
+    assert "*" in out
+    assert "forced in" in out
+
+
 def test_render_squad_reports_infeasible():
     out = render_squad(
         {"status": "Infeasible", "selected": [], "total_points": 0, "total_cost": 0.0},

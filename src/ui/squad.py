@@ -29,14 +29,19 @@ def render_squad(result, budget: float = 80.0) -> str:
     )
 
     lines = [f"Optimal XI — budget £{budget:.1f}m", "", header, divider]
+    any_forced = False
     for p in result["selected"]:
         name = str(p["web_name"])[:_NAME_W]
         price = f"£{p['price']:.1f}m"
+        marker = " *" if p.get("forced") else ""
+        any_forced = any_forced or bool(p.get("forced"))
         lines.append(
             f"{p['position']:<{_POS_W}} {name:<{_NAME_W}} {str(p['team'] or ''):<{_TEAM_W}} "
-            f"{price:>{_PRICE_W}} {p['total_points']:>{_PTS_W}}"
+            f"{price:>{_PRICE_W}} {p['total_points']:>{_PTS_W}}{marker}"
         )
 
     lines.append("")
     lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
+    if any_forced:
+        lines.append("* = forced in")
     return "\n".join(lines)

@@ -52,10 +52,10 @@ clearly when a name is ambiguous or the choices make a squad impossible.
 - [x] Include/exclude approach agreed (ADR-009) before feature code
 - [x] `select_squad` accepts include/exclude and fixes those picks (in / out)
 - [x] Names resolve to players; ambiguous names (e.g. "Wilson") are reported with candidates and can be disambiguated
-- [ ] `squad --include X --exclude Y` builds the XI around the choices; forced picks are marked
-- [ ] Impossible choices (conflict, over-budget, too many for a position) are reported clearly, not crashed
-- [ ] Tests cover force-in, force-out, ambiguity, conflict, and infeasible-forced
-- [ ] **Manual smoke test** run before the sprint is closed (Definition of Done)
+- [x] `squad --include X --exclude Y` builds the XI around the choices; forced picks are marked
+- [x] Impossible choices (conflict, over-budget, too many for a position) are reported clearly, not crashed
+- [x] Tests cover force-in, force-out, ambiguity, conflict, and infeasible-forced
+- [x] **Manual smoke test** run before the sprint is closed (Definition of Done)
 
 ---
 
@@ -65,12 +65,12 @@ clearly when a name is ambiguous or the choices make a squad impossible.
 |---|---|---|---|---|
 | US-027 | Agree include/exclude approach (ADR-009): name resolution + disambiguation, fixed picks, validation, infeasibility | Critical | ✅ Complete | 0.5 session |
 | US-028 | Extend optimiser — `select_squad(include, exclude)` fixes picks; a `resolve_players(players, names)` helper (ambiguous / not-found) | High | ✅ Complete | 1 session |
-| US-029 | `squad --include … --exclude …` command + mark forced picks + Handbook/README | High | Planned | 1 session |
+| US-029 | `squad --include … --exclude …` command + mark forced picks + Handbook/README | High | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-009 recorded + added to the ADR index - _Done (US-027)_
 - [x] Update Architecture doc if needed (name-resolution note) - _Done (US-027)_
-- [ ] Update `README.md` with `squad --include/--exclude` - _Planned_
+- [x] Update `README.md` with `squad --include/--exclude` - _Done (US-029)_
 
 ---
 
@@ -139,6 +139,13 @@ Settle before building (and pressure-test with a worked example, per the Sprint 
 * **Docs touched:** Handbook Ch22, Sprint8 board, PROJECT_STATUS. (Architecture covered in US-027.)
 * **Issues / Blockers:** None.
 * **Next Steps:** US-029 — the `squad --include … --exclude …` command.
+
+#### Session 3 - 2026-08-02 (US-029: the include/exclude command)
+* **Completed:** `squad --include … --exclude …` — the handler resolves names → ids, pre-checks the include/exclude conflict (clear message with names), prints resolver errors or solves + displays. `render_squad` marks forced picks (`*` + note). Added to Ch20/README. 3 tests (parse lists + defaults; render forced marker; 95 total). US-029 **complete** — all Sprint 008 stories done.
+* **Manual smoke test:** ✅ `squad --include Garner --exclude B.Fernandes` → XI rebuilt, Garner marked `*` (1991 pts / £78.0m); `squad --include Wilson` → lists the 3 Wilsons with the Name:TEAM hint; `--help` shows the options.
+* **Docs touched:** Handbook Ch20, README, Sprint8 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 008 review & retrospective.
 
 ---
 

@@ -120,6 +120,20 @@ def test_squad_budget_is_parsed():
     assert args.budget == 75.0
 
 
+def test_squad_include_exclude_are_parsed_as_lists():
+    args = build_parser().parse_args(
+        ["squad", "--include", "Haaland", "Gabriel", "--exclude", "Salah"]
+    )
+    assert args.include == ["Haaland", "Gabriel"]
+    assert args.exclude == ["Salah"]
+
+
+def test_squad_include_exclude_default_empty():
+    args = build_parser().parse_args(["squad"])
+    assert args.include == []
+    assert args.exclude == []
+
+
 def test_xp_options_are_parsed():
     args = build_parser().parse_args(
         ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]
