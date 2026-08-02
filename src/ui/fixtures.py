@@ -6,14 +6,14 @@ dedicated renderer.
 """
 
 
-def render_team_fixtures(schedule, team: str) -> str:
+def render_team_fixtures(schedule, team: str, source: str = "fpl") -> str:
     if not schedule:
         return f"No upcoming fixtures for {team}."
 
     header = f"{'GW':<3} {'Venue':<5} {'Opponent':<9} {'Diff':>4}"
     divider = f"{'-' * 3} {'-' * 5} {'-' * 9} {'-' * 4}"
 
-    lines = [f"{team} — next fixtures", "", header, divider]
+    lines = [f"{team} — next fixtures (difficulty: {source})", "", header, divider]
     for f in schedule:
         gw = f["event"] if f["event"] is not None else "?"
         venue = "Home" if f["venue"] == "H" else "Away"

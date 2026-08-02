@@ -97,3 +97,17 @@ def test_team_schedule_reads_each_fixture_from_the_team_view():
 
     assert sched[0] == {"event": 1, "opponent": "BUR", "venue": "H", "difficulty": 2}
     assert sched[1] == {"event": 2, "opponent": "MCI", "venue": "A", "difficulty": 3}
+
+
+def test_team_schedule_custom_source_uses_strength():
+    # ARS home (home strength 5) vs BUR away (away strength 2).
+    fx = fixture(
+        "ARS", "BUR", h_diff=2, a_diff=5,
+        home_team_strength=5, away_team_strength=2,
+    )
+
+    sched = team_schedule([fx], "ARS", source="custom")
+
+    # ARS faces BUR playing away → custom difficulty = BUR's away strength = 2.
+    assert sched[0]["difficulty"] == 2
+    assert sched[0]["opponent"] == "BUR"

@@ -62,16 +62,17 @@ def team_fdr(fixtures, next_n: int = 5, source: str = "fpl") -> list[dict]:
     return results
 
 
-def team_schedule(fixtures, team) -> list[dict]:
+def team_schedule(fixtures, team, source: str = "fpl") -> list[dict]:
     """One team's upcoming fixtures, each seen from that team's perspective.
 
     Returns a list of {event, opponent, venue, difficulty}, in the order given
-    (the caller passes fixtures already ordered by gameweek).
+    (the caller passes fixtures already ordered by gameweek). `source` picks FPL's
+    difficulty or our custom one, exactly as in team_fdr.
     """
     schedule = []
     for f in fixtures:
         if team in (f["home"], f["away"]):
-            difficulty, opponent, venue = _view(f, team)
+            difficulty, opponent, venue = _view(f, team, source)
             schedule.append({
                 "event": f["event"],
                 "opponent": opponent,

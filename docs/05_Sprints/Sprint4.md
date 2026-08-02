@@ -50,9 +50,9 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 - [x] `strength_overall_home/away` stored (schema evolution handled cleanly)
 - [x] Custom difficulty computed correctly, home/away aware
 - [x] `fdr --type custom|fpl` works; FPL's FDR remains the default
-- [ ] A team's fixtures view can show the custom difficulty per match
-- [ ] Tests cover the custom calc, including the home/away perspective
-- [ ] **Manual smoke test** run before the sprint is closed (see Definition of Done)
+- [x] A team's fixtures view can show the custom difficulty per match
+- [x] Tests cover the custom calc, including the home/away perspective
+- [x] **Manual smoke test** run before the sprint is closed (see Definition of Done)
 
 ---
 
@@ -64,12 +64,12 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 | US-013 | Agree custom (overall) FDR approach (ADR-005): formula, home/away, coexistence with FPL FDR, presentation, schema evolution, attack/defence deferral | Critical | ✅ Complete | 0.5 session |
 | US-014 | Store `strength_overall_home/away` (extend `Team` + teams table + `from_api`) | High | ✅ Complete | 1 session |
 | US-015 | Custom FDR analytics + `fdr --type custom\|fpl` | High | ✅ Complete | 1 session |
-| US-016 | Show custom difficulty per match in `fixtures --team` + Handbook update | Medium | Planned | 0.5 session |
+| US-016 | Show custom difficulty per match in `fixtures --team` + Handbook update | Medium | ✅ Complete | 0.5 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-005 recorded + added to the ADR index - _Done (US-013)_
 - [x] Update Architecture doc: team strength fields + custom FDR - _Done (US-013)_
-- [ ] Update `README.md` with the new `fdr --type` usage - _Planned_
+- [x] Update `README.md` with the new `fdr --type` usage - _Done (US-015/016)_
 
 ---
 
@@ -157,6 +157,13 @@ Settle before building:
 * **Docs touched:** README (`fdr --type`), Handbook Ch21 (metric sources), Sprint4 board, PROJECT_STATUS.
 * **Issues / Blockers:** None.
 * **Next Steps:** US-016 — show custom difficulty per match in `fixtures --team` + Handbook.
+
+#### Session 4 - 2026-08-02 (US-016: custom difficulty per match)
+* **Completed:** Threaded `source` through `team_schedule` → `_view` (reused from US-015); `fixtures --team ARS --type custom|fpl` (default fpl); heading notes the source. Brought Handbook Ch20 command list up to date (was missing fdr/fixtures). 3 new tests (57 total). US-016 **complete** — all four Sprint 004 feature stories done.
+* **Manual smoke test:** ✅ `fixtures --team ARS --type custom` vs `--type fpl` — per-match difficulties differ (AVL 4→3, SUN 3→2, BHA 3→2 under custom).
+* **Docs touched:** Handbook Ch20 (command list current), README (fixtures --type), Sprint4 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 004 review & retrospective.
 
 ---
 

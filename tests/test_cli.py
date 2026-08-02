@@ -87,6 +87,16 @@ def test_fixtures_team_is_parsed():
     assert args.handler is cmd_fixtures
 
 
+def test_fixtures_defaults_to_type_fpl():
+    args = build_parser().parse_args(["fixtures", "--team", "ARS"])
+    assert args.type == "fpl"
+
+
+def test_fixtures_type_custom_is_parsed():
+    args = build_parser().parse_args(["fixtures", "--team", "ARS", "--type", "custom"])
+    assert args.type == "custom"
+
+
 def test_no_command_leaves_no_handler():
     # main() prints help in this case; here we just confirm the parsed shape.
     args = build_parser().parse_args([])

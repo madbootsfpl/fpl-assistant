@@ -74,10 +74,10 @@ def cmd_fixtures(args) -> None:
     team = args.team.upper()
     store = Storage()
     upcoming = store.get_upcoming_fixtures(team=team)
-    schedule = team_schedule(upcoming, team)
+    schedule = team_schedule(upcoming, team, source=args.type)
     if args.next is not None:
         schedule = schedule[: args.next]
-    print(render_team_fixtures(schedule, team))
+    print(render_team_fixtures(schedule, team, source=args.type))
     store.close()
 
 
@@ -154,6 +154,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_fixtures.add_argument("--team", required=True, help="Team short name, e.g. ARS")
     p_fixtures.add_argument(
         "--next", type=int, default=None, help="Limit to the next N fixtures",
+    )
+    p_fixtures.add_argument(
+        "--type", choices=["fpl", "custom"], default="fpl",
+        help="Difficulty source: FPL's rating (default) or our custom one",
     )
     p_fixtures.set_defaults(handler=cmd_fixtures)
 

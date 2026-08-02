@@ -1,7 +1,7 @@
-Current Phase: Sprint 004 planned — ready to start
-Current Sprint: Sprint 004 - Custom Fixture Difficulty (Planned)
-Current Story: US-015 complete (custom FDR + fdr --type custom|fpl); next up US-016 - custom difficulty per match in fixtures view
-Next Milestone: Custom overall FDR from strength_overall (home/away aware); Attack/Defence split deferred (preseason data all zeros)
+Current Phase: Sprint 004 feature stories COMPLETE — review/retro pending
+Current Sprint: Sprint 004 - Custom Fixture Difficulty (all 4 stories done)
+Current Story: US-016 complete — custom difficulty in fdr and fixtures via --type
+Next Milestone: Sprint 004 review & retrospective, then Sprint 005 (Attack/Defence FDR when data populates, or xP engine)
 Current Version: 0.0.1
 Last Updated: 2026-08-02
-New this sprint: manual smoke-test in the Definition of Done (Sprint 003 retro action)
+Commands: refresh · table · search · filter · fdr (--type) · fixtures (--type)

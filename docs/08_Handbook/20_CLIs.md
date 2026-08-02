@@ -68,11 +68,13 @@ program — parse an argument list and check the shape.
 ## Commands
 
 ```bash
-python app.py --help                          # list commands
-python app.py refresh                         # fetch + store
-python app.py table --sort value --limit 20   # view, ranked
-python app.py search haaland                  # find by name
-python app.py filter --pos DEF --max-price 6  # narrow the list
+python app.py --help                             # list commands (with examples)
+python app.py refresh                            # fetch + store (players, teams, fixtures)
+python app.py table --sort value --limit 20      # players, ranked by points or value
+python app.py search haaland                     # find players by name
+python app.py filter --pos DEF --max-price 6     # narrow the player list
+python app.py fdr --type custom --next 5         # teams by fixture difficulty (fpl or custom)
+python app.py fixtures --team ARS --type custom  # a team's fixtures + difficulty
 ```
 
 ---
