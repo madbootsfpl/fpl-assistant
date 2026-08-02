@@ -1,7 +1,7 @@
 # Sprint 007: Optimal Squad Selector
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~3 working sessions
 **Carried Over:** None (Sprint 006 closed clean)
 
@@ -150,15 +150,28 @@ Settle before building:
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All three stories — US-024 (ADR-008), US-025 (the PuLP optimiser), US-026 (the `squad` command). The app now picks the **provably-optimal starting XI** within a budget/formation/club-cap. First optimisation feature and first dependency beyond `requests`. Tests grew 76 → 85.
+* **Carried Forward:** None. Backlog gained: PuLP-4.0 migration, availability filter, flexible formations, 15-man squad, xP objective.
+* **Key Artifacts / Decisions:** ADR-008 (ILP via PuLP, with a worked example); `src/analytics/optimizer.py`; Handbook Ch 22 (Optimisation); commits `7783ed5`→`6b27391`.
 
 #### Retrospective
 * **What Went Well?**
+  - **The app crossed from analysis to a decision** — `squad` recommends, it doesn't just rank. From Tony's own retro idea.
+  - **The gate story earned its name.** ADR-008's formulation was pressure-tested with a worked example *before* coding — applying the Sprint 006 lesson; no flaw slipped this time.
+  - A genuinely new *kind* of code (declarative optimisation) landed cleanly in one module.
+  - The dependency (PuLP) stayed sealed; the rest of the codebase was untouched.
+  - The 3-part DoD held again (8th sprint).
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - PuLP's 4.0 deprecation warnings needed handling — scope-suppressed with a backlog item; a future migration is owed.
+  - v0 objective is last-season points and the formation is fixed — honest for a first cut, but both are obvious next refinements.
+* **Lessons Learned?**
+  - Optimisation flips the mindset: describe the *rules*, not the *search*.
+  - Pressure-testing an ADR mechanism (worked example) works — the discipline caught nothing to fix *because* it was applied.
+  - A "black box" solver is trustworthy when pinned by tests on known-answer cases.
+* **Action Items for Next Sprint (008):**
+  - [ ] Consider: 15-man squad, flexible formations, or an xP-based objective (backlog).
+  - [ ] Revisit data-dependent work (form/expected-minutes xP, Attack/Defence FDR) once the season starts — check data first.
+  - [ ] Keep pressure-testing ADR mechanisms + the 3-part DoD.
 
 ---
 
@@ -166,5 +179,7 @@ Settle before building:
 formations, or an xP-based objective — plus the deferred data-dependent work once the
 season starts.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** The app crossed from *analysis* to *recommendations* — its first
+optimisation, giving a provably-best XI. Tony's own idea, and a landmark step. Sprint
+outcome: **Successful** — 3/3 stories, zero roll-over, DoD held.
