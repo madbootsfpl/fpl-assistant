@@ -67,14 +67,22 @@ holds: storage stores the strengths, analytics computes the rating.
 ### ✅ Definition of Done (this sprint)
 
 Carrying the Sprint 003 lesson — *tests verify behaviour, manual testing verifies
-experience* — a story isn't done until:
+experience* — a story isn't done until **all** of the following hold:
 
-- automated tests pass **and**
-- the new capability is **manually smoke-tested** (run the real command, eyeball the
-  output, check `--help` reveals it), **and**
-- the Handbook is updated for anything new it introduced.
+1. **Automated tests pass** (and cover the new logic).
+2. **Manual smoke test done** — run the real command, eyeball the output, and check
+   `--help` reveals the feature.
+3. **Documentation updated & checked** — as applicable to the story:
+   - **Handbook** — a chapter (or badge bump) for any new tool/topic;
+   - **Architecture** (`03_Architecture`) — for any change to layers or the data model;
+   - **ADR** (`06_Decisions`) + ADR index — for any real decision;
+   - **README** — for any new/changed command;
+   - **Sprint board + PROJECT_STATUS** — story status and progress.
+   (This mirrors the Charter's Documentation Rules: 01_Journal, 03_Architecture,
+   04_Roadmap, 06_Decisions.)
 
-A short manual smoke-test note goes in the session log for each feature story.
+A short note — smoke-test result **and** which docs were touched — goes in the session
+log for each feature story.
 
 ---
 
@@ -122,6 +130,7 @@ Settle before building:
 #### Session 1 - [Date]
 * **Completed:**
 * **Manual smoke test:**
+* **Docs touched:**
 * **Issues / Blockers:**
 * **Next Steps:**
 
