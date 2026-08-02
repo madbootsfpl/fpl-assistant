@@ -36,6 +36,10 @@ _MIGRATIONS = {
         "points_per_game": "REAL",
         "status": "TEXT",
         "ep_next": "REAL",
+        "xg": "REAL",
+        "xa": "REAL",
+        "xgi": "REAL",
+        "xgc": "REAL",
     },
 }
 
@@ -51,7 +55,11 @@ CREATE TABLE IF NOT EXISTS players (
     total_points    INTEGER,
     points_per_game REAL,
     status          TEXT,
-    ep_next         REAL
+    ep_next         REAL,
+    xg              REAL,
+    xa              REAL,
+    xgi             REAL,
+    xgc             REAL
 )
 """
 
@@ -82,8 +90,8 @@ ON CONFLICT(id) DO UPDATE SET
 UPSERT_PLAYER = """
 INSERT INTO players
     (id, first_name, second_name, web_name, team_id, position, price, total_points,
-     points_per_game, status, ep_next)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     points_per_game, status, ep_next, xg, xa, xgi, xgc)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
     second_name     = excluded.second_name,
@@ -94,7 +102,11 @@ ON CONFLICT(id) DO UPDATE SET
     total_points    = excluded.total_points,
     points_per_game = excluded.points_per_game,
     status          = excluded.status,
-    ep_next         = excluded.ep_next
+    ep_next         = excluded.ep_next,
+    xg              = excluded.xg,
+    xa              = excluded.xa,
+    xgi             = excluded.xgi,
+    xgc             = excluded.xgc
 """
 
 UPSERT_FIXTURE = """
@@ -165,7 +177,8 @@ class Storage:
         rows = [
             (p.id, p.first_name, p.second_name, p.web_name,
              p.team_id, p.position, p.price, p.total_points,
-             p.points_per_game, p.status, p.ep_next)
+             p.points_per_game, p.status, p.ep_next,
+             p.xg, p.xa, p.xgi, p.xgc)
             for p in players
         ]
         with self.conn:

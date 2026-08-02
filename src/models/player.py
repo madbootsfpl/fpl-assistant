@@ -30,13 +30,19 @@ class Player:
     points_per_game: float | None = None
     status: str | None = None
     ep_next: float | None = None
+    # Expected goals (Sprint 014, ADR-015). xGI = xG + xA; xGC is goals conceded.
+    xg: float | None = None
+    xa: float | None = None
+    xgi: float | None = None
+    xgc: float | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
         """Build a Player from one entry of bootstrap-static['elements'].
 
         FPL quirks normalised here: element_type → position label; now_cost → £m;
-        and points_per_game / ep_next arrive as strings, so they're parsed to float.
+        and points_per_game / ep_next / the expected_* fields arrive as strings, so
+        they're parsed to float (absent → None).
         """
         return cls(
             id=raw["id"],
@@ -50,4 +56,8 @@ class Player:
             points_per_game=_to_float(raw.get("points_per_game")),
             status=raw.get("status"),
             ep_next=_to_float(raw.get("ep_next")),
+            xg=_to_float(raw.get("expected_goals")),
+            xa=_to_float(raw.get("expected_assists")),
+            xgi=_to_float(raw.get("expected_goal_involvements")),
+            xgc=_to_float(raw.get("expected_goals_conceded")),
         )

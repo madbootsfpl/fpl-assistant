@@ -219,6 +219,12 @@ def test_objective_scores_value_guards_zero_price():
     assert scores[2] == 0.0    # price 0 → guarded
 
 
+def test_objective_scores_xgi_reads_xgi_and_coerces_none():
+    players = [{"id": 1, "xgi": 14.7}, {"id": 2, "xgi": None}]
+    scores = objective_scores(players, "xgi")
+    assert scores == {1: 14.7, 2: 0.0}   # None (unrefreshed/absent) → 0.0
+
+
 def test_objective_scores_xp_reuses_player_xp():
     players = [{
         "id": 1, "team_id": 1, "points_per_game": 5.0, "status": "a",

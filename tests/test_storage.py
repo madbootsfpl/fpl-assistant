@@ -26,6 +26,10 @@ def make_player(
     points_per_game: float | None = None,
     status: str | None = None,
     ep_next: float | None = None,
+    xg: float | None = None,
+    xa: float | None = None,
+    xgi: float | None = None,
+    xgc: float | None = None,
 ) -> Player:
     return Player(
         id=id,
@@ -39,6 +43,10 @@ def make_player(
         points_per_game=points_per_game,
         status=status,
         ep_next=ep_next,
+        xg=xg,
+        xa=xa,
+        xgi=xgi,
+        xgc=xgc,
     )
 
 
@@ -180,6 +188,36 @@ def test_migration_adds_xp_columns_to_an_old_players_table(tmp_path):
     store = Storage(db_path=db)
     cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
     assert {"points_per_game", "status", "ep_next"} <= cols
+    store.close()
+
+
+def test_save_players_stores_expected_goals(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    store.save_players([make_player(id=1, xg=25.5, xa=2.67, xgi=28.17, xgc=38.6)])
+
+    row = store.get_players(name="Test")[0]
+    assert (row["xg"], row["xa"], row["xgi"], row["xgc"]) == (25.5, 2.67, 28.17, 38.6)
+    store.close()
+
+
+def test_migration_adds_expected_goals_columns_to_an_old_players_table(tmp_path):
+    db = str(tmp_path / "old.db")
+
+    # A pre-Sprint-014 database: players table without the expected_* columns.
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)")
+    conn.execute(
+        """CREATE TABLE players (
+            id INTEGER PRIMARY KEY, first_name TEXT, second_name TEXT, web_name TEXT,
+            team_id INTEGER, position TEXT, price REAL, total_points INTEGER)"""
+    )
+    conn.commit()
+    conn.close()
+
+    store = Storage(db_path=db)
+    cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
+    assert {"xg", "xa", "xgi", "xgc"} <= cols
     store.close()
 
 

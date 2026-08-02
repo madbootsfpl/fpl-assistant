@@ -19,3 +19,4 @@ new ADR as it is created.
 | [012](./ADR-012-full-squad.md) | The full 15-man squad (`squad --full`) | Accepted |
 | [013](./ADR-013-declared-bench.md) | A declared bench (`squad --bench`) | Accepted |
 | [014](./ADR-014-flexible-formations.md) | Flexible formations (`squad --formation`) | Accepted |
+| [015](./ADR-015-expected-goals.md) | Expected goals (xG/xA/xGI) from the FPL API | Accepted |

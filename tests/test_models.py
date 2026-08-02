@@ -60,6 +60,34 @@ def test_player_from_api_maps_xp_inputs_and_parses_strings():
     assert player.ep_next == 5.2
 
 
+def test_player_from_api_parses_expected_goals():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 4, "now_cost": 90, "total_points": 200,
+        "expected_goals": "25.50", "expected_assists": "2.67",
+        "expected_goal_involvements": "28.17", "expected_goals_conceded": "38.60",
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.xg == 25.50       # strings → floats
+    assert player.xa == 2.67
+    assert player.xgi == 28.17
+    assert player.xgc == 38.60
+
+
+def test_player_from_api_expected_goals_absent_are_none():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 50, "total_points": 0,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.xg is None and player.xa is None
+    assert player.xgi is None and player.xgc is None
+
+
 def test_player_from_api_missing_xp_inputs_are_none():
     raw = {
         "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

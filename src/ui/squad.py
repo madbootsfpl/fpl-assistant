@@ -76,6 +76,9 @@ def render_squad(
 
     lines.append("")
     lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
+    if objective == "xgi":
+        # ADR-015: xGI is an attacking measure (GK/DEF ≈ 0) — say so, don't oversell it.
+        lines.append("Note: xGI is attacking — GK/DEF score ≈ 0, so this leans to attackers.")
 
     # With a declared bench we know the starters — show their subtotal, the honest number.
     # At a full 4-man bench the 11 starters form a legal XI, so state its shape (ADR-014).

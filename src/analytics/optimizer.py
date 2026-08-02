@@ -145,6 +145,7 @@ def objective_scores(players, objective: str, upcoming=None) -> dict:
 
     - "value" → points-per-£m (undefined price → 0);
     - "xp"    → Expected Points via player_xp (needs `upcoming` fixtures);
+    - "xgi"   → expected goal involvements (None → 0.0); attacking, so GK/DEF ≈ 0;
     - anything else → last-season total_points (the default).
     """
     if objective == "value":
@@ -154,6 +155,9 @@ def objective_scores(players, objective: str, upcoming=None) -> dict:
         }
     if objective == "xp":
         return {r["id"]: r["xp"] for r in player_xp(players, upcoming or [])}
+    if objective == "xgi":
+        # Expected goal involvements (ADR-015). None (unrefreshed/absent) → 0.0.
+        return {p["id"]: (p["xgi"] or 0.0) for p in players}
     return {p["id"]: p["total_points"] for p in players}
 
 

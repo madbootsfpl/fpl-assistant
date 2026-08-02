@@ -158,6 +158,10 @@ in preseason, so the custom FDR uses overall strength for now (ADR-005).
 | `points_per_game` | REAL | `elements[].points_per_game` | xP baseline; last-season, auto-updates (Sprint 005, [ADR-006](../06_Decisions/ADR-006-expected-points-v0.md)) |
 | `status` | TEXT | `elements[].status` | 'a' = available (Sprint 005) |
 | `ep_next` | REAL | `elements[].ep_next` | FPL's own expected points, for comparison (Sprint 005) |
+| `xg` | REAL | `elements[].expected_goals` | Expected goals; last-season (Sprint 014, [ADR-015](../06_Decisions/ADR-015-expected-goals.md)) |
+| `xa` | REAL | `elements[].expected_assists` | Expected assists (Sprint 014) |
+| `xgi` | REAL | `elements[].expected_goal_involvements` | xGI = xG + xA; `xg` view + `--objective xgi` (Sprint 014) |
+| `xgc` | REAL | `elements[].expected_goals_conceded` | Expected goals conceded; defensive lens (Sprint 014) |
 
 The Sprint 005 columns are added to the existing `players` table via the same light
 migration as `teams` (§ADR-005). **Expected Points (xP)** is the first *cross-domain*
@@ -320,3 +324,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   the flexible default (`XI_FLEX`). The chosen shape is shown, as is the bench-implied
   shape in `--full` (shared `formation_str`) — connecting the bench (ADR-013) to the
   formation. Policy at the edge; the solver stays a generic constraint executor.
+- **Sprint 014 (2026-08-02)** — *expected goals* (xG/xA/xGI/xGC), per ADR-015. A new data
+  dimension from the **FPL API** (FBref rejected — 403 + dependency); `players` gains four
+  `expected_*` columns via the generic migration. A new `xg` view ranks by xGI, and
+  `--objective xgi` is one new `objective_scores` entry (no solver change — ADR-011). A
+  full-stack slice: API → model → storage migration → analytics → view. No new dependency.

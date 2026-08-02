@@ -226,6 +226,18 @@ def test_squad_objective_is_parsed():
     assert args.objective == "value"
 
 
+def test_squad_objective_accepts_xgi():
+    args = build_parser().parse_args(["squad", "--objective", "xgi"])
+    assert args.objective == "xgi"
+
+
+def test_xg_command_parses_pos_and_limit():
+    args = build_parser().parse_args(["xg", "--pos", "FWD", "--limit", "5"])
+    assert args.command == "xg"
+    assert args.pos == "FWD"
+    assert args.limit == 5
+
+
 def test_xp_options_are_parsed():
     args = build_parser().parse_args(
         ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]

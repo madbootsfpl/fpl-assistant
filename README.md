@@ -46,12 +46,14 @@ python app.py filter --pos DEF --max-price 6   # filter players (position / team
 python app.py fdr --type elo --next 5           # teams by fixture difficulty (FPL / custom / ClubElo)
 python app.py fixtures --team ARS --type custom # a team's upcoming fixtures + difficulty
 python app.py xp --type custom --next 5         # players by expected points over the next N gameweeks (vs FPL's ep_next at N=1)
+python app.py xg --pos FWD                       # players by expected goal involvement (xGI = xG + xA)
 python app.py squad --budget 80                 # pick the optimal starting XI (1-4-4-2) within a budget
 python app.py squad --include Haaland --exclude Salah  # the optimal XI built around your picks
 python app.py squad --objective xp              # optimise the XI on points / value / xp
 python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 python app.py squad --bench Dubravka Diop        # declare your bench (marked **, shown last); implies --full
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)
+python app.py squad --objective xgi              # optimise on expected goal involvement (attacking)
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

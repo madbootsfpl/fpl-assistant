@@ -30,6 +30,7 @@ from src.storage import Storage
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
 from src.ui.squad import render_squad
+from src.ui.xg import render_xg_table
 from src.ui.table import render_player_table
 from src.ui.xp import render_xp_table
 
@@ -177,6 +178,19 @@ def cmd_squad(args) -> None:
     store.close()
 
 
+def cmd_xg(args) -> None:
+    """Rank players by expected goal involvement (xGI = xG + xA)."""
+    store = Storage()
+    players = store.get_players(position=args.pos.upper() if args.pos else None)
+    # get_players orders by points; the xg view ranks by xGI (None → 0.0).
+    players = sorted(players, key=lambda p: (p["xgi"] or 0.0), reverse=True)
+    if not players:
+        print("No players to rank — run `refresh` first.")
+    else:
+        print(render_xg_table(players, limit=args.limit, pos=args.pos))
+    store.close()
+
+
 def cmd_xp(args) -> None:
     """Rank players by expected points for their team's next fixture."""
     store = Storage()
@@ -243,6 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fdr --next 5                teams with the easiest upcoming fixtures\n"
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
+            "  python app.py xg --pos FWD                players by expected goal involvement (xG + xA)\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
             "  python app.py squad --formation 3-5-2     pin the XI shape (default: best legal shape)\n"
             "  python app.py squad --full --bench Dubravka Diop  full 15-man squad; declare your bench\n"
@@ -292,6 +307,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_xp.set_defaults(handler=cmd_xp)
 
+    p_xg = sub.add_parser("xg", help="Rank players by expected goal involvement (xG + xA)")
+    p_xg.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")
+    p_xg.add_argument(
+        "--limit", type=int, default=20, help="How many players to show (default 20)",
+    )
+    p_xg.set_defaults(handler=cmd_xg)
+
     p_squad = sub.add_parser("squad", help="Pick the optimal squad (starting XI, or --full 15)")
     p_squad.add_argument(
         "--full", action="store_true",
@@ -318,8 +340,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Pin the XI shape, e.g. 3-5-2 (DEF-MID-FWD); default picks the best legal shape",
     )
     p_squad.add_argument(
-        "--objective", choices=["points", "value", "xp"], default="points",
-        help="What to maximise: last-season points (default), value (£m), or xP",
+        "--objective", choices=["points", "value", "xp", "xgi"], default="points",
+        help="What to maximise: points (default), value (£m), xP, or xGI (attacking)",
     )
     p_squad.set_defaults(handler=cmd_squad)
 
