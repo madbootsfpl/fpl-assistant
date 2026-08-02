@@ -87,6 +87,47 @@ def two_teams():
     ]
 
 
+def test_save_teams_stores_overall_strength(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([
+        Team(id=1, name="Arsenal", short_name="ARS",
+             strength_overall_home=4, strength_overall_away=5),
+    ])
+
+    row = store.conn.execute(
+        "SELECT strength_overall_home, strength_overall_away FROM teams WHERE id = 1"
+    ).fetchone()
+    assert (row[0], row[1]) == (4, 5)
+    store.close()
+
+
+def test_migration_adds_strength_columns_to_an_old_teams_table(tmp_path):
+    db = str(tmp_path / "old.db")
+
+    # Simulate a pre-Sprint-004 database: a teams table without the strength columns.
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)"
+    )
+    conn.execute("INSERT INTO teams (id, name, short_name) VALUES (1, 'Arsenal', 'ARS')")
+    conn.commit()
+    conn.close()
+
+    # Opening Storage should migrate the table up to the current schema.
+    store = Storage(db_path=db)
+    cols = {row[1] for row in store.conn.execute("PRAGMA table_info(teams)")}
+    assert "strength_overall_home" in cols
+    assert "strength_overall_away" in cols
+
+    # The existing row is preserved; the new column is NULL until the next refresh.
+    row = store.conn.execute(
+        "SELECT name, strength_overall_home FROM teams WHERE id = 1"
+    ).fetchone()
+    assert row[0] == "Arsenal"
+    assert row[1] is None
+    store.close()
+
+
 def test_foreign_keys_are_enforced(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     # No teams saved, so this player references a team (999) that doesn't exist.

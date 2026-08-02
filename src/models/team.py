@@ -8,6 +8,10 @@ class Team:
     id: int
     name: str
     short_name: str
+    # Overall strength on a 1-5 scale (Sprint 004, ADR-005). Default None so
+    # existing callers/tests that don't set them keep working.
+    strength_overall_home: int | None = None
+    strength_overall_away: int | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Team":
@@ -16,4 +20,6 @@ class Team:
             id=raw["id"],
             name=raw["name"],
             short_name=raw["short_name"],
+            strength_overall_home=raw.get("strength_overall_home"),
+            strength_overall_away=raw.get("strength_overall_away"),
         )

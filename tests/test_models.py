@@ -11,6 +11,19 @@ def test_team_from_api_maps_fields():
     assert team.short_name == "ARS"
 
 
+def test_team_from_api_maps_overall_strength():
+    team = Team.from_api({
+        "id": 1,
+        "name": "Arsenal",
+        "short_name": "ARS",
+        "strength_overall_home": 4,
+        "strength_overall_away": 5,
+    })
+
+    assert team.strength_overall_home == 4
+    assert team.strength_overall_away == 5
+
+
 def test_player_from_api_maps_fields_and_normalises_price_and_position():
     raw = {
         "id": 2,

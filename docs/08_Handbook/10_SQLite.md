@@ -36,6 +36,9 @@ isolation is the whole point of the design.
 - **Parameterised query:** passing values with `?` placeholders (never string-
   building SQL) — safe and correct.
 - **JOIN:** combining tables. A `LEFT JOIN` keeps a player even if its team is missing.
+- **Migration:** bringing an *existing* database up to a new schema. `CREATE TABLE IF
+  NOT EXISTS` won't change a table that already exists, so new columns are added with
+  `ALTER TABLE ADD COLUMN`.
 - **`sqlite3`:** Python's built-in module — no install needed.
 
 ---
@@ -64,6 +67,20 @@ ORDER BY p.total_points DESC
 
 **Proof it works:** running `python app.py` twice both times reported
 "564 players / 20 teams" — the upsert refreshed rather than duplicated.
+
+Evolving the schema — adding columns to a table that already has data (Sprint 004):
+
+```python
+# CREATE TABLE IF NOT EXISTS won't alter an existing table, so add missing columns.
+existing = {row[1] for row in conn.execute("PRAGMA table_info(teams)")}
+for column, col_type in NEW_COLUMNS.items():
+    if column not in existing:
+        conn.execute(f"ALTER TABLE teams ADD COLUMN {column} {col_type}")
+```
+
+This ran on the real `data/fpl.db`: a `teams` table of `[id, name, short_name]` gained
+`strength_overall_home/away` on the next startup, with no data lost. Idempotent — it
+only adds columns that are missing.
 
 ---
 

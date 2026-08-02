@@ -47,7 +47,7 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 
 #### Success Criteria
 - [x] Custom FDR approach agreed (ADR-005) before feature code
-- [ ] `strength_overall_home/away` stored (schema evolution handled cleanly)
+- [x] `strength_overall_home/away` stored (schema evolution handled cleanly)
 - [ ] Custom difficulty computed correctly, home/away aware
 - [ ] `fdr --type custom|fpl` works; FPL's FDR remains the default
 - [ ] A team's fixtures view can show the custom difficulty per match
@@ -62,7 +62,7 @@ can explain the rating, and have the foundation to extend to Attack/Defence late
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-013 | Agree custom (overall) FDR approach (ADR-005): formula, home/away, coexistence with FPL FDR, presentation, schema evolution, attack/defence deferral | Critical | ✅ Complete | 0.5 session |
-| US-014 | Store `strength_overall_home/away` (extend `Team` + teams table + `from_api`) | High | Planned | 1 session |
+| US-014 | Store `strength_overall_home/away` (extend `Team` + teams table + `from_api`) | High | ✅ Complete | 1 session |
 | US-015 | Custom FDR analytics + `fdr --type custom\|fpl` | High | Planned | 1 session |
 | US-016 | Show custom difficulty per match in `fixtures --team` + Handbook update | Medium | Planned | 0.5 session |
 
@@ -143,6 +143,13 @@ Settle before building:
 * **Docs touched:** ADR-005 (new) + index, Architecture §6/changelog, Sprint4 board, PROJECT_STATUS, memory note.
 * **Issues / Blockers:** None — the descope was the finding, handled at planning time.
 * **Next Steps:** US-014 — store `strength_overall_home/away` (with the light migration).
+
+#### Session 2 - 2026-08-02 (US-014: store team strengths + migration)
+* **Completed:** Extended `Team` (+ `from_api`) and the teams table with `strength_overall_home/away`; added a light migration (`PRAGMA table_info` + `ALTER TABLE ADD COLUMN`) so existing caches gain the columns. 3 new tests incl. a migration test on a simulated old DB (49 total). US-014 **complete**.
+* **Manual smoke test:** ✅ Ran `refresh` on the real `data/fpl.db` — the teams table went from `[id, name, short_name]` to include the two strength columns, populated with 1–5 values (ARS 4/5, MCI 4/5). No data lost.
+* **Docs touched:** Handbook Ch10 (migration concept + example), Sprint4 board, PROJECT_STATUS. (Architecture §6 already covered the columns in US-013.)
+* **Issues / Blockers:** None.
+* **Next Steps:** US-015 — custom FDR analytics + `fdr --type custom|fpl`.
 
 ---
 

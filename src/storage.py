@@ -14,11 +14,21 @@ from src.models import Fixture, Player, Team
 
 CREATE_TEAMS = """
 CREATE TABLE IF NOT EXISTS teams (
-    id         INTEGER PRIMARY KEY,
-    name       TEXT NOT NULL,
-    short_name TEXT NOT NULL
+    id                    INTEGER PRIMARY KEY,
+    name                  TEXT NOT NULL,
+    short_name            TEXT NOT NULL,
+    strength_overall_home INTEGER,
+    strength_overall_away INTEGER
 )
 """
+
+# Columns added to `teams` after it first shipped. On an existing database,
+# CREATE TABLE IF NOT EXISTS leaves the old table untouched, so we add any
+# missing columns with a light migration (see _migrate_teams).
+_TEAM_MIGRATIONS = {
+    "strength_overall_home": "INTEGER",
+    "strength_overall_away": "INTEGER",
+}
 
 CREATE_PLAYERS = """
 CREATE TABLE IF NOT EXISTS players (
@@ -48,11 +58,13 @@ CREATE TABLE IF NOT EXISTS fixtures (
 
 # Upsert: insert a new row, or refresh the existing one if the id already exists.
 UPSERT_TEAM = """
-INSERT INTO teams (id, name, short_name)
-VALUES (?, ?, ?)
+INSERT INTO teams (id, name, short_name, strength_overall_home, strength_overall_away)
+VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    name       = excluded.name,
-    short_name = excluded.short_name
+    name                  = excluded.name,
+    short_name            = excluded.short_name,
+    strength_overall_home = excluded.strength_overall_home,
+    strength_overall_away = excluded.strength_overall_away
 """
 
 UPSERT_PLAYER = """
@@ -105,9 +117,27 @@ class Storage:
             self.conn.execute(CREATE_TEAMS)
             self.conn.execute(CREATE_PLAYERS)
             self.conn.execute(CREATE_FIXTURES)
+            self._migrate_teams()
+
+    def _migrate_teams(self) -> None:
+        """Add any teams columns missing from an older database.
+
+        CREATE TABLE IF NOT EXISTS won't alter a table that already exists, so we
+        bring older caches up to the current schema by adding missing columns.
+        Idempotent: only columns not already present are added.
+        """
+        existing = {row[1] for row in self.conn.execute("PRAGMA table_info(teams)")}
+        for column, col_type in _TEAM_MIGRATIONS.items():
+            if column not in existing:
+                # `column`/`col_type` are fixed constants, never user input.
+                self.conn.execute(f"ALTER TABLE teams ADD COLUMN {column} {col_type}")
 
     def save_teams(self, teams: list[Team]) -> None:
-        rows = [(t.id, t.name, t.short_name) for t in teams]
+        rows = [
+            (t.id, t.name, t.short_name,
+             t.strength_overall_home, t.strength_overall_away)
+            for t in teams
+        ]
         # `with self.conn` is a transaction: commit on success, roll back on error.
         with self.conn:
             self.conn.executemany(UPSERT_TEAM, rows)
