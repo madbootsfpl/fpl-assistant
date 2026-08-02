@@ -100,13 +100,13 @@ decisions can weigh a run of games — and double gameweeks.
 
 | Mistake | What I'll Do Differently Next Time |
 |----------|------------------------------------|
-| | |
+| | | Possibly be clearer with my requests, for example I assumed that we would see the N weeks of xP rather than just a total. I aslo assumed that I would see at least a total of the FPL along side this. I just need to be clearer on what I ask and my expectations.
 
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+-Expetcted that  FPL would have their predicted data on each player for a number of weeks.
 
 ---
 
@@ -176,13 +176,18 @@ python app.py xp --type custom --next 5     # sum over the next 5 gameweeks (DGW
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-
+seeing the xP for N weeks is great
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-
+we seem to be running into blockers until th eseason starts. one thing that this brings up is th eoption of having an optimal squad selector based on last years points, currect selection and current price. Do this for the main 11 players with a max buget defined (say £80M default), 11 players could be 
+GK = 1
+DEF = 4
+MID = 4
+FWD = 2
+Max club players = 3. and display the output. The other 4 players could be manually picked with a £20M budget.
 ---
 
 # Summary

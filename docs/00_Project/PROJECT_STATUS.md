@@ -1,8 +1,8 @@
-Current Phase: Sprint 006 COMPLETE — between sprints
-Current Sprint: Sprint 006 - Multi-week xP (✅ Complete, 3/3 stories, retro done)
-Current Story: None active — ready to plan Sprint 007
-Next Milestone: Sprint 007 - form/expected-minutes xP or Attack/Defence FDR (both data-dependent; check first)
+Current Phase: Sprint 007 planned — ready to start
+Current Sprint: Sprint 007 - Optimal Squad Selector (Planned)
+Current Story: US-024 - Agree squad-selector approach (ADR-008) — gating story, not yet started
+Next Milestone: Optimal starting XI via integer programming (PuLP): budget + formation + ≤3/club
 Current Version: 0.0.1
 Last Updated: 2026-08-02
-Commands: refresh · table · search · filter · fdr (--type) · fixtures (--type) · xp (--type --next)
-Deferred: form/expected-minutes xP + Attack/Defence FDR (still preseason-blocked)
+Origin: Tony's Sprint 006 reflection (optimal squad selector) — sidesteps preseason data blockers
+New this sprint: first optimisation feature + first dependency beyond requests (PuLP)
