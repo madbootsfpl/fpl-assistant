@@ -1,6 +1,7 @@
 """Tests for the Expected Points (xP) analytics — the cross-domain join."""
 
 from src.analytics.xp import player_xp
+from src.ui.xp import render_xp_table
 
 
 def player(team_id=1, ppg=5.0, status="a", ep_next=4.0, web_name="P",
@@ -71,3 +72,30 @@ def test_xp_custom_source_uses_strength():
     fixtures = [upcoming(h_diff=4, a_diff=4, away_team_strength=2, home_team_strength=5)]
     result = player_xp([player(ppg=5.0)], fixtures, source="custom")
     assert result[0]["xp"] == 5.5
+
+
+def test_render_xp_table_empty():
+    assert "run `refresh`" in render_xp_table([])
+
+
+def test_render_xp_table_shows_xp_and_fpl_ep():
+    rows = [{
+        "web_name": "B.Fernandes", "team": "MUN", "position": "MID",
+        "xp": 7.4, "ep_next": 4.0, "difficulty": 2,
+    }]
+
+    out = render_xp_table(rows, source="custom")
+
+    assert "B.Fernandes" in out
+    assert "7.4" in out          # our xP
+    assert "4.0" in out          # FPL's ep_next
+    assert "custom" in out       # source noted in the footer
+
+
+def test_render_xp_table_handles_missing_ep():
+    rows = [{
+        "web_name": "X", "team": "ARS", "position": "MID",
+        "xp": 3.0, "ep_next": None, "difficulty": None,
+    }]
+    out = render_xp_table(rows)
+    assert "—" in out            # None ep_next / difficulty render as a dash

@@ -13,6 +13,7 @@ from src.cli import (
     cmd_fixtures,
     cmd_search,
     cmd_table,
+    cmd_xp,
 )
 
 
@@ -95,6 +96,21 @@ def test_fixtures_defaults_to_type_fpl():
 def test_fixtures_type_custom_is_parsed():
     args = build_parser().parse_args(["fixtures", "--team", "ARS", "--type", "custom"])
     assert args.type == "custom"
+
+
+def test_xp_defaults():
+    args = build_parser().parse_args(["xp"])
+    assert args.command == "xp"
+    assert args.type == "fpl"
+    assert args.limit == 20
+    assert args.handler is cmd_xp
+
+
+def test_xp_options_are_parsed():
+    args = build_parser().parse_args(["xp", "--type", "custom", "--pos", "MID", "--limit", "5"])
+    assert args.type == "custom"
+    assert args.pos == "MID"
+    assert args.limit == 5
 
 
 def test_no_command_leaves_no_handler():

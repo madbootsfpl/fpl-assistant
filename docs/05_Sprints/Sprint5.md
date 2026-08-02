@@ -57,10 +57,10 @@ xP_next    = points_per_game × multiplier      # 0 if the player isn't availabl
 - [x] xP v0 approach agreed (ADR-006) before feature code
 - [x] xP inputs stored (`points_per_game`, `status`, `ep_next`) via the migration pattern
 - [x] xP computed by joining a player to their team's next fixture difficulty
-- [ ] `xp` ranks players by expected points; `--type custom|fpl` picks the difficulty
-- [ ] Output shows our xP alongside FPL's `ep_next` for comparison
-- [ ] Tests cover the xP calc (multiplier, availability, the player→fixture join)
-- [ ] **Manual smoke test** run before the sprint is closed (see Definition of Done)
+- [x] `xp` ranks players by expected points; `--type custom|fpl` picks the difficulty
+- [x] Output shows our xP alongside FPL's `ep_next` for comparison
+- [x] Tests cover the xP calc (multiplier, availability, the player→fixture join)
+- [x] **Manual smoke test** run before the sprint is closed (see Definition of Done)
 
 ---
 
@@ -71,12 +71,12 @@ xP_next    = points_per_game × multiplier      # 0 if the player isn't availabl
 | US-017 | Agree xP v0 approach (ADR-006): formula, difficulty source, next-GW horizon, availability, deferrals, last-season baseline | Critical | ✅ Complete | 0.5 session |
 | US-018 | Store xP inputs — extend `Player` (`points_per_game`, `status`, `ep_next`) via the `ALTER TABLE` migration | High | ✅ Complete | 1 session |
 | US-019 | xP analytics — combine ppg × next-fixture difficulty (the cross-domain join) | High | ✅ Complete | 1 session |
-| US-020 | `xp` command — rank by expected points (`--type custom\|fpl`), compare vs FPL `ep_next`, + Handbook | High | Planned | 1 session |
+| US-020 | `xp` command — rank by expected points (`--type custom\|fpl`), compare vs FPL `ep_next`, + Handbook | High | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-006 recorded + added to the ADR index - _Done (US-017)_
 - [x] Update Architecture doc: player xP fields + xP analytics (cross-domain) - _Done (US-017)_
-- [ ] Update `README.md` with the `xp` command - _Planned_
+- [x] Update `README.md` with the `xp` command - _Done (US-020)_
 
 ---
 
@@ -153,6 +153,13 @@ Settle before building:
 * **Docs touched:** Handbook Ch21 (cross-domain metric), Sprint5 board, PROJECT_STATUS.
 * **Issues / Blockers:** None.
 * **Next Steps:** US-020 — the `xp` command (rank by xP, `--type`, compare vs ep_next) + Handbook.
+
+#### Session 4 - 2026-08-02 (US-020: the xp command)
+* **Completed:** Added `ui/xp.py` (`render_xp_table` — xP next to FPL's ep_next + difficulty) and the `xp --type custom|fpl --pos MID --limit N` command (thin handler over `player_xp`, reusing `get_players(position=…)`). Added `xp` to the `--help` examples, Ch20 command list, and README. 5 new tests (73 total). US-020 **complete** — all four Sprint 005 stories done.
+* **Manual smoke test:** ✅ `xp --type custom --pos MID --limit 6` ranks midfielders (B.Fernandes 7.4 vs FPL 4.0); `xp` appears in `--help`.
+* **Docs touched:** Handbook Ch20, README, cli `--help` examples, Sprint5 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 005 review & retrospective.
 
 ---
 
