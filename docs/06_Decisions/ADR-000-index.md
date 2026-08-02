@@ -13,3 +13,4 @@ new ADR as it is created.
 | [006](./ADR-006-expected-points-v0.md) | Expected Points (xP v0) | Accepted |
 | [007](./ADR-007-multi-week-xp.md) | Multi-week xP (fixture horizon) | Accepted |
 | [008](./ADR-008-squad-selector.md) | Optimal squad selector (ILP) | Accepted |
+| [009](./ADR-009-squad-include-exclude.md) | Squad selector include / exclude | Accepted |

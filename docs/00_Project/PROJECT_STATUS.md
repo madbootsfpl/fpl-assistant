@@ -1,6 +1,6 @@
 Current Phase: Sprint 008 planned — ready to start
 Current Sprint: Sprint 008 - Squad Selector Include/Exclude (Planned)
-Current Story: US-027 - Agree include/exclude approach (ADR-009) — gating story, not yet started
+Current Story: US-027 complete (ADR-009 agreed — forced picks + Name:TEAM resolution, pressure-tested); next up US-028 - optimiser + resolver
 Next Milestone: squad --include/--exclude — build the optimal XI around the user's chosen players
 Current Version: 0.0.1
 Last Updated: 2026-08-02

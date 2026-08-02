@@ -49,7 +49,7 @@ and have the optimiser build the best legal XI around those choices — reportin
 clearly when a name is ambiguous or the choices make a squad impossible.
 
 #### Success Criteria
-- [ ] Include/exclude approach agreed (ADR-009) before feature code
+- [x] Include/exclude approach agreed (ADR-009) before feature code
 - [ ] `select_squad` accepts include/exclude and fixes those picks (in / out)
 - [ ] Names resolve to players; ambiguous names (e.g. "Wilson") are reported with candidates and can be disambiguated
 - [ ] `squad --include X --exclude Y` builds the XI around the choices; forced picks are marked
@@ -63,13 +63,13 @@ clearly when a name is ambiguous or the choices make a squad impossible.
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-027 | Agree include/exclude approach (ADR-009): name resolution + disambiguation, fixed picks, validation, infeasibility | Critical | Planned | 0.5 session |
+| US-027 | Agree include/exclude approach (ADR-009): name resolution + disambiguation, fixed picks, validation, infeasibility | Critical | ✅ Complete | 0.5 session |
 | US-028 | Extend optimiser — `select_squad(include, exclude)` fixes picks; a `resolve_players(players, names)` helper (ambiguous / not-found) | High | Planned | 1 session |
 | US-029 | `squad --include … --exclude …` command + mark forced picks + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-009 recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc if needed (name-resolution note) - _Planned_
+- [x] ADR-009 recorded + added to the ADR index - _Done (US-027)_
+- [x] Update Architecture doc if needed (name-resolution note) - _Done (US-027)_
 - [ ] Update `README.md` with `squad --include/--exclude` - _Planned_
 
 ---
@@ -126,12 +126,12 @@ Settle before building (and pressure-test with a worked example, per the Sprint 
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-027: ADR-009 — include/exclude design)
+* **Completed:** Recorded ADR-009: forced picks (`pick=1`/`0`); exact case-insensitive `web_name` matching with a `Name:TEAM` form for the 14 shared names; validation (not-found / ambiguous / include-exclude conflict pre-checks; formation & budget violations reported as the solver's Infeasible). **Pressure-tested with worked examples** (2 GKs → infeasible; £13M force cascades budget; exclude top scorer; Wilson ×3 → candidates listed) — per the Sprint 006/007 lesson. Added to ADR index; Architecture §4 note + changelog. US-027 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-009 (new) + index, Architecture §4/changelog, Sprint8 board, PROJECT_STATUS.
+* **Issues / Blockers:** None. (Data verified at planning surfaced the non-unique web_name; formulation pressure-tested.)
+* **Next Steps:** US-028 — extend the optimiser (`select_squad(include, exclude)`) + a name resolver.
 
 ---
 

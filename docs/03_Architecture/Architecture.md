@@ -91,6 +91,12 @@ feature that makes a decision. It's also the first component with an external
 dependency beyond `requests` (**PuLP**, an integer-programming solver), kept sealed
 inside that one module so the rest of the code is unaffected.
 
+**Sprint 008 addition — include/exclude.** The optimiser gains forced picks
+(`pick = 1`/`0`) so the user can lock players in or out
+([ADR-009](../06_Decisions/ADR-009-squad-include-exclude.md)). A small **name-resolver**
+turns typed names into player ids, handling the non-unique `web_name` (14 shared) via a
+`Name:TEAM` form — input validation at the CLI/optimiser boundary.
+
 ---
 
 ## 5. Data flow — the Sprint 001 slice
@@ -282,3 +288,5 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **Sprint 007 (2026-08-02)** — first optimisation: a squad selector picks the optimal
   XI via integer programming (PuLP), per ADR-008. First dependency beyond `requests`;
   no schema change.
+- **Sprint 008 (2026-08-02)** — the squad selector gains include/exclude (forced picks)
+  + a name resolver for the non-unique `web_name`, per ADR-009. No new data/dependency.
