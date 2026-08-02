@@ -193,6 +193,45 @@ intent that earns the `**` marker, the bottom of the list, and the honest subtot
 
 ---
 
+## Flexible formations — a constraint becomes a range (ADR-014)
+
+The fixed 1-4-4-2 often isn't the best XI. On real data, the best legal shape (5-4-1)
+scores **19 points more** than 4-4-2 at the same £80m. So `squad` now picks the shape:
+
+```
+squad                  # Optimal XI (5-4-1) — the best legal formation
+squad --formation 3-5-2   # pin a shape
+```
+
+The change is small because a formation is just constraints. The exact equalities become
+**ranges**:
+
+```
+old:  DEF == 4                    new:  3 ≤ DEF ≤ 5,  2 ≤ MID ≤ 5,  1 ≤ FWD ≤ 3
+      MID == 4  FWD == 2                total == 11  → the solver picks the shape
+```
+
+`select_squad` normalises an exact int to `(n, n)`, so **exact formations behave exactly
+as before** — the default and the 15-man squad are untouched. "Flexible is the new XI
+default" is a choice the *CLI* makes (it passes `XI_FLEX`), not a change to the solver —
+the same "generic core, policy at the edge" pattern as the objective and the FDR source.
+
+### The bench *is* the formation
+
+In the full squad you don't pass `--formation` — your **bench** sets the shape. You start
+1 GK + 10 outfield, so the four you bench (the backup GK + 3 outfield) decide it:
+
+```
+XI = (5 − benched DEF, 5 − benched MID, 3 − benched FWD)
+bench 1 DEF, 1 MID, 1 FWD → 4-4-2
+```
+
+So `--formation` is XI-only (with `--full` it's an error — you'd be setting the shape
+twice). And a single `formation_str()` helper shows *both*: the chosen XI shape, and the
+shape a full 4-man bench implies (`Starters (11) — 4-4-2`). One idea, two views.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.
@@ -222,6 +261,7 @@ intent that earns the `**` marker, the bottom of the list, and the honest subtot
 - [ADR-008 — Squad selector (ILP)](../06_Decisions/ADR-008-squad-selector.md)
 - [ADR-012 — The full 15-man squad](../06_Decisions/ADR-012-full-squad.md)
 - [ADR-013 — A declared bench](../06_Decisions/ADR-013-declared-bench.md)
+- [ADR-014 — Flexible formations](../06_Decisions/ADR-014-flexible-formations.md)
 - [Architecture §4 (optimisation component)](../03_Architecture/Architecture.md)
 - [Chapter 21 — Analytics](./21_Analytics.md)
 - Code: `src/analytics/optimizer.py`

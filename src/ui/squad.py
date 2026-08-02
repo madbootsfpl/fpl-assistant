@@ -12,6 +12,15 @@ _PRICE_W = 6
 _PTS_W = 5
 
 
+def formation_str(players) -> str:
+    """The DEF-MID-FWD shape of a set of players, e.g. "5-4-1" (GK implied)."""
+    counts = {"DEF": 0, "MID": 0, "FWD": 0}
+    for p in players:
+        if p["position"] in counts:
+            counts[p["position"]] += 1
+    return f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
+
+
 def render_squad(
     result, budget: float = 80.0, objective: str = "points", full: bool = False
 ) -> str:
@@ -25,6 +34,9 @@ def render_squad(
             "Try a higher budget — or run `refresh` if you haven't loaded data yet."
         )
 
+    # In XI mode every picked player is a starter, so the squad *is* the formation.
+    shape = "" if full else f" ({formation_str(result['selected'])})"
+
     header = (
         f"{'Pos':<{_POS_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
         f"{'Price':>{_PRICE_W}} {'Pts':>{_PTS_W}}"
@@ -35,7 +47,8 @@ def render_squad(
     )
 
     lines = [
-        f"Optimal {what} — objective: {objective}, budget £{budget:.1f}m", "", header, divider
+        f"Optimal {what}{shape} — objective: {objective}, budget £{budget:.1f}m",
+        "", header, divider,
     ]
     any_forced = False
     any_bench = False
@@ -65,10 +78,12 @@ def render_squad(
     lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
 
     # With a declared bench we know the starters — show their subtotal, the honest number.
+    # At a full 4-man bench the 11 starters form a legal XI, so state its shape (ADR-014).
     if any_bench:
         starters = [p for p in result["selected"] if not p.get("bench")]
         starters_pts = sum(p["total_points"] for p in starters)
-        lines.append(f"Starters ({len(starters)}): {starters_pts} pts")
+        shape = f" — {formation_str(starters)}" if len(starters) == 11 else ""
+        lines.append(f"Starters ({len(starters)}){shape}: {starters_pts} pts")
 
     legend = []
     if any_forced:

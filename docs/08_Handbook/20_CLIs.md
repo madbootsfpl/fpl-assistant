@@ -81,6 +81,7 @@ python app.py squad --include Haaland --exclude Salah  # the optimal XI around y
 python app.py squad --objective value            # optimise the XI on points / value / xp
 python app.py squad --full --include <4 cheap>   # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 python app.py squad --bench Dubravka Diop         # declare your bench (** , shown last); implies --full
+python app.py squad --formation 3-5-2             # pin the XI shape (default: best legal formation)
 ```
 
 ---

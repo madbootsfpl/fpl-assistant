@@ -13,12 +13,33 @@ from src.analytics.value import points_per_million
 from src.analytics.xp import player_xp
 
 DEFAULT_BUDGET = 80.0
-FORMATION = {"GK": 1, "DEF": 4, "MID": 4, "FWD": 2}   # 11 players (a starting XI)
+FORMATION = {"GK": 1, "DEF": 4, "MID": 4, "FWD": 2}   # 11 players (a fixed 1-4-4-2 XI)
+# A flexible XI: each outfield line is a (min, max) range; the solver picks the shape.
+XI_FLEX = {"GK": (1, 1), "DEF": (3, 5), "MID": (2, 5), "FWD": (1, 3)}   # 11, any legal shape
 SQUAD_15 = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}    # 15 players (the full FPL squad)
 FULL_BUDGET = 100.0                                    # the real FPL squad budget
 MAX_PER_CLUB = 3
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
+
+
+def _formation_bounds(formation: dict, size):
+    """Normalise a formation to {pos: (min, max)} and resolve the total squad `size`.
+
+    A value may be an exact int (→ `(n, n)`) or a `(min, max)` range. `size` is the total
+    number of players; if None it's derived from an all-exact formation (their sum), and
+    a range formation without an explicit `size` is an error (the total is ambiguous).
+    """
+    bounds = {
+        pos: ((v, v) if isinstance(v, int) else tuple(v))
+        for pos, v in formation.items()
+    }
+    if size is None:
+        if all(lo == hi for lo, hi in bounds.values()):
+            size = sum(lo for lo, _ in bounds.values())
+        else:
+            raise ValueError("select_squad: `size` is required for a range formation")
+    return bounds, size
 
 
 def select_squad(
@@ -30,6 +51,7 @@ def select_squad(
     exclude_ids=(),
     bench_ids=(),
     scores=None,
+    size=None,
 ) -> dict:
     """Pick the starting XI that maximises a per-player score under the constraints.
 
@@ -45,6 +67,7 @@ def select_squad(
     """
     include_set = set(include_ids)
     bench_set = set(bench_ids)
+    bounds, size = _formation_bounds(formation, size)
     if scores is None:
         scores = {p["id"]: p["total_points"] for p in players}
     # We use PuLP 3.x's current API; it emits DeprecationWarnings pointing at the
@@ -63,12 +86,18 @@ def select_squad(
         # Budget.
         problem += pulp.lpSum(p["price"] * pick[p["id"]] for p in players) <= budget
 
-        # Formation: an exact count per position.
-        for position, count in formation.items():
-            problem += (
-                pulp.lpSum(pick[p["id"]] for p in players if p["position"] == position)
-                == count
+        # Formation: each position within its (min, max) range, and `size` in total.
+        # An exact shape is just a range where min == max.
+        for position, (lo, hi) in bounds.items():
+            pos_sum = pulp.lpSum(
+                pick[p["id"]] for p in players if p["position"] == position
             )
+            if lo == hi:
+                problem += pos_sum == lo
+            else:
+                problem += pos_sum >= lo
+                problem += pos_sum <= hi
+        problem += pulp.lpSum(pick[p["id"]] for p in players) == size
 
         # At most `max_per_club` players from any one club.
         for club in {p["team"] for p in players}:

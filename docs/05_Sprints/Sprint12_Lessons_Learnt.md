@@ -106,7 +106,7 @@ with a starters' points subtotal that finally means "weekly".
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- less surprised but pure admiration for Claude - well done!!
 
 ---
 
@@ -185,6 +185,7 @@ python app.py squad --full --bench A B C:TEAM D   # a full 4-man bench → Start
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+reviewing the backlog
 
 ---
 

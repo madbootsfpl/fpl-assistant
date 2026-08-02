@@ -15,6 +15,7 @@ from src.analytics import (
     DEFAULT_BUDGET,
     FULL_BUDGET,
     SQUAD_15,
+    XI_FLEX,
     elo_difficulty_bands,
     objective_scores,
     player_xp,
@@ -103,6 +104,29 @@ def validate_bench(bench_ids, include_ids, exclude_ids) -> list:
     return errors
 
 
+# Legal XI ranges (GK is always 1): DEF 3–5, MID 2–5, FWD 1–3, outfield sums to 10.
+_FORMATION_RANGES = {"DEF": (3, 5), "MID": (2, 5), "FWD": (1, 3)}
+
+
+def parse_formation(spec: str):
+    """Parse a `D-M-F` formation string to an exact `{GK,DEF,MID,FWD}` dict (ADR-014).
+
+    Pure: returns `(formation, None)` on success or `(None, message)` on any error —
+    three integers, each within its legal range, summing to 10 outfield (GK implicit).
+    """
+    parts = spec.split("-")
+    if len(parts) != 3 or not all(x.strip().lstrip("-").isdigit() for x in parts):
+        return None, f"Formation '{spec}' must be three numbers like 3-5-2 (DEF-MID-FWD)."
+    d, m, f = (int(x) for x in parts)
+    for pos, val in (("DEF", d), ("MID", m), ("FWD", f)):
+        lo, hi = _FORMATION_RANGES[pos]
+        if not lo <= val <= hi:
+            return None, f"Formation '{spec}': {pos} must be {lo}-{hi} (got {val})."
+    if d + m + f != 10:
+        return None, f"Formation '{spec}': outfield players must total 10 (got {d + m + f})."
+    return {"GK": 1, "DEF": d, "MID": m, "FWD": f}, None
+
+
 def cmd_squad(args) -> None:
     """Pick the optimal squad — the starting XI, or the full 15 with `--full`."""
     store = Storage()
@@ -122,10 +146,21 @@ def cmd_squad(args) -> None:
 
     # A declared bench implies the full squad — an XI has no bench (ADR-013).
     full = args.full or bool(args.bench)
-    # `--full` picks the 15-man squad (2/5/5/3, £100m); otherwise the XI (1-4-4-2, £80m).
-    # The budget default depends on the mode, so it's resolved here, not in argparse.
-    formation = SQUAD_15 if full else None   # None → select_squad's XI default
     budget = resolve_squad_budget(args.budget, full)
+
+    # Choose the formation (ADR-014): the full squad is a fixed 2/5/5/3; the XI is a
+    # pinned shape (--formation) or, by default, flexible (the solver picks the best).
+    formation, size = (SQUAD_15, 15) if full else (XI_FLEX, 11)
+    if args.formation is not None:
+        if full:
+            errors.append(
+                "--formation applies to the starting XI, not the 15-man squad "
+                "(--full/--bench). In the full squad your bench sets the shape."
+            )
+        else:
+            formation, ferror = parse_formation(args.formation)
+            if ferror:
+                errors.append(ferror)
 
     if errors:
         for message in errors:
@@ -133,11 +168,10 @@ def cmd_squad(args) -> None:
     else:
         upcoming = store.get_upcoming_fixtures() if args.objective == "xp" else None
         scores = objective_scores(players, args.objective, upcoming)
-        kwargs = {"formation": formation} if formation is not None else {}
         result = select_squad(
-            players, budget=budget,
+            players, budget=budget, formation=formation, size=size,
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
-            scores=scores, **kwargs,
+            scores=scores,
         )
         print(render_squad(result, budget=budget, objective=args.objective, full=full))
     store.close()
@@ -210,6 +244,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
+            "  python app.py squad --formation 3-5-2     pin the XI shape (default: best legal shape)\n"
             "  python app.py squad --full --bench Dubravka Diop  full 15-man squad; declare your bench\n"
             "\n"
             "Run 'python app.py <command> --help' for a command's options."
@@ -277,6 +312,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--bench", nargs="*", default=[], metavar="NAME",
         help="Declare 1-4 players as your bench (marked **, shown last); implies --full",
+    )
+    p_squad.add_argument(
+        "--formation", default=None, metavar="D-M-F",
+        help="Pin the XI shape, e.g. 3-5-2 (DEF-MID-FWD); default picks the best legal shape",
     )
     p_squad.add_argument(
         "--objective", choices=["points", "value", "xp"], default="points",

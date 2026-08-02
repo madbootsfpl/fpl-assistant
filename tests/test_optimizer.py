@@ -4,13 +4,16 @@ Each test uses a small hand-built player set where the optimum is known, so we c
 check the solver picks it and respects each constraint.
 """
 
+import pytest
+
 from src.analytics.optimizer import (
     SQUAD_15,
+    XI_FLEX,
     objective_scores,
     resolve_players,
     select_squad,
 )
-from src.ui.squad import render_squad
+from src.ui.squad import formation_str, render_squad
 
 
 def p(id, position, price, points, team=None, name=None):
@@ -151,6 +154,45 @@ def test_bench_players_are_forced_in_tagged_and_sorted_last():
     assert all(s["bench"] for s in selected[-2:])
     # A benched player is tagged bench, not "forced" (that flag is for --include).
     assert benched[0]["bench"] is True and benched[0]["forced"] is False
+
+
+def _shape_pool():
+    """1 GK + strong DEF (10), medium MID (5), weak FWD (1) — best legal XI is 5-4-1."""
+    return (
+        [p(1, "GK", 4.0, 3), p(2, "GK", 4.0, 2)]
+        + [p(10 + i, "DEF", 4.0, 10) for i in range(6)]
+        + [p(20 + i, "MID", 4.0, 5) for i in range(6)]
+        + [p(30 + i, "FWD", 4.0, 1) for i in range(3)]
+    )
+
+
+def test_flexible_formation_picks_the_best_legal_shape():
+    from collections import Counter
+    result = select_squad(_shape_pool(), budget=100.0, formation=XI_FLEX, size=11)
+
+    assert result["status"] == "Optimal"
+    assert len(result["selected"]) == 11
+    counts = Counter(s["position"] for s in result["selected"])
+    assert counts["GK"] == 1
+    assert 3 <= counts["DEF"] <= 5 and 2 <= counts["MID"] <= 5 and 1 <= counts["FWD"] <= 3
+    # Strong defenders → the solver maxes DEF: a 5-4-1, not the fixed 4-4-2.
+    assert (counts["DEF"], counts["MID"], counts["FWD"]) == (5, 4, 1)
+
+
+def test_pinned_formation_is_honoured():
+    from collections import Counter
+    # A pinned 3-5-2 (size derives from the exact shape); overrides the best-shape choice.
+    result = select_squad(_shape_pool(), budget=100.0,
+                          formation={"GK": 1, "DEF": 3, "MID": 5, "FWD": 2})
+
+    counts = Counter(s["position"] for s in result["selected"])
+    assert (counts["DEF"], counts["MID"], counts["FWD"]) == (3, 5, 2)
+
+
+def test_range_formation_without_size_raises():
+    # A range formation has an ambiguous total — `size` is required (fail loud).
+    with pytest.raises(ValueError):
+        select_squad(formation_11(), budget=80.0, formation=XI_FLEX)
 
 
 def test_no_bench_leaves_the_order_unchanged():
@@ -375,6 +417,34 @@ def test_render_full_four_man_bench_calls_starters_the_xi():
                        budget=100, full=True)
     assert "Starters (11)" in out
     assert "is your XI" in out              # caveat softened at a full 4-man bench
+
+
+def test_formation_str_counts_outfield_only():
+    players = [{"position": "GK"}, {"position": "DEF"}, {"position": "DEF"},
+               {"position": "MID"}, {"position": "FWD"}]
+    assert formation_str(players) == "2-1-1"
+
+
+def test_render_xi_states_the_chosen_formation():
+    def row(pos):
+        return {"position": pos, "web_name": pos, "team": "ARS",
+                "price": 5.0, "total_points": 50, "forced": False, "bench": False}
+    selected = ([row("GK")] + [row("DEF")] * 5 + [row("MID")] * 4 + [row("FWD")] * 1)  # 5-4-1
+    out = render_squad({"status": "Optimal", "selected": selected,
+                        "total_points": 550, "total_cost": 55.0}, budget=80)
+    assert "Optimal XI (5-4-1)" in out
+
+
+def test_render_full_four_man_bench_shows_the_implied_shape():
+    def row(pos, bench=False):
+        return {"position": pos, "web_name": pos, "team": "ARS",
+                "price": 5.0, "total_points": 50, "forced": False, "bench": bench}
+    # 11 starters as a 4-4-2 + a legal 4-man bench (backup GK + 1 DEF/MID/FWD).
+    starters = [row("GK")] + [row("DEF")] * 4 + [row("MID")] * 4 + [row("FWD")] * 2
+    bench = [row("GK", True), row("DEF", True), row("MID", True), row("FWD", True)]
+    out = render_squad({"status": "Optimal", "selected": starters + bench,
+                        "total_points": 750, "total_cost": 100.0}, budget=100, full=True)
+    assert "Starters (11) — 4-4-2" in out
 
 
 def test_render_full_no_bench_has_no_bench_section():

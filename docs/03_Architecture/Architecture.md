@@ -314,3 +314,9 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   the end; `--bench` implies `--full` (cap 4). Knowing the bench yields a starters'
   points subtotal — the honest weekly number that answers ADR-012's caveat. Annotation +
   display; the optimiser's model is unchanged.
+- **Sprint 013 (2026-08-02)** — *flexible formations* (`squad --formation`), per ADR-014.
+  The XI's position constraints become ranges (DEF 3–5, MID 2–5, FWD 1–3, 11 total);
+  `select_squad` gains range/`size` support (exact ints unchanged), and the CLI opts into
+  the flexible default (`XI_FLEX`). The chosen shape is shown, as is the bench-implied
+  shape in `--full` (shared `formation_str`) — connecting the bench (ADR-013) to the
+  formation. Policy at the edge; the solver stays a generic constraint executor.

@@ -15,6 +15,7 @@ from src.cli import (
     cmd_squad,
     cmd_table,
     cmd_xp,
+    parse_formation,
     resolve_squad_budget,
     validate_bench,
 )
@@ -173,6 +174,32 @@ def test_validate_bench_rejects_include_and_bench():
 def test_validate_bench_rejects_bench_and_exclude():
     errors = validate_bench([1], include_ids=[], exclude_ids=[1])
     assert any("--bench and --exclude" in e for e in errors)
+
+
+def test_squad_formation_defaults_to_none_and_is_parsed():
+    assert build_parser().parse_args(["squad"]).formation is None
+    assert build_parser().parse_args(["squad", "--formation", "3-5-2"]).formation == "3-5-2"
+
+
+def test_parse_formation_accepts_a_legal_shape():
+    formation, error = parse_formation("3-5-2")
+    assert error is None
+    assert formation == {"GK": 1, "DEF": 3, "MID": 5, "FWD": 2}
+
+
+def test_parse_formation_rejects_out_of_range():
+    _, error = parse_formation("6-3-1")          # DEF 6 > 5
+    assert error is not None and "DEF" in error
+
+
+def test_parse_formation_rejects_wrong_outfield_total():
+    _, error = parse_formation("3-5-3")          # sums to 11, not 10
+    assert error is not None and "10" in error
+
+
+def test_parse_formation_rejects_non_numeric():
+    _, error = parse_formation("foo")
+    assert error is not None and "three numbers" in error
 
 
 def test_squad_include_exclude_are_parsed_as_lists():
