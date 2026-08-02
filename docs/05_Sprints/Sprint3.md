@@ -1,9 +1,9 @@
 # Sprint 003: Fixtures & Difficulty
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-01 to 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~3–4 working sessions
-**Carried Over:** 2 technical tasks from Sprints 001–002 (see Carry-over below)
+**Carried Over:** 2 technical tasks from Sprints 001–002 — both cleared first (see Carry-over below)
 
 ---
 
@@ -159,19 +159,33 @@ Recorded as **ADR-004** at sprint start.
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** Both carry-over tasks (FK enforcement, Handbook chapters 20/21) + all four stories — US-009 (ADR-004), US-010 (fixtures ingestion), US-011 (FDR view), US-012 (fixtures listing) — plus a `--help` discoverability fix found in testing. The app now has two data entities, two analytics metrics, and six commands. Tests grew 29 → 46, all offline.
+* **Carried Forward:** None. And no tech task slipped — the carry-over gate worked.
+* **Key Artifacts / Decisions:** ADR-004 (fixtures/FDR); `fixtures` entity with two FKs + enforcement; `src/ingest.py` extended; `src/analytics/fdr.py` (first aggregating metric); commits `0795c15`→`b81a057`.
 
 #### Retrospective
 * **What Went Well?**
+  - The carry-over gate worked — the two tasks that slipped in Sprints 001 *and* 002 were done first, and nothing slipped this sprint.
+  - Adding a whole new entity (fixtures) was *boring* — it flowed through each layer exactly like players. The strongest evidence yet that the layering pays off.
+  - DRY refactors (`_get_json`, `_view`) were chosen and paid off immediately; tests proved the FDR refactor safe (identical output, green suite).
+  - The storage-vs-analytics boundary held again: filter/query in storage, compute in analytics.
+  - Handbook stayed in step (Ch21 updated inside US-011), per the DoD.
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - Manual testing caught a `--help` discoverability gap that automated tests couldn't — a reminder to smoke-test the *experience*, not just behaviour.
+  - `git add -A` once swept in `.claude/settings.local.json`; caught by reviewing `git status` before commit, now gitignored. Keep that discipline.
+* **Lessons Learned?**
+  - A well-layered design makes a new entity predictable to add — the boundaries did the thinking.
+  - **Tests verify behaviour; manual testing verifies experience** (discoverability, help text, feel). Both are needed.
+  - Refactor confidence comes from tests — the `_view` extraction was safe *because* the FDR tests would have caught a regression.
+  - Gating carried tasks at sprint start (with a Definition of Done) actually stops slippage.
+* **Action Items for Next Sprint (004):**
+  - [ ] Choose direction: custom FDR (Attack/Defense split, home/away weighting) **or** begin the xP engine.
+  - [ ] Add a short per-sprint manual smoke-test checklist (does the UX reveal the new features?).
+  - [ ] Keep the staging discipline — review `git status` before every commit.
 
 ---
 
 **Proposed follow-on (Sprint 004):** custom FDR (Attack/Defense split, home/away), or begin the xP engine.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** The app gained a second data source (fixtures) and its first aggregating analytics (FDR) — decisions can now weigh *who a team plays*, not just past points. Sprint outcome: **Successful** — 4/4 stories, carry-over cleared, zero roll-over.
