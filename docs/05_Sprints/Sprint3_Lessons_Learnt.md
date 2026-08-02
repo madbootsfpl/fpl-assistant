@@ -102,13 +102,13 @@ plays*, not just past points.
 
 | Mistake | What I'll Do Differently Next Time |
 |----------|------------------------------------|
-| | |
+| | | Need to do more testing at complete
 
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- how good Claude Code is
 
 ---
 
@@ -121,7 +121,7 @@ plays*, not just past points.
 
 ## Personal Improvements _(for Tony)_
 
--
+- No need to learn Phyton, learnings more geared on how things work, flow end to end and how the project is architectec
 
 ## Workflow Improvements
 
@@ -185,6 +185,7 @@ sqlite3 data/fpl.db "SELECT COUNT(*) FROM fixtures;"
 ---
 
 # Overall Sprint Reflection _(for Tony)_
+Great sprint and delighted i could add value manually testing. I have noticed that we are not keeping up with th eHandbook entries, like glossary etc. Need to do a better job there.
 
 ### What am I most pleased with?
 

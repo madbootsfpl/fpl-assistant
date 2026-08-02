@@ -1,7 +1,7 @@
-Current Phase: Sprint 003 COMPLETE — between sprints
-Current Sprint: Sprint 003 - Fixtures & Difficulty (✅ Complete, 4/4 stories + carry-over, retro done)
-Current Story: None active — ready to plan Sprint 004
-Next Milestone: Sprint 004 - custom FDR (Attack/Defense, home/away) OR begin the xP engine
+Current Phase: Sprint 004 planned — ready to start
+Current Sprint: Sprint 004 - Custom Fixture Difficulty (Planned)
+Current Story: US-013 - Agree custom FDR approach (ADR-005) — gating story, not yet started
+Next Milestone: Custom Attack/Defence FDR from team strengths (home/away aware)
 Current Version: 0.0.1
 Last Updated: 2026-08-02
-Commands: refresh · table · search · filter · fdr · fixtures
+New this sprint: manual smoke-test in the Definition of Done (Sprint 003 retro action)
