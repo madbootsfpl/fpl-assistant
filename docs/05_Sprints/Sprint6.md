@@ -42,7 +42,7 @@ seam (custom/fpl), and the fixtures data.
 the next one — so decisions can weigh a *run* of games.
 
 #### Success Criteria
-- [ ] Multi-week xP approach agreed (ADR-007) before feature code
+- [x] Multi-week xP approach agreed (ADR-007) before feature code
 - [ ] xP summed correctly over a team's next N fixtures (each fixture's multiplier applied)
 - [ ] `xp --next N` works; `--next 1` reproduces today's single-GW behaviour
 - [ ] Output is clearly labelled as a total over N fixtures; `ep_next` handled honestly at N>1
@@ -55,13 +55,13 @@ the next one — so decisions can weigh a *run* of games.
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-021 | Agree multi-week xP (ADR-007): sum over next N fixtures; horizon = next N *fixtures* (DGW/BGW alignment deferred); `ep_next` comparable only at N=1; default N | Critical | Planned | 0.5 session |
+| US-021 | Agree multi-week xP (ADR-007): sum over next N fixtures; horizon = next N *fixtures* (DGW/BGW alignment deferred); `ep_next` comparable only at N=1; default N | Critical | ✅ Complete | 0.5 session |
 | US-022 | Multi-week xP analytics — next-N difficulties per team, sum per-fixture xP | High | Planned | 1 session |
 | US-023 | `xp --next N` command + label the horizon + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-007 recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc (if the xP note needs the horizon) - _Planned_
+- [x] ADR-007 recorded + added to the ADR index - _Done (US-021)_
+- [x] Update Architecture doc (if the xP note needs the horizon) - _Done (US-021)_
 - [ ] Update `README.md` with `xp --next` - _Planned_
 
 ---
@@ -116,12 +116,12 @@ Settle before building:
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-021: ADR-007 — multi-week xP design)
+* **Completed:** Recorded ADR-007: xP over a horizon = **sum** of per-fixture xP over the next N *fixtures* (captures DGW by count; true DGW/BGW alignment deferred); `xp --next` defaults to 1 (today's behaviour); `ep_next` shown only at N=1 (not comparable to an N-fixture sum); short horizons sum over what's available. Added to ADR index; Architecture xP note + changelog updated. US-021 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-007 (new) + index, Architecture §6/changelog, Sprint6 board, PROJECT_STATUS.
+* **Issues / Blockers:** None. (Data verified at planning.)
+* **Next Steps:** US-022 — multi-week xP analytics (next-N difficulties per team, sum per-fixture xP).
 
 ---
 

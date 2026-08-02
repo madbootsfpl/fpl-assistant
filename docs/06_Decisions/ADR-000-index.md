@@ -11,3 +11,4 @@ new ADR as it is created.
 | [004](./ADR-004-fixtures-and-fdr.md) | Fixtures data model & FDR approach | Accepted |
 | [005](./ADR-005-custom-fdr.md) | Custom (overall) fixture difficulty | Accepted |
 | [006](./ADR-006-expected-points-v0.md) | Expected Points (xP v0) | Accepted |
+| [007](./ADR-007-multi-week-xp.md) | Multi-week xP (fixture horizon) | Accepted |
