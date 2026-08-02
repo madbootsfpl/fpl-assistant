@@ -50,8 +50,8 @@ clearly when a name is ambiguous or the choices make a squad impossible.
 
 #### Success Criteria
 - [x] Include/exclude approach agreed (ADR-009) before feature code
-- [ ] `select_squad` accepts include/exclude and fixes those picks (in / out)
-- [ ] Names resolve to players; ambiguous names (e.g. "Wilson") are reported with candidates and can be disambiguated
+- [x] `select_squad` accepts include/exclude and fixes those picks (in / out)
+- [x] Names resolve to players; ambiguous names (e.g. "Wilson") are reported with candidates and can be disambiguated
 - [ ] `squad --include X --exclude Y` builds the XI around the choices; forced picks are marked
 - [ ] Impossible choices (conflict, over-budget, too many for a position) are reported clearly, not crashed
 - [ ] Tests cover force-in, force-out, ambiguity, conflict, and infeasible-forced
@@ -64,7 +64,7 @@ clearly when a name is ambiguous or the choices make a squad impossible.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-027 | Agree include/exclude approach (ADR-009): name resolution + disambiguation, fixed picks, validation, infeasibility | Critical | ✅ Complete | 0.5 session |
-| US-028 | Extend optimiser — `select_squad(include, exclude)` fixes picks; a `resolve_players(players, names)` helper (ambiguous / not-found) | High | Planned | 1 session |
+| US-028 | Extend optimiser — `select_squad(include, exclude)` fixes picks; a `resolve_players(players, names)` helper (ambiguous / not-found) | High | ✅ Complete | 1 session |
 | US-029 | `squad --include … --exclude …` command + mark forced picks + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
@@ -132,6 +132,13 @@ Settle before building (and pressure-test with a worked example, per the Sprint 
 * **Docs touched:** ADR-009 (new) + index, Architecture §4/changelog, Sprint8 board, PROJECT_STATUS.
 * **Issues / Blockers:** None. (Data verified at planning surfaced the non-unique web_name; formulation pressure-tested.)
 * **Next Steps:** US-028 — extend the optimiser (`select_squad(include, exclude)`) + a name resolver.
+
+#### Session 2 - 2026-08-02 (US-028: optimiser + resolver)
+* **Completed:** Extended `select_squad(..., include_ids, exclude_ids)` — forced picks (`pick=1`/`0`) + a `forced` flag on selected players. Added `resolve_players(players, names)` — exact `web_name` (case-insensitive) with `Name:TEAM` disambiguation; returns (ids, errors) for not-found / ambiguous. Handbook Ch22 gains a forcing-choices section. 7 new tests (92 total). US-028 **complete** — command is US-029.
+* **Manual smoke test:** ✅ Excluded B.Fernandes + force-included Garner on real data → XI rebuilt around both (Garner marked forced), 1991 pts / £78.0m; resolution returned no errors.
+* **Docs touched:** Handbook Ch22, Sprint8 board, PROJECT_STATUS. (Architecture covered in US-027.)
+* **Issues / Blockers:** None.
+* **Next Steps:** US-029 — the `squad --include … --exclude …` command.
 
 ---
 

@@ -21,14 +21,19 @@ def select_squad(
     budget: float = DEFAULT_BUDGET,
     formation: dict = FORMATION,
     max_per_club: int = MAX_PER_CLUB,
+    include_ids=(),
+    exclude_ids=(),
 ) -> dict:
     """Pick the starting XI that maximises last-season points under the constraints.
 
     `players` are mappings with id, web_name, position, price, total_points, team
-    (as returned by Storage.get_players()). Returns a dict with the solver `status`,
-    the `selected` players, and `total_points` / `total_cost`. If no legal XI fits
-    (e.g. the budget is too low), `status` is not "Optimal" and `selected` is empty.
+    (as returned by Storage.get_players()). `include_ids`/`exclude_ids` force players
+    into or out of the XI (pick = 1 / 0). Returns a dict with the solver `status`, the
+    `selected` players (each flagged `forced`), and `total_points` / `total_cost`. If
+    no legal XI fits (e.g. the budget is too low, or the forced set breaks a rule),
+    `status` is not "Optimal" and `selected` is empty.
     """
+    include_set = set(include_ids)
     # We use PuLP 3.x's current API; it emits DeprecationWarnings pointing at the
     # PuLP 4.0 API (see docs/Backlog.md). Silence those forward-looking notices here.
     with warnings.catch_warnings():
@@ -59,13 +64,26 @@ def select_squad(
                 <= max_per_club
             )
 
+        # Forced picks: lock chosen players in (1) or out (0).
+        for pid in include_set:
+            if pid in pick:
+                problem += pick[pid] == 1
+        for pid in set(exclude_ids):
+            if pid in pick:
+                problem += pick[pid] == 0
+
         problem.solve(pulp.PULP_CBC_CMD(msg=False))
 
     status = pulp.LpStatus[problem.status]
     if status != "Optimal":
         return {"status": status, "selected": [], "total_points": 0, "total_cost": 0.0}
 
-    selected = [dict(p) for p in players if pick[p["id"]].value() > 0.5]
+    selected = []
+    for p in players:
+        if pick[p["id"]].value() > 0.5:
+            row = dict(p)
+            row["forced"] = p["id"] in include_set
+            selected.append(row)
     selected.sort(key=lambda p: (_POS_ORDER.get(p["position"], 9), -p["total_points"]))
 
     return {
@@ -74,3 +92,35 @@ def select_squad(
         "total_points": sum(p["total_points"] for p in selected),
         "total_cost": round(sum(p["price"] for p in selected), 1),
     }
+
+
+def resolve_players(players, names) -> tuple[list, list]:
+    """Resolve typed names to player ids.
+
+    Each name matches a `web_name` (case-insensitive); a shared name can be
+    disambiguated as `web_name:TEAM` (e.g. "Wilson:NFO"). Returns (ids, errors):
+    `ids` are the uniquely-resolved player ids; `errors` are human-readable messages
+    for names that were not found or were ambiguous (never a silent wrong guess).
+    """
+    ids: list = []
+    errors: list = []
+    for name in names:
+        wanted, team = name, None
+        if ":" in name:
+            wanted, team = (part.strip() for part in name.split(":", 1))
+
+        matches = [p for p in players if p["web_name"].lower() == wanted.strip().lower()]
+        if team:
+            matches = [p for p in matches if str(p["team"]).lower() == team.lower()]
+
+        if not matches:
+            errors.append(f"No player matches '{name}'.")
+        elif len(matches) > 1:
+            candidates = ", ".join(f"{p['web_name']} ({p['team']})" for p in matches)
+            errors.append(
+                f"'{name}' matches {len(matches)} players: {candidates} "
+                "— disambiguate with Name:TEAM."
+            )
+        else:
+            ids.append(matches[0]["id"])
+    return ids, errors

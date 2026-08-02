@@ -4,7 +4,7 @@ Each test uses a small hand-built player set where the optimum is known, so we c
 check the solver picks it and respects each constraint.
 """
 
-from src.analytics.optimizer import select_squad
+from src.analytics.optimizer import resolve_players, select_squad
 from src.ui.squad import render_squad
 
 
@@ -84,6 +84,65 @@ def test_reports_infeasible_when_budget_too_low():
 
     assert result["status"] != "Optimal"
     assert result["selected"] == []
+
+
+def test_include_forces_a_weak_player_in_and_flags_it():
+    # A 5th DEF (id 99) scores less, so it wouldn't normally be picked — force it in.
+    players = [x for x in formation_11() if x["position"] != "DEF"]
+    players += [p(20, "DEF", 4.0, 10), p(21, "DEF", 4.0, 10),
+                p(22, "DEF", 4.0, 10), p(23, "DEF", 4.0, 10),
+                p(99, "DEF", 4.0, 1)]
+
+    result = select_squad(players, budget=80, include_ids=[99])
+    picked = {s["id"]: s for s in result["selected"]}
+    assert 99 in picked
+    assert picked[99]["forced"] is True
+
+
+def test_exclude_removes_a_player():
+    # Two forwards score 10, a third 1; excluding a 10-scorer forces the 1-scorer in.
+    base = [x for x in formation_11() if x["position"] != "FWD"]
+    fwd = [p(50, "FWD", 4.0, 10), p(51, "FWD", 4.0, 10), p(52, "FWD", 4.0, 1)]
+
+    result = select_squad(base + fwd, budget=80, exclude_ids=[50])
+    ids = {s["id"] for s in result["selected"]}
+    assert 50 not in ids
+    assert 52 in ids   # the weak forward has to come in
+
+
+def test_forcing_two_goalkeepers_is_infeasible():
+    players = formation_11() + [p(200, "GK", 4.0, 10)]   # a 2nd GK exists
+    result = select_squad(players, budget=80, include_ids=[1, 200])  # force both GKs
+    assert result["status"] != "Optimal"
+
+
+def test_resolve_unique_name():
+    players = [p(1, "MID", 8.0, 100, name="Haaland")]
+    ids, errors = resolve_players(players, ["haaland"])   # case-insensitive
+    assert ids == [1]
+    assert errors == []
+
+
+def test_resolve_ambiguous_name_errors_with_candidates():
+    players = [p(1, "MID", 8.0, 100, team="NFO", name="Wilson"),
+               p(2, "FWD", 6.0, 80, team="FUL", name="Wilson")]
+    ids, errors = resolve_players(players, ["Wilson"])
+    assert ids == []
+    assert len(errors) == 1 and "matches 2 players" in errors[0]
+
+
+def test_resolve_disambiguates_with_team():
+    players = [p(1, "MID", 8.0, 100, team="NFO", name="Wilson"),
+               p(2, "FWD", 6.0, 80, team="FUL", name="Wilson")]
+    ids, errors = resolve_players(players, ["Wilson:NFO"])
+    assert ids == [1]
+    assert errors == []
+
+
+def test_resolve_not_found_errors():
+    ids, errors = resolve_players([p(1, "MID", 8.0, 100, name="Haaland")], ["Nobody"])
+    assert ids == []
+    assert "No player matches" in errors[0]
 
 
 def test_render_squad_shows_players_and_totals():

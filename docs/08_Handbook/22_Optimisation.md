@@ -74,6 +74,25 @@ finds **B + C = £15M, 17 points**. That's why "optimal" needs a solver, not a s
 
 ---
 
+## Forcing choices (include / exclude)
+
+The user can force players **in** (favourites) or **out** (dislikes). In an integer
+program these are the simplest constraints — fix the variable:
+
+```python
+for pid in include_ids:  problem += pick[pid] == 1   # must be in the XI
+for pid in exclude_ids:  problem += pick[pid] == 0   # can't be in the XI
+```
+
+The solver then builds the best legal XI around them — and *validates the choices for
+free*: forcing two goalkeepers, or players that bust the budget, simply comes back
+**Infeasible**. The only extra code we wrote was **name resolution** — turning typed
+names into ids — because `web_name` isn't unique (14 shared names, so `--include
+Wilson` is ambiguous and needs `Wilson:NFO`). That's input validation at the edge:
+resolve first (fail early with a clear message), then optimise.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.
