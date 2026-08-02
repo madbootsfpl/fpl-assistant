@@ -1,7 +1,7 @@
 # Sprint 008: Squad Selector — Include / Exclude
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~2–3 working sessions (a focused extension of the optimiser)
 **Carried Over:** None (Sprint 007 closed clean)
 
@@ -152,20 +152,36 @@ Settle before building (and pressure-test with a worked example, per the Sprint 
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All three stories — US-027 (ADR-009), US-028 (optimiser forced picks + name resolver), US-029 (the `squad --include/--exclude` command). The tool now builds the optimal XI *around the user's chosen players*, and handles ambiguous names honestly. Tests grew 85 → 95. No new data or dependency.
+* **Carried Forward:** None. Backlog unchanged (15-man squad, flexible formations, xP objective, PuLP-4.0 migration, fuzzy matching).
+* **Key Artifacts / Decisions:** ADR-009 (include/exclude + `Name:TEAM` resolution, with worked examples); `resolve_players`; forced-pick flag; commits `2f86194`→`438658e`.
 
 #### Retrospective
 * **What Went Well?**
+  - **Tony's Sprint 007 idea shipped** — from a retro note to a working feature.
+  - **The data check pointed at the real work.** Forcing picks was trivial (6 lines); the effort was name resolution — which the plan-time `web_name` uniqueness check had already flagged.
+  - The gate story pressure-tested ADR-009 with worked examples (4th sprint running) — no design flaw slipped.
+  - "Resolve at the edge, then optimise" kept the solver clean; the solver validated the forced set for free.
+  - The 3-part DoD held (8th sprint).
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - `Name:TEAM` is a little verbose, and multi-word names need shell quoting — usable, but fuzzy matching (backlog) would be friendlier.
+  - Objective is still last-season points and the formation is fixed — obvious next refinements.
+* **Lessons Learned?**
+  - Verify data at planning and it tells you *where the effort will go* — here, the input, not the algorithm.
+  - Validate at the boundary (resolve names first) so the core stays simple.
+  - In an ILP, "must include / exclude" are the simplest constraints, and the solver checks feasibility for free.
+* **Action Items for Next Sprint (009):**
+  - [ ] Consider: 15-man squad, flexible formations, xP-based objective, or fuzzy name matching (backlog).
+  - [ ] Revisit data-dependent work (form/expected-minutes xP, Attack/Defence FDR) once the season starts — check data first.
+  - [ ] Keep pressure-testing ADR mechanisms + the 3-part DoD.
 
 ---
 
 **Proposed follow-on (Sprint 009):** 15-man squad / flexible formations / xP-based
 objective (backlog), plus the deferred data-dependent work once the season starts.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** Tony's idea, shipped: the assistant now recommends the optimal XI
+*around your picks*. The plan-time data check again pointed at the real work (name
+resolution, not the optimisation). Sprint outcome: **Successful** — 3/3 stories, zero
+roll-over, DoD held.
