@@ -12,6 +12,9 @@ import argparse
 
 from src import config, ingest
 from src.analytics import (
+    DEFAULT_BUDGET,
+    FULL_BUDGET,
+    SQUAD_15,
     elo_difficulty_bands,
     objective_scores,
     player_xp,
@@ -68,8 +71,19 @@ def cmd_search(args) -> None:
     store.close()
 
 
+def resolve_squad_budget(budget, full: bool) -> float:
+    """The budget to use: the given value, else the mode default (£100m full / £80m XI).
+
+    argparse can't tell "user typed --budget 80" from "default 80", and the default
+    differs by mode — so `--budget` defaults to None and the choice is made here.
+    """
+    if budget is not None:
+        return budget
+    return FULL_BUDGET if full else DEFAULT_BUDGET
+
+
 def cmd_squad(args) -> None:
-    """Pick the optimal starting XI within a budget (optionally around forced picks)."""
+    """Pick the optimal squad — the starting XI, or the full 15 with `--full`."""
     store = Storage()
     players = store.get_players()
 
@@ -83,17 +97,24 @@ def cmd_squad(args) -> None:
         names = ", ".join(p["web_name"] for p in players if p["id"] in conflict)
         errors.append(f"Cannot both include and exclude: {names}.")
 
+    # `--full` picks the 15-man squad (2/5/5/3, £100m); otherwise the XI (1-4-4-2, £80m).
+    # The budget default depends on the mode, so it's resolved here, not in argparse.
+    formation = SQUAD_15 if args.full else None   # None → select_squad's XI default
+    budget = resolve_squad_budget(args.budget, args.full)
+
     if errors:
         for message in errors:
             print(message)
     else:
         upcoming = store.get_upcoming_fixtures() if args.objective == "xp" else None
         scores = objective_scores(players, args.objective, upcoming)
+        kwargs = {"formation": formation} if formation is not None else {}
         result = select_squad(
-            players, budget=args.budget,
+            players, budget=budget,
             include_ids=include_ids, exclude_ids=exclude_ids, scores=scores,
+            **kwargs,
         )
-        print(render_squad(result, budget=args.budget, objective=args.objective))
+        print(render_squad(result, budget=budget, objective=args.objective, full=args.full))
     store.close()
 
 
@@ -164,6 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
+            "  python app.py squad --full --include Dubravka Diop  full 15-man squad; pick the bench yourself\n"
             "\n"
             "Run 'python app.py <command> --help' for a command's options."
         ),
@@ -210,10 +232,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_xp.set_defaults(handler=cmd_xp)
 
-    p_squad = sub.add_parser("squad", help="Pick the optimal starting XI within a budget")
+    p_squad = sub.add_parser("squad", help="Pick the optimal squad (starting XI, or --full 15)")
     p_squad.add_argument(
-        "--budget", type=float, default=80.0,
-        help="Budget in £m for the XI (default 80)",
+        "--full", action="store_true",
+        help="Pick the full 15-man squad (2/5/5/3, £100m) — choose the bench with --include",
+    )
+    p_squad.add_argument(
+        "--budget", type=float, default=None,
+        help="Budget in £m (default 80 for the XI, 100 for --full)",
     )
     p_squad.add_argument(
         "--include", nargs="*", default=[], metavar="NAME",

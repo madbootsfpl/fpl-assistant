@@ -117,6 +117,46 @@ are* outside it. Adding a 4th objective is then a new dict entry, not a solver c
 
 ---
 
+## The full 15-man squad (`--full`) — a new *caller*, not a new algorithm (ADR-012)
+
+Real FPL isn't 11 players — it's the **15 you own**: 2 GK, 5 DEF, 5 MID, 3 FWD, ≤ £100M,
+≤ 3 per club. The important lesson is how *little* had to change: `select_squad` already
+takes `formation` and `budget` as **parameters**, so the full squad is just a different
+set of arguments:
+
+```
+squad        → formation {GK:1, DEF:4, MID:4, FWD:2},  £80M    (the XI)
+squad --full → formation {GK:2, DEF:5, MID:5, FWD:3},  £100M   (the 15)
+```
+
+No new objective, no new constraints, no new solver code — the generic core built in
+ADR-008 paid off. This is the recurring project pattern: *add capability at the edge,
+leave the core untouched.*
+
+### The bench is the manager's job — and why
+
+The model scores **all 15 equally**, so on its own `--full` spends nearly the whole
+£100M on 15 strong players and leaves **no cheap bench**. That's deliberate: the manager
+picks the bench, using the `--include` mechanism already built:
+
+```
+squad --full --include <cheap GK> <cheap DEF> <cheap MID> <cheap FWD>
+```
+
+Those four slots lock cheap, and the solver pours the rest into the best 11. Human
+judgement (which cheap fodder is worth owning) stays with the human; the solver does the
+optimising. A richer *two-tier* model — where the solver itself picks the bench by
+scoring only a chosen XI — was considered and **rejected** for simplicity (ADR-012).
+
+### An honest caveat about the number
+
+For the XI, the points total is a fair guide to weekly return. For the **15**, the total
+**counts bench players who won't actually score**, so it's a *squad-strength* proxy, not
+a weekly total. The `--full` output says so plainly rather than letting the figure
+mislead — a small but important piece of intellectual honesty.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.
@@ -144,6 +184,7 @@ are* outside it. Adding a 4th objective is then a new dict entry, not a solver c
 ## Related Documents
 
 - [ADR-008 — Squad selector (ILP)](../06_Decisions/ADR-008-squad-selector.md)
+- [ADR-012 — The full 15-man squad](../06_Decisions/ADR-012-full-squad.md)
 - [Architecture §4 (optimisation component)](../03_Architecture/Architecture.md)
 - [Chapter 21 — Analytics](./21_Analytics.md)
 - Code: `src/analytics/optimizer.py`

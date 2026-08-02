@@ -13,7 +13,9 @@ from src.analytics.value import points_per_million
 from src.analytics.xp import player_xp
 
 DEFAULT_BUDGET = 80.0
-FORMATION = {"GK": 1, "DEF": 4, "MID": 4, "FWD": 2}   # 11 players
+FORMATION = {"GK": 1, "DEF": 4, "MID": 4, "FWD": 2}   # 11 players (a starting XI)
+SQUAD_15 = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}    # 15 players (the full FPL squad)
+FULL_BUDGET = 100.0                                    # the real FPL squad budget
 MAX_PER_CLUB = 3
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}

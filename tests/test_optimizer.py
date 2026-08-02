@@ -4,7 +4,12 @@ Each test uses a small hand-built player set where the optimum is known, so we c
 check the solver picks it and respects each constraint.
 """
 
-from src.analytics.optimizer import objective_scores, resolve_players, select_squad
+from src.analytics.optimizer import (
+    SQUAD_15,
+    objective_scores,
+    resolve_players,
+    select_squad,
+)
 from src.ui.squad import render_squad
 
 
@@ -22,6 +27,21 @@ def p(id, position, price, points, team=None, name=None):
 def formation_11(points_by_pos=None, price=4.0):
     """Exactly one legal XI (1 GK, 4 DEF, 4 MID, 2 FWD), distinct teams."""
     counts = {"GK": 1, "DEF": 4, "MID": 4, "FWD": 2}
+    players, i = [], 1
+    for pos, n in counts.items():
+        for _ in range(n):
+            players.append(p(i, pos, price, 10))
+            i += 1
+    return players
+
+
+def squad_pool(price=4.0):
+    """More than enough players per position to fill a 15-man squad (2/5/5/3).
+
+    Distinct teams (so the club cap never bites) and one extra per position, so the
+    solver must actually leave someone out rather than take everyone.
+    """
+    counts = {"GK": 3, "DEF": 6, "MID": 6, "FWD": 4}   # SQUAD_15 + 1 spare each
     players, i = [], 1
     for pos, n in counts.items():
         for _ in range(n):
@@ -84,6 +104,38 @@ def test_reports_infeasible_when_budget_too_low():
 
     assert result["status"] != "Optimal"
     assert result["selected"] == []
+
+
+def test_selects_a_full_15_man_squad():
+    # The full FPL shape (2/5/5/3) with a spare per position; budget is ample.
+    result = select_squad(squad_pool(), budget=100.0, formation=SQUAD_15)
+
+    assert result["status"] == "Optimal"
+    assert len(result["selected"]) == 15
+    counts = {}
+    for s in result["selected"]:
+        counts[s["position"]] = counts.get(s["position"], 0) + 1
+    assert counts == SQUAD_15
+
+
+def test_full_squad_respects_budget_and_club_cap():
+    # All players £4m → 15 must cost £60m; the ≤3/club cap still holds over the 15.
+    result = select_squad(squad_pool(price=4.0), budget=100.0, formation=SQUAD_15)
+
+    assert result["total_cost"] <= 100.0
+    from collections import Counter
+    by_club = Counter(s["team"] for s in result["selected"])
+    assert max(by_club.values()) <= 3
+
+
+def test_full_squad_forces_a_cheap_bench_in():
+    # The manager's workflow (ADR-012): --include locks cheap bench players into the 15.
+    pool = squad_pool()
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, include_ids=[1])  # a GK
+
+    picked = {s["id"] for s in result["selected"]}
+    assert 1 in picked
+    assert next(s for s in result["selected"] if s["id"] == 1)["forced"] is True
 
 
 def test_objective_scores_points():
@@ -247,3 +299,39 @@ def test_render_squad_reports_infeasible():
     )
     assert "No legal XI" in out
     assert "Infeasible" in out
+
+
+def test_render_full_squad_says_15_and_adds_the_caveat():
+    result = {
+        "status": "Optimal",
+        "selected": [{"position": "GK", "web_name": "Raya", "team": "ARS",
+                      "price": 6.0, "total_points": 162, "forced": False}],
+        "total_points": 162,
+        "total_cost": 6.0,
+    }
+    out = render_squad(result, budget=100, full=True)
+
+    assert "15-man squad" in out           # names the mode
+    assert "not a weekly" in out           # the ADR-012 caveat is shown
+    assert "--include" in out              # points at the bench workflow
+
+
+def test_render_full_squad_infeasible_message_names_the_squad():
+    out = render_squad(
+        {"status": "Infeasible", "selected": [], "total_points": 0, "total_cost": 0.0},
+        budget=50, full=True,
+    )
+    assert "No legal 15-man squad" in out
+
+
+def test_render_xi_has_no_full_squad_caveat():
+    # The caveat is only for the 15 — a plain XI must not carry it.
+    result = {
+        "status": "Optimal",
+        "selected": [{"position": "GK", "web_name": "Raya", "team": "ARS",
+                      "price": 6.0, "total_points": 162, "forced": False}],
+        "total_points": 162,
+        "total_cost": 6.0,
+    }
+    out = render_squad(result, budget=80)
+    assert "not a weekly" not in out

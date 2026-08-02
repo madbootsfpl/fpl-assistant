@@ -49,6 +49,7 @@ python app.py xp --type custom --next 5         # players by expected points ove
 python app.py squad --budget 80                 # pick the optimal starting XI (1-4-4-2) within a budget
 python app.py squad --include Haaland --exclude Salah  # the optimal XI built around your picks
 python app.py squad --objective xp              # optimise the XI on points / value / xp
+python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

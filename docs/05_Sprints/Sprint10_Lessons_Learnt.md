@@ -106,7 +106,8 @@ squad for *this* goal".
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- how good the xp was, brilliant to compare against points and value
+
 
 ---
 
@@ -183,6 +184,7 @@ python app.py squad --objective xp --include Haaland  # best expected XI around 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+getting through the backlog
 
 ---
 

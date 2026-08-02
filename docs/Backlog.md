@@ -16,9 +16,12 @@ Captured ideas not yet scheduled into a sprint.
   multi-week total to show alongside.
 - **`xp`/`squad` objective toggle** — let the optimiser/xp use `total_points`, `xp`, or
   `value` as the objective.
-- **Flexible formations** for the squad selector (beyond 1-4-4-2).
-- **Full 15-man squad** optimisation (2 GK, 5 DEF, 5 MID, 3 FWD, £100M) once the XI
-  selector is proven.
+- **Flexible formations** for the squad selector (beyond 1-4-4-2) — let the *starting XI*
+  take any legal shape (DEF 3–5, MID 2–5, FWD 1–3), with an optional `--formation 3-5-2`
+  pin. Deferred from Sprint 011 to keep it focused; a clean stand-alone next sprint.
+- ~~**Full 15-man squad** optimisation (2 GK, 5 DEF, 5 MID, 3 FWD, £100M)~~ — **DONE**
+  (Sprint 011, `squad --full`, ADR-012). Simple model; the manager picks the bench via
+  `--include`. The two-tier "solver picks the bench" model was considered and rejected.
 
 ## Tech debt
 

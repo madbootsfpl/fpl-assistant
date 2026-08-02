@@ -16,3 +16,4 @@ new ADR as it is created.
 | [009](./ADR-009-squad-include-exclude.md) | Squad selector include / exclude | Accepted |
 | [010](./ADR-010-clubelo-external-source.md) | ClubElo — first external data source | Accepted |
 | [011](./ADR-011-squad-objective.md) | Squad objective toggle (points/value/xp) | Accepted |
+| [012](./ADR-012-full-squad.md) | The full 15-man squad (`squad --full`) | Accepted |

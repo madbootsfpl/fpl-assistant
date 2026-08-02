@@ -304,3 +304,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **Sprint 010 (2026-08-02)** — the squad optimiser's objective becomes pluggable
   (`squad --objective points|value|xp`), per ADR-011. The optimiser maximises any
   per-player score; the objective (reusing value/xP) is computed outside it.
+- **Sprint 011 (2026-08-02)** — the optimiser gains the full 15-man squad
+  (`squad --full`: 2/5/5/3, £100m, ≤3/club), per ADR-012. No new algorithm — a new
+  *caller* of the generic `select_squad` (formation + budget already parameters); the
+  bench is the manager's via `--include`. The 15-total is a squad-strength proxy, not a
+  weekly score (stated caveat).

@@ -15,6 +15,7 @@ from src.cli import (
     cmd_squad,
     cmd_table,
     cmd_xp,
+    resolve_squad_budget,
 )
 
 
@@ -113,16 +114,35 @@ def test_xp_defaults():
     assert args.handler is cmd_xp
 
 
-def test_squad_defaults_to_budget_80():
+def test_squad_budget_defaults_to_none_and_is_not_full():
+    # The mode-dependent default (80 XI / 100 full) is resolved in the handler, so the
+    # parser leaves --budget as None.
     args = build_parser().parse_args(["squad"])
     assert args.command == "squad"
-    assert args.budget == 80.0
+    assert args.budget is None
+    assert args.full is False
     assert args.handler is cmd_squad
+
+
+def test_squad_full_flag_is_parsed():
+    args = build_parser().parse_args(["squad", "--full"])
+    assert args.full is True
+    assert args.budget is None
 
 
 def test_squad_budget_is_parsed():
     args = build_parser().parse_args(["squad", "--budget", "75"])
     assert args.budget == 75.0
+
+
+def test_resolve_squad_budget_defaults_by_mode():
+    assert resolve_squad_budget(None, full=False) == 80.0    # the XI default
+    assert resolve_squad_budget(None, full=True) == 100.0    # the 15-man default
+
+
+def test_resolve_squad_budget_honours_an_explicit_value():
+    assert resolve_squad_budget(90.0, full=False) == 90.0
+    assert resolve_squad_budget(90.0, full=True) == 90.0     # explicit wins in both modes
 
 
 def test_squad_include_exclude_are_parsed_as_lists():

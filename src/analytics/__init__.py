@@ -6,11 +6,21 @@ up to the display. It never touches the API or the screen.
 """
 
 from src.analytics.fdr import elo_difficulty_bands, team_fdr, team_schedule
-from src.analytics.optimizer import objective_scores, resolve_players, select_squad
+from src.analytics.optimizer import (
+    DEFAULT_BUDGET,
+    FULL_BUDGET,
+    SQUAD_15,
+    objective_scores,
+    resolve_players,
+    select_squad,
+)
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import player_xp
 
 __all__ = [
+    "DEFAULT_BUDGET",
+    "FULL_BUDGET",
+    "SQUAD_15",
     "elo_difficulty_bands",
     "objective_scores",
     "player_xp",
