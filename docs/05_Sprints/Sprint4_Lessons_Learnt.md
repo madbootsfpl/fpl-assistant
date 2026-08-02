@@ -174,24 +174,27 @@ ALTER TABLE teams ADD COLUMN strength_overall_home INTEGER;
 
 | Topic | Before | After |
 |--------|-------:|------:|
-| SQL / schema changes | | |
-| Migrations | | |
-| Analytics (metrics/sources) | | |
-| Reading/using real data | | |
-| Architecture | | |
-| AI-assisted Development | | |
+| SQL / schema changes | 1|2 |
+| Migrations | 1|2 |
+| Analytics (metrics/sources) | 2|4 |
+| Reading/using real data |1 |3 |
+| Architecture |2 |3 |
+| AI-assisted Development |2 |4 |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
-### What am I most pleased with?
+### What am I most pleased with? 
+Seeing feature grwoth & understanding same
 
 ### What was the biggest lesson?
+check assumptions before we build
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+next sprint
 
 ---
 
@@ -210,7 +213,7 @@ ALTER TABLE teams ADD COLUMN strength_overall_home INTEGER;
 
 - None (Attack/Defence split deferred to a future sprint — data-dependent)
 
-**Overall Satisfaction (1–10):** ___ _(for Tony)_
+**Overall Satisfaction (1–10):** __8_ _(for Tony)_
 
 **Time Invested:** ___ _(for Tony)_
 
