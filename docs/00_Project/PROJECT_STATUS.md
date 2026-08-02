@@ -1,8 +1,10 @@
-Current Phase: Sprint 008 COMPLETE — between sprints
-Current Sprint: Sprint 008 - Squad Selector Include/Exclude (✅ Complete, 3/3 stories, retro done)
-Current Story: None active — ready to plan Sprint 009
-Next Milestone: Sprint 009 - 15-man squad / flexible formations / xP objective / fuzzy names (backlog), or data-dependent work once season starts
+Current Phase: Sprint 009 planned — ready to start
+Current Sprint: Sprint 009 - External Data: ClubElo (team strength) (Planned)
+Current Story: US-030 - Agree ClubElo approach (ADR-010) — gating story, not yet started
+Next Milestone: ClubElo as a second (gracefully-degrading) source → an Elo-based FDR (fdr --type elo)
 Current Version: 0.0.1
 Last Updated: 2026-08-02
-Commands: refresh · table · search · filter · fdr · fixtures · xp · squad (--include/--exclude)
-Deferred: form/expected-minutes xP + Attack/Defence FDR (still preseason-blocked)
+Origin: Tony's Sprint 008 reflection (value of external data sources)
+Plan-time checks: ClubElo reachable (no key); 14/20 names exact + 6-entry mapping
+New this sprint: first multi-source design + graceful degradation
+Deferred: FBref xG/xA (player-level, later); form/attack-defence FPL data (preseason)

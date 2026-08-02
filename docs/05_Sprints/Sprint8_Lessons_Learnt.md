@@ -107,7 +107,7 @@ or impossible sets.
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- This is so cool
 
 ---
 
@@ -178,13 +178,26 @@ python app.py squad --include Wilson:NFO                # disambiguate a shared 
 
 # Overall Sprint Reflection _(for Tony)_
 
-### What am I most pleased with?
+### What am I most pleased with? 
+Really easy to include or exclude players.
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+what additional valude would other data sources bring to the project? 
+is this a good time to be looking at this or should we park for later?
+a quick analysis shows that there are a number of free sources out there tha would include some insights.
+Examples are:
+Source	API Key Required?	Best For	Advanced Metrics (xG, xA)?
+SoccerData / FBref	No (Python Library)	Deep analytical metrics, shot/pass data	Yes
+Football-Data.org	Yes (Free Tier)	Clean fixtures, standings & match scores	Basic
+API-Football	Yes (Free Tier)	In-match events & live scores	Basic/Intermediate
+ClubElo	No	Team strength modeling & Elo history	N/A (Elo Ratings)
+TheSportsDB	Yes (Free Tier)	Team/League metadata, logos, & schedules	Basic
+
+
 
 ---
 
