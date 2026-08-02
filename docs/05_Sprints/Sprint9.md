@@ -1,7 +1,7 @@
 # Sprint 009: External Data — ClubElo (team strength)
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~3–4 working sessions (a bigger sprint — first second data source)
 **Carried Over:** None (Sprint 008 closed clean)
 
@@ -166,20 +166,36 @@ Settle before building (pressure-test with a worked example, per the standing le
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All four stories — US-030 (ADR-010), US-031 (ClubElo client + mapping), US-032 (store Elo + graceful refresh), US-033 (Elo-based FDR). The app is now **multi-source**: FPL (required) + ClubElo (best-effort), with a real Elo FDR (`fdr --type elo`) that works in preseason. Tests grew 95 → 106. No new pip dependency.
+* **Carried Forward:** None. Backlog gained FBref xG/xA (player-level) and an Elo-based squad objective.
+* **Key Artifacts / Decisions:** ADR-010 (ClubElo, with worked examples); `src/api/clubelo.py`; graceful `_refresh_elo`; Handbook Ch 23; commits `94efab5`→`ff46db6`.
 
 #### Retrospective
 * **What Went Well?**
+  - **Tony's strategic question drove a landmark direction** — the project's first second data source.
+  - **The planning check both verified the source AND found the effort** — reachable, populated, and the exact 6 team-name mismatches — before any code.
+  - **Graceful degradation, proven live** — a simulated ClubElo outage left the app fully working with last-known Elo intact.
+  - The `--type` seam absorbed a third FDR source cleanly; the new source stayed isolated in its own module.
+  - Gate ADR pressure-tested (5th sprint); 3-part DoD held (9th sprint).
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - Elo is venue-agnostic and rank-banded (loses fine gaps) — honest for v0, refinable.
+  - `fdr` gained `--type elo` but `xp`/`fixtures` didn't — a small consistency gap to close later.
+* **Lessons Learned?**
+  - Verify the *external source itself* at planning (reachability + data + name matching), not just FPL data.
+  - Resilience is a design choice: isolate the source, wrap the fetch, keep last-known, separate the write.
+  - A well-placed seam (`--type`) keeps paying off — a third source was one branch.
+* **Action Items for Next Sprint (010):**
+  - [ ] Consider: FBref xG/xA (player-level, harder name matching), or extend `--type elo` to `xp`/`fixtures`.
+  - [ ] Revisit data-dependent FPL work (form / attack-defence) once the season starts.
+  - [ ] Keep verifying sources at plan time + pressure-testing ADRs + the 3-part DoD.
 
 ---
 
 **Proposed follow-on (Sprint 010):** FBref xG/xA (player-level, harder name matching)
 now the multi-source pattern exists; or an Elo-based squad objective.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** The biggest architectural step since Sprint 1 — the app became
+multi-source (FPL + ClubElo), resilient (graceful degradation), and gained real team
+strength that works in preseason. From Tony's strategic question. Sprint outcome:
+**Successful** — 4/4 stories, zero roll-over, DoD held.
