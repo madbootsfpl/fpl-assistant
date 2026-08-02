@@ -1,4 +1,4 @@
-# Sprint 004: Custom Fixture Difficulty
+# Sprint 004: Custom Fixture Difficulty (Overall)
 
 **Dates:** TBC
 **Status:** Planned
@@ -7,42 +7,51 @@
 
 ---
 
+### ⚠️ Scope note — descoped from Attack/Defence to Overall
+
+Planning check (2026-08-02) found the granular team-strength fields
+(`strength_attack_*`, `strength_defence_*`) are **all zero in preseason** — FPL doesn't
+publish them until the season is underway. Only `strength_overall_home/away` (1–5) is
+populated. So Sprint 004 builds a **custom *overall* FDR** (home/away aware) from that
+signal; the **Attack/Defence split is deferred** to a later sprint once the data
+populates. (See the memory note `fpl-preseason-strength-data`.)
+
+---
+
 ### 🧭 Architecturally, what's new
 
 Sprint 003 *consumed* FPL's coarse 1–5 difficulty as-is. Sprint 004 makes the app
-**compute its own** rating — the first time analytics produces a difficulty from team
-strength data we already fetch but currently discard.
+**compute its own** difficulty from `strength_overall_home/away` — data we already
+fetch but currently discard.
 
-1. **The `teams` entity grows.** `bootstrap-static` teams carry
-   `strength_attack_home/away` and `strength_defence_home/away`. We fetch these today
-   and throw them away. US-014 stores them — the project's first *schema-evolution*
-   moment (adding columns to an existing table).
-2. **Difficulty becomes directional.** A fixture is no longer one number but two, each
-   from the *opponent's* strength at the venue they play:
+1. **The `teams` entity grows.** We store `strength_overall_home/away` — the project's
+   first *schema-evolution* moment (adding columns to an existing table).
+2. **Difficulty becomes ours, and home/away aware.** A team's difficulty facing an
+   opponent = the **opponent's overall strength at the venue the opponent plays**:
 
 ```
-My team's Attack FDR  = opponent's DEFENCE strength (their venue)   → low = easy to score
-My team's Defence FDR = opponent's ATTACK strength (their venue)    → low = easy clean sheet
+If my team is HOME → opponent is away → difficulty = opponent.strength_overall_away
+If my team is AWAY → opponent is home → difficulty = opponent.strength_overall_home
 ```
 
-The `_view` perspective helper from Sprint 003 is reused and extended. The boundary
-holds: storage stores the strengths, analytics computes the rating.
+The `_view` perspective helper from Sprint 003 is reused. The boundary holds: storage
+stores the strengths, analytics computes the rating.
 
 ---
 
 ### 🎯 Sprint Goal
 
-**Objective:** Replace FPL's coarse 1–5 difficulty with our own **Attack** and
-**Defence** FDR, computed from team strengths (home/away aware), so the app can say
-*why* a fixture is easy — good for attackers, good for defenders, or both.
+**Objective:** Compute our **own** fixture difficulty from team overall strengths
+(home/away aware), sitting alongside FPL's version for comparison — so we control and
+can explain the rating, and have the foundation to extend to Attack/Defence later.
 
 #### Success Criteria
 - [ ] Custom FDR approach agreed (ADR-005) before feature code
-- [ ] Team strength fields are stored (schema evolution handled cleanly)
-- [ ] Attack FDR and Defence FDR are computed correctly, home/away aware
-- [ ] `fdr --type attack|defence` works; FPL's FDR remains available
+- [ ] `strength_overall_home/away` stored (schema evolution handled cleanly)
+- [ ] Custom difficulty computed correctly, home/away aware
+- [ ] `fdr --type custom|fpl` works; FPL's FDR remains the default
 - [ ] A team's fixtures view can show the custom difficulty per match
-- [ ] Tests cover the custom FDR calc, including the home/away perspective
+- [ ] Tests cover the custom calc, including the home/away perspective
 - [ ] **Manual smoke test** run before the sprint is closed (see Definition of Done)
 
 ---
@@ -52,9 +61,9 @@ holds: storage stores the strengths, analytics computes the rating.
 #### User Stories & Features
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-013 | Agree custom FDR approach (ADR-005): definitions, home/away, coexistence with FPL FDR, presentation, schema evolution | Critical | Planned | 0.5 session |
-| US-014 | Store team strength fields (extend `Team` + teams table + `from_api`) | High | Planned | 1 session |
-| US-015 | Custom Attack & Defence FDR analytics + `fdr --type attack\|defence\|fpl` | High | Planned | 1 session |
+| US-013 | Agree custom (overall) FDR approach (ADR-005): formula, home/away, coexistence with FPL FDR, presentation, schema evolution, attack/defence deferral | Critical | Planned | 0.5 session |
+| US-014 | Store `strength_overall_home/away` (extend `Team` + teams table + `from_api`) | High | Planned | 1 session |
+| US-015 | Custom FDR analytics + `fdr --type custom\|fpl` | High | Planned | 1 session |
 | US-016 | Show custom difficulty per match in `fixtures --team` + Handbook update | Medium | Planned | 0.5 session |
 
 #### Technical Tasks & Maintenance
@@ -90,13 +99,13 @@ log for each feature story.
 
 | Included (In Scope) | Excluded (Out of Scope) |
 |---|---|
-| • Custom Attack + Defence FDR from team strengths | • The xP engine → Sprint 005 |
-| • Home/away weighting | • Recent-form adjustment to strength → later |
-| • Coexist with FPL's FDR (`--type`) | • Player-level expected points |
-| • Store team strength fields | • New external data sources |
+| • Custom **overall** FDR from `strength_overall_*` | • Attack/Defence split → deferred (preseason data) |
+| • Home/away weighting | • The xP engine → later |
+| • Coexist with FPL's FDR (`--type`) | • Recent-form adjustment |
+| • Store `strength_overall_home/away` | • New external data sources |
 
 **External Dependencies:**
-- [ ] `bootstrap-static` team `strength_*` fields (already fetched)
+- [ ] `bootstrap-static` team `strength_overall_home/away` (populated; already fetched)
 - [ ] Sprint 003 fixtures/teams/analytics (done); Python stdlib only
 
 ---
@@ -106,22 +115,23 @@ log for each feature story.
 | Risk | Impact (High/Med/Low) | Mitigation Strategy |
 |---|---|---|
 | Schema evolution — teams table gains columns; `CREATE TABLE IF NOT EXISTS` won't alter an existing table | High | The DB is a regenerable cache; decide in ADR-005 between "recreate on schema change" and a light migration (check `pragma table_info`, `ALTER TABLE ADD COLUMN`) |
-| Attack/Defence perspective backwards (attack FDR must use opponent's *defence*) | High | Define clearly in ADR-005; a test pins the direction and home/away |
-| Raw FPL strengths (~1000–1400) are unintuitive | Med | Decide presentation in ADR-005 (raw vs normalised to a ~1–5 scale) |
-| Breaking the existing `fdr` command | Med | FPL FDR stays the default/`--type fpl`; run the full suite |
-| Scope drift into xP or form | Med | Hard-limit to strength-based Attack/Defence FDR this sprint |
+| Custom FDR ≈ FPL's FDR (both derive from overall strength) | Med | Frame it as "build your own + compare"; keep FPL's for side-by-side; the learning is the transparent, extendable formula |
+| Home/away perspective backwards | Med | Define clearly in ADR-005; a test pins the direction |
+| Strength values are 1–5 already (no normalisation needed) | Low | Keep the average on the 1–5 scale; decide any tweak in ADR-005 |
+| Attack/Defence data appears mid-sprint | Low | Out of scope here; revisit for the deferred split |
 
 ---
 
 ### 🗝️ Gating decision (US-013 → ADR-005)
 
 Settle before building:
-1. **Attack/Defence definitions** — attack FDR = opponent defence strength; defence FDR
-   = opponent attack strength (home/away aware). Confirm the direction.
-2. **Coexistence** — custom FDR added as `fdr --type attack|defence`, with FPL's as
-   `--type fpl` (kept for comparison). Recommended over replacing outright.
-3. **Presentation** — raw average strength faced vs a normalised ~1–5 scale.
+1. **Formula** — difficulty = opponent's overall strength at the opponent's venue
+   (home/away aware). Confirm; decide whether to factor in the team's own strength.
+2. **Coexistence** — custom FDR as `fdr --type custom`, with FPL's as `--type fpl`
+   (default). Recommended over replacing.
+3. **Presentation** — values stay on the 1–5 scale (average shown to 1 dp).
 4. **Schema evolution** — how the teams table gains columns without losing the cache.
+5. **Deferral** — record that Attack/Defence FDR waits for preseason data to populate.
 
 ---
 
@@ -151,7 +161,8 @@ Settle before building:
 
 ---
 
-**Proposed follow-on (Sprint 005):** begin the xP engine — now with a custom FDR to build on.
+**Proposed follow-on (Sprint 005):** the deferred Attack/Defence FDR split (once
+strengths populate), or begin the xP engine.
 
 **Completion Date:** [YYYY-MM-DD]
 **Final Notes:**
