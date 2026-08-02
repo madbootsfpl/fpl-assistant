@@ -80,7 +80,9 @@ for column, col_type in NEW_COLUMNS.items():
 
 This ran on the real `data/fpl.db`: a `teams` table of `[id, name, short_name]` gained
 `strength_overall_home/away` on the next startup, with no data lost. Idempotent — it
-only adds columns that are missing.
+only adds columns that are missing. Sprint 005 generalised it to a
+`{table: {column: type}}` map, so the *same* mechanism migrates any table (teams, then
+players) — a pattern used twice, made reusable.
 
 ---
 

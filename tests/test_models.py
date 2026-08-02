@@ -46,6 +46,32 @@ def test_player_from_api_maps_fields_and_normalises_price_and_position():
     assert player.total_points == 88
 
 
+def test_player_from_api_maps_xp_inputs_and_parses_strings():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 75, "total_points": 88,
+        "points_per_game": "4.4", "status": "a", "ep_next": "5.2",
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.points_per_game == 4.4   # string → float
+    assert player.status == "a"
+    assert player.ep_next == 5.2
+
+
+def test_player_from_api_missing_xp_inputs_are_none():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 75, "total_points": 88,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.points_per_game is None
+    assert player.ep_next is None
+
+
 def test_fixture_from_api_maps_fields():
     raw = {
         "id": 5,

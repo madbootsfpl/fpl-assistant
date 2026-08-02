@@ -22,24 +22,34 @@ CREATE TABLE IF NOT EXISTS teams (
 )
 """
 
-# Columns added to `teams` after it first shipped. On an existing database,
-# CREATE TABLE IF NOT EXISTS leaves the old table untouched, so we add any
-# missing columns with a light migration (see _migrate_teams).
-_TEAM_MIGRATIONS = {
-    "strength_overall_home": "INTEGER",
-    "strength_overall_away": "INTEGER",
+# Columns added to tables after they first shipped. On an existing database,
+# CREATE TABLE IF NOT EXISTS leaves old tables untouched, so we add any missing
+# columns with a light migration (see _migrate). Keyed by table name.
+_MIGRATIONS = {
+    "teams": {
+        "strength_overall_home": "INTEGER",
+        "strength_overall_away": "INTEGER",
+    },
+    "players": {
+        "points_per_game": "REAL",
+        "status": "TEXT",
+        "ep_next": "REAL",
+    },
 }
 
 CREATE_PLAYERS = """
 CREATE TABLE IF NOT EXISTS players (
-    id           INTEGER PRIMARY KEY,
-    first_name   TEXT,
-    second_name  TEXT,
-    web_name     TEXT,
-    team_id      INTEGER REFERENCES teams(id),
-    position     TEXT,
-    price        REAL,
-    total_points INTEGER
+    id              INTEGER PRIMARY KEY,
+    first_name      TEXT,
+    second_name     TEXT,
+    web_name        TEXT,
+    team_id         INTEGER REFERENCES teams(id),
+    position        TEXT,
+    price           REAL,
+    total_points    INTEGER,
+    points_per_game REAL,
+    status          TEXT,
+    ep_next         REAL
 )
 """
 
@@ -69,16 +79,20 @@ ON CONFLICT(id) DO UPDATE SET
 
 UPSERT_PLAYER = """
 INSERT INTO players
-    (id, first_name, second_name, web_name, team_id, position, price, total_points)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    (id, first_name, second_name, web_name, team_id, position, price, total_points,
+     points_per_game, status, ep_next)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    first_name   = excluded.first_name,
-    second_name  = excluded.second_name,
-    web_name     = excluded.web_name,
-    team_id      = excluded.team_id,
-    position     = excluded.position,
-    price        = excluded.price,
-    total_points = excluded.total_points
+    first_name      = excluded.first_name,
+    second_name     = excluded.second_name,
+    web_name        = excluded.web_name,
+    team_id         = excluded.team_id,
+    position        = excluded.position,
+    price           = excluded.price,
+    total_points    = excluded.total_points,
+    points_per_game = excluded.points_per_game,
+    status          = excluded.status,
+    ep_next         = excluded.ep_next
 """
 
 UPSERT_FIXTURE = """
@@ -117,20 +131,23 @@ class Storage:
             self.conn.execute(CREATE_TEAMS)
             self.conn.execute(CREATE_PLAYERS)
             self.conn.execute(CREATE_FIXTURES)
-            self._migrate_teams()
+            self._migrate()
 
-    def _migrate_teams(self) -> None:
-        """Add any teams columns missing from an older database.
+    def _migrate(self) -> None:
+        """Add any columns missing from an older database, table by table.
 
         CREATE TABLE IF NOT EXISTS won't alter a table that already exists, so we
         bring older caches up to the current schema by adding missing columns.
         Idempotent: only columns not already present are added.
         """
-        existing = {row[1] for row in self.conn.execute("PRAGMA table_info(teams)")}
-        for column, col_type in _TEAM_MIGRATIONS.items():
-            if column not in existing:
-                # `column`/`col_type` are fixed constants, never user input.
-                self.conn.execute(f"ALTER TABLE teams ADD COLUMN {column} {col_type}")
+        for table, columns in _MIGRATIONS.items():
+            existing = {row[1] for row in self.conn.execute(f"PRAGMA table_info({table})")}
+            for column, col_type in columns.items():
+                if column not in existing:
+                    # table/column/type are fixed constants, never user input.
+                    self.conn.execute(
+                        f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
+                    )
 
     def save_teams(self, teams: list[Team]) -> None:
         rows = [
@@ -145,7 +162,8 @@ class Storage:
     def save_players(self, players: list[Player]) -> None:
         rows = [
             (p.id, p.first_name, p.second_name, p.web_name,
-             p.team_id, p.position, p.price, p.total_points)
+             p.team_id, p.position, p.price, p.total_points,
+             p.points_per_game, p.status, p.ep_next)
             for p in players
         ]
         with self.conn:

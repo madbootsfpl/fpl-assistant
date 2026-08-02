@@ -23,6 +23,9 @@ def make_player(
     position: str = "MID",
     price: float = 7.5,
     team_id: int = 1,
+    points_per_game: float | None = None,
+    status: str | None = None,
+    ep_next: float | None = None,
 ) -> Player:
     return Player(
         id=id,
@@ -33,6 +36,9 @@ def make_player(
         position=position,
         price=price,
         total_points=total_points,
+        points_per_game=points_per_game,
+        status=status,
+        ep_next=ep_next,
     )
 
 
@@ -125,6 +131,41 @@ def test_migration_adds_strength_columns_to_an_old_teams_table(tmp_path):
     ).fetchone()
     assert row[0] == "Arsenal"
     assert row[1] is None
+    store.close()
+
+
+def test_save_players_stores_xp_inputs(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    store.save_players([
+        make_player(id=1, points_per_game=4.4, status="a", ep_next=5.2),
+    ])
+
+    row = store.conn.execute(
+        "SELECT points_per_game, status, ep_next FROM players WHERE id = 1"
+    ).fetchone()
+    assert (row[0], row[1], row[2]) == (4.4, "a", 5.2)
+    store.close()
+
+
+def test_migration_adds_xp_columns_to_an_old_players_table(tmp_path):
+    db = str(tmp_path / "old.db")
+
+    # Simulate a pre-Sprint-005 database: a players table without the xP columns.
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)")
+    conn.execute(
+        """CREATE TABLE players (
+            id INTEGER PRIMARY KEY, first_name TEXT, second_name TEXT, web_name TEXT,
+            team_id INTEGER, position TEXT, price REAL, total_points INTEGER)"""
+    )
+    conn.commit()
+    conn.close()
+
+    # Opening Storage migrates the players table up to the current schema.
+    store = Storage(db_path=db)
+    cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
+    assert {"points_per_game", "status", "ep_next"} <= cols
     store.close()
 
 
