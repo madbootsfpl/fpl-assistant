@@ -109,7 +109,7 @@ baseline scoring rate adjusted by fixture difficulty — comparable against FPL'
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- how much difference between xP and FPL scores
 
 ---
 
@@ -169,8 +169,8 @@ python app.py xp --type fpl --limit 30
 
 | Topic | Before | After |
 |--------|-------:|------:|
-| Analytics (composing metrics) | | |
-| Cross-domain joins | | |
+| Analytics (composing metrics) |3 |4 |
+| Cross-domain joins | 1| 2|
 | Migrations | | |
 | Reading/using real data | | |
 | Architecture | | |
@@ -181,8 +181,10 @@ python app.py xp --type fpl --limit 30
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+the xP scoring
 
 ### What was the biggest lesson?
+show we consider looking at xP across a number of fixtures?
 
 ### What challenged me the most?
 
