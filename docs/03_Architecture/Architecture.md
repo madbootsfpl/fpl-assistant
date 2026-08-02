@@ -143,8 +143,8 @@ migration as `teams` (§ADR-005). **Expected Points (xP)** is the first *cross-d
 metric: it multiplies a player's `points_per_game` by their next fixture's difficulty
 (reusing the FDR from ADR-005), so the analytics layer joins the player and fixture
 threads for the first time (ADR-006). Sprint 006 extends xP to a **horizon** — the sum
-of per-fixture xP over the next N fixtures (ADR-007) — which captures double gameweeks
-by fixture count.
+of per-fixture xP over the next N gameweeks (ADR-007) — which captures double gameweeks
+(a team playing twice in a gameweek has both fixtures counted).
 
 **`fixtures`** *(Sprint 003 — see [ADR-004](../06_Decisions/ADR-004-fixtures-and-fdr.md))*
 
@@ -269,5 +269,6 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
 - **Sprint 005 (2026-08-02)** — `players` gains `points_per_game`, `status`, `ep_next`
   (same light migration), per ADR-006. First cross-domain metric: Expected Points (xP)
   = player rate × fixture difficulty. Form/expected-minutes deferred.
-- **Sprint 006 (2026-08-02)** — xP extended to a fixture horizon (sum over the next N
-  fixtures), per ADR-007. No schema change; captures DGW by fixture count.
+- **Sprint 006 (2026-08-02)** — xP extended to a gameweek horizon (sum over the next N
+  gameweeks), per ADR-007. No schema change; captures DGW (two fixtures in a gameweek
+  both count).

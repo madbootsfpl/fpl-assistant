@@ -38,12 +38,12 @@ seam (custom/fpl), and the fixtures data.
 
 ### 🎯 Sprint Goal
 
-**Objective:** Rank players by expected points **over the next N fixtures**, not just
-the next one — so decisions can weigh a *run* of games.
+**Objective:** Rank players by expected points **over the next N gameweeks**, not just
+the next one — so decisions can weigh a *run* of games (and double gameweeks).
 
 #### Success Criteria
 - [x] Multi-week xP approach agreed (ADR-007) before feature code
-- [ ] xP summed correctly over a team's next N fixtures (each fixture's multiplier applied)
+- [x] xP summed correctly over a team's fixtures in the next N gameweeks (DGW-aware)
 - [ ] `xp --next N` works; `--next 1` reproduces today's single-GW behaviour
 - [ ] Output is clearly labelled as a total over N fixtures; `ep_next` handled honestly at N>1
 - [ ] Tests cover the multi-week sum (incl. a team with fewer than N fixtures)
@@ -56,7 +56,7 @@ the next one — so decisions can weigh a *run* of games.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-021 | Agree multi-week xP (ADR-007): sum over next N fixtures; horizon = next N *fixtures* (DGW/BGW alignment deferred); `ep_next` comparable only at N=1; default N | Critical | ✅ Complete | 0.5 session |
-| US-022 | Multi-week xP analytics — next-N difficulties per team, sum per-fixture xP | High | Planned | 1 session |
+| US-022 | Multi-week xP analytics — next-N difficulties per team, sum per-fixture xP | High | ✅ Complete | 1 session |
 | US-023 | `xp --next N` command + label the horizon + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
@@ -122,6 +122,13 @@ Settle before building:
 * **Docs touched:** ADR-007 (new) + index, Architecture §6/changelog, Sprint6 board, PROJECT_STATUS.
 * **Issues / Blockers:** None. (Data verified at planning.)
 * **Next Steps:** US-022 — multi-week xP analytics (next-N difficulties per team, sum per-fixture xP).
+
+#### Session 2 - 2026-08-02 (US-022: multi-week xP analytics)
+* **Completed:** Extended `player_xp(..., horizon=N)` to sum per-fixture xP over the team's fixtures in the next N gameweeks (via `_horizon_difficulties`, reusing `_view`). **Caught and corrected an ADR-007 design flaw**: the horizon must be next N *gameweeks*, not *fixtures* — per-team fixture-count can't capture DGW (every team gets N). Amended ADR-007 + Architecture wording. 4 new tests incl. a double-gameweek test (75 total). US-022 **complete**.
+* **Manual smoke test:** ✅ `player_xp` horizon 1 (games=1, xP 7.4) vs horizon 5 (games=5, xP 34.2) on real data.
+* **Docs touched:** ADR-007 (corrected), Architecture note/changelog, Sprint6 goal/criteria, PROJECT_STATUS.
+* **Issues / Blockers:** The ADR-007 mislabel — caught before building (per the "check assumptions" lesson), corrected in place.
+* **Next Steps:** US-023 — the `xp --next N` command + label the horizon.
 
 ---
 

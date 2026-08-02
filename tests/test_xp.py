@@ -55,10 +55,30 @@ def test_xp_uses_the_next_fixture_only():
     assert result[0]["xp"] == 5.5
 
 
-def test_xp_neutral_when_team_has_no_fixture():
-    # Player's team (99) isn't in any fixture → neutral multiplier → xP = ppg.
+def test_xp_zero_when_team_has_no_fixture_in_horizon():
+    # Player's team (99) plays no fixture in the window (a blank) → 0.
     result = player_xp([player(team_id=99, ppg=5.0)], [upcoming()])
-    assert result[0]["xp"] == 5.0
+    assert result[0]["xp"] == 0.0
+    assert result[0]["games"] == 0
+
+
+def test_xp_sums_over_the_horizon():
+    # Team 1 plays GW1 (diff 3 → ×1.0) and GW2 (diff 3 → ×1.0); horizon 2 → 5.0×2 = 10.0.
+    fixtures = [upcoming(h_diff=3, event=1), upcoming(h_diff=3, event=2)]
+    result = player_xp([player(ppg=5.0)], fixtures, horizon=2)
+    assert result[0]["xp"] == 10.0
+    assert result[0]["games"] == 2
+
+
+def test_xp_double_gameweek_counts_both_fixtures():
+    # Team 1 (ARS) plays TWICE in GW1 — a double gameweek — so both count at horizon 1.
+    fixtures = [
+        upcoming(team_h=1, team_a=2, home="ARS", away="BUR", h_diff=3, event=1),
+        upcoming(team_h=1, team_a=3, home="ARS", away="COV", h_diff=3, event=1),
+    ]
+    result = player_xp([player(ppg=5.0)], fixtures, horizon=1)
+    assert result[0]["games"] == 2        # both GW1 fixtures counted
+    assert result[0]["xp"] == 10.0        # 5.0 × (1.0 + 1.0)
 
 
 def test_xp_sorted_highest_first():

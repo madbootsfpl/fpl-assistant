@@ -28,15 +28,21 @@ can weigh a *run* of games. A planning-time data check confirmed the inputs
 **1. Aggregation — SUM.** A player's multi-week xP is the **sum** of their per-fixture
 xP over the next N fixtures:
 ```
-xP_total = points_per_game × Σ  multiplier(difficulty_i)      over the next N fixtures
-                             i=1..N
+xP_total = points_per_game × Σ multiplier(difficulty_i)   over every fixture in the next N gameweeks
 ```
 Chosen over an average because the total is the actionable quantity for planning, and
 it **rewards fixture volume** — a double-gameweek team (more fixtures in the window)
 naturally rises.
 
-**2. Horizon unit — next N *fixtures*.** Counting fixtures (not gameweeks) is what
-captures double gameweeks for free. True DGW/BGW *gameweek* alignment is deferred.
+**2. Horizon unit — next N *gameweeks*.** The horizon is the next N gameweeks; xP sums
+every fixture the team plays within them. This is what actually captures double/blank
+gameweeks: a DGW team has *two* fixtures in one gameweek (both summed → higher xP), a
+BGW team has none in a gameweek (fewer terms → lower xP).
+
+*(Correction: US-021 first wrote "next N fixtures", but per-team fixture-count gives
+every team exactly N fixtures and so can't capture DGW. Caught during US-022 and
+corrected to gameweeks — the same intent, the right mechanism. In preseason there are
+no DGWs, so the two are numerically identical for current data.)*
 
 **3. `ep_next` comparability.** FPL's `ep_next` is a *single*-gameweek number, so it is
 only comparable to our xP at **N=1**. At N>1 it is shown as "—" (with a note), rather
