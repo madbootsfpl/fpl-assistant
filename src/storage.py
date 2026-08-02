@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS teams (
     name                  TEXT NOT NULL,
     short_name            TEXT NOT NULL,
     strength_overall_home INTEGER,
-    strength_overall_away INTEGER
+    strength_overall_away INTEGER,
+    elo                   REAL
 )
 """
 
@@ -29,6 +30,7 @@ _MIGRATIONS = {
     "teams": {
         "strength_overall_home": "INTEGER",
         "strength_overall_away": "INTEGER",
+        "elo": "REAL",
     },
     "players": {
         "points_per_game": "REAL",
@@ -168,6 +170,16 @@ class Storage:
         ]
         with self.conn:
             self.conn.executemany(UPSERT_PLAYER, rows)
+
+    def save_team_elo(self, elo_by_team: dict) -> None:
+        """Update only the `elo` column for the given team ids.
+
+        Kept separate from save_teams (which handles FPL data) so a refresh never
+        overwrites Elo — and so a ClubElo failure simply leaves the last-known Elo.
+        """
+        rows = [(elo, team_id) for team_id, elo in elo_by_team.items()]
+        with self.conn:
+            self.conn.executemany("UPDATE teams SET elo = ? WHERE id = ?", rows)
 
     def save_fixtures(self, fixtures: list[Fixture]) -> None:
         rows = [

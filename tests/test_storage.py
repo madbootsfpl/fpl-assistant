@@ -93,6 +93,20 @@ def two_teams():
     ]
 
 
+def test_save_team_elo_updates_only_the_elo_column(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+
+    store.save_team_elo({1: 2063.7})
+
+    row = store.conn.execute(
+        "SELECT short_name, elo FROM teams WHERE id = 1"
+    ).fetchone()
+    assert row["short_name"] == "ARS"   # FPL data preserved
+    assert row["elo"] == 2063.7
+    store.close()
+
+
 def test_save_teams_stores_overall_strength(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     store.save_teams([

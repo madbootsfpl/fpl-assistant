@@ -56,8 +56,8 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 #### Success Criteria
 - [x] ClubElo integration approach agreed (ADR-010) before feature code
 - [x] A ClubElo client fetches Elo; all 20 teams map to FPL (14 exact + 6 mapped)
-- [ ] `teams.elo` stored (via the migration pattern)
-- [ ] `refresh` fetches ClubElo **gracefully** — if it fails, FPL data still loads and the app works
+- [x] `teams.elo` stored (via the migration pattern)
+- [x] `refresh` fetches ClubElo **gracefully** — if it fails, FPL data still loads and the app works
 - [ ] `fdr --type elo` ranks teams' upcoming difficulty from opponent Elo
 - [ ] Tests cover the client/mapping, graceful degradation, and the Elo FDR (offline)
 - [ ] **Manual smoke test** run before the sprint is closed (Definition of Done)
@@ -70,7 +70,7 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 |---|---|---|---|---|
 | US-030 | Agree ClubElo approach (ADR-010): endpoint/format, Elo storage, name mapping, graceful degradation, Elo→difficulty | Critical | ✅ Complete | 0.5 session |
 | US-031 | ClubElo client + team-name mapping — fetch Elo, map 20 clubs to FPL teams | High | ✅ Complete | 1 session |
-| US-032 | Store `teams.elo` (migration) + extend `refresh` with graceful degradation | High | Planned | 1 session |
+| US-032 | Store `teams.elo` (migration) + extend `refresh` with graceful degradation | High | ✅ Complete | 1 session |
 | US-033 | Elo-based FDR (`fdr --type elo`) + Handbook chapter (external data / graceful degradation) + README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
@@ -146,6 +146,13 @@ Settle before building (pressure-test with a worked example, per the standing le
 * **Docs touched:** Sprint9 board, PROJECT_STATUS. (Handbook external-data chapter comes in US-033; Architecture in US-030.)
 * **Issues / Blockers:** None.
 * **Next Steps:** US-032 — store `teams.elo` (migration) + extend `refresh` with graceful degradation.
+
+#### Session 3 - 2026-08-02 (US-032: store Elo + graceful refresh)
+* **Completed:** Added `teams.elo` (migration) + `save_team_elo()` (updates *only* the elo column, kept separate from `save_teams` so a refresh never wipes Elo). Extended `refresh` to a best-effort ClubElo step (`_refresh_elo`): a `ClubEloError` is logged and non-fatal (keeps last-known Elo); unmapped clubs warned but non-blocking; returns a 4th count. `cmd_refresh` reports it. 3 tests incl. the graceful-failure path (102 total). US-032 **complete**.
+* **Manual smoke test:** ✅ Live refresh → "20 Elo ratings" stored. Simulated ClubElo outage → refresh completes (…, 0), ARS Elo unchanged (2063.76 kept) — graceful degradation proven.
+* **Docs touched:** Sprint9 board, PROJECT_STATUS. (Handbook external-data chapter in US-033; Architecture in US-030.)
+* **Issues / Blockers:** None.
+* **Next Steps:** US-033 — Elo-based FDR (`fdr --type elo`) + Handbook chapter + README.
 
 ---
 

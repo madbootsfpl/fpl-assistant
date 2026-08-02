@@ -44,10 +44,10 @@ def cmd_refresh(args) -> None:
     """Fetch the latest FPL data and store it locally."""
     store = Storage()
     try:
-        n_players, n_teams, n_fixtures = ingest.refresh(store)
+        n_players, n_teams, n_fixtures, n_elo = ingest.refresh(store)
         print(
-            f"Refreshed {n_players} players, {n_teams} teams and "
-            f"{n_fixtures} fixtures into {config.DB_PATH}."
+            f"Refreshed {n_players} players, {n_teams} teams, {n_fixtures} fixtures "
+            f"and {n_elo} Elo ratings into {config.DB_PATH}."
         )
     except FplApiError as exc:
         print(f"Could not refresh FPL data: {exc}")
