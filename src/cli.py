@@ -100,13 +100,30 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fpl-assistant",
         description="A personal Fantasy Premier League analytics assistant.",
+        epilog=(
+            "Examples:\n"
+            "  python app.py refresh\n"
+            "  python app.py table --sort value          rank players by value (points per £m)\n"
+            "  python app.py search haaland\n"
+            "  python app.py filter --pos DEF --max-price 6\n"
+            "  python app.py fdr --next 5                teams with the easiest upcoming fixtures\n"
+            "  python app.py fixtures --team ARS\n"
+            "\n"
+            "Run 'python app.py <command> --help' for a command's options."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command")
 
-    p_refresh = sub.add_parser("refresh", help="Re-fetch FPL data and store it locally")
+    p_refresh = sub.add_parser(
+        "refresh",
+        help="Fetch the latest FPL data (players, teams, fixtures) and store it locally",
+    )
     p_refresh.set_defaults(handler=cmd_refresh)
 
-    p_table = sub.add_parser("table", help="Show stored players as a table")
+    p_table = sub.add_parser(
+        "table", help="Show players, ranked by points or value (points per £m)"
+    )
     p_table.add_argument(
         "--limit", type=int, default=20, help="How many players to show (default 20)"
     )
