@@ -97,6 +97,14 @@ inside that one module so the rest of the code is unaffected.
 turns typed names into player ids, handling the non-unique `web_name` (14 shared) via a
 `Name:TEAM` form — input validation at the CLI/optimiser boundary.
 
+**Sprint 009 addition — a second data source (ClubElo).** Until now the app had one
+source (FPL). ClubElo (team Elo) is added via its own client + a team-name mapping,
+stored as `teams.elo` ([ADR-010](../06_Decisions/ADR-010-clubelo-external-source.md)).
+It is **best-effort**: `refresh` still requires FPL, but ClubElo failure is *non-fatal*
+— it's logged, the last-known Elo is kept, and every feature still works (**graceful
+degradation**). So the golden rule now has two network paths in `refresh` — FPL
+(required) and ClubElo (best-effort) — and nowhere else.
+
 ---
 
 ## 5. Data flow — the Sprint 001 slice
@@ -290,3 +298,6 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   no schema change.
 - **Sprint 008 (2026-08-02)** — the squad selector gains include/exclude (forced picks)
   + a name resolver for the non-unique `web_name`, per ADR-009. No new data/dependency.
+- **Sprint 009 (2026-08-02)** — first multi-source design: ClubElo (team Elo) added as a
+  best-effort second source with graceful degradation, per ADR-010. `teams.elo`;
+  Elo-based FDR. No new pip dependency (requests + stdlib csv).

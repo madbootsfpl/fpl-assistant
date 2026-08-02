@@ -54,7 +54,7 @@ gracefully-degrading data source, and use it to power an **Elo-based FDR** — g
 team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 
 #### Success Criteria
-- [ ] ClubElo integration approach agreed (ADR-010) before feature code
+- [x] ClubElo integration approach agreed (ADR-010) before feature code
 - [ ] A ClubElo client fetches Elo; all 20 teams map to FPL (14 exact + 6 mapped)
 - [ ] `teams.elo` stored (via the migration pattern)
 - [ ] `refresh` fetches ClubElo **gracefully** — if it fails, FPL data still loads and the app works
@@ -68,14 +68,14 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-030 | Agree ClubElo approach (ADR-010): endpoint/format, Elo storage, name mapping, graceful degradation, Elo→difficulty | Critical | Planned | 0.5 session |
+| US-030 | Agree ClubElo approach (ADR-010): endpoint/format, Elo storage, name mapping, graceful degradation, Elo→difficulty | Critical | ✅ Complete | 0.5 session |
 | US-031 | ClubElo client + team-name mapping — fetch Elo, map 20 clubs to FPL teams | High | Planned | 1 session |
 | US-032 | Store `teams.elo` (migration) + extend `refresh` with graceful degradation | High | Planned | 1 session |
 | US-033 | Elo-based FDR (`fdr --type elo`) + Handbook chapter (external data / graceful degradation) + README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
-- [ ] ADR-010 recorded + added to the ADR index - _Planned_
-- [ ] Update Architecture doc: second data source + graceful-degradation note - _Planned_
+- [x] ADR-010 recorded + added to the ADR index - _Done (US-030)_
+- [x] Update Architecture doc: second data source + graceful-degradation note - _Done (US-030)_
 - [ ] `docs/10_Data_Sources` note that ClubElo is now integrated - _Planned_
 - [ ] Update `README.md` with `fdr --type elo` - _Planned_
 
@@ -133,12 +133,12 @@ Settle before building (pressure-test with a worked example, per the standing le
 
 ### 📝 Session Progress Log
 
-#### Session 1 - [Date]
-* **Completed:**
-* **Manual smoke test:**
-* **Docs touched:**
-* **Issues / Blockers:**
-* **Next Steps:**
+#### Session 1 - 2026-08-02 (US-030: ADR-010 — ClubElo design)
+* **Completed:** Recorded ADR-010: fetch `api.clubelo.com/<date>` CSV (ENG level-1, stdlib csv); 14 exact + a 6-entry `{ClubElo→FPL}` mapping (unmapped → fail loudly); `teams.elo` via migration; **graceful degradation** (ClubElo failure non-fatal, keep last-known Elo); **Elo → 1–5 rank bands** (4 teams per band). **Pressure-tested with worked examples** (map 20 clubs; unknown club errors; graceful failure; Arsenal→5 / Hull→1). Added to ADR index; Architecture note (second source + graceful degradation) + changelog. US-030 **complete** — no feature code.
+* **Manual smoke test:** N/A (docs-only gate story).
+* **Docs touched:** ADR-010 (new) + index, Architecture §4/changelog, Sprint9 board, PROJECT_STATUS.
+* **Issues / Blockers:** None. (Planning verified reachability + the 6-team mapping; formulation pressure-tested.)
+* **Next Steps:** US-031 — the ClubElo client + team-name mapping.
 
 ---
 
