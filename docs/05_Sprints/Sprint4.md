@@ -1,7 +1,7 @@
 # Sprint 004: Custom Fixture Difficulty (Overall)
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~3–4 working sessions
 **Carried Over:** None (Sprint 003 closed clean — no slips, no roll-over)
 
@@ -170,20 +170,34 @@ Settle before building:
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All four stories — US-013 (ADR-005 + descope), US-014 (store team strengths + a live migration), US-015 (custom FDR + `fdr --type`), US-016 (per-match custom in `fixtures --type`). The app now computes its *own* fixture difficulty, comparable to FPL's. Tests grew 46 → 57.
+* **Carried Forward:** None. The Attack/Defence FDR split is **deferred** (not slipped) — it needs season-start data (recorded in ADR-005 + a memory note).
+* **Key Artifacts / Decisions:** ADR-005 (custom overall FDR); `teams` schema evolved via a light `ALTER TABLE` migration; the `source` seam on `_view`/`team_fdr`/`team_schedule`; commits `2262a00`→`a36e243`.
 
 #### Retrospective
 * **What Went Well?**
+  - **Grounding in data at planning time caught a blocker before any code** — the attack/defence strengths were all zero, so we descoped honestly instead of building a broken feature. The Sprint 003 lesson, applied *proactively*.
+  - The 3-part DoD (tests → smoke test → docs check) **held for every story** — the kind of gap the `--help` miss exposed in Sprint 003 couldn't recur.
+  - A well-placed seam paid off: the `source` param added in US-015 made US-016 nearly free.
+  - The schema migration worked first time on the real `data/fpl.db` — no data lost.
+  - The error-prone perspective calc was pinned by a test.
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - The data-availability check happened at *sprint start*, after the full attack/defence plan was written — better to verify the data *while planning* the premise.
+  - Custom FDR lands close to FPL's (both derive from overall strength), so the football value this sprint was modest — the real wins were the learning and the groundwork.
+* **Lessons Learned?**
+  - Ground a feature's *premise* in real data before committing to it — check the fields at plan time, not just execution.
+  - `CREATE TABLE` gets you a new schema; a *migration* (`ALTER TABLE`) gets an existing database up to it.
+  - A seam in the right place makes the next feature nearly free (one `source` param, three consumers).
+  - A forcing-function DoD (tests + smoke + docs) closes gaps a single check misses.
+* **Action Items for Next Sprint (005):**
+  - [ ] Revisit the **Attack/Defence FDR split** once the season populates the strengths (re-check the fields first) — or begin the **xP engine**.
+  - [ ] Add a **data-availability check to sprint planning** (verify the fields a feature needs exist and are populated, before writing the plan).
+  - [ ] Keep the 3-part DoD — it worked.
 
 ---
 
 **Proposed follow-on (Sprint 005):** the deferred Attack/Defence FDR split (once
 strengths populate), or begin the xP engine.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** The app crossed from *using* FPL's difficulty to *computing its own* — and did so honestly, descoping from Attack/Defence to Overall when the data demanded it. Sprint outcome: **Successful** — 4/4 stories, zero roll-over, DoD held throughout.
