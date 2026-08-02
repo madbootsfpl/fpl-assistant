@@ -93,6 +93,30 @@ resolve first (fail early with a clear message), then optimise.
 
 ---
 
+## Choosing the objective (points / value / xp)
+
+The objective — the thing being maximised — is **pluggable**. The optimiser maximises a
+per-player *score* it's handed; it doesn't know or care what that score means:
+
+```python
+problem += pulp.lpSum(scores[p["id"]] * pick[p["id"]] for p in players)
+```
+
+`objective_scores()` computes the score for the chosen metric — `points`
+(total_points), `value` (points-per-£m), or `xp` (Expected Points, reusing
+`player_xp`). So the value and xP analytics *become* what the optimiser chases:
+
+```
+squad --objective points  → maximise last-season points   (default)
+squad --objective value   → maximise points-per-£m         (leaves budget unspent)
+squad --objective xp       → maximise expected points       (fixtures-aware)
+```
+
+The lesson: keep the solver a generic "maximise these scores"; decide *what the scores
+are* outside it. Adding a 4th objective is then a new dict entry, not a solver change.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.

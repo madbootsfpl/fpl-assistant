@@ -1,6 +1,6 @@
 Current Phase: Sprint 010 planned — ready to start
 Current Sprint: Sprint 010 - Squad Objective Toggle (Planned)
-Current Story: US-034 complete (ADR-011 agreed — pluggable objective, pressure-tested); next up US-035 - generic optimiser + objective_scores
+Current Story: US-035 complete (generic optimiser + objective_scores — points/value/xp); next up US-036 - the squad --objective command
 Next Milestone: squad --objective points|value|xp — optimise the XI on any metric we built
 Current Version: 0.0.1
 Last Updated: 2026-08-02

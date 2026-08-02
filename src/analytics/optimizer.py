@@ -9,6 +9,9 @@ import warnings
 
 import pulp
 
+from src.analytics.value import points_per_million
+from src.analytics.xp import player_xp
+
 DEFAULT_BUDGET = 80.0
 FORMATION = {"GK": 1, "DEF": 4, "MID": 4, "FWD": 2}   # 11 players
 MAX_PER_CLUB = 3
@@ -23,17 +26,21 @@ def select_squad(
     max_per_club: int = MAX_PER_CLUB,
     include_ids=(),
     exclude_ids=(),
+    scores=None,
 ) -> dict:
-    """Pick the starting XI that maximises last-season points under the constraints.
+    """Pick the starting XI that maximises a per-player score under the constraints.
 
     `players` are mappings with id, web_name, position, price, total_points, team
-    (as returned by Storage.get_players()). `include_ids`/`exclude_ids` force players
-    into or out of the XI (pick = 1 / 0). Returns a dict with the solver `status`, the
-    `selected` players (each flagged `forced`), and `total_points` / `total_cost`. If
-    no legal XI fits (e.g. the budget is too low, or the forced set breaks a rule),
-    `status` is not "Optimal" and `selected` is empty.
+    (as returned by Storage.get_players()). `scores` is {player_id: score} to
+    maximise; it defaults to `total_points` (so the result is unchanged).
+    `include_ids`/`exclude_ids` force players into or out of the XI (pick = 1 / 0).
+    Returns a dict with the solver `status`, the `selected` players (each flagged
+    `forced`), and `total_points` / `total_cost`. If no legal XI fits, `status` is not
+    "Optimal" and `selected` is empty.
     """
     include_set = set(include_ids)
+    if scores is None:
+        scores = {p["id"]: p["total_points"] for p in players}
     # We use PuLP 3.x's current API; it emits DeprecationWarnings pointing at the
     # PuLP 4.0 API (see docs/Backlog.md). Silence those forward-looking notices here.
     with warnings.catch_warnings():
@@ -44,8 +51,8 @@ def select_squad(
         # One binary decision per player: 1 = picked, 0 = not.
         pick = {p["id"]: pulp.LpVariable(f"pick_{p['id']}", cat="Binary") for p in players}
 
-        # Objective: maximise total points.
-        problem += pulp.lpSum(p["total_points"] * pick[p["id"]] for p in players)
+        # Objective: maximise the chosen per-player score.
+        problem += pulp.lpSum(scores.get(p["id"], 0.0) * pick[p["id"]] for p in players)
 
         # Budget.
         problem += pulp.lpSum(p["price"] * pick[p["id"]] for p in players) <= budget
@@ -92,6 +99,23 @@ def select_squad(
         "total_points": sum(p["total_points"] for p in selected),
         "total_cost": round(sum(p["price"] for p in selected), 1),
     }
+
+
+def objective_scores(players, objective: str, upcoming=None) -> dict:
+    """Per-player score {id: value} for the chosen squad objective (ADR-011).
+
+    - "value" → points-per-£m (undefined price → 0);
+    - "xp"    → Expected Points via player_xp (needs `upcoming` fixtures);
+    - anything else → last-season total_points (the default).
+    """
+    if objective == "value":
+        return {
+            p["id"]: (points_per_million(p["total_points"], p["price"]) or 0.0)
+            for p in players
+        }
+    if objective == "xp":
+        return {r["id"]: r["xp"] for r in player_xp(players, upcoming or [])}
+    return {p["id"]: p["total_points"] for p in players}
 
 
 def resolve_players(players, names) -> tuple[list, list]:

@@ -64,6 +64,7 @@ def player_xp(players, upcoming, source: str = "fpl", horizon: int = 1) -> list[
             xp = ppg * sum(_multiplier(d) for d in difficulties)
 
         results.append({
+            "id": p["id"],
             "web_name": p["web_name"],
             "team": p["team"],
             "position": p["position"],

@@ -46,8 +46,8 @@ historical squad" into "best squad for *this* goal".
 
 #### Success Criteria
 - [x] Objective-toggle approach agreed (ADR-011) before feature code
-- [ ] The optimiser maximises a per-player score (defaults to points; same result as today)
-- [ ] `objective_scores()` computes points / value / xp scores from the players
+- [x] The optimiser maximises a per-player score (defaults to points; same result as today)
+- [x] `objective_scores()` computes points / value / xp scores from the players
 - [ ] `squad --objective points|value|xp` works and the output states the objective
 - [ ] Edge cases handled (price 0 for value; no fixtures for xp) — no crash
 - [ ] Tests cover each objective + the edge cases (offline)
@@ -60,7 +60,7 @@ historical squad" into "best squad for *this* goal".
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-034 | Agree objective-toggle approach (ADR-011): objectives (points/value/xp), generic optimiser score, xp defaults, display | Critical | ✅ Complete | 0.5 session |
-| US-035 | Optimiser takes a per-player `scores` objective + `objective_scores()` helper (points/value/xp; reuse `player_xp`) | High | Planned | 1 session |
+| US-035 | Optimiser takes a per-player `scores` objective + `objective_scores()` helper (points/value/xp; reuse `player_xp`) | High | ✅ Complete | 1 session |
 | US-036 | `squad --objective …` command + display the objective + Handbook/README | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
@@ -128,6 +128,13 @@ Settle before building (pressure-test with a worked example, per the standing le
 * **Docs touched:** ADR-011 (new) + index, Architecture changelog, Sprint10 board, PROJECT_STATUS.
 * **Issues / Blockers:** None. (Data verified at planning; mechanism pressure-tested.)
 * **Next Steps:** US-035 — generic optimiser score + `objective_scores()`.
+
+#### Session 2 - 2026-08-02 (US-035: generic objective + objective_scores)
+* **Completed:** `select_squad(..., scores=None)` now maximises a per-player score (default `total_points` → unchanged). `objective_scores(players, objective, upcoming)` computes points/value/xp (value guards price 0; xp reuses `player_xp`, which gained an `id`). 5 new tests incl. the objective-flips-the-pick + default-is-points regression (111 total). US-035 **complete** — command is US-036.
+* **Manual smoke test:** ✅ Real points/value/xp squads differ sensibly — points £80.0m/2024, value £65.5m/1767 (leaves budget), xp £79.0m/1798 (fixtures-aware).
+* **Docs touched:** Handbook Ch22 (pluggable objective), Sprint10 board, PROJECT_STATUS. (Architecture in US-034.)
+* **Issues / Blockers:** None.
+* **Next Steps:** US-036 — the `squad --objective …` command + display.
 
 ---
 

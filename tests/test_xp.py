@@ -5,8 +5,9 @@ from src.ui.xp import render_xp_table
 
 
 def player(team_id=1, ppg=5.0, status="a", ep_next=4.0, web_name="P",
-           position="MID", team="ARS"):
+           position="MID", team="ARS", id=1):
     return {
+        "id": id,
         "team_id": team_id,
         "points_per_game": ppg,
         "status": status,

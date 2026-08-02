@@ -4,7 +4,7 @@ Each test uses a small hand-built player set where the optimum is known, so we c
 check the solver picks it and respects each constraint.
 """
 
-from src.analytics.optimizer import resolve_players, select_squad
+from src.analytics.optimizer import objective_scores, resolve_players, select_squad
 from src.ui.squad import render_squad
 
 
@@ -84,6 +84,55 @@ def test_reports_infeasible_when_budget_too_low():
 
     assert result["status"] != "Optimal"
     assert result["selected"] == []
+
+
+def test_objective_scores_points():
+    players = [p(1, "MID", 8.0, 100)]
+    assert objective_scores(players, "points") == {1: 100}
+
+
+def test_objective_scores_value_guards_zero_price():
+    players = [p(1, "MID", 8.0, 100), p(2, "FWD", 0.0, 50)]
+    scores = objective_scores(players, "value")
+    assert scores[1] == 12.5   # 100 / 8
+    assert scores[2] == 0.0    # price 0 → guarded
+
+
+def test_objective_scores_xp_reuses_player_xp():
+    players = [{
+        "id": 1, "team_id": 1, "points_per_game": 5.0, "status": "a",
+        "ep_next": 4.0, "web_name": "P", "position": "MID", "team": "ARS",
+    }]
+    upcoming = [{
+        "event": 1, "team_h": 1, "team_a": 2, "home": "ARS", "away": "BUR",
+        "team_h_difficulty": 3, "team_a_difficulty": 3,
+        "home_team_strength": None, "away_team_strength": None,
+    }]
+    scores = objective_scores(players, "xp", upcoming)
+    assert scores == {1: 5.0}   # ppg 5.0 × multiplier(diff 3) = 1.0
+
+
+def test_objective_changes_which_players_are_picked():
+    base = [x for x in formation_11() if x["position"] != "FWD"]   # 9 cheap players
+    fwd = [p(50, "FWD", 10.0, 20, name="A"),   # value 2.0
+           p(51, "FWD", 4.0, 10, name="B"),    # value 2.5
+           p(52, "FWD", 4.0, 9, name="C")]     # value 2.25
+    players = base + fwd
+
+    points = select_squad(players, budget=80, scores=objective_scores(players, "points"))
+    value = select_squad(players, budget=80, scores=objective_scores(players, "value"))
+
+    points_fwd = {s["web_name"] for s in points["selected"] if s["position"] == "FWD"}
+    value_fwd = {s["web_name"] for s in value["selected"] if s["position"] == "FWD"}
+    assert "A" in points_fwd       # points keeps the high scorer
+    assert "A" not in value_fwd    # value drops the expensive one for B + C
+
+
+def test_default_scores_maximise_points():
+    players = formation_11()
+    default = select_squad(players, budget=80)
+    explicit = select_squad(players, budget=80, scores=objective_scores(players, "points"))
+    assert {s["id"] for s in default["selected"]} == {s["id"] for s in explicit["selected"]}
 
 
 def test_include_forces_a_weak_player_in_and_flags_it():
