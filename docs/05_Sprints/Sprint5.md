@@ -56,7 +56,7 @@ xP_next    = points_per_game × multiplier      # 0 if the player isn't availabl
 #### Success Criteria
 - [x] xP v0 approach agreed (ADR-006) before feature code
 - [x] xP inputs stored (`points_per_game`, `status`, `ep_next`) via the migration pattern
-- [ ] xP computed by joining a player to their team's next fixture difficulty
+- [x] xP computed by joining a player to their team's next fixture difficulty
 - [ ] `xp` ranks players by expected points; `--type custom|fpl` picks the difficulty
 - [ ] Output shows our xP alongside FPL's `ep_next` for comparison
 - [ ] Tests cover the xP calc (multiplier, availability, the player→fixture join)
@@ -70,7 +70,7 @@ xP_next    = points_per_game × multiplier      # 0 if the player isn't availabl
 |---|---|---|---|---|
 | US-017 | Agree xP v0 approach (ADR-006): formula, difficulty source, next-GW horizon, availability, deferrals, last-season baseline | Critical | ✅ Complete | 0.5 session |
 | US-018 | Store xP inputs — extend `Player` (`points_per_game`, `status`, `ep_next`) via the `ALTER TABLE` migration | High | ✅ Complete | 1 session |
-| US-019 | xP analytics — combine ppg × next-fixture difficulty (the cross-domain join) | High | Planned | 1 session |
+| US-019 | xP analytics — combine ppg × next-fixture difficulty (the cross-domain join) | High | ✅ Complete | 1 session |
 | US-020 | `xp` command — rank by expected points (`--type custom\|fpl`), compare vs FPL `ep_next`, + Handbook | High | Planned | 1 session |
 
 #### Technical Tasks & Maintenance
@@ -146,6 +146,13 @@ Settle before building:
 * **Docs touched:** Handbook Ch10 (migration now table-generic), Sprint5 board, PROJECT_STATUS. (Architecture §6 covered the columns in US-017.)
 * **Issues / Blockers:** None.
 * **Next Steps:** US-019 — xP analytics (ppg × next-fixture difficulty, the cross-domain join).
+
+#### Session 3 - 2026-08-02 (US-019: xP analytics — the cross-domain join)
+* **Completed:** Added `src/analytics/xp.py` — `player_xp()` joins players to their team's next fixture (via `team_id`), reusing `get_players`, `get_upcoming_fixtures` and the FDR `_view` seam (custom/fpl). xP = ppg × multiplier; 0 if unavailable/no ppg; carries `ep_next`. 7 new tests (68 total). US-019 **complete** — no command yet.
+* **Manual smoke test:** ✅ Drove `player_xp` on real data — B.Fernandes (MUN, diff 2) tops our xP at 7.4. Noted: our v0 runs optimistic vs FPL's `ep_next` (last-season ppg, no minutes/form dampening) — expected for v0, and why we show `ep_next` alongside.
+* **Docs touched:** Handbook Ch21 (cross-domain metric), Sprint5 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** US-020 — the `xp` command (rank by xP, `--type`, compare vs ep_next) + Handbook.
 
 ---
 

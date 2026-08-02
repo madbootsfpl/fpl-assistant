@@ -7,5 +7,12 @@ up to the display. It never touches the API or the screen.
 
 from src.analytics.fdr import team_fdr, team_schedule
 from src.analytics.value import points_per_million, rank_players
+from src.analytics.xp import player_xp
 
-__all__ = ["points_per_million", "rank_players", "team_fdr", "team_schedule"]
+__all__ = [
+    "player_xp",
+    "points_per_million",
+    "rank_players",
+    "team_fdr",
+    "team_schedule",
+]

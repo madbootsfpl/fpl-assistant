@@ -39,6 +39,9 @@ together instead of being scattered into queries or formatting code.
   fixture is easy for one team and hard for its opponent, so each team reads its own side.
 - **Undefined results:** some inputs have no sensible answer (divide by zero). Say so
   honestly rather than inventing a value.
+- **Cross-domain:** a metric that combines two domains — Expected Points (xP) joins a
+  *player's* scoring rate with their *fixture's* difficulty (`points_per_game ×
+  multiplier(difficulty)`). The join key is the player's `team_id`.
 
 ---
 
@@ -75,6 +78,12 @@ for f in fixtures:
 
 The boundary from Chapter 10 holds: storage answers "which fixtures are upcoming?";
 analytics does the perspective + averaging + ranking.
+
+**Expected Points (xP)** is the first metric to *compose two others*: it multiplies a
+player's `points_per_game` by their next fixture's difficulty (reusing FDR's `_view`).
+`src/analytics/xp.py` links each player to their team's next fixture via `team_id` —
+the first time the player and fixture threads meet. It also carries FPL's own
+`ep_next` alongside, so ours can be compared to theirs (ADR-006).
 
 A metric can have more than one **source**. `fdr --type fpl|custom` uses either FPL's
 published difficulty or our own (the opponent's overall strength at their venue,
