@@ -1,7 +1,7 @@
 # Sprint 010: Squad Objective Toggle
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~2–3 working sessions (a focused extension of the optimiser)
 **Carried Over:** None (Sprint 009 closed clean)
 
@@ -148,20 +148,34 @@ Settle before building (pressure-test with a worked example, per the standing le
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All three stories — US-034 (ADR-011), US-035 (generic optimiser + `objective_scores`), US-036 (`squad --objective`). The optimiser now maximises the metric the user chooses (points/value/xp), and it composes with include/exclude and budget. Tests grew 106 → 114. No new data/dependency.
+* **Carried Forward:** None. Backlog: FBref xG/xA, 15-man squad/formations, `--type`/`--next` for the xp objective, plus season-dependent FPL work.
+* **Key Artifacts / Decisions:** ADR-011 (pluggable objective, with a worked example); generic `select_squad(scores=...)`; `objective_scores()`; commits `8492126`→`560c1bd`.
 
 #### Retrospective
 * **What Went Well?**
+  - **The whole toolkit converged** — value (Sprint 2) and xP (Sprint 5) now feed the optimiser (Sprint 7). Tony's backlog review picked the "tie it together" option.
+  - **The generic-core / decide-at-the-edge pattern recurred** — the optimiser became a pure "maximise these scores" engine; the objective moved outside it.
+  - **It composes** — objective + include/exclude + budget all work together, because each was built independently and tested.
+  - The gate ADR was pressure-tested (6th sprint); the 3-part DoD held (10th sprint).
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - The `xp` objective uses fixed v0 settings (next-GW, fpl); exposing `--type`/`--next` for it is a backlog item.
+  - The squad display still shows the points column regardless of objective — a per-objective score column would be clearer (backlog).
+* **Lessons Learned?**
+  - Keep the core generic and push the meaning to the edge — the same pattern (seams, resolver, now objective) keeps paying off.
+  - A default that's a true no-op (`scores=None` → points) makes an extension safe — proven by the regression test.
+  - Composability is earned: independent, tested pieces combine without extra work.
+* **Action Items for Next Sprint (011):**
+  - [ ] Consider: FBref xG/xA (player-level), 15-man squad / formations, or `--type`/`--next` for the xp objective.
+  - [ ] Revisit data-dependent FPL work (form / attack-defence) once the season starts — check data first.
+  - [ ] Keep pressure-testing ADR mechanisms + the 3-part DoD.
 
 ---
 
 **Proposed follow-on (Sprint 011):** FBref xG/xA (player-level), 15-man squad / flexible
 formations, or the data-dependent FPL work once the season starts.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** The toolkit came together — value and xP now drive the squad
+optimiser. From Tony's backlog review. Sprint outcome: **Successful** — 3/3 stories,
+zero roll-over, DoD held.
