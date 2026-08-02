@@ -12,6 +12,7 @@ from src.cli import (
     cmd_filter,
     cmd_fixtures,
     cmd_search,
+    cmd_squad,
     cmd_table,
     cmd_xp,
 )
@@ -105,6 +106,18 @@ def test_xp_defaults():
     assert args.limit == 20
     assert args.next == 1          # single-gameweek by default
     assert args.handler is cmd_xp
+
+
+def test_squad_defaults_to_budget_80():
+    args = build_parser().parse_args(["squad"])
+    assert args.command == "squad"
+    assert args.budget == 80.0
+    assert args.handler is cmd_squad
+
+
+def test_squad_budget_is_parsed():
+    args = build_parser().parse_args(["squad", "--budget", "75"])
+    assert args.budget == 75.0
 
 
 def test_xp_options_are_parsed():

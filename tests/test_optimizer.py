@@ -5,6 +5,7 @@ check the solver picks it and respects each constraint.
 """
 
 from src.analytics.optimizer import select_squad
+from src.ui.squad import render_squad
 
 
 def p(id, position, price, points, team=None, name=None):
@@ -83,3 +84,30 @@ def test_reports_infeasible_when_budget_too_low():
 
     assert result["status"] != "Optimal"
     assert result["selected"] == []
+
+
+def test_render_squad_shows_players_and_totals():
+    result = {
+        "status": "Optimal",
+        "selected": [
+            {"position": "GK", "web_name": "Raya", "team": "ARS",
+             "price": 6.0, "total_points": 162},
+        ],
+        "total_points": 162,
+        "total_cost": 6.0,
+    }
+    out = render_squad(result, budget=80)
+
+    assert "Raya" in out
+    assert "162" in out
+    assert "£6.0m" in out
+    assert "Total" in out
+
+
+def test_render_squad_reports_infeasible():
+    out = render_squad(
+        {"status": "Infeasible", "selected": [], "total_points": 0, "total_cost": 0.0},
+        budget=40,
+    )
+    assert "No legal XI" in out
+    assert "Infeasible" in out

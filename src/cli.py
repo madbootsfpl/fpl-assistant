@@ -11,11 +11,12 @@ See ADR-003 for why this is argparse + subcommands.
 import argparse
 
 from src import config, ingest
-from src.analytics import player_xp, rank_players, team_fdr, team_schedule
+from src.analytics import player_xp, rank_players, select_squad, team_fdr, team_schedule
 from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
+from src.ui.squad import render_squad
 from src.ui.table import render_player_table
 from src.ui.xp import render_xp_table
 
@@ -55,6 +56,14 @@ def cmd_search(args) -> None:
         print(f"No players match '{args.name}'.")
     else:
         print(render_player_table(rank_players(rows)))
+    store.close()
+
+
+def cmd_squad(args) -> None:
+    """Pick the optimal starting XI within a budget."""
+    store = Storage()
+    result = select_squad(store.get_players(), budget=args.budget)
+    print(render_squad(result, budget=args.budget))
     store.close()
 
 
@@ -123,6 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fdr --next 5                teams with the easiest upcoming fixtures\n"
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
+            "  python app.py squad --budget 80           pick the optimal starting XI within a budget\n"
             "\n"
             "Run 'python app.py <command> --help' for a command's options."
         ),
@@ -168,6 +178,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--limit", type=int, default=20, help="How many players to show (default 20)",
     )
     p_xp.set_defaults(handler=cmd_xp)
+
+    p_squad = sub.add_parser("squad", help="Pick the optimal starting XI within a budget")
+    p_squad.add_argument(
+        "--budget", type=float, default=80.0,
+        help="Budget in £m for the XI (default 80)",
+    )
+    p_squad.set_defaults(handler=cmd_squad)
 
     p_fdr = sub.add_parser("fdr", help="Rank teams by upcoming fixture difficulty")
     p_fdr.add_argument(

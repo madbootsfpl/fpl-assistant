@@ -47,10 +47,10 @@ rule — and display it. (The 4 bench players stay a manual pick with a £20M bu
 #### Success Criteria
 - [x] Squad-selector approach agreed (ADR-008) before feature code
 - [x] An integer program (PuLP) selects the XI: budget, formation, ≤3-per-club
-- [ ] `squad --budget 80` outputs the XI (players, cost, total points)
-- [ ] Infeasible cases (e.g. budget too low) are reported clearly, not crashed
-- [ ] Tests cover the optimiser on a small known dataset (optimum + each constraint)
-- [ ] **Manual smoke test** run before the sprint is closed (Definition of Done)
+- [x] `squad --budget 80` outputs the XI (players, cost, total points)
+- [x] Infeasible cases (e.g. budget too low) are reported clearly, not crashed
+- [x] Tests cover the optimiser on a small known dataset (optimum + each constraint)
+- [x] **Manual smoke test** run before the sprint is closed (Definition of Done)
 
 ---
 
@@ -60,13 +60,13 @@ rule — and display it. (The 4 bench players stay a manual pick with a £20M bu
 |---|---|---|---|---|
 | US-024 | Agree squad-selector approach (ADR-008): ILP formulation, constraints (budget, 1-4-4-2, ≤3/club), objective (`total_points`), PuLP dependency, output, infeasibility | Critical | ✅ Complete | 0.5 session |
 | US-025 | Optimiser — `src/analytics/optimizer.py` builds + solves the ILP (add PuLP to requirements) | High | ✅ Complete | 1.5 session |
-| US-026 | `squad` command + display + Handbook/README | High | Planned | 1 session |
+| US-026 | `squad` command + display + Handbook/README | High | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-008 recorded + added to the ADR index - _Done (US-024)_
 - [x] Add `pulp` to `requirements.txt` (first dependency beyond `requests`) - _Done (US-025)_
 - [x] Update Architecture doc: optimisation component + the new dependency - _Done (US-024)_
-- [ ] Update `README.md` with the `squad` command - _Planned_
+- [x] Update `README.md` with the `squad` command - _Done (US-026)_
 - [x] New Handbook chapter for optimisation / linear programming - _Done (US-025, Ch 22)_
 
 ---
@@ -137,6 +137,13 @@ Settle before building:
 * **Docs touched:** Handbook Ch 22 + front-page table, Backlog (PuLP 4.0 tech debt), Sprint7 board, PROJECT_STATUS. (Architecture covered in US-024.)
 * **Issues / Blockers:** PuLP emitted 4.0-deprecation warnings — scope-suppressed with a backlog item to migrate; not a blocker.
 * **Next Steps:** US-026 — the `squad` command + display.
+
+#### Session 3 - 2026-08-02 (US-026: the squad command)
+* **Completed:** Added `ui/squad.py` (`render_squad` — the XI grouped by position + totals, or a clear infeasible message) and the `squad --budget N` command (thin handler over `select_squad`). Added `squad` to the `--help` examples, Ch20 command list, README. 4 tests (render optimal/infeasible + parse; 85 total). US-026 **complete** — all Sprint 007 stories done.
+* **Manual smoke test:** ✅ `squad --budget 80` → optimal XI (£80.0m, 2024 pts); `squad --budget 40` → infeasible message; `squad` in `--help`.
+* **Docs touched:** Handbook Ch20, README, cli `--help`, Sprint7 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 007 review & retrospective.
 
 ---
 

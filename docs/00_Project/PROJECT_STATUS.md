@@ -1,8 +1,8 @@
-Current Phase: Sprint 007 planned — ready to start
-Current Sprint: Sprint 007 - Optimal Squad Selector (Planned)
-Current Story: US-025 complete (optimiser — PuLP ILP picks the optimal XI); next up US-026 - the squad command
-Next Milestone: Optimal starting XI via integer programming (PuLP): budget + formation + ≤3/club
+Current Phase: Sprint 007 feature stories COMPLETE — review/retro pending
+Current Sprint: Sprint 007 - Optimal Squad Selector (all 3 stories done)
+Current Story: US-026 complete — squad command (optimal XI via integer programming)
+Next Milestone: Sprint 007 review & retrospective, then Sprint 008 (15-man squad / flexible formations / xP objective, or data-dependent work)
 Current Version: 0.0.1
 Last Updated: 2026-08-02
-Origin: Tony's Sprint 006 reflection (optimal squad selector) — sidesteps preseason data blockers
-New this sprint: first optimisation feature + first dependency beyond requests (PuLP)
+Commands: refresh · table · search · filter · fdr · fixtures · xp · squad
+Deferred: form/expected-minutes xP + Attack/Defence FDR (still preseason-blocked)

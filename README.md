@@ -46,6 +46,7 @@ python app.py filter --pos DEF --max-price 6   # filter players (position / team
 python app.py fdr --type custom --next 5        # teams by fixture difficulty (FPL's rating or our custom one)
 python app.py fixtures --team ARS --type custom # a team's upcoming fixtures + difficulty
 python app.py xp --type custom --next 5         # players by expected points over the next N gameweeks (vs FPL's ep_next at N=1)
+python app.py squad --budget 80                 # pick the optimal starting XI (1-4-4-2) within a budget
 ```
 
 `refresh` is the only command that touches the network; every view reads from the
