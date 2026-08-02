@@ -58,9 +58,9 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 - [x] A ClubElo client fetches Elo; all 20 teams map to FPL (14 exact + 6 mapped)
 - [x] `teams.elo` stored (via the migration pattern)
 - [x] `refresh` fetches ClubElo **gracefully** — if it fails, FPL data still loads and the app works
-- [ ] `fdr --type elo` ranks teams' upcoming difficulty from opponent Elo
-- [ ] Tests cover the client/mapping, graceful degradation, and the Elo FDR (offline)
-- [ ] **Manual smoke test** run before the sprint is closed (Definition of Done)
+- [x] `fdr --type elo` ranks teams' upcoming difficulty from opponent Elo
+- [x] Tests cover the client/mapping, graceful degradation, and the Elo FDR (offline)
+- [x] **Manual smoke test** run before the sprint is closed (Definition of Done)
 
 ---
 
@@ -71,13 +71,13 @@ team-difficulty rating that works *now* (unlike FPL's preseason strengths).
 | US-030 | Agree ClubElo approach (ADR-010): endpoint/format, Elo storage, name mapping, graceful degradation, Elo→difficulty | Critical | ✅ Complete | 0.5 session |
 | US-031 | ClubElo client + team-name mapping — fetch Elo, map 20 clubs to FPL teams | High | ✅ Complete | 1 session |
 | US-032 | Store `teams.elo` (migration) + extend `refresh` with graceful degradation | High | ✅ Complete | 1 session |
-| US-033 | Elo-based FDR (`fdr --type elo`) + Handbook chapter (external data / graceful degradation) + README | High | Planned | 1 session |
+| US-033 | Elo-based FDR (`fdr --type elo`) + Handbook chapter (external data / graceful degradation) + README | High | ✅ Complete | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-010 recorded + added to the ADR index - _Done (US-030)_
 - [x] Update Architecture doc: second data source + graceful-degradation note - _Done (US-030)_
-- [ ] `docs/10_Data_Sources` note that ClubElo is now integrated - _Planned_
-- [ ] Update `README.md` with `fdr --type elo` - _Planned_
+- [x] `docs/10_Data_Sources` note that ClubElo is now integrated - _Done (US-033)_
+- [x] Update `README.md` with `fdr --type elo` - _Done (US-033)_
 
 ---
 
@@ -153,6 +153,13 @@ Settle before building (pressure-test with a worked example, per the standing le
 * **Docs touched:** Sprint9 board, PROJECT_STATUS. (Handbook external-data chapter in US-033; Architecture in US-030.)
 * **Issues / Blockers:** None.
 * **Next Steps:** US-033 — Elo-based FDR (`fdr --type elo`) + Handbook chapter + README.
+
+#### Session 4 - 2026-08-02 (US-033: Elo-based FDR)
+* **Completed:** Added `elo_difficulty_bands()` (Elo → 1–5 rank bands, strongest → 5) + an `elo` branch to `_view`/`team_fdr`; `storage.get_teams()`; `fdr --type elo` (computes bands, passes them in). New Handbook Ch 23 (External Data & Graceful Degradation) + front-page row; README + Data_Sources note. 4 new tests incl. the elo perspective (106 total). US-033 **complete** — all Sprint 009 stories done.
+* **Manual smoke test:** ✅ `fdr --type elo` vs `--type fpl` differ sensibly (BRE/MUN/CRY top by Elo); crucially Elo FDR works in preseason where custom would be zero.
+* **Docs touched:** Handbook Ch 23 + table, README, Data_Sources, Sprint9 board, PROJECT_STATUS.
+* **Issues / Blockers:** None.
+* **Next Steps:** Sprint 009 review & retrospective.
 
 ---
 

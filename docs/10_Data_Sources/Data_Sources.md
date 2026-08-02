@@ -1,5 +1,9 @@
 This file lists potential data sources, nothing agreed and there may be others to pull data from
 
+> **Integrated so far:** Official FPL API (players, teams, fixtures) and **ClubElo**
+> (team Elo, Sprint 009 — best-effort/graceful, powers `fdr --type elo`; see ADR-010).
+> Next candidate: FBref/SoccerData for player xG/xA (harder — player-name matching).
+
 The best assistants combine **Fantasy data + Football data + Context + AI-generated insights**.
 
 ## Tier 1 - Must Have (Sprint 1)

@@ -263,6 +263,11 @@ class Storage:
     def count_players(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]
 
+    def get_teams(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT id, name, short_name, elo FROM teams ORDER BY short_name"
+        ).fetchall()
+
     def count_teams(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
 

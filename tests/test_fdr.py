@@ -1,6 +1,6 @@
 """Tests for the Fixture Difficulty (FDR) analytics."""
 
-from src.analytics.fdr import team_fdr, team_schedule
+from src.analytics.fdr import elo_difficulty_bands, team_fdr, team_schedule
 
 
 def fixture(home, away, h_diff, a_diff, event=1,
@@ -85,6 +85,34 @@ def test_fpl_is_the_default_source():
     result = {r["team"]: r for r in team_fdr([fx])}
     assert result["ARS"]["avg_difficulty"] == 2.0   # team_h_difficulty
     assert result["BUR"]["avg_difficulty"] == 5.0   # team_a_difficulty
+
+
+def test_elo_bands_rank_strongest_as_5_and_weakest_as_1():
+    from collections import Counter
+    teams = [{"short_name": f"T{i}", "elo": 1500 + i * 50} for i in range(20)]  # T19 strongest
+
+    bands = elo_difficulty_bands(teams)
+
+    assert bands["T0"] == 1     # weakest Elo → easiest to face
+    assert bands["T19"] == 5    # strongest Elo → hardest to face
+    assert all(count == 4 for count in Counter(bands.values()).values())   # 4 per band
+
+
+def test_elo_bands_omit_teams_without_elo():
+    bands = elo_difficulty_bands(
+        [{"short_name": "A", "elo": 2000.0}, {"short_name": "B", "elo": None}]
+    )
+    assert "A" in bands and "B" not in bands
+
+
+def test_team_fdr_elo_source_uses_the_opponents_band():
+    fx = fixture("ARS", "BUR", h_diff=2, a_diff=2, event=1)   # FPL diffs irrelevant here
+    bands = {"ARS": 1, "BUR": 5}
+
+    result = {r["team"]: r for r in team_fdr([fx], source="elo", elo_bands=bands)}
+
+    assert result["ARS"]["avg_difficulty"] == 5.0   # ARS faces BUR (band 5)
+    assert result["BUR"]["avg_difficulty"] == 1.0   # BUR faces ARS (band 1)
 
 
 def test_team_schedule_reads_each_fixture_from_the_team_view():

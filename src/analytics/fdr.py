@@ -8,19 +8,35 @@ that once; `team_fdr` aggregates it, `team_schedule` lists it.
 from collections import defaultdict
 
 
-def _view(fixture, team, source: str = "fpl"):
+def elo_difficulty_bands(teams) -> dict:
+    """Turn team Elo into a 1-5 difficulty band, keyed by short_name (ADR-010).
+
+    Sort the rated teams by Elo and split into 5 equal bands (4 per band for 20
+    teams): weakest → 1, strongest → 5. Teams without Elo are omitted (their
+    difficulty is undefined).
+    """
+    rated = sorted((t for t in teams if t["elo"] is not None), key=lambda t: t["elo"])
+    n = len(rated)
+    bands = {}
+    for i, t in enumerate(rated):
+        bands[t["short_name"]] = min(5, i * 5 // n + 1) if n else None
+    return bands
+
+
+def _view(fixture, team, source: str = "fpl", elo_bands=None):
     """This fixture seen from `team`'s side: (difficulty, opponent, venue).
 
     `source` selects which difficulty number:
     - "fpl"    → FPL's published team_h/a_difficulty (ADR-004);
-    - "custom" → the opponent's overall strength at the venue the opponent plays
-      (ADR-005). If my team is home, the opponent is away, so I face their *away*
-      strength; if my team is away, I face the home team's *home* strength.
+    - "custom" → the opponent's overall strength at the venue they play (ADR-005);
+    - "elo"    → the opponent's Elo band (1-5) from `elo_bands` (ADR-010).
     """
     is_home = fixture["home"] == team
     opponent = fixture["away"] if is_home else fixture["home"]
     venue = "H" if is_home else "A"
-    if source == "custom":
+    if source == "elo":
+        difficulty = (elo_bands or {}).get(opponent)
+    elif source == "custom":
         difficulty = (
             fixture["away_team_strength"] if is_home else fixture["home_team_strength"]
         )
@@ -31,18 +47,18 @@ def _view(fixture, team, source: str = "fpl"):
     return difficulty, opponent, venue
 
 
-def team_fdr(fixtures, next_n: int = 5, source: str = "fpl") -> list[dict]:
+def team_fdr(fixtures, next_n: int = 5, source: str = "fpl", elo_bands=None) -> list[dict]:
     """Rank teams by average difficulty over their next `next_n` fixtures.
 
     `fixtures` is a sequence of upcoming-fixture mappings (from
     Storage.get_upcoming_fixtures()), already ordered by gameweek. `source` picks
-    FPL's difficulty or our custom one. Returns a list of dicts sorted easiest-run
-    first; a team with no valid difficulty sorts last.
+    FPL's difficulty, our custom one, or Elo (needs `elo_bands`). Returns a list of
+    dicts sorted easiest-run first; a team with no valid difficulty sorts last.
     """
     per_team = defaultdict(list)   # short_name -> list of (difficulty, opponent)
     for f in fixtures:
         for team in (f["home"], f["away"]):
-            difficulty, opponent, _ = _view(f, team, source)
+            difficulty, opponent, _ = _view(f, team, source, elo_bands)
             per_team[team].append((difficulty, opponent))
 
     results = []

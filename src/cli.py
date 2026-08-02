@@ -12,6 +12,7 @@ import argparse
 
 from src import config, ingest
 from src.analytics import (
+    elo_difficulty_bands,
     player_xp,
     rank_players,
     resolve_players,
@@ -113,7 +114,8 @@ def cmd_fdr(args) -> None:
     if not upcoming:
         print("No upcoming fixtures — run `refresh` first.")
     else:
-        ranked = team_fdr(upcoming, next_n=args.next, source=args.type)
+        elo_bands = elo_difficulty_bands(store.get_teams()) if args.type == "elo" else None
+        ranked = team_fdr(upcoming, next_n=args.next, source=args.type, elo_bands=elo_bands)
         print(render_fdr_table(ranked, next_n=args.next, source=args.type))
     store.close()
 
@@ -226,8 +228,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="How many upcoming fixtures to average (default 5)",
     )
     p_fdr.add_argument(
-        "--type", choices=["fpl", "custom"], default="fpl",
-        help="Difficulty source: FPL's rating (default) or our custom one",
+        "--type", choices=["fpl", "custom", "elo"], default="fpl",
+        help="Difficulty source: FPL's rating (default), our custom one, or ClubElo",
     )
     p_fdr.set_defaults(handler=cmd_fdr)
 
