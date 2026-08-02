@@ -1,7 +1,7 @@
 # Sprint 006: Multi-week xP
 
-**Dates:** TBC
-**Status:** Planned
+**Dates:** 2026-08-02
+**Status:** ✅ Complete
 **Capacity:** ~2–3 working sessions (a focused extension of xP)
 **Carried Over:** None (Sprint 005 closed clean)
 
@@ -142,20 +142,34 @@ Settle before building:
 ### 🏁 Sprint Review & Retrospective
 
 #### Delivered vs. Roll-over
-* **Delivered:**
-* **Carried Forward:**
-* **Key Artifacts / Decisions:**
+* **Delivered:** All three stories — US-021 (ADR-007), US-022 (multi-week analytics), US-023 (the `xp --next N` command). xP now sums over the next N gameweeks, is DGW-aware, and hides FPL's `ep_next` at N>1. Tests grew 73 → 76. This sprint came from a Sprint 005 reflection.
+* **Carried Forward:** None. Form/expected-minutes xP and Attack/Defence FDR remain deferred (data-dependent).
+* **Key Artifacts / Decisions:** ADR-007 (multi-week xP, corrected to a gameweek horizon); `player_xp(..., horizon=N)`; commits `ab423a4`→`7dae4ee`.
 
 #### Retrospective
 * **What Went Well?**
+  - The sprint came from **Tony's own reflection** — direction driven by his instinct.
+  - **A design flaw was caught before building.** ADR-007 first said "next N fixtures" (which can't capture DGW); working through US-022 exposed it and it was corrected to "next N gameweeks" — no wrong code shipped.
+  - Honest presentation: FPL's `ep_next` shown only where it's comparable (N=1), hidden with a note otherwise.
+  - Pure reuse again — the horizon threaded through tested xP/FDR seams.
+  - The 3-part DoD held for every story.
 * **What Could Be Improved?**
-* **Lessons Learned:**
-* **Action Items for Next Sprint:**
+  - **A recorded decision isn't a verified one.** The ADR-007 flaw survived the gate story (US-021) and was only caught at implementation. A quick worked example when writing an ADR mechanism would have caught it earlier.
+* **Lessons Learned?**
+  - Pressure-test an ADR's *mechanism* against its *intent* (a worked example), not just the intent — "captures DGW" needed checking against "next N fixtures".
+  - Catching a flaw before code is cheap; the discipline is to look.
+  - Horizon design: a gameweek window (not a per-team fixture count) is what captures double/blank gameweeks.
+* **Action Items for Next Sprint (007):**
+  - [ ] Sanity-check each ADR mechanism with a worked example at write time.
+  - [ ] Refine xP with `form` + expected minutes, or the Attack/Defence FDR split (both data-dependent — check first).
+  - [ ] Keep verifying data at plan time + the 3-part DoD.
 
 ---
 
 **Proposed follow-on (Sprint 007):** richer xP (form + expected minutes) and/or the
 Attack/Defence FDR split, once the season populates them.
 
-**Completion Date:** [YYYY-MM-DD]
-**Final Notes:**
+**Completion Date:** 2026-08-02
+**Final Notes:** Tony's own idea, shipped: xP now weighs a *run* of games, and is
+double-gameweek-aware. The standout was catching a flawed ADR before it became code.
+Sprint outcome: **Successful** — 3/3 stories, zero roll-over, DoD held.
