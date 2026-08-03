@@ -8,10 +8,12 @@ side is untouched, and it is *best-effort*: callers handle failure gracefully.
 import csv
 import datetime
 import io
+import time
 
 import requests
 
 from src import config
+from src.api.retry import is_transient, with_retry
 
 # The 6 clubs whose ClubElo name differs from FPL's `name` (14 others match exactly).
 CLUBELO_TO_FPL = {
@@ -35,22 +37,44 @@ class EloClient:
         self,
         base_url: str = config.CLUBELO_BASE_URL,
         timeout: int = config.REQUEST_TIMEOUT,
+        retries: int = 2,
+        backoff: float = 0.5,
+        sleep=time.sleep,
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.retries = retries
+        self.backoff = backoff
+        self.sleep = sleep
 
     def get_elo_csv(self, date: str | None = None) -> str:
-        """Fetch the Elo ratings CSV for `date` (defaults to today)."""
+        """Fetch the Elo ratings CSV for `date` (defaults to today).
+
+        Transient failures (502/503/504, timeouts, dropped connections) are retried with
+        backoff before giving up (ADR-020); a permanent error (4xx) fails fast. On final
+        failure raises `ClubEloError`, so the caller's graceful degradation still applies.
+        """
         date = date or datetime.date.today().isoformat()
         url = f"{self.base_url}/{date}"
-        try:
+
+        def fetch() -> str:
             response = requests.get(
                 url, timeout=self.timeout, headers={"User-Agent": config.USER_AGENT}
             )
             response.raise_for_status()
             return response.text
+
+        try:
+            return with_retry(
+                fetch, retries=self.retries, backoff=self.backoff, sleep=self.sleep
+            )
         except requests.RequestException as exc:
-            raise ClubEloError(f"Failed to fetch {url}: {exc}") from exc
+            # A transient error that propagated means every attempt was used; a permanent
+            # one failed on the first attempt.
+            attempts = self.retries + 1 if is_transient(exc) else 1
+            raise ClubEloError(
+                f"Failed to fetch {url} after {attempts} attempt(s): {exc}"
+            ) from exc
 
 
 def parse_english_elo(csv_text: str) -> dict:

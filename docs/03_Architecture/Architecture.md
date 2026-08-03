@@ -354,3 +354,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   stored since Sprint 014; verified == FPL's per-90 field), ranking DEF+GK by best solidity,
   minutes-gated. Completes the defensive picture (DefCon + clean sheets); GKs get a lens. A
   team signal shown per player (stated caveat). No new dependency.
+- **Sprint 019 (2026-08-03)** — *ClubElo resilience* (retry-with-backoff), per ADR-020. The
+  ClubElo fetch retries transient errors (502/503/504, timeouts, connection) with exponential
+  backoff *before* falling back to last-known Elo — so a momentary blip no longer loses the Elo
+  refresh. Retry *then* degrade (ADR-010 unchanged); a reusable helper; injectable sleep. No
+  new dependency.

@@ -68,6 +68,30 @@ except ClubEloError as exc:
 
 ---
 
+## Retry *then* degrade (ADR-020)
+
+ClubElo is a free hobby API that occasionally returns a transient **502 Bad Gateway** (Tony
+hit this twice). Degradation alone meant one blip lost the whole Elo refresh — even though a
+retry seconds later succeeds. So there are now **two layers** of resilience:
+
+```
+fetch → transient error (502/503/504, timeout, dropped connection)?
+          ├─ yes → back off (0.5s, 1s) and retry, up to 2×  ── rides out a blip
+          └─ no (a 4xx) → fail fast                          ── a retry won't help
+        all attempts failed → ClubEloError → graceful degradation (keep last-known Elo)
+```
+
+The retry lives in a small **reusable helper** (`src/api/retry.py` — `is_transient` +
+`with_retry`), source-agnostic so the FPL client could adopt it. Its `sleep` is **injected**,
+so tests pass a no-op — instant *and* able to assert the backoff (`[0.5, 1.0]`s).
+
+**The trade-off (be honest):** retry helps a *momentary* blip, but on a *full* outage it now
+waits longer before degrading (up to `timeout × attempts` — ~30s with a 10s timeout × 3). It's
+bounded, only-on-failure, and tunable (`retries` / `timeout` / `backoff`). A retry is not a
+cache: a real outage still degrades, exactly as before.
+
+---
+
 ## Common Mistakes
 
 - **Letting a non-critical source crash the app.** Wrap it; a failure is data missing,
@@ -94,6 +118,8 @@ except ClubEloError as exc:
 ---
 
 ## Related Documents
+
+- [ADR-020 — ClubElo retry-with-backoff](../06_Decisions/ADR-020-clubelo-retry.md)
 
 - [ADR-010 — ClubElo external source](../06_Decisions/ADR-010-clubelo-external-source.md)
 - [Architecture §4 (second data source)](../03_Architecture/Architecture.md)

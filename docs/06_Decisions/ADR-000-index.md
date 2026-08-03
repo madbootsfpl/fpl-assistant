@@ -24,3 +24,4 @@ new ADR as it is created.
 | [017](./ADR-017-over-under-performance.md) | Over/under-performance (expected vs actual attacking points) | Accepted |
 | [018](./ADR-018-defensive-contribution.md) | Defensive Contribution (DefCon reliability) | Accepted |
 | [019](./ADR-019-clean-sheet-solidity.md) | Clean-sheet / defensive-solidity lens (xGC) | Accepted |
+| [020](./ADR-020-clubelo-retry.md) | ClubElo retry-with-backoff (transient failures) | Accepted |

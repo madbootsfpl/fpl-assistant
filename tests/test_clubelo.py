@@ -66,4 +66,81 @@ def test_get_elo_csv_wraps_network_errors(monkeypatch):
 
     monkeypatch.setattr("src.api.clubelo.requests.get", boom)
     with pytest.raises(ClubEloError):
-        EloClient().get_elo_csv(date="2026-08-02")
+        # A connection error is transient, so it retries — inject a no-op sleep so the
+        # test stays instant.
+        EloClient(sleep=lambda s: None).get_elo_csv(date="2026-08-02")
+
+
+# --- retry-with-backoff (ADR-020) ---
+
+class FakeResp:
+    """A stand-in requests.Response: raise_for_status raises HTTPError on a 4xx/5xx."""
+
+    def __init__(self, status=200, text=CSV):
+        self.status_code = status
+        self.text = text
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            resp = requests.Response()
+            resp.status_code = self.status_code
+            raise requests.HTTPError(response=resp)
+
+
+def sequence_get(items):
+    """A fake requests.get yielding `items` (FakeResp or Exception) in order."""
+    it = iter(items)
+
+    def _get(*a, **k):
+        item = next(it)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    return _get
+
+
+def test_is_transient_classifies_errors():
+    from src.api.retry import is_transient
+
+    def http(code):
+        resp = requests.Response()
+        resp.status_code = code
+        return requests.HTTPError(response=resp)
+
+    assert is_transient(http(502)) and is_transient(http(503)) and is_transient(http(504))
+    assert not is_transient(http(404))          # permanent — a retry won't help
+    assert not is_transient(http(500))          # not in the gateway set
+    assert is_transient(requests.Timeout()) and is_transient(requests.ConnectionError())
+
+
+def test_get_elo_csv_retries_transient_then_succeeds(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(
+        "src.api.clubelo.requests.get",
+        sequence_get([FakeResp(502), FakeResp(502), FakeResp(200)]),
+    )
+    out = EloClient(sleep=sleeps.append).get_elo_csv(date="2026-08-02")
+
+    assert "Arsenal" in out            # succeeded on the 3rd attempt
+    assert sleeps == [0.5, 1.0]        # exponential backoff between the failed attempts
+
+
+def test_get_elo_csv_does_not_retry_permanent(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("src.api.clubelo.requests.get", sequence_get([FakeResp(404)]))
+    with pytest.raises(ClubEloError) as exc:
+        EloClient(sleep=sleeps.append).get_elo_csv(date="2026-08-02")
+
+    assert "after 1 attempt" in str(exc.value)   # failed fast
+    assert sleeps == []                          # no retry on a permanent error
+
+
+def test_get_elo_csv_exhausts_retries_then_raises(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("src.api.clubelo.requests.get", sequence_get([FakeResp(502)] * 3))
+    with pytest.raises(ClubEloError) as exc:
+        EloClient(sleep=sleeps.append).get_elo_csv(date="2026-08-02")
+
+    assert "after 3 attempt" in str(exc.value)   # all attempts used → then degrade
+    assert sleeps == [0.5, 1.0]
