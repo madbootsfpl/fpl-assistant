@@ -349,3 +349,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `defensive_contribution_per_90 − threshold` (DEF 10, MID/FWD 12; GK excluded), minutes-gated.
   Verified FPL's field is position-correct (DEF=CBIT, MID/FWD=CBIT+recoveries). A defensive
   counterpart to `overperf`; no new dependency.
+- **Sprint 018 (2026-08-03)** — *clean-sheet / solidity lens* (`cleansheet`), per ADR-019. A
+  **metric + view only, no ingest** — `xGC/90 = xgc × 90 / minutes` (computed from the `xgc`
+  stored since Sprint 014; verified == FPL's per-90 field), ranking DEF+GK by best solidity,
+  minutes-gated. Completes the defensive picture (DefCon + clean sheets); GKs get a lens. A
+  team signal shown per player (stated caveat). No new dependency.

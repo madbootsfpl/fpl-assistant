@@ -270,6 +270,22 @@ def test_defcon_defaults():
     assert args.limit == 20
 
 
+def test_cleansheet_command_parses_options():
+    args = build_parser().parse_args(
+        ["cleansheet", "--pos", "GK", "--limit", "5", "--min-minutes", "1200"]
+    )
+    assert args.command == "cleansheet"
+    assert args.pos == "GK"
+    assert args.limit == 5
+    assert args.min_minutes == 1200
+
+
+def test_cleansheet_defaults():
+    args = build_parser().parse_args(["cleansheet"])
+    assert args.min_minutes == 900
+    assert args.limit == 20
+
+
 def test_xp_options_are_parsed():
     args = build_parser().parse_args(
         ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]

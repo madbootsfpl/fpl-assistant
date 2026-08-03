@@ -107,9 +107,41 @@ item. Until then, read the **margin as a tendency**: bigger is safer, but it's a
 
 ---
 
+## The other defensive source: clean sheets (`cleansheet`, ADR-019)
+
+Defenders and keepers score two ways — **DefCon** (above) and **clean sheets** (4 pts). The
+`cleansheet` view covers the second, using **expected goals conceded (xGC)**:
+
+```
+xGC/90 = expected_goals_conceded × 90 ÷ minutes      (computed; == FPL's per-90 field)
+```
+
+Lower xGC/90 → the team concedes fewer expected goals with this player on → **higher
+clean-sheet probability**. Ranked **ascending** (lowest = best), DEF + GK, minutes-gated.
+
+```bash
+python app.py cleansheet            # best clean-sheet prospects
+python app.py cleansheet --pos GK   # goalkeepers only
+```
+
+Two things to hold onto:
+
+- **It's a team signal shown per player.** xGC reflects the *team's* defence — so the ranking
+  really ranks team defences (on real data the top is all one club), surfaced via their DEF/GK.
+  You act on it by picking that team's cheapest nailed starter.
+- **No new data was needed.** `xgc` has been stored since Sprint 014 and `minutes` since
+  Sprint 016 — so this was a *metric + view only*, computed from what we already had. Banking a
+  field early pays off later.
+
+Together, `defcon` (actions) and `cleansheet` (solidity) answer *"why own this defender?"* —
+the two routes to defensive points.
+
+---
+
 ## Common Mistakes
 
 - **Reading the margin as guaranteed points.** It's a reliability tendency.
+- **Reading `cleansheet` as individual defending.** It's a team solidity signal shown per player.
 - **Expecting forwards.** By design they rarely clear the 12-action bar — DefCon is a
   defence / defensive-mid signal.
 - **Trusting it early season.** Like every FPL number it resets, and the ≥ 900-minute gate
@@ -120,6 +152,7 @@ item. Until then, read the **margin as a tendency**: bigger is safer, but it's a
 ## Related Documents
 
 - [ADR-018 — Defensive Contribution](../06_Decisions/ADR-018-defensive-contribution.md)
+- [ADR-019 — Clean-sheet / solidity lens](../06_Decisions/ADR-019-clean-sheet-solidity.md)
 - [ADR-017 — Over/under-performance](../06_Decisions/ADR-017-over-under-performance.md) (the attacking counterpart)
 - [Chapter 24 — Expected Goals](./24_Expected_Goals.md)
 - Code: `src/analytics/defcon.py`, `src/ui/defcon.py`

@@ -79,6 +79,7 @@ python app.py xp --type custom --next 5          # players by expected points ov
 python app.py xg --pos FWD                        # players by expected goal involvement (xG + xA)
 python app.py overperf                            # over/under-performers (actual vs expected pts)
 python app.py defcon                              # reliable Defensive Contribution earners
+python app.py cleansheet                          # best clean-sheet prospects (DEF/GK by xGC/90)
 python app.py squad --budget 80                  # pick the optimal starting XI within a budget
 python app.py squad --include Haaland --exclude Salah  # the optimal XI around your picks
 python app.py squad --objective value            # optimise the XI on points / value / xp

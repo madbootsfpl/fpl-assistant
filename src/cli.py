@@ -18,6 +18,7 @@ from src.analytics import (
     XI_FLEX,
     elo_difficulty_bands,
     defcon_reliability,
+    defensive_solidity,
     objective_scores,
     over_under,
     player_xp,
@@ -31,6 +32,7 @@ from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
+from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_squad
@@ -182,6 +184,15 @@ def cmd_squad(args) -> None:
     store.close()
 
 
+def cmd_cleansheet(args) -> None:
+    """Rank DEF/GK by clean-sheet prospect — expected goals conceded per 90 (lowest best)."""
+    store = Storage()
+    players = store.get_players(position=args.pos.upper() if args.pos else None)
+    rows = defensive_solidity(players, min_minutes=args.min_minutes)
+    print(render_cleansheet(rows, limit=args.limit, min_minutes=args.min_minutes))
+    store.close()
+
+
 def cmd_defcon(args) -> None:
     """Rank players by Defensive Contribution reliability (per-90 vs threshold)."""
     store = Storage()
@@ -282,6 +293,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py xg --pos FWD                players by expected goal involvement (xG + xA)\n"
             "  python app.py overperf                   over/under-performers (actual vs expected pts)\n"
             "  python app.py defcon                     reliable Defensive Contribution earners\n"
+            "  python app.py cleansheet                 best clean-sheet prospects (DEF/GK by xGC/90)\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
             "  python app.py squad --formation 3-5-2     pin the XI shape (default: best legal shape)\n"
             "  python app.py squad --full --bench Dubravka Diop  full 15-man squad; declare your bench\n"
@@ -363,6 +375,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Only rank players with at least this many minutes (default 900)",
     )
     p_dc.set_defaults(handler=cmd_defcon)
+
+    p_cs = sub.add_parser(
+        "cleansheet", help="Rank DEF/GK by clean-sheet prospect (expected goals conceded per 90)",
+    )
+    p_cs.add_argument("--pos", help="Filter to a position: DEF or GK")
+    p_cs.add_argument(
+        "--limit", type=int, default=20, help="How many players to show (default 20)",
+    )
+    p_cs.add_argument(
+        "--min-minutes", type=int, default=900, dest="min_minutes",
+        help="Only rank players with at least this many minutes (default 900)",
+    )
+    p_cs.set_defaults(handler=cmd_cleansheet)
 
     p_squad = sub.add_parser("squad", help="Pick the optimal squad (starting XI, or --full 15)")
     p_squad.add_argument(
