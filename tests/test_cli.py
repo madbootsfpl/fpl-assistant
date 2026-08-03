@@ -15,6 +15,7 @@ from src.cli import (
     cmd_search,
     cmd_squad,
     cmd_table,
+    cmd_transfer,
     cmd_xp,
     parse_formation,
     resolve_squad_budget,
@@ -328,6 +329,26 @@ def test_captain_squad_and_limit_are_parsed():
     args = build_parser().parse_args(["captain", "--squad", "my-team", "--limit", "3"])
     assert args.squad == "my-team"
     assert args.limit == 3
+
+
+def test_transfer_command_defaults():
+    args = build_parser().parse_args(["transfer", "--squad", "TS"])
+    assert args.command == "transfer"
+    assert args.squad == "TS"
+    assert args.bank == 0.0        # self-funding by default
+    assert args.next == 5          # multi-week horizon
+    assert args.limit == 5
+    assert args.handler is cmd_transfer
+
+
+def test_transfer_requires_a_squad():
+    with pytest.raises(SystemExit):        # argparse errors without the required --squad
+        build_parser().parse_args(["transfer"])
+
+
+def test_transfer_bank_and_next_are_parsed():
+    args = build_parser().parse_args(["transfer", "--squad", "TS", "--bank", "2.5", "--next", "3"])
+    assert args.bank == 2.5 and args.next == 3
 
 
 def test_no_command_leaves_no_handler():

@@ -34,3 +34,4 @@ new ADR as it is created.
 | [027](./ADR-027-historical-past-seasons.md) | Historical past-season data (`history --backfill`) | Accepted |
 | [028](./ADR-028-xp-historical-baseline.md) | xP historical baseline (multi-season rate) | Accepted |
 | [029](./ADR-029-captain-suggestions.md) | Captain suggestions (recommend + explain; xP, GK-excluded) | Accepted |
+| [030](./ADR-030-transfer-suggestions.md) | Transfer suggestions (best single legal upgrades; xP gain, `--bank`) | Accepted |

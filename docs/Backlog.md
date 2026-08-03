@@ -16,6 +16,10 @@ tech-debt.)*
 - **Ceiling / "differential" captaincy** — `captain` (Sprint 027, ADR-029) ranks by *mean* xP,
   which favours nailed-on premiums. A ceiling/variance view would surface high-upside punts — but
   it needs variance/form data we don't have yet. Revisit once in-season data accrues.
+- **Multi-move transfer *planner*** — `transfer` (Sprint 028, ADR-030) suggests the best *single*
+  swaps. A planner would optimise a *sequence* over a horizon: taking a −4 hit vs rolling a free
+  transfer, banking transfers, two-moves-this-week maths. A bigger optimisation problem (and it
+  wants the real bank + xMins) — a natural late-Phase-3 / Phase-5 feature.
 
 ### Done (kept for the trail)
 

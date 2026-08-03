@@ -1,11 +1,11 @@
-Current Phase: Phase 3 — Decision Support (open; captain suggestions shipped). Phase 1 MVP complete; Phase 2 first slice done
-Current Sprint: Sprint 027 - Captain Suggestions (✅ Complete, 3/3 stories, retro done)
-Current Story: None active — Sprint 028 to pick the next Phase 3 feature (transfers / team analyser) or data hardening
-Next Milestone: Owner to steer — transfer suggestions or a team analyser (compose xP + saved squads), or data hardening (full backfill / per-GW once GW1 plays)
+Current Phase: Phase 3 — Decision Support (captain + transfers shipped). Phase 1 MVP complete; Phase 2 first slice done
+Current Sprint: Sprint 028 - Transfer Suggestions (✅ Complete, 3/3 stories, retro done). Sequence: 028 transfers ✅ → 029 team analyser → 030 data hardening
+Current Story: None active — Sprint 029 (Team Analyser) next in the sequence
+Next Milestone: Team Analyser — grade a saved squad's health / fixtures / weak spots over a horizon (compose xP + saved squads + availability)
 Current Version: 0.0.1
 Last Updated: 2026-08-03
-Commands: refresh · history (--backfill) · table · search · filter · fdr (--type) · fixtures · xp · captain (--squad/--limit/--type) · xg · overperf · defcon · cleansheet · squad (--full/--bench/--formation/--objective/--include[-unavailable]/--exclude/--save/--load)
+Commands: refresh · history (--backfill) · table · search · filter · fdr (--type) · fixtures · xp · captain (--squad) · transfer (--squad/--bank/--next) · xg · overperf · defcon · cleansheet · squad (--full/--bench/--formation/--objective/--include[-unavailable]/--exclude/--save/--load)
 Sources: FPL — bootstrap-static + fixtures + element-summary (past-season history) — required, retries hard · ClubElo (best-effort, fails fast)
-Tests: 249 · ADRs: 29 · CI: GitHub Actions (ruff + pytest on push, Py 3.13/3.14) · captain picks recommend + explain (ADR-029)
+Tests: 262 · ADRs: 30 · CI: GitHub Actions (ruff + pytest on push, Py 3.13/3.14) · captain + transfer recommend & explain (ADR-029/030)
 Known issue: ClubElo API down since 2026-08-03 (their end — timeouts/502s; last-known Elo kept, degrades as designed). Re-check next session.
-Deferred (→ later): ceiling/differential captaincy (needs variance data); per-GW history + in-season xP blending (need GW1 played); web UI; transfers/team analyser (Phase 3); AI/RAG (Phase 4)
+Deferred (→ later): multi-move transfer planner (hits vs roll); ceiling/differential captaincy; per-GW history + in-season xP blending (need GW1); web UI; AI/RAG (Phase 4)

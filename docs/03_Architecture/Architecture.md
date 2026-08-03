@@ -401,6 +401,13 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   Probe-driven policy: **exclude GKs** (a keeper ranked #3 by mean xP — the mean-not-ceiling caveat)
   and **keep doubtful players, flagged** (a new `is_available` seam on `player_xp` so they aren't
   zeroed). Penalties are context, not a score bump (no double-counting). No new dependency.
+- **Sprint 028 (2026-08-03)** — *transfer suggestions* (Phase 3, feature 2), per ADR-030. A pure
+  `suggest_transfers` analytics fn: for a saved squad, the best legal same-position replacement per
+  owned player, ranked by **xP gain over a horizon** — the first feature that respects FPL's
+  **transfer rules** (≤3/club, reusing the optimiser's `MAX_PER_CLUB`; budget = sale + `--bank`;
+  availability; not-owned). GKs are **included** (a better keeper is a real upgrade — the mirror of
+  captaincy's GK *exclusion*); bench players (from the squad's `bench_ids`) are **flagged**, not
+  modelled. Composes xP + saved squads; no schema change, no new dependency. (Command + view: US-085.)
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

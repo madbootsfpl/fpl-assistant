@@ -29,6 +29,7 @@ from src.analytics import (
     rank_players,
     resolve_players,
     select_squad,
+    suggest_transfers,
     team_fdr,
     team_schedule,
 )
@@ -43,6 +44,7 @@ from src.ui.fixtures import render_team_fixtures
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_loaded_squad, render_squad
 from src.ui.table import render_player_table
+from src.ui.transfer import render_transfers
 from src.ui.xg import render_xg_table
 from src.ui.xp import render_xp_table
 
@@ -411,6 +413,47 @@ def cmd_captain(args) -> None:
         store.close()
 
 
+def cmd_transfer(args) -> None:
+    """Suggest the best single transfers for a saved squad (ADR-030)."""
+    store = Storage()
+    try:
+        squad = SquadStore().load(args.squad)
+        if squad is None:
+            names = SquadStore().names()
+            hint = f" Saved: {', '.join(names)}." if names else " None saved yet."
+            print(f"No saved squad '{args.squad}'.{hint}")
+            return
+
+        players = store.get_players()
+        upcoming = store.get_upcoming_fixtures()
+        if not players:
+            print("No players — run `refresh` first.")
+            return
+
+        owned_ids = set(squad["player_ids"])
+        owned = [p for p in players if p["id"] in owned_ids]   # departed ids drop out
+        if not owned:
+            print(f"Squad '{args.squad}' has no current players to improve.")
+            return
+
+        baseline_by_code = {
+            code: baseline_rate(rows)
+            for code, rows in store.get_history_by_code().items()
+        }
+        ranked = player_xp(
+            players, upcoming, source=args.type, horizon=args.next,
+            baseline_by_code=baseline_by_code,
+        )
+        xp_by_id = {r["id"]: r["xp"] for r in ranked}
+        suggestions = suggest_transfers(
+            owned, players, xp_by_id,
+            bench_ids=squad.get("bench_ids", []), bank=args.bank, limit=args.limit,
+        )
+        print(render_transfers(suggestions, args.squad, bank=args.bank, horizon=args.next))
+    finally:
+        store.close()
+
+
 def cmd_fdr(args) -> None:
     """Rank teams by how easy their upcoming fixtures are."""
     store = Storage()
@@ -544,6 +587,29 @@ def build_parser() -> argparse.ArgumentParser:
         "--squad", help="Only consider players from a saved squad (see `squad --save`)",
     )
     p_captain.set_defaults(handler=cmd_captain)
+
+    p_transfer = sub.add_parser(
+        "transfer", help="Suggest the best single transfers for a saved squad"
+    )
+    p_transfer.add_argument(
+        "--squad", required=True, help="The saved squad to improve (see `squad --save`)",
+    )
+    p_transfer.add_argument(
+        "--bank", type=float, default=0.0,
+        help="Money in the bank, £m — adds to each sale's budget (default 0, self-funding)",
+    )
+    p_transfer.add_argument(
+        "--next", type=int, default=5,
+        help="Horizon: compare xP over the next N gameweeks (default 5)",
+    )
+    p_transfer.add_argument(
+        "--type", choices=["fpl", "custom"], default="fpl",
+        help="Difficulty source used in the xP calc (default fpl)",
+    )
+    p_transfer.add_argument(
+        "--limit", type=int, default=5, help="How many suggestions to show (default 5)",
+    )
+    p_transfer.set_defaults(handler=cmd_transfer)
 
     p_xg = sub.add_parser("xg", help="Rank players by expected goal involvement (xG + xA)")
     p_xg.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")

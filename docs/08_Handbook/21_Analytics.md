@@ -118,6 +118,17 @@ a keeper ranked 3rd by mean xP gave that away on a live probe) and keep doubtful
 - **Explain, then let the human decide.** A recommendation the manager can see the reasons for
   is one they can trust or overrule — better than an unexplained "captain X".
 
+**Recommending a *change* means respecting the rules (Sprint 028, transfers).** `suggest_transfers`
+(ADR-030) is the next step up: it proposes swapping a player out, so it must only ever suggest a
+*legal* move — same position, ≤3 per club, affordable. Two lessons:
+- **Encode the domain constraints, and test each one in isolation.** The ≤3/club rule has a subtle
+  case — selling a same-club player frees a slot — that a unit test flushed out (it caught a *bad
+  test*, where a legal same-club swap existed after all). A recommendation that breaks the rules is
+  worse than none.
+- **Be honest about what you can't see.** We don't know the manager's bank (no auth) or who they
+  start — so the bank is an input (`--bank`, default £0 = self-funding) and bench players are
+  *flagged*, not silently modelled. State the assumptions rather than guessing.
+
 ---
 
 ## Common Mistakes

@@ -115,7 +115,7 @@ dependency.
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- this is better than expected, being able to run generically and they with my save Squad - awsome!!
 
 ---
 
