@@ -28,3 +28,4 @@ new ADR as it is created.
 | [021](./ADR-021-importance-scaled-retry.md) | Importance-scaled retry (FPL tries hard, ClubElo fails fast) | Accepted |
 | [022](./ADR-022-validate-legal-bench.md) | Validate a legal bench (warn, not block) | Accepted |
 | [023](./ADR-023-player-availability.md) | Player availability (skip injured; opt-out) | Accepted |
+| [024](./ADR-024-saved-squad.md) | Saved / persistent squad (user state, JSON) | Accepted |

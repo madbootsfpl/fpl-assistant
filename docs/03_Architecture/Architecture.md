@@ -375,3 +375,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   players (status i/s/u/n) by default with `--include-unavailable` opt-out, flags doubtful
   picks, and warns on a forced-in injured pick. Availability is a policy at the edge (the CLI
   filters); `select_squad` stays generic. Fixes the optimiser picking an injured player.
+- **Sprint 023 (2026-08-03)** — *saved / persistent squad*, per ADR-024. The first **user-state**
+  layer: a JSON `SquadStore` (`data/squads.json`, gitignored) stores the user's picks (ids +
+  bench), kept **separate from the `data/fpl.db` reference cache** so it survives `refresh`.
+  `squad --save/--load`; on load the ids are re-priced and availability re-checked against
+  current data, and departed players noted. Store the picks, derive the numbers fresh.

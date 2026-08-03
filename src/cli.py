@@ -31,13 +31,14 @@ from src.analytics import (
     team_schedule,
 )
 from src.api.client import FplApiError
+from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
 from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
 from src.ui.overperf import render_overperf
-from src.ui.squad import render_squad
+from src.ui.squad import render_loaded_squad, render_squad
 from src.ui.xg import render_xg_table
 from src.ui.table import render_player_table
 from src.ui.xp import render_xp_table
@@ -139,10 +140,53 @@ def parse_formation(spec: str):
     return {"GK": 1, "DEF": d, "MID": m, "FWD": f}, None
 
 
+_POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
+
+
+def _load_squad(name: str, players) -> None:
+    """Reconstruct a saved squad against current data (ADR-024): re-price, availability, departed."""
+    squads = SquadStore()
+    saved = squads.load(name)
+    if saved is None:
+        names = squads.names()
+        hint = f" Saved: {', '.join(names)}." if names else " None saved yet."
+        print(f"No saved squad '{name}'.{hint}")
+        return
+
+    by_id = {p["id"]: p for p in players}
+    bench = set(saved["bench_ids"])
+    loaded = []
+    for pid in saved["player_ids"]:
+        if pid in by_id:
+            row = dict(by_id[pid])
+            row["bench"] = pid in bench
+            loaded.append(row)
+
+    # A saved player no longer in the game — shown by the name we stored at save time.
+    name_by_id = dict(zip(saved["player_ids"], saved.get("player_names", [])))
+    departed = [name_by_id.get(pid, str(pid))
+                for pid in saved["player_ids"] if pid not in by_id]
+
+    # Starters (by position, points) first; bench last — matching the squad display.
+    loaded.sort(key=lambda p: (p["bench"], _POS_ORDER.get(p["position"], 9), -p["total_points"]))
+    now_cost = round(sum(p["price"] for p in loaded), 1)
+    print(render_loaded_squad(name, saved, loaded, now_cost, departed))
+
+
 def cmd_squad(args) -> None:
     """Pick the optimal squad — the starting XI, or the full 15 with `--full`."""
     store = Storage()
     players = store.get_players()
+
+    # --load is a distinct display-only mode: reconstruct a saved squad (ADR-024).
+    if args.load:
+        if args.save:
+            print("Use --save or --load, not both.")
+            store.close()
+            return
+        _load_squad(args.load, players)
+        store.close()
+        return
 
     include_ids, errors = resolve_players(players, args.include)
     exclude_ids, exclude_errors = resolve_players(players, args.exclude)
@@ -194,6 +238,18 @@ def cmd_squad(args) -> None:
             scores=scores,
         )
         print(render_squad(result, budget=budget, objective=args.objective, full=full))
+
+        # Save the computed squad (ADR-024) — the picks (ids + names) + bench, to reload later.
+        if args.save and result["status"] == "Optimal":
+            picked = result["selected"]
+            bench_ids = [p["id"] for p in picked if p.get("bench")]
+            SquadStore().save(
+                args.save, [p["id"] for p in picked],
+                player_names=[p["web_name"] for p in picked],
+                bench_ids=bench_ids, cost=result["total_cost"],
+            )
+            print(f"Saved as '{args.save}' "
+                  f"({len(picked)} players, £{result['total_cost']:.1f}m).")
 
         # Warn on any unavailable player the manager forced in, and report the rest.
         for p in players:
@@ -447,6 +503,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--include-unavailable", action="store_true", dest="include_unavailable",
         help="Also consider injured/suspended players (excluded by default)",
+    )
+    p_squad.add_argument(
+        "--save", metavar="NAME", default=None,
+        help="Save the computed squad under a name (reload it later with --load)",
+    )
+    p_squad.add_argument(
+        "--load", metavar="NAME", default=None,
+        help="Reload a saved squad — re-priced, with current availability and any departures",
     )
     p_squad.set_defaults(handler=cmd_squad)
 

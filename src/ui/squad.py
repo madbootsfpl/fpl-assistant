@@ -37,6 +37,51 @@ def formation_str(players) -> str:
     return f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
 
 
+def render_loaded_squad(name, saved, loaded, now_cost, departed) -> str:
+    """Render a reloaded saved squad (ADR-024): the picks re-priced + availability + departed.
+
+    `loaded` are the present players (each a mapping with position/web_name/team/price/
+    total_points/status/chance and a `bench` flag), sorted starters-then-bench. `departed`
+    are the names of saved players no longer in the game. `saved` is the stored record.
+    """
+    lines = [f"Squad '{name}' — saved {saved.get('saved_at', '?')}", ""]
+
+    if loaded:
+        header = (
+            f"{'Pos':<{_POS_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
+            f"{'Price':>{_PRICE_W}} {'Pts':>{_PTS_W}}"
+        )
+        lines += [header, "-" * len(header)]
+        bench_started = False
+        for p in loaded:
+            if p.get("bench") and not bench_started:
+                lines += ["", "Bench:"]
+                bench_started = True
+            marker = " **" if p.get("bench") else ""
+            lines.append(
+                f"{p['position']:<{_POS_W}} {str(p['web_name'])[:_NAME_W]:<{_NAME_W}} "
+                f"{str(p['team'] or ''):<{_TEAM_W}} £{p['price']:.1f}m"
+                f"{p['total_points']:>{_PTS_W + 1}}{marker}{_avail_flag(p)}"
+            )
+        lines.append("")
+
+    # Re-price against current data, comparing to what it cost when saved.
+    was = saved.get("cost")
+    if was is not None:
+        lines.append(f"Cost: was £{was:.1f}m → now £{now_cost:.1f}m ({now_cost - was:+.1f}).")
+    else:
+        lines.append(f"Cost (re-priced): £{now_cost:.1f}m.")
+
+    # Availability of your picks, and anyone who's left the game.
+    flagged = [p for p in loaded if _avail_flag(p)]
+    if flagged:
+        who = ", ".join(f"{p['web_name']}{_avail_flag(p).strip()}" for p in flagged)
+        lines.append(f"⚠ {len(flagged)} of your picks now flagged: {who}.")
+    if departed:
+        lines.append(f"Departed (no longer in the game): {', '.join(departed)}.")
+    return "\n".join(lines)
+
+
 def render_squad(
     result, budget: float = 80.0, objective: str = "points", full: bool = False
 ) -> str:

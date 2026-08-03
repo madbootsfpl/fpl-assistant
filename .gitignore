@@ -21,6 +21,9 @@ venv/
 # Local database (generated cache, not source)
 data/*.db
 
+# Saved squads — the user's own state, not source (ADR-024)
+data/*.json
+
 # Claude Code local settings
 .claude/settings.local.json
 

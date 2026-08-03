@@ -271,11 +271,40 @@ in one place.
 
 ---
 
+## Saving a squad — user state vs the reference cache (ADR-024)
+
+You can keep a squad and reload it later:
+
+```bash
+squad --full --bench Dubravka Diop … --save my-team   # persist your picks
+squad --load my-team                                    # reload, re-priced + re-checked
+```
+
+The interesting part is a new *kind* of data. Everything else we store is **reference data**
+— FPL's players/teams/fixtures, cached in `data/fpl.db` and *overwritten* every `refresh`. A
+saved squad is **the user's own state**, so it lives in its **own** file (`data/squads.json`,
+gitignored) that a refresh never touches. A small `SquadStore` owns it, kept separate from
+`Storage` so the two lifecycles don't mix.
+
+And we **store the picks, not the numbers** — just player ids (+ names, + bench). Prices and
+availability are *derived fresh* from current data on load. That's what makes reload useful:
+
+- **Re-priced** — "was £100.0m → now £101.5m".
+- **Availability re-checked** — a pick that's since been injured shows `(inj)` and a warning.
+- **Departures noted** — a player who's left the game is flagged by name (we can't look them
+  up in current data, which is exactly why we stored the name).
+
+Store the picks; derive the rest fresh — the same "don't cache what you can recompute" idea
+behind the clean-sheet lens.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.
 - **Trusting an "optimal" squad blindly.** Check the availability flags — and that it's not
   quietly built on last-season points for a player who's now injured.
+- **Putting user state in the cache.** A saved squad must outlive a `refresh` — its own file, not `fpl.db`.
 - **Not handling infeasible.** Check the solver's status before reading a result.
 - **Letting the dependency spread.** Keep PuLP inside the optimiser module.
 
@@ -304,6 +333,7 @@ in one place.
 - [ADR-013 — A declared bench](../06_Decisions/ADR-013-declared-bench.md)
 - [ADR-014 — Flexible formations](../06_Decisions/ADR-014-flexible-formations.md)
 - [ADR-023 — Player availability](../06_Decisions/ADR-023-player-availability.md)
+- [ADR-024 — Saved / persistent squad](../06_Decisions/ADR-024-saved-squad.md)
 - [Architecture §4 (optimisation component)](../03_Architecture/Architecture.md)
 - [Chapter 21 — Analytics](./21_Analytics.md)
 - Code: `src/analytics/optimizer.py`

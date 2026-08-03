@@ -58,6 +58,8 @@ python app.py squad --bench Dubravka Diop        # declare your bench (marked **
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)
 python app.py squad --objective xgi              # optimise on expected goal involvement (attacking)
 python app.py squad --include-unavailable        # also consider injured/suspended (excluded by default)
+python app.py squad --full --save my-team        # save your squad (persists across refreshes)
+python app.py squad --load my-team               # reload it — re-priced, with current injuries + departures
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

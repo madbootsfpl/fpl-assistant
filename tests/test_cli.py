@@ -237,6 +237,18 @@ def test_squad_include_unavailable_flag_parses():
     assert args.include_unavailable is True
 
 
+def test_squad_save_flag_parses():
+    assert build_parser().parse_args(["squad"]).save is None
+    args = build_parser().parse_args(["squad", "--save", "my-team"])
+    assert args.save == "my-team"
+
+
+def test_squad_load_flag_parses():
+    assert build_parser().parse_args(["squad"]).load is None
+    args = build_parser().parse_args(["squad", "--load", "my-team"])
+    assert args.load == "my-team"
+
+
 def test_xg_command_parses_pos_and_limit():
     args = build_parser().parse_args(["xg", "--pos", "FWD", "--limit", "5"])
     assert args.command == "xg"

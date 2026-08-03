@@ -16,7 +16,7 @@ from src.analytics.optimizer import (
     resolve_players,
     select_squad,
 )
-from src.ui.squad import formation_str, render_squad
+from src.ui.squad import formation_str, render_loaded_squad, render_squad
 
 
 def p(id, position, price, points, team=None, name=None):
@@ -525,6 +525,21 @@ def test_render_full_four_man_bench_shows_the_implied_shape():
     out = render_squad({"status": "Optimal", "selected": starters + bench,
                         "total_points": 750, "total_cost": 100.0}, budget=100, full=True)
     assert "Starters (11) — 4-4-2" in out
+
+
+def test_render_loaded_squad_reprices_flags_and_departed():
+    def row(pos, name, price, pts, status="a", bench=False):
+        return {"position": pos, "web_name": name, "team": "ARS", "price": price,
+                "total_points": pts, "status": status, "chance": None, "bench": bench}
+    loaded = [row("GK", "Raya", 6.0, 120), row("DEF", "Saliba", 6.0, 100, "i")]
+    saved = {"saved_at": "2026-08-01", "cost": 100.0}
+    out = render_loaded_squad("my-team", saved, loaded, now_cost=12.0, departed=["Henderson"])
+
+    assert "Squad 'my-team'" in out
+    assert "was £100.0m → now £12.0m" in out       # re-priced vs saved
+    assert "(inj)" in out                          # Saliba flagged injured
+    assert "picks now flagged" in out and "Saliba" in out
+    assert "Departed" in out and "Henderson" in out
 
 
 def test_render_flags_doubtful_and_unavailable_picks():

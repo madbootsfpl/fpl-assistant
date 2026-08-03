@@ -107,7 +107,7 @@ warns — using FPL's `status` / `chance` / `news`.
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- Simple idea but very informative as you may want to carry an ingured player
 
 ---
 
@@ -178,12 +178,14 @@ python app.py squad --include-unavailable  # consider injured/suspended too
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+tool is looking very useful now!
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+closing out this phase
 
 ---
 
