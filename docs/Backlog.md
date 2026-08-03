@@ -1,6 +1,8 @@
 # Backlog
 
-Captured ideas not yet scheduled into a sprint.
+Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features now live in the
+reframed [Roadmap](04_Roadmap/Roadmap.md) Phase 2+; this file holds the small nice-to-haves and
+tech-debt.)*
 
 ## Enhancements
 
@@ -9,8 +11,8 @@ Captured ideas not yet scheduled into a sprint.
   reflection. Note: FPL only publishes `ep_next` (next GW), so there is no FPL
   multi-week total to show alongside.
 - **Bench order** — which bench player subs on first (Sprint 012 sequel).
-- **Saved / persistent squad** — store the user's own squad (user state) separately from
-  FPL reference data; reload + re-price after a refresh. A new persistence concept.
+- **Availability flags in the ranking views** — surface injury/suspension flags in
+  `table`/`xg`/etc. the way `squad` does (Sprint 022 sequel).
 
 ### Done (kept for the trail)
 
@@ -22,6 +24,9 @@ Captured ideas not yet scheduled into a sprint.
   ADR-014). Ranges (DEF 3–5, MID 2–5, FWD 1–3); the bench-implied shape shown in `--full`.
 - ~~Validate a declared bench yields a legal XI~~ — **DONE** (Sprint 021, `legal_xi_issues`,
   ADR-022). Warns (not blocks) when a full 4-man bench leaves an illegal XI; reuses `XI_FLEX`.
+- ~~Saved / persistent squad~~ — **DONE** (Sprint 023, `squad --save`/`--load`, ADR-024).
+  User state in `data/squads.json` (gitignored), separate from the FPL cache; reload re-prices +
+  flags injuries + notes departures.
 
 ## Validated, deferred
 
@@ -38,6 +43,11 @@ Captured ideas not yet scheduled into a sprint.
 - **Migrate to the PuLP 4.0 API** — use `prob.add_variable(...)` / `COIN_CMD` instead of
   `LpVariable(...)` / `PULP_CBC_CMD` (currently the 4.0 deprecation notices are
   scope-suppressed in `src/analytics/optimizer.py`).
+- **Shared *squad* renderer** — `render_squad` / `render_loaded_squad` still duplicate a little
+  row logic. The ranking views were unified in Sprint 024 (`ui/_table.py`), but the squad views
+  are a different shape (position groups, bench, markers) and were left out — fold them in later.
+- ~~Shared table renderer for the ranking views~~ — **DONE** (Sprint 024, `ui/_table.py`
+  `Col` + `render_rows`, ADR-025). Five near-duplicate renderers → one; output byte-identical.
 
 ## Deferred (data-dependent — need season-start data)
 

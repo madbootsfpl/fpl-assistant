@@ -30,3 +30,4 @@ new ADR as it is created.
 | [023](./ADR-023-player-availability.md) | Player availability (skip injured; opt-out) | Accepted |
 | [024](./ADR-024-saved-squad.md) | Saved / persistent squad (user state, JSON) | Accepted |
 | [025](./ADR-025-shared-table-renderer.md) | Shared table renderer (`Col` + `render_rows`) | Accepted |
+| [026](./ADR-026-phase1-cli-mvp.md) | Declare Phase 1 (CLI Analytics MVP) complete; reframe the Roadmap | Accepted |

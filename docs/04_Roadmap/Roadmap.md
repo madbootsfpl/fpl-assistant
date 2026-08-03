@@ -1,139 +1,116 @@
 # Master FPL Assistant Roadmap
 
-*(Original structure preserved + gaps, risks, and refinements integrated)*
+*Reframed 2026-08-03 (Sprint 025). **Phase 1 is complete** — declared as the "CLI Analytics MVP".
+The original aspirational 5-phase plan is preserved and reconciled item-by-item in
+[Phase1_Reconciliation.md](Phase1_Reconciliation.md); the decision is
+[ADR-026](../06_Decisions/ADR-026-phase1-cli-mvp.md). Nothing has been dropped — every unbuilt
+item below traces to an original bullet.*
+
+**Status legend:** ✅ Done · ◑ Partial · ⬜ Not started (carried forward)
 
 ---
 
-## Phase 1 – Foundations & Infrastructure
+## ✅ Phase 1 — CLI Analytics MVP — **COMPLETE (2026-08-03)**
 
-**Goal:** Establish reliable data pipelines, local persistence, auto-refresh scheduling, and the base dashboard UI.
+**What shipped:** a working command-line FPL analytics & optimisation assistant — the analytical
+and optimisation *core* that the original plan (Phases 1/2/5) is reconciled against, delivered as
+a **CLI**. Web UI, CI/CD, auth and historical data were *deliberately* deferred (ADR-001/002/003).
 
-### Environment & CI/CD
-- Set up repository structure, virtual environments, pre-commit hooks, and GitHub Actions (linting/tests).
-- Configure environment variables for local vs. production environments.
+- **Data:** FPL API client (`bootstrap-static`, `fixtures`) + SQLite cache (upsert, generic
+  migrations). FPL is the source of truth; ClubElo is a best-effort second source that degrades
+  gracefully (retry-then-degrade, importance-scaled).
+- **Analytics:** custom FDR (overall + ClubElo Elo), Points-per-£m value, Expected Points (xP) v0
+  over a multi-week horizon, xG/xA/xGI/xGC, over/under-performance, Defensive Contribution,
+  clean-sheet solidity (xGC/90).
+- **Optimisation:** an ILP squad selector (PuLP) — best XI or full 15-man squad, flexible
+  formations, declared bench, include/exclude, a pluggable objective (points/value/xp/xgi),
+  availability filtering.
+- **User state:** saved / reloadable squads (re-priced, with current injuries + departures).
+- **Engineering:** 12 commands, 25 ADRs (001–025) + ADR-026 closing the phase, 227 offline tests,
+  a shared table renderer.
 
-### FPL API Ingestion & Local Cache
-- Implement client wrapper for static endpoints (`/bootstrap-static/`, `/fixtures/`, `/element-summary/{id}/`).
-- Build session/cookie auth handler to fetch user-specific data (`/my-team/{id}/`) safely.
-- Add a local caching layer (Redis or SQLite with TTLs) to prevent 429 rate-limiting.
-
-### Database Schema (SQLite / PostgreSQL)
-- Design schema for players, fixtures, historical gameweek statistics, and price trends.
-- Implement historical backfills (incorporating past season stats for long-term modeling).
-- Design schema from day one to support multi-manager / league analysis later (even if Phase 1 only uses a single manager ID).
-
-### Base Dashboard UI
-- Set up web app boilerplate (FastAPI/Flask + React/Next.js preferred long-term; Streamlit/Dash acceptable only for rapid prototyping).
-- Display live player tables, raw stats, and basic gameweek countdown timer.
-- Decide early whether this is an internal tool or a multi-user product — this choice drives later UI decisions.
-
-### Risks / Mitigations
-- External data sources (especially later xG) will break → plan for graceful degradation and source versioning from the start.
+**Deliberately deferred to Phase 2+ (carried, not dropped)** — full two-way audit in
+[Phase1_Reconciliation.md](Phase1_Reconciliation.md).
 
 ---
 
-## Phase 2 – Analytics Engine
+## Phase 2 — Infrastructure, Data Depth & Analytics Hardening  *(next)*
 
-**Goal:** Transform raw FPL points into granular predictive metrics, custom rating models, and expected value indicators.
+**Goal:** give the proven analytics core the infrastructure and richer data the original Phase 1/2
+called for — now that the MVP has shown what's worth investing in.
 
-### Advanced Metric Ingestion
-- Integrate xG, xA, and xGI via open datasets or scrapers.
-- Account for recent rules changes (updated Bonus Point System rules for clearances, blocks, interceptions, and goalkeeper saves).
-- Build clear confidence scoring and fallback behaviour when external sources are unavailable.
+### Infrastructure (carried forward from the original Phase 1)
+- ⬜ **Web dashboard UI** (FastAPI/Flask + React/Next.js; the CLI stays the engine) — the original
+  Phase 1 UI, deferred by ADR-002/003.
+- ⬜ **CI/CD** — GitHub Actions (lint + the 227 tests) + pre-commit hooks.
+- ⬜ **Session/cookie auth** for user-specific data (`/my-team/{id}/`).
+- ⬜ **Historical + price-trend schema and backfills** (past-season stats for modelling); cache
+  TTLs; a gameweek countdown.
+- ⬜ **Source versioning** — formalise the "version all external sources" reliability rule.
 
-### Value & Form Ranking
-- Calculate Points per £m (season-long) and Form per £m (short-term).
-- Build short-term rolling averages (3-GW vs. 6-GW trendlines).
-
-### Custom Fixture Difficulty Rating (FDR)
-- Decouple into separate Attack FDR and Defense FDR.
-- Incorporate home/away bias and recent team defensive/attacking metrics.
-
-### Price Change Predictor
-- Track net transfer deltas to flag upcoming rises/falls before daily cutoffs.
-- Treat early versions as **directional flags only** — the real FPL price algorithm is more nuanced (ownership %, thresholds, timing).
-
-### Explicit xP Engine (new first-class deliverable)
-- Build a robust per-player, per-fixture Expected Points model (with uncertainty estimates).
-- This becomes the single source of truth for every downstream recommendation, captain pick, and optimizer.
-
----
-
-## Phase 3 – Decision Support Engine
-
-**Goal:** Translate analytics into actionable manager recommendations (captains, transfers, squad health).
-
-### Expected Minutes (xMins) & Rotation Model
-- Incorporate rotation risk (European matches, manager tendencies, injury news).
-- Build baseline predicted minutes per player per gameweek.
-- Injury/news data is noisy → require secondary sources + manual override capability + confidence scores.
-
-### Captain Suggestion Algorithm
-- Rank top 3–5 captains using the Phase 2 xP model, fixture strength, form, and penalty duties.
-
-### Transfer Recommendation Engine
-- Evaluate squad weaknesses (injuries, poor fixture runs, low xMins).
-- Fully respect FPL constraints (budget, max 3 per team, free transfers, hits).
-
-### Team Analyser Tool
-- Upload/link manager ID to grade team health over the next 1–5 gameweeks.
-- Highlight bench strength and potential starting XI headaches.
-
-### Live Event Layer (new)
-- Lightweight layer that can invalidate or re-rank recommendations when injuries, lineups, or price changes occur without a full recompute.
+### Data & analytics depth (original Phase 2 remainder)
+- ⬜ Price-change predictor (directional flags from net transfer deltas — treat as flags, not truth).
+- ⬜ Form per £m + rolling 3-GW vs 6-GW trendlines (needs in-season `form` + history).
+- ◑ Attack/Defence FDR split + recent-form weighting (deferred while preseason strengths are 0 —
+  ADR-005).
+- ◑ A **first-class xP engine with uncertainty** — graduate xP v0 into the single source of truth
+  for every downstream recommendation.
+- ◑ Updated BPS rules beyond DefCon (e.g. GK saves).
+- ⬜ Confidence scoring on external-data fallback.
 
 ---
 
-## Phase 4 – AI & Natural Language Layer
+## Phase 3 — Decision Support Engine
 
-**Goal:** Add an intelligent interface that explains data outputs using grounded Retrieval-Augmented Generation (RAG).
+**Goal:** translate analytics into actionable manager recommendations.
+*Seeds already in the MVP: availability filtering (ADR-023) is xMins-adjacent; saved squads
+(ADR-024) are a team-analyser precursor.*
 
-### Grounded RAG Pipeline
-- Pass structured analytics outputs (JSON from Phases 2 & 3) directly into the LLM context.
-- Never let the LLM calculate prices, points, or deadlines itself — this is the primary defence against hallucination.
-
-### Chat Interface & Query Parser
-- Conversational UI for natural language queries (“Who should I start between Palmer and Saka?” / “Analyze my defense for GW8”).
-- Intent-matching system to route queries to the correct analytics module.
-
-### Strategy & Decision Justification
-- Generate short, human-readable explanations of why one option is mathematically preferred.
+- ⬜ Expected minutes (xMins) & rotation model (needs secondary sources + manual override + confidence).
+- ⬜ Captain suggestion (top 3–5 via xP, fixtures, form, penalties).
+- ⬜ Transfer recommendation engine (respect budget, ≤3/club, free transfers, hits).
+- ⬜ Team analyser — link a manager ID; grade health over 1–5 GWs; flag bench / starting-XI issues.
+- ⬜ Live event layer — re-rank on injuries / lineups / price changes without a full recompute.
 
 ---
 
-## Phase 5 – Advanced Optimization & Long-Term Planning
+## Phase 4 — AI & Natural-Language Layer
 
-**Goal:** Solve complex multi-week squad decisions using mathematical optimization.
+**Goal:** an intelligent interface that explains outputs via grounded RAG.
 
-### Linear Programming Solver (Integer Programming)
-- Build optimization pipeline (PuLP / scipy.optimize) under strict budget and positional constraints.
-- Start with single-week + simple heuristics in Phase 3; graduate to full integer programming only once the xP objective function is proven.
-
-### Chip Strategy Optimizers
-- Wildcard / Free Hit: full 15-man squad generation for a defined horizon.
-- Bench Boost: identify double-gameweek or high-value bench setups.
-- Triple Captain: flag peak single-match or double-gameweek opportunities.
-
-### Multi-Week Horizon Planning
-- 3-to-6 gameweek lookahead with decaying weights.
-- Simulate transfer paths (taking a –4 now vs rolling) to evaluate long-term net yield.
+- ⬜ Grounded RAG pipeline — feed structured Phase 2/3 JSON into the LLM; never let it compute
+  prices / points / deadlines (the primary anti-hallucination defence).
+- ⬜ Chat interface + intent-matching query parser.
+- ⬜ Human-readable decision justification.
 
 ---
 
-## Cross-Cutting Additions (apply across all phases)
+## Phase 5 — Advanced Optimisation & Long-Term Planning
 
-### Evaluation & Feedback Loops (critical missing piece)
-- Track real-world performance: “Did the suggested captain beat the template?”, “Did the multi-week plan outperform a simple rolling strategy?”
-- Maintain a set of historical “golden” gameweeks for regression testing.
-- Collect live manager feedback. Without measurement, sophisticated models can look clever while underperforming.
+**Goal:** multi-week squad decisions via optimisation. *Core already delivered in the MVP.*
 
-### Data Reliability Philosophy
-- Official FPL API is the source of truth for ownership, prices, points, and fixtures.
-- External sources (xG, injuries, news) are best-effort and must degrade gracefully.
-- Version all external data sources.
+- ✅ Integer-programming solver under budget / positional constraints (ADR-008).
+- ✅ Full 15-man squad generation for a horizon (ADR-012).
+- ◑ Multi-week horizon — the xP horizon is done (ADR-007); add decaying weights.
+- ⬜ Chip optimisers — Wildcard / Free Hit (15-man exists), Bench Boost, Triple Captain.
+- ⬜ Transfer-path simulation (a −4 now vs rolling).
 
-### Success Metrics to Define Early
-- Accuracy of price-change flags
-- Calibration of xP vs actual points
-- Hit rate of captain suggestions vs popular templates
-- Net points gained by following transfer / chip recommendations over a season
+---
+
+## Cross-Cutting (all phases)
+
+- ⬜ **Evaluation & feedback loops** — track real outcomes ("did the suggested captain beat the
+  template?"); keep golden gameweeks for regression testing. *Critical before trusting
+  recommendations — without measurement, models look clever while underperforming.*
+- ✅ **Data reliability** — FPL is the source of truth; external sources degrade gracefully
+  (ADR-010/020/021). ⬜ Version all external sources.
+- ⬜ **Success metrics** — price-flag accuracy, xP calibration, captain hit-rate, net points over a
+  season. Define *before* Phase 3 recommendations.
+
+---
+
+## Original plan (for the record)
+
+The original aspirational 5-phase roadmap is fully preserved and reconciled bullet-by-bullet in
+[Phase1_Reconciliation.md](Phase1_Reconciliation.md) — every unbuilt item above traces back to an
+original line, and nothing has been deleted.

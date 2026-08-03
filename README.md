@@ -1,22 +1,35 @@
 # FPL Assistant
 
-A personal Fantasy Premier League analytics platform.
+A personal Fantasy Premier League analytics assistant — a command-line tool.
 
-## Goals
+**Status:** Phase 1 — *CLI Analytics MVP* — **complete** (2026-08-03). See the
+[Roadmap](docs/04_Roadmap/Roadmap.md).
 
-- Analyse FPL players
-- Calculate value metrics
-- Recommend transfers
-- Recommend captains
-- Provide AI-assisted analysis
+## What it does today (the MVP)
+
+- Analyse FPL players (points, value, form-free rankings)
+- Calculate value metrics (Points per £m) and Expected Points (xP) over a fixture horizon
+- Expected goals (xG / xA / xGI / xGC), over/under-performance, Defensive Contribution, clean sheets
+- Custom fixture difficulty (overall + ClubElo Elo)
+- Pick an optimal XI or full 15-man squad (ILP), with formations, bench, and availability handling
+- Save and reload your own squad (re-priced, with current injuries + departures)
+
+## Planned (Phase 2+ — not yet built)
+
+- Recommend transfers · recommend captains (Phase 3)
+- AI-assisted natural-language analysis (Phase 4)
+- A web dashboard UI, CI/CD, historical data (Phase 2)
+
+See the [Roadmap](docs/04_Roadmap/Roadmap.md) and
+[Phase 1 reconciliation](docs/04_Roadmap/Phase1_Reconciliation.md).
 
 ## Technology
 
-- Python
-- FastAPI
-- VS Code
-- GitHub
-- Claude Code
+- Python (standard library + `requests`)
+- SQLite (local cache)
+- PuLP (integer-programming squad optimiser)
+- pytest (offline test suite)
+- VS Code · GitHub · Claude Code
 
 ## Getting Started
 

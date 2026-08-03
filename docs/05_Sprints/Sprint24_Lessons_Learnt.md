@@ -90,7 +90,9 @@ code, with **byte-identical output**. A pure refactor; the existing tests pin it
 
 ### Notes _(for Tony)_
 
--
+- I think we are closing in on completing Phase 1 and should make a decision on declaring that.
+- We do need to compare achievements versus the original Roadmap, update roadmap to show actual phase 1 complete and push any remaining, viable items into future phases or nice to have backlog.
+- lets revie wif there is anything else to do before closing phase 1.
 
 ---
 
@@ -112,7 +114,7 @@ code, with **byte-identical output**. A pure refactor; the existing tests pin it
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- How impressive Claude Code is - remarkable
 
 ---
 
