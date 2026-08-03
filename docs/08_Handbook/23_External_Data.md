@@ -85,10 +85,28 @@ The retry lives in a small **reusable helper** (`src/api/retry.py` — `is_trans
 `with_retry`), source-agnostic so the FPL client could adopt it. Its `sleep` is **injected**,
 so tests pass a no-op — instant *and* able to assert the backoff (`[0.5, 1.0]`s).
 
-**The trade-off (be honest):** retry helps a *momentary* blip, but on a *full* outage it now
-waits longer before degrading (up to `timeout × attempts` — ~30s with a 10s timeout × 3). It's
-bounded, only-on-failure, and tunable (`retries` / `timeout` / `backoff`). A retry is not a
-cache: a real outage still degrades, exactly as before.
+**The trade-off (be honest):** retry helps a *momentary* blip, but on a *full* outage it waits
+longer before degrading. It's bounded, only-on-failure, and tunable — which leads to the next
+decision.
+
+### Effort scales with importance (ADR-021)
+
+The *same* retry helper is applied to both clients, but with **different numbers**, because the
+two sources matter differently:
+
+| Source | Importance | Policy | A full outage costs |
+|---|---|---|---|
+| **FPL** | Required — a failure is **fatal** (no degradation) | try hard: **2 retries**, 10s | ~30s, then `FplApiError` (rare) |
+| **ClubElo** | Best-effort — a failure **degrades** | fail fast: **1 retry**, **5s** timeout | **~10s**, then last-known Elo |
+
+The rule: **the more a source matters, the harder we try; the more optional it is, the faster we
+give up.** FPL (fatal on failure) now survives a momentary blip that used to kill the whole
+refresh. ClubElo (optional) degrades in ~10s instead of ~31s — it shouldn't hold up refresh.
+Same `with_retry`, two policies, no duplicated logic.
+
+*(Still-open idea if a source stays down for days: a **circuit breaker** — remember the last
+failure and skip the source for a cooldown, so refresh is instant. It needs cross-run state, so
+it's deferred.)*
 
 ---
 
@@ -120,6 +138,7 @@ cache: a real outage still degrades, exactly as before.
 ## Related Documents
 
 - [ADR-020 — ClubElo retry-with-backoff](../06_Decisions/ADR-020-clubelo-retry.md)
+- [ADR-021 — Importance-scaled retry](../06_Decisions/ADR-021-importance-scaled-retry.md)
 
 - [ADR-010 — ClubElo external source](../06_Decisions/ADR-010-clubelo-external-source.md)
 - [Architecture §4 (second data source)](../03_Architecture/Architecture.md)

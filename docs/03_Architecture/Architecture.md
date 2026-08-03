@@ -359,3 +359,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   backoff *before* falling back to last-known Elo — so a momentary blip no longer loses the Elo
   refresh. Retry *then* degrade (ADR-010 unchanged); a reusable helper; injectable sleep. No
   new dependency.
+- **Sprint 020 (2026-08-03)** — *importance-scaled retry*, per ADR-021. The ADR-020 helper is
+  applied to **both** clients: **FPL** (required) retries hard (2, 10s) — a blip no longer kills
+  refresh, though exhaustion is still fatal; **ClubElo** (best-effort) fails fast (1 retry, 5s
+  timeout) so a sustained outage degrades in ~10s not ~31s. One helper, two policies; the more a
+  source matters, the harder we try.

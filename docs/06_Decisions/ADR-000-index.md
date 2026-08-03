@@ -25,3 +25,4 @@ new ADR as it is created.
 | [018](./ADR-018-defensive-contribution.md) | Defensive Contribution (DefCon reliability) | Accepted |
 | [019](./ADR-019-clean-sheet-solidity.md) | Clean-sheet / defensive-solidity lens (xGC) | Accepted |
 | [020](./ADR-020-clubelo-retry.md) | ClubElo retry-with-backoff (transient failures) | Accepted |
+| [021](./ADR-021-importance-scaled-retry.md) | Importance-scaled retry (FPL tries hard, ClubElo fails fast) | Accepted |

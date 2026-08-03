@@ -56,4 +56,70 @@ def test_get_bootstrap_static_wraps_network_errors(monkeypatch):
     monkeypatch.setattr("src.api.client.requests.get", fake_get)
 
     with pytest.raises(FplApiError):
-        FplClient().get_bootstrap_static()
+        # A connection error is transient, so it retries — inject a no-op sleep so the
+        # test stays instant.
+        FplClient(sleep=lambda s: None).get_bootstrap_static()
+
+
+# --- retry-with-backoff (ADR-021): FPL is required, so it retries hard (2 retries) ---
+
+class StatusResponse:
+    """A stand-in requests.Response: raise_for_status raises HTTPError on a 4xx/5xx."""
+
+    def __init__(self, status=200, payload=None):
+        self.status_code = status
+        self._payload = payload or {"elements": []}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            resp = requests.Response()
+            resp.status_code = self.status_code
+            raise requests.HTTPError(response=resp)
+
+    def json(self):
+        return self._payload
+
+
+def sequence_get(items):
+    """A fake requests.get yielding `items` (StatusResponse or Exception) in order."""
+    it = iter(items)
+
+    def _get(*a, **k):
+        item = next(it)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    return _get
+
+
+def test_get_json_retries_transient_then_succeeds(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(
+        "src.api.client.requests.get",
+        sequence_get([StatusResponse(502), StatusResponse(502), StatusResponse(200)]),
+    )
+    data = FplClient(sleep=sleeps.append).get_bootstrap_static()
+
+    assert data == {"elements": []}    # succeeded on the 3rd attempt
+    assert sleeps == [0.5, 1.0]        # FPL retries hard: two backoffs
+
+
+def test_get_json_does_not_retry_permanent(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("src.api.client.requests.get", sequence_get([StatusResponse(404)]))
+    with pytest.raises(FplApiError) as exc:
+        FplClient(sleep=sleeps.append).get_bootstrap_static()
+
+    assert "after 1 attempt" in str(exc.value)
+    assert sleeps == []                # no retry on a permanent error
+
+
+def test_get_json_exhausts_retries_then_raises(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("src.api.client.requests.get", sequence_get([StatusResponse(503)] * 3))
+    with pytest.raises(FplApiError) as exc:
+        FplClient(sleep=sleeps.append).get_bootstrap_static()
+
+    assert "after 3 attempt" in str(exc.value)   # required source → still fatal
+    assert sleeps == [0.5, 1.0]

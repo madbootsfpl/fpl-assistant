@@ -6,9 +6,12 @@ to later layers (parser, storage). Keeping the network isolated here is the
 "one-way data flow" rule from docs/03_Architecture/Architecture.md (§3).
 """
 
+import time
+
 import requests
 
 from src import config
+from src.api.retry import is_transient, with_retry
 
 
 class FplApiError(Exception):
@@ -26,21 +29,29 @@ class FplClient:
         self,
         base_url: str = config.FPL_BASE_URL,
         timeout: int = config.REQUEST_TIMEOUT,
+        retries: int = 2,          # required source: retry hard before giving up (ADR-021)
+        backoff: float = 0.5,
+        sleep=time.sleep,
     ):
         # Strip a trailing slash so joining with an endpoint path is predictable.
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.retries = retries
+        self.backoff = backoff
+        self.sleep = sleep
 
     def _get_json(self, path: str):
         """GET one FPL endpoint and return its parsed JSON.
 
         Shared by the endpoint methods below so the network logic (timeout,
-        User-Agent, error handling) lives in exactly one place. Any network or
-        HTTP failure is re-raised as FplApiError, so callers get one clear,
-        project-specific error type instead of a raw requests traceback.
+        User-Agent, retry, error handling) lives in exactly one place. FPL is the
+        *required* source, so a transient failure is retried (ADR-021); on exhaustion
+        any network or HTTP failure is re-raised as FplApiError — fatal, since there is
+        no graceful degradation for FPL.
         """
         url = self.base_url + path
-        try:
+
+        def fetch():
             response = requests.get(
                 url,
                 timeout=self.timeout,
@@ -48,8 +59,16 @@ class FplClient:
             )
             response.raise_for_status()
             return response.json()
+
+        try:
+            return with_retry(
+                fetch, retries=self.retries, backoff=self.backoff, sleep=self.sleep
+            )
         except requests.RequestException as exc:
-            raise FplApiError(f"Failed to fetch {url}: {exc}") from exc
+            attempts = self.retries + 1 if is_transient(exc) else 1
+            raise FplApiError(
+                f"Failed to fetch {url} after {attempts} attempt(s): {exc}"
+            ) from exc
 
     def get_bootstrap_static(self) -> dict:
         """Fetch the bootstrap-static payload (players, teams, gameweeks)."""

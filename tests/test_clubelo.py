@@ -118,12 +118,13 @@ def test_get_elo_csv_retries_transient_then_succeeds(monkeypatch):
     sleeps = []
     monkeypatch.setattr(
         "src.api.clubelo.requests.get",
-        sequence_get([FakeResp(502), FakeResp(502), FakeResp(200)]),
+        sequence_get([FakeResp(502), FakeResp(200)]),
     )
+    # ClubElo is best-effort → fail fast (default 1 retry): a blip is still retried once.
     out = EloClient(sleep=sleeps.append).get_elo_csv(date="2026-08-02")
 
-    assert "Arsenal" in out            # succeeded on the 3rd attempt
-    assert sleeps == [0.5, 1.0]        # exponential backoff between the failed attempts
+    assert "Arsenal" in out            # succeeded on the 2nd attempt
+    assert sleeps == [0.5]             # a single backoff (1 retry)
 
 
 def test_get_elo_csv_does_not_retry_permanent(monkeypatch):
@@ -142,5 +143,6 @@ def test_get_elo_csv_exhausts_retries_then_raises(monkeypatch):
     with pytest.raises(ClubEloError) as exc:
         EloClient(sleep=sleeps.append).get_elo_csv(date="2026-08-02")
 
-    assert "after 3 attempt" in str(exc.value)   # all attempts used → then degrade
-    assert sleeps == [0.5, 1.0]
+    # Fail fast: 1 retry = 2 attempts, then degrade (down from ~31s in Sprint 019).
+    assert "after 2 attempt" in str(exc.value)
+    assert sleeps == [0.5]

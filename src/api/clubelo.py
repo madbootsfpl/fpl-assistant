@@ -36,8 +36,8 @@ class EloClient:
     def __init__(
         self,
         base_url: str = config.CLUBELO_BASE_URL,
-        timeout: int = config.REQUEST_TIMEOUT,
-        retries: int = 2,
+        timeout: int = config.CLUBELO_TIMEOUT,   # best-effort: a tighter 5s budget (ADR-021)
+        retries: int = 1,                        # fail fast — 2 attempts, then degrade
         backoff: float = 0.5,
         sleep=time.sleep,
     ):

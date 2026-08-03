@@ -21,6 +21,11 @@ CLUBELO_BASE_URL = "http://api.clubelo.com"
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 
+# ClubElo is best-effort, so it gets a tighter budget than the required FPL source
+# (ADR-021): a shorter timeout + fewer retries → a sustained outage degrades fast.
+# A healthy ClubElo answers in ~1–2s, so 5s is a safe margin.
+CLUBELO_TIMEOUT = 5
+
 # The FPL API can reject requests that don't look like they came from a browser,
 # so we send a simple, honest User-Agent that identifies this project.
 USER_AGENT = "fpl-assistant/0.1 (learning project)"
