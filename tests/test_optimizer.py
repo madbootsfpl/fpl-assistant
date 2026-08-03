@@ -9,6 +9,8 @@ import pytest
 from src.analytics.optimizer import (
     SQUAD_15,
     XI_FLEX,
+    available_players,
+    is_unavailable,
     legal_xi_issues,
     objective_scores,
     resolve_players,
@@ -457,6 +459,27 @@ def _xi(counts):
     return [{"position": pos} for pos, n in counts.items() for _ in range(n)]
 
 
+def test_is_unavailable_by_status():
+    assert is_unavailable({"status": "i"})       # injured
+    assert is_unavailable({"status": "s"})       # suspended
+    assert is_unavailable({"status": "u"})       # departed
+    assert not is_unavailable({"status": "a"})   # available
+    assert not is_unavailable({"status": "d"})   # doubtful — might play
+
+
+def test_available_players_excludes_unavailable_but_keeps_forced():
+    players = [
+        {"id": 1, "status": "a"},   # available → pool
+        {"id": 2, "status": "i"},   # injured, not forced → excluded
+        {"id": 3, "status": "i"},   # injured, forced in → kept
+        {"id": 4, "status": "d"},   # doubtful → pool
+    ]
+    pool, excluded = available_players(players, keep_ids={3})
+
+    assert {p["id"] for p in pool} == {1, 3, 4}
+    assert {p["id"] for p in excluded} == {2}
+
+
 def test_legal_xi_issues_passes_a_legal_xi():
     assert legal_xi_issues(_xi({"GK": 1, "DEF": 4, "MID": 4, "FWD": 2})) == []
 
@@ -502,6 +525,19 @@ def test_render_full_four_man_bench_shows_the_implied_shape():
     out = render_squad({"status": "Optimal", "selected": starters + bench,
                         "total_points": 750, "total_cost": 100.0}, budget=100, full=True)
     assert "Starters (11) — 4-4-2" in out
+
+
+def test_render_flags_doubtful_and_unavailable_picks():
+    def row(pos, status="a", chance=None):
+        return {"position": pos, "web_name": pos + status, "team": "ARS",
+                "price": 5.0, "total_points": 50, "forced": False, "bench": False,
+                "status": status, "chance": chance}
+    selected = [row("GK"), row("DEF", "d", 75), row("MID", "i")]
+    out = render_squad({"status": "Optimal", "selected": selected,
+                        "total_points": 150, "total_cost": 15.0}, budget=80)
+
+    assert "(d 75%)" in out       # doubtful pick flagged with chance
+    assert "(inj)" in out         # a forced-in / opted-in injured pick flagged
 
 
 def test_render_full_no_bench_has_no_bench_section():

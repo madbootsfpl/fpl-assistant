@@ -141,6 +141,31 @@ def test_player_from_api_defensive_contribution_absent_are_none():
     assert player.cbi is None and player.tackles is None and player.recoveries is None
 
 
+def test_player_from_api_parses_availability():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Saliba",
+        "team": 1, "element_type": 2, "now_cost": 60, "total_points": 137,
+        "status": "i", "chance_of_playing_next_round": 0, "news": "Back injury",
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.status == "i"
+    assert player.chance == 0           # int, as-is
+    assert player.news == "Back injury"
+
+
+def test_player_from_api_availability_absent_are_none():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 50, "total_points": 0,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.chance is None and player.news is None
+
+
 def test_player_from_api_missing_xp_inputs_are_none():
     raw = {
         "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

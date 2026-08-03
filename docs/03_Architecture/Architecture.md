@@ -170,6 +170,8 @@ in preseason, so the custom FDR uses overall strength for now (ADR-005).
 | `cbi` | INTEGER | `elements[].clearances_blocks_interceptions` | Clearances + blocks + interceptions (Sprint 017) |
 | `tackles` | INTEGER | `elements[].tackles` | Tackles (Sprint 017) |
 | `recoveries` | INTEGER | `elements[].recoveries` | Ball recoveries (Sprint 017) |
+| `chance` | INTEGER | `elements[].chance_of_playing_next_round` | % chance of playing; None = fully fit (Sprint 022, [ADR-023](../06_Decisions/ADR-023-player-availability.md)) |
+| `news` | TEXT | `elements[].news` | Injury/suspension detail; availability flag messages (Sprint 022) |
 
 The Sprint 005 columns are added to the existing `players` table via the same light
 migration as `teams` (§ADR-005). **Expected Points (xP)** is the first *cross-domain*
@@ -368,3 +370,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   is declared, the 11 starters are checked against the `XI_FLEX` legal ranges (reused from
   ADR-014); an illegal bench (e.g. 0 FWD) is **warned**, not blocked. Closes the ADR-014 gap;
   one pure `legal_xi_issues` helper; no new data.
+- **Sprint 022 (2026-08-03)** — *player availability*, per ADR-023. `players` gains `chance`
+  and `news` via the generic migration (`status` already stored); `squad` excludes unavailable
+  players (status i/s/u/n) by default with `--include-unavailable` opt-out, flags doubtful
+  picks, and warns on a forced-in injured pick. Availability is a policy at the edge (the CLI
+  filters); `select_squad` stays generic. Fixes the optimiser picking an injured player.

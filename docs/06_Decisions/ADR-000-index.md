@@ -27,3 +27,4 @@ new ADR as it is created.
 | [020](./ADR-020-clubelo-retry.md) | ClubElo retry-with-backoff (transient failures) | Accepted |
 | [021](./ADR-021-importance-scaled-retry.md) | Importance-scaled retry (FPL tries hard, ClubElo fails fast) | Accepted |
 | [022](./ADR-022-validate-legal-bench.md) | Validate a legal bench (warn, not block) | Accepted |
+| [023](./ADR-023-player-availability.md) | Player availability (skip injured; opt-out) | Accepted |

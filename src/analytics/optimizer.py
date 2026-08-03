@@ -63,6 +63,32 @@ def legal_xi_issues(starters) -> list:
     return issues
 
 
+# FPL status codes for players who cannot play (all have chance 0). 'a' = available,
+# 'd' = doubtful (might play — kept, but flagged). ADR-023.
+UNAVAILABLE_STATUS = frozenset({"i", "s", "u", "n"})
+
+
+def is_unavailable(player) -> bool:
+    """True if the player can't play next round (injured / suspended / gone) — ADR-023."""
+    return player["status"] in UNAVAILABLE_STATUS
+
+
+def available_players(players, keep_ids=()) -> tuple:
+    """Split players into (pool, excluded): drop the unavailable, but keep `keep_ids`.
+
+    `keep_ids` are players the manager forced in (include/bench) — they stay in the pool
+    even if unavailable (their call), so only the rest of the unavailable are excluded.
+    """
+    keep = set(keep_ids)
+    pool, excluded = [], []
+    for p in players:
+        if is_unavailable(p) and p["id"] not in keep:
+            excluded.append(p)
+        else:
+            pool.append(p)
+    return pool, excluded
+
+
 def select_squad(
     players,
     budget: float = DEFAULT_BUDGET,

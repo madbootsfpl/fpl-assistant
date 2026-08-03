@@ -16,9 +16,11 @@ from src.analytics import (
     FULL_BUDGET,
     SQUAD_15,
     XI_FLEX,
+    available_players,
     elo_difficulty_bands,
     defcon_reliability,
     defensive_solidity,
+    is_unavailable,
     objective_scores,
     over_under,
     player_xp,
@@ -91,6 +93,9 @@ def resolve_squad_budget(budget, full: bool) -> float:
 
 
 BENCH_MAX = 4   # a 15-man squad has 15 − 11 = 4 bench slots
+
+# FPL status codes → a human word for availability messages (ADR-023).
+_STATUS_WORD = {"i": "injured", "s": "suspended", "u": "unavailable", "n": "unavailable"}
 
 
 def validate_bench(bench_ids, include_ids, exclude_ids) -> list:
@@ -173,14 +178,35 @@ def cmd_squad(args) -> None:
         for message in errors:
             print(message)
     else:
+        # Availability (ADR-023): don't optimise over players who can't play, unless the
+        # manager opts in — but keep anyone they forced in (include/bench), warned below.
+        forced = set(include_ids) | set(bench_ids)
+        if args.include_unavailable:
+            pool, excluded = players, []
+        else:
+            pool, excluded = available_players(players, keep_ids=forced)
+
         upcoming = store.get_upcoming_fixtures() if args.objective == "xp" else None
         scores = objective_scores(players, args.objective, upcoming)
         result = select_squad(
-            players, budget=budget, formation=formation, size=size,
+            pool, budget=budget, formation=formation, size=size,
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
             scores=scores,
         )
         print(render_squad(result, budget=budget, objective=args.objective, full=full))
+
+        # Warn on any unavailable player the manager forced in, and report the rest.
+        for p in players:
+            if p["id"] in forced and is_unavailable(p):
+                chance = f" ({p['chance']}%)" if p["chance"] is not None else ""
+                print(f"⚠ {p['web_name']} is {_STATUS_WORD.get(p['status'], 'unavailable')}"
+                      f"{chance} — forced in.")
+        if excluded:
+            worst = sorted(excluded, key=lambda p: -p["total_points"])[:3]
+            listed = ", ".join(f"{p['web_name']} ({p['status']})" for p in worst)
+            more = "…" if len(excluded) > 3 else ""
+            print(f"({len(excluded)} unavailable excluded: {listed}{more} — "
+                  "use --include-unavailable to keep them.)")
     store.close()
 
 
@@ -417,6 +443,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--objective", choices=["points", "value", "xp", "xgi"], default="points",
         help="What to maximise: points (default), value (£m), xP, or xGI (attacking)",
+    )
+    p_squad.add_argument(
+        "--include-unavailable", action="store_true", dest="include_unavailable",
+        help="Also consider injured/suspended players (excluded by default)",
     )
     p_squad.set_defaults(handler=cmd_squad)
 

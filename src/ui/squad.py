@@ -7,6 +7,20 @@ legal XI fits the budget.
 
 from src.analytics.optimizer import legal_xi_issues
 
+# Availability flags for picked players (ADR-023): 'a' shows nothing; 'd' shows the chance.
+_STATUS_FLAG = {"i": "inj", "s": "susp", "u": "out", "n": "n/a"}
+
+
+def _avail_flag(p) -> str:
+    status = p.get("status")
+    if status == "d":
+        chance = p.get("chance")
+        return f" (d {chance}%)" if chance is not None else " (doubtful)"
+    if status in _STATUS_FLAG:
+        return f" ({_STATUS_FLAG[status]})"
+    return ""
+
+
 _POS_W = 3
 _NAME_W = 17
 _TEAM_W = 5
@@ -73,7 +87,7 @@ def render_squad(
             marker = ""
         lines.append(
             f"{p['position']:<{_POS_W}} {name:<{_NAME_W}} {str(p['team'] or ''):<{_TEAM_W}} "
-            f"{price:>{_PRICE_W}} {p['total_points']:>{_PTS_W}}{marker}"
+            f"{price:>{_PRICE_W}} {p['total_points']:>{_PTS_W}}{marker}{_avail_flag(p)}"
         )
 
     lines.append("")

@@ -57,6 +57,7 @@ python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3
 python app.py squad --bench Dubravka Diop        # declare your bench (marked **, shown last); implies --full
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)
 python app.py squad --objective xgi              # optimise on expected goal involvement (attacking)
+python app.py squad --include-unavailable        # also consider injured/suspended (excluded by default)
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

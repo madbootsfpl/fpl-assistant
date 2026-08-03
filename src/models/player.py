@@ -46,6 +46,10 @@ class Player:
     cbi: int | None = None          # clearances + blocks + interceptions
     tackles: int | None = None
     recoveries: int | None = None
+    # Availability (Sprint 022, ADR-023). `status` above is a/d/i/s/u; `chance` is the
+    # % chance of playing next round (None when fully fit); `news` explains an issue.
+    chance: int | None = None
+    news: str | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -80,4 +84,6 @@ class Player:
             cbi=raw.get("clearances_blocks_interceptions"),
             tackles=raw.get("tackles"),
             recoveries=raw.get("recoveries"),
+            chance=raw.get("chance_of_playing_next_round"),
+            news=raw.get("news"),
         )

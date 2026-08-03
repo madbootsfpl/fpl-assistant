@@ -245,9 +245,37 @@ rule and can never disagree.
 
 ---
 
+## Availability — don't pick players who can't play (ADR-023)
+
+An "optimal" squad is worthless if it's full of injured players. FPL flags availability on
+each player — `status` (a=available, d=doubtful, i=injured, s=suspended, u=unavailable) plus
+`chance_of_playing_next_round` and `news`. So `squad` now **excludes unavailable players
+(status i/s/u/n) by default**:
+
+```bash
+squad                        # available players only (default)
+squad --include-unavailable  # consider injured/suspended too (the theoretical best)
+squad --include J.Timber     # force an injured player in anyway → warns
+```
+
+Three behaviours, all in the *warn-not-block* spirit:
+- **Excluded by default**, with a report: "(39 unavailable excluded: Garner (i)… )".
+- **Doubtful (`d`) players are kept** (they might play) but **flagged**: `Kamara (d 75%)`.
+- **Forcing one in is allowed but warned**: `⚠ J.Timber is injured (0%) — forced in.` and the
+  row shows `(inj)`.
+
+The key architectural point: **availability is a policy at the edge** — the CLI filters the
+pool before calling `select_squad`, which stays a pure "maximise these scores". Same pattern
+as the objective and the formation. `is_unavailable()` and `available_players()` keep the rule
+in one place.
+
+---
+
 ## Common Mistakes
 
 - **Assuming greedy = optimal.** It isn't, once a budget couples the choices.
+- **Trusting an "optimal" squad blindly.** Check the availability flags — and that it's not
+  quietly built on last-season points for a player who's now injured.
 - **Not handling infeasible.** Check the solver's status before reading a result.
 - **Letting the dependency spread.** Keep PuLP inside the optimiser module.
 
@@ -275,6 +303,7 @@ rule and can never disagree.
 - [ADR-012 — The full 15-man squad](../06_Decisions/ADR-012-full-squad.md)
 - [ADR-013 — A declared bench](../06_Decisions/ADR-013-declared-bench.md)
 - [ADR-014 — Flexible formations](../06_Decisions/ADR-014-flexible-formations.md)
+- [ADR-023 — Player availability](../06_Decisions/ADR-023-player-availability.md)
 - [Architecture §4 (optimisation component)](../03_Architecture/Architecture.md)
 - [Chapter 21 — Analytics](./21_Analytics.md)
 - Code: `src/analytics/optimizer.py`

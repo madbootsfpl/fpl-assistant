@@ -48,6 +48,8 @@ _MIGRATIONS = {
         "cbi": "INTEGER",
         "tackles": "INTEGER",
         "recoveries": "INTEGER",
+        "chance": "INTEGER",
+        "news": "TEXT",
     },
 }
 
@@ -75,7 +77,9 @@ CREATE TABLE IF NOT EXISTS players (
     defcon_per90    REAL,
     cbi             INTEGER,
     tackles         INTEGER,
-    recoveries      INTEGER
+    recoveries      INTEGER,
+    chance          INTEGER,
+    news            TEXT
 )
 """
 
@@ -108,8 +112,9 @@ INSERT INTO players
     (id, first_name, second_name, web_name, team_id, position, price, total_points,
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
      goals_scored, assists, minutes,
-     defcon, defcon_per90, cbi, tackles, recoveries)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     defcon, defcon_per90, cbi, tackles, recoveries,
+     chance, news)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
     second_name     = excluded.second_name,
@@ -132,7 +137,9 @@ ON CONFLICT(id) DO UPDATE SET
     defcon_per90    = excluded.defcon_per90,
     cbi             = excluded.cbi,
     tackles         = excluded.tackles,
-    recoveries      = excluded.recoveries
+    recoveries      = excluded.recoveries,
+    chance          = excluded.chance,
+    news            = excluded.news
 """
 
 UPSERT_FIXTURE = """
@@ -206,7 +213,8 @@ class Storage:
              p.points_per_game, p.status, p.ep_next,
              p.xg, p.xa, p.xgi, p.xgc,
              p.goals_scored, p.assists, p.minutes,
-             p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries)
+             p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries,
+             p.chance, p.news)
             for p in players
         ]
         with self.conn:

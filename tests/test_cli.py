@@ -231,6 +231,12 @@ def test_squad_objective_accepts_xgi():
     assert args.objective == "xgi"
 
 
+def test_squad_include_unavailable_flag_parses():
+    assert build_parser().parse_args(["squad"]).include_unavailable is False
+    args = build_parser().parse_args(["squad", "--include-unavailable"])
+    assert args.include_unavailable is True
+
+
 def test_xg_command_parses_pos_and_limit():
     args = build_parser().parse_args(["xg", "--pos", "FWD", "--limit", "5"])
     assert args.command == "xg"

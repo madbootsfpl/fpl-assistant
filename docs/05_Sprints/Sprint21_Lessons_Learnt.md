@@ -177,12 +177,15 @@ python app.py squad --full --bench <3 forwards>   # warns: bench doesn't leave a
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+Provides a good catch for invalid team
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+completing backlog & closing phase
+
 
 ---
 
