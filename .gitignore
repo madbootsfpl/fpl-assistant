@@ -23,3 +23,6 @@ data/*.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# seleniumbase/soccerdata spike cruft (never committed)
+downloaded_files/

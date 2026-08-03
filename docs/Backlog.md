@@ -24,6 +24,16 @@ Captured ideas not yet scheduled into a sprint.
 - ~~Flexible formations~~ — **DONE** (Sprint 013, `squad --formation` + flexible default,
   ADR-014). Ranges (DEF 3–5, MID 2–5, FWD 1–3); the bench-implied shape shown in `--full`.
 
+## Validated, deferred
+
+- **soccerdata / npXG** — evaluated in Sprint 015 ([ADR-016](06_Decisions/ADR-016-soccerdata-evaluation.md)).
+  Matching works (~95% FPL↔Understat) and npXG is real, **but** the value is narrow
+  (penalties score points in FPL, so penalty-inclusive xG is the relevant signal) and the
+  cost is high (14 → 72 packages incl. a selenium/pandas stack, scraping fragility, a
+  season-alignment trap). **Deferred.** Revisit only if a decision-driving need appears
+  that FPL can't meet — and prefer a *lightweight* direct Understat fetch over the full
+  library. Evidence: `spikes/015-soccerdata/`.
+
 ## Tech debt
 
 - **Migrate to the PuLP 4.0 API** — use `prob.add_variable(...)` / `COIN_CMD` instead of
