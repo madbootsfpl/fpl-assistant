@@ -254,6 +254,22 @@ def test_overperf_min_minutes_defaults_to_900():
     assert args.limit == 10
 
 
+def test_defcon_command_parses_options():
+    args = build_parser().parse_args(
+        ["defcon", "--pos", "DEF", "--limit", "15", "--min-minutes", "600"]
+    )
+    assert args.command == "defcon"
+    assert args.pos == "DEF"
+    assert args.limit == 15
+    assert args.min_minutes == 600
+
+
+def test_defcon_defaults():
+    args = build_parser().parse_args(["defcon"])
+    assert args.min_minutes == 900
+    assert args.limit == 20
+
+
 def test_xp_options_are_parsed():
     args = build_parser().parse_args(
         ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]

@@ -114,6 +114,7 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 |22 | [Optimisation (Linear Programming)](./22_Optimisation.md) | 📖 🧪 💻 | In progress |
 |23 | [External Data & Graceful Degradation](./23_External_Data.md) | 📖 🧪 💻 | In progress |
 |24 | [Expected Goals (xG / xA / xGI)](./24_Expected_Goals.md) | 📖 🧪 💻 | In progress |
+|25 | [Defensive Contribution (DefCon)](./25_Defensive_Contribution.md) | 📖 🧪 💻 | In progress |
 
 Update the badges and status as each chapter grows.
 

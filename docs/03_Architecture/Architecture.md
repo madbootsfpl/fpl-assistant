@@ -165,6 +165,11 @@ in preseason, so the custom FDR uses overall strength for now (ADR-005).
 | `goals_scored` | INTEGER | `elements[].goals_scored` | Actual goals; over/under-performance (Sprint 016, [ADR-017](../06_Decisions/ADR-017-over-under-performance.md)) |
 | `assists` | INTEGER | `elements[].assists` | Actual assists (Sprint 016) |
 | `minutes` | INTEGER | `elements[].minutes` | Minutes played; the ≥ 900 gate for `overperf` (Sprint 016) |
+| `defcon` | INTEGER | `elements[].defensive_contribution` | DefCon actions; position-correct (DEF=CBIT, MID/FWD=CBIT+rec) (Sprint 017, [ADR-018](../06_Decisions/ADR-018-defensive-contribution.md)) |
+| `defcon_per90` | REAL | `elements[].defensive_contribution_per_90` | Per-90 rate; compared to the position threshold in `defcon` (Sprint 017) |
+| `cbi` | INTEGER | `elements[].clearances_blocks_interceptions` | Clearances + blocks + interceptions (Sprint 017) |
+| `tackles` | INTEGER | `elements[].tackles` | Tackles (Sprint 017) |
+| `recoveries` | INTEGER | `elements[].recoveries` | Ball recoveries (Sprint 017) |
 
 The Sprint 005 columns are added to the existing `players` table via the same light
 migration as `teams` (§ADR-005). **Expected Points (xP)** is the first *cross-domain*
@@ -339,3 +344,8 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   **expected** attacking points (from xG/xA) to **actual** (from goals/assists), minutes-gated
   (≥ 900) to filter noise + a preseason glitch. Attacking-only (stated caveat). FPL-native,
   no new dependency (the "lighter model" chosen in ADR-016).
+- **Sprint 017 (2026-08-03)** — *Defensive Contribution* (`defcon`), per ADR-018. `players`
+  gains five DefCon columns via the generic migration; a new view ranks players by
+  `defensive_contribution_per_90 − threshold` (DEF 10, MID/FWD 12; GK excluded), minutes-gated.
+  Verified FPL's field is position-correct (DEF=CBIT, MID/FWD=CBIT+recoveries). A defensive
+  counterpart to `overperf`; no new dependency.

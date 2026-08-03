@@ -114,6 +114,33 @@ def test_player_from_api_actual_returns_absent_are_none():
     assert player.minutes is None
 
 
+def test_player_from_api_parses_defensive_contribution():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 2, "now_cost": 55, "total_points": 175,
+        "defensive_contribution": 419, "defensive_contribution_per_90": "11.47",
+        "clearances_blocks_interceptions": 357, "tackles": 62, "recoveries": 155,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.defcon == 419                 # int count, as-is
+    assert player.defcon_per90 == 11.47         # per-90 string → float
+    assert player.cbi == 357 and player.tackles == 62 and player.recoveries == 155
+
+
+def test_player_from_api_defensive_contribution_absent_are_none():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 50, "total_points": 0,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.defcon is None and player.defcon_per90 is None
+    assert player.cbi is None and player.tackles is None and player.recoveries is None
+
+
 def test_player_from_api_missing_xp_inputs_are_none():
     raw = {
         "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

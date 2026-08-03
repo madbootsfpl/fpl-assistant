@@ -22,3 +22,4 @@ new ADR as it is created.
 | [015](./ADR-015-expected-goals.md) | Expected goals (xG/xA/xGI) from the FPL API | Accepted |
 | [016](./ADR-016-soccerdata-evaluation.md) | soccerdata as a data source — **Defer** | Accepted |
 | [017](./ADR-017-over-under-performance.md) | Over/under-performance (expected vs actual attacking points) | Accepted |
+| [018](./ADR-018-defensive-contribution.md) | Defensive Contribution (DefCon reliability) | Accepted |

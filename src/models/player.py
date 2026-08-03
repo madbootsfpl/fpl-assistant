@@ -39,6 +39,13 @@ class Player:
     goals_scored: int | None = None
     assists: int | None = None
     minutes: int | None = None
+    # Defensive Contribution (Sprint 017, ADR-018). `defcon` = position-correct action
+    # count (DEF: CBIT; MID/FWD: CBIT + recoveries); `defcon_per90` is the per-90 rate.
+    defcon: int | None = None
+    defcon_per90: float | None = None
+    cbi: int | None = None          # clearances + blocks + interceptions
+    tackles: int | None = None
+    recoveries: int | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -68,4 +75,9 @@ class Player:
             goals_scored=raw.get("goals_scored"),
             assists=raw.get("assists"),
             minutes=raw.get("minutes"),
+            defcon=raw.get("defensive_contribution"),
+            defcon_per90=_to_float(raw.get("defensive_contribution_per_90")),
+            cbi=raw.get("clearances_blocks_interceptions"),
+            tackles=raw.get("tackles"),
+            recoveries=raw.get("recoveries"),
         )

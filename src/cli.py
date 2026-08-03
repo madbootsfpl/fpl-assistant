@@ -17,6 +17,7 @@ from src.analytics import (
     SQUAD_15,
     XI_FLEX,
     elo_difficulty_bands,
+    defcon_reliability,
     objective_scores,
     over_under,
     player_xp,
@@ -30,6 +31,7 @@ from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
+from src.ui.defcon import render_defcon
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_squad
 from src.ui.xg import render_xg_table
@@ -180,6 +182,15 @@ def cmd_squad(args) -> None:
     store.close()
 
 
+def cmd_defcon(args) -> None:
+    """Rank players by Defensive Contribution reliability (per-90 vs threshold)."""
+    store = Storage()
+    players = store.get_players(position=args.pos.upper() if args.pos else None)
+    rows = defcon_reliability(players, min_minutes=args.min_minutes)
+    print(render_defcon(rows, limit=args.limit, min_minutes=args.min_minutes))
+    store.close()
+
+
 def cmd_overperf(args) -> None:
     """Show over/under-performers: actual vs expected attacking points (minutes-gated)."""
     store = Storage()
@@ -270,6 +281,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
             "  python app.py xg --pos FWD                players by expected goal involvement (xG + xA)\n"
             "  python app.py overperf                   over/under-performers (actual vs expected pts)\n"
+            "  python app.py defcon                     reliable Defensive Contribution earners\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
             "  python app.py squad --formation 3-5-2     pin the XI shape (default: best legal shape)\n"
             "  python app.py squad --full --bench Dubravka Diop  full 15-man squad; declare your bench\n"
@@ -338,6 +350,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Only rank players with at least this many minutes (default 900)",
     )
     p_op.set_defaults(handler=cmd_overperf)
+
+    p_dc = sub.add_parser(
+        "defcon", help="Rank players by Defensive Contribution reliability (per-90 vs threshold)",
+    )
+    p_dc.add_argument("--pos", help="Filter to a position: DEF, MID or FWD (GK not eligible)")
+    p_dc.add_argument(
+        "--limit", type=int, default=20, help="How many players to show (default 20)",
+    )
+    p_dc.add_argument(
+        "--min-minutes", type=int, default=900, dest="min_minutes",
+        help="Only rank players with at least this many minutes (default 900)",
+    )
+    p_dc.set_defaults(handler=cmd_defcon)
 
     p_squad = sub.add_parser("squad", help="Pick the optimal squad (starting XI, or --full 15)")
     p_squad.add_argument(

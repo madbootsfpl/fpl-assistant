@@ -43,6 +43,11 @@ _MIGRATIONS = {
         "goals_scored": "INTEGER",
         "assists": "INTEGER",
         "minutes": "INTEGER",
+        "defcon": "INTEGER",
+        "defcon_per90": "REAL",
+        "cbi": "INTEGER",
+        "tackles": "INTEGER",
+        "recoveries": "INTEGER",
     },
 }
 
@@ -65,7 +70,12 @@ CREATE TABLE IF NOT EXISTS players (
     xgc             REAL,
     goals_scored    INTEGER,
     assists         INTEGER,
-    minutes         INTEGER
+    minutes         INTEGER,
+    defcon          INTEGER,
+    defcon_per90    REAL,
+    cbi             INTEGER,
+    tackles         INTEGER,
+    recoveries      INTEGER
 )
 """
 
@@ -97,8 +107,9 @@ UPSERT_PLAYER = """
 INSERT INTO players
     (id, first_name, second_name, web_name, team_id, position, price, total_points,
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
-     goals_scored, assists, minutes)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     goals_scored, assists, minutes,
+     defcon, defcon_per90, cbi, tackles, recoveries)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
     second_name     = excluded.second_name,
@@ -116,7 +127,12 @@ ON CONFLICT(id) DO UPDATE SET
     xgc             = excluded.xgc,
     goals_scored    = excluded.goals_scored,
     assists         = excluded.assists,
-    minutes         = excluded.minutes
+    minutes         = excluded.minutes,
+    defcon          = excluded.defcon,
+    defcon_per90    = excluded.defcon_per90,
+    cbi             = excluded.cbi,
+    tackles         = excluded.tackles,
+    recoveries      = excluded.recoveries
 """
 
 UPSERT_FIXTURE = """
@@ -189,7 +205,8 @@ class Storage:
              p.team_id, p.position, p.price, p.total_points,
              p.points_per_game, p.status, p.ep_next,
              p.xg, p.xa, p.xgi, p.xgc,
-             p.goals_scored, p.assists, p.minutes)
+             p.goals_scored, p.assists, p.minutes,
+             p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries)
             for p in players
         ]
         with self.conn:

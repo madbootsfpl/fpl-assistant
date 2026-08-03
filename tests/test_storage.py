@@ -33,6 +33,11 @@ def make_player(
     goals_scored: int | None = None,
     assists: int | None = None,
     minutes: int | None = None,
+    defcon: int | None = None,
+    defcon_per90: float | None = None,
+    cbi: int | None = None,
+    tackles: int | None = None,
+    recoveries: int | None = None,
 ) -> Player:
     return Player(
         id=id,
@@ -53,6 +58,11 @@ def make_player(
         goals_scored=goals_scored,
         assists=assists,
         minutes=minutes,
+        defcon=defcon,
+        defcon_per90=defcon_per90,
+        cbi=cbi,
+        tackles=tackles,
+        recoveries=recoveries,
     )
 
 
@@ -254,6 +264,38 @@ def test_migration_adds_actual_return_columns_to_an_old_players_table(tmp_path):
     store = Storage(db_path=db)
     cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
     assert {"goals_scored", "assists", "minutes"} <= cols
+    store.close()
+
+
+def test_save_players_stores_defensive_contribution(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    store.save_players([make_player(
+        id=1, defcon=419, defcon_per90=11.47, cbi=357, tackles=62, recoveries=155)])
+
+    row = store.get_players(name="Test")[0]
+    assert (row["defcon"], row["defcon_per90"]) == (419, 11.47)
+    assert (row["cbi"], row["tackles"], row["recoveries"]) == (357, 62, 155)
+    store.close()
+
+
+def test_migration_adds_defcon_columns_to_an_old_players_table(tmp_path):
+    db = str(tmp_path / "old.db")
+
+    # A pre-Sprint-017 database: players table without the DefCon columns.
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)")
+    conn.execute(
+        """CREATE TABLE players (
+            id INTEGER PRIMARY KEY, first_name TEXT, second_name TEXT, web_name TEXT,
+            team_id INTEGER, position TEXT, price REAL, total_points INTEGER)"""
+    )
+    conn.commit()
+    conn.close()
+
+    store = Storage(db_path=db)
+    cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
+    assert {"defcon", "defcon_per90", "cbi", "tackles", "recoveries"} <= cols
     store.close()
 
 
