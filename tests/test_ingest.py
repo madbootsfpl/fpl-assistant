@@ -6,8 +6,6 @@ Uses fake clients (no network) and a temporary database, so it's fully offline.
 import json
 from pathlib import Path
 
-import pytest
-
 from src import ingest
 from src.api.clubelo import ClubEloError
 from src.storage import Storage

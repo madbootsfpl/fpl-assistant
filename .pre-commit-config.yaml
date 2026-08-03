@@ -1,0 +1,22 @@
+# Pre-commit hooks (US-079, Sprint 026). Opt-in for local development:
+#   pip install pre-commit && pre-commit install
+# then hooks run on every `git commit`. Bump the pinned versions any time with:
+#   pre-commit autoupdate
+#
+# These mirror what CI enforces (ruff) plus small file-hygiene fixes, so problems are
+# caught before they reach a push rather than in CI.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff            # lint (and auto-fix) — same rules as ci.yml (ruff.toml)
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files

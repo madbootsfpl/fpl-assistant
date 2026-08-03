@@ -17,9 +17,10 @@ from src.analytics import (
     SQUAD_15,
     XI_FLEX,
     available_players,
-    elo_difficulty_bands,
+    baseline_rate,
     defcon_reliability,
     defensive_solidity,
+    elo_difficulty_bands,
     is_unavailable,
     objective_scores,
     over_under,
@@ -33,14 +34,14 @@ from src.analytics import (
 from src.api.client import FplApiError
 from src.squads import SquadStore
 from src.storage import Storage
-from src.ui.fdr import render_fdr_table
-from src.ui.fixtures import render_team_fixtures
 from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
+from src.ui.fdr import render_fdr_table
+from src.ui.fixtures import render_team_fixtures
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_loaded_squad, render_squad
-from src.ui.xg import render_xg_table
 from src.ui.table import render_player_table
+from src.ui.xg import render_xg_table
 from src.ui.xp import render_xp_table
 
 
@@ -67,6 +68,45 @@ def cmd_refresh(args) -> None:
         )
     except FplApiError as exc:
         print(f"Could not refresh FPL data: {exc}")
+    finally:
+        store.close()
+
+
+def cmd_history(args) -> None:
+    """Backfill past-season history for all stored players (ADR-027).
+
+    A throttled, resumable, once-per-season job — kept out of `refresh`. `--limit N`
+    backfills only the first N players (a quick test run).
+    """
+    if not args.backfill:
+        print(
+            "Nothing to do. Try `history --backfill` to fetch past-season data "
+            "(a few minutes for all players; add --limit N for a slice)."
+        )
+        return
+
+    store = Storage()
+    try:
+        ids = store.get_player_ids()
+        if not ids:
+            print("No players stored yet — run `refresh` first.")
+            return
+        if args.limit:
+            ids = ids[: args.limit]
+
+        def progress(i, total):
+            if i % 50 == 0 or i == total:
+                print(f"  … {i}/{total} players")
+
+        print(f"Backfilling past-season history for {len(ids)} player(s)…")
+        processed, seasons, failures = ingest.backfill_history(
+            store, ids=ids, progress=progress
+        )
+        note = f" ({failures} failed and were skipped)" if failures else ""
+        print(
+            f"Stored {seasons} season rows across {processed} player(s){note}. "
+            f"Now cached in {config.DB_PATH}."
+        )
     finally:
         store.close()
 
@@ -307,14 +347,22 @@ def cmd_xg(args) -> None:
 
 
 def cmd_xp(args) -> None:
-    """Rank players by expected points for their team's next fixture."""
+    """Rank players by expected points (multi-season baseline rate; ADR-028)."""
     store = Storage()
     players = store.get_players(position=args.pos.upper() if args.pos else None)
     upcoming = store.get_upcoming_fixtures()
     if not players:
         print("No players to rank — run `refresh` first.")
     else:
-        ranked = player_xp(players, upcoming, source=args.type, horizon=args.next)
+        # Historical baseline rate per player (empty until `history --backfill` is run).
+        baseline_by_code = {
+            code: baseline_rate(rows)
+            for code, rows in store.get_history_by_code().items()
+        }
+        ranked = player_xp(
+            players, upcoming, source=args.type, horizon=args.next,
+            baseline_by_code=baseline_by_code,
+        )
         print(render_xp_table(ranked, limit=args.limit, source=args.type, horizon=args.next))
     store.close()
 
@@ -391,6 +439,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Fetch the latest FPL data (players, teams, fixtures) and store it locally",
     )
     p_refresh.set_defaults(handler=cmd_refresh)
+
+    p_history = sub.add_parser(
+        "history", help="Backfill past-season player history (once per season)"
+    )
+    p_history.add_argument(
+        "--backfill", action="store_true",
+        help="Fetch and store each player's past-season summaries (a few minutes)",
+    )
+    p_history.add_argument(
+        "--limit", type=int,
+        help="Only backfill the first N players (useful for a quick test run)",
+    )
+    p_history.set_defaults(handler=cmd_history)
 
     p_table = sub.add_parser(
         "table", help="Show players, ranked by points or value (points per £m)"

@@ -53,3 +53,6 @@ tech-debt.)*
 
 - Richer xP: recent `form` + expected minutes.
 - Attack/Defence FDR split (needs `strength_attack_*` / `strength_defence_*`).
+- **Per-GW history ingestion** — `element-summary`'s `history` (this-season per-GW) is empty
+  preseason (Sprint 026, ADR-027). Ingest it once gameweeks start playing (same endpoint/command);
+  it enables within-season form/rolling trends. A `history <player>` season-trend view could follow.

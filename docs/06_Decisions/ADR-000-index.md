@@ -31,3 +31,5 @@ new ADR as it is created.
 | [024](./ADR-024-saved-squad.md) | Saved / persistent squad (user state, JSON) | Accepted |
 | [025](./ADR-025-shared-table-renderer.md) | Shared table renderer (`Col` + `render_rows`) | Accepted |
 | [026](./ADR-026-phase1-cli-mvp.md) | Declare Phase 1 (CLI Analytics MVP) complete; reframe the Roadmap | Accepted |
+| [027](./ADR-027-historical-past-seasons.md) | Historical past-season data (`history --backfill`) | Accepted |
+| [028](./ADR-028-xp-historical-baseline.md) | xP historical baseline (multi-season rate) | Accepted |

@@ -1,5 +1,7 @@
 # FPL Assistant
 
+[![CI](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml)
+
 A personal Fantasy Premier League analytics assistant — a command-line tool.
 
 **Status:** Phase 1 — *CLI Analytics MVP* — **complete** (2026-08-03). See the
@@ -45,6 +47,17 @@ python app.py --help
 
 # 4. Run the tests (offline — no live API calls)
 pytest
+```
+
+## Development
+
+CI (GitHub Actions) runs `ruff` (lint) and the offline test suite on every push and PR
+across Python 3.13/3.14. To mirror it locally:
+
+```bash
+pip install ruff pre-commit
+ruff check .            # lint (config in ruff.toml)
+pre-commit install      # optional: run the same checks on every git commit
 ```
 
 ## Commands

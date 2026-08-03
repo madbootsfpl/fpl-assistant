@@ -12,6 +12,46 @@ per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek)
 from src.analytics.fdr import _view
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
+_BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
+# A season needs ~10 full games before its points-per-90 is trustworthy — otherwise a
+# tiny cameo (e.g. 2 pts in 20 mins → pp90 9.0+) invents an absurd rate. Same minutes
+# gate the over/under and DefCon views use (ADR-017/018); the Sprint 016 Meslier lesson.
+_MIN_SEASON_MINUTES = 900
+
+
+def _get(row, key):
+    """Read `key` from a sqlite Row or a dict, returning None if it's absent.
+
+    Lets player_xp accept both real rows (which have `code`) and lightweight test
+    dicts (which may not) without a KeyError.
+    """
+    try:
+        return row[key]
+    except (KeyError, IndexError):
+        return None
+
+
+def baseline_rate(
+    history, k_seasons: int = _BASELINE_SEASONS, min_minutes: int = _MIN_SEASON_MINUTES
+):
+    """A multi-season points-per-90 baseline for one player (ADR-028).
+
+    Recency- and minutes-weighted over the last `k_seasons` seasons that clear
+    `min_minutes` (a small sample invents an absurd rate — see the gate above), using
+    only the fields ADR-027 confirmed reliable across seasons (points + minutes).
+    Returns None when no season qualifies (young/fringe player), so the caller can
+    fall back to the current single-season rate.
+    """
+    seasons = [h for h in history if (h["minutes"] or 0) >= min_minutes][-k_seasons:]
+    if not seasons:
+        return None
+    num = den = 0.0
+    for rank, h in enumerate(seasons, start=1):   # oldest → 1 … newest → n (recency)
+        pp90 = h["total_points"] * 90.0 / h["minutes"]
+        weight = rank * h["minutes"]              # newer + higher-minutes seasons weigh more
+        num += weight * pp90
+        den += weight
+    return num / den
 
 
 def _multiplier(difficulty) -> float:
@@ -42,26 +82,34 @@ def _horizon_difficulties(upcoming, source: str, gameweeks: int) -> dict:
     return difficulties_by_team
 
 
-def player_xp(players, upcoming, source: str = "fpl", horizon: int = 1) -> list[dict]:
+def player_xp(
+    players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None
+) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
     `players` are rows from Storage.get_players() (team_id, points_per_game, status,
-    ep_next, web_name, position, team). `upcoming` is from get_upcoming_fixtures().
-    xP is the sum of per-fixture xP over the team's fixtures in the horizon; 0 if the
-    player is unavailable or has no points_per_game. Returned sorted by xP, highest first.
+    ep_next, web_name, position, team, code). `upcoming` is from get_upcoming_fixtures().
+
+    The scoring **rate** is the multi-season historical baseline (ADR-028) when available
+    — keyed by the player's `code` in `baseline_by_code` — else the current
+    `points_per_game`. xP is the sum of per-fixture rate × fixture-multiplier over the
+    horizon; 0 if the player is unavailable or has no rate at all. Sorted by xP, highest first.
     """
     difficulties_by_team = _horizon_difficulties(upcoming, source, horizon)
+    baseline_by_code = baseline_by_code or {}
 
     results = []
     for p in players:
         ppg = p["points_per_game"]
+        baseline = baseline_by_code.get(_get(p, "code"))
+        rate = baseline if baseline is not None else ppg   # ADR-028: baseline, else current
         available = p["status"] == "a"
         difficulties = difficulties_by_team.get(p["team_id"], [])
 
-        if ppg is None or not available:
+        if rate is None or not available:
             xp = 0.0
         else:
-            xp = ppg * sum(_multiplier(d) for d in difficulties)
+            xp = rate * sum(_multiplier(d) for d in difficulties)
 
         results.append({
             "id": p["id"],
@@ -72,6 +120,8 @@ def player_xp(players, upcoming, source: str = "fpl", horizon: int = 1) -> list[
             "games": len(difficulties),               # fixtures in the horizon (DGW → >horizon)
             "ep_next": p["ep_next"],
             "difficulty": difficulties[0] if difficulties else None,  # next fixture (for N=1 display)
+            "rate": round(rate, 2) if rate is not None else None,
+            "rate_source": "hist" if baseline is not None else "current",
         })
 
     results.sort(key=lambda r: r["xp"], reverse=True)

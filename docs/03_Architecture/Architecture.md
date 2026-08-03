@@ -380,6 +380,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   bench), kept **separate from the `data/fpl.db` reference cache** so it survives `refresh`.
   `squad --save/--load`; on load the ids are re-priced and availability re-checked against
   current data, and departed players noted. Store the picks, derive the numbers fresh.
+- **Sprint 026 (2026-08-03)** — *historical past-season data* (Phase 2 begins), per ADR-027. A
+  **second FPL endpoint** (`element-summary/{id}/`) and the project's first historical store: a new
+  `player_history_past` table (keyed by the stable `element_code`, **no FK** — history outlives a
+  player's presence, like ADR-024). Populated by a **throttled, idempotent, per-player-degrading**
+  `history --backfill` command (kept out of the one-call `refresh`); a `PlayerSeason` model mirrors
+  the `from_api` idiom. Data-provenance caveat confirmed on the live backfill: only
+  points/minutes/goals/assists are reliable across all seasons (xG/xA/DC are recent-only). Sets up
+  US-078's xP enrichment. Full-stack slice: API → model → storage → ingest → CLI. No new dependency.
+  Then (US-078, ADR-028) *xP enrichment*: the scoring **rate** becomes a multi-season baseline
+  (recency+minutes-weighted points/90 from history, ≥900-min gated), replacing one noisy season
+  preseason and falling back to current `ppg` without history. Only the rate input changed — the xP
+  formula, horizon, and optimiser are untouched (policy at the edge); `players` gains a `code` join
+  key. A live smoke caught cameo seasons inventing absurd rates → the ≥900-min gate (Sprint 016 lesson).
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

@@ -14,6 +14,15 @@ BOOTSTRAP_STATIC_PATH = "/bootstrap-static/"
 # Fixtures endpoint: all matches (home/away teams, difficulty, gameweek).
 FIXTURES_PATH = "/fixtures/"
 
+# Per-player endpoint (ADR-027): a player's fixtures, this-season per-GW history, and
+# `history_past` (past-season summaries). `{}` is the per-season element id.
+ELEMENT_SUMMARY_PATH = "/element-summary/{}/"
+
+# Seconds to wait between element-summary calls during a history backfill (ADR-027).
+# A full backfill is one call per player (~567), so we throttle to respect rate limits
+# (~0.3s ≈ a few minutes). It's a fetch-once-per-season job, kept out of `refresh`.
+HISTORY_THROTTLE = 0.3
+
 # ClubElo — the second (external) data source: team Elo ratings (ADR-010).
 # The API returns CSV for a given date at CLUBELO_BASE_URL/<YYYY-MM-DD>.
 CLUBELO_BASE_URL = "http://api.clubelo.com"

@@ -77,3 +77,12 @@ class FplClient:
     def get_fixtures(self) -> list:
         """Fetch the fixtures payload (all matches)."""
         return self._get_json(config.FIXTURES_PATH)
+
+    def get_element_summary(self, element_id: int) -> dict:
+        """Fetch one player's element-summary (ADR-027).
+
+        Contains `fixtures`, this-season per-GW `history`, and `history_past`
+        (past-season summaries). One call per player — the caller throttles a bulk
+        backfill (see ingest.backfill_history).
+        """
+        return self._get_json(config.ELEMENT_SUMMARY_PATH.format(element_id))

@@ -6,14 +6,17 @@ Keeping it in one module (rather than inside the CLI handler) honours ADR-003:
 the CLI dispatches, the ingestion does the work.
 """
 
-from src.api.client import FplClient
+import time
+
+from src import config
+from src.api.client import FplApiError, FplClient
 from src.api.clubelo import (
     ClubEloError,
     EloClient,
     map_elo_to_teams,
     parse_english_elo,
 )
-from src.models import Fixture, Player, Team
+from src.models import Fixture, Player, PlayerSeason, Team
 from src.storage import Storage
 
 
@@ -44,6 +47,52 @@ def refresh(
     n_elo = _refresh_elo(store, data.get("teams", []), elo_client)
 
     return len(players), len(teams), len(fixtures), n_elo
+
+
+def backfill_history(
+    store: Storage,
+    client: FplClient | None = None,
+    ids: list[int] | None = None,
+    sleep_between: float = config.HISTORY_THROTTLE,
+    sleep=time.sleep,
+    progress=None,
+) -> tuple[int, int, int]:
+    """Fetch each player's past-season summaries and store them (ADR-027).
+
+    One `element-summary` call per player, **throttled** (`sleep_between`) to respect
+    rate limits and kept out of `refresh`. **Idempotent** (upsert on code+season, so an
+    interrupted run resumes) and **per-player degrading** — one player's FplApiError is
+    logged and skipped, never aborting the run. `ids` defaults to every stored player;
+    pass a subset to backfill a slice. `progress(i, total)` is called after each player.
+
+    Returns (players_processed, seasons_stored, failures).
+    """
+    client = client or FplClient()
+    if ids is None:
+        ids = store.get_player_ids()
+
+    processed = seasons_stored = failures = 0
+    total = len(ids)
+    for i, element_id in enumerate(ids, start=1):
+        try:
+            summary = client.get_element_summary(element_id)
+        except FplApiError as exc:
+            failures += 1
+            print(f"  history: player {element_id} failed — skipped ({exc}).")
+        else:
+            rows = [PlayerSeason.from_api(s) for s in summary.get("history_past", [])]
+            if rows:
+                store.save_history_past(rows)
+                seasons_stored += len(rows)
+            processed += 1
+
+        if progress:
+            progress(i, total)
+        # Throttle between calls (not after the last one).
+        if sleep_between and i < total:
+            sleep(sleep_between)
+
+    return processed, seasons_stored, failures
 
 
 def _refresh_elo(store: Storage, raw_teams, elo_client: EloClient | None) -> int:

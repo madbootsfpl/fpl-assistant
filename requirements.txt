@@ -4,3 +4,5 @@ pulp          # integer-programming solver for the squad optimiser (ADR-008)
 
 # Development / testing
 pytest
+ruff          # linter (CI + pre-commit; config in ruff.toml) — ADR none, US-079
+pre-commit    # optional local hooks (.pre-commit-config.yaml); run `pre-commit install`

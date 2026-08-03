@@ -50,6 +50,9 @@ class Player:
     # % chance of playing next round (None when fully fit); `news` explains an issue.
     chance: int | None = None
     news: str | None = None
+    # The stable cross-season id (Sprint 026, ADR-028) — the join key to
+    # player_history_past (whose per-season `id` differs from this year's `id`).
+    code: int | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -86,4 +89,5 @@ class Player:
             recoveries=raw.get("recoveries"),
             chance=raw.get("chance_of_playing_next_round"),
             news=raw.get("news"),
+            code=raw.get("code"),
         )

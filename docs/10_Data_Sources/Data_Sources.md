@@ -1,8 +1,15 @@
 This file lists potential data sources, nothing agreed and there may be others to pull data from
 
-> **Integrated so far:** Official FPL API (players, teams, fixtures) and **ClubElo**
-> (team Elo, Sprint 009 — best-effort/graceful, powers `fdr --type elo`; see ADR-010).
+> **Integrated so far:** Official FPL API — `bootstrap-static` + `fixtures` (players, teams,
+> fixtures) and, since Sprint 026, `element-summary/{id}/` for **past-season history**
+> (`history_past`, ADR-027) — plus **ClubElo** (team Elo, Sprint 009 — best-effort/graceful,
+> powers `fdr --type elo`; see ADR-010).
 > Next candidate: FBref/SoccerData for player xG/xA (harder — player-name matching).
+
+> **⚠️ Historical data caveat (ADR-027, confirmed Sprint 026):** in `history_past`, only
+> `total_points / minutes / goals / assists` are reliable across *all* seasons. `xG/xA/xGI/xGC`
+> and `defensive_contribution` are **recent-seasons-only** — FPL sends a hard `0.00`/`0` for older
+> seasons, meaning "not tracked", not a real zero. Don't trend them across seasons.
 
 The best assistants combine **Fantasy data + Football data + Context + AI-generated insights**.
 

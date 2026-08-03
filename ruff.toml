@@ -1,0 +1,18 @@
+# Ruff config (Sprint 026, US-079 — CI/CD).
+#
+# A deliberately small, stable ruleset for a learning project: real errors (E),
+# pyflakes dead-code/undefined-name (F), and import ordering (I). We *don't* enable
+# the opinionated preview rules (RUF/DTZ) — e.g. `date.today()` is correct here, and
+# we'd rather keep working code than churn it to satisfy a style preference.
+
+target-version = "py313"
+line-length = 120   # the code naturally runs to ~112; 120 catches only egregious lines
+
+# Throwaway spike code (Sprint 015 / ADR-016 — soccerdata evaluation) isn't maintained.
+exclude = ["spikes"]
+
+[lint]
+select = ["E", "F", "I"]
+
+[lint.per-file-ignores]
+"tests/*" = ["E501"]

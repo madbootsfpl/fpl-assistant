@@ -29,3 +29,4 @@ data/*.json
 
 # seleniumbase/soccerdata spike cruft (never committed)
 downloaded_files/
+.ruff_cache/

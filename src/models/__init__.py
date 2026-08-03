@@ -7,6 +7,7 @@ mapping next to the model means the API's quirks are handled in one obvious plac
 
 from src.models.fixture import Fixture
 from src.models.player import Player
+from src.models.player_season import PlayerSeason
 from src.models.team import Team
 
-__all__ = ["Fixture", "Player", "Team"]
+__all__ = ["Fixture", "Player", "PlayerSeason", "Team"]

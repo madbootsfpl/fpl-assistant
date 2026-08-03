@@ -90,6 +90,22 @@ published difficulty or our own (the opponent's overall strength at their venue,
 ADR-005) — same averaging/ranking machinery, a different input number. Keeping both
 lets us compare our rating against FPL's.
 
+**Enriching a metric's *input*, not its formula (ADR-028).** Sprint 026 improved xP
+without touching its formula: instead of the rate being one noisy season's
+`points_per_game`, it's a **multi-season baseline** — a recency- and minutes-weighted
+points-per-90 over the last ≤3 seasons (from the new past-season history, ADR-027),
+falling back to the current season when a player has no history. Two lessons worth
+keeping:
+- **Gate small samples.** A cameo season (2 pts in 20 mins → pp90 90.0) invents an
+  absurd rate. A live smoke test — not the unit tests, which used clean data — caught
+  it topping the ranking; the fix was the same ≥900-minute gate the DefCon/over-under
+  views use (the Sprint 016 Meslier lesson, again). *Verify metrics on real data.*
+- **Use only trustworthy fields.** Older seasons report `0.00` for stats that didn't
+  exist yet (xG, DefCon) — a 0 meaning "not tracked", not a real zero. The baseline
+  uses only points + minutes, which are reliable across all seasons (ADR-027).
+- **Know the boundary.** The baseline is a *"quality when playing"* rate — it doesn't
+  model rotation/minutes (that's xMins, a later phase). Stated in the view's footer.
+
 ---
 
 ## Common Mistakes

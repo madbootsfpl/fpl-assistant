@@ -92,10 +92,25 @@ Current suite: **9 tests** across client, models, storage and the table renderer
 
 ---
 
+## Continuous Integration (Sprint 026)
+
+The whole point of an **offline** test suite is that a machine can run it on every push.
+`.github/workflows/ci.yml` (GitHub Actions) does exactly that: on each push/PR it installs
+the deps, runs `ruff check .` (lint), then `pytest` — across Python 3.13 and 3.14. Because
+the tests use fakes and an in-memory DB (no network), CI is fast and deterministic; a red
+build means a real regression, not a flaky API. `.pre-commit-config.yaml` runs the same
+lint locally on commit (opt-in: `pre-commit install`).
+
+A judgement call worth remembering: the linter (`ruff`) is scoped to a **small, stable**
+ruleset (errors, dead code, import order — `ruff.toml`), *not* every opinionated default.
+`date.today()` is correct here, so we didn't enable the rule that dislikes it — a first CI
+should catch real problems, not force churn on working code.
+
 ## Lessons Learned
 
 - Testable code and good architecture are the same thing seen from two angles: our
   layers were easy to test *because* each one had a single, isolated job.
+- An offline suite is what makes CI worth having — deterministic, fast, no flaky network.
 
 ---
 

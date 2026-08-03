@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 
 from src import config
-from src.models import Fixture, Player, Team
+from src.models import Fixture, Player, PlayerSeason, Team
 
 CREATE_TEAMS = """
 CREATE TABLE IF NOT EXISTS teams (
@@ -50,6 +50,7 @@ _MIGRATIONS = {
         "recoveries": "INTEGER",
         "chance": "INTEGER",
         "news": "TEXT",
+        "code": "INTEGER",
     },
 }
 
@@ -79,7 +80,33 @@ CREATE TABLE IF NOT EXISTS players (
     tackles         INTEGER,
     recoveries      INTEGER,
     chance          INTEGER,
-    news            TEXT
+    news            TEXT,
+    code            INTEGER
+)
+"""
+
+# Past-season history (ADR-027). Keyed by element_code (stable across seasons) +
+# season_name. NO foreign key to players — history outlives a player's presence in
+# the current game (a departed player still has past seasons), like ADR-024's squads.
+CREATE_HISTORY_PAST = """
+CREATE TABLE IF NOT EXISTS player_history_past (
+    element_code               INTEGER NOT NULL,
+    season_name                TEXT NOT NULL,
+    total_points               INTEGER,
+    minutes                    INTEGER,
+    goals_scored               INTEGER,
+    assists                    INTEGER,
+    clean_sheets               INTEGER,
+    goals_conceded             INTEGER,
+    expected_goals             REAL,
+    expected_assists           REAL,
+    expected_goal_involvements REAL,
+    expected_goals_conceded    REAL,
+    defensive_contribution     INTEGER,
+    starts                     INTEGER,
+    start_cost                 REAL,
+    end_cost                   REAL,
+    PRIMARY KEY (element_code, season_name)
 )
 """
 
@@ -113,8 +140,8 @@ INSERT INTO players
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
      goals_scored, assists, minutes,
      defcon, defcon_per90, cbi, tackles, recoveries,
-     chance, news)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     chance, news, code)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
     second_name     = excluded.second_name,
@@ -139,7 +166,32 @@ ON CONFLICT(id) DO UPDATE SET
     tackles         = excluded.tackles,
     recoveries      = excluded.recoveries,
     chance          = excluded.chance,
-    news            = excluded.news
+    news            = excluded.news,
+    code            = excluded.code
+"""
+
+UPSERT_HISTORY_PAST = """
+INSERT INTO player_history_past
+    (element_code, season_name, total_points, minutes, goals_scored, assists,
+     clean_sheets, goals_conceded, expected_goals, expected_assists,
+     expected_goal_involvements, expected_goals_conceded, defensive_contribution,
+     starts, start_cost, end_cost)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(element_code, season_name) DO UPDATE SET
+    total_points               = excluded.total_points,
+    minutes                    = excluded.minutes,
+    goals_scored               = excluded.goals_scored,
+    assists                    = excluded.assists,
+    clean_sheets               = excluded.clean_sheets,
+    goals_conceded             = excluded.goals_conceded,
+    expected_goals             = excluded.expected_goals,
+    expected_assists           = excluded.expected_assists,
+    expected_goal_involvements = excluded.expected_goal_involvements,
+    expected_goals_conceded    = excluded.expected_goals_conceded,
+    defensive_contribution     = excluded.defensive_contribution,
+    starts                     = excluded.starts,
+    start_cost                 = excluded.start_cost,
+    end_cost                   = excluded.end_cost
 """
 
 UPSERT_FIXTURE = """
@@ -178,6 +230,7 @@ class Storage:
             self.conn.execute(CREATE_TEAMS)
             self.conn.execute(CREATE_PLAYERS)
             self.conn.execute(CREATE_FIXTURES)
+            self.conn.execute(CREATE_HISTORY_PAST)
             self._migrate()
 
     def _migrate(self) -> None:
@@ -214,11 +267,51 @@ class Storage:
              p.xg, p.xa, p.xgi, p.xgc,
              p.goals_scored, p.assists, p.minutes,
              p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries,
-             p.chance, p.news)
+             p.chance, p.news, p.code)
             for p in players
         ]
         with self.conn:
             self.conn.executemany(UPSERT_PLAYER, rows)
+
+    def save_history_past(self, seasons: list[PlayerSeason]) -> None:
+        """Upsert past-season history rows (ADR-027). Idempotent on (code, season)."""
+        rows = [
+            (s.element_code, s.season_name, s.total_points, s.minutes,
+             s.goals_scored, s.assists, s.clean_sheets, s.goals_conceded,
+             s.expected_goals, s.expected_assists, s.expected_goal_involvements,
+             s.expected_goals_conceded, s.defensive_contribution, s.starts,
+             s.start_cost, s.end_cost)
+            for s in seasons
+        ]
+        with self.conn:
+            self.conn.executemany(UPSERT_HISTORY_PAST, rows)
+
+    def get_player_ids(self) -> list[int]:
+        """Every stored player's (per-season) id — the backfill's work list."""
+        return [row[0] for row in self.conn.execute("SELECT id FROM players ORDER BY id")]
+
+    def get_history_past(self, element_code: int) -> list[sqlite3.Row]:
+        """A player's past seasons (oldest first), by stable element_code."""
+        return self.conn.execute(
+            "SELECT * FROM player_history_past WHERE element_code = ? ORDER BY season_name",
+            (element_code,),
+        ).fetchall()
+
+    def count_history_past(self) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM player_history_past").fetchone()[0]
+
+    def get_history_by_code(self) -> dict[int, list[sqlite3.Row]]:
+        """All past seasons grouped by element_code, oldest first within each player.
+
+        One query for the whole backfill — the xP baseline (ADR-028) needs every
+        player's seasons, so this avoids a per-player round-trip.
+        """
+        grouped: dict[int, list[sqlite3.Row]] = {}
+        for row in self.conn.execute(
+            "SELECT * FROM player_history_past ORDER BY element_code, season_name"
+        ):
+            grouped.setdefault(row["element_code"], []).append(row)
+        return grouped
 
     def save_team_elo(self, elo_by_team: dict) -> None:
         """Update only the `elo` column for the given team ids.
