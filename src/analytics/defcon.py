@@ -8,6 +8,9 @@ DefCon-eligible and are excluded.
 """
 
 # Per-match thresholds (FPL rules). DEF count CBIT; MID/FWD count CBIT + recoveries.
+# NOTE: these numbers are transcribed from FPL's published scoring rules — the API does
+# NOT expose them (see Handbook Ch25). Treat as a hand-maintained assumption: confirm
+# against FPL's official rules, and re-check each season (FPL can change them).
 THRESHOLD = {"DEF": 10, "MID": 12, "FWD": 12}   # GK: not eligible → excluded
 MIN_MINUTES = 900   # ~10 matches — a per-90 rate off a tiny sample is noise
 
