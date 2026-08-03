@@ -53,6 +53,9 @@ class Player:
     # The stable cross-season id (Sprint 026, ADR-028) — the join key to
     # player_history_past (whose per-season `id` differs from this year's `id`).
     code: int | None = None
+    # Set-piece duty (Sprint 027, ADR-029). 1 = first-choice penalty taker — a captaincy
+    # ceiling signal (shown as context; the returns are already in the player's points).
+    penalties_order: int | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -90,4 +93,5 @@ class Player:
             chance=raw.get("chance_of_playing_next_round"),
             news=raw.get("news"),
             code=raw.get("code"),
+            penalties_order=raw.get("penalties_order"),
         )

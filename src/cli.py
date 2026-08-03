@@ -18,6 +18,7 @@ from src.analytics import (
     XI_FLEX,
     available_players,
     baseline_rate,
+    captain_picks,
     defcon_reliability,
     defensive_solidity,
     elo_difficulty_bands,
@@ -34,6 +35,7 @@ from src.analytics import (
 from src.api.client import FplApiError
 from src.squads import SquadStore
 from src.storage import Storage
+from src.ui.captain import render_captain_picks
 from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
 from src.ui.fdr import render_fdr_table
@@ -367,6 +369,48 @@ def cmd_xp(args) -> None:
     store.close()
 
 
+def cmd_captain(args) -> None:
+    """Recommend the top captain picks for the next gameweek (ADR-029).
+
+    With `--squad <name>`, candidates are drawn from a saved squad (ADR-024) — the real
+    weekly question ("who do I captain from *my* team?"); otherwise from all players.
+    """
+    store = Storage()
+    try:
+        players = store.get_players()
+        upcoming = store.get_upcoming_fixtures()
+        if not players:
+            print("No players — run `refresh` first.")
+            return
+
+        squad_name = None
+        if args.squad:
+            squad = SquadStore().load(args.squad)
+            if squad is None:
+                names = SquadStore().names()
+                hint = f" Saved: {', '.join(names)}." if names else " None saved yet."
+                print(f"No saved squad '{args.squad}'.{hint}")
+                return
+            squad_name = args.squad
+            ids = set(squad["player_ids"])            # departed ids simply won't match
+            players = [p for p in players if p["id"] in ids]
+            if not players:
+                print(f"Squad '{args.squad}' has no current players to captain.")
+                return
+
+        baseline_by_code = {
+            code: baseline_rate(rows)
+            for code, rows in store.get_history_by_code().items()
+        }
+        picks = captain_picks(
+            players, upcoming, baseline_by_code=baseline_by_code,
+            source=args.type, limit=args.limit,
+        )
+        print(render_captain_picks(picks, squad_name=squad_name))
+    finally:
+        store.close()
+
+
 def cmd_fdr(args) -> None:
     """Rank teams by how easy their upcoming fixtures are."""
     store = Storage()
@@ -485,6 +529,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--limit", type=int, default=20, help="How many players to show (default 20)",
     )
     p_xp.set_defaults(handler=cmd_xp)
+
+    p_captain = sub.add_parser(
+        "captain", help="Recommend captain picks for the next gameweek (by xP)"
+    )
+    p_captain.add_argument(
+        "--type", choices=["fpl", "custom"], default="fpl",
+        help="Difficulty source used in the xP calc (default fpl)",
+    )
+    p_captain.add_argument(
+        "--limit", type=int, default=5, help="How many candidates to show (default 5)",
+    )
+    p_captain.add_argument(
+        "--squad", help="Only consider players from a saved squad (see `squad --save`)",
+    )
+    p_captain.set_defaults(handler=cmd_captain)
 
     p_xg = sub.add_parser("xg", help="Rank players by expected goal involvement (xG + xA)")
     p_xg.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")

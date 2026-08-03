@@ -8,6 +8,7 @@ import pytest
 
 from src.cli import (
     build_parser,
+    cmd_captain,
     cmd_fdr,
     cmd_filter,
     cmd_fixtures,
@@ -312,6 +313,21 @@ def test_xp_options_are_parsed():
     assert args.pos == "MID"
     assert args.limit == 5
     assert args.next == 6
+
+
+def test_captain_command_defaults():
+    args = build_parser().parse_args(["captain"])
+    assert args.command == "captain"
+    assert args.limit == 5          # top-5 candidates by default
+    assert args.type == "fpl"
+    assert args.squad is None       # global unless --squad is given
+    assert args.handler is cmd_captain
+
+
+def test_captain_squad_and_limit_are_parsed():
+    args = build_parser().parse_args(["captain", "--squad", "my-team", "--limit", "3"])
+    assert args.squad == "my-team"
+    assert args.limit == 3
 
 
 def test_no_command_leaves_no_handler():

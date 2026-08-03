@@ -82,8 +82,14 @@ def _horizon_difficulties(upcoming, source: str, gameweeks: int) -> dict:
     return difficulties_by_team
 
 
+def _status_is_active(p) -> bool:
+    """Default availability: only a fully-fit player (status 'a') scores (ADR-006)."""
+    return p["status"] == "a"
+
+
 def player_xp(
-    players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None
+    players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
+    is_available=None,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -94,16 +100,21 @@ def player_xp(
     — keyed by the player's `code` in `baseline_by_code` — else the current
     `points_per_game`. xP is the sum of per-fixture rate × fixture-multiplier over the
     horizon; 0 if the player is unavailable or has no rate at all. Sorted by xP, highest first.
+
+    `is_available(player)` decides who scores (others → 0); it defaults to "status is 'a'".
+    The captain view (ADR-029) passes a looser predicate so *doubtful* players still get an
+    xP (to be suggested with a flag) rather than being zeroed.
     """
     difficulties_by_team = _horizon_difficulties(upcoming, source, horizon)
     baseline_by_code = baseline_by_code or {}
+    is_available = is_available or _status_is_active
 
     results = []
     for p in players:
         ppg = p["points_per_game"]
         baseline = baseline_by_code.get(_get(p, "code"))
         rate = baseline if baseline is not None else ppg   # ADR-028: baseline, else current
-        available = p["status"] == "a"
+        available = is_available(p)
         difficulties = difficulties_by_team.get(p["team_id"], [])
 
         if rate is None or not available:

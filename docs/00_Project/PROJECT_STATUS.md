@@ -1,11 +1,11 @@
-Current Phase: Phase 2 — Infrastructure, Data Depth & Analytics Hardening (Phase 1 CLI Analytics MVP complete, ADR-026)
-Current Sprint: Sprint 026 - Historical Trend Data & Enriched xP (✅ Complete, 4/4 stories, retro done)
-Current Story: None active — Sprint 027 to pick the next Phase 2 / Phase 3 direction
-Next Milestone: Owner to steer — decision-support (captain picks on the better xP), web UI, or data hardening (full backfill / per-GW once GW1 plays)
+Current Phase: Phase 3 — Decision Support (open; captain suggestions shipped). Phase 1 MVP complete; Phase 2 first slice done
+Current Sprint: Sprint 027 - Captain Suggestions (✅ Complete, 3/3 stories, retro done)
+Current Story: None active — Sprint 028 to pick the next Phase 3 feature (transfers / team analyser) or data hardening
+Next Milestone: Owner to steer — transfer suggestions or a team analyser (compose xP + saved squads), or data hardening (full backfill / per-GW once GW1 plays)
 Current Version: 0.0.1
 Last Updated: 2026-08-03
-Commands: refresh · history (--backfill) · table · search · filter · fdr (--type) · fixtures · xp · xg · overperf · defcon · cleansheet · squad (--full/--bench/--formation/--objective/--include[-unavailable]/--exclude/--save/--load)
-Sources: FPL — bootstrap-static + fixtures + element-summary (past-season history, ADR-027) — required, retries hard · ClubElo (best-effort, fails fast)
-Tests: 242 · ADRs: 28 · CI: GitHub Actions (ruff + pytest on push, Py 3.13/3.14) · xP uses a multi-season baseline rate (ADR-028)
+Commands: refresh · history (--backfill) · table · search · filter · fdr (--type) · fixtures · xp · captain (--squad/--limit/--type) · xg · overperf · defcon · cleansheet · squad (--full/--bench/--formation/--objective/--include[-unavailable]/--exclude/--save/--load)
+Sources: FPL — bootstrap-static + fixtures + element-summary (past-season history) — required, retries hard · ClubElo (best-effort, fails fast)
+Tests: 249 · ADRs: 29 · CI: GitHub Actions (ruff + pytest on push, Py 3.13/3.14) · captain picks recommend + explain (ADR-029)
 Known issue: ClubElo API down since 2026-08-03 (their end — timeouts/502s; last-known Elo kept, degrades as designed). Re-check next session.
-Deferred (→ later): per-GW history + in-season xP blending (need GW1 played); web UI; session auth; Attack/Def FDR split; decision-support (Phase 3); AI/RAG (Phase 4)
+Deferred (→ later): ceiling/differential captaincy (needs variance data); per-GW history + in-season xP blending (need GW1 played); web UI; transfers/team analyser (Phase 3); AI/RAG (Phase 4)

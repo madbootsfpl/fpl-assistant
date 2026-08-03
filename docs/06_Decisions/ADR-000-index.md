@@ -33,3 +33,4 @@ new ADR as it is created.
 | [026](./ADR-026-phase1-cli-mvp.md) | Declare Phase 1 (CLI Analytics MVP) complete; reframe the Roadmap | Accepted |
 | [027](./ADR-027-historical-past-seasons.md) | Historical past-season data (`history --backfill`) | Accepted |
 | [028](./ADR-028-xp-historical-baseline.md) | xP historical baseline (multi-season rate) | Accepted |
+| [029](./ADR-029-captain-suggestions.md) | Captain suggestions (recommend + explain; xP, GK-excluded) | Accepted |

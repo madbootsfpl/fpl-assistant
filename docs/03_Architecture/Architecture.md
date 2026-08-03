@@ -393,6 +393,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   preseason and falling back to current `ppg` without history. Only the rate input changed — the xP
   formula, horizon, and optimiser are untouched (policy at the edge); `players` gains a `code` join
   key. A live smoke caught cameo seasons inventing absurd rates → the ≥900-min gate (Sprint 016 lesson).
+- **Sprint 027 (2026-08-03)** — *captain suggestions* (**Phase 3 / decision support begins**), per
+  ADR-029. The app's first feature that *recommends and explains* rather than ranks: a
+  `captain_picks` analytics fn ranks available **outfield** players by next-GW xP (ADR-028) and
+  annotates each with opponent, venue, and penalty duty. Reuses availability (ADR-023) and the
+  shared renderer (ADR-025 — its first new consumer); `players` gains `penalties_order`.
+  Probe-driven policy: **exclude GKs** (a keeper ranked #3 by mean xP — the mean-not-ceiling caveat)
+  and **keep doubtful players, flagged** (a new `is_available` seam on `player_xp` so they aren't
+  zeroed). Penalties are context, not a score bump (no double-counting). No new dependency.
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

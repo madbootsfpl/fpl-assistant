@@ -13,6 +13,9 @@ tech-debt.)*
 - **Bench order** — which bench player subs on first (Sprint 012 sequel).
 - **Availability flags in the ranking views** — surface injury/suspension flags in
   `table`/`xg`/etc. the way `squad` does (Sprint 022 sequel).
+- **Ceiling / "differential" captaincy** — `captain` (Sprint 027, ADR-029) ranks by *mean* xP,
+  which favours nailed-on premiums. A ceiling/variance view would surface high-upside punts — but
+  it needs variance/form data we don't have yet. Revisit once in-season data accrues.
 
 ### Done (kept for the trail)
 

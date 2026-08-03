@@ -106,6 +106,18 @@ keeping:
 - **Know the boundary.** The baseline is a *"quality when playing"* rate — it doesn't
   model rotation/minutes (that's xMins, a later phase). Stated in the view's footer.
 
+**From ranking to *recommending* (Sprint 027, decision support).** Captain suggestions
+(ADR-029) are the first feature that *advises* rather than lists — and the lesson is that a
+good recommendation **reuses a trusted metric and explains itself**, rather than inventing a
+new score. `captain_picks` ranks by the existing xP, then adds *why* (opponent, venue, penalty
+duty) and applies decision-appropriate policy: exclude goalkeepers (captaincy is a ceiling bet;
+a keeper ranked 3rd by mean xP gave that away on a live probe) and keep doubtful players but
+*flag* them. Two rules worth keeping:
+- **Don't double-count.** Penalty takers are shown as context, not given a score bonus — their
+  penalty returns are already inside xP. Adding a bonus would count them twice.
+- **Explain, then let the human decide.** A recommendation the manager can see the reasons for
+  is one they can trust or overrule — better than an unexplained "captain X".
+
 ---
 
 ## Common Mistakes
@@ -114,6 +126,8 @@ keeping:
 - **Hiding the metric in SQL or the display.** Then "what counts as value" is smeared
   across layers. Keep it in analytics.
 - **Inventing a value for undefined cases** (e.g. 0) — it mixes with real low values.
+- **Inventing a new score when a trusted one exists** — captaincy reuses xP + context, not a
+  bespoke "captain rating" that would need its own validation.
 
 ---
 

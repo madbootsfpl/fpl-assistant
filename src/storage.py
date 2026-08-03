@@ -51,6 +51,7 @@ _MIGRATIONS = {
         "chance": "INTEGER",
         "news": "TEXT",
         "code": "INTEGER",
+        "penalties_order": "INTEGER",
     },
 }
 
@@ -81,7 +82,8 @@ CREATE TABLE IF NOT EXISTS players (
     recoveries      INTEGER,
     chance          INTEGER,
     news            TEXT,
-    code            INTEGER
+    code            INTEGER,
+    penalties_order INTEGER
 )
 """
 
@@ -140,8 +142,8 @@ INSERT INTO players
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
      goals_scored, assists, minutes,
      defcon, defcon_per90, cbi, tackles, recoveries,
-     chance, news, code)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     chance, news, code, penalties_order)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
     second_name     = excluded.second_name,
@@ -167,7 +169,8 @@ ON CONFLICT(id) DO UPDATE SET
     recoveries      = excluded.recoveries,
     chance          = excluded.chance,
     news            = excluded.news,
-    code            = excluded.code
+    code            = excluded.code,
+    penalties_order = excluded.penalties_order
 """
 
 UPSERT_HISTORY_PAST = """
@@ -267,7 +270,7 @@ class Storage:
              p.xg, p.xa, p.xgi, p.xgc,
              p.goals_scored, p.assists, p.minutes,
              p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries,
-             p.chance, p.news, p.code)
+             p.chance, p.news, p.code, p.penalties_order)
             for p in players
         ]
         with self.conn:
