@@ -3,30 +3,24 @@
 Pure formatting: takes the ranked rows (from analytics.over_under) and shows two ends —
 the biggest over-performers (regression risk) and under-performers (bounce-back). Only
 attacking returns are compared, so a caveat is printed to stop the number being over-read.
+
+The two tables share the shape from the shared renderer (`ui._table`, ADR-025) — each
+section calls `render_rows` with `divider=False`, so its rank column restarts at 1.
 """
 
-_RANK_W = 3
+from ._table import Col, render_rows
+
 _NAME_W = 16
-_TEAM_W = 5
-_POS_W = 4
-_MIN_W = 6
-_NUM_W = 7
 
-
-def _header():
-    return (
-        f"{'#':<{_RANK_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} {'Pos':<{_POS_W}} "
-        f"{'Mins':>{_MIN_W}} {'Actual':>{_NUM_W}} {'Exp':>{_NUM_W}} {'Diff':>{_NUM_W}}"
-    )
-
-
-def _row(rank, r):
-    return (
-        f"{rank:<{_RANK_W}} {str(r['web_name'])[:_NAME_W]:<{_NAME_W}} "
-        f"{str(r['team'] or ''):<{_TEAM_W}} {str(r['position'] or ''):<{_POS_W}} "
-        f"{r['minutes']:>{_MIN_W}} {r['actual']:>{_NUM_W}.1f} {r['expected']:>{_NUM_W}.1f} "
-        f"{r['diff']:>+{_NUM_W}.1f}"
-    )
+_COLS = [
+    Col("Player", _NAME_W, "<", lambda r: str(r["web_name"])[:_NAME_W]),
+    Col("Team", 5, "<", lambda r: str(r["team"] or "")),
+    Col("Pos", 4, "<", lambda r: str(r["position"] or "")),
+    Col("Mins", 6, ">", lambda r: str(r["minutes"])),
+    Col("Actual", 7, ">", lambda r: f"{r['actual']:.1f}"),
+    Col("Exp", 7, ">", lambda r: f"{r['expected']:.1f}"),
+    Col("Diff", 7, ">", lambda r: f"{r['diff']:+.1f}"),
+]
 
 
 def render_overperf(rows, limit: int = 10, min_minutes: int = 900) -> str:
@@ -42,16 +36,13 @@ def render_overperf(rows, limit: int = 10, min_minutes: int = 900) -> str:
 
     lines = [
         f"Over/under-performance — attacking points, players ≥ {min_minutes} mins", "",
-        "Over-performing (finishing hot → regression risk):", _header(),
+        "Over-performing (finishing hot → regression risk):",
     ]
-    for rank, r in enumerate(over, start=1):
-        lines.append(_row(rank, r))
+    lines += render_rows(over, _COLS, rank=True, divider=False)
 
     lines.append("")
     lines.append("Under-performing (unlucky → bounce-back):")
-    lines.append(_header())
-    for rank, r in enumerate(under, start=1):
-        lines.append(_row(rank, r))
+    lines += render_rows(under, _COLS, rank=True, divider=False)
 
     lines.append("")
     lines.append(

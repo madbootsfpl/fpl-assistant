@@ -380,3 +380,13 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   bench), kept **separate from the `data/fpl.db` reference cache** so it survives `refresh`.
   `squad --save/--load`; on load the ids are re-priced and availability re-checked against
   current data, and departed players noted. Store the picks, derive the numbers fresh.
+- **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
+  `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
+  (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps
+  output **byte-identical**: `fmt` produces the finished cell string (truncation, number format),
+  and `render_rows` only pads. **All five** ranking views (`table`, `xg`, `overperf`, `defcon`,
+  `cleansheet`) migrated (US-071/072); every existing view test passed **untouched**. A pure
+  refactor: the duplicated padding logic (written 5×) is now written once — each view shrank ~12%
+  and became a declarative list of columns. (Raw line total is ~flat: the well-documented shared
+  module offsets the per-view savings; the win is maintainability — a new view or column is a
+  one-line change.) No behaviour change, no dependency.

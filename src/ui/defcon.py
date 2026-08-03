@@ -3,14 +3,24 @@
 Pure formatting: takes the ranked rows (from analytics.defcon_reliability) and lists the
 most reliable DefCon-point earners — per-90 defensive actions vs the position threshold.
 A positive margin means they clear the bar on average; the bigger the margin, the safer.
+
+The table shape comes from the shared renderer (`ui._table`, ADR-025); this module
+supplies the columns, title, and footer.
 """
 
-_RANK_W = 3
+from ._table import Col, render_rows
+
 _NAME_W = 16
-_TEAM_W = 5
-_POS_W = 4
-_MIN_W = 6
-_NUM_W = 7
+
+_COLS = [
+    Col("Player", _NAME_W, "<", lambda r: str(r["web_name"])[:_NAME_W]),
+    Col("Team", 5, "<", lambda r: str(r["team"] or "")),
+    Col("Pos", 4, "<", lambda r: str(r["position"] or "")),
+    Col("Mins", 6, ">", lambda r: str(r["minutes"])),
+    Col("DC/90", 7, ">", lambda r: f"{r['per90']:.1f}"),
+    Col("Thr", 7, ">", lambda r: str(r["threshold"])),
+    Col("Margin", 7, ">", lambda r: f"{r['margin']:+.1f}"),
+]
 
 
 def render_defcon(rows, limit: int = 20, min_minutes: int = 900) -> str:
@@ -20,26 +30,11 @@ def render_defcon(rows, limit: int = 20, min_minutes: int = 900) -> str:
             "first, or lower --min-minutes."
         )
 
-    header = (
-        f"{'#':<{_RANK_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} {'Pos':<{_POS_W}} "
-        f"{'Mins':>{_MIN_W}} {'DC/90':>{_NUM_W}} {'Thr':>{_NUM_W}} {'Margin':>{_NUM_W}}"
-    )
-    divider = (
-        f"{'-' * _RANK_W} {'-' * _NAME_W} {'-' * _TEAM_W} {'-' * _POS_W} "
-        f"{'-' * _MIN_W} {'-' * _NUM_W} {'-' * _NUM_W} {'-' * _NUM_W}"
-    )
-
     lines = [
         f"Defensive Contribution — per-90 vs threshold, players ≥ {min_minutes} mins",
-        "", header, divider,
+        "",
     ]
-    for rank, r in enumerate(rows[:limit], start=1):
-        lines.append(
-            f"{rank:<{_RANK_W}} {str(r['web_name'])[:_NAME_W]:<{_NAME_W}} "
-            f"{str(r['team'] or ''):<{_TEAM_W}} {str(r['position'] or ''):<{_POS_W}} "
-            f"{r['minutes']:>{_MIN_W}} {r['per90']:>{_NUM_W}.1f} {r['threshold']:>{_NUM_W}} "
-            f"{r['margin']:>+{_NUM_W}.1f}"
-        )
+    lines += render_rows(rows[:limit], _COLS, rank=True)
 
     lines.append("")
     lines.append(

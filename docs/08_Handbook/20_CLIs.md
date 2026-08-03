@@ -111,6 +111,22 @@ python app.py squad --formation 3-5-2             # pin the XI shape (default: b
 
 - A CLI is just another entry point. The value of the layered design is that adding
   one (or four) commands didn't disturb the client/storage/display below.
+- **One shared renderer for many tables (DRY, done safely).** Five ranking views
+  (`table`, `xg`, `overperf`, `defcon`, `cleansheet`) each printed the same shape —
+  a header, a divider, then fixed-width aligned rows — with the padding logic copied
+  five times. Sprint 024 extracted it to `src/ui/_table.py`: a `Col` spec
+  (header, width, align, `fmt`) + `render_rows(rows, columns, rank=, divider=)`. Each
+  view now *describes its columns as data* and calls one helper. Two lessons worth
+  keeping:
+  - **The seam that keeps output identical:** the column's `fmt(row)` returns the
+    *finished* cell string (any truncation, any number format like `.1f`/`+.1f`), and
+    the renderer does nothing but pad to width. So every per-view quirk stays in the
+    view; the core carries none. `format(v, '.1f')` then `{s:>6}` is byte-for-byte
+    the same as `{v:>6.1f}` — proven before touching code.
+  - **How to refactor without fear:** capture each view's output to a frozen baseline
+    *first*, migrate, then diff byte-for-byte — and keep the existing tests green
+    **untouched** (they pin behaviour). A refactor that changes output isn't a
+    refactor. (ADR-025.)
 
 ---
 

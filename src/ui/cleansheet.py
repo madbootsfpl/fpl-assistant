@@ -2,14 +2,22 @@
 
 Pure formatting: takes the ranked rows (from analytics.defensive_solidity) and lists the
 DEF/GK with the lowest expected goals conceded per 90 — the best clean-sheet prospects.
+
+The table shape comes from the shared renderer (`ui._table`, ADR-025); this module
+supplies the columns, title, and footer.
 """
 
-_RANK_W = 3
+from ._table import Col, render_rows
+
 _NAME_W = 16
-_TEAM_W = 5
-_POS_W = 4
-_MIN_W = 6
-_NUM_W = 8
+
+_COLS = [
+    Col("Player", _NAME_W, "<", lambda r: str(r["web_name"])[:_NAME_W]),
+    Col("Team", 5, "<", lambda r: str(r["team"] or "")),
+    Col("Pos", 4, "<", lambda r: str(r["position"] or "")),
+    Col("Mins", 6, ">", lambda r: str(r["minutes"])),
+    Col("xGC/90", 8, ">", lambda r: f"{r['xgc90']:.2f}"),
+]
 
 
 def render_cleansheet(rows, limit: int = 20, min_minutes: int = 900) -> str:
@@ -19,25 +27,11 @@ def render_cleansheet(rows, limit: int = 20, min_minutes: int = 900) -> str:
             "or lower --min-minutes."
         )
 
-    header = (
-        f"{'#':<{_RANK_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} {'Pos':<{_POS_W}} "
-        f"{'Mins':>{_MIN_W}} {'xGC/90':>{_NUM_W}}"
-    )
-    divider = (
-        f"{'-' * _RANK_W} {'-' * _NAME_W} {'-' * _TEAM_W} {'-' * _POS_W} "
-        f"{'-' * _MIN_W} {'-' * _NUM_W}"
-    )
-
     lines = [
         f"Clean-sheet prospects — xGC/90 (lowest = best), DEF/GK ≥ {min_minutes} mins",
-        "", header, divider,
+        "",
     ]
-    for rank, r in enumerate(rows[:limit], start=1):
-        lines.append(
-            f"{rank:<{_RANK_W}} {str(r['web_name'])[:_NAME_W]:<{_NAME_W}} "
-            f"{str(r['team'] or ''):<{_TEAM_W}} {str(r['position'] or ''):<{_POS_W}} "
-            f"{r['minutes']:>{_MIN_W}} {r['xgc90']:>{_NUM_W}.2f}"
-        )
+    lines += render_rows(rows[:limit], _COLS, rank=True)
 
     lines.append("")
     lines.append(

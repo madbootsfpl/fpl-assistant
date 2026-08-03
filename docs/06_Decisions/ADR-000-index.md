@@ -29,3 +29,4 @@ new ADR as it is created.
 | [022](./ADR-022-validate-legal-bench.md) | Validate a legal bench (warn, not block) | Accepted |
 | [023](./ADR-023-player-availability.md) | Player availability (skip injured; opt-out) | Accepted |
 | [024](./ADR-024-saved-squad.md) | Saved / persistent squad (user state, JSON) | Accepted |
+| [025](./ADR-025-shared-table-renderer.md) | Shared table renderer (`Col` + `render_rows`) | Accepted |

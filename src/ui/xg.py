@@ -4,17 +4,29 @@ Pure formatting: it takes player rows (from storage, already sorted by xGI) and 
 a string. xGI = xG + xA is the headline attacking involvement; xGC (goals conceded) is a
 defensive counterpoint. Values may be None on a database refreshed before Sprint 014, so
 they're coerced to 0.0 for display.
+
+The table shape (header / divider / aligned rows) comes from the shared renderer
+(`ui._table`, ADR-025); this module supplies the columns, title, and footer.
 """
 
-_RANK_W = 3
-_NAME_W = 17
-_TEAM_W = 5
-_POS_W = 4
-_NUM_W = 6
+from ._table import Col, render_rows
+
+_NAME_W = 17  # also the truncation width, so it's named
 
 
 def _n(value) -> float:
     return value or 0.0
+
+
+_COLS = [
+    Col("Player", _NAME_W, "<", lambda r: str(r["web_name"])[:_NAME_W]),
+    Col("Team", 5, "<", lambda r: str(r["team"] or "")),
+    Col("Pos", 4, "<", lambda r: str(r["position"] or "")),
+    Col("xG", 6, ">", lambda r: f"{_n(r['xg']):.1f}"),
+    Col("xA", 6, ">", lambda r: f"{_n(r['xa']):.1f}"),
+    Col("xGI", 6, ">", lambda r: f"{_n(r['xgi']):.1f}"),
+    Col("xGC", 6, ">", lambda r: f"{_n(r['xgc']):.1f}"),
+]
 
 
 def render_xg_table(rows, limit: int = 20, pos: str | None = None) -> str:
@@ -22,25 +34,7 @@ def render_xg_table(rows, limit: int = 20, pos: str | None = None) -> str:
     if total == 0:
         return "No players to rank — run `refresh` first."
 
-    header = (
-        f"{'#':<{_RANK_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} {'Pos':<{_POS_W}} "
-        f"{'xG':>{_NUM_W}} {'xA':>{_NUM_W}} {'xGI':>{_NUM_W}} {'xGC':>{_NUM_W}}"
-    )
-    divider = (
-        f"{'-' * _RANK_W} {'-' * _NAME_W} {'-' * _TEAM_W} {'-' * _POS_W} "
-        f"{'-' * _NUM_W} {'-' * _NUM_W} {'-' * _NUM_W} {'-' * _NUM_W}"
-    )
-
-    lines = [header, divider]
-    for rank, r in enumerate(rows[:limit], start=1):
-        name = str(r["web_name"])[:_NAME_W]
-        team = str(r["team"] or "")
-        position = str(r["position"] or "")
-        lines.append(
-            f"{rank:<{_RANK_W}} {name:<{_NAME_W}} {team:<{_TEAM_W}} {position:<{_POS_W}} "
-            f"{_n(r['xg']):>{_NUM_W}.1f} {_n(r['xa']):>{_NUM_W}.1f} "
-            f"{_n(r['xgi']):>{_NUM_W}.1f} {_n(r['xgc']):>{_NUM_W}.1f}"
-        )
+    lines = render_rows(rows[:limit], _COLS, rank=True)
 
     lines.append("")
     scope = f" ({pos.upper()})" if pos else ""
