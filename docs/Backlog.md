@@ -8,9 +8,6 @@ Captured ideas not yet scheduled into a sprint.
   the total (e.g. a small `GW1 GW2 GW3 …` mini-row per player). From Tony's Sprint 006
   reflection. Note: FPL only publishes `ep_next` (next GW), so there is no FPL
   multi-week total to show alongside.
-- **Validate a declared bench yields a *legal* XI** — warn if `--bench` leaves an illegal
-  starting XI (e.g. sitting all three forwards). Sprint 013 *displays* the implied shape
-  but doesn't police it (ADR-014). Small, natural follow-on.
 - **Bench order** — which bench player subs on first (Sprint 012 sequel).
 - **Saved / persistent squad** — store the user's own squad (user state) separately from
   FPL reference data; reload + re-price after a refresh. A new persistence concept.
@@ -23,6 +20,8 @@ Captured ideas not yet scheduled into a sprint.
 - ~~Declared bench~~ — **DONE** (Sprint 012, `squad --bench`, ADR-013).
 - ~~Flexible formations~~ — **DONE** (Sprint 013, `squad --formation` + flexible default,
   ADR-014). Ranges (DEF 3–5, MID 2–5, FWD 1–3); the bench-implied shape shown in `--full`.
+- ~~Validate a declared bench yields a legal XI~~ — **DONE** (Sprint 021, `legal_xi_issues`,
+  ADR-022). Warns (not blocks) when a full 4-man bench leaves an illegal XI; reuses `XI_FLEX`.
 
 ## Validated, deferred
 

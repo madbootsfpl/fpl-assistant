@@ -364,3 +364,7 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   refresh, though exhaustion is still fatal; **ClubElo** (best-effort) fails fast (1 retry, 5s
   timeout) so a sustained outage degrades in ~10s not ~31s. One helper, two policies; the more a
   source matters, the harder we try.
+- **Sprint 021 (2026-08-03)** — *validate a legal bench*, per ADR-022. When a full 4-man bench
+  is declared, the 11 starters are checked against the `XI_FLEX` legal ranges (reused from
+  ADR-014); an illegal bench (e.g. 0 FWD) is **warned**, not blocked. Closes the ADR-014 gap;
+  one pure `legal_xi_issues` helper; no new data.

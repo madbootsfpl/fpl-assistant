@@ -5,6 +5,8 @@ returns a string — the XI grouped by position with totals, or a clear message 
 legal XI fits the budget.
 """
 
+from src.analytics.optimizer import legal_xi_issues
+
 _POS_W = 3
 _NAME_W = 17
 _TEAM_W = 5
@@ -100,7 +102,15 @@ def render_squad(
         if any_bench:
             # ADR-013: the starters' subtotal is a true XI only at a full 4-man bench.
             if len(starters) == 11:
-                lines.append("Note: Starters (11) is your XI — the bench won't score.")
+                # ADR-022: check the declared bench actually leaves a legal XI.
+                issues = legal_xi_issues(starters)
+                if issues:
+                    lines.append(
+                        "Note: this bench doesn't leave a legal XI — "
+                        + "; ".join(issues) + "."
+                    )
+                else:
+                    lines.append("Note: Starters (11) is your XI — the bench won't score.")
             else:
                 lines.append(
                     f"Note: Starters ({len(starters)}) excludes your bench; bench 4 for "

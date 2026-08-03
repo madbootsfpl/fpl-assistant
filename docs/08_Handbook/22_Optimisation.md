@@ -230,6 +230,19 @@ So `--formation` is XI-only (with `--full` it's an error — you'd be setting th
 twice). And a single `formation_str()` helper shows *both*: the chosen XI shape, and the
 shape a full 4-man bench implies (`Starters (11) — 4-4-2`). One idea, two views.
 
+**Validating the bench (ADR-022).** Showing the implied shape isn't enough — a shape can be
+*displayable yet illegal* (bench all three forwards and "5-5-0" prints, but 0 forwards is not
+a legal XI). So when a full 4-man bench is declared, `legal_xi_issues()` checks the 11
+starters against the same `XI_FLEX` ranges and **warns** if they don't form a legal XI:
+
+```
+Note: this bench doesn't leave a legal XI — 0 FWD (need 1-3).
+```
+
+It **warns, does not block** — the tool proposes a squad, it doesn't submit a team, so the
+manager stays in control. And it reuses `XI_FLEX`, so bench-legality and formations share one
+rule and can never disagree.
+
 ---
 
 ## Common Mistakes

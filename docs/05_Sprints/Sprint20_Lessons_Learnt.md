@@ -176,12 +176,15 @@ python app.py refresh     # FPL now survives a blip; ClubElo degrades in ~10s, n
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+we are improving our resiliency and will continue to do that.
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+Closing on open backlog items and getting this phase completed
+
 
 ---
 

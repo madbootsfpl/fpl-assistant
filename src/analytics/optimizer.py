@@ -42,6 +42,27 @@ def _formation_bounds(formation: dict, size):
     return bounds, size
 
 
+def legal_xi_issues(starters) -> list:
+    """Reasons `starters` don't form a legal XI — empty if legal (ADR-022).
+
+    Each position's count must sit inside its `XI_FLEX` range (GK 1, DEF 3-5, MID 2-5,
+    FWD 1-3). Used to validate a declared 4-man bench: the 11 non-bench players must be a
+    legal starting XI. Reuses `XI_FLEX` so the rules live in one place (ADR-014).
+    """
+    counts = {}
+    for p in starters:
+        counts[p["position"]] = counts.get(p["position"], 0) + 1
+    issues = []
+    for position, (lo, hi) in XI_FLEX.items():
+        n = counts.get(position, 0)
+        if n < lo:
+            want = f"{lo}" if lo == hi else f"{lo}-{hi}"
+            issues.append(f"{n} {position} (need {want})")
+        elif n > hi:
+            issues.append(f"{n} {position} (max {hi})")
+    return issues
+
+
 def select_squad(
     players,
     budget: float = DEFAULT_BUDGET,

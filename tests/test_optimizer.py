@@ -9,6 +9,7 @@ import pytest
 from src.analytics.optimizer import (
     SQUAD_15,
     XI_FLEX,
+    legal_xi_issues,
     objective_scores,
     resolve_players,
     select_squad,
@@ -418,11 +419,61 @@ def test_render_bench_section_marker_and_starters_subtotal():
     assert "Starters (13): 1300 pts" in out   # the honest subtotal (13 × 100)
 
 
-def test_render_full_four_man_bench_calls_starters_the_xi():
-    out = render_squad(_full_squad_with_bench(bench_count=4, starter_count=11),
+def _bench_row(pos, bench=False):
+    return {"position": pos, "web_name": pos, "team": "ARS",
+            "price": 5.0, "total_points": 50, "forced": False, "bench": bench}
+
+
+def _full_squad(starter_positions, bench_positions):
+    selected = ([_bench_row(p) for p in starter_positions]
+                + [_bench_row(p, True) for p in bench_positions])
+    return {"status": "Optimal", "selected": selected,
+            "total_points": sum(r["total_points"] for r in selected),
+            "total_cost": round(sum(r["price"] for r in selected), 1)}
+
+
+def test_render_full_legal_bench_calls_starters_the_xi():
+    # A legal 4-4-2 XI + a legal 4-man bench (backup GK + 1 DEF/MID/FWD).
+    starters = ["GK"] + ["DEF"] * 4 + ["MID"] * 4 + ["FWD"] * 2
+    out = render_squad(_full_squad(starters, ["GK", "DEF", "MID", "FWD"]),
                        budget=100, full=True)
     assert "Starters (11)" in out
-    assert "is your XI" in out              # caveat softened at a full 4-man bench
+    assert "is your XI" in out               # legal → no warning
+
+
+def test_render_full_illegal_bench_is_warned(monkeypatch):
+    # Bench all 3 forwards (+ a GK) → starters have 0 FWD → illegal.
+    starters = ["GK"] + ["DEF"] * 5 + ["MID"] * 5           # 5-5-0, 11 players
+    out = render_squad(_full_squad(starters, ["GK", "FWD", "FWD", "FWD"]),
+                       budget=100, full=True)
+    assert "doesn't leave a legal XI" in out
+    assert "0 FWD (need 1-3)" in out
+    assert "is your XI" not in out           # warned, but still printed the squad
+    assert "Total:" in out
+
+
+def _xi(counts):
+    """Build a starters list from {position: n} for legal_xi_issues tests."""
+    return [{"position": pos} for pos, n in counts.items() for _ in range(n)]
+
+
+def test_legal_xi_issues_passes_a_legal_xi():
+    assert legal_xi_issues(_xi({"GK": 1, "DEF": 4, "MID": 4, "FWD": 2})) == []
+
+
+def test_legal_xi_issues_flags_too_few_forwards():
+    issues = legal_xi_issues(_xi({"GK": 1, "DEF": 5, "MID": 5, "FWD": 0}))
+    assert issues == ["0 FWD (need 1-3)"]
+
+
+def test_legal_xi_issues_flags_too_few_defenders():
+    issues = legal_xi_issues(_xi({"GK": 1, "DEF": 2, "MID": 5, "FWD": 3}))
+    assert issues == ["2 DEF (need 3-5)"]
+
+
+def test_legal_xi_issues_flags_extra_goalkeeper():
+    issues = legal_xi_issues(_xi({"GK": 2, "DEF": 4, "MID": 3, "FWD": 2}))
+    assert "2 GK (max 1)" in issues          # "need 1" for GK, not "need 1-1"
 
 
 def test_formation_str_counts_outfield_only():
