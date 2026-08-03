@@ -30,6 +30,9 @@ def make_player(
     xa: float | None = None,
     xgi: float | None = None,
     xgc: float | None = None,
+    goals_scored: int | None = None,
+    assists: int | None = None,
+    minutes: int | None = None,
 ) -> Player:
     return Player(
         id=id,
@@ -47,6 +50,9 @@ def make_player(
         xa=xa,
         xgi=xgi,
         xgc=xgc,
+        goals_scored=goals_scored,
+        assists=assists,
+        minutes=minutes,
     )
 
 
@@ -218,6 +224,36 @@ def test_migration_adds_expected_goals_columns_to_an_old_players_table(tmp_path)
     store = Storage(db_path=db)
     cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
     assert {"xg", "xa", "xgi", "xgc"} <= cols
+    store.close()
+
+
+def test_save_players_stores_actual_returns(tmp_path):
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    store.save_players([make_player(id=1, goals_scored=12, assists=7, minutes=3200)])
+
+    row = store.get_players(name="Test")[0]
+    assert (row["goals_scored"], row["assists"], row["minutes"]) == (12, 7, 3200)
+    store.close()
+
+
+def test_migration_adds_actual_return_columns_to_an_old_players_table(tmp_path):
+    db = str(tmp_path / "old.db")
+
+    # A pre-Sprint-016 database: players table without goals/assists/minutes.
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)")
+    conn.execute(
+        """CREATE TABLE players (
+            id INTEGER PRIMARY KEY, first_name TEXT, second_name TEXT, web_name TEXT,
+            team_id INTEGER, position TEXT, price REAL, total_points INTEGER)"""
+    )
+    conn.commit()
+    conn.close()
+
+    store = Storage(db_path=db)
+    cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
+    assert {"goals_scored", "assists", "minutes"} <= cols
     store.close()
 
 

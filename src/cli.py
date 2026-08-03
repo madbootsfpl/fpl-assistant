@@ -18,6 +18,7 @@ from src.analytics import (
     XI_FLEX,
     elo_difficulty_bands,
     objective_scores,
+    over_under,
     player_xp,
     rank_players,
     resolve_players,
@@ -29,6 +30,7 @@ from src.api.client import FplApiError
 from src.storage import Storage
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
+from src.ui.overperf import render_overperf
 from src.ui.squad import render_squad
 from src.ui.xg import render_xg_table
 from src.ui.table import render_player_table
@@ -178,6 +180,15 @@ def cmd_squad(args) -> None:
     store.close()
 
 
+def cmd_overperf(args) -> None:
+    """Show over/under-performers: actual vs expected attacking points (minutes-gated)."""
+    store = Storage()
+    players = store.get_players(position=args.pos.upper() if args.pos else None)
+    rows = over_under(players, min_minutes=args.min_minutes)
+    print(render_overperf(rows, limit=args.limit, min_minutes=args.min_minutes))
+    store.close()
+
+
 def cmd_xg(args) -> None:
     """Rank players by expected goal involvement (xGI = xG + xA)."""
     store = Storage()
@@ -258,6 +269,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python app.py fixtures --team ARS\n"
             "  python app.py xp --type custom --next 5   players by expected points over the next N gameweeks\n"
             "  python app.py xg --pos FWD                players by expected goal involvement (xG + xA)\n"
+            "  python app.py overperf                   over/under-performers (actual vs expected pts)\n"
             "  python app.py squad --objective value     optimal XI (maximise points / value / xp)\n"
             "  python app.py squad --formation 3-5-2     pin the XI shape (default: best legal shape)\n"
             "  python app.py squad --full --bench Dubravka Diop  full 15-man squad; declare your bench\n"
@@ -313,6 +325,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--limit", type=int, default=20, help="How many players to show (default 20)",
     )
     p_xg.set_defaults(handler=cmd_xg)
+
+    p_op = sub.add_parser(
+        "overperf", help="Over/under-performers: actual vs expected attacking points",
+    )
+    p_op.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")
+    p_op.add_argument(
+        "--limit", type=int, default=10, help="How many per end to show (default 10)",
+    )
+    p_op.add_argument(
+        "--min-minutes", type=int, default=900, dest="min_minutes",
+        help="Only rank players with at least this many minutes (default 900)",
+    )
+    p_op.set_defaults(handler=cmd_overperf)
 
     p_squad = sub.add_parser("squad", help="Pick the optimal squad (starting XI, or --full 15)")
     p_squad.add_argument(

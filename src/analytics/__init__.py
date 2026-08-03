@@ -15,6 +15,7 @@ from src.analytics.optimizer import (
     resolve_players,
     select_squad,
 )
+from src.analytics.overperf import over_under
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import player_xp
 
@@ -25,6 +26,7 @@ __all__ = [
     "XI_FLEX",
     "elo_difficulty_bands",
     "objective_scores",
+    "over_under",
     "player_xp",
     "points_per_million",
     "rank_players",

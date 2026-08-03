@@ -238,6 +238,22 @@ def test_xg_command_parses_pos_and_limit():
     assert args.limit == 5
 
 
+def test_overperf_command_parses_options():
+    args = build_parser().parse_args(
+        ["overperf", "--pos", "MID", "--limit", "5", "--min-minutes", "1200"]
+    )
+    assert args.command == "overperf"
+    assert args.pos == "MID"
+    assert args.limit == 5
+    assert args.min_minutes == 1200
+
+
+def test_overperf_min_minutes_defaults_to_900():
+    args = build_parser().parse_args(["overperf"])
+    assert args.min_minutes == 900
+    assert args.limit == 10
+
+
 def test_xp_options_are_parsed():
     args = build_parser().parse_args(
         ["xp", "--type", "custom", "--pos", "MID", "--limit", "5", "--next", "6"]

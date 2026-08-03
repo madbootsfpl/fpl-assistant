@@ -35,6 +35,10 @@ class Player:
     xa: float | None = None
     xgi: float | None = None
     xgc: float | None = None
+    # Actual returns for over/under-performance (Sprint 016, ADR-017). Ints in the API.
+    goals_scored: int | None = None
+    assists: int | None = None
+    minutes: int | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -42,7 +46,8 @@ class Player:
 
         FPL quirks normalised here: element_type → position label; now_cost → £m;
         and points_per_game / ep_next / the expected_* fields arrive as strings, so
-        they're parsed to float (absent → None).
+        they're parsed to float (absent → None). goals_scored / assists / minutes are
+        already ints, so they're taken as-is.
         """
         return cls(
             id=raw["id"],
@@ -60,4 +65,7 @@ class Player:
             xa=_to_float(raw.get("expected_assists")),
             xgi=_to_float(raw.get("expected_goal_involvements")),
             xgc=_to_float(raw.get("expected_goals_conceded")),
+            goals_scored=raw.get("goals_scored"),
+            assists=raw.get("assists"),
+            minutes=raw.get("minutes"),
         )

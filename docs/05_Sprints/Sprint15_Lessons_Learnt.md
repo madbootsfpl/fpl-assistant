@@ -107,7 +107,7 @@ production dependency until decided.
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- on the surface this package looked like it could add a lot to th eproject, however based on our detailed analysis and review we determined value add was much less that th ecost incurred
 
 ---
 
@@ -168,7 +168,7 @@ python3 -m venv sd_probe && ./sd_probe/bin/pip install soccerdata
 
 | Topic | Before | After |
 |--------|-------:|------:|
-| Evaluating a dependency | | |
+| Evaluating a dependency | 2| 5|
 | Entity / name matching | | |
 | Cost-vs-value judgement | | |
 | Architecture | | |
@@ -178,14 +178,16 @@ python3 -m venv sd_probe && ./sd_probe/bin/pip install soccerdata
 
 # Overall Sprint Reflection _(for Tony)_
 
-### What am I most pleased with?
+### What am I most pleased with? 
+that we did a detailed evalution and did not jump in with assumptions
 
 ### What was the biggest lesson?
+double check your assumptions
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-
+tackling the backlog
 ---
 
 # Summary

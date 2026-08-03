@@ -88,6 +88,32 @@ def test_player_from_api_expected_goals_absent_are_none():
     assert player.xgi is None and player.xgc is None
 
 
+def test_player_from_api_parses_actual_returns_as_ints():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 75, "total_points": 100,
+        "goals_scored": 12, "assists": 7, "minutes": 3200,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.goals_scored == 12       # ints, taken as-is (no _to_float)
+    assert player.assists == 7
+    assert player.minutes == 3200
+
+
+def test_player_from_api_actual_returns_absent_are_none():
+    raw = {
+        "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+        "team": 1, "element_type": 3, "now_cost": 50, "total_points": 0,
+    }
+
+    player = Player.from_api(raw)
+
+    assert player.goals_scored is None and player.assists is None
+    assert player.minutes is None
+
+
 def test_player_from_api_missing_xp_inputs_are_none():
     raw = {
         "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

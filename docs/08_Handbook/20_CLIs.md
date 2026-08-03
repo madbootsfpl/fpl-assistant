@@ -77,6 +77,7 @@ python app.py fdr --type custom --next 5         # teams by fixture difficulty (
 python app.py fixtures --team ARS --type custom  # a team's fixtures + difficulty
 python app.py xp --type custom --next 5          # players by expected points over the next N gameweeks
 python app.py xg --pos FWD                        # players by expected goal involvement (xG + xA)
+python app.py overperf                            # over/under-performers (actual vs expected pts)
 python app.py squad --budget 80                  # pick the optimal starting XI within a budget
 python app.py squad --include Haaland --exclude Salah  # the optimal XI around your picks
 python app.py squad --objective value            # optimise the XI on points / value / xp

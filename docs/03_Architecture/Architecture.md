@@ -162,6 +162,9 @@ in preseason, so the custom FDR uses overall strength for now (ADR-005).
 | `xa` | REAL | `elements[].expected_assists` | Expected assists (Sprint 014) |
 | `xgi` | REAL | `elements[].expected_goal_involvements` | xGI = xG + xA; `xg` view + `--objective xgi` (Sprint 014) |
 | `xgc` | REAL | `elements[].expected_goals_conceded` | Expected goals conceded; defensive lens (Sprint 014) |
+| `goals_scored` | INTEGER | `elements[].goals_scored` | Actual goals; over/under-performance (Sprint 016, [ADR-017](../06_Decisions/ADR-017-over-under-performance.md)) |
+| `assists` | INTEGER | `elements[].assists` | Actual assists (Sprint 016) |
+| `minutes` | INTEGER | `elements[].minutes` | Minutes played; the ≥ 900 gate for `overperf` (Sprint 016) |
 
 The Sprint 005 columns are added to the existing `players` table via the same light
 migration as `teams` (§ADR-005). **Expected Points (xP)** is the first *cross-domain*
@@ -329,3 +332,10 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `expected_*` columns via the generic migration. A new `xg` view ranks by xGI, and
   `--objective xgi` is one new `objective_scores` entry (no solver change — ADR-011). A
   full-stack slice: API → model → storage migration → analytics → view. No new dependency.
+- **Sprint 015 (2026-08-03)** — a *spike*, no code: evaluated `soccerdata` and **deferred**
+  it (ADR-016). `src/` unchanged; evidence in `spikes/015-soccerdata/`.
+- **Sprint 016 (2026-08-03)** — *over/under-performance* (`overperf`), per ADR-017. `players`
+  gains `goals_scored`/`assists`/`minutes` via the generic migration; a new view compares
+  **expected** attacking points (from xG/xA) to **actual** (from goals/assists), minutes-gated
+  (≥ 900) to filter noise + a preseason glitch. Attacking-only (stated caveat). FPL-native,
+  no new dependency (the "lighter model" chosen in ADR-016).

@@ -78,10 +78,42 @@ expected, not a bug.
 
 ---
 
+## Over/under-performance — comparing expected to actual (ADR-017)
+
+Once we store both **expected** goals/assists (xG/xA) and **actual** ones (goals/assists),
+we can *compare* them — the first metric that does. In FPL points:
+
+```
+expected attacking pts = xG · goal_pts[pos] + xA · 3
+actual   attacking pts = goals · goal_pts[pos] + assists · 3   (goal_pts: GK/DEF 6, MID 5, FWD 4)
+over/under = actual − expected
+```
+
+- **Positive** → out-scoring the underlying numbers (finishing hot → **regression risk**).
+- **Negative** → unlucky (→ **bounce-back candidate**).
+
+```bash
+python app.py overperf                 # both ends: over- and under-performers
+python app.py overperf --pos FWD       # attackers only
+python app.py overperf --min-minutes 1500
+```
+
+Two design points worth remembering:
+
+- **The minutes gate is part of the metric**, not a filter. Below ~900 minutes a sample is
+  noise — and it drops a real preseason glitch (a GK row with 11 goals but 0 minutes). You
+  can't read over/under-performance off a handful of games.
+- **Attacking returns only.** It ignores clean sheets, appearance and bonus points — so a
+  defender "under-performing" here isn't a bad pick (his value is clean sheets). The output
+  says so. Over/under-performance is a *tendency flag*, not a forecast.
+
+---
+
 ## Common Mistakes
 
 - **Treating season totals as current form.** Preseason these are *last* season — the same
   caveat as every FPL number.
+- **Reading over/under-performance as certainty.** It's a regression *tendency*, not a promise.
 - **Reading a defender's low xGI as "bad".** xGI is attacking; defenders are judged more by
   clean sheets / xGC.
 - **Reaching for a scraper.** The data is already in the FPL feed — check first.
@@ -108,6 +140,7 @@ expected, not a bug.
 ## Related Documents
 
 - [ADR-015 — Expected goals](../06_Decisions/ADR-015-expected-goals.md)
+- [ADR-017 — Over/under-performance](../06_Decisions/ADR-017-over-under-performance.md)
 - [ADR-011 — Pluggable squad objective](../06_Decisions/ADR-011-squad-objective.md)
 - [Chapter 21 — Analytics](./21_Analytics.md) · [Chapter 22 — Optimisation](./22_Optimisation.md)
 - Code: `src/models/player.py`, `src/storage.py`, `src/ui/xg.py`, `src/analytics/optimizer.py`

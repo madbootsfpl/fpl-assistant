@@ -1,10 +1,10 @@
-Current Phase: Sprint 015 COMPLETE — between sprints
-Current Sprint: Sprint 015 - Evaluate soccerdata (✅ Complete, 3/3 stories, ADR-016 = Defer)
-Current Story: None active — ready to plan Sprint 016
-Next Milestone: Sprint 016 - the lighter FPL-native over/under-performance lens (no new dependency)
+Current Phase: Sprint 016 COMPLETE — between sprints
+Current Sprint: Sprint 016 - Over/Under-performance (✅ Complete, 3/3 stories, retro done)
+Current Story: None active — ready to plan Sprint 017
+Next Milestone: Sprint 017 - total-points over/under, a defensive (xGC) lens, or another backlog pick
 Current Version: 0.0.1
-Last Updated: 2026-08-02
-Commands: refresh · table · search · filter · fdr (--type) · fixtures · xp · xg · squad (--full/--bench/--formation/--objective[points|value|xp|xgi]/--include/--exclude)
+Last Updated: 2026-08-03
+Commands: refresh · table · search · filter · fdr (--type) · fixtures · xp · xg · overperf · squad (--full/--bench/--formation/--objective[points|value|xp|xgi]/--include/--exclude)
 Sources: FPL (required) + ClubElo (best-effort)
-Tests: 156 · ADRs: 15 · players carry xG/xA/xGI/xGC
+Tests: 168 · ADRs: 17 · players carry xG/xA/xGI/xGC + goals/assists/minutes
 Deferred: FBref xG/xA; flexible formations (XI); two-tier bench (rejected, ADR-012); form/attack-defence FPL data (preseason)
