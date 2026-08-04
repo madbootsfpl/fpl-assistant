@@ -15,12 +15,16 @@ from dataclasses import dataclass
 
 from src import llm
 from src.analytics import (
+    FULL_BUDGET,
+    SQUAD_15,
     analyse_squad,
+    available_players,
     baseline_rate,
     best_legal_xi,
     captain_picks,
+    decision_xp,
     minutes_weight_from_history,
-    player_xp,
+    select_squad,
     suggest_transfer_plan,
     suggest_transfers,
 )
@@ -29,6 +33,7 @@ from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.compare import render_compare
+from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
 from src.ui.transfer import render_transfer_plan
 
@@ -40,6 +45,8 @@ _INTENT_KEYWORDS = {
     "transfer": ("transfer", "sell", "buy", "swap"),
     "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
     "start_bench": ("start", "bench", "lineup", "line-up"),
+    "build_squad": ("build", "wildcard", "best squad", "best team", "best xi", "new squad",
+                    "new team", "pick a squad", "pick a team"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
 }
 
@@ -50,8 +57,9 @@ _RULES = (
 )
 
 _FALLBACK = (
-    "I can answer about captaincy, transfers, your squad's health, or your lineup. "
-    'Try: ask "who should I captain from <squad>?" or ask "who should I start from <squad>?"'
+    "I can answer about captaincy, transfers, your squad's health, your lineup, comparing players, "
+    'or building a squad. Try: ask "who should I captain from <squad>?" or ask "build me a squad '
+    'for £100m".'
 )
 
 
@@ -194,13 +202,7 @@ def _squad_xp(store: Storage, squad_name: str):
         return None
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
-    history_by_code = store.get_history_by_code()
-    baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
-    ranked = player_xp(
-        players, upcoming, horizon=_HORIZON, baseline_by_code=baselines,
-        minutes_weight=minutes_weight_from_history(history_by_code),
-        history_by_code=history_by_code,
-    )
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
@@ -385,11 +387,7 @@ def _decide_compare(store: Storage, question: str) -> dict | None:
         return {"message": f"Name two players to compare, e.g. ask \"Haaland or Saka?\".{found}"}
 
     upcoming = store.get_upcoming_fixtures()
-    history_by_code = store.get_history_by_code()
-    baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
-    weight = minutes_weight_from_history(history_by_code)
-    ranked = player_xp(players, upcoming, horizon=_HORIZON, baseline_by_code=baselines,
-                       minutes_weight=weight, history_by_code=history_by_code)
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
     by_id = {r["id"]: r for r in ranked}
 
     rows = []
@@ -422,6 +420,42 @@ def _decide_compare(store: Storage, question: str) -> dict | None:
     }
 
 
+def _squad_budget(question: str) -> float:
+    """The budget in a build-a-squad question — '£100m' / '85m' / '£90' — else the £100m default."""
+    m = re.search(r"£\s*(\d+(?:\.\d+)?)|\b(\d+(?:\.\d+)?)\s*m\b", question.lower())
+    return float(m.group(1) or m.group(2)) if m else FULL_BUDGET
+
+
+def _decide_build_squad(store: Storage, question: str) -> dict | None:
+    """Analytics BUILD the squad (ADR-041): the optimal 15 on the unified xP, within budget."""
+    players = store.get_players()
+    if not players:
+        return None
+    budget = _squad_budget(question)
+    upcoming = store.get_upcoming_fixtures()
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    pool, _excluded = available_players(players)          # exclude injured/suspended (as `squad` does)
+    result = select_squad(pool, budget=budget, formation=SQUAD_15, scores=xp_by_id)
+    if result["status"] != "Optimal":
+        return {"message": f"No legal squad fits £{budget:.1f}m — try a larger budget."}
+
+    picks = result["selected"]
+    top = sorted(picks, key=lambda p: -xp_by_id.get(p["id"], 0))[:3]
+    return {
+        "detail": render_squad(result, budget=budget, objective="xp", full=True),
+        "facts": {
+            "budget": f"£{budget:.1f}m",
+            "squad_cost": f"£{result['total_cost']:.1f}m",
+            "standout_picks": [f"{p['web_name']} ({p['position']}, xP {xp_by_id.get(p['id'], 0)})"
+                               for p in top],
+        },
+        "subjects": [p["web_name"] for p in picks],
+        "task": "in 2 short sentences, describe this optimal squad — the budget used and its standout "
+                "picks",
+    }
+
+
 def _numbers(text: str) -> set:
     """Number-like tokens in `text` (e.g. '7.4', '22')."""
     return set(re.findall(r"\d+(?:\.\d+)?", text))
@@ -447,7 +481,9 @@ def verify_grounding(text: str, facts: dict, *, known_names=(), subjects=()) -> 
     if not text:
         return {"numbers": [], "names": []}
 
-    facts_numbers = _numbers(json.dumps(facts))
+    # ensure_ascii=False so a '£' stays '£' — otherwise its £ escape injects stray digits
+    # (00, 3) that corrupt the number set and wrongly flag a grounded figure (e.g. £100.0m).
+    facts_numbers = _numbers(json.dumps(facts, ensure_ascii=False))
     unverified_numbers = sorted(n for n in _numbers(text) if n not in facts_numbers)
 
     words = _significant_tokens(text)
@@ -467,7 +503,7 @@ def _build_prompt(decision: dict) -> str:
         f"You are an FPL assistant. The analytics have ALREADY made the decision. Your job: "
         f"{decision['task']}, using ONLY the facts below.\n{_RULES}\n"
         "Write only the explanation itself — no preamble, and do not restate the task.\n\n"
-        f"FACTS:\n{json.dumps(decision['facts'], indent=2)}"
+        f"FACTS:\n{json.dumps(decision['facts'], indent=2, ensure_ascii=False)}"
     )
 
 
@@ -521,6 +557,8 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
             decision = _decide_start_bench(store, squad_name)
         elif intent == "compare":
             decision = _decide_compare(store, question)
+        elif intent == "build_squad":
+            decision = _decide_build_squad(store, question)
         else:
             decision = _decide_analyse(store, squad_name)
         # The known player names for the verifier's name check (ADR-037).

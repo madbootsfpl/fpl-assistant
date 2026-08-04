@@ -90,7 +90,46 @@ raw-vs-xMins consistency legible (and structural). No new dependency.
 
 ### Notes _(for Tony)_
 
--
+- Great i can see that the errors are fixed.
+- What i still dont understand is the following:
+(venv) ➜  fpl-assistant git:(master) python app.py squad --full --budget 100          
+Optimal 15-man squad — objective: points, budget £100.0m
+
+Pos Player            Team   Price   Pts
+--- ----------------- ----- ------ -----
+GK  Raya              ARS    £6.0m   162
+GK  Kelleher          BRE    £5.0m   143
+DEF Gabriel           ARS    £8.0m   209
+DEF Guéhi             MCI    £6.0m   179
+DEF Senesi            TOT    £6.0m   175
+DEF Truffert          BOU    £5.5m   165
+DEF Van Hecke         TOT    £5.0m   148
+MID Semenyo           MCI    £8.5m   202
+MID Gibbs-White       NFO    £8.0m   188
+MID Rice              ARS    £7.5m   184
+MID Anderson          MCI    £6.5m   180
+MID Wilson            LEE    £6.5m   168
+FWD Thiago            BRE    £8.0m   181
+FWD João Pedro        CHE    £7.5m   177
+FWD Calvert-Lewin     LEE    £6.0m   142
+
+Total: £100.0m · 2603 pts
+Note: Pts totals a bench that won't score — squad strength, not a weekly total. Declare your bench with --bench.
+(41 unavailable excluded: Garner (i), J.Timber (i), Saliba (i)… — use --include-unavailable to keep them.)
+(venv) ➜  fpl-assistant git:(master) python app.py transfer  --squad RoboTS           
+Transfer suggestions for 'RoboTS' — by xP gain over the next 5 gameweeks (bank £0.0m)
+
+#   Out                  £     xP → In                   £     xP    ΔxP
+--- ---------------- ----- ------ - ---------------- ----- ------ ------
+1   Thiago             8.0   16.3 → Watkins            8.0   24.1   +7.8
+2   Kelleher           5.0   12.1 → Roefs              5.0   17.5   +5.4
+3   Senesi             6.0   15.4 → Mukiele            5.5   19.5   +4.1
+4   Wilson             6.5   16.9 → E.Le Fée           6.0   19.0   +2.1
+5   Van Hecke          5.0   15.2 → Mitchell           4.5   16.9   +1.7
+
+Each is a single, legal, affordable swap (same position, ≤3/club, within the sale price + bank). `(b)` = the player you'd sell is on your bench (less weekly impact). xP is weighted by expected minutes (xMins v0; `--no-xmins` for raw).
+
+- I create a squad designed to give max points, and the output looks great. I then ask for transfers, and i get suggestions that will give me more points. So my question is why was this not given at the start? There should be no transfers that will give extra points when nothing else has changed or am i confused?
 
 ---
 

@@ -21,6 +21,7 @@ from src.analytics import (
     baseline_rate,
     best_legal_xi,
     captain_picks,
+    decision_xp,
     defcon_reliability,
     defensive_solidity,
     elo_difficulty_bands,
@@ -280,8 +281,16 @@ def cmd_squad(args) -> None:
         else:
             pool, excluded = available_players(players, keep_ids=forced)
 
-        upcoming = store.get_upcoming_fixtures() if args.objective == "xp" else None
-        scores = objective_scores(players, args.objective, upcoming)
+        # The xp objective uses the shared decision-xP (ADR-041) — the SAME xP transfer/analyse
+        # use, so an xp-optimal squad has no free transfers. Other objectives are unchanged.
+        if args.objective == "xp":
+            ranked = decision_xp(
+                players, store.get_upcoming_fixtures(), store.get_history_by_code(),
+                minutes_weighted=not args.no_xmins,
+            )
+            scores = {r["id"]: r["xp"] for r in ranked}
+        else:
+            scores = objective_scores(players, args.objective)
         result = select_squad(
             pool, budget=budget, formation=formation, size=size,
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
@@ -455,14 +464,10 @@ def cmd_analyse(args) -> None:
             print(f"Squad '{args.squad}' has no current players to analyse.")
             return
 
-        history_by_code = store.get_history_by_code()
-        baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
-        # xMins v0 (ADR-038): weight xP by expected minutes unless --no-xmins.
-        minutes_weight = None if args.no_xmins else minutes_weight_from_history(history_by_code)
-        ranked = player_xp(
-            players, upcoming, source=args.type, horizon=args.next,
-            baseline_by_code=baseline_by_code, minutes_weight=minutes_weight,
-            history_by_code=history_by_code,
+        # The shared decision-xP recipe (ADR-041) — the same xP squad/transfer/ask use.
+        ranked = decision_xp(
+            players, upcoming, store.get_history_by_code(),
+            source=args.type, horizon=args.next, minutes_weighted=not args.no_xmins,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -507,15 +512,11 @@ def cmd_transfer(args) -> None:
             print(f"Squad '{args.squad}' has no current players to improve.")
             return
 
-        history_by_code = store.get_history_by_code()
-        baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
-        # xMins v0 (ADR-038): weight xP by expected minutes unless --no-xmins.
-        minutes_weight = None if args.no_xmins else minutes_weight_from_history(history_by_code)
+        # The shared decision-xP recipe (ADR-041) — the same xP squad/analyse/ask use.
         show_xmins = not args.no_xmins
-        ranked = player_xp(
-            players, upcoming, source=args.type, horizon=args.next,
-            baseline_by_code=baseline_by_code, minutes_weight=minutes_weight,
-            history_by_code=history_by_code,
+        ranked = decision_xp(
+            players, upcoming, store.get_history_by_code(),
+            source=args.type, horizon=args.next, minutes_weighted=show_xmins,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])
@@ -816,8 +817,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Pin the XI shape, e.g. 3-5-2 (DEF-MID-FWD); default picks the best legal shape",
     )
     p_squad.add_argument(
-        "--objective", choices=["points", "value", "xp", "xgi"], default="points",
-        help="What to maximise: points (default), value (£m), xP, or xGI (attacking)",
+        "--objective", choices=["points", "value", "xp", "xgi"], default="xp",
+        help="What to maximise: xP (default; expected points next 5 GW), points (last-season "
+             "total), value (£m), or xGI (attacking)",
+    )
+    p_squad.add_argument(
+        "--no-xmins", action="store_true",
+        help="With --objective xp: don't weight by expected minutes (xMins v0) — the raw view",
     )
     p_squad.add_argument(
         "--include-unavailable", action="store_true", dest="include_unavailable",

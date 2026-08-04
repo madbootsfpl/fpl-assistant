@@ -6,7 +6,7 @@ edge case). Plus xP-gain ranking, positive-gains-only, the bench flag, and no-up
 Offline, plain dicts.
 """
 
-from src.analytics import suggest_transfer_plan, suggest_transfers
+from src.analytics import SQUAD_15, select_squad, suggest_transfer_plan, suggest_transfers
 from src.ui.transfer import render_transfer_plan
 
 
@@ -28,6 +28,22 @@ def test_ranks_by_xp_gain_and_reports_the_move():
     s = out[0]
     assert s["out"]["id"] == 1 and s["in"]["id"] == 2
     assert s["gain"] == 6.0 and s["position"] == "MID"
+
+
+def test_an_xp_optimal_squad_has_no_positive_transfers():
+    # ADR-041 consistency: when the squad is BUILT on the same xP that `transfer` ranks by, there
+    # are no free upgrades — a cheaper-or-equal same-position player with higher xP would mean the
+    # squad wasn't optimal. (The inconsistency the owner spotted was two different metrics.)
+    pool, xp, pid = [], {}, 1
+    for pos, n in (("GK", 4), ("DEF", 7), ("MID", 7), ("FWD", 5)):   # spares beyond 2/5/5/3
+        for k in range(n):
+            player = _p(pid, pos, f"T{pid}", 5.0)                    # distinct team, same price
+            player["total_points"] = 0                              # select_squad sums this
+            pool.append(player)
+            xp[pid] = 10.0 - k                                       # descending xP within position
+            pid += 1
+    owned = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=xp)["selected"]
+    assert suggest_transfers(owned, pool, xp, bank=0.0) == []
 
 
 def test_incoming_player_is_not_suggested_twice():

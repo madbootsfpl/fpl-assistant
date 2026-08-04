@@ -17,6 +17,7 @@ from src.ask import (
     _lineup_change,
     _match_players,
     _plan_facts,
+    _squad_budget,
     _transfer_count,
     _transfer_facts,
     assemble,
@@ -136,6 +137,29 @@ def test_render_compare_orders_by_xp_and_shows_columns():
     out = render_compare([_row("Haaland", 29.0, 0.82), _row("B.Fernandes", 27.3, 0.89)])
     assert out.index("Haaland") < out.index("B.Fernandes")   # strongest xP first
     assert "xMins" in out and "29.0" in out
+
+
+# ---- build_squad intent (US-120) --------------------------------------------
+
+def test_routes_build_squad():
+    assert route("build me a squad for £100m", known_squads=[])[0] == "build_squad"
+    assert route("what's the best squad for £90m?", known_squads=[])[0] == "build_squad"
+    # 'start'/'bench' still win where they apply (build is checked after them)
+    assert route("who should I start from TS", known_squads=["TS"])[0] == "start_bench"
+
+
+def test_squad_budget_parses_the_amount_or_defaults():
+    assert _squad_budget("build me a squad for £100m") == 100.0
+    assert _squad_budget("build a team for 85m") == 85.0
+    assert _squad_budget("build me a squad") == 100.0        # FULL_BUDGET default
+
+
+def test_verify_grounding_handles_a_pound_sign_in_the_facts():
+    # ADR-037 bug found via build_squad: a '£' fact must not corrupt the number set (its JSON
+    # escape used to inject stray digits, wrongly flagging a grounded figure like £100.0m).
+    facts = {"budget": "£100.0m", "squad_cost": "£100.0m"}
+    trust = verify_grounding("The squad costs £100.0m of the £100.0m budget.", facts)
+    assert trust["numbers"] == []
 
 
 def test_squad_matched_by_name_regardless_of_phrasing():

@@ -452,6 +452,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 040 (2026-08-04)** — *one xP metric + a squad-build intent*, per ADR-041, answering the
+  owner's *"why does `transfer` improve my optimal squad?"* Cause: `squad` optimised **`points`**
+  (last-season total) while the recommendations rank by **xP**, and even `--objective xp` used a
+  *degraded* xP (horizon 1, no baseline/xMins). Fix: **`decision_xp(...)`** — one shared full-xP recipe
+  (baseline + fallback + xMins) now used by `squad` (xp objective), `analyse`, `transfer`, and `ask`
+  (removing the triplicated assembly); **`xp` is the default `squad` objective** (`--no-xmins` for raw;
+  `--objective points` kept), so an xp-optimal squad leaves `transfer` nothing (a test locks it).
+  **Phase 4:** `ask "build me a squad [for £X]"` (`_decide_build_squad` + `_squad_budget`) builds the
+  optimal 15 on that xP, grounded + verified. Also fixed a latent **grounding-verifier bug** — a `£`
+  in the facts was JSON-escaped to `£`, injecting stray digits that wrongly flagged a figure;
+  `verify_grounding`/`_build_prompt` now use `ensure_ascii=False`. No new dependency.
 - **Sprint 039 (2026-08-04)** — *trust the numbers* (data-quality), per ADR-040, from the owner's
   challenge of three RoboTS outputs. (1) **Sane low-evidence xP** — `fallback_rate` shrinks a no-baseline
   player's career pp90 toward a replacement prior (2.0) by confidence from their **biggest single

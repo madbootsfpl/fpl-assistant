@@ -100,7 +100,8 @@ python app.py defcon                             # reliable Defensive Contributi
 python app.py cleansheet                         # best clean-sheet prospects (DEF/GK by expected goals conceded / 90)
 python app.py squad --budget 80                 # pick the optimal starting XI (1-4-4-2) within a budget
 python app.py squad --include Haaland --exclude Salah  # the optimal XI built around your picks
-python app.py squad --objective xp              # optimise the XI on points / value / xp
+python app.py squad --objective xp              # xP is the DEFAULT objective (forward-looking; consistent with transfer)
+python app.py squad --objective points          # optimise last season's total points instead
 python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 python app.py squad --bench Dubravka Diop        # declare your bench (marked **, shown last); implies --full
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)
@@ -124,6 +125,7 @@ python app.py ask "which 3 transfers for my-team?"
 python app.py ask "analyse my-team"
 python app.py ask "who should I start from my-team?"   # best legal XI (xMins-weighted) vs your bench
 python app.py ask "Haaland or Saka?"                   # compare two players side by side
+python app.py ask "build me a squad for £100m"         # the optimal 15 on xP, within budget
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

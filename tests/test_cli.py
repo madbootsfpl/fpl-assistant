@@ -219,9 +219,12 @@ def test_squad_include_exclude_default_empty():
     assert args.exclude == []
 
 
-def test_squad_defaults_to_objective_points():
+def test_squad_defaults_to_objective_xp():
+    # ADR-041: xp (forward-looking, the metric transfer/analyse use) is the default, so a squad
+    # built by default is consistent with transfer; --objective points is the season-total view.
     args = build_parser().parse_args(["squad"])
-    assert args.objective == "points"
+    assert args.objective == "xp"
+    assert build_parser().parse_args(["squad", "--objective", "points"]).objective == "points"
 
 
 def test_squad_objective_is_parsed():

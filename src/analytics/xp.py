@@ -10,6 +10,7 @@ per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek)
 """
 
 from src.analytics.fdr import _view
+from src.analytics.minutes import minutes_weight_from_history
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
 _BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
@@ -197,3 +198,20 @@ def player_xp(
 
     results.sort(key=lambda r: r["xp"], reverse=True)
     return results
+
+
+def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", horizon: int = 5,
+                minutes_weighted: bool = True) -> list[dict]:
+    """The single "decision xP" recipe shared by squad / analyse / transfer / ask (ADR-041).
+
+    Assembles the *full* xP the tool acts on: the multi-season historical baseline + the
+    low-evidence fallback (ADR-040), and — unless `minutes_weighted` is False (`--no-xmins`) —
+    the xMins weight (ADR-038). One place, so the optimiser and the recommendations can't disagree
+    on a player's xP (the inconsistency behind "why does transfer improve my optimal squad?").
+    """
+    baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
+    weight = minutes_weight_from_history(history_by_code) if minutes_weighted else None
+    return player_xp(
+        players, upcoming, source=source, horizon=horizon,
+        baseline_by_code=baseline_by_code, minutes_weight=weight, history_by_code=history_by_code,
+    )

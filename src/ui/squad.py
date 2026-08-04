@@ -140,6 +140,13 @@ def render_squad(
     if objective == "xgi":
         # ADR-015: xGI is an attacking measure (GK/DEF ≈ 0) — say so, don't oversell it.
         lines.append("Note: xGI is attacking — GK/DEF score ≈ 0, so this leans to attackers.")
+    elif objective == "xp":
+        # ADR-041: optimised on forward-looking xP; the `Pts` column is last season's total.
+        lines.append(
+            "Note: optimised on xP (expected points next 5 GW, xMins-weighted — the metric "
+            "`transfer`/`analyse` use); the `Pts` column is last season's total. `--objective "
+            "points` optimises that total instead; `--no-xmins` for the raw xP."
+        )
 
     # With a declared bench we know the starters — show their subtotal, the honest number.
     # At a full 4-man bench the 11 starters form a legal XI, so state its shape (ADR-014).
