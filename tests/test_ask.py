@@ -103,6 +103,29 @@ def test_render_ask_shows_detail_then_prose():
     assert out.index("THE PLAN TABLE") < out.index("the prose")   # table first, then narration
 
 
+def test_analyse_decision_carries_the_squad_table_as_detail(monkeypatch):
+    # US-107: `ask "analyse"` shows the full squad-analysis table (per-GW xP + weak links),
+    # not just a one-line headline — the same table the `analyse` command prints (ADR-036).
+    def _p(pid, pos, team, price):
+        return {"id": pid, "position": pos, "team": team, "price": price,
+                "web_name": f"P{pid}", "status": "a", "chance": None}
+    owned = [_p(1, "GK", "AAA", 5.0), _p(2, "DEF", "BBB", 6.0),
+             _p(3, "MID", "CCC", 8.0), _p(4, "FWD", "DDD", 9.0)]
+    xp_by_id = {1: 12.0, 2: 15.0, 3: 25.0, 4: 30.0}
+    by_gw = {pid: {1: xp / 3, 2: xp / 3, 3: xp / 3} for pid, xp in xp_by_id.items()}
+    squad = {"player_ids": [1, 2, 3, 4], "bench_ids": [1]}   # P1 benched → XI = 2,3,4
+    monkeypatch.setattr(
+        ask, "_squad_xp",
+        lambda store, name: (squad, owned, owned, xp_by_id, by_gw, [1, 2, 3]),
+    )
+    decision = ask._decide_analyse(store=None, squad_name="TST")
+    assert "headline" not in decision                 # detail replaces the one-line headline
+    assert isinstance(decision["detail"], str)
+    assert "Starting XI:" in decision["detail"]
+    assert "GW1" in decision["detail"]                # the per-GW breakdown Tony wanted
+    assert "Weakest links:" in decision["detail"]     # who the weak starters are
+
+
 def test_assemble_handles_no_decision():
     r = assemble("q", "captain", None, narrator=lambda p: "unused")
     assert r.headline is None and r.message and "refresh" in r.message

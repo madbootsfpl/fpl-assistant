@@ -73,8 +73,12 @@ cross-linked** (`captain` → `transfer` → `analyse`).
 - ✅ Team analyser (`analyse --squad`, ADR-031) — projected XI xP over N GW (with a per-GW breakdown,
   ADR-032), weak links, injuries, club concentration; indicators, not a grade. *(Uses a saved
   squad — a manager-ID fetch waits on auth.)*
-- ◑ Expected minutes (xMins) & rotation — deferred; captaincy/transfers note the "assumes they play"
-  caveat and flag bench players until this exists (needs the season started).
+- ◑ **Expected minutes (xMins) v0** (lightweight, FPL-native) — estimate expected minutes from
+  `chance_of_playing%` × a historical minutes/starts ratio (data we already hold), then **weight xP by
+  it** so nailed-on starters outrank rotation risks. Retires the "assumes they play" caveat that
+  captaincy/transfer/analyse currently flag. No ML; a near-term Phase 3 enhancement. *(The full
+  probabilistic model is Phase 5 — see below. Owner's Sprint-35 request; assessed in the
+  [Backlog](../Backlog.md#expected-minutes-xmins--the-owners-sprint-35-request).)*
 - ⬜ Live event layer — re-rank on injuries / lineups / price changes without a full recompute.
 - ⬜ Multi-move transfer *planner* (hits vs roll, −4 maths) — the single-move engine is the foundation.
 
@@ -100,6 +104,12 @@ cross-linked** (`captain` → `transfer` → `analyse`).
 - ◑ Multi-week horizon — the xP horizon is done (ADR-007); add decaying weights.
 - ⬜ Chip optimisers — Wildcard / Free Hit (15-man exists), Bench Boost, Triple Captain.
 - ⬜ Transfer-path simulation (a −4 now vs rolling).
+- ⬜ **Probabilistic xMins (the full ML model)** — a trained model producing per-fixture expected-minutes
+  *probabilities* from schedule density (hours between kickoffs), European-match congestion, historical
+  manager rotation profiles, and substitution tendencies. The rigorous successor to the Phase-3 v0
+  above. **Needs** in-season per-GW minutes to train (post-GW1), external European-fixture data (not in
+  the FPL API), and a real ML effort — so a **later, dedicated phase**, gated on data. Owner's Sprint-35
+  request; assessed in the [Backlog](../Backlog.md#expected-minutes-xmins--the-owners-sprint-35-request).
 
 ---
 

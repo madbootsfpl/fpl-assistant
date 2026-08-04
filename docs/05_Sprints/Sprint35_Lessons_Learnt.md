@@ -87,8 +87,20 @@ trust line. Makes "grounded, not a black box" provable and visible. No new depen
 
 ### Notes _(for Tony)_
 
--
+-continuing to make progress.
+- the following for analyse did not produce a table like the transfer question
+see: 
+fpl-assistant git:(master) python app.py ask "analyse TS"     
+Q: analyse TS
 
+Squad health (squad 'TS') over 5 GW: projected XI xP 278.1
+
+The squad has no availability problems, but three players are considered weakest starters with xP values of 19.4, 19.6, and 20.7 respectively.
+
+✓ Checked: every figure and name in the explanation traces to the data above.
+
+
+- would have liked to see the brakout over 5 weeks and who the weakest startes were.
 ---
 
 # Decisions Made 📋
@@ -181,12 +193,17 @@ python app.py ask "who should I captain from TS?"   # now ends with a ✓/⚠ tr
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+- this is shaping up to be a very usefull and exciting tool. Well done Claude!
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+- If we coul dfix th eoutput on analyse that would be great.
+- I also want to add another backlog item
+- Probabilistic Rotation & Minutes Modeling (xMins)
+Predicting playing time is often harder than predicting performance. A Machine learning model could account for schedule density (hours between kickoffs), European match congestion, historical manager rotation profiles, and substitution tendencies to generate probabilistic expected minutes (xMins) rather than simple binary start/bench guesses. let me know what you think of that and when and where we could fit that in. maybe another phase or later in this one.
 
 ---
 

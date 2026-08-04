@@ -26,6 +26,7 @@ from src.analytics import (
 )
 from src.squads import SquadStore
 from src.storage import Storage
+from src.ui.analyse import render_squad_analysis
 from src.ui.transfer import render_transfer_plan
 
 _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
@@ -236,7 +237,7 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
-    squad, players, owned, xp_by_id, _by_gw, _gws = data
+    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks = data
     if not owned:
         return None
     bench_ids = set(squad.get("bench_ids") or [])
@@ -245,12 +246,17 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
     else:
         result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
         xi_ids = {p["id"] for p in result["selected"]}
-    analysis = analyse_squad(owned, xi_ids, xp_by_id, horizon=_HORIZON)
+    # The full squad-analysis table (XI + per-GW xP + weak links) as structured detail (ADR-036) —
+    # the same analysis + renderer the `analyse` command uses, so `ask` reads like the command.
+    analysis = analyse_squad(
+        owned, xi_ids, xp_by_id, horizon=_HORIZON,
+        by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks,
+    )
+    detail = render_squad_analysis(analysis, squad_name)
     subjects = [w["web_name"] for w in analysis["weakest"]] + \
                [p["web_name"] for p in analysis["issues"]]
     return {
-        "headline": f"Squad health (squad '{squad_name}') over {_HORIZON} GW: "
-                    f"projected XI xP {analysis['projected_xp']}",
+        "detail": detail,                       # the exact table, shown above the narration
         "facts": _analyse_facts(analysis),
         "subjects": subjects,
         "task": "summarise this squad's health in 2-3 short sentences",

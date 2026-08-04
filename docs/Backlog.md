@@ -34,6 +34,30 @@ tech-debt.)*
   `player_xp` (a faithful decomposition of the total); shown in `analyse` and `xp --by-gameweek`,
   plus `analyse --sort xp`. (From Tony's Sprint 006 reflection.)
 
+## Expected minutes (xMins) — the owner's Sprint-35 request
+
+*Predicting playing time is often harder than predicting performance.* Rotation/minutes is the single
+biggest source of FPL variance, and "assumes they play" is the recurring caveat in
+`captain`/`transfer`/`analyse`. **Value: very high.** Assessed in Sprint 036 (US-108); recommended in
+**two steps** so most of the value lands early, the heavy modelling waits for data.
+
+- **xMins v0 — lightweight, FPL-native, no ML *(near-term, Phase 3)*.** Expected minutes ≈
+  `chance_of_playing_next_round%` (FPL, populated) × a historical minutes/starts ratio (from
+  `history_past`, which we already ingest). Then **weight xP by expected minutes** so nailed-on
+  starters outrank rotation risks, and bench-blindness retires. Captures ~most of the decision value
+  with data we already hold; buildable relatively soon. *Honest limit:* it's an estimate from a stated
+  chance% + history, **not** the full probabilistic model.
+- **Full probabilistic xMins — the ML model *(later, dedicated phase — Roadmap Phase 5)*.** A trained
+  model producing per-fixture expected-minutes *probabilities* from schedule density (hours between
+  kickoffs), European-match congestion, historical manager rotation profiles, and substitution
+  tendencies. **Needs:** in-season per-GW minutes to train (post-GW1, ties to Data Hardening), external
+  European-fixture data (not in the FPL API), and a genuine ML effort. Gated on data → a later phase.
+
+**Placement:** v0 as a near-term Phase 3 enhancement (immediately improves every recommendation); the
+ML model as a later Phase 5 item (post-GW1). It's the highest-value deferred item — worth doing
+properly, lightweight first. *(This supersedes the terse "Richer xP: … expected minutes" line under
+Deferred below.)*
+
 ## Validated, deferred
 
 - **soccerdata / npXG** — evaluated in Sprint 015 ([ADR-016](06_Decisions/ADR-016-soccerdata-evaluation.md)).
@@ -57,7 +81,7 @@ tech-debt.)*
 
 ## Deferred (data-dependent — need season-start data)
 
-- Richer xP: recent `form` + expected minutes.
+- Richer xP: recent `form` + expected minutes (xMins — now assessed in its own section above).
 - Attack/Defence FDR split (needs `strength_attack_*` / `strength_defence_*`).
 - **Per-GW history ingestion** — `element-summary`'s `history` (this-season per-GW) is empty
   preseason (Sprint 026, ADR-027). Ingest it once gameweeks start playing (same endpoint/command);
