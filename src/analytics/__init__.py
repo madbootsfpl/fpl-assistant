@@ -5,6 +5,7 @@ It reads player data (via the caller, from storage), computes, and hands results
 up to the display. It never touches the API or the screen.
 """
 
+from src.analytics.analyse import analyse_squad
 from src.analytics.captain import captain_picks
 from src.analytics.cleansheet import defensive_solidity
 from src.analytics.defcon import defcon_reliability
@@ -31,6 +32,7 @@ __all__ = [
     "FULL_BUDGET",
     "SQUAD_15",
     "XI_FLEX",
+    "analyse_squad",
     "available_players",
     "captain_picks",
     "is_unavailable",

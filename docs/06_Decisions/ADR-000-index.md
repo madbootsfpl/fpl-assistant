@@ -35,3 +35,4 @@ new ADR as it is created.
 | [028](./ADR-028-xp-historical-baseline.md) | xP historical baseline (multi-season rate) | Accepted |
 | [029](./ADR-029-captain-suggestions.md) | Captain suggestions (recommend + explain; xP, GK-excluded) | Accepted |
 | [030](./ADR-030-transfer-suggestions.md) | Transfer suggestions (best single legal upgrades; xP gain, `--bank`) | Accepted |
+| [031](./ADR-031-team-analyser.md) | Team Analyser (a saved squad's health check; indicators, not a grade) | Accepted |

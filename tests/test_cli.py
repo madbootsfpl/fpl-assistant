@@ -8,6 +8,7 @@ import pytest
 
 from src.cli import (
     build_parser,
+    cmd_analyse,
     cmd_captain,
     cmd_fdr,
     cmd_filter,
@@ -349,6 +350,20 @@ def test_transfer_requires_a_squad():
 def test_transfer_bank_and_next_are_parsed():
     args = build_parser().parse_args(["transfer", "--squad", "TS", "--bank", "2.5", "--next", "3"])
     assert args.bank == 2.5 and args.next == 3
+
+
+def test_analyse_command_defaults():
+    args = build_parser().parse_args(["analyse", "--squad", "TS"])
+    assert args.command == "analyse"
+    assert args.squad == "TS"
+    assert args.next == 5           # multi-week horizon
+    assert args.type == "fpl"
+    assert args.handler is cmd_analyse
+
+
+def test_analyse_requires_a_squad():
+    with pytest.raises(SystemExit):        # --squad is required
+        build_parser().parse_args(["analyse"])
 
 
 def test_no_command_leaves_no_handler():

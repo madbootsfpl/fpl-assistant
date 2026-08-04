@@ -16,6 +16,7 @@ from src.analytics import (
     FULL_BUDGET,
     SQUAD_15,
     XI_FLEX,
+    analyse_squad,
     available_players,
     baseline_rate,
     captain_picks,
@@ -36,6 +37,7 @@ from src.analytics import (
 from src.api.client import FplApiError
 from src.squads import SquadStore
 from src.storage import Storage
+from src.ui.analyse import render_squad_analysis
 from src.ui.captain import render_captain_picks
 from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
@@ -413,6 +415,54 @@ def cmd_captain(args) -> None:
         store.close()
 
 
+def cmd_analyse(args) -> None:
+    """Grade a saved squad's health over the next N gameweeks (ADR-031)."""
+    store = Storage()
+    try:
+        squad = SquadStore().load(args.squad)
+        if squad is None:
+            names = SquadStore().names()
+            hint = f" Saved: {', '.join(names)}." if names else " None saved yet."
+            print(f"No saved squad '{args.squad}'.{hint}")
+            return
+
+        players = store.get_players()
+        upcoming = store.get_upcoming_fixtures()
+        if not players:
+            print("No players — run `refresh` first.")
+            return
+
+        owned_ids = set(squad["player_ids"])
+        owned = [p for p in players if p["id"] in owned_ids]   # departed ids drop out
+        if not owned:
+            print(f"Squad '{args.squad}' has no current players to analyse.")
+            return
+
+        baseline_by_code = {
+            code: baseline_rate(rows)
+            for code, rows in store.get_history_by_code().items()
+        }
+        xp_by_id = {
+            r["id"]: r["xp"] for r in player_xp(
+                players, upcoming, source=args.type, horizon=args.next,
+                baseline_by_code=baseline_by_code,
+            )
+        }
+
+        # The XI: the declared bench's complement, else the best legal XI (ADR-031).
+        bench_ids = set(squad.get("bench_ids") or [])
+        if bench_ids:
+            xi_ids = {p["id"] for p in owned if p["id"] not in bench_ids}
+        else:
+            result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
+            xi_ids = {p["id"] for p in result["selected"]}
+
+        analysis = analyse_squad(owned, xi_ids, xp_by_id, horizon=args.next)
+        print(render_squad_analysis(analysis, args.squad))
+    finally:
+        store.close()
+
+
 def cmd_transfer(args) -> None:
     """Suggest the best single transfers for a saved squad (ADR-030)."""
     store = Storage()
@@ -610,6 +660,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--limit", type=int, default=5, help="How many suggestions to show (default 5)",
     )
     p_transfer.set_defaults(handler=cmd_transfer)
+
+    p_analyse = sub.add_parser(
+        "analyse", help="Grade a saved squad's health over the next N gameweeks"
+    )
+    p_analyse.add_argument(
+        "--squad", required=True, help="The saved squad to analyse (see `squad --save`)",
+    )
+    p_analyse.add_argument(
+        "--next", type=int, default=5,
+        help="Horizon: project xP over the next N gameweeks (default 5)",
+    )
+    p_analyse.add_argument(
+        "--type", choices=["fpl", "custom"], default="fpl",
+        help="Difficulty source used in the xP calc (default fpl)",
+    )
+    p_analyse.set_defaults(handler=cmd_analyse)
 
     p_xg = sub.add_parser("xg", help="Rank players by expected goal involvement (xG + xA)")
     p_xg.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")

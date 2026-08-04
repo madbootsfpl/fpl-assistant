@@ -129,6 +129,16 @@ a keeper ranked 3rd by mean xP gave that away on a live probe) and keep doubtful
   start — so the bank is an input (`--bank`, default £0 = self-funding) and bench players are
   *flagged*, not silently modelled. State the assumptions rather than guessing.
 
+**A summary that composes and cross-links (Sprint 029, the analyser).** `analyse_squad` (ADR-031)
+is the capstone: it adds almost no new computation — it *aggregates* the pieces (xP over a horizon,
+availability, the optimiser's XI pick, the club rule) into one health check, and **points at the
+other tools** (a weak link → `transfer`, the top XI player → `captain`). Two lessons:
+- **Indicators beat a grade.** We show projected XI xP, # issues, weak links — not an invented
+  "B+". A concrete number the manager can interpret is more honest than a false-precision score.
+- **The dividend of clean layers.** Three Phase-3 features (captain, transfer, analyse) were each
+  mostly *wiring* — because xP, availability, saved squads, the optimiser and the renderer were
+  already separate, testable pieces. Composability is the pay-off of the one-way-flow architecture.
+
 ---
 
 ## Common Mistakes

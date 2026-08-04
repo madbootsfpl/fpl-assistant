@@ -408,6 +408,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   availability; not-owned). GKs are **included** (a better keeper is a real upgrade — the mirror of
   captaincy's GK *exclusion*); bench players (from the squad's `bench_ids`) are **flagged**, not
   modelled. Composes xP + saved squads; no schema change, no new dependency. (Command + view: US-085.)
+- **Sprint 029 (2026-08-04)** — *Team Analyser* (Phase 3 decision-support **capstone**), per ADR-031.
+  An `analyse --squad <name>` command that grades a saved squad's health over a horizon: projected
+  **XI** xP, value, availability issues, weakest links, club concentration — **indicators, not a
+  grade**. A pure `analyse_squad` fn; the XI is the declared bench's complement, else the best legal
+  XI via `select_squad` (ADR-008). Almost entirely **composition** — xP (ADR-028) + availability
+  (ADR-023) + saved squads (ADR-024) + the optimiser + the shared renderer (ADR-025, its 3rd new
+  consumer) — and it **cross-links** the trio (weak link → `transfer`, top XI → `captain`). No schema
+  change, no new dependency. Completes captain · transfer · analyse.
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps
