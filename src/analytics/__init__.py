@@ -23,7 +23,7 @@ from src.analytics.optimizer import (
     select_squad,
 )
 from src.analytics.overperf import over_under
-from src.analytics.transfer import suggest_transfers
+from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import baseline_rate, player_xp
 
@@ -48,6 +48,7 @@ __all__ = [
     "rank_players",
     "resolve_players",
     "select_squad",
+    "suggest_transfer_plan",
     "suggest_transfers",
     "team_fdr",
     "team_schedule",

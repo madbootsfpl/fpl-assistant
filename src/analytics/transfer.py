@@ -84,3 +84,41 @@ def suggest_transfers(
 
     suggestions.sort(key=lambda s: s["gain"], reverse=True)
     return suggestions[:limit]
+
+
+def suggest_transfer_plan(
+    owned, players, xp_by_id, *,
+    bench_ids=(), bank: float = 0.0, count: int = 1, max_per_club: int = MAX_PER_CLUB,
+) -> list[dict]:
+    """A coordinated, greedy plan of up to `count` transfers (ADR-035).
+
+    Repeatedly takes the **best legal single transfer given the running state** and applies
+    it: the shared **bank threads** (a later move can spend what an earlier sale freed), club
+    counts and ownership update, and no player is bought twice or a sold one re-bought. Reuses
+    `suggest_transfers` on the evolving state, so every single-transfer rule holds across the
+    plan. Returns the ordered moves, each annotated with `bank_after`; stops early when no
+    positive-gain move remains.
+    """
+    by_id = {p["id"]: p for p in players}
+    owned = list(owned)
+    sold: set = set()
+    running_bank = bank
+    plan = []
+
+    for _ in range(count):
+        market = [p for p in players if p["id"] not in sold]   # a sold player can't return
+        moves = suggest_transfers(
+            owned, market, xp_by_id, bench_ids=bench_ids, bank=running_bank,
+            limit=1, max_per_club=max_per_club,
+        )
+        if not moves:
+            break
+        move = moves[0]
+        out_id, in_id = move["out"]["id"], move["in"]["id"]
+        # Bank after: the sale frees the out price, the buy spends the in price.
+        running_bank = round(running_bank + move["out"]["price"] - move["in"]["price"], 1)
+        owned = [p for p in owned if p["id"] != out_id] + [by_id[in_id]]  # buy → owned (no re-buy)
+        sold.add(out_id)
+        plan.append({**move, "bank_after": running_bank})
+
+    return plan

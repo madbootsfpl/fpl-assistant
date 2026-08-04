@@ -90,7 +90,7 @@ dependency.
 
 ### Notes _(for Tony)_
 
--
+- Looking really good on the humanisation, definely needs to go deeper, for example I may have 1-5 transfers available to me depending on what i have used or banked in prior weeks. So would be good to have this as an option, Example: "which 3 tranfers would you recommend for team TS"
 
 ---
 

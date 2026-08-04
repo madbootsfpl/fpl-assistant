@@ -11,6 +11,8 @@ from src.ask import (
     _analyse_facts,
     _build_prompt,
     _captain_facts,
+    _plan_facts,
+    _transfer_count,
     _transfer_facts,
     assemble,
     route,
@@ -116,6 +118,23 @@ def test_analyse_facts_availability_reads_none_when_no_issues():
 def test_analyse_facts_lists_availability_problems():
     a = {"projected_xp": 200, "issues": [{"web_name": "Inj"}], "weakest": []}
     assert _analyse_facts(a)["availability_problems"] == "1: Inj"
+
+
+def test_transfer_count_parsed_from_the_question():
+    assert _transfer_count("which 3 transfers for TS?") == 3
+    assert _transfer_count("what transfer should I make for TS") == 1   # no number → 1
+    assert _transfer_count("plan 2 transfers") == 2
+    assert _transfer_count("who should I captain for the next 5 gameweeks") == 1  # 5 not a count
+
+
+def test_plan_facts_are_self_describing():
+    plan = [
+        {"out": {"web_name": "A"}, "in": {"web_name": "B"}, "gain": 15.4},
+        {"out": {"web_name": "C"}, "in": {"web_name": "D"}, "gain": 9.9},
+    ]
+    f = _plan_facts(plan)
+    assert f["transfers"] == ["sell A, buy B (+15.4 xP)", "sell C, buy D (+9.9 xP)"]
+    assert f["total_expected_points_gain_over_5_gameweeks"] == 25.3
 
 
 def test_transfer_and_analyse_ask_for_a_squad_when_missing():

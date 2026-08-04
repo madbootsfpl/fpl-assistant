@@ -105,11 +105,13 @@ python app.py squad --load my-team               # reload it — re-priced, with
 # Decision support (Phase 3) — work on a saved squad:
 python app.py captain --squad my-team            # best captain picks next GW (xP + opponent + penalty)
 python app.py transfer --squad my-team --bank 2  # best single legal transfers by xP gain (bank £2m)
+python app.py transfer --squad my-team --count 3 # a coordinated plan of 3 transfers (shared bank)
 python app.py analyse --squad my-team --sort xp  # squad health over N GWs (per-GW xP, weak links, injuries)
 
 # Natural language (Phase 4) — grounded in the analytics; local LLM optional:
 python app.py ask "who should I captain from my-team?"
 python app.py ask "what transfer should I make for my-team?"
+python app.py ask "which 3 transfers for my-team?"
 python app.py ask "analyse my-team"
 ```
 

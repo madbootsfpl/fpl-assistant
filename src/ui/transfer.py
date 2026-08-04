@@ -30,6 +30,40 @@ _COLS = [
 ]
 
 
+_PLAN_COLS = [
+    Col("Out", _OUT_W, "<", _out_name),
+    Col("→", 1, "<", lambda s: "→"),
+    Col("In", _IN_W, "<", lambda s: str(s["in"]["web_name"])[:_IN_W]),
+    Col("ΔxP", 6, ">", lambda s: f"+{s['gain']:.1f}"),
+    Col("Bank", 7, ">", lambda s: f"£{s['bank_after']:.1f}m"),
+]
+
+
+def render_transfer_plan(plan, squad_name: str, bank: float = 0.0, horizon: int = 5) -> str:
+    window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
+    if not plan:
+        return (
+            f"No positive-gain transfer plan for '{squad_name}' over the next {window} "
+            f"(bank £{bank:.1f}m). Try a larger --bank, or the squad may already be strong."
+        )
+
+    total = round(sum(m["gain"] for m in plan), 1)
+    end_bank = plan[-1]["bank_after"]
+    lines = [
+        f"Transfer plan for '{squad_name}' — {len(plan)} move(s) by xP gain over the next "
+        f"{window} (start bank £{bank:.1f}m)", "",
+    ]
+    lines += render_rows(plan, _PLAN_COLS, rank=True)
+    lines += [
+        "",
+        f"Total: +{total} xP over {window} · end bank £{end_bank:.1f}m.",
+        "A coordinated plan — each move is legal given the last (shared bank, ≤3/club, no repeats; "
+        "`(b)` = selling a benched player). Assumes you have that many free transfers — hits (−4) "
+        "aren't modelled — and it's greedy, so not guaranteed optimal.",
+    ]
+    return "\n".join(lines)
+
+
 def render_transfers(suggestions, squad_name: str, bank: float = 0.0, horizon: int = 5) -> str:
     window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
     if not suggestions:

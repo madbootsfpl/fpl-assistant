@@ -431,6 +431,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `ask` degrades to the decision + facts (verified). The narrator is injectable → the flow is
   unit-tested offline; the real model is smoke-only. US-096 wired the `captain` intent; transfer +
   analyse follow (US-097).
+- **Sprint 033 (2026-08-04)** — *multi-transfer plan* (deepen Phase 4), per ADR-035. The first
+  recommendation over a **sequence**: `suggest_transfer_plan` greedily takes the best legal single
+  transfer given the *running* state, up to `count` — **threading the shared bank** (a later move
+  spends what an earlier sale freed), updating club counts, and excluding sold/bought players. It
+  **reuses `suggest_transfers`** on the evolving state, so it's correct by construction (bank can't
+  go negative; no double-buy/re-buy; ≤3/club across the set). Surfaced as `transfer --count N`
+  (opt-in; the shortlist is unchanged) and, next, `ask "which N transfers"` (US-100). Greedy (not
+  ILP) — explainable; hits deferred. No schema change, no new dependency.
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

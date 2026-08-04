@@ -30,6 +30,7 @@ from src.analytics import (
     rank_players,
     resolve_players,
     select_squad,
+    suggest_transfer_plan,
     suggest_transfers,
     team_fdr,
     team_schedule,
@@ -47,7 +48,7 @@ from src.ui.fixtures import render_team_fixtures
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_loaded_squad, render_squad
 from src.ui.table import render_player_table
-from src.ui.transfer import render_transfers
+from src.ui.transfer import render_transfer_plan, render_transfers
 from src.ui.xg import render_xg_table
 from src.ui.xp import render_xp_table
 
@@ -512,11 +513,18 @@ def cmd_transfer(args) -> None:
             baseline_by_code=baseline_by_code,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
-        suggestions = suggest_transfers(
-            owned, players, xp_by_id,
-            bench_ids=squad.get("bench_ids", []), bank=args.bank, limit=args.limit,
-        )
-        print(render_transfers(suggestions, args.squad, bank=args.bank, horizon=args.next))
+        bench_ids = squad.get("bench_ids", [])
+        if args.count:
+            # Plan mode: a coordinated set of `count` transfers (ADR-035).
+            plan = suggest_transfer_plan(
+                owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, count=args.count,
+            )
+            print(render_transfer_plan(plan, args.squad, bank=args.bank, horizon=args.next))
+        else:
+            suggestions = suggest_transfers(
+                owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, limit=args.limit,
+            )
+            print(render_transfers(suggestions, args.squad, bank=args.bank, horizon=args.next))
     finally:
         store.close()
 
@@ -685,6 +693,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_transfer.add_argument(
         "--limit", type=int, default=5, help="How many suggestions to show (default 5)",
+    )
+    p_transfer.add_argument(
+        "--count", type=int,
+        help="Plan a coordinated set of N transfers (shared bank) instead of a shortlist",
     )
     p_transfer.set_defaults(handler=cmd_transfer)
 

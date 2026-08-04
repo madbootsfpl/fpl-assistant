@@ -142,6 +142,15 @@ analytics. The pattern (proven by a spike, ADR-033) is strict:
   analytics decision + facts. The tool never depends on the model — the honest, transparent contrast
   to a black-box AI companion.
 
+**A recommendation over a *sequence* (Sprint 033, multi-transfer plan).** `suggest_transfer_plan`
+(ADR-035) is the first that reasons across several moves: *"which 3 transfers?"*. The lesson is to
+**reuse the single-move engine over an evolving state** rather than write a new optimiser — a greedy
+loop that, each step, takes the best legal `suggest_transfers` move and updates the state (running
+bank, club counts, players used). That makes it correct *by construction*: the bank can't go negative
+(the affordability check runs on the running bank), no player is bought twice or a sold one
+re-bought, and ≤3/club holds across the set. Greedy (explainable) over ILP (optimal-but-opaque); and
+it's honest about what it can't know (your free-transfer count, hits).
+
 **A summary that composes and cross-links (Sprint 029, the analyser).** `analyse_squad` (ADR-031)
 is the capstone: it adds almost no new computation — it *aggregates* the pieces (xP over a horizon,
 availability, the optimiser's XI pick, the club rule) into one health check, and **points at the

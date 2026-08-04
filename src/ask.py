@@ -20,6 +20,7 @@ from src.analytics import (
     captain_picks,
     player_xp,
     select_squad,
+    suggest_transfer_plan,
     suggest_transfers,
 )
 from src.squads import SquadStore
@@ -119,12 +120,32 @@ def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
     }
 
 
+def _transfer_count(question: str) -> int:
+    """The N in 'which N transfers …' (a digit right before 'transfer(s)'); else 1."""
+    tokens = question.lower().replace("?", "").split()
+    for i, tok in enumerate(tokens[:-1]):
+        if tok.isdigit() and tokens[i + 1].startswith("transfer"):
+            return max(1, int(tok))
+    return 1
+
+
 def _transfer_facts(move: dict) -> dict:
     """Pre-humanised facts for one transfer move."""
     return {
         "sell": f"{move['out']['web_name']} ({move['out']['team']}, xP {move['out']['xp']})",
         "buy": f"{move['in']['web_name']} ({move['in']['team']}, xP {move['in']['xp']})",
         "expected_points_gain_over_5_gameweeks": move["gain"],
+    }
+
+
+def _plan_facts(plan: list) -> dict:
+    """Self-describing facts for a coordinated transfer plan (ADR-035)."""
+    return {
+        "transfers": [
+            f"sell {m['out']['web_name']}, buy {m['in']['web_name']} (+{m['gain']} xP)"
+            for m in plan
+        ],
+        "total_expected_points_gain_over_5_gameweeks": round(sum(m["gain"] for m in plan), 1),
     }
 
 
@@ -162,15 +183,32 @@ def _squad_xp(store: Storage, squad_name: str):
     return squad, players, owned, xp_by_id
 
 
-def _decide_transfer(store: Storage, squad_name: str | None) -> dict | None:
+def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
     squad, players, owned, xp_by_id = data
     if not owned:
         return None
+    bench_ids = squad.get("bench_ids") or []
+
+    if count > 1:
+        # A coordinated N-transfer plan (ADR-035).
+        plan = suggest_transfer_plan(
+            owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, count=count
+        )
+        if not plan:
+            return None
+        total = round(sum(m["gain"] for m in plan), 1)
+        return {
+            "headline": f"Transfer plan (squad '{squad_name}'): {len(plan)} move(s), "
+                        f"+{total} xP over {_HORIZON} GW",
+            "facts": _plan_facts(plan),
+            "task": f"summarise this {len(plan)}-transfer plan in 2-3 short sentences",
+        }
+
     moves = suggest_transfers(
-        owned, players, xp_by_id, bench_ids=squad.get("bench_ids") or [], bank=0.0, limit=1
+        owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, limit=1
     )
     if not moves:
         return None
@@ -243,12 +281,12 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
     own_store = store is None
     store = store or Storage()
     try:
-        deciders = {
-            "captain": _decide_captain,
-            "transfer": _decide_transfer,
-            "analyse": _decide_analyse,
-        }
-        decision = deciders[intent](store, squad_name)
+        if intent == "transfer":
+            decision = _decide_transfer(store, squad_name, _transfer_count(question))
+        elif intent == "captain":
+            decision = _decide_captain(store, squad_name)
+        else:
+            decision = _decide_analyse(store, squad_name)
     finally:
         if own_store:
             store.close()
