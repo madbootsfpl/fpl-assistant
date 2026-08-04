@@ -422,6 +422,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   per-GW values, so it's byte-for-byte unchanged; DGW = a GW's fixtures summed, BGW = 0). Additive:
   existing consumers/totals untouched. Feeds a per-GW view in `analyse` + `xp` and `analyse --sort xp`
   (US-091), closing the Sprint-006 "xp per-GW" backlog item. No schema change, no new dependency.
+- **Sprint 032 (2026-08-04)** — *the `ask` command* (**Phase 4 begins**), per ADR-034 (from the
+  ADR-033 spike). The first **language layer** — but it adds words, not intelligence: `ask` routes a
+  question by **keyword** (`src/ask.py`; the LLM decides nothing, incl. the route), the analytics
+  **decide** and emit **pre-humanised, self-describing facts**, and a local LLM (`src/llm.py`,
+  Ollama via stdlib HTTP — no new dependency) **narrates**, forbidden from ranking/computing/
+  inventing. Crucially the **LLM is optional**: `narrate` returns `None` when Ollama is absent and
+  `ask` degrades to the decision + facts (verified). The narrator is injectable → the flow is
+  unit-tested offline; the real model is smoke-only. US-096 wired the `captain` intent; transfer +
+  analyse follow (US-097).
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

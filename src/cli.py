@@ -10,7 +10,7 @@ See ADR-003 for why this is argparse + subcommands.
 
 import argparse
 
-from src import config, ingest
+from src import ask, config, ingest
 from src.analytics import (
     DEFAULT_BUDGET,
     FULL_BUDGET,
@@ -38,6 +38,7 @@ from src.api.client import FplApiError
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
+from src.ui.ask import render_ask
 from src.ui.captain import render_captain_picks
 from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
@@ -418,6 +419,15 @@ def cmd_captain(args) -> None:
         store.close()
 
 
+def cmd_ask(args) -> None:
+    """Answer a natural-language question, grounded in the analytics (ADR-034).
+
+    The analytics decide; a local LLM only narrates. Works without the LLM (degrades to the
+    decision + facts).
+    """
+    print(render_ask(ask.answer(args.question)))
+
+
 def cmd_analyse(args) -> None:
     """Grade a saved squad's health over the next N gameweeks (ADR-031)."""
     store = Storage()
@@ -596,6 +606,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Only backfill the first N players (useful for a quick test run)",
     )
     p_history.set_defaults(handler=cmd_history)
+
+    p_ask = sub.add_parser(
+        "ask", help="Ask a natural-language question, grounded in the analytics (local LLM)"
+    )
+    p_ask.add_argument("question", help='e.g. "who should I captain from my-team?"')
+    p_ask.set_defaults(handler=cmd_ask)
 
     p_table = sub.add_parser(
         "table", help="Show players, ranked by points or value (points per £m)"

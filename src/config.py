@@ -23,6 +23,12 @@ ELEMENT_SUMMARY_PATH = "/element-summary/{}/"
 # (~0.3s ≈ a few minutes). It's a fetch-once-per-season job, kept out of `refresh`.
 HISTORY_THROTTLE = 0.3
 
+# Local LLM for the `ask` command (ADR-034). Ollama's generate endpoint; the model is one
+# pulled locally. The LLM is OPTIONAL — `ask` degrades to the analytics decision if it's absent.
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "llama3.2"
+OLLAMA_TIMEOUT = 60
+
 # ClubElo — the second (external) data source: team Elo ratings (ADR-010).
 # The API returns CSV for a given date at CLUBELO_BASE_URL/<YYYY-MM-DD>.
 CLUBELO_BASE_URL = "http://api.clubelo.com"

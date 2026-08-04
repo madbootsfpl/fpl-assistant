@@ -129,6 +129,19 @@ a keeper ranked 3rd by mean xP gave that away on a live probe) and keep doubtful
   start — so the bank is an input (`--bank`, default £0 = self-funding) and bench players are
   *flagged*, not silently modelled. State the assumptions rather than guessing.
 
+**A language layer that adds words, not intelligence (Phase 4, `ask`).** `ask` (ADR-034) answers a
+question in plain English — but the numbers, decisions and rules stay in the deterministic
+analytics. The pattern (proven by a spike, ADR-033) is strict:
+- **Analytics decide; the LLM only narrates.** Ask a small model to *rank* and it fabricates (it
+  once "recommended" the lower-xP player claiming a higher xP). Hand it a *pre-made decision* + facts
+  and it stays honest.
+- **Pre-humanise the facts.** The model must not decode `A`/`H` or team codes, and it conflates
+  fields in a summary — so we pass self-describing facts (`"availability_problems": "none"`) and
+  forbid merging. Grounding is *engineered*, not hoped.
+- **The LLM is optional.** It's an *additive narrator*: if Ollama is absent, `ask` degrades to the
+  analytics decision + facts. The tool never depends on the model — the honest, transparent contrast
+  to a black-box AI companion.
+
 **A summary that composes and cross-links (Sprint 029, the analyser).** `analyse_squad` (ADR-031)
 is the capstone: it adds almost no new computation — it *aggregates* the pieces (xP over a horizon,
 availability, the optimiser's XI pick, the club rule) into one health check, and **points at the

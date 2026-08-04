@@ -38,3 +38,4 @@ new ADR as it is created.
 | [031](./ADR-031-team-analyser.md) | Team Analyser (a saved squad's health check; indicators, not a grade) | Accepted |
 | [032](./ADR-032-per-gameweek-xp.md) | Per-gameweek xP breakdown (+ `analyse --sort xp`) | Accepted |
 | [033](./ADR-033-llm-grounded-narration-spike.md) | LLM grounded-narration spike (local Ollama; analytics decide, LLM narrates) | Accepted |
+| [034](./ADR-034-ask-command-grounded-nl.md) | The `ask` command — grounded NL answers (routing; LLM optional) | Accepted |
