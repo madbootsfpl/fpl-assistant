@@ -10,6 +10,8 @@ multi-season historical baseline; plain is the current single season (the fallba
 for players with no history).
 """
 
+from ._table import Col, render_rows
+
 _RANK_W = 3
 _NAME_W = 17
 _TEAM_W = 5
@@ -20,10 +22,39 @@ _XP_W = 6
 _EP_W = 5
 
 
-def render_xp_table(rows, limit: int = 20, source: str = "fpl", horizon: int = 1) -> str:
+def _render_by_gameweek(rows, limit: int, source: str) -> str:
+    """Per-gameweek layout (ADR-032): a GW column per horizon gameweek, then the total."""
+    total = len(rows)
+    gameweeks = rows[0].get("gameweeks") or []
+    cols = [
+        Col("Player", _NAME_W, "<", lambda r: str(r["web_name"])[:_NAME_W]),
+        Col("Team", _TEAM_W, "<", lambda r: str(r["team"] or "")),
+        Col("Pos", _POS_W, "<", lambda r: str(r["position"] or "")),
+    ]
+    for gw in gameweeks:
+        cols.append(
+            Col(f"GW{gw}", 5, ">", lambda r, gw=gw: f"{r['by_gameweek'].get(gw, 0):.1f}")
+        )
+    cols.append(Col("xP", _XP_W, ">", lambda r: f"{r['xp']:.1f}"))
+
+    lines = render_rows(rows[:limit], cols, rank=True)
+    lines.append("")
+    shown = "all" if total <= limit else f"top {limit} of"
+    lines.append(
+        f"Showing {shown} {total} by xP, split per gameweek (difficulty source: {source}). "
+        "GWn is rounded; the xP total is authoritative."
+    )
+    return "\n".join(lines)
+
+
+def render_xp_table(
+    rows, limit: int = 20, source: str = "fpl", horizon: int = 1, by_gameweek: bool = False
+) -> str:
     total = len(rows)
     if total == 0:
         return "No players to rank — run `refresh` first."
+    if by_gameweek:
+        return _render_by_gameweek(rows, limit, source)
 
     header = (
         f"{'#':<{_RANK_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "

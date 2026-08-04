@@ -366,6 +366,16 @@ def test_analyse_requires_a_squad():
         build_parser().parse_args(["analyse"])
 
 
+def test_analyse_sort_option_parses():
+    assert build_parser().parse_args(["analyse", "--squad", "TS"]).sort == "position"
+    assert build_parser().parse_args(["analyse", "--squad", "TS", "--sort", "xp"]).sort == "xp"
+
+
+def test_xp_by_gameweek_flag_parses():
+    assert build_parser().parse_args(["xp"]).by_gameweek is False
+    assert build_parser().parse_args(["xp", "--by-gameweek"]).by_gameweek is True
+
+
 def test_no_command_leaves_no_handler():
     # main() prints help in this case; here we just confirm the parsed shape.
     args = build_parser().parse_args([])

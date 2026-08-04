@@ -416,6 +416,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   (ADR-023) + saved squads (ADR-024) + the optimiser + the shared renderer (ADR-025, its 3rd new
   consumer) — and it **cross-links** the trio (weak link → `transfer`, top XI → `captain`). No schema
   change, no new dependency. Completes captain · transfer · analyse.
+- **Sprint 030 (2026-08-04)** — *per-gameweek xP* (analyser enhancements), per ADR-032. `player_xp`
+  now groups fixtures **by gameweek** (`_difficulties_by_team_gw`) and returns a `by_gameweek`
+  breakdown alongside the total — a **faithful decomposition** (the total is the sum of the unrounded
+  per-GW values, so it's byte-for-byte unchanged; DGW = a GW's fixtures summed, BGW = 0). Additive:
+  existing consumers/totals untouched. Feeds a per-GW view in `analyse` + `xp` and `analyse --sort xp`
+  (US-091), closing the Sprint-006 "xp per-GW" backlog item. No schema change, no new dependency.
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

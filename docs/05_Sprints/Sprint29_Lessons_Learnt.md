@@ -88,7 +88,7 @@ fake grade. FPL-native; no new dependency.
 
 ### Notes _(for Tony)_
 
--
+- Really like th eanalyse function, would like to be able to sort of higest xP and also see the xP for each game week.
 
 ---
 
@@ -184,6 +184,7 @@ python app.py analyse --squad TS --next 3    # over a 3-GW horizon
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+they way its shaping up!
 
 ### What was the biggest lesson?
 

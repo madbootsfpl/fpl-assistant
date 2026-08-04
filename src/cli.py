@@ -369,7 +369,10 @@ def cmd_xp(args) -> None:
             players, upcoming, source=args.type, horizon=args.next,
             baseline_by_code=baseline_by_code,
         )
-        print(render_xp_table(ranked, limit=args.limit, source=args.type, horizon=args.next))
+        print(render_xp_table(
+            ranked, limit=args.limit, source=args.type, horizon=args.next,
+            by_gameweek=args.by_gameweek,
+        ))
     store.close()
 
 
@@ -442,12 +445,13 @@ def cmd_analyse(args) -> None:
             code: baseline_rate(rows)
             for code, rows in store.get_history_by_code().items()
         }
-        xp_by_id = {
-            r["id"]: r["xp"] for r in player_xp(
-                players, upcoming, source=args.type, horizon=args.next,
-                baseline_by_code=baseline_by_code,
-            )
-        }
+        ranked = player_xp(
+            players, upcoming, source=args.type, horizon=args.next,
+            baseline_by_code=baseline_by_code,
+        )
+        xp_by_id = {r["id"]: r["xp"] for r in ranked}
+        by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
+        gameweeks = ranked[0]["gameweeks"] if ranked else []
 
         # The XI: the declared bench's complement, else the best legal XI (ADR-031).
         bench_ids = set(squad.get("bench_ids") or [])
@@ -457,7 +461,10 @@ def cmd_analyse(args) -> None:
             result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
             xi_ids = {p["id"] for p in result["selected"]}
 
-        analysis = analyse_squad(owned, xi_ids, xp_by_id, horizon=args.next)
+        analysis = analyse_squad(
+            owned, xi_ids, xp_by_id, horizon=args.next, sort=args.sort,
+            by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks,
+        )
         print(render_squad_analysis(analysis, args.squad))
     finally:
         store.close()
@@ -621,6 +628,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_xp.add_argument(
         "--limit", type=int, default=20, help="How many players to show (default 20)",
     )
+    p_xp.add_argument(
+        "--by-gameweek", action="store_true",
+        help="Show a per-gameweek xP breakdown (a GW column per gameweek in the horizon)",
+    )
     p_xp.set_defaults(handler=cmd_xp)
 
     p_captain = sub.add_parser(
@@ -674,6 +685,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_analyse.add_argument(
         "--type", choices=["fpl", "custom"], default="fpl",
         help="Difficulty source used in the xP calc (default fpl)",
+    )
+    p_analyse.add_argument(
+        "--sort", choices=["position", "xp"], default="position",
+        help="Order the XI by formation position (default) or by xP",
     )
     p_analyse.set_defaults(handler=cmd_analyse)
 

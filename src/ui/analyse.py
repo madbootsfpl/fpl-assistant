@@ -20,18 +20,30 @@ def _name(r) -> str:
     return name[:_NAME_W]
 
 
-_COLS = [
+_BASE_COLS = [
     Col("Player", _NAME_W, "<", _name),
     Col("Team", 5, "<", lambda r: str(r["team"] or "")),
     Col("Pos", 4, "<", lambda r: str(r["position"] or "")),
     Col("£", 6, ">", lambda r: f"{r['price']:.1f}"),
-    Col("xP", 6, ">", lambda r: f"{r['xp']:.1f}"),
 ]
+_XP_COL = Col("xP", 6, ">", lambda r: f"{r['xp']:.1f}")
+
+
+def _columns(gameweeks):
+    """Base columns + a per-GW column per gameweek (ADR-032) + the total, when present."""
+    cols = list(_BASE_COLS)
+    for gw in gameweeks:
+        cols.append(
+            Col(f"GW{gw}", 5, ">", lambda r, gw=gw: f"{r['by_gameweek'].get(gw, 0):.1f}")
+        )
+    cols.append(_XP_COL)
+    return cols
 
 
 def render_squad_analysis(analysis: dict, squad_name: str) -> str:
     horizon = analysis["horizon"]
     window = f"{horizon} GW" if horizon != 1 else "next GW"
+    cols = _columns(analysis.get("gameweeks") or [])
 
     lines = [
         f"Squad analysis — '{squad_name}' over the next {window}", "",
@@ -45,11 +57,11 @@ def render_squad_analysis(analysis: dict, squad_name: str) -> str:
         lines.append(f"  At the 3-per-club cap: {clubs} (less transfer room)")
 
     lines += ["", "Starting XI:"]
-    lines += render_rows(analysis["xi"], _COLS, rank=True)
+    lines += render_rows(analysis["xi"], cols, rank=True)
 
     lines += ["", "Bench:"]
     if analysis["bench"]:
-        lines += render_rows(analysis["bench"], _COLS, rank=True)
+        lines += render_rows(analysis["bench"], cols, rank=True)
     else:
         lines.append("  (none — no bench in this squad)")
 
@@ -67,7 +79,8 @@ def render_squad_analysis(analysis: dict, squad_name: str) -> str:
 
     lines.append("")
     lines.append(
-        "Projected xP is the starting XI's expected points over the horizon (a mean; "
-        "it assumes they play). `--load` shows the current state instead."
+        "GWn = projected xP that gameweek (rounded; the xP total is authoritative). Projected xP "
+        "is the XI's expected points over the horizon (a mean; assumes they play). `--load` shows "
+        "the current state; `--sort xp` orders the XI by xP."
     )
     return "\n".join(lines)

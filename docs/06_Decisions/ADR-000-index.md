@@ -36,3 +36,4 @@ new ADR as it is created.
 | [029](./ADR-029-captain-suggestions.md) | Captain suggestions (recommend + explain; xP, GK-excluded) | Accepted |
 | [030](./ADR-030-transfer-suggestions.md) | Transfer suggestions (best single legal upgrades; xP gain, `--bank`) | Accepted |
 | [031](./ADR-031-team-analyser.md) | Team Analyser (a saved squad's health check; indicators, not a grade) | Accepted |
+| [032](./ADR-032-per-gameweek-xp.md) | Per-gameweek xP breakdown (+ `analyse --sort xp`) | Accepted |

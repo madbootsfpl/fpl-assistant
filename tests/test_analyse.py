@@ -63,3 +63,18 @@ def test_xi_is_ordered_by_position_then_xp():
     a = analyse_squad(SQUAD, XI, XP)
     positions = [p["position"] for p in a["xi"]]
     assert positions == ["DEF", "MID", "FWD"]   # GK/DEF/MID/FWD order
+
+
+def test_sort_xp_orders_the_xi_by_xp():
+    a = analyse_squad(SQUAD, XI, XP, sort="xp")
+    assert [p["id"] for p in a["xi"]] == [2, 1, 3]   # 40, 30, 20 — strongest first
+
+
+def test_per_gameweek_is_carried_into_summaries_when_given():
+    gw = {1: {1: 10.0, 2: 20.0}}
+    a = analyse_squad(SQUAD, XI, XP, by_gameweek_by_id=gw, gameweeks=[1, 2])
+    assert a["gameweeks"] == [1, 2]
+    p1 = next(p for p in a["xi"] if p["id"] == 1)
+    assert p1["by_gameweek"] == {1: 10.0, 2: 20.0}
+    # a player with no breakdown gets an empty dict, not a crash
+    assert next(p for p in a["xi"] if p["id"] == 2)["by_gameweek"] == {}

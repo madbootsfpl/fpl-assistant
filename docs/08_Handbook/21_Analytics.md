@@ -139,6 +139,16 @@ other tools** (a weak link → `transfer`, the top XI player → `captain`). Two
   mostly *wiring* — because xP, availability, saved squads, the optimiser and the renderer were
   already separate, testable pieces. Composability is the pay-off of the one-way-flow architecture.
 
+**Making a metric legible without changing it (Sprint 030, per-GW xP).** A total can hide *when*
+the points land. The per-gameweek breakdown (ADR-032) splits xP into its gameweeks — but it's a
+**faithful decomposition**, not a new number: the total is the sum of the (unrounded) per-GW parts,
+so it's byte-for-byte unchanged and every existing xP test stayed green. Two lessons:
+- **Additive beats invasive.** The breakdown was added as extra keys (`by_gameweek`) on the result;
+  existing consumers ignore them, and one capability now serves `analyse` *and* `xp`.
+- **Round for display, keep the total authoritative.** Per-GW cells are rounded, so a row can read
+  ±0.1 off its total — a normal rounding artifact. We footnote it rather than fudge the total (which
+  would break the "unchanged" guarantee). Honesty over a tidy-looking-but-wrong sum.
+
 ---
 
 ## Common Mistakes
