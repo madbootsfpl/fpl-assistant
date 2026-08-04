@@ -87,7 +87,7 @@ ADR-032 (per-GW xP); tighten the plan-narration prompt. No new dependency.
 
 ### Notes _(for Tony)_
 
--
+- looks great and works well
 
 ---
 
@@ -187,6 +187,7 @@ python app.py ask "which 3 transfers for TS?"    # the same table + a grounded s
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+what else can we deepen?
 
 ---
 

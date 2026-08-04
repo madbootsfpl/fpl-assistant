@@ -28,7 +28,8 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
 
 **Natural language (Phase 4)** — grounded, and optional:
 - **`ask "..."`** — ask a question in plain English (captain / transfer / squad health). The
-  **analytics decide**; a **local LLM (Ollama) only narrates** — it can't invent numbers, and `ask`
+  **analytics decide**; a **local LLM (Ollama) only narrates** — and every answer is **checked
+  against the data** (a ✓/⚠ trust line: figures and names are verified, not just instructed). `ask`
   works without the LLM (it falls back to the decision + facts).
 
 ## Planned (not yet built)

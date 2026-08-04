@@ -10,6 +10,7 @@ This sprint (US-096) wires the `captain` intent; transfer + analyse follow in US
 """
 
 import json
+import re
 from dataclasses import dataclass
 
 from src import llm
@@ -57,6 +58,7 @@ class AskResult:
     explanation: str | None = None   # the LLM prose, or None when the model is unavailable
     message: str | None = None       # for an unrecognised question or an empty result
     detail: str | None = None        # a pre-rendered structured table (e.g. a plan; ADR-036)
+    trust: dict | None = None        # verify_grounding result when there's narration (ADR-037)
 
 
 def _squad_name(question: str, known_squads) -> str | None:
@@ -117,6 +119,7 @@ def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
     return {
         "headline": f"Captain pick ({scope}): {top['web_name']} — xP {top['xp']} next GW",
         "facts": _captain_facts(top),
+        "subjects": [top["web_name"]],
         "task": f"explain in 2-3 short sentences why {top['web_name']} is a good captain pick "
                 "this gameweek",
     }
@@ -208,6 +211,8 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> 
         return {
             "detail": detail,                       # the exact table, shown above the narration
             "facts": _plan_facts(plan),
+            "subjects": [m["out"]["web_name"] for m in plan]
+                        + [m["in"]["web_name"] for m in plan],
             "task": f"summarise this {len(plan)}-transfer plan in 2-3 short sentences",
         }
 
@@ -221,6 +226,7 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> 
         "headline": f"Transfer (squad '{squad_name}'): {m['out']['web_name']} → "
                     f"{m['in']['web_name']} (+{m['gain']} xP over {_HORIZON} GW)",
         "facts": _transfer_facts(m),
+        "subjects": [m["out"]["web_name"], m["in"]["web_name"]],
         "task": f"explain in 2 short sentences why selling {m['out']['web_name']} and buying "
                 f"{m['in']['web_name']} improves the squad",
     }
@@ -240,12 +246,55 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
         result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
         xi_ids = {p["id"] for p in result["selected"]}
     analysis = analyse_squad(owned, xi_ids, xp_by_id, horizon=_HORIZON)
+    subjects = [w["web_name"] for w in analysis["weakest"]] + \
+               [p["web_name"] for p in analysis["issues"]]
     return {
         "headline": f"Squad health (squad '{squad_name}') over {_HORIZON} GW: "
                     f"projected XI xP {analysis['projected_xp']}",
         "facts": _analyse_facts(analysis),
+        "subjects": subjects,
         "task": "summarise this squad's health in 2-3 short sentences",
     }
+
+
+def _numbers(text: str) -> set:
+    """Number-like tokens in `text` (e.g. '7.4', '22')."""
+    return set(re.findall(r"\d+(?:\.\d+)?", text))
+
+
+def _significant_tokens(text: str) -> set:
+    """Lower-cased whole words of ≥4 letters — distinctive enough to match a player by.
+
+    Whole-word (not substring) so 'ward' never matches 'forward'; ≥4 letters so short
+    surnames ('Son', 'Sá') don't collide with common words. Keeps the name check quiet.
+    """
+    return {t.lower() for t in re.findall(r"[A-Za-z]{4,}", text)}
+
+
+def verify_grounding(text: str, facts: dict, *, known_names=(), subjects=()) -> dict:
+    """Flag numbers and player names in a narration not backed by the facts (ADR-037).
+
+    - **numbers:** every number in `text` should appear in `facts`; the rest are unverified.
+    - **names:** a **known** FPL player (from `known_names`) named in `text` who isn't a
+      `subject` of this answer is flagged. Conservative (≥4-letter whole-word tokens) to avoid
+      crying wolf. Returns ``{"numbers": [...], "names": [...]}`` — empty means it checks out.
+    """
+    if not text:
+        return {"numbers": [], "names": []}
+
+    facts_numbers = _numbers(json.dumps(facts))
+    unverified_numbers = sorted(n for n in _numbers(text) if n not in facts_numbers)
+
+    words = _significant_tokens(text)
+    subject_tokens = set().union(*(_significant_tokens(s) for s in subjects)) if subjects else set()
+    unverified_names = sorted({
+        name for name in known_names
+        if (toks := _significant_tokens(name))          # a matchable (≥4-letter) name
+        and toks <= words                               # all its tokens appear in the text
+        and not (toks & subject_tokens)                 # …and it isn't a subject of the answer
+    })
+
+    return {"numbers": unverified_numbers, "names": unverified_names}
 
 
 def _build_prompt(decision: dict) -> str:
@@ -257,11 +306,13 @@ def _build_prompt(decision: dict) -> str:
     )
 
 
-def assemble(question: str, intent: str | None, decision: dict | None, narrator) -> AskResult:
-    """Turn a decision into an AskResult — narrating if we can, degrading if we can't.
+def assemble(question: str, intent: str | None, decision: dict | None, narrator,
+             known_names=()) -> AskResult:
+    """Turn a decision into an AskResult — narrating, verifying, and degrading if needed.
 
     Pure given `decision` + `narrator` (so it's unit-tested without a live model): a narrator
-    returning None (Ollama absent) yields a result with the decision + facts but no prose.
+    returning None (Ollama absent) yields a result with the decision + facts but no prose. When
+    there IS narration, it's verified against the facts (ADR-037) and the result carried in `trust`.
     """
     if intent is None:
         return AskResult(question, None, message=_FALLBACK)
@@ -269,9 +320,15 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator)
         return AskResult(question, intent,
                          message="No result — run `refresh`, and check the squad name.")
     explanation = narrator(_build_prompt(decision))   # str, or None if unavailable
+    trust = None
+    if explanation:
+        trust = verify_grounding(
+            explanation, decision["facts"],
+            known_names=known_names, subjects=decision.get("subjects", ()),
+        )
     return AskResult(
         question, intent, headline=decision.get("headline"), facts=decision["facts"],
-        explanation=explanation, detail=decision.get("detail"),
+        explanation=explanation, detail=decision.get("detail"), trust=trust,
     )
 
 
@@ -294,8 +351,10 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
             decision = _decide_captain(store, squad_name)
         else:
             decision = _decide_analyse(store, squad_name)
+        # The known player names for the verifier's name check (ADR-037).
+        known_names = [p["web_name"] for p in store.get_players()] if decision else ()
     finally:
         if own_store:
             store.close()
 
-    return assemble(question, intent, decision, narrator)
+    return assemble(question, intent, decision, narrator, known_names=known_names)

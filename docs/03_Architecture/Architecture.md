@@ -445,6 +445,13 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   pre-rendered `detail` table shown above the narration (US-103) — the LLM still narrates only the
   self-describing facts (ADR-034 unchanged). Reuses the shared renderer (ADR-025) + `by_gameweek`;
   the plan engine and `player_xp` are untouched. No new dependency.
+- **Sprint 035 (2026-08-04)** — *grounding verification* (deepen Phase 4's trust), per ADR-037.
+  Closes the grounding loop: a pure `verify_grounding(text, facts, *, known_names, subjects)` checks
+  that every **number** in the LLM's narration appears in the facts, and that any **known FPL player**
+  named is a *subject* of the answer (≥4-letter whole-word tokens, so it doesn't cry wolf). `ask` will
+  show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
+  never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
+  no new dependency; the analytics untouched.
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

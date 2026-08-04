@@ -16,6 +16,7 @@ from src.ask import (
     _transfer_facts,
     assemble,
     route,
+    verify_grounding,
 )
 
 # ---- routing ----------------------------------------------------------------
@@ -133,6 +134,73 @@ def test_analyse_facts_availability_reads_none_when_no_issues():
 def test_analyse_facts_lists_availability_problems():
     a = {"projected_xp": 200, "issues": [{"web_name": "Inj"}], "weakest": []}
     assert _analyse_facts(a)["availability_problems"] == "1: Inj"
+
+
+# ---- grounding verification (ADR-037) ---------------------------------------
+
+_CAPTAIN_FACTS = {"player": "B.Fernandes (MUN)", "expected_points_next_gameweek": 7.4,
+                  "fixture": "away against HUL", "is_penalty_taker": True}
+
+
+def test_grounded_narration_passes():
+    text = "B.Fernandes has 7.4 expected points and is the penalty taker, away against HUL."
+    result = verify_grounding(text, _CAPTAIN_FACTS, subjects=["B.Fernandes"])
+    assert result == {"numbers": [], "names": []}
+
+
+def test_fabricated_numbers_are_flagged():
+    text = "B.Fernandes is superb: 22 goals and 9.8 xP this week."
+    result = verify_grounding(text, _CAPTAIN_FACTS, subjects=["B.Fernandes"])
+    assert result["numbers"] == ["22", "9.8"]
+
+
+def test_a_player_who_is_not_a_subject_is_flagged():
+    text = "B.Fernandes is a better pick than Salah this week."
+    result = verify_grounding(
+        text, _CAPTAIN_FACTS, known_names=["B.Fernandes", "Salah"], subjects=["B.Fernandes"],
+    )
+    assert result["names"] == ["Salah"]          # Salah isn't a subject; B.Fernandes is
+
+
+def test_the_subject_itself_is_not_flagged():
+    text = "B.Fernandes is the clear pick."
+    result = verify_grounding(
+        text, _CAPTAIN_FACTS, known_names=["B.Fernandes"], subjects=["B.Fernandes"],
+    )
+    assert result["names"] == []
+
+
+def test_short_names_and_common_words_do_not_false_positive():
+    # "Son"/"Sá" are too short to match; "Ward" must be a whole word (not inside "forward")
+    text = "A forward with a strong performance and a reason to start."
+    result = verify_grounding(text, {}, known_names=["Son", "Sá", "Ward"])
+    assert result["names"] == []
+
+
+def test_empty_text_is_clean():
+    assert verify_grounding("", _CAPTAIN_FACTS) == {"numbers": [], "names": []}
+
+
+def test_assemble_verifies_the_narration():
+    decision = {"headline": "Captain: X", "facts": {"expected_points": 7.4},
+                "subjects": ["X"], "task": "explain"}
+    clean = assemble("q", "captain", decision, narrator=lambda p: "X has 7.4 points.",
+                     known_names=["X"])
+    assert clean.trust == {"numbers": [], "names": []}
+    fabricated = assemble("q", "captain", decision, narrator=lambda p: "X will score 20 goals.",
+                          known_names=["X"])
+    assert fabricated.trust["numbers"] == ["20"]
+
+
+def test_render_ask_trust_line():
+    from src.ui.ask import render_ask
+    ok = AskResult("q", "captain", headline="H", facts={}, explanation="p",
+                   trust={"numbers": [], "names": []})
+    assert "✓ Checked" in render_ask(ok)
+    warn = AskResult("q", "captain", headline="H", facts={}, explanation="p",
+                     trust={"numbers": ["22"], "names": ["Salah"]})
+    out = render_ask(warn)
+    assert "⚠" in out and "22" in out and "Salah" in out
 
 
 def test_transfer_count_parsed_from_the_question():

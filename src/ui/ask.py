@@ -16,7 +16,7 @@ def render_ask(result) -> str:
     lines = [f"Q: {result.question}", "", result.detail or result.headline]
 
     if result.explanation:
-        lines += ["", result.explanation]
+        lines += ["", result.explanation, _trust_line(result.trust)]
     elif result.detail is None:
         # Degraded and no table → show the grounded facts + how to enable prose.
         lines += ["", "Facts:"]
@@ -27,3 +27,19 @@ def render_ask(result) -> str:
         # A table is present (it's the exact data) but no prose.
         lines += ["", "(Start Ollama for a written summary.)"]
     return "\n".join(lines)
+
+
+def _trust_line(trust) -> str:
+    """A visible ✓/⚠ line (ADR-037): the explanation checked against the data, or the gaps."""
+    if trust is None:
+        return ""
+    numbers, names = trust.get("numbers", []), trust.get("names", [])
+    if not numbers and not names:
+        return "\n✓ Checked: every figure and name in the explanation traces to the data above."
+    bits = []
+    if numbers:
+        bits.append("figures " + ", ".join(numbers))
+    if names:
+        bits.append("names " + ", ".join(names))
+    return (f"\n⚠ Unverified in the explanation ({'; '.join(bits)}) — the data above is the "
+            "source of truth.")

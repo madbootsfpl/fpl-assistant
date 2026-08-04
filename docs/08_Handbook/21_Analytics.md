@@ -158,6 +158,15 @@ pre-rendered `detail`) *above* the narration: the table is the exact truth, the 
 readable summary. The lesson: mature features compose — reach for a join before a rebuild — and a
 natural-language layer can still show hard data, not just words.
 
+**Verify the grounding, don't just instruct it (Sprint 035).** The LLM is *told* not to invent
+numbers — `verify_grounding` (ADR-037) then *checks* that it didn't: every number in the prose must
+appear in the facts, and any known FPL player named must be a subject of the answer. `ask` shows a
+soft **✓/⚠ trust line**, with the facts/table always present. Two lessons: (1) an anti-hallucination
+*claim* becomes a *guarantee* only when you check it — instructing is hope, verifying is proof; and
+(2) a self-check must itself be trustworthy, so the name check is deliberately conservative
+(≥4-letter whole words) to avoid crying wolf. This is what separates a grounded assistant from a
+black-box one — the grounding is *visible*.
+
 **A summary that composes and cross-links (Sprint 029, the analyser).** `analyse_squad` (ADR-031)
 is the capstone: it adds almost no new computation — it *aggregates* the pieces (xP over a horizon,
 availability, the optimiser's XI pick, the club rule) into one health check, and **points at the
