@@ -6,6 +6,7 @@ and club concentration.
 """
 
 from src.analytics import analyse_squad
+from src.ui.analyse import render_squad_analysis
 
 
 def _p(pid, pos, team, price, status="a", chance=None):
@@ -78,3 +79,18 @@ def test_per_gameweek_is_carried_into_summaries_when_given():
     assert p1["by_gameweek"] == {1: 10.0, 2: 20.0}
     # a player with no breakdown gets an empty dict, not a crash
     assert next(p for p in a["xi"] if p["id"] == 2)["by_gameweek"] == {}
+
+
+def test_weight_by_id_is_carried_into_summaries():
+    # xMins v0 (ADR-038): the per-player weight rides on each summary (1.0 when absent).
+    a = analyse_squad(SQUAD, XI, XP, weight_by_id={1: 0.62})
+    assert next(p for p in a["xi"] if p["id"] == 1)["minutes_weight"] == 0.62
+    assert next(p for p in a["xi"] if p["id"] == 2)["minutes_weight"] == 1.0   # default
+
+
+def test_render_shows_the_xmins_column_only_when_on():
+    a = analyse_squad(SQUAD, XI, XP, weight_by_id={1: 0.62, 2: 1.0, 3: 1.0})
+    on = render_squad_analysis(a, "TST", show_xmins=True)
+    assert "xMins" in on and " 56" in on          # P1's 0.62 → 56 expected minutes
+    off = render_squad_analysis(a, "TST", show_xmins=False)
+    assert "xMins" not in off                      # --no-xmins reproduces the original table

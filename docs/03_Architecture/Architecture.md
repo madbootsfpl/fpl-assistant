@@ -452,6 +452,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 037 (2026-08-04)** — *expected minutes (xMins) v0* (**Phase 3 depth**), per ADR-038. A new
+  `analytics/minutes.py` — `chance_factor` × a recency-weighted **minutes share** (minutes-only;
+  `starts` proved unreliable pre-2022/23 at planning) → `availability_weight ∈ [0,1]`, with graceful
+  fallbacks (no history / no news → nailed-on; injured/suspended → 0). `player_xp` gained an optional
+  `minutes_weight` hook (scales the total + per-GW; **byte-identical without it**), and the decision
+  edge — `captain`, `transfer`, `analyse`, `ask` — passes it **default-on**, weighting xP by expected
+  playing time so rotation risks stop out-ranking nailed-on starters. The weight is **shown as expected
+  minutes** (an `xMins` column in captain/analyse; a note on transfer) with a **`--no-xmins`** opt-out;
+  the raw `xp` command stays a pure *"assumes they play"* number (**generic core, policy at the edge**).
+  The `history --backfill` coverage was broadened 29% → 87% so the signal fires. No new dependency. The
+  full probabilistic model (congestion, rotation profiles, in-season minutes) remains Phase 5.
 - **Sprint 036 (2026-08-04)** — *`ask "analyse"` gains a structured detail table* (US-107), under
   ADR-036. Pure **reuse/consistency**: `_decide_analyse` now threads the per-GW data into
   `analyse_squad` and renders the same `render_squad_analysis(...)` table the `analyse` command prints

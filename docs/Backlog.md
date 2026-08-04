@@ -41,12 +41,13 @@ biggest source of FPL variance, and "assumes they play" is the recurring caveat 
 `captain`/`transfer`/`analyse`. **Value: very high.** Assessed in Sprint 036 (US-108); recommended in
 **two steps** so most of the value lands early, the heavy modelling waits for data.
 
-- **xMins v0 — lightweight, FPL-native, no ML *(near-term, Phase 3)*.** Expected minutes ≈
-  `chance_of_playing_next_round%` (FPL, populated) × a historical minutes/starts ratio (from
-  `history_past`, which we already ingest). Then **weight xP by expected minutes** so nailed-on
-  starters outrank rotation risks, and bench-blindness retires. Captures ~most of the decision value
-  with data we already hold; buildable relatively soon. *Honest limit:* it's an estimate from a stated
-  chance% + history, **not** the full probabilistic model.
+- ~~**xMins v0 — lightweight, FPL-native, no ML *(near-term, Phase 3)*.**~~ **DONE** (Sprint 037,
+  **ADR-038**). `availability_weight = chance_factor × recency-weighted minutes share` (**minutes-only**
+  — the planning probe proved `starts` is unreliable pre-2022/23, correcting the original "minutes/starts
+  ratio" sketch). Weights xP by expected minutes **default-on** at the decision edge
+  (captain/transfer/analyse/`ask`), shown as **expected minutes** with a **`--no-xmins`** opt-out; the
+  raw `xp` view stays pure. Backfill broadened 29% → 87%. *Honest limits (→ Phase 5):* role change +
+  coverage. It's an estimate from chance% + history, **not** the full probabilistic model.
 - **Full probabilistic xMins — the ML model *(later, dedicated phase — Roadmap Phase 5)*.** A trained
   model producing per-fixture expected-minutes *probabilities* from schedule density (hours between
   kickoffs), European-match congestion, historical manager rotation profiles, and substitution

@@ -113,16 +113,18 @@ def test_analyse_decision_carries_the_squad_table_as_detail(monkeypatch):
              _p(3, "MID", "CCC", 8.0), _p(4, "FWD", "DDD", 9.0)]
     xp_by_id = {1: 12.0, 2: 15.0, 3: 25.0, 4: 30.0}
     by_gw = {pid: {1: xp / 3, 2: xp / 3, 3: xp / 3} for pid, xp in xp_by_id.items()}
+    weight_by_id = {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0}
     squad = {"player_ids": [1, 2, 3, 4], "bench_ids": [1]}   # P1 benched → XI = 2,3,4
     monkeypatch.setattr(
         ask, "_squad_xp",
-        lambda store, name: (squad, owned, owned, xp_by_id, by_gw, [1, 2, 3]),
+        lambda store, name: (squad, owned, owned, xp_by_id, by_gw, [1, 2, 3], weight_by_id),
     )
     decision = ask._decide_analyse(store=None, squad_name="TST")
     assert "headline" not in decision                 # detail replaces the one-line headline
     assert isinstance(decision["detail"], str)
     assert "Starting XI:" in decision["detail"]
     assert "GW1" in decision["detail"]                # the per-GW breakdown Tony wanted
+    assert "xMins" in decision["detail"]              # the expected-minutes column (xMins v0)
     assert "Weakest links:" in decision["detail"]     # who the weak starters are
 
 

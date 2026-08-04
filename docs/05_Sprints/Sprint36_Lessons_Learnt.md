@@ -179,10 +179,12 @@ python app.py analyse --squad TS  # the same table, from the command
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+-Really happy with the change to analyse, very powerful
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
+Going deeper in Phase 4, particularly Build xMins v0
 
 ### What am I looking forward to building next?
 

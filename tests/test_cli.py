@@ -380,3 +380,11 @@ def test_no_command_leaves_no_handler():
     # main() prints help in this case; here we just confirm the parsed shape.
     args = build_parser().parse_args([])
     assert getattr(args, "handler", None) is None
+
+
+@pytest.mark.parametrize("command", ["captain", "transfer", "analyse"])
+def test_no_xmins_flag_defaults_off_and_parses(command):
+    # xMins v0 (ADR-038): weighting is default-on; --no-xmins opts out.
+    base = [command] + ([] if command == "captain" else ["--squad", "TS"])
+    assert build_parser().parse_args(base).no_xmins is False
+    assert build_parser().parse_args(base + ["--no-xmins"]).no_xmins is True

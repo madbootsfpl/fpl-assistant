@@ -19,6 +19,7 @@ from src.analytics import (
     analyse_squad,
     baseline_rate,
     captain_picks,
+    minutes_weight_from_history,
     player_xp,
     select_squad,
     suggest_transfer_plan,
@@ -103,7 +104,8 @@ def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
     """Analytics DECIDE the captain (never the LLM); return the decision + humanised facts."""
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
-    baselines = {c: baseline_rate(r) for c, r in store.get_history_by_code().items()}
+    history_by_code = store.get_history_by_code()
+    baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
     scope = "all players"
     if squad_name:
         squad = SquadStore().load(squad_name)
@@ -113,7 +115,11 @@ def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
         players = [p for p in players if p["id"] in ids]
         scope = f"squad '{squad_name}'"
 
-    picks = captain_picks(players, upcoming, baseline_by_code=baselines, limit=3)
+    # xMins v0 (ADR-038): `ask` is a decision, so weight xP by expected minutes (default-on).
+    picks = captain_picks(
+        players, upcoming, baseline_by_code=baselines, limit=3,
+        minutes_weight=minutes_weight_from_history(history_by_code),
+    )
     if not picks:
         return None
     top = picks[0]
@@ -174,26 +180,34 @@ def _analyse_facts(analysis: dict) -> dict:
 
 
 def _squad_xp(store: Storage, squad_name: str):
-    """Shared setup for transfer/analyse: the squad's owned rows + xP (+ per-GW) over the horizon."""
+    """Shared setup for transfer/analyse: the squad's owned rows + xP (+ per-GW) over the horizon.
+
+    xP is weighted by expected minutes (xMins v0, ADR-038) — `ask` is a decision, so default-on.
+    """
     squad = SquadStore().load(squad_name)
     if squad is None:
         return None
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
-    baselines = {c: baseline_rate(r) for c, r in store.get_history_by_code().items()}
-    ranked = player_xp(players, upcoming, horizon=_HORIZON, baseline_by_code=baselines)
+    history_by_code = store.get_history_by_code()
+    baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
+    ranked = player_xp(
+        players, upcoming, horizon=_HORIZON, baseline_by_code=baselines,
+        minutes_weight=minutes_weight_from_history(history_by_code),
+    )
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
+    weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     gameweeks = ranked[0]["gameweeks"] if ranked else []
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
-    return squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks
+    return squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, weight_by_id
 
 
 def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
-    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks = data
+    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, _weight_by_id = data
     if not owned:
         return None
     bench_ids = squad.get("bench_ids") or []
@@ -207,7 +221,7 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> 
             return None
         detail = render_transfer_plan(
             plan, squad_name, bank=0.0, horizon=_HORIZON,
-            by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks,
+            by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks, show_xmins=True,
         )
         return {
             "detail": detail,                       # the exact table, shown above the narration
@@ -237,7 +251,7 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
-    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks = data
+    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, weight_by_id = data
     if not owned:
         return None
     bench_ids = set(squad.get("bench_ids") or [])
@@ -248,11 +262,12 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
         xi_ids = {p["id"] for p in result["selected"]}
     # The full squad-analysis table (XI + per-GW xP + weak links) as structured detail (ADR-036) —
     # the same analysis + renderer the `analyse` command uses, so `ask` reads like the command.
+    # xP is xMins-weighted (ADR-038); the table shows the expected-minutes column.
     analysis = analyse_squad(
         owned, xi_ids, xp_by_id, horizon=_HORIZON,
-        by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks,
+        by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks, weight_by_id=weight_by_id,
     )
-    detail = render_squad_analysis(analysis, squad_name)
+    detail = render_squad_analysis(analysis, squad_name, show_xmins=True)
     subjects = [w["web_name"] for w in analysis["weakest"]] + \
                [p["web_name"] for p in analysis["issues"]]
     return {

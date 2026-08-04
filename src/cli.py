@@ -24,6 +24,7 @@ from src.analytics import (
     defensive_solidity,
     elo_difficulty_bands,
     is_unavailable,
+    minutes_weight_from_history,
     objective_scores,
     over_under,
     player_xp,
@@ -407,15 +408,15 @@ def cmd_captain(args) -> None:
                 print(f"Squad '{args.squad}' has no current players to captain.")
                 return
 
-        baseline_by_code = {
-            code: baseline_rate(rows)
-            for code, rows in store.get_history_by_code().items()
-        }
+        history_by_code = store.get_history_by_code()
+        baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
+        # xMins v0 (ADR-038): weight xP by expected minutes unless --no-xmins.
+        minutes_weight = None if args.no_xmins else minutes_weight_from_history(history_by_code)
         picks = captain_picks(
             players, upcoming, baseline_by_code=baseline_by_code,
-            source=args.type, limit=args.limit,
+            source=args.type, limit=args.limit, minutes_weight=minutes_weight,
         )
-        print(render_captain_picks(picks, squad_name=squad_name))
+        print(render_captain_picks(picks, squad_name=squad_name, show_xmins=not args.no_xmins))
     finally:
         store.close()
 
@@ -452,16 +453,17 @@ def cmd_analyse(args) -> None:
             print(f"Squad '{args.squad}' has no current players to analyse.")
             return
 
-        baseline_by_code = {
-            code: baseline_rate(rows)
-            for code, rows in store.get_history_by_code().items()
-        }
+        history_by_code = store.get_history_by_code()
+        baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
+        # xMins v0 (ADR-038): weight xP by expected minutes unless --no-xmins.
+        minutes_weight = None if args.no_xmins else minutes_weight_from_history(history_by_code)
         ranked = player_xp(
             players, upcoming, source=args.type, horizon=args.next,
-            baseline_by_code=baseline_by_code,
+            baseline_by_code=baseline_by_code, minutes_weight=minutes_weight,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
+        weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
         gameweeks = ranked[0]["gameweeks"] if ranked else []
 
         # The XI: the declared bench's complement, else the best legal XI (ADR-031).
@@ -474,9 +476,9 @@ def cmd_analyse(args) -> None:
 
         analysis = analyse_squad(
             owned, xi_ids, xp_by_id, horizon=args.next, sort=args.sort,
-            by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks,
+            by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks, weight_by_id=weight_by_id,
         )
-        print(render_squad_analysis(analysis, args.squad))
+        print(render_squad_analysis(analysis, args.squad, show_xmins=not args.no_xmins))
     finally:
         store.close()
 
@@ -504,13 +506,14 @@ def cmd_transfer(args) -> None:
             print(f"Squad '{args.squad}' has no current players to improve.")
             return
 
-        baseline_by_code = {
-            code: baseline_rate(rows)
-            for code, rows in store.get_history_by_code().items()
-        }
+        history_by_code = store.get_history_by_code()
+        baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
+        # xMins v0 (ADR-038): weight xP by expected minutes unless --no-xmins.
+        minutes_weight = None if args.no_xmins else minutes_weight_from_history(history_by_code)
+        show_xmins = not args.no_xmins
         ranked = player_xp(
             players, upcoming, source=args.type, horizon=args.next,
-            baseline_by_code=baseline_by_code,
+            baseline_by_code=baseline_by_code, minutes_weight=minutes_weight,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])
@@ -523,13 +526,15 @@ def cmd_transfer(args) -> None:
             print(render_transfer_plan(
                 plan, args.squad, bank=args.bank, horizon=args.next,
                 by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
-                gameweeks=ranked[0]["gameweeks"] if ranked else [],
+                gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=show_xmins,
             ))
         else:
             suggestions = suggest_transfers(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, limit=args.limit,
             )
-            print(render_transfers(suggestions, args.squad, bank=args.bank, horizon=args.next))
+            print(render_transfers(
+                suggestions, args.squad, bank=args.bank, horizon=args.next, show_xmins=show_xmins,
+            ))
     finally:
         store.close()
 
@@ -676,6 +681,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_captain.add_argument(
         "--squad", help="Only consider players from a saved squad (see `squad --save`)",
     )
+    p_captain.add_argument(
+        "--no-xmins", action="store_true",
+        help="Don't weight xP by expected minutes (xMins v0) — show the raw 'assumes 90' number",
+    )
     p_captain.set_defaults(handler=cmd_captain)
 
     p_transfer = sub.add_parser(
@@ -703,6 +712,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--count", type=int,
         help="Plan a coordinated set of N transfers (shared bank) instead of a shortlist",
     )
+    p_transfer.add_argument(
+        "--no-xmins", action="store_true",
+        help="Don't weight xP by expected minutes (xMins v0) — show the raw 'assumes 90' number",
+    )
     p_transfer.set_defaults(handler=cmd_transfer)
 
     p_analyse = sub.add_parser(
@@ -722,6 +735,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_analyse.add_argument(
         "--sort", choices=["position", "xp"], default="position",
         help="Order the XI by formation position (default) or by xP",
+    )
+    p_analyse.add_argument(
+        "--no-xmins", action="store_true",
+        help="Don't weight xP by expected minutes (xMins v0) — show the raw 'assumes 90' number",
     )
     p_analyse.set_defaults(handler=cmd_analyse)
 

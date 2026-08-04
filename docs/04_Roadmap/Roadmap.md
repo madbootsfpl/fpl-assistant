@@ -73,12 +73,11 @@ cross-linked** (`captain` → `transfer` → `analyse`).
 - ✅ Team analyser (`analyse --squad`, ADR-031) — projected XI xP over N GW (with a per-GW breakdown,
   ADR-032), weak links, injuries, club concentration; indicators, not a grade. *(Uses a saved
   squad — a manager-ID fetch waits on auth.)*
-- ◑ **Expected minutes (xMins) v0** (lightweight, FPL-native) — estimate expected minutes from
-  `chance_of_playing%` × a historical minutes/starts ratio (data we already hold), then **weight xP by
-  it** so nailed-on starters outrank rotation risks. Retires the "assumes they play" caveat that
-  captaincy/transfer/analyse currently flag. No ML; a near-term Phase 3 enhancement. *(The full
-  probabilistic model is Phase 5 — see below. Owner's Sprint-35 request; assessed in the
-  [Backlog](../Backlog.md#expected-minutes-xmins--the-owners-sprint-35-request).)*
+- ✅ **Expected minutes (xMins) v0** (lightweight, FPL-native) — **DONE (Sprint 037, ADR-038)**.
+  `chance_of_playing%` × a recency-weighted historical **minutes share** (minutes-only) **weights xP**
+  default-on at the decision edge (captain/transfer/analyse/`ask`), shown as expected minutes with a
+  `--no-xmins` opt-out; the raw `xp` view stays pure. Retires the "assumes they play" caveat where
+  decisions are made. *(The full probabilistic model is Phase 5 — see below.)*
 - ⬜ Live event layer — re-rank on injuries / lineups / price changes without a full recompute.
 - ⬜ Multi-move transfer *planner* (hits vs roll, −4 maths) — the single-move engine is the foundation.
 

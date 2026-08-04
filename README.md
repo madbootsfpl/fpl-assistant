@@ -25,6 +25,9 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
 - **`captain`** — the best captain picks for the next GW (by xP), with opponent + penalty duty
 - **`transfer`** — the best single legal transfers for your squad (≤3/club, budget, by xP gain)
 - **`analyse`** — a saved squad's health over N GWs (projected XI xP, weak links, injuries), cross-linked
+- **Expected minutes (xMins v0)** — every recommendation **weights xP by expected playing time**
+  (`chance_of_playing%` × a historical minutes share), so rotation risks don't out-rank nailed-on
+  starters. Shown as expected minutes; use `--no-xmins` for the raw "assumes 90" number.
 
 **Natural language (Phase 4)** — grounded, and optional:
 - **`ask "..."`** — ask a question in plain English (captain / transfer / squad health). The
@@ -34,7 +37,9 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
 
 ## Planned (not yet built)
 
-- A web dashboard UI (Phase 2); in-season form + expected minutes (needs the season started)
+- A web dashboard UI (Phase 2); in-season form (needs the season started); the full probabilistic
+  xMins model — schedule/European congestion, rotation profiles (Phase 5, post-GW1). *(xMins **v0** —
+  chance% × historical minutes — is built; see above.)*
 
 See the [Roadmap](docs/04_Roadmap/Roadmap.md) and
 [Phase 1 reconciliation](docs/04_Roadmap/Phase1_Reconciliation.md).
@@ -109,6 +114,7 @@ python app.py transfer --squad my-team --bank 2  # best single legal transfers b
 python app.py transfer --squad my-team --count 3 # a coordinated plan of 3 transfers (shared bank),
                                                  #   with each incoming player's points per gameweek
 python app.py analyse --squad my-team --sort xp  # squad health over N GWs (per-GW xP, weak links, injuries)
+python app.py captain --squad my-team --no-xmins # raw xP (don't weight by expected minutes / xMins v0)
 
 # Natural language (Phase 4) — grounded in the analytics; local LLM optional:
 python app.py ask "who should I captain from my-team?"

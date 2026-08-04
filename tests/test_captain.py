@@ -6,6 +6,7 @@ Offline, plain dicts.
 """
 
 from src.analytics import captain_picks
+from src.ui.captain import render_captain_picks
 
 
 def _player(pid, pos, ppg, team_id=1, status="a", pens=None, chance=None, code=None):
@@ -29,6 +30,19 @@ def test_ranks_by_xp_and_annotates():
     top = picks[0]
     assert top["penalty_taker"] is True
     assert top["opponent"] == "CHE" and top["venue"] == "H"   # team 1 is home vs CHE
+
+
+def test_minutes_weight_demotes_a_rotation_risk_below_a_nailed_on_starter():
+    # xMins v0 (ADR-038): P1 has the higher raw rate but is a rotation risk (weight 0.3);
+    # P2 is nailed-on (1.0). Weighted, the nailed-on starter tops the list.
+    players = [_player(1, "MID", 6.0), _player(2, "FWD", 5.0)]
+    raw = captain_picks(players, FIXTURES)
+    assert [p["web_name"] for p in raw] == ["P1", "P2"]        # unweighted: P1 first
+
+    weight = lambda p: 0.3 if p["id"] == 1 else 1.0            # noqa: E731
+    weighted = captain_picks(players, FIXTURES, minutes_weight=weight)
+    assert [p["web_name"] for p in weighted] == ["P2", "P1"]   # weighted: nailed-on P2 first
+    assert weighted[0]["minutes_weight"] == 1.0                # the weight is carried on the pick
 
 
 def test_goalkeepers_are_excluded():
@@ -60,3 +74,12 @@ def test_limit_is_respected():
     players = [_player(i, "MID", 10 - i) for i in range(1, 6)]
     picks = captain_picks(players, FIXTURES, limit=3)
     assert len(picks) == 3
+
+
+def test_render_shows_the_xmins_column_only_when_on():
+    picks = [{"web_name": "Kelleher", "team": "BRE", "position": "GK", "xp": 3.9,
+              "penalty_taker": False, "opponent": "CHE", "venue": "H", "minutes_weight": 0.62}]
+    on = render_captain_picks(picks, show_xmins=True)
+    assert "xMins" in on and " 56" in on         # 0.62 × 90 → 56 expected minutes
+    off = render_captain_picks(picks, show_xmins=False)
+    assert "xMins" not in off                     # --no-xmins reproduces the original table

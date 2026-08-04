@@ -25,13 +25,18 @@ def _next_opponent(team_id, upcoming):
     return nxt["home"], "A"
 
 
-def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl", limit: int = 5):
+def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl", limit: int = 5,
+                  minutes_weight=None):
     """Top `limit` captain candidates for the next gameweek (ADR-029).
 
     Outfield players who aren't injured/suspended/gone (`is_unavailable`), ranked by
     next-GW xP — *doubtful* players are included (flagged), not zeroed. Each pick carries
     its opponent, venue, penalty duty, and a doubtful marker. Returns a list of dicts
     (the xP fields plus opponent/venue/penalty_taker/doubtful/chance), highest xP first.
+
+    `minutes_weight` (xMins v0, ADR-038) optionally scales each xP by expected playing
+    time, so a rotation risk doesn't out-rank a nailed-on starter; each pick carries the
+    `minutes_weight` used (1.0 when the hook is absent).
     """
     candidates = [p for p in players if p["position"] != "GK" and not is_unavailable(p)]
 
@@ -39,6 +44,7 @@ def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl",
         candidates, upcoming, source=source, horizon=1,
         baseline_by_code=baseline_by_code,
         is_available=lambda p: not is_unavailable(p),   # count doubtful, not only 'a'
+        minutes_weight=minutes_weight,
     )
     by_id = {p["id"]: p for p in candidates}
 

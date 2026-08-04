@@ -48,7 +48,7 @@ def _plan_columns(gameweeks, by_gameweek_by_id):
 
 def render_transfer_plan(
     plan, squad_name: str, bank: float = 0.0, horizon: int = 5,
-    by_gameweek_by_id=None, gameweeks=(),
+    by_gameweek_by_id=None, gameweeks=(), show_xmins: bool = False,
 ) -> str:
     window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
     if not plan:
@@ -66,17 +66,22 @@ def render_transfer_plan(
         "",
     ]
     lines += render_rows(plan, cols, rank=True)
+    xmins_note = (
+        " xP is weighted by expected minutes (xMins v0; `--no-xmins` for raw)." if show_xmins else ""
+    )
     lines += [
         "",
         f"Total: +{total} xP over {window} · end bank £{end_bank:.1f}m.",
         "A coordinated plan — each move is legal given the last (shared bank, ≤3/club, no repeats; "
         "`(b)` = selling a benched player). Assumes you have that many free transfers — hits (−4) "
-        "aren't modelled — and it's greedy, so not guaranteed optimal.",
+        f"aren't modelled — and it's greedy, so not guaranteed optimal.{xmins_note}",
     ]
     return "\n".join(lines)
 
 
-def render_transfers(suggestions, squad_name: str, bank: float = 0.0, horizon: int = 5) -> str:
+def render_transfers(
+    suggestions, squad_name: str, bank: float = 0.0, horizon: int = 5, show_xmins: bool = False,
+) -> str:
     window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
     if not suggestions:
         return (
@@ -90,10 +95,13 @@ def render_transfers(suggestions, squad_name: str, bank: float = 0.0, horizon: i
     ]
     lines += render_rows(suggestions, _COLS, rank=True)
 
+    starts = (
+        "xP is weighted by expected minutes (xMins v0; `--no-xmins` for raw)."
+        if show_xmins else "xP is a mean over the horizon and assumes the incoming player starts."
+    )
     lines.append("")
     lines.append(
         "Each is a single, legal, affordable swap (same position, ≤3/club, within the sale "
-        "price + bank). `(b)` = the player you'd sell is on your bench (less weekly impact). "
-        "xP is a mean over the horizon and assumes the incoming player starts."
+        f"price + bank). `(b)` = the player you'd sell is on your bench (less weekly impact). {starts}"
     )
     return "\n".join(lines)

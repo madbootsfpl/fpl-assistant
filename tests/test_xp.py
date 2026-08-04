@@ -44,6 +44,24 @@ def test_xp_is_zero_when_unavailable():
     assert result[0]["xp"] == 0.0
 
 
+def test_minutes_weight_scales_xp_when_passed():
+    # xMins v0 hook (ADR-038): half the expected minutes → half the xP (and per-GW).
+    result = player_xp(
+        [player(ppg=5.0)], [upcoming(h_diff=2)], source="fpl",
+        minutes_weight=lambda p: 0.5,
+    )
+    assert result[0]["xp"] == 2.8                        # 5.5 × 0.5 = 2.75, rounded for display
+    assert result[0]["by_gameweek"][1] == 2.8
+    assert result[0]["minutes_weight"] == 0.5
+
+
+def test_xp_is_byte_identical_without_the_minutes_hook():
+    # No hook → xP unchanged and the weight reads 1.0 (the raw `xp` view stays pure).
+    result = player_xp([player(ppg=5.0)], [upcoming(h_diff=2)], source="fpl")
+    assert result[0]["xp"] == 5.5
+    assert result[0]["minutes_weight"] == 1.0
+
+
 def test_xp_is_zero_when_ppg_missing():
     result = player_xp([player(ppg=None)], [upcoming(h_diff=2)])
     assert result[0]["xp"] == 0.0

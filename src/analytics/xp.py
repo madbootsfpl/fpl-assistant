@@ -92,7 +92,7 @@ def _status_is_active(p) -> bool:
 
 def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
-    is_available=None,
+    is_available=None, minutes_weight=None,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -107,6 +107,10 @@ def player_xp(
     `is_available(player)` decides who scores (others → 0); it defaults to "status is 'a'".
     The captain view (ADR-029) passes a looser predicate so *doubtful* players still get an
     xP (to be suggested with a flag) rather than being zeroed.
+
+    `minutes_weight(player)` (xMins v0, ADR-038) optionally scales xP by expected playing
+    time — a continuous [0, 1] weight applied to the total and every per-GW cell. When
+    absent (the raw `xp` view), xP is unchanged; the decision layer passes it default-on.
     """
     horizon_events = _horizon_gameweeks(upcoming, horizon)
     diff_by_team_gw = _difficulties_by_team_gw(upcoming, source, horizon_events)
@@ -123,14 +127,17 @@ def player_xp(
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
         flat = [d for gw in horizon_events for d in gw_map.get(gw, [])]
 
+        # xMins v0 (ADR-038): scale by expected playing time; 1.0 (unchanged) without the hook.
+        weight = minutes_weight(p) if minutes_weight is not None else 1.0
+
         if rate is None or not available:
             by_gameweek = {gw: 0.0 for gw in horizon_events}
             xp = 0.0
         else:
             # Per-GW xP unrounded, so the total is exactly today's number (ADR-032);
-            # per-GW cells are rounded only for display.
+            # per-GW cells are rounded only for display. The minutes weight scales both.
             unrounded = {
-                gw: rate * sum(_multiplier(d) for d in gw_map.get(gw, []))
+                gw: weight * rate * sum(_multiplier(d) for d in gw_map.get(gw, []))
                 for gw in horizon_events
             }
             xp = round(sum(unrounded.values()), 1)
@@ -149,6 +156,7 @@ def player_xp(
             "rate_source": "hist" if baseline is not None else "current",
             "by_gameweek": by_gameweek,               # ADR-032: {gw → xP}, sums to `xp`
             "gameweeks": list(horizon_events),
+            "minutes_weight": round(weight, 2),       # xMins v0 weight applied (1.0 without the hook)
         })
 
     results.sort(key=lambda r: r["xp"], reverse=True)

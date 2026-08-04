@@ -10,6 +10,13 @@ from src.analytics.captain import captain_picks
 from src.analytics.cleansheet import defensive_solidity
 from src.analytics.defcon import defcon_reliability
 from src.analytics.fdr import elo_difficulty_bands, team_fdr, team_schedule
+from src.analytics.minutes import (
+    availability_weight,
+    chance_factor,
+    expected_minutes,
+    minutes_share,
+    minutes_weight_from_history,
+)
 from src.analytics.optimizer import (
     DEFAULT_BUDGET,
     FULL_BUDGET,
@@ -33,8 +40,13 @@ __all__ = [
     "SQUAD_15",
     "XI_FLEX",
     "analyse_squad",
+    "availability_weight",
     "available_players",
     "captain_picks",
+    "chance_factor",
+    "expected_minutes",
+    "minutes_share",
+    "minutes_weight_from_history",
     "is_unavailable",
     "defcon_reliability",
     "defensive_solidity",

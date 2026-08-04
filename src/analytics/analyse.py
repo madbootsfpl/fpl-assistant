@@ -12,7 +12,7 @@ from src.analytics.optimizer import MAX_PER_CLUB, is_unavailable
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
 
-def _summary(player, xp_by_id, by_gameweek_by_id) -> dict:
+def _summary(player, xp_by_id, by_gameweek_by_id, weight_by_id) -> dict:
     return {
         "id": player["id"],
         "web_name": player["web_name"],
@@ -23,6 +23,7 @@ def _summary(player, xp_by_id, by_gameweek_by_id) -> dict:
         "status": player["status"],
         "chance": player["chance"] if "chance" in player.keys() else None,
         "by_gameweek": by_gameweek_by_id.get(player["id"], {}),   # ADR-032; {} when absent
+        "minutes_weight": weight_by_id.get(player["id"], 1.0),    # xMins v0 (ADR-038); 1.0 if absent
     }
 
 
@@ -33,7 +34,7 @@ def _has_issue(player) -> bool:
 
 def analyse_squad(
     owned, xi_ids, xp_by_id, *, horizon: int = 5, max_per_club: int = MAX_PER_CLUB,
-    sort: str = "position", by_gameweek_by_id=None, gameweeks=(),
+    sort: str = "position", by_gameweek_by_id=None, gameweeks=(), weight_by_id=None,
 ) -> dict:
     """Summarise a squad's health over the horizon (ADR-031).
 
@@ -48,6 +49,7 @@ def analyse_squad(
     (ADR-032) to each summary; omit them for a totals-only analysis.
     """
     by_gameweek_by_id = by_gameweek_by_id or {}
+    weight_by_id = weight_by_id or {}
     xi_ids = set(xi_ids)
     xi = [p for p in owned if p["id"] in xi_ids]
     bench = [p for p in owned if p["id"] not in xi_ids]
@@ -61,7 +63,7 @@ def analyse_squad(
     by_xp = sorted(xi, key=lambda p: xp_by_id.get(p["id"], 0))
 
     def summ(p):
-        return _summary(p, xp_by_id, by_gameweek_by_id)
+        return _summary(p, xp_by_id, by_gameweek_by_id, weight_by_id)
 
     club_counts: dict = {}
     for p in owned:
