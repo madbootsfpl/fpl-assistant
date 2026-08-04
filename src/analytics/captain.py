@@ -26,7 +26,7 @@ def _next_opponent(team_id, upcoming):
 
 
 def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl", limit: int = 5,
-                  minutes_weight=None):
+                  minutes_weight=None, history_by_code=None):
     """Top `limit` captain candidates for the next gameweek (ADR-029).
 
     Outfield players who aren't injured/suspended/gone (`is_unavailable`), ranked by
@@ -44,7 +44,7 @@ def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl",
         candidates, upcoming, source=source, horizon=1,
         baseline_by_code=baseline_by_code,
         is_available=lambda p: not is_unavailable(p),   # count doubtful, not only 'a'
-        minutes_weight=minutes_weight,
+        minutes_weight=minutes_weight, history_by_code=history_by_code,
     )
     by_id = {p["id"]: p for p in candidates}
 

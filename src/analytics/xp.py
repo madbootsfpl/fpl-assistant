@@ -17,6 +17,9 @@ _BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
 # tiny cameo (e.g. 2 pts in 20 mins → pp90 9.0+) invents an absurd rate. Same minutes
 # gate the over/under and DefCon views use (ADR-017/018); the Sprint 016 Meslier lesson.
 _MIN_SEASON_MINUTES = 900
+# A replacement-level pp90 (ADR-040): the fallback for a player with no qualifying baseline shrinks
+# toward this. Pinned below the p10 (~2.9) of 900-minute regulars — sub-threshold players are weaker.
+_FALLBACK_PRIOR = 2.0
 
 
 def _get(row, key):
@@ -52,6 +55,31 @@ def baseline_rate(
         num += weight * pp90
         den += weight
     return num / den
+
+
+def fallback_rate(history, prior: float = _FALLBACK_PRIOR):
+    """A damped scoring rate for a player with no qualifying baseline (ADR-040).
+
+    When no season clears the ≥900-min gate, projecting raw `points_per_game` lets a one-game
+    cameo (Benitez: 90 min, 7 pts → ppg 7.0) rank like a star. Instead, shrink the player's
+    **career** pp90 toward a replacement-level `prior` by how much evidence we have:
+
+        rate = career_pp90 × c + prior × (1 − c),   c = min(1, best_season_minutes / 900)
+
+    Confidence comes from the player's **biggest single season**, not the career sum — scattered
+    cameos must not *compound* to false confidence (the Enes Ünal case: 317+330+214 min at ~10 pp90
+    would otherwise trust a flukey rate). So Benitez (best 90 min, c ≈ 0.1) and Enes Ünal (best 330,
+    c ≈ 0.37) both shrink toward the prior, while one real ≥900-min season (c → 1) keeps ~its own
+    rate. Returns None with no history — the caller then falls back to the current `points_per_game`.
+    """
+    total_min = sum((h["minutes"] or 0) for h in history)
+    if total_min <= 0:
+        return None
+    total_pts = sum((h["total_points"] or 0) for h in history)
+    career_pp90 = total_pts * 90.0 / total_min
+    best_season_min = max((h["minutes"] or 0) for h in history)
+    c = min(1.0, best_season_min / _MIN_SEASON_MINUTES)
+    return career_pp90 * c + prior * (1.0 - c)
 
 
 def _multiplier(difficulty) -> float:
@@ -92,7 +120,7 @@ def _status_is_active(p) -> bool:
 
 def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
-    is_available=None, minutes_weight=None,
+    is_available=None, minutes_weight=None, history_by_code=None,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -115,13 +143,21 @@ def player_xp(
     horizon_events = _horizon_gameweeks(upcoming, horizon)
     diff_by_team_gw = _difficulties_by_team_gw(upcoming, source, horizon_events)
     baseline_by_code = baseline_by_code or {}
+    history_by_code = history_by_code or {}
     is_available = is_available or _status_is_active
 
     results = []
     for p in players:
         ppg = p["points_per_game"]
-        baseline = baseline_by_code.get(_get(p, "code"))
-        rate = baseline if baseline is not None else ppg   # ADR-028: baseline, else current
+        code = _get(p, "code")
+        # Rate tiers (ADR-028/040): a trusted ≥900-min baseline, else a low-evidence shrunk
+        # fallback (so a cameo can't project like a star), else the current points-per-game.
+        baseline = baseline_by_code.get(code)
+        if baseline is not None:
+            rate, rate_source = baseline, "hist"
+        else:
+            fb = fallback_rate(history_by_code.get(code, []))
+            rate, rate_source = (fb, "fallback") if fb is not None else (ppg, "current")
         available = is_available(p)
         gw_map = diff_by_team_gw.get(p["team_id"], {})
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
@@ -153,7 +189,7 @@ def player_xp(
             "ep_next": p["ep_next"],
             "difficulty": flat[0] if flat else None,  # next fixture (for N=1 display)
             "rate": round(rate, 2) if rate is not None else None,
-            "rate_source": "hist" if baseline is not None else "current",
+            "rate_source": rate_source,
             "by_gameweek": by_gameweek,               # ADR-032: {gw → xP}, sums to `xp`
             "gameweeks": list(horizon_events),
             "minutes_weight": round(weight, 2),       # xMins v0 weight applied (1.0 without the hook)

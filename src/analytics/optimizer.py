@@ -187,6 +187,17 @@ def select_squad(
     }
 
 
+def best_legal_xi(owned, scores) -> set:
+    """The best legal starting XI (ids) from a 15-man squad, ranked on `scores` (id → value).
+
+    The single primitive behind `analyse` (with no declared bench) and start/bench (ADR-040), so
+    the two can't diverge on what the "optimal XI" is. Budget-unconstrained (the players are already
+    owned); the best flexible formation (`XI_FLEX`).
+    """
+    result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=scores)
+    return {p["id"] for p in result["selected"]}
+
+
 def objective_scores(players, objective: str, upcoming=None) -> dict:
     """Per-player score {id: value} for the chosen squad objective (ADR-011).
 

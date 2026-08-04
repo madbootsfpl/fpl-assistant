@@ -15,13 +15,12 @@ from dataclasses import dataclass
 
 from src import llm
 from src.analytics import (
-    XI_FLEX,
     analyse_squad,
     baseline_rate,
+    best_legal_xi,
     captain_picks,
     minutes_weight_from_history,
     player_xp,
-    select_squad,
     suggest_transfer_plan,
     suggest_transfers,
 )
@@ -124,6 +123,7 @@ def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
     picks = captain_picks(
         players, upcoming, baseline_by_code=baselines, limit=3,
         minutes_weight=minutes_weight_from_history(history_by_code),
+        history_by_code=history_by_code,
     )
     if not picks:
         return None
@@ -199,6 +199,7 @@ def _squad_xp(store: Storage, squad_name: str):
     ranked = player_xp(
         players, upcoming, horizon=_HORIZON, baseline_by_code=baselines,
         minutes_weight=minutes_weight_from_history(history_by_code),
+        history_by_code=history_by_code,
     )
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -260,11 +261,8 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
     if not owned:
         return None
     bench_ids = set(squad.get("bench_ids") or [])
-    if bench_ids:
-        xi_ids = {p["id"] for p in owned if p["id"] not in bench_ids}
-    else:
-        result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
-        xi_ids = {p["id"] for p in result["selected"]}
+    xi_ids = ({p["id"] for p in owned if p["id"] not in bench_ids} if bench_ids
+              else best_legal_xi(owned, xp_by_id))
     # The full squad-analysis table (XI + per-GW xP + weak links) as structured detail (ADR-036) —
     # the same analysis + renderer the `analyse` command uses, so `ask` reads like the command.
     # xP is xMins-weighted (ADR-038); the table shows the expected-minutes column.
@@ -303,9 +301,9 @@ def _decide_start_bench(store: Storage, squad_name: str | None) -> dict | None:
     if not owned:
         return None
 
-    # The best legal XI on xMins-weighted xP; the rest are the recommended bench (ADR-038/039).
-    result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
-    optimal_xi = {p["id"] for p in result["selected"]}
+    # The best legal XI on xMins-weighted xP — the SAME primitive `analyse` uses, so they agree
+    # (ADR-040); the rest are the recommended bench (ADR-038/039).
+    optimal_xi = best_legal_xi(owned, xp_by_id)
 
     declared_bench = set(squad.get("bench_ids") or [])
     declared_xi = {p["id"] for p in owned if p["id"] not in declared_bench} if declared_bench else optimal_xi
@@ -387,10 +385,11 @@ def _decide_compare(store: Storage, question: str) -> dict | None:
         return {"message": f"Name two players to compare, e.g. ask \"Haaland or Saka?\".{found}"}
 
     upcoming = store.get_upcoming_fixtures()
-    baselines = {c: baseline_rate(r) for c, r in store.get_history_by_code().items()}
-    weight = minutes_weight_from_history(store.get_history_by_code())
+    history_by_code = store.get_history_by_code()
+    baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
+    weight = minutes_weight_from_history(history_by_code)
     ranked = player_xp(players, upcoming, horizon=_HORIZON, baseline_by_code=baselines,
-                       minutes_weight=weight)
+                       minutes_weight=weight, history_by_code=history_by_code)
     by_id = {r["id"]: r for r in ranked}
 
     rows = []

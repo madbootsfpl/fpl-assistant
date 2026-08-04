@@ -92,7 +92,95 @@ composition of the existing analytics. No new dependency.
 
 ### Notes _(for Tony)_
 
--
+- Really like the direction, but I want to challenge so of th edata output/results.
+- see these 3 examples:
+(venv) ➜  fpl-assistant git:(master)  python app.py analyse  --squad RoboTS --no-xmins
+Squad analysis — 'RoboTS' over the next 5 GW
+
+  Projected XI xP :  271.9   (bench 79.8)
+  Squad value     : £100.0m   Availability issues: 0
+  At the 3-per-club cap: ARS, MCI (less transfer room)
+
+Starting XI:
+#   Player             Team  Pos       £   GW1   GW2   GW3   GW4   GW5     xP
+--- ------------------ ----- ---- ------ ----- ----- ----- ----- ----- ------
+1   Raya               ARS   GK      6.0   4.5   3.7   3.7   4.1   4.1   20.2
+2   Gabriel            ARS   DEF     8.0   6.2   5.1   5.1   5.7   5.7   27.8
+3   Senesi             TOT   DEF     6.0   4.3   4.8   4.3   4.3   4.3   22.1
+4   Guéhi              MCI   DEF     6.0   4.3   4.3   4.7   3.8   4.7   21.8
+5   Wilson             LEE   MID     6.5   5.7   5.7   5.7   6.3   5.7   29.0
+6   Semenyo            MCI   MID     8.5   5.2   5.2   5.7   4.7   5.7   26.4
+7   Gibbs-White        NFO   MID     8.0   5.6   4.5   5.1   4.5   5.6   25.3
+8   Rice               ARS   MID     7.5   5.3   4.3   4.3   4.8   4.8   23.6
+9   Anderson           MCI   MID     6.5   4.4   4.4   4.8   3.9   4.8   22.2
+10  João Pedro         CHE   FWD     7.5   5.7   6.3   4.6   6.3   5.7   28.7
+11  Thiago             BRE   FWD     8.0   5.0   5.0   5.5   5.0   4.5   24.8
+
+Bench:
+#   Player             Team  Pos       £   GW1   GW2   GW3   GW4   GW5     xP
+--- ------------------ ----- ---- ------ ----- ----- ----- ----- ----- ------
+1   Calvert-Lewin      LEE   FWD     6.0   4.3   4.3   4.3   4.8   4.3   22.1
+2   Truffert           BOU   DEF     5.5   3.5   4.4   4.4   4.4   4.0   20.7
+3   Kelleher           BRE   GK      5.0   3.9   3.9   4.3   3.9   3.5   19.6
+4   Van Hecke          TOT   DEF     5.0   3.4   3.8   3.4   3.4   3.4   17.4
+
+Captain lead : Wilson (29.0 xP) — `captain --squad RoboTS`.
+Weakest links: Raya (20.2), Guéhi (21.8), Senesi (22.1) — `transfer --squad RoboTS`.
+
+GWn = projected xP that gameweek (rounded; the xP total is authoritative). Projected xP is the XI's expected points over the horizon (a mean; assumes they play). `--load` shows the current state; `--sort xp` orders the XI by xP.
+(venv) ➜  fpl-assistant git:(master)  python app.py transfer  --squad RoboTS --no-xmins
+Transfer suggestions for 'RoboTS' — by xP gain over the next 5 gameweeks (bank £0.0m)
+
+#   Out                  £     xP → In                   £     xP    ΔxP
+--- ---------------- ----- ------ - ---------------- ----- ------ ------
+1   Kelleher           5.0   19.6 → Benitez            4.5   35.0  +15.4
+2   Raya               6.0   20.2 → Benitez            4.5   35.0  +14.8
+3   Anderson           6.5   22.2 → Okafor             6.0   32.2  +10.0
+4   Calvert-Lewin      6.0   22.1 → Wilson             5.5   32.0   +9.9
+5   Van Hecke          5.0   17.4 → De Cuyper          4.5   26.9   +9.5
+
+Each is a single, legal, affordable swap (same position, ≤3/club, within the sale price + bank). `(b)` = the player you'd sell is on your bench (less weekly impact). xP is a mean over the horizon and assumes the incoming player starts.
+(venv) ➜  fpl-assistant git:(master) python app.py ask " best start/bench for RoboTS"  
+Q:  best start/bench for RoboTS
+
+Recommended lineup — 'RoboTS' (best legal XI by xMins-weighted xP)
+
+  Projected XI xP : 217.1
+
+Start (XI):
+#   Player             Team  Pos   xMins     xP
+--- ------------------ ----- ---- ------ ------
+1   Raya               ARS   GK       86   19.4
+2   Gabriel            ARS   DEF      70   21.7
+3   Truffert           BOU   DEF      89   20.4
+4   Guéhi              MCI   DEF      77   18.7
+5   Semenyo            MCI   MID      79   23.3
+6   Gibbs-White        NFO   MID      79   22.2
+7   Rice               ARS   MID      79   20.9
+8   Anderson           MCI   MID      72   17.8
+9   Wilson             LEE   MID      52   16.9
+10  João Pedro         CHE   FWD      61   19.5
+11  Thiago             BRE   FWD      59   16.3
+
+Bench:
+#   Player             Team  Pos   xMins     xP
+--- ------------------ ----- ---- ------ ------
+1   Senesi             TOT   DEF      63   15.4
+2   Van Hecke          TOT   DEF      78   15.2
+3   Calvert-Lewin      LEE   FWD      59   14.6
+4   Kelleher           BRE   GK       56   12.1
+
+Change: your squad has no saved bench — this is the best legal XI.
+
+`xMins` = expected minutes next GW (xMins v0); the XI is chosen on xMins-weighted xP over the horizon (a mean; assumes availability). Use `analyse --squad --no-xmins` for the raw view.
+
+The recommended lineup change is to use the current starting XI, as it has no saved bench and is considered the optimal lineup. The projected points over 5 gameweeks for this lineup are 217.1.
+
+✓ Checked: every figure and name in the explanation traces to the data above.
+
+- First gives me a good squad answer, looks strong, but what is not logical is when i ask for transfers, it gives me other players with higher points output for th esame cost, why would this not be in the original output/result. Also transfer gives same player (Benitez) as incoming player twice.
+- why is th estart/bench different from original line-up, I thought the original would be optimised.
+
 
 ---
 
@@ -189,6 +277,7 @@ python app.py ask "compare Saka and Palmer"       # ambiguous name → a disambi
 ### What am I most pleased with?
 
 ### What was the biggest lesson?
+- Don we need to do some logic/data hardening?
 
 ### What challenged me the most?
 

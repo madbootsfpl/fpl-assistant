@@ -41,11 +41,15 @@ def suggest_transfers(
 
     `owned` are the squad's player rows; `players` is the whole market; `xp_by_id`
     maps player id → xP over the chosen horizon (the caller computes it). For each owned
-    player, the best legal replacement is: same position, not already owned, available
+    player, a legal replacement is: same position, not already owned, available
     (`is_unavailable`), affordable (`price ≤ out.price + bank`), and ≤ `max_per_club` per
     club after the swap. Only **positive-gain** moves are returned, highest gain first,
     capped at `limit`. Each result flags whether the outgoing player is on the bench
     (`bench_ids`) — a bench upgrade helps the weekly score less.
+
+    The shortlist is a menu of *alternative* single swaps, so each is taken greedily and
+    disjoint (ADR-040): no incoming player is suggested twice, and no outgoing player twice —
+    a sell whose best target is already taken gets its next-best available one.
     """
     owned_ids = {p["id"] for p in owned}
     bench = set(bench_ids)
@@ -54,26 +58,32 @@ def suggest_transfers(
     for p in owned:
         club_counts[p["team"]] = club_counts.get(p["team"], 0) + 1
 
-    suggestions = []
+    # Every positive-gain (out → in) pair; the shortlist is then a disjoint pick from these.
+    pairs = []
     for out in owned:
         budget = out["price"] + bank
-        candidates = [
-            c for c in players
-            if c["position"] == out["position"]
-            and c["id"] not in owned_ids
-            and not is_unavailable(c)
-            and c["price"] <= budget
-            and _club_ok(out, c, club_counts, max_per_club)
-        ]
-        if not candidates:
-            continue
+        out_sum = _summary(out, xp_by_id)
+        for c in players:
+            if (c["position"] == out["position"]
+                    and c["id"] not in owned_ids
+                    and not is_unavailable(c)
+                    and c["price"] <= budget
+                    and _club_ok(out, c, club_counts, max_per_club)):
+                in_sum = _summary(c, xp_by_id)
+                gain = round(in_sum["xp"] - out_sum["xp"], 1)
+                if gain > 0:
+                    pairs.append((gain, out, out_sum, c, in_sum))
 
-        best = max(candidates, key=lambda c: xp_by_id.get(c["id"], 0))
-        out_sum, in_sum = _summary(out, xp_by_id), _summary(best, xp_by_id)
-        gain = round(in_sum["xp"] - out_sum["xp"], 1)
-        if gain <= 0:
-            continue
+    pairs.sort(key=lambda t: t[0], reverse=True)
 
+    used_out: set = set()
+    used_in: set = set()
+    suggestions = []
+    for gain, out, out_sum, c, in_sum in pairs:
+        if out["id"] in used_out or c["id"] in used_in:   # each sell + each buy at most once
+            continue
+        used_out.add(out["id"])
+        used_in.add(c["id"])
         suggestions.append({
             "position": out["position"],
             "out": out_sum,
@@ -81,9 +91,9 @@ def suggest_transfers(
             "gain": gain,
             "out_on_bench": out["id"] in bench,
         })
-
-    suggestions.sort(key=lambda s: s["gain"], reverse=True)
-    return suggestions[:limit]
+        if len(suggestions) >= limit:
+            break
+    return suggestions
 
 
 def suggest_transfer_plan(

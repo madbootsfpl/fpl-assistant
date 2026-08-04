@@ -30,6 +30,20 @@ def test_ranks_by_xp_gain_and_reports_the_move():
     assert s["gain"] == 6.0 and s["position"] == "MID"
 
 
+def test_incoming_player_is_not_suggested_twice():
+    # Both MIDs' best target is P3; the shortlist must not buy P3 twice (ADR-040) — the
+    # lower-gain sell (P1) gets its next-best available target (P4) instead.
+    owned = [_p(1, "MID", "AAA", 5.0), _p(2, "MID", "BBB", 5.0)]
+    market = owned + [_p(3, "MID", "CCC", 5.0), _p(4, "MID", "DDD", 5.0)]
+    xp = {1: 3.0, 2: 4.0, 3: 10.0, 4: 8.0}
+    out = suggest_transfers(owned, market, xp)
+    incoming = [s["in"]["id"] for s in out]
+    assert incoming == [3, 4]                       # P3 once (best gain), then P4 (next-best)
+    assert len(set(incoming)) == len(incoming)      # no repeated buy
+    # P1→P3 is the top gain (7.0), then P2→P4 (4.0): each sell appears once
+    assert [s["out"]["id"] for s in out] == [1, 2]
+
+
 def test_only_same_position_is_suggested():
     owned = [_p(1, "MID", "AAA", 5.0)]
     market = owned + [_p(2, "FWD", "BBB", 5.0)]      # a FWD can't replace a MID

@@ -19,6 +19,7 @@ from src.analytics import (
     analyse_squad,
     available_players,
     baseline_rate,
+    best_legal_xi,
     captain_picks,
     defcon_reliability,
     defensive_solidity,
@@ -415,6 +416,7 @@ def cmd_captain(args) -> None:
         picks = captain_picks(
             players, upcoming, baseline_by_code=baseline_by_code,
             source=args.type, limit=args.limit, minutes_weight=minutes_weight,
+            history_by_code=history_by_code,
         )
         print(render_captain_picks(picks, squad_name=squad_name, show_xmins=not args.no_xmins))
     finally:
@@ -460,19 +462,18 @@ def cmd_analyse(args) -> None:
         ranked = player_xp(
             players, upcoming, source=args.type, horizon=args.next,
             baseline_by_code=baseline_by_code, minutes_weight=minutes_weight,
+            history_by_code=history_by_code,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
         weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
         gameweeks = ranked[0]["gameweeks"] if ranked else []
 
-        # The XI: the declared bench's complement, else the best legal XI (ADR-031).
+        # The XI: the declared bench's complement, else the best legal XI (ADR-031; shared with
+        # start/bench via best_legal_xi so they can't diverge, ADR-040).
         bench_ids = set(squad.get("bench_ids") or [])
-        if bench_ids:
-            xi_ids = {p["id"] for p in owned if p["id"] not in bench_ids}
-        else:
-            result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
-            xi_ids = {p["id"] for p in result["selected"]}
+        xi_ids = ({p["id"] for p in owned if p["id"] not in bench_ids} if bench_ids
+                  else best_legal_xi(owned, xp_by_id))
 
         analysis = analyse_squad(
             owned, xi_ids, xp_by_id, horizon=args.next, sort=args.sort,
@@ -514,6 +515,7 @@ def cmd_transfer(args) -> None:
         ranked = player_xp(
             players, upcoming, source=args.type, horizon=args.next,
             baseline_by_code=baseline_by_code, minutes_weight=minutes_weight,
+            history_by_code=history_by_code,
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])

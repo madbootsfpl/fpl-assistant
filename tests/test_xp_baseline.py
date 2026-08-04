@@ -5,7 +5,7 @@ cases) and its use in player_xp: baseline-when-present, fall back to current ppg
 and the rate_source flag. Offline, plain dicts.
 """
 
-from src.analytics import baseline_rate, player_xp
+from src.analytics import baseline_rate, fallback_rate, player_xp
 
 
 def _season(pts, mins):
@@ -51,6 +51,31 @@ def test_only_last_k_seasons_are_used():
     assert b < 3.0            # ~2.0, the oldest 90.0-pp90 season excluded
 
 
+# ---- fallback_rate: sane low-evidence rate (ADR-040) ------------------------
+
+def test_fallback_shrinks_a_cameo_toward_the_prior():
+    # Benitez case: 90 mins, 7 pts → career pp90 7.0, but c = 90/900 = 0.1 →
+    # 7.0×0.1 + 2.0×0.9 = 2.5 (a plausible rate, not a 7-pts/GW star).
+    assert fallback_rate([_season(7, 90)]) == 2.5
+
+
+def test_fallback_barely_shrinks_when_minutes_are_ample():
+    # ≥900 career minutes → c = 1.0 → the player's own career pp90, no shrink.
+    assert fallback_rate([_season(200, 1800)]) == 10.0        # 200×90/1800 = 10.0
+
+
+def test_fallback_confidence_comes_from_the_biggest_season_not_the_sum():
+    # Enes Ünal case: three cameo seasons must NOT compound to confidence. career pp90 = 9.0
+    # (90 pts / 900 mins), but the biggest season is only 300 min → c = 300/900 = 1/3 →
+    # 9.0×(1/3) + 2.0×(2/3) = 4.33, not the un-shrunk 9.0.
+    assert round(fallback_rate([_season(30, 300)] * 3), 2) == 4.33
+
+
+def test_fallback_is_none_without_any_history():
+    assert fallback_rate([]) is None
+    assert fallback_rate([_season(0, 0)]) is None             # no minutes → no rate
+
+
 # ---- player_xp uses the baseline -------------------------------------------
 
 def _player(pid, code, ppg, team_id=1):
@@ -84,3 +109,19 @@ def test_player_xp_works_when_row_has_no_code_key():
          "points_per_game": 3.0, "status": "a", "ep_next": 1.0}
     out = player_xp([p], [_fixture()], baseline_by_code={999: 9.9})
     assert out[0]["rate_source"] == "current" and out[0]["rate"] == 3.0
+
+
+def test_player_xp_uses_the_shrunk_fallback_when_no_baseline():
+    # ADR-040: a cameo (ppg 7.0 from one game) uses the shrunk fallback, not raw ppg.
+    players = [_player(1, code=999, ppg=7.0)]
+    out = player_xp(players, [_fixture()], baseline_by_code={},
+                    history_by_code={999: [_season(7, 90)]})
+    assert out[0]["rate"] == 2.5 and out[0]["rate_source"] == "fallback"
+
+
+def test_player_xp_baseline_still_wins_over_the_fallback():
+    # a trusted ≥900-min baseline is used even when history is also supplied.
+    players = [_player(1, code=999, ppg=7.0)]
+    out = player_xp(players, [_fixture()], baseline_by_code={999: 6.5},
+                    history_by_code={999: [_season(7, 90)]})
+    assert out[0]["rate"] == 6.5 and out[0]["rate_source"] == "hist"

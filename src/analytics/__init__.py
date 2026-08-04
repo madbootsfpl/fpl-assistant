@@ -23,6 +23,7 @@ from src.analytics.optimizer import (
     SQUAD_15,
     XI_FLEX,
     available_players,
+    best_legal_xi,
     is_unavailable,
     legal_xi_issues,
     objective_scores,
@@ -32,7 +33,7 @@ from src.analytics.optimizer import (
 from src.analytics.overperf import over_under
 from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
 from src.analytics.value import points_per_million, rank_players
-from src.analytics.xp import baseline_rate, player_xp
+from src.analytics.xp import baseline_rate, fallback_rate, player_xp
 
 __all__ = [
     "DEFAULT_BUDGET",
@@ -42,9 +43,11 @@ __all__ = [
     "analyse_squad",
     "availability_weight",
     "available_players",
+    "best_legal_xi",
     "captain_picks",
     "chance_factor",
     "expected_minutes",
+    "fallback_rate",
     "minutes_share",
     "minutes_weight_from_history",
     "is_unavailable",

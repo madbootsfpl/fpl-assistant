@@ -452,6 +452,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 039 (2026-08-04)** — *trust the numbers* (data-quality), per ADR-040, from the owner's
+  challenge of three RoboTS outputs. (1) **Sane low-evidence xP** — `fallback_rate` shrinks a no-baseline
+  player's career pp90 toward a replacement prior (2.0) by confidence from their **biggest single
+  season** (so a cameo like Benitez, or scattered cameos like Enes Ünal, can't project like a star);
+  `player_xp` gained a three-tier rate (`hist` → `fallback` → `current`) via an optional
+  `history_by_code`, byte-identical without it. (2) **Transfer dedup** — `suggest_transfers` now picks
+  disjoint moves (each buy *and* each sell once; a sell whose best target is taken gets its next-best).
+  (3) **Consistency** — extracted `best_legal_xi(owned, scores)`, the one primitive `analyse` (no
+  bench) and start/bench both call, so they can't diverge; a note makes raw (`--no-xmins`) vs
+  xMins legible. No new dependency.
 - **Sprint 038 (2026-08-04)** — *two new `ask` intents — start/bench + compare* (**Phase 4 depth**),
   per ADR-039. **start/bench** (`ask "who should I start from <squad>?"`): the best legal XI on
   **xMins-weighted** xP (`select_squad`) diffed against the declared XI → the swap(s) or "already

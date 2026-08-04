@@ -10,6 +10,7 @@ from src.analytics.optimizer import (
     SQUAD_15,
     XI_FLEX,
     available_players,
+    best_legal_xi,
     is_unavailable,
     legal_xi_issues,
     objective_scores,
@@ -586,3 +587,19 @@ def test_render_xi_has_no_full_squad_caveat():
     }
     out = render_squad(result, budget=80)
     assert "not a weekly" not in out
+
+
+def test_best_legal_xi_is_the_shared_primitive():
+    # best_legal_xi is what `analyse` (no bench) and start/bench both call, so they can't
+    # diverge on the "optimal XI" (ADR-040). It equals select_squad's XI on the same scores.
+    from collections import Counter
+    pool = _shape_pool()
+    scores = {pl["id"]: pl["total_points"] for pl in pool}
+    xi = best_legal_xi(pool, scores)
+    assert len(xi) == 11
+    direct = {pl["id"] for pl in
+              select_squad(pool, budget=200.0, formation=XI_FLEX, size=11, scores=scores)["selected"]}
+    assert xi == direct
+    byid = {pl["id"]: pl for pl in pool}
+    counts = Counter(byid[i]["position"] for i in xi)
+    assert (counts["DEF"], counts["MID"], counts["FWD"]) == (5, 4, 1)   # strong DEF → 5-4-1
