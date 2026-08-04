@@ -25,9 +25,12 @@ from src.analytics import (
     suggest_transfer_plan,
     suggest_transfers,
 )
+from src.analytics.captain import _next_opponent
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
+from src.ui.compare import render_compare
+from src.ui.startbench import render_start_bench
 from src.ui.transfer import render_transfer_plan
 
 _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
@@ -37,6 +40,8 @@ _INTENT_KEYWORDS = {
     "captain": ("captain", "armband"),
     "transfer": ("transfer", "sell", "buy", "swap"),
     "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
+    "start_bench": ("start", "bench", "lineup", "line-up"),
+    "compare": ("compare", "versus", " vs ", "better", " or "),
 }
 
 _RULES = (
@@ -46,8 +51,8 @@ _RULES = (
 )
 
 _FALLBACK = (
-    "I can answer about captaincy, transfers, or your squad's health. "
-    'Try: ask "who should I captain from <squad>?"'
+    "I can answer about captaincy, transfers, your squad's health, or your lineup. "
+    'Try: ask "who should I captain from <squad>?" or ask "who should I start from <squad>?"'
 )
 
 
@@ -278,6 +283,146 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
     }
 
 
+def _lineup_change(bring_in: list, drop: list, has_declared_bench: bool) -> str:
+    """A one-line lineup verdict: the swap(s), 'already optimal', or 'no saved bench'."""
+    if not has_declared_bench:
+        return "Change: your squad has no saved bench — this is the best legal XI."
+    if not bring_in and not drop:
+        return "Change: none — your current XI is already the best legal XI."
+    starts = ", ".join(p["web_name"] for p in bring_in)
+    benched = ", ".join(p["web_name"] for p in drop)
+    return f"Change: start {starts} — bench {benched}."
+
+
+def _decide_start_bench(store: Storage, squad_name: str | None) -> dict | None:
+    """Analytics DECIDE the lineup (ADR-039): the best legal XI (xMins-weighted) vs the declared one."""
+    data = _squad_xp(store, squad_name)
+    if data is None:
+        return None
+    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, weight_by_id = data
+    if not owned:
+        return None
+
+    # The best legal XI on xMins-weighted xP; the rest are the recommended bench (ADR-038/039).
+    result = select_squad(owned, budget=200.0, formation=XI_FLEX, size=11, scores=xp_by_id)
+    optimal_xi = {p["id"] for p in result["selected"]}
+
+    declared_bench = set(squad.get("bench_ids") or [])
+    declared_xi = {p["id"] for p in owned if p["id"] not in declared_bench} if declared_bench else optimal_xi
+    byid = {p["id"]: p for p in owned}
+    bring_in = [byid[i] for i in optimal_xi - declared_xi]
+    drop = [byid[i] for i in declared_xi - optimal_xi]
+
+    analysis = analyse_squad(owned, optimal_xi, xp_by_id, horizon=_HORIZON, weight_by_id=weight_by_id)
+    change = _lineup_change(bring_in, drop, bool(declared_bench))
+    detail = render_start_bench(
+        analysis["xi"], analysis["bench"], change, squad_name, analysis["projected_xp"],
+    )
+    return {
+        "detail": detail,                       # the recommended XI + bench, shown above the narration
+        "facts": {
+            "recommendation": change.removeprefix("Change: ").rstrip("."),
+            "starting_XI_projected_points_over_5_gameweeks": analysis["projected_xp"],
+        },
+        # The lineup is about the whole squad, so every owned player may be named in the prose.
+        "subjects": [p["web_name"] for p in owned],
+        "task": "state the recommended lineup change (or that the XI is already optimal) in 2 short "
+                "sentences",
+    }
+
+
+def _bounded(haystack: str, needle: str, start: int) -> bool:
+    """True if `needle` at `start` in `haystack` is bounded by non-letters (a whole name).
+
+    So "Isak" doesn't match inside "mistaken"; "b.fernandes" still matches (bounded by space/'?').
+    """
+    end = start + len(needle)
+    before = haystack[start - 1] if start > 0 else " "
+    after = haystack[end] if end < len(haystack) else " "
+    return not before.isalpha() and not after.isalpha()
+
+
+def _match_players(question: str, players) -> dict:
+    """Player web_names named in `question` → {web_name: [players]} in question order (ADR-039).
+
+    Bounded substring match; a name that is a substring of another matched name is dropped
+    (`Fernandes` ⊂ `B.Fernandes`); a web_name shared by >1 player yields a list (ambiguous).
+    """
+    ql = question.lower()
+    hits = []   # (position, web_name, player)
+    for p in players:
+        wn = (p["web_name"] or "").lower()
+        if not wn:
+            continue
+        i = ql.find(wn)
+        if i != -1 and _bounded(ql, wn, i):
+            hits.append((i, p["web_name"], p))
+
+    lower = {h[1].lower() for h in hits}
+    hits = [h for h in hits if not any(h[1].lower() != o and h[1].lower() in o for o in lower)]
+
+    matched: dict = {}
+    for _i, wn, p in sorted(hits, key=lambda h: h[0]):
+        matched.setdefault(wn, []).append(p)
+    return matched
+
+
+def _decide_compare(store: Storage, question: str) -> dict | None:
+    """Analytics DECIDE the comparison (ADR-039): match the named players, rank by xMins-weighted xP.
+
+    Returns a soft `message` when < 2 players are found or a name is ambiguous — never a silent
+    wrong pick. Otherwise a side-by-side detail + facts; the analytics state who's higher, the LLM
+    only narrates.
+    """
+    players = store.get_players()
+    matched = _match_players(question, players)
+
+    ambiguous = [wn for wn, ps in matched.items() if len(ps) > 1]
+    if ambiguous:
+        return {"message": f"More than one player called '{ambiguous[0]}' — name the team too "
+                           "(e.g. by club) so I compare the right one."}
+    names = list(matched.keys())
+    if len(names) < 2:
+        found = f" I only recognised {names[0]}." if names else ""
+        return {"message": f"Name two players to compare, e.g. ask \"Haaland or Saka?\".{found}"}
+
+    upcoming = store.get_upcoming_fixtures()
+    baselines = {c: baseline_rate(r) for c, r in store.get_history_by_code().items()}
+    weight = minutes_weight_from_history(store.get_history_by_code())
+    ranked = player_xp(players, upcoming, horizon=_HORIZON, baseline_by_code=baselines,
+                       minutes_weight=weight)
+    by_id = {r["id"]: r for r in ranked}
+
+    rows = []
+    for ps in matched.values():
+        p = ps[0]
+        r = by_id.get(p["id"], {})
+        opponent, venue = _next_opponent(p["team_id"], upcoming)
+        rows.append({
+            **r, "web_name": p["web_name"], "team": p["team"], "position": p["position"],
+            "status": p["status"], "chance": p["chance"],
+            "opponent": opponent, "venue": venue,
+            "penalty_taker": p["penalties_order"] == 1,
+        })
+    rows.sort(key=lambda r: -r.get("xp", 0))   # analytics decide the order: strongest xP first
+
+    best = rows[0]
+    detail = render_compare(rows, horizon=_HORIZON)
+    return {
+        "detail": detail,
+        "facts": {
+            "comparison": [
+                f"{r['web_name']} ({r['team']}, {r['position']}): xP {r.get('xp', 0)} over "
+                f"{_HORIZON} GW, ~{round((r.get('minutes_weight') or 0) * 90)} expected minutes"
+                for r in rows
+            ],
+            "higher_expected_points": f"{best['web_name']} (xP {best.get('xp', 0)})",
+        },
+        "subjects": [r["web_name"] for r in rows],
+        "task": f"in 2 short sentences, say why {best['web_name']} has the higher expected points",
+    }
+
+
 def _numbers(text: str) -> set:
     """Number-like tokens in `text` (e.g. '7.4', '22')."""
     return set(re.findall(r"\d+(?:\.\d+)?", text))
@@ -340,6 +485,8 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
     if decision is None:
         return AskResult(question, intent,
                          message="No result — run `refresh`, and check the squad name.")
+    if decision.get("message"):   # a soft, specific failure (e.g. compare: not found / ambiguous)
+        return AskResult(question, intent, message=decision["message"])
     explanation = narrator(_build_prompt(decision))   # str, or None if unavailable
     trust = None
     if explanation:
@@ -358,8 +505,9 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
     intent, squad_name = route(question)
     if intent is None:
         return assemble(question, None, None, narrator)
-    if intent in ("transfer", "analyse") and not squad_name:
-        verb = "what transfer" if intent == "transfer" else "analyse"
+    if intent in ("transfer", "analyse", "start_bench") and not squad_name:
+        verb = {"transfer": "what transfer", "analyse": "analyse",
+                "start_bench": "who should I start"}[intent]
         return AskResult(question, intent,
                          message=f'Name a saved squad, e.g. ask "{verb} for <squad>?"')
 
@@ -370,6 +518,10 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
             decision = _decide_transfer(store, squad_name, _transfer_count(question))
         elif intent == "captain":
             decision = _decide_captain(store, squad_name)
+        elif intent == "start_bench":
+            decision = _decide_start_bench(store, squad_name)
+        elif intent == "compare":
+            decision = _decide_compare(store, question)
         else:
             decision = _decide_analyse(store, squad_name)
         # The known player names for the verifier's name check (ADR-037).

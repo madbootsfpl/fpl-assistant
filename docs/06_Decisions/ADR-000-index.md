@@ -43,3 +43,4 @@ new ADR as it is created.
 | [036](./ADR-036-per-gameweek-plan-table.md) | Per-gameweek transfer-plan table + a structured detail in `ask` | Accepted |
 | [037](./ADR-037-grounding-verification.md) | Grounding verification (verify the LLM narration; a ✓/⚠ trust line) | Accepted |
 | [038](./ADR-038-expected-minutes-v0.md) | Expected minutes (xMins) v0 — weight recommendations by playing time (chance% × minutes share; default-on at the decision edge) | Accepted |
+| [039](./ADR-039-start-bench-compare-intents.md) | Two new `ask` intents — start/bench (best legal XI vs declared) + compare (robust name-matching; analytics decide, LLM narrates) | Accepted |

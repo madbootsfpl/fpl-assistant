@@ -452,6 +452,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 038 (2026-08-04)** — *two new `ask` intents — start/bench + compare* (**Phase 4 depth**),
+  per ADR-039. **start/bench** (`ask "who should I start from <squad>?"`): the best legal XI on
+  **xMins-weighted** xP (`select_squad`) diffed against the declared XI → the swap(s) or "already
+  optimal" (`_decide_start_bench` + `_lineup_change` + `ui/startbench.py`). **compare**
+  (`ask "A or B?"`): a robust name-matcher (`_match_players` — bounded substring, drop-substring
+  overlap, ambiguity, not-found) → a side-by-side table (`ui/compare.py`); *the analytics state who's
+  higher-xP, the LLM only narrates*. Both carry `subjects`, a structured detail table, and the ✓/⚠
+  trust line (ADR-037), and degrade without the LLM. `assemble` gained a soft-`message` short-circuit
+  (a specific not-found/ambiguous reply). Pure composition — no new analytics, no new dependency.
 - **Sprint 037 (2026-08-04)** — *expected minutes (xMins) v0* (**Phase 3 depth**), per ADR-038. A new
   `analytics/minutes.py` — `chance_factor` × a recency-weighted **minutes share** (minutes-only;
   `starts` proved unreliable pre-2022/23 at planning) → `availability_weight ∈ [0,1]`, with graceful

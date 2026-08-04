@@ -5,12 +5,17 @@ exercise the graceful-degradation path). Covers routing, fact-humanising, the pr
 contract, and assembling a result (narrated vs degraded vs unrecognised).
 """
 
+import types
+
 from src import ask
 from src.ask import (
     AskResult,
     _analyse_facts,
     _build_prompt,
     _captain_facts,
+    _decide_compare,
+    _lineup_change,
+    _match_players,
     _plan_facts,
     _transfer_count,
     _transfer_facts,
@@ -18,6 +23,8 @@ from src.ask import (
     route,
     verify_grounding,
 )
+from src.ui.compare import render_compare
+from src.ui.startbench import render_start_bench
 
 # ---- routing ----------------------------------------------------------------
 
@@ -29,6 +36,106 @@ def test_routes_transfer_and_analyse():
     assert route("what transfer should I make", known_squads=[])[0] == "transfer"
     assert route("analyse my squad", known_squads=[])[0] == "analyse"
     assert route("how good is my squad", known_squads=[])[0] == "analyse"
+
+
+def test_routes_start_bench():
+    assert route("who should I start from TS?", known_squads=["TS"]) == ("start_bench", "TS")
+    assert route("fix my bench", known_squads=[])[0] == "start_bench"
+    assert route("what's my best lineup?", known_squads=[])[0] == "start_bench"
+
+
+def test_lineup_change_reports_no_saved_bench():
+    assert "no saved bench" in _lineup_change([], [], has_declared_bench=False)
+
+
+def test_lineup_change_reports_already_optimal():
+    assert "already the best legal XI" in _lineup_change([], [], has_declared_bench=True)
+
+
+def test_lineup_change_names_the_swap():
+    msg = _lineup_change(
+        [{"web_name": "Haaland"}], [{"web_name": "Diop"}], has_declared_bench=True,
+    )
+    assert msg == "Change: start Haaland — bench Diop."
+
+
+def test_start_bench_asks_for_a_squad_when_missing():
+    r = ask.answer("who should I start", narrator=lambda p: "unused")
+    assert r.intent == "start_bench" and "squad" in r.message.lower()
+
+
+def test_render_start_bench_shows_xi_bench_and_change():
+    def _row(name, pos, xp, w):
+        return {"web_name": name, "team": "ARS", "position": pos, "price": 5.0,
+                "xp": xp, "status": "a", "chance": None, "minutes_weight": w}
+    out = render_start_bench(
+        [_row("Haaland", "FWD", 29.0, 0.82)], [_row("Diop", "DEF", 4.1, 0.32)],
+        "Change: none — your current XI is already the best legal XI.", "TS", 208.9,
+    )
+    assert "Start (XI):" in out and "Bench:" in out
+    assert "Haaland" in out and "Diop" in out
+    assert " 74" in out                       # 0.82 × 90 → 74 expected minutes (the xMins column)
+    assert "already the best legal XI" in out
+
+
+# ---- compare intent (US-114) ------------------------------------------------
+
+def _pl(pid, web_name, team="ARS"):
+    return {"id": pid, "web_name": web_name, "team": team, "position": "MID",
+            "team_id": 1, "status": "a", "chance": None, "penalties_order": None}
+
+
+def test_routes_compare():
+    assert route("Haaland or B.Fernandes?", known_squads=[])[0] == "compare"
+    assert route("compare Saka and Palmer", known_squads=[])[0] == "compare"
+    # a captain question keeps priority even with 'or' in it (compare is checked last)
+    assert route("who should I captain, this week or next", known_squads=[])[0] == "captain"
+
+
+def test_match_players_drops_a_name_that_is_a_substring_of_another():
+    players = [_pl(1, "Haaland"), _pl(2, "B.Fernandes"), _pl(3, "Fernandes")]
+    matched = _match_players("Haaland or B.Fernandes?", players)
+    assert list(matched.keys()) == ["Haaland", "B.Fernandes"]   # 'Fernandes' dropped, order kept
+
+
+def test_match_players_flags_an_ambiguous_name():
+    players = [_pl(1, "Palmer", "CHE"), _pl(2, "Palmer", "AVL")]
+    matched = _match_players("compare Palmer", players)
+    assert len(matched["Palmer"]) == 2       # same web_name, two players → ambiguous
+
+
+def test_match_players_is_bounded_to_whole_names():
+    players = [_pl(1, "Isak")]
+    assert _match_players("this is a mistaken sentence", players) == {}   # no match inside a word
+
+
+def test_compare_message_when_fewer_than_two_players():
+    store = types.SimpleNamespace(get_players=lambda: [_pl(1, "Haaland")])
+    d = _decide_compare(store, "Haaland or Salah?")
+    assert "two players" in d["message"] and "Haaland" in d["message"]
+
+
+def test_compare_message_when_ambiguous():
+    store = types.SimpleNamespace(
+        get_players=lambda: [_pl(1, "Palmer", "CHE"), _pl(2, "Palmer", "AVL")]
+    )
+    d = _decide_compare(store, "compare Palmer")
+    assert "More than one player called 'Palmer'" in d["message"]
+
+
+def test_compare_message_short_circuits_in_assemble():
+    r = assemble("q", "compare", {"message": "Name two players."}, narrator=lambda p: "unused")
+    assert r.message == "Name two players." and r.explanation is None
+
+
+def test_render_compare_orders_by_xp_and_shows_columns():
+    def _row(name, xp, w):
+        return {"web_name": name, "team": "MCI", "position": "FWD", "xp": xp,
+                "status": "a", "chance": None, "minutes_weight": w,
+                "opponent": "BOU", "venue": "H", "penalty_taker": True}
+    out = render_compare([_row("Haaland", 29.0, 0.82), _row("B.Fernandes", 27.3, 0.89)])
+    assert out.index("Haaland") < out.index("B.Fernandes")   # strongest xP first
+    assert "xMins" in out and "29.0" in out
 
 
 def test_squad_matched_by_name_regardless_of_phrasing():

@@ -30,7 +30,8 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
   starters. Shown as expected minutes; use `--no-xmins` for the raw "assumes 90" number.
 
 **Natural language (Phase 4)** — grounded, and optional:
-- **`ask "..."`** — ask a question in plain English (captain / transfer / squad health). The
+- **`ask "..."`** — ask a question in plain English (captain / transfer / squad health /
+  **start-bench** / **compare two players**). The
   **analytics decide**; a **local LLM (Ollama) only narrates** — and every answer is **checked
   against the data** (a ✓/⚠ trust line: figures and names are verified, not just instructed). `ask`
   works without the LLM (it falls back to the decision + facts).
@@ -121,6 +122,8 @@ python app.py ask "who should I captain from my-team?"
 python app.py ask "what transfer should I make for my-team?"
 python app.py ask "which 3 transfers for my-team?"
 python app.py ask "analyse my-team"
+python app.py ask "who should I start from my-team?"   # best legal XI (xMins-weighted) vs your bench
+python app.py ask "Haaland or Saka?"                   # compare two players side by side
 ```
 
 `refresh` is the only command that touches the network; every view reads from the
