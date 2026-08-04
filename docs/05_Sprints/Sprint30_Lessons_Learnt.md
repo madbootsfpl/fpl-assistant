@@ -88,7 +88,7 @@ Sprint-29 retro note. FPL-native; no new dependency, no schema change, the xP to
 
 ### Notes _(for Tony)_
 
--
+- Thats a fabulous addition, being able to see x weeks of xP as well as total. Excellent.
 
 ---
 
@@ -183,12 +183,16 @@ python app.py xp --next 5 --by-gameweek           # players ranked, split per ga
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+Overall progress
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+- So lets update our documentation to celebrate Phase 3 completion. Handbook, Readme etc to update. 
+- Given we have a couple of blockers until the season starts, lets look at other phases or baclog items that we could start and add value. 
+- Example we put the presentation layer on hold, maybe we could consider doing some work there now OR the other alternative is investigating LLM / chat capability. Note FPL have introduced a FPL Companion using CoPilot - not sure if that something to replicate or leverage.  
 
 ---
 

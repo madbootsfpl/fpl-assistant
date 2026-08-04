@@ -4,23 +4,32 @@
 
 A personal Fantasy Premier League analytics assistant — a command-line tool.
 
-**Status:** Phase 1 — *CLI Analytics MVP* — **complete** (2026-08-03). See the
+**Status:** Phase 1 (*CLI Analytics MVP*) **complete**; Phase 3 (*decision support* —
+captain · transfer · squad analysis) **complete** (2026-08-04). See the
 [Roadmap](docs/04_Roadmap/Roadmap.md).
 
-## What it does today (the MVP)
+## What it does today
 
-- Analyse FPL players (points, value, form-free rankings)
-- Calculate value metrics (Points per £m) and Expected Points (xP) over a fixture horizon
+**Analytics**
+- Rank players by points / value (Points per £m) and **Expected Points (xP)** over a fixture
+  horizon — now with a **per-gameweek breakdown** (`--by-gameweek`)
 - Expected goals (xG / xA / xGI / xGC), over/under-performance, Defensive Contribution, clean sheets
 - Custom fixture difficulty (overall + ClubElo Elo)
+- **Past-season history** (a throttled backfill) feeding a multi-season xP baseline
+
+**Optimisation**
 - Pick an optimal XI or full 15-man squad (ILP), with formations, bench, and availability handling
 - Save and reload your own squad (re-priced, with current injuries + departures)
 
-## Planned (Phase 2+ — not yet built)
+**Decision support (Phase 3)** — recommend *and explain*, composed on the above:
+- **`captain`** — the best captain picks for the next GW (by xP), with opponent + penalty duty
+- **`transfer`** — the best single legal transfers for your squad (≤3/club, budget, by xP gain)
+- **`analyse`** — a saved squad's health over N GWs (projected XI xP, weak links, injuries), cross-linked
 
-- Recommend transfers · recommend captains (Phase 3)
-- AI-assisted natural-language analysis (Phase 4)
-- A web dashboard UI, CI/CD, historical data (Phase 2)
+## Planned (not yet built)
+
+- **AI-assisted natural-language analysis** (Phase 4) — a grounded `ask`, *being spiked now*
+- A web dashboard UI (Phase 2); in-season form + expected minutes (needs the season started)
 
 See the [Roadmap](docs/04_Roadmap/Roadmap.md) and
 [Phase 1 reconciliation](docs/04_Roadmap/Phase1_Reconciliation.md).
@@ -66,12 +75,14 @@ The app is driven by subcommands (see ADR-003):
 
 ```bash
 python app.py refresh                          # fetch FPL data (players, teams, fixtures)
+python app.py history --backfill               # backfill past-season history (once per season)
 python app.py table --sort value --limit 20    # players, ranked by points or value (£m)
 python app.py search haaland                   # find players by name
 python app.py filter --pos DEF --max-price 6   # filter players (position / team / max price)
 python app.py fdr --type elo --next 5           # teams by fixture difficulty (FPL / custom / ClubElo)
 python app.py fixtures --team ARS --type custom # a team's upcoming fixtures + difficulty
-python app.py xp --type custom --next 5         # players by expected points over the next N gameweeks (vs FPL's ep_next at N=1)
+python app.py xp --type custom --next 5         # players by expected points over the next N gameweeks
+python app.py xp --next 5 --by-gameweek         # xP split per gameweek (GW1 GW2 … + total)
 python app.py xg --pos FWD                       # players by expected goal involvement (xGI = xG + xA)
 python app.py overperf                           # over/under-performers: actual vs expected attacking points
 python app.py defcon                             # reliable Defensive Contribution earners (per-90 vs threshold)
@@ -86,6 +97,11 @@ python app.py squad --objective xgi              # optimise on expected goal inv
 python app.py squad --include-unavailable        # also consider injured/suspended (excluded by default)
 python app.py squad --full --save my-team        # save your squad (persists across refreshes)
 python app.py squad --load my-team               # reload it — re-priced, with current injuries + departures
+
+# Decision support (Phase 3) — work on a saved squad:
+python app.py captain --squad my-team            # best captain picks next GW (xP + opponent + penalty)
+python app.py transfer --squad my-team --bank 2  # best single legal transfers by xP gain (bank £2m)
+python app.py analyse --squad my-team --sort xp  # squad health over N GWs (per-GW xP, weak links, injuries)
 ```
 
 `refresh` is the only command that touches the network; every view reads from the

@@ -60,17 +60,23 @@ called for — now that the MVP has shown what's worth investing in.
 
 ---
 
-## Phase 3 — Decision Support Engine
+## Phase 3 — Decision Support Engine  — ✅ **substantially complete (2026-08-04)**
 
-**Goal:** translate analytics into actionable manager recommendations.
-*Seeds already in the MVP: availability filtering (ADR-023) is xMins-adjacent; saved squads
-(ADR-024) are a team-analyser precursor.*
+**Goal:** translate analytics into actionable manager recommendations. The core trio —
+recommend-and-explain, all composed on xP + saved squads + availability — is **built and
+cross-linked** (`captain` → `transfer` → `analyse`).
 
-- ⬜ Expected minutes (xMins) & rotation model (needs secondary sources + manual override + confidence).
-- ⬜ Captain suggestion (top 3–5 via xP, fixtures, form, penalties).
-- ⬜ Transfer recommendation engine (respect budget, ≤3/club, free transfers, hits).
-- ⬜ Team analyser — link a manager ID; grade health over 1–5 GWs; flag bench / starting-XI issues.
+- ✅ Captain suggestion (`captain --squad`, ADR-029) — top picks by next-GW xP; opponent, venue,
+  penalty duty; GKs excluded (mean ≠ ceiling); doubtful flagged.
+- ✅ Transfer recommendation (`transfer --squad`, ADR-030) — best single legal upgrades by xP gain;
+  same position, ≤3/club, budget (sale + `--bank`); GKs included; bench flagged.
+- ✅ Team analyser (`analyse --squad`, ADR-031) — projected XI xP over N GW (with a per-GW breakdown,
+  ADR-032), weak links, injuries, club concentration; indicators, not a grade. *(Uses a saved
+  squad — a manager-ID fetch waits on auth.)*
+- ◑ Expected minutes (xMins) & rotation — deferred; captaincy/transfers note the "assumes they play"
+  caveat and flag bench players until this exists (needs the season started).
 - ⬜ Live event layer — re-rank on injuries / lineups / price changes without a full recompute.
+- ⬜ Multi-move transfer *planner* (hits vs roll, −4 maths) — the single-move engine is the foundation.
 
 ---
 
