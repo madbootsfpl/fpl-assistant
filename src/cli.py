@@ -515,11 +515,16 @@ def cmd_transfer(args) -> None:
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])
         if args.count:
-            # Plan mode: a coordinated set of `count` transfers (ADR-035).
+            # Plan mode: a coordinated set of `count` transfers (ADR-035), with the incoming
+            # players' per-gameweek xP shown (ADR-036).
             plan = suggest_transfer_plan(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, count=args.count,
             )
-            print(render_transfer_plan(plan, args.squad, bank=args.bank, horizon=args.next))
+            print(render_transfer_plan(
+                plan, args.squad, bank=args.bank, horizon=args.next,
+                by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
+                gameweeks=ranked[0]["gameweeks"] if ranked else [],
+            ))
         else:
             suggestions = suggest_transfers(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, limit=args.limit,

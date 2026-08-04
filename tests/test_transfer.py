@@ -7,6 +7,7 @@ Offline, plain dicts.
 """
 
 from src.analytics import suggest_transfer_plan, suggest_transfers
+from src.ui.transfer import render_transfer_plan
 
 
 def _p(pid, pos, team, price, status="a"):
@@ -140,3 +141,17 @@ def test_plan_stops_when_no_positive_move_remains():
     owned = [_p(1, "MID", "AAA", 5.0)]
     market = owned + [_p(10, "MID", "BBB", 5.0)]
     assert suggest_transfer_plan(owned, market, {1: 9, 10: 3}, count=3) == []
+
+
+def test_plan_table_shows_the_incoming_players_per_gameweek():
+    plan = [{
+        "out": {"web_name": "Kelleher", "team": "BRE", "price": 5.0, "xp": 19.6},
+        "in": {"id": 99, "web_name": "Benitez", "team": "CRY", "price": 4.5, "xp": 35.0},
+        "gain": 15.4, "out_on_bench": False, "bank_after": 0.5,
+    }]
+    out = render_transfer_plan(
+        plan, "TS", by_gameweek_by_id={99: {1: 7.0, 2: 6.3}}, gameweeks=[1, 2],
+    )
+    assert "GW1" in out and "GW2" in out
+    assert "7.0" in out and "6.3" in out          # the INCOMING player's per-GW xP
+    assert "Benitez" in out and "+15.4" in out

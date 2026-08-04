@@ -439,6 +439,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   go negative; no double-buy/re-buy; ≤3/club across the set). Surfaced as `transfer --count N`
   (opt-in; the shortlist is unchanged) and, next, `ask "which N transfers"` (US-100). Greedy (not
   ILP) — explainable; hits deferred. No schema change, no new dependency.
+- **Sprint 034 (2026-08-04)** — *per-gameweek transfer-plan table + a structured detail in `ask`*,
+  per ADR-036. A **composition** (ADR-035 plan × ADR-032 per-GW xP), no new logic: the plan table
+  gains **GW1…GWN columns of the incoming player's** projected xP (US-102), and `ask` returns a
+  pre-rendered `detail` table shown above the narration (US-103) — the LLM still narrates only the
+  self-describing facts (ADR-034 unchanged). Reuses the shared renderer (ADR-025) + `by_gameweek`;
+  the plan engine and `player_xp` are untouched. No new dependency.
 - **Sprint 024 (2026-08-03)** — *shared table renderer* (tech-debt closer), per ADR-025. A new
   `ui/_table.py` holds the ranking tables' shared shape once — a `Col` spec
   (header/width/align/`fmt`) + `render_rows(rows, columns, rank=, divider=)`. The seam that keeps

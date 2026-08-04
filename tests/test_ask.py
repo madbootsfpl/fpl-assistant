@@ -87,6 +87,21 @@ def test_assemble_degrades_when_the_model_is_unavailable():
     assert r.headline == _DECISION["headline"] and r.facts == _DECISION["facts"]
 
 
+def test_assemble_carries_a_structured_detail():
+    # a plan decision has a pre-rendered `detail` table instead of a one-line headline (ADR-036)
+    decision = {"detail": "THE PLAN TABLE", "facts": {"x": 1}, "task": "summarise"}
+    r = assemble("q", "transfer", decision, narrator=lambda p: "the prose")
+    assert r.detail == "THE PLAN TABLE" and r.headline is None
+    assert r.explanation == "the prose"
+
+
+def test_render_ask_shows_detail_then_prose():
+    from src.ui.ask import render_ask
+    r = AskResult("q", "transfer", detail="THE PLAN TABLE", facts={}, explanation="the prose")
+    out = render_ask(r)
+    assert out.index("THE PLAN TABLE") < out.index("the prose")   # table first, then narration
+
+
 def test_assemble_handles_no_decision():
     r = assemble("q", "captain", None, narrator=lambda p: "unused")
     assert r.headline is None and r.message and "refresh" in r.message

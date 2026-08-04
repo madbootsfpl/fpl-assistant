@@ -25,6 +25,7 @@ from src.analytics import (
 )
 from src.squads import SquadStore
 from src.storage import Storage
+from src.ui.transfer import render_transfer_plan
 
 _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 
@@ -55,6 +56,7 @@ class AskResult:
     facts: dict | None = None        # the pre-humanised facts
     explanation: str | None = None   # the LLM prose, or None when the model is unavailable
     message: str | None = None       # for an unrecognised question or an empty result
+    detail: str | None = None        # a pre-rendered structured table (e.g. a plan; ADR-036)
 
 
 def _squad_name(question: str, known_squads) -> str | None:
@@ -168,41 +170,43 @@ def _analyse_facts(analysis: dict) -> dict:
 
 
 def _squad_xp(store: Storage, squad_name: str):
-    """Shared setup for transfer/analyse: the saved squad's owned rows + xP over the horizon."""
+    """Shared setup for transfer/analyse: the squad's owned rows + xP (+ per-GW) over the horizon."""
     squad = SquadStore().load(squad_name)
     if squad is None:
         return None
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     baselines = {c: baseline_rate(r) for c, r in store.get_history_by_code().items()}
-    xp_by_id = {
-        r["id"]: r["xp"]
-        for r in player_xp(players, upcoming, horizon=_HORIZON, baseline_by_code=baselines)
-    }
+    ranked = player_xp(players, upcoming, horizon=_HORIZON, baseline_by_code=baselines)
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
+    gameweeks = ranked[0]["gameweeks"] if ranked else []
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
-    return squad, players, owned, xp_by_id
+    return squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks
 
 
 def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
-    squad, players, owned, xp_by_id = data
+    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks = data
     if not owned:
         return None
     bench_ids = squad.get("bench_ids") or []
 
     if count > 1:
-        # A coordinated N-transfer plan (ADR-035).
+        # A coordinated N-transfer plan (ADR-035), with a per-GW table as structured detail (ADR-036).
         plan = suggest_transfer_plan(
             owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, count=count
         )
         if not plan:
             return None
-        total = round(sum(m["gain"] for m in plan), 1)
+        detail = render_transfer_plan(
+            plan, squad_name, bank=0.0, horizon=_HORIZON,
+            by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks,
+        )
         return {
-            "headline": f"Transfer plan (squad '{squad_name}'): {len(plan)} move(s), "
-                        f"+{total} xP over {_HORIZON} GW",
+            "detail": detail,                       # the exact table, shown above the narration
             "facts": _plan_facts(plan),
             "task": f"summarise this {len(plan)}-transfer plan in 2-3 short sentences",
         }
@@ -226,7 +230,7 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
-    squad, players, owned, xp_by_id = data
+    squad, players, owned, xp_by_id, _by_gw, _gws = data
     if not owned:
         return None
     bench_ids = set(squad.get("bench_ids") or [])
@@ -247,7 +251,8 @@ def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
 def _build_prompt(decision: dict) -> str:
     return (
         f"You are an FPL assistant. The analytics have ALREADY made the decision. Your job: "
-        f"{decision['task']}, using ONLY the facts below.\n{_RULES}\n\n"
+        f"{decision['task']}, using ONLY the facts below.\n{_RULES}\n"
+        "Write only the explanation itself — no preamble, and do not restate the task.\n\n"
         f"FACTS:\n{json.dumps(decision['facts'], indent=2)}"
     )
 
@@ -264,8 +269,10 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator)
         return AskResult(question, intent,
                          message="No result — run `refresh`, and check the squad name.")
     explanation = narrator(_build_prompt(decision))   # str, or None if unavailable
-    return AskResult(question, intent, headline=decision["headline"],
-                     facts=decision["facts"], explanation=explanation)
+    return AskResult(
+        question, intent, headline=decision.get("headline"), facts=decision["facts"],
+        explanation=explanation, detail=decision.get("detail"),
+    )
 
 
 def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate) -> AskResult:

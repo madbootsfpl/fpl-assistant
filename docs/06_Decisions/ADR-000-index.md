@@ -40,3 +40,4 @@ new ADR as it is created.
 | [033](./ADR-033-llm-grounded-narration-spike.md) | LLM grounded-narration spike (local Ollama; analytics decide, LLM narrates) | Accepted |
 | [034](./ADR-034-ask-command-grounded-nl.md) | The `ask` command — grounded NL answers (routing; LLM optional) | Accepted |
 | [035](./ADR-035-multi-transfer-plan.md) | Multi-transfer plan (coordinated, greedy; `transfer --count` / `ask` N transfers) | Accepted |
+| [036](./ADR-036-per-gameweek-plan-table.md) | Per-gameweek transfer-plan table + a structured detail in `ask` | Accepted |

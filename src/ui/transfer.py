@@ -30,16 +30,26 @@ _COLS = [
 ]
 
 
-_PLAN_COLS = [
-    Col("Out", _OUT_W, "<", _out_name),
-    Col("→", 1, "<", lambda s: "→"),
-    Col("In", _IN_W, "<", lambda s: str(s["in"]["web_name"])[:_IN_W]),
-    Col("ΔxP", 6, ">", lambda s: f"+{s['gain']:.1f}"),
-    Col("Bank", 7, ">", lambda s: f"£{s['bank_after']:.1f}m"),
-]
+def _plan_columns(gameweeks, by_gameweek_by_id):
+    """Out → In, then a per-GW column of the *incoming* player's xP (ADR-036), then the gain."""
+    cols = [
+        Col("Out", _OUT_W, "<", _out_name),
+        Col("→", 1, "<", lambda s: "→"),
+        Col("In", _IN_W, "<", lambda s: str(s["in"]["web_name"])[:_IN_W]),
+    ]
+    for gw in gameweeks:
+        cols.append(Col(
+            f"GW{gw}", 5, ">",
+            lambda s, gw=gw: f"{by_gameweek_by_id.get(s['in']['id'], {}).get(gw, 0):.1f}",
+        ))
+    cols.append(Col("ΔxP", 6, ">", lambda s: f"+{s['gain']:.1f}"))
+    return cols
 
 
-def render_transfer_plan(plan, squad_name: str, bank: float = 0.0, horizon: int = 5) -> str:
+def render_transfer_plan(
+    plan, squad_name: str, bank: float = 0.0, horizon: int = 5,
+    by_gameweek_by_id=None, gameweeks=(),
+) -> str:
     window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
     if not plan:
         return (
@@ -49,11 +59,13 @@ def render_transfer_plan(plan, squad_name: str, bank: float = 0.0, horizon: int 
 
     total = round(sum(m["gain"] for m in plan), 1)
     end_bank = plan[-1]["bank_after"]
+    cols = _plan_columns(gameweeks, by_gameweek_by_id or {})
     lines = [
         f"Transfer plan for '{squad_name}' — {len(plan)} move(s) by xP gain over the next "
-        f"{window} (start bank £{bank:.1f}m)", "",
+        f"{window} (start bank £{bank:.1f}m). GWn = the incoming player's projected xP that week.",
+        "",
     ]
-    lines += render_rows(plan, _PLAN_COLS, rank=True)
+    lines += render_rows(plan, cols, rank=True)
     lines += [
         "",
         f"Total: +{total} xP over {window} · end bank £{end_bank:.1f}m.",

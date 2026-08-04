@@ -151,6 +151,13 @@ bank, club counts, players used). That makes it correct *by construction*: the b
 re-bought, and ≤3/club holds across the set. Greedy (explainable) over ILP (optimal-but-opaque); and
 it's honest about what it can't know (your free-transfer count, hits).
 
+**Composing features, and `ask` structured detail (Sprint 034).** The plan table then gained each
+incoming player's **per-gameweek xP** — a straight *join* of the plan (ADR-035) and the per-GW
+breakdown (ADR-032), no new logic. And `ask` learned to return a **structured table** (a
+pre-rendered `detail`) *above* the narration: the table is the exact truth, the LLM prose is the
+readable summary. The lesson: mature features compose — reach for a join before a rebuild — and a
+natural-language layer can still show hard data, not just words.
+
 **A summary that composes and cross-links (Sprint 029, the analyser).** `analyse_squad` (ADR-031)
 is the capstone: it adds almost no new computation — it *aggregates* the pieces (xP over a horizon,
 availability, the optimiser's XI pick, the club rule) into one health check, and **points at the
