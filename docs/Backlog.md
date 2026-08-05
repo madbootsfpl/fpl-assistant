@@ -1,8 +1,8 @@
 # Backlog
 
-Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features now live in the
-reframed [Roadmap](04_Roadmap/Roadmap.md) Phase 2+; this file holds the small nice-to-haves and
-tech-debt.)*
+Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features live in the
+consolidated [Roadmap](04_Roadmap/Roadmap.md) — "Next / Then / Later"; this file holds the small
+nice-to-haves and tech-debt.)*
 
 ## Enhancements
 
@@ -16,10 +16,18 @@ tech-debt.)*
 - **Ceiling / "differential" captaincy** — `captain` (Sprint 027, ADR-029) ranks by *mean* xP,
   which favours nailed-on premiums. A ceiling/variance view would surface high-upside punts — but
   it needs variance/form data we don't have yet. Revisit once in-season data accrues.
-- **Multi-move transfer *planner*** — `transfer` (Sprint 028, ADR-030) suggests the best *single*
-  swaps. A planner would optimise a *sequence* over a horizon: taking a −4 hit vs rolling a free
-  transfer, banking transfers, two-moves-this-week maths. A bigger optimisation problem (and it
-  wants the real bank + xMins) — a natural late-Phase-3 / Phase-5 feature.
+- **Multi-move transfer *planner*** — ◑ *partly done.* A **coordinated greedy plan** shipped (Sprint 033,
+  **ADR-035**: `transfer --count N`, shared bank, no repeats) and it now ranks by **XI improvement**
+  (Sprint 046, ADR-046). Still open: the **−4-hit vs roll / banking** maths and chip-aware sequencing —
+  a bigger optimisation (wants the real bank + xMins) → Roadmap *Later*.
+- **Differentials / value `ask` intent** — extend the shortlist with ownership + points-per-£m lenses
+  ("best differentials", "is X worth the money?"). Reuses `selected_by` (ADR-044) + value; overlaps the
+  existing shortlist a little. A live Phase-4 option.
+- **Persisted / pronoun-aware chat** — `chat` (Sprint 047, ADR-047) holds the last turn in memory only.
+  A later step: resolve pronouns ("is **he** worth captaining?") and/or persist context across runs.
+- **Team-level squad-fixtures view** — the alternative lens deferred at Sprint 049 (ADR-049): rank a
+  squad's **teams** (with player-counts) rather than one row per player. A small option on the existing
+  squad-scoped fixtures mode.
 
 ### Done (kept for the trail)
 

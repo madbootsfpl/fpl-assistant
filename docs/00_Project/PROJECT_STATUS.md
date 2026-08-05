@@ -1,6 +1,6 @@
 Current Phase: Phase 4 — AI & Natural-Language Layer (grounded `ask`: seven intents, verified; a conversational `chat` mode). Phase 3 (decision support + xMins v0) complete; Phase 1 MVP done; Phase 2 first slice done
-Current Sprint: Sprint 049 - Squad-scoped fixtures (✅ Complete, 3/3 stories, retro done)
-Current Story: None active — live options: a differentials/value `ask` intent, a persisted/pronoun-aware chat, a team-level squad-fixtures view (counts), web UI (Phase 2), or Data Hardening (~GW1, full Phase-5 xMins). Owner to steer
+Current Sprint: Sprint 050 - Documentation consolidation & status refresh (✅ Complete, 3/3 stories, retro done)
+Current Story: None active — next up: a thin web UI (FastAPI + Jinja, read-only, reuses the analytics; Sprint 051). Other live options: Data Hardening (~GW1), a differentials/value `ask` intent, a persisted/pronoun-aware chat. Owner to steer
 Next Milestone: Owner to steer — more Phase 4, the web UI (Phase 2), or (at GW1, 2026-08-21) Data Hardening + the full probabilistic xMins (Phase 5)
 Current Version: 0.0.1
 Last Updated: 2026-08-05

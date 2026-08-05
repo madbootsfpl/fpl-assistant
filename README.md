@@ -2,11 +2,12 @@
 
 [![CI](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml)
 
-A personal Fantasy Premier League analytics assistant — a command-line tool.
+A personal Fantasy Premier League analytics assistant — a command-line tool you can also **talk to**.
 
-**Status:** Phase 1 (*CLI Analytics MVP*) **complete**; Phase 3 (*decision support* —
-captain · transfer · squad analysis) **complete** (2026-08-04). See the
-[Roadmap](docs/04_Roadmap/Roadmap.md).
+**Status:** Phase 1 (*CLI Analytics MVP*) **complete**; Phase 3 (*decision support* — captain · transfer ·
+squad analysis) **complete**; Phase 4 (*natural language* — a grounded `ask` with eight intents + a
+conversational `chat`) **complete** (2026-08-05). **49 ADRs · 421 tests · CI green.** Next: a thin web UI.
+See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -43,19 +44,22 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
 
 ## Planned (not yet built)
 
-- A web dashboard UI (Phase 2); in-season form (needs the season started); the full probabilistic
-  xMins model — schedule/European congestion, rotation profiles (Phase 5, post-GW1). *(xMins **v0** —
-  chance% × historical minutes — is built; see above.)*
+- **Next — a thin web UI** (FastAPI + Jinja, server-rendered) that reuses these analytics: the CLI stays
+  the engine, the web is just a new read-only view.
+- **Then — Data Hardening** (post-GW1): in-season form + per-gameweek history blended into xP.
+- **Later:** chip optimisers; the full probabilistic xMins model (schedule/European congestion, rotation
+  profiles — post-GW1); evaluation & feedback loops. *(xMins **v0** — chance% × historical minutes — is
+  built; see above.)*
 
-See the [Roadmap](docs/04_Roadmap/Roadmap.md) and
-[Phase 1 reconciliation](docs/04_Roadmap/Phase1_Reconciliation.md).
+See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## Technology
 
 - Python (standard library + `requests`)
 - SQLite (local cache)
 - PuLP (integer-programming squad optimiser)
-- pytest (offline test suite)
+- Ollama (optional local LLM — *narrates* `ask`/`chat`; never computes; the tool works without it)
+- pytest (offline test suite) · ruff (lint)
 - VS Code · GitHub · Claude Code
 
 ## Getting Started

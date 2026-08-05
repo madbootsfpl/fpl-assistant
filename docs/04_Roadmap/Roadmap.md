@@ -1,131 +1,103 @@
-# Master FPL Assistant Roadmap
+# FPL Assistant Roadmap
 
-*Reframed 2026-08-03 (Sprint 025). **Phase 1 is complete** — declared as the "CLI Analytics MVP".
-The original aspirational 5-phase plan is preserved and reconciled item-by-item in
-[Phase1_Reconciliation.md](Phase1_Reconciliation.md); the decision is
-[ADR-026](../06_Decisions/ADR-026-phase1-cli-mvp.md). Nothing has been dropped — every unbuilt
-item below traces to an original bullet.*
+*Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page. Phase 1 was delivered as a
+**CLI** (ADR-002/003), not the original web-first plan; that original 5-phase plan and its bullet-by-bullet
+reconciliation live in git history and the per-sprint docs — this page looks **forward**.*
 
-**Status legend:** ✅ Done · ◑ Partial · ⬜ Not started (carried forward)
+**Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
+and a grounded natural-language layer (`ask` + `chat`). **49 ADRs · 421 tests · CI green.** Preseason (0
+gameweeks; **GW1 deadline 2026-08-21**), so form/per-GW insight is still ahead.
+
+**Status legend:** ✅ Done · ◑ Partial · ⬜ Not started
 
 ---
 
-## ✅ Phase 1 — CLI Analytics MVP — **COMPLETE (2026-08-03)**
+## ✅ Delivered
 
-**What shipped:** a working command-line FPL analytics & optimisation assistant — the analytical
-and optimisation *core* that the original plan (Phases 1/2/5) is reconciled against, delivered as
-a **CLI**. Web UI, CI/CD, auth and historical data were *deliberately* deferred (ADR-001/002/003).
-
-- **Data:** FPL API client (`bootstrap-static`, `fixtures`) + SQLite cache (upsert, generic
-  migrations). FPL is the source of truth; ClubElo is a best-effort second source that degrades
-  gracefully (retry-then-degrade, importance-scaled).
-- **Analytics:** custom FDR (overall + ClubElo Elo), Points-per-£m value, Expected Points (xP) v0
-  over a multi-week horizon, xG/xA/xGI/xGC, over/under-performance, Defensive Contribution,
-  clean-sheet solidity (xGC/90).
-- **Optimisation:** an ILP squad selector (PuLP) — best XI or full 15-man squad, flexible
-  formations, declared bench, include/exclude, a pluggable objective (points/value/xp/xgi),
-  availability filtering.
+### Analytics & optimisation core (the CLI engine)
+- **Data:** FPL API client (`bootstrap-static`, `fixtures`, `element-summary`) + SQLite cache (upsert,
+  generic migrations). FPL is the source of truth; ClubElo is a best-effort second source that degrades
+  gracefully (retry-then-degrade, importance-scaled). Past-season history backfill.
+- **Analytics:** custom FDR (overall + ClubElo Elo), Points-per-£m value, **Expected Points (xP)** over a
+  multi-week horizon, xG/xA/xGI/xGC, over/under-performance, Defensive Contribution, clean-sheet solidity.
+- **One xP metric (ADR-041):** the optimiser and the decision layer share a single `decision_xp` recipe
+  (baseline + a sane low-evidence fallback + xMins) — so a squad built on xP has no phantom free transfers.
+- **Expected minutes (xMins) v0 (ADR-038):** `chance%` × a recency-weighted historical minutes share
+  weights xP **default-on** at every decision edge; shown as expected minutes; `--no-xmins` opts out.
+- **Optimisation:** an ILP squad selector (PuLP) — best XI or full 15, flexible formations, declared
+  bench, include/exclude, pluggable objective; **archetypes** (`--cheap`/`--premium`/`--differential`,
+  ADR-043/044) and **bench-aware** builds (`--weekly`/`--bench-boost`, ADR-045).
 - **User state:** saved / reloadable squads (re-priced, with current injuries + departures).
-- **Engineering:** 12 commands, 25 ADRs (001–025) + ADR-026 closing the phase, 227 offline tests,
-  a shared table renderer.
 
-**Deliberately deferred to Phase 2+ (carried, not dropped)** — full two-way audit in
-[Phase1_Reconciliation.md](Phase1_Reconciliation.md).
+### Decision support
+- **`captain`** (ADR-029) — top picks by next-GW xP; opponent, venue, penalty duty.
+- **`transfer`** (ADR-030) — best single legal upgrades, **ranked by XI improvement** (XI-gain via
+  `best_xi_points`, ADR-046; `--raw` for the old ranking); a coordinated multi-move **plan** (`--count`,
+  ADR-035).
+- **`analyse`** (ADR-031) — projected XI xP over N GW (per-GW breakdown, ADR-032), weak links, injuries.
 
----
+### Natural-language layer (grounded)
+- **`ask`** — eight intents (captain · transfer · analyse · start/bench · compare · build-a-squad ·
+  best-players · **fixtures**), all **analytics-decide, LLM-narrates**, every answer **verified** against
+  the data (✓/⚠ trust line, ADR-037). The LLM (local Ollama) is optional — degrades to decision + facts.
+- **`chat`** (ADR-047) — a conversational mode where follow-ups build on the last turn (why / next /
+  what-about), still analytics-decided each turn.
+- **`fixtures`** (ADR-048/049) — a league FDR ranking, a single team's schedule, or a **squad's players by
+  their fixture run**; team names resolve or ask, never guess.
 
-## Phase 2 — Infrastructure, Data Depth & Analytics Hardening  *(next)*
-
-**Goal:** give the proven analytics core the infrastructure and richer data the original Phase 1/2
-called for — now that the MVP has shown what's worth investing in.
-
-### Infrastructure (carried forward from the original Phase 1)
-- ⬜ **Web dashboard UI** (FastAPI/Flask + React/Next.js; the CLI stays the engine) — the original
-  Phase 1 UI, deferred by ADR-002/003.
-- ⬜ **CI/CD** — GitHub Actions (lint + the 227 tests) + pre-commit hooks.
-- ⬜ **Session/cookie auth** for user-specific data (`/my-team/{id}/`).
-- ⬜ **Historical + price-trend schema and backfills** (past-season stats for modelling); cache
-  TTLs; a gameweek countdown.
-- ⬜ **Source versioning** — formalise the "version all external sources" reliability rule.
-
-### Data & analytics depth (original Phase 2 remainder)
-- ⬜ Price-change predictor (directional flags from net transfer deltas — treat as flags, not truth).
-- ⬜ Form per £m + rolling 3-GW vs 6-GW trendlines (needs in-season `form` + history).
-- ◑ Attack/Defence FDR split + recent-form weighting (deferred while preseason strengths are 0 —
-  ADR-005).
-- ◑ A **first-class xP engine with uncertainty** — graduate xP v0 into the single source of truth
-  for every downstream recommendation.
-- ◑ Updated BPS rules beyond DefCon (e.g. GK saves).
-- ⬜ Confidence scoring on external-data fallback.
+### Engineering
+- **CI (GitHub Actions):** ruff + pytest on push (Py 3.13/3.14). Layered one-way architecture
+  (`api → ingest → storage → analytics → ui → cli`); 49 ADRs; 421 offline tests; shared table renderer.
 
 ---
 
-## Phase 3 — Decision Support Engine  — ✅ **substantially complete (2026-08-04)**
+## ▶ Next — a thin web UI (Sprint 051)
 
-**Goal:** translate analytics into actionable manager recommendations. The core trio —
-recommend-and-explain, all composed on xP + saved squads + availability — is **built and
-cross-linked** (`captain` → `transfer` → `analyse`).
-
-- ✅ Captain suggestion (`captain --squad`, ADR-029) — top picks by next-GW xP; opponent, venue,
-  penalty duty; GKs excluded (mean ≠ ceiling); doubtful flagged.
-- ✅ Transfer recommendation (`transfer --squad`, ADR-030) — best single legal upgrades by xP gain;
-  same position, ≤3/club, budget (sale + `--bank`); GKs included; bench flagged.
-- ✅ Team analyser (`analyse --squad`, ADR-031) — projected XI xP over N GW (with a per-GW breakdown,
-  ADR-032), weak links, injuries, club concentration; indicators, not a grade. *(Uses a saved
-  squad — a manager-ID fetch waits on auth.)*
-- ✅ **Expected minutes (xMins) v0** (lightweight, FPL-native) — **DONE (Sprint 037, ADR-038)**.
-  `chance_of_playing%` × a recency-weighted historical **minutes share** (minutes-only) **weights xP**
-  default-on at the decision edge (captain/transfer/analyse/`ask`), shown as expected minutes with a
-  `--no-xmins` opt-out; the raw `xp` view stays pure. Retires the "assumes they play" caveat where
-  decisions are made. *(The full probabilistic model is Phase 5 — see below.)*
-- ⬜ Live event layer — re-rank on injuries / lineups / price changes without a full recompute.
-- ⬜ Multi-move transfer *planner* (hits vs roll, −4 maths) — the single-move engine is the foundation.
+A minimal, **read-only, local-only** web layer that **reuses the analytics/`ask` untouched** — the web as
+a new *edge* over the same core (**the CLI stays the engine**). Proposed: **FastAPI + Jinja** (server-
+rendered, no JS build), testable with `TestClient`. Deliberately small — a GW1-ready shell, not a full
+interactive app. *(Discussed Sprint 050; approach to be gated at the sprint's start.)*
 
 ---
 
-## Phase 4 — AI & Natural-Language Layer
+## Then — Data Hardening (post-GW1)
 
-**Goal:** an intelligent interface that explains outputs via grounded RAG.
-
-- ⬜ Grounded RAG pipeline — feed structured Phase 2/3 JSON into the LLM; never let it compute
-  prices / points / deadlines (the primary anti-hallucination defence).
-- ⬜ Chat interface + intent-matching query parser.
-- ⬜ Human-readable decision justification.
-
----
-
-## Phase 5 — Advanced Optimisation & Long-Term Planning
-
-**Goal:** multi-week squad decisions via optimisation. *Core already delivered in the MVP.*
-
-- ✅ Integer-programming solver under budget / positional constraints (ADR-008).
-- ✅ Full 15-man squad generation for a horizon (ADR-012).
-- ◑ Multi-week horizon — the xP horizon is done (ADR-007); add decaying weights.
-- ⬜ Chip optimisers — Wildcard / Free Hit (15-man exists), Bench Boost, Triple Captain.
-- ⬜ Transfer-path simulation (a −4 now vs rolling).
-- ⬜ **Probabilistic xMins (the full ML model)** — a trained model producing per-fixture expected-minutes
-  *probabilities* from schedule density (hours between kickoffs), European-match congestion, historical
-  manager rotation profiles, and substitution tendencies. The rigorous successor to the Phase-3 v0
-  above. **Needs** in-season per-GW minutes to train (post-GW1), external European-fixture data (not in
-  the FPL API), and a real ML effort — so a **later, dedicated phase**, gated on data. Owner's Sprint-35
-  request; assessed in the [Backlog](../Backlog.md#expected-minutes-xmins--the-owners-sprint-35-request).
+The substance that comes alive once the season runs (GW1 = 2026-08-21):
+- ⬜ Full 567-player history backfill (can ride sooner) + **per-GW `history` ingestion** (empty preseason).
+- ⬜ **In-season form** + rolling 3-GW vs 6-GW trends; blend form into xP.
+- ◑ Attack/Defence FDR split + recent-form weighting (preseason strengths are 0 — ADR-005).
+- ⬜ Price-change predictor (directional flags from net-transfer deltas — flags, not truth).
 
 ---
 
-## Cross-Cutting (all phases)
+## Later — advanced optimisation & evaluation
 
-- ⬜ **Evaluation & feedback loops** — track real outcomes ("did the suggested captain beat the
-  template?"); keep golden gameweeks for regression testing. *Critical before trusting
-  recommendations — without measurement, models look clever while underperforming.*
-- ✅ **Data reliability** — FPL is the source of truth; external sources degrade gracefully
-  (ADR-010/020/021). ⬜ Version all external sources.
-- ⬜ **Success metrics** — price-flag accuracy, xP calibration, captain hit-rate, net points over a
-  season. Define *before* Phase 3 recommendations.
+- ⬜ **Chip optimisers** — Wildcard / Free Hit (the 15-man build exists), Bench Boost (bench-aware exists),
+  Triple Captain.
+- ⬜ **Probabilistic xMins (the full ML model)** — per-fixture expected-minutes *probabilities* from
+  schedule density, European congestion, rotation profiles. Needs in-season per-GW minutes to train
+  (post-GW1) + external European-fixture data + a real ML effort — a later, data-gated phase. The rigorous
+  successor to xMins v0.
+- ⬜ Multi-week horizon **decay weights**; transfer-path simulation (a −4 now vs rolling).
+- ⬜ **Evaluation & feedback loops** — did the suggested captain beat the template? Golden-gameweek
+  regression; success metrics (xP calibration, captain hit-rate, net season points). *Critical before
+  fully trusting recommendations.*
 
 ---
 
-## Original plan (for the record)
+## Infrastructure (carried)
 
-The original aspirational 5-phase roadmap is fully preserved and reconciled bullet-by-bullet in
-[Phase1_Reconciliation.md](Phase1_Reconciliation.md) — every unbuilt item above traces back to an
-original line, and nothing has been deleted.
+- ⬜ Session/cookie **auth** for user-specific data (`/my-team/{id}/`) — unlocks a manager-ID fetch in
+  `analyse`/`transfer`.
+- ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.
+- ⬜ Cache TTLs + a gameweek countdown.
+
+---
+
+## Guiding principles (unchanged)
+
+- **The CLI stays the engine** — new surfaces (web) are edges over the same analytics; generic core, policy
+  at the edge.
+- **Analytics decide; the LLM only narrates** — grounded, verified, optional.
+- **FPL is the source of truth**; external sources degrade gracefully.
+- **Learn by building, sprint by sprint** — a gate (ADR) per feature; simple over clever.
