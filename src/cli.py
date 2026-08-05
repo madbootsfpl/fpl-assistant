@@ -17,6 +17,7 @@ from src.analytics import (
     SQUAD_15,
     XI_FLEX,
     analyse_squad,
+    archetype_bands,
     available_players,
     baseline_rate,
     best_legal_xi,
@@ -293,11 +294,20 @@ def cmd_squad(args) -> None:
             weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
         else:
             scores = objective_scores(players, args.objective)
+        # Archetype constraints (ADR-043): ≥N low-cost / ≥M premium, if asked.
+        bands = archetype_bands(cheap=args.cheap, premium=args.premium)
         result = select_squad(
             pool, budget=budget, formation=formation, size=size,
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
-            scores=scores,
+            scores=scores, band_minimums=bands,
         )
+        if result["status"] != "Optimal" and bands:
+            print(
+                f"No squad fits those archetypes within £{budget:.1f}m "
+                f"(cheap≥{args.cheap or 0}, premium≥{args.premium or 0}) — relax --cheap/--premium "
+                "or raise the budget."
+            )
+            return
         if args.objective == "xp":   # US-121: show what we optimised — attach xP + xMins for the table
             for p in result["selected"]:
                 p["xp"] = scores.get(p["id"], 0)
@@ -830,6 +840,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--no-xmins", action="store_true",
         help="With --objective xp: don't weight by expected minutes (xMins v0) — the raw view",
+    )
+    p_squad.add_argument(
+        "--cheap", type=int, metavar="N",
+        help="Require at least N low-cost (≤£4.5m) players — bench enablers (ADR-043)",
+    )
+    p_squad.add_argument(
+        "--premium", type=int, metavar="N",
+        help="Require at least N premium (≥£9.0m) players",
     )
     p_squad.add_argument(
         "--include-unavailable", action="store_true", dest="include_unavailable",

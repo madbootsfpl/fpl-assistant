@@ -7,8 +7,11 @@ check the solver picks it and respects each constraint.
 import pytest
 
 from src.analytics.optimizer import (
+    LOW_COST_MAX,
+    PREMIUM_MIN,
     SQUAD_15,
     XI_FLEX,
+    archetype_bands,
     available_players,
     best_legal_xi,
     is_unavailable,
@@ -624,3 +627,37 @@ def test_best_legal_xi_is_the_shared_primitive():
     byid = {pl["id"]: pl for pl in pool}
     counts = Counter(byid[i]["position"] for i in xi)
     assert (counts["DEF"], counts["MID"], counts["FWD"]) == (5, 4, 1)   # strong DEF → 5-4-1
+
+
+# ---- squad archetypes (ADR-043, US-125) -------------------------------------
+
+def test_archetype_bands_translates_counts():
+    assert archetype_bands(cheap=3) == [(3, 0.0, LOW_COST_MAX)]
+    assert archetype_bands(premium=1) == [(1, PREMIUM_MIN, 999.9)]
+    assert archetype_bands(cheap=2, premium=1) == [(2, 0.0, LOW_COST_MAX), (1, PREMIUM_MIN, 999.9)]
+    assert archetype_bands() == []                       # no archetypes → no bands
+
+
+def test_band_minimum_forces_a_premium_into_the_squad():
+    # A low-scoring premium FWD isn't picked normally, but a "≥1 premium" band forces it in —
+    # the objective is still maximised subject to the constraint (ADR-043).
+    pool = squad_pool()                                  # 3GK/6DEF/6MID/4FWD, all £4, score 10
+    prem = next(p for p in pool if p["position"] == "FWD")
+    prem["price"], prem["total_points"] = 9.5, 1         # a pricey, low-scoring player
+    scores = {p["id"]: p["total_points"] for p in pool}
+
+    without = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores)
+    assert prem["id"] not in {p["id"] for p in without["selected"]}   # worst FWD → left out
+
+    withband = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores,
+                            band_minimums=[(1, PREMIUM_MIN, 999.9)])
+    assert prem["id"] in {p["id"] for p in withband["selected"]}      # the only ≥£9 → forced in
+
+
+def test_band_minimum_can_be_infeasible():
+    # No player is ≥£9m, so "≥1 premium" can't be satisfied → non-Optimal, empty.
+    pool = squad_pool()                                  # all £4
+    scores = {p["id"]: p["total_points"] for p in pool}
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores,
+                          band_minimums=[(1, PREMIUM_MIN, 999.9)])
+    assert result["status"] != "Optimal" and result["selected"] == []

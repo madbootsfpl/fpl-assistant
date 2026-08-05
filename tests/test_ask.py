@@ -11,6 +11,7 @@ from src import ask
 from src.ask import (
     AskResult,
     _analyse_facts,
+    _archetype_counts,
     _build_prompt,
     _captain_facts,
     _decide_compare,
@@ -155,6 +156,20 @@ def test_squad_budget_parses_the_amount_or_defaults():
     assert _squad_budget("build me a squad for £100m") == 100.0
     assert _squad_budget("build a team for 85m") == 85.0
     assert _squad_budget("build me a squad") == 100.0        # FULL_BUDGET default
+
+
+def test_archetype_counts_parses_low_cost_premium_and_differential():
+    # ADR-043: (low_cost, premium, differential) counts from a build request.
+    assert _archetype_counts(
+        "build me a squad for £100M with 3 low cost players and 1 premium player") == (3, 1, None)
+    assert _archetype_counts("build a squad with 2 premium and 4 budget players") == (4, 2, None)
+    assert _archetype_counts("build a team with 2 differentials") == (None, None, 2)
+    assert _archetype_counts("build me a squad for £100m") == (None, None, None)
+
+
+def test_routes_multifaceted_build_to_build_squad():
+    q = "build me a squad for £100m with 3 low cost players and 1 premium player"
+    assert route(q, known_squads=[])[0] == "build_squad"    # 'build' wins over 'players'/'premium'
 
 
 def test_verify_grounding_handles_a_pound_sign_in_the_facts():

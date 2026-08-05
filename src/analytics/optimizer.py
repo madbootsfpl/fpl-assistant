@@ -19,6 +19,9 @@ XI_FLEX = {"GK": (1, 1), "DEF": (3, 5), "MID": (2, 5), "FWD": (1, 3)}   # 11, an
 SQUAD_15 = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}    # 15 players (the full FPL squad)
 FULL_BUDGET = 100.0                                    # the real FPL squad budget
 MAX_PER_CLUB = 3
+# Squad archetypes (ADR-043), tunable: a low-cost bench enabler vs a premium star, by price band.
+LOW_COST_MAX = 4.5      # ≤ this is a "low-cost" / budget enabler (the bench-fodder tier)
+PREMIUM_MIN = 9.0       # ≥ this is a "premium" (the elite few)
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
@@ -99,6 +102,7 @@ def select_squad(
     bench_ids=(),
     scores=None,
     size=None,
+    band_minimums=None,
 ) -> dict:
     """Pick the starting XI that maximises a per-player score under the constraints.
 
@@ -153,6 +157,13 @@ def select_squad(
                 <= max_per_club
             )
 
+        # Archetype bands (ADR-043): at least `count` picked players priced within [lo, hi]
+        # (e.g. ≥3 low-cost ≤£4.5m, ≥1 premium ≥£9.0m). The objective (xP) is still maximised.
+        for count, lo, hi in (band_minimums or []):
+            problem += pulp.lpSum(
+                pick[p["id"]] for p in players if lo <= p["price"] <= hi
+            ) >= count
+
         # Forced picks: lock chosen players in (1) or out (0). Benched players are
         # forced in too — they're part of the squad, just declared as bench.
         for pid in include_set | bench_set:
@@ -185,6 +196,20 @@ def select_squad(
         "total_points": sum(p["total_points"] for p in selected),
         "total_cost": round(sum(p["price"] for p in selected), 1),
     }
+
+
+def archetype_bands(cheap=None, premium=None) -> list:
+    """Translate low-cost / premium counts into `select_squad` `band_minimums` (ADR-043).
+
+    `cheap` → ≥N players ≤ LOW_COST_MAX; `premium` → ≥M players ≥ PREMIUM_MIN. A None/0 count
+    adds no band, so no archetypes → today's unconstrained build.
+    """
+    bands = []
+    if cheap:
+        bands.append((cheap, 0.0, LOW_COST_MAX))
+    if premium:
+        bands.append((premium, PREMIUM_MIN, 999.9))
+    return bands
 
 
 def best_legal_xi(owned, scores) -> set:

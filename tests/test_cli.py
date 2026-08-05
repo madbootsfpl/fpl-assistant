@@ -219,6 +219,14 @@ def test_squad_include_exclude_default_empty():
     assert args.exclude == []
 
 
+def test_squad_cheap_and_premium_flags_are_parsed():
+    # ADR-043: --cheap N / --premium M add archetype constraints; absent → None (no constraint).
+    args = build_parser().parse_args(["squad", "--full", "--cheap", "3", "--premium", "1"])
+    assert args.cheap == 3 and args.premium == 1
+    plain = build_parser().parse_args(["squad"])
+    assert plain.cheap is None and plain.premium is None
+
+
 def test_squad_defaults_to_objective_xp():
     # ADR-041: xp (forward-looking, the metric transfer/analyse use) is the default, so a squad
     # built by default is consistent with transfer; --objective points is the season-total view.

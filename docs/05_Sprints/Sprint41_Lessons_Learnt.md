@@ -89,7 +89,11 @@ intent: `ask "best <position> [under £Xm]"`, ranked on the unified xP. No new d
 
 ### Notes _(for Tony)_
 
--
+- more good work done in last sprint.
+- I would like to be able to ask a multifacted question like: ask "build me a squad for £100M with 3 low cost players and 1 premium player" 
+- The reason for this is that its normal to have a couple of plyers who are always benched and will only be used when playing a chip. So keeping a low cost keeper and one or two outfield players make sense. You also may want to select 1-3 premium players. 
+- The other player type would be a differential, we probally need to define that first and then include as option.
+- Appreciate this is a big ask.
 
 ---
 

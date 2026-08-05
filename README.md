@@ -102,6 +102,7 @@ python app.py squad --budget 80                 # pick the optimal starting XI (
 python app.py squad --include Haaland --exclude Salah  # the optimal XI built around your picks
 python app.py squad --objective xp              # xP is the DEFAULT objective (forward-looking; consistent with transfer)
 python app.py squad --objective points          # optimise last season's total points instead
+python app.py squad --full --cheap 3 --premium 1  # shape it: ≥3 low-cost (≤£4.5m) + ≥1 premium (≥£9m)
 python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 python app.py squad --bench Dubravka Diop        # declare your bench (marked **, shown last); implies --full
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)
@@ -126,6 +127,7 @@ python app.py ask "analyse my-team"
 python app.py ask "who should I start from my-team?"   # best legal XI (xMins-weighted) vs your bench
 python app.py ask "Haaland or Saka?"                   # compare two players side by side
 python app.py ask "build me a squad for £100m"         # the optimal 15 on xP, within budget
+python app.py ask "build me a squad for £100m with 3 low cost players and 1 premium player"
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
 ```
 

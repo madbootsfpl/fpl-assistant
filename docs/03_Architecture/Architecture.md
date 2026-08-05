@@ -452,6 +452,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 042 (2026-08-05)** — *squad archetypes*, per ADR-043, from the owner's multi-faceted build
+  request. `select_squad` gained **`band_minimums=[(count, lo, hi), …]`** — one ILP line (`Σ pick[p]
+  (lo ≤ price ≤ hi) ≥ count`), byte-identical when absent; `archetype_bands(cheap, premium)` maps counts
+  to bands via tunable `LOW_COST_MAX=4.5` / `PREMIUM_MIN=9.0`. Surfaced as **`squad --full --cheap N
+  --premium M`** and parsed from NL in `build_squad` (`_archetype_counts` → "3 low-cost … 1 premium");
+  an infeasible ask (e.g. ≥6 premiums — only 5 exist) → a clear message, not a crash. The **differential**
+  archetype is defined (low ownership) but deferred — `selected_by_percent` isn't ingested yet (Backlog);
+  a requested differential returns a "coming soon" note. No new dependency.
 - **Sprint 041 (2026-08-05)** — *show what you optimised + a "best players" intent*, per ADR-042 (and
   finishing ADR-041's display). **Part A:** under `--objective xp` (the default) the `squad` table now
   shows **`xMins` + `xP`** columns and a **projected xP total** (not last-season `Pts`) —
