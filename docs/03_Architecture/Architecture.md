@@ -452,6 +452,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 047 (2026-08-05)** — *conversational `ask`* (mechanics), per ADR-047, from the owner (*more
+  Phase 4*). A follow-up can now build on the last turn while the discipline holds — **analytics decide
+  every turn**, the LLM only narrates. A `Context` (last intent/squad/decision + a `rank`) carries the
+  turn; **`detect_followup`** classifies three families by *subject-less* trigger only (so *"why?"* is a
+  follow-up but *"why is Haaland good?"* stays a fresh question): **why** (re-narrate the last decision's
+  *same* facts with a deeper task), **next** (re-run the intent at a **rank offset** — captain/transfer
+  take the Nth pick, shortlist the next page; the engines already rank), **what-about** (shortlist-only:
+  swap the position, *keeping* the price/value constraints via `_swap_position`). **`converse(question,
+  context)`** is the per-turn engine (a follow-up on the context, else a fresh question via the shared
+  `_dispatch`); the one-shot `answer()` is `converse` with no context; a follow-up with no context yet
+  nudges. Grounding (ADR-037) runs every turn. The `chat` REPL that threads the context is US-141. No new
+  dependency.
 - **Sprint 046 (2026-08-05)** — *XI-aware transfers*, per ADR-046, from the owner (the follow-on to
   bench-aware builds). `suggest_transfers` now ranks single swaps by **XI-gain** = `best_xi_points(owned −
   out + in) − best_xi_points(owned)` — how much a swap lifts your best legal XI — so bench-fodder swaps

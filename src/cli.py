@@ -471,6 +471,33 @@ def cmd_ask(args) -> None:
     print(render_ask(ask.answer(args.question)))
 
 
+def _prompt_lines(prompt: str = "\n> "):
+    """Yield lines typed at the REPL prompt, stopping cleanly on EOF (Ctrl-D) / interrupt."""
+    while True:
+        try:
+            yield input(prompt)
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+
+
+def cmd_chat(args) -> None:
+    """An interactive `ask` — follow-ups build on the last answer (ADR-047).
+
+    Same discipline as `ask` (analytics decide, the LLM only narrates, every turn verified); the
+    only new thing is memory of the last turn, so "why?" / "and the second best?" / "what about
+    defenders?" build on it. Degrades without the LLM, exactly like `ask`.
+    """
+    store = Storage()
+    print('Chat with your FPL assistant. Ask a question, then follow up — "why?", "and the second '
+          'best?", "what about defenders?". Type "quit" (or Ctrl-D) to exit.')
+    try:
+        for result in ask.chat_transcript(_prompt_lines(), store=store):
+            print(render_ask(result))
+    finally:
+        store.close()
+
+
 def cmd_analyse(args) -> None:
     """Grade a saved squad's health over the next N gameweeks (ADR-031)."""
     store = Storage()
@@ -668,6 +695,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_ask.add_argument("question", help='e.g. "who should I captain from my-team?"')
     p_ask.set_defaults(handler=cmd_ask)
+
+    p_chat = sub.add_parser(
+        "chat", help='Interactive `ask` — follow-ups ("why?", "and the second best?") build on the last'
+    )
+    p_chat.set_defaults(handler=cmd_chat)
 
     p_table = sub.add_parser(
         "table", help="Show players, ranked by points or value (points per £m)"

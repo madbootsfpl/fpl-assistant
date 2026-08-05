@@ -10,6 +10,7 @@ from src.cli import (
     build_parser,
     cmd_analyse,
     cmd_captain,
+    cmd_chat,
     cmd_fdr,
     cmd_filter,
     cmd_fixtures,
@@ -22,6 +23,11 @@ from src.cli import (
     resolve_squad_budget,
     validate_bench,
 )
+
+
+def test_chat_command_parses_with_no_args():
+    args = build_parser().parse_args(["chat"])       # an interactive REPL — no positional/flags
+    assert args.command == "chat" and args.handler is cmd_chat
 
 
 def test_table_command_defaults_to_limit_20():

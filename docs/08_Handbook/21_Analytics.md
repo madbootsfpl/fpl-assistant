@@ -156,6 +156,23 @@ analytics. The pattern (proven by a spike, ADR-033) is strict:
   analytics decision + facts. The tool never depends on the model — the honest, transparent contrast
   to a black-box AI companion.
 
+**A conversation that stays honest (Sprint 047, `chat`).** `chat` (ADR-047) lets a second question build
+on the first — *"who should I captain for TS?"* → *"why?"* → *"and the second best?"* → *"what about
+defenders?"*. The point is that **memory didn't loosen the grounding**: every follow-up is still
+analytics-decided. Three lessons:
+- **A follow-up is an offset, not new intelligence.** The decision engines already *rank* (captain,
+  transfer, shortlist), so *"the second best?"* is just reading rank #2 — the analytics still decide;
+  the LLM still only narrates. *"why?"* is the safest of all: it re-narrates the *same* facts with a
+  deeper task, so there's nothing new to get wrong. The grounding verifier runs every turn, unchanged.
+- **Detect follow-ups deterministically, on *subject-less* lines.** The model never decides the route
+  (as ever). A line counts as a follow-up only when every word is filler — so *"why?"* builds on the
+  last turn but *"why is Haaland good?"* (it carries a subject) is a fresh question. That single rule
+  makes detection collision-free.
+- **Keep the state tiny.** Just the last turn (intent, squad, the decision, a rank) held in memory for
+  the REPL — no persistence, no cross-process surprise. `answer()` is simply `converse()` with no
+  context, so the one-shot `ask` is unchanged and the conversational path reuses the exact same
+  pipeline.
+
 **A recommendation over a *sequence* (Sprint 033, multi-transfer plan).** `suggest_transfer_plan`
 (ADR-035) is the first that reasons across several moves: *"which 3 transfers?"*. The lesson is to
 **reuse the single-move engine over an evolving state** rather than write a new optimiser — a greedy

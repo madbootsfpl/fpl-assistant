@@ -51,3 +51,4 @@ new ADR as it is created.
 | [044](./ADR-044-differential-archetype.md) | The differential archetype — ingest ownership; a ≤5%-owned min-count constraint (`--differential N`, NL); completes ADR-043 | Accepted |
 | [045](./ADR-045-bench-aware-optimisation.md) | Bench-aware squad optimisation — a `start`-variable ILP + weighted objective; `--weekly` (max XI + playing bench) / `--bench-boost` (max-15); default unchanged | Accepted |
 | [046](./ADR-046-xi-aware-transfers.md) | XI-aware transfers — rank swaps by XI-gain (best-XI change) via a fast `best_xi_points`; the default (`--raw` for the old ranking) | Accepted |
+| [047](./ADR-047-conversational-ask-follow-ups.md) | Conversational `ask` — a `chat` REPL with grounded follow-ups (why / next / what-about); a pre-route resolver + rank offset; analytics still decide, verifier runs each turn | Accepted |

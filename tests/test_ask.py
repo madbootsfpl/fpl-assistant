@@ -11,7 +11,10 @@ from src import ask
 from src.analytics import WEEKLY_BENCH_WEIGHT
 from src.ask import (
     AskResult,
+    Context,
+    FollowUp,
     _analyse_facts,
+    _apply_followup,
     _archetype_counts,
     _bench_mode,
     _build_prompt,
@@ -23,9 +26,12 @@ from src.ask import (
     _plan_facts,
     _shortlist_query,
     _squad_budget,
+    _swap_position,
     _transfer_count,
     _transfer_facts,
     assemble,
+    converse,
+    detect_followup,
     route,
     verify_grounding,
 )
@@ -450,3 +456,123 @@ def test_transfer_and_analyse_ask_for_a_squad_when_missing():
     assert r.intent == "transfer" and "squad" in r.message.lower()
     r2 = ask.answer("analyse my chances", narrator=lambda p: "unused")
     assert r2.intent == "analyse" and "squad" in r2.message.lower()
+
+
+# ---- conversational follow-ups (ADR-047) ------------------------------------
+
+def test_detect_followup_classifies_bare_triggers():
+    assert detect_followup("why?").kind == "why"
+    assert detect_followup("why not?").kind == "why"
+    assert detect_followup("explain that").kind == "why"
+    assert detect_followup("and the second best?").kind == "next"
+    assert detect_followup("who else?").kind == "next"
+    assert detect_followup("another one?").kind == "next"
+    fu = detect_followup("what about defenders?")
+    assert fu.kind == "whatabout" and fu.position == "DEF"
+    assert detect_followup("what about keepers?").position == "GK"
+
+
+def test_detect_followup_ignores_fresh_questions_with_a_subject():
+    # the safety property: a line carrying its own subject is a FRESH question, not a follow-up
+    assert detect_followup("why is Haaland so good?") is None
+    assert detect_followup("best midfielders under 8m") is None
+    assert detect_followup("who should I captain for TS?") is None
+    assert detect_followup("what about a cheap midfielder?") is None   # 'cheap' isn't filler
+    assert detect_followup("") is None
+
+
+def test_swap_position_keeps_price_and_value():
+    assert _swap_position("best midfielders under 8m", "DEF") == "best defender under 8m"
+    assert _swap_position("best value goalkeepers", "FWD") == "best value forward"
+    # no position word in the original → the new position is appended (constraints preserved)
+    assert _swap_position("best players under 6m", "MID") == "best players under 6m midfielder"
+
+
+def _canned(rank=0, **extra):
+    return {"headline": f"rank {rank}", "facts": {"r": rank}, "subjects": ["X"], "task": "t", **extra}
+
+
+def test_why_renarrates_the_same_facts_and_leaves_context():
+    store = types.SimpleNamespace(get_players=lambda: [])
+    decision = {"headline": "h", "facts": {"x": 1}, "subjects": ["Haaland"], "task": "orig"}
+    ctx = Context(intent="captain", squad="TS", question="captain for TS", decision=decision)
+    seen = {}
+    result, new_ctx = _apply_followup(
+        FollowUp("why"), ctx, store, lambda prompt: seen.setdefault("p", prompt) or "because",
+    )
+    assert new_ctx is ctx                       # a "why" doesn't move the conversation on
+    assert result.facts == {"x": 1}             # SAME facts (re-narration, not new analytics)
+    assert "Haaland" in seen["p"]               # the detailed task names the subject
+
+
+def test_next_advances_the_rank(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        ask, "_dispatch",
+        lambda intent, store, q, squad, *, count=1, rank=0: (calls.append((intent, rank))
+                                                              or _canned(rank)),
+    )
+    store = types.SimpleNamespace(get_players=lambda: [])
+    ctx = Context(intent="captain", squad="TS", question="captain for TS", decision=_canned(0))
+    result, new_ctx = _apply_followup(FollowUp("next"), ctx, store, lambda p: None)
+    assert calls == [("captain", 1)] and new_ctx.rank == 1
+
+
+def test_next_past_the_end_keeps_the_rank(monkeypatch):
+    monkeypatch.setattr(ask, "_dispatch",
+                        lambda *a, **k: {"message": "That's all I have."})
+    store = types.SimpleNamespace(get_players=lambda: [])
+    ctx = Context(intent="captain", squad="TS", question="captain for TS", rank=2,
+                  decision=_canned(2))
+    result, new_ctx = _apply_followup(FollowUp("next"), ctx, store, lambda p: None)
+    assert result.message == "That's all I have." and new_ctx.rank == 2   # not advanced past end
+
+
+def test_whatabout_swaps_position_shortlist_only(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        ask, "_dispatch",
+        lambda intent, store, q, squad, *, count=1, rank=0: (seen.update(q=q, rank=rank)
+                                                             or _canned(rank, detail="d")),
+    )
+    store = types.SimpleNamespace(get_players=lambda: [])
+    ctx = Context(intent="shortlist", question="best midfielders under 8m", rank=3,
+                  decision=_canned(3))
+    result, new_ctx = _apply_followup(FollowUp("whatabout", position="DEF"), ctx, store,
+                                      lambda p: None)
+    assert "defender" in seen["q"] and "8m" in seen["q"]   # swapped position, kept the cap
+    assert seen["rank"] == 0 and new_ctx.rank == 0         # a new query resets the page
+    # what-about after a non-shortlist intent doesn't apply → None (converse falls through)
+    ctx2 = Context(intent="captain", squad="TS", question="captain for TS", decision=_canned(0))
+    assert _apply_followup(FollowUp("whatabout", position="DEF"), ctx2, store, lambda p: None) is None
+
+
+def test_converse_nudges_a_followup_with_no_context():
+    store = types.SimpleNamespace(get_players=lambda: [])
+    result, ctx = converse("why?", None, store=store, narrator=lambda p: None)
+    assert ctx is None and "Ask a question first" in result.message
+
+
+def test_answer_one_shot_is_unchanged_for_an_unrecognised_question(monkeypatch):
+    # the one-shot `ask` is `converse` with no context → a follow-up-only line still falls back
+    monkeypatch.setattr(ask, "SquadStore", lambda: types.SimpleNamespace(names=lambda: []))
+    store = types.SimpleNamespace(get_players=lambda: [])
+    result = ask.answer("what is the meaning of life", store=store, narrator=lambda p: None)
+    assert result.intent is None and "captaincy" in result.message
+
+
+def test_chat_transcript_threads_context_and_stops_at_quit(monkeypatch):
+    # the REPL heart: blank lines skipped, an exit word stops, the context carries turn-to-turn
+    seen = []
+
+    def fake_converse(q, ctx, *, store, narrator=None):
+        seen.append((q, ctx))
+        return AskResult(q, "x", headline=f"ans:{q}"), f"ctx-after-{q}"
+
+    monkeypatch.setattr(ask, "converse", fake_converse)
+    lines = ["who should I captain?", "", "  ", "why?", "quit", "never reached"]
+    results = list(ask.chat_transcript(lines, store=object(), narrator=lambda p: None))
+
+    assert [r.headline for r in results] == ["ans:who should I captain?", "ans:why?"]
+    assert seen == [("who should I captain?", None),        # first turn starts with no context…
+                    ("why?", "ctx-after-who should I captain?")]   # …then the last turn's context

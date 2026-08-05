@@ -11,7 +11,7 @@ This sprint (US-096) wires the `captain` intent; transfer + analyse follow in US
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from src import llm
 from src.analytics import (
@@ -68,6 +68,11 @@ _FALLBACK = (
     '<squad>?", ask "build me a squad for £100m", or ask "best midfielders under £8m".'
 )
 
+_NUDGE = (   # a follow-up ("why?", "and the next?") arrived before any question to build on (ADR-047)
+    "Ask a question first, then follow up — e.g. \"who should I captain from <squad>?\", "
+    'then "why?" or "and the second best?".'
+)
+
 
 @dataclass
 class AskResult:
@@ -107,6 +112,61 @@ def route(question: str, known_squads=None) -> tuple[str | None, str | None]:
     return None, squad
 
 
+# ---- conversational follow-ups (ADR-047) ------------------------------------
+# A follow-up builds on the last turn. Detection is deterministic (the LLM never decides it) and
+# fires only on short, *subject-less* lines: every non-position word must be filler, so "why?" is a
+# follow-up but "why is Haaland good?" (carries a subject) stays a fresh question.
+
+_WHY_WORDS = {"why", "not", "explain", "how", "come", "reason", "because", "that", "this", "again",
+              "so", "is", "it", "the", "one", "them", "him", "her", "though", "really", "then"}
+_WHY_HINTS = ("why", "explain", "reason", "because", "come")
+_NEXT_WORDS = {"next", "second", "third", "2nd", "3rd", "who", "else", "another", "someone", "best",
+               "the", "one", "and", "option", "pick", "give", "me", "show", "other", "some", "are",
+               "there", "any"}
+_NEXT_HINTS = ("next", "second", "third", "2nd", "3rd", "else", "another")
+_WHATABOUT_WORDS = {"what", "about", "how", "and", "the", "a", "instead", "of", "some"}
+
+
+@dataclass
+class FollowUp:
+    kind: str                       # "why" | "next" | "whatabout"
+    position: str | None = None     # for "whatabout": the new position code (GK/DEF/MID/FWD)
+
+
+@dataclass
+class Context:
+    """The last successful turn, so a follow-up can build on it (ADR-047)."""
+    intent: str
+    squad: str | None = None
+    question: str = ""              # the (possibly rewritten) question that produced this turn
+    count: int = 1                  # transfer count
+    rank: int = 0                   # how many "next" steps in — the current pick / shortlist page
+    decision: dict | None = None    # the decision itself, so "why" can re-narrate its facts
+
+
+def detect_followup(question: str) -> FollowUp | None:
+    """A follow-up (why / next / what-about), or None for a fresh question — by trigger only.
+
+    A line only counts as a follow-up when it is *subject-less*: apart from a position word (for
+    what-about), every token must be filler for that family. So "why?" / "and the second best?" /
+    "what about defenders?" match, but "why is Haaland good?" or "best defenders" do not.
+    """
+    toks = set(re.findall(r"[a-z0-9]+", question.lower()))
+    if not toks:
+        return None
+    # what about <position>: a position word (singular or plural), "about", and only filler else
+    pos = next((code for word, code in _POS_WORDS.items()
+                if word in toks or f"{word}s" in toks), None)
+    pos_forms = {form for word in _POS_WORDS for form in (word, f"{word}s")}
+    if pos and "about" in toks and (toks - pos_forms) <= _WHATABOUT_WORDS:
+        return FollowUp("whatabout", position=pos)
+    if toks <= _NEXT_WORDS and any(h in toks for h in _NEXT_HINTS):
+        return FollowUp("next")
+    if toks <= _WHY_WORDS and any(h in toks for h in _WHY_HINTS):
+        return FollowUp("why")
+    return None
+
+
 def _captain_facts(pick: dict) -> dict:
     """Pre-humanised, self-describing facts for one captain pick — nothing to decode."""
     venue = "home against" if pick["venue"] == "H" else "away against"
@@ -118,8 +178,12 @@ def _captain_facts(pick: dict) -> dict:
     }
 
 
-def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
-    """Analytics DECIDE the captain (never the LLM); return the decision + humanised facts."""
+def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0) -> dict | None:
+    """Analytics DECIDE the captain (never the LLM); return the decision + humanised facts.
+
+    `rank` (ADR-047) picks the Nth-best (0 = top); past the end returns a soft message so a
+    conversational "and the next?" degrades gracefully.
+    """
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history_by_code = store.get_history_by_code()
@@ -135,15 +199,18 @@ def _decide_captain(store: Storage, squad_name: str | None) -> dict | None:
 
     # xMins v0 (ADR-038): `ask` is a decision, so weight xP by expected minutes (default-on).
     picks = captain_picks(
-        players, upcoming, baseline_by_code=baselines, limit=3,
+        players, upcoming, baseline_by_code=baselines, limit=max(3, rank + 1),
         minutes_weight=minutes_weight_from_history(history_by_code),
         history_by_code=history_by_code,
     )
     if not picks:
         return None
-    top = picks[0]
+    if rank >= len(picks):
+        return {"message": "That's the last captain option I can rank — nothing more to add."}
+    top = picks[rank]
+    ordinal = f" #{rank + 1}" if rank else ""
     return {
-        "headline": f"Captain pick ({scope}): {top['web_name']} — xP {top['xp']} next GW",
+        "headline": f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW",
         "facts": _captain_facts(top),
         "subjects": [top["web_name"]],
         "task": f"explain in 2-3 short sentences why {top['web_name']} is a good captain pick "
@@ -218,7 +285,8 @@ def _squad_xp(store: Storage, squad_name: str):
     return squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, weight_by_id
 
 
-def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> dict | None:
+def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
+                     rank: int = 0) -> dict | None:
     data = _squad_xp(store, squad_name)
     if data is None:
         return None
@@ -247,13 +315,16 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> 
         }
 
     moves = suggest_transfers(
-        owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, limit=1
+        owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, limit=rank + 1
     )
     if not moves:
         return None
-    m = moves[0]
+    if rank >= len(moves):
+        return {"message": "That's the last positive-gain upgrade I can find — nothing more."}
+    m = moves[rank]
+    ordinal = f" #{rank + 1}" if rank else ""
     return {
-        "headline": f"Transfer (squad '{squad_name}'): {m['out']['web_name']} → "
+        "headline": f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
                     f"{m['in']['web_name']} (+{m['gain']} XI xP over {_HORIZON} GW)",
         "facts": _transfer_facts(m),
         "subjects": [m["out"]["web_name"], m["in"]["web_name"]],
@@ -538,8 +609,11 @@ def _shortlist_query(question: str) -> tuple:
     return position, cap, "value" in ql
 
 
-def _decide_shortlist(store: Storage, question: str) -> dict | None:
-    """Analytics rank the best players for a position/price query (ADR-042), on the unified xP."""
+def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | None:
+    """Analytics rank the best players for a position/price query (ADR-042), on the unified xP.
+
+    `rank` (ADR-047) is a page offset: a conversational "who else?" shows the next `_SHORTLIST_N`.
+    """
     players = store.get_players()
     if not players:
         return None
@@ -561,7 +635,10 @@ def _decide_shortlist(store: Storage, question: str) -> dict | None:
         xp = xp_by_id.get(p["id"], 0)
         return xp / p["price"] if by_value and p["price"] else xp
 
-    top = sorted(cands, key=score, reverse=True)[:_SHORTLIST_N]
+    start = rank * _SHORTLIST_N
+    top = sorted(cands, key=score, reverse=True)[start:start + _SHORTLIST_N]
+    if not top:
+        return {"message": "That's the end of the list — no more players to show."}
     rows = [{**p, "xp": xp_by_id.get(p["id"], 0), "minutes_weight": weight_by_id.get(p["id"], 1.0)}
             for p in top]
     scope = position or "players"
@@ -658,38 +735,159 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
     )
 
 
-def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate) -> AskResult:
-    """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional."""
-    intent, squad_name = route(question)
-    if intent is None:
-        return assemble(question, None, None, narrator)
-    if intent in ("transfer", "analyse", "start_bench") and not squad_name:
+def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
+              *, count: int = 1, rank: int = 0) -> dict | None:
+    """Run the decision engine for `intent` (shared by `answer` and `converse`).
+
+    `count`/`rank` are threaded so a conversational follow-up can ask for an N-transfer plan or
+    the Nth-best pick (ADR-047); the intents that don't rank ignore them.
+    """
+    if intent == "transfer":
+        return _decide_transfer(store, squad, count, rank=rank)
+    if intent == "captain":
+        return _decide_captain(store, squad, rank=rank)
+    if intent == "start_bench":
+        return _decide_start_bench(store, squad)
+    if intent == "compare":
+        return _decide_compare(store, question)
+    if intent == "build_squad":
+        return _decide_build_squad(store, question)
+    if intent == "shortlist":
+        return _decide_shortlist(store, question, rank=rank)
+    return _decide_analyse(store, squad)
+
+
+def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
+    """The 'name a squad' prompt for the squad-scoped intents (or None if fine)."""
+    if intent in ("transfer", "analyse", "start_bench") and not squad:
         verb = {"transfer": "what transfer", "analyse": "analyse",
                 "start_bench": "who should I start"}[intent]
-        return AskResult(question, intent,
-                         message=f'Name a saved squad, e.g. ask "{verb} for <squad>?"')
+        return AskResult("", intent, message=f'Name a saved squad, e.g. ask "{verb} for <squad>?"')
+    return None
 
+
+def _fresh(question: str, context: "Context | None", store: Storage, narrator):
+    """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
+
+    A successful answer becomes the new context; a fallback/soft-failure leaves the running
+    context untouched (so a later "why?" still refers to the last *good* turn).
+    """
+    intent, squad = route(question)
+    if intent is None:
+        return assemble(question, None, None, narrator), context
+    prompt = _needs_squad(intent, squad)
+    if prompt is not None:
+        return replace(prompt, question=question), context
+
+    count = _transfer_count(question)
+    decision = _dispatch(intent, store, question, squad, count=count)
+    known = [p["web_name"] for p in store.get_players()] if decision else ()
+    result = assemble(question, intent, decision, narrator, known_names=known)
+    new_context = context
+    if decision and "facts" in decision:
+        new_context = Context(intent=intent, squad=squad, question=question, count=count,
+                              rank=0, decision=decision)
+    return result, new_context
+
+
+def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator):
+    """Resolve a follow-up against `context` → (result, new_context), or None if it can't apply
+    here (e.g. 'what about defenders?' after a captain pick → let it fall through to a fresh Q)."""
+    known = [p["web_name"] for p in store.get_players()]
+
+    if fu.kind == "why":
+        if not context.decision or "facts" not in context.decision:
+            return None
+        subject = (context.decision.get("subjects") or ["this pick"])[0]
+        detailed = {**context.decision,
+                    "task": f"explain in 3-4 short sentences, in more depth, why {subject} is the "
+                            "pick here — using ONLY the facts"}
+        return assemble(context.question, context.intent, detailed, narrator, known_names=known), context
+
+    if fu.kind == "next":
+        if context.intent not in ("captain", "transfer", "shortlist"):
+            return None
+        nrank = context.rank + 1
+        decision = _dispatch(context.intent, store, context.question, context.squad,
+                             count=context.count, rank=nrank)
+        if not decision or "facts" not in decision:       # past the end → show the soft message,
+            msg = (decision or {}).get("message", "That's all I have.")   # keep the current rank
+            return AskResult(context.question, context.intent, message=msg), context
+        result = assemble(context.question, context.intent, decision, narrator, known_names=known)
+        return result, replace(context, rank=nrank, decision=decision)
+
+    if fu.kind == "whatabout":                            # shortlist-only (ADR-047)
+        if context.intent != "shortlist":
+            return None
+        new_q = _swap_position(context.question, fu.position)
+        decision = _dispatch("shortlist", store, new_q, None)
+        result = assemble(new_q, "shortlist", decision, narrator, known_names=known)
+        keep = decision if (decision and "facts" in decision) else context.decision
+        return result, replace(context, question=new_q, rank=0, decision=keep)
+
+    return None
+
+
+def _swap_position(question: str, new_code: str) -> str:
+    """Rewrite a shortlist question to a new position, keeping the rest (price cap, value)."""
+    new_word = next(word for word, code in _POS_WORDS.items() if code == new_code)
+    for word in _POS_WORDS:                               # replace an existing position word…
+        rewritten, n = re.subn(rf"\b{word}s?\b", new_word, question, flags=re.IGNORECASE)
+        if n:
+            return rewritten
+    return f"{question} {new_word}"                       # …or, if none, name the position
+
+
+def converse(question: str, context: "Context | None", *, store: Storage,
+             narrator=llm.narrate) -> tuple[AskResult, "Context | None"]:
+    """One conversational turn (ADR-047): a follow-up on `context`, else a fresh question.
+
+    Returns ``(result, new_context)``. `context` is None at the start of a chat; a follow-up with
+    no context yet returns a gentle nudge. The one-shot `answer` is `converse` with no context.
+    """
+    fu = detect_followup(question)
+    if fu is not None:
+        if context is None:
+            return AskResult(question, None, message=_NUDGE), None
+        applied = _apply_followup(fu, context, store, narrator)
+        if applied is not None:
+            return applied
+        # a detected follow-up that doesn't apply here → treat the line as a fresh question.
+    return _fresh(question, context, store, narrator)
+
+
+def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate) -> AskResult:
+    """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional.
+
+    The one-shot entry point: a single `converse` turn with no prior context (so a follow-up-only
+    line falls through to the normal fallback, exactly as before).
+    """
     own_store = store is None
     store = store or Storage()
     try:
-        if intent == "transfer":
-            decision = _decide_transfer(store, squad_name, _transfer_count(question))
-        elif intent == "captain":
-            decision = _decide_captain(store, squad_name)
-        elif intent == "start_bench":
-            decision = _decide_start_bench(store, squad_name)
-        elif intent == "compare":
-            decision = _decide_compare(store, question)
-        elif intent == "build_squad":
-            decision = _decide_build_squad(store, question)
-        elif intent == "shortlist":
-            decision = _decide_shortlist(store, question)
-        else:
-            decision = _decide_analyse(store, squad_name)
-        # The known player names for the verifier's name check (ADR-037).
-        known_names = [p["web_name"] for p in store.get_players()] if decision else ()
+        result, _context = _fresh(question, None, store, narrator)
+        return result
     finally:
         if own_store:
             store.close()
 
-    return assemble(question, intent, decision, narrator, known_names=known_names)
+
+_EXIT_WORDS = {"quit", "exit", "q", "bye", "done"}
+
+
+def chat_transcript(lines, *, store: Storage, narrator=llm.narrate):
+    """Thread a `Context` across `lines`, yielding an AskResult per answered line (ADR-047).
+
+    The pure heart of the `chat` REPL: blank lines are skipped, an exit word stops the session,
+    and every other line is a conversational turn whose context carries to the next. Kept free of
+    I/O (input/print) so it's unit-tested with a list of lines and a fake narrator.
+    """
+    context = None
+    for line in lines:
+        text = line.strip()
+        if text.lower() in _EXIT_WORDS:
+            return
+        if not text:
+            continue
+        result, context = converse(text, context, store=store, narrator=narrator)
+        yield result

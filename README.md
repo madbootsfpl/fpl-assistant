@@ -37,6 +37,9 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
   **analytics decide**; a **local LLM (Ollama) only narrates** — and every answer is **checked
   against the data** (a ✓/⚠ trust line: figures and names are verified, not just instructed). `ask`
   works without the LLM (it falls back to the decision + facts).
+- **`chat`** — an interactive `ask` where **follow-ups build on the last answer**: "who should I
+  captain from TS?" → **"why?"** → **"and the second best?"** → **"what about defenders?"**. Same
+  discipline (analytics decide, every turn verified); the only new thing is memory of the last turn.
 
 ## Planned (not yet built)
 
@@ -139,6 +142,12 @@ python app.py ask "build me a squad for £100m with 3 low cost players and 1 pre
 python app.py ask "build me a squad for rotation"      # bench-aware (strong XI + playing bench)
 python app.py ask "build me a squad for a bench boost" # maximise all 15
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
+
+python app.py chat                                     # interactive; follow-ups build on the last answer:
+#   > who should I captain from my-team?
+#   > why?                     # re-explains the last pick
+#   > and the second best?     # the next-best pick
+#   > what about defenders?    # (after a shortlist) swaps position, keeps the price filter
 ```
 
 `refresh` is the only command that touches the network; every view reads from the
