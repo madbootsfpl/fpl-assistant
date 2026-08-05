@@ -1,9 +1,11 @@
-# Chapter 12 — FastAPI
+# Chapter 12 — Web UI (FastAPI + Streamlit)
 
 **Badges:** 💻
 
-*Built in Sprint 051 ([ADR-050](../06_Decisions/ADR-050-thin-web-ui.md)) — a thin, read-only web UI over
-the analytics. This chapter records how it works in **this** project.*
+*The web UI over the analytics — a FastAPI slice (Sprint 051, [ADR-050](../06_Decisions/ADR-050-thin-web-ui.md))
+then a Streamlit edge (Sprint 052–053, [ADR-051](../06_Decisions/ADR-051-web-track-streamlit.md) /
+[ADR-052](../06_Decisions/ADR-052-streamlit-edge-structure.md)). This chapter records how they work in
+**this** project.*
 
 ---
 
@@ -56,30 +58,61 @@ def ask_page(request: Request, q: str | None = None):
 - **TestClient** — `from fastapi.testclient import TestClient; client = TestClient(app)` lets pytest hit
   routes with no live server (`tests/test_web.py`).
 
-## The one rule — the edge never leaks into the core
+## The one rule — an edge never leaks into the core
 
-`src/web/` imports the analytics; **the analytics import nothing from `src/web/`**. That one-way flow is
-what keeps the web additive (the CLI is untouched, the core is testable without a server). A test —
-`test_core_never_imports_the_web_edge` — statically asserts no core file mentions `src.web`.
+An edge imports the analytics; **the analytics import nothing from an edge**. That one-way flow is what
+keeps the web additive (the CLI is untouched, the core is testable without a server). A test —
+`test_core_never_imports_a_web_edge` — statically asserts no core file mentions `src.web` (which, by
+prefix, covers **both** `src/web` and `src/web_streamlit`).
 
-## Deliberately small (slice 1)
+## Two web edges over one engine (ADR-051/052)
 
-Read-only, local-only, no auth, no writes; the data views reuse the CLI renderers in `<pre>` (not HTML
-tables — that's a later polish). See ADR-050 for the scope and the reasons.
+A measured spike (ADR-051) chose **Streamlit** as the UI to grow; the FastAPI edge is kept **frozen** as a
+lean reference. Both are thin edges over the same `ask.answer`/analytics — "one engine, many faces".
+
+**Streamlit (`src/web_streamlit/`, the UI we grow).** Pure-Python, interactive, multipage:
+
+```python
+# src/web_streamlit/pages/4_Ask.py  (abridged) — a chat over the same engine
+import streamlit as st
+from src import ask
+from src.ui.ask import render_ask
+
+prompt = st.chat_input("Ask a question…")
+if prompt:
+    st.chat_message("assistant").code(render_ask(ask.answer(prompt)))   # grounded + trust line
+```
+
+- **Multipage** — `app.py` (home) + `pages/1_Players … 4_Ask.py`; Streamlit builds the sidebar nav.
+- **Widgets, not markup** — `st.dataframe` (sortable/searchable), `st.multiselect`/`st.slider` (live
+  filters), `st.chat_input`/`st.chat_message` (a chat) — interactivity with no HTML/JS.
+- **`AppTest`** — `from streamlit.testing.v1 import AppTest` runs a page headlessly for tests (set inputs,
+  assert output); no live server (`tests/test_web_streamlit.py`).
+- **The run quirk** — `streamlit run` puts the *script's* folder on `sys.path`, not the project root. The
+  `python -m src.web_streamlit` runner launches `streamlit run` with the project root on `PYTHONPATH`, so
+  the page files import `src` cleanly with **no path hack**.
+- **Trade** — far less code + interactivity for free, at the cost of a heavy dependency tree (kept
+  optional/web-only). See ADR-051 for the head-to-head.
+
+**FastAPI (`src/web/`, frozen).** Read-only, server-rendered; the data views reuse the CLI renderers in
+`<pre>`. Kept as-is (ADR-050).
 
 ---
 
 ## Run it
 
 ```bash
-pip install -r requirements.txt     # fastapi / uvicorn / jinja2 are web-only extras
-python -m src.web                   # http://127.0.0.1:8000
+pip install -r requirements.txt     # streamlit / fastapi / uvicorn / jinja2 are web-only extras
+python -m src.web_streamlit         # the Streamlit UI  → http://localhost:8501
+python -m src.web                   # the frozen FastAPI edge → http://127.0.0.1:8000
 ```
 
 ---
 
 ## Related Documents
 
-- [ADR-050 — A thin web UI](../06_Decisions/ADR-050-thin-web-ui.md)
+- [ADR-050 — A thin web UI (FastAPI)](../06_Decisions/ADR-050-thin-web-ui.md)
+- [ADR-051 — The web track: adopt Streamlit](../06_Decisions/ADR-051-web-track-streamlit.md)
+- [ADR-052 — The Streamlit edge structure](../06_Decisions/ADR-052-streamlit-edge-structure.md)
 - [ADR-002 — UI Approach](../06_Decisions/ADR-002-ui-approach.md) (why it waited)
 - [Architecture §3 (the two edges) + §12 changelog](../03_Architecture/Architecture.md)

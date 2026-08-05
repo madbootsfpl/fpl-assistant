@@ -162,17 +162,25 @@ local database (`data/fpl.db`).
 
 ## Web UI (optional)
 
-A thin, **read-only, local** web view over the same analytics (ADR-050) — the CLI stays the engine; the
-web is just a second way to look at it. Its pages reuse the exact CLI output (so it looks like the
-terminal), including the grounded **Ask** page with its ✓/⚠ trust line.
+A thin, **read-only, local** web view over the same analytics — the CLI stays the engine; the web is
+just another way to look at it. Two edges, both reusing the exact same engine:
+
+**Streamlit** — the interactive UI (ADR-051/052). Multipage: **Players** (live position/price filters +
+a sortable table) · **Fixtures** (FDR) · **Squads** (analyse a saved squad) · **Ask** (a **chat** — each
+answer grounded, with its ✓/⚠ trust line; works without Ollama, degrading to the decision + facts).
 
 ```bash
-pip install -r requirements.txt      # includes fastapi / uvicorn / jinja2 (web-only)
-python -m src.web                    # serves http://127.0.0.1:8000  (Ctrl-C to stop)
+pip install -r requirements.txt      # includes streamlit (web-only)
+python -m src.web_streamlit          # serves http://localhost:8501  (Ctrl-C to stop)
 ```
 
-Pages: **Players** (`/`) · **Fixtures** (`/fixtures`) · **Squads** (`/squads` → analyse a saved squad) ·
-**Ask** (`/ask` — type a question, same as the CLI `ask`; works without Ollama, degrading to the decision
-+ facts). It's local-only (`127.0.0.1`), read-only, and needs no auth.
+**FastAPI** — a lean, frozen server-rendered edge (ADR-050), kept as a reference:
+
+```bash
+python -m src.web                    # serves http://127.0.0.1:8000
+```
+
+Both are local-only, read-only, and need no auth. (Why two? A measured spike — ADR-051 — chose Streamlit
+to grow; the FastAPI edge is kept frozen as the lean HTTP reference.)
 
 Created by Tony Sheridan.

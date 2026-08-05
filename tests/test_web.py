@@ -72,13 +72,18 @@ _CORE = [
 ]
 
 
-def test_core_never_imports_the_web_edge():
+def test_core_never_imports_a_web_edge():
+    """The core imports **neither** edge — `src/web` (FastAPI) nor `src/web_streamlit` (Streamlit).
+
+    Both edge packages start with `src.web`, so a single prefix check covers both (ADR-050/052).
+    """
     root = pathlib.Path(__file__).resolve().parent.parent
     offenders = []
     for entry in _CORE:
         p = root / entry
         files = p.rglob("*.py") if p.is_dir() else [p]
         for f in files:
-            if "src.web" in f.read_text() or "src/web" in f.read_text():
+            text = f.read_text()
+            if "src.web" in text or "src/web" in text:   # matches src/web AND src/web_streamlit
                 offenders.append(str(f.relative_to(root)))
-    assert not offenders, f"the core must not import the web edge (one-way flow): {offenders}"
+    assert not offenders, f"the core must not import a web edge (one-way flow): {offenders}"

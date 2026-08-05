@@ -36,9 +36,10 @@ For v0.1 the application is a single Python process with three clear layers:
 ```
         ┌─────────────────────────────────────────────┐
         │             Presentation (edges)             │
-        │   CLI (argparse)  ·  Web (FastAPI, ADR-050)  │
-        │   — both call the SAME analytics; core is    │
-        │     web-free (one-way flow, a test asserts)  │
+        │  CLI (argparse) · Web: Streamlit (ADR-052,   │
+        │  grown) + FastAPI (ADR-050, frozen)          │
+        │  — all call the SAME analytics; core is      │
+        │    web-free (one-way flow, a test asserts)   │
         └───────────────────┬─────────────────────────┘
                             │ reads
         ┌───────────────────┴─────────────────────────┐
@@ -454,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 053 (2026-08-05)** — *the Streamlit edge graduated*, per ADR-052 (executing the ADR-051
+  decision). The Sprint-052 spike became a real edge, **`src/web_streamlit/`** — **multipage** (`app.py`
+  home + `pages/1_Players … 4_Ask.py`, Streamlit's sidebar nav), run via **`python -m src.web_streamlit`**
+  (a `__main__.py` that launches `streamlit run` with the project root on `PYTHONPATH`, so the app/page
+  files carry **no `sys.path` hack**). Pages reuse the same engine/renderers (`ask.answer` / `rank_players`
+  / `team_fdr`); `streamlit` added **web-only** to `requirements.txt`. Now **two web edges over the one
+  engine** — Streamlit (grown) + FastAPI (`src/web`, **frozen**, untouched) — with the one-way-flow
+  guardrail extended to assert the core imports **neither** (`test_core_never_imports_a_web_edge`). Tested
+  per page with Streamlit's `AppTest` (headless); the spike was removed on graduation. Tests 429 → 435.
+  Interactivity upgrades (filterable table + chat Ask) + the run/README docs are US-158.
 - **Sprint 051 (2026-08-05)** — *a thin web UI (first slice)*, per ADR-050 — realises the web UI deferred
   by ADR-002/003. A **second edge** (`src/web/`) alongside the CLI: a read-only, local-only **FastAPI**
   app (sync handlers) whose routes call the **same** `decision_xp`/`ask.answer`/optimiser and render the
