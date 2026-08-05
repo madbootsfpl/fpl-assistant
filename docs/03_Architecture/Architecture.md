@@ -452,6 +452,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 041 (2026-08-05)** — *show what you optimised + a "best players" intent*, per ADR-042 (and
+  finishing ADR-041's display). **Part A:** under `--objective xp` (the default) the `squad` table now
+  shows **`xMins` + `xP`** columns and a **projected xP total** (not last-season `Pts`) —
+  `cmd_squad`/`_decide_build_squad` attach `xp`+`minutes_weight` from `decision_xp`; `render_squad`
+  branches on `show_xp`. **Part B:** a seventh `ask` intent — **`shortlist`** (`ask "best <position>
+  [under £Xm]"`): `_shortlist_query` parses position + a price cap + a `value` toggle; `_decide_shortlist`
+  ranks the available pool by the unified `decision_xp` (or xP/£m for value), top ~8, via a new
+  `ui/shortlist.py` table; grounded + verified, with a no-match message. No new dependency.
 - **Sprint 040 (2026-08-04)** — *one xP metric + a squad-build intent*, per ADR-041, answering the
   owner's *"why does `transfer` improve my optimal squad?"* Cause: `squad` optimised **`points`**
   (last-season total) while the recommendations rank by **xP**, and even `--objective xp` used a

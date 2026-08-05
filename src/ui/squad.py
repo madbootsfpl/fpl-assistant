@@ -5,6 +5,7 @@ returns a string — the XI grouped by position with totals, or a clear message 
 legal XI fits the budget.
 """
 
+from src.analytics.minutes import expected_minutes
 from src.analytics.optimizer import legal_xi_issues
 
 # Availability flags for picked players (ADR-023): 'a' shows nothing; 'd' shows the chance.
@@ -26,6 +27,8 @@ _NAME_W = 17
 _TEAM_W = 5
 _PRICE_W = 6
 _PTS_W = 5
+_XMINS_W = 6
+_XP_W = 6
 
 
 def formation_str(players) -> str:
@@ -98,13 +101,22 @@ def render_squad(
     # In XI mode every picked player is a starter, so the squad *is* the formation.
     shape = "" if full else f" ({formation_str(result['selected'])})"
 
+    # Under --objective xp (ADR-041/US-121) show what we optimised: xMins + xP, not last-season Pts.
+    show_xp = objective == "xp"
+    if show_xp:
+        value_head = f"{'xMins':>{_XMINS_W}} {'xP':>{_XP_W}}"
+        value_rule = f"{'-' * _XMINS_W} {'-' * _XP_W}"
+    else:
+        value_head = f"{'Pts':>{_PTS_W}}"
+        value_rule = f"{'-' * _PTS_W}"
+
     header = (
         f"{'Pos':<{_POS_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
-        f"{'Price':>{_PRICE_W}} {'Pts':>{_PTS_W}}"
+        f"{'Price':>{_PRICE_W}} {value_head}"
     )
     divider = (
         f"{'-' * _POS_W} {'-' * _NAME_W} {'-' * _TEAM_W} "
-        f"{'-' * _PRICE_W} {'-' * _PTS_W}"
+        f"{'-' * _PRICE_W} {value_rule}"
     )
 
     lines = [
@@ -130,31 +142,42 @@ def render_squad(
             marker, any_forced = " *", True
         else:
             marker = ""
+        if show_xp:
+            value = f"{expected_minutes(p.get('minutes_weight')):>{_XMINS_W}} {p.get('xp', 0):>{_XP_W}.1f}"
+        else:
+            value = f"{p['total_points']:>{_PTS_W}}"
         lines.append(
             f"{p['position']:<{_POS_W}} {name:<{_NAME_W}} {str(p['team'] or ''):<{_TEAM_W}} "
-            f"{price:>{_PRICE_W}} {p['total_points']:>{_PTS_W}}{marker}{_avail_flag(p)}"
+            f"{price:>{_PRICE_W}} {value}{marker}{_avail_flag(p)}"
         )
 
     lines.append("")
-    lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
+    if show_xp:
+        projected = round(sum(p.get("xp", 0) for p in result["selected"]), 1)
+        lines.append(f"Total: £{result['total_cost']:.1f}m · projected {projected} xP")
+    else:
+        lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
     if objective == "xgi":
         # ADR-015: xGI is an attacking measure (GK/DEF ≈ 0) — say so, don't oversell it.
         lines.append("Note: xGI is attacking — GK/DEF score ≈ 0, so this leans to attackers.")
     elif objective == "xp":
-        # ADR-041: optimised on forward-looking xP; the `Pts` column is last season's total.
+        # ADR-041/US-121: optimised on forward-looking xP, and the table now shows it.
         lines.append(
-            "Note: optimised on xP (expected points next 5 GW, xMins-weighted — the metric "
-            "`transfer`/`analyse` use); the `Pts` column is last season's total. `--objective "
-            "points` optimises that total instead; `--no-xmins` for the raw xP."
+            "Note: `xP` = expected points over the next 5 GW (xMins-weighted — the metric "
+            "`transfer`/`analyse` use); `xMins` = expected minutes next GW. `--objective points` "
+            "optimises last season's total instead; `--no-xmins` for the raw xP."
         )
 
     # With a declared bench we know the starters — show their subtotal, the honest number.
     # At a full 4-man bench the 11 starters form a legal XI, so state its shape (ADR-014).
     if any_bench:
         starters = [p for p in result["selected"] if not p.get("bench")]
-        starters_pts = sum(p["total_points"] for p in starters)
         shape = f" — {formation_str(starters)}" if len(starters) == 11 else ""
-        lines.append(f"Starters ({len(starters)}){shape}: {starters_pts} pts")
+        if show_xp:
+            subtotal = f"projected {round(sum(p.get('xp', 0) for p in starters), 1)} xP"
+        else:
+            subtotal = f"{sum(p['total_points'] for p in starters)} pts"
+        lines.append(f"Starters ({len(starters)}){shape}: {subtotal}")
 
     legend = []
     if any_forced:
@@ -184,8 +207,9 @@ def render_squad(
                 )
         else:
             # ADR-012: without a declared bench, the 15-total counts non-scorers.
+            total_word = "The projected xP" if show_xp else "Pts"
             lines.append(
-                "Note: Pts totals a bench that won't score — squad strength, not a weekly "
-                "total. Declare your bench with --bench."
+                f"Note: {total_word} totals a bench that won't score — squad strength, not a "
+                "weekly total. Declare your bench with --bench."
             )
     return "\n".join(lines)

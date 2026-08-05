@@ -33,6 +33,7 @@ from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.compare import render_compare
+from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
 from src.ui.transfer import render_transfer_plan
@@ -47,6 +48,8 @@ _INTENT_KEYWORDS = {
     "start_bench": ("start", "bench", "lineup", "line-up"),
     "build_squad": ("build", "wildcard", "best squad", "best team", "best xi", "new squad",
                     "new team", "pick a squad", "pick a team"),
+    "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
+                  "best value", "best players"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
 }
 
@@ -58,8 +61,8 @@ _RULES = (
 
 _FALLBACK = (
     "I can answer about captaincy, transfers, your squad's health, your lineup, comparing players, "
-    'or building a squad. Try: ask "who should I captain from <squad>?" or ask "build me a squad '
-    'for £100m".'
+    'building a squad, or the best players in a position. Try: ask "who should I captain from '
+    '<squad>?", ask "build me a squad for £100m", or ask "best midfielders under £8m".'
 )
 
 
@@ -435,12 +438,16 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
     upcoming = store.get_upcoming_fixtures()
     ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     pool, _excluded = available_players(players)          # exclude injured/suspended (as `squad` does)
     result = select_squad(pool, budget=budget, formation=SQUAD_15, scores=xp_by_id)
     if result["status"] != "Optimal":
         return {"message": f"No legal squad fits £{budget:.1f}m — try a larger budget."}
 
     picks = result["selected"]
+    for p in picks:   # US-121: show xP + xMins in the squad table (objective xp)
+        p["xp"] = xp_by_id.get(p["id"], 0)
+        p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
     top = sorted(picks, key=lambda p: -xp_by_id.get(p["id"], 0))[:3]
     return {
         "detail": render_squad(result, budget=budget, objective="xp", full=True),
@@ -453,6 +460,62 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         "subjects": [p["web_name"] for p in picks],
         "task": "in 2 short sentences, describe this optimal squad — the budget used and its standout "
                 "picks",
+    }
+
+
+_POS_WORDS = {"goalkeeper": "GK", "keeper": "GK", "defender": "DEF", "midfielder": "MID",
+              "forward": "FWD", "striker": "FWD"}
+_SHORTLIST_N = 8   # how many players a shortlist shows
+
+
+def _shortlist_query(question: str) -> tuple:
+    """(position, price_cap, by_value) from a 'best <position> [under £X]' question (ADR-042)."""
+    ql = question.lower()
+    position = next((code for word, code in _POS_WORDS.items() if re.search(rf"\b{word}s?\b", ql)),
+                    None)
+    m = re.search(r"under £?\s*(\d+(?:\.\d+)?)|£\s*(\d+(?:\.\d+)?)", ql)
+    cap = float(m.group(1) or m.group(2)) if m else None
+    return position, cap, "value" in ql
+
+
+def _decide_shortlist(store: Storage, question: str) -> dict | None:
+    """Analytics rank the best players for a position/price query (ADR-042), on the unified xP."""
+    players = store.get_players()
+    if not players:
+        return None
+    position, cap, by_value = _shortlist_query(question)
+    pool, _excluded = available_players(players)         # exclude injured/suspended
+    cands = [p for p in pool
+             if (position is None or p["position"] == position)
+             and (cap is None or p["price"] <= cap)]
+    if not cands:
+        where = f" {position}" if position else ""
+        under = f" under £{cap:.1f}m" if cap else ""
+        return {"message": f"No available{where} players{under} — try a higher price cap."}
+
+    ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code())
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
+
+    def score(p):
+        xp = xp_by_id.get(p["id"], 0)
+        return xp / p["price"] if by_value and p["price"] else xp
+
+    top = sorted(cands, key=score, reverse=True)[:_SHORTLIST_N]
+    rows = [{**p, "xp": xp_by_id.get(p["id"], 0), "minutes_weight": weight_by_id.get(p["id"], 1.0)}
+            for p in top]
+    scope = position or "players"
+    cap_str = f" ≤£{cap:.1f}m" if cap else ""
+    metric = "value (xP per £m)" if by_value else "expected points (xP)"
+    return {
+        "detail": render_shortlist(rows, f"Best {scope}{cap_str} — by {metric}"),
+        "facts": {
+            "ranked_by": "xP per £m" if by_value else "xP over the next 5 GW",
+            "top_players": [f"{r['web_name']} ({r['position']}, £{r['price']}m, xP {r['xp']})"
+                            for r in rows[:3]],
+        },
+        "subjects": [r["web_name"] for r in rows],
+        "task": "in 2 short sentences, summarise these top players (name a couple and why they lead)",
     }
 
 
@@ -559,6 +622,8 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
             decision = _decide_compare(store, question)
         elif intent == "build_squad":
             decision = _decide_build_squad(store, question)
+        elif intent == "shortlist":
+            decision = _decide_shortlist(store, question)
         else:
             decision = _decide_analyse(store, squad_name)
         # The known player names for the verifier's name check (ADR-037).

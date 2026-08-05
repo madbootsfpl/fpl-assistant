@@ -14,9 +14,11 @@ from src.ask import (
     _build_prompt,
     _captain_facts,
     _decide_compare,
+    _decide_shortlist,
     _lineup_change,
     _match_players,
     _plan_facts,
+    _shortlist_query,
     _squad_budget,
     _transfer_count,
     _transfer_facts,
@@ -25,6 +27,7 @@ from src.ask import (
     verify_grounding,
 )
 from src.ui.compare import render_compare
+from src.ui.shortlist import render_shortlist
 from src.ui.startbench import render_start_bench
 
 # ---- routing ----------------------------------------------------------------
@@ -160,6 +163,42 @@ def test_verify_grounding_handles_a_pound_sign_in_the_facts():
     facts = {"budget": "£100.0m", "squad_cost": "£100.0m"}
     trust = verify_grounding("The squad costs £100.0m of the £100.0m budget.", facts)
     assert trust["numbers"] == []
+
+
+# ---- shortlist intent (US-123) ----------------------------------------------
+
+def test_routes_shortlist_after_build_squad():
+    assert route("best midfielders under £8m", known_squads=[])[0] == "shortlist"
+    assert route("best value goalkeepers", known_squads=[])[0] == "shortlist"
+    assert route("best squad for £100m", known_squads=[])[0] == "build_squad"   # build still wins
+
+
+def test_shortlist_query_parses_position_price_and_value():
+    assert _shortlist_query("best midfielders under £8m") == ("MID", 8.0, False)
+    assert _shortlist_query("best value goalkeepers") == ("GK", None, True)
+    assert _shortlist_query("best forwards") == ("FWD", None, False)
+    assert _shortlist_query("best players") == (None, None, False)   # no position → all
+
+
+def test_shortlist_message_when_nothing_matches_the_filter():
+    # Only a MID exists; "best goalkeepers" filters to none → a clear message (no fixtures needed,
+    # since the filter runs before the xP calc).
+    store = types.SimpleNamespace(
+        get_players=lambda: [{"id": 1, "web_name": "P1", "position": "MID", "price": 5.0,
+                              "status": "a", "team": "X"}]
+    )
+    d = _decide_shortlist(store, "best goalkeepers")
+    assert "No available GK players" in d["message"]
+
+
+def test_render_shortlist_ranks_and_shows_price_and_xp():
+    def _row(name, price, xp, w):
+        return {"web_name": name, "team": "MUN", "position": "MID", "price": price,
+                "status": "a", "chance": None, "xp": xp, "minutes_weight": w}
+    out = render_shortlist([_row("Mbeumo", 8.0, 23.3, 0.81), _row("Rice", 7.5, 20.9, 0.88)],
+                           "Best MID ≤£8.0m — by expected points (xP)")
+    assert out.index("Mbeumo") < out.index("Rice")   # given order preserved (analytics rank)
+    assert "8.0" in out and "23.3" in out and "73" in out   # price, xP, and xMins (0.81×90→73)
 
 
 def test_squad_matched_by_name_regardless_of_phrasing():

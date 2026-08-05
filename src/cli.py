@@ -283,12 +283,14 @@ def cmd_squad(args) -> None:
 
         # The xp objective uses the shared decision-xP (ADR-041) — the SAME xP transfer/analyse
         # use, so an xp-optimal squad has no free transfers. Other objectives are unchanged.
+        weight_by_id = {}
         if args.objective == "xp":
             ranked = decision_xp(
                 players, store.get_upcoming_fixtures(), store.get_history_by_code(),
                 minutes_weighted=not args.no_xmins,
             )
             scores = {r["id"]: r["xp"] for r in ranked}
+            weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
         else:
             scores = objective_scores(players, args.objective)
         result = select_squad(
@@ -296,6 +298,10 @@ def cmd_squad(args) -> None:
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
             scores=scores,
         )
+        if args.objective == "xp":   # US-121: show what we optimised — attach xP + xMins for the table
+            for p in result["selected"]:
+                p["xp"] = scores.get(p["id"], 0)
+                p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
         print(render_squad(result, budget=budget, objective=args.objective, full=full))
 
         # Save the computed squad (ADR-024) — the picks (ids + names) + bench, to reload later.

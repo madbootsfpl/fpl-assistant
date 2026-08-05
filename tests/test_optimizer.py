@@ -343,6 +343,27 @@ def test_render_squad_shows_players_and_totals():
     assert "Total" in out
 
 
+def test_render_squad_shows_xp_columns_under_the_xp_objective():
+    # US-121: under --objective xp the table shows what we optimised — xMins + xP + projected total —
+    # not last-season Pts.
+    result = {
+        "status": "Optimal",
+        "selected": [
+            {"position": "FWD", "web_name": "Haaland", "team": "MCI", "price": 15.5,
+             "total_points": 250, "xp": 34.7, "minutes_weight": 0.82},
+        ],
+        "total_points": 250,
+        "total_cost": 15.5,
+    }
+    out = render_squad(result, budget=100, objective="xp", full=True)
+    assert "xMins" in out and "xP" in out
+    assert " 74" in out and "34.7" in out           # 0.82 × 90 → 74 expected minutes; the xP
+    assert "projected 34.7 xP" in out               # the total is projected xP, not last-season pts
+
+    points_out = render_squad(result, budget=100, objective="points", full=True)
+    assert "Pts" in points_out and "250" in points_out and "xMins" not in points_out
+
+
 def test_render_squad_marks_forced_players():
     result = {
         "status": "Optimal",
