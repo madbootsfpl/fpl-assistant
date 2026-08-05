@@ -447,22 +447,25 @@ def _archetype_counts(question: str) -> tuple:
 
 
 def _decide_build_squad(store: Storage, question: str) -> dict | None:
-    """Analytics BUILD the squad (ADR-041/043): the optimal 15 on the unified xP, within budget,
-    honouring any requested archetypes (≥N low-cost / ≥M premium)."""
+    """Analytics BUILD the squad (ADR-041/043/044): the optimal 15 on the unified xP, within budget,
+    honouring any requested archetypes (≥N low-cost / ≥M premium / ≥K differential ≤5% owned)."""
     players = store.get_players()
     if not players:
         return None
     budget = _squad_budget(question)
     cheap, premium, differential = _archetype_counts(question)
     bands = archetype_bands(cheap=cheap, premium=premium)
+    constrained = bool(bands) or bool(differential)
     upcoming = store.get_upcoming_fixtures()
     ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     pool, _excluded = available_players(players)          # exclude injured/suspended (as `squad` does)
-    result = select_squad(pool, budget=budget, formation=SQUAD_15, scores=xp_by_id, band_minimums=bands)
+    result = select_squad(pool, budget=budget, formation=SQUAD_15, scores=xp_by_id,
+                          band_minimums=bands, min_differentials=differential)
     if result["status"] != "Optimal":
-        want = f" with {cheap or 0} low-cost and {premium or 0} premium" if bands else ""
+        want = (f" with {cheap or 0} low-cost, {premium or 0} premium and {differential or 0} "
+                "differential") if constrained else ""
         return {"message": f"No legal squad fits £{budget:.1f}m{want} — try a larger budget or "
                            "fewer constraints."}
 
@@ -472,21 +475,17 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
     top = sorted(picks, key=lambda p: -xp_by_id.get(p["id"], 0))[:3]
 
-    detail = render_squad(result, budget=budget, objective="xp", full=True)
-    if differential:   # ADR-043: defined, but deferred (needs ownership data)
-        detail += "\nNote: differentials need ownership data — not supported yet (coming soon)."
-
     facts = {
         "budget": f"£{budget:.1f}m",
         "squad_cost": f"£{result['total_cost']:.1f}m",
         "standout_picks": [f"{p['web_name']} ({p['position']}, xP {xp_by_id.get(p['id'], 0)})"
                            for p in top],
     }
-    if bands:
-        facts["requested_structure"] = (f"at least {cheap or 0} low-cost and {premium or 0} "
-                                        "premium players")
+    if constrained:
+        facts["requested_structure"] = (f"at least {cheap or 0} low-cost, {premium or 0} premium "
+                                        f"and {differential or 0} differential players")
     return {
-        "detail": detail,
+        "detail": render_squad(result, budget=budget, objective="xp", full=True),
         "facts": facts,
         "subjects": [p["web_name"] for p in picks],
         "task": "in 2 short sentences, describe this optimal squad — the budget used and its standout "

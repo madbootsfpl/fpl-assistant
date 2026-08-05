@@ -294,18 +294,18 @@ def cmd_squad(args) -> None:
             weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
         else:
             scores = objective_scores(players, args.objective)
-        # Archetype constraints (ADR-043): ≥N low-cost / ≥M premium, if asked.
+        # Archetype constraints (ADR-043/044): ≥N low-cost / ≥M premium / ≥K differential, if asked.
         bands = archetype_bands(cheap=args.cheap, premium=args.premium)
         result = select_squad(
             pool, budget=budget, formation=formation, size=size,
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
-            scores=scores, band_minimums=bands,
+            scores=scores, band_minimums=bands, min_differentials=args.differential,
         )
-        if result["status"] != "Optimal" and bands:
+        if result["status"] != "Optimal" and (bands or args.differential):
             print(
                 f"No squad fits those archetypes within £{budget:.1f}m "
-                f"(cheap≥{args.cheap or 0}, premium≥{args.premium or 0}) — relax --cheap/--premium "
-                "or raise the budget."
+                f"(cheap≥{args.cheap or 0}, premium≥{args.premium or 0}, "
+                f"differential≥{args.differential or 0}) — relax the constraints or raise the budget."
             )
             return
         if args.objective == "xp":   # US-121: show what we optimised — attach xP + xMins for the table
@@ -848,6 +848,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--premium", type=int, metavar="N",
         help="Require at least N premium (≥£9.0m) players",
+    )
+    p_squad.add_argument(
+        "--differential", type=int, metavar="N",
+        help="Require at least N differential (≤5%% owned) players — off-template picks (ADR-044)",
     )
     p_squad.add_argument(
         "--include-unavailable", action="store_true", dest="include_unavailable",

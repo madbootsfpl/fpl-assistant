@@ -19,9 +19,10 @@ XI_FLEX = {"GK": (1, 1), "DEF": (3, 5), "MID": (2, 5), "FWD": (1, 3)}   # 11, an
 SQUAD_15 = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}    # 15 players (the full FPL squad)
 FULL_BUDGET = 100.0                                    # the real FPL squad budget
 MAX_PER_CLUB = 3
-# Squad archetypes (ADR-043), tunable: a low-cost bench enabler vs a premium star, by price band.
-LOW_COST_MAX = 4.5      # ≤ this is a "low-cost" / budget enabler (the bench-fodder tier)
-PREMIUM_MIN = 9.0       # ≥ this is a "premium" (the elite few)
+# Squad archetypes (ADR-043/044), tunable: a low-cost enabler, a premium, and a differential.
+LOW_COST_MAX = 4.5              # ≤ this is a "low-cost" / budget enabler (the bench-fodder tier)
+PREMIUM_MIN = 9.0              # ≥ this is a "premium" (the elite few)
+DIFFERENTIAL_MAX_OWNERSHIP = 5.0   # ≤ this % owned is a "differential" (off-template; ADR-044)
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
@@ -76,6 +77,14 @@ def is_unavailable(player) -> bool:
     return player["status"] in UNAVAILABLE_STATUS
 
 
+def _selected_by(player):
+    """A player's ownership % (ADR-044), or None if the row lacks it (a sqlite Row or a test dict)."""
+    try:
+        return player["selected_by"]
+    except (KeyError, IndexError):
+        return None
+
+
 def available_players(players, keep_ids=()) -> tuple:
     """Split players into (pool, excluded): drop the unavailable, but keep `keep_ids`.
 
@@ -103,6 +112,7 @@ def select_squad(
     scores=None,
     size=None,
     band_minimums=None,
+    min_differentials=None,
 ) -> dict:
     """Pick the starting XI that maximises a per-player score under the constraints.
 
@@ -163,6 +173,14 @@ def select_squad(
             problem += pulp.lpSum(
                 pick[p["id"]] for p in players if lo <= p["price"] <= hi
             ) >= count
+
+        # Differentials (ADR-044): at least `min_differentials` picked players ≤5% owned. The xP
+        # objective picks the best qualifiers; players with no ownership data don't count.
+        if min_differentials:
+            problem += pulp.lpSum(
+                pick[p["id"]] for p in players
+                if (o := _selected_by(p)) is not None and o <= DIFFERENTIAL_MAX_OWNERSHIP
+            ) >= min_differentials
 
         # Forced picks: lock chosen players in (1) or out (0). Benched players are
         # forced in too — they're part of the squad, just declared as bench.

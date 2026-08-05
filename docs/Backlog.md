@@ -6,11 +6,9 @@ tech-debt.)*
 
 ## Enhancements
 
-- **Differential archetype** (Sprint 042, ADR-043 — *defined, deferred*) — a squad-build option for
-  low-ownership picks: `selected_by_percent` ≤ ~10% with a decent xP. **Blocked on data:**
-  `selected_by_percent` isn't ingested yet — a small ingest (a `players.selected_by` column + populate
-  from bootstrap-static) unblocks it, then it's another `band`/predicate constraint in `select_squad`
-  and a parsed count in `build_squad` ("… with 2 differentials"). Complements low-cost + premium.
+- ~~**Differential archetype**~~ — **DONE** (Sprint 043, **ADR-044**). Ingested `selected_by` and added a
+  `min_differentials` constraint (≤5% owned — pinned so it bites); `squad --full --differential N` +
+  NL "… with N differentials". Completes the archetype trio (low-cost / premium / differential).
 
 - **Bench order** — which bench player subs on first (Sprint 012 sequel).
 - **Availability flags in the ranking views** — surface injury/suspension flags in

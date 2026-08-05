@@ -219,12 +219,13 @@ def test_squad_include_exclude_default_empty():
     assert args.exclude == []
 
 
-def test_squad_cheap_and_premium_flags_are_parsed():
-    # ADR-043: --cheap N / --premium M add archetype constraints; absent → None (no constraint).
-    args = build_parser().parse_args(["squad", "--full", "--cheap", "3", "--premium", "1"])
-    assert args.cheap == 3 and args.premium == 1
+def test_squad_archetype_flags_are_parsed():
+    # ADR-043/044: --cheap / --premium / --differential add archetype constraints; absent → None.
+    args = build_parser().parse_args(
+        ["squad", "--full", "--cheap", "3", "--premium", "1", "--differential", "2"])
+    assert args.cheap == 3 and args.premium == 1 and args.differential == 2
     plain = build_parser().parse_args(["squad"])
-    assert plain.cheap is None and plain.premium is None
+    assert plain.cheap is None and plain.premium is None and plain.differential is None
 
 
 def test_squad_defaults_to_objective_xp():

@@ -166,6 +166,16 @@ def test_player_from_api_availability_absent_are_none():
     assert player.chance is None and player.news is None
 
 
+def test_player_from_api_parses_ownership():
+    # selected_by_percent arrives as a string (ADR-044) → parsed to float; absent → None.
+    raw = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Raya",
+           "team": 1, "element_type": 1, "now_cost": 60, "total_points": 0,
+           "selected_by_percent": "30.8"}
+    assert Player.from_api(raw).selected_by == 30.8
+    raw.pop("selected_by_percent")
+    assert Player.from_api(raw).selected_by is None
+
+
 def test_player_from_api_missing_xp_inputs_are_none():
     raw = {
         "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

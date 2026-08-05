@@ -661,3 +661,26 @@ def test_band_minimum_can_be_infeasible():
     result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores,
                           band_minimums=[(1, PREMIUM_MIN, 999.9)])
     assert result["status"] != "Optimal" and result["selected"] == []
+
+
+def test_min_differentials_forces_a_low_owned_player_in():
+    # A low-scoring ≤5%-owned FWD isn't picked normally, but "≥1 differential" forces it in;
+    # players without ownership data don't count as differentials (ADR-044).
+    pool = squad_pool()                                  # no `selected_by` → no differentials
+    diff = next(p for p in pool if p["position"] == "FWD")
+    diff["selected_by"], diff["total_points"] = 2.0, 1   # a low-owned, low-scoring player
+    scores = {p["id"]: p["total_points"] for p in pool}
+
+    without = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores)
+    assert diff["id"] not in {p["id"] for p in without["selected"]}      # worst FWD → left out
+
+    withdiff = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, min_differentials=1)
+    assert diff["id"] in {p["id"] for p in withdiff["selected"]}         # the only ≤5% → forced in
+
+
+def test_min_differentials_infeasible_without_any_low_owned_players():
+    # No player has ownership ≤5% (none have `selected_by`) → "≥1 differential" can't be met.
+    pool = squad_pool()
+    scores = {p["id"]: p["total_points"] for p in pool}
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, min_differentials=1)
+    assert result["status"] != "Optimal" and result["selected"] == []

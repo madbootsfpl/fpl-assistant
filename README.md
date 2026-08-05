@@ -103,6 +103,7 @@ python app.py squad --include Haaland --exclude Salah  # the optimal XI built ar
 python app.py squad --objective xp              # xP is the DEFAULT objective (forward-looking; consistent with transfer)
 python app.py squad --objective points          # optimise last season's total points instead
 python app.py squad --full --cheap 3 --premium 1  # shape it: ≥3 low-cost (≤£4.5m) + ≥1 premium (≥£9m)
+python app.py squad --full --differential 3       # ≥3 off-template picks (≤5% owned)
 python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 python app.py squad --bench Dubravka Diop        # declare your bench (marked **, shown last); implies --full
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)

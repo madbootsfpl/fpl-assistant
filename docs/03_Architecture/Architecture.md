@@ -452,6 +452,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 043 (2026-08-05)** — *the differential archetype*, per ADR-044, completing ADR-043. Ingested
+  **ownership** (`Player.selected_by` ← `selected_by_percent`; a storage column/migration; `refresh`
+  populates it — a line-for-line copy of the `chance` field). `select_squad` gained **`min_differentials`**
+  — one ILP line (`Σ pick[p] (selected_by ≤ 5%) ≥ N`; the xP objective picks the best qualifiers;
+  players without ownership don't count). Surfaced as **`squad --full --differential N`** and wired into
+  `build_squad` (the count already parsed) — the "coming soon" note gone. The **≤5%** threshold was
+  pinned at the gate (the optimal squad has 2 ≤5% but 6 ≤10%, so ≤10% would be a no-op); a differential
+  build tilts off-template at a small xP cost (e.g. −4 xP for +3 differentials). No new dependency.
 - **Sprint 042 (2026-08-05)** — *squad archetypes*, per ADR-043, from the owner's multi-faceted build
   request. `select_squad` gained **`band_minimums=[(count, lo, hi), …]`** — one ILP line (`Σ pick[p]
   (lo ≤ price ≤ hi) ≥ count`), byte-identical when absent; `archetype_bands(cheap, premium)` maps counts

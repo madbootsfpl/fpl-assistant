@@ -56,6 +56,9 @@ class Player:
     # Set-piece duty (Sprint 027, ADR-029). 1 = first-choice penalty taker — a captaincy
     # ceiling signal (shown as context; the returns are already in the player's points).
     penalties_order: int | None = None
+    # Ownership (Sprint 043, ADR-044). `selected_by` = % of managers who own this player;
+    # ≤5% marks a "differential" for the squad-build archetype constraint.
+    selected_by: float | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -94,4 +97,5 @@ class Player:
             news=raw.get("news"),
             code=raw.get("code"),
             penalties_order=raw.get("penalties_order"),
+            selected_by=_to_float(raw.get("selected_by_percent")),
         )

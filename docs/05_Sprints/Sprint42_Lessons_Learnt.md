@@ -188,6 +188,7 @@ python app.py ask "build me a squad for £100m with 3 low cost players and 1 pre
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+- the multi-faceted ask feature is a new dimension!
 
 ### What was the biggest lesson?
 

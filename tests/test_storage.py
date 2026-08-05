@@ -40,6 +40,7 @@ def make_player(
     recoveries: int | None = None,
     chance: int | None = None,
     news: str | None = None,
+    selected_by: float | None = None,
 ) -> Player:
     return Player(
         id=id,
@@ -67,6 +68,7 @@ def make_player(
         recoveries=recoveries,
         chance=chance,
         news=news,
+        selected_by=selected_by,
     )
 
 
@@ -187,6 +189,17 @@ def test_save_players_stores_xp_inputs(tmp_path):
         "SELECT points_per_game, status, ep_next FROM players WHERE id = 1"
     ).fetchone()
     assert (row[0], row[1], row[2]) == (4.4, "a", 5.2)
+    store.close()
+
+
+def test_save_players_stores_ownership(tmp_path):
+    # ADR-044: selected_by (ownership %) round-trips through save + get_players.
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    store.save_players([make_player(id=1, selected_by=3.2), make_player(id=2, selected_by=None)])
+
+    by_id = {r["id"]: r["selected_by"] for r in store.get_players()}
+    assert by_id[1] == 3.2 and by_id[2] is None
     store.close()
 
 
