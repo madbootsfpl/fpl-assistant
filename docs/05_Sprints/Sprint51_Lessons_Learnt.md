@@ -185,12 +185,16 @@ python -m pytest tests/test_web.py  # FastAPI TestClient — no live server need
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
+- simple but effective readonly frontend, ask feature is interactive
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
+- I am thinking should we pivot to Streamlit or Gradio or stay with the web polish
+- agin my thinking, from a learning perspective, is learning the how of web design or learning how to push using a 3rd party tool more advantageous to me.
+- Can we develop that thought?
 
 ---
 

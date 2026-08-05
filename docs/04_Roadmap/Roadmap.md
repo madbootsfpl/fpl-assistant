@@ -51,12 +51,18 @@ gameweeks; **GW1 deadline 2026-08-21**), so form/per-GW insight is still ahead.
 
 ---
 
-## ▶ Next — a thin web UI (Sprint 051)
+## ▶ The web track — Streamlit (ADR-051)
 
-A minimal, **read-only, local-only** web layer that **reuses the analytics/`ask` untouched** — the web as
-a new *edge* over the same core (**the CLI stays the engine**). Proposed: **FastAPI + Jinja** (server-
-rendered, no JS build), testable with `TestClient`. Deliberately small — a GW1-ready shell, not a full
-interactive app. *(Discussed Sprint 050; approach to be gated at the sprint's start.)*
+A read-only, local web view over the analytics — the web as a new *edge* over the same core (**the CLI
+stays the engine**). Two steps taken:
+- ✅ **A thin FastAPI slice** (Sprint 051, ADR-050) — `src/web/`, server-rendered, reusing the CLI text
+  renderers in `<pre>`. Now **frozen** as the lean "also-serves-HTTP" reference.
+- ✅ **A Streamlit spike + decision** (Sprint 052, ADR-051) — measured head-to-head (58 vs ~130+ LOC;
+  interactive vs static; +21 vs lean deps). Verdict: **adopt Streamlit** as the UI we grow (pure-Python,
+  interactive; fits "architecture over frontend syntax") — the heavier deps kept optional/web-only.
+- ⬜ **Next — graduate the Streamlit edge** to `src/web_streamlit/` (a proper edge + tests +
+  `requirements.txt`), then grow the pages (interactive tables, charts, a chat). The core stays the one
+  engine; the guardrail test carries over.
 
 ---
 
