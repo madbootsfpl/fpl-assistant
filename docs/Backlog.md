@@ -46,6 +46,15 @@ nice-to-haves and tech-debt.)*
   read-only, no writes/auth; Ollama absent → degrades to decision + facts, which is fine), and a **gate
   (ADR)** for the deployment + data + security decisions. *Big; high-leverage (unblocks real feedback).*
 
+- **Crowd & Sentiment Signals (Phase 6)** — fold *"what managers are doing"* + expert signals into the
+  tools as a **complementary lens, not a rewrite of xP** (owner: *lens + flags*; *free FPL signals first*).
+  Tier 1 (free, already in the API): ingest `transfers_in/out_event` · `cost_change_*` · `form` ·
+  `ict_index` (+ ICT components) · `value_form`, and surface flags (🔥 trending · 💰 price · 📈 form ·
+  template/differential) on Players/Captain/Transfer + a "trends" `ask` intent. Tier 2 (later, optional):
+  FPL Scout / Reddit sentiment (degrade like ClubElo). Tier 3: backtest crowd-follow vs xP-only.
+  **Season-time** — momentum fields are 0 preseason, live at GW1 (2026-08-21). See the Roadmap's *Phase 6*.
+  *Kicks off in **Sprint 060**.*
+
 - **Cloud squads — server-side persistence (Path 2)** — the seamless upgrade to Sprint 057's
   download/upload squads: a **"Save as `<name>` / Load `<name>`"** backed by a free external DB (e.g.
   Supabase/Postgres via `st.connection`) + a secret in Streamlit; persistent across sessions/devices, no
