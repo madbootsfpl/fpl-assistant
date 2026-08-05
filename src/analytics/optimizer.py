@@ -262,6 +262,34 @@ def archetype_bands(cheap=None, premium=None) -> list:
     return bands
 
 
+# The legal XI shapes (GK is always 1): DEF 3–5, MID 2–5, FWD 1–3, outfield sums to 10.
+_XI_FORMATIONS = [(d, m, f) for d in (3, 4, 5) for m in (2, 3, 4, 5) for f in (1, 2, 3)
+                  if d + m + f == 10]
+
+
+def best_xi_points(players, scores) -> float:
+    """The best legal XI's total score from a squad — a fast alternative to `best_legal_xi` (ADR-046).
+
+    Group by position, sort each descending, and try every legal shape (GK 1; DEF 3–5, MID 2–5,
+    FWD 1–3, outfield 10), summing the top-N per line. ~O(1) per squad (a handful of formations) and
+    equal to `best_legal_xi`'s sum — used to rank transfers by their effect on the *fielded* XI.
+    """
+    by_pos: dict = {"GK": [], "DEF": [], "MID": [], "FWD": []}
+    for p in players:
+        by_pos.setdefault(p["position"], []).append(scores.get(p["id"], 0.0))
+    for line in by_pos.values():
+        line.sort(reverse=True)
+    if not by_pos["GK"]:
+        return 0.0
+    best = 0.0
+    for d, m, f in _XI_FORMATIONS:
+        if len(by_pos["DEF"]) >= d and len(by_pos["MID"]) >= m and len(by_pos["FWD"]) >= f:
+            total = (by_pos["GK"][0] + sum(by_pos["DEF"][:d])
+                     + sum(by_pos["MID"][:m]) + sum(by_pos["FWD"][:f]))
+            best = max(best, total)
+    return best
+
+
 def best_legal_xi(owned, scores) -> set:
     """The best legal starting XI (ids) from a 15-man squad, ranked on `scores` (id → value).
 

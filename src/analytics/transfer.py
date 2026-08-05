@@ -7,7 +7,7 @@ formats the result. It respects FPL's rules (same position, ≤3/club, budget) s
 suggestion is always a move you could actually make.
 """
 
-from src.analytics.optimizer import MAX_PER_CLUB, is_unavailable
+from src.analytics.optimizer import MAX_PER_CLUB, best_xi_points, is_unavailable
 
 
 def _summary(player, xp_by_id) -> dict:
@@ -36,8 +36,9 @@ def _club_ok(out, candidate, club_counts, max_per_club) -> bool:
 def suggest_transfers(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, limit: int = 5, max_per_club: int = MAX_PER_CLUB,
+    xi_aware: bool = True,
 ) -> list[dict]:
-    """Rank the best single transfers for a squad by xP gain (ADR-030).
+    """Rank the best single transfers for a squad (ADR-030/046).
 
     `owned` are the squad's player rows; `players` is the whole market; `xp_by_id`
     maps player id → xP over the chosen horizon (the caller computes it). For each owned
@@ -47,12 +48,17 @@ def suggest_transfers(
     capped at `limit`. Each result flags whether the outgoing player is on the bench
     (`bench_ids`) — a bench upgrade helps the weekly score less.
 
+    `xi_aware` (default, ADR-046) ranks by the swap's effect on the best legal **starting XI**
+    (`best_xi_points` after − before), so a bench-only swap (XI-gain 0) drops out; `xi_aware=False`
+    (the `--raw` view) ranks by the raw player xP gain (`in.xp − out.xp`).
+
     The shortlist is a menu of *alternative* single swaps, so each is taken greedily and
     disjoint (ADR-040): no incoming player is suggested twice, and no outgoing player twice —
     a sell whose best target is already taken gets its next-best available one.
     """
     owned_ids = {p["id"] for p in owned}
     bench = set(bench_ids)
+    base_xi = best_xi_points(owned, xp_by_id) if xi_aware else 0.0
 
     club_counts: dict = {}
     for p in owned:
@@ -70,7 +76,11 @@ def suggest_transfers(
                     and c["price"] <= budget
                     and _club_ok(out, c, club_counts, max_per_club)):
                 in_sum = _summary(c, xp_by_id)
-                gain = round(in_sum["xp"] - out_sum["xp"], 1)
+                if xi_aware:   # how much the swap lifts the best legal XI (ADR-046)
+                    after = best_xi_points([p for p in owned if p["id"] != out["id"]] + [c], xp_by_id)
+                    gain = round(after - base_xi, 1)
+                else:
+                    gain = round(in_sum["xp"] - out_sum["xp"], 1)
                 if gain > 0:
                     pairs.append((gain, out, out_sum, c, in_sum))
 
@@ -99,6 +109,7 @@ def suggest_transfers(
 def suggest_transfer_plan(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, count: int = 1, max_per_club: int = MAX_PER_CLUB,
+    xi_aware: bool = True,
 ) -> list[dict]:
     """A coordinated, greedy plan of up to `count` transfers (ADR-035).
 
@@ -119,7 +130,7 @@ def suggest_transfer_plan(
         market = [p for p in players if p["id"] not in sold]   # a sold player can't return
         moves = suggest_transfers(
             owned, market, xp_by_id, bench_ids=bench_ids, bank=running_bank,
-            limit=1, max_per_club=max_per_club,
+            limit=1, max_per_club=max_per_club, xi_aware=xi_aware,
         )
         if not moves:
             break

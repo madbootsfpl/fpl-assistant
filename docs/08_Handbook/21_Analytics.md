@@ -129,6 +129,20 @@ a keeper ranked 3rd by mean xP gave that away on a live probe) and keep doubtful
   start — so the bank is an input (`--bank`, default £0 = self-funding) and bench players are
   *flagged*, not silently modelled. State the assumptions rather than guessing.
 
+**Rank by the *right* number — the team you actually field (Sprint 046, XI-aware transfers).** The
+first version ranked swaps by **raw player-xP gain** (`in.xp − out.xp`), which happily "upgraded" a
+cheap bench player: a big paper number that doesn't change your starting XI. ADR-046 switched the
+metric to **XI-gain** = `best_xi_points(owned − out + in) − best_xi_points(owned)` — how much the swap
+lifts your *best legal XI*. Two lessons:
+- **The metric is the recommendation.** Same candidates, same rules — only the *ranking number*
+  changed, and the advice went from misleading (*Kusi-Asare → João Pedro +19.3*, a bench swap) to
+  useful (*Guéhi → Gabriel +3.0 XI xP*). A bench-only swap now scores **0** and drops out. Getting the
+  objective right matters more than any amount of tuning around a wrong one.
+- **A fast exact helper beats a slow "proper" one.** Re-solving the XI ILP per candidate would be
+  seconds; instead `best_xi_points` enumerates the ~7 legal formations and sums the top-N per position
+  — **exactly matching** `best_legal_xi` (pinned by a test) in ~0.02s for ~750 swaps. Default-on, with
+  `--raw` preserving the old view.
+
 **A language layer that adds words, not intelligence (Phase 4, `ask`).** `ask` (ADR-034) answers a
 question in plain English — but the numbers, decisions and rules stay in the deterministic
 analytics. The pattern (proven by a spike, ADR-033) is strict:

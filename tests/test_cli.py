@@ -359,7 +359,13 @@ def test_transfer_command_defaults():
     assert args.bank == 0.0        # self-funding by default
     assert args.next == 5          # multi-week horizon
     assert args.limit == 5
+    assert args.raw is False       # XI-aware ranking by default (ADR-046)
     assert args.handler is cmd_transfer
+
+
+def test_transfer_raw_flag_opts_out_of_xi_aware_ranking():
+    args = build_parser().parse_args(["transfer", "--squad", "TS", "--raw"])
+    assert args.raw is True        # --raw restores the old raw-player-gain ranking
 
 
 def test_transfer_requires_a_squad():

@@ -452,6 +452,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 046 (2026-08-05)** — *XI-aware transfers*, per ADR-046, from the owner (the follow-on to
+  bench-aware builds). `suggest_transfers` now ranks single swaps by **XI-gain** = `best_xi_points(owned −
+  out + in) − best_xi_points(owned)` — how much a swap lifts your best legal XI — so bench-fodder swaps
+  (XI-gain 0) drop out instead of topping with a misleading paper gain. A fast **`best_xi_points(players,
+  scores)`** (enumerate the ~7 legal formations, sum top-N per position) gives the XI total in ~O(1) per
+  candidate and **matches `best_legal_xi` exactly** (a test pins 235.3 = 235.3; ~750 swaps in 0.02s), so no
+  per-candidate ILP. **XI-aware is the default** (`xi_aware=True`); `xi_aware=False` (**`--raw`**, US-138)
+  restores the old raw-player-gain ranking. `suggest_transfer_plan` threads `xi_aware` through its greedy
+  state. Worked example (a `--weekly` squad, £3 bank): raw tops with *Kusi-Asare → João Pedro **+19.3***
+  (bench fodder — its true XI gain is +0.8); XI-aware tops with *Guéhi → Gabriel **+3.0 XI xP***. Legality,
+  the greedy dedup (ADR-040) and the `(b)` marker are unchanged. No new dependency.
 - **Sprint 045 (2026-08-05)** — *bench-aware squad optimisation*, per ADR-045, from the owner (valuable
   for rotation + Bench Boost). `select_squad(bench_weight=W)` adds a `start[i]` binary per player (a legal
   XI within `XI_FLEX`) and maximises `Σ xp·start + W·xp·(pick−start)`, flagging non-starters `bench` —

@@ -550,23 +550,28 @@ def cmd_transfer(args) -> None:
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])
+        xi_aware = not args.raw   # XI-gain ranking by default; --raw for the old raw-player-gain (ADR-046)
         if args.count:
             # Plan mode: a coordinated set of `count` transfers (ADR-035), with the incoming
             # players' per-gameweek xP shown (ADR-036).
             plan = suggest_transfer_plan(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, count=args.count,
+                xi_aware=xi_aware,
             )
             print(render_transfer_plan(
                 plan, args.squad, bank=args.bank, horizon=args.next,
                 by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
                 gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=show_xmins,
+                xi_aware=xi_aware,
             ))
         else:
             suggestions = suggest_transfers(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, limit=args.limit,
+                xi_aware=xi_aware,
             )
             print(render_transfers(
                 suggestions, args.squad, bank=args.bank, horizon=args.next, show_xmins=show_xmins,
+                xi_aware=xi_aware,
             ))
     finally:
         store.close()
@@ -744,6 +749,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_transfer.add_argument(
         "--count", type=int,
         help="Plan a coordinated set of N transfers (shared bank) instead of a shortlist",
+    )
+    p_transfer.add_argument(
+        "--raw", action="store_true",
+        help="Rank by raw player xP gain (the old default) instead of the best-XI improvement",
     )
     p_transfer.add_argument(
         "--no-xmins", action="store_true",

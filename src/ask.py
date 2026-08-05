@@ -161,22 +161,23 @@ def _transfer_count(question: str) -> int:
 
 
 def _transfer_facts(move: dict) -> dict:
-    """Pre-humanised facts for one transfer move."""
+    """Pre-humanised facts for one transfer move. The gain is the **XI improvement** (ADR-046) —
+    how much the swap lifts your best legal XI, not a raw player-xP delta."""
     return {
         "sell": f"{move['out']['web_name']} ({move['out']['team']}, xP {move['out']['xp']})",
         "buy": f"{move['in']['web_name']} ({move['in']['team']}, xP {move['in']['xp']})",
-        "expected_points_gain_over_5_gameweeks": move["gain"],
+        "starting_XI_improvement_over_5_gameweeks": move["gain"],
     }
 
 
 def _plan_facts(plan: list) -> dict:
-    """Self-describing facts for a coordinated transfer plan (ADR-035)."""
+    """Self-describing facts for a coordinated transfer plan (ADR-035); gains are XI improvements."""
     return {
         "transfers": [
-            f"sell {m['out']['web_name']}, buy {m['in']['web_name']} (+{m['gain']} xP)"
+            f"sell {m['out']['web_name']}, buy {m['in']['web_name']} (+{m['gain']} XI xP)"
             for m in plan
         ],
-        "total_expected_points_gain_over_5_gameweeks": round(sum(m["gain"] for m in plan), 1),
+        "total_starting_XI_improvement_over_5_gameweeks": round(sum(m["gain"] for m in plan), 1),
     }
 
 
@@ -253,11 +254,11 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1) -> 
     m = moves[0]
     return {
         "headline": f"Transfer (squad '{squad_name}'): {m['out']['web_name']} → "
-                    f"{m['in']['web_name']} (+{m['gain']} xP over {_HORIZON} GW)",
+                    f"{m['in']['web_name']} (+{m['gain']} XI xP over {_HORIZON} GW)",
         "facts": _transfer_facts(m),
         "subjects": [m["out"]["web_name"], m["in"]["web_name"]],
         "task": f"explain in 2 short sentences why selling {m['out']['web_name']} and buying "
-                f"{m['in']['web_name']} improves the squad",
+                f"{m['in']['web_name']} improves the starting XI",
     }
 
 

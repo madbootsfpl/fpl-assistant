@@ -85,7 +85,7 @@ dependency.
 
 ### Notes _(for Tony)_
 
--
+- Weekly & bench-boost work incredibly well
 
 ---
 

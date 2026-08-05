@@ -345,7 +345,7 @@ def test_transfer_facts_humanise_a_move():
          "in": {"web_name": "B", "team": "BBB", "xp": 35.0}, "gain": 15.4}
     f = _transfer_facts(m)
     assert f["sell"] == "A (AAA, xP 19.6)" and f["buy"] == "B (BBB, xP 35.0)"
-    assert f["expected_points_gain_over_5_gameweeks"] == 15.4
+    assert f["starting_XI_improvement_over_5_gameweeks"] == 15.4   # XI gain, not raw player delta (ADR-046)
 
 
 def test_analyse_facts_availability_reads_none_when_no_issues():
@@ -440,8 +440,8 @@ def test_plan_facts_are_self_describing():
         {"out": {"web_name": "C"}, "in": {"web_name": "D"}, "gain": 9.9},
     ]
     f = _plan_facts(plan)
-    assert f["transfers"] == ["sell A, buy B (+15.4 xP)", "sell C, buy D (+9.9 xP)"]
-    assert f["total_expected_points_gain_over_5_gameweeks"] == 25.3
+    assert f["transfers"] == ["sell A, buy B (+15.4 XI xP)", "sell C, buy D (+9.9 XI xP)"]
+    assert f["total_starting_XI_improvement_over_5_gameweeks"] == 25.3
 
 
 def test_transfer_and_analyse_ask_for_a_squad_when_missing():

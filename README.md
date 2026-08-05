@@ -23,7 +23,9 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
 
 **Decision support (Phase 3)** — recommend *and explain*, composed on the above:
 - **`captain`** — the best captain picks for the next GW (by xP), with opponent + penalty duty
-- **`transfer`** — the best single legal transfers for your squad (≤3/club, budget, by xP gain)
+- **`transfer`** — the best single legal transfers for your squad (≤3/club, budget), ranked by **XI
+  improvement** (how much a swap lifts your best legal XI, so bench-fodder upgrades don't top the list);
+  `--raw` for the old raw-xP-gain ranking
 - **`analyse`** — a saved squad's health over N GWs (projected XI xP, weak links, injuries), cross-linked
 - **Expected minutes (xMins v0)** — every recommendation **weights xP by expected playing time**
   (`chance_of_playing%` × a historical minutes share), so rotation risks don't out-rank nailed-on
@@ -118,7 +120,8 @@ python app.py squad --load my-team               # reload it — re-priced, with
 
 # Decision support (Phase 3) — work on a saved squad:
 python app.py captain --squad my-team            # best captain picks next GW (xP + opponent + penalty)
-python app.py transfer --squad my-team --bank 2  # best single legal transfers by xP gain (bank £2m)
+python app.py transfer --squad my-team --bank 2  # best single legal transfers by XI improvement (bank £2m)
+python app.py transfer --squad my-team --raw     # rank by raw player-xP gain instead (the old default)
 python app.py transfer --squad my-team --count 3 # a coordinated plan of 3 transfers (shared bank),
                                                  #   with each incoming player's points per gameweek
 python app.py analyse --squad my-team --sort xp  # squad health over N GWs (per-GW xP, weak links, injuries)
