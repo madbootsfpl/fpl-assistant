@@ -32,6 +32,7 @@ from src.analytics.optimizer import (
     objective_scores,
     resolve_players,
     select_squad,
+    squad_15_issues,
 )
 from src.analytics.overperf import over_under
 from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
@@ -62,6 +63,7 @@ __all__ = [
     "defensive_solidity",
     "elo_difficulty_bands",
     "legal_xi_issues",
+    "squad_15_issues",
     "objective_scores",
     "over_under",
     "baseline_rate",

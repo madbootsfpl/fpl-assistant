@@ -80,16 +80,42 @@ def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     assert not at.exception
 
 
+def test_transfer_page_apply_mutates_the_session_squad():
+    # US-173: applying a suggested swap edits the active squad in session_state (no server write)
+    at = _run(_PAGES / "5_Transfer.py")
+    at.slider[0].set_value(10.0).run()                     # raise the bank → dearer upgrades → swaps appear
+    if len(at.selectbox) < 2 or not at.button:             # still none on this DB → nothing to apply
+        return
+    before = list(at.session_state["squad"]["player_ids"]) if "squad" in at.session_state else None
+    at.button[0].click().run()                             # "Apply this transfer →"
+    assert not at.exception
+    squad = at.session_state["squad"]                      # an active squad now exists…
+    assert before is None or squad["player_ids"] != before  # …and it changed (or was just adopted)
+    assert squad.get("name") and squad.get("cost")         # named + re-costed (no sidebar crash)
+
+
 def test_captain_page_renders_for_the_demo_squad():
     at = _run(_PAGES / "7_Captain.py")
-    assert len(at.selectbox) == 1                          # the squad picker
+    assert len(at.selectbox) >= 1                          # the squad picker (+ a set-captain selector)
     assert len(at.code) == 1 or len(at.info) >= 1          # the captain picks (or a "no data" note)
 
 
+def test_captain_page_sets_and_persists_a_captain():
+    # US-175: "Set as captain" writes captain_id onto the (adopted) session squad
+    at = _run(_PAGES / "7_Captain.py")
+    setbtn = [b for b in at.button if b.label == "Set as captain"]
+    if not setbtn:                                         # no data locally → nothing to set
+        return
+    setbtn[0].click().run()
+    assert not at.exception
+    cap = at.session_state["squad"].get("captain_id")
+    assert cap in at.session_state["squad"]["player_ids"]  # a real, owned captain
+
+
 def test_consumer_pages_use_a_session_active_squad():
-    # build sets session_state["squad"]; Transfer/Analyse/Captain must offer it in the picker (ADR-054)
+    # build sets session_state["squad"]; the squad pages must offer it in the picker (ADR-054/055)
     squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
-    for page in ("3_Squads.py", "5_Transfer.py", "7_Captain.py"):
+    for page in ("3_Squads.py", "5_Transfer.py", "7_Captain.py", "8_My_Squad.py"):
         at = AppTest.from_file(str(_PAGES / page), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
@@ -115,6 +141,64 @@ def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
     assert not at.exception
     squad = at.session_state["squad"]                      # …became the session active squad (ADR-054)
     assert squad["name"] == "My squad" and 11 <= len(squad["player_ids"]) <= 15
+
+
+def test_build_page_renders_non_zero_xp(monkeypatch):
+    # regression (US-172): Build must attach xp/minutes_weight so the table + projected total aren't zeros
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:
+        return
+    out = at.code[0].value
+    assert "xMins" in out and "xP" in out                  # the xp-objective columns
+    total = next((ln for ln in out.splitlines() if ln.startswith("Total:")), "")
+    assert "projected" in total and "projected 0.0 xP" not in total   # a real total, not zeros
+
+
+def test_build_page_names_the_squad(monkeypatch):
+    # US-172: the squad-name input flows into the active squad (and the download key)
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:
+        return
+    at.text_input[0].set_value("Tony's XI").run()
+    at.button[0].click().run()                             # "Use this squad →"
+    assert at.session_state["squad"]["name"] == "Tony's XI"
+
+
+def test_my_squad_page_renders_with_a_legality_banner_and_download():
+    at = _run(_PAGES / "8_My_Squad.py")
+    # a download (an editable squad view) or the no-data info; a legality banner (success/error) if data
+    assert at.get("download_button") or at.info
+    if at.get("download_button"):
+        assert at.success or at.error                      # the ✓ legal / ⚠ / illegal banner
+
+
+def test_my_squad_swap_adopts_and_mutates_the_session_squad():
+    at = _run(_PAGES / "8_My_Squad.py")
+    swap = [b for b in at.button if b.label.startswith("Swap")]
+    if not swap:                                           # no data / no candidates → nothing to swap
+        return
+    swap[0].click().run()
+    assert not at.exception
+    assert "squad" in at.session_state and at.session_state["squad"].get("cost")   # adopted + re-costed
+
+
+def test_my_squad_rename_updates_the_active_squad():
+    at = _run(_PAGES / "8_My_Squad.py")
+    if not at.text_input or not any(b.label == "Rename" for b in at.button):
+        return
+    at.text_input[0].set_value("Dream Team").run()
+    next(b for b in at.button if b.label == "Rename").click().run()
+    assert at.session_state["squad"]["name"] == "Dream Team"
+
+
+def test_my_squad_set_bench_picks_four():
+    at = _run(_PAGES / "8_My_Squad.py")
+    if not at.multiselect or not any(b.label == "Set bench" for b in at.button):
+        return
+    at.multiselect[0].set_value(at.multiselect[0].options[:4]).run()
+    next(b for b in at.button if b.label == "Set bench").click().run()
+    assert not at.exception
+    assert len(at.session_state["squad"]["bench_ids"]) == 4
 
 
 def test_ask_chat_answers_a_grounded_question():

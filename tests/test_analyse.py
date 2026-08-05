@@ -94,3 +94,10 @@ def test_render_shows_the_xmins_column_only_when_on():
     assert "xMins" in on and " 56" in on          # P1's 0.62 → 56 expected minutes
     off = render_squad_analysis(a, "TST", show_xmins=False)
     assert "xMins" not in off                      # --no-xmins reproduces the original table
+
+
+def test_render_marks_the_set_captain():
+    # US-175: a captain_id marks that player `(C)`; without it, no `(C)` (backwards-compatible)
+    a = analyse_squad(SQUAD, XI, XP)
+    assert "P2 (C)" in render_squad_analysis(a, "TST", captain_id=2)
+    assert "(C)" not in render_squad_analysis(a, "TST")

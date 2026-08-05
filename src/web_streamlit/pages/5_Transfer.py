@@ -11,7 +11,7 @@ import streamlit as st
 from src.analytics import decision_xp, suggest_transfer_plan, suggest_transfers
 from src.storage import Storage
 from src.ui.transfer import render_transfer_plan, render_transfers
-from src.web_streamlit.squads import render_sidebar, squad_picker
+from src.web_streamlit.squads import apply_transfer, render_sidebar, set_active_squad, squad_picker
 
 st.set_page_config(page_title="Transfer · FPL Assistant", page_icon="⚽", layout="wide")
 render_sidebar()
@@ -53,3 +53,21 @@ else:
         swaps = suggest_transfers(owned, players, xp_by_id, bench_ids=bench_ids,
                                   bank=bank, limit=5)
         st.code(render_transfers(swaps, squad_name, bank=bank, show_xmins=True), language=None)
+
+        # Apply a suggested swap to your squad (ADR-055) — mutates the session active squad (a copy of
+        # the picked squad), so a demo squad becomes yours on first edit. No server write.
+        if swaps:
+            labels = [f"{s['out']['web_name']} → {s['in']['web_name']}  (+{s['gain']} xP)" for s in swaps]
+            choice = st.selectbox("Apply a swap to your squad", labels, key="apply_swap")
+            if st.button("Apply this transfer →"):
+                chosen = swaps[labels.index(choice)]
+                ok, issues, warning, new = apply_transfer(
+                    squad, chosen["out"]["id"], chosen["in"]["id"], players)
+                if not ok:
+                    st.error("Can't apply — that would leave an illegal squad: " + "; ".join(issues))
+                else:
+                    set_active_squad(new)
+                    done = (f"Applied **{chosen['out']['web_name']} → {chosen['in']['web_name']}** — "
+                            f"new cost £{new['cost']:.1f}m.")
+                    st.warning(f"{done}  ⚠ {warning}") if warning else st.success(done)
+                    st.rerun()                        # recompute suggestions on the updated squad

@@ -10,7 +10,7 @@ import streamlit as st
 from src.analytics import baseline_rate, captain_picks, minutes_weight_from_history
 from src.storage import Storage
 from src.ui.captain import render_captain_picks
-from src.web_streamlit.squads import render_sidebar, squad_picker
+from src.web_streamlit.squads import render_sidebar, set_active_squad, set_captain, squad_picker
 
 st.set_page_config(page_title="Captain · FPL Assistant", page_icon="⚽", layout="wide")
 render_sidebar()
@@ -38,3 +38,19 @@ else:
     picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code,
                           minutes_weight=minutes_weight, history_by_code=history)
     st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True), language=None)
+
+    # Set & persist YOUR captain (ADR-055) — stored on the session squad, shown (C) in Analyse + the
+    # download. Defaults to the current captain, else the top recommendation. Editing a demo adopts a copy.
+    current = squad.get("captain_id")
+    if current:
+        cur = next((p["web_name"] for p in owned if p["id"] == current), "?")
+        st.caption(f"Your captain: **{cur} (C)**")
+    labels = {f"{p['position']} {p['web_name']}": p["id"] for p in owned}
+    recommended = picks[0]["id"] if picks else None
+    want = current or recommended
+    idx = next((i for i, pid in enumerate(labels.values()) if pid == want), 0)
+    choice = st.selectbox("Set your captain", list(labels), index=idx, key="set_captain")
+    if st.button("Set as captain"):
+        set_active_squad(set_captain(squad, labels[choice]))
+        st.success(f"Captain set: **{choice.split(' ', 1)[1]} (C)** — shown in Analyse + your download.")
+        st.rerun()

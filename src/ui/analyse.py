@@ -12,18 +12,20 @@ from ._table import Col, render_rows
 _NAME_W = 18
 
 
-def _name(r) -> str:
-    """Player name with an availability marker when injured/suspended/doubtful."""
+def _name(r, captain_id=None) -> str:
+    """Player name with an availability marker (injured/suspended/doubtful) and, for the set captain, a
+    trailing ` (C)` — kept inside `_NAME_W` so the columns stay aligned."""
     name = str(r["web_name"])
     if r["status"] == "d" and r.get("chance") is not None:
         name = f"{name} (d {r['chance']}%)"
     elif r["status"] in ("i", "s", "u", "n"):
         name = f"{name} ({r['status']})"
-    return name[:_NAME_W]
+    is_captain = captain_id is not None and r.get("id") == captain_id
+    name = name[:_NAME_W - 4] if is_captain else name[:_NAME_W]   # reserve room for " (C)"
+    return f"{name} (C)" if is_captain else name
 
 
 _BASE_COLS = [
-    Col("Player", _NAME_W, "<", _name),
     Col("Team", 5, "<", lambda r: str(r["team"] or "")),
     Col("Pos", 4, "<", lambda r: str(r["position"] or "")),
     Col("£", 6, ">", lambda r: f"{r['price']:.1f}"),
@@ -32,12 +34,13 @@ _XP_COL = Col("xP", 6, ">", lambda r: f"{r['xp']:.1f}")
 _XMINS_COL = Col("xMins", 6, ">", lambda r: str(expected_minutes(r.get("minutes_weight"))))
 
 
-def _columns(gameweeks, show_xmins=False):
+def _columns(gameweeks, show_xmins=False, captain_id=None):
     """Base columns + a per-GW column per gameweek (ADR-032) + the total, when present.
 
     With `show_xmins` (xMins v0, ADR-038), an expected-minutes column precedes the total.
+    The Player column is captain-aware (marks the set captain `(C)`, ADR-055).
     """
-    cols = list(_BASE_COLS)
+    cols = [Col("Player", _NAME_W, "<", lambda r: _name(r, captain_id)), *_BASE_COLS]
     for gw in gameweeks:
         cols.append(
             Col(f"GW{gw}", 5, ">", lambda r, gw=gw: f"{r['by_gameweek'].get(gw, 0):.1f}")
@@ -48,10 +51,11 @@ def _columns(gameweeks, show_xmins=False):
     return cols
 
 
-def render_squad_analysis(analysis: dict, squad_name: str, show_xmins: bool = False) -> str:
+def render_squad_analysis(analysis: dict, squad_name: str, show_xmins: bool = False,
+                          captain_id=None) -> str:
     horizon = analysis["horizon"]
     window = f"{horizon} GW" if horizon != 1 else "next GW"
-    cols = _columns(analysis.get("gameweeks") or [], show_xmins=show_xmins)
+    cols = _columns(analysis.get("gameweeks") or [], show_xmins=show_xmins, captain_id=captain_id)
 
     lines = [
         f"Squad analysis — '{squad_name}' over the next {window}", "",

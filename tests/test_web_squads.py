@@ -93,6 +93,98 @@ def test_parse_uploaded_rejects_unknown_player_ids():
     assert squad is None and "current data" in err
 
 
+def test_parse_uploaded_accepts_a_valid_captain():
+    sq = _valid_squad()
+    sq["captain_id"] = sq["player_ids"][0]
+    squad, err = web_squads.parse_uploaded(_Upload(sq))
+    assert err is None and squad["captain_id"] == sq["player_ids"][0]
+
+
+def test_parse_uploaded_rejects_a_captain_not_in_the_squad():
+    sq = _valid_squad()
+    sq["captain_id"] = 900_099                            # not one of the squad's players
+    squad, err = web_squads.parse_uploaded(_Upload(sq))
+    assert squad is None and "captain" in err
+
+
+# --- apply_transfer (ADR-055): a validated, session-only swap ------------------------------------
+
+def _market():
+    """15 owned synthetic players (2/5/5/3, distinct clubs) + 2 unowned (a MID, a GK)."""
+    players, i = [], 1
+    for pos, n in {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}.items():
+        for _ in range(n):
+            players.append({"id": i, "web_name": f"P{i}", "position": pos, "price": 5.0, "team": f"T{i}"})
+            i += 1
+    owned = [p["id"] for p in players]                        # ids 1..15 (MIDs are 8..12)
+    players.append({"id": 100, "web_name": "NewMid", "position": "MID", "price": 5.0, "team": "TX"})
+    players.append({"id": 200, "web_name": "NewGK", "position": "GK", "price": 5.0, "team": "TY"})
+    return players, owned
+
+
+def _squad(owned, **extra):
+    return {"name": "T", "player_ids": list(owned), "player_names": [f"P{i}" for i in owned],
+            "bench_ids": [], "cost": 75.0, **extra}
+
+
+def test_apply_transfer_applies_a_legal_swap():
+    players, owned = _market()
+    ok, issues, warning, new = web_squads.apply_transfer(_squad(owned), 8, 100, players)
+    assert ok and not issues and warning is None
+    assert 8 not in new["player_ids"] and 100 in new["player_ids"]
+    assert new["cost"] == 75.0                                # 15 × £5.0m, same-price swap
+
+
+def test_apply_transfer_refuses_an_illegal_swap():
+    players, owned = _market()
+    ok, issues, warning, new = web_squads.apply_transfer(_squad(owned), 8, 200, players)  # MID→GK
+    assert not ok and new is None
+    assert any("GK" in i for i in issues)                     # 3 GK / 4 MID — an illegal split
+
+
+def test_apply_transfer_clears_a_transferred_out_captain():
+    players, owned = _market()
+    _, _, _, new = web_squads.apply_transfer(_squad(owned, captain_id=8), 8, 100, players)
+    assert new["captain_id"] is None                          # the captain (8) left → cleared
+
+
+def test_apply_transfer_keeps_a_captain_who_stays():
+    players, owned = _market()
+    _, _, _, new = web_squads.apply_transfer(_squad(owned, captain_id=9), 8, 100, players)
+    assert new["captain_id"] == 9                             # 9 is untouched
+
+
+def test_apply_transfer_warns_over_budget_but_still_applies():
+    players, owned = _market()
+    dear = next(p for p in players if p["id"] == 100)
+    dear["price"] = 31.0                                      # 75 − 5 + 31 = £101m → £1 over
+    ok, _, warning, new = web_squads.apply_transfer(_squad(owned), 8, 100, players)
+    assert ok and new["cost"] == 101.0 and warning and "over" in warning
+
+
+# --- rename / set_bench (ADR-055) ----------------------------------------------------------------
+
+def test_rename_sets_the_name():
+    assert web_squads.rename({"name": "A", "player_ids": [1]}, "B")["name"] == "B"
+
+
+def test_rename_blank_keeps_the_old_name():
+    assert web_squads.rename({"name": "A", "player_ids": [1]}, "   ")["name"] == "A"   # never nameless
+
+
+def test_set_bench_keeps_player_id_order():
+    squad = {"player_ids": [5, 3, 9, 1], "bench_ids": []}
+    assert web_squads.set_bench(squad, [9, 5])["bench_ids"] == [5, 9]   # player_ids order, not arg order
+
+
+def test_set_captain_accepts_an_owned_player():
+    assert web_squads.set_captain({"player_ids": [1, 2, 3]}, 2)["captain_id"] == 2
+
+
+def test_set_captain_rejects_a_non_owned_player():
+    assert web_squads.set_captain({"player_ids": [1, 2, 3]}, 99)["captain_id"] is None
+
+
 # --- the guardrail: the web never writes squads server-side --------------------------------------
 
 def test_web_edges_never_call_squadstore_save():

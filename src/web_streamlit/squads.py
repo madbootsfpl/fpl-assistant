@@ -10,8 +10,12 @@ import json
 
 import streamlit as st
 
+from src.analytics import squad_15_issues
 from src.squads import SquadStore
 from src.storage import Storage
+
+# The FPL squad budget (£m) — the reference for the *soft* over-budget warning on an edit (ADR-055).
+FPL_BUDGET = 100.0
 
 _SESSION_KEY = "squad"
 _UPLOAD_APPLIED = "_squad_upload_id"
@@ -27,9 +31,10 @@ def set_active_squad(squad: dict) -> None:
 
 
 def demo_squads() -> dict:
-    """`{name: squad_dict}` — the committed demo squads (read-only, via SquadStore)."""
+    """`{name: squad_dict}` — the committed demo squads (read-only, via SquadStore). Each dict carries its
+    own `name` so every squad (demo or session) is uniformly named (used by the sidebar / after an edit)."""
     store = SquadStore()
-    return {name: store.load(name) for name in store.names()}
+    return {name: {**store.load(name), "name": name} for name in store.names()}
 
 
 def available_squads() -> dict:
@@ -57,6 +62,60 @@ def squad_picker(label: str = "Squad", key: str | None = None) -> tuple[str, dic
     return choice, squads[choice]
 
 
+def rename(squad: dict, name: str) -> dict:
+    """A copy of `squad` renamed. A blank name keeps the existing one (never nameless)."""
+    new = dict(squad)
+    new["name"] = name.strip() or squad.get("name", "My squad")
+    return new
+
+
+def set_captain(squad: dict, captain_id) -> dict:
+    """A copy of `squad` with `captain_id` set — but only if it's one of the squad's players (else None,
+    so a stale captain can't linger). Shown as **(C)** and travels in the download (ADR-055)."""
+    new = dict(squad)
+    new["captain_id"] = captain_id if captain_id in squad["player_ids"] else None
+    return new
+
+
+def set_bench(squad: dict, bench_ids) -> dict:
+    """A copy of `squad` with a new bench (the rest are the XI). Kept in `player_ids` order. Display/
+    analysis honour it; legality of the resulting XI is the caller's soft warning (ADR-022, warn-not-block),
+    not a block here."""
+    chosen = set(bench_ids)
+    new = dict(squad)
+    new["bench_ids"] = [i for i in squad["player_ids"] if i in chosen]
+    return new
+
+
+def apply_transfer(squad: dict, out_id: int, in_id: int, players,
+                   budget: float = FPL_BUDGET) -> tuple[bool, list, str | None, dict | None]:
+    """Swap `out_id`→`in_id` on a **copy** of `squad`, legality-checked (ADR-055).
+
+    Returns `(ok, issues, warning, new_squad)`. A structurally illegal result (positions / ≤3-club, via
+    `squad_15_issues`) → `ok=False` + the `issues`, no change. Legal → `ok=True`, the mutated `new_squad`
+    (ids/names/bench/cost updated; a captain that left is cleared), and a **soft** `warning` string if it's
+    over `budget` (never blocks — prices drift). No server write: the caller sets it as the active squad.
+    """
+    by_id = {p["id"]: p for p in players}
+    new_ids = [in_id if i == out_id else i for i in squad["player_ids"]]
+    new_players = [by_id[i] for i in new_ids if i in by_id]
+    issues = squad_15_issues(new_players)
+    if issues:
+        return False, issues, None, None
+
+    new = dict(squad)
+    new["player_ids"] = new_ids
+    new["player_names"] = [by_id[i]["web_name"] for i in new_ids]
+    new["bench_ids"] = [in_id if i == out_id else i for i in squad.get("bench_ids", [])]
+    if new.get("captain_id") == out_id:
+        new["captain_id"] = None                      # the captain was transferred out — clear it
+    cost = round(sum(by_id[i]["price"] for i in new_ids), 1)
+    new["cost"] = cost
+    warning = (f"£{cost - budget:.1f}m over the £{budget:.0f}m budget"
+               if budget is not None and cost > budget else None)
+    return True, [], warning, new
+
+
 def parse_uploaded(uploaded) -> tuple[dict | None, str | None]:
     """Validate an uploaded `squad.json` → (squad_dict, error). Accepts a bare squad dict or a
     `{name: squad}` file (the SquadStore format); checks the ids exist in the current data."""
@@ -80,6 +139,8 @@ def parse_uploaded(uploaded) -> tuple[dict | None, str | None]:
     missing = [i for i in ids if i not in known]
     if missing:
         return None, f"{len(missing)} player id(s) aren't in the current data — is this an old squad?"
+    if data.get("captain_id") is not None and data["captain_id"] not in ids:
+        return None, "The captain isn't one of the squad's players."
     data.setdefault("name", "Uploaded squad")
     return data, None
 
@@ -90,7 +151,7 @@ def render_sidebar() -> None:
     with st.sidebar:
         st.subheader("Your squad")
         act = active_squad()
-        st.caption(f"Active: **{act['name'] if act else 'none'}**"
+        st.caption(f"Active: **{act.get('name', 'unnamed')}**"
                    if act else "Active: **none** — build one or upload a `squad.json`.")
         uploaded = st.file_uploader("Upload a squad.json", type="json", key="squad_uploader")
         if uploaded is not None and st.session_state.get(_UPLOAD_APPLIED) != uploaded.file_id:

@@ -71,6 +71,33 @@ def legal_xi_issues(starters) -> list:
     return issues
 
 
+def squad_15_issues(players, max_per_club: int = MAX_PER_CLUB) -> list:
+    """Reasons `players` aren't a legal 15-man FPL squad — empty if legal (ADR-055).
+
+    The *hard* structural rules only: exactly 15 players in the `SQUAD_15` split
+    (2 GK, 5 DEF, 5 MID, 3 FWD), and no more than `max_per_club` from any one club.
+    Budget is deliberately NOT checked here — prices drift, so it's a soft warning the
+    caller shows (never a block, ADR-055), computed from the squad's cost at the edge.
+    The 15-man counterpart to `legal_xi_issues` (ADR-022); reuses `SQUAD_15`/`MAX_PER_CLUB`
+    so the rules live in one place.
+    """
+    counts: dict = {}
+    club_counts: dict = {}
+    for p in players:
+        counts[p["position"]] = counts.get(p["position"], 0) + 1
+        club_counts[p["team"]] = club_counts.get(p["team"], 0) + 1
+    issues = []
+    if len(players) != 15:
+        issues.append(f"{len(players)} players (need 15)")
+    for position, need in SQUAD_15.items():
+        n = counts.get(position, 0)
+        if n != need:
+            issues.append(f"{n} {position} (need {need})")
+    for club in sorted(c for c, n in club_counts.items() if n > max_per_club):
+        issues.append(f"{club_counts[club]} from {club} (max {max_per_club})")
+    return issues
+
+
 # FPL status codes for players who cannot play (all have chance 0). 'a' = available,
 # 'd' = doubtful (might play — kept, but flagged). ADR-023.
 UNAVAILABLE_STATUS = frozenset({"i", "s", "u", "n"})

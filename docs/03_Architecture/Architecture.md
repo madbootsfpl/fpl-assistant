@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 058 (2026-08-05)** — *an editable session squad*, per ADR-055. The read-only session squad
+  (ADR-054) becomes **editable** — still **in `session_state`, no server writes**. Fixed a Build bug (xP/
+  xMins rendered 0 — the page now attaches `xp`/`minutes_weight` like the CLI). New generic core validator
+  **`squad_15_issues`** (position split vs `SQUAD_15` + ≤3/club; **budget stays a soft edge-side warning**,
+  never in the legality list). Edits go through **mutation helpers** in `web_streamlit/squads.py`
+  (`rename` · `apply_transfer` · `set_bench` · `set_captain`) — each edits a **copy**, recomputes cost,
+  clears a departed captain, and pages never touch the dict inline. Editing happens **where the opportunity
+  is**: **Transfer** gains *Apply* (a suggested swap), **Captain** gains *Set as captain* (persisted as
+  `captain_id`, shown **(C)** in Analyse + the download; `parse_uploaded` validates it), plus a new
+  **My Squad** hub (`pages/8_My_Squad.py`) — the 15 with (C)/cost/legality, rename, manual same-position
+  swap (validated), bench, download. `name`/`captain_id` are harmless **superset** keys on the CLI
+  `SquadStore` dict. 481 tests green.
 - **Sprint 057 (2026-08-05)** — *cloud squads — per-user, no server*, per ADR-054. The deployed app's
   disk is ephemeral + multi-user, so squads move to a **session "active squad"** in `st.session_state`,
   set by **building** (Build → *Download* a `squad.json` + *Use this squad*) or **uploading** one (a

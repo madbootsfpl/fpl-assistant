@@ -22,6 +22,7 @@ st.title("Build — the optimal 15 within a budget")
 
 col1, col2 = st.columns(2)
 budget = col1.slider("Budget (£m)", 80.0, 100.0, 100.0, step=0.5)
+name = col1.text_input("Squad name", value="My squad", max_chars=40).strip() or "My squad"
 cheap = col2.number_input("Low-cost (≤£4.5m)", min_value=0, max_value=8, value=0)
 premium = col2.number_input("Premium (≥£9m)", min_value=0, max_value=5, value=0)
 differential = col2.number_input("Differentials (≤5% owned)", min_value=0, max_value=5, value=0)
@@ -39,10 +40,16 @@ if not players:
 else:
     ranked = decision_xp(players, upcoming, history)                # xMins-weighted (default)
     scores = {r["id"]: r["xp"] for r in ranked}
+    weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     bands = archetype_bands(cheap=cheap or None, premium=premium or None)
     result = select_squad(players, budget=budget, formation=SQUAD_15, scores=scores,
                           band_minimums=bands, min_differentials=differential or None)
     xi_ids = best_legal_xi(result["selected"], scores) if result["status"] == "Optimal" else None
+    # Attach the optimised xP + xMins onto the picked players so the table (and the projected-xP total)
+    # render them — the same step the CLI does before `render_squad` (cli.py cmd_squad, ADR-041/US-121).
+    for p in result["selected"]:
+        p["xp"] = scores.get(p["id"], 0)
+        p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
     st.code(render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids), language=None)
 
     if result["status"] == "Optimal":
@@ -56,10 +63,10 @@ else:
         }
         # The download is the CLI `SquadStore` file shape (`{name: squad}`), so it drops straight into
         # `data/squads.json` and loads in the CLI too. No server write — this file is the user's own save.
-        payload = json.dumps({"My squad": squad}, indent=2)
+        payload = json.dumps({name: squad}, indent=2)
         dl, use = st.columns(2)
         dl.download_button("⬇︎ Download squad.json", payload, file_name="squad.json",
                            mime="application/json", use_container_width=True)
         if use.button("Use this squad →", use_container_width=True):
-            set_active_squad({**squad, "name": "My squad"})
-            st.success("Set as your **active squad** — open Transfer, Analyse or Captain.")
+            set_active_squad({**squad, "name": name})
+            st.success(f"Set **{name}** as your active squad — open Transfer, Analyse or Captain.")

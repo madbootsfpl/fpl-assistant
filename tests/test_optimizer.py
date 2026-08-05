@@ -19,6 +19,7 @@ from src.analytics.optimizer import (
     objective_scores,
     resolve_players,
     select_squad,
+    squad_15_issues,
 )
 from src.ui.squad import formation_str, render_loaded_squad, render_squad
 
@@ -522,6 +523,45 @@ def test_legal_xi_issues_flags_too_few_defenders():
 def test_legal_xi_issues_flags_extra_goalkeeper():
     issues = legal_xi_issues(_xi({"GK": 2, "DEF": 4, "MID": 3, "FWD": 2}))
     assert "2 GK (max 1)" in issues          # "need 1" for GK, not "need 1-1"
+
+
+_LEGAL_15 = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
+
+
+def _squad15(counts):
+    """Build a 15-man squad from {position: n}; distinct teams by default (club cap irrelevant)."""
+    players, i = [], 1
+    for pos, n in counts.items():
+        for _ in range(n):
+            players.append({"id": i, "position": pos, "team": f"T{i}"})
+            i += 1
+    return players
+
+
+def test_squad_15_issues_passes_a_legal_15():
+    assert squad_15_issues(_squad15(_LEGAL_15)) == []
+
+
+def test_squad_15_issues_flags_a_wrong_position_split():
+    issues = squad_15_issues(_squad15({"GK": 2, "DEF": 4, "MID": 6, "FWD": 3}))   # still 15
+    assert "4 DEF (need 5)" in issues and "6 MID (need 5)" in issues
+
+
+def test_squad_15_issues_flags_the_wrong_count():
+    issues = squad_15_issues(_squad15({"GK": 2, "DEF": 5, "MID": 5, "FWD": 2}))   # 14 players
+    assert "14 players (need 15)" in issues
+
+
+def test_squad_15_issues_flags_more_than_three_from_a_club():
+    squad = _squad15(_LEGAL_15)
+    for pl in squad[:4]:                                  # four players share one club
+        pl["team"] = "BIG"
+    assert "4 from BIG (max 3)" in squad_15_issues(squad)
+
+
+def test_squad_15_issues_ignores_budget():
+    # budget is a soft, edge-side warning (ADR-055) — a legal-but-expensive 15 is still "legal" here
+    assert squad_15_issues(_squad15(_LEGAL_15)) == []
 
 
 def test_formation_str_counts_outfield_only():

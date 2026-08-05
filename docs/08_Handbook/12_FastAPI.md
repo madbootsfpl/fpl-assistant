@@ -83,8 +83,8 @@ if prompt:
     st.chat_message("assistant").code(render_ask(ask.answer(prompt)))   # grounded + trust line
 ```
 
-- **Multipage** — `Home.py` (the landing) + `pages/1_Players … 7_Captain.py`; Streamlit builds the sidebar
-  nav (Home · Players · Fixtures · Squads · Ask · Transfer · Build · Captain). *The entrypoint's
+- **Multipage** — `Home.py` (the landing) + `pages/1_Players … 8_My_Squad.py`; Streamlit builds the sidebar
+  nav (Home · Players · Fixtures · Squads · Ask · Transfer · Build · Captain · My Squad). *The entrypoint's
   **filename** is the sidebar label* — so the home file is `Home.py` (not `app.py`).
 - **Widgets, not markup** — `st.dataframe` (sortable/searchable), `st.multiselect`/`st.slider`/
   `st.number_input` (live filters + controls), `st.bar_chart`/`st.scatter_chart` (native charts, no
@@ -102,6 +102,14 @@ if prompt:
   `squad_picker` + upload validation; a committed `data/seed_squads.json` **demo** (a `config.SQUADS_PATH`
   fallback, like `seed.db`) means the pages aren't empty on a first visit. **The web never writes**
   server-side — a test scans both edges for `.save(` — so the DB/squads stay read-only.
+- **Editing the squad — session-only, no server writes (ADR-055)** — the active squad is **editable** in
+  `session_state`: **rename**, **apply a transfer** (Transfer), **swap any player** / set the **bench**
+  (My Squad), **set a captain** (Captain → `(C)`). Every edit goes through a **mutation helper**
+  (`rename`/`apply_transfer`/`set_bench`/`set_captain`) that edits a *copy*, recomputes cost, and clears a
+  departed captain — pages never touch the dict inline, so the logic can't drift. Legality is one generic
+  core function, **`squad_15_issues`** (positions + ≤3/club are hard; **budget is a soft warning at the
+  edge**, never a block — prices drift). `name`/`captain_id` are harmless **superset** keys on the CLI
+  `SquadStore` dict (validated on upload). Download still = your save; nothing is written server-side.
 - **`AppTest`** — `from streamlit.testing.v1 import AppTest` runs a page headlessly for tests (set inputs,
   assert output); no live server (`tests/test_web_streamlit.py`).
 - **The run quirk** — `streamlit run` puts the *script's* folder on `sys.path`, not the project root. The
@@ -132,5 +140,6 @@ python -m src.web                   # the frozen FastAPI edge → http://127.0.0
 - [ADR-052 — The Streamlit edge structure](../06_Decisions/ADR-052-streamlit-edge-structure.md)
 - [ADR-053 — Deploy & share (Streamlit Community Cloud)](../06_Decisions/ADR-053-deploy-streamlit-community-cloud.md)
 - [ADR-054 — Cloud squads (session + files)](../06_Decisions/ADR-054-cloud-squads-session-and-files.md)
+- [ADR-055 — An editable session squad](../06_Decisions/ADR-055-editable-session-squad.md)
 - [ADR-002 — UI Approach](../06_Decisions/ADR-002-ui-approach.md) (why it waited)
 - [Architecture §3 (the two edges) + §12 changelog](../03_Architecture/Architecture.md)

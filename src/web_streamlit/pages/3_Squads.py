@@ -46,4 +46,5 @@ else:
         gameweeks=ranked[0]["gameweeks"] if ranked else [],
         weight_by_id={r["id"]: r["minutes_weight"] for r in ranked},
     )
-    st.code(render_squad_analysis(analysis, squad_name, show_xmins=True), language=None)
+    st.code(render_squad_analysis(analysis, squad_name, show_xmins=True,
+                                  captain_id=squad.get("captain_id")), language=None)
