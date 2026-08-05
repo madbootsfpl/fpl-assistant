@@ -86,7 +86,8 @@ def render_loaded_squad(name, saved, loaded, now_cost, departed) -> str:
 
 
 def render_squad(
-    result, budget: float = 80.0, objective: str = "points", full: bool = False, xi_ids=None
+    result, budget: float = 80.0, objective: str = "points", full: bool = False, xi_ids=None,
+    bench_boost: bool = False,
 ) -> str:
     # `full` picks the 15-man squad; otherwise a starting XI. Only the wording and the
     # trailing caveat differ — the table is the same.
@@ -188,6 +189,8 @@ def render_squad(
         else:
             lines.append(f"Starters ({len(starters)}){xi_shape}: "
                          f"{sum(p['total_points'] for p in starters)} pts")
+    if bench_boost:
+        lines.append("Bench Boost: all 15 score this week — your total is the whole squad's xP.")
 
     any_bench = bool(bench)
     legend = []

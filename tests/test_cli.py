@@ -228,6 +228,14 @@ def test_squad_archetype_flags_are_parsed():
     assert plain.cheap is None and plain.premium is None and plain.differential is None
 
 
+def test_squad_bench_mode_flags_are_parsed_and_mutually_exclusive():
+    # ADR-045: --weekly / --bench-boost are bench-aware modes and can't be used together.
+    assert build_parser().parse_args(["squad", "--full", "--weekly"]).weekly is True
+    assert build_parser().parse_args(["squad", "--full", "--bench-boost"]).bench_boost is True
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["squad", "--full", "--weekly", "--bench-boost"])
+
+
 def test_squad_defaults_to_objective_xp():
     # ADR-041: xp (forward-looking, the metric transfer/analyse use) is the default, so a squad
     # built by default is consistent with transfer; --objective points is the season-total view.

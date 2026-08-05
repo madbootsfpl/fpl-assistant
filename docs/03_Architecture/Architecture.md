@@ -452,6 +452,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 045 (2026-08-05)** — *bench-aware squad optimisation*, per ADR-045, from the owner (valuable
+  for rotation + Bench Boost). `select_squad(bench_weight=W)` adds a `start[i]` binary per player (a legal
+  XI within `XI_FLEX`) and maximises `Σ xp·start + W·xp·(pick−start)`, flagging non-starters `bench` —
+  **byte-identical when `W` is None**. **`--weekly`** (`W = 0.1`) builds a strong XI (+7.6 xP) with a
+  cheap-but-playing bench (rotation cover); **`--bench-boost`** is the default max-15 (all 15 score) with
+  an "all 15 score" note (its arbitrary-XI weight-1.0 form was dropped). `ask "build me a squad for
+  rotation / for a bench boost"` picks the mode (`_bench_mode`); `build_squad` moved before `start_bench`
+  in routing so "bench boost" isn't caught by "bench". The bench-aware build *designates* its XI (an exact
+  breakout, saveable). No new dependency.
 - **Sprint 044 (2026-08-05)** — *XI vs bench xP breakout* (a squad-build display completion; no new ADR,
   under ADR-031/041), from the owner's Sprint-43 note. `render_squad` gained an `xi_ids` param: it splits
   the 15 into XI + bench and, under `--objective xp`, prints **`Starting XI (11): projected N xP`** +

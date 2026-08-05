@@ -8,10 +8,12 @@ contract, and assembling a result (narrated vs degraded vs unrecognised).
 import types
 
 from src import ask
+from src.analytics import WEEKLY_BENCH_WEIGHT
 from src.ask import (
     AskResult,
     _analyse_facts,
     _archetype_counts,
+    _bench_mode,
     _build_prompt,
     _captain_facts,
     _decide_compare,
@@ -170,6 +172,18 @@ def test_archetype_counts_parses_low_cost_premium_and_differential():
 def test_routes_multifaceted_build_to_build_squad():
     q = "build me a squad for £100m with 3 low cost players and 1 premium player"
     assert route(q, known_squads=[])[0] == "build_squad"    # 'build' wins over 'players'/'premium'
+
+
+def test_bench_mode_parses_boost_and_rotation():
+    # ADR-045: "bench boost" → the max-15; "rotation"/"weekly" → a bench-aware XI; else default.
+    assert _bench_mode("build me a squad for a bench boost") == (None, True)
+    assert _bench_mode("build a team for rotation") == (WEEKLY_BENCH_WEIGHT, False)
+    assert _bench_mode("build me a squad for £100m") == (None, False)
+
+
+def test_bench_boost_build_routes_to_build_squad_not_start_bench():
+    # 'build' must win over 'bench' — else a bench-boost build hits the start/bench intent.
+    assert route("build me a squad for a bench boost", known_squads=[])[0] == "build_squad"
 
 
 def test_verify_grounding_handles_a_pound_sign_in_the_facts():

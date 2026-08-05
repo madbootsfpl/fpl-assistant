@@ -708,3 +708,37 @@ def test_render_squad_no_xi_breakout_for_non_xp_objectives():
         "total_points": 88, "total_cost": 5.0}
     out = render_squad(result, budget=100, objective="points", full=True)
     assert "88" in out and "Starting XI" not in out
+
+
+# ---- bench-aware optimisation (ADR-045, US-134) -----------------------------
+
+def test_bench_aware_designates_a_legal_xi_and_a_four_man_bench():
+    from collections import Counter
+    pool = squad_pool()                                   # enough for a full 2/5/5/3
+    scores = {p["id"]: p["total_points"] for p in pool}
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, bench_weight=0.1)
+
+    assert result["status"] == "Optimal" and len(result["selected"]) == 15
+    starters = [p for p in result["selected"] if not p["bench"]]
+    bench = [p for p in result["selected"] if p["bench"]]
+    assert len(starters) == 11 and len(bench) == 4        # the ILP designates the split
+    c = Counter(p["position"] for p in starters)          # …and the XI is a legal shape
+    assert c["GK"] == 1 and 3 <= c["DEF"] <= 5 and 2 <= c["MID"] <= 5 and 1 <= c["FWD"] <= 3
+
+
+def test_bench_aware_benches_the_weaker_of_two_keepers():
+    # Exactly 2 GK, so both are picked but only 1 starts; bench-aware benches the lower-scoring one.
+    pool = [x for x in squad_pool() if x["position"] != "GK"]
+    pool += [p(100, "GK", 4.0, 50), p(101, "GK", 4.0, 1)]
+    scores = {x["id"]: x["total_points"] for x in pool}
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, bench_weight=0.1)
+    picked = {x["id"]: x for x in result["selected"]}
+    assert not picked[100]["bench"] and picked[101]["bench"]   # strong starts, weak benches
+
+
+def test_bench_weight_none_designates_no_bench():
+    # Without bench_weight the objective is the whole-squad total — no XI designation (ADR-045).
+    pool = squad_pool()
+    scores = {p["id"]: p["total_points"] for p in pool}
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores)
+    assert not any(p["bench"] for p in result["selected"])

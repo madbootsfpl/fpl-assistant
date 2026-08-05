@@ -23,6 +23,10 @@ MAX_PER_CLUB = 3
 LOW_COST_MAX = 4.5              # ≤ this is a "low-cost" / budget enabler (the bench-fodder tier)
 PREMIUM_MIN = 9.0              # ≥ this is a "premium" (the elite few)
 DIFFERENTIAL_MAX_OWNERSHIP = 5.0   # ≤ this % owned is a "differential" (off-template; ADR-044)
+# Bench-aware objective weight (ADR-045): how much a bench player's score counts vs a starter's.
+# `--weekly` uses this; `--bench-boost` is just the default max-15 build (all 15 score under the chip),
+# so it needs no separate weight — it keeps the best-XI display + an "all 15 score" note.
+WEEKLY_BENCH_WEIGHT = 0.1      # a strong XI + a cheap, still-playing bench (rotation cover)
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
@@ -113,6 +117,7 @@ def select_squad(
     size=None,
     band_minimums=None,
     min_differentials=None,
+    bench_weight=None,
 ) -> dict:
     """Pick the starting XI that maximises a per-player score under the constraints.
 
@@ -125,6 +130,11 @@ def select_squad(
     `status`, the `selected` players (each flagged `forced` and `bench`), and
     `total_points` / `total_cost`. If no legal squad fits, `status` is not "Optimal" and
     `selected` is empty.
+
+    `bench_weight` (ADR-045) makes a full-15 build **bench-aware**: the solver also designates the
+    starting XI (a legal shape) and maximises `Σ score·start + bench_weight·score·bench`, marking
+    non-starters `bench`. `0.1` (`--weekly`) builds a strong XI with a cheap-but-playing bench; `1.0`
+    (`--bench-boost`) is the max-15. None → the whole-squad objective above (byte-identical).
     """
     include_set = set(include_ids)
     bench_set = set(bench_ids)
@@ -141,8 +151,27 @@ def select_squad(
         # One binary decision per player: 1 = picked, 0 = not.
         pick = {p["id"]: pulp.LpVariable(f"pick_{p['id']}", cat="Binary") for p in players}
 
-        # Objective: maximise the chosen per-player score.
-        problem += pulp.lpSum(scores.get(p["id"], 0.0) * pick[p["id"]] for p in players)
+        if bench_weight is None:
+            # Objective: maximise the chosen per-player score (the whole squad counts equally).
+            problem += pulp.lpSum(scores.get(p["id"], 0.0) * pick[p["id"]] for p in players)
+            start = None
+        else:
+            # Bench-aware (ADR-045): also choose which 11 START (a legal XI), and maximise the
+            # XI's score plus `bench_weight` × the bench's — so `--weekly` (w≈0.1) builds a strong
+            # XI with a cheap-but-playing bench; `--bench-boost` (w=1) reduces to the max-15 above.
+            start = {p["id"]: pulp.LpVariable(f"start_{p['id']}", cat="Binary") for p in players}
+            problem += pulp.lpSum(
+                scores.get(p["id"], 0.0)
+                * (start[p["id"]] + bench_weight * (pick[p["id"]] - start[p["id"]]))
+                for p in players
+            )
+            for p in players:
+                problem += start[p["id"]] <= pick[p["id"]]        # can't start who you didn't pick
+            problem += pulp.lpSum(start.values()) == 11            # a full XI
+            for position, (lo, hi) in XI_FLEX.items():             # …in a legal shape
+                xi_pos = pulp.lpSum(start[p["id"]] for p in players if p["position"] == position)
+                problem += xi_pos >= lo
+                problem += xi_pos <= hi
 
         # Budget.
         problem += pulp.lpSum(p["price"] * pick[p["id"]] for p in players) <= budget
@@ -202,7 +231,10 @@ def select_squad(
         if pick[p["id"]].value() > 0.5:
             row = dict(p)
             row["forced"] = p["id"] in include_set
-            row["bench"] = p["id"] in bench_set
+            # Bench-aware (ADR-045) designates the bench (picked but not started); otherwise the
+            # declared bench (ADR-013).
+            row["bench"] = (start[p["id"]].value() < 0.5) if start is not None \
+                else (p["id"] in bench_set)
             selected.append(row)
     # Bench players sort to the end; within each group, by position then points. With no
     # bench declared the `bench` key is constant-False, so the order is unchanged.

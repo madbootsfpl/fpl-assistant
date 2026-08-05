@@ -49,3 +49,4 @@ new ADR as it is created.
 | [042](./ADR-042-shortlist-intent.md) | A "best players" shortlist `ask` intent — `best <position> [under £X]` ranked by xP (or xP/£m for "value"); grounded | Accepted |
 | [043](./ADR-043-squad-archetype-constraints.md) | Squad archetypes — min-count price-band constraints in the optimiser (`--cheap`/`--premium`, NL); differential defined + deferred (needs ownership) | Accepted |
 | [044](./ADR-044-differential-archetype.md) | The differential archetype — ingest ownership; a ≤5%-owned min-count constraint (`--differential N`, NL); completes ADR-043 | Accepted |
+| [045](./ADR-045-bench-aware-optimisation.md) | Bench-aware squad optimisation — a `start`-variable ILP + weighted objective; `--weekly` (max XI + playing bench) / `--bench-boost` (max-15); default unchanged | Accepted |

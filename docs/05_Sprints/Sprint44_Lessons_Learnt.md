@@ -106,7 +106,7 @@ best XI via `best_legal_xi` — so build iterations compare on the weekly-releva
 
 # Things That Surprised Me 💡 _(for Tony)_
 
--
+- How good is this now!
 
 ---
 

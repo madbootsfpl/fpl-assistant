@@ -106,6 +106,8 @@ python app.py squad --full --cheap 3 --premium 1  # shape it: ≥3 low-cost (≤
 python app.py squad --full --differential 3       # ≥3 off-template picks (≤5% owned)
                                                   #   (a full build shows Starting XI xP vs Bench xP —
                                                   #    the weekly-relevant number for comparing builds)
+python app.py squad --full --weekly               # bench-aware: maximise the XI + a cheap playing bench
+python app.py squad --full --bench-boost          # maximise all 15 (the Bench Boost chip week)
 python app.py squad --full --include <4 cheap>  # the full 15-man squad (2/5/5/3, £100m); you pick the bench
 python app.py squad --bench Dubravka Diop        # declare your bench (marked **, shown last); implies --full
 python app.py squad --formation 3-5-2            # pin the XI shape (default: the best legal formation)
@@ -131,6 +133,8 @@ python app.py ask "who should I start from my-team?"   # best legal XI (xMins-we
 python app.py ask "Haaland or Saka?"                   # compare two players side by side
 python app.py ask "build me a squad for £100m"         # the optimal 15 on xP, within budget
 python app.py ask "build me a squad for £100m with 3 low cost players and 1 premium player"
+python app.py ask "build me a squad for rotation"      # bench-aware (strong XI + playing bench)
+python app.py ask "build me a squad for a bench boost" # maximise all 15
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
 ```
 

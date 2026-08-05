@@ -17,6 +17,7 @@ from src import llm
 from src.analytics import (
     FULL_BUDGET,
     SQUAD_15,
+    WEEKLY_BENCH_WEIGHT,
     analyse_squad,
     archetype_bands,
     available_players,
@@ -46,9 +47,10 @@ _INTENT_KEYWORDS = {
     "captain": ("captain", "armband"),
     "transfer": ("transfer", "sell", "buy", "swap"),
     "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
-    "start_bench": ("start", "bench", "lineup", "line-up"),
+    # build_squad before start_bench so "build me a squad for a bench boost" isn't caught by "bench".
     "build_squad": ("build", "wildcard", "best squad", "best team", "best xi", "new squad",
                     "new team", "pick a squad", "pick a team"),
+    "start_bench": ("start", "bench", "lineup", "line-up"),
     "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
                   "best value", "best players"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
@@ -446,9 +448,24 @@ def _archetype_counts(question: str) -> tuple:
             count("premium"), count("differential"))
 
 
+def _bench_mode(question: str) -> tuple:
+    """(bench_weight, is_bench_boost) from a build request (ADR-045).
+
+    "bench boost" → the max-15 (all 15 score); "rotation"/"weekly" → a bench-aware XI (w = 0.1,
+    a strong XI + a cheap playing bench); else the default.
+    """
+    ql = question.lower()
+    if "bench boost" in ql or "benchboost" in ql:
+        return None, True
+    if "rotation" in ql or "weekly" in ql:
+        return WEEKLY_BENCH_WEIGHT, False
+    return None, False
+
+
 def _decide_build_squad(store: Storage, question: str) -> dict | None:
-    """Analytics BUILD the squad (ADR-041/043/044): the optimal 15 on the unified xP, within budget,
-    honouring any requested archetypes (≥N low-cost / ≥M premium / ≥K differential ≤5% owned)."""
+    """Analytics BUILD the squad (ADR-041/043/044/045): the optimal 15 on the unified xP, within
+    budget, honouring any requested archetypes (≥N low-cost / ≥M premium / ≥K differential) and the
+    bench mode ("for rotation" → a strong XI + playing bench; "for a bench boost" → the max-15)."""
     players = store.get_players()
     if not players:
         return None
@@ -456,13 +473,15 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
     cheap, premium, differential = _archetype_counts(question)
     bands = archetype_bands(cheap=cheap, premium=premium)
     constrained = bool(bands) or bool(differential)
+    bench_weight, bench_boost = _bench_mode(question)
     upcoming = store.get_upcoming_fixtures()
     ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     pool, _excluded = available_players(players)          # exclude injured/suspended (as `squad` does)
     result = select_squad(pool, budget=budget, formation=SQUAD_15, scores=xp_by_id,
-                          band_minimums=bands, min_differentials=differential)
+                          band_minimums=bands, min_differentials=differential,
+                          bench_weight=bench_weight)
     if result["status"] != "Optimal":
         want = (f" with {cheap or 0} low-cost, {premium or 0} premium and {differential or 0} "
                 "differential") if constrained else ""
@@ -475,8 +494,10 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
     top = sorted(picks, key=lambda p: -xp_by_id.get(p["id"], 0))[:3]
 
-    # US-131/132: the XI/bench xP breakout — the weekly-relevant number, so builds compare.
-    xi_ids = best_legal_xi(picks, xp_by_id)
+    # US-131/132: the XI/bench xP breakout. A bench-aware build (ADR-045) already designated the XI;
+    # else derive the best legal XI. Either way, the split is the comparison number.
+    xi_ids = ({p["id"] for p in picks if not p["bench"]} if bench_weight is not None
+              else best_legal_xi(picks, xp_by_id))
     xi_xp = round(sum(xp_by_id.get(pid, 0) for pid in xi_ids), 1)
     bench_xp = round(sum(xp_by_id.get(p["id"], 0) for p in picks if p["id"] not in xi_ids), 1)
 
@@ -492,7 +513,8 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         facts["requested_structure"] = (f"at least {cheap or 0} low-cost, {premium or 0} premium "
                                         f"and {differential or 0} differential players")
     return {
-        "detail": render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids),
+        "detail": render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids,
+                               bench_boost=bench_boost),
         "facts": facts,
         "subjects": [p["web_name"] for p in picks],
         "task": "in 2 short sentences, state the starting XI's projected points and name a couple of "

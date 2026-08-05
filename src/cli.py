@@ -15,6 +15,7 @@ from src.analytics import (
     DEFAULT_BUDGET,
     FULL_BUDGET,
     SQUAD_15,
+    WEEKLY_BENCH_WEIGHT,
     XI_FLEX,
     analyse_squad,
     archetype_bands,
@@ -252,9 +253,15 @@ def cmd_squad(args) -> None:
         errors.append(f"Cannot both include and exclude: {names}.")
     errors += validate_bench(bench_ids, include_ids, exclude_ids)
 
-    # A declared bench implies the full squad — an XI has no bench (ADR-013).
-    full = args.full or bool(args.bench)
+    # A declared bench, --weekly or --bench-boost all imply the full squad (ADR-013/045).
+    full = args.full or bool(args.bench) or args.weekly or args.bench_boost
     budget = resolve_squad_budget(args.budget, full)
+    # Bench-aware objective (ADR-045): --weekly maximises the XI (cheap playing bench). --bench-boost
+    # is just the default max-15 build (all 15 score under the chip) with an "all 15 score" note.
+    # Both imply --full and are incompatible with a declared bench (which pins the split itself).
+    bench_weight = WEEKLY_BENCH_WEIGHT if args.weekly else None
+    if (args.weekly or args.bench_boost) and args.bench:
+        errors.append("--weekly/--bench-boost can't be combined with --bench (it declares the bench).")
 
     # Choose the formation (ADR-014): the full squad is a fixed 2/5/5/3; the XI is a
     # pinned shape (--formation) or, by default, flexible (the solver picks the best).
@@ -300,6 +307,7 @@ def cmd_squad(args) -> None:
             pool, budget=budget, formation=formation, size=size,
             include_ids=include_ids, exclude_ids=exclude_ids, bench_ids=bench_ids,
             scores=scores, band_minimums=bands, min_differentials=args.differential,
+            bench_weight=bench_weight,
         )
         if result["status"] != "Optimal" and (bands or args.differential):
             print(
@@ -313,11 +321,12 @@ def cmd_squad(args) -> None:
             for p in result["selected"]:
                 p["xp"] = scores.get(p["id"], 0)
                 p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
-            # US-131: with no declared bench, auto-derive the best XI for the XI/bench xP breakout
-            # (display-only — the saved bench is unaffected). A declared bench drives its own split.
-            if full and not bench_ids:
+            # US-131: with no declared bench (and not bench-aware, which designates its own bench),
+            # auto-derive the best XI for the breakout — display-only, the saved bench is unaffected.
+            if full and not bench_ids and bench_weight is None:
                 xi_ids = best_legal_xi(result["selected"], scores)
-        print(render_squad(result, budget=budget, objective=args.objective, full=full, xi_ids=xi_ids))
+        print(render_squad(result, budget=budget, objective=args.objective, full=full,
+                           xi_ids=xi_ids, bench_boost=args.bench_boost))
 
         # Save the computed squad (ADR-024) — the picks (ids + names) + bench, to reload later.
         if args.save and result["status"] == "Optimal":
@@ -857,6 +866,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_squad.add_argument(
         "--differential", type=int, metavar="N",
         help="Require at least N differential (≤5%% owned) players — off-template picks (ADR-044)",
+    )
+    p_bench_mode = p_squad.add_mutually_exclusive_group()
+    p_bench_mode.add_argument(
+        "--weekly", action="store_true",
+        help="Bench-aware build: maximise the starting XI with a cheap, still-playing bench (ADR-045)",
+    )
+    p_bench_mode.add_argument(
+        "--bench-boost", action="store_true", dest="bench_boost",
+        help="Bench-aware build: maximise all 15 (the Bench Boost chip week)",
     )
     p_squad.add_argument(
         "--include-unavailable", action="store_true", dest="include_unavailable",
