@@ -1,5 +1,9 @@
 # The project itself (editable) — so `import src` resolves under `streamlit run` on Community Cloud,
 # where the script's folder (not the project root) is on sys.path (ADR-053; pyproject.toml).
+# NOTE: Community Cloud caches the env and only reinstalls `-e .` when THIS FILE changes. When a deploy
+# imports stale `src` symbols after a source-only change, bump the rebuild token below to force a clean
+# reinstall (Sprint 058: new symbols weren't picked up until this was bumped).
+# rebuild-token: 2026-08-05-01
 -e .
 
 # Runtime dependencies
