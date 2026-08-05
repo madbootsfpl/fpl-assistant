@@ -8,7 +8,7 @@ tested elsewhere — here we test the mode selection, the hardest reversal, and 
 import types
 
 from src import ask
-from src.ask import _fixture_horizon, _match_team, route
+from src.ask import _fixture_horizon, _match_team, _squad_name, route
 
 _TEAMS = [
     {"name": "Arsenal", "short_name": "ARS"},
@@ -99,3 +99,67 @@ def test_decide_fixtures_ambiguous_team_asks_to_clarify():
 def test_decide_fixtures_no_fixtures_returns_none():
     store = types.SimpleNamespace(get_upcoming_fixtures=lambda: [], get_teams=lambda: _TEAMS)
     assert ask._decide_fixtures(store, "best fixtures?") is None
+
+
+# ---- squad-scoped mode (ADR-049) --------------------------------------------
+
+def test_squad_name_is_possessive_aware():
+    # the gate bug: "TS's" is one token — must still resolve to the saved squad "TS"
+    assert _squad_name("which of TS's players have the best fixtures?", ["TS"]) == "TS"
+    assert _squad_name("TS's fixtures", ["TS"]) == "TS"
+    assert _squad_name("fixtures for TS", ["TS"]) == "TS"           # plain still works
+    assert _squad_name("who plays this weekend", ["TS"]) is None    # no squad → None
+
+
+_SQUAD_FDR = [
+    {"team": "LIV", "games": 5, "avg_difficulty": 2.6, "opponents": ["NEW", "NFO"]},
+    {"team": "BOU", "games": 5, "avg_difficulty": 3.6, "opponents": ["MCI", "EVE"]},
+]
+_SQUAD_PLAYERS = [
+    {"id": 1, "web_name": "Salah", "team": "LIV"},
+    {"id": 2, "web_name": "Semenyo", "team": "BOU"},
+    {"id": 3, "web_name": "VVD", "team": "LIV"},
+]
+
+
+def _squad_store(get_players=None):
+    return types.SimpleNamespace(
+        get_upcoming_fixtures=lambda: [object()],
+        get_teams=lambda: _TEAMS,
+        get_players=lambda: get_players if get_players is not None else _SQUAD_PLAYERS,
+    )
+
+
+def test_decide_fixtures_squad_mode_ranks_players_by_their_team(monkeypatch):
+    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask, "SquadStore",
+                        lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [1, 2, 3]}))
+    d = ask._decide_fixtures(_squad_store(), "which of TS's players have the best fixtures?", "TS")
+    assert d["subjects"][:2] == ["Salah", "VVD"]        # both LIV (2.6) ahead of BOU (3.6)
+    assert d["subjects"][-1] == "Semenyo"
+    assert "Salah" in d["detail"] and "LIV" in d["detail"]
+    assert "Salah" in d["facts"]["players"][0]
+
+
+def test_decide_fixtures_squad_mode_hardest_reverses(monkeypatch):
+    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask, "SquadStore",
+                        lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [1, 2, 3]}))
+    d = ask._decide_fixtures(_squad_store(), "which of TS's players have the hardest fixtures?", "TS")
+    assert d["subjects"][0] == "Semenyo"                # BOU 3.6 first when hardest
+
+
+def test_decide_fixtures_a_named_team_beats_a_squad(monkeypatch):
+    # precedence: a specific team → its schedule, even with a squad also named
+    monkeypatch.setattr(ask, "team_schedule", lambda up, team, source="fpl": [
+        {"event": 1, "opponent": "COV", "venue": "H", "difficulty": 2}])
+    d = ask._decide_fixtures(_squad_store(get_players=[]), "Arsenal fixtures for TS", "TS")
+    assert d["subjects"] == ["ARS"]                     # schedule mode, not squad mode
+
+
+def test_decide_fixtures_squad_with_no_current_players(monkeypatch):
+    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask, "SquadStore",
+                        lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [99]}))
+    d = ask._decide_fixtures(_squad_store(), "fixtures for TS", "TS")   # id 99 not in players
+    assert "no current players" in d["message"]

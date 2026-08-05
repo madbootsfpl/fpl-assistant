@@ -186,6 +186,19 @@ router keyword. Two lessons:
   it's ambiguous or finds nothing, it says so rather than picking one. Same rule as `compare` (ADR-039):
   a wrong-but-confident answer is worse than "which team did you mean?".
 
+**A third mode, chosen by precedence (Sprint 049, squad-scoped fixtures).** ADR-049 added *"which of my
+players have good fixtures?"* — the squad-relative view a manager reads before a move. It's the same
+`fixtures` intent with a **precedence** ladder inside one decision function: a specific **team** → its
+schedule; else a saved **squad** → rank that squad's players by their team's FDR; else the **league**
+ranking. Two lessons:
+- **A new mode can be a join, not an engine.** Squad-scoped fixtures is *player → its team's `team_fdr` →
+  sort* — a join over the existing ranking, plus a small renderer. Again the cheapest feature was the one
+  that reused what was there.
+- **Verify the routing on the real phrasing.** The planning probe caught that *"which of **TS's**
+  players…"* routed with no squad — the possessive `TS's` is one token, so `_squad_name` never matched
+  `TS`. A one-line fix (strip a trailing `'s`) rescued the most natural phrasing *and* every other
+  squad-scoped intent. The lesson that keeps paying: run the exact words a user would type.
+
 **A recommendation over a *sequence* (Sprint 033, multi-transfer plan).** `suggest_transfer_plan`
 (ADR-035) is the first that reasons across several moves: *"which 3 transfers?"*. The lesson is to
 **reuse the single-move engine over an evolving state** rather than write a new optimiser — a greedy

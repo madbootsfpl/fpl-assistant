@@ -38,7 +38,7 @@ from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.compare import render_compare
 from src.ui.fdr import render_fdr_table
-from src.ui.fixtures import render_team_fixtures
+from src.ui.fixtures import render_squad_fixtures, render_team_fixtures
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
@@ -98,9 +98,13 @@ def _squad_name(question: str, known_squads) -> str | None:
 
     Matching against *known* names (not a preposition) is robust to phrasing — "for TS",
     "from TS", "analyse TS" all work — and it won't mistake a stray word ("for the weekend")
-    for a squad, so captaincy's global mode still works.
+    for a squad, so captaincy's global mode still works. Possessive-aware (ADR-049): "TS's
+    players" resolves to "TS", so the natural squad-scoped phrasing routes.
     """
-    tokens = set(question.replace("?", "").split())
+    tokens = set()
+    for raw in question.replace("?", "").split():
+        tokens.add(raw)
+        tokens.add(re.sub(r"['’]s$", "", raw).strip(".,!;:'’\""))   # "TS's" → "TS", "TS." → "TS"
     return next((name for name in known_squads if name in tokens), None)
 
 
@@ -703,21 +707,27 @@ def _fixture_horizon(question: str) -> int:
     return max(1, min(int(m.group(1)), 38)) if m else 5
 
 
-def _decide_fixtures(store: Storage, question: str) -> dict | None:
-    """Analytics answer a fixtures question (ADR-048): a team's schedule, or the league FDR ranking.
+def _decide_fixtures(store: Storage, question: str, squad: str | None = None) -> dict | None:
+    """Analytics answer a fixtures question (ADR-048/049): a team's schedule, a saved squad's
+    players ranked by their fixture run, or the league FDR ranking.
 
-    Grounded on FPL difficulty; reuses `team_fdr` / `team_schedule` + their renderers. A team named
-    → its schedule; otherwise the league ranking (easiest by default, hardest on a 'hard' cue).
+    Grounded on FPL difficulty; reuses `team_fdr` / `team_schedule` + their renderers. Precedence:
+    a specific team named → its schedule; else a saved squad named → the squad-scoped ranking; else
+    the league ranking (easiest by default, hardest on a 'hard' cue).
     """
     upcoming = store.get_upcoming_fixtures()
     if not upcoming:
         return None
     horizon = _fixture_horizon(question)
+    hardest = any(w in question.lower() for w in _HARDEST_WORDS)
     match = _match_team(question, store.get_teams())
 
     if isinstance(match, list):                          # two+ teams named → clarify, don't guess
         return {"message": f"More than one team matches — did you mean {', '.join(match)}? "
                            "Please name just one."}
+
+    if not match and squad:                              # a saved squad → its players' fixture runs
+        return _decide_squad_fixtures(store, squad, upcoming, horizon, hardest)
 
     if match:                                            # a single team → its schedule
         schedule = team_schedule(upcoming, match, source="fpl")[:horizon]
@@ -740,11 +750,10 @@ def _decide_fixtures(store: Storage, question: str) -> dict | None:
                     "favourable the run is, naming a couple of opponents",
         }
 
-    # no team → the league FDR ranking (team_fdr is easiest-first; reverse for hardest)
+    # no team, no squad → the league FDR ranking (team_fdr is easiest-first; reverse for hardest)
     ranked = team_fdr(upcoming, next_n=horizon, source="fpl")
     if not ranked:
         return None
-    hardest = any(w in question.lower() for w in _HARDEST_WORDS)
     rows = list(reversed(ranked))[:_FIXTURES_N] if hardest else ranked[:_FIXTURES_N]
     which = "hardest" if hardest else "easiest"
     return {
@@ -757,6 +766,42 @@ def _decide_fixtures(store: Storage, question: str) -> dict | None:
         "subjects": [r["team"] for r in rows],
         "task": f"in 2 short sentences, say which teams have the {which} fixtures over the next "
                 f"{horizon} gameweeks (name a couple)",
+    }
+
+
+def _decide_squad_fixtures(store: Storage, squad: str, upcoming, horizon: int,
+                           hardest: bool) -> dict | None:
+    """A saved squad's players ranked by their team's fixture run (ADR-049): a join (player → its
+    team's FDR) + a sort. Grounded per player; easiest by default, hardest on a cue."""
+    saved = SquadStore().load(squad)
+    if saved is None:
+        return None
+    by_id = {p["id"]: p for p in store.get_players()}
+    owned = [by_id[i] for i in saved["player_ids"] if i in by_id]   # departed ids drop out
+    if not owned:
+        return {"message": f"Squad '{squad}' has no current players to check."}
+
+    fdr = {r["team"]: r for r in team_fdr(upcoming, next_n=horizon, source="fpl")}
+    rows = [
+        {"web_name": p["web_name"], "team": p["team"],
+         "avg_difficulty": r["avg_difficulty"], "opponents": r["opponents"]}
+        for p in owned
+        if (r := fdr.get(p["team"])) is not None and r["avg_difficulty"] is not None
+    ]
+    if not rows:
+        return None
+    rows.sort(key=lambda x: x["avg_difficulty"], reverse=hardest)
+    which = "hardest" if hardest else "easiest"
+    return {
+        "detail": render_squad_fixtures(rows, squad, next_n=horizon, source="fpl", hardest=hardest),
+        "facts": {
+            "ranking": f"{squad}'s players by their team's {which} fixture run, next {horizon} GWs",
+            "players": [f"{r['web_name']} ({r['team']}, avg difficulty {r['avg_difficulty']}, "
+                        f"next: {', '.join(r['opponents'])})" for r in rows[:5]],
+        },
+        "subjects": [r["web_name"] for r in rows],
+        "task": f"in 2 short sentences, say which of {squad}'s players have the {which} fixtures over "
+                f"the next {horizon} gameweeks (name a couple, with their opponents)",
     }
 
 
@@ -859,7 +904,7 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "shortlist":
         return _decide_shortlist(store, question, rank=rank)
     if intent == "fixtures":
-        return _decide_fixtures(store, question)
+        return _decide_fixtures(store, question, squad)
     return _decide_analyse(store, squad)
 
 

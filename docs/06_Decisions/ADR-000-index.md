@@ -53,3 +53,4 @@ new ADR as it is created.
 | [046](./ADR-046-xi-aware-transfers.md) | XI-aware transfers — rank swaps by XI-gain (best-XI change) via a fast `best_xi_points`; the default (`--raw` for the old ranking) | Accepted |
 | [047](./ADR-047-conversational-ask-follow-ups.md) | Conversational `ask` — a `chat` REPL with grounded follow-ups (why / next / what-about); a pre-route resolver + rank offset; analytics still decide, verifier runs each turn | Accepted |
 | [048](./ADR-048-fixtures-fdr-ask-intent.md) | A fixtures / FDR `ask` intent — league FDR ranking + single-team schedule (reuse `team_fdr`/`team_schedule` + renderers); team resolution never guesses; FPL difficulty; squad-scoped deferred | Accepted |
+| [049](./ADR-049-squad-scoped-fixtures.md) | Squad-scoped fixtures — a third `fixtures` mode: rank a saved squad's **players** by their team's FDR (player-level); precedence team→squad→league; `_squad_name` possessive-aware; works in `ask` + `chat` | Accepted |

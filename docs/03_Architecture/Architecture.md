@@ -452,6 +452,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 049 (2026-08-05)** — *squad-scoped fixtures*, per ADR-049, from the owner (the piece deferred
+  from Sprint 048). The `fixtures` intent gains a **third mode**: name a saved squad and
+  `_decide_fixtures` ranks **that squad's players** by their team's upcoming FDR (player-level: Player ·
+  Team · Avg FDR · Next opponents), easiest default / hardest on a cue — a **join** (player → its team's
+  `team_fdr`) **+ a sort**, no new analytics; rendered by a small dedicated `render_squad_fixtures`.
+  Precedence in `_decide_fixtures`: a specific **team** → its schedule; else a **saved squad** → the
+  squad ranking; else the **league** ranking. A gate-caught bug fixed: **`_squad_name` is now
+  possessive-aware** (strips a trailing `'s`, so *"TS's players"* resolves to TS) — a general win for
+  every squad-scoped intent. Threads the routed `squad` through the fixtures `_dispatch`, so it works in
+  **both `ask` and `chat`**, grounded + verified (ADR-037). Needs a named squad (else league); FPL
+  difficulty; per-player xP × fixtures stays `analyse`'s job. No new dependency.
 - **Sprint 048 (2026-08-05)** — *a fixtures / FDR `ask` intent*, per ADR-048, from the owner (*more Phase
   4*). Closes the biggest routing gap — every fixtures question fell through before — with **no new
   analytics**: a `fixtures` intent reuses `team_fdr` / `team_schedule` (FPL difficulty) and their

@@ -144,6 +144,7 @@ python app.py ask "build me a squad for a bench boost" # maximise all 15
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
 python app.py ask "who has the best fixtures over the next 5?"   # league fixture-difficulty ranking
 python app.py ask "when does Arsenal play next?"       # one team's upcoming fixtures (venue + difficulty)
+python app.py ask "which of my-team's players have the best fixtures?"   # your players by their fixture run
 
 python app.py chat                                     # interactive; follow-ups build on the last answer:
 #   > who should I captain from my-team?
