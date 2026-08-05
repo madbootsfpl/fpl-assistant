@@ -83,15 +83,25 @@ if prompt:
     st.chat_message("assistant").code(render_ask(ask.answer(prompt)))   # grounded + trust line
 ```
 
-- **Multipage** — `Home.py` (the landing) + `pages/1_Players … 6_Build.py`; Streamlit builds the sidebar
-  nav (Home · Players · Fixtures · Squads · Transfer · Build · Ask). *The entrypoint's **filename** is the
-  sidebar label* — so the home file is `Home.py` (not `app.py`).
+- **Multipage** — `Home.py` (the landing) + `pages/1_Players … 7_Captain.py`; Streamlit builds the sidebar
+  nav (Home · Players · Fixtures · Squads · Ask · Transfer · Build · Captain). *The entrypoint's
+  **filename** is the sidebar label* — so the home file is `Home.py` (not `app.py`).
 - **Widgets, not markup** — `st.dataframe` (sortable/searchable), `st.multiselect`/`st.slider`/
   `st.number_input` (live filters + controls), `st.bar_chart`/`st.scatter_chart` (native charts, no
   charting library), `st.column_config.ImageColumn` (player photos + team badges, from the stored
   `code`s), `st.chat_input`/`st.chat_message` (a chat) — interactivity with no HTML/JS.
-- **Pages are sliders wired to the engine** — Transfer (`suggest_transfers`) and Build (the `build_squad`
-  `ask` intent) reuse the *same* functions the CLI does, so the web can't drift from the CLI's logic.
+- **Pages are sliders wired to the engine** — Build (`select_squad`), Transfer (`suggest_transfers`),
+  Analyse (`analyse_squad`) and Captain (`captain_picks`) reuse the *same* functions the CLI does, so the
+  web can't drift from the CLI's logic.
+- **Cloud squads — per-user, no server (ADR-054)** — Community Cloud's disk is ephemeral **and** shared
+  across users, so there's nowhere safe to save. Instead: a session **"active squad"** in
+  `st.session_state["squad"]`, set by **building** (Build → *Download* a `squad.json` + *Use this squad*)
+  or **uploading** one. **Download = your save** (`st.download_button`); **Upload = load**
+  (`st.file_uploader`, sidebar). The file is the CLI `SquadStore` `{name: squad}` shape, so it's
+  interoperable. A tiny edge module `src/web_streamlit/squads.py` holds the state + a demo/session
+  `squad_picker` + upload validation; a committed `data/seed_squads.json` **demo** (a `config.SQUADS_PATH`
+  fallback, like `seed.db`) means the pages aren't empty on a first visit. **The web never writes**
+  server-side — a test scans both edges for `.save(` — so the DB/squads stay read-only.
 - **`AppTest`** — `from streamlit.testing.v1 import AppTest` runs a page headlessly for tests (set inputs,
   assert output); no live server (`tests/test_web_streamlit.py`).
 - **The run quirk** — `streamlit run` puts the *script's* folder on `sys.path`, not the project root. The
@@ -120,5 +130,7 @@ python -m src.web                   # the frozen FastAPI edge → http://127.0.0
 - [ADR-050 — A thin web UI (FastAPI)](../06_Decisions/ADR-050-thin-web-ui.md)
 - [ADR-051 — The web track: adopt Streamlit](../06_Decisions/ADR-051-web-track-streamlit.md)
 - [ADR-052 — The Streamlit edge structure](../06_Decisions/ADR-052-streamlit-edge-structure.md)
+- [ADR-053 — Deploy & share (Streamlit Community Cloud)](../06_Decisions/ADR-053-deploy-streamlit-community-cloud.md)
+- [ADR-054 — Cloud squads (session + files)](../06_Decisions/ADR-054-cloud-squads-session-and-files.md)
 - [ADR-002 — UI Approach](../06_Decisions/ADR-002-ui-approach.md) (why it waited)
 - [Architecture §3 (the two edges) + §12 changelog](../03_Architecture/Architecture.md)

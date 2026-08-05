@@ -167,9 +167,16 @@ just another way to look at it. Two edges, both reusing the exact same engine:
 
 **Streamlit** — the interactive UI (ADR-051/052). Multipage (a **Home** landing + a sidebar): **Players**
 (filters, a sortable table with **photos** + a price-vs-points scatter) · **Fixtures** (FDR table with
-**team badges** + a bar chart) · **Squads** (analyse a saved squad) · **Transfer** (squad + bank sliders →
-XI-aware swaps) · **Build** (budget + archetype sliders → the optimal 15) · **Ask** (a **chat** — each
-answer grounded, with its ✓/⚠ trust line; works without Ollama, degrading to the decision + facts).
+**team badges** + a bar chart) · **Squads** (analyse **your squad's** health) · **Transfer** (bank slider →
+XI-aware swaps) · **Build** (budget + archetype sliders → the optimal 15) · **Captain** (who to captain
+this week) · **Ask** (a **chat** — each answer grounded, with its ✓/⚠ trust line; works without Ollama,
+degrading to the decision + facts).
+
+**Your squad, in the browser (ADR-054).** On **Build**, *Download* a `squad.json` (that file *is* your
+save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*; or *Upload*
+one from the sidebar. It's held in the session and used across **Analyse · Transfer · Captain**. A committed
+**demo** squad populates the pages on first visit. Persistence is your own file — no accounts, and the web
+**never writes** server-side (the DB/squads stay read-only), so this works on the multi-user cloud.
 
 ```bash
 pip install -r requirements.txt      # includes streamlit (web-only)

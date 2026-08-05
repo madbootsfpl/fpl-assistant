@@ -46,6 +46,13 @@ nice-to-haves and tech-debt.)*
   read-only, no writes/auth; Ollama absent → degrades to decision + facts, which is fine), and a **gate
   (ADR)** for the deployment + data + security decisions. *Big; high-leverage (unblocks real feedback).*
 
+- **Cloud squads — server-side persistence (Path 2)** — the seamless upgrade to Sprint 057's
+  download/upload squads: a **"Save as `<name>` / Load `<name>`"** backed by a free external DB (e.g.
+  Supabase/Postgres via `st.connection`) + a secret in Streamlit; persistent across sessions/devices, no
+  files to manage. *Needs:* an external DB account, a secret, a persistence adapter, and the first
+  server-side writes; optionally light per-user identity later. Revisit once download/upload friction
+  proves it's worth it.
+
 ### Done (kept for the trail)
 
 - ~~Include / exclude players~~ — **DONE** (Sprint 008, ADR-009).

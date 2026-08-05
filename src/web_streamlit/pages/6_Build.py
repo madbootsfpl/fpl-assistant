@@ -1,16 +1,23 @@
 """Build — the optimal 15 within a budget, shaped by archetypes (ADR-041/043/044), interactively.
 
-The sliders build a plain-English request and hand it to the SAME `build_squad` `ask` intent the CLI/`ask`
-use — so it runs the exact optimiser + archetype constraints + the XI/bench breakout, grounded and
-verified. Zero of an archetype simply drops that constraint.
+Runs the SAME engine the CLI's `squad` command does — `decision_xp` (xMins-weighted xP) → `archetype_bands`
+→ `select_squad` → `best_legal_xi` → `render_squad` — so the web can't drift from the CLI. The structured
+result becomes a **downloadable `squad.json`** (the CLI `SquadStore` format) and can be set as this session's
+**active squad** for Transfer/Analyse/Captain (ADR-054). No server writes — Download *is* your save.
 """
+
+import datetime
+import json
 
 import streamlit as st
 
-from src import ask
-from src.ui.ask import render_ask
+from src.analytics import SQUAD_15, archetype_bands, best_legal_xi, decision_xp, select_squad
+from src.storage import Storage
+from src.ui.squad import render_squad
+from src.web_streamlit.squads import render_sidebar, set_active_squad
 
 st.set_page_config(page_title="Build · FPL Assistant", page_icon="⚽", layout="wide")
+render_sidebar()
 st.title("Build — the optimal 15 within a budget")
 
 col1, col2 = st.columns(2)
@@ -19,17 +26,40 @@ cheap = col2.number_input("Low-cost (≤£4.5m)", min_value=0, max_value=8, valu
 premium = col2.number_input("Premium (≥£9m)", min_value=0, max_value=5, value=0)
 differential = col2.number_input("Differentials (≤5% owned)", min_value=0, max_value=5, value=0)
 
-# Build a plain-English request from the controls — only the archetypes you asked for.
-extras = []
-if cheap:
-    extras.append(f"{cheap} low cost players")
-if premium:
-    extras.append(f"{premium} premium players")
-if differential:
-    extras.append(f"{differential} differentials")
-query = f"build me a squad for £{budget:.0f}m"
-if extras:
-    query += " with " + ", ".join(extras)
+store = Storage()
+try:
+    players = store.get_players()
+    upcoming = store.get_upcoming_fixtures()
+    history = store.get_history_by_code()
+finally:
+    store.close()
 
-st.caption(f"Request: _{query}_")
-st.code(render_ask(ask.answer(query)), language=None)
+if not players:
+    st.info("No players — run `python app.py refresh` first.")
+else:
+    ranked = decision_xp(players, upcoming, history)                # xMins-weighted (default)
+    scores = {r["id"]: r["xp"] for r in ranked}
+    bands = archetype_bands(cheap=cheap or None, premium=premium or None)
+    result = select_squad(players, budget=budget, formation=SQUAD_15, scores=scores,
+                          band_minimums=bands, min_differentials=differential or None)
+    xi_ids = best_legal_xi(result["selected"], scores) if result["status"] == "Optimal" else None
+    st.code(render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids), language=None)
+
+    if result["status"] == "Optimal":
+        selected = result["selected"]
+        squad = {
+            "player_ids": [p["id"] for p in selected],
+            "player_names": [p["web_name"] for p in selected],
+            "bench_ids": [p["id"] for p in selected if p["id"] not in set(xi_ids)],
+            "cost": result["total_cost"],
+            "saved_at": datetime.date.today().isoformat(),
+        }
+        # The download is the CLI `SquadStore` file shape (`{name: squad}`), so it drops straight into
+        # `data/squads.json` and loads in the CLI too. No server write — this file is the user's own save.
+        payload = json.dumps({"My squad": squad}, indent=2)
+        dl, use = st.columns(2)
+        dl.download_button("⬇︎ Download squad.json", payload, file_name="squad.json",
+                           mime="application/json", use_container_width=True)
+        if use.button("Use this squad →", use_container_width=True):
+            set_active_squad({**squad, "name": "My squad"})
+            st.success("Set as your **active squad** — open Transfer, Analyse or Captain.")

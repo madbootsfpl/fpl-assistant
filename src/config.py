@@ -43,9 +43,10 @@ REQUEST_TIMEOUT = 10
 # A healthy ClubElo answers in ~1–2s, so 5s is a safe margin.
 CLUBELO_TIMEOUT = 5
 
-# Where the user's saved squads live (ADR-024). This is *user state*, kept separate
-# from the reference cache (fpl.db) so it survives a refresh — and gitignored.
-SQUADS_PATH = "data/squads.json"
+# Where the user's saved squads live (ADR-024). This is *user state*, kept separate from the reference
+# cache (fpl.db), gitignored. On a fresh clone / a public deploy it's absent — fall back to the committed
+# **demo** squads (seed_squads.json) so the web pages have a squad to show (ADR-054).
+SQUADS_PATH = "data/squads.json" if os.path.exists("data/squads.json") else "data/seed_squads.json"
 
 # The FPL API can reject requests that don't look like they came from a browser,
 # so we send a simple, honest User-Agent that identifies this project.

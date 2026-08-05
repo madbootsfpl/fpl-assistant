@@ -1,0 +1,46 @@
+{
+  "Demo XI": {
+    "player_ids": [
+      1,
+      226,
+      4,
+      356,
+      61,
+      533,
+      204,
+      397,
+      480,
+      427,
+      542,
+      335,
+      165,
+      55,
+      223
+    ],
+    "player_names": [
+      "Raya",
+      "Pickford",
+      "Gabriel",
+      "Virgil",
+      "Truffert",
+      "Mukiele",
+      "Mitchell",
+      "Semenyo",
+      "Gibbs-White",
+      "Mbeumo",
+      "E.Le F\u00e9e",
+      "Stach",
+      "Jo\u00e3o Pedro",
+      "Watkins",
+      "Mateta"
+    ],
+    "bench_ids": [
+      226,
+      204,
+      335,
+      223
+    ],
+    "cost": 100.0,
+    "saved_at": "2026-08-05"
+  }
+}

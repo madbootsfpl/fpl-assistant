@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 057 (2026-08-05)** — *cloud squads — per-user, no server*, per ADR-054. The deployed app's
+  disk is ephemeral + multi-user, so squads move to a **session "active squad"** in `st.session_state`,
+  set by **building** (Build → *Download* a `squad.json` + *Use this squad*) or **uploading** one (a
+  sidebar `file_uploader`). Persistence is the **user's own file** (the CLI `SquadStore` `{name: squad}`
+  shape — interoperable); the web **never writes** server-side (a test scans both edges for `.save(`), so
+  the DB/squads stay read-only. A new edge module **`src/web_streamlit/squads.py`** holds the state
+  (`active_squad`/`set_active_squad`), a demo+session **`squad_picker`**, upload validation
+  (`parse_uploaded` — shape, 11–15 size, ids exist), and the sidebar. A committed **`data/seed_squads.json`**
+  demo (+ a `config.SQUADS_PATH` fallback, mirroring `seed.db`) populates the pages on first visit.
+  **Analyse · Transfer · Captain** (a new page) run the engine on the squad **dict** (not `ask`-by-name),
+  so an uploaded squad works. Core analytics unchanged; 455 tests green.
 - **Sprint 056 (2026-08-05)** — *deploy & share*, per ADR-053 — the Streamlit app becomes a public,
   read-only site on **Streamlit Community Cloud** (the owner relaxed the custom domain, so no PaaS /
   Cloudflare / Docker / `$PORT`). Repo-prep: a minimal **`pyproject.toml`** + **`-e .`** in

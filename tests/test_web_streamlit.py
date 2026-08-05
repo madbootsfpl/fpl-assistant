@@ -64,21 +64,37 @@ def test_fixtures_page_shows_a_table_and_chart():
         assert "" in at.dataframe[0].value.columns          # a team-badge image column
 
 
-def test_squads_page_renders():
+def test_squads_page_analyses_the_demo_squad():
+    # the demo seed always populates the picker (ADR-054) → an analysis renders, no crash
     at = _run(_PAGES / "3_Squads.py")
-    # a selectbox (squads exist) or the "no saved squads" info — both are fine, no crash
-    assert len(at.selectbox) == 1 or len(at.info) == 1
+    assert len(at.selectbox) == 1                          # the squad picker (demo + session)
+    assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
 
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     at = _run(_PAGES / "5_Transfer.py")
-    if not at.selectbox:                                   # no saved squads locally → the info branch
-        assert len(at.info) == 1
-        return
+    assert len(at.selectbox) == 1                          # the squad picker (demo always present)
     # a squad is selected → the ranked swaps (or a "no upgrades" note) render, no crash
     assert len(at.code) == 1 or len(at.info) >= 1
     at.slider[0].set_value(3.0).run()                      # move the bank slider → recompute, no crash
     assert not at.exception
+
+
+def test_captain_page_renders_for_the_demo_squad():
+    at = _run(_PAGES / "7_Captain.py")
+    assert len(at.selectbox) == 1                          # the squad picker
+    assert len(at.code) == 1 or len(at.info) >= 1          # the captain picks (or a "no data" note)
+
+
+def test_consumer_pages_use_a_session_active_squad():
+    # build sets session_state["squad"]; Transfer/Analyse/Captain must offer it in the picker (ADR-054)
+    squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
+    for page in ("3_Squads.py", "5_Transfer.py", "7_Captain.py"):
+        at = AppTest.from_file(str(_PAGES / page), default_timeout=30)
+        at.session_state["squad"] = squad
+        at.run()
+        assert not at.exception, f"{page} raised: {at.exception}"
+        assert any("My squad (yours)" in o for o in at.selectbox[0].options)
 
 
 def test_build_page_returns_a_squad(monkeypatch):
@@ -88,6 +104,17 @@ def test_build_page_returns_a_squad(monkeypatch):
     # move an archetype control → rebuild, still no crash
     at.number_input[0].set_value(3).run()                  # 3 low-cost players
     assert not at.exception
+
+
+def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:                                        # no data locally → the "run refresh" note
+        return
+    assert at.get("download_button"), "an Optimal build must offer a squad.json download"
+    at.button[0].click().run()                             # "Use this squad →"
+    assert not at.exception
+    squad = at.session_state["squad"]                      # …became the session active squad (ADR-054)
+    assert squad["name"] == "My squad" and 11 <= len(squad["player_ids"]) <= 15
 
 
 def test_ask_chat_answers_a_grounded_question():

@@ -35,3 +35,5 @@ data/*.json
 # seleniumbase/soccerdata spike cruft (never committed)
 downloaded_files/
 .ruff_cache/
+# …except the committed demo squads (ADR-054):
+!data/seed_squads.json
