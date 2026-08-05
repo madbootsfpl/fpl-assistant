@@ -36,6 +36,15 @@ def test_players_page_has_a_scatter_chart_when_data_present():
         assert len(at.get("vega_lite_chart")) == 1
 
 
+def test_players_page_shows_the_crowd_lens_columns():
+    # US-183 / ADR-057: the Players table gains Form · ICT · Trends (crowd flags), display-only
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    cols = at.dataframe[0].value.columns.tolist()
+    assert "Trends" in cols and "Form" in cols and "ICT" in cols
+
+
 def test_players_page_has_photo_and_badge_columns_when_data_present():
     at = _run(_PAGES / "1_Players.py")
     if at.dataframe:

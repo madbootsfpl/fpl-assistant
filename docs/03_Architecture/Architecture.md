@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 060 (2026-08-06)** — *Phase 6 opener — the crowd lens (Tier 1)*, per **ADR-057**. Crowd &
+  sentiment signals as a **complementary lens + flags, never blended into xP** (a test asserts `decision_xp`
+  is unchanged). **Ingest** the free FPL Tier-1 fields (`transfers_in/out_event` · `cost_change_*` · `form` ·
+  `ict_index`+components · `value_form`) into the `Player` model + storage (`_migrate` adds the columns;
+  `seed.db` reseeded so opening it stays a no-op). A pure **`src/analytics/crowd.py`** `crowd_flags` helper
+  (empty-safe, tunable thresholds — template ≥20% / differential ≤5% / price sign / trending / in-form)
+  surfaced as **Trends** + **Form/ICT** columns on Players and a **Trends** column on Build/Analyse/My Squad.
+  Season-gated: momentum/form are 0 preseason, live at GW1. External social + pundit deferred (Tier 2/3).
+  499 tests green.
 - **Sprint 059 (2026-08-05)** — *pre-tester polish*, two adds before a feedback cycle. **Imagery
   consistency** (no ADR — UI over the settled edge): the player-photo helper moves into the shared
   `badges.py` (`photo_url`/`photo_url_by_id`) + a `web_streamlit/tables.py` `render_player_table`, so

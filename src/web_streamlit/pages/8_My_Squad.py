@@ -12,7 +12,7 @@ import json
 
 import streamlit as st
 
-from src.analytics import decision_xp, is_unavailable, legal_xi_issues, squad_15_issues
+from src.analytics import crowd_flags, decision_xp, is_unavailable, legal_xi_issues, squad_15_issues
 from src.storage import Storage
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import (
@@ -74,7 +74,7 @@ for p in sorted(owned, key=lambda x: (x["id"] in bench_ids, _ORDER.get(x["positi
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": name, "Team": p["team"],
         "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
-        "Role": "Bench" if p["id"] in bench_ids else "XI",
+        "Role": "Bench" if p["id"] in bench_ids else "XI", "Trends": " ".join(crowd_flags(p)),
     })
 render_player_table(rows)
 

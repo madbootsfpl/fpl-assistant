@@ -11,7 +11,7 @@ import json
 
 import streamlit as st
 
-from src.analytics import SQUAD_15, archetype_bands, best_legal_xi, decision_xp, select_squad
+from src.analytics import SQUAD_15, archetype_bands, best_legal_xi, crowd_flags, decision_xp, select_squad
 from src.storage import Storage
 from src.ui.squad import render_squad
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
@@ -67,7 +67,7 @@ else:
             "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
             "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
             "£m": p["price"], "xP": round(p.get("xp", 0), 1),
-            "Role": "XI" if p["id"] in xi else "Bench",
+            "Role": "XI" if p["id"] in xi else "Bench", "Trends": " ".join(crowd_flags(p)),
         } for p in sorted(result["selected"], key=lambda x: (x["id"] not in xi, _ORDER.get(x["position"], 9)))])
     st.code(render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids), language=None)
 

@@ -84,10 +84,11 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 **free & structured in the FPL API** — no scraping needed to start.
 
 **Tier 1 — free & structured (already in the API; start here).** Season-time (0 preseason → live at GW1):
-- ⬜ Ingest crowd/momentum fields: `transfers_in/out_event`, `cost_change_event`/`_start`, `form`,
-  `ict_index` (+ Influence / Creativity / Threat), `value_form`. (`selected_by` already stored, ADR-044.)
-- ⬜ A **lens + flags** across the tools: 🔥 trending in / ❄️ out · 💰 price rising / falling · 📈 in form ·
-  **template** (high-owned) vs **differential** (low-owned) — on Players · Captain · Transfer.
+- ✅ Ingest crowd/momentum fields: `transfers_in/out_event`, `cost_change_event`/`_start`, `form`,
+  `ict_index` (+ Influence / Creativity / Threat), `value_form` (Sprint 060, US-182). (`selected_by`
+  already stored, ADR-044.)
+- ◑ A **lens + flags** — `crowd_flags` (🔥 trending · 💰 price · 📈 form · template/differential), on
+  **Players** + Build/Analyse/My Squad (Sprint 060, US-183). *Remaining:* Captain · Transfer.
 - ⬜ A **"trends"** `ask`/`chat` intent — most transferred in/out, biggest price risers, in-form.
 - ⬜ An effective-ownership / **template-risk** lens for captaincy.
 

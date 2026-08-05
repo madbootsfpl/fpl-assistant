@@ -1,0 +1,62 @@
+"""Crowd & sentiment signals — a display **lens** over the free FPL fields (Phase 6, ADR-057).
+
+Pure: a player row → a list of short, human-readable **flags**. This is display-only — it is **never
+blended into xP** (the grounded prediction stays exactly as it was). Empty-safe: a 0 / None field yields no
+flag (no crash). Thresholds are tunable constants, calibrated on real data — ownership now; the momentum /
+form ones at GW1 (0 in preseason).
+"""
+
+# Tunable thresholds (ADR-057), calibrated on the live FPL data.
+TEMPLATE_OWN = 20.0        # ≥ this % owned → a "template" pick (≈ the top ~17 today)
+DIFFERENTIAL_OWN = 5.0     # 0 < own ≤ this % → a "differential" (reuse ADR-044)
+FORM_MIN = 6.0             # ≥ this recent avg pts/GW → "in form" (calibrate at GW1)
+TRENDING_NET = 50_000      # |net transfers this GW| ≥ this → trending in/out (calibrate at GW1)
+
+
+def _get(player, key):
+    """A player-row field (sqlite Row or dict), or None if absent."""
+    try:
+        return player[key]
+    except (KeyError, IndexError):
+        return None
+
+
+def net_transfers(player):
+    """Net managers buying this player this GW (in − out), or None if neither field is present."""
+    tin, tout = _get(player, "transfers_in_event"), _get(player, "transfers_out_event")
+    if tin is None and tout is None:
+        return None
+    return (tin or 0) - (tout or 0)
+
+
+def crowd_flags(player) -> list:
+    """Short crowd/sentiment flags for a player row — empty-safe, display-only (ADR-057).
+
+    Ownership (`template` / `differential`), transfer momentum (`🔥 in` / `❄️ out`), price movement
+    (`💰↑` / `💸↓`) and recent form (`📈 form`). Absent / zero signals simply produce no flag.
+    """
+    flags = []
+
+    own = _get(player, "selected_by")
+    if own is not None:
+        if own >= TEMPLATE_OWN:
+            flags.append("🟦 template")
+        elif 0 < own <= DIFFERENTIAL_OWN:
+            flags.append("💎 differential")
+
+    net = net_transfers(player)
+    if net is not None:
+        if net >= TRENDING_NET:
+            flags.append("🔥 in")
+        elif net <= -TRENDING_NET:
+            flags.append("❄️ out")
+
+    change = _get(player, "cost_change_event")
+    if change:                                  # non-zero £0.1m move
+        flags.append("💰↑" if change > 0 else "💸↓")
+
+    form = _get(player, "form")
+    if form is not None and form >= FORM_MIN:
+        flags.append("📈 form")
+
+    return flags

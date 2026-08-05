@@ -6,7 +6,7 @@ missing one just shows a broken-thumbnail icon (Sprint 055).
 
 import streamlit as st
 
-from src.analytics import rank_players
+from src.analytics import crowd_flags, rank_players
 from src.storage import Storage
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.status import render_data_status
@@ -44,11 +44,15 @@ else:
             [{"£m": p["price"], "Pts": p["total_points"], "Pos": p["position"]} for p in filtered],
             x="£m", y="Pts", color="Pos",
         )
+        # The crowd lens (ADR-057): Own% · Form · ICT + short trend flags (template / differential /
+        # 🔥 in / ❄️ out / 💰 price / 📈 form). Display-only — xP is untouched. Momentum flags are 0
+        # preseason and light up at GW1.
         st.dataframe(
             [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
-              "Own%": p["selected_by"]} for p in ranked],
+              "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
+              "Trends": " ".join(crowd_flags(p))} for p in ranked],
             width="stretch", hide_index=True,
             column_config={"photo": st.column_config.ImageColumn("", width="small"),
                            "badge": st.column_config.ImageColumn("", width="small")},

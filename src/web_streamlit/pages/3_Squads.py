@@ -7,7 +7,7 @@ command does (`decision_xp` → `best_legal_xi` → `analyse_squad` → `render_
 
 import streamlit as st
 
-from src.analytics import analyse_squad, best_legal_xi, decision_xp
+from src.analytics import analyse_squad, best_legal_xi, crowd_flags, decision_xp
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
@@ -60,7 +60,7 @@ else:
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": p["web_name"] + (" (C)" if p["id"] == captain_id else ""),
         "Team": p["team"], "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
-        "Role": "XI" if p["id"] in xi_ids else "Bench",
+        "Role": "XI" if p["id"] in xi_ids else "Bench", "Trends": " ".join(crowd_flags(p)),
     } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))])
     st.code(render_squad_analysis(analysis, squad_name, show_xmins=True,
                                   captain_id=captain_id), language=None)

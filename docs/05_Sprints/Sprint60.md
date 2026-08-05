@@ -70,13 +70,13 @@ preseason for ownership/ICT and auto-populates the momentum flags at GW1.
 |---|---|---|---|---|
 | US-181 | **Gate.** Phase 6 model (**ADR-057**): crowd = a **lens + flags, not blended into xP**; the Tier-1 fields; the flag set + thresholds; the surfaces; Tier 2/3 (external / evaluation) deferred | Critical | ✅ Done | 0.5 session |
 | US-182 | **Ingest the crowd fields** — add `transfers_in/out_event` · `cost_change_event`/`_start` · `form` · `ict_index` (+ ICT components) · `value_form` to the `Player` model + storage (schema + `_migrate` + getters) + `refresh` mapping. Tests | High | ✅ Done | 1 session |
-| US-183 | **The crowd lens + flags** — a pure `crowd_flags(player)` helper (trending / price / form / template / differential, threshold-driven, empty-safe) surfaced on the **Players** tab + the shared player table. Tests + smoke | High | 📝 To Do | 1 session |
+| US-183 | **The crowd lens + flags** — a pure `crowd_flags(player)` helper (trending / price / form / template / differential, threshold-driven, empty-safe) surfaced on the **Players** tab + the shared player table. Tests + smoke | High | ✅ Done | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-057 recorded + added to the ADR index — _US-181_
 - [x] `Player` model + storage schema/migration + `ingest.refresh` mapping (+ reseed `seed.db`) — _US-182_
-- [ ] `crowd_flags` helper + wire into the player table(s) — _US-183_
-- [ ] Roadmap Phase 6 Tier-1 items ticked; Architecture/README/Handbook/PROJECT_STATUS — _US-183_
+- [x] `crowd_flags` helper + wire into the player table(s) — _US-183_
+- [x] Roadmap Phase 6 Tier-1 items ticked; Architecture/PROJECT_STATUS — _US-183_
 - [ ] (Post-GW1) confirm the momentum/price/form flags light up with live data
 
 ---
@@ -164,6 +164,17 @@ empty-safe row→flags function reused by the tables.
   (+4 → **491**): `from_api` parses the crowd fields (and absent → None); a save/get round-trip; the
   `_migrate` adds the columns to an old players table. Smoke: refresh + round-trip + migration all pass;
   `ruff` clean. (Values are 0 preseason — live at GW1.)
+- **US-183 ✅** — **The crowd lens + flags.** New pure **`src/analytics/crowd.py`** — `crowd_flags(player)`
+  (empty-safe row→flags) + `net_transfers`, with **tunable threshold constants** (`TEMPLATE_OWN=20` ·
+  `DIFFERENTIAL_OWN=5` · `FORM_MIN=6` · `TRENDING_NET=50k`): 🟦 template / 💎 differential (ownership),
+  🔥 in / ❄️ out (net transfers), 💰↑ / 💸↓ (price), 📈 form. Exported from `src.analytics`. Surfaced as a
+  **Trends** column + **Form** / **ICT** columns on the **Players** tab, and a **Trends** column on
+  **Build · Analyse · My Squad** (rows built from full player dicts). **Display-only** — a test mutates
+  every crowd field to wild values and asserts **`decision_xp` is byte-for-byte unchanged**. Tests (+8 →
+  **499**): the flag thresholds (template/differential/price/trending/form), empty-safety, `net_transfers`,
+  the xP-invariance, and the Players tab showing the lens columns. Smoke on live data: Haaland (74.9%) →
+  🟦 template, Truffert (4.7%) → 💎 differential; momentum/form flags correctly absent preseason (live at
+  GW1). `ruff` clean.
 
 ---
 
