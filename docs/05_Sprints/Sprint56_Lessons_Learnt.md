@@ -84,8 +84,6 @@ DB, and a public/read-only posture.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +96,9 @@ DB, and a public/read-only posture.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -118,8 +110,6 @@ DB, and a public/read-only posture.
   Captain page; **Data Hardening** post-GW1 (per-GW history + form). GW1: 2026-08-21.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,19 +150,9 @@ cp data/fpl.db data/seed.db          # refresh the committed deploy snapshot (th
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Packaging (`pyproject` / `-e .`) | | |
-| Deploying a Streamlit app | | |
-| `.gitignore` rules | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

@@ -84,8 +84,6 @@ best XI via `best_legal_xi` — so build iterations compare on the weekly-releva
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +96,9 @@ best XI via `best_legal_xi` — so build iterations compare on the weekly-releva
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- How good is this now!
 
 ---
 
@@ -118,8 +110,6 @@ best XI via `best_legal_xi` — so build iterations compare on the weekly-releva
   not best-possible). A "compare two builds" command. More Phase 4 / the web UI / (GW1) the full xMins.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,19 +150,9 @@ python app.py ask "build me a squad for £100m"    # the breakout + a grounded n
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Showing the decision-relevant number | | |
-| Decoupling via data, not mutation | | |
-| Grounding by supplying facts | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

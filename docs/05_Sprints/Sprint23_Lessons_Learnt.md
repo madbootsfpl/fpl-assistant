@@ -34,9 +34,6 @@ availability, and notes anyone who's left the game. A new user-state layer, no n
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,8 +82,6 @@ availability, and notes anyone who's left the game. A new user-state layer, no n
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +94,9 @@ availability, and notes anyone who's left the game. A new user-state layer, no n
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -119,8 +108,6 @@ availability, and notes anyone who's left the game. A new user-state layer, no n
   the remaining small/tech-debt closers, or declare the build phase complete.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -159,19 +146,9 @@ python app.py squad --load my-team          # reload: re-priced + current availa
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| User state vs reference data | | |
-| JSON persistence / atomic writes | | |
-| Deriving vs storing | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

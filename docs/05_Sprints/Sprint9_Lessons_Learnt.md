@@ -34,9 +34,6 @@ data source, and use it to power an Elo-based FDR that works even in preseason.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ data source, and use it to power an Elo-based FDR that works even in preseason.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ data source, and use it to power an Elo-based FDR that works even in preseason.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- differences between elo and fdr and even custom
 
 ---
 
@@ -118,8 +107,6 @@ data source, and use it to power an Elo-based FDR that works even in preseason.
 - Revisit data-dependent FPL work once the season starts.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,19 +147,9 @@ python app.py fdr --type elo --next 5 # fixture difficulty from real team Elo
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Multi-source / integrations | | |
-| Graceful degradation / resilience | | |
-| Verifying a data source | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
@@ -185,7 +162,6 @@ python app.py fdr --type elo --next 5 # fixture difficulty from real team Elo
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-reviewing whats next on th ebacklog
 
 ---
 

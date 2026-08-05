@@ -34,9 +34,6 @@ airtight. No new data or dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,8 +82,6 @@ airtight. No new data or dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +94,9 @@ airtight. No new data or dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -119,8 +108,6 @@ airtight. No new data or dependency.
   the phase (combined defensive value, saved squad, small polish).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -158,34 +145,21 @@ python app.py squad --full --bench <3 forwards>   # warns: bench doesn't leave a
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Display vs validation | | |
-| Single source of truth | | |
-| Product calls (warn vs block) | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-Provides a good catch for invalid team
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-completing backlog & closing phase
-
 
 ---
 

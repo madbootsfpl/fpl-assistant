@@ -35,9 +35,6 @@ dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -93,8 +90,6 @@ dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -107,15 +102,9 @@ dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -128,8 +117,6 @@ dependency.
   Phase-5 xMins. Or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -169,26 +156,15 @@ python app.py ask "build me a squad for £100m with 3 low cost players and 1 pre
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| ILP constraints | | |
-| Feature-as-a-constraint | | |
-| Honest scoping | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-- the multi-faceted ask feature is a new dimension!
 
 ### What was the biggest lesson?
 

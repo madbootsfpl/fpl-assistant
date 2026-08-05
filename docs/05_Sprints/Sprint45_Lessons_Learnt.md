@@ -85,8 +85,6 @@ dependency.
 
 ### Notes _(for Tony)_
 
-- Weekly & bench-boost work incredibly well
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +97,9 @@ dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -119,8 +111,6 @@ dependency.
   intent classifier as routing grows. (GW1) the full Phase-5 xMins. Or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -161,19 +151,9 @@ python app.py ask "build me a squad for rotation" # ...same, in plain English
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Parameter sweeps | | |
-| ILP decision variables | | |
-| Preserving invariants (opt-in) | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

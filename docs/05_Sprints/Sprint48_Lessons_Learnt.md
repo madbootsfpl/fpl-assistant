@@ -88,8 +88,6 @@ and verified; working in both `ask` and `chat`. Team names resolve or ask — ne
 
 ### Notes _(for Tony)_
 
-- Excellent addtion 
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +100,9 @@ and verified; working in both `ask` and `chat`. Team names resolve or ask — ne
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -123,8 +115,6 @@ and verified; working in both `ask` and `chat`. Team names resolve or ask — ne
   (Phase 2).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -167,19 +157,9 @@ python app.py chat                                               # ...the same, 
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Building from existing parts | | |
-| Routing / keyword ordering | | |
-| Entity resolution (never guess) | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

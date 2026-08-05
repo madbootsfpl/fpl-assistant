@@ -86,8 +86,6 @@ frozen. The core stays the one engine.
 
 ### Notes _(for Tony)_
 
-- absolutey fab result, lets keep going
-
 ---
 
 # Decisions Made 📋
@@ -100,15 +98,9 @@ frozen. The core stays the one engine.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -120,8 +112,6 @@ frozen. The core stays the one engine.
   Hardening** post-GW1 (per-GW history + form), the substance the whole app is built to use. GW1: 2026-08-21.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -163,19 +153,9 @@ python -m pytest tests/test_web_streamlit.py   # AppTest — headless page tests
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Streamlit multipage + widgets | | |
-| Graduating a spike to `src/` | | |
-| Clean run entries for tools | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

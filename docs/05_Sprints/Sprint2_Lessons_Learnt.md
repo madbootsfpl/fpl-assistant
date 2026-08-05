@@ -34,9 +34,6 @@ refresh, search, filter, and rank players by value (Points-per-£m) from the CLI
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -87,8 +84,6 @@ refresh, search, filter, and rank players by value (Points-per-£m) from the CLI
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -101,15 +96,9 @@ refresh, search, filter, and rank players by value (Points-per-£m) from the CLI
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -121,8 +110,6 @@ refresh, search, filter, and rank players by value (Points-per-£m) from the CLI
 - Clear the carried tech tasks (FK enforcement; Handbook content).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -166,22 +153,9 @@ pytest -q
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Python | | |
-| Git | | |
-| SQLite / SQL | | |
-| Testing | | |
-| CLIs (argparse) | | |
-| Analytics / metrics | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

@@ -34,9 +34,6 @@ composition of the existing analytics. No new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -92,16 +89,6 @@ composition of the existing analytics. No new dependency.
 
 ### Notes _(for Tony)_
 
-- Really like the direction, but I want to challenge so of th edata output/results.
-- see these 3 examples:
-(venv) ➜  fpl-assistant git:(master)  python app.py analyse  --squad RoboTS --no-xmins
-Squad analysis — 'RoboTS' over the next 5 GW
-
-  Projected XI xP :  271.9   (bench 79.8)
-  Squad value     : £100.0m   Availability issues: 0
-  At the 3-per-club cap: ARS, MCI (less transfer room)
-
-Starting XI:
 #   Player             Team  Pos       £   GW1   GW2   GW3   GW4   GW5     xP
 --- ------------------ ----- ---- ------ ----- ----- ----- ----- ----- ------
 1   Raya               ARS   GK      6.0   4.5   3.7   3.7   4.1   4.1   20.2
@@ -181,7 +168,6 @@ The recommended lineup change is to use the current starting XI, as it has no sa
 - First gives me a good squad answer, looks strong, but what is not logical is when i ask for transfers, it gives me other players with higher points output for th esame cost, why would this not be in the original output/result. Also transfer gives same player (Benitez) as incoming player twice.
 - why is th estart/bench different from original line-up, I thought the original would be optimised.
 
-
 ---
 
 # Decisions Made 📋
@@ -194,15 +180,9 @@ The recommended lineup change is to use the current starting XI, as it has no sa
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -214,8 +194,6 @@ The recommended lineup change is to use the current starting XI, as it has no sa
   Phase 4 (further intents / a chat mode / stronger verification), the web UI, or GW1 Data Hardening.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -256,19 +234,9 @@ python app.py ask "compare Saka and Palmer"       # ambiguous name → a disambi
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Robust text/name matching | | |
-| Composing intents from existing parts | | |
-| Grounded NL design | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
@@ -277,7 +245,6 @@ python app.py ask "compare Saka and Palmer"       # ambiguous name → a disambi
 ### What am I most pleased with?
 
 ### What was the biggest lesson?
-- Don we need to do some logic/data hardening?
 
 ### What challenged me the most?
 

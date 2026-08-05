@@ -34,9 +34,6 @@ with a starters' points subtotal that finally means "weekly".
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ with a starters' points subtotal that finally means "weekly".
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ with a starters' points subtotal that finally means "weekly".
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- less surprised but pure admiration for Claude - well done!!
 
 ---
 
@@ -120,8 +109,6 @@ with a starters' points subtotal that finally means "weekly".
   `--objective`) — a future tidy-up may help.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,19 +147,9 @@ python app.py squad --full --bench A B C:TEAM D   # a full 4-man bench → Start
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Reusing a mechanism vs adding one | | |
-| Annotation + display separation | | |
-| Testable pure helpers | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
@@ -185,7 +162,6 @@ python app.py squad --full --bench A B C:TEAM D   # a full 4-man bench → Start
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-reviewing the backlog
 
 ---
 

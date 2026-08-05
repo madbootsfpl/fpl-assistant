@@ -34,9 +34,6 @@ visible, including the one the declared bench implies in `--full`.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ visible, including the one the declared bench implies in `--full`.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ visible, including the one the declared bench implies in `--full`.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -119,8 +108,6 @@ visible, including the one the declared bench implies in `--full`.
 - Consider grouping the growing `squad` options.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -159,33 +146,21 @@ python app.py squad --formation 3-5-2   # pin the XI shape
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Constraints as ranges | | |
-| Backward-compatible changes | | |
-| Connecting features into one idea | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-This is a huge value add to creating the squad.
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-maybe tackling the big backlog item - could add significant value
 
 ---
 

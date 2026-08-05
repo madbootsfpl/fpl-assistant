@@ -35,9 +35,6 @@ slice: connect to the FPL API, persist player data locally, and display it.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -88,8 +85,6 @@ slice: connect to the FPL API, persist player data locally, and display it.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -103,15 +98,9 @@ slice: connect to the FPL API, persist player data locally, and display it.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -123,8 +112,6 @@ slice: connect to the FPL API, persist player data locally, and display it.
 - Consider enabling SQLite foreign-key enforcement.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -173,23 +160,9 @@ git log --oneline
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Python | 2|3 |
-| Git |1 | 4|
-| VS Code | 2|4 |
-| APIs | 1|3 |
-| JSON | | |
-| SQLite | | |
-| Testing | 2|4 |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

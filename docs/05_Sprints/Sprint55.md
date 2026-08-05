@@ -7,7 +7,7 @@
 
 > **Direction (owner, from the Sprint-54 review):** make it *look* great. Rename the home tab to **Home**
 > and list all six pages; add **player photos** and **team badges** across the Streamlit UI. (The bigger
-> asks — deploy & share at `fpl.malahide.cc`, and Data Hardening — are captured in the Backlog; Data
+> asks — deploy & share at `a custom domain`, and Data Hardening — are captured in the Backlog; Data
 > Hardening is GW1-gated anyway.)
 
 ---
@@ -91,7 +91,7 @@ The standard 3-part DoD:
 
 | Included (In Scope) | Excluded (Out of Scope) |
 |---|---|
-| Home rename + full landing; player photos; team badges | Deploy & share (`fpl.malahide.cc`) — Backlog (a later gated sprint) |
+| Home rename + full landing; player photos; team badges | Deploy & share (`a custom domain`) — Backlog (a later gated sprint) |
 | A light `team.code` ingest for badge URLs | Any analytics/decision change; a new runtime dependency |
 | Native image columns (`ImageColumn`); graceful fallback | Downloading/caching images locally (the browser fetches them) |
 | Reuse the stored data + existing pages | Data Hardening (GW1-gated) |
@@ -187,5 +187,5 @@ holds.
 - **`AppTest` + a wide table** — pandas truncates the string repr, so the image-column tests inspect the
   DataFrame column directly (`df["photo"]` / `df[""]`).
 
-**Carried forward:** None. *(Backlog for later: deploy & share at `fpl.malahide.cc`; a Compare/Captain
+**Carried forward:** None. *(Backlog for later: deploy & share at `a custom domain`; a Compare/Captain
 page; Data Hardening post-GW1.)*

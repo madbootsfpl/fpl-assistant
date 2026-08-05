@@ -34,9 +34,6 @@ as `transfer --count N` and via `ask "which N transfers for <squad>?"` — threa
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -89,19 +86,6 @@ as `transfer --count N` and via `ask "which N transfers for <squad>?"` — threa
 
 ### Notes _(for Tony)_
 
-- Very good improvement. We can go deeper on this.
-- This shows outpt:
-fpl-assistant git:(master) ✗ python app.py ask "which 5 transfers for team TS"
-Q: which 5 transfers for team TS
-
-Transfer plan (squad 'TS'): 5 move(s), +69.3 xP over 5 GW
-
-Here is a summary of the transfer plan in 2-3 short sentences:
-
-The FPL assistant recommends selling Kelleher and buying Benitez, with an expected points gain of +15.4 xP. The plan also involves selling Slater and buying Dasilva (+26.6 xP), as well as making transfers involving Ampadu, Diop, and Truffert to buy Adli, De Cuyper, and Calafiori respectively.
-
-- Under Transfer plan (squad 'TS'): 5 move(s), +69.3 xP over 5 GW, I think a table with a list of transferred in players and points per week would be informative.
-
 ---
 
 # Decisions Made 📋
@@ -114,15 +98,9 @@ The FPL assistant recommends selling Kelleher and buying Benitez, with an expect
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -134,8 +112,6 @@ The FPL assistant recommends selling Kelleher and buying Benitez, with an expect
   (~GW1), more Phase 4, or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -175,19 +151,9 @@ python app.py ask "which 3 transfers for TS?"    # the same plan, in plain Engli
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Sequence recommendations (reuse a single step) | | |
-| Structural correctness + invariant tests | | |
-| One engine behind two surfaces | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

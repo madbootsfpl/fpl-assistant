@@ -34,9 +34,6 @@ in Phase 2+ / the backlog — nothing dropped. A documentation sprint; no code.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -90,8 +87,6 @@ in Phase 2+ / the backlog — nothing dropped. A documentation sprint; no code.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -104,15 +99,9 @@ in Phase 2+ / the backlog — nothing dropped. A documentation sprint; no code.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -124,8 +113,6 @@ in Phase 2+ / the backlog — nothing dropped. A documentation sprint; no code.
   web UI, CI/CD, historical data, or a jump to a Phase 3 decision-support feature.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -168,19 +155,9 @@ in Phase 2+ / the backlog — nothing dropped. A documentation sprint; no code.
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Reconciling plan vs reality | | |
-| Declaring a milestone honestly | | |
-| Roadmap / project hygiene | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

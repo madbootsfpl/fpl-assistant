@@ -35,9 +35,6 @@ fake grade. FPL-native; no new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -88,8 +85,6 @@ fake grade. FPL-native; no new dependency.
 
 ### Notes _(for Tony)_
 
-- Really like th eanalyse function, would like to be able to sort of higest xP and also see the xP for each game week.
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +97,9 @@ fake grade. FPL-native; no new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -122,8 +111,6 @@ fake grade. FPL-native; no new dependency.
   once GW1 plays — per-GW `history` + in-season xP blending. Then xMins can retire bench-blindness.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -165,26 +152,15 @@ python app.py analyse --squad TS --next 3    # over a 3-GW horizon
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Composing features from layers | | |
-| Reusing the optimiser for sub-problems | | |
-| Indicators vs grades | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-they way its shaping up!
 
 ### What was the biggest lesson?
 

@@ -88,8 +88,6 @@ just a second view. A GW1-ready shell, not a full interactive app.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +100,9 @@ just a second view. A GW1-ready shell, not a full interactive app.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -122,8 +114,6 @@ just a second view. A GW1-ready shell, not a full interactive app.
   **Data Hardening** (post-GW1: per-GW history + form) — the substance the whole app is built to use.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -166,35 +156,21 @@ python -m pytest tests/test_web.py  # FastAPI TestClient — no live server need
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| FastAPI (sync) + templates | | |
-| Adding an edge to a layered app | | |
-| Enforcing boundaries with tests | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-- simple but effective readonly frontend, ask feature is interactive
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-- I am thinking should we pivot to Streamlit or Gradio or stay with the web polish
-- agin my thinking, from a learning perspective, is learning the how of web design or learning how to push using a 3rd party tool more advantageous to me.
-- Can we develop that thought?
 
 ---
 

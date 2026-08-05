@@ -35,9 +35,6 @@ opt-out; the raw `xp` view stays pure. No ML, no new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -94,8 +91,6 @@ opt-out; the raw `xp` view stays pure. No ML, no new dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -108,15 +103,9 @@ opt-out; the raw `xp` view stays pure. No ML, no new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -128,8 +117,6 @@ opt-out; the raw `xp` view stays pure. No ML, no new dependency.
   (needs in-season per-GW minutes + external fixture data). Or the web UI, or more Phase 4.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -171,19 +158,9 @@ python app.py analyse --squad TS                 # the xMins column flags rotati
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Verifying data assumptions | | |
-| Generalising a seam safely | | |
-| Modelling expected minutes | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

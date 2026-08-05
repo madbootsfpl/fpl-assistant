@@ -36,9 +36,6 @@ the groundwork to extend to Attack/Defence later.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -88,8 +85,6 @@ the groundwork to extend to Attack/Defence later.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +97,9 @@ the groundwork to extend to Attack/Defence later.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -122,8 +111,6 @@ the groundwork to extend to Attack/Defence later.
 - Add a data-availability check to sprint planning.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -166,35 +153,21 @@ ALTER TABLE teams ADD COLUMN strength_overall_home INTEGER;
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| SQL / schema changes | 1|2 |
-| Migrations | 1|2 |
-| Analytics (metrics/sources) | 2|4 |
-| Reading/using real data |1 |3 |
-| Architecture |2 |3 |
-| AI-assisted Development |2 |4 |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with? 
-Seeing feature grwoth & understanding same
 
 ### What was the biggest lesson?
-check assumptions before we build
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-next sprint
 
 ---
 

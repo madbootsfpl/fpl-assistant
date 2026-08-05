@@ -85,8 +85,6 @@ architecture), and record the verdict for the web track as an ADR. A spike, not 
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +97,9 @@ architecture), and record the verdict for the web track as an ADR. A spike, not 
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -119,8 +111,6 @@ architecture), and record the verdict for the web track as an ADR. A spike, not 
   then grow the pages (interactive tables, charts, a chat), keeping it a thin edge over the engine.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -164,19 +154,9 @@ python -c "from streamlit.testing.v1 import AppTest; \
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Streamlit basics | | |
-| Deciding with a spike | | |
-| Faithful smoke tests | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

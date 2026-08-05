@@ -34,9 +34,6 @@ code, with **byte-identical output**. A pure refactor; the existing tests pin it
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -90,10 +87,6 @@ code, with **byte-identical output**. A pure refactor; the existing tests pin it
 
 ### Notes _(for Tony)_
 
-- I think we are closing in on completing Phase 1 and should make a decision on declaring that.
-- We do need to compare achievements versus the original Roadmap, update roadmap to show actual phase 1 complete and push any remaining, viable items into future phases or nice to have backlog.
-- lets revie wif there is anything else to do before closing phase 1.
-
 ---
 
 # Decisions Made 📋
@@ -106,15 +99,9 @@ code, with **byte-identical output**. A pure refactor; the existing tests pin it
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- How impressive Claude Code is - remarkable
 
 ---
 
@@ -127,8 +114,6 @@ code, with **byte-identical output**. A pure refactor; the existing tests pin it
   (availability flags in the ranking views; a shared *squad* renderer).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -169,19 +154,9 @@ python app.py xg --limit 5        # unchanged output, now via the shared rendere
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Refactoring safely (baseline + diff) | | |
-| Declarative specs vs copy-paste | | |
-| Choosing the right success metric | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

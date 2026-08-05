@@ -34,9 +34,6 @@ chase underlying attacking threat, beside points / value / xp.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ chase underlying attacking threat, beside points / value / xp.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ chase underlying attacking threat, beside points / value / xp.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -118,8 +107,6 @@ chase underlying attacking threat, beside points / value / xp.
 - A defensive (xGC) metric; a per-90 involvement view.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -158,19 +145,9 @@ python app.py squad --objective xgi   # optimise the squad on attacking involvem
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Checking a data source first | | |
-| Schema migrations | | |
-| Full-stack data flow | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

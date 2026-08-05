@@ -34,9 +34,6 @@ momentary blip no longer loses the Elo refresh.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,8 +82,6 @@ momentary blip no longer loses the Elo refresh.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +94,9 @@ momentary blip no longer loses the Elo refresh.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -119,8 +108,6 @@ momentary blip no longer loses the Elo refresh.
 - Consider a shorter ClubElo timeout to bound full-outage latency.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -158,19 +145,9 @@ python app.py refresh     # ClubElo now retries a transient 502 before degrading
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Diagnosing before fixing | | |
-| Retry / backoff patterns | | |
-| Testable time-based logic | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

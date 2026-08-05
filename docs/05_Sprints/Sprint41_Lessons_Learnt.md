@@ -34,9 +34,6 @@ intent: `ask "best <position> [under £Xm]"`, ranked on the unified xP. No new d
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -89,12 +86,6 @@ intent: `ask "best <position> [under £Xm]"`, ranked on the unified xP. No new d
 
 ### Notes _(for Tony)_
 
-- more good work done in last sprint.
-- I would like to be able to ask a multifacted question like: ask "build me a squad for £100M with 3 low cost players and 1 premium player" 
-- The reason for this is that its normal to have a couple of plyers who are always benched and will only be used when playing a chip. So keeping a low cost keeper and one or two outfield players make sense. You also may want to select 1-3 premium players. 
-- The other player type would be a differential, we probally need to define that first and then include as option.
-- Appreciate this is a big ask.
-
 ---
 
 # Decisions Made 📋
@@ -108,15 +99,9 @@ intent: `ask "best <position> [under £Xm]"`, ranked on the unified xP. No new d
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -128,8 +113,6 @@ intent: `ask "best <position> [under £Xm]"`, ranked on the unified xP. No new d
   baseline tuning; the full Phase-5 xMins. Or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -169,19 +152,9 @@ python app.py ask "best value goalkeepers"      # ranked by xP per £m
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Metric vs display | | |
-| Composing NL intents | | |
-| Ordering for testability | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

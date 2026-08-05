@@ -34,9 +34,6 @@ ClubElo outage degrades in ~10s instead of ~31s.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ ClubElo outage degrades in ~10s instead of ~31s.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ ClubElo outage degrades in ~10s instead of ~31s.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -118,8 +107,6 @@ ClubElo outage degrades in ~10s instead of ~31s.
 - A combined defensive-value lens; a shared table renderer (tech debt).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -157,34 +144,21 @@ python app.py refresh     # FPL now survives a blip; ClubElo degrades in ~10s, n
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Reusing a generic helper | | |
-| Principle-driven decisions | | |
-| Tuning timeout/retry budgets | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-we are improving our resiliency and will continue to do that.
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-Closing on open backlog items and getting this phase completed
-
 
 ---
 

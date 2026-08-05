@@ -88,8 +88,6 @@ status, "web UI next") agree everywhere. No feature code.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +100,9 @@ status, "web UI next") agree everywhere. No feature code.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -122,8 +114,6 @@ status, "web UI next") agree everywhere. No feature code.
   engine; a GW1-ready shell). Then Data Hardening (post-GW1).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -165,19 +155,9 @@ python -m pytest -q                                          # verify the test c
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Keeping docs in sync with reality | | |
-| Consolidating / retiring docs cleanly | | |
-| Single-source-of-truth discipline | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

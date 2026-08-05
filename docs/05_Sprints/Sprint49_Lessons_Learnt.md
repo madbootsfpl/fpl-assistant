@@ -86,8 +86,6 @@ league ranking.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -100,15 +98,9 @@ league ranking.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -121,8 +113,6 @@ league ranking.
   the web UI (Phase 2).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -163,19 +153,9 @@ python app.py chat                                                   # ...then "
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Modes as joins over engines | | |
-| Precedence in one function | | |
-| Verifying real phrasings | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

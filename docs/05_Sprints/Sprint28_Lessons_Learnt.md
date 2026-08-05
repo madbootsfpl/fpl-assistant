@@ -35,9 +35,6 @@ no new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -90,8 +87,6 @@ no new dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -104,15 +99,9 @@ no new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -124,8 +113,6 @@ no new dependency.
   availability), composing the same pieces. Then Sprint 030 — data hardening.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -166,19 +153,9 @@ python app.py transfer --squad TS --next 3       # compare over a 3-GW horizon
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Encoding domain constraints | | |
-| Composing features | | |
-| Testing each rule in isolation | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

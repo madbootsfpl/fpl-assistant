@@ -34,9 +34,6 @@ budget, a fixed formation, and the max-3-per-club rule — and display it.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,9 +82,6 @@ budget, a fixed formation, and the max-3-per-club rule — and display it.
 
 ### Notes _(for Tony)_
 
-- Output is great, really like it and it gives different results for different budgets as expected.
-- I think th enext logical extention of this feature is to have th echoice to include or exclude up to say 4 players, this will allow the user then to essentually choose 4 favorite players or exclue 4 that they dont like and have th etool then create a team around that.
-
 ---
 
 # Decisions Made 📋
@@ -100,15 +94,9 @@ budget, a fixed formation, and the max-3-per-club rule — and display it.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -120,8 +108,6 @@ budget, a fixed formation, and the max-3-per-club rule — and display it.
 - Revisit data-dependent work once the season starts.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -162,26 +148,15 @@ python app.py squad --budget 40     # too low → clear "no legal XI" message
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Optimisation / linear programming | | |
-| Using a third-party library | | |
-| Reviewing decisions critically | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-Really like how this is shaping up
 
 ### What was the biggest lesson?
 

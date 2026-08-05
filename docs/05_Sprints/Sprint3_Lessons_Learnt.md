@@ -35,9 +35,6 @@ plays*, not just past points.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -86,8 +83,6 @@ plays*, not just past points.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -100,15 +95,9 @@ plays*, not just past points.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | | Need to do more testing at complete
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- how good Claude Code is
 
 ---
 
@@ -120,8 +109,6 @@ plays*, not just past points.
 - Add a short per-sprint manual smoke-test checklist (does the UX reveal new features?).
 
 ## Personal Improvements _(for Tony)_
-
-- No need to learn Phyton, learnings more geared on how things work, flow end to end and how the project is architectec
 
 ## Workflow Improvements
 
@@ -166,26 +153,13 @@ sqlite3 data/fpl.db "SELECT COUNT(*) FROM fixtures;"
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
 
-| Topic | Before | After |
-|--------|-------:|------:|
-| Python | | |
-| SQL / joins | | |
-| Foreign keys | | |
-| Testing / refactoring | | |
-| Analytics (aggregate) | | |
-| Architecture | | |
-| AI-assisted Development | | |
-
 ---
 
 # Overall Sprint Reflection _(for Tony)_
-Great sprint and delighted i could add value manually testing. I have noticed that we are not keeping up with th eHandbook entries, like glossary etc. Need to do a better job there.
 
 ### What am I most pleased with?
 

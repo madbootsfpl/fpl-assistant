@@ -88,8 +88,6 @@ follow-up families (why / next / what-about), an in-memory `Context`, no new dep
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +100,9 @@ follow-up families (why / next / what-about), an in-memory `Context`, no new dep
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -123,8 +115,6 @@ follow-up families (why / next / what-about), an in-memory `Context`, no new dep
   full Phase-5 xMins; or the web UI (Phase 2).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -167,19 +157,9 @@ python app.py chat                 # interactive; follow-ups build on the last a
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Adding state safely | | |
-| Deterministic detection | | |
-| Refactoring to one path | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

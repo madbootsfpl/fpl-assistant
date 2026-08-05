@@ -34,9 +34,6 @@ raw-vs-xMins consistency legible (and structural). No new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -90,35 +87,6 @@ raw-vs-xMins consistency legible (and structural). No new dependency.
 
 ### Notes _(for Tony)_
 
-- Great i can see that the errors are fixed.
-- What i still dont understand is the following:
-(venv) ➜  fpl-assistant git:(master) python app.py squad --full --budget 100          
-Optimal 15-man squad — objective: points, budget £100.0m
-
-Pos Player            Team   Price   Pts
---- ----------------- ----- ------ -----
-GK  Raya              ARS    £6.0m   162
-GK  Kelleher          BRE    £5.0m   143
-DEF Gabriel           ARS    £8.0m   209
-DEF Guéhi             MCI    £6.0m   179
-DEF Senesi            TOT    £6.0m   175
-DEF Truffert          BOU    £5.5m   165
-DEF Van Hecke         TOT    £5.0m   148
-MID Semenyo           MCI    £8.5m   202
-MID Gibbs-White       NFO    £8.0m   188
-MID Rice              ARS    £7.5m   184
-MID Anderson          MCI    £6.5m   180
-MID Wilson            LEE    £6.5m   168
-FWD Thiago            BRE    £8.0m   181
-FWD João Pedro        CHE    £7.5m   177
-FWD Calvert-Lewin     LEE    £6.0m   142
-
-Total: £100.0m · 2603 pts
-Note: Pts totals a bench that won't score — squad strength, not a weekly total. Declare your bench with --bench.
-(41 unavailable excluded: Garner (i), J.Timber (i), Saliba (i)… — use --include-unavailable to keep them.)
-(venv) ➜  fpl-assistant git:(master) python app.py transfer  --squad RoboTS           
-Transfer suggestions for 'RoboTS' — by xP gain over the next 5 gameweeks (bank £0.0m)
-
 #   Out                  £     xP → In                   £     xP    ΔxP
 --- ---------------- ----- ------ - ---------------- ----- ------ ------
 1   Thiago             8.0   16.3 → Watkins            8.0   24.1   +7.8
@@ -143,15 +111,9 @@ Each is a single, legal, affordable swap (same position, ≤3/club, within the s
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -163,8 +125,6 @@ Each is a single, legal, affordable swap (same position, ≤3/club, within the s
   priors. Then more Phase 4, the web UI, or Data Hardening.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -204,19 +164,9 @@ python app.py analyse  --squad RoboTS              # default XI == the start/ben
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Diagnosing implausible output | | |
-| Shrinkage / priors | | |
-| Structural consistency | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

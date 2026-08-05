@@ -34,9 +34,6 @@ Computed from data already stored; no ingest, no new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ Computed from data already stored; no ingest, no new dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ Computed from data already stored; no ingest, no new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- another good feature, aids with analysing defensive attributes. 
 
 ---
 
@@ -118,8 +107,6 @@ Computed from data already stored; no ingest, no new dependency.
   *probability* model; a shared table renderer for the four ranking views.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -158,39 +145,21 @@ python app.py cleansheet --pos GK
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Computing metrics from stored data | | |
-| Direction-aware None handling | | |
-| Pairing complementary metrics | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with? 
-Progression
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-
-we need to check Elo refresh, as i tried last evening and today and both times getting:
-python app.py refresh           
-ClubElo unavailable — keeping last-known Elo (Failed to fetch http://api.clubelo.com/2026-08-03: 502 Server Error: Bad Gatewayfor url: http://api.clubelo.com/2026-08-03).
-Refreshed 564 players, 20 teams, 380 fixtures and 0 Elo ratings into data/fpl.db.
-
-it worked previously.
 
 ---
 

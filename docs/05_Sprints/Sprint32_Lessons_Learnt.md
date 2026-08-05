@@ -35,9 +35,6 @@ dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -90,8 +87,6 @@ dependency.
 
 ### Notes _(for Tony)_
 
-- Looking really good on the humanisation, definely needs to go deeper, for example I may have 1-5 transfers available to me depending on what i have used or banked in prior weeks. So would be good to have this as an option, Example: "which 3 tranfers would you recommend for team TS"
-
 ---
 
 # Decisions Made 📋
@@ -104,15 +99,9 @@ dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -124,8 +113,6 @@ dependency.
   output-grounding check), or wait for GW1 to do Data Hardening, or start the web UI (Phase 2).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -167,19 +154,9 @@ python app.py ask "analyse TS"                         # squad health
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Grounding an LLM in real data | | |
-| Making a capability optional / degradable | | |
-| Testing LLM code offline | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

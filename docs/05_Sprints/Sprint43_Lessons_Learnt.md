@@ -34,9 +34,6 @@ it so a differential build actually tilts the squad (≤5% owned, pinned on data
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -91,9 +88,6 @@ it so a differential build actually tilts the squad (≤5% owned, pinned on data
 
 ### Notes _(for Tony)_
 
-- Excellent work!
-- When building a squad, would be great to breakout the top 11 xP players, vs the bench players xP for the next 5 GW's. This will enable a good comparison when comparing a few different iterations of building a team, so you can see the score differences.
-
 ---
 
 # Decisions Made 📋
@@ -106,15 +100,9 @@ it so a differential build actually tilts the squad (≤5% owned, pinned on data
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -126,8 +114,6 @@ it so a differential build actually tilts the squad (≤5% owned, pinned on data
   (reduce ⚠, from Sprint 042). (GW1) the full Phase-5 xMins. Or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -168,19 +154,9 @@ python app.py ask "build me a squad with 3 differentials"
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Pinning a threshold on data | | |
-| Ingesting a new field | | |
-| ILP constraints | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

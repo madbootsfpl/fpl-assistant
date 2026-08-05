@@ -34,9 +34,6 @@ will build on. Also stand up CI (lint + tests on push). FPL-native; no new depen
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -95,8 +92,6 @@ will build on. Also stand up CI (lint + tests on push). FPL-native; no new depen
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -110,15 +105,9 @@ will build on. Also stand up CI (lint + tests on push). FPL-native; no new depen
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -130,8 +119,6 @@ will build on. Also stand up CI (lint + tests on push). FPL-native; no new depen
   once GW1 plays, the web UI, or a Phase 3 decision-support feature on the improved xP.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -175,19 +162,9 @@ ruff check .                                # the lint CI runs
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Ingesting a new API endpoint + store | | |
-| Rate-limit-safe bulk fetches | | |
-| Enriching a metric (input vs formula) | | |
-| CI / GitHub Actions | | |
-| AI-assisted Development | | |
 
 ---
 

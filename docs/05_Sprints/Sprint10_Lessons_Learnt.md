@@ -34,9 +34,6 @@ squad for *this* goal".
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ squad for *this* goal".
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,16 +93,9 @@ squad for *this* goal".
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- how good the xp was, brilliant to compare against points and value
-
 
 ---
 
@@ -119,8 +107,6 @@ squad for *this* goal".
 - Revisit data-dependent FPL work once the season starts.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -159,19 +145,9 @@ python app.py squad --objective xp --include Haaland  # best expected XI around 
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Optimisation / objectives | | |
-| Reusing / composing features | | |
-| Reviewing decisions critically | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
@@ -184,7 +160,6 @@ python app.py squad --objective xp --include Haaland  # best expected XI around 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-getting through the backlog
 
 ---
 

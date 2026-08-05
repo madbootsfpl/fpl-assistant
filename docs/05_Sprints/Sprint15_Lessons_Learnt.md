@@ -34,9 +34,6 @@ production dependency until decided.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,8 +82,6 @@ production dependency until decided.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +94,9 @@ production dependency until decided.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- on the surface this package looked like it could add a lot to th eproject, however based on our detailed analysis and review we determined value add was much less that th ecost incurred
 
 ---
 
@@ -119,8 +108,6 @@ production dependency until decided.
   points) — no new dependency, decision-relevant.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,34 +147,22 @@ python3 -m venv sd_probe && ./sd_probe/bin/pip install soccerdata
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Evaluating a dependency | 2| 5|
-| Entity / name matching | | |
-| Cost-vs-value judgement | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with? 
-that we did a detailed evalution and did not jump in with assumptions
 
 ### What was the biggest lesson?
-double check your assumptions
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-tackling the backlog
+
 ---
 
 # Summary

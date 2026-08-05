@@ -34,9 +34,6 @@ ADR-032 (per-GW xP); tighten the plan-narration prompt. No new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -87,8 +84,6 @@ ADR-032 (per-GW xP); tighten the plan-narration prompt. No new dependency.
 
 ### Notes _(for Tony)_
 
-- looks great and works well
-
 ---
 
 # Decisions Made 📋
@@ -101,15 +96,9 @@ ADR-032 (per-GW xP); tighten the plan-narration prompt. No new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -121,8 +110,6 @@ ADR-032 (per-GW xP); tighten the plan-narration prompt. No new dependency.
   (~GW1), more Phase 4, or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -162,19 +149,9 @@ python app.py ask "which 3 transfers for TS?"    # the same table + a grounded s
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Composing features (a join, not a rebuild) | | |
-| Structured output alongside NL | | |
-| Minimal result-shape evolution | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
@@ -187,7 +164,6 @@ python app.py ask "which 3 transfers for TS?"    # the same table + a grounded s
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-what else can we deepen?
 
 ---
 

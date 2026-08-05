@@ -12,7 +12,7 @@ change to the analytics core.
 ### 📌 Context & Problem Statement
 
 The Streamlit UI is now presentable (Sprint 055), and the owner wants it **shared publicly** so others can
-help functionality-test. The initial idea was a custom domain (`fpl.malahide.cc`) via Cloudflare + a PaaS
+help functionality-test. The initial idea was a custom domain (`a custom domain`) via Cloudflare + a PaaS
 — but **the owner relaxed the custom-domain requirement** ("whichever is easier/better"). That removes the
 only reason to run a PaaS, and points at the simplest path.
 

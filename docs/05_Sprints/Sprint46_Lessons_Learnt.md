@@ -88,8 +88,6 @@ for the old view; the plan + `ask` speak the same number. No new dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +100,9 @@ for the old view; the plan + `ask` speak the same number. No new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -123,8 +115,6 @@ for the old view; the plan + `ask` speak the same number. No new dependency.
   full Phase-5 xMins. Or the web UI (Phase 2).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -166,19 +156,9 @@ python app.py ask "what transfer for my-team?"    # ...the same decision, in pla
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Choosing the right objective | | |
-| Fast exact approximations | | |
-| Changing a default safely | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

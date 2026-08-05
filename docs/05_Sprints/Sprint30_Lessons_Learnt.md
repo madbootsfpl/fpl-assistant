@@ -34,9 +34,6 @@ Sprint-29 retro note. FPL-native; no new dependency, no schema change, the xP to
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -88,8 +85,6 @@ Sprint-29 retro note. FPL-native; no new dependency, no schema change, the xP to
 
 ### Notes _(for Tony)_
 
-- Thats a fabulous addition, being able to see x weeks of xP as well as total. Excellent.
-
 ---
 
 # Decisions Made 📋
@@ -102,15 +97,9 @@ Sprint-29 retro note. FPL-native; no new dependency, no schema change, the xP to
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -122,8 +111,6 @@ Sprint-29 retro note. FPL-native; no new dependency, no schema change, the xP to
   in-season xP form blending. Then xMins can retire bench-blindness in captain/transfer.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -164,35 +151,21 @@ python app.py xp --next 5 --by-gameweek           # players ranked, split per ga
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Extending a metric additively | | |
-| Proving invariants before building | | |
-| Display rounding vs authoritative totals | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-Overall progress
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-- So lets update our documentation to celebrate Phase 3 completion. Handbook, Readme etc to update. 
-- Given we have a couple of blockers until the season starts, lets look at other phases or baclog items that we could start and add value. 
-- Example we put the presentation layer on hold, maybe we could consider doing some work there now OR the other alternative is investigating LLM / chat capability. Note FPL have introduced a FPL Companion using CoPilot - not sure if that something to replicate or leverage.  
 
 ---
 

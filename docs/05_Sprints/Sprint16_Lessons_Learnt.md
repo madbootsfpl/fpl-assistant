@@ -35,9 +35,6 @@ soccerdata in ADR-016).
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,13 +82,6 @@ soccerdata in ADR-016).
 
 ### Notes _(for Tony)_
 
--  Over/under-performance: for players with ≥ 900 minutes last season, actual attacking points (from goals + assists) minus expected attacking points (from xG + xA) — attacking returns only (no clean sheets / appearance / bonus). Source: the FPL player feed
-
-- when new season starts,  ~10 games for the default view to be meaningful — by design. And the same "resets then accumulates" applies to xg and the xGI objective too; overperf is just the one that goes empty early because of its gate (the others show small numbers instead).
-
-- Worth knowing this is one of those things we'd confirm live when the season actually ticks over — FPL's exact reset timing is theirs to control — but this is how the data behaves year to year.
-
-
 ---
 
 # Decisions Made 📋
@@ -104,15 +94,9 @@ soccerdata in ADR-016).
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -124,8 +108,6 @@ soccerdata in ADR-016).
   recent-form weighting (needs per-gameweek data).
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -164,33 +146,21 @@ python app.py overperf --pos FWD --min-minutes 1500
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Comparing metrics | | |
-| Statistical guards (min sample) | | |
-| Pure, testable analytics | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-Excellent feature and brings another thought.
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-Defensive Contributions has become a higher contributor to players obtaining points over the last season, would be could to explore a similar metric to this one using defensive contributions, its notewordy that sorting th eplayers by value, there are no FWD's in top 20, and only a couple of MIDs
 
 ---
 

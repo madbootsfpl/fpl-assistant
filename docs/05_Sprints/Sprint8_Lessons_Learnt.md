@@ -35,9 +35,6 @@ or impossible sets.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,8 +82,6 @@ or impossible sets.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +94,9 @@ or impossible sets.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- This is so cool
 
 ---
 
@@ -119,8 +108,6 @@ or impossible sets.
 - Revisit data-dependent work once the season starts.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,44 +147,21 @@ python app.py squad --include Wilson:NFO                # disambiguate a shared 
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Optimisation / constraints | | |
-| Handling user input safely | | |
-| Reviewing decisions critically | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with? 
-Really easy to include or exclude players.
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-what additional valude would other data sources bring to the project? 
-is this a good time to be looking at this or should we park for later?
-a quick analysis shows that there are a number of free sources out there tha would include some insights.
-Examples are:
-Source	API Key Required?	Best For	Advanced Metrics (xG, xA)?
-SoccerData / FBref	No (Python Library)	Deep analytical metrics, shot/pass data	Yes
-Football-Data.org	Yes (Free Tier)	Clean fixtures, standings & match scores	Basic
-API-Football	Yes (Free Tier)	In-match events & live scores	Basic/Intermediate
-ClubElo	No	Team strength modeling & Elo history	N/A (Elo Ratings)
-TheSportsDB	Yes (Free Tier)	Team/League metadata, logos, & schedules	Basic
-
-
 
 ---
 

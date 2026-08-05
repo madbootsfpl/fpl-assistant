@@ -32,9 +32,6 @@ narration — matching the transfer plan — by reusing the command's own render
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -86,8 +83,6 @@ narration — matching the transfer plan — by reusing the command's own render
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -100,15 +95,9 @@ narration — matching the transfer plan — by reusing the command's own render
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -120,8 +109,6 @@ narration — matching the transfer plan — by reusing the command's own render
   Hardening (~GW1), more Phase 4, or the web UI.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -160,31 +147,19 @@ python app.py analyse --squad TS  # the same table, from the command
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Reuse vs rebuild | | |
-| Staged feature assessment | | |
-| The `ask` composition | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
--Really happy with the change to analyse, very powerful
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
-Going deeper in Phase 4, particularly Build xMins v0
 
 ### What am I looking forward to building next?
 

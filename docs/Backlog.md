@@ -39,9 +39,9 @@ nice-to-haves and tech-debt.)*
   players/…/p{code}.png`). **Team badges** need a small ingest change — store `team.code` (in
   bootstrap-static, not currently ingested) → `…/badges/…/t{code}.png`. Display via `st.image` /
   `st.column_config.ImageColumn`. *Medium; self-contained; external image URLs load at render.*
-- **Deploy & share** (`fpl.malahide.cc`) — host the Streamlit app publicly so others can help
+- **Deploy & share** (`a custom domain`) — host the Streamlit app publicly so others can help
   functionality-test. Feasible via **Streamlit Community Cloud** (free; deploys from the GitHub repo;
-  custom domain via CNAME on the owner's `malahide.cc`). *Needs:* a **data strategy** (the DB is
+  custom domain via CNAME on the owner's `your domain`). *Needs:* a **data strategy** (the DB is
   gitignored — ship a committed snapshot or refresh-on-start), a **light security review** (public but
   read-only, no writes/auth; Ollama absent → degrades to decision + facts, which is fine), and a **gate
   (ADR)** for the deployment + data + security decisions. *Big; high-leverage (unblocks real feedback).*

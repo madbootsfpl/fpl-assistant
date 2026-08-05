@@ -34,9 +34,6 @@ A spike in the spirit of Sprint 015 (soccerdata): evaluate, decide, minimal thro
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -87,8 +84,6 @@ A spike in the spirit of Sprint 015 (soccerdata): evaluate, decide, minimal thro
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -101,15 +96,9 @@ A spike in the spirit of Sprint 015 (soccerdata): evaluate, decide, minimal thro
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -122,8 +111,6 @@ A spike in the spirit of Sprint 015 (soccerdata): evaluate, decide, minimal thro
   Ollama-absent handling + tests. Or wait for GW1 to do Data Hardening — both are live.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -164,19 +151,9 @@ python spikes/031-llm/ask_spike.py "who should I captain from TS?"
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Grounding an LLM (no hallucinated numbers) | | |
-| Running a spike to a decision | | |
-| Local LLMs (Ollama) | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

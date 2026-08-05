@@ -85,17 +85,6 @@ ADR.
 
 ### Notes _(for Tony)_
 
-- Looks great
-- Rename app tab to Home, and include the Build & Transfer tab descriptions
-- Could we add some images to the teams, 2 examples below.
-![
-](7FF097BD-68DE-4834-8E25-D4F06700D597_4_5005_c.jpeg)
-
-![alt text](84794BF1-FFE6-49BA-ADCA-1FF73BD5B1FB_1_105_c.jpeg)
-
-- could i share the app to get some help on functionality testing. I could create an fpl.malahide.cc domain as i own malahide.cc
-
-- appreciate above are big asks and will need to go into backlog for consideration - brain is racing at how good this is
 ---
 
 # Decisions Made 📋
@@ -108,15 +97,9 @@ ADR.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -128,8 +111,6 @@ ADR.
   Or move to **Data Hardening** post-GW1 (per-GW history + form) — GW1: 2026-08-21.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -168,19 +149,9 @@ python -m pytest tests/test_web_streamlit.py   # AppTest — headless page tests
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Streamlit charts + controls | | |
-| Wiring controls to an engine | | |
-| Reuse over re-implement | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

@@ -35,9 +35,6 @@ dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -93,8 +90,6 @@ dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -107,15 +102,9 @@ dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- this is better than expected, being able to run generically and they with my save Squad - awsome!!
 
 ---
 
@@ -127,8 +116,6 @@ dependency.
   a ceiling/differential captain mode once variance data exists.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -169,19 +156,9 @@ python app.py captain --limit 3          # just the top 3
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Composing features from existing layers | | |
-| Turning a metric into a recommendation | | |
-| Decision-appropriate policy | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

@@ -34,9 +34,6 @@ earners. A defensive counterpart to `overperf`; FPL-native, no new dependency.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -84,8 +81,6 @@ earners. A defensive counterpart to `overperf`; FPL-native, no new dependency.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -98,15 +93,9 @@ earners. A defensive counterpart to `overperf`; FPL-native, no new dependency.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -118,8 +107,6 @@ earners. A defensive counterpart to `overperf`; FPL-native, no new dependency.
   flag to show the action components.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -158,19 +145,9 @@ python app.py defcon --pos DEF --min-minutes 1500
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Verifying data meaning | | |
-| Reference-point metrics | | |
-| Reusing a proven pattern | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 

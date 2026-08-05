@@ -10,7 +10,7 @@
 **Capacity:** ~2–3 working sessions (a gate + repo prep + a deploy runbook + docs) — **collaborative**
 **Carried Over:** Deploy & share (from the Sprint-54 review / Backlog)
 
-> **Direction (owner):** host the Streamlit app publicly at **`fpl.malahide.cc`** (via Cloudflare) so
+> **Direction (owner):** host the Streamlit app publicly at **`a custom domain`** (via Cloudflare) so
 > others can help functionality-test. A **collaborative** sprint: *Claude* makes the repo deploy-ready +
 > writes a runbook; *Tony* creates the host account, connects the repo, and sets the Cloudflare DNS.
 
@@ -29,7 +29,7 @@
   2. **A data strategy** — `data/*.db` is gitignored, so a repo deploy has **no data**; ship a committed
      **seed DB** (preseason data is near-static) or refresh-on-start.
 - **The custom domain drives the host choice.** Streamlit Community Cloud doesn't cleanly support custom
-  domains; a PaaS (Render/Railway/Fly) supports `fpl.malahide.cc` natively (CNAME + auto-TLS). Cloudflare
+  domains; a PaaS (Render/Railway/Fly) supports `a custom domain` natively (CNAME + auto-TLS). Cloudflare
   = a CNAME `fpl → <host target>` (DNS-only to start).
 - Preseason (GW1 2026-08-21) — the shipped data is stable for now.
 
@@ -37,7 +37,7 @@
 
 ### 🧭 What's new — the app leaves the laptop
 
-The Streamlit UI becomes a **shared, public, read-only** site at `fpl.malahide.cc`. The analytics don't
+The Streamlit UI becomes a **shared, public, read-only** site at `a custom domain`. The analytics don't
 change; this is packaging (a data strategy + a port/host bind + a Streamlit deploy config) + a **runbook**
 the owner follows to go live (host account → connect repo → custom domain → Cloudflare CNAME).
 
@@ -46,7 +46,7 @@ the owner follows to go live (host account → connect repo → custom domain �
 ### 🎯 Sprint Goal
 
 **Objective:** the repo is **deploy-ready** (binds `$PORT`/`0.0.0.0`, a shipped data strategy, a Streamlit
-deploy config) and a **runbook** takes the owner from zero → `https://fpl.malahide.cc` on the chosen host,
+deploy config) and a **runbook** takes the owner from zero → `https://<your-app>.streamlit.app` on the chosen host,
 with a light security posture (read-only, public, no secrets). Core analytics + tests unchanged.
 
 #### Success Criteria
@@ -60,7 +60,7 @@ with a light security posture (read-only, public, no secrets). Core analytics + 
       any host manifest (`render.yaml` / `Procfile` / start command)
 - [ ] **A runbook** — a step-by-step: host account → connect the GitHub repo → set the start command → add
       the custom domain → the Cloudflare CNAME → verify TLS
-- [ ] **Live** — the owner follows the runbook; `https://fpl.malahide.cc` serves the app (the collaborative
+- [ ] **Live** — the owner follows the runbook; `https://<your-app>.streamlit.app` serves the app (the collaborative
       "done")
 - [ ] Core analytics unchanged; the existing **442** tests stay green; the two-edge guardrail holds
 - [ ] Docs: ADR-053 + index, Architecture (a deploy note), README (the live URL + how to deploy),
@@ -88,7 +88,7 @@ with a light security posture (read-only, public, no secrets). Core analytics + 
 A collaborative DoD (repo prep is Claude's; going live is the owner's, guided):
 1. **Deploy-ready + green** — the app binds `$PORT`/`0.0.0.0`, has data on the deploy (seed DB or refresh),
    a deploy config; the existing **442** tests stay green; the core is unchanged; no secrets in the repo.
-2. **Live (owner-executed)** — following the runbook, `https://fpl.malahide.cc` serves the app (Cloudflare
+2. **Live (owner-executed)** — following the runbook, `https://<your-app>.streamlit.app` serves the app (Cloudflare
    CNAME + host TLS); a quick manual pass (Home + a page + Ask degrading without Ollama).
 3. **Documentation** — ADR-053 + index, Architecture (deploy note), README (live URL + deploy steps),
    sprint board + PROJECT_STATUS.
@@ -100,12 +100,12 @@ A collaborative DoD (repo prep is Claude's; going live is the owner's, guided):
 | Included (In Scope) | Excluded (Out of Scope) |
 |---|---|
 | Repo prep ($PORT/host, config, data strategy) + a runbook | Auth/accounts / user data / writes (the deploy is read-only) |
-| A public, read-only Streamlit deploy at `fpl.malahide.cc` | Hosting Ollama (the LLM stays optional/absent — degrades) |
+| A public, read-only Streamlit deploy at `a custom domain` | Hosting Ollama (the LLM stays optional/absent — degrades) |
 | A light security review; optional password | A CI/CD auto-deploy pipeline — later, if wanted |
 | The Cloudflare CNAME shape (guidance + runbook) | The owner's account creation / DNS clicks (his to do, guided) |
 
 **External Dependencies (owner):** a host account (PaaS or Streamlit Cloud); Cloudflare DNS for
-`malahide.cc`; the GitHub repo (public, already pushed). **Claude cannot create accounts or set DNS** —
+`your domain`; the GitHub repo (public, already pushed). **Claude cannot create accounts or set DNS** —
 those steps are the owner's, guided by the runbook.
 
 ---
@@ -128,7 +128,7 @@ Settle before prep — security is clear (read-only, no secrets); these are the 
 (confirm/redirect at "start US-165"):
 
 1. **Host — the key call.** A **PaaS with native custom domains** (Render / Railway / Fly.io) so
-   `fpl.malahide.cc` attaches cleanly with auto-TLS. *(Streamlit Community Cloud is easiest to deploy but
+   `a custom domain` attaches cleanly with auto-TLS. *(Streamlit Community Cloud is easiest to deploy but
    doesn't do custom domains cleanly — only if you'd accept a `*.streamlit.app` URL.)* *Propose a PaaS.*
 2. **Data strategy.** Ship a committed **seed DB snapshot** (simple; preseason data is near-static; no
    boot-time API calls) *vs* refresh-on-start (fresh but slower/heavier). *Propose the seed DB.*

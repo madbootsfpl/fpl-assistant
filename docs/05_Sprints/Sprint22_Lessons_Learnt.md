@@ -34,9 +34,6 @@ warns — using FPL's `status` / `chance` / `news`.
 
 ### Areas Needing More Practice _(for Tony)_
 
--
--
-
 ---
 
 # What Went Well ✅
@@ -85,8 +82,6 @@ warns — using FPL's `status` / `chance` / `news`.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +94,9 @@ warns — using FPL's `status` / `chance` / `news`.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
-- Simple idea but very informative as you may want to carry an ingured player
 
 ---
 
@@ -119,8 +108,6 @@ warns — using FPL's `status` / `chance` / `news`.
   weighting by `chance` rather than a hard exclude.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -159,33 +146,21 @@ python app.py squad --include-unavailable  # consider injured/suspended too
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Filtering optimiser inputs | | |
-| Policy at the edge | | |
-| Diagnosing before fixing | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
 # Overall Sprint Reflection _(for Tony)_
 
 ### What am I most pleased with?
-tool is looking very useful now!
 
 ### What was the biggest lesson?
 
 ### What challenged me the most?
 
 ### What am I looking forward to building next?
-closing out this phase
 
 ---
 

@@ -85,8 +85,6 @@ stored data; core unchanged; no new ADR.
 
 ### Notes _(for Tony)_
 
--
-
 ---
 
 # Decisions Made 📋
@@ -99,15 +97,9 @@ stored data; core unchanged; no new ADR.
 
 # Mistakes Made (and Why They're Valuable) 😊 _(for Tony)_
 
-| Mistake | What I'll Do Differently Next Time |
-|----------|------------------------------------|
-| | |
-
 ---
 
 # Things That Surprised Me 💡 _(for Tony)_
-
--
 
 ---
 
@@ -115,13 +107,11 @@ stored data; core unchanged; no new ADR.
 
 ## Project Improvements
 
-- **Deploy & share** at `fpl.malahide.cc` (Backlog — a gated infra sprint; unblocks feedback); a
+- **Deploy & share** at `a custom domain` (Backlog — a gated infra sprint; unblocks feedback); a
   **Compare/Captain** Streamlit page; or **Data Hardening** post-GW1 (per-GW history + form). GW1:
   2026-08-21.
 
 ## Personal Improvements _(for Tony)_
-
--
 
 ## Workflow Improvements
 
@@ -161,19 +151,9 @@ python -m src.web_streamlit          # the UI (Home + 6 pages, with photos + bad
 
 # Questions for Future Me ❓ _(for Tony)_
 
--
-
 ---
 
 # Confidence Rating 📊 _(for Tony — rate 1–5)_
-
-| Topic | Before | After |
-|--------|-------:|------:|
-| Streamlit images / column_config | | |
-| Additive schema migrations | | |
-| Probing external deps at planning | | |
-| Architecture | | |
-| AI-assisted Development | | |
 
 ---
 
