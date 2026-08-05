@@ -176,6 +176,29 @@ def test_player_from_api_parses_ownership():
     assert Player.from_api(raw).selected_by is None
 
 
+def test_player_from_api_parses_crowd_signals():
+    # Sprint 060 / ADR-057: transfers/cost_change are ints; form/ict/value_form are strings → float.
+    raw = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+           "team": 1, "element_type": 3, "now_cost": 75, "total_points": 0,
+           "transfers_in_event": 123456, "transfers_out_event": 7890,
+           "cost_change_event": 2, "cost_change_start": -1,
+           "form": "6.5", "ict_index": "57.5", "influence": "541.6",
+           "creativity": "33.5", "threat": "0.0", "value_form": "1.2"}
+    p = Player.from_api(raw)
+    assert p.transfers_in_event == 123456 and p.transfers_out_event == 7890
+    assert p.cost_change_event == 2 and p.cost_change_start == -1
+    assert p.form == 6.5 and p.ict_index == 57.5 and p.value_form == 1.2
+    assert (p.influence, p.creativity, p.threat) == (541.6, 33.5, 0.0)
+
+
+def test_player_from_api_crowd_signals_absent_are_none():
+    # preseason / a lean payload: the crowd fields are simply absent → None, no crash.
+    raw = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+           "team": 1, "element_type": 3, "now_cost": 75, "total_points": 0}
+    p = Player.from_api(raw)
+    assert p.transfers_in_event is None and p.form is None and p.ict_index is None
+
+
 def test_player_from_api_missing_xp_inputs_are_none():
     raw = {
         "id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

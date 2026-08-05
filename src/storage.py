@@ -55,6 +55,17 @@ _MIGRATIONS = {
         "code": "INTEGER",
         "penalties_order": "INTEGER",
         "selected_by": "REAL",
+        # Crowd & sentiment signals (Sprint 060, ADR-057) — a display lens, not xP inputs.
+        "transfers_in_event": "INTEGER",
+        "transfers_out_event": "INTEGER",
+        "cost_change_event": "INTEGER",
+        "cost_change_start": "INTEGER",
+        "form": "REAL",
+        "ict_index": "REAL",
+        "influence": "REAL",
+        "creativity": "REAL",
+        "threat": "REAL",
+        "value_form": "REAL",
     },
 }
 
@@ -87,7 +98,17 @@ CREATE TABLE IF NOT EXISTS players (
     news            TEXT,
     code            INTEGER,
     penalties_order INTEGER,
-    selected_by     REAL
+    selected_by     REAL,
+    transfers_in_event  INTEGER,
+    transfers_out_event INTEGER,
+    cost_change_event   INTEGER,
+    cost_change_start   INTEGER,
+    form                REAL,
+    ict_index           REAL,
+    influence           REAL,
+    creativity          REAL,
+    threat              REAL,
+    value_form          REAL
 )
 """
 
@@ -147,8 +168,11 @@ INSERT INTO players
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
      goals_scored, assists, minutes,
      defcon, defcon_per90, cbi, tackles, recoveries,
-     chance, news, code, penalties_order, selected_by)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     chance, news, code, penalties_order, selected_by,
+     transfers_in_event, transfers_out_event, cost_change_event, cost_change_start,
+     form, ict_index, influence, creativity, threat, value_form)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
     second_name     = excluded.second_name,
@@ -176,7 +200,17 @@ ON CONFLICT(id) DO UPDATE SET
     news            = excluded.news,
     code            = excluded.code,
     penalties_order = excluded.penalties_order,
-    selected_by     = excluded.selected_by
+    selected_by     = excluded.selected_by,
+    transfers_in_event  = excluded.transfers_in_event,
+    transfers_out_event = excluded.transfers_out_event,
+    cost_change_event   = excluded.cost_change_event,
+    cost_change_start   = excluded.cost_change_start,
+    form                = excluded.form,
+    ict_index           = excluded.ict_index,
+    influence           = excluded.influence,
+    creativity          = excluded.creativity,
+    threat              = excluded.threat,
+    value_form          = excluded.value_form
 """
 
 UPSERT_HISTORY_PAST = """
@@ -276,7 +310,9 @@ class Storage:
              p.xg, p.xa, p.xgi, p.xgc,
              p.goals_scored, p.assists, p.minutes,
              p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries,
-             p.chance, p.news, p.code, p.penalties_order, p.selected_by)
+             p.chance, p.news, p.code, p.penalties_order, p.selected_by,
+             p.transfers_in_event, p.transfers_out_event, p.cost_change_event, p.cost_change_start,
+             p.form, p.ict_index, p.influence, p.creativity, p.threat, p.value_form)
             for p in players
         ]
         with self.conn:

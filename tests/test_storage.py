@@ -212,6 +212,39 @@ def test_save_players_stores_ownership(tmp_path):
     store.close()
 
 
+def test_save_players_stores_crowd_signals(tmp_path):
+    # Sprint 060 / ADR-057: the crowd-lens fields round-trip through save + get_players.
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    p = make_player(id=1)
+    p.transfers_in_event, p.cost_change_event, p.form, p.ict_index = 123456, 2, 6.5, 57.5
+    store.save_players([p])
+
+    row = store.get_players()[0]
+    assert (row["transfers_in_event"], row["cost_change_event"]) == (123456, 2)
+    assert (row["form"], row["ict_index"]) == (6.5, 57.5)
+    store.close()
+
+
+def test_migration_adds_crowd_columns_to_an_old_players_table(tmp_path):
+    db = str(tmp_path / "old.db")
+    # A pre-Sprint-060 database: players table without the crowd-signal columns.
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)")
+    conn.execute(
+        """CREATE TABLE players (
+            id INTEGER PRIMARY KEY, first_name TEXT, second_name TEXT, web_name TEXT,
+            team_id INTEGER, position TEXT, price REAL, total_points INTEGER)"""
+    )
+    conn.commit()
+    conn.close()
+
+    store = Storage(db_path=db)     # opening migrates up to the current schema
+    cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
+    assert {"transfers_in_event", "cost_change_event", "form", "ict_index", "value_form"} <= cols
+    store.close()
+
+
 def test_migration_adds_xp_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
 

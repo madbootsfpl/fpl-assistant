@@ -69,12 +69,12 @@ preseason for ownership/ICT and auto-populates the momentum flags at GW1.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-181 | **Gate.** Phase 6 model (**ADR-057**): crowd = a **lens + flags, not blended into xP**; the Tier-1 fields; the flag set + thresholds; the surfaces; Tier 2/3 (external / evaluation) deferred | Critical | ✅ Done | 0.5 session |
-| US-182 | **Ingest the crowd fields** — add `transfers_in/out_event` · `cost_change_event`/`_start` · `form` · `ict_index` (+ ICT components) · `value_form` to the `Player` model + storage (schema + `_migrate` + getters) + `refresh` mapping. Tests | High | 📝 To Do | 1 session |
+| US-182 | **Ingest the crowd fields** — add `transfers_in/out_event` · `cost_change_event`/`_start` · `form` · `ict_index` (+ ICT components) · `value_form` to the `Player` model + storage (schema + `_migrate` + getters) + `refresh` mapping. Tests | High | ✅ Done | 1 session |
 | US-183 | **The crowd lens + flags** — a pure `crowd_flags(player)` helper (trending / price / form / template / differential, threshold-driven, empty-safe) surfaced on the **Players** tab + the shared player table. Tests + smoke | High | 📝 To Do | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-057 recorded + added to the ADR index — _US-181_
-- [ ] `Player` model + storage schema/migration + `ingest.refresh` mapping — _US-182_
+- [x] `Player` model + storage schema/migration + `ingest.refresh` mapping (+ reseed `seed.db`) — _US-182_
 - [ ] `crowd_flags` helper + wire into the player table(s) — _US-183_
 - [ ] Roadmap Phase 6 Tier-1 items ticked; Architecture/README/Handbook/PROJECT_STATUS — _US-183_
 - [ ] (Post-GW1) confirm the momentum/price/form flags light up with live data
@@ -153,6 +153,17 @@ empty-safe row→flags function reused by the tables.
   **trending** (net transfers) / **in form** (`form ≥ ~6`) as constants **calibrated at GW1** (0 preseason).
   ICT/form/net-transfers also shown as numeric columns. Surfaces: **Players** first (via the shared
   `render_player_table`, so squad tabs inherit it); Captain/Transfer/`ask`-"trends" follow. ADR-057 indexed.
+- **US-182 ✅** — **Ingest the crowd fields.** Added the 10 Tier-1 fields to the `Player` model +
+  `from_api` (`transfers_in/out_event`, `cost_change_event`/`_start` as ints; `form`, `ict_index`,
+  `influence`, `creativity`, `threat`, `value_form` parsed from strings → float; absent → None) and to
+  storage (`CREATE_PLAYERS` + `_MIGRATIONS` + `UPSERT_PLAYER` + `save_players`; `get_players` is `SELECT *`
+  so no getter change). `ingest.refresh` needed no change (it uses `from_api`). **Reseeded `data/seed.db`**
+  (ran `refresh` → 570 players / 20 teams / 380 fixtures with the new schema, copied to the committed seed)
+  so the deploy's seed already has the columns — opening it is a **no-op migration** (verified
+  byte-identical, no sidecars), avoiding the tracked-file write that risks the Cloud git-sync glitch. Tests
+  (+4 → **491**): `from_api` parses the crowd fields (and absent → None); a save/get round-trip; the
+  `_migrate` adds the columns to an old players table. Smoke: refresh + round-trip + migration all pass;
+  `ruff` clean. (Values are 0 preseason — live at GW1.)
 
 ---
 

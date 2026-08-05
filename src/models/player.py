@@ -59,6 +59,21 @@ class Player:
     # Ownership (Sprint 043, ADR-044). `selected_by` = % of managers who own this player;
     # ≤5% marks a "differential" for the squad-build archetype constraint.
     selected_by: float | None = None
+    # Crowd & sentiment signals (Sprint 060, ADR-057) — a display LENS, never blended into xP. All are
+    # season-time (0 preseason, live from GW1). `transfers_*_event` are raw manager counts this GW;
+    # `cost_change_*` are in £0.1m units (sign = price rise/fall); `form` is recent avg pts/GW; `ict_index`
+    # (+ its influence/creativity/threat components) is the FPL underlying-stats composite; `value_form` is
+    # form per £m.
+    transfers_in_event: int | None = None
+    transfers_out_event: int | None = None
+    cost_change_event: int | None = None
+    cost_change_start: int | None = None
+    form: float | None = None
+    ict_index: float | None = None
+    influence: float | None = None
+    creativity: float | None = None
+    threat: float | None = None
+    value_form: float | None = None
 
     @classmethod
     def from_api(cls, raw: dict) -> "Player":
@@ -98,4 +113,14 @@ class Player:
             code=raw.get("code"),
             penalties_order=raw.get("penalties_order"),
             selected_by=_to_float(raw.get("selected_by_percent")),
+            transfers_in_event=raw.get("transfers_in_event"),
+            transfers_out_event=raw.get("transfers_out_event"),
+            cost_change_event=raw.get("cost_change_event"),
+            cost_change_start=raw.get("cost_change_start"),
+            form=_to_float(raw.get("form")),
+            ict_index=_to_float(raw.get("ict_index")),
+            influence=_to_float(raw.get("influence")),
+            creativity=_to_float(raw.get("creativity")),
+            threat=_to_float(raw.get("threat")),
+            value_form=_to_float(raw.get("value_form")),
         )
