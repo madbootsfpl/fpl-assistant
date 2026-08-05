@@ -54,8 +54,10 @@ USER_AGENT = "fpl-assistant/0.1 (learning project)"
 
 # Where the local SQLite cache lives. The live cache (fpl.db) is a generated file, gitignored (see
 # .gitignore). On a fresh clone / a public deploy it's absent, so fall back to the committed **seed
-# snapshot** (seed.db) — so the app still has data to show (ADR-053).
-DB_PATH = "data/fpl.db" if os.path.exists("data/fpl.db") else "data/seed.db"
+# snapshot** (seed.db) — so the app still has data to show (ADR-053). `SEED_DB_PATH` is named so the web
+# can tell "read-only demo (seed)" from "a live cache" (ADR-056 — the local-only refresh).
+SEED_DB_PATH = "data/seed.db"
+DB_PATH = "data/fpl.db" if os.path.exists("data/fpl.db") else SEED_DB_PATH
 
 # FPL encodes a player's position as element_type 1-4. We store a readable
 # label instead of the magic number (mapped once, at ingestion).

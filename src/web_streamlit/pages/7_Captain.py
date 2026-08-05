@@ -10,9 +10,13 @@ import streamlit as st
 from src.analytics import baseline_rate, captain_picks, minutes_weight_from_history
 from src.storage import Storage
 from src.ui.captain import render_captain_picks
+from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import render_sidebar, set_active_squad, set_captain, squad_picker
+from src.web_streamlit.status import render_data_status
+from src.web_streamlit.tables import render_player_table
 
 st.set_page_config(page_title="Captain · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 render_sidebar()
 st.title("Captain — who to captain this week")
 
@@ -23,6 +27,8 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    photos = photo_url_by_id(players)
+    badges = badge_url_by_short_name(store.get_teams())
 finally:
     store.close()
 
@@ -37,6 +43,12 @@ else:
     minutes_weight = minutes_weight_from_history(history)      # xMins v0 (ADR-038), default-on
     picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code,
                           minutes_weight=minutes_weight, history_by_code=history)
+    # An image table of the ranked candidates (photos + badges), then the text detail beneath (Sprint 059).
+    render_player_table([{
+        "photo": photos.get(pk["id"], ""), "badge": badges.get(pk["team"], ""),
+        "Player": pk["web_name"], "Team": pk["team"], "Opp": pk.get("opponent", ""),
+        "xP": round(pk.get("xp", 0), 1),
+    } for pk in picks])
     st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True), language=None)
 
     # Set & persist YOUR captain (ADR-055) — stored on the session squad, shown (C) in Analyse + the

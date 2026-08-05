@@ -8,8 +8,10 @@ import streamlit as st
 
 from src import ask
 from src.ui.ask import render_ask
+from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="Ask · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 st.title("Ask")
 st.caption("Captaincy · transfers · your squad · comparisons · build a squad · best players · fixtures. "
            "The analytics decide; the answer is checked against the data.")

@@ -11,9 +11,13 @@ import streamlit as st
 from src.analytics import decision_xp, suggest_transfer_plan, suggest_transfers
 from src.storage import Storage
 from src.ui.transfer import render_transfer_plan, render_transfers
+from src.web_streamlit.badges import photo_url_by_id
 from src.web_streamlit.squads import apply_transfer, render_sidebar, set_active_squad, squad_picker
+from src.web_streamlit.status import render_data_status
+from src.web_streamlit.tables import render_player_table
 
 st.set_page_config(page_title="Transfer · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 render_sidebar()
 st.title("Transfer — best XI-aware swaps")
 
@@ -28,6 +32,7 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    photos = photo_url_by_id(players)
 finally:
     store.close()
 
@@ -52,6 +57,12 @@ else:
     else:
         swaps = suggest_transfers(owned, players, xp_by_id, bench_ids=bench_ids,
                                   bank=bank, limit=5)
+        # An image table of the out→in swaps (both players' photos), then the text detail beneath (Sprint 059).
+        render_player_table([{
+            "out": photos.get(s["out"]["id"], ""), "Out": s["out"]["web_name"],
+            "in": photos.get(s["in"]["id"], ""), "In": s["in"]["web_name"],
+            "Pos": s["position"], "+xP": s["gain"],
+        } for s in swaps])
         st.code(render_transfers(swaps, squad_name, bank=bank, show_xmins=True), language=None)
 
         # Apply a suggested swap to your squad (ADR-055) — mutates the session active squad (a copy of

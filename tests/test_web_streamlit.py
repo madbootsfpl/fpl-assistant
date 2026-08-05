@@ -218,7 +218,71 @@ def test_badge_url_helper():
     assert m["ARS"].endswith("/t3.png") and m["LIV"] == ""
 
 
+def test_photo_url_helper():
+    # US-179: the shared player-photo helper (one source for every tab)
+    from src.web_streamlit.badges import photo_url, photo_url_by_id
+    assert photo_url(12345).endswith("/p12345.png")
+    assert photo_url(None) == ""                            # no code → no image
+    m = photo_url_by_id([{"id": 1, "code": 999}, {"id": 2, "code": None}])
+    assert m[1].endswith("/p999.png") and m[2] == ""        # by player id; missing code → empty
+
+
+def test_squad_tabs_show_image_tables():
+    # US-179: Build/Analyse/Captain/My Squad show a photo+badge image table (augmenting the text summary)
+    for page in ("6_Build.py", "3_Squads.py", "7_Captain.py", "8_My_Squad.py"):
+        at = _run(_PAGES / page)
+        if not at.dataframe:                                # no data locally → the info branch
+            continue
+        cols = str(at.dataframe[0].value.columns.tolist())
+        assert "photo" in cols and "badge" in cols, f"{page} should show photo + badge columns"
+
+
+def test_transfer_tab_shows_a_swap_image_table():
+    # US-179: the Transfer swaps render with both players' photos (out/in image columns)
+    at = _run(_PAGES / "5_Transfer.py")
+    at.slider[0].set_value(10.0).run()                      # raise the bank → swaps appear
+    if not at.dataframe:
+        return
+    cols = str(at.dataframe[0].value.columns.tolist())
+    assert "out" in cols and "in" in cols                   # out→in photo columns
+
+
 def test_runner_module_points_at_the_app():
     # the `python -m src.web_streamlit` entry — imports cleanly and targets app.py (no server launched)
     from src.web_streamlit import __main__ as runner
     assert runner._APP.name == "Home.py" and runner._APP.exists()
+
+
+def test_data_freshness_caption_on_every_tab(monkeypatch):
+    # US-180/ADR-056: the "Data as of <date>" caption renders in both modes, on every page
+    monkeypatch.delenv("FPL_LOCAL", raising=False)
+    for page in (_APP, _PAGES / "1_Players.py", _PAGES / "6_Build.py"):
+        at = _run(page)
+        assert any("Data as of" in c.value for c in at.caption), f"{page} should show a freshness caption"
+
+
+def test_refresh_button_is_gated_by_local_mode(monkeypatch):
+    # cloud (no FPL_LOCAL) → caption only, no refresh button; local (FPL_LOCAL=1, non-seed DB) → the button
+    from src import config
+
+    monkeypatch.delenv("FPL_LOCAL", raising=False)
+    at = _run(_APP)
+    assert "🔄 Refresh data" not in [b.label for b in at.button]      # never on the read-only cloud
+
+    if config.DB_PATH != config.SEED_DB_PATH:                         # a live cache locally
+        monkeypatch.setenv("FPL_LOCAL", "1")
+        at2 = _run(_APP)
+        assert "🔄 Refresh data" in [b.label for b in at2.button]     # local run → the refresh button
+
+
+def test_is_local_requires_flag_and_a_non_seed_db(monkeypatch):
+    from src import config
+    from src.web_streamlit.status import is_local
+
+    monkeypatch.setenv("FPL_LOCAL", "1")
+    monkeypatch.setattr(config, "DB_PATH", config.SEED_DB_PATH)       # the seed → read-only even locally
+    assert not is_local()
+    monkeypatch.setattr(config, "DB_PATH", "data/fpl.db")             # a live cache + the flag → local
+    assert is_local()
+    monkeypatch.delenv("FPL_LOCAL", raising=False)
+    assert not is_local()                                            # no flag (cloud) → never local

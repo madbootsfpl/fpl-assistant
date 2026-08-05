@@ -5,8 +5,10 @@ import streamlit as st
 from src.analytics import team_fdr
 from src.storage import Storage
 from src.web_streamlit.badges import badge_url_by_short_name
+from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="Fixtures · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 st.title("Fixtures — difficulty over the next 5")
 
 store = Storage()

@@ -16,7 +16,9 @@ _APP = Path(__file__).resolve().parent / "Home.py"    # the entrypoint (its file
 
 
 def main() -> int:
-    env = {**os.environ,
+    # FPL_LOCAL flags a *local* run — enables the local-only data-refresh button (ADR-056). The cloud runs
+    # Home.py directly (not via this runner), so the flag is absent there and the app stays read-only.
+    env = {**os.environ, "FPL_LOCAL": "1",
            "PYTHONPATH": os.pathsep.join(filter(None, [str(_ROOT), os.environ.get("PYTHONPATH", "")]))}
     return subprocess.call([sys.executable, "-m", "streamlit", "run", str(_APP)], env=env)
 

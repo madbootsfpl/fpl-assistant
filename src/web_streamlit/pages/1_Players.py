@@ -8,22 +8,18 @@ import streamlit as st
 
 from src.analytics import rank_players
 from src.storage import Storage
-from src.web_streamlit.badges import badge_url_by_short_name
-
-_PHOTO = "https://resources.premierleague.com/premierleague/photos/players/110x140/p{code}.png"
+from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
+from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="Players · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 st.title("Players")
-
-
-def _photo_url(player) -> str:
-    code = player["code"] if "code" in player.keys() else None
-    return _PHOTO.format(code=code) if code else ""
 
 store = Storage()
 try:
     rows = store.get_players()
     badges = badge_url_by_short_name(store.get_teams())     # {short_name: badge URL}
+    photos = photo_url_by_id(rows)                          # {player id: photo URL}
 finally:
     store.close()
 
@@ -49,7 +45,7 @@ else:
             x="£m", y="Pts", color="Pos",
         )
         st.dataframe(
-            [{"photo": _photo_url(p), "badge": badges.get(p["team"], ""),
+            [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
               "Own%": p["selected_by"]} for p in ranked],

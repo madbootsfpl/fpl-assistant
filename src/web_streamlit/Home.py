@@ -7,7 +7,10 @@ engine the CLI does and changes nothing in `src/`. Run:  python -m src.web_strea
 
 import streamlit as st
 
+from src.web_streamlit.status import render_data_status
+
 st.set_page_config(page_title="FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 st.title("⚽ FPL Assistant")
 st.caption("A read-only view over the analytics — the CLI stays the engine (ADR-051/052).")
 st.markdown(
@@ -31,3 +34,5 @@ pages on first visit. All per-user — no accounts, nothing saved server-side (A
 The analytics decide; a local LLM (optional) only narrates. `python app.py refresh` updates the data.
 """
 )
+st.info("🧪 **Testing this?** Tell us what breaks or feels off → "
+        "[open a GitHub issue](https://github.com/tesheridan/fpl-assistant/issues/new).")

@@ -14,9 +14,15 @@ import streamlit as st
 from src.analytics import SQUAD_15, archetype_bands, best_legal_xi, decision_xp, select_squad
 from src.storage import Storage
 from src.ui.squad import render_squad
+from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import render_sidebar, set_active_squad
+from src.web_streamlit.status import render_data_status
+from src.web_streamlit.tables import render_player_table
+
+_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
 st.set_page_config(page_title="Build · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 render_sidebar()
 st.title("Build — the optimal 15 within a budget")
 
@@ -32,6 +38,8 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    photos = photo_url_by_id(players)
+    badges = badge_url_by_short_name(store.get_teams())
 finally:
     store.close()
 
@@ -50,6 +58,17 @@ else:
     for p in result["selected"]:
         p["xp"] = scores.get(p["id"], 0)
         p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
+
+    # An image table of the 15 (photos + badges), then the CLI text summary beneath (the totals /
+    # XI-bench breakout / notes) — the "augment" approach (Sprint 059).
+    if result["status"] == "Optimal":
+        xi = set(xi_ids or [])
+        render_player_table([{
+            "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
+            "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
+            "£m": p["price"], "xP": round(p.get("xp", 0), 1),
+            "Role": "XI" if p["id"] in xi else "Bench",
+        } for p in sorted(result["selected"], key=lambda x: (x["id"] not in xi, _ORDER.get(x["position"], 9)))])
     st.code(render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids), language=None)
 
     if result["status"] == "Optimal":

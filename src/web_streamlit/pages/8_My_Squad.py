@@ -14,6 +14,7 @@ import streamlit as st
 
 from src.analytics import decision_xp, is_unavailable, legal_xi_issues, squad_15_issues
 from src.storage import Storage
+from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import (
     FPL_BUDGET,
     apply_transfer,
@@ -23,10 +24,13 @@ from src.web_streamlit.squads import (
     set_bench,
     squad_picker,
 )
+from src.web_streamlit.status import render_data_status
+from src.web_streamlit.tables import render_player_table
 
 _ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
 st.set_page_config(page_title="My Squad · FPL Assistant", page_icon="⚽", layout="wide")
+render_data_status()
 render_sidebar()
 st.title("My Squad — view & edit")
 
@@ -37,6 +41,8 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    photos = photo_url_by_id(players)
+    badges = badge_url_by_short_name(store.get_teams())
 finally:
     store.close()
 
@@ -60,16 +66,17 @@ else:
     st.success(f"£{cost:.1f}m — ✓ a legal 15" if over <= 0
                else f"£{cost:.1f}m — ✓ legal, ⚠ £{over:.1f}m over the £{FPL_BUDGET:.0f}m budget")
 
-# --- the 15 ---------------------------------------------------------------------------------------
+# --- the 15 (with photos + badges) ----------------------------------------------------------------
 rows = []
 for p in sorted(owned, key=lambda x: (x["id"] in bench_ids, _ORDER.get(x["position"], 9))):
     name = p["web_name"] + (" (C)" if p["id"] == captain_id else "")
     rows.append({
+        "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": name, "Team": p["team"],
         "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
         "Role": "Bench" if p["id"] in bench_ids else "XI",
     })
-st.dataframe(rows, hide_index=True)
+render_player_table(rows)
 
 st.divider()
 st.subheader("Edit")

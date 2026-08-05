@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 059 (2026-08-05)** — *pre-tester polish*, two adds before a feedback cycle. **Imagery
+  consistency** (no ADR — UI over the settled edge): the player-photo helper moves into the shared
+  `badges.py` (`photo_url`/`photo_url_by_id`) + a `web_streamlit/tables.py` `render_player_table`, so
+  **Build · Analyse · Transfer · Captain · My Squad** show photo + team-badge tables (augmenting, not
+  replacing, their text summaries). **Local refresh + freshness**, per **ADR-056**: a shared
+  `web_streamlit/status.py` `render_data_status()` on every tab — a **"Data as of \<date\>"** caption
+  (DB mtime) always, plus a **local-only "🔄 Refresh data"** button (reuses `ingest.refresh`), gated by
+  `FPL_LOCAL=1` (set by the runner) + a writable non-seed DB. This is the **first web write path**, kept
+  narrow: local only, the data cache only; the **cloud stays read-only** (caption only). 487 tests green.
 - **Sprint 058 (2026-08-05)** — *an editable session squad*, per ADR-055. The read-only session squad
   (ADR-054) becomes **editable** — still **in `session_state`, no server writes**. Fixed a Build bug (xP/
   xMins rendered 0 — the page now attaches `xp`/`minutes_weight` like the CLI). New generic core validator
