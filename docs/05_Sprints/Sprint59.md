@@ -1,7 +1,7 @@
 # Sprint 059: Tester feedback loop (share the live app · capture · triage — no feature build)
 
 **Dates:** 2026-08-05
-**Status:** 📝 Planned
+**Status:** ✅ Complete (US-176–180 done; US-177 feedback intake ongoing by design)
 **Capacity:** ~1 session of scaffolding (a tester guide + a feedback log) + owner-run calendar time (share + collect)
 **Carried Over:** None (Sprint 058 shipped the editable squad; the app is live + rebooted healthy)
 
@@ -127,9 +127,40 @@ calendar, so US-177 completes over days, not in one session.
   (date · tester · tab · what · severity · → backlog?) + how it feeds **Sprint 060** + pre-seeded themes to
   watch (refresh-loss, cross-position swaps, freshness clarity). Intake is **ongoing** (owner shares →
   reports land → triaged here).
+- **US-178 ✅** — **Home feedback hint.** A one-line `st.info` on Home linking the GitHub-issue channel
+  ("🧪 Testing this? Tell us what breaks…"), owner-approved. The only code touch of the feedback stories.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be completed at sprint close)_
+**Outcome:** ✅ Successful — the two **pre-tester polish** adds shipped (imagery everywhere + a local
+refresh & freshness caption), and the **feedback loop scaffolding** is in place. What remains is *calendar*
+work, not build: the owner shares the app and testers report (US-177 intake is ongoing by design).
+
+**Delivered**
+- **US-179 ✅** — imagery consistency (augment): photos + badges on Build · Analyse · Transfer · Captain ·
+  My Squad, via a shared `badges.photo_url*` + `tables.render_player_table`.
+- **US-180 ✅** — local refresh + freshness (**ADR-056**): a "Data as of" caption on every tab + a
+  local-only refresh button (`FPL_LOCAL` + non-seed DB); the cloud stays read-only.
+- **US-176/177/178 ✅** — tester guide (GitHub Issues channel), feedback triage log, Home hint.
+
+**Verification** — 487 tests green (**+9** over the sprint), `ruff` clean. Headless smoke: every data tab
+renders image tables; the freshness caption shows in both modes; the refresh button appears only locally.
+The two-edge guardrail + the no-`SquadStore.save` scan still hold (the new `ingest.refresh` write is the
+data cache, local-only).
+
+**Carried forward** — the **owner** shares the app + recruits testers; feedback lands on GitHub Issues and
+is triaged into `Feedback_Log.md`, seeding **Sprint 060**. A **local eyeball** of the imagery is still
+worth doing (tests prove the columns exist, not that the images look right).
+
+**What went well** — one shared photo helper + one `render_player_table` kept the five-tab imagery change
+DRY and consistent; the `FPL_LOCAL` env (set by our own runner) was a clean, controllable way to tell
+"local" from "cloud" without a fragile heuristic; the read-only invariant survived the first web write by
+scoping it narrowly (local + data-cache only), recorded honestly in ADR-056.
+
+**What to watch** — the freshness caption uses the DB file mtime, so on the cloud it shows the *deploy*
+date, not the true snapshot date (a stored `refreshed_at` is the accurate fix, deferred). And every
+web-page push risks the Cloud half-sync deploy glitch — reboot from Manage app's ⋮ menu if pages error.
+
+**Lessons captured:** `docs/05_Sprints/Sprint59_Lessons_Learnt.md`.
