@@ -29,12 +29,16 @@ from src.analytics import (
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
+    team_fdr,
+    team_schedule,
 )
 from src.analytics.captain import _next_opponent
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.compare import render_compare
+from src.ui.fdr import render_fdr_table
+from src.ui.fixtures import render_team_fixtures
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
@@ -54,6 +58,9 @@ _INTENT_KEYWORDS = {
     "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
                   "best value", "best players"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
+    # fixtures is last: its keywords are distinctive, and "play" is broad, so let every more
+    # specific intent match first (ADR-048).
+    "fixtures": ("fixture", "schedule", "opponent", "difficulty", "fdr", "play"),
 }
 
 _RULES = (
@@ -656,6 +663,103 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
     }
 
 
+# ---- fixtures / FDR intent (ADR-048) ----------------------------------------
+
+_FIXTURES_N = 8   # how many teams the league FDR ranking shows
+_HARDEST_WORDS = ("hard", "tough", "difficult", "avoid", "worst", "nightmare")
+_TEAM_ALIASES = {   # colloquial names the FPL `name` field doesn't carry
+    "tottenham": "TOT", "spurs": "TOT", "man united": "MUN", "man utd": "MUN",
+    "manchester united": "MUN", "man city": "MCI", "manchester city": "MCI", "forest": "NFO",
+}
+
+
+def _match_team(question: str, teams) -> str | list | None:
+    """Resolve a team from a question (ADR-048): the code (str), None (→ league mode), or a list
+    (ambiguous → clarify). Never a silent wrong guess.
+
+    Matches the full `name` (a substring, so multi-word names like "Man City" work), the
+    `short_name` as a **case-sensitive** whole word (so a typed code "LIV"/"NEW" matches but the
+    common word "new" doesn't), and a small alias set.
+    """
+    ql = question.lower()
+    hits = set()
+    for t in teams:
+        if re.search(rf"\b{re.escape(t['short_name'])}\b", question):   # case-sensitive: "NEW" not "new"
+            hits.add(t["short_name"])
+        if t["name"].lower() in ql:
+            hits.add(t["short_name"])
+    for alias, code in _TEAM_ALIASES.items():
+        if re.search(rf"\b{re.escape(alias)}\b", ql):
+            hits.add(code)
+    if len(hits) > 1:
+        return sorted(hits)
+    return next(iter(hits), None)
+
+
+def _fixture_horizon(question: str) -> int:
+    """The N in 'next N' / 'N gameweeks' (ADR-048); default 5, capped to a season."""
+    m = re.search(r"next\s+(\d+)", question.lower()) or re.search(
+        r"(\d+)\s*(?:game|gw|week|fixture)", question.lower())
+    return max(1, min(int(m.group(1)), 38)) if m else 5
+
+
+def _decide_fixtures(store: Storage, question: str) -> dict | None:
+    """Analytics answer a fixtures question (ADR-048): a team's schedule, or the league FDR ranking.
+
+    Grounded on FPL difficulty; reuses `team_fdr` / `team_schedule` + their renderers. A team named
+    → its schedule; otherwise the league ranking (easiest by default, hardest on a 'hard' cue).
+    """
+    upcoming = store.get_upcoming_fixtures()
+    if not upcoming:
+        return None
+    horizon = _fixture_horizon(question)
+    match = _match_team(question, store.get_teams())
+
+    if isinstance(match, list):                          # two+ teams named → clarify, don't guess
+        return {"message": f"More than one team matches — did you mean {', '.join(match)}? "
+                           "Please name just one."}
+
+    if match:                                            # a single team → its schedule
+        schedule = team_schedule(upcoming, match, source="fpl")[:horizon]
+        if not schedule:
+            return {"message": f"No upcoming fixtures for {match}."}
+        diffs = [f["difficulty"] for f in schedule if f["difficulty"] is not None]
+        facts = {
+            "team": match,
+            "next_fixtures": [
+                f"GW{f['event']}: {'home' if f['venue'] == 'H' else 'away'} vs {f['opponent']} "
+                f"(difficulty {f['difficulty']})" for f in schedule
+            ],
+            "average_difficulty": round(sum(diffs) / len(diffs), 1) if diffs else None,
+        }
+        return {
+            "detail": render_team_fixtures(schedule, match, source="fpl"),
+            "facts": facts,
+            "subjects": [match],
+            "task": f"in 2 short sentences, summarise {match}'s next {len(schedule)} fixtures — how "
+                    "favourable the run is, naming a couple of opponents",
+        }
+
+    # no team → the league FDR ranking (team_fdr is easiest-first; reverse for hardest)
+    ranked = team_fdr(upcoming, next_n=horizon, source="fpl")
+    if not ranked:
+        return None
+    hardest = any(w in question.lower() for w in _HARDEST_WORDS)
+    rows = list(reversed(ranked))[:_FIXTURES_N] if hardest else ranked[:_FIXTURES_N]
+    which = "hardest" if hardest else "easiest"
+    return {
+        "detail": render_fdr_table(rows, next_n=horizon, source="fpl", hardest=hardest),
+        "facts": {
+            "ranking": f"{which} fixtures first, over the next {horizon} gameweeks",
+            "teams": [f"{r['team']} (avg difficulty {r['avg_difficulty']}, next: "
+                      f"{', '.join(r['opponents'])})" for r in rows[:5]],
+        },
+        "subjects": [r["team"] for r in rows],
+        "task": f"in 2 short sentences, say which teams have the {which} fixtures over the next "
+                f"{horizon} gameweeks (name a couple)",
+    }
+
+
 def _numbers(text: str) -> set:
     """Number-like tokens in `text` (e.g. '7.4', '22')."""
     return set(re.findall(r"\d+(?:\.\d+)?", text))
@@ -754,6 +858,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_build_squad(store, question)
     if intent == "shortlist":
         return _decide_shortlist(store, question, rank=rank)
+    if intent == "fixtures":
+        return _decide_fixtures(store, question)
     return _decide_analyse(store, squad)
 
 

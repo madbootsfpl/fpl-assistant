@@ -52,3 +52,4 @@ new ADR as it is created.
 | [045](./ADR-045-bench-aware-optimisation.md) | Bench-aware squad optimisation — a `start`-variable ILP + weighted objective; `--weekly` (max XI + playing bench) / `--bench-boost` (max-15); default unchanged | Accepted |
 | [046](./ADR-046-xi-aware-transfers.md) | XI-aware transfers — rank swaps by XI-gain (best-XI change) via a fast `best_xi_points`; the default (`--raw` for the old ranking) | Accepted |
 | [047](./ADR-047-conversational-ask-follow-ups.md) | Conversational `ask` — a `chat` REPL with grounded follow-ups (why / next / what-about); a pre-route resolver + rank offset; analytics still decide, verifier runs each turn | Accepted |
+| [048](./ADR-048-fixtures-fdr-ask-intent.md) | A fixtures / FDR `ask` intent — league FDR ranking + single-team schedule (reuse `team_fdr`/`team_schedule` + renderers); team resolution never guesses; FPL difficulty; squad-scoped deferred | Accepted |

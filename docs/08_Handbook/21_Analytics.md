@@ -173,6 +173,19 @@ analytics-decided. Three lessons:
   context, so the one-shot `ask` is unchanged and the conversational path reuses the exact same
   pipeline.
 
+**A new intent from analytics you already have (Sprint 048, fixtures).** `ask`/`chat` couldn't answer
+*"who has the best fixtures?"* or *"when does Arsenal play?"* — yet `team_fdr` and `team_schedule` (and
+their renderers) had existed since Sprint 003–004. ADR-048 added a `fixtures` intent that is **pure
+wiring**: it reuses the engines *and* the renderers, so the whole feature is a decision function + a
+router keyword. Two lessons:
+- **Reuse decides scope.** Because the analytics + display already existed, the "cost" of the biggest
+  visible gap was tiny — a reminder to check what's already built before designing anything new. Two
+  modes (league ranking vs one team's schedule) fell out of a single check: *is a team named?*
+- **Resolve entities without guessing.** `_match_team` matches the full name, the short code
+  (case-sensitively, so a typed `NEW` matches but the word "new" doesn't), and a few aliases — and when
+  it's ambiguous or finds nothing, it says so rather than picking one. Same rule as `compare` (ADR-039):
+  a wrong-but-confident answer is worse than "which team did you mean?".
+
 **A recommendation over a *sequence* (Sprint 033, multi-transfer plan).** `suggest_transfer_plan`
 (ADR-035) is the first that reasons across several moves: *"which 3 transfers?"*. The lesson is to
 **reuse the single-move engine over an evolving state** rather than write a new optimiser — a greedy

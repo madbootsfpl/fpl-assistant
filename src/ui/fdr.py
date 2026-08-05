@@ -11,7 +11,7 @@ _GAMES_W = 6
 _AVG_W = 8
 
 
-def render_fdr_table(rows, next_n: int = 5, source: str = "fpl") -> str:
+def render_fdr_table(rows, next_n: int = 5, source: str = "fpl", hardest: bool = False) -> str:
     if not rows:
         return "No upcoming fixtures to rate."
 
@@ -34,8 +34,9 @@ def render_fdr_table(rows, next_n: int = 5, source: str = "fpl") -> str:
             f"{avg_str:>{_AVG_W}}  {opponents}"
         )
 
+    run = "hardest" if hardest else "easiest"
     lines.append("")
     lines.append(
-        f"Ranked by easiest run over the next {next_n} fixtures (source: {source})."
+        f"Ranked by {run} run over the next {next_n} fixtures (source: {source})."
     )
     return "\n".join(lines)

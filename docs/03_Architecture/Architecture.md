@@ -452,6 +452,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 048 (2026-08-05)** — *a fixtures / FDR `ask` intent*, per ADR-048, from the owner (*more Phase
+  4*). Closes the biggest routing gap — every fixtures question fell through before — with **no new
+  analytics**: a `fixtures` intent reuses `team_fdr` / `team_schedule` (FPL difficulty) and their
+  renderers. Two modes: a **team named** → its schedule (`_match_team` → `team_schedule` →
+  `render_team_fixtures`), **no team** → the league **FDR ranking** (`team_fdr` → `render_fdr_table`;
+  **easiest** default, **hardest** on a hard/tough/avoid cue). `_match_team` resolves the full name, the
+  short code (case-sensitive, so a typed "NEW" matches but the word "new" doesn't) and a small alias set
+  (*Tottenham/Spurs*→TOT, *Man Utd*→MUN, *Man City*→MCI, *Forest*→NFO) — and **never guesses** (≥2 teams
+  → clarify, none → league mode / a message). "next N" horizon (default 5). Wired through the shared
+  `_dispatch`, so it works in **both `ask` and `chat`**, grounded + verified (ADR-037). The routing
+  keyword set is placed **last** ("play" is broad); squad-scoped fixtures deferred. No new dependency.
 - **Sprint 047 (2026-08-05)** — *conversational `ask`* (mechanics), per ADR-047, from the owner (*more
   Phase 4*). A follow-up can now build on the last turn while the discipline holds — **analytics decide
   every turn**, the LLM only narrates. A `Context` (last intent/squad/decision + a `rank`) carries the

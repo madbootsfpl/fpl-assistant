@@ -33,7 +33,7 @@ captain · transfer · squad analysis) **complete** (2026-08-04). See the
 
 **Natural language (Phase 4)** — grounded, and optional:
 - **`ask "..."`** — ask a question in plain English (captain / transfer / squad health / start-bench /
-  compare / **build a squad** / **best players in a position**). The
+  compare / **build a squad** / **best players in a position** / **fixtures & difficulty**). The
   **analytics decide**; a **local LLM (Ollama) only narrates** — and every answer is **checked
   against the data** (a ✓/⚠ trust line: figures and names are verified, not just instructed). `ask`
   works without the LLM (it falls back to the decision + facts).
@@ -142,6 +142,8 @@ python app.py ask "build me a squad for £100m with 3 low cost players and 1 pre
 python app.py ask "build me a squad for rotation"      # bench-aware (strong XI + playing bench)
 python app.py ask "build me a squad for a bench boost" # maximise all 15
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
+python app.py ask "who has the best fixtures over the next 5?"   # league fixture-difficulty ranking
+python app.py ask "when does Arsenal play next?"       # one team's upcoming fixtures (venue + difficulty)
 
 python app.py chat                                     # interactive; follow-ups build on the last answer:
 #   > who should I captain from my-team?
