@@ -83,9 +83,13 @@ if prompt:
     st.chat_message("assistant").code(render_ask(ask.answer(prompt)))   # grounded + trust line
 ```
 
-- **Multipage** — `app.py` (home) + `pages/1_Players … 4_Ask.py`; Streamlit builds the sidebar nav.
-- **Widgets, not markup** — `st.dataframe` (sortable/searchable), `st.multiselect`/`st.slider` (live
-  filters), `st.chat_input`/`st.chat_message` (a chat) — interactivity with no HTML/JS.
+- **Multipage** — `app.py` (home) + `pages/1_Players … 6_Build.py`; Streamlit builds the sidebar nav
+  (Players · Fixtures · Squads · Transfer · Build · Ask).
+- **Widgets, not markup** — `st.dataframe` (sortable/searchable), `st.multiselect`/`st.slider`/
+  `st.number_input` (live filters + controls), `st.bar_chart`/`st.scatter_chart` (native charts, no
+  charting library), `st.chat_input`/`st.chat_message` (a chat) — interactivity with no HTML/JS.
+- **Pages are sliders wired to the engine** — Transfer (`suggest_transfers`) and Build (the `build_squad`
+  `ask` intent) reuse the *same* functions the CLI does, so the web can't drift from the CLI's logic.
 - **`AppTest`** — `from streamlit.testing.v1 import AppTest` runs a page headlessly for tests (set inputs,
   assert output); no live server (`tests/test_web_streamlit.py`).
 - **The run quirk** — `streamlit run` puts the *script's* folder on `sys.path`, not the project root. The

@@ -30,6 +30,12 @@ def test_players_page_shows_a_table():
     assert len(at.dataframe) == 1 or len(at.info) == 1     # a table, or the "run refresh" note
 
 
+def test_players_page_has_a_scatter_chart_when_data_present():
+    at = _run(_PAGES / "1_Players.py")
+    if at.dataframe:                                        # data present → a price-vs-points scatter
+        assert len(at.get("vega_lite_chart")) == 1
+
+
 def test_players_filters_narrow_the_table(monkeypatch):
     # the interactivity upgrade: position multiselect + max-price slider drive the table live
     at = _run(_PAGES / "1_Players.py")
@@ -41,15 +47,37 @@ def test_players_filters_narrow_the_table(monkeypatch):
     assert not at.exception                                  # narrowing never crashes (table or a note)
 
 
-def test_fixtures_page_shows_a_table():
+def test_fixtures_page_shows_a_table_and_chart():
     at = _run(_PAGES / "2_Fixtures.py")
     assert len(at.dataframe) == 1 or len(at.info) == 1
+    if at.dataframe:                                        # data present → an avg-FDR bar chart
+        assert len(at.get("vega_lite_chart")) == 1
 
 
 def test_squads_page_renders():
     at = _run(_PAGES / "3_Squads.py")
     # a selectbox (squads exist) or the "no saved squads" info — both are fine, no crash
     assert len(at.selectbox) == 1 or len(at.info) == 1
+
+
+def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
+    at = _run(_PAGES / "5_Transfer.py")
+    if not at.selectbox:                                   # no saved squads locally → the info branch
+        assert len(at.info) == 1
+        return
+    # a squad is selected → the ranked swaps (or a "no upgrades" note) render, no crash
+    assert len(at.code) == 1 or len(at.info) >= 1
+    at.slider[0].set_value(3.0).run()                      # move the bank slider → recompute, no crash
+    assert not at.exception
+
+
+def test_build_page_returns_a_squad(monkeypatch):
+    at = _run(_PAGES / "6_Build.py")
+    # a squad is rendered (or the "no data" note if the DB is empty) — no crash
+    assert len(at.code) == 1 or len(at.info) >= 1
+    # move an archetype control → rebuild, still no crash
+    at.number_input[0].set_value(3).run()                  # 3 low-cost players
+    assert not at.exception
 
 
 def test_ask_chat_answers_a_grounded_question():

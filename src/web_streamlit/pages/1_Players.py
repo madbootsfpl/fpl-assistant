@@ -30,6 +30,11 @@ else:
     else:
         ranked = rank_players(filtered, sort_by=sort)[:limit]
         st.caption(f"{len(filtered)} players match · showing {len(ranked)}")
+        # The value landscape: price vs points across all matching players (top-left = cheap + high).
+        st.scatter_chart(
+            [{"£m": p["price"], "Pts": p["total_points"], "Pos": p["position"]} for p in filtered],
+            x="£m", y="Pts", color="Pos",
+        )
         st.dataframe(
             [{"Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),

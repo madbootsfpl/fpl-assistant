@@ -455,6 +455,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 054 (2026-08-05)** — *Streamlit polish* (no ADR — UI over the settled edge, ADR-052). The
+  `src/web_streamlit/` edge gains **charts** (native `st.bar_chart` — teams by avg FDR on Fixtures; native
+  `st.scatter_chart` — price vs points, coloured by position, on Players) and two **interactive decision
+  pages** — **Transfer** (`suggest_transfers`, squad + bank/count) and **Build** (`select_squad`, budget +
+  archetypes). All reuse the same engines/renderers the CLI does; the core is unchanged, the two-edge
+  guardrail holds, FastAPI stays frozen. (US-159 shipped the charts; Transfer/Build are US-160/161.)
 - **Sprint 053 (2026-08-05)** — *the Streamlit edge graduated*, per ADR-052 (executing the ADR-051
   decision). The Sprint-052 spike became a real edge, **`src/web_streamlit/`** — **multipage** (`app.py`
   home + `pages/1_Players … 4_Ask.py`, Streamlit's sidebar nav), run via **`python -m src.web_streamlit`**

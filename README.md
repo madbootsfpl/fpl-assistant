@@ -165,9 +165,11 @@ local database (`data/fpl.db`).
 A thin, **read-only, local** web view over the same analytics — the CLI stays the engine; the web is
 just another way to look at it. Two edges, both reusing the exact same engine:
 
-**Streamlit** — the interactive UI (ADR-051/052). Multipage: **Players** (live position/price filters +
-a sortable table) · **Fixtures** (FDR) · **Squads** (analyse a saved squad) · **Ask** (a **chat** — each
-answer grounded, with its ✓/⚠ trust line; works without Ollama, degrading to the decision + facts).
+**Streamlit** — the interactive UI (ADR-051/052). Multipage: **Players** (live position/price filters, a
+sortable table + a price-vs-points scatter) · **Fixtures** (FDR table + a bar chart) · **Squads** (analyse
+a saved squad) · **Transfer** (squad + bank sliders → XI-aware swaps) · **Build** (budget + archetype
+sliders → the optimal 15) · **Ask** (a **chat** — each answer grounded, with its ✓/⚠ trust line; works
+without Ollama, degrading to the decision + facts).
 
 ```bash
 pip install -r requirements.txt      # includes streamlit (web-only)
