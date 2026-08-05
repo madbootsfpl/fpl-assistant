@@ -86,7 +86,7 @@ def render_loaded_squad(name, saved, loaded, now_cost, departed) -> str:
 
 
 def render_squad(
-    result, budget: float = 80.0, objective: str = "points", full: bool = False
+    result, budget: float = 80.0, objective: str = "points", full: bool = False, xi_ids=None
 ) -> str:
     # `full` picks the 15-man squad; otherwise a starting XI. Only the wording and the
     # trailing caveat differ — the table is the same.
@@ -119,15 +119,23 @@ def render_squad(
         f"{'-' * _PRICE_W} {value_rule}"
     )
 
+    # XI/bench split for the breakout (US-131): a passed `xi_ids` (the auto-derived best XI,
+    # ADR-041) wins; else the declared-bench flag. Display-only — this never mutates the players,
+    # so `--save` (which reads `bench`) is untouched. Bench sorts last (stable → position order).
+    def _bench(p):
+        return (p["id"] not in xi_ids) if xi_ids is not None else bool(p.get("bench"))
+    selected = sorted(result["selected"], key=_bench)
+    starters = [p for p in selected if not _bench(p)]
+    bench = [p for p in selected if _bench(p)]
+
     lines = [
         f"Optimal {what}{shape} — objective: {objective}, budget £{budget:.1f}m",
         "", header, divider,
     ]
     any_forced = False
-    any_bench = False
     bench_started = False
-    for p in result["selected"]:
-        is_bench = bool(p.get("bench"))
+    for p in selected:
+        is_bench = _bench(p)
         # A "Bench:" heading before the first bench row (they sort to the end).
         if is_bench and not bench_started:
             lines.append("")
@@ -137,7 +145,7 @@ def render_squad(
         name = str(p["web_name"])[:_NAME_W]
         price = f"£{p['price']:.1f}m"
         if is_bench:
-            marker, any_bench = " **", True
+            marker = " **"
         elif p.get("forced"):
             marker, any_forced = " *", True
         else:
@@ -153,7 +161,7 @@ def render_squad(
 
     lines.append("")
     if show_xp:
-        projected = round(sum(p.get("xp", 0) for p in result["selected"]), 1)
+        projected = round(sum(p.get("xp", 0) for p in selected), 1)
         lines.append(f"Total: £{result['total_cost']:.1f}m · projected {projected} xP")
     else:
         lines.append(f"Total: £{result['total_cost']:.1f}m · {result['total_points']} pts")
@@ -168,17 +176,20 @@ def render_squad(
             "optimises last season's total instead; `--no-xmins` for the raw xP."
         )
 
-    # With a declared bench we know the starters — show their subtotal, the honest number.
-    # At a full 4-man bench the 11 starters form a legal XI, so state its shape (ADR-014).
-    if any_bench:
-        starters = [p for p in result["selected"] if not p.get("bench")]
-        shape = f" — {formation_str(starters)}" if len(starters) == 11 else ""
+    # The XI/bench breakout (US-131) — the weekly-relevant XI xP vs the non-scoring bench, so
+    # builds are comparable. Also the honest subtotal for a declared bench (ADR-013/014).
+    if bench:
+        xi_shape = f" — {formation_str(starters)}" if len(starters) == 11 else ""
         if show_xp:
-            subtotal = f"projected {round(sum(p.get('xp', 0) for p in starters), 1)} xP"
+            lines.append(f"Starting XI ({len(starters)}){xi_shape}: projected "
+                         f"{round(sum(p.get('xp', 0) for p in starters), 1)} xP")
+            lines.append(f"Bench ({len(bench)}): projected "
+                         f"{round(sum(p.get('xp', 0) for p in bench), 1)} xP")
         else:
-            subtotal = f"{sum(p['total_points'] for p in starters)} pts"
-        lines.append(f"Starters ({len(starters)}){shape}: {subtotal}")
+            lines.append(f"Starters ({len(starters)}){xi_shape}: "
+                         f"{sum(p['total_points'] for p in starters)} pts")
 
+    any_bench = bool(bench)
     legend = []
     if any_forced:
         legend.append("* = forced in")

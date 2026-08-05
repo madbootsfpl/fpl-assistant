@@ -475,9 +475,16 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
     top = sorted(picks, key=lambda p: -xp_by_id.get(p["id"], 0))[:3]
 
+    # US-131/132: the XI/bench xP breakout — the weekly-relevant number, so builds compare.
+    xi_ids = best_legal_xi(picks, xp_by_id)
+    xi_xp = round(sum(xp_by_id.get(pid, 0) for pid in xi_ids), 1)
+    bench_xp = round(sum(xp_by_id.get(p["id"], 0) for p in picks if p["id"] not in xi_ids), 1)
+
     facts = {
         "budget": f"£{budget:.1f}m",
         "squad_cost": f"£{result['total_cost']:.1f}m",
+        "starting_XI_points_over_5_gameweeks": xi_xp,
+        "bench_points_over_5_gameweeks": bench_xp,
         "standout_picks": [f"{p['web_name']} ({p['position']}, xP {xp_by_id.get(p['id'], 0)})"
                            for p in top],
     }
@@ -485,11 +492,11 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         facts["requested_structure"] = (f"at least {cheap or 0} low-cost, {premium or 0} premium "
                                         f"and {differential or 0} differential players")
     return {
-        "detail": render_squad(result, budget=budget, objective="xp", full=True),
+        "detail": render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids),
         "facts": facts,
         "subjects": [p["web_name"] for p in picks],
-        "task": "in 2 short sentences, describe this optimal squad — the budget used and its standout "
-                "picks",
+        "task": "in 2 short sentences, state the starting XI's projected points and name a couple of "
+                "standout picks",
     }
 
 

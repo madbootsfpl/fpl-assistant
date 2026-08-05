@@ -452,6 +452,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 044 (2026-08-05)** — *XI vs bench xP breakout* (a squad-build display completion; no new ADR,
+  under ADR-031/041), from the owner's Sprint-43 note. `render_squad` gained an `xi_ids` param: it splits
+  the 15 into XI + bench and, under `--objective xp`, prints **`Starting XI (11): projected N xP`** +
+  **`Bench (4): projected M xP`** so build iterations compare on the *weekly-relevant* number.
+  `cmd_squad` and `_decide_build_squad` auto-derive the XI via `best_legal_xi(selected, xp)` when no bench
+  is declared — **display-only** (they don't touch `p["bench"]`, so `--save` is untouched); a declared
+  `--bench` drives its own split. `ask "build me a squad"` carries the XI/bench xP in its facts, and the
+  task now cites them — which also **fixed the recurring build-narration ⚠** (the LLM stated the grounded
+  XI/bench points instead of inventing a cost split). No new dependency.
 - **Sprint 043 (2026-08-05)** — *the differential archetype*, per ADR-044, completing ADR-043. Ingested
   **ownership** (`Player.selected_by` ← `selected_by_percent`; a storage column/migration; `refresh`
   populates it — a line-for-line copy of the `chance` field). `select_squad` gained **`min_differentials`**

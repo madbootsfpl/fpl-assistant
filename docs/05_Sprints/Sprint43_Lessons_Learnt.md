@@ -91,7 +91,8 @@ it so a differential build actually tilts the squad (≤5% owned, pinned on data
 
 ### Notes _(for Tony)_
 
--
+- Excellent work!
+- When building a squad, would be great to breakout the top 11 xP players, vs the bench players xP for the next 5 GW's. This will enable a good comparison when comparing a few different iterations of building a team, so you can see the score differences.
 
 ---
 

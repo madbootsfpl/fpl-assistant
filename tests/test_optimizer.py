@@ -684,3 +684,27 @@ def test_min_differentials_infeasible_without_any_low_owned_players():
     scores = {p["id"]: p["total_points"] for p in pool}
     result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, min_differentials=1)
     assert result["status"] != "Optimal" and result["selected"] == []
+
+
+def test_render_squad_shows_xi_bench_xp_breakout():
+    # US-131: a passed xi_ids drives a Starting XI xP + Bench xP breakout (display-only);
+    # bench players sort last and are marked.
+    def _pl(pid, xp):
+        return {"id": pid, "web_name": f"P{pid}", "team": "ARS", "position": "MID",
+                "price": 5.0, "total_points": 10, "status": "a", "xp": xp, "minutes_weight": 1.0}
+    result = {"status": "Optimal", "selected": [_pl(1, 20.0), _pl(2, 15.0), _pl(3, 5.0)],
+              "total_points": 30, "total_cost": 15.0}
+    out = render_squad(result, budget=100, objective="xp", full=True, xi_ids={1, 2})
+    assert "Starting XI (2)" in out and "projected 35.0 xP" in out     # P1 + P2 in the XI
+    assert "Bench (1)" in out and "projected 5.0 xP" in out            # P3 on the bench
+    assert out.rindex("P3") > out.rindex("P1")                         # bench sorts last
+
+
+def test_render_squad_no_xi_breakout_for_non_xp_objectives():
+    # The XI/bench xP breakout is xp-only; --objective points shows Pts and no XI xP lines.
+    result = {"status": "Optimal", "selected": [
+        {"id": 1, "web_name": "P1", "team": "ARS", "position": "MID",
+         "price": 5.0, "total_points": 88}],
+        "total_points": 88, "total_cost": 5.0}
+    out = render_squad(result, budget=100, objective="points", full=True)
+    assert "88" in out and "Starting XI" not in out

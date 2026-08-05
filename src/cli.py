@@ -308,11 +308,16 @@ def cmd_squad(args) -> None:
                 f"differential≥{args.differential or 0}) — relax the constraints or raise the budget."
             )
             return
+        xi_ids = None
         if args.objective == "xp":   # US-121: show what we optimised — attach xP + xMins for the table
             for p in result["selected"]:
                 p["xp"] = scores.get(p["id"], 0)
                 p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
-        print(render_squad(result, budget=budget, objective=args.objective, full=full))
+            # US-131: with no declared bench, auto-derive the best XI for the XI/bench xP breakout
+            # (display-only — the saved bench is unaffected). A declared bench drives its own split.
+            if full and not bench_ids:
+                xi_ids = best_legal_xi(result["selected"], scores)
+        print(render_squad(result, budget=budget, objective=args.objective, full=full, xi_ids=xi_ids))
 
         # Save the computed squad (ADR-024) — the picks (ids + names) + bench, to reload later.
         if args.save and result["status"] == "Optimal":
