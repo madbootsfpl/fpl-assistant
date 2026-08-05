@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]           # the project root
-_APP = Path(__file__).resolve().parent / "app.py"
+_APP = Path(__file__).resolve().parent / "Home.py"    # the entrypoint (its filename = the sidebar "Home")
 
 
 def main() -> int:

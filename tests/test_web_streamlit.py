@@ -11,7 +11,7 @@ import pathlib
 from streamlit.testing.v1 import AppTest
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
-_APP = _ROOT / "src" / "web_streamlit" / "app.py"
+_APP = _ROOT / "src" / "web_streamlit" / "Home.py"
 _PAGES = _ROOT / "src" / "web_streamlit" / "pages"
 
 
@@ -36,6 +36,15 @@ def test_players_page_has_a_scatter_chart_when_data_present():
         assert len(at.get("vega_lite_chart")) == 1
 
 
+def test_players_page_has_photo_and_badge_columns_when_data_present():
+    at = _run(_PAGES / "1_Players.py")
+    if at.dataframe:
+        df = at.dataframe[0].value
+        assert "photos/players" in str(df["photo"].iloc[0])   # the player photo URL
+        # the team badge is present iff team.code is in the DB (a refreshed DB); tolerate both
+        assert "badge" in df.columns
+
+
 def test_players_filters_narrow_the_table(monkeypatch):
     # the interactivity upgrade: position multiselect + max-price slider drive the table live
     at = _run(_PAGES / "1_Players.py")
@@ -52,6 +61,7 @@ def test_fixtures_page_shows_a_table_and_chart():
     assert len(at.dataframe) == 1 or len(at.info) == 1
     if at.dataframe:                                        # data present → an avg-FDR bar chart
         assert len(at.get("vega_lite_chart")) == 1
+        assert "" in at.dataframe[0].value.columns          # a team-badge image column
 
 
 def test_squads_page_renders():
@@ -89,7 +99,15 @@ def test_ask_chat_answers_a_grounded_question():
     assert len(at.session_state["history"]) == 1           # the turn was kept in history
 
 
+def test_badge_url_helper():
+    from src.web_streamlit.badges import badge_url, badge_url_by_short_name
+    assert badge_url(3).endswith("/t3.png")
+    assert badge_url(None) == ""                            # no code → no image (no crash)
+    m = badge_url_by_short_name([{"short_name": "ARS", "code": 3}, {"short_name": "LIV", "code": None}])
+    assert m["ARS"].endswith("/t3.png") and m["LIV"] == ""
+
+
 def test_runner_module_points_at_the_app():
     # the `python -m src.web_streamlit` entry — imports cleanly and targets app.py (no server launched)
     from src.web_streamlit import __main__ as runner
-    assert runner._APP.name == "app.py" and runner._APP.exists()
+    assert runner._APP.name == "Home.py" and runner._APP.exists()

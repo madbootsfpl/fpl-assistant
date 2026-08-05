@@ -85,8 +85,17 @@ ADR.
 
 ### Notes _(for Tony)_
 
--
+- Looks great
+- Rename app tab to Home, and include the Build & Transfer tab descriptions
+- Could we add some images to the teams, 2 examples below.
+![
+](7FF097BD-68DE-4834-8E25-D4F06700D597_4_5005_c.jpeg)
 
+![alt text](84794BF1-FFE6-49BA-ADCA-1FF73BD5B1FB_1_105_c.jpeg)
+
+- could i share the app to get some help on functionality testing. I could create an fpl.malahide.cc domain as i own malahide.cc
+
+- appreciate above are big asks and will need to go into backlog for consideration - brain is racing at how good this is
 ---
 
 # Decisions Made 📋

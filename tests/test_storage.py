@@ -151,6 +151,15 @@ def test_save_teams_stores_overall_strength(tmp_path):
     store.close()
 
 
+def test_save_teams_stores_and_returns_the_code(tmp_path):
+    # the FPL asset `code` (for the badge URL, Sprint 055) round-trips through get_teams
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([Team(id=1, name="Arsenal", short_name="ARS", code=3)])
+    team = store.get_teams()[0]
+    assert team["code"] == 3
+    store.close()
+
+
 def test_migration_adds_strength_columns_to_an_old_teams_table(tmp_path):
     db = str(tmp_path / "old.db")
 

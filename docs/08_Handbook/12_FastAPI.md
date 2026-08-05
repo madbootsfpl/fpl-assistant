@@ -83,11 +83,13 @@ if prompt:
     st.chat_message("assistant").code(render_ask(ask.answer(prompt)))   # grounded + trust line
 ```
 
-- **Multipage** — `app.py` (home) + `pages/1_Players … 6_Build.py`; Streamlit builds the sidebar nav
-  (Players · Fixtures · Squads · Transfer · Build · Ask).
+- **Multipage** — `Home.py` (the landing) + `pages/1_Players … 6_Build.py`; Streamlit builds the sidebar
+  nav (Home · Players · Fixtures · Squads · Transfer · Build · Ask). *The entrypoint's **filename** is the
+  sidebar label* — so the home file is `Home.py` (not `app.py`).
 - **Widgets, not markup** — `st.dataframe` (sortable/searchable), `st.multiselect`/`st.slider`/
   `st.number_input` (live filters + controls), `st.bar_chart`/`st.scatter_chart` (native charts, no
-  charting library), `st.chat_input`/`st.chat_message` (a chat) — interactivity with no HTML/JS.
+  charting library), `st.column_config.ImageColumn` (player photos + team badges, from the stored
+  `code`s), `st.chat_input`/`st.chat_message` (a chat) — interactivity with no HTML/JS.
 - **Pages are sliders wired to the engine** — Transfer (`suggest_transfers`) and Build (the `build_squad`
   `ask` intent) reuse the *same* functions the CLI does, so the web can't drift from the CLI's logic.
 - **`AppTest`** — `from streamlit.testing.v1 import AppTest` runs a page headlessly for tests (set inputs,

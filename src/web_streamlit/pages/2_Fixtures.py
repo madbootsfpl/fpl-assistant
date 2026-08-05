@@ -1,9 +1,10 @@
-"""Fixtures — the league fixture-difficulty ranking (easiest over the next 5)."""
+"""Fixtures — the league fixture-difficulty ranking (easiest over the next 5), with team badges."""
 
 import streamlit as st
 
 from src.analytics import team_fdr
 from src.storage import Storage
+from src.web_streamlit.badges import badge_url_by_short_name
 
 st.set_page_config(page_title="Fixtures · FPL Assistant", page_icon="⚽", layout="wide")
 st.title("Fixtures — difficulty over the next 5")
@@ -11,6 +12,7 @@ st.title("Fixtures — difficulty over the next 5")
 store = Storage()
 try:
     upcoming = store.get_upcoming_fixtures()
+    badges = badge_url_by_short_name(store.get_teams())     # {short_name: badge URL}
 finally:
     store.close()
 
@@ -24,7 +26,8 @@ else:
         x="Team", y="Avg FDR", horizontal=True,
     )
     st.dataframe(
-        [{"Team": r["team"], "Avg FDR": r["avg_difficulty"],
+        [{"": badges.get(r["team"], ""), "Team": r["team"], "Avg FDR": r["avg_difficulty"],
           "Next opponents": ", ".join(r["opponents"])} for r in fdr],
         width="stretch", hide_index=True,
+        column_config={"": st.column_config.ImageColumn("", width="small")},
     )

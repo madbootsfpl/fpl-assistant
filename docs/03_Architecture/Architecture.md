@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 055 (2026-08-05)** — *Streamlit visual polish* (no ADR — UI over the settled edge + a
+  display-only field). The entrypoint `app.py` → **`Home.py`** (in Streamlit's classic multipage the
+  sidebar label is the entrypoint *filename*), the landing lists all six pages; **player photos**
+  (`st.column_config.ImageColumn` from the stored player `code`) on Players; **team badges** on Fixtures +
+  Players, via a **light `team.code` ingest** (a nullable column + migration, backfilled by `refresh`;
+  bootstrap-static `teams[].code`) and an edge helper `src/web_streamlit/badges.py`. Images are fetched by
+  the **browser** at render (no new Python dep; a missing one → a broken-thumbnail icon). Core analytics
+  unchanged; the two-edge guardrail holds (the badge helper is *edge*).
 - **Sprint 054 (2026-08-05)** — *Streamlit polish* (no ADR — UI over the settled edge, ADR-052). The
   `src/web_streamlit/` edge gains **charts** (native `st.bar_chart` — teams by avg FDR on Fixtures; native
   `st.scatter_chart` — price vs points, coloured by position, on Players) and two **interactive decision

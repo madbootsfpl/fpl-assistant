@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS teams (
     short_name            TEXT NOT NULL,
     strength_overall_home INTEGER,
     strength_overall_away INTEGER,
-    elo                   REAL
+    elo                   REAL,
+    code                  INTEGER
 )
 """
 
@@ -31,6 +32,7 @@ _MIGRATIONS = {
         "strength_overall_home": "INTEGER",
         "strength_overall_away": "INTEGER",
         "elo": "REAL",
+        "code": "INTEGER",              # the FPL asset code, for the badge URL (Sprint 055)
     },
     "players": {
         "points_per_game": "REAL",
@@ -129,13 +131,14 @@ CREATE TABLE IF NOT EXISTS fixtures (
 
 # Upsert: insert a new row, or refresh the existing one if the id already exists.
 UPSERT_TEAM = """
-INSERT INTO teams (id, name, short_name, strength_overall_home, strength_overall_away)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO teams (id, name, short_name, strength_overall_home, strength_overall_away, code)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name                  = excluded.name,
     short_name            = excluded.short_name,
     strength_overall_home = excluded.strength_overall_home,
-    strength_overall_away = excluded.strength_overall_away
+    strength_overall_away = excluded.strength_overall_away,
+    code                  = excluded.code
 """
 
 UPSERT_PLAYER = """
@@ -258,7 +261,7 @@ class Storage:
     def save_teams(self, teams: list[Team]) -> None:
         rows = [
             (t.id, t.name, t.short_name,
-             t.strength_overall_home, t.strength_overall_away)
+             t.strength_overall_home, t.strength_overall_away, t.code)
             for t in teams
         ]
         # `with self.conn` is a transaction: commit on success, roll back on error.
@@ -413,7 +416,7 @@ class Storage:
 
     def get_teams(self) -> list[sqlite3.Row]:
         return self.conn.execute(
-            "SELECT id, name, short_name, elo FROM teams ORDER BY short_name"
+            "SELECT id, name, short_name, elo, code FROM teams ORDER BY short_name"
         ).fetchall()
 
     def count_teams(self) -> int:
