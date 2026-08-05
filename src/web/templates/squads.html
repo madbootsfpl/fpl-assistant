@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Saved squads</h1>
+{% if squads %}
+<ul>
+  {% for name in squads %}
+  <li><a href="/squad/{{ name }}">{{ name }}</a> — analyse over the next 5 gameweeks</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No saved squads yet. Save one from the CLI:
+<code>python app.py squad --full --save my-team</code>.</p>
+{% endif %}
+{% endblock %}

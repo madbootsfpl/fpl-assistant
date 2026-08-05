@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ask</h1>
+<form class="ask" method="get" action="/ask">
+  <input type="text" name="q" value="{{ q }}"
+         placeholder="e.g. who has the best fixtures over the next 5?" autofocus>
+  <button type="submit">Ask</button>
+</form>
+{% if answer %}
+<pre>{{ answer }}</pre>
+{% else %}
+<p class="muted">Ask about captaincy, transfers, your squad, comparisons, building a squad,
+the best players, or fixtures. The analytics decide; the answer is checked against the data.</p>
+{% endif %}
+{% endblock %}

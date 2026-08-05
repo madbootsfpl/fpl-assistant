@@ -160,4 +160,19 @@ python app.py chat                                     # interactive; follow-ups
 `refresh` is the only command that touches the network; every view reads from the
 local database (`data/fpl.db`).
 
+## Web UI (optional)
+
+A thin, **read-only, local** web view over the same analytics (ADR-050) — the CLI stays the engine; the
+web is just a second way to look at it. Its pages reuse the exact CLI output (so it looks like the
+terminal), including the grounded **Ask** page with its ✓/⚠ trust line.
+
+```bash
+pip install -r requirements.txt      # includes fastapi / uvicorn / jinja2 (web-only)
+python -m src.web                    # serves http://127.0.0.1:8000  (Ctrl-C to stop)
+```
+
+Pages: **Players** (`/`) · **Fixtures** (`/fixtures`) · **Squads** (`/squads` → analyse a saved squad) ·
+**Ask** (`/ask` — type a question, same as the CLI `ask`; works without Ollama, degrading to the decision
++ facts). It's local-only (`127.0.0.1`), read-only, and needs no auth.
+
 Created by Tony Sheridan.

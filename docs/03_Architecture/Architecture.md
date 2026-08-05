@@ -35,8 +35,10 @@ For v0.1 the application is a single Python process with three clear layers:
 
 ```
         ┌─────────────────────────────────────────────┐
-        │                 Presentation                 │
-        │        (print a player table for now)        │
+        │             Presentation (edges)             │
+        │   CLI (argparse)  ·  Web (FastAPI, ADR-050)  │
+        │   — both call the SAME analytics; core is    │
+        │     web-free (one-way flow, a test asserts)  │
         └───────────────────┬─────────────────────────┘
                             │ reads
         ┌───────────────────┴─────────────────────────┐
@@ -452,6 +454,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 051 (2026-08-05)** — *a thin web UI (first slice)*, per ADR-050 — realises the web UI deferred
+  by ADR-002/003. A **second edge** (`src/web/`) alongside the CLI: a read-only, local-only **FastAPI**
+  app (sync handlers) whose routes call the **same** `decision_xp`/`ask.answer`/optimiser and render the
+  **existing text renderers wrapped in `<pre>`** (zero new rendering logic). Slice-1 routes: **`/`**
+  (players) · **`/fixtures`** (FDR) · **`/ask`** (the flagship — the grounded NL answer with its ✓/⚠ trust
+  line, degrading without Ollama like the CLI). The analytics/CLI import **nothing** from `src/web/` — a
+  test (`test_core_never_imports_the_web_edge`) asserts the core stays web-free, so one-way flow survives
+  the new edge. Run: `python -m src.web` (127.0.0.1:8000). New **web-only** deps (`fastapi`/`uvicorn`/
+  `jinja2`, +`httpx` for the test client) — the CLI runs without them. Tests 421 → 427. Later pages +
+  HTML polish are US-153 / future.
 - **Sprint 049 (2026-08-05)** — *squad-scoped fixtures*, per ADR-049, from the owner (the piece deferred
   from Sprint 048). The `fixtures` intent gains a **third mode**: name a saved squad and
   `_decide_fixtures` ranks **that squad's players** by their team's upcoming FDR (player-level: Player ·

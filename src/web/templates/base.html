@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · FPL Assistant</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.4; }
+    header { padding: 0.6rem 1rem; border-bottom: 1px solid #8884; display: flex; gap: 1rem;
+             align-items: baseline; flex-wrap: wrap; }
+    header .brand { font-weight: 700; }
+    nav a { margin-right: 0.9rem; text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    main { padding: 1rem; }
+    pre { overflow-x: auto; padding: 0.9rem; border: 1px solid #8884; border-radius: 6px;
+          font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.86rem; }
+    form.ask { margin: 0 0 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    form.ask input[type=text] { flex: 1 1 24rem; padding: 0.5rem; font-size: 1rem; }
+    form.ask button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    .muted { color: #8888; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">⚽ FPL Assistant</span>
+    <nav>
+      <a href="/">Players</a>
+      <a href="/fixtures">Fixtures</a>
+      <a href="/squads">Squads</a>
+      <a href="/ask">Ask</a>
+    </nav>
+    <span class="muted">read-only · local</span>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

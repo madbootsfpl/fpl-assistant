@@ -2,7 +2,13 @@
 requests
 pulp          # integer-programming solver for the squad optimiser (ADR-008)
 
+# Web UI (optional — the CLI runs without these; ADR-050). Run: `python -m src.web`
+fastapi       # the read-only web edge over the analytics
+uvicorn       # local dev server (127.0.0.1)
+jinja2        # server-side templates
+
 # Development / testing
 pytest
+httpx         # FastAPI TestClient (web-edge tests; ADR-050)
 ruff          # linter (CI + pre-commit; config in ruff.toml) — ADR none, US-079
 pre-commit    # optional local hooks (.pre-commit-config.yaml); run `pre-commit install`
