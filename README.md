@@ -176,6 +176,10 @@ pip install -r requirements.txt      # includes streamlit (web-only)
 python -m src.web_streamlit          # serves http://localhost:8501  (Ctrl-C to stop)
 ```
 
+**Live app:** `https://<name>.streamlit.app` *(deploy in a few clicks on Streamlit Community Cloud — see
+[docs/DEPLOY.md](docs/DEPLOY.md); ADR-053).* Public + read-only; in the cloud, **Ask** shows the decision +
+facts (no Ollama narration).
+
 **FastAPI** — a lean, frozen server-rendered edge (ADR-050), kept as a reference:
 
 ```bash

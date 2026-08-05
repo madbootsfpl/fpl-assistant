@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 056 (2026-08-05)** — *deploy & share*, per ADR-053 — the Streamlit app becomes a public,
+  read-only site on **Streamlit Community Cloud** (the owner relaxed the custom domain, so no PaaS /
+  Cloudflare / Docker / `$PORT`). Repo-prep: a minimal **`pyproject.toml`** + **`-e .`** in
+  `requirements.txt` so `import src` resolves under Community Cloud's `streamlit run` (an editable install
+  on the path — no `sys.path` hack); a committed **`data/seed.db`** snapshot (the live `fpl.db` is
+  gitignored) with `config.DB_PATH` falling back to it when `fpl.db` is absent; a `.streamlit/config.toml`.
+  Security: read-only, no secrets, FPL API public, **Ollama absent → Ask degrades to decision + facts**.
+  Going live is owner-executed via `docs/DEPLOY.md`. Core analytics unchanged; 442 tests green.
 - **Sprint 055 (2026-08-05)** — *Streamlit visual polish* (no ADR — UI over the settled edge + a
   display-only field). The entrypoint `app.py` → **`Home.py`** (in Streamlit's classic multipage the
   sidebar label is the entrypoint *filename*), the landing lists all six pages; **player photos**

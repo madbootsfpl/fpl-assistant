@@ -1,3 +1,7 @@
+# The project itself (editable) — so `import src` resolves under `streamlit run` on Community Cloud,
+# where the script's folder (not the project root) is on sys.path (ADR-053; pyproject.toml).
+-e .
+
 # Runtime dependencies
 requests
 pulp          # integer-programming solver for the squad optimiser (ADR-008)

@@ -1,0 +1,20 @@
+# Minimal packaging so `import src` works regardless of how the app is launched — in particular under
+# `streamlit run src/web_streamlit/Home.py` (Streamlit Community Cloud), where the script's folder, not
+# the project root, is on sys.path. An editable install (`-e .`, added to requirements.txt) puts the
+# project root on the path via the venv, so no per-file sys.path hack is needed (ADR-053).
+#
+# (Lint/format config stays in ruff.toml; test config stays with conftest.py — this file is packaging only.)
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fpl-assistant"
+version = "0.0.1"
+description = "A personal Fantasy Premier League analytics assistant."
+requires-python = ">=3.11"
+# Runtime/dev dependencies live in requirements.txt (installed separately by the CLI + Community Cloud).
+
+[tool.setuptools.packages.find]
+include = ["src*"]

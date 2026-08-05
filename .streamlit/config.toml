@@ -1,0 +1,6 @@
+# Streamlit config for the deploy (and local runs) — ADR-053.
+[server]
+headless = true          # no auto-open a browser (also the Community Cloud default)
+
+[browser]
+gatherUsageStats = false  # don't phone home

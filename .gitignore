@@ -20,6 +20,11 @@ venv/
 
 # Local database (generated cache, not source)
 data/*.db
+# …except the committed public-deploy snapshot (ADR-053):
+!data/seed.db
+
+# Editable-install build metadata (`pip install -e .`) — generated, not source
+*.egg-info/
 
 # Saved squads — the user's own state, not source (ADR-024)
 data/*.json

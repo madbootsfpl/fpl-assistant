@@ -5,6 +5,8 @@ never hard-codes URLs, and tests (or a future config file) can override them
 easily. See docs/03_Architecture/Architecture.md (§4 Components — "Config").
 """
 
+import os
+
 # Base URL for the official FPL API.
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -49,9 +51,10 @@ SQUADS_PATH = "data/squads.json"
 # so we send a simple, honest User-Agent that identifies this project.
 USER_AGENT = "fpl-assistant/0.1 (learning project)"
 
-# Where the local SQLite cache lives. This is a generated file, not source, so
-# it is gitignored (see .gitignore).
-DB_PATH = "data/fpl.db"
+# Where the local SQLite cache lives. The live cache (fpl.db) is a generated file, gitignored (see
+# .gitignore). On a fresh clone / a public deploy it's absent, so fall back to the committed **seed
+# snapshot** (seed.db) — so the app still has data to show (ADR-053).
+DB_PATH = "data/fpl.db" if os.path.exists("data/fpl.db") else "data/seed.db"
 
 # FPL encodes a player's position as element_type 1-4. We store a readable
 # label instead of the magic number (mapped once, at ingestion).
