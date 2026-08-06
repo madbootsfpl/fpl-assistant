@@ -7,7 +7,7 @@ xMins-weighted — so the web can't drift from the CLI (ADR-054).
 
 import streamlit as st
 
-from src.analytics import baseline_rate, captain_picks, minutes_weight_from_history
+from src.analytics import baseline_rate, captain_picks, crowd_flags, minutes_weight_from_history
 from src.storage import Storage
 from src.ui.captain import render_captain_picks
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
@@ -43,12 +43,18 @@ else:
     minutes_weight = minutes_weight_from_history(history)      # xMins v0 (ADR-038), default-on
     picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code,
                           minutes_weight=minutes_weight, history_by_code=history)
-    # An image table of the ranked candidates (photos + badges), then the text detail beneath (Sprint 059).
+    # An image table of the ranked candidates (photos + badges) + the crowd Trends flags (joined by id from
+    # the full squad rows, ADR-057), then the text detail beneath (Sprint 059/061).
+    owned_by_id = {p["id"]: p for p in owned}
     render_player_table([{
         "photo": photos.get(pk["id"], ""), "badge": badges.get(pk["team"], ""),
         "Player": pk["web_name"], "Team": pk["team"], "Opp": pk.get("opponent", ""),
-        "xP": round(pk.get("xp", 0), 1),
+        "xP": round(pk.get("xp", 0), 1), "Trends": " ".join(crowd_flags(owned_by_id.get(pk["id"], {}))),
     } for pk in picks])
+    # Template-risk framing (Tier-1, US-184): a 🟦 template captain is safe (the field owns them too); a
+    # 💎 differential captain is a rank swing. The flags carry it; this names it.
+    st.caption("Captaincy risk: a **🟦 template** captain is safe (most managers own them); a "
+               "**💎 differential** captain is a bigger rank swing — upside and downside.")
     st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True), language=None)
 
     # Set & persist YOUR captain (ADR-055) — stored on the session squad, shown (C) in Analyse + the

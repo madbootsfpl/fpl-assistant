@@ -109,6 +109,24 @@ def test_captain_page_renders_for_the_demo_squad():
     assert len(at.code) == 1 or len(at.info) >= 1          # the captain picks (or a "no data" note)
 
 
+def test_captain_page_shows_crowd_flags_and_template_risk():
+    # US-184: the captain candidates gain a Trends column + a template-risk caption (ADR-057)
+    at = _run(_PAGES / "7_Captain.py")
+    if not at.dataframe:
+        return
+    assert "Trends" in at.dataframe[0].value.columns.tolist()
+    assert any("Captaincy risk" in c.value for c in at.caption)
+
+
+def test_transfer_page_shows_incoming_crowd_flags():
+    # US-184: the swap table gains an "In trends" column for the player you'd buy
+    at = _run(_PAGES / "5_Transfer.py")
+    at.slider[0].set_value(10.0).run()                     # bank → swaps appear
+    if not at.dataframe:
+        return
+    assert "In trends" in at.dataframe[0].value.columns.tolist()
+
+
 def test_captain_page_sets_and_persists_a_captain():
     # US-175: "Set as captain" writes captain_id onto the (adopted) session squad
     at = _run(_PAGES / "7_Captain.py")

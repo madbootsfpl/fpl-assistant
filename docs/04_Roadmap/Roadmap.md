@@ -87,10 +87,13 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 - ✅ Ingest crowd/momentum fields: `transfers_in/out_event`, `cost_change_event`/`_start`, `form`,
   `ict_index` (+ Influence / Creativity / Threat), `value_form` (Sprint 060, US-182). (`selected_by`
   already stored, ADR-044.)
-- ◑ A **lens + flags** — `crowd_flags` (🔥 trending · 💰 price · 📈 form · template/differential), on
-  **Players** + Build/Analyse/My Squad (Sprint 060, US-183). *Remaining:* Captain · Transfer.
-- ⬜ A **"trends"** `ask`/`chat` intent — most transferred in/out, biggest price risers, in-form.
-- ⬜ An effective-ownership / **template-risk** lens for captaincy.
+- ✅ A **lens + flags** — `crowd_flags` (🔥 trending · 💰 price · 📈 form · template/differential), on
+  **Players · Build · Analyse · My Squad** (Sprint 060, US-183) + **Captain · Transfer** (Sprint 061,
+  US-184).
+- ✅ A **template-risk** captaincy lens — the ownership flags + a "safe template vs differential swing"
+  caption on Captain (Sprint 061, US-184). *(A full captaincy-% EO model is later.)*
+- 🕓 A **"trends"** `ask`/`chat` intent — most transferred in/out, biggest price risers, in-form.
+  **Deferred to nearer GW1** (its momentum questions are 0 in preseason).
 
 **Tier 2 — external sentiment (optional, later; degrade gracefully like ClubElo, ADR-010/021).**
 - ⬜ FPL **Scout** news / picks (the `scout_news_link` is already in the payload).
