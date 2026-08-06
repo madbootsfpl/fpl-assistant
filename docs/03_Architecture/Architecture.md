@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 073 (2026-08-06)** — *Rich filters on Players & Player Stats*, per **ADR-064** — one shared
+  `web_streamlit/filters.py`: `filter_controls` (Team · Position · Player multiselects + optional max-price,
+  key-namespaced) + a pure `apply` (keep rows matching every non-empty dimension — **AND**; tolerant of
+  `sqlite3.Row` and dict). Applied to **Player Stats** (one filter above the four tabs → each analytic
+  narrowed before pagination) and **Players** (team + player added to position; max-price kept). The Players
+  price-vs-points **scatter is replaced** by a filter-responsive **top-15 horizontal bar** (Altair,
+  `y sort="-x"`) of the strongest filtered players by the sort metric. No analytics change; no server
+  writes. 578 tests.
 - **Sprint 072 (2026-08-06)** — *Player Stats page + pagination*, per **ADR-063** — the CLI's stat views
   come to the web with **no engine change**. A new `pages/2_Player_Stats.py` (sidebar position 2) has tabs
   **Over/under · DefCon · Clean sheets · xG**, each reusing the *same* analytics (`over_under` /

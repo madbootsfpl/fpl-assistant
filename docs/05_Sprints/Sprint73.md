@@ -121,4 +121,19 @@ paginated table. The bar updates live with the filter.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — both tester items shipped: a rich **Team · Position · Player** filter
+(AND-combinable) on **Player Stats** *and* **Players**, and the dead price-vs-points scatter replaced by a
+filter-responsive **top-15 bar**. One shared `filters.py` serves both pages; **no analytics change**.
+
+**What went well** — building the filter **once** (`filter_controls` + `apply`) and reusing it kept both
+stories to ~half a session and the UX consistent. The pure `apply` (AND across non-empty dims, Row/dict
+tolerant) was easy to unit-test exhaustively, and the AppTests proved the wiring narrows real boards. The
+**AppTest caught a real Altair gotcha** — a bare tooltip field with `alt.Data` needs an explicit `:N` type —
+before it could reach the live app.
+
+**What to watch / lessons** — the **player multiselect lists ~570 names** (searchable); a team-scoped
+variant (only players from the chosen teams) is a noted follow-up if it feels unwieldy. `alt.Data(values=…)`
+(non-DataFrame) needs **explicit encoding types** on *every* field, tooltips included. And prefer the
+current `width="stretch"` over the deprecated `use_container_width` for new chart calls.
+
+**Lessons captured:** `docs/05_Sprints/Sprint73_Lessons_Learnt.md`.
