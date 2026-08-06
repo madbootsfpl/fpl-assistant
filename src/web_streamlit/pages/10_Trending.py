@@ -85,9 +85,15 @@ else:
                 if not buzz:
                     st.info("No current-player mentions in the latest r/FantasyPL posts.")
                 else:
-                    st.caption(f"{len(buzz)} players mentioned — expand a name to read the posts.")
+                    st.caption(f"{len(buzz)} players mentioned — expand a name to read the posts. "
+                               "(Surnames can collide — the photo/badge shows who actually matched.)")
                     for r in buzz:
-                        with st.expander(f"{r['web_name']} — {r['team']} · {r['mentions']} mentions"):
+                        c_photo, c_badge, c_body = st.columns([1, 1, 12], vertical_alignment="center")
+                        if photos.get(r["id"]):
+                            c_photo.image(photos[r["id"]], width=44)
+                        if badges.get(r["team"]):
+                            c_badge.image(badges[r["team"]], width=28)
+                        with c_body.expander(f"{r['web_name']} — {r['team']} · {r['mentions']} mentions"):
                             for post in r["posts"]:
                                 title = post["title"] or "(untitled post)"
                                 st.markdown(f"- [{title}]({post['link']})" if post["link"]
