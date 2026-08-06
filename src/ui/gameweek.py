@@ -3,7 +3,7 @@
 A plain-text block — Captain / Lineup / Transfer / Flags — that is the exact plan the analytics
 assembled (`gameweek_plan`). It shows with or without the LLM (the prose is a bonus); the same
 "the block is the truth" shape the other `ask` details use. Rendered in the CLI and, via
-`render_ask`, in the web's Squads → This week view.
+`render_ask`, in the web's Squads → AI Tips view.
 """
 
 

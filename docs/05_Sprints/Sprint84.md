@@ -45,7 +45,7 @@ example prompts so a new user knows what to type.
       ≥900 minutes**, with the percentile computed over **that** pool; GKs and low-minutes players show a
       blank **—** (not a colour). The column is renamed **"xGI rating"** and moved **right after xGI** (away
       from xGC); its tooltip says what it rates + who's excluded. Refines ADR-071; Clean sheets unchanged.
-- [ ] **US-226 (rename This week → AI Tips)** — the Squads segmented control shows **AI Tips** (was This
+- [x] **US-226 (rename This week → AI Tips)** — the Squads segmented control shows **AI Tips** (was This
       week); the dispatch, help text, Help-tab copy, and tests/docs updated. The engine (the grounded
       gameweek plan, ADR-070) is unchanged.
 - [ ] **US-227 (Ask examples)** — a few copy-paste **example prompts** on the Ask page (incl. a gameweek /
@@ -61,7 +61,7 @@ example prompts so a new user knows what to type.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-225 | **Fix the xG-board rating** — rate xGI only for outfield players ≥900 mins (pool = those players); blank — for GKs / low-minutes; rename the column "xGI rating" and move it beside xGI. ADR-073 (refines ADR-071). | High | ✅ Done | ~½ session |
-| US-226 | **Rename This week → AI Tips** — the Squads segmented-control label (+ dispatch, help, Help copy, tests, docs). Engine unchanged. | Medium | ⬜ To do | ~¼ session |
+| US-226 | **Rename This week → AI Tips** — the Squads segmented-control label (+ dispatch, help, Help copy, tests, docs). Engine unchanged. | Medium | ✅ Done | ~¼ session |
 | US-227 | **Ask example prompts** — a few copy-paste examples on the Ask page. | Medium | ⬜ To do | ~¼ session |
 
 ---
@@ -113,6 +113,14 @@ shown rows, so a GK-filtered view rated a keeper's 0.04 as "top 19% → 🟢 exc
 Smoke: top attacker B.Fernandes (xGI 23.07) → 🟢 excellent (top 1%); **filtered to GK → every rating is —**.
 Test rewritten (`test_xg_board_rates_only_meaningful_players`): column named/placed correctly + GKs unrated.
 ruff clean, full suite **612** green.
+
+**US-226 (rename This week → AI Tips).** The Squads segmented control now reads **AI Tips** (was This week):
+label + `elif` dispatch + the control `help=`; `render_this_week` → `render_ai_tips`; the Help tab copy
+(quick-start, the sub-nav caption, step 4) updated to "AI Tips"; the `ui/gameweek.py` docstring reference
+fixed. The engine (the grounded gameweek plan, ADR-070) is unchanged — the plan block still reads
+"This week — squad X" (it *is* this gameweek's plan) and the NL Ask example keeps its phrasing. Tests
+updated (`test_squads_ai_tips_view_renders_a_gameweek_plan`; the Help test now asserts "AI Tips"). ruff
+clean, full suite **612** green.
 
 ---
 

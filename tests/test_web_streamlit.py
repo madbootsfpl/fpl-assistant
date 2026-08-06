@@ -136,12 +136,12 @@ def test_squads_page_analyses_the_demo_squad():
     assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
 
-def test_squads_this_week_view_renders_a_gameweek_plan():
-    # ADR-070: the "This week" view routes through ask.answer → the grounded plan block renders
-    # (no Ollama in the test → the plan + facts, no prose), no crash
-    at = _squads_view("This week")
+def test_squads_ai_tips_view_renders_a_gameweek_plan():
+    # ADR-070 / US-226: the "AI Tips" view (renamed from This week) routes through ask.answer → the
+    # grounded plan block renders (no Ollama in the test → the plan + facts, no prose), no crash
+    at = _squads_view("AI Tips")
     assert len(at.code) == 1                               # the rendered gameweek plan
-    assert "This week" in at.code[0].value
+    assert "This week" in at.code[0].value                 # the plan block header (the plan is for this GW)
 
 
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
@@ -228,7 +228,7 @@ def test_help_page_renders_the_guide_without_data():
     blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
     assert "Squads" in blob and "My Squad" in blob             # the core steps (new nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
-    assert "This week" in blob                                 # US-224: the gameweek plan is in the guide
+    assert "AI Tips" in blob                                   # US-226: the gameweek tab (renamed) is in the guide
     assert "this week for my-team" in blob                     # US-224: the gameweek Ask example
     assert "quality rating" in blob                            # US-224: the stat-board rating is explained
     assert not at.get("dataframe")                             # static content — no data widgets

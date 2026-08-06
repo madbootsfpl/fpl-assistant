@@ -13,12 +13,12 @@ st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *na
            "download it to keep it (nothing is saved on the server).")
 
 st.markdown(
-    "**Quick start:** open **Squads** → *Build* → **Use this squad** → tweak it in *My Squad* → get "
-    "**This week**'s plan → check *Health*, *Transfer* and *Captain* → **Download** your `squad.json`. "
+    "**Quick start:** open **Squads** → *Build* → **Use this squad** → tweak it in *My Squad* → get your "
+    "**AI Tips** for the week → check *Health*, *Transfer* and *Captain* → **Download** your `squad.json`. "
     "Prefer words? Do it all from **Ask**."
 )
 
-st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · This week · "
+st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · AI Tips · "
            "Health · Transfer · Captain** with the buttons at the top.")
 
 with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=True):
@@ -44,9 +44,9 @@ with st.expander("3 · Check its health  →  **Squads → Health**"):
         "**weak links** worth upgrading. This is the same engine the CLI uses — one honest xP number."
     )
 
-with st.expander("4 · Plan your week & improve it  →  **Squads → This week · Transfer · Captain**"):
+with st.expander("4 · Plan your week & improve it  →  **Squads → AI Tips · Transfer · Captain**"):
     st.markdown(
-        "**This week** is the fastest answer — one grounded view of who to **captain**, any **lineup** "
+        "**AI Tips** is the fastest answer — one grounded view of who to **captain**, any **lineup** "
         "change, one **transfer** to consider, and any **flagged** players (injuries / doubts), all checked "
         "against the data (a ✓/⚠ line). *(The AI narrates it if a local Ollama is running; otherwise you "
         "still get the full plan.)* Start there, then dig deeper:\n\n"

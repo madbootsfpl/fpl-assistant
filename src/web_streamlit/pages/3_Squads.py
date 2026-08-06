@@ -21,9 +21,9 @@ st.title("🧩 Squads")
 st.caption("Everything for your team in one place — build it, tweak it, and get this week's plan.")
 
 view = st.segmented_control(
-    "Tool", ["Build", "My Squad", "This week", "Health", "Transfer", "Captain"], default="Build",
-    help="Build a new squad, then manage the one you're working on. **This week** = a grounded "
-         "gameweek plan (captain · lineup · a transfer · flags) for your squad.")
+    "Tool", ["Build", "My Squad", "AI Tips", "Health", "Transfer", "Captain"], default="Build",
+    help="Build a new squad, then manage the one you're working on. **AI Tips** = a grounded gameweek "
+         "plan (captain · lineup · a transfer · flags) for your squad.")
 
 store = Storage()
 try:
@@ -44,8 +44,8 @@ else:
     squad_name, squad = squad_picker()      # one picker feeds the four manage views
     if view == "My Squad":
         views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos)
-    elif view == "This week":
-        views.render_this_week(squad_name, squad)
+    elif view == "AI Tips":
+        views.render_ai_tips(squad_name, squad)
     elif view == "Health":
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges)
     elif view == "Transfer":

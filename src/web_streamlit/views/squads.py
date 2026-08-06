@@ -397,12 +397,13 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
         st.rerun()
 
 
-# ---- This week (a grounded gameweek plan; ADR-070) ---------------------------------------------------
-def render_this_week(squad_name, squad):
-    """A grounded 'this week' recommendation for the picked squad — captain · lineup · a transfer · flags.
+# ---- AI Tips (a grounded gameweek plan; ADR-070, labelled "AI Tips" per US-226) ---------------------
+def render_ai_tips(squad_name, squad):
+    """A grounded gameweek recommendation for the picked squad — captain · lineup · a transfer · flags.
 
-    Routes through `ask.answer` (analytics decide, the LLM narrates, every figure/name checked, ADR-037),
-    reusing the session squad. Degrades to the plan + facts without Ollama (the cloud). No server writes.
+    Shown under the **AI Tips** tab. Routes through `ask.answer` (analytics decide, the LLM narrates,
+    every figure/name checked, ADR-037), reusing the session squad. Degrades to the plan + facts without
+    Ollama (the cloud). No server writes.
     """
     st.caption("Your whole week in one view — who to **captain**, any **lineup** change, one **transfer** "
                "to consider, and any **flagged** players. The analytics decide; the answer is checked "
