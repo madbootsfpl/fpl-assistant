@@ -123,6 +123,25 @@ def route(question: str, known_squads=None) -> tuple[str | None, str | None]:
     return None, squad
 
 
+# --- squad resolution: prefer the session active squad, else the saved SquadStore (Sprint 066) ------
+# The web edge loads a squad into the session (build/upload/import, ADR-054/055); `ask` must see it, not
+# only the server-side saved squads. So every squad load/list goes through these, given the active squad.
+
+def _load_squad(name, active_squad=None):
+    """A squad by name — the **session active squad** wins when its name matches; else `SquadStore`."""
+    if active_squad and name and name == active_squad.get("name"):
+        return active_squad
+    return SquadStore().load(name)
+
+
+def _known_squad_names(active_squad=None):
+    """Saved-squad names + the session active squad's name (so routing resolves "captain <its name>")."""
+    names = SquadStore().names()
+    if active_squad and active_squad.get("name") and active_squad["name"] not in names:
+        return [active_squad["name"], *names]
+    return names
+
+
 # ---- conversational follow-ups (ADR-047) ------------------------------------
 # A follow-up builds on the last turn. Detection is deterministic (the LLM never decides it) and
 # fires only on short, *subject-less* lines: every non-position word must be filler, so "why?" is a
@@ -189,7 +208,7 @@ def _captain_facts(pick: dict) -> dict:
     }
 
 
-def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0) -> dict | None:
+def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, active_squad=None) -> dict | None:
     """Analytics DECIDE the captain (never the LLM); return the decision + humanised facts.
 
     `rank` (ADR-047) picks the Nth-best (0 = top); past the end returns a soft message so a
@@ -201,7 +220,7 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0) -> di
     baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
     scope = "all players"
     if squad_name:
-        squad = SquadStore().load(squad_name)
+        squad = _load_squad(squad_name, active_squad)
         if squad is None:
             return None
         ids = set(squad["player_ids"])
@@ -277,12 +296,12 @@ def _analyse_facts(analysis: dict) -> dict:
     }
 
 
-def _squad_xp(store: Storage, squad_name: str):
+def _squad_xp(store: Storage, squad_name: str, active_squad=None):
     """Shared setup for transfer/analyse: the squad's owned rows + xP (+ per-GW) over the horizon.
 
     xP is weighted by expected minutes (xMins v0, ADR-038) — `ask` is a decision, so default-on.
     """
-    squad = SquadStore().load(squad_name)
+    squad = _load_squad(squad_name, active_squad)
     if squad is None:
         return None
     players = store.get_players()
@@ -297,8 +316,8 @@ def _squad_xp(store: Storage, squad_name: str):
 
 
 def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
-                     rank: int = 0) -> dict | None:
-    data = _squad_xp(store, squad_name)
+                     rank: int = 0, active_squad=None) -> dict | None:
+    data = _squad_xp(store, squad_name, active_squad)
     if data is None:
         return None
     squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, _weight_by_id = data
@@ -344,8 +363,8 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
     }
 
 
-def _decide_analyse(store: Storage, squad_name: str | None) -> dict | None:
-    data = _squad_xp(store, squad_name)
+def _decide_analyse(store: Storage, squad_name: str | None, active_squad=None) -> dict | None:
+    data = _squad_xp(store, squad_name, active_squad)
     if data is None:
         return None
     squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, weight_by_id = data
@@ -383,9 +402,9 @@ def _lineup_change(bring_in: list, drop: list, has_declared_bench: bool) -> str:
     return f"Change: start {starts} — bench {benched}."
 
 
-def _decide_start_bench(store: Storage, squad_name: str | None) -> dict | None:
+def _decide_start_bench(store: Storage, squad_name: str | None, active_squad=None) -> dict | None:
     """Analytics DECIDE the lineup (ADR-039): the best legal XI (xMins-weighted) vs the declared one."""
-    data = _squad_xp(store, squad_name)
+    data = _squad_xp(store, squad_name, active_squad)
     if data is None:
         return None
     squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, weight_by_id = data
@@ -707,7 +726,8 @@ def _fixture_horizon(question: str) -> int:
     return max(1, min(int(m.group(1)), 38)) if m else 5
 
 
-def _decide_fixtures(store: Storage, question: str, squad: str | None = None) -> dict | None:
+def _decide_fixtures(store: Storage, question: str, squad: str | None = None,
+                     active_squad=None) -> dict | None:
     """Analytics answer a fixtures question (ADR-048/049): a team's schedule, a saved squad's
     players ranked by their fixture run, or the league FDR ranking.
 
@@ -727,7 +747,7 @@ def _decide_fixtures(store: Storage, question: str, squad: str | None = None) ->
                            "Please name just one."}
 
     if not match and squad:                              # a saved squad → its players' fixture runs
-        return _decide_squad_fixtures(store, squad, upcoming, horizon, hardest)
+        return _decide_squad_fixtures(store, squad, upcoming, horizon, hardest, active_squad)
 
     if match:                                            # a single team → its schedule
         schedule = team_schedule(upcoming, match, source="fpl")[:horizon]
@@ -770,10 +790,10 @@ def _decide_fixtures(store: Storage, question: str, squad: str | None = None) ->
 
 
 def _decide_squad_fixtures(store: Storage, squad: str, upcoming, horizon: int,
-                           hardest: bool) -> dict | None:
+                           hardest: bool, active_squad=None) -> dict | None:
     """A saved squad's players ranked by their team's fixture run (ADR-049): a join (player → its
     team's FDR) + a sort. Grounded per player; easiest by default, hardest on a cue."""
-    saved = SquadStore().load(squad)
+    saved = _load_squad(squad, active_squad)
     if saved is None:
         return None
     by_id = {p["id"]: p for p in store.get_players()}
@@ -885,18 +905,19 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
 
 
 def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
-              *, count: int = 1, rank: int = 0) -> dict | None:
+              *, count: int = 1, rank: int = 0, active_squad=None) -> dict | None:
     """Run the decision engine for `intent` (shared by `answer` and `converse`).
 
     `count`/`rank` are threaded so a conversational follow-up can ask for an N-transfer plan or
-    the Nth-best pick (ADR-047); the intents that don't rank ignore them.
+    the Nth-best pick (ADR-047); the intents that don't rank ignore them. `active_squad` is the
+    session squad so squad-scoped intents see the loaded team, not only saved squads (Sprint 066).
     """
     if intent == "transfer":
-        return _decide_transfer(store, squad, count, rank=rank)
+        return _decide_transfer(store, squad, count, rank=rank, active_squad=active_squad)
     if intent == "captain":
-        return _decide_captain(store, squad, rank=rank)
+        return _decide_captain(store, squad, rank=rank, active_squad=active_squad)
     if intent == "start_bench":
-        return _decide_start_bench(store, squad)
+        return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "compare":
         return _decide_compare(store, question)
     if intent == "build_squad":
@@ -904,8 +925,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "shortlist":
         return _decide_shortlist(store, question, rank=rank)
     if intent == "fixtures":
-        return _decide_fixtures(store, question, squad)
-    return _decide_analyse(store, squad)
+        return _decide_fixtures(store, question, squad, active_squad=active_squad)
+    return _decide_analyse(store, squad, active_squad=active_squad)
 
 
 def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
@@ -917,13 +938,18 @@ def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
     return None
 
 
-def _fresh(question: str, context: "Context | None", store: Storage, narrator):
+def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None):
     """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
 
     A successful answer becomes the new context; a fallback/soft-failure leaves the running
-    context untouched (so a later "why?" still refers to the last *good* turn).
+    context untouched (so a later "why?" still refers to the last *good* turn). `active_squad` is the
+    session squad so "captain <its name>" / "analyse my team" use the loaded team (Sprint 066).
     """
-    intent, squad = route(question)
+    intent, squad = route(question, _known_squad_names(active_squad))
+    # "my team" / "my squad" → the loaded session squad (when one is active and no name matched).
+    if not squad and active_squad and active_squad.get("name") \
+            and re.search(r"\bmy (team|squad|side|xi)\b", question, re.IGNORECASE):
+        squad = active_squad["name"]
     if intent is None:
         return assemble(question, None, None, narrator), context
     prompt = _needs_squad(intent, squad)
@@ -931,7 +957,7 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator):
         return replace(prompt, question=question), context
 
     count = _transfer_count(question)
-    decision = _dispatch(intent, store, question, squad, count=count)
+    decision = _dispatch(intent, store, question, squad, count=count, active_squad=active_squad)
     known = [p["web_name"] for p in store.get_players()] if decision else ()
     result = assemble(question, intent, decision, narrator, known_names=known)
     new_context = context
@@ -941,7 +967,7 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator):
     return result, new_context
 
 
-def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator):
+def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator, active_squad=None):
     """Resolve a follow-up against `context` → (result, new_context), or None if it can't apply
     here (e.g. 'what about defenders?' after a captain pick → let it fall through to a fresh Q)."""
     known = [p["web_name"] for p in store.get_players()]
@@ -960,7 +986,7 @@ def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator):
             return None
         nrank = context.rank + 1
         decision = _dispatch(context.intent, store, context.question, context.squad,
-                             count=context.count, rank=nrank)
+                             count=context.count, rank=nrank, active_squad=active_squad)
         if not decision or "facts" not in decision:       # past the end → show the soft message,
             msg = (decision or {}).get("message", "That's all I have.")   # keep the current rank
             return AskResult(context.question, context.intent, message=msg), context
@@ -990,33 +1016,36 @@ def _swap_position(question: str, new_code: str) -> str:
 
 
 def converse(question: str, context: "Context | None", *, store: Storage,
-             narrator=llm.narrate) -> tuple[AskResult, "Context | None"]:
+             narrator=llm.narrate, active_squad=None) -> tuple[AskResult, "Context | None"]:
     """One conversational turn (ADR-047): a follow-up on `context`, else a fresh question.
 
     Returns ``(result, new_context)``. `context` is None at the start of a chat; a follow-up with
     no context yet returns a gentle nudge. The one-shot `answer` is `converse` with no context.
+    `active_squad` (the session squad) lets squad-scoped intents see the loaded team (Sprint 066).
     """
     fu = detect_followup(question)
     if fu is not None:
         if context is None:
             return AskResult(question, None, message=_NUDGE), None
-        applied = _apply_followup(fu, context, store, narrator)
+        applied = _apply_followup(fu, context, store, narrator, active_squad)
         if applied is not None:
             return applied
         # a detected follow-up that doesn't apply here → treat the line as a fresh question.
-    return _fresh(question, context, store, narrator)
+    return _fresh(question, context, store, narrator, active_squad)
 
 
-def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate) -> AskResult:
+def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
+           active_squad=None) -> AskResult:
     """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional.
 
     The one-shot entry point: a single `converse` turn with no prior context (so a follow-up-only
-    line falls through to the normal fallback, exactly as before).
+    line falls through to the normal fallback, exactly as before). `active_squad` (the session
+    squad, ADR-054/055) lets squad-scoped questions use the loaded team, not only saved squads.
     """
     own_store = store is None
     store = store or Storage()
     try:
-        result, _context = _fresh(question, None, store, narrator)
+        result, _context = _fresh(question, None, store, narrator, active_squad)
         return result
     finally:
         if own_store:
@@ -1026,7 +1055,7 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate)
 _EXIT_WORDS = {"quit", "exit", "q", "bye", "done"}
 
 
-def chat_transcript(lines, *, store: Storage, narrator=llm.narrate):
+def chat_transcript(lines, *, store: Storage, narrator=llm.narrate, active_squad=None):
     """Thread a `Context` across `lines`, yielding an AskResult per answered line (ADR-047).
 
     The pure heart of the `chat` REPL: blank lines are skipped, an exit word stops the session,
@@ -1040,5 +1069,6 @@ def chat_transcript(lines, *, store: Storage, narrator=llm.narrate):
             return
         if not text:
             continue
-        result, context = converse(text, context, store=store, narrator=narrator)
+        result, context = converse(text, context, store=store, narrator=narrator,
+                                   active_squad=active_squad)
         yield result

@@ -322,7 +322,7 @@ def test_analyse_decision_carries_the_squad_table_as_detail(monkeypatch):
     squad = {"player_ids": [1, 2, 3, 4], "bench_ids": [1]}   # P1 benched → XI = 2,3,4
     monkeypatch.setattr(
         ask, "_squad_xp",
-        lambda store, name: (squad, owned, owned, xp_by_id, by_gw, [1, 2, 3], weight_by_id),
+        lambda store, name, active_squad=None: (squad, owned, owned, xp_by_id, by_gw, [1, 2, 3], weight_by_id),
     )
     decision = ask._decide_analyse(store=None, squad_name="TST")
     assert "headline" not in decision                 # detail replaces the one-line headline
@@ -509,8 +509,8 @@ def test_next_advances_the_rank(monkeypatch):
     calls = []
     monkeypatch.setattr(
         ask, "_dispatch",
-        lambda intent, store, q, squad, *, count=1, rank=0: (calls.append((intent, rank))
-                                                              or _canned(rank)),
+        lambda intent, store, q, squad, *, count=1, rank=0, active_squad=None: (
+            calls.append((intent, rank)) or _canned(rank)),
     )
     store = types.SimpleNamespace(get_players=lambda: [])
     ctx = Context(intent="captain", squad="TS", question="captain for TS", decision=_canned(0))
@@ -532,8 +532,8 @@ def test_whatabout_swaps_position_shortlist_only(monkeypatch):
     seen = {}
     monkeypatch.setattr(
         ask, "_dispatch",
-        lambda intent, store, q, squad, *, count=1, rank=0: (seen.update(q=q, rank=rank)
-                                                             or _canned(rank, detail="d")),
+        lambda intent, store, q, squad, *, count=1, rank=0, active_squad=None: (
+            seen.update(q=q, rank=rank) or _canned(rank, detail="d")),
     )
     store = types.SimpleNamespace(get_players=lambda: [])
     ctx = Context(intent="shortlist", question="best midfielders under 8m", rank=3,
@@ -565,7 +565,7 @@ def test_chat_transcript_threads_context_and_stops_at_quit(monkeypatch):
     # the REPL heart: blank lines skipped, an exit word stops, the context carries turn-to-turn
     seen = []
 
-    def fake_converse(q, ctx, *, store, narrator=None):
+    def fake_converse(q, ctx, *, store, narrator=None, active_squad=None):
         seen.append((q, ctx))
         return AskResult(q, "x", headline=f"ans:{q}"), f"ctx-after-{q}"
 
@@ -576,3 +576,43 @@ def test_chat_transcript_threads_context_and_stops_at_quit(monkeypatch):
     assert [r.headline for r in results] == ["ans:who should I captain?", "ans:why?"]
     assert seen == [("who should I captain?", None),        # first turn starts with no context…
                     ("why?", "ctx-after-who should I captain?")]   # …then the last turn's context
+
+
+# --- Sprint 066: `ask` sees the session active squad (Feedback_Log — the web Ask bug) ---------------
+
+def test_load_squad_prefers_the_active_session_squad():
+    active = {"name": "MyXI", "player_ids": [1, 2, 3]}
+    assert ask._load_squad("MyXI", active) is active          # the active squad wins on a name match
+    assert ask._load_squad("no-such-zz", active) is None      # else → SquadStore (a bogus name → None)
+    assert ask._load_squad("MyXI", None) is None              # no active squad → SquadStore (bogus → None)
+
+
+def test_known_squad_names_includes_the_active_squad():
+    active = {"name": "MyXI", "player_ids": [1]}
+    assert "MyXI" in ask._known_squad_names(active)
+    assert "MyXI" not in ask._known_squad_names(None)
+
+
+def test_ask_captain_scopes_to_the_active_session_squad():
+    # the reported bug: an active squad not in SquadStore must scope captain to it, not "(all players)"
+    from src.storage import Storage
+    from src.ui.ask import render_ask
+
+    store = Storage()
+    try:
+        players = [dict(p) for p in store.get_players()]
+    finally:
+        store.close()
+    if not players:
+        return
+
+    def cheap(pos, n):
+        return sorted((p for p in players if p["position"] == pos), key=lambda p: p["price"])[:n]
+    picks = cheap("GK", 2) + cheap("DEF", 5) + cheap("MID", 5) + cheap("FWD", 3)
+    active = {"name": "ZZTestXI", "player_ids": [p["id"] for p in picks],
+              "player_names": [p["web_name"] for p in picks], "bench_ids": [], "cost": 100.0}
+
+    with_active = render_ask(ask.answer("who should i captain from ZZTestXI", active_squad=active))
+    assert "squad 'ZZTestXI'" in with_active and "all players" not in with_active
+    without = render_ask(ask.answer("who should i captain from ZZTestXI"))   # not in SquadStore
+    assert "all players" in without                                          # the old fallback

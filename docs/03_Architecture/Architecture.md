@@ -455,6 +455,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 066 (2026-08-06)** — *fix (tester bug, no ADR)* — the web **Ask** tab ignored the session
+  active squad (it resolved squads only via `SquadStore`), so "captain/analyse RoboTS" fell back to "(all
+  players)". Added `ask._load_squad` / `_known_squad_names` (the **session squad wins**, else `SquadStore`)
+  and threaded an optional `active_squad` (default None → CLI unchanged) through the `ask` entry points →
+  deciders; "my team" resolves to the loaded squad; the Ask page passes `active_squad()`. `decision_xp`
+  untouched. 517 tests green. *(Ended the Sprint-065 hold.)*
 - **Sprint 064 (2026-08-06)** — *Phase 6 Tier 2 (start)*, per **ADR-058** — external/extended signals, two
   **free, no-key** pieces. An FPL official-**news lens**: ingest `scout_news_link` (the source link) +
   reuse the stored `player.news` → a new `pages/9_News.py` (flagged players, most-serious first, a "read
