@@ -168,15 +168,17 @@ def select_squad(
     bounds, size = _formation_bounds(formation, size)
     if scores is None:
         scores = {p["id"]: p["total_points"] for p in players}
-    # We use PuLP 3.x's current API; it emits DeprecationWarnings pointing at the
-    # PuLP 4.0 API (see docs/Backlog.md). Silence those forward-looking notices here.
+    # Variables use the PuLP 4.0-ready `problem.add_variable(...)` (ADR-066). The solver stays
+    # `PULP_CBC_CMD` — `COIN_CMD` needs an *external* CBC (`pip install pulp[cbc]`) which isn't present
+    # (locally or on the read-only Cloud), so we keep the bundled solver and silence *only* its
+    # deprecation notice — any other future deprecation still surfaces.
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
+        warnings.filterwarnings("ignore", message=".*PULP_CBC_CMD.*", category=DeprecationWarning)
 
         problem = pulp.LpProblem("squad", pulp.LpMaximize)
 
         # One binary decision per player: 1 = picked, 0 = not.
-        pick = {p["id"]: pulp.LpVariable(f"pick_{p['id']}", cat="Binary") for p in players}
+        pick = {p["id"]: problem.add_variable(f"pick_{p['id']}", cat="Binary") for p in players}
 
         if bench_weight is None:
             # Objective: maximise the chosen per-player score (the whole squad counts equally).
@@ -186,7 +188,7 @@ def select_squad(
             # Bench-aware (ADR-045): also choose which 11 START (a legal XI), and maximise the
             # XI's score plus `bench_weight` × the bench's — so `--weekly` (w≈0.1) builds a strong
             # XI with a cheap-but-playing bench; `--bench-boost` (w=1) reduces to the max-15 above.
-            start = {p["id"]: pulp.LpVariable(f"start_{p['id']}", cat="Binary") for p in players}
+            start = {p["id"]: problem.add_variable(f"start_{p['id']}", cat="Binary") for p in players}
             problem += pulp.lpSum(
                 scores.get(p["id"], 0.0)
                 * (start[p["id"]] + bench_weight * (pick[p["id"]] - start[p["id"]]))
