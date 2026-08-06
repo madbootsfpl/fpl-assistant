@@ -17,6 +17,7 @@ from src.analytics import (
 )
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.paginate import paginate
+from src.web_streamlit.ratings import LEGEND, rating_cell
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 _BADGE = {"badge": st.column_config.ImageColumn("", width="small")}
@@ -69,42 +70,72 @@ def render_pool(rows, sel, photos, badges):
     )
 
 
-def _board(stat_rows, columns, badges, key):
-    """A paginated stat table: a team badge + the given {column: value_of} spec (season-to-date)."""
+def _board(stat_rows, columns, badges, key, col_help=None):
+    """A paginated stat table: a team badge + the given {column: value_of} spec (season-to-date).
+
+    `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071) so a casual user can
+    hover to see what each number means (an absolute season total vs a per-90 rate)."""
+    config = dict(_BADGE)
+    for head, text in (col_help or {}).items():
+        config[head] = st.column_config.Column(head, help=text)
     page = paginate(stat_rows, key=key, per_page=50)
     st.dataframe(
         [{"badge": badges.get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
           "Pos": r["position"], **{head: value_of(r) for head, value_of in columns.items()}}
          for r in page],
-        hide_index=True, width="stretch", column_config=_BADGE,
+        hide_index=True, width="stretch", column_config=config,
     )
 
 
 def render_over_under(players, sel, badges):
-    st.caption("Actual attacking points vs expected (xGI-based) — **+** = running hot (regression risk), "
-               "**−** = due a bounce. ≥900 mins.")
+    st.caption("**Actual** attacking points vs **expected** (xGI-based) this season — **+** = running hot "
+               "(regression risk), **−** = due a bounce. Season totals, ≥900 mins.")
     _board(apply_filter(over_under(players), sel), {
         "Mins": lambda r: r["minutes"], "Actual": lambda r: r["actual"],
-        "Exp": lambda r: r["expected"], "Diff": lambda r: f"{r['diff']:+.1f}"}, badges, key="stats_over")
+        "Exp": lambda r: r["expected"], "Diff": lambda r: f"{r['diff']:+.1f}"}, badges, key="stats_over",
+        col_help={"Mins": "Minutes played this season.",
+                  "Actual": "Actual attacking points scored (season total).",
+                  "Exp": "Expected attacking points from xGI (season total).",
+                  "Diff": "Actual − Expected. + = over-performing (may regress), − = under (may bounce)."})
 
 
 def render_defcon(players, sel, badges):
-    st.caption("Defensive Contribution per 90 vs the position threshold — **+ margin** = a reliable DefCon "
-               "points source. ≥900 mins.")
+    st.caption("**Defensive Contribution per 90** vs the position threshold — **+ margin** = a reliable "
+               "DefCon points source. Per-90 rate, ≥900 mins.")
     _board(apply_filter(defcon_reliability(players), sel), {
         "Mins": lambda r: r["minutes"], "DC/90": lambda r: r["per90"],
-        "Thr": lambda r: r["threshold"], "Margin": lambda r: f"{r['margin']:+.1f}"}, badges, key="stats_defcon")
+        "Thr": lambda r: r["threshold"], "Margin": lambda r: f"{r['margin']:+.1f}"}, badges, key="stats_defcon",
+        col_help={"Mins": "Minutes played this season.",
+                  "DC/90": "Defensive Contribution actions per 90 minutes (a rate, not a total).",
+                  "Thr": "The position's DefCon points threshold.",
+                  "Margin": "DC/90 − threshold. + = clears the bar reliably; higher is better."})
 
 
 def render_cleansheet(players, sel, badges):
-    st.caption("Expected goals conceded per 90 (lowest = best clean-sheet prospects) — DEF/GK, ≥900 mins.")
-    _board(apply_filter(defensive_solidity(players), sel), {
-        "Mins": lambda r: r["minutes"], "xGC/90": lambda r: r["xgc90"]}, badges, key="stats_clean")
+    st.caption("**Expected goals conceded per 90** (xGC/90) — **lower = better** clean-sheet prospects. A "
+               "team stat while the player is on the pitch, per-90. DEF/GK, ≥900 mins. " + LEGEND)
+    rows = apply_filter(defensive_solidity(players), sel)
+    pool = [r["xgc90"] for r in rows]
+    _board(rows, {
+        "Mins": lambda r: r["minutes"], "xGC/90": lambda r: r["xgc90"],
+        "Rating": lambda r: rating_cell(r["xgc90"], pool, higher_is_better=False)},
+        badges, key="stats_clean",
+        col_help={"Mins": "Minutes played this season.",
+                  "xGC/90": "Expected goals the team conceded per 90 while this player was on. Lower = better.",
+                  "Rating": "Quality vs the players shown (best 20% 🟢 … worst 20% 🔴), with the percentile."})
 
 
 def render_xg(players, sel, badges):
-    st.caption("Expected goal involvement (xGI = xG + xA), plus expected goals conceded (xGC).")
-    ranked = sorted(players, key=lambda p: (p["xgi"] or 0.0), reverse=True)
-    _board(apply_filter(ranked, sel), {
+    st.caption("**Expected goal involvement** (xGI = xG + xA) — **higher = better**. Absolute season "
+               "totals (a model's expected goals), plus expected goals conceded (xGC). " + LEGEND)
+    rows = apply_filter(sorted(players, key=lambda p: (p["xgi"] or 0.0), reverse=True), sel)
+    pool = [(r["xgi"] or 0.0) for r in rows]
+    _board(rows, {
         "xG": lambda r: r["xg"], "xA": lambda r: r["xa"],
-        "xGI": lambda r: r["xgi"], "xGC": lambda r: r["xgc"]}, badges, key="stats_xg")
+        "xGI": lambda r: r["xgi"], "xGC": lambda r: r["xgc"],
+        "Rating": lambda r: rating_cell((r["xgi"] or 0.0), pool, higher_is_better=True)},
+        badges, key="stats_xg",
+        col_help={"xG": "Expected goals (season total).", "xA": "Expected assists (season total).",
+                  "xGI": "xG + xA — expected goal involvements (season total). Higher = better.",
+                  "xGC": "Expected goals conceded while on the pitch (season total).",
+                  "Rating": "xGI quality vs the players shown (best 20% 🟢 … worst 20% 🔴), with the percentile."})

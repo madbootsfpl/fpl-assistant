@@ -263,6 +263,31 @@ def test_player_stats_filter_narrows_a_board():
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
+def test_clean_sheets_board_shows_a_quality_rating_and_legend():
+    # ADR-071: xGC/90 board gains a relative Rating column (🟢…🔴) + a "vs the players shown" legend
+    at = _run(_PAGES / "1_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Clean sheets").run()
+    assert not at.exception
+    assert any("relative to the players shown" in c.value for c in at.caption)   # the legend
+    if at.dataframe:
+        df = at.dataframe[0].value
+        assert "Rating" in df.columns
+        assert df["Rating"].astype(str).str.contains("🟢|🟡|🟠|🔴", regex=True).any()
+
+
+def test_xg_board_shows_a_quality_rating():
+    # ADR-071: the xG board rates xGI (higher = better) the same way
+    at = _run(_PAGES / "1_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("xG / xA / xGI").run()
+    assert not at.exception
+    if at.dataframe:
+        assert "Rating" in at.dataframe[0].value.columns
+
+
 def test_my_squad_points_to_build():
     # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
     at = _squads_view("My Squad")
