@@ -13,12 +13,13 @@ st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *na
            "download it to keep it (nothing is saved on the server).")
 
 st.markdown(
-    "**Quick start:** open **Squads** → *Build* → **Use this squad** → tweak it in *My Squad* → check "
-    "*Health*, *Transfer* and *Captain* → **Download** your `squad.json`. Prefer words? Do it all from **Ask**."
+    "**Quick start:** open **Squads** → *Build* → **Use this squad** → tweak it in *My Squad* → get "
+    "**This week**'s plan → check *Health*, *Transfer* and *Captain* → **Download** your `squad.json`. "
+    "Prefer words? Do it all from **Ask**."
 )
 
-st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · Health · "
-           "Transfer · Captain** with the buttons at the top.")
+st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · This week · "
+           "Health · Transfer · Captain** with the buttons at the top.")
 
 with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=True):
     st.markdown(
@@ -43,8 +44,12 @@ with st.expander("3 · Check its health  →  **Squads → Health**"):
         "**weak links** worth upgrading. This is the same engine the CLI uses — one honest xP number."
     )
 
-with st.expander("4 · Improve it  →  **Squads → Transfer** and **Captain**"):
+with st.expander("4 · Plan your week & improve it  →  **Squads → This week · Transfer · Captain**"):
     st.markdown(
+        "**This week** is the fastest answer — one grounded view of who to **captain**, any **lineup** "
+        "change, one **transfer** to consider, and any **flagged** players (injuries / doubts), all checked "
+        "against the data (a ✓/⚠ line). *(The AI narrates it if a local Ollama is running; otherwise you "
+        "still get the full plan.)* Start there, then dig deeper:\n\n"
         "**Transfer** ranks the best single swaps by **XI improvement** (how much a change lifts your best "
         "legal XI) — set your **bank** with the slider, or ask for a **coordinated plan** of 2–3. "
         "**Apply** a swap to your session squad.\n\n"
@@ -54,9 +59,11 @@ with st.expander("4 · Improve it  →  **Squads → Transfer** and **Captain**"
 
 with st.expander("5 · Do your research  →  Players · Fixtures · Trending · News"):
     st.markdown(
-        "- **Players** — the whole pool (filter by **team / position / player**, sort, page through all) "
-        "**plus** the stat views: over/under-performance · Defensive Contribution · clean sheets · xG "
-        "(season-to-date). Switch views with the buttons at the top.\n"
+        "- **Players** — the whole pool (filter by **team / position / player**, sort, page through all — "
+        "the **table first**, a top-15 chart below) **plus** the stat views: over/under-performance · "
+        "Defensive Contribution · clean sheets · xG (season-to-date). On **clean sheets / xG** a "
+        "**🟢…🔴 quality rating** shows how a player stacks up *vs the players shown*. Switch views with the "
+        "buttons at the top.\n"
         "- **Fixtures** — a colour-coded **difficulty ticker** (pick 1–8 gameweeks).\n"
         "- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + "
         "**Community Signals** (what r/FantasyPL is talking about).\n"
@@ -72,6 +79,7 @@ with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)")
         'build me a squad for £100m with 3 differentials\n'
         'best differential midfielders under £8m\n'
         'is Haaland worth the money?\n'
+        'what should I do this week for my-team?\n'
         'who should I captain from my-team?\n'
         'what transfer should I make for my-team?\n'
         'which of my-team\'s teams have the best fixtures?\n'

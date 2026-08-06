@@ -48,7 +48,7 @@ counts, `6` always shows as `6.0`; and the Help tab reflects everything shipped 
       (`render_player_table`). Money/value/%/form/ICT → **1dp**; Pts/Mins → **integer**; xG/xA/xGI/xGC/xGC/90
       → **2dp**; Diff/Margin → **`%+.1f`**. Columns stay **numeric + sortable** (NumberColumn, not strings).
       No analytics change; no server writes; the CLI is untouched.
-- [ ] **US-224 (refresh Help)** — the Help guide reflects the current app: **This week** (the grounded
+- [x] **US-224 (refresh Help)** — the Help guide reflects the current app: **This week** (the grounded
       gameweek plan) in the Squads flow + a step/pointer; the **quality ratings** noted in the research step;
       the **Pool table-first**; a *"what should I do this week for my-team?"* Ask example; the Squads sub-nav
       list includes **This week**. Content only — no input widgets (the tooltip-coverage test still holds).
@@ -62,7 +62,7 @@ counts, `6` always shows as `6.0`; and the Help tab reflects everything shipped 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-223 | **Consistent number formatting** — a shared `NumberColumn` format convention (1dp money/value/%, 2dp xG family, integer counts, +/- signed) across the Pool, the four stat boards, and the squad tables. ADR-072. | High | ✅ Done | ~½ session |
-| US-224 | **Refresh the Help tab** — add This week / the gameweek plan, the 🟢…🔴 quality ratings, the Pool table-first + the new Ask example; fix the Squads sub-nav list. | Medium | ⬜ To do | ~¼ session |
+| US-224 | **Refresh the Help tab** — add This week / the gameweek plan, the 🟢…🔴 quality ratings, the Pool table-first + the new Ask example; fix the Squads sub-nav list. | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -112,6 +112,20 @@ examples. Keep it static (no widgets).
 Smoke (real data): `value` 29.833… now shows as `29.8`, whole-number prices as `6.0`; xGI still `4.42`.
 Tests: +5 (4 `formats` unit — 1dp/int/2dp/signed, image/text/help, the coverage guard; 1 web — Pool money
 columns stay numeric). ruff clean, full suite **612** green.
+
+**US-224 (refresh the Help tab).** Brought the step-by-step guide up to date with Sprints 080–083:
+- **Quick start** + the Squads sub-nav caption now include **This week**.
+- **Step 4** retitled *"Plan your week & improve it → Squads → This week · Transfer · Captain"* with a lead
+  paragraph on the grounded gameweek plan (captain · lineup · a transfer · flags, verified; degrades without
+  Ollama).
+- **Step 5 (research → Players)** notes the **table-first** Pool and the **🟢…🔴 quality rating** (vs the
+  players shown) on clean sheets / xG.
+- **Ask examples** gained `what should I do this week for my-team?`.
+Content only — no widgets. The Help test now also asserts "This week", the gameweek Ask example, and the
+"quality rating" note. ruff clean, full suite **612** green.
+
+**Housekeeping:** noticed `data/seed.db` had drifted to 572 players (vs the committed 570) from an incidental
+write during the session — restored it to HEAD so the seed changes only via a deliberate `reseed` + commit.
 
 ---
 

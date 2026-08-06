@@ -228,6 +228,9 @@ def test_help_page_renders_the_guide_without_data():
     blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
     assert "Squads" in blob and "My Squad" in blob             # the core steps (new nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
+    assert "This week" in blob                                 # US-224: the gameweek plan is in the guide
+    assert "this week for my-team" in blob                     # US-224: the gameweek Ask example
+    assert "quality rating" in blob                            # US-224: the stat-board rating is explained
     assert not at.get("dataframe")                             # static content — no data widgets
 
 
