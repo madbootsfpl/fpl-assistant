@@ -16,7 +16,8 @@ _SEVERITY = {"u": 0, "i": 1, "s": 2, "n": 3, "d": 4, "a": 5}
 
 st.set_page_config(page_title="News · FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
-st.title("News — player availability")
+st.title("📰 News")
+st.caption("Official FPL player news — injuries, doubts and returns, most serious first.")
 
 store = Storage()
 try:

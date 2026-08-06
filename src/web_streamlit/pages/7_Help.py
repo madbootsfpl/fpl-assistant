@@ -7,7 +7,7 @@ refresh, and no input controls. It complements Home (the short overview) with a 
 import streamlit as st
 
 st.set_page_config(page_title="Help · FPL Assistant", page_icon="⚽", layout="wide")
-st.title("Help — build your team with the assistant")
+st.title("🧭 Help")
 st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *narrates* — and every "
            "answer is checked against the data (a ✓/⚠ trust line). Your squad lives in **your session** — "
            "download it to keep it (nothing is saved on the server).")

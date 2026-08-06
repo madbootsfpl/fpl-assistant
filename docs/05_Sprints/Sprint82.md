@@ -51,7 +51,7 @@ inline; and every tab gets a consistent, friendly **emoji header** like Home.
       **legend** caption ("rated vs the players shown — 🟢 best 20% … 🔴 worst 20%"); **clearer captions +
       per-column `help=` tooltips** on all four stat boards saying what each number means (absolute season
       total vs per-90). Display-only (a web helper); analytics untouched; no server writes.
-- [ ] **US-222 (per-tab header graphics)** — a consistent **emoji-led header + one-line tagline** on every
+- [x] **US-222 (per-tab header graphics)** — a consistent **emoji-led header + one-line tagline** on every
       tab (Players 👟 · Fixtures 📅 · Squads 🧩 · Ask 💬 · News 📰 · Trending 📈 · Help 🧭), matching Home's
       look. Copy/UI only; no behaviour change.
 - [ ] **No analytics drift** — `defensive_solidity`/`over_under`/`defcon_reliability`/xGI ranking unchanged;
@@ -65,7 +65,7 @@ inline; and every tab gets a consistent, friendly **emoji header** like Home.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-221 | **Interpretable stat boards** — a `quality_band` helper (quintile colour + percentile); a **Rating** column on Clean sheets (xGC/90) and xG (xGI) + a legend; clearer captions + per-column tooltips on all four boards. ADR-071. | High | ✅ Done | ~1 session |
-| US-222 | **Per-tab header graphics** — an emoji-led header + tagline on all 7 tabs, like Home. | Medium | ⬜ To do | ~¼ session |
+| US-222 | **Per-tab header graphics** — an emoji-led header + tagline on all 7 tabs, like Home. | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -115,6 +115,11 @@ data/logic; the tooltip-coverage + existing render tests still pass.
 Smoke (real data): Calafiori `🟢 excellent (top 1%)`, median `🟡 average`, Dubravka `🔴 very poor (top 99%)`.
 Tests: +8 (6 `ratings` unit — both directions, ties, extremes, 1-elem/empty; 2 web — Rating column + legend
 on Clean sheets, Rating on xG). ruff clean, full suite **606** green.
+
+**US-222 (per-tab header graphics).** Each tab now leads with a distinct emoji + a one-line tagline, matching
+Home's ⚽: **Players 👟 · Fixtures 📅 · Squads 🧩 · Ask 💬 · News 📰 · Trending 📈 · Help 🧭**. Titles trimmed
+of their " — descriptive" suffix (moved into the tagline caption where one wasn't already present). Copy/UI
+only — no logic, no ADR. +1 test (every tab's title carries its emoji, no crash); full suite **607** green.
 
 ---
 

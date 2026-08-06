@@ -36,7 +36,7 @@ _BOARDS = [
 
 st.set_page_config(page_title="Trending · FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
-st.title("Trending — what the crowd is doing")
+st.title("📈 Trending")
 st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction.")
 
 store = Storage()

@@ -288,6 +288,18 @@ def test_xg_board_shows_a_quality_rating():
         assert "Rating" in at.dataframe[0].value.columns
 
 
+_TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_Squads.py": "🧩", "4_Ask.py": "💬",
+              "5_News.py": "📰", "6_Trending.py": "📈", "7_Help.py": "🧭"}
+
+
+def test_every_tab_has_an_emoji_led_header():
+    # US-222: each tab's title leads with a distinct emoji (like Home's ⚽ FPL Assistant), no crash
+    for fname, emoji in _TAB_EMOJI.items():
+        at = _run(_PAGES / fname)
+        assert not at.exception, f"{fname} raised: {at.exception}"
+        assert at.title and emoji in at.title[0].value, f"{fname} title missing {emoji}"
+
+
 def test_my_squad_points_to_build():
     # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
     at = _squads_view("My Squad")

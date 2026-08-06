@@ -15,7 +15,8 @@ from src.web_streamlit.views import players as views
 
 st.set_page_config(page_title="Players · FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
-st.title("Players")
+st.title("👟 Players")
+st.caption("The whole player pool + the stat boards — filter, sort, and see who's over/under-performing.")
 
 store = Storage()
 try:

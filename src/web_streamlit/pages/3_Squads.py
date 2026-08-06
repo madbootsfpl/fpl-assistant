@@ -17,7 +17,8 @@ from src.web_streamlit.views import squads as views
 st.set_page_config(page_title="Squads · FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
 render_sidebar()
-st.title("Squads")
+st.title("🧩 Squads")
+st.caption("Everything for your team in one place — build it, tweak it, and get this week's plan.")
 
 view = st.segmented_control(
     "Tool", ["Build", "My Squad", "This week", "Health", "Transfer", "Captain"], default="Build",
