@@ -294,15 +294,25 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
         assert df["Rating"].astype(str).str.contains("🟢|🟡|🟠|🔴", regex=True).any()
 
 
-def test_xg_board_shows_a_quality_rating():
-    # ADR-071: the xG board rates xGI (higher = better) the same way
+def test_xg_board_rates_only_meaningful_players():
+    # ADR-071/073: the xG board rates xGI, but only for outfield players with minutes — the column is
+    # named "xGI rating" and sits before xGC; goalkeepers (xGI ≈ noise) are left unrated (—).
     at = _run(_PAGES / "1_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("xG / xA / xGI").run()
     assert not at.exception
-    if at.dataframe:
-        assert "Rating" in at.dataframe[0].value.columns
+    if not at.dataframe:
+        return
+    cols = list(at.dataframe[0].value.columns)
+    assert "xGI rating" in cols and "Rating" not in cols            # renamed
+    assert cols.index("xGI rating") < cols.index("xGC")             # sits before xGC (away from it)
+
+    pos = [m for m in at.multiselect if m.label == "Position"]      # filter to GK → all unrated
+    if pos:
+        pos[0].set_value(["GK"]).run()
+        ratings = set(at.dataframe[0].value["xGI rating"].astype(str))
+        assert ratings <= {"—"}, f"goalkeepers should not be rated on xGI, got {ratings}"
 
 
 _TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_Squads.py": "🧩", "4_Ask.py": "💬",

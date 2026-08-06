@@ -21,6 +21,7 @@ from src.web_streamlit.paginate import paginate
 from src.web_streamlit.ratings import LEGEND, rating_cell
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
+_RATING_MIN_MINUTES = 900   # the "enough to be meaningful" bar (matches the other boards; ADR-073)
 
 
 def _sorted(players, sort_by):
@@ -123,13 +124,18 @@ def render_xg(players, sel, badges):
     st.caption("**Expected goal involvement** (xGI = xG + xA) — **higher = better**. Absolute season "
                "totals (a model's expected goals), plus expected goals conceded (xGC). " + LEGEND)
     rows = apply_filter(sorted(players, key=lambda p: (p["xgi"] or 0.0), reverse=True), sel)
-    pool = [(r["xgi"] or 0.0) for r in rows]
+    # xGI is only a real signal for outfield players who've actually played — rating a keeper (xGI ≈ 0)
+    # or a 0-minute backup is meaningless (ADR-073). Rate only those, against that pool; blank the rest.
+    def _rate_xgi(r):
+        return r["position"] != "GK" and (r["minutes"] or 0) >= _RATING_MIN_MINUTES and r["xgi"] is not None
+    pool = [r["xgi"] for r in rows if _rate_xgi(r)]
     _board(rows, {
-        "xG": lambda r: r["xg"], "xA": lambda r: r["xa"],
-        "xGI": lambda r: r["xgi"], "xGC": lambda r: r["xgc"],
-        "Rating": lambda r: rating_cell((r["xgi"] or 0.0), pool, higher_is_better=True)},
+        "xG": lambda r: r["xg"], "xA": lambda r: r["xa"], "xGI": lambda r: r["xgi"],
+        "xGI rating": lambda r: rating_cell(r["xgi"], pool, higher_is_better=True) if _rate_xgi(r) else "—",
+        "xGC": lambda r: r["xgc"]},
         badges, key="stats_xg",
         col_help={"xG": "Expected goals (season total).", "xA": "Expected assists (season total).",
                   "xGI": "xG + xA — expected goal involvements (season total). Higher = better.",
-                  "xGC": "Expected goals conceded while on the pitch (season total).",
-                  "Rating": "xGI quality vs the players shown (best 20% 🟢 … worst 20% 🔴), with the percentile."})
+                  "xGI rating": "Attacking quality (xGI) vs outfield players with ≥900 mins (best 20% 🟢 … "
+                                "worst 20% 🔴). Keepers & low-minutes players aren't rated (—).",
+                  "xGC": "Expected goals conceded while on the pitch (season total)."})
