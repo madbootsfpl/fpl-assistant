@@ -110,7 +110,7 @@ def test_players_page_sorts_by_team_and_paginates():
 
 def test_fixtures_ticker_grid_and_weeks_selector():
     # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
-    at = _run(_PAGES / "3_Fixtures.py")
+    at = _run(_PAGES / "2_Fixtures.py")
     assert len(at.dataframe) == 1 or len(at.info) == 1
     if not at.dataframe:
         return
@@ -121,37 +121,45 @@ def test_fixtures_ticker_grid_and_weeks_selector():
     assert sum(c.startswith("GW") for c in at.dataframe[0].value.columns) == 3
 
 
+def _squads_view(view):
+    # ADR-069: open the Squads page and switch its segmented control to a manage/build view
+    at = _run(_PAGES / "3_Squads.py")
+    at.segmented_control[0].set_value(view).run()
+    assert not at.exception, f"Squads[{view}] raised: {at.exception}"
+    return at
+
+
 def test_squads_page_analyses_the_demo_squad():
-    # the demo seed always populates the picker (ADR-054) → an analysis renders, no crash
-    at = _run(_PAGES / "6_Squad_Health.py")
+    # Health view: the demo seed populates the picker (ADR-054) → an analysis renders, no crash
+    at = _squads_view("Health")
     assert len(at.selectbox) == 1                          # the squad picker (demo + session)
     assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
 
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
-    at = _run(_PAGES / "7_Transfer.py")
+    at = _squads_view("Transfer")
     assert len(at.selectbox) == 1                          # the squad picker (demo always present)
-    # a squad is selected → the ranked swaps (or a "no upgrades" note) render, no crash
-    assert len(at.code) == 1 or len(at.info) >= 1
+    assert len(at.code) == 1 or len(at.info) >= 1          # the swaps (or a "no upgrades" note)
     at.slider[0].set_value(3.0).run()                      # move the bank slider → recompute, no crash
     assert not at.exception
 
 
 def test_sidebar_offers_the_import_team_control():
-    # US-191 / ADR-058: the sidebar (on squad pages) has a manager-ID input + an Import team button
-    at = _run(_PAGES / "5_My_Squad.py")
+    # US-191 / ADR-058: the sidebar (on the Squads page) has a manager-ID input + an Import team button
+    at = _run(_PAGES / "3_Squads.py")
     assert any(t.label == "FPL manager-ID" for t in at.text_input)
     assert any(b.label == "Import team" for b in at.button)
 
 
 def test_transfer_page_apply_mutates_the_session_squad():
     # US-173: applying a suggested swap edits the active squad in session_state (no server write)
-    at = _run(_PAGES / "7_Transfer.py")
+    at = _squads_view("Transfer")
     at.slider[0].set_value(10.0).run()                     # raise the bank → dearer upgrades → swaps appear
-    if len(at.selectbox) < 2 or not at.button:             # still none on this DB → nothing to apply
+    apply = [b for b in at.button if "Apply this transfer" in b.label]
+    if not apply:                                          # still none on this DB → nothing to apply
         return
     before = list(at.session_state["squad"]["player_ids"]) if "squad" in at.session_state else None
-    at.button[0].click().run()                             # "Apply this transfer →"
+    apply[0].click().run()
     assert not at.exception
     squad = at.session_state["squad"]                      # an active squad now exists…
     assert before is None or squad["player_ids"] != before  # …and it changed (or was just adopted)
@@ -159,14 +167,14 @@ def test_transfer_page_apply_mutates_the_session_squad():
 
 
 def test_captain_page_renders_for_the_demo_squad():
-    at = _run(_PAGES / "8_Captain.py")
+    at = _squads_view("Captain")
     assert len(at.selectbox) >= 1                          # the squad picker (+ a set-captain selector)
     assert len(at.code) == 1 or len(at.info) >= 1          # the captain picks (or a "no data" note)
 
 
 def test_captain_page_shows_crowd_flags_and_template_risk():
     # US-184: the captain candidates gain a Trends column + a template-risk caption (ADR-057)
-    at = _run(_PAGES / "8_Captain.py")
+    at = _squads_view("Captain")
     if not at.dataframe:
         return
     assert "Trends" in at.dataframe[0].value.columns.tolist()
@@ -175,7 +183,7 @@ def test_captain_page_shows_crowd_flags_and_template_risk():
 
 def test_transfer_page_shows_incoming_crowd_flags():
     # US-184: the swap table gains an "In trends" column for the player you'd buy
-    at = _run(_PAGES / "7_Transfer.py")
+    at = _squads_view("Transfer")
     at.slider[0].set_value(10.0).run()                     # bank → swaps appear
     if not at.dataframe:
         return
@@ -184,7 +192,7 @@ def test_transfer_page_shows_incoming_crowd_flags():
 
 def test_captain_page_sets_and_persists_a_captain():
     # US-175: "Set as captain" writes captain_id onto the (adopted) session squad
-    at = _run(_PAGES / "8_Captain.py")
+    at = _squads_view("Captain")
     setbtn = [b for b in at.button if b.label == "Set as captain"]
     if not setbtn:                                         # no data locally → nothing to set
         return
@@ -194,33 +202,35 @@ def test_captain_page_sets_and_persists_a_captain():
     assert cap in at.session_state["squad"]["player_ids"]  # a real, owned captain
 
 
-def test_consumer_pages_use_a_session_active_squad():
-    # build sets session_state["squad"]; the squad pages must offer it in the picker (ADR-054/055)
+def test_consumer_views_use_a_session_active_squad():
+    # build sets session_state["squad"]; the Squads manage views must offer it in the picker (ADR-054/055)
     squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
-    for page in ("6_Squad_Health.py", "7_Transfer.py", "8_Captain.py", "5_My_Squad.py"):
-        at = AppTest.from_file(str(_PAGES / page), default_timeout=30)
+    for view in ("Health", "Transfer", "Captain", "My Squad"):
+        at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
-        assert not at.exception, f"{page} raised: {at.exception}"
+        at.segmented_control[0].set_value(view).run()
+        assert not at.exception, f"Squads[{view}] raised: {at.exception}"
         assert any("My squad (yours)" in o for o in at.selectbox[0].options)
 
 
 def test_help_page_renders_the_guide_without_data():
     # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps + an example
-    at = _run(_PAGES / "12_Help.py")
+    at = _run(_PAGES / "7_Help.py")
     blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
-    assert "Build Squad" in blob and "My Squad" in blob        # the core steps
+    assert "Squads" in blob and "My Squad" in blob             # the core steps (new nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
     assert not at.get("dataframe")                             # static content — no data widgets
 
 
-def test_squad_tabs_are_renamed_and_grouped():
-    # ADR-069: Player Stats merged into Players (US-216); the squad pages still separate until US-217
-    assert not (_PAGES / "2_Player_Stats.py").exists()   # merged into Players
-    assert (_PAGES / "1_Players.py").exists()
-    assert (_PAGES / "4_Build_Squad.py").exists()
-    assert (_PAGES / "5_My_Squad.py").exists()
-    assert (_PAGES / "6_Squad_Health.py").exists()
+def test_sidebar_consolidated_to_seven_tabs():
+    # ADR-069: 12 → 7 tabs; Player Stats merged into Players, the 5 squad tools into Squads
+    present = sorted(p.name for p in _PAGES.glob("*.py"))
+    assert present == sorted(["1_Players.py", "2_Fixtures.py", "3_Squads.py", "4_Ask.py",
+                              "5_News.py", "6_Trending.py", "7_Help.py"])
+    for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
+                 "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
+        assert not (_PAGES / gone).exists()
 
 
 def test_player_stats_board_renders_via_the_segmented_control():
@@ -245,14 +255,14 @@ def test_player_stats_filter_narrows_a_board():
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
-def test_my_squad_points_to_build_squad():
-    # ADR-062: My Squad stays the tweaker + points to Build Squad for a full rebuild
-    at = _run(_PAGES / "5_My_Squad.py")
-    assert any("Build Squad" in c.value for c in at.caption)
+def test_my_squad_points_to_build():
+    # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
+    at = _squads_view("My Squad")
+    assert any("Build" in c.value for c in at.caption)
 
 
 def test_build_page_returns_a_squad(monkeypatch):
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     # a squad is rendered (or the "no data" note if the DB is empty) — no crash
     assert len(at.code) == 1 or len(at.info) >= 1
     # move an archetype control → rebuild, still no crash
@@ -261,7 +271,7 @@ def test_build_page_returns_a_squad(monkeypatch):
 
 
 def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     assert at.get("download_button"), "an Optimal build must offer a squad.json download"
@@ -273,7 +283,7 @@ def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
 
 def test_build_page_renders_non_zero_xp(monkeypatch):
     # regression (US-172): Build must attach xp/minutes_weight so the table + projected total aren't zeros
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
     out = at.code[0].value
@@ -284,7 +294,7 @@ def test_build_page_renders_non_zero_xp(monkeypatch):
 
 def test_build_page_names_the_squad(monkeypatch):
     # US-172: the squad-name input flows into the active squad (and the download key)
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
     at.text_input[0].set_value("Tony's XI").run()
@@ -294,7 +304,7 @@ def test_build_page_names_the_squad(monkeypatch):
 
 def test_build_page_objective_switch_rebuilds(monkeypatch):
     # ADR-062: switching the objective (xp→xgi) rebuilds on the same engine, no crash, still a squad
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
     at.selectbox[0].set_value("xgi").run()
@@ -303,7 +313,7 @@ def test_build_page_objective_switch_rebuilds(monkeypatch):
 
 def test_build_page_weekly_and_include_unavailable(monkeypatch):
     # ADR-062: the new build-mode radio + include-unavailable checkbox drive the same select_squad
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
     at.radio[0].set_value("Weekly (playing bench)").run()
@@ -313,7 +323,7 @@ def test_build_page_weekly_and_include_unavailable(monkeypatch):
 
 def test_build_page_formation_preview_is_display_only(monkeypatch):
     # ADR-062: the formation preview is XI-only and never adds a second (save) download
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
     assert len(at.selectbox) >= 2                          # [0] objective, [1] formation preview
@@ -324,7 +334,7 @@ def test_build_page_formation_preview_is_display_only(monkeypatch):
 
 def test_build_page_exclude_removes_the_player_from_the_save(monkeypatch):
     # ADR-062: the "Must exclude" control wires through to the saved 15 (the tester's key ask)
-    at = _run(_PAGES / "4_Build_Squad.py")
+    at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
     opts = at.multiselect[1].options                       # [0] include, [1] exclude, [2] bench
@@ -340,7 +350,7 @@ def test_build_page_exclude_removes_the_player_from_the_save(monkeypatch):
 
 
 def test_my_squad_page_renders_with_a_legality_banner_and_download():
-    at = _run(_PAGES / "5_My_Squad.py")
+    at = _squads_view("My Squad")
     # a download (an editable squad view) or the no-data info; a legality banner (success/error) if data
     assert at.get("download_button") or at.info
     if at.get("download_button"):
@@ -349,7 +359,7 @@ def test_my_squad_page_renders_with_a_legality_banner_and_download():
 
 def test_my_squad_pitch_view_lays_out_the_squad():
     # US-187: the squad renders as a formation card-grid — a card (markdown name) per player, not a table
-    at = _run(_PAGES / "5_My_Squad.py")
+    at = _squads_view("My Squad")
     if not at.get("download_button"):                      # no data locally → the info branch
         return
     assert len(at.dataframe) == 0                          # the pitch replaced the dataframe
@@ -357,7 +367,7 @@ def test_my_squad_pitch_view_lays_out_the_squad():
 
 
 def test_my_squad_swap_adopts_and_mutates_the_session_squad():
-    at = _run(_PAGES / "5_My_Squad.py")
+    at = _squads_view("My Squad")
     swap = [b for b in at.button if b.label.startswith("Swap")]
     if not swap:                                           # no data / no candidates → nothing to swap
         return
@@ -367,16 +377,17 @@ def test_my_squad_swap_adopts_and_mutates_the_session_squad():
 
 
 def test_my_squad_rename_updates_the_active_squad():
-    at = _run(_PAGES / "5_My_Squad.py")
-    if not at.text_input or not any(b.label == "Rename" for b in at.button):
+    at = _squads_view("My Squad")
+    name_inputs = [t for t in at.text_input if t.label == "Squad name"]   # not the sidebar manager-ID
+    if not name_inputs or not any(b.label == "Rename" for b in at.button):
         return
-    at.text_input[0].set_value("Dream Team").run()
+    name_inputs[0].set_value("Dream Team").run()
     next(b for b in at.button if b.label == "Rename").click().run()
     assert at.session_state["squad"]["name"] == "Dream Team"
 
 
 def test_my_squad_set_bench_picks_four():
-    at = _run(_PAGES / "5_My_Squad.py")
+    at = _squads_view("My Squad")
     if not at.multiselect or not any(b.label == "Set bench" for b in at.button):
         return
     at.multiselect[0].set_value(at.multiselect[0].options[:4]).run()
@@ -387,7 +398,7 @@ def test_my_squad_set_bench_picks_four():
 
 def test_trending_page_shows_a_leaderboard():
     # US-194: a community leaderboard (owned board renders now; momentum boards note "live at GW1")
-    at = _run(_PAGES / "11_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     assert at.dataframe or at.info                          # a board, or the no-data note
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
@@ -398,7 +409,7 @@ def test_trending_page_shows_a_leaderboard():
 
 def test_trending_filter_narrows_the_owned_board():
     # ADR-064 reuse: the shared Team/Position/Player filter narrows Trending (the owned board is populated)
-    at = _run(_PAGES / "11_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     if not at.dataframe:
         return
     at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
@@ -409,7 +420,7 @@ def test_trending_filter_narrows_the_owned_board():
 def test_trending_owned_board_paginates():
     # ADR-063: the always-populated owned board pages past 30 (no 30-cap)
     from src.web_streamlit.paginate import page_labels
-    at = _run(_PAGES / "11_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     if not at.dataframe:
         return
     first = page_labels(31, 30)[0]                          # "1–30" (avoids hard-coding the en-dash)
@@ -418,7 +429,7 @@ def test_trending_owned_board_paginates():
 
 def test_news_page_lists_flagged_players_or_all_clear():
     # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
-    at = _run(_PAGES / "10_News.py")
+    at = _run(_PAGES / "5_News.py")
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
         assert "News" in cols and "Source" in cols
@@ -427,7 +438,7 @@ def test_news_page_lists_flagged_players_or_all_clear():
 
 
 def test_ask_chat_answers_a_grounded_question():
-    at = AppTest.from_file(str(_PAGES / "9_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
     assert not at.exception
     at.chat_input[0].set_value("who has the best fixtures over the next 5?").run()
     assert not at.exception
@@ -437,7 +448,7 @@ def test_ask_chat_answers_a_grounded_question():
 
 def test_ask_build_offers_use_this_squad(monkeypatch):
     # ADR-062: a "build me a squad" answer offers "Use this squad →" → adopts the session squad
-    at = AppTest.from_file(str(_PAGES / "9_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
     assert not at.exception
     at.chat_input[0].set_value("build me a squad for £100m").run()
     assert not at.exception
@@ -466,19 +477,19 @@ def test_photo_url_helper():
     assert m[1].endswith("/p999.png") and m[2] == ""        # by player id; missing code → empty
 
 
-def test_squad_tabs_show_image_tables():
-    # US-179: Build/Analyse/Captain show a photo+badge image table (My Squad is now a pitch view, US-187)
-    for page in ("4_Build_Squad.py", "6_Squad_Health.py", "8_Captain.py"):
-        at = _run(_PAGES / page)
+def test_squad_views_show_image_tables():
+    # US-179 / ADR-069: the Build/Health/Captain views show a photo+badge image table
+    for view in ("Build", "Health", "Captain"):
+        at = _squads_view(view)
         if not at.dataframe:                                # no data locally → the info branch
             continue
         cols = str(at.dataframe[0].value.columns.tolist())
-        assert "photo" in cols and "badge" in cols, f"{page} should show photo + badge columns"
+        assert "photo" in cols and "badge" in cols, f"Squads[{view}] should show photo + badge columns"
 
 
-def test_transfer_tab_shows_a_swap_image_table():
-    # US-179: the Transfer swaps render with both players' photos (out/in image columns)
-    at = _run(_PAGES / "7_Transfer.py")
+def test_transfer_view_shows_a_swap_image_table():
+    # US-179: the Transfer view's swaps render with both players' photos (out/in image columns)
+    at = _squads_view("Transfer")
     at.slider[0].set_value(10.0).run()                      # raise the bank → swaps appear
     if not at.dataframe:
         return
@@ -495,7 +506,7 @@ def test_runner_module_points_at_the_app():
 def test_data_freshness_caption_on_every_tab(monkeypatch):
     # US-180/ADR-056: the "Data as of <date>" caption renders in both modes, on every page
     monkeypatch.delenv("FPL_LOCAL", raising=False)
-    for page in (_APP, _PAGES / "1_Players.py", _PAGES / "4_Build_Squad.py"):
+    for page in (_APP, _PAGES / "1_Players.py", _PAGES / "3_Squads.py"):
         at = _run(page)
         assert any("Data as of" in c.value for c in at.caption), f"{page} should show a freshness caption"
 

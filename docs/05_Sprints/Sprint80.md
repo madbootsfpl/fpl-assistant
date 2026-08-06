@@ -42,14 +42,14 @@ underlying tools (same engine, same outputs).
 - [x] **US-216 (Players)** — merge Player Stats into **Players**: a shared filter + a segmented control
       **Pool · Over/under · DefCon · Clean sheets · xG** (only the chosen view computes); remove
       `2_Player_Stats.py`; rewire the Players + Player Stats AppTests + the tooltip-coverage list
-- [ ] **US-217 (Squads)** — merge Build/My Squad/Health/Transfer/Captain into **Squads**: the sidebar +
+- [x] **US-217 (Squads)** — merge Build/My Squad/Health/Transfer/Captain into **Squads**: the sidebar +
       a segmented control **Build · My Squad · Health · Transfer · Captain** (a shared picker for the manage
-      views; only the chosen view computes); remove the 5 pages; **renumber** to the clean 7-tab sidebar;
-      rewire the squad AppTests; update **Home** + **Help** copy to the new nav
-- [ ] **No behaviour change** — each tool behaves as before (same analytics, same rendered output); the web
+      views; only the chosen view computes); removed the 5 pages; **renumbered** to the clean 7-tab sidebar;
+      rewired the squad AppTests; updated **Home** + **Help** copy to the new nav
+- [x] **No behaviour change** — each tool behaves as before (same analytics, same rendered output); the web
       writes nothing server-side (the `.save(` guardrail holds); help tooltips still covered
-- [ ] Existing **585** stay green (rewired, not weakened); ruff clean
-- [ ] Docs: ADR-069 + index, Architecture, PROJECT_STATUS, README (the new tab list)
+- [x] Existing **585** stay green (rewired, not weakened); ruff clean
+- [ ] Docs: ADR-069 + index ✅; Architecture, PROJECT_STATUS, README (the new tab list) _(at the retro)_
 
 ---
 
@@ -58,7 +58,7 @@ underlying tools (same engine, same outputs).
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-216 | **Consolidate Players** — Players + Player Stats → one **Players** page (shared filter + a lazy segmented control: Pool · Over/under · DefCon · Clean sheets · xG). Extract the view renders; rewire tests. ADR-069. | High | ✅ Done | ~1 session |
-| US-217 | **Consolidate Squads** — Build/My Squad/Health/Transfer/Captain → one **Squads** page (sidebar + a lazy segmented control + a shared picker for the manage views). Extract renders; renumber to 7 tabs; rewire tests; update Home/Help. ADR-069. | High | ⬜ To do | ~1–1.5 sessions |
+| US-217 | **Consolidate Squads** — Build/My Squad/Health/Transfer/Captain → one **Squads** page (sidebar + a lazy segmented control + a shared picker for the manage views). Extract renders; renumber to 7 tabs; rewire tests; update Home/Help. ADR-069. | High | ✅ Done | ~1–1.5 sessions |
 
 ---
 
@@ -117,6 +117,18 @@ to the merged pages; the segmented control + filter/picker carry `help=`.
   behaviour change**. **585** green, ruff clean. **Smoke:** 5 views (default Pool = table + bar); switching
   to "Clean sheets" + Team=ARS → 7 ARS players (xGC/90), no exception. _Home/Help copy + the final renumber
   land in US-217 with the Squads merge._
+
+- **US-217 ✅ (build)** — Extracted the five squad tools into `views/squads.py` (`render_build` /
+  `render_my_squad` / `render_health` / `render_transfer` / `render_captain` — bodies copied faithfully,
+  `st.stop()`→`return`). New thin `pages/3_Squads.py`: `render_sidebar()` → an `st.segmented_control`
+  **Build · My Squad · Health · Transfer · Captain** → Build renders itself; the four manage views share
+  **one** `squad_picker()`; only the selected view computes (lazy). `git rm` the five squad pages; **final
+  renumber** to the clean **7-tab** sidebar (`1 Players · 2 Fixtures · 3 Squads · 4 Ask · 5 News ·
+  6 Trending · 7 Help`). **Rewired ~38 AppTest refs** (a `_squads_view(view)` helper drives the control;
+  every prior assertion kept — buttons label-filtered for robustness); updated the tooltip-coverage list,
+  the layout test, **Home** + the **Help** guide + the package docstring to the new nav. **585** green
+  (rewired, not weakened), ruff clean, no server writes. **Smoke:** all 5 tools render via the control
+  (Build→code · My Squad→pitch · Health/Transfer/Captain→code), shared picker present, no exceptions.
 
 ---
 

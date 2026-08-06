@@ -13,11 +13,14 @@ st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *na
            "download it to keep it (nothing is saved on the server).")
 
 st.markdown(
-    "**Quick start:** *Build Squad* → **Use this squad** → tweak it in *My Squad* → check *Squad Health*, "
-    "*Transfer* and *Captain* → **Download** your `squad.json`. Prefer words? Do it all from **Ask**."
+    "**Quick start:** open **Squads** → *Build* → **Use this squad** → tweak it in *My Squad* → check "
+    "*Health*, *Transfer* and *Captain* → **Download** your `squad.json`. Prefer words? Do it all from **Ask**."
 )
 
-with st.expander("1 · Build your squad  →  the **Build Squad** tab", expanded=True):
+st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · Health · "
+           "Transfer · Captain** with the buttons at the top.")
+
+with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=True):
     st.markdown(
         "Pick a **budget** and shape the 15 with the options: **archetypes** (cheap / premium / "
         "differential), **include / exclude** specific players, a **declared bench**, the **objective** "
@@ -27,20 +30,20 @@ with st.expander("1 · Build your squad  →  the **Build Squad** tab", expanded
         "squad →** to make it this session's active squad."
     )
 
-with st.expander("2 · Make it yours  →  the **My Squad** tab", expanded=True):
+with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=True):
     st.markdown(
         "Your active squad as a **formation pitch**. Edit it: **rename**, **swap** any player "
-        "(legality-checked), set the **bench** (pick 4), and **set a captain** (shown **(C)**). Every "
-        "change updates your session and the **Download**. New team? Head back to *Build Squad*."
+        "(legality-checked), set the **bench** (pick 4). Every change updates your session and the "
+        "**Download**. New team? Switch back to the **Build** view."
     )
 
-with st.expander("3 · Check its health  →  the **Squad Health** tab"):
+with st.expander("3 · Check its health  →  **Squads → Health**"):
     st.markdown(
         "See your squad's **projected xP over the next 5 gameweeks**, the per-GW breakdown, and the "
         "**weak links** worth upgrading. This is the same engine the CLI uses — one honest xP number."
     )
 
-with st.expander("4 · Improve it  →  the **Transfer** and **Captain** tabs"):
+with st.expander("4 · Improve it  →  **Squads → Transfer** and **Captain**"):
     st.markdown(
         "**Transfer** ranks the best single swaps by **XI improvement** (how much a change lifts your best "
         "legal XI) — set your **bank** with the slider, or ask for a **coordinated plan** of 2–3. "
@@ -49,12 +52,11 @@ with st.expander("4 · Improve it  →  the **Transfer** and **Captain** tabs"):
         "penalty duty, and a template-vs-differential steer. **Set as captain** to keep it."
     )
 
-with st.expander("5 · Do your research  →  Players · Player Stats · Fixtures · Trending · News"):
+with st.expander("5 · Do your research  →  Players · Fixtures · Trending · News"):
     st.markdown(
-        "- **Players** — the whole player pool: filter by **team / position / player**, sort, and a top-15 "
-        "bar; page through all.\n"
-        "- **Player Stats** — over/under-performance · Defensive Contribution · clean sheets · xG "
-        "(season-to-date), with the same filter.\n"
+        "- **Players** — the whole pool (filter by **team / position / player**, sort, page through all) "
+        "**plus** the stat views: over/under-performance · Defensive Contribution · clean sheets · xG "
+        "(season-to-date). Switch views with the buttons at the top.\n"
         "- **Fixtures** — a colour-coded **difficulty ticker** (pick 1–8 gameweeks).\n"
         "- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + "
         "**Community Signals** (what r/FantasyPL is talking about).\n"

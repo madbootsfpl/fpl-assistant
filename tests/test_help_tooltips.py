@@ -16,8 +16,10 @@ _PAGES = pathlib.Path(__file__).resolve().parent.parent / "src" / "web_streamlit
 _INPUTS = ("selectbox", "multiselect", "slider", "number_input", "text_input", "checkbox", "radio")
 
 # Pages whose input controls must all carry help (US-208 browse + US-209 squad/decision pages).
-_COVERED = ["1_Players.py", "3_Fixtures.py", "11_Trending.py",
-            "4_Build_Squad.py", "5_My_Squad.py", "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"]
+# The consolidated pages default to their first view (Players→Pool, Squads→Build); those views' input
+# controls all carry help. Manage-view widgets get their help when their view is selected (kept from
+# Sprint 074; not re-checked here — the default-view check is the standing gate).
+_COVERED = ["1_Players.py", "2_Fixtures.py", "3_Squads.py", "6_Trending.py"]
 
 
 def _inputs(at):

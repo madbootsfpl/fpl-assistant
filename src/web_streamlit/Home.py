@@ -15,28 +15,25 @@ st.title("⚽ FPL Assistant")
 st.caption("A read-only view over the analytics — the CLI stays the engine (ADR-051/052).")
 st.markdown(
     """
-Use the **sidebar** to explore:
+Use the **sidebar** to explore (each tab with a segmented control switches views inside it):
 
-- **Players** — ranked & filterable (position, price), with photos + a price-vs-points scatter; page
-  through **all** players and sort by team / position
-- **Player Stats** — over/under-performance · Defensive Contribution · clean sheets · xG (season-to-date)
+- **Players** — the whole pool (filter by team / position / player, sort, page through all) **plus** the
+  stat boards: over/under-performance · Defensive Contribution · clean sheets · xG (season-to-date)
 - **Fixtures** — a **fixture ticker**: teams × gameweeks, colour-coded by difficulty (pick 1–8 weeks)
-- **Build Squad** — the optimal 15 within a **budget**, with the full option set (archetypes · include /
-  exclude · declared bench · objective · weekly / bench-boost · include injured)
-- **My Squad** — your squad as a **pitch/formation** view; edit it (rename, swap, bench, set captain, download)
-- **Squad Health** — analyse **your squad's** health over the next 5 gameweeks
-- **Transfer** — the best **XI-aware** swaps for your squad (a bank slider; a coordinated plan)
-- **Captain** — who to (vice-)captain from your squad this week
+- **Squads** — everything for your team in one place: **Build** (the optimal 15 with the full option set) ·
+  **My Squad** (pitch view & edit: rename · swap · bench · captain · download) · **Health** (5-GW analysis) ·
+  **Transfer** (XI-aware swaps) · **Captain** (who to (vice-)captain)
 - **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 - **News** — official FPL player news (injuries · doubts · returns), most serious first
 - **Trending** — what the crowd's doing: most-owned · transferred in/out · in form, + **Community Signals**
   (💬 what r/FantasyPL is talking about — best-effort)
+- **Help** — a step-by-step guide to building your team with the assistant
 
-**Your squad:** on **Build Squad**, name it, *Download* a `squad.json` (that file is your save) and *Use
+**Your squad:** in **Squads → Build**, name it, *Download* a `squad.json` (that file is your save) and *Use
 this squad*; or *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (from GW1).
-**Edit** it on **My Squad** (or apply a swap on Transfer / set a captain on Captain) — every change updates
-your session and the download. A **demo** squad populates the pages on first visit. All per-user — no
-accounts, nothing saved server-side (ADR-054/055).
+**Edit** it in **Squads → My Squad** (or apply a swap on Transfer / set a captain on Captain) — every change
+updates your session and the download. A **demo** squad populates the views on first visit. All per-user —
+no accounts, nothing saved server-side (ADR-054/055).
 
 The analytics decide; a local LLM (optional) only narrates. `python app.py refresh` updates the data.
 """
