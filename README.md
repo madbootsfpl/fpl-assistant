@@ -161,6 +161,7 @@ python app.py ask "is Haaland worth the money?"        # a single-player value v
 python app.py ask "who has the best fixtures over the next 5?"   # league fixture-difficulty ranking
 python app.py ask "when does Arsenal play next?"       # one team's upcoming fixtures (venue + difficulty)
 python app.py ask "which of my-team's players have the best fixtures?"   # your players by their fixture run
+python app.py ask "which of my-team's teams have the best fixtures?"     # your clubs ranked (with player-counts)
 
 python app.py chat                                     # interactive; follow-ups build on the last answer:
 #   > who should I captain from my-team?

@@ -56,3 +56,31 @@ def render_squad_fixtures(rows, squad: str, next_n: int = 5, source: str = "fpl"
         f"Ranked by each player's team's {run} run over the next {next_n} fixtures (source: {source})."
     )
     return "\n".join(lines)
+
+
+def render_squad_team_fixtures(rows, squad: str, next_n: int = 5, source: str = "fpl",
+                               hardest: bool = False) -> str:
+    """A saved squad's **teams** ranked by their fixture run (ADR-067).
+
+    One row per distinct team — Team / #Players (how many of your squad play for it) / Avg FDR / next
+    opponents — its own shape, so a small dedicated renderer (sibling of render_squad_fixtures)."""
+    if not rows:
+        return f"No fixtures to rate for '{squad}'."
+
+    header = f"{'#':<3} {'Team':<5} {'Players':>7} {'Avg FDR':>7}  Next opponents"
+    divider = f"{'-' * 3} {'-' * 5} {'-' * 7} {'-' * 7}  {'-' * 14}"
+
+    lines = [f"{squad} — teams by their fixture run (difficulty: {source})", "", header, divider]
+    for rank, r in enumerate(rows, start=1):
+        avg = r["avg_difficulty"]
+        avg_str = f"{avg:.1f}" if avg is not None else "—"
+        opponents = ", ".join(r["opponents"])
+        lines.append(f"{rank:<3} {r['team']:<5} {r['n']:>7} {avg_str:>7}  {opponents}")
+
+    run = "hardest" if hardest else "easiest"
+    lines.append("")
+    lines.append(
+        f"Ranked by each team's {run} run over the next {next_n} fixtures (source: {source}); "
+        "'Players' = how many of your squad play for that team."
+    )
+    return "\n".join(lines)

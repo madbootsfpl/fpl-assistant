@@ -8,7 +8,7 @@ plan and its bullet-by-bullet reconciliation live in git history and the per-spr
 **Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
 and a grounded natural-language layer (`ask` + `chat`) — now with a **deployed read-only Streamlit web UI**
 and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens · manager-ID import · Reddit
-buzz). **66 ADRs · 581 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
+buzz). **67 ADRs · 584 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
 form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
 wired dormant** (Sprint 069): GW1 is a switch-flip.
 
@@ -46,8 +46,9 @@ wired dormant** (Sprint 069): GW1 is a switch-flip.
   the data (✓/⚠ trust line, ADR-037). The LLM (local Ollama) is optional — degrades to decision + facts.
 - **`chat`** (ADR-047) — a conversational mode where follow-ups build on the last turn (why / next /
   what-about), still analytics-decided each turn.
-- **`fixtures`** (ADR-048/049) — a league FDR ranking, a single team's schedule, or a **squad's players by
-  their fixture run**; team names resolve or ask, never guess.
+- **`fixtures`** (ADR-048/049/067) — a league FDR ranking, a single team's schedule, a **squad's players by
+  their fixture run**, or a **squad's teams** ranked by their run (with player-counts, via a "teams" cue);
+  team names resolve or ask, never guess.
 
 ### Engineering
 - **CI (GitHub Actions):** ruff + pytest on push (Py 3.13/3.14). Layered one-way architecture

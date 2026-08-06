@@ -163,3 +163,35 @@ def test_decide_fixtures_squad_with_no_current_players(monkeypatch):
                         lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [99]}))
     d = ask._decide_fixtures(_squad_store(), "fixtures for TS", "TS")   # id 99 not in players
     assert "no current players" in d["message"]
+
+
+# ---- team-level squad fixtures (ADR-067) ------------------------------------
+
+def _patch_squad(monkeypatch):
+    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask, "SquadStore",
+                        lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [1, 2, 3]}))
+
+
+def test_decide_fixtures_team_level_ranks_teams_with_counts(monkeypatch):
+    # "teams" cue → the team-level view: distinct teams ranked, with a player-count (LIV ×2, BOU ×1)
+    _patch_squad(monkeypatch)
+    d = ask._decide_fixtures(_squad_store(), "which of TS's teams have the best fixtures?", "TS")
+    assert d["subjects"] == ["LIV", "BOU"]              # LIV 2.6 before BOU 3.6
+    assert "LIV" in d["detail"] and "2 player" in d["facts"]["teams"][0]   # LIV has 2 of the squad
+    assert "1 player" in d["facts"]["teams"][1]
+
+
+def test_decide_fixtures_team_level_hardest_reverses(monkeypatch):
+    _patch_squad(monkeypatch)
+    d = ask._decide_fixtures(_squad_store(), "which of TS's clubs have the hardest fixtures?", "TS")
+    assert d["subjects"][0] == "BOU"                    # BOU 3.6 first when hardest
+
+
+def test_fixtures_teams_cue_routes_team_level_players_stays_player_level(monkeypatch):
+    # routing: "teams" → team-level (subjects = team codes); "players" → player-level (subjects = names)
+    _patch_squad(monkeypatch)
+    team = ask._decide_fixtures(_squad_store(), "which of TS's teams have the best fixtures?", "TS")
+    player = ask._decide_fixtures(_squad_store(), "which of TS's players have the best fixtures?", "TS")
+    assert set(team["subjects"]) <= {"LIV", "BOU"}
+    assert "Salah" in player["subjects"]               # player-level unchanged

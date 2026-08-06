@@ -42,7 +42,7 @@ from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.compare import render_compare
 from src.ui.fdr import render_fdr_table
-from src.ui.fixtures import render_squad_fixtures, render_team_fixtures
+from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
@@ -913,8 +913,11 @@ def _decide_fixtures(store: Storage, question: str, squad: str | None = None,
         return {"message": f"More than one team matches — did you mean {', '.join(match)}? "
                            "Please name just one."}
 
-    if not match and squad:                              # a saved squad → its players' fixture runs
-        return _decide_squad_fixtures(store, squad, upcoming, horizon, hardest, active_squad)
+    if not match and squad:                              # a saved squad → its fixture run
+        # A "teams"/"by team" cue → the team-level lens (ADR-067); else the per-player view.
+        by_team = any(c in question.lower() for c in ("teams", "clubs", "by team", "by club"))
+        decide = _decide_squad_team_fixtures if by_team else _decide_squad_fixtures
+        return decide(store, squad, upcoming, horizon, hardest, active_squad)
 
     if match:                                            # a single team → its schedule
         schedule = team_schedule(upcoming, match, source="fpl")[:horizon]
@@ -989,6 +992,45 @@ def _decide_squad_fixtures(store: Storage, squad: str, upcoming, horizon: int,
         "subjects": [r["web_name"] for r in rows],
         "task": f"in 2 short sentences, say which of {squad}'s players have the {which} fixtures over "
                 f"the next {horizon} gameweeks (name a couple, with their opponents)",
+    }
+
+
+def _decide_squad_team_fixtures(store: Storage, squad: str, upcoming, horizon: int,
+                                hardest: bool, active_squad=None) -> dict | None:
+    """A saved squad's **teams** ranked by their fixture run (ADR-067): group the owned players by team
+    (with a player-count) + join `team_fdr` + sort. Grounded per team; easiest by default, hardest on a cue."""
+    saved = _load_squad(squad, active_squad)
+    if saved is None:
+        return None
+    by_id = {p["id"]: p for p in store.get_players()}
+    owned = [by_id[i] for i in saved["player_ids"] if i in by_id]   # departed ids drop out
+    if not owned:
+        return {"message": f"Squad '{squad}' has no current players to check."}
+
+    names_by_team: dict = {}
+    for p in owned:
+        names_by_team.setdefault(p["team"], []).append(p["web_name"])
+    fdr = {r["team"]: r for r in team_fdr(upcoming, next_n=horizon, source="fpl")}
+    rows = [
+        {"team": t, "n": len(names), "players": names,
+         "avg_difficulty": r["avg_difficulty"], "opponents": r["opponents"]}
+        for t, names in names_by_team.items()
+        if (r := fdr.get(t)) is not None and r["avg_difficulty"] is not None
+    ]
+    if not rows:
+        return None
+    rows.sort(key=lambda x: x["avg_difficulty"], reverse=hardest)
+    which = "hardest" if hardest else "easiest"
+    return {
+        "detail": render_squad_team_fixtures(rows, squad, next_n=horizon, source="fpl", hardest=hardest),
+        "facts": {
+            "ranking": f"{squad}'s teams by their {which} fixture run, next {horizon} GWs",
+            "teams": [f"{r['team']} ({r['n']} player{'s' if r['n'] != 1 else ''}, avg difficulty "
+                      f"{r['avg_difficulty']}, next: {', '.join(r['opponents'])})" for r in rows[:5]],
+        },
+        "subjects": [r["team"] for r in rows],
+        "task": f"in 2 short sentences, say which of {squad}'s teams have the {which} fixtures over the "
+                f"next {horizon} gameweeks (name a couple, with their opponents)",
     }
 
 

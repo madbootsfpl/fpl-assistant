@@ -455,6 +455,13 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 078 (2026-08-06)** — *Team-level squad fixtures*, per **ADR-067** — implements the ADR-049
+  deferral: a 4th `fixtures` ask/chat mode. `_decide_squad_team_fixtures` groups a squad's owned players by
+  team (a player-count + names), joins `team_fdr`, and ranks the distinct teams by avg difficulty (easiest
+  default, hardest on the existing cue); a **`teams`/`clubs`/`by team`** cue routes to it within the squad
+  branch (else the per-player view; a possessive "my team's players" doesn't false-trigger). A dedicated
+  `render_squad_team_fixtures` (Team · #Players · Avg FDR · Next). Reuses `team_fdr` (no new analytics);
+  grounded; the other three fixtures modes unchanged. 584 tests.
 - **Sprint 077 (2026-08-06)** — *Team-scoped player multiselect* (refines **ADR-064**) — the shared
   `filter_controls` now scopes the **Player** options by the selected **team ∧ position** (empty = all)
   instead of ~570 names; the stored pick is pruned when it falls out of scope. One edit → Players ·
