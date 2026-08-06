@@ -65,12 +65,17 @@ def test_players_filters_narrow_the_table(monkeypatch):
     assert not at.exception                                  # narrowing never crashes (table or a note)
 
 
-def test_fixtures_page_shows_a_table_and_chart():
+def test_fixtures_ticker_grid_and_weeks_selector():
+    # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
     at = _run(_PAGES / "2_Fixtures.py")
     assert len(at.dataframe) == 1 or len(at.info) == 1
-    if at.dataframe:                                        # data present → an avg-FDR bar chart
-        assert len(at.get("vega_lite_chart")) == 1
-        assert "" in at.dataframe[0].value.columns          # a team-badge image column
+    if not at.dataframe:
+        return
+    cols = list(at.dataframe[0].value.columns)
+    assert "Team" in cols and sum(c.startswith("GW") for c in cols) == 6   # default 6 weeks
+    at.slider[0].set_value(3).run()                                        # → 3 GW columns
+    assert not at.exception
+    assert sum(c.startswith("GW") for c in at.dataframe[0].value.columns) == 3
 
 
 def test_squads_page_analyses_the_demo_squad():

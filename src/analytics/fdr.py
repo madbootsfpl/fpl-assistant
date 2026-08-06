@@ -96,3 +96,26 @@ def team_schedule(fixtures, team, source: str = "fpl") -> list[dict]:
                 "difficulty": difficulty,
             })
     return schedule
+
+
+def fixture_ticker(fixtures, next_n: int = 6, source: str = "fpl") -> dict:
+    """A teams × gameweeks difficulty grid (Sprint 062) — reuses `team_fdr` + `team_schedule`.
+
+    Returns `{"gameweeks": [event, ...], "rows": [{"team", "avg_difficulty", "cells": {event: cell}}]}`
+    where `cell` is `{opponent, venue, difficulty}` or None (a blank gameweek). Teams are ordered
+    easiest-run-first over the window; `gameweeks` are the next `next_n` upcoming gameweeks.
+    """
+    events = sorted({f["event"] for f in fixtures if f["event"]})[:next_n]
+    ranked = team_fdr(fixtures, next_n=next_n, source=source)     # already easiest-first
+    rows = []
+    for r in ranked:
+        by_event: dict = {}
+        for s in team_schedule(fixtures, r["team"], source=source):
+            if s["event"] in events:
+                by_event.setdefault(s["event"], s)                # a double GW: keep the first fixture
+        rows.append({
+            "team": r["team"],
+            "avg_difficulty": r["avg_difficulty"],
+            "cells": {ev: by_event.get(ev) for ev in events},
+        })
+    return {"gameweeks": events, "rows": rows}

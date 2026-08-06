@@ -1,6 +1,6 @@
 """Tests for the Fixture Difficulty (FDR) analytics."""
 
-from src.analytics.fdr import elo_difficulty_bands, team_fdr, team_schedule
+from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
 
 
 def fixture(home, away, h_diff, a_diff, event=1,
@@ -42,6 +42,28 @@ def test_ranked_easiest_first():
 
     assert ranked[0]["team"] == "EASY"
     assert ranked[-1]["team"] == "HARD"
+
+
+def test_fixture_ticker_grid_shape_and_ordering():
+    # Sprint 062: a teams × gameweeks grid, easiest-first, with per-GW opponent/venue/difficulty cells.
+    fixtures = [
+        fixture("EASY", "HARD", 1, 5, event=1),   # EASY home GW1 (diff 1); HARD away GW1 (diff 5)
+        fixture("MID", "EASY", 3, 2, event=2),    # EASY away GW2 (diff 2); MID home GW2 (diff 3)
+    ]
+    t = fixture_ticker(fixtures, next_n=2)
+    assert t["gameweeks"] == [1, 2]
+    assert t["rows"][0]["team"] == "EASY"                     # easiest run first
+    easy = t["rows"][0]["cells"]
+    assert easy[1] == {"event": 1, "opponent": "HARD", "venue": "H", "difficulty": 1}
+    assert easy[2]["opponent"] == "MID" and easy[2]["venue"] == "A"
+
+
+def test_fixture_ticker_blank_gameweek_is_none():
+    # a team with no fixture in a listed gameweek → a None cell (a blank GW), no crash
+    t = fixture_ticker([fixture("A", "B", 2, 2, event=1)], next_n=2)
+    # only GW1 exists in the data, so next_n=2 yields just [1]; every team has a cell for it
+    assert t["gameweeks"] == [1]
+    assert all(row["cells"][1] is not None for row in t["rows"])
 
 
 def test_next_n_limits_the_window():
