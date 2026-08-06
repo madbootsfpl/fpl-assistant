@@ -203,6 +203,53 @@ def test_build_page_names_the_squad(monkeypatch):
     assert at.session_state["squad"]["name"] == "Tony's XI"
 
 
+def test_build_page_objective_switch_rebuilds(monkeypatch):
+    # ADR-062: switching the objective (xp→xgi) rebuilds on the same engine, no crash, still a squad
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:
+        return
+    at.selectbox[0].set_value("xgi").run()
+    assert not at.exception and at.code
+
+
+def test_build_page_weekly_and_include_unavailable(monkeypatch):
+    # ADR-062: the new build-mode radio + include-unavailable checkbox drive the same select_squad
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:
+        return
+    at.radio[0].set_value("Weekly (playing bench)").run()
+    at.checkbox[-1].set_value(True).run()                  # include injured/suspended
+    assert not at.exception and at.code                    # still a valid 15 renders
+
+
+def test_build_page_formation_preview_is_display_only(monkeypatch):
+    # ADR-062: the formation preview is XI-only and never adds a second (save) download
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:
+        return
+    assert len(at.selectbox) >= 2                          # [0] objective, [1] formation preview
+    at.selectbox[1].set_value("4-3-3").run()
+    assert not at.exception
+    assert len(at.get("download_button")) == 1             # only the full-15 build is downloadable
+
+
+def test_build_page_exclude_removes_the_player_from_the_save(monkeypatch):
+    # ADR-062: the "Must exclude" control wires through to the saved 15 (the tester's key ask)
+    at = _run(_PAGES / "6_Build.py")
+    if not at.code:
+        return
+    opts = at.multiselect[1].options                       # [0] include, [1] exclude, [2] bench
+    if not opts:
+        return
+    label = opts[0]
+    at.multiselect[1].set_value([label]).run()
+    if not at.code or not at.button:                       # still Optimal + "Use this squad →" present
+        return
+    at.button[0].click().run()
+    excluded_name = label.split(" · ")[0]                  # "web_name · team · £Xm"
+    assert excluded_name not in at.session_state["squad"]["player_names"]
+
+
 def test_my_squad_page_renders_with_a_legality_banner_and_download():
     at = _run(_PAGES / "8_My_Squad.py")
     # a download (an editable squad view) or the no-data info; a legality banner (success/error) if data

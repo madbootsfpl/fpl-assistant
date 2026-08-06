@@ -8,6 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-06 | Owner | Build / Ask / My Squad | The web can't build a squad with the **full CLI `squad` options** (include · exclude · bench · formation · objective · no-xmins · weekly/bench-boost · include-unavailable — only budget/cheap/premium/differential are exposed). Want to build with any/all options, save it into the session so **My Squad** picks it up to tweak, then download. | 🟠 gap / 💡 | ▶ Sprint 071 (scoping) |
 | 2026-08-06 | Owner | My Squad | Player photos are left-aligned in the pitch cards — centre them | 🟡 polish | ✅ Sprint 063 (US-188) |
 | 2026-08-06 | Owner | Ask | Ask ignores the loaded/session squad — "captain/analyse RoboTS" falls back to "(all players)" (picks B.Fernandes, who isn't in RoboTS). Ask only sees server-side `SquadStore`, not the session active squad. | 🔴 broken | ✅ Sprint 066 |
 
