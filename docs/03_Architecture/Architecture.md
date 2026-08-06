@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 081 (2026-08-06)** — *An AI gameweek recommendation + refresh clarity + Pool layout*, per
+  **ADR-070** (US-218/219/220). **US-220 (the feature):** a grounded **"this week"** plan for a squad —
+  captain · lineup · a transfer · flags — as an **assembler**, not new analytics: `src/analytics/gameweek.py`
+  `gameweek_plan(owned, market, upcoming, xp_by_id, …)` orchestrates the existing primitives (`captain_picks`
+  next-GW · `best_legal_xi` vs the declared bench · one self-funding `suggest_transfers` · `is_unavailable`/
+  doubtful flags) → `{captain, lineup, transfer, flags}`. `ask.py` gains a phrase-routed **gameweek** intent
+  (`_decide_gameweek` → `detail`/`facts`/`subjects`/`task`), placed **after** the specific intents so
+  "captain this week" still routes to captain; it narrates + verifies (✓/⚠, ADR-037). `src/ui/gameweek.py`
+  `render_gameweek_plan` is the block; a **Squads → This week** view routes through `ask.answer(active_squad=…)`
+  + `render_ask`, degrading to the plan without Ollama. No server writes; captain uses next-GW xP while
+  lineup/transfer use the caller's 5-GW xP (the horizon each wants). **US-219:** the freshness caption leads
+  with the **player count** + a cloud snapshot note; a one-command **`reseed`** (refresh `fpl.db` → copy to
+  `seed.db`; new `config.LIVE_DB_PATH`); DEPLOY/Help split the cloud vs local refresh story. **US-218:**
+  `views/players.py::render_pool` renders the table before the top-15 bar. 598 tests.
 - **Sprint 080 (2026-08-06)** — *Sidebar consolidation*, per **ADR-069** — the web sidebar went **12 → 7
   tabs** (Players · Fixtures · Squads · Ask · News · Trending · Help). **Players** absorbed Player Stats and
   **Squads** absorbed Build/My Squad/Health/Transfer/Captain, each behind a lazy `st.segmented_control`

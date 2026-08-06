@@ -8,7 +8,8 @@ plan and its bullet-by-bullet reconciliation live in git history and the per-spr
 **Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
 and a grounded natural-language layer (`ask` + `chat`) — now with a **deployed read-only Streamlit web UI**
 and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens · manager-ID import · Reddit
-buzz). **69 ADRs · 585 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
+buzz), plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags —
+ADR-070). **70 ADRs · 598 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
 form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
 wired dormant** (Sprint 069): GW1 is a switch-flip.
 
@@ -39,6 +40,10 @@ wired dormant** (Sprint 069): GW1 is a switch-flip.
   `best_xi_points`, ADR-046; `--raw` for the old ranking); a coordinated multi-move **plan** (`--count`,
   ADR-035).
 - **`analyse`** (ADR-031) — projected XI xP over N GW (per-GW breakdown, ADR-032), weak links, injuries.
+- **gameweek plan** (ADR-070) — a grounded **"this week"** recommendation for a squad: who to **captain**,
+  any **lineup** change, one **transfer** to consider, and **flagged** players — an *assembler* over the
+  above primitives (no new analytics), narrated + verified; an `ask`/`chat` intent + a **Squads → This
+  week** web view.
 
 ### Natural-language layer (grounded)
 - **`ask`** — eight intents (captain · transfer · analyse · start/bench · compare · build-a-squad ·

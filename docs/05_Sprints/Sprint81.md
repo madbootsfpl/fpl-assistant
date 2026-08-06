@@ -145,4 +145,32 @@ ruff clean, full suite **598** green.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 3/3 stories done. Test count **585 → 598** (+13); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-218 — Pool: table first.** A one-block reorder in `views/players.py::render_pool` — the paginated
+  table renders before the top-15 bar (which stays filter/sort-responsive). No new ADR.
+- **US-219 — refresh clarity.** The freshness caption leads with the **player count** (so a stale snapshot
+  is obvious); a **cloud snapshot note**; a one-command **`python app.py reseed`** (refresh → copy
+  `fpl.db`→`seed.db`, added `config.LIVE_DB_PATH`); DEPLOY.md + Help split the cloud vs local refresh story.
+  Extends ADR-053/056.
+- **US-220 — AI gameweek recommendation (ADR-070).** A grounded **"this week"** plan (captain · lineup · a
+  transfer · flags) — an *assembler* over the existing primitives (`gameweek_plan`), a new phrase-routed
+  `ask`/`chat` **gameweek** intent (narrated + verified ✓/⚠), a `render_gameweek_plan` block, and a
+  **Squads → This week** view; degrades to the plan without Ollama; no new analytics; no server writes.
+
+**What went well**
+- All three tester items closed in one sprint; the big one (US-220) reused trusted primitives, so it added
+  a *capability* without touching the analytics — zero drift risk, small surface.
+- US-219 turned a confusing bug report ("572 vs 569") into a *visible* signal (the count) + a *fix* (reseed),
+  not just an explanation.
+- Routing held its discipline: "this week" reaches the new intent, but "captain this week" still routes to
+  captain (test-pinned).
+
+**Watch-outs / follow-ups**
+- Preseason the plan reads correctly but the numbers are quiet (form/momentum 0 until **GW1 2026-08-21**);
+  it sharpens then with no code change.
+- The gameweek plan is a *weekly baseline* — chip advice (TC/BB/WC) is deliberately out of scope (roadmap's
+  later chip optimisers).
+
+See `Sprint81_Lessons_Learnt.md` for the detailed retro.

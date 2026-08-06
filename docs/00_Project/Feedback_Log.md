@@ -8,6 +8,9 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-06 | Owner | Squads | Want an **AI recommendation on your squad for the upcoming gameweek**. | 💡 | ✅ Sprint 081 (US-220, ADR-070) — a grounded "this week" plan (captain·lineup·transfer·flags); an `ask` intent + a **Squads → This week** view |
+| 2026-08-06 | Owner | All (data) | CLI refreshed **572** players but the app shows **569–570** — how do I ensure the Streamlit app is on fresh data? | 🟠 confusing | ✅ Sprint 081 (US-219) — the freshness caption shows the **player count** + a cloud snapshot note; a one-command **`reseed`**; DEPLOY/Help explain cloud vs local refresh |
+| 2026-08-06 | Owner | Players → Pool | Flip the bar chart and table — the **table matters most**, show it first. | 🟡 polish | ✅ Sprint 081 (US-218) — `render_pool` renders the table before the top-15 bar |
 | 2026-08-06 | Owner | Players / Player Stats / Trending | The filter's **Player** multiselect lists all ~570 names — scope it to the selected team(s). | 🟡 polish | ✅ Sprint 077 (US-213) — scoped by team ∧ position in the shared filter |
 | 2026-08-06 | Owner | Trending | Trending needs a **filter**, same as Players and Player Stats. | 💡 | ✅ Sprint 075 (US-210) — reused the shared Team/Position/Player filter (ADR-064) |
 | 2026-08-06 | Owner | All | Add a small **ⓘ help tooltip** over all feature options so users understand what each does. | 💡 | ✅ Sprint 074 (US-208/209, ADR-065) — `help=` on every input control + a coverage test |

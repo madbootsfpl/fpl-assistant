@@ -8,7 +8,8 @@ A personal Fantasy Premier League analytics assistant — a command-line tool yo
 and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **complete**. A **read-only web UI**
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
-delivering. **59 ADRs · 530 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
+**70 ADRs · 598 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -105,6 +106,7 @@ The app is driven by subcommands (see ADR-003):
 
 ```bash
 python app.py refresh                          # fetch FPL data (players, teams, fixtures)
+python app.py reseed                           # refresh, then copy the cache to the committed seed (deploy)
 python app.py history --backfill               # backfill past-season history (once per season)
 python app.py table --sort value --limit 20    # players, ranked by points or value (£m)
 python app.py search haaland                   # find players by name
@@ -180,12 +182,14 @@ just another way to look at it. Two edges, both reusing the exact same engine:
 
 **Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing + **7 sidebar tabs**; the two
 consolidated tabs switch views with a lazy segmented control:
-- **Players** — a **Team · Position · Player** filter over the **Pool** (photos, a top-15 bar, page through
-  all, sort) plus stat views: **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date)
+- **Players** — a **Team · Position · Player** filter over the **Pool** (photos; the **table first**, a
+  top-15 bar below; page through all, sort) plus stat views: **over/under-perf · Defensive Contribution ·
+  clean sheets · xG** (season-to-date)
 - **Fixtures** — a colour-coded fixture **ticker** with team badges
 - **Squads** — **Build** (the full `squad` options → the optimal 15) · **My Squad** (a formation-pitch view;
-  edit: rename/swap/bench/captain/download) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps,
-  **Apply**) · **Captain** (and **set** yours) — the manage views share one squad picker
+  edit: rename/swap/bench/captain/download) · **This week** (a grounded gameweek plan — captain · lineup · a
+  transfer · flags) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps, **Apply**) · **Captain**
+  (and **set** yours) — the manage views share one squad picker
 - **Ask** — a grounded **chat** with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**
 - **News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**) · **Help** (a
   step-by-step guide)
