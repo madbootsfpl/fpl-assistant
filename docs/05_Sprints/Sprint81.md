@@ -42,7 +42,7 @@
       (updates on redeploy); a **`python app.py reseed`** command (refresh → copy `fpl.db`→`seed.db`) so
       updating the live app is one step; Help/DEPLOY explain the local (button/restart) vs cloud (reseed +
       push + reboot) refresh story
-- [ ] **US-220 (AI gameweek recommendation)** — a grounded **gameweek plan** for a squad: who to **captain**,
+- [x] **US-220 (AI gameweek recommendation)** — a grounded **gameweek plan** for a squad: who to **captain**,
       the best **XI vs bench** (any start/bench change), one **transfer to consider**, and **flagged**
       players — assembled from the existing analytics, **narrated** by the LLM and **verified** (✓/⚠).
       Exposed as an `ask`/`chat` intent *and* a **"This week"** view in the **Squads** tab; degrades to the
@@ -59,7 +59,7 @@
 |---|---|---|---|---|
 | US-218 | **Pool: table first** — reorder `render_pool` so the table + pagination come before the top-15 bar. | High | ✅ Done | ~¼ session |
 | US-219 | **Refresh clarity** — player count in the freshness caption; a cloud "snapshot" note; a `reseed` CLI command; document the local vs cloud refresh story. Extends ADR-053/056. | High | ✅ Done | ~½ session |
-| US-220 | **AI gameweek recommendation** — a grounded "this week" plan (captain · lineup · a transfer · flags), narrated + verified; an `ask` intent + a "This week" Squads view. ADR-070. | High | ⬜ To do | ~1–1.5 sessions |
+| US-220 | **AI gameweek recommendation** — a grounded "this week" plan (captain · lineup · a transfer · flags), narrated + verified; an `ask` intent + a "This week" Squads view. ADR-070. | High | ✅ Done | ~1–1.5 sessions |
 
 ---
 
@@ -119,6 +119,27 @@ fresh CLI cache (572). Three fixes, no new ADR (extends ADR-053/056):
 
 Tests: +3 (reseed routes + reseed refresh→copy behaviour on tmp paths + cloud-shows-snapshot-note); the
 freshness test now also asserts the count. ruff clean, reseed smoke OK, full suite **588** green.
+
+**US-220 (AI gameweek recommendation, ADR-070).** A grounded "this week" plan for a squad — captain ·
+lineup · a transfer · flags — assembled from the existing primitives (no new analytics), narrated + verified.
+- **Assembler** — new `analytics/gameweek.py::gameweek_plan(owned, market, upcoming, xp_by_id, …)` →
+  `{captain, lineup, transfer, flags}`. It only orchestrates: `captain_picks` (next-GW pick), `best_legal_xi`
+  vs the declared bench (bring-in/drop), one self-funding `suggest_transfers`, and availability flags
+  (unavailable / doubtful with chance%). Captain uses its own next-GW xP; lineup/transfer use the caller's
+  5-GW xP — the horizon each decision wants.
+- **`ask` intent** — `_decide_gameweek` reuses `_squad_xp`, builds `detail` (a `render_gameweek_plan` block),
+  self-describing `facts`, subjects = all owned + the buy (so `verify_grounding` doesn't cry wolf), and a
+  `task`; a new phrase-based **gameweek** keyword group placed *after* the specific intents (so "captain this
+  week" still routes to captain), squad-scoped in `_needs_squad`.
+- **Renderer** — new `ui/gameweek.py::render_gameweek_plan` (Captain / Lineup / Transfer / Flags block).
+- **Web** — a **This week** option in the Squads segmented control → `render_this_week` routes through
+  `ask.answer("what should I do this week for <squad>?", active_squad=squad)` + `render_ask` (plan + ✓/⚠);
+  degrades to the plan without Ollama; no server writes.
+- **Docs** — ADR-070 + index.
+Tests: +10 (assembler orchestration incl. None-handling; renderer branches; `_gameweek_facts`; grounded +
+verified `_decide_gameweek`; routing this-week→gameweek vs captain-this-week→captain; needs-a-squad; the web
+This-week view). Smokes: CLI degraded plan + a grounded narrator shows the ✓ line; the web view renders.
+ruff clean, full suite **598** green.
 
 ---
 

@@ -10,6 +10,7 @@ import json
 
 import streamlit as st
 
+from src import ask
 from src.analytics import (
     SQUAD_15,
     WEEKLY_BENCH_WEIGHT,
@@ -32,6 +33,7 @@ from src.analytics import (
     team_schedule,
 )
 from src.ui.analyse import render_squad_analysis
+from src.ui.ask import render_ask
 from src.ui.captain import render_captain_picks
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
@@ -393,3 +395,17 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
         set_active_squad(set_captain(squad, labels[choice]))
         st.success(f"Captain set: **{choice.split(' ', 1)[1]} (C)** — shown in Health + your download.")
         st.rerun()
+
+
+# ---- This week (a grounded gameweek plan; ADR-070) ---------------------------------------------------
+def render_this_week(squad_name, squad):
+    """A grounded 'this week' recommendation for the picked squad — captain · lineup · a transfer · flags.
+
+    Routes through `ask.answer` (analytics decide, the LLM narrates, every figure/name checked, ADR-037),
+    reusing the session squad. Degrades to the plan + facts without Ollama (the cloud). No server writes.
+    """
+    st.caption("Your whole week in one view — who to **captain**, any **lineup** change, one **transfer** "
+               "to consider, and any **flagged** players. The analytics decide; the answer is checked "
+               "against the data (✓/⚠).")
+    result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad)
+    st.code(render_ask(result), language=None)

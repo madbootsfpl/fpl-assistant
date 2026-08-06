@@ -136,6 +136,14 @@ def test_squads_page_analyses_the_demo_squad():
     assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
 
+def test_squads_this_week_view_renders_a_gameweek_plan():
+    # ADR-070: the "This week" view routes through ask.answer → the grounded plan block renders
+    # (no Ollama in the test → the plan + facts, no prose), no crash
+    at = _squads_view("This week")
+    assert len(at.code) == 1                               # the rendered gameweek plan
+    assert "This week" in at.code[0].value
+
+
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     at = _squads_view("Transfer")
     assert len(at.selectbox) == 1                          # the squad picker (demo always present)

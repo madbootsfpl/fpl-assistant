@@ -28,6 +28,7 @@ from src.analytics import (
     best_legal_xi,
     captain_picks,
     decision_xp,
+    gameweek_plan,
     minutes_weight_from_history,
     select_squad,
     suggest_transfer_plan,
@@ -43,6 +44,7 @@ from src.ui.analyse import render_squad_analysis
 from src.ui.compare import render_compare
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
+from src.ui.gameweek import render_gameweek_plan
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
@@ -67,6 +69,12 @@ _INTENT_KEYWORDS = {
     "build_squad": ("build", "wildcard", "best squad", "best team", "best xi", "new squad",
                     "new team", "pick a squad", "pick a team"),
     "start_bench": ("start", "bench", "lineup", "line-up"),
+    # gameweek after the specific intents: a holistic "what should I do this week" routes here, but a
+    # pointed "who should I captain this week" still matches captain first (ADR-070). Phrase-based so
+    # "this week" only fires the weekly plan, not a stray word.
+    "gameweek": ("this week", "this gameweek", "gameweek plan", "gw plan", "weekly plan",
+                 "plan for the week", "plan for this week", "what should i do", "what do i do",
+                 "recommend my", "recommendation for my"),
     "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
                   "best value", "best players", "differential", "differentials"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
@@ -451,6 +459,80 @@ def _decide_start_bench(store: Storage, squad_name: str | None, active_squad=Non
         "subjects": [p["web_name"] for p in owned],
         "task": "state the recommended lineup change (or that the XI is already optimal) in 2 short "
                 "sentences",
+    }
+
+
+def _gameweek_facts(plan: dict) -> dict:
+    """Self-describing facts for a gameweek plan (ADR-070) — every number present so the verifier
+    (ADR-037) can trace it, and each field reads plainly so the LLM can't conflate them."""
+    cap = plan["captain"]
+    captain = ("none — no eligible captain" if not cap else
+               f"{cap['web_name']} ({cap['team']}) — xP {cap['xp']} next GW, "
+               f"{'home against' if cap['venue'] == 'H' else 'away against'} {cap['opponent']}")
+
+    lu = plan["lineup"]
+    if not lu["has_declared_bench"]:
+        lineup = "no saved bench — the best legal XI is what's shown"
+    elif not lu["bring_in"] and not lu["drop"]:
+        lineup = "none — your current XI is already the best legal XI"
+    else:
+        lineup = (f"start {', '.join(p['web_name'] for p in lu['bring_in'])}; "
+                  f"bench {', '.join(p['web_name'] for p in lu['drop'])}")
+
+    tr = plan["transfer"]
+    transfer = ("none — no positive-gain upgrade" if not tr else
+                f"sell {tr['out']['web_name']} (xP {tr['out']['xp']}), "
+                f"buy {tr['in']['web_name']} (xP {tr['in']['xp']}), +{tr['gain']} starting-XI xP")
+
+    flags = ("none" if not plan["flags"] else
+             f"{len(plan['flags'])}: " + ", ".join(
+                 f"{f['web_name']} ({f['reason']}"
+                 f"{'' if f['chance'] is None else f', {f['chance']}%'})"
+                 for f in plan["flags"]))
+
+    return {
+        "captain": captain,
+        "lineup_change": lineup,
+        "transfer_to_consider": transfer,
+        "flagged_players": flags,
+    }
+
+
+def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None) -> dict | None:
+    """Analytics DECIDE a one-gameweek plan (ADR-070): captain · lineup · a transfer · flags.
+
+    An assembly of the existing primitives (via `gameweek_plan`), humanised for narration and
+    verified — the LLM never decides anything. Reuses `_squad_xp` so the horizon xP is the same the
+    transfer/analyse tools use (no drift).
+    """
+    data = _squad_xp(store, squad_name, active_squad)
+    if data is None:
+        return None
+    squad, players, owned, xp_by_id, _by_gw, _gws, _weight = data
+    if not owned:
+        return None
+
+    history_by_code = store.get_history_by_code()
+    baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
+    plan = gameweek_plan(
+        owned, players, store.get_upcoming_fixtures(), xp_by_id,
+        baseline_by_code=baselines,
+        minutes_weight=minutes_weight_from_history(history_by_code),
+        history_by_code=history_by_code,
+        bench_ids=squad.get("bench_ids") or [],
+    )
+    cap, tr = plan["captain"], plan["transfer"]
+    # subjects = every owned player (the prose may name any starter) + the transfer buy (not owned),
+    # so verify_grounding (ADR-037) doesn't flag a legitimately-named player.
+    subjects = [p["web_name"] for p in owned] + ([tr["in"]["web_name"]] if tr else [])
+    return {
+        "detail": render_gameweek_plan(plan, squad_name),   # the exact plan, shown with or without prose
+        "headline": f"This week (squad '{squad_name}'): captain "
+                    f"{cap['web_name'] if cap else '—'}",
+        "facts": _gameweek_facts(plan),
+        "subjects": subjects,
+        "task": "give a brief 'this week' recommendation in 3-4 short sentences — who to captain, any "
+                "lineup change, one transfer to consider, and any injury/doubt flags — using ONLY the facts",
     }
 
 
@@ -1128,6 +1210,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_captain(store, squad, rank=rank, active_squad=active_squad)
     if intent == "start_bench":
         return _decide_start_bench(store, squad, active_squad=active_squad)
+    if intent == "gameweek":
+        return _decide_gameweek(store, squad, active_squad=active_squad)
     if intent == "compare":
         return _decide_compare(store, question)
     if intent == "build_squad":
@@ -1145,9 +1229,9 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
 
 def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
     """The 'name a squad' prompt for the squad-scoped intents (or None if fine)."""
-    if intent in ("transfer", "analyse", "start_bench") and not squad:
+    if intent in ("transfer", "analyse", "start_bench", "gameweek") and not squad:
         verb = {"transfer": "what transfer", "analyse": "analyse",
-                "start_bench": "who should I start"}[intent]
+                "start_bench": "who should I start", "gameweek": "what should I do this week"}[intent]
         return AskResult("", intent, message=f'Name a saved squad, e.g. ask "{verb} for <squad>?"')
     return None
 

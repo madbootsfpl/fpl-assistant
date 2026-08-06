@@ -20,8 +20,10 @@ from src.ask import (
     _build_prompt,
     _captain_facts,
     _decide_compare,
+    _decide_gameweek,
     _decide_shortlist,
     _decide_worth,
+    _gameweek_facts,
     _lineup_change,
     _match_players,
     _plan_facts,
@@ -57,6 +59,22 @@ def test_routes_start_bench():
     assert route("who should I start from TS?", known_squads=["TS"]) == ("start_bench", "TS")
     assert route("fix my bench", known_squads=[])[0] == "start_bench"
     assert route("what's my best lineup?", known_squads=[])[0] == "start_bench"
+
+
+def test_routes_gameweek_for_a_holistic_weekly_question():
+    # ADR-070: "what should I do this week" / "this gameweek plan" → the weekly plan intent
+    assert route("what should I do this week for TS?", known_squads=["TS"]) == ("gameweek", "TS")
+    assert route("this gameweek plan", known_squads=[])[0] == "gameweek"
+
+
+def test_a_pointed_captain_question_still_beats_gameweek():
+    # "captain this week" carries a specific keyword → captain wins (gameweek is placed after it)
+    assert route("who should I captain this week for TS?", known_squads=["TS"])[0] == "captain"
+
+
+def test_gameweek_asks_for_a_squad_when_missing():
+    r = ask.answer("what should I do this week", narrator=lambda p: "unused")
+    assert r.intent == "gameweek" and "squad" in r.message.lower()
 
 
 def test_lineup_change_reports_no_saved_bench():
@@ -460,6 +478,61 @@ def test_analyse_decision_carries_the_squad_table_as_detail(monkeypatch):
     assert "GW1" in decision["detail"]                # the per-GW breakdown Tony wanted
     assert "xMins" in decision["detail"]              # the expected-minutes column (xMins v0)
     assert "Weakest links:" in decision["detail"]     # who the weak starters are
+
+
+def test_gameweek_facts_read_plainly_and_carry_every_number():
+    plan = {
+        "captain": {"web_name": "Haaland", "team": "MCI", "xp": 6.2, "venue": "H", "opponent": "BUR"},
+        "lineup": {"has_declared_bench": True, "bring_in": [{"web_name": "Saka"}],
+                   "drop": [{"web_name": "Foden"}]},
+        "transfer": {"out": {"web_name": "Watkins", "xp": 3.1}, "in": {"web_name": "Isak", "xp": 5.0},
+                     "gain": 1.9},
+        "flags": [{"web_name": "Foden", "reason": "doubtful", "chance": 75}],
+    }
+    facts = _gameweek_facts(plan)
+    assert facts["captain"].startswith("Haaland (MCI) — xP 6.2")
+    assert facts["lineup_change"] == "start Saka; bench Foden"
+    assert "buy Isak (xP 5.0)" in facts["transfer_to_consider"] and "+1.9" in facts["transfer_to_consider"]
+    assert facts["flagged_players"] == "1: Foden (doubtful, 75%)"
+
+
+class _FakeStore:
+    """A store whose reads the gameweek decision touches directly return empty — the plan is stubbed."""
+    def get_history_by_code(self):
+        return {}
+
+    def get_upcoming_fixtures(self):
+        return []
+
+
+def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
+    # ADR-070: the decision carries the plan as `detail`, names all owned players + the buy as
+    # subjects, and a narration that restates only the facts verifies clean (✓, ADR-037).
+    owned = [{"id": 1, "web_name": "Haaland"}, {"id": 2, "web_name": "Saka"}]
+    plan = {
+        "captain": {"web_name": "Haaland", "team": "MCI", "xp": 6.2, "venue": "H",
+                    "opponent": "BUR", "penalty_taker": True, "doubtful": False},
+        "lineup": {"start": owned, "bench": [], "has_declared_bench": False,
+                   "bring_in": [], "drop": []},
+        "transfer": {"out": {"web_name": "Saka", "team": "ARS", "xp": 3.1},
+                     "in": {"web_name": "Palmer", "team": "CHE", "xp": 5.0}, "gain": 1.9},
+        "flags": [],
+    }
+    monkeypatch.setattr(
+        ask, "_squad_xp",
+        lambda store, name, active_squad=None: (
+            {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {1: 6.2, 2: 3.1}, {}, [], {}),
+    )
+    monkeypatch.setattr(ask, "gameweek_plan", lambda *a, **k: plan)
+
+    decision = _decide_gameweek(_FakeStore(), "TST")
+    assert "This week — squad 'TST'" in decision["detail"]
+    assert "Haaland" in decision["subjects"] and "Palmer" in decision["subjects"]   # owned + the buy
+
+    res = assemble("q", "gameweek", decision,
+                   narrator=lambda p: "Captain Haaland (xP 6.2). Consider Saka to Palmer (+1.9).",
+                   known_names=["Haaland", "Saka", "Palmer", "Isak"])
+    assert res.trust == {"numbers": [], "names": []}                                 # every figure/name traces
 
 
 def test_assemble_handles_no_decision():
