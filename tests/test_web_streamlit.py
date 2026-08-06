@@ -370,6 +370,16 @@ def test_trending_page_shows_a_leaderboard():
     assert any(b.label.startswith("Show what") for b in at.button)
 
 
+def test_trending_filter_narrows_the_owned_board():
+    # ADR-064 reuse: the shared Team/Position/Player filter narrows Trending (the owned board is populated)
+    at = _run(_PAGES / "11_Trending.py")
+    if not at.dataframe:
+        return
+    at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
+    assert not at.exception
+    assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
+
+
 def test_trending_owned_board_paginates():
     # ADR-063: the always-populated owned board pages past 30 (no 30-cap)
     from src.web_streamlit.paginate import page_labels

@@ -8,7 +8,7 @@ plan and its bullet-by-bullet reconciliation live in git history and the per-spr
 **Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
 and a grounded natural-language layer (`ask` + `chat`) — now with a **deployed read-only Streamlit web UI**
 and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens · manager-ID import · Reddit
-buzz). **65 ADRs · 579 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
+buzz). **65 ADRs · 580 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
 form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
 wired dormant** (Sprint 069): GW1 is a switch-flip.
 

@@ -455,6 +455,11 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 075 (2026-08-06)** — *A filter on Trending* (reuses **ADR-064**) — the Trending page gained the
+  same **Team · Position · Player** filter as Players & Player Stats: `filter_controls(players,
+  key="trending")` once above the four boards, each `apply`-ing it before pagination. The buzz board + the
+  GW1-empty note are unchanged. No new analytics/ADR; the filter's `help=` tooltips are inherited (ADR-065),
+  so the coverage test stayed green. The third reuse of the shared filter — a few lines. 580 tests.
 - **Sprint 074 (2026-08-06)** — *Help tooltips (ⓘ)*, per **ADR-065** — a concise, action-oriented `help=`
   on **every input control** across the web (a Streamlit ⓘ tooltip), added at the shared components
   (`filters` · `paginate` · `squads`) so all pages inherit it, plus each page's own controls; key buttons

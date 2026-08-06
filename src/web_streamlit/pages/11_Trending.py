@@ -12,6 +12,8 @@ from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
+from src.web_streamlit.filters import apply as apply_filter
+from src.web_streamlit.filters import filter_controls
 from src.web_streamlit.paginate import paginate
 from src.web_streamlit.status import render_data_status
 
@@ -61,10 +63,12 @@ else:
                            "badge": st.column_config.ImageColumn("", width="small")},
         )
 
+    # A shared filter (ADR-064): Team / Position / Player, AND-combinable — applied to every board.
+    sel = filter_controls(players, key="trending")
     tabs = st.tabs([b[1] for b in _BOARDS] + ["💬 Talked about"])
     for tab, (by, label, header) in zip(tabs, _BOARDS):
         with tab:
-            rows = trending(players, by=by, limit=len(players))       # all, then page (ADR-063)
+            rows = apply_filter(trending(players, by=by, limit=len(players)), sel)   # all, filtered, paged
             if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
                 st.info("No transfer / form data yet — this board lights up at **GW1 (2026-08-21)**.")
             else:
