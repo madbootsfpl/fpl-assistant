@@ -8,7 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
-| _(none yet — awaiting testers)_ | | | | | |
+| 2026-08-06 | Owner | My Squad | Player photos are left-aligned in the pitch cards — centre them | 🟡 polish | ✅ Sprint 063 (US-188) |
 
 ---
 

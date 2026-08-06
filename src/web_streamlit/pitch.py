@@ -17,7 +17,10 @@ def _card(player, *, captain_id, xp_by_id, photos, next_opp) -> None:
     with st.container(border=True):
         url = photos.get(player["id"], "")
         if url:
-            st.image(url, width=54)
+            # Centre the photo within the card (US-188) — a nested [1,2,1] column, robust + native
+            # (no custom CSS); one level of nesting inside the row column, allowed by Streamlit.
+            _, mid, _ = st.columns([1, 2, 1])
+            mid.image(url, width=54)
         name = player["web_name"] + (" **(C)**" if player["id"] == captain_id else "")
         st.markdown(f"**{name}**")
         opp = next_opp.get(player["team"])
