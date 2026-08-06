@@ -46,9 +46,11 @@ never a raise.
 (the user clicks "show what's being talked about" — no fetch on every rerun), with a **descriptive
 User-Agent**. Low volume; respects Reddit's rate limits (the `/hot/.rss` variant 429'd on rapid repeats).
 
-**4. Surfaced on the Trending page.** A **"💬 Talked about"** board (Community Signals): player · team ·
-**mentions** · flags, from the RSS buzz. On failure → **"community buzz unavailable right now"** (not a
-crash). Display-only — `decision_xp` untouched.
+**4. Surfaced on the Trending page.** A **"💬 Talked about"** board (Community Signals): one **expander per
+player** (`web_name — team · N mentions`) listing the **posts** that drive the buzz — each post title a
+clickable link to the r/FantasyPL thread (so a count is readable, not opaque). `community_buzz` therefore
+returns each player's distinct matching posts (`{title, link}`) alongside the count. On failure →
+**"community buzz unavailable right now"** (not a crash). Display-only — `decision_xp` untouched.
 
 **5. Cloud-IP caveat (accepted).** The RSS works from a normal IP, but Streamlit Cloud's **datacenter IP**
 may be blocked (403/429). If so, the board simply **degrades to "unavailable"** on the live site — accepted,

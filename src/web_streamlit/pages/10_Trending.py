@@ -85,4 +85,10 @@ else:
                 if not buzz:
                     st.info("No current-player mentions in the latest r/FantasyPL posts.")
                 else:
-                    _board(buzz, "Mentions", lambda r: r["mentions"])
+                    st.caption(f"{len(buzz)} players mentioned — expand a name to read the posts.")
+                    for r in buzz:
+                        with st.expander(f"{r['web_name']} — {r['team']} · {r['mentions']} mentions"):
+                            for post in r["posts"]:
+                                title = post["title"] or "(untitled post)"
+                                st.markdown(f"- [{title}]({post['link']})" if post["link"]
+                                            else f"- {title}")

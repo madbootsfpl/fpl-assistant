@@ -10,8 +10,8 @@ from src.community import community_buzz, community_signals
 
 _RSS = """<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <entry><title>Haaland or Isak this week?</title><content>captain Haaland</content></entry>
-  <entry><title>Rate my team - is Saka worth it</title><content>Saka vs Haaland</content></entry>
+  <entry><link href="https://reddit.test/haaland"/><title>Haaland or Isak this week?</title><content>captain Haaland</content></entry>
+  <entry><link href="https://reddit.test/saka"/><title>Rate my team - is Saka worth it</title><content>Saka vs Haaland</content></entry>
 </feed>"""
 
 _PLAYERS = [{"id": 1, "web_name": "Haaland"}, {"id": 2, "web_name": "Isak"},
@@ -22,6 +22,18 @@ def test_community_buzz_ranks_by_mentions():
     buzz = community_buzz(_RSS, _PLAYERS, limit=5)
     assert [(r["web_name"], r["mentions"]) for r in buzz] == [("Haaland", 3), ("Saka", 2), ("Isak", 1)]
     assert all(r["web_name"] != "Zzz" for r in buzz)          # unmentioned players are dropped
+
+
+def test_community_buzz_captures_the_posts():
+    # each ranked player carries the distinct posts (title + link) that mention them
+    buzz = community_buzz(_RSS, _PLAYERS, limit=5)
+    haaland = next(r for r in buzz if r["web_name"] == "Haaland")
+    assert len(haaland["posts"]) == 2                     # mentioned across both posts
+    assert {p["link"] for p in haaland["posts"]} == {"https://reddit.test/haaland",
+                                                      "https://reddit.test/saka"}
+    assert all(p["title"] for p in haaland["posts"])      # each post carries its title
+    isak = next(r for r in buzz if r["web_name"] == "Isak")
+    assert [p["link"] for p in isak["posts"]] == ["https://reddit.test/haaland"]
 
 
 def test_community_buzz_accepts_sqlite_rows():

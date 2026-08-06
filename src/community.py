@@ -15,24 +15,29 @@ _ATOM = {"a": "http://www.w3.org/2005/Atom"}
 _MIN_NAME = 4        # ignore very short web_names (noise); count whole-word mentions only
 
 
-def _feed_text(rss_text: str) -> str:
-    """The lowercased title + content text of every entry in an Atom RSS feed (empty on a parse error)."""
+def _entries(rss_text: str) -> list:
+    """Each Atom entry as `{title, link, text}` (text = lowercased title + content, for matching);
+    `[]` on a parse error. The title + link let the UI show *which* posts drive a player's buzz."""
     try:
         root = ET.fromstring(rss_text)
     except ET.ParseError:
-        return ""
-    parts = []
+        return []
+    out = []
     for entry in root.findall("a:entry", _ATOM):
-        parts.append(entry.findtext("a:title", default="", namespaces=_ATOM))
-        parts.append(entry.findtext("a:content", default="", namespaces=_ATOM))
-    return " ".join(parts).lower()
+        title = entry.findtext("a:title", default="", namespaces=_ATOM)
+        content = entry.findtext("a:content", default="", namespaces=_ATOM)
+        link_el = entry.find("a:link", _ATOM)
+        out.append({"title": title, "link": link_el.get("href") if link_el is not None else "",
+                    "text": f"{title} {content}".lower()})
+    return out
 
 
 def community_buzz(rss_text: str, players, limit: int = 10) -> list:
     """Rank current players by how often they're mentioned in the RSS feed (ADR-059). Pure + empty-safe:
-    a bad/empty feed → `[]`. Returns `[{**player, "mentions": n}]`, most-mentioned first (n ≥ 1)."""
-    text = _feed_text(rss_text)
-    if not text:
+    a bad/empty feed → `[]`. Returns `[{**player, "mentions": n, "posts": [{title, link}]}]`,
+    most-mentioned first (n ≥ 1); `posts` are the distinct entries mentioning that player."""
+    entries = _entries(rss_text)
+    if not entries:
         return []
     scored = []
     for p in players:
@@ -40,9 +45,15 @@ def community_buzz(rss_text: str, players, limit: int = 10) -> list:
         name = str(row.get("web_name") or "")
         if len(name) < _MIN_NAME:
             continue
-        hits = len(re.findall(rf"\b{re.escape(name.lower())}\b", text))
+        pattern = rf"\b{re.escape(name.lower())}\b"
+        hits, posts = 0, []
+        for e in entries:
+            n = len(re.findall(pattern, e["text"]))
+            if n:
+                hits += n
+                posts.append({"title": e["title"], "link": e["link"]})
         if hits:
-            scored.append({**row, "mentions": hits})
+            scored.append({**row, "mentions": hits, "posts": posts})
     scored.sort(key=lambda r: r["mentions"], reverse=True)
     return scored[:limit]
 
