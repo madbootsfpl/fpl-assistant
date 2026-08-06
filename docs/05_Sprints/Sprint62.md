@@ -1,7 +1,7 @@
 # Sprint 062: Two UI feature requests — a Fixtures ticker + a My Squad pitch view
 
 **Dates:** 2026-08-06
-**Status:** 📝 Planned
+**Status:** ✅ Complete (2/2 stories; retro done)
 **Capacity:** ~2 working sessions (a fixture-ticker grid + weeks selector; a formation card-grid; docs)
 **Carried Over:** None (Sprint 061 shipped US-184; US-185 deferred → GW1)
 
@@ -143,4 +143,30 @@ like Sprint 054/055. **No ADR.** The design is settled here: a **weeks-selectabl
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be completed at sprint close)_
+**Outcome:** ✅ Successful — both owner-requested views shipped: a **Fixtures ticker** (weeks-selectable,
+colour-coded) and a **My Squad pitch** (formation card-grid), robustly and over existing data.
+
+**Delivered**
+- **US-186 ✅** — a pure `fixture_ticker` + a teams × GW grid on Fixtures (1–8 weeks selector, difficulty
+  colours via a Styler, easiest-first).
+- **US-187 ✅** — a `render_pitch` formation card-grid on My Squad (position rows + bench; photo · name ·
+  (C) · £ · xP · opponent · flags), keeping the edit controls; native Streamlit, no custom CSS.
+
+**Verification** — 504 tests green (**+3**), `ruff` clean. Smoke: the ticker renders 20 teams × the chosen
+weeks and recolours by difficulty; the pitch lays out 15 cards with the captain marked, banner + edit
+controls intact. `decision_xp`/engine untouched; the invariance test still holds.
+
+**Carried forward** — none new. The standing markers remain: **GW1 (2026-08-21)** (the deferred trends
+intent US-185 + threshold calibration + Data Hardening) and the **tester-feedback loop** (Sprint 059).
+
+**What went well** — matching the screenshots with existing data meant **no new analytics** — `fixture_ticker`
+just reshaped `team_fdr`/`team_schedule`, and the pitch reused `crowd_flags` + `team_schedule`. Keeping the
+grid's data-shaping pure (core, unit-tested) and the colouring at the edge kept the split clean. The owner's
+"robustness first" call made the pitch a native card-grid — themeable and headless-testable — rather than a
+fragile custom-CSS pitch.
+
+**What to watch** — the pitch is an *approximation* of the FPL pitch (cards in position rows), not the exact
+shirt-on-green look; if that fidelity matters later it's a custom-HTML/CSS follow-up (with the robustness
+trade-off noted). The ticker's colour bands are fixed constants — fine, but tunable if the palette needs it.
+
+**Lessons captured:** `docs/05_Sprints/Sprint62_Lessons_Learnt.md`.
