@@ -28,13 +28,19 @@ _COLS = [
     Col("xP", 6, ">", lambda r: f"{r['xp']:.1f}"),
 ]
 
+# The differential shortlist (ADR-061) adds an ownership column after price.
+_OWN_COL = Col("Own%", 6, ">", lambda r: f"{r['selected_by'] or 0:.1f}")
 
-def render_shortlist(rows, title: str) -> str:
+
+def render_shortlist(rows, title: str, *, show_own: bool = False) -> str:
+    """Render the shortlist (ADR-042). `show_own` adds an Own% column for the differential lens
+    (ADR-061); without it the output is byte-identical to before."""
+    cols = _COLS if not show_own else [*_COLS[:4], _OWN_COL, *_COLS[4:]]
     lines = [title, ""]
-    lines += render_rows(rows, _COLS, rank=True)
-    lines += [
-        "",
-        "`xP` = expected points over the next 5 GW (xMins-weighted); `xMins` = expected minutes next "
-        "GW. Injured/suspended players are excluded.",
-    ]
+    lines += render_rows(rows, cols, rank=True)
+    note = ("`xP` = expected points over the next 5 GW (xMins-weighted); `xMins` = expected minutes next "
+            "GW. Injured/suspended players are excluded.")
+    if show_own:
+        note += " `Own%` = ownership; differentials are ≤5%-owned (this sharpens once the season starts)."
+    lines += ["", note]
     return "\n".join(lines)

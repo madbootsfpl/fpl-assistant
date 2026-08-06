@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 
 from src import llm
 from src.analytics import (
+    DIFFERENTIAL_OWN,
     FULL_BUDGET,
     SQUAD_15,
     TREND_BYS,
@@ -62,7 +63,7 @@ _INTENT_KEYWORDS = {
                     "new team", "pick a squad", "pick a team"),
     "start_bench": ("start", "bench", "lineup", "line-up"),
     "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
-                  "best value", "best players"),
+                  "best value", "best players", "differential", "differentials"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
     # fixtures is last: its keywords are distinctive, and "play" is broad, so let every more
     # specific intent match first (ADR-048).
@@ -639,13 +640,18 @@ _SHORTLIST_N = 8   # how many players a shortlist shows
 
 
 def _shortlist_query(question: str) -> tuple:
-    """(position, price_cap, by_value) from a 'best <position> [under £X]' question (ADR-042)."""
+    """(position, price_cap, by_value, differential) from a 'best <position> [under £X]' question.
+
+    `differential` (ADR-061) filters to low-owned players; cued by "differential(s)" / "off-template" /
+    "low-owned". Value ("value") ranks by xP/£m (ADR-042).
+    """
     ql = question.lower()
     position = next((code for word, code in _POS_WORDS.items() if re.search(rf"\b{word}s?\b", ql)),
                     None)
     m = re.search(r"under £?\s*(\d+(?:\.\d+)?)|£\s*(\d+(?:\.\d+)?)", ql)
     cap = float(m.group(1) or m.group(2)) if m else None
-    return position, cap, "value" in ql
+    differential = "differential" in ql or "off-template" in ql or "low-owned" in ql or "low owned" in ql
+    return position, cap, "value" in ql, differential
 
 
 def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | None:
@@ -656,15 +662,18 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
     players = store.get_players()
     if not players:
         return None
-    position, cap, by_value = _shortlist_query(question)
+    position, cap, by_value, differential = _shortlist_query(question)
     pool, _excluded = available_players(players)         # exclude injured/suspended
     cands = [p for p in pool
              if (position is None or p["position"] == position)
-             and (cap is None or p["price"] <= cap)]
+             and (cap is None or p["price"] <= cap)
+             # differential (ADR-061): ≤ DIFFERENTIAL_OWN owned, 0% included (maximally differential)
+             and (not differential or (p["selected_by"] or 0) <= DIFFERENTIAL_OWN)]
     if not cands:
         where = f" {position}" if position else ""
         under = f" under £{cap:.1f}m" if cap else ""
-        return {"message": f"No available{where} players{under} — try a higher price cap."}
+        diff = " differential" if differential else ""
+        return {"message": f"No available{diff}{where} players{under} — try a higher price cap."}
 
     ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
                          gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
@@ -682,15 +691,25 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
     rows = [{**p, "xp": xp_by_id.get(p["id"], 0), "minutes_weight": weight_by_id.get(p["id"], 1.0)}
             for p in top]
     scope = position or "players"
+    diff_str = "differential " if differential else ""
     cap_str = f" ≤£{cap:.1f}m" if cap else ""
     metric = "value (xP per £m)" if by_value else "expected points (xP)"
+    title = f"Best {diff_str}{scope}{cap_str} — by {metric}"
+    if differential:
+        title += f"  (≤{DIFFERENTIAL_OWN:.0f}% owned — sharpens at GW1)"
+    facts = {
+        "ranked_by": "xP per £m" if by_value else "xP over the next 5 GW",
+        "top_players": [f"{r['web_name']} ({r['position']}, £{r['price']}m, xP {r['xp']})"
+                        for r in rows[:3]],
+    }
+    if differential:
+        facts["filter"] = f"differentials only (≤{DIFFERENTIAL_OWN:.0f}% owned)"
+        facts["top_players"] = [
+            f"{r['web_name']} ({r['position']}, £{r['price']}m, {r['selected_by']}% owned, xP {r['xp']})"
+            for r in rows[:3]]
     return {
-        "detail": render_shortlist(rows, f"Best {scope}{cap_str} — by {metric}"),
-        "facts": {
-            "ranked_by": "xP per £m" if by_value else "xP over the next 5 GW",
-            "top_players": [f"{r['web_name']} ({r['position']}, £{r['price']}m, xP {r['xp']})"
-                            for r in rows[:3]],
-        },
+        "detail": render_shortlist(rows, title, show_own=differential),
+        "facts": facts,
         "subjects": [r["web_name"] for r in rows],
         "task": "in 2 short sentences, summarise these top players (name a couple and why they lead)",
     }

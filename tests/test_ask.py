@@ -208,11 +208,47 @@ def test_routes_shortlist_after_build_squad():
     assert route("best squad for £100m", known_squads=[])[0] == "build_squad"   # build still wins
 
 
+def test_routes_differentials_to_shortlist_not_trends():
+    # ADR-061: "best differentials" is a shortlist (ownership filter), not a trends board ("most owned")
+    assert route("best differentials", known_squads=[])[0] == "shortlist"
+    assert route("best differential forwards under £7m", known_squads=[])[0] == "shortlist"
+    assert route("most owned players", known_squads=[])[0] == "trends"          # trends still owns this
+
+
 def test_shortlist_query_parses_position_price_and_value():
-    assert _shortlist_query("best midfielders under £8m") == ("MID", 8.0, False)
-    assert _shortlist_query("best value goalkeepers") == ("GK", None, True)
-    assert _shortlist_query("best forwards") == ("FWD", None, False)
-    assert _shortlist_query("best players") == (None, None, False)   # no position → all
+    assert _shortlist_query("best midfielders under £8m") == ("MID", 8.0, False, False)
+    assert _shortlist_query("best value goalkeepers") == ("GK", None, True, False)
+    assert _shortlist_query("best forwards") == ("FWD", None, False, False)
+    assert _shortlist_query("best players") == (None, None, False, False)   # no position → all
+
+
+def test_shortlist_query_parses_the_differential_cue():
+    # ADR-061: "differential(s)" / off-template / low-owned → the ownership lens
+    assert _shortlist_query("best differential forwards under £7m") == ("FWD", 7.0, False, True)
+    assert _shortlist_query("best differentials") == (None, None, False, True)
+    assert _shortlist_query("best low-owned midfielders") == ("MID", None, False, True)
+    assert _shortlist_query("best midfielders") == ("MID", None, False, False)  # not differential
+
+
+def test_shortlist_differential_filters_by_ownership():
+    # two MIDs, one template (30%) one differential (3%); the differential query keeps only the latter
+    store = types.SimpleNamespace(
+        get_players=lambda: [
+            {"id": 1, "web_name": "Template", "position": "MID", "price": 8.0, "status": "a",
+             "team": "X", "team_id": 1, "points_per_game": 5.0, "ep_next": 4.0,
+             "selected_by": 30.0, "code": 1},
+            {"id": 2, "web_name": "Diff", "position": "MID", "price": 6.0, "status": "a",
+             "team": "Y", "team_id": 2, "points_per_game": 4.0, "ep_next": 3.0,
+             "selected_by": 3.0, "code": 2},
+        ],
+        get_upcoming_fixtures=lambda: [],
+        get_history_by_code=lambda: {},
+        get_gw_history_by_code=lambda: {},
+    )
+    d = _decide_shortlist(store, "best differential midfielders")
+    assert d["subjects"] == ["Diff"]                       # the template is filtered out
+    assert "≤5% owned" in d["detail"]                      # the caption + Own% column
+    assert "3.0" in d["detail"]                            # Diff's ownership shown
 
 
 def test_shortlist_message_when_nothing_matches_the_filter():
@@ -234,6 +270,16 @@ def test_render_shortlist_ranks_and_shows_price_and_xp():
                            "Best MID ≤£8.0m — by expected points (xP)")
     assert out.index("Mbeumo") < out.index("Rice")   # given order preserved (analytics rank)
     assert "8.0" in out and "23.3" in out and "73" in out   # price, xP, and xMins (0.81×90→73)
+    assert "Own%" not in out                          # plain shortlist: no ownership column
+
+
+def test_render_shortlist_show_own_adds_ownership_column():
+    def _row(name, price, xp, w, own):
+        return {"web_name": name, "team": "MUN", "position": "MID", "price": price,
+                "status": "a", "chance": None, "xp": xp, "minutes_weight": w, "selected_by": own}
+    out = render_shortlist([_row("Diff", 6.0, 18.0, 0.9, 2.5)],
+                           "Best differential MID — by expected points (xP)", show_own=True)
+    assert "Own%" in out and "2.5" in out             # the ownership column + value
 
 
 def test_squad_matched_by_name_regardless_of_phrasing():
