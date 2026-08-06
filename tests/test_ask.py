@@ -362,6 +362,20 @@ def test_unrecognised_question_has_no_intent():
     assert route("what is the meaning of life", known_squads=[]) == (None, None)
 
 
+def test_build_answer_carries_the_squad():
+    # ADR-062: a build answer exposes the 15 (SquadStore shape) so a web edge can adopt it
+    res = ask.answer("build me a squad for £100m", narrator=lambda p: None)
+    assert res.intent == "build_squad"
+    assert res.squad and res.squad["name"] == "My squad"
+    assert 11 <= len(res.squad["player_ids"]) <= 15
+    assert len(res.squad["bench_ids"]) == len(res.squad["player_ids"]) - 11
+
+
+def test_a_non_build_answer_carries_no_squad():
+    res = ask.answer("best midfielders under £8m", narrator=lambda p: None)
+    assert res.squad is None
+
+
 # ---- humanising (self-describing facts — nothing to decode) ------------------
 
 def test_captain_facts_humanise_venue_and_keep_codes():

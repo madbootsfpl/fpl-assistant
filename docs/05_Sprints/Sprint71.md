@@ -50,12 +50,13 @@ Build → save → My Squad → tweak → download flow, and tidy the squad tabs
 - [x] **US-201 (Tab reorg)** — rename `Squads`→**Squad Health**, `Build`→**Build Squad**; reorder the
       sidebar so **Build Squad · My Squad · Squad Health** are grouped; **My Squad** points to Build Squad
       for a full rebuild (a caption — `st.page_link` crashes AppTest); AppTest refs + Home.py copy updated
-- [ ] **US-202 (Ask bridge, optional)** — the Ask "build me a squad…" answer surfaces the built squad so
+- [x] **US-202 (Ask bridge, optional)** — the Ask "build me a squad…" answer surfaces the built squad so
       the web offers **"Use this squad →"** (sets the session squad → My Squad), for the NL-supported
       options; degrades unchanged when it's not a build answer
-- [ ] **No engine change** — the optimiser/`decision_xp` are untouched; a test still asserts the web
-      writes nothing server-side (`.save(`); existing **556** stay green
-- [ ] Docs: ADR-062 + index, Architecture, README (web section), PROJECT_STATUS, Feedback_Log (resolved)
+- [x] **No engine change** — the optimiser/`decision_xp` are untouched; a test still asserts the web
+      writes nothing server-side (`.save(`); existing tests stay green — **565** (+9)
+- [ ] Docs: ADR-062 + index ✅; Architecture, README (web section), PROJECT_STATUS, Feedback_Log (resolved)
+      _(at the retro)_
 
 ---
 
@@ -65,7 +66,7 @@ Build → save → My Squad → tweak → download flow, and tidy the squad tabs
 |---|---|---|---|---|
 | US-200 | **Build Squad — full CLI option parity** (include/exclude/bench/objective/no-xmins/weekly/bench-boost/include-unavailable as widgets → same `select_squad`; 15-man build stays saveable; a display-only best-XI-shape preview). ADR-062. | High | ✅ Done | ~1 session |
 | US-201 | **Tab rename + logical reorder** (Squads→Squad Health, Build→Build Squad; group Build Squad · My Squad · Squad Health; My Squad "Rebuild in Build Squad →" link; fix AppTest refs + Home copy). ADR-062. | High | ✅ Done | ~½ session |
-| US-202 | **Ask-build → session squad bridge** (the "build a squad" answer → a "Use this squad →" button; the ask decision carries the built ids). *Optional / stretch.* ADR-062. | Medium | ⬜ To do | ~½ session |
+| US-202 | **Ask-build → session squad bridge** (the "build a squad" answer → a "Use this squad →" button; the ask decision carries the built ids). *Optional / stretch.* ADR-062. | Medium | ✅ Done | ~½ session |
 
 ---
 
@@ -138,8 +139,36 @@ unchanged. If the contract change feels heavy, defer — US-200 already covers t
   + My Squad points to Build Squad; all existing web tests pass under the new names. No seed/data change.
   ruff clean. _US-202 (Ask-build → session-squad bridge) next (optional)._
 
+- **US-202 ✅ (build)** — Additive, minimal contract change: `_decide_build_squad` now also returns a
+  **`squad`** field (SquadStore shape — `player_ids`/`player_names`/`bench_ids`/`cost`/`name="My squad"`);
+  `AskResult` gained a `squad: dict | None` field; `assemble` carries `decision.get("squad")` through. The
+  web **Ask** page keeps the `AskResult`, stashes `result.squad` in `session_state["built_squad"]` (a
+  non-build answer clears it), and renders a **"Use this squad → (name)"** button that `set_active_squad`s it
+  → **My Squad**. Everything else (CLI, other intents) is untouched — the field is ignored where unused (CLI
+  build output verified unchanged). Tests (+3 → **565**): a build answer carries the 15 (ids + a
+  4-man bench), a non-build answer carries `None`, and the Ask page's button adopts the squad end-to-end.
+  ruff clean.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — the whole tester request landed: build a squad with **any/all** CLI options in
+the web (on **Build Squad** *or* via **Ask**), save it into the session, tweak in **My Squad**, download.
+**No engine change** — every option feeds the same `select_squad` / `decision_xp` the CLI uses, so the web
+can't drift.
+
+**What went well** — verifying on **real data first** proved the engine already did everything (an
+xp+include+exclude+differentials+weekly build, and an XI in a pinned formation), so this stayed a pure
+edge/UI sprint. Reusing the CLI logic verbatim (availability, bench_weight, archetype bands, the score
+split) kept parity honest. The Ask bridge was a *minimal additive* contract change (one optional `squad`
+field on the decision + `AskResult`), so the CLI and every other intent were untouched.
+
+**What to watch / lessons** — **`st.page_link` crashes under `AppTest`** (no multipage runtime), so the
+"rebuild" pointer is a caption, not a click-through link — a small UX trade for keeping headless coverage.
+The **formation** option is a *display-only preview* (an XI is 11, a saveable squad is 15) — clearly
+labelled so it doesn't surprise. The Build Squad page now runs the optimiser twice per render (main + the
+preview expander, whose body always executes) — fine at this scale, but a candidate to gate behind a toggle
+if it ever feels heavy on the cloud.
+
+**Lessons captured:** `docs/05_Sprints/Sprint71_Lessons_Learnt.md`.

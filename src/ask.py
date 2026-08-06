@@ -104,6 +104,7 @@ class AskResult:
     message: str | None = None       # for an unrecognised question or an empty result
     detail: str | None = None        # a pre-rendered structured table (e.g. a plan; ADR-036)
     trust: dict | None = None        # verify_grounding result when there's narration (ADR-037)
+    squad: dict | None = None        # a built squad (SquadStore shape) an edge can adopt (ADR-062)
 
 
 def _squad_name(question: str, known_squads) -> str | None:
@@ -637,6 +638,14 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         "subjects": [p["web_name"] for p in picks],
         "task": "in 2 short sentences, state the starting XI's projected points and name a couple of "
                 "standout picks",
+        # ADR-062: the built 15 in SquadStore shape, so a web edge can offer "Use this squad →".
+        "squad": {
+            "name": "My squad",
+            "player_ids": [p["id"] for p in picks],
+            "player_names": [p["web_name"] for p in picks],
+            "bench_ids": [p["id"] for p in picks if p["id"] not in xi_ids],
+            "cost": result["total_cost"],
+        },
     }
 
 
@@ -1059,6 +1068,7 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
     return AskResult(
         question, intent, headline=decision.get("headline"), facts=decision["facts"],
         explanation=explanation, detail=decision.get("detail"), trust=trust,
+        squad=decision.get("squad"),   # a build answer carries the 15 an edge can adopt (ADR-062)
     )
 
 

@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 071 (2026-08-06)** — *Web build parity + tab reorg*, per **ADR-062** — the web reaches full CLI
+  `squad` parity with **no engine change**. **Build Squad** (`pages/3_Build_Squad.py`) exposes the full
+  option set as form widgets (include/exclude/declared-bench multiselects · objective · no-xmins · build
+  mode · include-unavailable) feeding the *same* `select_squad`/`decision_xp`/`objective_scores` the CLI
+  uses; the saveable build stays a full **15** (Download / Use this squad →); formation is a display-only
+  best-XI-shape preview (an XI ≠ a 15). The **Ask** edge gained an additive `squad` field on the decision +
+  `AskResult`, so a "build me a squad" answer offers **"Use this squad →"** (→ the session squad → My
+  Squad). Squad tabs renamed + regrouped via `git mv` (Squads→Squad Health, Build→Build Squad; sidebar
+  grouped Build Squad · My Squad · Squad Health); My Squad points to Build Squad (a caption — `st.page_link`
+  crashes AppTest). No server writes (guardrail holds). 565 tests.
 - **Sprint 070 (2026-08-06)** — *Differentials / value `ask` intent*, per **ADR-061** — two natural-language
   lenses over the unified xP + ownership, grounded + verified (ADR-037), by **reusing** the shortlist, the
   compare matcher, and `DIFFERENTIAL_OWN`. (1) A **differential** filter on the shortlist (`_shortlist_query`

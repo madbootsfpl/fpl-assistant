@@ -177,20 +177,20 @@ local database (`data/fpl.db`).
 A thin, **read-only, local** web view over the same analytics — the CLI stays the engine; the web is
 just another way to look at it. Two edges, both reusing the exact same engine:
 
-**Streamlit** — the interactive UI (ADR-051/052). Multipage (a **Home** landing + a sidebar): **Players**
-(filters, a sortable table with **photos** + a price-vs-points scatter) · **Fixtures** (a colour-coded
-fixture **ticker** with **team badges**) · **Squads** (analyse **your squad's** health) · **Transfer**
-(bank slider → XI-aware swaps, with **Apply**) · **Build** (budget + archetype sliders → the optimal 15) ·
-**Captain** (who to captain, and **set** yours) · **My Squad** (a **formation-pitch** view; **edit**:
-rename, swap, bench, set captain, download) · **News** (official player news, most serious first) ·
-**Trending** (most-owned / transferred / in-form boards + **💬 Community Signals** — what r/FantasyPL is
-talking about) · **Ask** (a **chat** — each answer grounded, with its ✓/⚠ trust line; works without Ollama,
-degrading to the decision + facts).
+**Streamlit** — the interactive UI (ADR-051/052). Multipage (a **Home** landing + a sidebar, grouped):
+**Players** (filters, a sortable table with **photos** + a price-vs-points scatter) · **Fixtures** (a
+colour-coded fixture **ticker** with **team badges**) · **Build Squad** (the **full `squad` options** —
+budget · archetypes · include / exclude · declared bench · objective · weekly / bench-boost · include
+injured — → the optimal 15) · **My Squad** (a **formation-pitch** view; **edit**: rename, swap, bench, set
+captain, download) · **Squad Health** (analyse **your squad's** health over 5 GW) · **Transfer** (bank
+slider → XI-aware swaps, with **Apply**) · **Captain** (who to captain, and **set** yours) · **Ask** (a
+**chat** — grounded, with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**) ·
+**News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**).
 
-**Your squad, in the browser (ADR-054/055).** On **Build**, name it, *Download* a `squad.json` (that file
+**Your squad, in the browser (ADR-054/055).** On **Build Squad**, name it, *Download* a `squad.json` (that file
 *is* your save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*;
 *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (the public entry API; picks
-from GW1). It's held in the session and used across **Analyse · Transfer · Captain · My Squad** — and it's
+from GW1). It's held in the session and used across **My Squad · Squad Health · Transfer · Captain** — and it's
 **editable**: apply a transfer, swap any player (legality-checked), set the bench, and **set a captain**
 (shown **(C)**). A committed **demo** squad populates the pages on first visit. Persistence is your own file
 — no accounts, and the web **never writes** server-side (the DB/squads stay read-only), so this works on

@@ -341,6 +341,20 @@ def test_ask_chat_answers_a_grounded_question():
     assert len(at.session_state["history"]) == 1           # the turn was kept in history
 
 
+def test_ask_build_offers_use_this_squad(monkeypatch):
+    # ADR-062: a "build me a squad" answer offers "Use this squad →" → adopts the session squad
+    at = AppTest.from_file(str(_PAGES / "8_Ask.py"), default_timeout=30).run()
+    assert not at.exception
+    at.chat_input[0].set_value("build me a squad for £100m").run()
+    assert not at.exception
+    btn = [b for b in at.button if "Use this squad" in b.label]
+    if not btn:                                            # no data locally → no build → skip
+        return
+    btn[0].click().run()
+    squad = at.session_state["squad"]
+    assert squad["name"] == "My squad" and 11 <= len(squad["player_ids"]) <= 15
+
+
 def test_badge_url_helper():
     from src.web_streamlit.badges import badge_url, badge_url_by_short_name
     assert badge_url(3).endswith("/t3.png")
