@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 062 (2026-08-06)** — *two UI feature requests* (no ADR — UI over the settled edge). **Fixtures**
+  becomes a **fixture ticker**: a new pure `fixture_ticker(fixtures, next_n)` (reuses `team_fdr` /
+  `team_schedule`) → a teams × gameweeks grid rendered with a **weeks selector (1–8)** and per-cell
+  difficulty colours (green→red) via a pandas Styler. **My Squad** becomes a **formation card-grid**
+  (`src/web_streamlit/pitch.py` `render_pitch`) — position rows + bench, each a card (photo · name (+ (C)) ·
+  £ · xP · next opponent · crowd flags), replacing the dataframe; robust native `st.columns`/`st.container`
+  (owner's call — no custom-CSS pitch). Data-shaping stays in the core (pure + tested); colours/layout at
+  the edge. `decision_xp`/engine untouched. 504 tests green.
+- **Sprint 061 (2026-08-06)** — *finish Phase 6 Tier-1* — `crowd_flags` extended to Captain (+ a
+  template-risk caption) and Transfer (an "In trends" column) reusing the pure helper; the "trends" `ask`
+  intent deferred to a GW1-timed sprint (momentum is 0 preseason). Display-only; xP untouched.
 - **Sprint 060 (2026-08-06)** — *Phase 6 opener — the crowd lens (Tier 1)*, per **ADR-057**. Crowd &
   sentiment signals as a **complementary lens + flags, never blended into xP** (a test asserts `decision_xp`
   is unchanged). **Ingest** the free FPL Tier-1 fields (`transfers_in/out_event` · `cost_change_*` · `form` ·

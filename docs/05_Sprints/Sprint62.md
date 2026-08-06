@@ -65,13 +65,13 @@ renderings over existing data. No core/xP change.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-186 | **Fixtures ticker + weeks selector** — a teams × GW grid (opponent + H/A per cell, colour-coded by difficulty) via a pandas Styler; a **1–8 weeks** selector; sort easiest-first (reuse `team_schedule` / `team_fdr`). Replaces the current table/bar. Tests + smoke | High | ✅ Done | 1 session |
-| US-187 | **My Squad pitch view** — a formation **card-grid** (GK/DEF/MID/FWD rows + bench) of player cards (photo · name (+ (C)) · £ · xP · next opponent), keeping the legality banner + edit controls; native `st.columns`/`st.container`. Tests + smoke | High | 📝 To Do | 1 session |
+| US-187 | **My Squad pitch view** — a formation **card-grid** (GK/DEF/MID/FWD rows + bench) of player cards (photo · name (+ (C)) · £ · xP · next opponent), keeping the legality banner + edit controls; native `st.columns`/`st.container`. Tests + smoke | High | ✅ Done | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] `fixture_ticker` builder (analytics, pure + tested) — team rows × GW cells; page renders via a Styler — _US-186_
-- [ ] A `pitch`/formation renderer helper in the Streamlit edge (position rows + bench) — _US-187_
-- [ ] Reuse `team_schedule` for a player's next opponent (My Squad) — _US-187_
-- [ ] Architecture/Handbook/README/PROJECT_STATUS — _US-187_
+- [x] A `pitch`/formation renderer helper in the Streamlit edge (position rows + bench) — _US-187_
+- [x] Reuse `team_schedule` for a player's next opponent (My Squad) — _US-187_
+- [x] Architecture/Home/PROJECT_STATUS — _US-187_
 
 ---
 
@@ -129,6 +129,15 @@ like Sprint 054/055. **No ADR.** The design is settled here: a **weeks-selectabl
   Tests (+2 → **503**): `fixture_ticker` shape/ordering + a blank-GW → None cell; the page renders the grid
   and the weeks slider changes the GW-column count (6 → 3). Smoke: 20 teams, GW1–6, EVE easiest; `ruff`
   clean. Works **now** (difficulty/opponents are live).
+- **US-187 ✅** — **My Squad pitch view.** New `src/web_streamlit/pitch.py` `render_pitch(xi, bench, …)` — a
+  robust, native **formation card-grid**: position rows (GK/DEF/MID/FWD) via `st.columns` + a bench row,
+  each player a bordered card (photo · name (+ **(C)**) · team · £ · xP · **next opponent (H/A)** · crowd
+  flags), reusing `crowd_flags`. The **My Squad** page renders it in place of the dataframe (a
+  `team_schedule` lookup per owned team gives each card's next fixture); the legality banner + all edit
+  controls (rename/swap/bench/download) stay beneath. Owner's call honoured — no custom-CSS pitch, so it's
+  themeable + headless-testable. Tests (+1 → **504**): the pitch lays out ≥11 name cards and no dataframe;
+  the existing My Squad tests (banner/download/swap/rename/bench) stay green; `test_squad_tabs_show_image_tables`
+  narrowed to the table tabs. Smoke: 15 cards, banner + edit controls + download intact; `ruff` clean.
 
 ---
 

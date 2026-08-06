@@ -204,6 +204,15 @@ def test_my_squad_page_renders_with_a_legality_banner_and_download():
         assert at.success or at.error                      # the ✓ legal / ⚠ / illegal banner
 
 
+def test_my_squad_pitch_view_lays_out_the_squad():
+    # US-187: the squad renders as a formation card-grid — a card (markdown name) per player, not a table
+    at = _run(_PAGES / "8_My_Squad.py")
+    if not at.get("download_button"):                      # no data locally → the info branch
+        return
+    assert len(at.dataframe) == 0                          # the pitch replaced the dataframe
+    assert len(at.markdown) >= 11                          # ≥ an XI of player-name cards
+
+
 def test_my_squad_swap_adopts_and_mutates_the_session_squad():
     at = _run(_PAGES / "8_My_Squad.py")
     swap = [b for b in at.button if b.label.startswith("Swap")]
@@ -260,8 +269,8 @@ def test_photo_url_helper():
 
 
 def test_squad_tabs_show_image_tables():
-    # US-179: Build/Analyse/Captain/My Squad show a photo+badge image table (augmenting the text summary)
-    for page in ("6_Build.py", "3_Squads.py", "7_Captain.py", "8_My_Squad.py"):
+    # US-179: Build/Analyse/Captain show a photo+badge image table (My Squad is now a pitch view, US-187)
+    for page in ("6_Build.py", "3_Squads.py", "7_Captain.py"):
         at = _run(_PAGES / page)
         if not at.dataframe:                                # no data locally → the info branch
             continue

@@ -18,12 +18,12 @@ st.markdown(
 Use the **sidebar** to explore:
 
 - **Players** — ranked & filterable (position, price), with photos + a price-vs-points scatter
-- **Fixtures** — fixture difficulty (FDR): a table + a bar chart, with team badges
+- **Fixtures** — a **fixture ticker**: teams × gameweeks, colour-coded by difficulty (pick 1–8 weeks)
 - **Squads** — analyse **your squad's** health over the next 5 gameweeks
 - **Transfer** — the best **XI-aware** swaps for your squad (a bank slider; a coordinated plan)
 - **Build** — the optimal 15 within a **budget**, shaped by archetypes (cheap / premium / differential)
 - **Captain** — who to (vice-)captain from your squad this week
-- **My Squad** — view & **edit** your squad: rename, swap any player (validated), set the bench, download
+- **My Squad** — your squad as a **pitch/formation** view; edit it (rename, swap, bench, set captain, download)
 - **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 
 **Your squad:** on **Build**, name it, *Download* a `squad.json` (that file is your save) and *Use this
