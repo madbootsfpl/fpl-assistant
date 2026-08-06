@@ -1,7 +1,7 @@
 # Sprint 061: Finish Phase 6 Tier-1 — crowd flags everywhere + a "trends" ask intent
 
 **Dates:** 2026-08-06
-**Status:** 📝 Planned
+**Status:** ✅ Complete (US-184 shipped; US-185 deferred → GW1; retro done)
 **Capacity:** ~2 working sessions (flags on Captain/Transfer + a template-risk note; a "trends" `ask` intent; docs)
 **Carried Over:** Phase 6 Tier-1 remainder from Sprint 060
 
@@ -143,4 +143,31 @@ routing complexity, promote to **ADR-058**.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be completed at sprint close)_
+**Outcome:** ✅ Successful (scoped) — shipped **US-184** (the crowd lens now on *every* player surface +
+a template-risk captaincy framing) and **consciously deferred US-185** (the trends `ask` intent) to a
+GW1-timed sprint, because its distinctive value is momentum data that's 0 in preseason.
+
+**Delivered**
+- **US-184 ✅** — `crowd_flags` on **Captain** (Trends column + a template-risk caption) and **Transfer**
+  (an "In trends" column on the buy target), reusing the pure helper; display-only, xP untouched.
+
+**Deferred (by choice)**
+- **US-185 🕓** — the "trends" `ask`/`chat` intent → nearer **GW1 (2026-08-21)**, when transfers/price/form
+  are live and the momentum questions are meaningful (and calibratable). Recorded in the Roadmap.
+
+**Verification** — 501 tests green (**+2**), `ruff` clean. Smoke: Captain shows the Trends column + risk
+caption; Transfer shows "In trends" (after bank→swaps). Ownership flags live now; momentum at GW1.
+
+**Carried forward** — US-185 + threshold calibration (`TRENDING_NET`/`FORM_MIN`) into a **GW1 sprint**
+(alongside Data Hardening). Tester feedback (the Sprint 059 loop) still runs in parallel.
+
+**What went well** — the pure `crowd_flags` helper paid off again: two more surfaces were a one-line join
+each, no new logic. Recognising the trends intent is **GW1-gated** and splitting it out avoided building a
+feature that would sit empty for two weeks — shipping the useful-now flags instead. Phase 6 Tier-1 is now
+"done bar the GW1-dependent piece," a clean, honest state.
+
+**What to watch** — the template-risk caption is an *ownership* framing, not a true captaincy-% EO model
+(named honestly as a lens). And the momentum flags/questions across the app remain unproven until GW1 —
+worth a deliberate check + calibration then.
+
+**Lessons captured:** `docs/05_Sprints/Sprint61_Lessons_Learnt.md`.
