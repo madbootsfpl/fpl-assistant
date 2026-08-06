@@ -348,6 +348,16 @@ def test_trending_page_shows_a_leaderboard():
     assert any(b.label.startswith("Show what") for b in at.button)
 
 
+def test_trending_owned_board_paginates():
+    # ADR-063: the always-populated owned board pages past 30 (no 30-cap)
+    from src.web_streamlit.paginate import page_labels
+    at = _run(_PAGES / "11_Trending.py")
+    if not at.dataframe:
+        return
+    first = page_labels(31, 30)[0]                          # "1–30" (avoids hard-coding the en-dash)
+    assert any(first in sb.options for sb in at.selectbox)  # a 30-row page control is present
+
+
 def test_news_page_lists_flagged_players_or_all_clear():
     # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
     at = _run(_PAGES / "10_News.py")

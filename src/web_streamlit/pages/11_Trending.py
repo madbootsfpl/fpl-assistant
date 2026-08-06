@@ -12,6 +12,7 @@ from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
+from src.web_streamlit.paginate import paginate
 from src.web_streamlit.status import render_data_status
 
 
@@ -47,8 +48,6 @@ finally:
 if not players:
     st.info("No data yet — run `python app.py refresh` first.")
 else:
-    count = st.slider("How many", 5, 30, 15)
-
     def _value(by, v):
         return f"{int(v):+,}" if by in ("in", "out") else f"{v:.1f}"     # signed transfers; %/form to 1dp
 
@@ -65,11 +64,12 @@ else:
     tabs = st.tabs([b[1] for b in _BOARDS] + ["💬 Talked about"])
     for tab, (by, label, header) in zip(tabs, _BOARDS):
         with tab:
-            rows = trending(players, by=by, limit=count)
+            rows = trending(players, by=by, limit=len(players))       # all, then page (ADR-063)
             if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
                 st.info("No transfer / form data yet — this board lights up at **GW1 (2026-08-21)**.")
             else:
-                _board(rows, header, lambda r, by=by: _value(by, r["trend"]))
+                page = paginate(rows, key=f"trend_{by}", per_page=30)
+                _board(page, header, lambda r, by=by: _value(by, r["trend"]))
 
     # Community Signals (ADR-059) — Reddit RSS buzz. Button-gated (no fetch on load) + cached; degrades.
     with tabs[-1]:
@@ -81,7 +81,7 @@ else:
             if rss is None:
                 st.info("Community buzz is unavailable right now (Reddit didn't respond).")
             else:
-                buzz = community_buzz(rss, players, limit=count)
+                buzz = community_buzz(rss, players, limit=len(players))   # all mentioned (usually few)
                 if not buzz:
                     st.info("No current-player mentions in the latest r/FantasyPL posts.")
                 else:

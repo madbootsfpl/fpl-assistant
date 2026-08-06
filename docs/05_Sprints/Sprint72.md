@@ -43,11 +43,11 @@
       "season-to-date" caption. Placed at **2** (renumbered the rest); the shared `paginate` helper built here
 - [x] **US-204 (Players — pagination + sort)** — replace the 50-cap with the paginator (page through all);
       add **team** and **position** to "Sort by" (the scatter still spans all matches)
-- [ ] **US-205 (Trending — pagination)** — the four crowd boards page through **all** rows (not just 30),
+- [x] **US-205 (Trending — pagination)** — the four crowd boards page through **all** rows (not just 30),
       via the shared paginator (per-board keys); the GW1 "lights up" note unchanged
-- [ ] **No analytics change** — the web writes nothing server-side (guardrail holds); existing **565** stay
-      green
-- [ ] Docs: ADR-063 + index, Architecture, README (web section), PROJECT_STATUS
+- [x] **No analytics change** — the web writes nothing server-side (guardrail holds); existing tests stay
+      green — **571** (+6)
+- [ ] Docs: ADR-063 + index ✅; Architecture, README (web section), PROJECT_STATUS _(at the retro)_
 
 ---
 
@@ -57,7 +57,7 @@
 |---|---|---|---|---|
 | US-203 | **Player Stats page** — a new page (tabs: Over/under · DefCon · Clean sheets · xG) reusing the stat analytics, paginated, at sidebar position 2 (renumber); + the shared `paginate` helper. ADR-063. | High | ✅ Done | ~1 session |
 | US-204 | **Players — pagination + sort** — page through all players (per-page 50) + sort by team / position (on top of points / value). ADR-063. | High | ✅ Done | ~½ session |
-| US-205 | **Trending — pagination** — the four boards (owned / in / out / form) page through all rows, via the shared paginator. ADR-063. | High | ⬜ To do | ~½ session |
+| US-205 | **Trending — pagination** — the four boards (owned / in / out / form) page through all rows, via the shared paginator. ADR-063. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -126,6 +126,14 @@ and `paginate(rows, key=f"trend_{by}", per_page=30)`; keep the GW1-empty note. T
   table; fixed by normalising through `rank_players` first, then re-sorting the dicts. Tests (+1 → **570**):
   sort-by-team orders the first page + a page control appears + paging past 50 doesn't crash. The existing
   filter test (max-price slider = the only slider now) still holds. ruff clean. _US-205 next._
+
+- **US-205 ✅ (build)** — Trending's `How many` (5–30) slider gone; each of the four boards now fetches
+  **all** rows (`trending(players, by, limit=len(players))`) and `paginate(rows, key=f"trend_{by}",
+  per_page=30)` — page past 30 on every board. The GW1-empty note (momentum boards preseason) is unchanged;
+  the buzz board's stale `count` (from the removed slider) → `limit=len(players)` (show all mentioned — a
+  bug **ruff caught** as F821 undefined `count`). Tests (+1 → **571**): the always-populated owned board
+  shows a "1–30" page control. **Smoke (real DB):** owned board paginates ("1–30"), momentum boards still
+  note "lights up at GW1". ruff clean.
 
 ---
 
