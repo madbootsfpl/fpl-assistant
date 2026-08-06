@@ -4,6 +4,7 @@ A thin, **read-only, local** Streamlit app over the analytics. Like the (frozen)
 pages call the SAME engine the CLI does (`ask.answer` / analytics) and render the existing renderers or
 native widgets — the analytics/CLI import **nothing** from here (one-way flow; a test asserts it).
 
-Multipage: `app.py` (home) + `pages/` (Players · Fixtures · Squads · Ask).
+Multipage: `Home.py` + `pages/` (Players · Fixtures · Build Squad · My Squad · Squad Health · Transfer ·
+Captain · Ask · News · Trending).
 Run:  python -m src.web_streamlit   (→ http://localhost:8501)
 """

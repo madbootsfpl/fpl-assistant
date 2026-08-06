@@ -19,18 +19,19 @@ Use the **sidebar** to explore:
 
 - **Players** — ranked & filterable (position, price), with photos + a price-vs-points scatter
 - **Fixtures** — a **fixture ticker**: teams × gameweeks, colour-coded by difficulty (pick 1–8 weeks)
-- **Squads** — analyse **your squad's** health over the next 5 gameweeks
-- **Transfer** — the best **XI-aware** swaps for your squad (a bank slider; a coordinated plan)
-- **Build** — the optimal 15 within a **budget**, shaped by archetypes (cheap / premium / differential)
-- **Captain** — who to (vice-)captain from your squad this week
+- **Build Squad** — the optimal 15 within a **budget**, with the full option set (archetypes · include /
+  exclude · declared bench · objective · weekly / bench-boost · include injured)
 - **My Squad** — your squad as a **pitch/formation** view; edit it (rename, swap, bench, set captain, download)
+- **Squad Health** — analyse **your squad's** health over the next 5 gameweeks
+- **Transfer** — the best **XI-aware** swaps for your squad (a bank slider; a coordinated plan)
+- **Captain** — who to (vice-)captain from your squad this week
+- **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 - **News** — official FPL player news (injuries · doubts · returns), most serious first
 - **Trending** — what the crowd's doing: most-owned · transferred in/out · in form, + **Community Signals**
   (💬 what r/FantasyPL is talking about — best-effort)
-- **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 
-**Your squad:** on **Build**, name it, *Download* a `squad.json` (that file is your save) and *Use this
-squad*; or *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (from GW1).
+**Your squad:** on **Build Squad**, name it, *Download* a `squad.json` (that file is your save) and *Use
+this squad*; or *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (from GW1).
 **Edit** it on **My Squad** (or apply a swap on Transfer / set a captain on Captain) — every change updates
 your session and the download. A **demo** squad populates the pages on first visit. All per-user — no
 accounts, nothing saved server-side (ADR-054/055).

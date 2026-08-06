@@ -17,10 +17,10 @@ from src.web_streamlit.tables import render_player_table
 
 _ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
-st.set_page_config(page_title="Analyse · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="Squad Health · FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
 render_sidebar()
-st.title("Analyse — your squad's health")
+st.title("Squad Health — your squad over the next 5 GW")
 
 squad_name, squad = squad_picker()
 

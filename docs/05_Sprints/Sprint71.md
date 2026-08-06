@@ -47,9 +47,9 @@ Build → save → My Squad → tweak → download flow, and tidy the squad tabs
       cheap / premium / differential already there), all wired to the *same* `select_squad`; the build
       stays a full 15; **Download** + **Use this squad →** unchanged; a display-only **best-XI-shape**
       preview (optional formation) that does **not** save
-- [ ] **US-201 (Tab reorg)** — rename `Squads`→**Squad Health**, `Build`→**Build Squad**; reorder the
-      sidebar so **Build Squad · My Squad · Squad Health** are grouped; **My Squad** gains a
-      "**Rebuild in Build Squad →**" `st.page_link`; update AppTest page-path refs + Home.py copy
+- [x] **US-201 (Tab reorg)** — rename `Squads`→**Squad Health**, `Build`→**Build Squad**; reorder the
+      sidebar so **Build Squad · My Squad · Squad Health** are grouped; **My Squad** points to Build Squad
+      for a full rebuild (a caption — `st.page_link` crashes AppTest); AppTest refs + Home.py copy updated
 - [ ] **US-202 (Ask bridge, optional)** — the Ask "build me a squad…" answer surfaces the built squad so
       the web offers **"Use this squad →"** (sets the session squad → My Squad), for the NL-supported
       options; degrades unchanged when it's not a build answer
@@ -64,7 +64,7 @@ Build → save → My Squad → tweak → download flow, and tidy the squad tabs
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-200 | **Build Squad — full CLI option parity** (include/exclude/bench/objective/no-xmins/weekly/bench-boost/include-unavailable as widgets → same `select_squad`; 15-man build stays saveable; a display-only best-XI-shape preview). ADR-062. | High | ✅ Done | ~1 session |
-| US-201 | **Tab rename + logical reorder** (Squads→Squad Health, Build→Build Squad; group Build Squad · My Squad · Squad Health; My Squad "Rebuild in Build Squad →" link; fix AppTest refs + Home copy). ADR-062. | High | ⬜ To do | ~½ session |
+| US-201 | **Tab rename + logical reorder** (Squads→Squad Health, Build→Build Squad; group Build Squad · My Squad · Squad Health; My Squad "Rebuild in Build Squad →" link; fix AppTest refs + Home copy). ADR-062. | High | ✅ Done | ~½ session |
 | US-202 | **Ask-build → session squad bridge** (the "build a squad" answer → a "Use this squad →" button; the ask decision carries the built ids). *Optional / stretch.* ADR-062. | Medium | ⬜ To do | ~½ session |
 
 ---
@@ -125,6 +125,18 @@ unchanged. If the contract change feels heavy, defer — US-200 already covers t
   switch rebuilds; weekly + include-unavailable; the formation preview adds no second download; and the
   **exclude control removes the player from the saved 15** (end-to-end). Existing Build tests unchanged.
   ruff clean. _US-201 (rename `6_Build.py`→`3_Build_Squad.py` + reorder) and US-202 (Ask bridge) next._
+
+- **US-201 ✅ (build)** — `git mv` renamed 5 pages to rename the sidebar labels + regroup them:
+  `6_Build.py`→**3_Build_Squad**, `8_My_Squad.py`→**4_My_Squad**, `3_Squads.py`→**5_Squad_Health**,
+  `5_Transfer.py`→**6_Transfer**, `4_Ask.py`→**8_Ask** — so the sidebar reads **Players · Fixtures ·
+  Build Squad · My Squad · Squad Health · Transfer · Captain · Ask · News · Trending** (the squad trio
+  grouped). The Squad Health page's title/page_title updated (was "Analyse"). **My Squad** gains a
+  caption pointing to **Build Squad** for a full rebuild — a **caption, not `st.page_link`**, because
+  page_link to another page crashes under `AppTest` (no multipage runtime); the sidebar nav makes a text
+  pointer sufficient. Updated the ~26 `AppTest.from_file` refs, Home.py's page list, and the
+  `web_streamlit/__init__` docstring. Tests (+2 → **562**): the rename/regroup (new files exist, old gone)
+  + My Squad points to Build Squad; all existing web tests pass under the new names. No seed/data change.
+  ruff clean. _US-202 (Ask-build → session-squad bridge) next (optional)._
 
 ---
 

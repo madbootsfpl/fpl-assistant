@@ -33,6 +33,8 @@ st.set_page_config(page_title="My Squad · FPL Assistant", page_icon="⚽", layo
 render_data_status()
 render_sidebar()
 st.title("My Squad — view & edit")
+st.caption("Tweak your squad here — rename · swap · bench · set captain · download. 🔧 To **build a fresh "
+           "one** with the full option set, open **Build Squad** in the sidebar.")
 
 squad_name, squad = squad_picker()
 
