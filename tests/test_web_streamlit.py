@@ -197,6 +197,17 @@ def test_player_stats_page_renders_the_stat_boards():
     assert len(at.dataframe) >= 1 or len(at.info) >= 1     # at least one board rendered
 
 
+def test_player_stats_filter_narrows_the_boards():
+    # ADR-064: the shared Team/Position/Player filter narrows every tab
+    at = _run(_PAGES / "2_Player_Stats.py")
+    if not at.dataframe:
+        return
+    at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
+    assert not at.exception
+    for df in at.dataframe:                                 # every rendered board is now ARS-only
+        assert set(df.value["Team"].tolist()) <= {"ARS"}
+
+
 def test_my_squad_points_to_build_squad():
     # ADR-062: My Squad stays the tweaker + points to Build Squad for a full rebuild
     at = _run(_PAGES / "5_My_Squad.py")
