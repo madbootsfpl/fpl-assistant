@@ -131,4 +131,29 @@ write during the session — restored it to HEAD so the seed changes only via a 
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **607 → 612** (+5); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-223 — consistent number formatting (ADR-072).** A shared `web_streamlit/formats.py` convention
+  (`FORMATS` + `column_config`) formatting every web table via `st.column_config.NumberColumn` — money/value/
+  %/form/ICT → 1dp (`6.0`, `24.2`), counts → integer, the xG family → 2dp, signed diffs → `%+.1f`. Applied
+  to the Pool, the four stat boards, and the squad tables. Display-only (columns stay numeric/sortable);
+  CLI untouched.
+- **US-224 — refresh the Help tab.** The guide now reflects Sprints 080–083: This week (the gameweek plan),
+  the 🟢…🔴 quality ratings, the table-first Pool, and a "this week" Ask example.
+
+**What went well**
+- **The right layer for a display fix** — formatting via `NumberColumn` (not rounding the data, not
+  stringifying) kept the columns sortable and the analytics pure; a test pins that the frame stays numeric.
+- **One convention, one place** — `FORMATS` means the three tables can't drift, and it composed cleanly with
+  the ADR-071 tooltips (same `NumberColumn`).
+- Caught + reverted an **incidental `data/seed.db` drift** (572 vs the committed 570) so the commits stayed
+  pure — the deploy seed only moves via a deliberate `reseed`.
+
+**Watch-outs / follow-ups**
+- A new numeric column must be added to `FORMATS` or it renders at Streamlit's default — the `formats`
+  coverage-guard test makes that visible.
+- The deployed seed is still **570** (stale vs a live 572-player refresh). When you want testers on fresh
+  data: `python app.py reseed` → commit → push (the US-219 workflow).
+
+See `Sprint83_Lessons_Learnt.md` for the detailed retro.

@@ -8,6 +8,8 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-06 | Owner | Help | Update the **Help** tab with recent changes and improvements. | 💡 | ✅ Sprint 083 (US-224) — This week / the gameweek plan, the 🟢…🔴 ratings, the table-first Pool, a new Ask example |
+| 2026-08-06 | Owner | Players / tables | **Number formatting** — keep to xx.x (Val/£m `24.2345` → `24.2`; cost `6` → `6.0`) to keep tables aligned. | 🟡 polish | ✅ Sprint 083 (US-223, ADR-072) — a shared `NumberColumn` convention (1dp money/%, 2dp xG family, integer counts, signed diffs) across the Pool, stat boards & squad tables |
 | 2026-08-06 | Owner | All tabs | Home has a nice **⚽ graphic** header — do the same on every other tab. | 💡 | ✅ Sprint 082 (US-222) — an emoji-led title + tagline on all 7 tabs (👟📅🧩💬📰📈🧭) |
 | 2026-08-06 | Owner | Players (stat boards) | What does a raw stat mean (**xGI/xGC**) — is it absolute or just relative? Could a **colour graphic** beside the score help a casual user read it? | 💡 | ✅ Sprint 082 (US-221, ADR-071) — a relative 🟢…🔴 **quality rating** + percentile on Clean sheets (xGC/90) & xG (xGI); clearer captions + tooltips on all four boards. (Verified: a fixed ChatGPT band table would mislabel 91/117 defenders "poor" → rate relative to the pool) |
 | 2026-08-06 | Owner | Squads | Want an **AI recommendation on your squad for the upcoming gameweek**. | 💡 | ✅ Sprint 081 (US-220, ADR-070) — a grounded "this week" plan (captain·lineup·transfer·flags); an `ask` intent + a **Squads → This week** view |

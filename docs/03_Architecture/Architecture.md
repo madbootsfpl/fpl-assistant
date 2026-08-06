@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 083 (2026-08-06)** — *Consistent number formatting + a Help refresh*, per **ADR-072** (US-223/224).
+  A tester wanted the web tables aligned (`Val/£m` showed `24.2345`; whole prices showed `6`). A shared
+  `src/web_streamlit/formats.py` (`FORMATS` label→printf map + `column_config(labels, *, help, images)`)
+  formats every Streamlit table via `st.column_config.NumberColumn` — right-aligned + **still numeric/
+  sortable** (not pre-rounded strings, which would sort lexically). Policy: money/value/%/form/ICT → **1dp**;
+  counts (Pts/Mins) → **integer**; the xG family (xG/xA/xGI/xGC/xGC/90) → **2dp**; signed diffs
+  (Diff/Margin/+xP) → **`%+.1f`**. Applied in `views/players.py` (Pool + `_board`, whose `Diff`/`Margin`
+  cells move from pre-formatted strings back to raw numbers) and `tables.py` (`render_player_table`, keyed by
+  the union of row labels); the dead `_BADGE` constant was removed. **Display-only** — the raw analytics
+  values and sort order are untouched; the CLI already aligns via its renderers, so it's unchanged; no server
+  writes. **US-224:** the Help guide refreshed to cover This week (the gameweek plan), the 🟢…🔴 quality
+  ratings, the table-first Pool, and a "this week" Ask example. 612 tests.
 - **Sprint 082 (2026-08-06)** — *Interpretable stat boards + per-tab headers*, per **ADR-071** (US-221/222).
   A **display-only** quality rating answers the tester's "is xGC/90 0.52 good, or just relative?".
   `src/web_streamlit/ratings.py::quality_band(value, pool, *, higher_is_better)` rates a value **relative to
