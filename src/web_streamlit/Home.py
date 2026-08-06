@@ -17,7 +17,9 @@ st.markdown(
     """
 Use the **sidebar** to explore:
 
-- **Players** — ranked & filterable (position, price), with photos + a price-vs-points scatter
+- **Players** — ranked & filterable (position, price), with photos + a price-vs-points scatter; page
+  through **all** players and sort by team / position
+- **Player Stats** — over/under-performance · Defensive Contribution · clean sheets · xG (season-to-date)
 - **Fixtures** — a **fixture ticker**: teams × gameweeks, colour-coded by difficulty (pick 1–8 weeks)
 - **Build Squad** — the optimal 15 within a **budget**, with the full option set (archetypes · include /
   exclude · declared bench · objective · weekly / bench-boost · include injured)
