@@ -115,4 +115,20 @@ mismatch — mid-table heading, glued markers, divergent price cells; would chan
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — both tech-debt items cleared with **zero behaviour or output change** (the 65
+optimizer + 19 render assertions passed unchanged throughout). The real value was **verifying before
+migrating**: the naive backlog versions would each have caused harm.
+
+**What went well** — probing the actual behaviour re-scoped the sprint honestly: `COIN_CMD` fails ("cannot
+execute cbc"), so keeping the bundled `PULP_CBC_CMD` avoided breaking the optimiser + the Cloud; and
+`render_rows` can't reproduce the squad layout byte-for-byte, so we shared only the safe pieces. Narrowing
+the blanket `DeprecationWarning` ignore to a targeted filter is a genuine improvement — future deprecations
+now surface instead of being hidden.
+
+**What to watch / lessons** — "tech debt" phrased in a backlog can be **over-stated**: the migration target
+(`COIN_CMD`) wasn't viable, and the "shared renderer" was smaller + more divergent than it read. The
+disciplined move was to migrate what's safe, **keep** what a naive change would break, and **document the
+close** (in the Backlog + ADR-066) rather than force a fit. `PULP_CBC_CMD` stays deprecated-but-bundled —
+revisit only when `pulp[cbc]` / PuLP 4.0 packaging settles.
+
+**Lessons captured:** `docs/05_Sprints/Sprint76_Lessons_Learnt.md`.

@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 076 (2026-08-06)** — *Tech-debt sweep*, per **ADR-066** — two Backlog items cleared with **no
+  behaviour/output change** (65 optimizer + 19 render assertions unchanged). **PuLP** (`optimizer.py`):
+  variables → `problem.add_variable(...)`; **kept `PULP_CBC_CMD`** (`COIN_CMD` needs an external CBC —
+  "cannot execute cbc" — and would break the read-only Cloud); the blanket `DeprecationWarning` ignore →
+  a **targeted** PULP_CBC_CMD filter so other deprecations surface. **Squad renderer** (`ui/squad.py`):
+  `render_squad`/`render_loaded_squad` share `_header` + `_BENCH_HEADING`; the `render_rows` fold is
+  **closed** (its flat single-space join can't reproduce the mid-table heading, glued `**`/`*` markers, or
+  divergent price cells byte-for-byte). Verifying real behaviour re-scoped both items away from the naive
+  backlog phrasing. 580 tests.
 - **Sprint 075 (2026-08-06)** — *A filter on Trending* (reuses **ADR-064**) — the Trending page gained the
   same **Team · Position · Player** filter as Players & Player Stats: `filter_controls(players,
   key="trending")` once above the four boards, each `apply`-ing it before pagination. The buzz board + the
