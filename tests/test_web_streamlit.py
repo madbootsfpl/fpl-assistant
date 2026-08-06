@@ -65,6 +65,23 @@ def test_players_filters_narrow_the_table(monkeypatch):
     assert not at.exception                                  # narrowing never crashes (table or a note)
 
 
+def test_players_page_sorts_by_team_and_paginates():
+    # ADR-063: page through all players (no 50-cap) + sort by team
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    at.selectbox[0].set_value("team").run()                 # Sort by → team
+    assert not at.exception
+    teams = at.dataframe[0].value["Team"].tolist()
+    assert teams == sorted(teams)                           # first page ordered by team
+    # >50 players → a page control (selectbox[1]); moving to the next page doesn't crash
+    page_sb = at.selectbox[1]
+    assert any(o.startswith("1–") for o in page_sb.options)
+    if len(page_sb.options) > 1:
+        page_sb.set_value(page_sb.options[1]).run()          # 51–100
+        assert not at.exception
+
+
 def test_fixtures_ticker_grid_and_weeks_selector():
     # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
     at = _run(_PAGES / "3_Fixtures.py")

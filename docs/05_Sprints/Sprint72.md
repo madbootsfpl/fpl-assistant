@@ -41,7 +41,7 @@
 - [x] **US-203 (Player Stats page)** — a new `pages/2_Player_Stats.py` with tabs **Over/under · DefCon ·
       Clean sheets · xG**, each an st.dataframe (team badge + the stat columns) paginated; a
       "season-to-date" caption. Placed at **2** (renumbered the rest); the shared `paginate` helper built here
-- [ ] **US-204 (Players — pagination + sort)** — replace the 50-cap with the paginator (page through all);
+- [x] **US-204 (Players — pagination + sort)** — replace the 50-cap with the paginator (page through all);
       add **team** and **position** to "Sort by" (the scatter still spans all matches)
 - [ ] **US-205 (Trending — pagination)** — the four crowd boards page through **all** rows (not just 30),
       via the shared paginator (per-board keys); the GW1 "lights up" note unchanged
@@ -56,7 +56,7 @@
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-203 | **Player Stats page** — a new page (tabs: Over/under · DefCon · Clean sheets · xG) reusing the stat analytics, paginated, at sidebar position 2 (renumber); + the shared `paginate` helper. ADR-063. | High | ✅ Done | ~1 session |
-| US-204 | **Players — pagination + sort** — page through all players (per-page 50) + sort by team / position (on top of points / value). ADR-063. | High | ⬜ To do | ~½ session |
+| US-204 | **Players — pagination + sort** — page through all players (per-page 50) + sort by team / position (on top of points / value). ADR-063. | High | ✅ Done | ~½ session |
 | US-205 | **Trending — pagination** — the four boards (owned / in / out / form) page through all rows, via the shared paginator. ADR-063. | High | ⬜ To do | ~½ session |
 
 ---
@@ -117,6 +117,15 @@ and `paginate(rows, key=f"trend_{by}", per_page=30)`; keep the GW1-empty note. T
   tabs · 4 dataframes · 4 page selectboxes, a "1–50" page label + the season-to-date caption present. No
   analytics/data change. ruff clean. _US-204 (Players pagination + sort) and US-205 (Trending pagination),
   reusing `paginate`, next._
+
+- **US-204 ✅ (build)** — Players now **pages through all** matches: dropped the `How many` (5–50) slider,
+  added `paginate(ranked, key="players", per_page=50)`; the scatter still spans every match. **Sort by**
+  gained **team** and **position** (a helper `_sorted` — points/value via `rank_players`, team/position via
+  a plain key then points-desc within the group, using a GK→DEF→MID→FWD order). **Bug caught by the test:**
+  the team/position path first returned raw `sqlite3.Row`s (no `.get`, no computed `value`) → crash in the
+  table; fixed by normalising through `rank_players` first, then re-sorting the dicts. Tests (+1 → **570**):
+  sort-by-team orders the first page + a page control appears + paging past 50 doesn't crash. The existing
+  filter test (max-price slider = the only slider now) still holds. ruff clean. _US-205 next._
 
 ---
 
