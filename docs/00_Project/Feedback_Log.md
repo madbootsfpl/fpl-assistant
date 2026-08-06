@@ -8,6 +8,9 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-06 | Owner | Players → xG | **Flaw in logic:** goalkeepers with `xGI 0`/`0.04` are rated **🟢 excellent** — "how can 0 be good and 56 be good?" | 🟠 wrong | ✅ Sprint 084 (US-225, ADR-073) — rate xGI only for outfield ≥900-min players (vs that pool); GKs/low-minutes show `—`; column renamed "xGI rating" beside xGI |
+| 2026-08-06 | Owner | Squads | Rename the **This week** tab to **AI Tips**. | 💡 | ✅ Sprint 084 (US-226) — label renamed; the gameweek engine (ADR-070) unchanged |
+| 2026-08-06 | Owner | Ask | Show a few **example prompts** in the Ask tab. | 💡 | ✅ Sprint 084 (US-227) — an expander of 7 copy-paste examples |
 | 2026-08-06 | Owner | Help | Update the **Help** tab with recent changes and improvements. | 💡 | ✅ Sprint 083 (US-224) — This week / the gameweek plan, the 🟢…🔴 ratings, the table-first Pool, a new Ask example |
 | 2026-08-06 | Owner | Players / tables | **Number formatting** — keep to xx.x (Val/£m `24.2345` → `24.2`; cost `6` → `6.0`) to keep tables aligned. | 🟡 polish | ✅ Sprint 083 (US-223, ADR-072) — a shared `NumberColumn` convention (1dp money/%, 2dp xG family, integer counts, signed diffs) across the Pool, stat boards & squad tables |
 | 2026-08-06 | Owner | All tabs | Home has a nice **⚽ graphic** header — do the same on every other tab. | 💡 | ✅ Sprint 082 (US-222) — an emoji-led title + tagline on all 7 tabs (👟📅🧩💬📰📈🧭) |

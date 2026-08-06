@@ -132,4 +132,29 @@ doesn't crowd the chat. Static (an expander + `st.code`) — no input widgets, n
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 3/3 stories done. Test count **612 → 613** (+1 net); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-225 — fix the xG-board rating (ADR-073, refines ADR-071).** A tester spotted keepers rated
+  "🟢 excellent" on an attacking metric. The xG board now rates `xGI` **only for outfield players with
+  ≥900 mins**, against that pool; GKs / low-minutes / no-data rows show a blank **—**. The column is renamed
+  **"xGI rating"** and moved beside `xGI` (away from `xGC`).
+- **US-226 — rename This week → AI Tips.** The Squads gameweek tab; the engine (ADR-070) unchanged.
+- **US-227 — Ask example prompts.** An expander of 7 copy-paste prompts on the Ask page.
+
+**What went well**
+- **The tester found a real correctness bug**, and verifying on real data (GK xGI max 0.22; 172 zero-minute
+  players; the pool was all-zeros when filtered to GK) made the right fix obvious — scope the rating to
+  where the metric is a genuine signal, and rate against *that* pool.
+- **Minimal, honest fix** — reused the ADR-071 helper untouched; changed only *which rows* are rated and
+  *what pool*. A blank `—` is the honest outcome for a metric that doesn't apply.
+- Two tiny UI asks (rename, examples) landed cheaply and cleanly; the rename kept the plan *content*
+  ("This week — squad X") while only the tab *label* changed.
+
+**Watch-outs / follow-ups**
+- The ≥900-min bar for the xGI rating matches the other boards but excludes early-season rotation players;
+  revisit post-GW1 if too strict.
+- **Reseed the deploy** so testers see all of Sprints 081–084 (the Cloud seed is still 570-player / stale):
+  `python app.py reseed` → commit → push.
+
+See `Sprint84_Lessons_Learnt.md` for the detailed retro.

@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 084 (2026-08-06)** — *Fix the xG rating flaw + rename This week→AI Tips + Ask examples*, per
+  **ADR-073** (US-225/226/227). A tester spotted goalkeepers rated "🟢 excellent" on the xG board — xGI is
+  ~0 for GKs, 172 players have 0 minutes, and the rating pool was *all shown rows*, so a GK-filtered view
+  rated `0.04` as "top 19%". **US-225 (ADR-073, refines ADR-071):** `render_xg` now rates `xGI` only for
+  outfield players with ≥900 mins (`_rate_xgi`), against **that** pool; GKs / low-minutes / no-data rows show
+  a blank `—`; the column is renamed **"xGI rating"** and moved right after `xGI` (away from `xGC`, the source
+  of the "how can 0 be good and 56 be good?" ambiguity). `quality_band`/`rating_cell`, the analytics, and
+  Clean sheets are unchanged — only which rows are rated and against what pool. **US-226:** the Squads
+  gameweek tab renamed **This week → AI Tips** (label/dispatch/`render_ai_tips`/help/Help copy); the engine
+  (ADR-070) is unchanged (the plan content still reads "This week — squad X"). **US-227:** an `st.expander`
+  of copy-paste example prompts on the Ask page. 613 tests.
 - **Sprint 083 (2026-08-06)** — *Consistent number formatting + a Help refresh*, per **ADR-072** (US-223/224).
   A tester wanted the web tables aligned (`Val/£m` showed `24.2345`; whole prices showed `6`). A shared
   `src/web_streamlit/formats.py` (`FORMATS` label→printf map + `column_config(labels, *, help, images)`)
