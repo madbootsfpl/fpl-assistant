@@ -178,24 +178,22 @@ local database (`data/fpl.db`).
 A thin, **read-only, local** web view over the same analytics — the CLI stays the engine; the web is
 just another way to look at it. Two edges, both reusing the exact same engine:
 
-**Streamlit** — the interactive UI (ADR-051/052). Multipage (a **Home** landing + a sidebar, grouped):
-**Players** (a **Team · Position · Player** filter + **photos** + a **top-15 bar**; page through all + sort
-by team / position) · **Player Stats** (over/under-perf · Defensive Contribution · clean sheets · xG,
-season-to-date; same **filter**)
-· **Fixtures** (a
-colour-coded fixture **ticker** with **team badges**) · **Build Squad** (the **full `squad` options** —
-budget · archetypes · include / exclude · declared bench · objective · weekly / bench-boost · include
-injured — → the optimal 15) · **My Squad** (a **formation-pitch** view; **edit**: rename, swap, bench, set
-captain, download) · **Squad Health** (analyse **your squad's** health over 5 GW) · **Transfer** (bank
-slider → XI-aware swaps, with **Apply**) · **Captain** (who to captain, and **set** yours) · **Ask** (a
-**chat** — grounded, with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**) ·
-**News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**) · **Help** (a
-step-by-step guide to building your team with the assistant).
+**Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing + **7 sidebar tabs**; the two
+consolidated tabs switch views with a lazy segmented control:
+- **Players** — a **Team · Position · Player** filter over the **Pool** (photos, a top-15 bar, page through
+  all, sort) plus stat views: **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date)
+- **Fixtures** — a colour-coded fixture **ticker** with team badges
+- **Squads** — **Build** (the full `squad` options → the optimal 15) · **My Squad** (a formation-pitch view;
+  edit: rename/swap/bench/captain/download) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps,
+  **Apply**) · **Captain** (and **set** yours) — the manage views share one squad picker
+- **Ask** — a grounded **chat** with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**
+- **News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**) · **Help** (a
+  step-by-step guide)
 
-**Your squad, in the browser (ADR-054/055).** On **Build Squad**, name it, *Download* a `squad.json` (that file
+**Your squad, in the browser (ADR-054/055).** In **Squads → Build**, name it, *Download* a `squad.json` (that file
 *is* your save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*;
 *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (the public entry API; picks
-from GW1). It's held in the session and used across **My Squad · Squad Health · Transfer · Captain** — and it's
+from GW1). It's held in the session and used across the **Squads** views (My Squad · Health · Transfer · Captain) — and it's
 **editable**: apply a transfer, swap any player (legality-checked), set the bench, and **set a captain**
 (shown **(C)**). A committed **demo** squad populates the pages on first visit. Persistence is your own file
 — no accounts, and the web **never writes** server-side (the DB/squads stay read-only), so this works on

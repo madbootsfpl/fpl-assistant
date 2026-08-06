@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 080 (2026-08-06)** — *Sidebar consolidation*, per **ADR-069** — the web sidebar went **12 → 7
+  tabs** (Players · Fixtures · Squads · Ask · News · Trending · Help). **Players** absorbed Player Stats and
+  **Squads** absorbed Build/My Squad/Health/Transfer/Captain, each behind a lazy `st.segmented_control`
+  (only the selected view runs — not `st.tabs`, which executes all). View bodies were extracted to a
+  `web_streamlit/views/` package (`players.py`, `squads.py`); the consolidated pages load once + dispatch on
+  the control (Players: a shared filter; Squads: `render_sidebar` + one shared `squad_picker` for the four
+  manage views). ~38 AppTest refs rewired (a `_squads_view` helper; buttons label-filtered) with **every
+  prior assertion kept** — no behaviour change. Home + the Help guide updated to the 7-tab nav. 585 tests.
 - **Sprint 079 (2026-08-06)** — *A Help tab*, per **ADR-068** — a new static onboarding page
   (`pages/12_Help.py`, placed last → no renumber): a step-by-step guide to building a team with the
   assistant — 7 `st.expander` steps (build → make it yours → check health → improve → research → **ask**

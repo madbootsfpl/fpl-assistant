@@ -134,4 +134,21 @@ to the merged pages; the segmented control + filter/picker carry `help=`.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — the sidebar went **12 → 7 tabs** (Players · Fixtures · Squads · Ask · News ·
+Trending · Help). Players absorbed Player Stats; Squads absorbed Build/My Squad/Health/Transfer/Captain —
+each behind a lazy `st.segmented_control` (only the shown view computes). **No behaviour change**: every
+prior assertion was kept, just reached via the control.
+
+**What went well** — doing **Players first** proved the pattern (extract view bodies → `views/` package →
+thin page + segmented control → rewire tests) on the light page before the heavy Squads merge, which then
+went smoothly. The `st.segmented_control` choice paid off: the 5-tool Squads page only computes the selected
+view. A `_squads_view()` test helper made the ~38-ref rewire tractable, and **label-filtering the buttons**
+(rather than `button[0]`) made the tests robust to the sidebar's Import button shifting widget indices.
+
+**What to watch / lessons** — a few tests had hidden a fragile assumption (`text_input[0]`/`button[0]`
+positional indexing); consolidating surfaced it, and label-filtering is the durable fix. The tooltip
+coverage now checks each consolidated page's **default** view (Pool / Build); the manage-view widgets keep
+their help (Sprint 074) but aren't re-checked — an acceptable trade. This is intended as the **settling
+point** for the nav; Home + Help now describe the 7 tabs + the in-tab view switches.
+
+**Lessons captured:** `docs/05_Sprints/Sprint80_Lessons_Learnt.md`.
