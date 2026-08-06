@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 
 from src import config
-from src.models import Fixture, Player, PlayerSeason, Team
+from src.models import Fixture, Player, PlayerGameweek, PlayerSeason, Team
 
 CREATE_TEAMS = """
 CREATE TABLE IF NOT EXISTS teams (
@@ -139,6 +139,24 @@ CREATE TABLE IF NOT EXISTS player_history_past (
 )
 """
 
+# Per-GW history (ADR-060) — the current season, one row per player per gameweek. Keyed by
+# element_code (stable id, so form joins by the same code the xP baseline uses) + round. A
+# current-season working set: a new season re-backfills and overwrites round-for-round (the
+# per-GW payload carries no season name). No FK to players — history outlives presence (ADR-027).
+CREATE_HISTORY = """
+CREATE TABLE IF NOT EXISTS player_history (
+    element_code   INTEGER NOT NULL,
+    round          INTEGER NOT NULL,
+    minutes        INTEGER,
+    total_points   INTEGER,
+    was_home       INTEGER,
+    opponent_team  INTEGER,
+    fixture        INTEGER,
+    kickoff_time   TEXT,
+    PRIMARY KEY (element_code, round)
+)
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -240,6 +258,19 @@ ON CONFLICT(element_code, season_name) DO UPDATE SET
     end_cost                   = excluded.end_cost
 """
 
+UPSERT_HISTORY = """
+INSERT INTO player_history
+    (element_code, round, minutes, total_points, was_home, opponent_team, fixture, kickoff_time)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(element_code, round) DO UPDATE SET
+    minutes       = excluded.minutes,
+    total_points  = excluded.total_points,
+    was_home      = excluded.was_home,
+    opponent_team = excluded.opponent_team,
+    fixture       = excluded.fixture,
+    kickoff_time  = excluded.kickoff_time
+"""
+
 UPSERT_FIXTURE = """
 INSERT INTO fixtures
     (id, event, team_h, team_a, team_h_difficulty, team_a_difficulty, finished, kickoff_time)
@@ -277,6 +308,7 @@ class Storage:
             self.conn.execute(CREATE_PLAYERS)
             self.conn.execute(CREATE_FIXTURES)
             self.conn.execute(CREATE_HISTORY_PAST)
+            self.conn.execute(CREATE_HISTORY)
             self._migrate()
 
     def _migrate(self) -> None:
@@ -333,6 +365,43 @@ class Storage:
         ]
         with self.conn:
             self.conn.executemany(UPSERT_HISTORY_PAST, rows)
+
+    def save_history(self, rows: list[PlayerGameweek]) -> None:
+        """Upsert per-GW history rows (ADR-060). Idempotent on (element_code, round)."""
+        values = [
+            (r.element_code, r.round, r.minutes, r.total_points, r.was_home,
+             r.opponent_team, r.fixture, r.kickoff_time)
+            for r in rows
+        ]
+        with self.conn:
+            self.conn.executemany(UPSERT_HISTORY, values)
+
+    def get_history(self, element_code: int) -> list[sqlite3.Row]:
+        """A player's per-GW rows this season (earliest round first), by stable element_code."""
+        return self.conn.execute(
+            "SELECT * FROM player_history WHERE element_code = ? ORDER BY round",
+            (element_code,),
+        ).fetchall()
+
+    def count_history(self) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM player_history").fetchone()[0]
+
+    def get_gw_history_by_code(self) -> dict[int, list[sqlite3.Row]]:
+        """All per-GW rows grouped by element_code, earliest round first within each player.
+
+        One query for the whole season — the in-season form term (ADR-060) needs every player's
+        gameweeks, keyed by the same `code` the xP baseline (ADR-028) uses. Empty preseason.
+        """
+        grouped: dict[int, list[sqlite3.Row]] = {}
+        for row in self.conn.execute(
+            "SELECT * FROM player_history ORDER BY element_code, round"
+        ):
+            grouped.setdefault(row["element_code"], []).append(row)
+        return grouped
+
+    def get_player_codes(self) -> dict[int, int]:
+        """A map of (per-season) id → stable element_code — used to key per-GW history (ADR-060)."""
+        return {row["id"]: row["code"] for row in self.conn.execute("SELECT id, code FROM players")}
 
     def get_player_ids(self) -> list[int]:
         """Every stored player's (per-season) id — the backfill's work list."""

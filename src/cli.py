@@ -86,10 +86,11 @@ def cmd_refresh(args) -> None:
 
 
 def cmd_history(args) -> None:
-    """Backfill past-season history for all stored players (ADR-027).
+    """Backfill past-season + per-GW history for all stored players (ADR-027/060).
 
-    A throttled, resumable, once-per-season job — kept out of `refresh`. `--limit N`
-    backfills only the first N players (a quick test run).
+    A throttled, resumable job — kept out of `refresh`. One `element-summary` call per
+    player stores both past-season aggregates and this-season per-GW rows (the latter
+    empty preseason, live at GW1). `--limit N` backfills only the first N players.
     """
     if not args.backfill:
         print(
@@ -111,14 +112,15 @@ def cmd_history(args) -> None:
             if i % 50 == 0 or i == total:
                 print(f"  … {i}/{total} players")
 
-        print(f"Backfilling past-season history for {len(ids)} player(s)…")
-        processed, seasons, failures = ingest.backfill_history(
+        print(f"Backfilling past-season + per-GW history for {len(ids)} player(s)…")
+        processed, seasons, gameweeks, failures = ingest.backfill_history(
             store, ids=ids, progress=progress
         )
         note = f" ({failures} failed and were skipped)" if failures else ""
+        # Per-GW (ADR-060) is empty preseason (0) and fills at GW1 — reported for visibility.
         print(
-            f"Stored {seasons} season rows across {processed} player(s){note}. "
-            f"Now cached in {config.DB_PATH}."
+            f"Stored {seasons} season rows + {gameweeks} per-GW rows across {processed} "
+            f"player(s){note}. Now cached in {config.DB_PATH}."
         )
     finally:
         store.close()

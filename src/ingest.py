@@ -16,7 +16,7 @@ from src.api.clubelo import (
     map_elo_to_teams,
     parse_english_elo,
 )
-from src.models import Fixture, Player, PlayerSeason, Team
+from src.models import Fixture, Player, PlayerGameweek, PlayerSeason, Team
 from src.storage import Storage
 
 
@@ -56,22 +56,27 @@ def backfill_history(
     sleep_between: float = config.HISTORY_THROTTLE,
     sleep=time.sleep,
     progress=None,
-) -> tuple[int, int, int]:
-    """Fetch each player's past-season summaries and store them (ADR-027).
+) -> tuple[int, int, int, int]:
+    """Fetch each player's past-season **and** per-GW summaries and store them (ADR-027/060).
 
     One `element-summary` call per player, **throttled** (`sleep_between`) to respect
-    rate limits and kept out of `refresh`. **Idempotent** (upsert on code+season, so an
-    interrupted run resumes) and **per-player degrading** — one player's FplApiError is
-    logged and skipped, never aborting the run. `ids` defaults to every stored player;
-    pass a subset to backfill a slice. `progress(i, total)` is called after each player.
+    rate limits and kept out of `refresh`. The single payload carries both `history_past`
+    (past-season aggregates, ADR-027) and `history` (this-season per-GW, ADR-060) — so the
+    per-GW ingest **rides the same walk** (no second pass). Per-GW is **empty preseason** and
+    lights up at GW1. **Idempotent** (past: upsert on code+season; per-GW: on code+round, so an
+    interrupted run resumes) and **per-player degrading** — one player's FplApiError is logged
+    and skipped, never aborting the run. `ids` defaults to every stored player; pass a subset to
+    backfill a slice. `progress(i, total)` is called after each player.
 
-    Returns (players_processed, seasons_stored, failures).
+    Returns (players_processed, seasons_stored, gameweeks_stored, failures).
     """
     client = client or FplClient()
     if ids is None:
         ids = store.get_player_ids()
+    # The per-GW `history` row carries `element` (the season id), not the stable code — so map it.
+    code_by_id = store.get_player_codes()
 
-    processed = seasons_stored = failures = 0
+    processed = seasons_stored = gameweeks_stored = failures = 0
     total = len(ids)
     for i, element_id in enumerate(ids, start=1):
         try:
@@ -84,6 +89,13 @@ def backfill_history(
             if rows:
                 store.save_history_past(rows)
                 seasons_stored += len(rows)
+            # Per-GW (ADR-060) — empty preseason, live at GW1; needs the stable code to key by.
+            code = code_by_id.get(element_id)
+            if code is not None:
+                gw_rows = [PlayerGameweek.from_api(h, code) for h in summary.get("history", [])]
+                if gw_rows:
+                    store.save_history(gw_rows)
+                    gameweeks_stored += len(gw_rows)
             processed += 1
 
         if progress:
@@ -92,7 +104,7 @@ def backfill_history(
         if sleep_between and i < total:
             sleep(sleep_between)
 
-    return processed, seasons_stored, failures
+    return processed, seasons_stored, gameweeks_stored, failures
 
 
 def _refresh_elo(store: Storage, raw_teams, elo_client: EloClient | None) -> int:
