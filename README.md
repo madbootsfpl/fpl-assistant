@@ -4,10 +4,11 @@
 
 A personal Fantasy Premier League analytics assistant — a command-line tool you can also **talk to**.
 
-**Status:** Phase 1 (*CLI Analytics MVP*) **complete**; Phase 3 (*decision support* — captain · transfer ·
-squad analysis) **complete**; Phase 4 (*natural language* — a grounded `ask` with eight intents + a
-conversational `chat`) **complete** (2026-08-05). **49 ADRs · 421 tests · CI green.** Next: a thin web UI.
-See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**Status:** Phases 1 (*CLI Analytics MVP*), 3 (*decision support* — captain · transfer · squad analysis)
+and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **complete**. A **read-only web UI**
+(Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
+(ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
+delivering. **59 ADRs · 530 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -42,14 +43,22 @@ See the [Roadmap](docs/04_Roadmap/Roadmap.md).
   captain from TS?" → **"why?"** → **"and the second best?"** → **"what about defenders?"**. Same
   discipline (analytics decide, every turn verified); the only new thing is memory of the last turn.
 
+**Crowd & community signals (Phase 6)** — a *complementary lens*, never folded into xP:
+- **Trends** — most-owned · most transferred in/out · in-form boards (free FPL crowd data), crowd **flags**
+  (🟦 template · 💎 differential · 💰 price · 🔥 trending · 📈 form) across the player/squad views, and a
+  **"trends"** `ask` intent. *(Ownership works now; momentum/form light up at GW1, 2026-08-21.)*
+- **News** — official FPL player news (injuries · doubts · returns), most serious first.
+- **Import your team by manager-ID** — pull your real FPL squad from the public entry API (picks from GW1).
+- **Community Signals** — who r/FantasyPL is talking about right now, from the public Reddit **RSS** feed
+  (mention *buzz*, not sentiment; best-effort — degrades to "unavailable" if the feed can't be reached).
+
 ## Planned (not yet built)
 
-- **Next — a thin web UI** (FastAPI + Jinja, server-rendered) that reuses these analytics: the CLI stays
-  the engine, the web is just a new read-only view.
-- **Then — Data Hardening** (post-GW1): in-season form + per-gameweek history blended into xP.
-- **Later:** chip optimisers; the full probabilistic xMins model (schedule/European congestion, rotation
-  profiles — post-GW1); evaluation & feedback loops. *(xMins **v0** — chance% × historical minutes — is
-  built; see above.)*
+- **Next — Data Hardening** (post-GW1, GW1 = 2026-08-21): per-gameweek history + in-season **form** blended
+  into xP; a full history backfill; the attack/defence FDR split.
+- **Later:** chip optimisers; the full probabilistic xMins model (schedule / European congestion, rotation
+  profiles — post-GW1); keyed Reddit / pundit **sentiment** + a crowd-vs-xP **backtest**; evaluation &
+  feedback loops. *(xMins **v0** — chance% × historical minutes — is built; see above.)*
 
 See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
@@ -58,6 +67,7 @@ See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 - Python (standard library + `requests`)
 - SQLite (local cache)
 - PuLP (integer-programming squad optimiser)
+- Streamlit (the read-only web UI edge — optional, web-only) · FastAPI (a frozen reference edge)
 - Ollama (optional local LLM — *narrates* `ask`/`chat`; never computes; the tool works without it)
 - pytest (offline test suite) · ruff (lint)
 - VS Code · GitHub · Claude Code
@@ -166,20 +176,23 @@ A thin, **read-only, local** web view over the same analytics — the CLI stays 
 just another way to look at it. Two edges, both reusing the exact same engine:
 
 **Streamlit** — the interactive UI (ADR-051/052). Multipage (a **Home** landing + a sidebar): **Players**
-(filters, a sortable table with **photos** + a price-vs-points scatter) · **Fixtures** (FDR table with
-**team badges** + a bar chart) · **Squads** (analyse **your squad's** health) · **Transfer** (bank slider →
-XI-aware swaps, with **Apply**) · **Build** (budget + archetype sliders → the optimal 15) · **Captain**
-(who to captain, and **set** yours) · **My Squad** (view & **edit**: rename, swap, bench, download) ·
-**Ask** (a **chat** — each answer grounded, with its ✓/⚠ trust line; works without Ollama, degrading to the
-decision + facts).
+(filters, a sortable table with **photos** + a price-vs-points scatter) · **Fixtures** (a colour-coded
+fixture **ticker** with **team badges**) · **Squads** (analyse **your squad's** health) · **Transfer**
+(bank slider → XI-aware swaps, with **Apply**) · **Build** (budget + archetype sliders → the optimal 15) ·
+**Captain** (who to captain, and **set** yours) · **My Squad** (a **formation-pitch** view; **edit**:
+rename, swap, bench, set captain, download) · **News** (official player news, most serious first) ·
+**Trending** (most-owned / transferred / in-form boards + **💬 Community Signals** — what r/FantasyPL is
+talking about) · **Ask** (a **chat** — each answer grounded, with its ✓/⚠ trust line; works without Ollama,
+degrading to the decision + facts).
 
 **Your squad, in the browser (ADR-054/055).** On **Build**, name it, *Download* a `squad.json` (that file
-*is* your save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*; or
-*Upload* one from the sidebar. It's held in the session and used across **Analyse · Transfer · Captain ·
-My Squad** — and it's **editable**: apply a transfer, swap any player (legality-checked), set the bench,
-and **set a captain** (shown **(C)**). A committed **demo** squad populates the pages on first visit.
-Persistence is your own file — no accounts, and the web **never writes** server-side (the DB/squads stay
-read-only), so this works on the multi-user cloud.
+*is* your save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*;
+*Upload* one from the sidebar; or **import your real team by FPL manager-ID** (the public entry API; picks
+from GW1). It's held in the session and used across **Analyse · Transfer · Captain · My Squad** — and it's
+**editable**: apply a transfer, swap any player (legality-checked), set the bench, and **set a captain**
+(shown **(C)**). A committed **demo** squad populates the pages on first visit. Persistence is your own file
+— no accounts, and the web **never writes** server-side (the DB/squads stay read-only), so this works on
+the multi-user cloud.
 
 ```bash
 pip install -r requirements.txt      # includes streamlit (web-only)

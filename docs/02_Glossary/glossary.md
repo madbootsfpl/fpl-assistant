@@ -71,3 +71,25 @@ For where an idea is *explained in depth*, see [Handbook Ch 19 — Glossary Inde
 | Grounding verification | An automatic check that every figure/name in the answer traces to the data (the ✓/⚠ trust line). |
 | Follow-up           | A `chat` question that builds on the last turn ("why?", "and the second best?"). |
 | LLM / Ollama        | The (optional, local) language model that **narrates** a decision the analytics made. |
+
+## Crowd & community signals (Phase 6)
+
+A *complementary lens* — shown **alongside** xP, never folded into it. *Flags, not truth.*
+
+| Term                | Plain English                                                 |
+| ------------------- | ------------------------------------------------------------- |
+| Crowd flags         | The 🟦 / 💎 / 💰 / 🔥 / 📈 markers beside a player (template / differential / price / trending / form). |
+| Template            | A very widely-owned player (≈20%+ owned) — the "everyone has him" pick. |
+| Trending            | Boards of what the crowd's doing — most-owned · transferred in/out · in-form. |
+| Buzz                | How often a player is **mentioned** in posts — frequency, not positive/negative sentiment. |
+| Community Signals   | The Reddit-**RSS** buzz feature — who r/FantasyPL is talking about right now (best-effort). |
+| News lens           | Official FPL player news (injuries / doubts / returns), surfaced most-serious first. |
+| Manager-ID import   | Pulling your real FPL squad from the public **entry** API by your team ID (picks live from GW1). |
+
+## Web UI
+
+| Term                | Plain English                                                 |
+| ------------------- | ------------------------------------------------------------- |
+| Edge                | A thin surface (CLI / web) over the one shared analytics **core** — the CLI stays the engine. |
+| Streamlit           | The interactive, read-only web edge (a multipage app) grown over that same engine. |
+| Session squad (active squad) | Your squad held in the browser **session** — built / uploaded / imported, editable, never saved server-side. |

@@ -6,7 +6,7 @@
 
 **Technical Mentor:** ChatGPT
 
-**Version:** 1.0
+**Version:** 1.1
 
 ---
 
@@ -101,7 +101,7 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 | 9 | [JSON](./09_JSON.md) | 📖 🧪 💻 | In progress |
 |10 | [SQLite](./10_SQLite.md) | 📖 🧪 💻 | In progress |
 |11 | [Testing](./11_Testing.md) | 📖 🧪 💻 | In progress |
-|12 | [FastAPI](./12_FastAPI.md) | 📖 | Not started |
+|12 | [FastAPI](./12_FastAPI.md) | 📖 🧪 💻 | In progress — a thin edge built (ADR-050), now frozen |
 |13 | [Claude Code](./13_Claude_Code.md) | 📖 🧪 💻 | In progress |
 |14 | [ChatGPT](./14_ChatGPT.md) | 📖 🧪 💻 | In progress |
 |15 | [Prompt Engineering](./15_Prompt_Engineering.md) | 📖 🧪 | In progress |
@@ -117,6 +117,11 @@ A chapter's badge line is a simple left-to-right progression, e.g. Git might sho
 |25 | [Defensive Contribution (DefCon)](./25_Defensive_Contribution.md) | 📖 🧪 💻 | In progress |
 
 Update the badges and status as each chapter grows.
+
+**Chapters still to write** *(built in the project, not yet captured here — a known gap)*: **Streamlit /
+the web edge** (the multipage UI, `session_state`, `st.cache_data`, `AppTest`; ADR-051/052) and **Crowd &
+community signals** (the lens-not-xP principle, the Reddit-RSS best-effort pattern; ADR-057/059). Add them
+when there's an appetite — the learning is real, the write-up is owed.
 
 ---
 

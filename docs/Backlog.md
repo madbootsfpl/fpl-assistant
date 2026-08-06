@@ -31,29 +31,22 @@ nice-to-haves and tech-debt.)*
 
 ### Web UI ideas (from the Sprint 054 review — owner's notes)
 
-- **Home tab + full landing** — rename the Streamlit `app` sidebar entry to **Home** and list all six
-  pages (incl. Transfer & Build descriptions) on the landing (the landing predates those pages). *Tiny —
-  bundle into any web sprint.*
-- **Team badges + player photos** — show crests/photos in the Streamlit UI (Players table, Fixtures,
-  Squads). **Player photos** work now (players carry `code` → `resources.premierleague.com/.../photos/
-  players/…/p{code}.png`). **Team badges** need a small ingest change — store `team.code` (in
-  bootstrap-static, not currently ingested) → `…/badges/…/t{code}.png`. Display via `st.image` /
-  `st.column_config.ImageColumn`. *Medium; self-contained; external image URLs load at render.*
-- **Deploy & share** (`a custom domain`) — host the Streamlit app publicly so others can help
-  functionality-test. Feasible via **Streamlit Community Cloud** (free; deploys from the GitHub repo;
-  custom domain via CNAME on the owner's `your domain`). *Needs:* a **data strategy** (the DB is
-  gitignored — ship a committed snapshot or refresh-on-start), a **light security review** (public but
-  read-only, no writes/auth; Ollama absent → degrades to decision + facts, which is fine), and a **gate
-  (ADR)** for the deployment + data + security decisions. *Big; high-leverage (unblocks real feedback).*
+- ~~**Home tab + full landing**~~ — **DONE** (Sprint 059). The Streamlit landing is **Home** and lists
+  every page.
+- ~~**Team badges + player photos**~~ — **DONE** (Sprint 059). `team.code` ingested → badges; player
+  photos via `code`; shown across Players / Fixtures / the squad tabs (shared `badges` helper +
+  `st.column_config.ImageColumn`).
+- ~~**Deploy & share**~~ — **DONE** (Sprint 053, **ADR-053**). Deployed on **Streamlit Community Cloud**,
+  public + read-only; a committed `data/seed.db` + `seed_squads.json` seed it; Ollama absent → degrades to
+  decision + facts. Runbook: `docs/DEPLOY.md`. *(A custom domain via CNAME remains an optional extra.)*
 
-- **Crowd & Sentiment Signals (Phase 6)** — fold *"what managers are doing"* + expert signals into the
-  tools as a **complementary lens, not a rewrite of xP** (owner: *lens + flags*; *free FPL signals first*).
-  Tier 1 (free, already in the API): ingest `transfers_in/out_event` · `cost_change_*` · `form` ·
-  `ict_index` (+ ICT components) · `value_form`, and surface flags (🔥 trending · 💰 price · 📈 form ·
-  template/differential) on Players/Captain/Transfer + a "trends" `ask` intent. Tier 2 (later, optional):
-  FPL Scout / Reddit sentiment (degrade like ClubElo). Tier 3: backtest crowd-follow vs xP-only.
-  **Season-time** — momentum fields are 0 preseason, live at GW1 (2026-08-21). See the Roadmap's *Phase 6*.
-  *Kicks off in **Sprint 060**.*
+- ~~**Crowd & Sentiment Signals (Phase 6) — Tier 1 & 2**~~ — **DONE** (Sprints 060–068). A *lens, not a
+  rewrite of xP* (a test asserts `decision_xp` is untouched). **Tier 1** (ADR-057): ingested
+  `transfers_in/out_event` · `cost_change_*` · `form` · `ict_index` (+ components) · `value_form`; crowd
+  **flags** on Players/Build/Analyse/My Squad/Captain/Transfer; a **"trends"** `ask` intent + a **Trending**
+  page. **Tier 2** (ADR-058/059): an FPL **news lens**, **manager-ID import**, and **Community Signals**
+  (Reddit RSS buzz). **Tier 3** (backtest crowd-follow vs xP-only) + **keyed** Reddit/pundit sentiment
+  remain open → Roadmap *Phase 6 / Later*. Momentum/form boards light up at **GW1 (2026-08-21)**.
 
 - **Cloud squads — server-side persistence (Path 2)** — the seamless upgrade to Sprint 057's
   download/upload squads: a **"Save as `<name>` / Load `<name>`"** backed by a free external DB (e.g.

@@ -1,12 +1,15 @@
 # FPL Assistant Roadmap
 
-*Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page. Phase 1 was delivered as a
-**CLI** (ADR-002/003), not the original web-first plan; that original 5-phase plan and its bullet-by-bullet
-reconciliation live in git history and the per-sprint docs — this page looks **forward**.*
+*Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page; kept current through Sprint 068.
+Phase 1 was delivered as a **CLI** (ADR-002/003), not the original web-first plan; that original 5-phase
+plan and its bullet-by-bullet reconciliation live in git history and the per-sprint docs — this page looks
+**forward**.*
 
 **Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
-and a grounded natural-language layer (`ask` + `chat`). **49 ADRs · 421 tests · CI green.** Preseason (0
-gameweeks; **GW1 deadline 2026-08-21**), so form/per-GW insight is still ahead.
+and a grounded natural-language layer (`ask` + `chat`) — now with a **deployed read-only Streamlit web UI**
+and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens · manager-ID import · Reddit
+buzz). **59 ADRs · 530 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
+form/per-GW insight — and the momentum boards — are still ahead.
 
 **Status legend:** ✅ Done · ◑ Partial · ⬜ Not started
 
@@ -60,9 +63,13 @@ stays the engine**). Two steps taken:
 - ✅ **A Streamlit spike + decision** (Sprint 052, ADR-051) — measured head-to-head (58 vs ~130+ LOC;
   interactive vs static; +21 vs lean deps). Verdict: **adopt Streamlit** as the UI we grow (pure-Python,
   interactive; fits "architecture over frontend syntax") — the heavier deps kept optional/web-only.
-- ⬜ **Next — graduate the Streamlit edge** to `src/web_streamlit/` (a proper edge + tests +
-  `requirements.txt`), then grow the pages (interactive tables, charts, a chat). The core stays the one
-  engine; the guardrail test carries over.
+- ✅ **The Streamlit edge, graduated + grown** (`src/web_streamlit/`, ADR-052; tests + `requirements.txt`)
+  — a multipage app: Home · Players · Fixtures (ticker) · Analyse · Transfer · Build · Captain · My Squad
+  (formation pitch) · News · Trending (+ Community Signals) · Ask (chat). Session **squads** (build / upload
+  / manager-ID import; edit — all in `session_state`, no server writes), photos + badges, charts.
+- ✅ **Deployed** to Streamlit Community Cloud (Sprint 053, ADR-053; runbook: `docs/DEPLOY.md`) — public,
+  read-only; a committed `data/seed.db` + `seed_squads.json` seed it. The core stays the one engine; the
+  guardrail test (core imports no web) carries over.
 
 ---
 
