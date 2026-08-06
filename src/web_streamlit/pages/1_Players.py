@@ -1,14 +1,18 @@
-"""Players — live filters (position, max price) over a native sortable/searchable table (ADR-052).
+"""Players — a shared team/position/player filter (ADR-064) over a native sortable table (ADR-052),
+paged through in full (ADR-063), with a filter-responsive top-15 bar.
 
 Shows each player's official FPL photo (from the stored `code`); the browser fetches the image, so a
 missing one just shows a broken-thumbnail icon (Sprint 055).
 """
 
+import altair as alt
 import streamlit as st
 
 from src.analytics import crowd_flags, rank_players
 from src.storage import Storage
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
+from src.web_streamlit.filters import apply as apply_filter
+from src.web_streamlit.filters import filter_controls
 from src.web_streamlit.paginate import paginate
 from src.web_streamlit.status import render_data_status
 
@@ -41,21 +45,29 @@ finally:
 if not rows:
     st.info("No data yet — run `python app.py refresh` first.")
 else:
-    col1, col2, col3 = st.columns(3)
-    positions = col1.multiselect("Position", ["GK", "DEF", "MID", "FWD"],
-                                 default=["GK", "DEF", "MID", "FWD"])
-    max_price = col2.slider("Max price (£m)", 3.5, 15.0, 15.0, step=0.5)
-    sort = col3.selectbox("Sort by", ["points", "value", "team", "position"])
+    # A shared filter (ADR-064): Team · Position · Player (AND) + max-price; then a separate sort.
+    sel = filter_controls(rows, key="players", with_price=True)
+    sort = st.selectbox("Sort by", ["points", "value", "team", "position"])
 
-    filtered = [p for p in rows if p["position"] in positions and p["price"] <= max_price]
+    filtered = apply_filter(rows, sel)
     if not filtered:
-        st.info("No players match those filters — widen the position or price.")
+        st.info("No players match those filters — clear a filter or raise the price.")
     else:
         ranked = _sorted(filtered, sort)
-        # The value landscape: price vs points across all matching players (top-left = cheap + high).
-        st.scatter_chart(
-            [{"£m": p["price"], "Pts": p["total_points"], "Pos": p["position"]} for p in filtered],
-            x="£m", y="Pts", color="Pos",
+        # A filter-responsive top-15 bar (ADR-064): the strongest of the filtered set by the sort metric
+        # (points → Pts, else value → Val/£m), rank-ordered. Replaces the old price-vs-points scatter.
+        by_value = sort == "value"
+        field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")
+        top = sorted(ranked, key=lambda p: -((p.get(field) or 0)))[:15]
+        bar_data = [{"Player": p["web_name"], "metric": round(p.get(field) or 0, 1)} for p in top]
+        st.caption(f"Top {len(top)} of {len(filtered)} filtered players — by {bar_label}")
+        st.altair_chart(
+            alt.Chart(alt.Data(values=bar_data)).mark_bar().encode(
+                x=alt.X("metric:Q", title=bar_label),
+                y=alt.Y("Player:N", sort="-x", title=None),
+                tooltip=[alt.Tooltip("Player:N"), alt.Tooltip("metric:Q", title=bar_label)],
+            ).properties(height=28 * len(bar_data) or 28),
+            width="stretch",
         )
         # Page through ALL matches (ADR-063) — no 50-cap; the table headers also click-sort.
         page = paginate(ranked, key="players", per_page=50)

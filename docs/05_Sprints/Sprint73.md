@@ -38,13 +38,14 @@ edge-only, no analytics change.
 - [x] **US-206 (Player Stats filter)** — the shared filter above the four tabs; each tab filters its
       analytic rows (by team/position/player) before pagination; the "season-to-date" caption stays. The
       shared `web_streamlit/filters.py` helper built here
-- [ ] **US-207 (Players filter + graph)** — adopt the shared filter (adds **team** + **player** to the
-      existing position; keeps **max-price**); **remove the price-vs-points scatter**, add a **top-15
+- [x] **US-207 (Players filter + graph)** — adopt the shared filter (adds **team** + **player** to the
+      existing position; keeps **max-price**); **removed the price-vs-points scatter**, added a **top-15
       horizontal bar** of the filtered players by the current sort metric (points / value); the table +
       pagination + team/position sort stay
-- [ ] **No analytics change** — the web writes nothing server-side (guardrail holds); existing **571** stay
-      green
-- [ ] Docs: ADR-064 + index, Architecture, README (web section), PROJECT_STATUS, Feedback_Log (resolved)
+- [x] **No analytics change** — the web writes nothing server-side (guardrail holds); existing tests stay
+      green — **578** (+7)
+- [ ] Docs: ADR-064 + index ✅; Architecture, README (web section), PROJECT_STATUS, Feedback_Log (resolved)
+      _(at the retro)_
 
 ---
 
@@ -53,7 +54,7 @@ edge-only, no analytics change.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-206 | **Player Stats filter** — a shared Team / Position / Player multiselect filter (AND) above the four tabs, applied to each analytic before pagination; builds `web_streamlit/filters.py`. ADR-064. | High | ✅ Done | ~½ session |
-| US-207 | **Players filter + graph** — adopt the shared filter (team + player added, max-price kept); replace the scatter with a top-15 bar of the filtered set by the sort metric. ADR-064. | High | ⬜ To do | ~½ session |
+| US-207 | **Players filter + graph** — adopt the shared filter (team + player added, max-price kept); replace the scatter with a top-15 bar of the filtered set by the sort metric. ADR-064. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -104,6 +105,17 @@ paginated table. The bar updates live with the filter.
   Row tolerance) + an AppTest (Team=ARS narrows every board to ARS-only). **Smoke (real DB):** 3 filter
   multiselects; over/under 50 → **6** after ARS ∧ DEF (teams={ARS}, pos={DEF}), no exception. No analytics
   change. ruff clean. _US-207 (Players filter + the scatter→top-15-bar) next._
+
+- **US-207 ✅ (build)** — Players adopts the shared filter (`filter_controls(rows, key="players",
+  with_price=True)` — **Team + Player added** to Position, max-price kept) + a separate sort selectbox;
+  `filtered = apply(rows, sel)`. The **price-vs-points scatter is gone**, replaced by a filter-responsive
+  **top-15 horizontal bar** (Altair `mark_bar`, `y=Player sort="-x"`) of the strongest filtered players by
+  the sort metric (points → Pts, value → Val/£m); the paginated table + team/position sort stay. Two test
+  fixes: the filter multiselect indices shifted (Position is now `[1]`, Team `[0]`), and the scatter test →
+  a top-15-bar assertion; +1 test (filter by team narrows the table). A tooltip bug (a bare `Player` field
+  with `alt.Data` needs an explicit `:N` type) was **caught by the AppTest** and fixed; used the current
+  `width="stretch"` (not the deprecated `use_container_width`). **578** green, ruff clean. **Smoke (real
+  DB):** table 50 → **6** after (ARS|LIV) ∧ FWD, the bar present + responsive. No analytics change.
 
 ---
 

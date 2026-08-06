@@ -30,10 +30,11 @@ def test_players_page_shows_a_table():
     assert len(at.dataframe) == 1 or len(at.info) == 1     # a table, or the "run refresh" note
 
 
-def test_players_page_has_a_scatter_chart_when_data_present():
+def test_players_page_has_a_top15_bar_when_data_present():
+    # ADR-064: the scatter is gone; a filter-responsive top-15 bar (a vega/altair chart) takes its place
     at = _run(_PAGES / "1_Players.py")
-    if at.dataframe:                                        # data present → a price-vs-points scatter
-        assert len(at.get("vega_lite_chart")) == 1
+    if at.dataframe:
+        assert at.get("arrow_vega_lite_chart") or at.get("vega_lite_chart")
 
 
 def test_players_page_shows_the_crowd_lens_columns():
@@ -55,14 +56,24 @@ def test_players_page_has_photo_and_badge_columns_when_data_present():
 
 
 def test_players_filters_narrow_the_table(monkeypatch):
-    # the interactivity upgrade: position multiselect + max-price slider drive the table live
+    # ADR-064 filter: multiselects are [0] Team · [1] Position · [2] Player; slider[0] is max-price
     at = _run(_PAGES / "1_Players.py")
     if not at.multiselect:                                  # no data locally → the info branch
         return
-    at.multiselect[0].set_value(["GK"]).run()               # keepers only
+    at.multiselect[1].set_value(["GK"]).run()               # Position → keepers only
     assert not at.exception
     at.slider[0].set_value(5.0).run()                       # …and ≤ £5.0m
     assert not at.exception                                  # narrowing never crashes (table or a note)
+
+
+def test_players_filter_by_team_narrows_the_table():
+    # ADR-064: filter by team (multiselect[0]) restricts the table to that team
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    at.multiselect[0].set_value(["ARS"]).run()              # Team = ARS
+    assert not at.exception
+    assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
 def test_players_page_sorts_by_team_and_paginates():
