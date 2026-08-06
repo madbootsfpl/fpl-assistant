@@ -249,6 +249,15 @@ def test_my_squad_set_bench_picks_four():
     assert len(at.session_state["squad"]["bench_ids"]) == 4
 
 
+def test_trending_page_shows_a_leaderboard():
+    # US-194: a community leaderboard (owned board renders now; momentum boards note "live at GW1")
+    at = _run(_PAGES / "10_Trending.py")
+    assert at.dataframe or at.info                          # a board, or the no-data note
+    if at.dataframe:
+        cols = list(at.dataframe[0].value.columns)
+        assert "Player" in cols and "Trends" in cols        # a crowd leaderboard with flags
+
+
 def test_news_page_lists_flagged_players_or_all_clear():
     # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
     at = _run(_PAGES / "9_News.py")

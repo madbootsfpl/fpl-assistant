@@ -92,10 +92,13 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   US-184).
 - ✅ A **template-risk** captaincy lens — the ownership flags + a "safe template vs differential swing"
   caption on Captain (Sprint 061, US-184). *(A full captaincy-% EO model is later.)*
-- 🕓 A **"trends"** `ask`/`chat` intent — most transferred in/out, biggest price risers, in-form.
-  **Deferred to nearer GW1** (its momentum questions are 0 in preseason).
+- ✅ A **"trends"** `ask`/`chat` intent + a **Trending page** — most-owned / transferred in-out / in-form
+  boards over a pure `trending` helper (Sprint 067, US-193/194). Ownership works now; momentum/form light up
+  at GW1.
 
 **Tier 2 — external / extended signals (started Sprint 064, ADR-058; degrade gracefully like ClubElo).**
+- ⬜ **Reddit r/FPL social sentiment** — a mention-counter over hot/top posts; needs a Reddit app + a cloud
+  secret (public JSON now 403s). A **gated spike (ADR-059)** next (Sprint 067 US-195, owner-prerequisite).
 - ✅ FPL official **news lens** — the stored `player.news` + `scout_news_link` on a **News** page
   (Sprint 064, US-190).
 - ✅ **Import your team by manager-ID** — the public FPL entry API → the session active squad (Sprint 064,

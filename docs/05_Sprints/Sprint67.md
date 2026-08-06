@@ -1,7 +1,7 @@
 # Sprint 067: Community "trending" — free FPL crowd data (a Trending view + a trends `ask`)
 
 **Dates:** 2026-08-06
-**Status:** 📝 Planned
+**Status:** ✅ Complete (US-193/194 done; US-195 Reddit spike deferred → owner secret; retro done)
 **Capacity:** ~2–3 working sessions (a `trending` helper + the trends `ask` intent + a Trending page + docs)
 **Carried Over:** the deferred trends `ask` intent (US-185, from Sprint 061)
 
@@ -64,7 +64,7 @@ GW1. No new infra, no xP change. (Reddit social sentiment = a gated follow-up sp
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-193 | **`trending` helper + trends `ask` intent** — a pure `trending(players, by, limit)` in analytics; wire a "trends" intent (keywords → `_decide_trends` → a renderer, mirrors shortlist); grounded + verified; preseason-graceful. Tests + smoke | High | ✅ Done | 1 session |
-| US-194 | **Trending page** — `pages/N_Trending.py`: most-owned / most-in / most-out / in-form leaderboards (photos · badges · flags), reusing `trending`; momentum boards degrade cleanly preseason. Tests + smoke | High | 📝 To Do | 1 session |
+| US-194 | **Trending page** — `pages/N_Trending.py`: most-owned / most-in / most-out / in-form leaderboards (photos · badges · flags), reusing `trending`; momentum boards degrade cleanly preseason. Tests + smoke | High | ✅ Done | 1 session |
 
 #### Next step (recorded — a separate gated sprint)
 | ID | Title / Story | Notes |
@@ -130,9 +130,46 @@ The **Reddit spike (US-195)** *will* get **ADR-059** when it's built (its own ga
   now. Wired into `_dispatch`. Tests (+5 → **522**): `trending` ranks each metric + empty-safe; routing
   (trends vs transfer); the ownership board (position-filtered) + the preseason momentum message. Smoke:
   "most owned midfielders" → Haaland/… ; "who's trending" → the GW1 note; `ruff` clean. Not xP.
+- **US-194 ✅** — **Trending page.** New **`pages/10_Trending.py`** — four boards as `st.tabs` (**Most
+  owned · Most transferred in · Most transferred out · In form**) over `trending`, each a photo+badge table
+  with the value column + the crowd flags; a "how many" slider (5–30). The **momentum/form boards degrade
+  cleanly** preseason ("this board lights up at **GW1 (2026-08-21)**"); **Most owned works now** (Haaland
+  74.9% top). Added to Home. Tests (+1 → **523**): the page renders a leaderboard (Player + Trends cols).
+  Smoke: owned board renders; momentum boards show the GW1 note; `ruff` clean. Reused the US-193 helper —
+  no duplicated ranking. Not xP.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be completed at sprint close)_
+**Outcome:** ✅ Successful — the free **community "trending"** shipped: a pure `trending` helper powering
+both a **trends `ask` intent** and a **Trending page**. The genuine social layer (Reddit) is recorded as a
+gated follow-up needing the owner's secret.
+
+**Delivered**
+- **US-193 ✅** — a pure `trending(players, by, limit)` (+ `TREND_BYS`) + a **trends `ask`/`chat` intent**
+  (keywords first so "most transferred" beats the transfer-advice intent; grounded; preseason-graceful).
+- **US-194 ✅** — a **Trending page** (4 boards as tabs, photos/badges/flags) reusing the same helper;
+  momentum boards degrade cleanly preseason.
+
+**Deferred (owner-gated)**
+- **US-195 🕓** — the Reddit social-sentiment spike (ADR-059) → needs the owner to create a Reddit app +
+  set a cloud secret first. Recorded in the Roadmap.
+
+**Verification** — 523 tests green (**+6**), `ruff` clean. Live-data smoke: "most owned midfielders" →
+Haaland/… ; the Trending "Most owned" board renders now; momentum/form boards + questions say "live at GW1".
+`decision_xp` untouched.
+
+**Carried forward** — US-195 (Reddit, gated on a secret). Standing GW1 markers: the momentum boards/questions
++ threshold calibration + Data Hardening + the live manager-import check light up at **GW1 (2026-08-21)**.
+
+**What went well** — the reframe was the win: most of "which players are trending as picks" was **free FPL
+crowd data we already had**, so one pure `trending` helper fed both the page and the `ask` intent with no
+duplication and no infra. Ordering the "trends" keywords first cleanly separated "most transferred" (trends)
+from "transfer" (advice). Preseason-gating each momentum surface kept it honest, not blank.
+
+**What to watch** — the distinctive momentum value is GW1-gated, so today the page/intent mostly show
+ownership; worth a look at GW1 to confirm the transfer/form boards populate. And true *social* sentiment
+(Reddit) is still a real infra/cost step (403 without a key) — the US-195 spike will decide if it earns its keep.
+
+**Lessons captured:** `docs/05_Sprints/Sprint67_Lessons_Learnt.md`.

@@ -455,6 +455,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 067 (2026-08-06)** — *community "trending"* (no new ADR — executes ADR-057). A pure
+  `trending(players, by, limit)` in `analytics/crowd.py` (rank by owned/in/out/form, display-only) powers
+  both a new **trends `ask`/`chat` intent** (keywords first so "most transferred" beats the transfer-advice
+  intent; grounded; preseason-graceful → "live from GW1") and a **Trending page** (`pages/10_Trending.py` —
+  four boards as tabs, photos+badges+flags). Ownership works now; momentum/form light up at GW1. Reddit
+  social sentiment recorded as a gated follow-up (US-195, ADR-059, needs a cloud secret). Not xP. 523 tests.
 - **Sprint 066 (2026-08-06)** — *fix (tester bug, no ADR)* — the web **Ask** tab ignored the session
   active squad (it resolved squads only via `SquadStore`), so "captain/analyse RoboTS" fell back to "(all
   players)". Added `ask._load_squad` / `_known_squad_names` (the **session squad wins**, else `SquadStore`)
