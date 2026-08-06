@@ -1,7 +1,7 @@
 # Sprint 064: Phase 6 Tier 2 (start) — an FPL news lens + import your team by manager-ID
 
 **Dates:** 2026-08-06
-**Status:** 📝 Planned
+**Status:** ✅ Complete (3/3 stories; retro done)
 **Capacity:** ~2–3 working sessions (a gate + a news lens + a manager-ID import + docs)
 **Carried Over:** None (Sprint 063 shipped the pitch-photo polish)
 
@@ -69,14 +69,14 @@ lens/import over the settled edge (xP untouched). A gate settles the Tier-2 mode
 |---|---|---|---|---|
 | US-189 | **Gate.** Tier-2 opener (**ADR-058**): an FPL-news lens + a manager-ID import; free/no-keys; degrade-gracefully; import = another way to set the session squad (no server writes); keyed social + pundit NLP deferred; import picks GW1-gated | Critical | ✅ Done | 0.5 session |
 | US-190 | **FPL official-news lens** — a **News** page listing flagged players (name · team · status · `news` · scout link) from the ingested `player.news`; degrades to "no current news". Tests + smoke | High | ✅ Done | 0.5–1 session |
-| US-191 | **Import team by manager-ID** — a new FPL-API fetch (`/entry/{id}/` + `…/event/{gw}/picks/`) in the api/ingest layer (retry/degrade, ADR-021); map picks → a squad dict → set the active squad; a manager-ID input (sidebar or a page); **preseason-graceful** ("available after the GW1 deadline"). Unit-test the mapping against a mocked payload. Tests + smoke | High | 1 session |
+| US-191 | **Import team by manager-ID** — a new FPL-API fetch (`/entry/{id}/` + `…/event/{gw}/picks/`) in the api/ingest layer (retry/degrade, ADR-021); map picks → a squad dict → set the active squad; a manager-ID input (sidebar or a page); **preseason-graceful** ("available after the GW1 deadline"). Unit-test the mapping against a mocked payload. Tests + smoke | High | ✅ Done | 1 session |
 
 #### Technical Tasks & Maintenance
 - [x] ADR-058 recorded + indexed — _US-189_
 - [x] `scout_news_link` ingested (model + storage `_migrate` + reseed) + a News page (`pages/9_News.py`) over `player.news` — _US-190_
-- [ ] Config endpoints + an api fetch for `/entry/{id}/` + picks (retry/degrade) — _US-191_
-- [ ] A pure `picks → squad dict` mapper (unit-tested via a mock) + wire an "Import team" control — _US-191_
-- [ ] ADR index, Architecture, Handbook/README, Roadmap (Tier-2 started), PROJECT_STATUS — _US-191_
+- [x] Config endpoints + api fetch `get_entry` / `get_entry_picks` (reuse `_get_json` retry/degrade) — _US-191_
+- [x] A pure `picks → squad dict` mapper (`src/manager.py`, unit-tested via a fake client) + an "Import team" sidebar control — _US-191_
+- [x] Architecture, Roadmap (Tier-2 started), PROJECT_STATUS — _US-191_
 - [ ] (Post-GW1) confirm the import pulls a real squad once picks unlock — _carry_
 
 ---
@@ -156,9 +156,49 @@ Proposed (confirm/redirect at "start US-189"):
   the freshness caption included. Tests (+3 → **507**): `from_api` parses/normalises the link; a
   save/get round-trip; the migration adds the column; the News page lists flagged players (News + Source
   cols) or the all-clear. Smoke: 58 flagged rows render; `ruff` clean. Works **now**.
+- **US-191 ✅** — **Import team by manager-ID.** Config `ENTRY_PATH` / `ENTRY_PICKS_PATH` + `FplClient`
+  `get_entry` / `get_entry_picks` (reuse `_get_json` — retry, `FplApiError`, ADR-021). A new
+  **`src/manager.py`**: a pure **`picks_to_squad(picks, players, name)`** (positions 1–11 XI / 12–15 bench;
+  `is_captain` → `captain_id`; → a `SquadStore`-shaped dict) + **`fetch_manager_team(entry_id, players,
+  client=None)`** that fetches the public entry + picks and **degrades gracefully** — bad id / down API /
+  no-`current_event` (preseason) / 404 picks → `(None, a clear message)`, never a raise. The **sidebar**
+  (every squad page) gains an **FPL manager-ID input + Import team** button → sets the session active squad
+  (a third way alongside build/upload — **no server writes**); non-numeric IDs rejected; preseason shows
+  "available after the GW1 deadline". Tests (+7 → **514**): the mapper (bench/captain/ids/cost; unknown-id →
+  None; empty → None); the orchestrator's 4 branches via a **fake client** (valid / preseason / bad-id /
+  404-picks); the sidebar shows the control. Smoke: all branches degrade; `ruff` clean. **Built now, live
+  at GW1** (picks 404 until the deadline).
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be completed at sprint close)_
+**Outcome:** ✅ Successful — Phase 6 **Tier 2 opened** with two free, no-key pieces: an FPL official-news
+lens (live now) and import-your-team-by-manager-ID (built now, live at GW1).
+
+**Delivered**
+- **US-189 (gate) ✅** — ADR-058: Tier-2 model (free/no-keys; degrade-gracefully; import = another way to
+  set the session squad; keyed social + pundit deferred; import GW1-gated).
+- **US-190 ✅** — the FPL news lens (`pages/9_News.py` over `player.news` + ingested `scout_news_link`;
+  most-serious first; degrades to "no current news").
+- **US-191 ✅** — import team by manager-ID (`src/manager.py` + FPL entry API; a degrade-gracefully
+  fetch + a pure mapper; a sidebar Import control → the session squad; no server writes).
+
+**Verification** — 514 tests green (**+10** over the sprint), `ruff` clean. Live-data smoke: 58 flagged
+players on News; the import's 4 branches (valid / preseason / bad-id / 404-picks) all degrade with a clear
+message. `decision_xp`/engine untouched; no server writes.
+
+**Carried forward** — **GW1 (2026-08-21):** confirm the import pulls a real squad once picks unlock; also
+the deferred trends intent (US-185) + threshold calibration + Data Hardening. Tier-2b (keyed social:
+Reddit/X + pundit NLP) remains gated for later.
+
+**What went well** — the investigation flipped the "social media" ask into two **free** wins: the news was
+already in the payload, and the FPL entry API needs no auth/secret. Reusing the `_get_json` retry client +
+the ClubElo degrade pattern made the import robust by construction; a **fake client** unit-tested all four
+branches with no network, so the GW1-gating didn't block building or testing.
+
+**What to watch** — the import can't be *fully* exercised until GW1 (picks 404 today); the mapper is
+verified against a mocked payload, so the one live unknown is the real picks shape — worth a check at GW1.
+"News" here is official injury/availability, not social sentiment (that's the deferred Tier-2b).
+
+**Lessons captured:** `docs/05_Sprints/Sprint64_Lessons_Learnt.md`.

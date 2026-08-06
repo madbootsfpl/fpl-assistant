@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 064 (2026-08-06)** — *Phase 6 Tier 2 (start)*, per **ADR-058** — external/extended signals, two
+  **free, no-key** pieces. An FPL official-**news lens**: ingest `scout_news_link` (the source link) +
+  reuse the stored `player.news` → a new `pages/9_News.py` (flagged players, most-serious first, a "read
+  more" link; degrades to "no current news"). **Import team by manager-ID**: config entry paths +
+  `FplClient.get_entry`/`get_entry_picks`, a new pure `src/manager.py` (`picks_to_squad` +
+  `fetch_manager_team`, degrade-gracefully like ClubElo, ADR-021) → a sidebar **Import** control that sets
+  the session active squad (no server writes; alongside build/upload). Both display/state — `decision_xp`
+  untouched. Keyed social (Reddit/X) + pundit NLP deferred. The import's picks are **GW1-gated** (404 until
+  the deadline) — built now, live at GW1. 514 tests green.
+- **Sprint 063 (2026-08-06)** — *tester-feedback polish* (no ADR) — centred the My Squad pitch-card photos
+  via a nested `st.columns([1,2,1])` (robust native, no custom CSS).
 - **Sprint 062 (2026-08-06)** — *two UI feature requests* (no ADR — UI over the settled edge). **Fixtures**
   becomes a **fixture ticker**: a new pure `fixture_ticker(fixtures, next_n)` (reuses `team_fdr` /
   `team_schedule`) → a teams × gameweeks grid rendered with a **weeks selector (1–8)** and per-cell

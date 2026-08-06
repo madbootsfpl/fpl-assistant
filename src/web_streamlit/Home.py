@@ -28,9 +28,10 @@ Use the **sidebar** to explore:
 - **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 
 **Your squad:** on **Build**, name it, *Download* a `squad.json` (that file is your save) and *Use this
-squad*; or *Upload* one from the sidebar. **Edit** it on **My Squad** (or apply a swap on Transfer / set a
-captain on Captain) — every change updates your session and the download. A **demo** squad populates the
-pages on first visit. All per-user — no accounts, nothing saved server-side (ADR-054/055).
+squad*; or *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (from GW1).
+**Edit** it on **My Squad** (or apply a swap on Transfer / set a captain on Captain) — every change updates
+your session and the download. A **demo** squad populates the pages on first visit. All per-user — no
+accounts, nothing saved server-side (ADR-054/055).
 
 The analytics decide; a local LLM (optional) only narrates. `python app.py refresh` updates the data.
 """

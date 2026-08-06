@@ -95,9 +95,12 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 - 🕓 A **"trends"** `ask`/`chat` intent — most transferred in/out, biggest price risers, in-form.
   **Deferred to nearer GW1** (its momentum questions are 0 in preseason).
 
-**Tier 2 — external sentiment (optional, later; degrade gracefully like ClubElo, ADR-010/021).**
-- ⬜ FPL **Scout** news / picks (the `scout_news_link` is already in the payload).
-- ⬜ Reddit **r/FPL** aggregate sentiment (Reddit API). X/Twitter (paid/restricted — likely skip).
+**Tier 2 — external / extended signals (started Sprint 064, ADR-058; degrade gracefully like ClubElo).**
+- ✅ FPL official **news lens** — the stored `player.news` + `scout_news_link` on a **News** page
+  (Sprint 064, US-190).
+- ✅ **Import your team by manager-ID** — the public FPL entry API → the session active squad (Sprint 064,
+  US-191; picks GW1-gated → live 2026-08-21).
+- ⬜ Reddit **r/FPL** aggregate sentiment (Reddit API + a Cloud secret). X/Twitter (paid/restricted — skip).
 - ⬜ Pundit / video NLP — LLM-summarise FPL YouTube / articles into structured signals (research-heavy).
 
 **Tier 3 — evaluation (before trusting any of it).**

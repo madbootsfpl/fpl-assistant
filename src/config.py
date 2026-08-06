@@ -20,6 +20,12 @@ FIXTURES_PATH = "/fixtures/"
 # `history_past` (past-season summaries). `{}` is the per-season element id.
 ELEMENT_SUMMARY_PATH = "/element-summary/{}/"
 
+# A manager's public entry (Sprint 064, ADR-058): metadata (name, current_event) and their squad picks for
+# a gameweek. Picks are **public only after that gameweek's deadline** (404 before) — GW1 = 2026-08-21.
+# `{}` is the manager (entry) id; the picks path takes (entry_id, gameweek).
+ENTRY_PATH = "/entry/{}/"
+ENTRY_PICKS_PATH = "/entry/{}/event/{}/picks/"
+
 # Seconds to wait between element-summary calls during a history backfill (ADR-027).
 # A full backfill is one call per player (~567), so we throttle to respect rate limits
 # (~0.3s ≈ a few minutes). It's a fetch-once-per-season job, kept out of `refresh`.

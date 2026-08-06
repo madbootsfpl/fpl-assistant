@@ -11,6 +11,7 @@ import json
 import streamlit as st
 
 from src.analytics import squad_15_issues
+from src.manager import fetch_manager_team
 from src.squads import SquadStore
 from src.storage import Storage
 
@@ -162,3 +163,23 @@ def render_sidebar() -> None:
                 set_active_squad(squad)
                 st.session_state[_UPLOAD_APPLIED] = uploaded.file_id
                 st.success(f"Loaded **{squad['name']}** ({len(squad['player_ids'])} players).")
+
+        # Import your real FPL team by manager-ID (ADR-058) — sets the session active squad (no server
+        # write). Picks are public only after the GW1 deadline; degrades with a clear message until then.
+        st.caption("— or import your FPL team —")
+        manager_id = st.text_input("FPL manager-ID", key="manager_id", placeholder="e.g. 1234567")
+        if st.button("Import team") and manager_id.strip():
+            if not manager_id.strip().isdigit():
+                st.error("The manager-ID should be a number (find it in your FPL team URL).")
+            else:
+                store = Storage()
+                try:
+                    players = store.get_players()
+                finally:
+                    store.close()
+                squad, message = fetch_manager_team(int(manager_id.strip()), players)
+                if squad:
+                    set_active_squad(squad)
+                    st.success(message)
+                else:
+                    st.info(message)

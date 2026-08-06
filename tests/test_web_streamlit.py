@@ -94,6 +94,13 @@ def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     assert not at.exception
 
 
+def test_sidebar_offers_the_import_team_control():
+    # US-191 / ADR-058: the sidebar (on squad pages) has a manager-ID input + an Import team button
+    at = _run(_PAGES / "8_My_Squad.py")
+    assert any(t.label == "FPL manager-ID" for t in at.text_input)
+    assert any(b.label == "Import team" for b in at.button)
+
+
 def test_transfer_page_apply_mutates_the_session_squad():
     # US-173: applying a suggested swap edits the active squad in session_state (no server write)
     at = _run(_PAGES / "5_Transfer.py")

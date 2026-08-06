@@ -78,6 +78,14 @@ class FplClient:
         """Fetch the fixtures payload (all matches)."""
         return self._get_json(config.FIXTURES_PATH)
 
+    def get_entry(self, entry_id: int) -> dict:
+        """A manager's public entry metadata (name, `current_event`, overall rank) — Sprint 064/ADR-058."""
+        return self._get_json(config.ENTRY_PATH.format(entry_id))
+
+    def get_entry_picks(self, entry_id: int, gameweek: int) -> dict:
+        """A manager's squad picks for `gameweek` (public **after** that GW's deadline; 404 before)."""
+        return self._get_json(config.ENTRY_PICKS_PATH.format(entry_id, gameweek))
+
     def get_element_summary(self, element_id: int) -> dict:
         """Fetch one player's element-summary (ADR-027).
 
