@@ -24,6 +24,21 @@ if _active:
 if "history" not in st.session_state:
     st.session_state.history = []          # [(question, rendered_answer), …]
 
+# A few starter prompts so a new user knows what to type (US-227). Copy one into the box below.
+# Expanded until the first question, then it folds away so it doesn't crowd the conversation.
+with st.expander("💡 Example questions — copy one into the box below",
+                 expanded=not st.session_state.history):
+    st.code(
+        "what should I do this week for my-team?\n"
+        "who should I captain from my-team?\n"
+        "best differential midfielders under £8m\n"
+        "is Haaland worth the money?\n"
+        "what transfer should I make for my-team?\n"
+        "which of my-team's teams have the best fixtures?\n"
+        "when does Arsenal play next?",
+        language=None,
+    )
+
 # Replay the conversation so far.
 for question, answer in st.session_state.history:
     st.chat_message("user").write(question)

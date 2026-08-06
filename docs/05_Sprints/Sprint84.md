@@ -48,7 +48,7 @@ example prompts so a new user knows what to type.
 - [x] **US-226 (rename This week → AI Tips)** — the Squads segmented control shows **AI Tips** (was This
       week); the dispatch, help text, Help-tab copy, and tests/docs updated. The engine (the grounded
       gameweek plan, ADR-070) is unchanged.
-- [ ] **US-227 (Ask examples)** — a few copy-paste **example prompts** on the Ask page (incl. a gameweek /
+- [x] **US-227 (Ask examples)** — a few copy-paste **example prompts** on the Ask page (incl. a gameweek /
       squad / value example), so a new user has a starting point. Static content; no server writes.
 - [ ] **No drift** — the rating helper (ADR-071), the gameweek plan (ADR-070), and the analytics are
       otherwise unchanged; existing **612** stay green; ruff clean.
@@ -62,7 +62,7 @@ example prompts so a new user knows what to type.
 |---|---|---|---|---|
 | US-225 | **Fix the xG-board rating** — rate xGI only for outfield players ≥900 mins (pool = those players); blank — for GKs / low-minutes; rename the column "xGI rating" and move it beside xGI. ADR-073 (refines ADR-071). | High | ✅ Done | ~½ session |
 | US-226 | **Rename This week → AI Tips** — the Squads segmented-control label (+ dispatch, help, Help copy, tests, docs). Engine unchanged. | Medium | ✅ Done | ~¼ session |
-| US-227 | **Ask example prompts** — a few copy-paste examples on the Ask page. | Medium | ⬜ To do | ~¼ session |
+| US-227 | **Ask example prompts** — a few copy-paste examples on the Ask page. | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -121,6 +121,12 @@ fixed. The engine (the grounded gameweek plan, ADR-070) is unchanged — the pla
 "This week — squad X" (it *is* this gameweek's plan) and the NL Ask example keeps its phrasing. Tests
 updated (`test_squads_ai_tips_view_renders_a_gameweek_plan`; the Help test now asserts "AI Tips"). ruff
 clean, full suite **612** green.
+
+**US-227 (Ask example prompts).** Added an `st.expander("💡 Example questions — copy one into the box
+below")` to `pages/4_Ask.py` with an `st.code` list of 7 copy-paste prompts (gameweek · captain · differential
+· value · transfer · squad-fixtures · fixtures). Expanded until the first question, then it folds away so it
+doesn't crowd the chat. Static (an expander + `st.code`) — no input widgets, no server writes. +1 test
+(`test_ask_page_shows_example_prompts`). ruff clean, full suite **613** green.
 
 ---
 

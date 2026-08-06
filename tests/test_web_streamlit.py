@@ -509,6 +509,14 @@ def test_news_page_lists_flagged_players_or_all_clear():
         assert at.success or at.info                       # "no current news" (or the run-refresh note)
 
 
+def test_ask_page_shows_example_prompts():
+    # US-227: the Ask page lists a few copy-paste example questions so a new user has a starting point
+    at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
+    assert not at.exception
+    codes = " ".join(c.value for c in at.code)
+    assert "best differential midfielders" in codes and "this week for my-team" in codes
+
+
 def test_ask_chat_answers_a_grounded_question():
     at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
     assert not at.exception
