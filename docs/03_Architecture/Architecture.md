@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 070 (2026-08-06)** — *Differentials / value `ask` intent*, per **ADR-061** — two natural-language
+  lenses over the unified xP + ownership, grounded + verified (ADR-037), by **reusing** the shortlist, the
+  compare matcher, and `DIFFERENTIAL_OWN`. (1) A **differential** filter on the shortlist (`_shortlist_query`
+  parses a differential cue; `_decide_shortlist` keeps ≤5%-owned, 0% included; `render_shortlist(show_own=…)`
+  adds an **Own%** column — the plain shortlist stays byte-identical). (2) A single-player **`worth`** intent
+  (`_decide_worth`): match one player, compute **xP/£m**, rank it among available same-position players, take
+  the **position median**, and a tiered fact-derived **verdict**; degrades on ambiguous/absent/flagged.
+  Routing precedence: `worth` before transfer ("worth buying" ≠ "buy"), "differentials"→shortlist, "most
+  owned"→trends. Preseason-honest (ownership sharpens at GW1). No new data/deps. 556 tests.
 - **Sprint 069 (2026-08-06)** — *Data Hardening prep*, per **ADR-060** — the first season-start foundations,
   built **wired but dormant** so **GW1 (2026-08-21)** is a switch-flip. (1) A per-GW `player_history` table
   (`src/models/player_gameweek.py` `PlayerGameweek`, keyed `code+round`; additive/idempotent) filled by the

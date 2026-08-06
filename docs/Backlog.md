@@ -20,9 +20,12 @@ nice-to-haves and tech-debt.)*
   **ADR-035**: `transfer --count N`, shared bank, no repeats) and it now ranks by **XI improvement**
   (Sprint 046, ADR-046). Still open: the **−4-hit vs roll / banking** maths and chip-aware sequencing —
   a bigger optimisation (wants the real bank + xMins) → Roadmap *Later*.
-- **Differentials / value `ask` intent** — extend the shortlist with ownership + points-per-£m lenses
-  ("best differentials", "is X worth the money?"). Reuses `selected_by` (ADR-044) + value; overlaps the
-  existing shortlist a little. A live Phase-4 option.
+- ~~**Differentials / value `ask` intent**~~ — **DONE** (Sprint 070, US-198/199, **ADR-061**). A
+  **differential** lens on the shortlist (`ask "best differential <pos> under £Xm"`, ≤5% owned, +Own%) + a
+  single-player **`worth`** verdict (`ask "is X worth the money?"` → xP/£m · rank among position peers · vs
+  the position median · a tiered verdict). Grounded; the plain shortlist stays byte-identical. *(Value
+  (xP/£m) already existed on the shortlist, ADR-042; this added the ownership lens + the single-player
+  judgment.)* The differential filter sharpens at GW1 as ownership concentrates.
 - **Persisted / pronoun-aware chat** — `chat` (Sprint 047, ADR-047) holds the last turn in memory only.
   A later step: resolve pronouns ("is **he** worth captaining?") and/or persist context across runs.
 - **Team-level squad-fixtures view** — the alternative lens deferred at Sprint 049 (ADR-049): rank a

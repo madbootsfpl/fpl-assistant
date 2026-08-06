@@ -21,6 +21,7 @@ from src.ask import (
     _captain_facts,
     _decide_compare,
     _decide_shortlist,
+    _decide_worth,
     _lineup_change,
     _match_players,
     _plan_facts,
@@ -29,6 +30,7 @@ from src.ask import (
     _swap_position,
     _transfer_count,
     _transfer_facts,
+    _value_verdict,
     assemble,
     converse,
     detect_followup,
@@ -280,6 +282,73 @@ def test_render_shortlist_show_own_adds_ownership_column():
     out = render_shortlist([_row("Diff", 6.0, 18.0, 0.9, 2.5)],
                            "Best differential MID — by expected points (xP)", show_own=True)
     assert "Own%" in out and "2.5" in out             # the ownership column + value
+
+
+# ---- worth intent (ADR-061) — single-player value verdict -------------------
+
+def test_routes_worth_before_transfer_and_captain():
+    # ADR-061: a single-player value question → `worth`, not transfer ("buy") or captain
+    assert route("is Haaland worth the money?", known_squads=[])[0] == "worth"
+    assert route("is Palmer worth buying?", known_squads=[])[0] == "worth"        # not transfer via "buy"
+    assert route("is Saka good value?", known_squads=[])[0] == "worth"
+    assert route("is Haaland worth captaining?", known_squads=[])[0] == "captain"  # value phrases only
+
+
+def test_value_verdict_tiers():
+    assert _value_verdict(1.5) == "good value"
+    assert _value_verdict(1.0) == "fair value"
+    assert _value_verdict(0.5) == "pricey for the output"
+
+
+def _worth_store(players):
+    return types.SimpleNamespace(
+        get_players=lambda: players,
+        get_upcoming_fixtures=lambda: [
+            {"event": 1, "team_h": 1, "team_a": 2, "home": "ARS", "away": "BUR",
+             "team_h_difficulty": 3, "team_a_difficulty": 3,
+             "home_team_strength": None, "away_team_strength": None}],
+        get_history_by_code=lambda: {},
+        get_gw_history_by_code=lambda: {},
+    )
+
+
+def _worth_player(name, ppg, price, pid, code, status="a"):
+    # neutral fixture (difficulty 3) → xp == ppg, so value == ppg / price
+    return {"id": pid, "code": code, "web_name": name, "position": "MID", "price": price,
+            "status": status, "chance": None, "team": "ARS", "team_id": 1,
+            "points_per_game": ppg, "ep_next": ppg, "selected_by": 3.0}
+
+
+# three MIDs: values 1.20 / 0.83 / 0.50 → median 0.83
+_WORTH_TRIO = [_worth_player("Aaa", 6.0, 5.0, 1, 1),
+               _worth_player("Bbb", 5.0, 6.0, 2, 2),
+               _worth_player("Ccc", 4.0, 8.0, 3, 3)]
+
+
+def test_decide_worth_good_value_with_rank_and_median():
+    d = _decide_worth(_worth_store(_WORTH_TRIO), "is Aaa worth the money?")
+    assert d["facts"]["verdict"] == "good value"          # 1.20 / 0.83 = 1.44 ≥ 1.15
+    assert d["facts"]["position_rank_by_value"] == "1 of 3 MIDs"
+    assert d["facts"]["value"] == "1.20 xP per £m"
+    assert "0.83" in d["facts"]["position_median_value"]
+    assert d["subjects"] == ["Aaa"]
+
+
+def test_decide_worth_pricey_for_expensive_low_output():
+    d = _decide_worth(_worth_store(_WORTH_TRIO), "is Ccc good value?")
+    assert d["facts"]["verdict"] == "pricey for the output"   # 0.50 / 0.83 = 0.60 < 0.9
+    assert d["facts"]["position_rank_by_value"] == "3 of 3 MIDs"
+
+
+def test_decide_worth_degrades_without_a_player():
+    d = _decide_worth(_worth_store(_WORTH_TRIO), "is it worth the money?")
+    assert "Name a player" in d["message"]
+
+
+def test_decide_worth_degrades_on_a_flagged_player():
+    injured = [_worth_player("Zzz", 6.0, 5.0, 9, 9, status="i")]
+    d = _decide_worth(_worth_store(injured), "is Zzz worth the money?")
+    assert "flagged" in d["message"]
 
 
 def test_squad_matched_by_name_regardless_of_phrasing():

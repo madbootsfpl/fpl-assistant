@@ -11,6 +11,7 @@ This sprint (US-096) wires the `captain` intent; transfer + analyse follow in US
 
 import json
 import re
+import statistics
 from dataclasses import dataclass, replace
 
 from src import llm
@@ -55,6 +56,10 @@ _INTENT_KEYWORDS = {
     # trends first: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
     "trends": ("trending", "most owned", "most picked", "most transferred", "most sold", "most bought",
                "in form", "risers", "fallers", "bandwagon", "most popular"),
+    # worth (a single-player value verdict, ADR-061) before captain/transfer so "worth buying" isn't
+    # caught by "buy"; the phrases are value-specific, so "worth captaining" still falls to captain.
+    "worth": ("worth the money", "worth it", "good value", "value for money", "worth buying",
+              "worth the price", "worth the cost"),
     "captain": ("captain", "armband"),
     "transfer": ("transfer", "sell", "buy", "swap"),
     "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
@@ -78,8 +83,9 @@ _RULES = (
 
 _FALLBACK = (
     "I can answer about captaincy, transfers, your squad's health, your lineup, comparing players, "
-    'building a squad, or the best players in a position. Try: ask "who should I captain from '
-    '<squad>?", ask "build me a squad for £100m", or ask "best midfielders under £8m".'
+    "building a squad, the best players in a position (incl. differentials), or whether a player is "
+    'worth the money. Try: ask "who should I captain from <squad>?", ask "best differential '
+    'midfielders under £8m", or ask "is Haaland worth the money?".'
 )
 
 _NUDGE = (   # a follow-up ("why?", "and the next?") arrived before any question to build on (ADR-047)
@@ -715,6 +721,78 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
     }
 
 
+# ---- worth intent (ADR-061) — a single-player value verdict ("is X worth the money?") --------------
+
+_WORTH_GOOD = 1.15   # value ≥ this × the position median → "good value"
+_WORTH_FAIR = 0.90   # value ≥ this × median → "fair value"; below → "pricey for the output"
+
+
+def _value_verdict(ratio: float) -> str:
+    """A fact-derived verdict tier from value ÷ the position-median value (ADR-061)."""
+    if ratio >= _WORTH_GOOD:
+        return "good value"
+    if ratio >= _WORTH_FAIR:
+        return "fair value"
+    return "pricey for the output"
+
+
+def _decide_worth(store: Storage, question: str) -> dict | None:
+    """Analytics DECIDE a single player's value (ADR-061): xP/£m, rank among available same-position
+    players, and how it sits vs the position median → a tiered verdict; the LLM only phrases it.
+
+    Degrades to a message on an ambiguous name, no player, or a flagged target — never a guess.
+    """
+    players = store.get_players()
+    if not players:
+        return None
+    matched = _match_players(question, players)
+    ambiguous = [wn for wn, ps in matched.items() if len(ps) > 1]
+    if ambiguous:
+        return {"message": f"More than one player called '{ambiguous[0]}' — name the team too "
+                           "so I value the right one."}
+    if not matched:
+        return {"message": 'Name a player, e.g. ask "is Haaland worth the money?".'}
+
+    target = next(iter(matched.values()))[0]        # the first named player
+    if target["status"] != "a":
+        return {"message": f"{target['web_name']} is currently flagged (injured/doubtful), so a value "
+                           "verdict wouldn't be meaningful right now."}
+
+    ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
+                         gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+
+    def _value(p):
+        return xp_by_id.get(p["id"], 0) / p["price"]
+
+    pool, _excluded = available_players(players)
+    peers = [p for p in pool if p["position"] == target["position"] and p["price"]]
+    ranked_peers = sorted(peers, key=_value, reverse=True)      # highest value per £m first
+    median = statistics.median([_value(p) for p in peers]) if peers else 0.0
+    tval = xp_by_id.get(target["id"], 0) / target["price"] if target["price"] else 0.0
+    rank = next((i for i, p in enumerate(ranked_peers, start=1) if p["id"] == target["id"]), None)
+    ratio = tval / median if median else 0.0
+    verdict = _value_verdict(ratio)
+
+    pos = target["position"]
+    rank_str = f"{rank} of {len(peers)} {pos}s" if rank else f"unranked among {pos}s"
+    return {
+        "headline": f"{target['web_name']} (£{target['price']}m): {verdict} — {tval:.2f} xP/£m, "
+                    f"{rank_str} by value; {pos} median {median:.2f}",
+        "facts": {
+            "player": f"{target['web_name']} ({target['team']}, {pos}, £{target['price']}m)",
+            "expected_points": f"xP {xp_by_id.get(target['id'], 0)} over the next {_HORIZON} GW",
+            "value": f"{tval:.2f} xP per £m",
+            "position_rank_by_value": rank_str,
+            "position_median_value": f"{median:.2f} xP per £m",
+            "verdict": verdict,
+        },
+        "subjects": [target["web_name"]],
+        "task": f"in 1-2 short sentences, say whether {target['web_name']} is worth the money, "
+                "citing the value and the rank",
+    }
+
+
 # ---- trends intent (Sprint 067, ADR-057) — community "trending" from free FPL crowd data -----------
 
 _TREND_N = 8   # how many players a trending board shows
@@ -1004,6 +1082,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_build_squad(store, question)
     if intent == "shortlist":
         return _decide_shortlist(store, question, rank=rank)
+    if intent == "worth":
+        return _decide_worth(store, question)
     if intent == "trends":
         return _decide_trends(store, question)
     if intent == "fixtures":

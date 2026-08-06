@@ -45,15 +45,15 @@ reusing the unified xP + the existing ownership/value analytics:
 - [x] **US-198** — `_shortlist_query` also parses a **differential** cue; `_decide_shortlist` filters to
       `selected_by ≤ DIFFERENTIAL_OWN`; `render_shortlist` shows **Own%** (differential mode); routes in
       `ask` **and** `chat`; paging ("who else?") still works; grounded facts include ownership
-- [ ] **US-199** — a `_decide_worth` handler: match a player, compute xP/£m, **rank among available
+- [x] **US-199** — a `_decide_worth` handler: match a player, compute xP/£m, **rank among available
       same-position players** + the **position median**, and a tiered **verdict** (above / near / below);
-      degrades to a helpful message when no player is matched
-- [ ] **Routing** — "differentials" → shortlist (not trends); "worth …" / "good value" / "value for money"
-      → the value intent (not the "best value" shortlist); precedence tested
-- [ ] **Grounded** — every number in the narration traces to the facts (the ✓/⚠ trust line, ADR-037);
+      degrades to a helpful message when no player is matched (or flagged/ambiguous)
+- [x] **Routing** — "differentials" → shortlist (not trends); "worth …" / "good value" / "value for money"
+      → the value intent (not the "best value" shortlist, not transfer via "buy"); precedence tested
+- [x] **Grounded** — every number in the narration traces to the facts (the ✓/⚠ trust line, ADR-037);
       analytics decide, the LLM only narrates
-- [ ] Tests green (existing **546** stay green; + query-parse, filter, verdict-tiers, routing, no-match)
-- [ ] Docs: ADR-061 + index, Architecture, Roadmap/Backlog, PROJECT_STATUS, README (ask examples)
+- [x] Tests green (existing stay green; + query-parse, filter, verdict-tiers, routing, no-match) — **556**
+- [ ] Docs: ADR-061 + index ✅; Architecture, Roadmap/Backlog, PROJECT_STATUS, README _(at the retro)_
 
 ---
 
@@ -62,7 +62,7 @@ reusing the unified xP + the existing ownership/value analytics:
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-198 | **Differential shortlist lens** — "best differentials [position] [under £X]": filter the shortlist to ≤`DIFFERENTIAL_OWN` owned, xP- (or value-) ranked, +Own% column; ask + chat. ADR-061. | High | ✅ Done | ~1 session |
-| US-199 | **Single-player value verdict** — "is X worth the money?": one player's xP/£m + rank among position peers + vs the position median + a tiered verdict; grounded, degrades on no match. ADR-061. | High | ⬜ To do | ~1 session |
+| US-199 | **Single-player value verdict** — "is X worth the money?": one player's xP/£m + rank among position peers + vs the position median + a tiered verdict; grounded, degrades on no match. ADR-061. | High | ✅ Done | ~1 session |
 
 ---
 
@@ -116,8 +116,37 @@ guess). Grounded: the verdict word is derived from the facts, the LLM only phras
   trust line; `ask "best forwards"` shows **no** Own% column. 550 tests green, ruff clean. _Cross-cutting
   docs (Architecture / PROJECT_STATUS / README / Backlog) batched to the sprint close after US-199._
 
+- **US-199 ✅ (build)** — A new **`worth`** intent (keywords `worth the money` / `worth it` / `good value` /
+  `value for money` / `worth buying` …), placed **before captain/transfer** so "worth buying" isn't caught
+  by "buy" (the phrases are value-specific, so "worth captaining" still routes to captain). `_decide_worth`
+  reuses the compare **player-matcher**: matches one player, computes **xP/£m** (unified xP), ranks it among
+  **available same-position** players, takes the **position median**, and a tiered **`_value_verdict`**
+  (`≥1.15×` → good · `≥0.9×` → fair · else pricey) — the verdict is fact-derived, the LLM only phrases it.
+  Degrades on an ambiguous name, no player, or a **flagged** target. Wired into `_dispatch`; `_FALLBACK`
+  updated. Tests (+6): routing precedence (worth vs transfer/captain), the verdict tiers, the rank + median
+  + value facts (good-value + pricey cases), and the two degrade paths. **Bug caught in smoke:** sorting
+  `(value, row)` tuples crashed on a value tie (rows aren't orderable) → switched to a `key=` sort. **Smoke
+  (real DB):** *is Haaland worth the money?* → "good value — 1.87 xP/£m, 19 of 61 FWDs; median 1.00";
+  *is Stach good value?* → "good value — 3.07 xP/£m, 3 of 231 MIDs; median 1.11" — grounded, ✓ trust line;
+  "is it worth the money?" → "Name a player". 556 tests green, ruff clean.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — both lenses shipped, grounded + verified, by **reusing** the shortlist, the one
+xP, the `DIFFERENTIAL_OWN` threshold, and the compare player-matcher. No new data, no new dependency; the
+plain shortlist and every other intent are byte-unchanged.
+
+**What went well** — verifying on **real data first** confirmed the differential shortlist returns genuinely
+useful picks *and* surfaced the honest preseason caveat (ownership is flat, so the filter is weakly
+discriminating now and sharpens at GW1 — captioned, not hidden). Threading `show_own` into the renderer kept
+the plain shortlist byte-identical (a test pins it). Placing `worth` **before** transfer stopped "worth
+buying" leaking into the "buy" intent — a small routing-precedence call that a test now guards.
+
+**What to watch** — the differential lens only bites once ownership concentrates (GW1); the value verdict's
+tier thresholds (1.15× / 0.9× the median) are a reasonable first cut worth revisiting once real form moves
+prices. The **smoke caught a real bug** the unit tests missed — sorting `(value, row)` tuples crashes on a
+value *tie* (rows aren't orderable) — a reminder that the manual smoke earns its place in the DoD.
+
+**Lessons captured:** `docs/05_Sprints/Sprint70_Lessons_Learnt.md`.
