@@ -42,11 +42,12 @@ and document the revised decisions — with **no behaviour or output change** (t
 - [x] **US-211 (PuLP tidy)** — `problem.add_variable(...)` for `pick`/`start`; the blanket
       `simplefilter("ignore", DeprecationWarning)` → `filterwarnings("ignore", message=".*PULP_CBC_CMD.*")`
       (so other deprecations surface); optimiser results **identical** (65 tests green, no warning leak)
-- [ ] **US-212 (squad renderer de-dup)** — extract the shared **header/divider** builder + the **"Bench:"
+- [x] **US-212 (squad renderer de-dup)** — extracted the shared **header** builder + the **"Bench:"
       section-heading** used by `render_squad` + `render_loaded_squad`; **byte-identical output** (the 19
-      render assertions pin it); `render_rows` fold **closed with a rationale** in the Backlog
-- [ ] **No behaviour/output change** — existing **580** stay green; ruff clean
-- [ ] Docs: ADR-066 + index, Architecture, PROJECT_STATUS, Backlog (both items resolved/closed)
+      render assertions pin it); the divider/rows stay per-renderer; `render_rows` fold **closed with a
+      rationale** in the Backlog
+- [x] **No behaviour/output change** — existing **580** stay green; ruff clean
+- [ ] Docs: ADR-066 + index ✅, Backlog ✅; Architecture, PROJECT_STATUS _(at the retro)_
 
 ---
 
@@ -55,7 +56,7 @@ and document the revised decisions — with **no behaviour or output change** (t
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-211 | **PuLP API tidy** — `LpVariable`→`add_variable`; keep `PULP_CBC_CMD` (COIN_CMD needs external CBC); narrow the warning suppression to the one remaining deprecation. ADR-066. | High | ✅ Done | ~½ session |
-| US-212 | **Squad renderer de-dup** — a shared header/divider + bench-heading for `render_squad`/`render_loaded_squad` (byte-identical); close the `render_rows`-fold idea with a rationale. ADR-066. | Medium | ⬜ To do | ~½ session |
+| US-212 | **Squad renderer de-dup** — a shared header + bench-heading for `render_squad`/`render_loaded_squad` (byte-identical); close the `render_rows`-fold idea with a rationale. ADR-066. | Medium | ✅ Done | ~½ session |
 
 ---
 
@@ -99,6 +100,16 @@ mismatch — mid-table heading, glued markers, divergent price cells; would chan
   green, ruff clean. **Smoke (real DB):** a 15-man build is Optimal (£100.0m, 15 picked) with **no
   DeprecationWarning leaking** to the caller; `squad --full` renders normally. _US-212 (squad renderer
   de-dup) next._
+
+- **US-212 ✅ (build)** — In `ui/squad.py`, extracted the byte-safe shared pieces: `_header(value_head)`
+  (the Pos/Player/Team/Price + value column header, identical in both renderers) and `_BENCH_HEADING`
+  (the `["", "Bench:"]` insert). `render_squad` and `render_loaded_squad` now call them; their **dividers
+  and row bodies stay per-renderer** (they legitimately differ — a solid rule vs per-column dashes; an
+  unpadded `£X.Xm` vs a width-6 padded price). **Closed the `render_rows` fold** with a rationale in
+  `docs/Backlog.md`: its flat single-space join can't reproduce the mid-table "Bench:" heading, the glued
+  `**`/`*` markers, or the divergent price cells byte-for-byte. **Output byte-identical** — the 77
+  optimizer + analyse tests (incl. the 19 render assertions) pass **unchanged**; 580 green, ruff clean. No
+  behaviour/output change.
 
 ---
 

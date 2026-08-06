@@ -40,6 +40,19 @@ def formation_str(players) -> str:
     return f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
 
 
+# Shared by both squad renderers (ADR-066): the Pos/Player/Team/Price + value column header, and the
+# blank-line + "Bench:" label inserted before the bench rows. The *divider* and the *row bodies* stay
+# per-renderer — they legitimately differ (a solid rule vs per-column dashes; an unpadded £X.Xm vs a
+# padded price), so folding into ui/_table.py's `render_rows` isn't byte-identical-feasible (see Backlog).
+_BENCH_HEADING = ["", "Bench:"]
+
+
+def _header(value_head: str) -> str:
+    """The shared header line: fixed Pos/Player/Team/Price columns + a view-supplied `value_head`."""
+    return (f"{'Pos':<{_POS_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
+            f"{'Price':>{_PRICE_W}} {value_head}")
+
+
 def render_loaded_squad(name, saved, loaded, now_cost, departed) -> str:
     """Render a reloaded saved squad (ADR-024): the picks re-priced + availability + departed.
 
@@ -50,15 +63,12 @@ def render_loaded_squad(name, saved, loaded, now_cost, departed) -> str:
     lines = [f"Squad '{name}' — saved {saved.get('saved_at', '?')}", ""]
 
     if loaded:
-        header = (
-            f"{'Pos':<{_POS_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
-            f"{'Price':>{_PRICE_W}} {'Pts':>{_PTS_W}}"
-        )
-        lines += [header, "-" * len(header)]
+        header = _header(f"{'Pts':>{_PTS_W}}")
+        lines += [header, "-" * len(header)]        # loaded uses a solid rule (per-renderer, ADR-066)
         bench_started = False
         for p in loaded:
             if p.get("bench") and not bench_started:
-                lines += ["", "Bench:"]
+                lines += _BENCH_HEADING
                 bench_started = True
             marker = " **" if p.get("bench") else ""
             lines.append(
@@ -111,11 +121,8 @@ def render_squad(
         value_head = f"{'Pts':>{_PTS_W}}"
         value_rule = f"{'-' * _PTS_W}"
 
-    header = (
-        f"{'Pos':<{_POS_W}} {'Player':<{_NAME_W}} {'Team':<{_TEAM_W}} "
-        f"{'Price':>{_PRICE_W}} {value_head}"
-    )
-    divider = (
+    header = _header(value_head)
+    divider = (       # per-column dashes (per-renderer — loaded uses a solid rule, ADR-066)
         f"{'-' * _POS_W} {'-' * _NAME_W} {'-' * _TEAM_W} "
         f"{'-' * _PRICE_W} {value_rule}"
     )
@@ -139,8 +146,7 @@ def render_squad(
         is_bench = _bench(p)
         # A "Bench:" heading before the first bench row (they sort to the end).
         if is_bench and not bench_started:
-            lines.append("")
-            lines.append("Bench:")
+            lines += _BENCH_HEADING
             bench_started = True
 
         name = str(p["web_name"])[:_NAME_W]

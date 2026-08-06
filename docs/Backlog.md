@@ -112,12 +112,17 @@ Deferred below.)*
 
 ## Tech debt
 
-- **Migrate to the PuLP 4.0 API** — use `prob.add_variable(...)` / `COIN_CMD` instead of
-  `LpVariable(...)` / `PULP_CBC_CMD` (currently the 4.0 deprecation notices are
-  scope-suppressed in `src/analytics/optimizer.py`).
-- **Shared *squad* renderer** — `render_squad` / `render_loaded_squad` still duplicate a little
-  row logic. The ranking views were unified in Sprint 024 (`ui/_table.py`), but the squad views
-  are a different shape (position groups, bench, markers) and were left out — fold them in later.
+- ~~**Migrate to the PuLP 4.0 API**~~ — **DONE (partial, deliberate)** (Sprint 076, US-211, **ADR-066**).
+  Variables migrated to `problem.add_variable(...)`. **`PULP_CBC_CMD` kept** — `COIN_CMD` needs an
+  *external* CBC (`pip install pulp[cbc]`) and fails ("cannot execute cbc") here + on the read-only Cloud;
+  the bundled solver stays. The blanket `DeprecationWarning` ignore → a **targeted** PULP_CBC_CMD filter
+  (other deprecations now surface). Revisit COIN_CMD only if we adopt `pulp[cbc]` / PuLP 4.0 lands.
+- ~~**Shared *squad* renderer**~~ — **DONE (safe parts) + closed** (Sprint 076, US-212, ADR-066).
+  `render_squad` / `render_loaded_squad` now share the **header** (`_header`) + the **"Bench:" heading**
+  (`_BENCH_HEADING`). Folding into `ui/_table.py`'s `render_rows` is **not pursued** — its flat
+  single-space join can't reproduce the squad views byte-for-byte (mid-table "Bench:" heading, `**`/`*`
+  markers glued without the join space, and divergent price cells: an unpadded `£X.Xm` in `loaded` vs a
+  width-6 pad in `render_squad`). The dividers + row bodies stay per-renderer by design.
 - ~~Shared table renderer for the ranking views~~ — **DONE** (Sprint 024, `ui/_table.py`
   `Col` + `render_rows`, ADR-025). Five near-duplicate renderers → one; output byte-identical.
 
