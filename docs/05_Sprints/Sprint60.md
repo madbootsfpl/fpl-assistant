@@ -1,7 +1,7 @@
 # Sprint 060: Phase 6 kickoff — the crowd lens (Tier 1, free FPL signals)
 
-**Dates:** 2026-08-05
-**Status:** 📝 Planned
+**Dates:** 2026-08-05 – 2026-08-06
+**Status:** ✅ Complete (3/3 stories; retro done — Tier-1 remainder carried forward)
 **Capacity:** ~2–3 working sessions (a gate + ingest the crowd fields + a lens/flags surface + docs)
 **Carried Over:** None (Sprint 059 shipped; tester-feedback intake runs in parallel, async)
 
@@ -180,4 +180,34 @@ empty-safe row→flags function reused by the tables.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be completed at sprint close)_
+**Outcome:** ✅ Successful — **Phase 6 is open** and its Tier-1 foundation shipped: the free FPL crowd
+signals are ingested and surfaced as a **lens + flags**, with the grounded xP provably untouched.
+
+**Delivered**
+- **US-181 (gate) ✅** — ADR-057: crowd = a **lens + flags, never blended into xP**; Tier-1 free fields;
+  the flag set + thresholds (set on real ownership data); Tier 2/3 (external / evaluation) deferred.
+- **US-182 ✅** — ingest the 10 Tier-1 fields (model + storage `_migrate` + `refresh`); **reseeded `seed.db`**
+  so the deploy opens a matching schema (no migration write).
+- **US-183 ✅** — a pure `crowd_flags` helper (tunable thresholds, empty-safe) surfaced as Trends/Form/ICT
+  on Players + a Trends column on Build/Analyse/My Squad; a test asserts `decision_xp` is unchanged.
+
+**Verification** — 499 tests green (**+12** over the sprint), `ruff` clean. Live-data smoke: Haaland → 🟦
+template, Truffert → 💎 differential; momentum/form flags correctly absent in preseason (live at GW1). The
+xP-invariance test (mutate every crowd field → identical `decision_xp`) is the key guard.
+
+**Carried forward (Tier-1 remainder)** — Captain + Transfer flags; a **"trends"** `ask`/`chat` intent
+(most transferred in / risers / in-form); a template-risk captaincy lens. Then Tier 2 (external sentiment)
+and Tier 3 (crowd-vs-xP backtest). **GW1 (2026-08-21)** lights up the momentum/price/form flags — worth a
+quick check then.
+
+**What went well** — the investigation flipped the whole shape: most of "what managers are doing" (and some
+pundit signal) is **already free & structured in the FPL payload**, so Tier 1 needed no scraping. Framing it
+as a **lens, not an xP input** kept the grounded model intact — and made the invariant a single, decisive
+test. The reseed step pre-empted the schema-migration-on-open write that would have re-triggered the Cloud
+git-sync glitch.
+
+**What to watch** — the momentum/form thresholds (`TRENDING_NET`, `FORM_MIN`) are guesses until GW1 data
+exists — calibrate them once real transfers land. The flags currently show on Players + three squad tabs;
+Captain/Transfer/`ask` are still text-only for crowd signals.
+
+**Lessons captured:** `docs/05_Sprints/Sprint60_Lessons_Learnt.md`.
