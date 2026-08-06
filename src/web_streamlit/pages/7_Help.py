@@ -93,8 +93,11 @@ with st.expander("7 · Save your team  →  Download, upload, or import by manag
 
 st.divider()
 st.markdown(
-    "**Good to know.** The *Data as of …* caption on each tab shows how fresh the data is. It's "
-    "**preseason** now — ownership works, but **transfer momentum, in-season form and live picks light up "
-    "at GW1 (2026-08-21)**. Crowd signals are a **lens, not truth**: the analytics decide, the crowd is "
-    "context. New here? The **Home** tab has the one-screen overview."
+    "**Good to know.** The *N players · data as of …* caption on each tab shows how fresh the data is (the "
+    "player count makes a stale snapshot obvious). This hosted app serves a **committed snapshot** — it "
+    "updates when the app is redeployed, not when you refresh your own CLI. Running it **locally**, the "
+    "sidebar **🔄 Refresh data** button pulls the latest FPL data on the spot. It's **preseason** now — "
+    "ownership works, but **transfer momentum, in-season form and live picks light up at GW1 "
+    "(2026-08-21)**. Crowd signals are a **lens, not truth**: the analytics decide, the crowd is context. "
+    "New here? The **Home** tab has the one-screen overview."
 )

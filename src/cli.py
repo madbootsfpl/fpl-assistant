@@ -9,6 +9,7 @@ See ADR-003 for why this is argparse + subcommands.
 """
 
 import argparse
+import shutil
 
 from src import ask, config, ingest
 from src.analytics import (
@@ -83,6 +84,31 @@ def cmd_refresh(args) -> None:
         print(f"Could not refresh FPL data: {exc}")
     finally:
         store.close()
+
+
+def cmd_reseed(args) -> None:
+    """Refresh the live cache, then copy it to the committed seed so the deployed app can be updated.
+
+    The one-command version of the documented deploy workflow (ADR-053): `refresh` into the live
+    cache (fpl.db), then copy fpl.db → seed.db. The **cloud** serves the committed seed, so updating
+    the live app is: `reseed` → commit → push → reboot. A **local** run never needs this — the sidebar
+    🔄 button (or a restart after `refresh`) reads fpl.db directly.
+    """
+    store = Storage(db_path=config.LIVE_DB_PATH)
+    try:
+        n_players, n_teams, n_fixtures, _ = ingest.refresh(store)
+    except FplApiError as exc:
+        print(f"Could not refresh FPL data: {exc}")
+        return
+    finally:
+        store.close()   # flush + unlock before copying the file
+
+    shutil.copyfile(config.LIVE_DB_PATH, config.SEED_DB_PATH)
+    print(
+        f"Refreshed {n_players} players, {n_teams} teams, {n_fixtures} fixtures into "
+        f"{config.LIVE_DB_PATH} and copied it to {config.SEED_DB_PATH}.\n"
+        "To update the live app: commit + push (Community Cloud auto-redeploys, or Reboot it)."
+    )
 
 
 def cmd_history(args) -> None:
@@ -656,6 +682,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Examples:\n"
             "  python app.py refresh\n"
+            "  python app.py reseed                       refresh + update the deployed app's seed\n"
             "  python app.py table --sort value          rank players by value (points per £m)\n"
             "  python app.py search haaland\n"
             "  python app.py filter --pos DEF --max-price 6\n"
@@ -681,6 +708,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Fetch the latest FPL data (players, teams, fixtures) and store it locally",
     )
     p_refresh.set_defaults(handler=cmd_refresh)
+
+    p_reseed = sub.add_parser(
+        "reseed",
+        help="Refresh the live cache and copy it to the committed seed (updates the deployed app)",
+    )
+    p_reseed.set_defaults(handler=cmd_reseed)
 
     p_history = sub.add_parser(
         "history", help="Backfill past-season player history (once per season)"

@@ -78,7 +78,10 @@ USER_AGENT = "fpl-assistant/0.1 (learning project)"
 # snapshot** (seed.db) — so the app still has data to show (ADR-053). `SEED_DB_PATH` is named so the web
 # can tell "read-only demo (seed)" from "a live cache" (ADR-056 — the local-only refresh).
 SEED_DB_PATH = "data/seed.db"
-DB_PATH = "data/fpl.db" if os.path.exists("data/fpl.db") else SEED_DB_PATH
+# The live cache written by `refresh` (gitignored). Named so `reseed` can target it explicitly —
+# even when it doesn't exist yet and DB_PATH has fallen back to the seed.
+LIVE_DB_PATH = "data/fpl.db"
+DB_PATH = LIVE_DB_PATH if os.path.exists(LIVE_DB_PATH) else SEED_DB_PATH
 
 # FPL encodes a player's position as element_type 1-4. We store a readable
 # label instead of the magic number (mapped once, at ingestion).

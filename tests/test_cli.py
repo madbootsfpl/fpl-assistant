@@ -14,6 +14,7 @@ from src.cli import (
     cmd_fdr,
     cmd_filter,
     cmd_fixtures,
+    cmd_reseed,
     cmd_search,
     cmd_squad,
     cmd_table,
@@ -28,6 +29,28 @@ from src.cli import (
 def test_chat_command_parses_with_no_args():
     args = build_parser().parse_args(["chat"])       # an interactive REPL — no positional/flags
     assert args.command == "chat" and args.handler is cmd_chat
+
+
+def test_reseed_command_routes_to_its_handler():
+    args = build_parser().parse_args(["reseed"])     # no args — refresh + copy to the seed
+    assert args.command == "reseed" and args.handler is cmd_reseed
+
+
+def test_reseed_refreshes_the_live_cache_then_copies_it_to_the_seed(tmp_path, monkeypatch, capsys):
+    # US-219: `reseed` = refresh into fpl.db, then copy fpl.db → seed.db (the one-command deploy update).
+    from src import cli, config
+
+    live, seed = tmp_path / "fpl.db", tmp_path / "seed.db"
+    monkeypatch.setattr(config, "LIVE_DB_PATH", str(live))
+    monkeypatch.setattr(config, "SEED_DB_PATH", str(seed))
+    # Stub the network refresh — Storage(live) has already created the live file; return counts.
+    monkeypatch.setattr(cli.ingest, "refresh", lambda store: (570, 20, 380, 20))
+
+    cli.cmd_reseed(None)
+
+    assert live.exists() and seed.exists()                       # the seed is a copy of the fresh cache
+    out = capsys.readouterr().out
+    assert "570 players" in out and "commit" in out.lower()      # counts + the push-to-update reminder
 
 
 def test_table_command_defaults_to_limit_20():

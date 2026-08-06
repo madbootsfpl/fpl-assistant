@@ -504,11 +504,28 @@ def test_runner_module_points_at_the_app():
 
 
 def test_data_freshness_caption_on_every_tab(monkeypatch):
-    # US-180/ADR-056: the "Data as of <date>" caption renders in both modes, on every page
+    # US-180/ADR-056: the "… data as of <date>" caption renders in both modes, on every page.
+    # US-219: it now leads with the player count so a stale snapshot is obvious.
     monkeypatch.delenv("FPL_LOCAL", raising=False)
     for page in (_APP, _PAGES / "1_Players.py", _PAGES / "3_Squads.py"):
         at = _run(page)
-        assert any("Data as of" in c.value for c in at.caption), f"{page} should show a freshness caption"
+        assert any("data as of" in c.value for c in at.caption), f"{page} should show a freshness caption"
+        assert any("players · data as of" in c.value for c in at.caption), \
+            f"{page} freshness caption should show the player count (US-219)"
+
+
+def test_cloud_shows_a_snapshot_note_local_does_not(monkeypatch):
+    # US-219: the read-only cloud (no FPL_LOCAL) notes it's a snapshot; a local run doesn't.
+    from src import config
+
+    monkeypatch.delenv("FPL_LOCAL", raising=False)
+    at = _run(_APP)
+    assert any("snapshot" in c.value for c in at.caption)             # cloud → the snapshot note
+
+    if config.DB_PATH != config.SEED_DB_PATH:                         # a live cache locally
+        monkeypatch.setenv("FPL_LOCAL", "1")
+        at2 = _run(_APP)
+        assert not any("snapshot" in c.value for c in at2.caption)    # local → no snapshot note
 
 
 def test_refresh_button_is_gated_by_local_mode(monkeypatch):

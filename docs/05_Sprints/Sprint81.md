@@ -37,7 +37,7 @@
 #### Success Criteria
 - [x] **US-218 (Pool layout)** — in `render_pool`, the **table + pagination render first**, the top-15 bar
       below it; nothing else changes
-- [ ] **US-219 (refresh clarity)** — the freshness caption shows the **player count** ("570 players · data
+- [x] **US-219 (refresh clarity)** — the freshness caption shows the **player count** ("572 players · data
       as of \<date\>") so a stale snapshot is visible; on the **cloud** a one-line note that it's a snapshot
       (updates on redeploy); a **`python app.py reseed`** command (refresh → copy `fpl.db`→`seed.db`) so
       updating the live app is one step; Help/DEPLOY explain the local (button/restart) vs cloud (reseed +
@@ -58,7 +58,7 @@
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-218 | **Pool: table first** — reorder `render_pool` so the table + pagination come before the top-15 bar. | High | ✅ Done | ~¼ session |
-| US-219 | **Refresh clarity** — player count in the freshness caption; a cloud "snapshot" note; a `reseed` CLI command; document the local vs cloud refresh story. Extends ADR-053/056. | High | ⬜ To do | ~½ session |
+| US-219 | **Refresh clarity** — player count in the freshness caption; a cloud "snapshot" note; a `reseed` CLI command; document the local vs cloud refresh story. Extends ADR-053/056. | High | ✅ Done | ~½ session |
 | US-220 | **AI gameweek recommendation** — a grounded "this week" plan (captain · lineup · a transfer · flags), narrated + verified; an `ask` intent + a "This week" Squads view. ADR-070. | High | ⬜ To do | ~1–1.5 sessions |
 
 ---
@@ -103,6 +103,22 @@ facts without Ollama.
 now render before the top-15 Altair bar (+ its caption), which sits beneath. The `sort` selectbox stays on
 top; the bar still reads from the same `ranked`/`sort`, so it stays filter- and sort-responsive. A one-block
 move, no new ADR. Players AppTests 8/8, ruff clean, smoke = 1 table + 1 bar (table first), full suite 585 green.
+
+**US-219 (refresh clarity).** Diagnosed root cause: the tester views the committed **seed** (570), not their
+fresh CLI cache (572). Three fixes, no new ADR (extends ADR-053/056):
+- **Visibility** — `status.py` freshness caption now leads with the **player count**
+  (`{count} players · data as of {date}`, via the existing cheap `count_players()`), so a stale snapshot is
+  obvious at a glance. On the **cloud** (`not is_local()`) a second caption: *"🌐 A data snapshot — updates
+  when the app is redeployed."*
+- **One-command update** — new CLI **`reseed`** (`cmd_reseed`): `ingest.refresh` into the live cache, then
+  `shutil.copyfile(fpl.db → seed.db)`, printing counts + a commit/push/reboot reminder. Added
+  `config.LIVE_DB_PATH` so `reseed` targets `fpl.db` explicitly even when `DB_PATH` has fallen back to the
+  seed. (Local runs never need it — the 🔄 button / a restart reads `fpl.db` directly.)
+- **Docs** — DEPLOY.md's "After it's live" now splits the **cloud** (`reseed` → push) vs **local** (button /
+  restart) refresh stories; the Help "Good to know" explains the snapshot-vs-live-refresh distinction.
+
+Tests: +3 (reseed routes + reseed refresh→copy behaviour on tmp paths + cloud-shows-snapshot-note); the
+freshness test now also asserts the count. ruff clean, reseed smoke OK, full suite **588** green.
 
 ---
 

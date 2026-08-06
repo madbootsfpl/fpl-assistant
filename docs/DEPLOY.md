@@ -41,9 +41,13 @@ the few-clicks part, which **you run** (Claude can't create the account).
 
 - **Update the app:** push to `master` → Community Cloud **auto-redeploys**. (Or **Reboot** in the app’s
   menu.)
-- **Refresh the data** (the deploy reads the committed snapshot): locally run
-  `python app.py refresh`, then `cp data/fpl.db data/seed.db`, then commit + push. **Do this before GW1
-  (2026-08-21)** and whenever prices/injuries move enough to matter.
+- **Refresh the data** (the deploy reads the committed snapshot). Two refresh stories:
+  - **Cloud** (what testers see): `python app.py reseed` (one command — refresh into `data/fpl.db`, then
+    copy it to `data/seed.db`), then **commit + push** (auto-redeploys, or Reboot). **Do this before GW1
+    (2026-08-21)** and whenever prices/injuries move enough to matter. The player count in the app's
+    freshness caption tells you whether the live snapshot is current.
+  - **Local** (your own run): no reseed needed — the sidebar **🔄 Refresh data** button updates `fpl.db`
+    in place, or just restart the app after a `python app.py refresh`.
 - **Record the live URL** in the README’s “Live app” line.
 
 ---
