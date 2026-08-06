@@ -76,7 +76,8 @@ else:
         st.caption("**Community Signals** — who r/FantasyPL is talking about right now (post mentions, a "
                    "buzz lens — not sentiment or a prediction). Best-effort: cached, may be unavailable "
                    "on the live app.")
-        if st.button("Show what's being talked about"):
+        if st.button("Show what's being talked about",
+                     help="Fetch r/FantasyPL and count player mentions (best-effort; cached ~30 min)."):
             rss = _cached_reddit_rss()
             if rss is None:
                 st.info("Community buzz is unavailable right now (Reddit didn't respond).")

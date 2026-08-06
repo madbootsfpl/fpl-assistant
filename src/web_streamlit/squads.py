@@ -59,7 +59,8 @@ def squad_picker(label: str = "Squad", key: str | None = None) -> tuple[str, dic
         st.stop()
     act = active_squad()
     index = next((i for i, s in enumerate(squads.values()) if s is act), 0)   # default to the active one
-    choice = st.selectbox(label, labels, index=index, key=key)
+    choice = st.selectbox(label, labels, index=index, key=key,
+                          help="Which squad to work on — your active/built one, or the demo.")
     return choice, squads[choice]
 
 
@@ -154,7 +155,8 @@ def render_sidebar() -> None:
         act = active_squad()
         st.caption(f"Active: **{act.get('name', 'unnamed')}**"
                    if act else "Active: **none** — build one or upload a `squad.json`.")
-        uploaded = st.file_uploader("Upload a squad.json", type="json", key="squad_uploader")
+        uploaded = st.file_uploader("Upload a squad.json", type="json", key="squad_uploader",
+                                    help="Load a squad.json you downloaded earlier (from Build Squad).")
         if uploaded is not None and st.session_state.get(_UPLOAD_APPLIED) != uploaded.file_id:
             squad, err = parse_uploaded(uploaded)
             if err:
@@ -167,8 +169,12 @@ def render_sidebar() -> None:
         # Import your real FPL team by manager-ID (ADR-058) — sets the session active squad (no server
         # write). Picks are public only after the GW1 deadline; degrades with a clear message until then.
         st.caption("— or import your FPL team —")
-        manager_id = st.text_input("FPL manager-ID", key="manager_id", placeholder="e.g. 1234567")
-        if st.button("Import team") and manager_id.strip():
+        manager_id = st.text_input(
+            "FPL manager-ID", key="manager_id", placeholder="e.g. 1234567",
+            help="Your FPL team's numeric id (in your team's URL on fantasy.premierleague.com). "
+                 "Imports your real squad — picks are public from the GW1 deadline.")
+        if st.button("Import team", help="Fetch your real squad for this manager-ID (no login needed).") \
+                and manager_id.strip():
             if not manager_id.strip().isdigit():
                 st.error("The manager-ID should be a number (find it in your FPL team URL).")
             else:

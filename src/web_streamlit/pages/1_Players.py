@@ -47,7 +47,8 @@ if not rows:
 else:
     # A shared filter (ADR-064): Team · Position · Player (AND) + max-price; then a separate sort.
     sel = filter_controls(rows, key="players", with_price=True)
-    sort = st.selectbox("Sort by", ["points", "value", "team", "position"])
+    sort = st.selectbox("Sort by", ["points", "value", "team", "position"],
+                        help="Order the table: total points · value (points per £m) · team · position.")
 
     filtered = apply_filter(rows, sel)
     if not filtered:

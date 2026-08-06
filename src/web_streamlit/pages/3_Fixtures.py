@@ -30,7 +30,8 @@ finally:
 if not upcoming:
     st.info("No fixtures yet — run `python app.py refresh` first.")
 else:
-    weeks = st.slider("Weeks to show", 1, 8, 6)
+    weeks = st.slider("Weeks to show", 1, 8, 6,
+                      help="How many upcoming gameweeks to show in the difficulty ticker.")
     ticker = fixture_ticker(upcoming, next_n=weeks, source="fpl")
     gws = ticker["gameweeks"]
     gw_cols = [f"GW{g}" for g in gws]

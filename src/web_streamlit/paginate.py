@@ -32,7 +32,8 @@ def paginate(rows, *, key: str, per_page: int = 50, label: str = "Page") -> list
         st.caption(f"{total} shown")
         return list(rows)
     labels = page_labels(total, per_page)
-    choice = st.selectbox(label, labels, key=key)
+    choice = st.selectbox(label, labels, key=key,
+                          help=f"Jump to a page — {per_page} rows at a time (there are {total}).")
     idx = labels.index(choice)
     start = idx * per_page
     end = min(start + per_page, total)
