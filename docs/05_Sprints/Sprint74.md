@@ -112,4 +112,18 @@ checked loosely — key ones get help, but the strict gate is the input "options
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — a concise **ⓘ tooltip on every feature option** across the web, plus a
+**coverage test** that keeps it that way: any input control shipped without a `help=` now fails CI. No
+behaviour change — help text only.
+
+**What went well** — adding help at the **shared components** (`filters` · `paginate` · `squads`) covered
+Players, Player Stats, Trending and every squad page from a handful of edits, before touching a single
+page. The AppTest `.help` attribute made "all options have a tooltip" a **machine-checked guarantee** rather
+than a manual audit — the coverage test grew page-by-page across the two stories and gates all nine.
+
+**What to watch / lessons** — `st.tabs` labels and `st.chat_input` take no `help=`, so those rely on the
+existing captions (documented exemption in the test). Writing help **inline** keeps the string beside the
+control (easy to keep truthful) and the test only guarantees *presence*, not accuracy — wording stays a
+review concern. A nice side-effect: the coverage test now protects every future control too.
+
+**Lessons captured:** `docs/05_Sprints/Sprint74_Lessons_Learnt.md`.

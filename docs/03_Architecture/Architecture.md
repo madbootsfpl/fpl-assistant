@@ -455,6 +455,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 074 (2026-08-06)** — *Help tooltips (ⓘ)*, per **ADR-065** — a concise, action-oriented `help=`
+  on **every input control** across the web (a Streamlit ⓘ tooltip), added at the shared components
+  (`filters` · `paginate` · `squads`) so all pages inherit it, plus each page's own controls; key buttons
+  too. `st.tabs` labels + `st.chat_input` take no `help=` → captions cover them. A coverage test
+  (`tests/test_help_tooltips.py`, via AppTest `.help`) asserts every input widget on all nine pages carries
+  a non-empty tooltip — a standing guarantee against regressions. No behaviour change. 579 tests.
 - **Sprint 073 (2026-08-06)** — *Rich filters on Players & Player Stats*, per **ADR-064** — one shared
   `web_streamlit/filters.py`: `filter_controls` (Team · Position · Player multiselects + optional max-price,
   key-namespaced) + a pure `apply` (keep rows matching every non-empty dimension — **AND**; tolerant of
