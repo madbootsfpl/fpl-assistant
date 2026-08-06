@@ -67,7 +67,8 @@ else:
     recommended = picks[0]["id"] if picks else None
     want = current or recommended
     idx = next((i for i, pid in enumerate(labels.values()) if pid == want), 0)
-    choice = st.selectbox("Set your captain", list(labels), index=idx, key="set_captain")
+    choice = st.selectbox("Set your captain", list(labels), index=idx, key="set_captain",
+                          help="Choose your captain — they score double; shown as (C).")
     if st.button("Set as captain"):
         set_active_squad(set_captain(squad, labels[choice]))
         st.success(f"Captain set: **{choice.split(' ', 1)[1]} (C)** — shown in Analyse + your download.")

@@ -68,23 +68,32 @@ def _ids(labels):
 
 # ---- controls ---------------------------------------------------------------
 c1, c2, c3 = st.columns(3)
-budget = c1.slider("Budget (£m)", 80.0, 100.0, 100.0, step=0.5)
-name = c1.text_input("Squad name", value="My squad", max_chars=40).strip() or "My squad"
+budget = c1.slider("Budget (£m)", 80.0, 100.0, 100.0, step=0.5,
+                   help="The most you'll spend across all 15 players.")
+name = c1.text_input("Squad name", value="My squad", max_chars=40,
+                     help="A name for this squad — used in the download and as the active-squad "
+                          "label.").strip() or "My squad"
 objective = c2.selectbox("Objective", ["xp", "points", "value", "xgi"],
                          help="xp = expected points (xMins-weighted); the CLI default.")
 no_xmins = c2.checkbox("Ignore expected minutes (--no-xmins)", value=False,
                        disabled=objective != "xp", help="xp objective only.")
 mode = c3.radio("Build mode", ["Balanced", "Weekly (playing bench)", "Bench Boost"],
                 help="Weekly maximises the XI + a cheap playing bench; Bench Boost maximises all 15.")
-include_unavailable = c3.checkbox("Include injured/suspended", value=False)
+include_unavailable = c3.checkbox("Include injured/suspended", value=False,
+                                  help="Also consider flagged players (off by default).")
 
 a1, a2, a3 = st.columns(3)
-cheap = a1.number_input("Low-cost (≤£4.5m)", min_value=0, max_value=8, value=0)
-premium = a2.number_input("Premium (≥£9m)", min_value=0, max_value=5, value=0)
-differential = a3.number_input("Differentials (≤5% owned)", min_value=0, max_value=5, value=0)
+cheap = a1.number_input("Low-cost (≤£4.5m)", min_value=0, max_value=8, value=0,
+                        help="Require at least this many budget (≤£4.5m) players.")
+premium = a2.number_input("Premium (≥£9m)", min_value=0, max_value=5, value=0,
+                          help="Require at least this many premium (≥£9m) players.")
+differential = a3.number_input("Differentials (≤5% owned)", min_value=0, max_value=5, value=0,
+                               help="Require at least this many low-owned (≤5%) picks.")
 
-include = _ids(st.multiselect("Must include", _labels))
-exclude = _ids(st.multiselect("Must exclude", _labels))
+include = _ids(st.multiselect("Must include", _labels,
+                              help="Force these players into the squad."))
+exclude = _ids(st.multiselect("Must exclude", _labels,
+                              help="Never pick these players."))
 declared_bench = _ids(st.multiselect("Declare bench (up to 4)", _labels,
                                      help="Pins these to the bench; leave empty to auto-derive the XI."))
 
@@ -171,7 +180,8 @@ if use.button("Use this squad →", use_container_width=True):
 
 # ---- best-XI-shape preview (display only — an XI is 11, not a saveable 15) ---
 with st.expander("🔎 Preview the best XI in a given shape (display only — not saved)"):
-    shape = st.selectbox("Formation", list(_FORMATIONS), index=0)
+    shape = st.selectbox("Formation", list(_FORMATIONS), index=0,
+                         help="Preview the best XI in this shape (display only — the saved build is a 15).")
     d, m, f = _FORMATIONS[shape]
     xi_pool = players if include_unavailable else available_players(players, keep_ids=set(include))[0]
     xi_result = select_squad(xi_pool, budget=budget, formation={"GK": 1, "DEF": d, "MID": m, "FWD": f},

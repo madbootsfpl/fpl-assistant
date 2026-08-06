@@ -24,8 +24,10 @@ st.title("Transfer — best XI-aware swaps")
 col1, col2 = st.columns(2)
 with col1:
     squad_name, squad = squad_picker()
-bank = col1.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5)
-count = col2.slider("Transfers (a coordinated plan)", 1, 3, 1)
+bank = col1.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5,
+                   help="Spare money you can add on top of selling a player.")
+count = col2.slider("Transfers (a coordinated plan)", 1, 3, 1,
+                    help="How many swaps to plan together (they share the bank).")
 
 store = Storage()
 try:
@@ -73,7 +75,8 @@ else:
         # the picked squad), so a demo squad becomes yours on first edit. No server write.
         if swaps:
             labels = [f"{s['out']['web_name']} → {s['in']['web_name']}  (+{s['gain']} xP)" for s in swaps]
-            choice = st.selectbox("Apply a swap to your squad", labels, key="apply_swap")
+            choice = st.selectbox("Apply a swap to your squad", labels, key="apply_swap",
+                                  help="Pick one suggested swap to apply to your active squad.")
             if st.button("Apply this transfer →"):
                 chosen = swaps[labels.index(choice)]
                 ok, issues, warning, new = apply_transfer(

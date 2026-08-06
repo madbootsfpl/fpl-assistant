@@ -80,7 +80,8 @@ st.subheader("Edit")
 
 # --- rename ---------------------------------------------------------------------------------------
 with st.expander("Rename"):
-    new_name = st.text_input("Squad name", value=squad.get("name", "My squad"), max_chars=40)
+    new_name = st.text_input("Squad name", value=squad.get("name", "My squad"), max_chars=40,
+                             help="Rename this squad (shown in the download and as the active label).")
     if st.button("Rename"):
         set_active_squad(rename(squad, new_name))
         st.rerun()
@@ -90,7 +91,8 @@ with st.expander("Swap a player", expanded=True):
     if owned:
         out_label = {f"{p['position']} {p['web_name']} (£{p['price']:.1f}m)": p["id"] for p in
                      sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
-        out_choice = st.selectbox("Replace", list(out_label), key="swap_out")
+        out_choice = st.selectbox("Replace", list(out_label), key="swap_out",
+                                  help="The player to transfer out.")
         out_id = out_label[out_choice]
         out = by_id[out_id]
         owned_ids = {p["id"] for p in owned}
@@ -102,7 +104,8 @@ with st.expander("Swap a player", expanded=True):
         in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
                     f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in cands}
         if in_label:
-            in_choice = st.selectbox("With", list(in_label), key="swap_in")
+            in_choice = st.selectbox("With", list(in_label), key="swap_in",
+                                     help="The same-position player to bring in (ranked by xP).")
             if st.button("Swap →"):
                 ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_label[in_choice], players)
                 if not ok:
@@ -120,7 +123,8 @@ with st.expander("Set the bench (pick 4)"):
     labels = {f"{p['position']} {p['web_name']}": p["id"] for p in
               sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
     default = [lab for lab, i in labels.items() if i in bench_ids]
-    picked = st.multiselect("Bench", list(labels), default=default, max_selections=4)
+    picked = st.multiselect("Bench", list(labels), default=default, max_selections=4,
+                            help="Pick your 4 bench players; the other 11 are your starting XI.")
     if st.button("Set bench"):
         new = set_bench(squad, [labels[lab] for lab in picked])
         xi = [by_id[i] for i in new["player_ids"] if i not in set(new["bench_ids"]) and i in by_id]

@@ -38,12 +38,12 @@ Analytics untouched.
 - [x] **US-208 (shared + browse pages)** — `help=` in `filters.py`, `paginate.py`, `squads.py`
       (`render_sidebar`, `squad_picker`); + Players (sort), Fixtures (weeks), Trending (the buzz button).
       The **coverage test** built here (asserts input widgets on these pages carry help)
-- [ ] **US-209 (squad/decision pages)** — `help=` on the remaining Build Squad controls, My Squad (rename ·
-      swap · bench · captain · manager-import), Transfer (bank slider · apply), Captain (set-captain);
-      coverage test extended to these pages
-- [ ] **No behaviour change** — help text only; no analytics/data change; the web writes nothing
-      server-side (guardrail holds); existing **578** stay green
-- [ ] Docs: ADR-065 + index, Architecture, PROJECT_STATUS
+- [x] **US-209 (squad/decision pages)** — `help=` on the remaining Build Squad controls, My Squad (rename ·
+      swap · bench), Transfer (bank · count · apply), Captain (set-captain); coverage test extended to all
+      nine pages
+- [x] **No behaviour change** — help text only; no analytics/data change; the web writes nothing
+      server-side (guardrail holds); existing tests stay green — **579** (+1)
+- [ ] Docs: ADR-065 + index ✅; Architecture, PROJECT_STATUS _(at the retro)_
 
 ---
 
@@ -52,7 +52,7 @@ Analytics untouched.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-208 | **Help tooltips — shared + browse pages** — `filters.py` · `paginate.py` · `squads.py` (sidebar + picker) · Players · Fixtures · Trending; + a coverage test asserting input widgets carry help. ADR-065. | High | ✅ Done | ~½ session |
-| US-209 | **Help tooltips — squad/decision pages** — Build Squad (remaining) · My Squad · Transfer · Captain; coverage test extended. ADR-065. | High | ⬜ To do | ~½ session |
+| US-209 | **Help tooltips — squad/decision pages** — Build Squad (remaining) · My Squad · Transfer · Captain; coverage test extended. ADR-065. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -99,6 +99,14 @@ checked loosely — key ones get help, but the strict gate is the input "options
   (tabs/chat_input exempt). +1 test → **579** green, ruff clean. **Smoke (real DB):** every Players control
   shows its tooltip (Team/Position/Player/Sort/Page/Max price). No behaviour change. _US-209 (squad/decision
   pages) next._
+
+- **US-209 ✅ (build)** — `help=` on the remaining squad/decision controls: **Build Squad** (budget · name ·
+  include-unavailable · cheap/premium/differential · must-include · must-exclude · formation preview —
+  objective/no-xmins/mode/bench already had it), **My Squad** (rename · replace · with · bench), **Transfer**
+  (bank · transfers-count · apply-swap), **Captain** (set-captain). Squad Health has no page-specific inputs
+  (its picker is covered by `squads.py`). Extended the coverage test to all nine pages. **Smoke (real DB):**
+  Build Squad's 14 input controls (incl. the sidebar manager-ID) all carry help, none missing. **579** green
+  (the coverage test now gates all pages), ruff clean. No behaviour change.
 
 ---
 
