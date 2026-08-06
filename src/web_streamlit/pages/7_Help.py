@@ -99,5 +99,7 @@ st.markdown(
     "sidebar **🔄 Refresh data** button pulls the latest FPL data on the spot. It's **preseason** now — "
     "ownership works, but **transfer momentum, in-season form and live picks light up at GW1 "
     "(2026-08-21)**. Crowd signals are a **lens, not truth**: the analytics decide, the crowd is context. "
+    "On **Players → Clean sheets / xG**, the **🟢…🔴 Rating** is *relative to the players shown* (best 20% "
+    "🟢 … worst 20% 🔴) with the percentile — so it re-scales as you filter; the raw number stays the truth. "
     "New here? The **Home** tab has the one-screen overview."
 )

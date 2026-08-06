@@ -125,4 +125,32 @@ only — no logic, no ADR. +1 test (every tab's title carries its emoji, no cras
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **598 → 607** (+9); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-221 — interpretable stat boards (ADR-071).** A display-only quality **rating** — `quality_band`
+  rates a value **relative to the players shown** (quintile 🟢 excellent…🔴 very poor) + the **percentile**
+  inline; a **Rating** column on **Clean sheets** (xGC/90) and **xG** (xGI) + a legend; clearer captions +
+  per-column tooltips on all four boards. Analytics untouched; no server writes.
+- **US-222 — per-tab header graphics.** A distinct emoji-led title + tagline on every tab
+  (👟📅🧩💬📰📈🧭), matching Home.
+
+**What went well**
+- **Real-data verification changed the design.** The tester's ChatGPT band table would have mislabeled
+  91/117 defenders "poor"; checking it against the actual distribution (median 1.36) turned a plausible
+  copy-the-table story into an honest, self-calibrating *relative* rating. This is the gate-on-real-data
+  rhythm doing its job.
+- **Small surface, clean layering** — the rating is a web-side display helper; the analytics core stayed
+  pure, and the two signed boards were left alone (they already show direction).
+- The header pass was genuinely trivial and low-risk (a title + caption per page), closing the tester's
+  third item cheaply.
+
+**Watch-outs / follow-ups**
+- The rating is *relative to the players shown*, so a narrow filter → a tiny pool → coarse quintiles; the
+  legend states this. Preseason values are last-season carryover — the rating sharpens at GW1 with no code
+  change.
+- Streamlit `st.dataframe` has no per-cell hover, so the percentile rides inline (colour + number) rather
+  than on hover — a platform limitation, not a design choice.
+- Possible later: extend ratings to the CLI stat commands, or a rating on the Players Pool itself.
+
+See `Sprint82_Lessons_Learnt.md` for the detailed retro.

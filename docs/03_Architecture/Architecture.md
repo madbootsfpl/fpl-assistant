@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 082 (2026-08-06)** — *Interpretable stat boards + per-tab headers*, per **ADR-071** (US-221/222).
+  A **display-only** quality rating answers the tester's "is xGC/90 0.52 good, or just relative?".
+  `src/web_streamlit/ratings.py::quality_band(value, pool, *, higher_is_better)` rates a value **relative to
+  the players shown** — a quintile (🟢 excellent … 🔴 very poor) + the **percentile** inline ("top N%");
+  `rating_cell` formats the cell. `views/players.py` adds a **Rating** column to **Clean sheets** (xGC/90,
+  lower=better) and **xG** (xGI, higher=better), computed over the *filtered* board (stable across pages), +
+  a legend; all four boards gain clearer captions + per-column `help=` tooltips (`_board` now takes
+  `col_help`). **Relative, not fixed** bands — real xGC/90 (median 1.36) makes ChatGPT's fixed table
+  mislabel 91/117 defenders "poor"; the two signed boards (over/under, DefCon) keep +/- and get no colour.
+  Web-side helper → the analytics core stays pure; no server writes. **US-222:** each tab gains an emoji-led
+  title + tagline (👟📅🧩💬📰📈🧭), like Home. 607 tests.
 - **Sprint 081 (2026-08-06)** — *An AI gameweek recommendation + refresh clarity + Pool layout*, per
   **ADR-070** (US-218/219/220). **US-220 (the feature):** a grounded **"this week"** plan for a squad —
   captain · lineup · a transfer · flags — as an **assembler**, not new analytics: `src/analytics/gameweek.py`

@@ -8,6 +8,8 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-06 | Owner | All tabs | Home has a nice **⚽ graphic** header — do the same on every other tab. | 💡 | ✅ Sprint 082 (US-222) — an emoji-led title + tagline on all 7 tabs (👟📅🧩💬📰📈🧭) |
+| 2026-08-06 | Owner | Players (stat boards) | What does a raw stat mean (**xGI/xGC**) — is it absolute or just relative? Could a **colour graphic** beside the score help a casual user read it? | 💡 | ✅ Sprint 082 (US-221, ADR-071) — a relative 🟢…🔴 **quality rating** + percentile on Clean sheets (xGC/90) & xG (xGI); clearer captions + tooltips on all four boards. (Verified: a fixed ChatGPT band table would mislabel 91/117 defenders "poor" → rate relative to the pool) |
 | 2026-08-06 | Owner | Squads | Want an **AI recommendation on your squad for the upcoming gameweek**. | 💡 | ✅ Sprint 081 (US-220, ADR-070) — a grounded "this week" plan (captain·lineup·transfer·flags); an `ask` intent + a **Squads → This week** view |
 | 2026-08-06 | Owner | All (data) | CLI refreshed **572** players but the app shows **569–570** — how do I ensure the Streamlit app is on fresh data? | 🟠 confusing | ✅ Sprint 081 (US-219) — the freshness caption shows the **player count** + a cloud snapshot note; a one-command **`reseed`**; DEPLOY/Help explain cloud vs local refresh |
 | 2026-08-06 | Owner | Players → Pool | Flip the bar chart and table — the **table matters most**, show it first. | 🟡 polish | ✅ Sprint 081 (US-218) — `render_pool` renders the table before the top-15 bar |
