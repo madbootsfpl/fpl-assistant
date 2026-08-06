@@ -76,6 +76,21 @@ def test_players_filter_by_team_narrows_the_table():
     assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
+def test_player_multiselect_is_team_scoped():
+    # US-213: choosing a team scopes the Player multiselect's options to that team's players
+    at = _run(_PAGES / "1_Players.py")
+    if not at.multiselect:
+        return
+    all_players = len(at.multiselect[2].options)            # [0] Team · [1] Position · [2] Player
+    at.multiselect[0].set_value(["ARS"]).run()              # Team = ARS
+    assert not at.exception
+    scoped = at.multiselect[2].options
+    assert 0 < len(scoped) < all_players                    # a short, team-scoped list
+    # every scoped player really is an Arsenal player
+    at.multiselect[2].set_value(list(scoped)).run()
+    assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
+
+
 def test_players_page_sorts_by_team_and_paginates():
     # ADR-063: page through all players (no 50-cap) + sort by team
     at = _run(_PAGES / "1_Players.py")

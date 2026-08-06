@@ -455,6 +455,11 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 077 (2026-08-06)** — *Team-scoped player multiselect* (refines **ADR-064**) — the shared
+  `filter_controls` now scopes the **Player** options by the selected **team ∧ position** (empty = all)
+  instead of ~570 names; the stored pick is pruned when it falls out of scope. One edit → Players ·
+  Player Stats · Trending. `apply` unchanged; no server writes. Smoke: 555 → 28 (ARS) → 15 (ARS ∧ MID).
+  581 tests.
 - **Sprint 076 (2026-08-06)** — *Tech-debt sweep*, per **ADR-066** — two Backlog items cleared with **no
   behaviour/output change** (65 optimizer + 19 render assertions unchanged). **PuLP** (`optimizer.py`):
   variables → `problem.add_variable(...)`; **kept `PULP_CBC_CMD`** (`COIN_CMD` needs an external CBC —

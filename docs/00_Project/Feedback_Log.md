@@ -8,6 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-06 | Owner | Players / Player Stats / Trending | The filter's **Player** multiselect lists all ~570 names — scope it to the selected team(s). | 🟡 polish | ✅ Sprint 077 (US-213) — scoped by team ∧ position in the shared filter |
 | 2026-08-06 | Owner | Trending | Trending needs a **filter**, same as Players and Player Stats. | 💡 | ✅ Sprint 075 (US-210) — reused the shared Team/Position/Player filter (ADR-064) |
 | 2026-08-06 | Owner | All | Add a small **ⓘ help tooltip** over all feature options so users understand what each does. | 💡 | ✅ Sprint 074 (US-208/209, ADR-065) — `help=` on every input control + a coverage test |
 | 2026-08-06 | Owner | Players / Player Stats | Need a **filter** (by player(s) / team / position, combinable, multi-select) on both. Players' top **graph isn't adding value** — remove/replace. | 🟡 polish / 💡 | ✅ Sprint 073 (US-206/207, ADR-064) — shared Team/Position/Player filter on both; scatter → a filter-responsive top-15 bar |

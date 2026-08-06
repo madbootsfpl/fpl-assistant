@@ -27,14 +27,24 @@ def filter_controls(players, *, key: str, with_price: bool = False) -> dict:
     adds a Max-price slider (Players only — stat rows have no price). Keys are namespaced by `key`.
     """
     teams = sorted({_get(p, "team") for p in players if _get(p, "team")})
-    names = sorted({_get(p, "web_name") for p in players if _get(p, "web_name")})
     cols = st.columns(4 if with_price else 3)
     team_sel = cols[0].multiselect("Team", teams, key=f"{key}_team",
                                    help="Show only players from these teams (leave empty for all).")
     pos_sel = cols[1].multiselect("Position", _POSITIONS, key=f"{key}_pos",
                                   help="Show only these positions — GK / DEF / MID / FWD (empty = all).")
-    player_sel = cols[2].multiselect("Player", names, key=f"{key}_player",
-                                     help="Pick specific players to focus on (empty = all).")
+    # Scope the Player options by the current Team ∧ Position selection (ADR-064; empty dims = all), so
+    # the dropdown is a short, relevant list rather than ~570 names.
+    team_set, pos_set = set(team_sel), set(pos_sel)
+    names = sorted({_get(p, "web_name") for p in players
+                    if (not team_set or _get(p, "team") in team_set)
+                    and (not pos_set or _get(p, "position") in pos_set)
+                    and _get(p, "web_name")})
+    pkey = f"{key}_player"
+    if pkey in st.session_state:   # prune a now-out-of-scope pick so it can't linger or resurrect
+        st.session_state[pkey] = [n for n in st.session_state[pkey] if n in names]
+    player_sel = cols[2].multiselect("Player", names, key=pkey,
+                                     help="Pick specific players (scoped to the team/position above; "
+                                          "empty = all).")
     max_price = (cols[3].slider("Max price (£m)", 3.5, 15.0, 15.0, step=0.5, key=f"{key}_price",
                                 help="Hide players priced above this.")
                  if with_price else None)
