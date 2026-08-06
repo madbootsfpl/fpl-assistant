@@ -4,7 +4,7 @@
 **display lens only** — they must never change the grounded xP (`decision_xp`).
 """
 
-from src.analytics import crowd_flags, decision_xp, net_transfers
+from src.analytics import crowd_flags, decision_xp, net_transfers, trending
 from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, TEMPLATE_OWN, TRENDING_NET
 from src.storage import Storage
 
@@ -70,3 +70,23 @@ def test_decision_xp_ignores_the_crowd_fields():
     after = {r["id"]: r["xp"] for r in decision_xp(players, upcoming, history)}
 
     assert base == after
+
+
+# --- trending leaderboards (Sprint 067) ----------------------------------------------------------
+
+def test_trending_ranks_by_each_metric():
+    players = [
+        {"id": 1, "selected_by": 10, "form": 2.0, "transfers_in_event": 5, "transfers_out_event": 1},
+        {"id": 2, "selected_by": 50, "form": 8.0, "transfers_in_event": 1, "transfers_out_event": 9},
+        {"id": 3, "selected_by": 30, "form": 5.0, "transfers_in_event": 100, "transfers_out_event": 0},
+    ]
+    assert [r["id"] for r in trending(players, "owned")] == [2, 3, 1]     # 50 > 30 > 10
+    assert [r["id"] for r in trending(players, "form")] == [2, 3, 1]      # 8 > 5 > 2
+    assert trending(players, "in")[0]["id"] == 3                          # net +100 buys
+    assert trending(players, "out")[0]["id"] == 2                         # net −8 (most sold)
+    assert trending(players, "owned", limit=1)[0]["trend"] == 50          # the display value
+
+
+def test_trending_is_empty_safe():
+    assert trending([], "owned") == []
+    assert trending([{"id": 1}], "owned")[0]["trend"] == 0                # missing metric → 0, no crash

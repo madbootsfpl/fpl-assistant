@@ -29,6 +29,43 @@ def net_transfers(player):
     return (tin or 0) - (tout or 0)
 
 
+# The "trending" leaderboards (Sprint 067) — free crowd metrics, display-only (never xP).
+# by → (a readable label, the column header). Ownership is live now; momentum/form are 0 preseason (GW1).
+TREND_BYS = {
+    "owned": ("most owned", "Own%"),
+    "in": ("most transferred in", "Net in"),
+    "out": ("most transferred out", "Net out"),
+    "form": ("in form", "Form"),
+}
+
+
+def _trend_sort_value(player, by):
+    """The value to rank by (higher = more 'trending'); missing → 0 (sorts last). Empty-safe."""
+    if by == "owned":
+        return _get(player, "selected_by") or 0
+    if by == "form":
+        return _get(player, "form") or 0
+    net = net_transfers(player) or 0
+    return net if by == "in" else -net          # 'out' ranks by most-sold (net most negative)
+
+
+def _trend_display_value(player, by):
+    """The number shown for a player on this board (own % · net transfers · form)."""
+    if by == "owned":
+        return _get(player, "selected_by") or 0
+    if by == "form":
+        return _get(player, "form") or 0
+    return net_transfers(player) or 0           # net transfers (positive = buys, negative = sells)
+
+
+def trending(players, by="owned", limit=10):
+    """Rank players by a free crowd metric (ADR-057) — display-only, **never xP**. `by` is one of
+    `TREND_BYS` (owned / in / out / form). Returns the top `limit` rows, each with a `trend` value for
+    display. Empty-safe (missing metric → 0)."""
+    ranked = sorted(players, key=lambda p: _trend_sort_value(p, by), reverse=True)
+    return [{**dict(p), "trend": _trend_display_value(p, by)} for p in ranked[:limit]]
+
+
 def crowd_flags(player) -> list:
     """Short crowd/sentiment flags for a player row — empty-safe, display-only (ADR-057).
 

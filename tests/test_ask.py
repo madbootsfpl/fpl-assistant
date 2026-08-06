@@ -616,3 +616,33 @@ def test_ask_captain_scopes_to_the_active_session_squad():
     assert "squad 'ZZTestXI'" in with_active and "all players" not in with_active
     without = render_ask(ask.answer("who should i captain from ZZTestXI"))   # not in SquadStore
     assert "all players" in without                                          # the old fallback
+
+
+# --- trends intent (Sprint 067) — community "trending" from free FPL crowd data --------------------
+
+def test_routes_trends_and_not_transfer():
+    assert route("who is most transferred in", known_squads=[])[0] == "trends"
+    assert route("most owned midfielders", known_squads=[])[0] == "trends"
+    assert route("who's in form", known_squads=[])[0] == "trends"
+    assert route("what transfer should I make", known_squads=[])[0] == "transfer"   # advice, not trends
+
+
+def _trend_player(pid, name, pos, own, net_in=0, form=0.0):
+    return {"id": pid, "web_name": name, "team": "ARS", "position": pos, "selected_by": own,
+            "transfers_in_event": net_in, "transfers_out_event": 0, "form": form}
+
+
+def test_decide_trends_most_owned_now():
+    players = [_trend_player(1, "A", "MID", 60), _trend_player(2, "B", "MID", 20),
+               _trend_player(3, "C", "FWD", 90)]
+    store = types.SimpleNamespace(get_players=lambda: players)
+    d = ask._decide_trends(store, "most owned midfielders")           # position-filtered
+    assert "detail" in d and "A" in d["detail"] and "C" not in d["detail"]   # MID only, A (60) leads
+    assert d["facts"]["top"][0].startswith("A")
+
+
+def test_decide_trends_momentum_is_preseason_gated():
+    players = [_trend_player(1, "A", "MID", 60, net_in=0, form=0.0)]   # momentum 0 (preseason)
+    store = types.SimpleNamespace(get_players=lambda: players)
+    d = ask._decide_trends(store, "who is most transferred in")
+    assert "GW1" in d["message"] and "detail" not in d              # a clear "live from GW1" message

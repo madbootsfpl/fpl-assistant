@@ -17,6 +17,7 @@ from src import llm
 from src.analytics import (
     FULL_BUDGET,
     SQUAD_15,
+    TREND_BYS,
     WEEKLY_BENCH_WEIGHT,
     analyse_squad,
     archetype_bands,
@@ -31,6 +32,7 @@ from src.analytics import (
     suggest_transfers,
     team_fdr,
     team_schedule,
+    trending,
 )
 from src.analytics.captain import _next_opponent
 from src.squads import SquadStore
@@ -43,11 +45,15 @@ from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
 from src.ui.transfer import render_transfer_plan
+from src.ui.trending import render_trending
 
 _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 
 # Keyword → intent. Order matters (first match wins); the LLM decides none of this.
 _INTENT_KEYWORDS = {
+    # trends first: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
+    "trends": ("trending", "most owned", "most picked", "most transferred", "most sold", "most bought",
+               "in form", "risers", "fallers", "bandwagon", "most popular"),
     "captain": ("captain", "armband"),
     "transfer": ("transfer", "sell", "buy", "swap"),
     "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
@@ -686,6 +692,57 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
     }
 
 
+# ---- trends intent (Sprint 067, ADR-057) — community "trending" from free FPL crowd data -----------
+
+_TREND_N = 8   # how many players a trending board shows
+
+# (by, cues) in precedence order — the more specific "out" phrases before the broad "in"/"owned".
+_TREND_CUES = (
+    ("out", ("most transferred out", "most sold", "fallers", "transferred out", "sold")),
+    ("in", ("most transferred in", "trending", "risers", "bandwagon", "transferred in",
+            "most bought", "bought")),
+    ("form", ("in form", "in-form")),
+    ("owned", ("most owned", "most picked", "most popular", "owned", "picked", "popular")),
+)
+
+
+def _trends_query(question: str) -> tuple:
+    """(by, position) from a trends question — which board (`TREND_BYS`) + an optional position filter."""
+    ql = question.lower()
+    by = next((b for b, cues in _TREND_CUES if any(c in ql for c in cues)), "in")
+    position = next((code for word, code in _POS_WORDS.items() if re.search(rf"\b{word}s?\b", ql)), None)
+    return by, position
+
+
+def _decide_trends(store: Storage, question: str) -> dict | None:
+    """Rank players by a free crowd metric (ownership / transfers / form) — a community lens, never xP.
+
+    Momentum (in/out/form) is 0 in preseason → a clear "live from GW1" message; ownership works now.
+    """
+    players = store.get_players()
+    if not players:
+        return None
+    by, position = _trends_query(question)
+    pool = [p for p in players if position is None or p["position"] == position]
+    rows = trending(pool, by=by, limit=_TREND_N)
+    label, header = TREND_BYS[by]
+
+    if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
+        return {"message": 'No transfer/form data yet — trending lights up at GW1 (2026-08-21). '
+                           'Try "most owned" meanwhile.'}
+
+    scope = f"{position} " if position else ""
+    return {
+        "detail": render_trending(rows, f"Trending — {scope}{label}", header, by=by),
+        "facts": {
+            "ranked_by": f"{label} (free FPL crowd data)",
+            "top": [f"{r['web_name']} ({r['position']}, {header} {r['trend']})" for r in rows[:3]],
+        },
+        "subjects": [r["web_name"] for r in rows],
+        "task": "in 2 short sentences, say who's trending here (name a couple) — it's crowd data, not a prediction",
+    }
+
+
 # ---- fixtures / FDR intent (ADR-048) ----------------------------------------
 
 _FIXTURES_N = 8   # how many teams the league FDR ranking shows
@@ -924,6 +981,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_build_squad(store, question)
     if intent == "shortlist":
         return _decide_shortlist(store, question, rank=rank)
+    if intent == "trends":
+        return _decide_trends(store, question)
     if intent == "fixtures":
         return _decide_fixtures(store, question, squad, active_squad=active_squad)
     return _decide_analyse(store, squad, active_squad=active_squad)

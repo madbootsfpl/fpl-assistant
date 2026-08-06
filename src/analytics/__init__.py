@@ -8,7 +8,7 @@ up to the display. It never touches the API or the screen.
 from src.analytics.analyse import analyse_squad
 from src.analytics.captain import captain_picks
 from src.analytics.cleansheet import defensive_solidity
-from src.analytics.crowd import crowd_flags, net_transfers
+from src.analytics.crowd import TREND_BYS, crowd_flags, net_transfers, trending
 from src.analytics.defcon import defcon_reliability
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
 from src.analytics.minutes import (
@@ -56,6 +56,8 @@ __all__ = [
     "chance_factor",
     "crowd_flags",
     "net_transfers",
+    "trending",
+    "TREND_BYS",
     "decision_xp",
     "expected_minutes",
     "fallback_rate",
