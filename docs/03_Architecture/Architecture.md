@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 072 (2026-08-06)** — *Player Stats page + pagination*, per **ADR-063** — the CLI's stat views
+  come to the web with **no engine change**. A new `pages/2_Player_Stats.py` (sidebar position 2) has tabs
+  **Over/under · DefCon · Clean sheets · xG**, each reusing the *same* analytics (`over_under` /
+  `defcon_reliability` / `defensive_solidity`; xG = players by `xgi`) → an st.dataframe (team badge + the
+  CLI columns), **season-to-date** (last-season carryover preseason). A shared `web_streamlit/paginate.py`
+  (`page_labels` pure + `paginate` = a stateless page selectbox) powers see-everything paging: **Players**
+  pages through all (no 50-cap) + a **team/position** sort; **Trending's** four boards page past 30. The
+  sidebar renumbered (Player Stats 2 → Fixtures 3 … Trending 11). Guardrails caught two regressions (a
+  Row-vs-dict crash; ruff F821 on a removed slider's `count`). No server writes. 571 tests.
 - **Sprint 071 (2026-08-06)** — *Web build parity + tab reorg*, per **ADR-062** — the web reaches full CLI
   `squad` parity with **no engine change**. **Build Squad** (`pages/3_Build_Squad.py`) exposes the full
   option set as form widgets (include/exclude/declared-bench multiselects · objective · no-xmins · build

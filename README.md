@@ -178,7 +178,9 @@ A thin, **read-only, local** web view over the same analytics — the CLI stays 
 just another way to look at it. Two edges, both reusing the exact same engine:
 
 **Streamlit** — the interactive UI (ADR-051/052). Multipage (a **Home** landing + a sidebar, grouped):
-**Players** (filters, a sortable table with **photos** + a price-vs-points scatter) · **Fixtures** (a
+**Players** (filters + **photos** + a price-vs-points scatter; **page through all** + sort by team /
+position) · **Player Stats** (over/under-perf · Defensive Contribution · clean sheets · xG, season-to-date)
+· **Fixtures** (a
 colour-coded fixture **ticker** with **team badges**) · **Build Squad** (the **full `squad` options** —
 budget · archetypes · include / exclude · declared bench · objective · weekly / bench-boost · include
 injured — → the optimal 15) · **My Squad** (a **formation-pitch** view; **edit**: rename, swap, bench, set

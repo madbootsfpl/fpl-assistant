@@ -139,4 +139,23 @@ and `paginate(rows, key=f"trend_{by}", per_page=30)`; keep the GW1-empty note. T
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — all three tester items shipped: a **Player Stats** page (the CLI's
+over/under · DefCon · clean-sheet · xG views), **Players** pages through everything + sorts by
+team/position, and **Trending's** four boards page past 30. **No analytics change** — every stat reuses the
+same functions the CLI does, and one shared `paginate` helper serves all three pages.
+
+**What went well** — verifying on **real data first** showed the stat commands are already rich (they read
+season-to-date fields, last season's carryover preseason), so a stats page was useful *now*, no GW1 gating.
+Building the **paginator once** and reusing it across Player Stats / Players / Trending kept the three
+stories small and consistent. Both **guardrails earned their keep**: the test suite caught a Row-vs-dict
+crash on the Players sort, and **ruff** caught a leftover `count` reference in Trending after the slider was
+removed.
+
+**What to watch / lessons** — Player Stats uses **team badges, not player photos** (the analytics rows carry
+no `id`); adding photos would be an engine change for a cosmetic gain — deferred. The paginator is a
+**page selectbox** (stateless, tab-safe) rather than a "Next" button (which would need session state);
+it matches the "1–50 → next" ask and is trivially testable. Placing Player Stats at position 2 meant a
+**second sidebar renumber** in as many sprints — mechanical, but a reminder that page order is filename-
+coupled, so each insert cascades.
+
+**Lessons captured:** `docs/05_Sprints/Sprint72_Lessons_Learnt.md`.
