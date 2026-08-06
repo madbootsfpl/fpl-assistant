@@ -50,6 +50,9 @@ class Player:
     # % chance of playing next round (None when fully fit); `news` explains an issue.
     chance: int | None = None
     news: str | None = None
+    # A link to the source of the news (FPL Scout / a club article), Sprint 064 / ADR-058 — the News lens's
+    # "read more"; often absent.
+    scout_news_link: str | None = None
     # The stable cross-season id (Sprint 026, ADR-028) — the join key to
     # player_history_past (whose per-season `id` differs from this year's `id`).
     code: int | None = None
@@ -110,6 +113,7 @@ class Player:
             recoveries=raw.get("recoveries"),
             chance=raw.get("chance_of_playing_next_round"),
             news=raw.get("news"),
+            scout_news_link=raw.get("scout_news_link") or None,
             code=raw.get("code"),
             penalties_order=raw.get("penalties_order"),
             selected_by=_to_float(raw.get("selected_by_percent")),

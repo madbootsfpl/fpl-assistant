@@ -24,6 +24,7 @@ Use the **sidebar** to explore:
 - **Build** — the optimal 15 within a **budget**, shaped by archetypes (cheap / premium / differential)
 - **Captain** — who to (vice-)captain from your squad this week
 - **My Squad** — your squad as a **pitch/formation** view; edit it (rename, swap, bench, set captain, download)
+- **News** — official FPL player news (injuries · doubts · returns), most serious first
 - **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 
 **Your squad:** on **Build**, name it, *Download* a `squad.json` (that file is your save) and *Use this

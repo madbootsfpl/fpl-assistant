@@ -226,6 +226,19 @@ def test_save_players_stores_crowd_signals(tmp_path):
     store.close()
 
 
+def test_save_players_stores_scout_news_link(tmp_path):
+    # Sprint 064 / ADR-058: the News-lens source link round-trips through save + get_players.
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    p = make_player(id=1)
+    p.news, p.scout_news_link = "Knock", "https://example/news"
+    store.save_players([p])
+
+    row = store.get_players()[0]
+    assert row["news"] == "Knock" and row["scout_news_link"] == "https://example/news"
+    store.close()
+
+
 def test_migration_adds_crowd_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
     # A pre-Sprint-060 database: players table without the crowd-signal columns.
@@ -241,7 +254,8 @@ def test_migration_adds_crowd_columns_to_an_old_players_table(tmp_path):
 
     store = Storage(db_path=db)     # opening migrates up to the current schema
     cols = {row[1] for row in store.conn.execute("PRAGMA table_info(players)")}
-    assert {"transfers_in_event", "cost_change_event", "form", "ict_index", "value_form"} <= cols
+    assert {"transfers_in_event", "cost_change_event", "form", "ict_index", "value_form",
+            "scout_news_link"} <= cols
     store.close()
 
 

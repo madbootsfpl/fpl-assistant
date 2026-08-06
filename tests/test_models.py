@@ -191,6 +191,15 @@ def test_player_from_api_parses_crowd_signals():
     assert (p.influence, p.creativity, p.threat) == (541.6, 33.5, 0.0)
 
 
+def test_player_from_api_parses_scout_news_link():
+    # Sprint 064 / ADR-058: a present link → kept; blank "" or absent → None (empty-safe for the News lens).
+    base = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+            "team": 1, "element_type": 3, "now_cost": 75, "total_points": 0}
+    assert Player.from_api({**base, "scout_news_link": "https://x/1"}).scout_news_link == "https://x/1"
+    assert Player.from_api({**base, "scout_news_link": ""}).scout_news_link is None
+    assert Player.from_api(base).scout_news_link is None
+
+
 def test_player_from_api_crowd_signals_absent_are_none():
     # preseason / a lean payload: the crowd fields are simply absent → None, no crash.
     raw = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",

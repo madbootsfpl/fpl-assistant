@@ -242,6 +242,16 @@ def test_my_squad_set_bench_picks_four():
     assert len(at.session_state["squad"]["bench_ids"]) == 4
 
 
+def test_news_page_lists_flagged_players_or_all_clear():
+    # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
+    at = _run(_PAGES / "9_News.py")
+    if at.dataframe:
+        cols = list(at.dataframe[0].value.columns)
+        assert "News" in cols and "Source" in cols
+    else:
+        assert at.success or at.info                       # "no current news" (or the run-refresh note)
+
+
 def test_ask_chat_answers_a_grounded_question():
     at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
     assert not at.exception

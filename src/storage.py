@@ -52,6 +52,7 @@ _MIGRATIONS = {
         "recoveries": "INTEGER",
         "chance": "INTEGER",
         "news": "TEXT",
+        "scout_news_link": "TEXT",       # source link for the news (Sprint 064, ADR-058)
         "code": "INTEGER",
         "penalties_order": "INTEGER",
         "selected_by": "REAL",
@@ -96,6 +97,7 @@ CREATE TABLE IF NOT EXISTS players (
     recoveries      INTEGER,
     chance          INTEGER,
     news            TEXT,
+    scout_news_link TEXT,
     code            INTEGER,
     penalties_order INTEGER,
     selected_by     REAL,
@@ -168,10 +170,10 @@ INSERT INTO players
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
      goals_scored, assists, minutes,
      defcon, defcon_per90, cbi, tackles, recoveries,
-     chance, news, code, penalties_order, selected_by,
+     chance, news, scout_news_link, code, penalties_order, selected_by,
      transfers_in_event, transfers_out_event, cost_change_event, cost_change_start,
      form, ict_index, influence, creativity, threat, value_form)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
@@ -198,6 +200,7 @@ ON CONFLICT(id) DO UPDATE SET
     recoveries      = excluded.recoveries,
     chance          = excluded.chance,
     news            = excluded.news,
+    scout_news_link = excluded.scout_news_link,
     code            = excluded.code,
     penalties_order = excluded.penalties_order,
     selected_by     = excluded.selected_by,
@@ -310,7 +313,7 @@ class Storage:
              p.xg, p.xa, p.xgi, p.xgc,
              p.goals_scored, p.assists, p.minutes,
              p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries,
-             p.chance, p.news, p.code, p.penalties_order, p.selected_by,
+             p.chance, p.news, p.scout_news_link, p.code, p.penalties_order, p.selected_by,
              p.transfers_in_event, p.transfers_out_event, p.cost_change_event, p.cost_change_start,
              p.form, p.ict_index, p.influence, p.creativity, p.threat, p.value_form)
             for p in players
