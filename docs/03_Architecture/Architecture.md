@@ -455,6 +455,13 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 068 (2026-08-06)** — *Community Signals*, per **ADR-059** — genuine community "buzz" with **no
+  Reddit Developer access / secret**: the public **RSS** feed (the `.json` API 403s). A self-contained
+  `src/api/reddit.py` `RedditRssClient` (best-effort, ClubElo pattern) + a pure `src/community.py`
+  `community_buzz` (parse Atom + count `web_name` mentions) + `community_signals` (degrade to
+  `(None, message)`). Surfaced as a Trending **"💬 Talked about"** board — **button-gated** + `st.cache_data`
+  (~30 min), degrading to "unavailable". Buzz (frequency), not sentiment; display-only, xP untouched.
+  Cloud-IP may block → degrades. 528 tests green.
 - **Sprint 067 (2026-08-06)** — *community "trending"* (no new ADR — executes ADR-057). A pure
   `trending(players, by, limit)` in `analytics/crowd.py` (rank by owned/in/out/form, display-only) powers
   both a new **trends `ask`/`chat` intent** (keywords first so "most transferred" beats the transfer-advice

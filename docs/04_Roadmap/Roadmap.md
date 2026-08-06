@@ -97,8 +97,9 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   at GW1.
 
 **Tier 2 — external / extended signals (started Sprint 064, ADR-058; degrade gracefully like ClubElo).**
-- ⬜ **Reddit r/FPL social sentiment** — a mention-counter over hot/top posts; needs a Reddit app + a cloud
-  secret (public JSON now 403s). A **gated spike (ADR-059)** next (Sprint 067 US-195, owner-prerequisite).
+- ✅ **Community Signals** — a Reddit **RSS** buzz counter (`r/FantasyPL/.rss`, **no auth/secret** — the
+  `.json` API 403s), surfaced as a Trending "💬 Talked about" board; degrade-gracefully + cached +
+  button-gated (Sprint 068, US-195, ADR-059). *Cloud-IP may block → degrades. Buzz, not sentiment.*
 - ✅ FPL official **news lens** — the stored `player.news` + `scout_news_link` on a **News** page
   (Sprint 064, US-190).
 - ✅ **Import your team by manager-ID** — the public FPL entry API → the session active squad (Sprint 064,

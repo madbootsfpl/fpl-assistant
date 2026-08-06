@@ -41,6 +41,12 @@ OLLAMA_TIMEOUT = 60
 # The API returns CSV for a given date at CLUBELO_BASE_URL/<YYYY-MM-DD>.
 CLUBELO_BASE_URL = "http://api.clubelo.com"
 
+# Community Signals (Sprint 067, ADR-059) — the public Reddit RSS feed (no auth; the `.json` API 403s).
+# `{}` is the subreddit. Best-effort + rate-limited → cache + degrade gracefully. 5s budget like ClubElo.
+REDDIT_RSS_URL = "https://www.reddit.com/r/{}/.rss"
+REDDIT_SUBREDDIT = "FantasyPL"
+REDDIT_TIMEOUT = 5
+
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 

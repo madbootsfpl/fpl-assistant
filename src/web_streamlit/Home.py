@@ -25,7 +25,8 @@ Use the **sidebar** to explore:
 - **Captain** — who to (vice-)captain from your squad this week
 - **My Squad** — your squad as a **pitch/formation** view; edit it (rename, swap, bench, set captain, download)
 - **News** — official FPL player news (injuries · doubts · returns), most serious first
-- **Trending** — what the crowd's doing: most-owned · most transferred in/out · in form (free FPL data)
+- **Trending** — what the crowd's doing: most-owned · transferred in/out · in form, + **Community Signals**
+  (💬 what r/FantasyPL is talking about — best-effort)
 - **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 
 **Your squad:** on **Build**, name it, *Download* a `squad.json` (that file is your save) and *Use this

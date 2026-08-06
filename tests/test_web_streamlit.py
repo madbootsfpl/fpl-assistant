@@ -256,6 +256,8 @@ def test_trending_page_shows_a_leaderboard():
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
         assert "Player" in cols and "Trends" in cols        # a crowd leaderboard with flags
+    # Community Signals (ADR-059): a button-gated "Talked about" board — present, no fetch on load
+    assert any(b.label.startswith("Show what") for b in at.button)
 
 
 def test_news_page_lists_flagged_players_or_all_clear():
