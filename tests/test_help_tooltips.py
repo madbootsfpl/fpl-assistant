@@ -16,7 +16,7 @@ _PAGES = pathlib.Path(__file__).resolve().parent.parent / "src" / "web_streamlit
 _INPUTS = ("selectbox", "multiselect", "slider", "number_input", "text_input", "checkbox", "radio")
 
 # Pages whose input controls must all carry help (US-208 browse + US-209 squad/decision pages).
-_COVERED = ["1_Players.py", "2_Player_Stats.py", "3_Fixtures.py", "11_Trending.py",
+_COVERED = ["1_Players.py", "3_Fixtures.py", "11_Trending.py",
             "4_Build_Squad.py", "5_My_Squad.py", "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"]
 
 

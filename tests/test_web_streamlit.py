@@ -215,31 +215,33 @@ def test_help_page_renders_the_guide_without_data():
 
 
 def test_squad_tabs_are_renamed_and_grouped():
-    # ADR-062/063: Player Stats at 2; Build Squad · My Squad · Squad Health grouped at 4–6; old names gone
-    assert (_PAGES / "2_Player_Stats.py").exists()
+    # ADR-069: Player Stats merged into Players (US-216); the squad pages still separate until US-217
+    assert not (_PAGES / "2_Player_Stats.py").exists()   # merged into Players
+    assert (_PAGES / "1_Players.py").exists()
     assert (_PAGES / "4_Build_Squad.py").exists()
     assert (_PAGES / "5_My_Squad.py").exists()
     assert (_PAGES / "6_Squad_Health.py").exists()
-    assert not (_PAGES / "6_Build.py").exists()
-    assert not (_PAGES / "3_Squads.py").exists()
-    assert not (_PAGES / "2_Fixtures.py").exists()      # Fixtures moved to 3 (Player Stats took 2)
 
 
-def test_player_stats_page_renders_the_stat_boards():
-    # ADR-063: Player Stats has 4 tabs over the reused analytics; each renders a table (or a "no data" note)
-    at = _run(_PAGES / "2_Player_Stats.py")
-    assert len(at.tabs) == 4 or len(at.info) >= 1
-    assert len(at.dataframe) >= 1 or len(at.info) >= 1     # at least one board rendered
+def test_player_stats_board_renders_via_the_segmented_control():
+    # ADR-069: Player Stats merged into Players — a stat board renders when its segmented-control view is picked
+    at = _run(_PAGES / "1_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Over / under-perf").run()
+    assert not at.exception
+    assert len(at.dataframe) >= 1 or len(at.info) >= 1     # the board rendered
 
 
-def test_player_stats_filter_narrows_the_boards():
-    # ADR-064: the shared Team/Position/Player filter narrows every tab
-    at = _run(_PAGES / "2_Player_Stats.py")
+def test_player_stats_filter_narrows_a_board():
+    # ADR-064/069: the shared filter narrows a stat board on the merged Players page
+    at = _run(_PAGES / "1_Players.py")
     if not at.dataframe:
         return
+    at.segmented_control[0].set_value("Defensive Contribution").run()
     at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
     assert not at.exception
-    for df in at.dataframe:                                 # every rendered board is now ARS-only
+    for df in at.dataframe:                                 # the board is now ARS-only
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
