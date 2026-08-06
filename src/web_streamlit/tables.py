@@ -7,17 +7,13 @@ The tabs keep their text summaries beneath (the "augment" approach): the picture
 
 import streamlit as st
 
-# Any row key named "photo" / "badge" (or "out"/"in" photo variants) renders as an image thumbnail.
-_IMAGE_COLS = ("photo", "badge", "out", "in")
+from src.web_streamlit.formats import column_config
 
 
 def render_player_table(rows) -> None:
-    """Render `rows` (dicts whose image keys hold FPL CDN URLs) as a native sortable table with the
-    photo/badge columns shown as thumbnails. A no-op on empty rows."""
+    """Render `rows` (dicts whose image keys hold FPL CDN URLs) as a native sortable table — image
+    columns as thumbnails, numeric columns formatted by the shared convention (ADR-072). No-op on empty."""
     if not rows:
         return
-    present = [c for c in _IMAGE_COLS if any(c in r for r in rows)]
-    st.dataframe(
-        rows, hide_index=True, width="stretch",
-        column_config={c: st.column_config.ImageColumn("", width="small") for c in present},
-    )
+    labels = {label for r in rows for label in r}      # union — callers pass different column sets
+    st.dataframe(rows, hide_index=True, width="stretch", column_config=column_config(labels))

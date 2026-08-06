@@ -16,11 +16,11 @@ from src.analytics import (
     rank_players,
 )
 from src.web_streamlit.filters import apply as apply_filter
+from src.web_streamlit.formats import column_config
 from src.web_streamlit.paginate import paginate
 from src.web_streamlit.ratings import LEGEND, rating_cell
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
-_BADGE = {"badge": st.column_config.ImageColumn("", width="small")}
 
 
 def _sorted(players, sort_by):
@@ -45,16 +45,13 @@ def render_pool(rows, sel, photos, badges):
     ranked = _sorted(filtered, sort)
     # The table first (it's what matters most) — page through all matches; the top-15 bar sits below.
     page = paginate(ranked, key="players", per_page=50)
-    st.dataframe(
-        [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
-          "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
-          "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
-          "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
-          "Trends": " ".join(crowd_flags(p))} for p in page],
-        width="stretch", hide_index=True,
-        column_config={"photo": st.column_config.ImageColumn("", width="small"),
-                       "badge": st.column_config.ImageColumn("", width="small")},
-    )
+    table = [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
+              "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
+              "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
+              "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
+              "Trends": " ".join(crowd_flags(p))} for p in page]
+    st.dataframe(table, width="stretch", hide_index=True,
+                 column_config=column_config(table[0] if table else []))
     by_value = sort == "value"
     field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")
     top = sorted(ranked, key=lambda p: -((p.get(field) or 0)))[:15]
@@ -73,18 +70,15 @@ def render_pool(rows, sel, photos, badges):
 def _board(stat_rows, columns, badges, key, col_help=None):
     """A paginated stat table: a team badge + the given {column: value_of} spec (season-to-date).
 
-    `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071) so a casual user can
-    hover to see what each number means (an absolute season total vs a per-90 rate)."""
-    config = dict(_BADGE)
-    for head, text in (col_help or {}).items():
-        config[head] = st.column_config.Column(head, help=text)
+    `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071). Column formatting +
+    alignment come from the shared convention (ADR-072) via `column_config`."""
     page = paginate(stat_rows, key=key, per_page=50)
-    st.dataframe(
-        [{"badge": badges.get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
-          "Pos": r["position"], **{head: value_of(r) for head, value_of in columns.items()}}
-         for r in page],
-        hide_index=True, width="stretch", column_config=config,
-    )
+    table = [{"badge": badges.get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
+              "Pos": r["position"], **{head: value_of(r) for head, value_of in columns.items()}}
+             for r in page]
+    st.dataframe(table, hide_index=True, width="stretch",
+                 column_config=column_config(["badge", "Player", "Team", "Pos", *columns],
+                                             help=col_help))
 
 
 def render_over_under(players, sel, badges):
@@ -92,7 +86,7 @@ def render_over_under(players, sel, badges):
                "(regression risk), **−** = due a bounce. Season totals, ≥900 mins.")
     _board(apply_filter(over_under(players), sel), {
         "Mins": lambda r: r["minutes"], "Actual": lambda r: r["actual"],
-        "Exp": lambda r: r["expected"], "Diff": lambda r: f"{r['diff']:+.1f}"}, badges, key="stats_over",
+        "Exp": lambda r: r["expected"], "Diff": lambda r: r["diff"]}, badges, key="stats_over",
         col_help={"Mins": "Minutes played this season.",
                   "Actual": "Actual attacking points scored (season total).",
                   "Exp": "Expected attacking points from xGI (season total).",
@@ -104,7 +98,7 @@ def render_defcon(players, sel, badges):
                "DefCon points source. Per-90 rate, ≥900 mins.")
     _board(apply_filter(defcon_reliability(players), sel), {
         "Mins": lambda r: r["minutes"], "DC/90": lambda r: r["per90"],
-        "Thr": lambda r: r["threshold"], "Margin": lambda r: f"{r['margin']:+.1f}"}, badges, key="stats_defcon",
+        "Thr": lambda r: r["threshold"], "Margin": lambda r: r["margin"]}, badges, key="stats_defcon",
         col_help={"Mins": "Minutes played this season.",
                   "DC/90": "Defensive Contribution actions per 90 minutes (a rate, not a total).",
                   "Thr": "The position's DefCon points threshold.",

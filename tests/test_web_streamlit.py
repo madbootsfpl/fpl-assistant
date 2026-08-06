@@ -263,6 +263,20 @@ def test_player_stats_filter_narrows_a_board():
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
+def test_pool_number_columns_stay_numeric_formatting_is_display_only():
+    # ADR-072: money/value columns are formatted via NumberColumn (display) — the frame still holds the
+    # raw numbers (not pre-rounded strings), so they stay sortable and truthful.
+    import pandas as pd
+
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    df = at.dataframe[0].value
+    assert {"£m", "Val/£m"} <= set(df.columns)
+    assert pd.api.types.is_numeric_dtype(df["£m"])       # not stringified
+    assert pd.api.types.is_numeric_dtype(df["Val/£m"])
+
+
 def test_clean_sheets_board_shows_a_quality_rating_and_legend():
     # ADR-071: xGC/90 board gains a relative Rating column (🟢…🔴) + a "vs the players shown" legend
     at = _run(_PAGES / "1_Players.py")
