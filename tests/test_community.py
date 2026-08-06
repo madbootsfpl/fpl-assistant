@@ -24,6 +24,18 @@ def test_community_buzz_ranks_by_mentions():
     assert all(r["web_name"] != "Zzz" for r in buzz)          # unmentioned players are dropped
 
 
+def test_community_buzz_accepts_sqlite_rows():
+    # the page passes store.get_players() → sqlite3.Row (no .get); community_buzz must handle it
+    import sqlite3
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE p (id INTEGER, web_name TEXT)")
+    conn.executemany("INSERT INTO p VALUES (?, ?)", [(1, "Haaland"), (2, "Saka")])
+    rows = conn.execute("SELECT * FROM p").fetchall()
+    buzz = community_buzz(_RSS, rows, limit=5)
+    assert [(r["web_name"], r["mentions"]) for r in buzz] == [("Haaland", 3), ("Saka", 2)]
+
+
 def test_community_buzz_is_empty_safe():
     assert community_buzz("not xml at all", _PLAYERS) == []   # a parse error → [], no crash
     assert community_buzz("", _PLAYERS) == []

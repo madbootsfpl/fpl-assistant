@@ -36,12 +36,13 @@ def community_buzz(rss_text: str, players, limit: int = 10) -> list:
         return []
     scored = []
     for p in players:
-        name = str(p.get("web_name") or "")
+        row = dict(p)        # players may be sqlite3.Row (no .get) — normalise once
+        name = str(row.get("web_name") or "")
         if len(name) < _MIN_NAME:
             continue
         hits = len(re.findall(rf"\b{re.escape(name.lower())}\b", text))
         if hits:
-            scored.append({**dict(p), "mentions": hits})
+            scored.append({**row, "mentions": hits})
     scored.sort(key=lambda r: r["mentions"], reverse=True)
     return scored[:limit]
 
