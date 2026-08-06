@@ -11,6 +11,7 @@ from src.analytics.cleansheet import defensive_solidity
 from src.analytics.crowd import TREND_BYS, crowd_flags, net_transfers, trending
 from src.analytics.defcon import defcon_reliability
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
+from src.analytics.form import blend_form, form_rate
 from src.analytics.minutes import (
     availability_weight,
     chance_factor,
@@ -59,6 +60,8 @@ __all__ = [
     "trending",
     "TREND_BYS",
     "decision_xp",
+    "blend_form",
+    "form_rate",
     "expected_minutes",
     "fallback_rate",
     "minutes_share",

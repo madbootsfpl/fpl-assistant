@@ -29,6 +29,7 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    gw_history = store.get_gw_history_by_code()      # in-season form (ADR-060; dormant now)
     photos = photo_url_by_id(players)
     badges = badge_url_by_short_name(store.get_teams())
 finally:
@@ -41,7 +42,7 @@ if not players:
 elif not owned:
     st.info(f"Squad '{squad_name}' has no current players to analyse.")
 else:
-    ranked = decision_xp(players, upcoming, history)            # xMins-weighted (default)
+    ranked = decision_xp(players, upcoming, history, gw_history_by_code=gw_history)  # xMins-weighted
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     # The XI: the declared bench's complement, else the best legal XI (shared with the CLI via
     # best_legal_xi, so they can't diverge — ADR-031/040).

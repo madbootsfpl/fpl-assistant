@@ -9,7 +9,9 @@ or 0 if the player isn't available. Over a horizon of the next N gameweeks, we s
 per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek) adds up.
 """
 
+from src import config
 from src.analytics.fdr import _view
+from src.analytics.form import blend_form, form_rate
 from src.analytics.minutes import minutes_weight_from_history
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
@@ -122,6 +124,7 @@ def _status_is_active(p) -> bool:
 def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
     is_available=None, minutes_weight=None, history_by_code=None,
+    form_by_code=None, form_weight: float = 0.0,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -145,6 +148,7 @@ def player_xp(
     diff_by_team_gw = _difficulties_by_team_gw(upcoming, source, horizon_events)
     baseline_by_code = baseline_by_code or {}
     history_by_code = history_by_code or {}
+    form_by_code = form_by_code or {}
     is_available = is_available or _status_is_active
 
     results = []
@@ -159,6 +163,12 @@ def player_xp(
         else:
             fb = fallback_rate(history_by_code.get(code, []))
             rate, rate_source = (fb, "fallback") if fb is not None else (ppg, "current")
+        # In-season form blend (ADR-060) — DORMANT: form_weight 0 (default) or no per-GW form for
+        # this player ⇒ rate unchanged, so xP is identical today (the ADR-041 invariant holds). At
+        # GW1, form_by_code is populated and form_weight > 0 nudges the rate toward recent form.
+        fr = form_by_code.get(code)
+        if fr is not None and form_weight and rate is not None:
+            rate = blend_form(rate, fr[0], fr[1], form_weight)
         available = is_available(p)
         gw_map = diff_by_team_gw.get(p["team_id"], {})
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
@@ -201,17 +211,30 @@ def player_xp(
 
 
 def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", horizon: int = 5,
-                minutes_weighted: bool = True) -> list[dict]:
+                minutes_weighted: bool = True, gw_history_by_code=None) -> list[dict]:
     """The single "decision xP" recipe shared by squad / analyse / transfer / ask (ADR-041).
 
     Assembles the *full* xP the tool acts on: the multi-season historical baseline + the
-    low-evidence fallback (ADR-040), and — unless `minutes_weighted` is False (`--no-xmins`) —
-    the xMins weight (ADR-038). One place, so the optimiser and the recommendations can't disagree
-    on a player's xP (the inconsistency behind "why does transfer improve my optimal squad?").
+    low-evidence fallback (ADR-040), the xMins weight (ADR-038, unless `--no-xmins`), and — when
+    live — an in-season **form** blend (ADR-060). One place, so the optimiser and the
+    recommendations can't disagree on a player's xP.
+
+    `gw_history_by_code` (from `Storage.get_gw_history_by_code()`) is the per-GW history for the
+    form term. **Form is dormant until GW1:** preseason it's empty and `config.FORM_WEIGHT` is 0,
+    so the rate — and every xP — is unchanged (an invariance test pins this). The GW1 flip is a
+    backfill + raising `FORM_WEIGHT`; nothing else here changes.
     """
     baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
     weight = minutes_weight_from_history(history_by_code) if minutes_weighted else None
+    # form_by_code: code → (form_pp90, confidence); only players with a computable rate. Empty
+    # preseason (no per-GW history) → no blend. Keyed by the same `code` the baseline uses.
+    form_by_code = {
+        code: fr
+        for code, rows in (gw_history_by_code or {}).items()
+        if (fr := form_rate(rows, k_gameweeks=config.FORM_GAMEWEEKS))[0] is not None
+    }
     return player_xp(
         players, upcoming, source=source, horizon=horizon,
         baseline_by_code=baseline_by_code, minutes_weight=weight, history_by_code=history_by_code,
+        form_by_code=form_by_code, form_weight=config.FORM_WEIGHT,
     )

@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 069 (2026-08-06)** — *Data Hardening prep*, per **ADR-060** — the first season-start foundations,
+  built **wired but dormant** so **GW1 (2026-08-21)** is a switch-flip. (1) A per-GW `player_history` table
+  (`src/models/player_gameweek.py` `PlayerGameweek`, keyed `code+round`; additive/idempotent) filled by the
+  **existing** throttled `element-summary` walk — the one call already carries `history` (empty preseason →
+  live GW1), so it rides the same pass (keyed via an id→code map). (2) A dormant in-season **form blend**: a
+  pure `src/analytics/form.py` (`form_rate` = a recency+minutes-weighted rolling **pp90**; `blend_form`)
+  folded into the **one** `decision_xp` recipe (precomputed `form_by_code`, like `baseline_by_code`) behind
+  `config.FORM_WEIGHT = 0`. Preseason → xP **unchanged** (an invariance test + a real-DB smoke pin it; the
+  whole suite passing is the proof). Every `decision_xp` caller (cli/ask/web) wired → **GW1 = backfill +
+  raise the weight**. Not FPL's `form` field (minutes-blind); the one-xP invariant (ADR-041) held. 546 tests.
 - **Sprint 068 (2026-08-06)** — *Community Signals*, per **ADR-059** — genuine community "buzz" with **no
   Reddit Developer access / secret**: the public **RSS** feed (the `.json` API 403s). A self-contained
   `src/api/reddit.py` `RedditRssClient` (best-effort, ClubElo pattern) + a pure `src/community.py`

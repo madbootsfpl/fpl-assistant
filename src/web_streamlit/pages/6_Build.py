@@ -38,6 +38,7 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    gw_history = store.get_gw_history_by_code()      # in-season form (ADR-060; dormant now)
     photos = photo_url_by_id(players)
     badges = badge_url_by_short_name(store.get_teams())
 finally:
@@ -46,7 +47,7 @@ finally:
 if not players:
     st.info("No players — run `python app.py refresh` first.")
 else:
-    ranked = decision_xp(players, upcoming, history)                # xMins-weighted (default)
+    ranked = decision_xp(players, upcoming, history, gw_history_by_code=gw_history)  # xMins-weighted
     scores = {r["id"]: r["xp"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     bands = archetype_bands(cheap=cheap or None, premium=premium or None)

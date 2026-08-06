@@ -50,16 +50,17 @@ the weight → in-season form goes live everywhere at once (one xP recipe, ADR-0
       the one-xP-metric invariant (ADR-041) preserved
 - [x] **US-196** — a `player_history` table + a `PlayerGameweek` model + `save_history`/`get_history…`;
       `backfill_history` also persists per-GW `history` (0 rows preseason, verified); idempotent upsert
-- [ ] **US-197** — a pure `form_rate` (recency-weighted, minutes-aware rolling pp90 over the last N GWs) +
+- [x] **US-197** — a pure `form_rate` (recency-weighted, minutes-aware rolling pp90 over the last N GWs) +
       an optional `form_by_code` / `form_weight` threaded through `player_xp`/`decision_xp`; **default
       weight 0 → rate unchanged**; `None` form (no per-GW history) → weight 0 for that player
-- [ ] **Invariance** — with `form_weight = 0` (and/or no per-GW history), `decision_xp` output is
+- [x] **Invariance** — with `form_weight = 0` (and/or no per-GW history), `decision_xp` output is
       **identical** to today; a test pins it. A second test with *synthetic* per-GW history + a non-zero
       weight proves the blend shifts the rate the intended way
-- [ ] **Dormant** — no CLI/web behaviour change now; the weight lives in `config` (0), documented as "set
-      at GW1"
-- [ ] Tests green (existing **530** stay green; + the new ingest/form/invariance tests)
-- [ ] Docs: ADR-060 + index, Architecture, Roadmap (Data Hardening ◑→partly), Backlog, PROJECT_STATUS
+- [x] **Dormant** — no CLI/web behaviour change now; the weight lives in `config` (0), documented as "set
+      at GW1"; every `decision_xp` caller (cli/ask/web) wired → GW1 is a weight-flip only
+- [x] Tests green (existing stay green; + the new ingest/form/invariance tests) — **546** (+16)
+- [ ] Docs: ADR-060 + index ✅; Architecture, Roadmap (Data Hardening ◑→partly), Backlog, PROJECT_STATUS
+      _(at the retro)_
 
 ---
 
@@ -68,7 +69,7 @@ the weight → in-season form goes live everywhere at once (one xP recipe, ADR-0
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-196 | **Per-GW history ingestion** — a `player_history` table + `PlayerGameweek` model; the existing throttled `element-summary` walk also stores `history` (empty now → live at GW1); idempotent. ADR-060. | High | ✅ Done | ~1 session |
-| US-197 | **Dormant form blend** — a rolling-pp90 form rate blended into `decision_xp` behind a **weight-0** flag (dormant); preserves the one-xP invariant; invariance + synthetic-blend tests. ADR-060. | High | ⬜ To do | ~1 session |
+| US-197 | **Dormant form blend** — a rolling-pp90 form rate blended into `decision_xp` behind a **weight-0** flag (dormant); preserves the one-xP invariant; invariance + synthetic-blend tests. ADR-060. | High | ✅ Done | ~1 session |
 
 ---
 
@@ -133,8 +134,45 @@ optional hook into `player_xp`, assembled in `decision_xp` — nowhere else, so 
   preseason, so no data to seed. ruff clean. _Cross-cutting docs (Architecture / PROJECT_STATUS / Roadmap)
   batched to the sprint close after US-197._
 
+- **US-197 ✅ (build)** — A pure `src/analytics/form.py`: `form_rate(gw_history)` — a recency- +
+  minutes-weighted rolling **pp90** over the last N GWs → `(form_pp90, confidence)`, `(None, 0.0)` when the
+  window has no minutes (mirrors `baseline_rate`); `blend_form(base, pp90, conf, weight)` — `rate =
+  (1−w)·base + w·form`, inert when `weight` 0 or form `None`. Wired into the **one recipe**: `player_xp`
+  gained a precomputed `form_by_code` + `form_weight` (mirroring `baseline_by_code`); `decision_xp` assembles
+  `form_by_code` from `gw_history_by_code` and passes `config.FORM_WEIGHT` (**default 0 → dormant**). New
+  config `FORM_WEIGHT = 0.0` + `FORM_GAMEWEEKS = 5` (documented "flip at GW1"). **Wired every caller** —
+  cli ×3, ask ×4, web ×4 all pass `store.get_gw_history_by_code()` — so GW1 is a *weight-flip only*, no
+  further code. Tests (+11 → **546**): `form_rate` (recency/minutes weighting · skips 0-min GWs · `None`
+  without minutes · window cap · cameo confidence); `blend_form` (mix · inert when dormant/None); the
+  `player_xp` hook (blends at weight > 0 · unchanged at 0); **`decision_xp` invariance** (weight 0 ⇒
+  identical) + **activation** (weight 0.5 ⇒ shifts to form). **Smoke (real DB):** dormant → **identical xP
+  for every player**; flip `FORM_WEIGHT=0.5` + a synthetic hot run → **Haaland 17.6 → 24.1**, while a player
+  with no per-GW form is unchanged. No schema change (US-197 is code + config) → no reseed. ruff clean.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — both Data-Hardening foundations built, **wired, and dormant**. Preseason output
+is provably unchanged (the whole 546-test suite + a real-DB smoke show identical xP for every player), and
+GW1 is now a **weight-flip only** (`history --backfill` + raise `FORM_WEIGHT`).
+
+**What went well** — verifying the design on **real data first** paid off twice: the live probe confirmed
+`history` is empty preseason (so "wire it dormant" is honest), and it surfaced the *efficiency find* that the
+past-season walk's payload already carries per-GW `history` (no second fetch). Folding form into the **one**
+`decision_xp` recipe (mirroring how `baseline_by_code` is precomputed and passed) kept the ADR-041 invariant
+airtight — the existing suite passing *is* the invariance proof. A design snag (per-GW rows carry no season
+name) was caught in build and simplified the schema (`(code, round)`, no magic season constant) rather than
+forcing one.
+
+**What to watch** — the **live per-GW row shape is unseen** until GW1 (`history` empty now); the additive
+schema + idempotent upsert mean an extra field is a one-line migration, not a rebuild. **`FORM_WEIGHT` +
+the window want calibration at GW1** (start small, e.g. 0.3) once real form exists — and the crowd-vs-xP
+backtest (Tier 3) is the eventual check that form actually helps. The dormant blend is exercised now by the
+activation test + smoke, so it won't rot unnoticed.
+
+**GW1 checklist (2026-08-21):** `python app.py history --backfill` (now also per-GW) → set
+`config.FORM_WEIGHT > 0` → verify form nudges xP (captain/transfer/analyse/squad/ask + the web, all at once)
+→ calibrate the weight/window.
+
+**Lessons captured:** `docs/05_Sprints/Sprint69_Lessons_Learnt.md`.

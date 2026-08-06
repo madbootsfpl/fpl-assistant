@@ -41,6 +41,7 @@ try:
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
     history = store.get_history_by_code()
+    gw_history = store.get_gw_history_by_code()      # in-season form (ADR-060; dormant now)
     photos = photo_url_by_id(players)
 finally:
     store.close()
@@ -51,7 +52,7 @@ if not players:
 
 by_id = {p["id"]: p for p in players}
 owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
-xp_by_id = {r["id"]: r["xp"] for r in decision_xp(players, upcoming, history)}
+xp_by_id = {r["id"]: r["xp"] for r in decision_xp(players, upcoming, history, gw_history_by_code=gw_history)}
 bench_ids = set(squad.get("bench_ids") or [])
 captain_id = squad.get("captain_id")
 

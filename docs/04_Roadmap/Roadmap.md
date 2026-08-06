@@ -8,8 +8,9 @@ plan and its bullet-by-bullet reconciliation live in git history and the per-spr
 **Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
 and a grounded natural-language layer (`ask` + `chat`) — now with a **deployed read-only Streamlit web UI**
 and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens · manager-ID import · Reddit
-buzz). **59 ADRs · 530 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
-form/per-GW insight — and the momentum boards — are still ahead.
+buzz). **60 ADRs · 546 tests · CI green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
+form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
+wired dormant** (Sprint 069): GW1 is a switch-flip.
 
 **Status legend:** ✅ Done · ◑ Partial · ⬜ Not started
 
@@ -75,9 +76,13 @@ stays the engine**). Two steps taken:
 
 ## Then — Data Hardening (post-GW1)
 
-The substance that comes alive once the season runs (GW1 = 2026-08-21):
-- ⬜ Full 567-player history backfill (can ride sooner) + **per-GW `history` ingestion** (empty preseason).
-- ⬜ **In-season form** + rolling 3-GW vs 6-GW trends; blend form into xP.
+The substance that comes alive once the season runs (GW1 = 2026-08-21). **Prep done, dormant** (Sprint 069,
+ADR-060) — GW1 is a flip (`history --backfill` + raise `FORM_WEIGHT`):
+- ◑ **Per-GW `history` ingestion** — a `player_history` table filled by the *existing* `element-summary`
+  walk (empty preseason → live GW1). *(Full 567-player backfill can ride sooner.)* (Sprint 069, US-196.)
+- ◑ **In-season form blend into xP** — a dormant rolling-**pp90** form term in the one `decision_xp` recipe
+  behind `FORM_WEIGHT = 0` (Sprint 069, US-197). Still ahead: **calibration** at GW1 + rolling 3-GW/6-GW
+  *trend views* over the new per-GW data.
 - ◑ Attack/Defence FDR split + recent-form weighting (preseason strengths are 0 — ADR-005).
 - ⬜ Price-change predictor (directional flags from net-transfer deltas — flags, not truth).
 

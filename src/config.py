@@ -47,6 +47,15 @@ REDDIT_RSS_URL = "https://www.reddit.com/r/{}/.rss"
 REDDIT_SUBREDDIT = "FantasyPL"
 REDDIT_TIMEOUT = 5
 
+# In-season form blend (ADR-060) — DORMANT until GW1 (2026-08-21). The one xP recipe (ADR-041)
+# blends a rolling, minutes-aware points-per-90 (from per-GW `player_history`) into a player's rate:
+#     rate = (1 − w)·base + w·form_pp90,   w = FORM_WEIGHT × confidence
+# Preseason there is no per-GW history AND FORM_WEIGHT is 0, so xP is unchanged (an invariance test
+# pins this). The GW1 flip: run `history --backfill` (now also per-GW), then raise FORM_WEIGHT
+# (calibrate then — start small, e.g. 0.3). FORM_GAMEWEEKS is the rolling window (last N GWs).
+FORM_WEIGHT = 0.0
+FORM_GAMEWEEKS = 5
+
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 

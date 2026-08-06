@@ -312,7 +312,8 @@ def _squad_xp(store: Storage, squad_name: str, active_squad=None):
         return None
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
-    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON,
+                         gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
@@ -501,7 +502,8 @@ def _decide_compare(store: Storage, question: str) -> dict | None:
         return {"message": f"Name two players to compare, e.g. ask \"Haaland or Saka?\".{found}"}
 
     upcoming = store.get_upcoming_fixtures()
-    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON,
+                         gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
     by_id = {r["id"]: r for r in ranked}
 
     rows = []
@@ -583,7 +585,8 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
     constrained = bool(bands) or bool(differential)
     bench_weight, bench_boost = _bench_mode(question)
     upcoming = store.get_upcoming_fixtures()
-    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON)
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON,
+                         gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
     pool, _excluded = available_players(players)          # exclude injured/suspended (as `squad` does)
@@ -663,7 +666,8 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
         under = f" under £{cap:.1f}m" if cap else ""
         return {"message": f"No available{where} players{under} — try a higher price cap."}
 
-    ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code())
+    ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
+                         gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
 

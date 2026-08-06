@@ -298,6 +298,7 @@ def cmd_squad(args) -> None:
             ranked = decision_xp(
                 players, store.get_upcoming_fixtures(), store.get_history_by_code(),
                 minutes_weighted=not args.no_xmins,
+                gw_history_by_code=store.get_gw_history_by_code(),   # in-season form (ADR-060; dormant now)
             )
             scores = {r["id"]: r["xp"] for r in ranked}
             weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
@@ -527,6 +528,7 @@ def cmd_analyse(args) -> None:
         ranked = decision_xp(
             players, upcoming, store.get_history_by_code(),
             source=args.type, horizon=args.next, minutes_weighted=not args.no_xmins,
+            gw_history_by_code=store.get_gw_history_by_code(),   # in-season form (ADR-060; dormant now)
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -576,6 +578,7 @@ def cmd_transfer(args) -> None:
         ranked = decision_xp(
             players, upcoming, store.get_history_by_code(),
             source=args.type, horizon=args.next, minutes_weighted=show_xmins,
+            gw_history_by_code=store.get_gw_history_by_code(),   # in-season form (ADR-060; dormant now)
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])

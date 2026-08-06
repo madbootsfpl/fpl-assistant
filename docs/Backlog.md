@@ -122,10 +122,13 @@ Deferred below.)*
 
 - Richer xP: recent `form` + expected minutes (xMins — now assessed in its own section above).
 - Attack/Defence FDR split (needs `strength_attack_*` / `strength_defence_*`).
-- **Per-GW history ingestion** — `element-summary`'s `history` (this-season per-GW) is empty
-  preseason (Sprint 026, ADR-027). Ingest it once gameweeks start playing (same endpoint/command);
-  it enables within-season form/rolling trends. A `history <player>` season-trend view could follow.
-- **Data Hardening (a scheduled sprint, ~GW1)** — the owner's "030" that got reordered: a full
-  567-player history backfill (doable any time) + per-GW `history` ingestion + in-season xP **form
-  blending**. The form/per-GW parts need the season started (GW1 deadline 2026-08-21), so this is a
-  **post-GW1 sprint**; the full backfill can ride along or go sooner.
+- ~~**Per-GW history ingestion**~~ — **DONE (wired, dormant)** (Sprint 069, US-196, **ADR-060**). A
+  `player_history` table filled by the *existing* `element-summary` backfill (the one call already carries
+  `history`); empty preseason → live at GW1. Still open: a `history <player>` season-trend / rolling-form
+  **view** over the new per-GW data.
+- ~~**In-season form blend into xP**~~ — **DONE (wired, dormant)** (Sprint 069, US-197, ADR-060). A
+  rolling-**pp90** form term in the one `decision_xp` recipe behind `FORM_WEIGHT = 0`. Still open at GW1:
+  set the weight + **calibrate** the weight/window on real form.
+- **Data Hardening — the GW1 flip + calibration** — prep is done (per-GW ingest + form blend, wired dormant,
+  Sprint 069). At **GW1 (2026-08-21):** `history --backfill` (now also per-GW) + raise `FORM_WEIGHT` +
+  calibrate; then the crowd/form-vs-xP **backtest** (Tier 3). The full 567-player backfill can ride any time.
