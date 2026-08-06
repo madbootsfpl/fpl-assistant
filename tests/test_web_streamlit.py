@@ -205,6 +205,15 @@ def test_consumer_pages_use_a_session_active_squad():
         assert any("My squad (yours)" in o for o in at.selectbox[0].options)
 
 
+def test_help_page_renders_the_guide_without_data():
+    # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps + an example
+    at = _run(_PAGES / "12_Help.py")
+    blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
+    assert "Build Squad" in blob and "My Squad" in blob        # the core steps
+    assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
+    assert not at.get("dataframe")                             # static content — no data widgets
+
+
 def test_squad_tabs_are_renamed_and_grouped():
     # ADR-062/063: Player Stats at 2; Build Squad · My Squad · Squad Health grouped at 4–6; old names gone
     assert (_PAGES / "2_Player_Stats.py").exists()

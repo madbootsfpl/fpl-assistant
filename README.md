@@ -189,7 +189,8 @@ injured — → the optimal 15) · **My Squad** (a **formation-pitch** view; **e
 captain, download) · **Squad Health** (analyse **your squad's** health over 5 GW) · **Transfer** (bank
 slider → XI-aware swaps, with **Apply**) · **Captain** (who to captain, and **set** yours) · **Ask** (a
 **chat** — grounded, with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**) ·
-**News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**).
+**News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**) · **Help** (a
+step-by-step guide to building your team with the assistant).
 
 **Your squad, in the browser (ADR-054/055).** On **Build Squad**, name it, *Download* a `squad.json` (that file
 *is* your save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*;

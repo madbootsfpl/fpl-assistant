@@ -41,5 +41,7 @@ accounts, nothing saved server-side (ADR-054/055).
 The analytics decide; a local LLM (optional) only narrates. `python app.py refresh` updates the data.
 """
 )
+st.info("🧭 **New here?** The **Help** tab (bottom of the sidebar) is a step-by-step guide to building "
+        "your team with the assistant.")
 st.info("🧪 **Testing this?** Tell us what breaks or feels off → "
         "[open a GitHub issue](https://github.com/tesheridan/fpl-assistant/issues/new).")

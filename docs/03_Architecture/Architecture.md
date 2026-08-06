@@ -455,6 +455,12 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 079 (2026-08-06)** — *A Help tab*, per **ADR-068** — a new static onboarding page
+  (`pages/12_Help.py`, placed last → no renumber): a step-by-step guide to building a team with the
+  assistant — 7 `st.expander` steps (build → make it yours → check health → improve → research → **ask**
+  (copy-paste examples + the ✓/⚠ trust line) → save) + a quick-start + an honest data-freshness/GW1 close.
+  No analytics/data dependency (renders before refresh); no input widgets (outside the tooltip test); Home
+  gains a pointer. 585 tests.
 - **Sprint 078 (2026-08-06)** — *Team-level squad fixtures*, per **ADR-067** — implements the ADR-049
   deferral: a 4th `fixtures` ask/chat mode. `_decide_squad_team_fixtures` groups a squad's owned players by
   team (a player-count + names), joins `team_fdr`, and ranks the distinct teams by avg difficulty (easiest

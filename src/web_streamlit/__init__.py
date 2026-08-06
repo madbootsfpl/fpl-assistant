@@ -5,6 +5,6 @@ pages call the SAME engine the CLI does (`ask.answer` / analytics) and render th
 native widgets — the analytics/CLI import **nothing** from here (one-way flow; a test asserts it).
 
 Multipage: `Home.py` + `pages/` (Players · Player Stats · Fixtures · Build Squad · My Squad · Squad Health ·
-Transfer · Captain · Ask · News · Trending).
+Transfer · Captain · Ask · News · Trending · Help).
 Run:  python -m src.web_streamlit   (→ http://localhost:8501)
 """
