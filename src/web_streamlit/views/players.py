@@ -42,6 +42,18 @@ def render_pool(rows, sel, photos, badges):
     sort = st.selectbox("Sort by", ["points", "value", "team", "position"],
                         help="Order the table: total points · value (points per £m) · team · position.")
     ranked = _sorted(filtered, sort)
+    # The table first (it's what matters most) — page through all matches; the top-15 bar sits below.
+    page = paginate(ranked, key="players", per_page=50)
+    st.dataframe(
+        [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
+          "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
+          "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
+          "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
+          "Trends": " ".join(crowd_flags(p))} for p in page],
+        width="stretch", hide_index=True,
+        column_config={"photo": st.column_config.ImageColumn("", width="small"),
+                       "badge": st.column_config.ImageColumn("", width="small")},
+    )
     by_value = sort == "value"
     field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")
     top = sorted(ranked, key=lambda p: -((p.get(field) or 0)))[:15]
@@ -54,17 +66,6 @@ def render_pool(rows, sel, photos, badges):
             tooltip=[alt.Tooltip("Player:N"), alt.Tooltip("metric:Q", title=bar_label)],
         ).properties(height=28 * len(bar_data) or 28),
         width="stretch",
-    )
-    page = paginate(ranked, key="players", per_page=50)
-    st.dataframe(
-        [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
-          "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
-          "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
-          "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
-          "Trends": " ".join(crowd_flags(p))} for p in page],
-        width="stretch", hide_index=True,
-        column_config={"photo": st.column_config.ImageColumn("", width="small"),
-                       "badge": st.column_config.ImageColumn("", width="small")},
     )
 
 
