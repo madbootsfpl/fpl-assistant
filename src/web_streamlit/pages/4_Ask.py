@@ -24,20 +24,32 @@ if _active:
 if "history" not in st.session_state:
     st.session_state.history = []          # [(question, rendered_answer), …]
 
-# A few starter prompts so a new user knows what to type (US-227). Copy one into the box below.
-# Expanded until the first question, then it folds away so it doesn't crowd the conversation.
-with st.expander("💡 Example questions — copy one into the box below",
-                 expanded=not st.session_state.history):
-    st.code(
-        "what should I do this week for my-team?\n"
-        "who should I captain from my-team?\n"
-        "best differential midfielders under £8m\n"
-        "is Haaland worth the money?\n"
-        "what transfer should I make for my-team?\n"
-        "which of my-team's teams have the best fixtures?\n"
-        "when does Arsenal play next?",
-        language=None,
-    )
+_EXAMPLES = [
+    "what should I do this week for my-team?",
+    "who should I captain from my-team?",
+    "best differential midfielders under £8m",
+    "is Haaland worth the money?",
+    "what transfer should I make for my-team?",
+    "which of my-team's teams have the best fixtures?",
+    "when does Arsenal play next?",
+]
+
+
+def _ask(question):
+    """Run a question through the grounded pipeline and record the turn — shared by the chat box and the
+    example buttons (US-234). A build answer carries the 15 (ADR-062); stash it for the adopt button, a
+    non-build answer clears it (result.squad is None)."""
+    result = ask.answer(question, active_squad=_active)
+    st.session_state.history.append((question, render_ask(result)))
+    st.session_state["built_squad"] = result.squad
+
+
+# A few starter prompts — click one to ask it (US-234). Expanded until the first turn, then it folds away.
+with st.expander("💡 Example questions — click one to ask it", expanded=not st.session_state.history):
+    for i, example in enumerate(_EXAMPLES):
+        if st.button(example, key=f"example_{i}", use_container_width=True):
+            _ask(example)
+            st.rerun()
 
 # Replay the conversation so far.
 for question, answer in st.session_state.history:
@@ -46,14 +58,8 @@ for question, answer in st.session_state.history:
 
 prompt = st.chat_input("Ask a question…")
 if prompt:
-    result = ask.answer(prompt, active_squad=_active)
-    answer = render_ask(result)
-    st.session_state.history.append((prompt, answer))
-    # A "build me a squad" answer carries the 15 (ADR-062) — stash it so the adopt button below
-    # survives the rerun; a non-build answer clears it (result.squad is None).
-    st.session_state["built_squad"] = result.squad
-    st.chat_message("user").write(prompt)
-    st.chat_message("assistant").code(answer, language=None)
+    _ask(prompt)
+    st.rerun()
 
 # Adopt a built squad into the session (→ My Squad / Transfer / Captain), like Build Squad's button.
 _built = st.session_state.get("built_squad")
