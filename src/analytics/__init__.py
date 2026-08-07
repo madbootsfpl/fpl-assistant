@@ -12,6 +12,7 @@ from src.analytics.cleansheet import defensive_solidity
 from src.analytics.crowd import (
     AVAILABILITY_LEGEND,
     DIFFERENTIAL_OWN,
+    SET_PIECE_LEGEND,
     TREND_BYS,
     availability_flag,
     crowd_flags,
@@ -72,6 +73,7 @@ __all__ = [
     "gameweek_plan",
     "chance_factor",
     "AVAILABILITY_LEGEND",
+    "SET_PIECE_LEGEND",
     "availability_flag",
     "crowd_flags",
     "set_piece_flags",

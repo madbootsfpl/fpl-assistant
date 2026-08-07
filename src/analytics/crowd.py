@@ -107,6 +107,10 @@ _AVAILABILITY_FLAG = {"i": "🚑", "s": "🚫", "u": "⛔", "n": "⛔", "d": "�
 AVAILABILITY_LEGEND = ("Fit: 🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful "
                        "(blank = available) — see **News** for details.")
 
+# The shared one-line legend for the set-piece "Set" column/line (Players + the Squads tables, ADR-081).
+SET_PIECE_LEGEND = ("Set pieces: ⚽ penalties · 🚩 corners · 🎯 free-kicks — shown for the **first-choice** "
+                    "taker (blank = not on set pieces).")
+
 
 def set_piece_flags(player) -> list:
     """First-choice set-piece duty flags for a player (ADR-081) — ⚽ pens · 🚩 corners · 🎯 FK, each

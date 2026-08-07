@@ -12,6 +12,7 @@ import streamlit as st
 
 from src import ask
 from src.analytics import (
+    SET_PIECE_LEGEND,
     SQUAD_15,
     WEEKLY_BENCH_WEIGHT,
     analyse_squad,
@@ -29,6 +30,7 @@ from src.analytics import (
     minutes_weight_from_history,
     objective_scores,
     select_squad,
+    set_piece_flags,
     squad_15_issues,
     suggest_transfer_plan,
     suggest_transfers,
@@ -167,7 +169,9 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
         "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
         "£m": p["price"], "xP": round(p.get("xp", 0), 1),
         "Role": "XI" if p["id"] in xi else "Bench", "Trends": " ".join(crowd_flags(p)),
-    } for p in sorted(selected, key=lambda x: (x["id"] not in xi, _ORDER.get(x["position"], 9)))])
+        "Set": " ".join(set_piece_flags(p)),
+    } for p in sorted(selected, key=lambda x: (x["id"] not in xi, _ORDER.get(x["position"], 9)))],
+        help={"Set": SET_PIECE_LEGEND})
     st.code(render_squad(result, budget=budget, objective=objective, full=True,
                          xi_ids=xi_ids, bench_boost=bench_boost), language=None)
 
@@ -210,7 +214,9 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
                 "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
                 "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
                 "£m": p["price"], "xP": round(p.get("xp", 0), 1), "Trends": " ".join(crowd_flags(p)),
-            } for p in sorted(xi_result["selected"], key=lambda x: _ORDER.get(x["position"], 9))])
+                "Set": " ".join(set_piece_flags(p)),
+            } for p in sorted(xi_result["selected"], key=lambda x: _ORDER.get(x["position"], 9))],
+                help={"Set": SET_PIECE_LEGEND})
             st.caption(f"Best **{shape}** XI (display only) — the saveable build above is always a full 15.")
 
         # Compare all shapes at a glance (ADR-075) — gated: the 7 extra ILP solves run only on tick,
@@ -414,7 +420,9 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
         "Pos": p["position"], "Player": p["web_name"] + (" (C)" if p["id"] == captain_id else ""),
         "Team": p["team"], "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
         "Role": "XI" if p["id"] in xi_ids else "Bench", "Trends": " ".join(crowd_flags(p)),
-    } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))])
+        "Set": " ".join(set_piece_flags(p)),
+    } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))],
+        help={"Set": SET_PIECE_LEGEND})
     st.code(render_squad_analysis(analysis, squad_name, show_xmins=True, captain_id=captain_id), language=None)
 
 
@@ -449,7 +457,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
             "in": photos.get(s["in"]["id"], ""), "In": s["in"]["web_name"],
             "Pos": s["position"], "+xP": s["gain"],
             "In trends": " ".join(crowd_flags(by_id.get(s["in"]["id"], {}))),
-        } for s in swaps])
+            "In set": " ".join(set_piece_flags(by_id.get(s["in"]["id"], {}))),
+        } for s in swaps], help={"In set": SET_PIECE_LEGEND})
         st.code(render_transfers(swaps, squad_name, bank=bank, horizon=horizon, show_xmins=True),
                 language=None)
 
@@ -489,7 +498,8 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
         "photo": photos.get(pk["id"], ""), "badge": badges.get(pk["team"], ""),
         "Player": pk["web_name"], "Team": pk["team"], "Opp": pk.get("opponent", ""),
         "xP": round(pk.get("xp", 0), 1), "Trends": " ".join(crowd_flags(owned_by_id.get(pk["id"], {}))),
-    } for pk in picks])
+        "Set": " ".join(set_piece_flags(owned_by_id.get(pk["id"], {}))),
+    } for pk in picks], help={"Set": SET_PIECE_LEGEND})
     st.caption("Captaincy risk: a **🟦 template** captain is safe (most managers own them); a "
                "**💎 differential** captain is a bigger rank swing — upside and downside.")
     st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True), language=None)

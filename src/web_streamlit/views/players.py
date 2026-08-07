@@ -10,6 +10,7 @@ import streamlit as st
 
 from src.analytics import (
     AVAILABILITY_LEGEND,
+    SET_PIECE_LEGEND,
     availability_flag,
     crowd_flags,
     defcon_reliability,
@@ -25,10 +26,6 @@ from src.web_streamlit.ratings import LEGEND, rating_cell
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 _RATING_MIN_MINUTES = 900   # the "enough to be meaningful" bar (matches the other boards; ADR-073)
-
-# The shared one-line legend for set-piece duty (ADR-081) — used on the Pool "Set" column + the board.
-SET_PIECE_LEGEND = ("Set pieces: ⚽ penalties · 🚩 corners · 🎯 free-kicks — shown for the **first-choice** "
-                    "taker (blank = not on set pieces).")
 
 
 def _sorted(players, sort_by):

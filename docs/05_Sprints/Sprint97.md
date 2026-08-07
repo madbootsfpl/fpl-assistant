@@ -97,6 +97,21 @@ beside "In trends" (the incoming buy's flags).
 - **Manual smoke (RoboTS):** 4 cards show flags — B.Fernandes ⚽🎯, Gibbs-White 🎯, Rice 🎯, Mateta ⚽; the
   other 11 show nothing (no clutter).
 
+**US-254 — "Set" column on the squad tables (ADR-081).** ✅ Done.
+- Moved `SET_PIECE_LEGEND` to `analytics/crowd.py` (next to `AVAILABILITY_LEGEND`) + exported from
+  `analytics`; `views/players.py` now imports it (no behaviour change — the Pool/board reuse it).
+- `tables.py::render_player_table` gained an optional `help=` param (threaded to the existing
+  `column_config(..., help=…)`), so a text column like "Set" can carry a tooltip.
+- `views/squads.py`: a **"Set"** column (`" ".join(set_piece_flags(p))`) next to each **"Trends"** —
+  `render_build` (the 15 + the formation-preview XI), `render_health`, `render_captain`; and an **"In set"**
+  column beside "In trends" on `render_transfer` (the incoming buy). Each passes `help={"Set"/"In set":
+  SET_PIECE_LEGEND}`.
+- **Tests (+2 assertions):** the Captain table exposes a **"Set"** column; the Transfer swap table exposes
+  **"In set"** (verified the swaps path renders both). Existing subset column-checks unaffected. **659** green,
+  ruff clean.
+- **Manual smoke:** Build/Health/Captain show Set next to Trends (Set populated for B.Fernandes ⚽🎯 etc.);
+  Transfer's swap table shows In set for the incoming buy; a non-taker's cell is blank.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

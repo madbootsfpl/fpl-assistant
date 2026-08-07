@@ -196,6 +196,7 @@ def test_captain_page_shows_crowd_flags_and_template_risk():
     if not at.dataframe:
         return
     assert "Trends" in at.dataframe[0].value.columns.tolist()
+    assert "Set" in at.dataframe[0].value.columns.tolist()   # US-254: set-piece parity with Trends (ADR-081)
     assert any("Captaincy risk" in c.value for c in at.caption)
 
 
@@ -206,6 +207,7 @@ def test_transfer_page_shows_incoming_crowd_flags():
     if not at.dataframe:
         return
     assert "In trends" in at.dataframe[0].value.columns.tolist()
+    assert "In set" in at.dataframe[0].value.columns.tolist()   # US-254: set-piece parity (ADR-081)
 
 
 def test_captain_page_sets_and_persists_a_captain():
