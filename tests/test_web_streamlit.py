@@ -388,6 +388,29 @@ def test_my_squad_shows_a_quick_stats_summary():
     assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
 
 
+def test_my_squad_flags_unavailable_players_by_name():
+    # US-240: My Squad names the flagged players (with their flag), else "all 15 available"
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+    injured = next((p for p in rows if p["status"] == "i"), None)
+    if injured is None:
+        return
+    others = [p for p in rows if p["status"] == "a"][:14]
+    squad = {"name": "Test XI", "player_ids": [injured["id"]] + [p["id"] for p in others],
+             "bench_ids": [], "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+    caps = " ".join(c.value for c in at.caption)
+    assert "Flagged" in caps and injured["web_name"] in caps and "🚑" in caps
+
+
 def test_my_squad_points_to_build():
     # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
     at = _squads_view("My Squad")

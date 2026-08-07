@@ -16,6 +16,7 @@ from src.analytics import (
     WEEKLY_BENCH_WEIGHT,
     analyse_squad,
     archetype_bands,
+    availability_flag,
     available_players,
     baseline_rate,
     best_legal_xi,
@@ -270,6 +271,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     m4.metric("Unavailable", unavailable,
               help="Owned players injured / suspended / unavailable (🚑 / 🚫 / ⛔).")
     m5.metric("Doubtful", doubtful, help="Owned players flagged doubtful (❓).")
+
+    # Who's flagged (US-240) — name them with their flag (❓ carries the chance%), else all-clear.
+    flagged = [(p, availability_flag(p)) for p in owned if availability_flag(p)]
+    if flagged:
+        st.caption("⚠ Flagged: " + " · ".join(f"{p['web_name']} {flag}" for p, flag in flagged)
+                   + " — see the **News** tab for detail.")
+    else:
+        st.caption("✓ All 15 available.")
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp)

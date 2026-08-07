@@ -38,7 +38,7 @@ above the existing pitch. Display-only; no analytics change.
       **Captain (2×)** · **Bench xP** · **Unavailable** (🚑/🚫/⛔ count) · **Doubtful** (❓ count). The
       £value / legal-15 banner stays. The Projected-XI figure reflects the *Gameweeks ahead* horizon; a
       missing captain shows "—".
-- [ ] **US-240 (who's flagged)** — a caption naming the flagged players with their flag (reusing
+- [x] **US-240 (who's flagged)** — a caption naming the flagged players with their flag (reusing
       `availability_flag`, e.g. *"Saliba 🚑 · Wharton ❓ 75%"*), or **"✓ all 15 available"** when none.
 - [ ] **No drift** — display-only; `decision_xp`/the analytics unchanged; existing **627** stay green; ruff
       clean. No new ADR (reuses ADR-074/077).
@@ -51,7 +51,7 @@ above the existing pitch. Display-only; no analytics change.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-239 | **My Squad summary metrics** — a metrics row (Projected XI over N GW · Captain 2× · Bench xP · Unavailable · Doubtful) above the pitch. | High | ✅ Done | ~¼ session |
-| US-240 | **Who's flagged** — a caption naming the injured/suspended/doubtful players (with flags), else "all 15 available". | Medium | ⬜ To do | ~¼ session |
+| US-240 | **Who's flagged** — a caption naming the injured/suspended/doubtful players (with flags), else "all 15 available". | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -90,6 +90,13 @@ so it's the best **11** (not all 15), with **Bench** the other 4 (verified: 236.
 all-15 300.4). The label tracks the *Gameweeks ahead* selector ("2 GW" when set to 2). Captain shows "—"
 when none is set. Display-only; no analytics change; no new ADR. +1 test
 (`test_my_squad_shows_a_quick_stats_summary`). ruff clean, full suite **628** green.
+
+**US-240 (who's flagged).** Below the metrics, a caption names the flagged owned players with their flag —
+`flagged = [(p, availability_flag(p)) for p in owned if availability_flag(p)]` → *"⚠ Flagged: Garner 🚑 —
+see the News tab for detail."* (❓ carries the chance%, US-236), or **"✓ All 15 available."** when none.
+Reuses `availability_flag` (ADR-074). Smoke: the demo squad → all-clear; a squad with an injured player →
+names them + 🚑. +1 test (`test_my_squad_flags_unavailable_players_by_name`, a session squad with an injured
+player). ruff clean, full suite **629** green.
 
 ---
 
