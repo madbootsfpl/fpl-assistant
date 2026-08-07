@@ -37,7 +37,7 @@ is still a full 15; no analytics change (reuses `select_squad`/the build's `scor
 - [x] **US-230 (the XI score, ADR-075)** — the preview expander shows the selected shape's **Projected XI**
       total (the sum of the previewed XI's `xP`), e.g. *"Projected XI: 254.1 xP (best 3-5-2)"*. Always shown
       (the solve already runs); updates as the formation selector changes.
-- [ ] **US-231 (compare all formations)** — a **"Compare all formations"** checkbox (**off by default**);
+- [x] **US-231 (compare all formations)** — a **"Compare all formations"** checkbox (**off by default**);
       when ticked, a small table ranks all 7 legal shapes by best-XI xP (with **Δ vs best**), so the effect
       is visible without flipping the selector. The 7 solves run **only when the box is ticked**.
 - [ ] **No drift** — display-only; the saved build stays a full 15; `select_squad`/the analytics are
@@ -51,7 +51,7 @@ is still a full 15; no analytics change (reuses `select_squad`/the build's `scor
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-230 | **XI score in the preview** — show the selected shape's total projected XI xP in the "Preview the best XI" expander. ADR-075. | High | ✅ Done | ~¼ session |
-| US-231 | **Compare all formations** — a gated (default-off) checkbox → a table of all 7 shapes ranked by XI xP (Δ vs best). | Medium | ⬜ To do | ~¼ session |
+| US-231 | **Compare all formations** — a gated (default-off) checkbox → a table of all 7 shapes ranked by XI xP (Δ vs best). | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -89,6 +89,14 @@ previewed XI's displayed xP`. Free (the shape's solve already runs); it updates 
 changes, and its help points at the upcoming "Compare all formations". Display-only; the saved build stays a
 full 15; no analytics change. Smoke (real data): 3-4-3 → **251.4 xP** (matches the planning check).
 +1 test (`test_build_formation_preview_shows_the_xi_score`). ruff clean, full suite **618** green.
+
+**US-231 (compare all formations).** A `st.checkbox("Compare all formations", value=False)` inside the
+preview expander (**off by default** — the 7 extra ILP solves run only on tick, since an expander body
+executes even collapsed). On tick, a `_formation_xi_scores(...)` helper solves the best XI for each of the 7
+shapes and a `st.dataframe` ranks them **Formation · XI xP · Δ vs best** (desc; `NumberColumn` `%.1f`/`%+.1f`,
+ADR-072), an illegal shape → blank. Reuses `select_squad` + the build's `scores`/`display_xp`; display-only.
+Smoke (real data): 3-5-2 254.1 (+0.0) → 5-4-1 246.0 (−8.1). +1 test (`test_build_compare_all_formations_is_
+gated` — absent by default, 7 rows ranked on tick). ruff clean, full suite **619** green.
 
 ---
 

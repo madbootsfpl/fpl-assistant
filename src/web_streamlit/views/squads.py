@@ -54,6 +54,19 @@ _FORMATIONS = {"3-4-3": (3, 4, 3), "3-5-2": (3, 5, 2), "4-4-2": (4, 4, 2),
                "4-3-3": (4, 3, 3), "4-5-1": (4, 5, 1), "5-4-1": (5, 4, 1), "5-3-2": (5, 3, 2)}
 
 
+def _formation_xi_scores(pool, budget, include, exclude, scores, display_xp):
+    """Best-XI projected xP for each legal shape (display-only; ADR-075). Illegal shapes → None.
+
+    One ILP solve per formation — the caller gates this behind a checkbox so it runs only on request."""
+    out = []
+    for shape, (d, m, f) in _FORMATIONS.items():
+        r = select_squad(pool, budget=budget, formation={"GK": 1, "DEF": d, "MID": m, "FWD": f},
+                         size=11, include_ids=include, exclude_ids=exclude, scores=scores)
+        tot = sum(display_xp.get(p["id"], 0) for p in r["selected"]) if r["status"] == "Optimal" else None
+        out.append((shape, tot))
+    return out
+
+
 # ---- Build (the full CLI `squad` options → a saveable 15; ADR-062) ---------------------------------
 
 def render_build(players, upcoming, history, gw_history, photos, badges):
@@ -192,6 +205,25 @@ def render_build(players, upcoming, history, gw_history, photos, badges):
                 "£m": p["price"], "xP": round(p.get("xp", 0), 1), "Trends": " ".join(crowd_flags(p)),
             } for p in sorted(xi_result["selected"], key=lambda x: _ORDER.get(x["position"], 9))])
             st.caption(f"Best **{shape}** XI (display only) — the saveable build above is always a full 15.")
+
+        # Compare all shapes at a glance (ADR-075) — gated: the 7 extra ILP solves run only on tick,
+        # since a Streamlit expander body executes even when collapsed.
+        if st.checkbox("Compare all formations", value=False,
+                       help="Solve the best XI for every legal shape and rank them by projected xP "
+                            "(runs only when ticked)."):
+            scored = _formation_xi_scores(xi_pool, budget, include, exclude, scores, display_xp)
+            best = max((t for _, t in scored if t is not None), default=None)
+            scored.sort(key=lambda s: (s[1] is None, -(s[1] or 0)))    # legal by xP desc, illegal last
+            st.dataframe(
+                [{"Formation": shp,
+                  "XI xP": round(t, 1) if t is not None else None,
+                  "Δ vs best": round(t - best, 1) if (t is not None and best is not None) else None}
+                 for shp, t in scored],
+                hide_index=True, width="stretch",
+                column_config={"XI xP": st.column_config.NumberColumn("XI xP", format="%.1f"),
+                               "Δ vs best": st.column_config.NumberColumn("Δ vs best", format="%+.1f")})
+            st.caption("Best XI's projected xP by shape — the same pool arranged in each legal formation "
+                       "(a blank = no legal XI within your budget/options).")
 
 
 # ---- My Squad (view & edit the active squad; ADR-055) ----------------------------------------------

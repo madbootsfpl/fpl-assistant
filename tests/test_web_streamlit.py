@@ -380,6 +380,27 @@ def test_build_formation_preview_shows_the_xi_score():
     assert "xP" in xi[0][1] and any(ch.isdigit() for ch in xi[0][1])   # a numeric xP total
 
 
+def test_build_compare_all_formations_is_gated():
+    # US-231 (ADR-075): the "Compare all formations" table is absent by default and appears only on tick,
+    # ranking all 7 shapes by XI xP (desc) with a Δ-vs-best column.
+    at = _run(_PAGES / "3_Squads.py")
+    if not at.code:                                        # no data locally → the "run refresh" note
+        return
+    assert not any("Formation" in df.value.columns for df in at.dataframe)   # off by default → no table
+
+    cb = [c for c in at.checkbox if c.label == "Compare all formations"]
+    assert cb, "the Compare all formations checkbox should exist"
+    cb[0].set_value(True).run()
+    assert not at.exception
+    comp = [df.value for df in at.dataframe if "Formation" in df.value.columns]
+    assert comp, "ticking Compare should render the all-formations table"
+    df = comp[0]
+    assert {"Formation", "XI xP", "Δ vs best"} <= set(df.columns)
+    assert len(df) == 7                                                       # every legal shape
+    xps = df["XI xP"].dropna().tolist()
+    assert xps == sorted(xps, reverse=True)                                   # ranked best-first
+
+
 def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
     at = _run(_PAGES / "3_Squads.py")
     if not at.code:                                        # no data locally → the "run refresh" note
