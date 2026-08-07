@@ -108,6 +108,20 @@ AVAILABILITY_LEGEND = ("Fit: 🚑 injured · 🚫 suspended · ⛔ unavailable �
                        "(blank = available) — see **News** for details.")
 
 
+def set_piece_flags(player) -> list:
+    """First-choice set-piece duty flags for a player (ADR-081) — ⚽ pens · 🚩 corners · 🎯 FK, each
+    when that order is 1 (the taker). Display-only; empty-safe (a Row or a dict). A low-owned taker is a
+    prime differential; the returns are already in the player's points, so this is a *lens*, not xP."""
+    flags = []
+    if _get(player, "penalties_order") == 1:
+        flags.append("⚽ pens")
+    if _get(player, "corners_order") == 1:
+        flags.append("🚩 corners")
+    if _get(player, "freekicks_order") == 1:
+        flags.append("🎯 FK")
+    return flags
+
+
 def availability_flag(player) -> str:
     """A compact availability flag for a player row — 🚑 injured · 🚫 suspended · ⛔ unavailable ·
     ❓ doubtful — or `""` when available. A **doubtful** player carries the chance of playing when known

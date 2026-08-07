@@ -15,6 +15,7 @@ from src.analytics.crowd import (
     availability_flag,
     crowd_flags,
     net_transfers,
+    set_piece_flags,
     trending,
 )
 from src.analytics.defcon import defcon_reliability
@@ -70,6 +71,7 @@ __all__ = [
     "AVAILABILITY_LEGEND",
     "availability_flag",
     "crowd_flags",
+    "set_piece_flags",
     "net_transfers",
     "trending",
     "TREND_BYS",

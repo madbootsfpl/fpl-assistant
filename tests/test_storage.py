@@ -41,6 +41,9 @@ def make_player(
     chance: int | None = None,
     news: str | None = None,
     selected_by: float | None = None,
+    penalties_order: int | None = None,
+    corners_order: int | None = None,
+    freekicks_order: int | None = None,
 ) -> Player:
     return Player(
         id=id,
@@ -69,6 +72,9 @@ def make_player(
         chance=chance,
         news=news,
         selected_by=selected_by,
+        penalties_order=penalties_order,
+        corners_order=corners_order,
+        freekicks_order=freekicks_order,
     )
 
 
@@ -81,6 +87,19 @@ def test_save_and_read_back(tmp_path):
     assert len(players) == 1
     assert players[0]["web_name"] == "Test"
     assert players[0]["price"] == 7.5
+    store.close()
+
+
+def test_set_piece_orders_round_trip(tmp_path):
+    """The corner/FK order fields (Sprint 095, ADR-081) persist and read back."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([make_team()])
+    store.save_players([make_player(penalties_order=1, corners_order=6, freekicks_order=2)])
+
+    row = store.get_players()[0]
+    assert row["penalties_order"] == 1
+    assert row["corners_order"] == 6
+    assert row["freekicks_order"] == 2
     store.close()
 
 

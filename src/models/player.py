@@ -59,6 +59,10 @@ class Player:
     # Set-piece duty (Sprint 027, ADR-029). 1 = first-choice penalty taker — a captaincy
     # ceiling signal (shown as context; the returns are already in the player's points).
     penalties_order: int | None = None
+    # Corner / free-kick duty (Sprint 095, ADR-081). 1 = first-choice taker — an attacking-returns
+    # signal + a differential lens (a low-owned set-piece taker is a prime pick).
+    corners_order: int | None = None       # ← corners_and_indirect_freekicks_order
+    freekicks_order: int | None = None     # ← direct_freekicks_order (the shooting FK taker)
     # Ownership (Sprint 043, ADR-044). `selected_by` = % of managers who own this player;
     # ≤5% marks a "differential" for the squad-build archetype constraint.
     selected_by: float | None = None
@@ -116,6 +120,8 @@ class Player:
             scout_news_link=raw.get("scout_news_link") or None,
             code=raw.get("code"),
             penalties_order=raw.get("penalties_order"),
+            corners_order=raw.get("corners_and_indirect_freekicks_order"),
+            freekicks_order=raw.get("direct_freekicks_order"),
             selected_by=_to_float(raw.get("selected_by_percent")),
             transfers_in_event=raw.get("transfers_in_event"),
             transfers_out_event=raw.get("transfers_out_event"),

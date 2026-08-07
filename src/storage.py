@@ -55,6 +55,8 @@ _MIGRATIONS = {
         "scout_news_link": "TEXT",       # source link for the news (Sprint 064, ADR-058)
         "code": "INTEGER",
         "penalties_order": "INTEGER",
+        "corners_order": "INTEGER",       # first-choice set-piece takers (Sprint 095, ADR-081)
+        "freekicks_order": "INTEGER",
         "selected_by": "REAL",
         # Crowd & sentiment signals (Sprint 060, ADR-057) — a display lens, not xP inputs.
         "transfers_in_event": "INTEGER",
@@ -100,6 +102,8 @@ CREATE TABLE IF NOT EXISTS players (
     scout_news_link TEXT,
     code            INTEGER,
     penalties_order INTEGER,
+    corners_order   INTEGER,
+    freekicks_order INTEGER,
     selected_by     REAL,
     transfers_in_event  INTEGER,
     transfers_out_event INTEGER,
@@ -188,10 +192,10 @@ INSERT INTO players
      points_per_game, status, ep_next, xg, xa, xgi, xgc,
      goals_scored, assists, minutes,
      defcon, defcon_per90, cbi, tackles, recoveries,
-     chance, news, scout_news_link, code, penalties_order, selected_by,
+     chance, news, scout_news_link, code, penalties_order, corners_order, freekicks_order, selected_by,
      transfers_in_event, transfers_out_event, cost_change_event, cost_change_start,
      form, ict_index, influence, creativity, threat, value_form)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     first_name      = excluded.first_name,
@@ -221,6 +225,8 @@ ON CONFLICT(id) DO UPDATE SET
     scout_news_link = excluded.scout_news_link,
     code            = excluded.code,
     penalties_order = excluded.penalties_order,
+    corners_order   = excluded.corners_order,
+    freekicks_order = excluded.freekicks_order,
     selected_by     = excluded.selected_by,
     transfers_in_event  = excluded.transfers_in_event,
     transfers_out_event = excluded.transfers_out_event,
@@ -345,7 +351,8 @@ class Storage:
              p.xg, p.xa, p.xgi, p.xgc,
              p.goals_scored, p.assists, p.minutes,
              p.defcon, p.defcon_per90, p.cbi, p.tackles, p.recoveries,
-             p.chance, p.news, p.scout_news_link, p.code, p.penalties_order, p.selected_by,
+             p.chance, p.news, p.scout_news_link, p.code, p.penalties_order,
+             p.corners_order, p.freekicks_order, p.selected_by,
              p.transfers_in_event, p.transfers_out_event, p.cost_change_event, p.cost_change_start,
              p.form, p.ict_index, p.influence, p.creativity, p.threat, p.value_form)
             for p in players

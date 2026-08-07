@@ -4,13 +4,36 @@
 **display lens only** — they must never change the grounded xP (`decision_xp`).
 """
 
-from src.analytics import availability_flag, crowd_flags, decision_xp, net_transfers, trending
+from src.analytics import (
+    availability_flag,
+    crowd_flags,
+    decision_xp,
+    net_transfers,
+    set_piece_flags,
+    trending,
+)
 from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, TEMPLATE_OWN, TRENDING_NET
 from src.storage import Storage
 
 
 def _p(**kw):
     return kw          # a player "row" is just a mapping; crowd_flags is empty-safe
+
+
+def test_set_piece_flags_for_a_first_choice_taker():
+    # ADR-081: order == 1 → the flag; any other order (or absent) → nothing. Display-only, empty-safe.
+    assert set_piece_flags(_p(penalties_order=1)) == ["⚽ pens"]
+    assert set_piece_flags(_p(corners_order=1)) == ["🚩 corners"]
+    assert set_piece_flags(_p(freekicks_order=1)) == ["🎯 FK"]
+    assert set_piece_flags(_p(penalties_order=1, corners_order=1, freekicks_order=1)) == [
+        "⚽ pens", "🚩 corners", "🎯 FK",
+    ]
+
+
+def test_set_piece_flags_ignores_non_first_choice_and_is_empty_safe():
+    assert set_piece_flags(_p(penalties_order=2, corners_order=6, freekicks_order=3)) == []
+    assert set_piece_flags(_p()) == []                                   # nothing present → no flags
+    assert set_piece_flags(_p(penalties_order=None)) == []               # None → no crash, no flag
 
 
 def test_availability_flag_per_status():

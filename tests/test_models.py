@@ -191,6 +191,23 @@ def test_player_from_api_parses_crowd_signals():
     assert (p.influence, p.creativity, p.threat) == (541.6, 33.5, 0.0)
 
 
+def test_player_from_api_parses_set_piece_orders():
+    # Sprint 095 / ADR-081: the API's long names map to corners_order / freekicks_order (ints, 1 = taker).
+    raw = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Saka",
+           "team": 1, "element_type": 3, "now_cost": 100, "total_points": 0,
+           "penalties_order": 1, "corners_and_indirect_freekicks_order": 6,
+           "direct_freekicks_order": 2}
+    p = Player.from_api(raw)
+    assert p.penalties_order == 1 and p.corners_order == 6 and p.freekicks_order == 2
+
+
+def test_player_from_api_set_piece_orders_absent_are_none():
+    raw = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
+           "team": 1, "element_type": 3, "now_cost": 75, "total_points": 0}
+    p = Player.from_api(raw)
+    assert p.corners_order is None and p.freekicks_order is None
+
+
 def test_player_from_api_parses_scout_news_link():
     # Sprint 064 / ADR-058: a present link → kept; blank "" or absent → None (empty-safe for the News lens).
     base = {"id": 1, "first_name": "T", "second_name": "P", "web_name": "Test",
