@@ -57,7 +57,7 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
     if not picks:
         return None
     top = picks[0]
-    row = players_by_id.get(top["id"], {})
+    row = players_by_id.get(_get(top, "id"), {})
     xp = top.get("xp")
     venue, difficulty = top.get("venue"), top.get("difficulty")
     mins = top.get("minutes_weight")
@@ -251,3 +251,57 @@ def explain_chips(advice) -> dict | None:
         conf = chip_confidence(rec.get("margin"), rec.get(value_key))
         out[chip] = {"confidence": conf, "band": confidence_band(conf)}
     return out
+
+
+# ── Gameweek plan (US-273/274, extends ADR-089) ───────────────────────────────
+
+def _lineup_reasons(lineup, xp_by_id) -> list:
+    """Short grounded 'why' for each start/bench change — 'start {in} over {out} (higher projected xP)'."""
+    reasons = []
+    for bring, drop in zip(lineup.get("bring_in", []), lineup.get("drop", [])):
+        reasons.append(f"Start {bring['web_name']} over {drop['web_name']} (higher projected xP: "
+                       f"{round(xp_by_id.get(bring['id'], 0), 1)} vs {round(xp_by_id.get(drop['id'], 0), 1)})")
+    return reasons
+
+
+def gameweek_confidence(captain_confidence_score, n_flags: int) -> int:
+    """A plan-level confidence (ADR-089), 1–99 — the week is driven by the captain (its biggest single lever),
+    tempered by flagged (doubtful/unavailable) players. Documented, not a probability."""
+    return max(1, min(99, round((captain_confidence_score or 50) - 8 * max(0, n_flags))))
+
+
+def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None:
+    """Explain a gameweek plan (ADR-089): reuse the captain + transfer explanations, add a lineup rationale,
+    and give the week an overall Confidence · Why · Risk. Returns `{captain, transfer, lineup, overall}` (each
+    an `Explanation` / list), or None if there's no plan."""
+    if not plan:
+        return None
+    cap_ex = explain_captain(plan.get("captain_ranked") or ([plan["captain"]] if plan.get("captain") else []),
+                             players_by_id)
+    move = plan.get("transfer")
+    tr_ex = explain_transfer(move, players_by_id.get((move.get("in") or {}).get("id"), {}), horizon) \
+        if move else None
+    lineup = _lineup_reasons(plan.get("lineup") or {}, xp_by_id)
+
+    # Overall — captain-driven, flagged players are the week's risk.
+    flags = plan.get("flags") or []
+    reasons, risks = [], []
+    if plan.get("captain"):
+        reasons.append(f"Clear captain: {plan['captain']['web_name']}"
+                       + (f" ({cap_ex.confidence}/100 · {cap_ex.band})" if cap_ex else ""))
+    if move:
+        reasons.append(f"A positive-gain upgrade available (+{move['gain']} XI xP)")
+    elif not lineup:
+        reasons.append("No changes needed — your XI is already optimal")
+    if lineup:
+        reasons.append(f"{len(lineup)} lineup tweak{'s' if len(lineup) != 1 else ''} to bank more points")
+    if flags:
+        risks.append(", ".join(f"{f['web_name']} ({f['reason']}"
+                               + (f", {f['chance']}%" if f.get("chance") is not None else "") + ")"
+                               for f in flags))
+    else:
+        risks.append("none — all your players are available")
+
+    score = gameweek_confidence(cap_ex.confidence if cap_ex else None, len(flags))
+    overall = Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
+    return {"captain": cap_ex, "transfer": tr_ex, "lineup": lineup, "overall": overall}

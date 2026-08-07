@@ -34,8 +34,9 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     - **transfer** — the single best positive-gain upgrade (a `suggest_transfers` dict), or None.
     - **flags** — owned players who can't (or might not) play: ``{web_name, team, reason, chance}``.
     """
-    # Captain — the next-GW pick from the owned, XI-eligible players (ADR-029).
-    picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code, limit=1,
+    # Captain — the next-GW pick from the owned, XI-eligible players (ADR-029). `limit=3` so the runner-up is
+    # available for the captain explanation's lead-margin (ADR-089); the pick is still picks[0].
+    picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code, limit=3,
                           minutes_weight=minutes_weight, history_by_code=history_by_code)
     captain = picks[0] if picks else None
 
@@ -69,4 +70,5 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
         flags.append({"web_name": p["web_name"], "team": p["team"],
                       "reason": reason, "chance": p["chance"]})
 
-    return {"captain": captain, "lineup": lineup, "transfer": transfer, "flags": flags}
+    return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
+            "transfer": transfer, "flags": flags}

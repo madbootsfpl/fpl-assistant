@@ -46,14 +46,29 @@ def _flags_line(flags) -> str:
     )
 
 
-def render_gameweek_plan(plan, squad_name, horizon: int = 5) -> str:
+def _conf(explanation) -> str:
+    """' · Confidence 72/100 · Medium' from an `Explanation`, or '' when none (US-273, ADR-089)."""
+    return f"  · Confidence {explanation.confidence}/100 · {explanation.band}" if explanation else ""
+
+
+def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -> str:
     """The one-gameweek plan as a readable block (ADR-070). `horizon` labels the transfer's window
-    (ADR-077); the captain + lineup are inherently about the immediate week."""
-    return "\n".join([
-        f"This week — squad '{squad_name}'",
-        "",
-        f"  Captain:  {_captain_line(plan['captain'])}",
-        f"  Lineup:   {_lineup_line(plan['lineup'])}",
-        f"  Transfer: {_transfer_line(plan['transfer'], horizon)}",
-        f"  Flags:    {_flags_line(plan['flags'])}",
-    ])
+    (ADR-077); the captain + lineup are inherently about the immediate week. `explanation`
+    (`explain_gameweek`, ADR-089) adds a per-recommendation Confidence + a short Why."""
+    ex = explanation or {}
+    cap_ex, tr_ex = ex.get("captain"), ex.get("transfer")
+    lines = [f"This week — squad '{squad_name}'", ""]
+
+    lines.append(f"  Captain:  {_captain_line(plan['captain'])}{_conf(cap_ex)}")
+    if cap_ex and cap_ex.reasons:
+        lines.append("            Why: " + " · ".join(cap_ex.reasons[:3]))
+
+    lines.append(f"  Lineup:   {_lineup_line(plan['lineup'])}")
+    lines += [f"            {r}" for r in (ex.get("lineup") or [])]
+
+    lines.append(f"  Transfer: {_transfer_line(plan['transfer'], horizon)}{_conf(tr_ex)}")
+    if tr_ex and tr_ex.reasons:
+        lines.append("            Why: " + " · ".join(tr_ex.reasons[:2]))
+
+    lines.append(f"  Flags:    {_flags_line(plan['flags'])}")
+    return "\n".join(lines)

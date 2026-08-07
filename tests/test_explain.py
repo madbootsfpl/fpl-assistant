@@ -174,3 +174,38 @@ def test_chip_advisor_exposes_a_margin_per_chip():
     advice = chip_advisor(owned, by_gw, [1, 2, 3])
     assert advice["triple_captain"]["margin"] > 0     # GW1 ceiling clearly beats the others
     assert all("margin" in advice[c] for c in ("triple_captain", "bench_boost", "free_hit", "wildcard"))
+
+
+# ── US-273/274: gameweek-plan explainability ──────────────────────────────────
+
+def test_gameweek_confidence_is_captain_driven_and_dropped_by_flags():
+    from src.analytics import gameweek_confidence
+    assert gameweek_confidence(80, 0) == 80
+    assert gameweek_confidence(80, 2) == 64                 # −8 per flagged player
+    assert 1 <= gameweek_confidence(10, 5) <= 99            # bounded
+
+
+def test_explain_gameweek_reuses_captain_transfer_and_adds_lineup():
+    from src.analytics import explain_gameweek, gameweek_confidence
+    captain = {"id": 1, "web_name": "Cap", "xp": 6.0, "opponent": "HUL", "venue": "A", "difficulty": 2,
+               "minutes_weight": 0.9, "penalty_taker": True, "doubtful": False, "chance": None}
+    runner = {**captain, "id": 2, "web_name": "Runner", "xp": 5.9}
+    move = {"position": "MID", "gain": 2.4,
+            "out": {"id": 9, "web_name": "Old", "team": "AAA", "price": 7.0, "xp": 4.0},
+            "in": {"id": 8, "web_name": "New", "team": "BBB", "price": 8.0, "xp": 6.5}}
+    plan = {
+        "captain": captain, "captain_ranked": [captain, runner], "transfer": move,
+        "lineup": {"bring_in": [{"id": 5, "web_name": "Xin"}], "drop": [{"id": 6, "web_name": "Yout"}],
+                   "has_declared_bench": True},
+        "flags": [{"web_name": "Sick", "reason": "doubtful", "chance": 75}],
+    }
+    players_by_id = {1: {"selected_by": 48.0, "freekicks_order": 1, "form": 0.0, "status": "a"},
+                    8: {"selected_by": 45.0, "status": "a"}}
+    ex = explain_gameweek(plan, players_by_id, {5: 5.5, 6: 4.0}, horizon=5)
+
+    assert ex["captain"] is not None                       # reused explain_captain
+    assert ex["transfer"] is not None and ex["transfer"].reasons   # reused explain_transfer
+    assert any("Start Xin over Yout" in r for r in ex["lineup"])   # grounded lineup rationale
+    assert "Sick" in " ".join(ex["overall"].risks)          # the flagged player is the week's risk
+    assert ex["overall"].confidence == gameweek_confidence(ex["captain"].confidence, 1)
+    assert explain_gameweek(None, {}, {}) is None            # empty-safe

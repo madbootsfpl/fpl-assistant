@@ -31,6 +31,7 @@ from src.analytics import (
     decision_xp,
     explain_captain,
     explain_chips,
+    explain_gameweek,
     explain_squad,
     explain_transfer,
     gameweek_plan,
@@ -570,11 +571,13 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         bench_ids=squad.get("bench_ids") or [],
     )
     cap, tr = plan["captain"], plan["transfer"]
+    # Explainability (ADR-089): per-recommendation Why/Confidence (captain + transfer reused) + an overall read.
+    explanation = explain_gameweek(plan, {p["id"]: p for p in players}, xp_by_id, horizon=horizon)
     # subjects = every owned player (the prose may name any starter) + the transfer buy (not owned),
     # so verify_grounding (ADR-037) doesn't flag a legitimately-named player.
     subjects = [p["web_name"] for p in owned] + ([tr["in"]["web_name"]] if tr else [])
     return {
-        "detail": render_gameweek_plan(plan, squad_name, horizon=horizon),   # the plan, with/without prose
+        "detail": render_gameweek_plan(plan, squad_name, horizon=horizon, explanation=explanation),
         "headline": f"This week (squad '{squad_name}'): captain "
                     f"{cap['web_name'] if cap else '—'}",
         "facts": _gameweek_facts(plan),
