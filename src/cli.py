@@ -28,6 +28,7 @@ from src.analytics import (
     defcon_reliability,
     defensive_solidity,
     elo_difficulty_bands,
+    explain_captain,
     is_unavailable,
     minutes_weight_from_history,
     objective_scores,
@@ -486,7 +487,9 @@ def cmd_captain(args) -> None:
             source=args.type, limit=args.limit, minutes_weight=minutes_weight,
             history_by_code=history_by_code,
         )
-        print(render_captain_picks(picks, squad_name=squad_name, show_xmins=not args.no_xmins))
+        explanation = explain_captain(picks, {p["id"]: p for p in players})   # Why/Risk/Confidence (ADR-089)
+        print(render_captain_picks(picks, squad_name=squad_name, show_xmins=not args.no_xmins,
+                                   explanation=explanation))
     finally:
         store.close()
 

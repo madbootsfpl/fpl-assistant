@@ -25,6 +25,7 @@ from src.analytics import (
     captain_picks,
     crowd_flags,
     decision_xp,
+    explain_captain,
     is_unavailable,
     legal_xi_issues,
     minutes_weight_from_history,
@@ -527,7 +528,9 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
     } for pk in picks], help={"Set": SET_PIECE_LEGEND})
     st.caption("Captaincy risk: a **🟦 template** captain is safe (most managers own them); a "
                "**💎 differential** captain is a bigger rank swing — upside and downside.")
-    st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True), language=None)
+    explanation = explain_captain(picks, owned_by_id)   # grounded Why/Risk/Confidence (ADR-089)
+    st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True, explanation=explanation),
+            language=None)
 
     current = squad.get("captain_id")
     if current:

@@ -29,6 +29,7 @@ from src.analytics import (
     captain_picks,
     chip_advisor,
     decision_xp,
+    explain_captain,
     gameweek_plan,
     minutes_weight_from_history,
     select_squad,
@@ -45,6 +46,7 @@ from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.chips import render_chip_advice
 from src.ui.compare import render_compare
+from src.ui.explain import render_explanation
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
 from src.ui.gameweek import render_gameweek_plan
@@ -279,12 +281,23 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
         return {"message": "That's the last captain option I can rank — nothing more to add."}
     top = picks[rank]
     ordinal = f" #{rank + 1}" if rank else ""
+    # Explainability (ADR-089): grounded Why/Risk/Confidence for the chosen pick — the slice makes it [0]
+    # and the next-best the runner-up (for the "narrow lead" risk).
+    explanation = explain_captain(picks[rank:], {p["id"]: p for p in players})
+    facts = _captain_facts(top)
+    if explanation is not None:
+        facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
+        facts["why"] = "; ".join(explanation.reasons) or "none"
+        facts["risk"] = "; ".join(explanation.risks) or "none noted"
+    detail = "\n".join([f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW", "",
+                        render_explanation(explanation)])   # self-contained block (scope + Why/Risk/Confidence)
     return {
+        "detail": detail,   # shown with or without prose (the block is the truth)
         "headline": f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW",
-        "facts": _captain_facts(top),
+        "facts": facts,
         "subjects": [top["web_name"]],
-        "task": f"explain in 2-3 short sentences why {top['web_name']} is a good captain pick "
-                "this gameweek",
+        "task": f"explain in 2-3 short sentences why {top['web_name']} is a good captain pick this gameweek, "
+                "reflecting the confidence and the ✓ reasons / ⚠ risks — using ONLY the facts",
     }
 
 

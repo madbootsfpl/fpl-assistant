@@ -8,6 +8,7 @@ sees *why*. Built on the shared table renderer (ui._table, ADR-025).
 from src.analytics.minutes import expected_minutes
 
 from ._table import Col, render_rows
+from .explain import render_explanation
 
 _NAME_W = 17
 
@@ -38,7 +39,8 @@ _COLS = [
 ]
 
 
-def render_captain_picks(picks, squad_name: str | None = None, show_xmins: bool = False) -> str:
+def render_captain_picks(picks, squad_name: str | None = None, show_xmins: bool = False,
+                         explanation=None) -> str:
     if not picks:
         base = "No captain candidates"
         if squad_name:
@@ -49,7 +51,10 @@ def render_captain_picks(picks, squad_name: str | None = None, show_xmins: bool 
     cols = [_COLS[0], _COLS[1], _COLS[2], _XMINS_COL, *_COLS[3:]] if show_xmins else _COLS
 
     scope = f" from squad '{squad_name}'" if squad_name else ""
-    lines = [f"Captain picks{scope} — next gameweek (by xP; goalkeepers excluded)", ""]
+    lines = []
+    if explanation is not None:   # the Why/Risk/Confidence for the top pick (ADR-089), above the shortlist
+        lines += [f"Captain: {picks[0]['web_name']}", "", render_explanation(explanation), ""]
+    lines += [f"Captain picks{scope} — next gameweek (by xP; goalkeepers excluded)", ""]
     lines += render_rows(picks, cols, rank=True)
 
     lines.append("")

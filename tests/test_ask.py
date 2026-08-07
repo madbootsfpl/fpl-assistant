@@ -984,6 +984,28 @@ def test_ask_captain_scopes_to_the_active_session_squad():
     assert "all players" in without                                          # the old fallback
 
 
+def test_ask_captain_explains_with_confidence_and_verifies():
+    # US-269 (ADR-089): the captain answer carries a grounded Why/Risk/Confidence block + facts, and a
+    # narration restating those values verifies clean (✓); the LLM never invents a reason or the number.
+    from src.storage import Storage
+    from src.ui.ask import render_ask
+
+    store = Storage()
+    try:
+        if not store.get_players():
+            return
+    finally:
+        store.close()
+
+    r = ask.answer("who should I captain from RoboTS?", narrator=lambda p: None)
+    if r.intent != "captain" or r.detail is None:
+        return                                                  # no such squad locally → nothing to assert
+    assert "Confidence:" in r.detail and "Why" in r.detail      # the grounded explanation block
+    assert "confidence" in r.facts and "why" in r.facts         # the values are facts (so narration verifies)
+    rendered = render_ask(r)
+    assert "✓" in rendered and "/ 100 ·" in rendered            # score + band shown
+
+
 # --- trends intent (Sprint 067) — community "trending" from free FPL crowd data --------------------
 
 def test_routes_trends_and_not_transfer():

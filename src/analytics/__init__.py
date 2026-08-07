@@ -23,6 +23,12 @@ from src.analytics.crowd import (
 )
 from src.analytics.deadline import deadline_urgency, gameweek_context, next_deadline
 from src.analytics.defcon import defcon_reliability
+from src.analytics.explain import (
+    Explanation,
+    captain_confidence,
+    confidence_band,
+    explain_captain,
+)
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
 from src.analytics.form import blend_form, form_rate
 from src.analytics.gameweek import gameweek_plan
@@ -75,6 +81,10 @@ __all__ = [
     "next_deadline",
     "deadline_urgency",
     "gameweek_context",
+    "explain_captain",
+    "captain_confidence",
+    "confidence_band",
+    "Explanation",
     "gameweek_plan",
     "chance_factor",
     "AVAILABILITY_LEGEND",
