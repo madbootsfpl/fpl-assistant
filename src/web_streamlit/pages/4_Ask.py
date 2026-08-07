@@ -1,12 +1,15 @@
 """Ask — a chat interface (ADR-052). Each turn is grounded + carries the ✓/⚠ trust line.
 
 The analytics decide; a local LLM (optional) only narrates — without Ollama the answer is the decision
-+ facts, exactly like the CLI. History is kept in `st.session_state` for the session.
++ facts, exactly like the CLI. It's **conversational** (ADR-047/080): a `Context` is threaded in
+`st.session_state`, so follow-ups ("why?", "and the next?") and pronouns ("is **he** worth it?") build on
+the last turn. History is kept in `st.session_state` for the session.
 """
 
 import streamlit as st
 
 from src import ask
+from src.storage import Storage
 from src.ui.ask import render_ask
 from src.web_streamlit.squads import active_squad, set_active_squad
 from src.web_streamlit.status import render_data_status
@@ -15,7 +18,8 @@ st.set_page_config(page_title="Ask · FPL Assistant", page_icon="⚽", layout="w
 render_data_status()
 st.title("💬 Ask")
 st.caption("Captaincy · transfers · your squad · comparisons · build a squad · best players · fixtures. "
-           "The analytics decide; the answer is checked against the data.")
+           "The analytics decide; the answer is checked against the data. Follow-ups build on the last "
+           "turn — try *\"why?\"* or *\"compare him to …\"*.")
 
 _active = active_squad()          # so "captain <its name>" / "analyse my team" use your loaded squad
 if _active:
@@ -23,6 +27,8 @@ if _active:
 
 if "history" not in st.session_state:
     st.session_state.history = []          # [(question, rendered_answer), …]
+if "chat_context" not in st.session_state:
+    st.session_state.chat_context = None   # the last conversational turn (ADR-047), threaded to converse
 
 _EXAMPLES = [
     "what should I do this week for my-team?",
@@ -36,10 +42,17 @@ _EXAMPLES = [
 
 
 def _ask(question):
-    """Run a question through the grounded pipeline and record the turn — shared by the chat box and the
-    example buttons (US-234). A build answer carries the 15 (ADR-062); stash it for the adopt button, a
-    non-build answer clears it (result.squad is None)."""
-    result = ask.answer(question, active_squad=_active)
+    """Run a question through the grounded **conversational** pipeline and record the turn — shared by the
+    chat box and the example buttons (US-234/248). Threads `chat_context` through `ask.converse`, so
+    follow-ups + pronouns build on the last turn (ADR-047/080). A build answer carries the 15 (ADR-062);
+    stash it for the adopt button, a non-build answer clears it (result.squad is None)."""
+    store = Storage()
+    try:
+        result, ctx = ask.converse(question, st.session_state.chat_context,
+                                    store=store, active_squad=_active)
+    finally:
+        store.close()
+    st.session_state.chat_context = ctx
     st.session_state.history.append((question, render_ask(result)))
     st.session_state["built_squad"] = result.squad
 

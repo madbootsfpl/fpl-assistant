@@ -777,6 +777,18 @@ def test_ask_page_example_prompts_are_clickable():
     assert not at.exception and len(at.session_state["history"]) == 1
 
 
+def test_ask_page_is_conversational_pronouns_and_followups():
+    # US-248 (ADR-047/080): the web Ask threads Context, so a pronoun resolves to the last player and a
+    # follow-up builds on the last turn
+    at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
+    at.chat_input[0].set_value("is Haaland worth the money?").run()
+    assert not at.exception and at.session_state["chat_context"] is not None   # context threaded
+    at.chat_input[0].set_value("compare him to Isak").run()                    # 'him' → Haaland
+    assert not at.exception
+    blob = " ".join(a for _q, a in at.session_state["history"])
+    assert "Haaland" in blob and "Isak" in blob                               # resolved compare, not a fallback
+
+
 def test_ask_chat_answers_a_grounded_question():
     at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
     assert not at.exception

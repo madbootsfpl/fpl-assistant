@@ -42,7 +42,7 @@ and the web **Ask** tab. Analytics decide as ever; the LLM only narrates.
       their), rewrite it (whole-word, case-insensitive; possessives → `name's`) to that player, then route.
       Wired into `_fresh` (so it fires in `converse`/`chat`, not the context-less one-shot). No pronoun / no
       single antecedent → unchanged.
-- [ ] **US-248 (conversational web Ask)** — `pages/4_Ask.py` threads `Context` through `session_state` and
+- [x] **US-248 (conversational web Ask)** — `pages/4_Ask.py` threads `Context` through `session_state` and
       calls `ask.converse` (not `answer`), so **pronouns + the existing why/next/what-about follow-ups** work
       in the web chat. The first turn is unchanged (converse with no context == answer); a build answer's
       "Use this squad →" bridge still works.
@@ -57,7 +57,7 @@ and the web **Ask** tab. Analytics decide as ever; the LLM only narrates.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-247 | **Pronoun resolution** — `_resolve_pronoun` in `_fresh`: a pronoun → the last turn's sole subject, then route. ADR-080. | High | ✅ Done | ~½ session |
-| US-248 | **Conversational web Ask** — thread `Context` via `session_state` + use `converse`, so pronouns + follow-ups work in the web chat. | Medium | ⬜ To do | ~½ session |
+| US-248 | **Conversational web Ask** — thread `Context` via `session_state` + use `converse`, so pronouns + follow-ups work in the web chat. | Medium | ✅ Done | ~½ session |
 
 ---
 
@@ -98,6 +98,14 @@ subjects / no pronoun / no context → unchanged). Substitutes the player's *nam
 Smoke: "is he worth captaining?" → "is Haaland worth captaining?"; "what are his fixtures?" → "…Haaland's…";
 a real converse chain worth(Haaland) → "compare him to Isak" → the **compare** intent. +3 tests (rewrite +
 possessive; ambiguous/no-pronoun/no-context no-ops; the converse chain). ruff clean, full suite **639** green.
+
+**US-248 (conversational web Ask).** `pages/4_Ask.py` now threads a `Context` in `st.session_state` and calls
+`ask.converse(question, chat_context, store=…, active_squad=…)` (a `Storage` opened/closed per turn) instead
+of the one-shot `answer` — so the web chat is properly conversational: **pronouns** (US-247) *and* the
+existing why/next/what-about follow-ups (ADR-047) now build on the last turn. The first turn (context=None)
+is identical to before; the build "Use this squad →" bridge is unchanged. Smoke: worth(Haaland) → "compare
+him to Isak" resolves (mentions both); "why?" re-narrates. +1 test
+(`test_ask_page_is_conversational_pronouns_and_followups`). ruff clean, full suite **640** green.
 
 ---
 
