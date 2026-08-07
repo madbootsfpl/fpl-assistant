@@ -19,6 +19,7 @@ from src.analytics import (
     availability_flag,
     available_players,
     baseline_rate,
+    bench_order,
     best_legal_xi,
     captain_picks,
     crowd_flags,
@@ -282,6 +283,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp)
+
+    # Bench order (US-242) — who subs on first if a starter blanks (auto-sub priority; ADR-078).
+    order = bench_order(bench, xp_by_id)
+    if order:
+        subs = " · ".join(f"**{role}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
+                          for role, p in order)
+        st.caption(f"🔁 **Bench order** (auto-subs): {subs} — FPL brings on the first that keeps a legal XI; "
+                   "the bench GK only covers your keeper.")
 
     st.divider()
     st.subheader("Edit")

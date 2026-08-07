@@ -388,6 +388,33 @@ def test_my_squad_shows_a_quick_stats_summary():
     assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
 
 
+def test_my_squad_shows_the_bench_order():
+    # US-242 (ADR-078): My Squad shows an auto-sub bench-order line for a squad with a declared bench
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # a GK + 3 outfield
+    squad = {"name": "BenchTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+    line = next((c.value for c in at.caption if "Bench order" in c.value), "")
+    assert "1st" in line and "GK" in line and "auto-sub" in line.lower()
+
+
 def test_my_squad_flags_unavailable_players_by_name():
     # US-240: My Squad names the flagged players (with their flag), else "all 15 available"
     from src.storage import Storage

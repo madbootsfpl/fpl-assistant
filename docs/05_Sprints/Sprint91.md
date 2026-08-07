@@ -37,7 +37,7 @@ drift.
       outfield bench ranked by `scores` (xP) → `1st`/`2nd`/`3rd`, then the bench GK → `GK` (subs only for the
       keeper). Empty-safe (Row or dict); returns `[(role, player)]`. Unit-tested (order, GK-separate, ties,
       empty).
-- [ ] **US-242 (My Squad display)** — under the pitch, a **"Bench order (auto-subs)"** line naming the subs
+- [x] **US-242 (My Squad display)** — under the pitch, a **"Bench order (auto-subs)"** line naming the subs
       in priority with their xP (e.g. *"1st Saka (5.2 xP) · 2nd Diaz (3.1) · 3rd Mitchell (1.4) · GK Sá"*)
       + a one-line explainer ("FPL brings on the first that keeps a legal XI; the bench GK only covers your
       keeper"). Shown when a bench is declared; uses the horizon-aware xP.
@@ -52,7 +52,7 @@ drift.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-241 | **`bench_order` helper** — outfield bench by xP (1st/2nd/3rd) + the GK sub, as a pure analytics function. ADR-078. | High | ✅ Done | ~¼ session |
-| US-242 | **My Squad bench-order line** — show the recommended sub priority + an auto-sub explainer under the pitch. | Medium | ⬜ To do | ~¼ session |
+| US-242 | **My Squad bench-order line** — show the recommended sub priority + an auto-sub explainer under the pitch. | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -87,6 +87,13 @@ to `best_legal_xi`, exported): the **outfield** bench sorted by `scores` (xP) de
 then the **bench GK** → "GK" (keeper-only). Returns `[(role, player)]`; empty-safe (Row or dict); tie-stable;
 a missing score treated as 0. Smoke: Mid 5.4→1st · Fwd 3.3→2nd · Def 2.1→3rd · GK separate. +2 tests
 (ranking + GK-separate; empty/tie/no-scores). ruff clean, full suite **631** green.
+
+**US-242 (My Squad display).** Under the pitch, `render_my_squad` shows a **🔁 Bench order (auto-subs)** line
+— `bench_order(bench, xp_by_id)` → *"1st João Pedro (19.5 xP) · 2nd Tarkowski (18.4) · 3rd Anderson (17.8) ·
+GK Kelleher"* — plus the explainer *"FPL brings on the first that keeps a legal XI; the bench GK only covers
+your keeper."* Only shown when a bench is declared; the xP is horizon-aware (tracks *Gameweeks ahead*).
+Display-only. +1 test (`test_my_squad_shows_the_bench_order`, a session squad with a declared 4-man bench).
+ruff clean, full suite **632** green.
 
 ---
 
