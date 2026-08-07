@@ -112,6 +112,21 @@ for a beta) — all in DIRECTION §1, revisited only if the beta proves demand.
   code errors, the right code unlocks to the real app. Off by default; the public deploy is unchanged until the
   owner sets the secret.
 
+**US-264 — in-app feedback + beta signup + runbook (ADR-087).** ✅ Done.
+- `pages/8_Feedback.py` — a **📣 Feedback** tab: an `st.form` (message + optional email) that on submit
+  **POSTs to `FPL_FEEDBACK_WEBHOOK`** (`{message, email, source}`, best-effort, 6s timeout, try/except),
+  **degrading to a GitHub-issue link** when the webhook is unset or the POST fails. A **"✋ Join the beta"**
+  `link_button` to `FPL_SIGNUP_URL` (shown only when set) on Feedback + Home. No user data persisted on our
+  infra (the POST goes to the owner's own sink) — the read-only guardrail holds.
+- `docs/BETA.md` — the owner runbook: the three opt-in secrets (`FPL_ACCESS_CODE` · `FPL_FEEDBACK_WEBHOOK` ·
+  `FPL_SIGNUP_URL`), a copy-paste Google Apps Script feedback sink, a signup form, recruiting on Reddit, and
+  honouring "free for X years" via the email list.
+- **Tests (+2, 2 updated):** the Feedback form renders + **degrades to GitHub without a webhook** (no network
+  in tests); the "Join the beta" link appears only when `FPL_SIGNUP_URL` is set; the page-list + tab-emoji
+  tests updated for the 8th tab (📣). **686** green, ruff clean.
+- **Manual smoke:** the Feedback form submits to GitHub-fallback with no webhook; the beta link appears once
+  the signup URL is configured.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

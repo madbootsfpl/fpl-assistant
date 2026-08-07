@@ -12,7 +12,7 @@ import streamlit as st
 from src.analytics import next_deadline
 from src.storage import Storage
 from src.ui.deadline import deadline_banner
-from src.web_streamlit.access import require_access
+from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="FPL Assistant", page_icon="⚽", layout="wide")
@@ -56,5 +56,10 @@ The analytics decide; a local LLM (optional) only narrates. `python app.py refre
 )
 st.info("🧭 **New here?** The **Help** tab (bottom of the sidebar) is a step-by-step guide to building "
         "your team with the assistant.")
-st.info("🧪 **Testing this?** Tell us what breaks or feels off → "
-        "[open a GitHub issue](https://github.com/tesheridan/fpl-assistant/issues/new).")
+st.info("🧪 **Testing this?** Tell us what breaks or feels off on the **📣 Feedback** tab (bottom of the "
+        "sidebar) — or [open a GitHub issue](https://github.com/tesheridan/fpl-assistant/issues/new).")
+
+_signup = secret("FPL_SIGNUP_URL")          # a founding-tester signup link, only when configured (ADR-087)
+if _signup:
+    st.link_button("✋ Join the beta (founding testers)", _signup,
+                   help="Sign up with your email — founding testers get free access as the app grows.")

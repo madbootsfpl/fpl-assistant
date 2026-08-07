@@ -255,11 +255,12 @@ def test_help_page_renders_the_guide_without_data():
     assert not at.get("dataframe")                             # static content — no data widgets
 
 
-def test_sidebar_consolidated_to_seven_tabs():
-    # ADR-069: 12 → 7 tabs; Player Stats merged into Players, the 5 squad tools into Squads
+def test_sidebar_pages():
+    # ADR-069: 12 → 7 core tabs (Player Stats merged into Players, the 5 squad tools into Squads);
+    # ADR-087 (US-264) adds a beta Feedback tab.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["1_Players.py", "2_Fixtures.py", "3_Squads.py", "4_Ask.py",
-                              "5_News.py", "6_Trending.py", "7_Help.py"])
+                              "5_News.py", "6_Trending.py", "7_Help.py", "8_Feedback.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
         assert not (_PAGES / gone).exists()
@@ -387,7 +388,7 @@ def test_xg_board_rates_only_meaningful_players():
 
 
 _TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_Squads.py": "🧩", "4_Ask.py": "💬",
-              "5_News.py": "📰", "6_Trending.py": "📈", "7_Help.py": "🧭"}
+              "5_News.py": "📰", "6_Trending.py": "📈", "7_Help.py": "🧭", "8_Feedback.py": "📣"}
 
 
 def test_every_tab_has_an_emoji_led_header():
@@ -396,6 +397,28 @@ def test_every_tab_has_an_emoji_led_header():
         at = _run(_PAGES / fname)
         assert not at.exception, f"{fname} raised: {at.exception}"
         assert at.title and emoji in at.title[0].value, f"{fname} title missing {emoji}"
+
+
+def test_feedback_page_form_degrades_to_github_without_a_webhook():
+    # US-264 (ADR-087): the Feedback form renders; with no FPL_FEEDBACK_WEBHOOK a submit points to GitHub
+    # (no network in tests), and the "Join the beta" link is hidden until FPL_SIGNUP_URL is set.
+    at = _run(_PAGES / "8_Feedback.py")
+    assert not at.exception
+    assert at.text_area and any(b.label == "Send feedback" for b in at.button)   # the form is there
+    assert not any("Join the beta" in b.label for b in at.get("link_button"))     # no signup URL configured
+    ta = at.text_area[0]
+    ta.set_value("Bench boost explanation was great, one typo on Trending.").run()
+    next(b for b in at.button if b.label == "Send feedback").click().run()
+    assert not at.exception
+    blob = " ".join(i.value for i in at.info) + " ".join(c.value for c in at.caption)
+    assert "github" in blob.lower()                              # degraded to the GitHub issue link, no POST
+
+
+def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
+    # US-264: the "Join the beta" link appears once FPL_SIGNUP_URL is set
+    monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/signup")
+    at = _run(_PAGES / "8_Feedback.py")
+    assert any("Join the beta" in b.label for b in at.get("link_button"))
 
 
 def test_squads_gameweeks_selector_drives_the_horizon():
