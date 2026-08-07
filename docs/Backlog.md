@@ -4,6 +4,32 @@ Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features li
 consolidated [Roadmap](04_Roadmap/Roadmap.md) — "Next / Then / Later"; this file holds the small
 nice-to-haves and tech-debt.)*
 
+## Requested features — 2026-08-07 intake (owner)
+
+Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/plumbing now, sharpens at GW1 ·
+⏳ GW1-gated · 🧭 needs a design/ADR):
+
+- ◑🧭 **AI Chat Assistant** — a 24/7 chatbot for FPL **rules**, squad questions, and tactical advice tailored
+  to your team. *Tension:* the Ask tab is a **grounded** intent-router (analytics decide, the LLM only
+  narrates + is verified, ADR-034/037) — a free-form "rules/tactics" chatbot is ungrounded general knowledge.
+  Needs a design (a scoped "general FPL knowledge" mode alongside the grounded intents, clearly labelled as
+  *not verified*), an ADR, and a willing LLM. Conversational plumbing already exists (ADR-047/080).
+- ⏳ **Elite Manager Comparison** — how your squad compares to top-ranked managers + what the **Top 1,000**
+  are doing (captain trends, transfer flow). *Needs:* the FPL leagues API + per-manager picks; **picks are
+  public only from the GW1 deadline (2026-08-21)** → no data preseason. Build post-GW1.
+- ✅ **Set Piece & Ownership Data** — who takes **penalties · corners · free-kicks** for each team, plus
+  **ownership combinations** to find high-value, low-ownership **differentials**. *Data:* `penalties_order` +
+  `selected_by` already ingested; **corners/free-kick orders need adding** (`corners_and_indirect_freekicks_
+  order`, `direct_freekicks_order` — in the FPL API; 2 fields + a migration). **Buildable now, no gating.**
+- ◑ **Chip Strategy Guidance** — AI advice on when to use **Wildcard · Free Hit · Bench Boost · Triple
+  Captain** from your squad, fixtures, and mini-league position. *Feasible now:* fixture-run / DGW-BGW /
+  bench-strength timing (reuses `team_fdr`, bench-aware builds). *Gated:* mini-league position (needs league
+  data, GW1). The Roadmap's *chip optimisers*.
+- ◑ **Price Change Predictor** — an indicator flagging players about to **rise/fall** in value, to time
+  transfers. *Data:* `transfers_in/out_event` + `cost_change_event/start` already ingested, **but net
+  transfers are 0 preseason** → the predictor lights up at **GW1**. Plumbing buildable now (a directional
+  **flag, not truth**), dormant like the Data-Hardening prep (ADR-060).
+
 ## Enhancements
 
 - ~~**Differential archetype**~~ — **DONE** (Sprint 043, **ADR-044**). Ingested `selected_by` and added a
