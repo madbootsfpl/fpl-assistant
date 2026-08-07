@@ -196,6 +196,15 @@ def test_set_captain_rejects_a_non_owned_player():
     assert web_squads.set_captain({"player_ids": [1, 2, 3]}, 99)["captain_id"] is None
 
 
+def test_captain_bonus_is_the_next_gw_double_only_for_a_starting_captain():
+    # ADR-083: the captain adds one extra copy of their NEXT-GW xP — and only when in the XI
+    by_gw = {7: {1: 5.9, 2: 6.3}, 8: {1: 2.0}}     # id 7 = captain, next GW (1) xP = 5.9
+    assert web_squads.captain_bonus(7, {7, 8, 9}, by_gw, next_gw=1) == 5.9   # captain starting → next-GW xP
+    assert web_squads.captain_bonus(7, {8, 9}, by_gw, next_gw=1) == 0.0      # captain benched → no bonus
+    assert web_squads.captain_bonus(None, {7, 8}, by_gw, next_gw=1) == 0.0   # no captain set → 0
+    assert web_squads.captain_bonus(7, {7, 8}, by_gw, next_gw=None) == 0.0   # no gameweeks → 0 (empty-safe)
+
+
 # --- the guardrail: the web never writes squads server-side --------------------------------------
 
 def test_web_edges_never_call_squadstore_save():

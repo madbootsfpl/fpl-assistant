@@ -119,6 +119,20 @@ existence at `refresh` (the cached edge sweep is simpler and offline-after-warm)
   outfield / GK **club shirt** (SUN code 56), while Haaland (223094) keeps his **photo**. No schema/ingest
   change; works immediately (no refresh needed); one ~daily cached sweep warms it.
 
+**US-256 — Captain double-points, next-GW only (ADR-083).** ✅ Done.
+- A pure `web_streamlit/squads.py::captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw)` → the
+  captain's **next-GW** xP, but only when the captain is **set and in the XI** (benched/unset → 0). Empty-safe.
+- `render_my_squad`: pulls `by_gameweek` + `next_gw` from the `decision_xp` pass; **Projected XI (N GW)** =
+  `XI over N GW + captain_bonus` (the ×2 for next GW only); **"Captain (2×)"** reframed to the captain's
+  **next-GW** doubled value; a **caption** states the ×2 is for the **next gameweek only** when horizon > 1
+  (owner steer), and notes when the captain is benched.
+- **Tests (+2):** `captain_bonus` (starting → next-GW xP; benched/unset/no-GW → 0); a My Squad AppTest asserts
+  Projected XI = `XI + captain-next-GW` with a captain injected, and the one-GW caption shows. **663** green,
+  ruff clean.
+- **Manual smoke (RoboTS + B.Fernandes ©):** Projected XI **242.5** (= 236.6 + 5.9), Captain (2×) **11.8**,
+  caption *"…doubled for the next gameweek only (+5.9 xP); the other 4 GW count once…"*. Display-only —
+  `decision_xp`/the engine unchanged.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

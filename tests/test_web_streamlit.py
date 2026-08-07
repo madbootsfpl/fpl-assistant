@@ -423,6 +423,40 @@ def test_my_squad_shows_a_quick_stats_summary():
     assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
 
 
+def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
+    # US-256 (ADR-083): with a captain set, Projected XI = XI over N GW + the captain's next-GW xP,
+    # and a caption says the ×2 is for the next GW only. Injects an active squad with a captain.
+    from src.analytics import best_legal_xi, decision_xp
+    from src.squads import SquadStore
+    from src.storage import Storage
+
+    store = Storage()
+    sq = SquadStore().load("RoboTS")
+    players = store.get_players()
+    if not sq or not players:
+        return
+    by_id = {p["id"]: p for p in players}
+    ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
+                         horizon=5, gw_history_by_code=store.get_gw_history_by_code())
+    store.close()
+    xp = {r["id"]: r["xp"] for r in ranked}
+    by_gw = {r["id"]: r["by_gameweek"] for r in ranked}
+    g1 = ranked[0]["gameweeks"][0]
+    owned = [by_id[i] for i in sq["player_ids"] if i in by_id]
+    xi = best_legal_xi(owned, xp)
+    cap = max(xi, key=lambda i: xp[i])                     # captain = the best XI player
+    expected = round(sum(xp[i] for i in xi) + by_gw[cap][g1], 1)
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = {**sq, "captain_id": cap, "name": "RoboTS"}
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+    proj = next(m for m in at.metric if m.label.startswith("Projected XI"))
+    assert proj.value == f"{expected:.1f} xP"              # XI + captain's next-GW double
+    assert any("next gameweek only" in c.value for c in at.caption)   # the honest one-GW note
+
+
 def test_my_squad_pitch_cards_show_set_piece_attributes():
     # US-253 (ADR-081): each pitch card shows a set-piece line (⚽/🚩/🎯) for a first-choice taker,
     # like the Trends line — display-only. Assert the count of set-piece captions matches the owned takers.

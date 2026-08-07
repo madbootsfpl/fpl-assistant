@@ -45,6 +45,7 @@ from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
     FPL_BUDGET,
     apply_transfer,
+    captain_bonus,
     move_bench_sub,
     rename,
     set_active_squad,
@@ -246,9 +247,10 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                "the full option set, switch to **Build**.")
     by_id = {p["id"]: p for p in players}
     owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
-    xp_by_id = {r["id"]: r["xp"]
-                for r in decision_xp(players, upcoming, history, horizon=horizon,
-                                     gw_history_by_code=gw_history)}
+    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}     # per-GW xP (ADR-032) for the captain
+    next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     bench_ids = set(squad.get("bench_ids") or [])
     captain_id = squad.get("captain_id")
 
@@ -270,18 +272,32 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     xi_ids = ({p["id"] for p in owned} - bench_ids) if bench_ids else best_legal_xi(owned, xp_by_id)
     xi_xp = sum(xp_by_id.get(i, 0) for i in xi_ids)
     bench_xp = sum(xp_by_id.get(p["id"], 0) for p in owned if p["id"] not in xi_ids)
-    cap_xp = xp_by_id.get(captain_id) if captain_id else None
+    # Captaincy is a next-GW decision → the projected XI adds the captain's double for the next GW only,
+    # and only when the captain is in the XI (a benched captain isn't doubled). ADR-083.
+    cap_next = captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw)
+    projected_xi = xi_xp + cap_next
+    captain_benched = captain_id is not None and captain_id not in xi_ids
     unavailable = sum(1 for p in owned if is_unavailable(p))
     doubtful = sum(1 for p in owned if p["status"] == "d")
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric(f"Projected XI ({gw_label})", f"{xi_xp:.1f} xP",
-              help="Your starting XI's projected points over the selected Gameweeks-ahead horizon.")
-    m2.metric("Captain (2×)", f"{cap_xp * 2:.1f} xP" if cap_xp is not None else "—",
-              help="Your captain's projected points, doubled. Set one on the Captain tab.")
+    m1.metric(f"Projected XI ({gw_label})", f"{projected_xi:.1f} xP",
+              help="Your starting XI's projected points over the selected horizon, plus your captain's "
+                   "double for the next gameweek (the ×2 is a one-week thing).")
+    m2.metric("Captain (2×)", f"{cap_next * 2:.1f} xP" if cap_next else "—",
+              help="Your captain's next-gameweek points, doubled. Captaincy is re-chosen each week, so the "
+                   "bonus counts for the next GW only. Set/change one on the Captain tab.")
     m3.metric("Bench", f"{bench_xp:.1f} xP", help="Your bench's projected points (bench strength).")
     m4.metric("Unavailable", unavailable,
               help="Owned players injured / suspended / unavailable (🚑 / 🚫 / ⛔).")
     m5.metric("Doubtful", doubtful, help="Owned players flagged doubtful (❓).")
+    # Be explicit that the ×2 is a one-week thing when a longer horizon is selected (owner steer, ADR-083).
+    cap_name = by_id[captain_id]["web_name"] if captain_id in by_id else None
+    if cap_next and horizon > 1:
+        st.caption(f"⚡ Captain **{cap_name}** is doubled for the **next gameweek only** (+{cap_next:.1f} xP); "
+                   f"the other {horizon - 1} GW count once — captaincy is re-picked each week.")
+    elif captain_benched:
+        st.caption("⚡ Your captain is on the **bench** — not doubled in the projected XI (FPL would auto-sub "
+                   "to your vice).")
 
     # Who's flagged (US-240) — name them with their flag (❓ carries the chance%), else all-clear.
     flagged = [(p, availability_flag(p)) for p in owned if availability_flag(p)]

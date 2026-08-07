@@ -79,6 +79,17 @@ def set_captain(squad: dict, captain_id) -> dict:
     return new
 
 
+def captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw) -> float:
+    """The captain's extra points from the armband, for the **next gameweek only** (ADR-083).
+
+    A captain scores double in one GW, and captaincy is re-chosen weekly — so the projected-XI total adds one
+    extra copy of the captain's *next-GW* xP, but only when a captain is **set and in the projected XI** (a
+    benched captain isn't doubled; FPL auto-subs to the vice). Empty-safe → 0.0."""
+    if captain_id is None or next_gw is None or captain_id not in set(xi_ids):
+        return 0.0
+    return (by_gameweek_by_id.get(captain_id) or {}).get(next_gw, 0.0)
+
+
 def set_bench(squad: dict, bench_ids) -> dict:
     """A copy of `squad` with a new bench (the rest are the XI). The **order is the sub priority**
     (ADR-079) — preserved as given, not re-sorted. Display/analysis honour the *set*; the order drives the
