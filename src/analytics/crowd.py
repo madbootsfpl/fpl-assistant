@@ -111,6 +111,15 @@ AVAILABILITY_LEGEND = ("Fit: 🚑 injured · 🚫 suspended · ⛔ unavailable �
 SET_PIECE_LEGEND = ("Set pieces: ⚽ penalties · 🚩 corners · 🎯 free-kicks — shown for the **first-choice** "
                     "taker (blank = not on set pieces).")
 
+# The shared legend for the crowd/sentiment "Trends" flags (tester asked "what does template mean?"). The
+# ownership numbers track the tunable thresholds above.
+CROWD_LEGEND = (
+    f"Trends: 🟦 **template** = ≥{TEMPLATE_OWN:.0f}% owned (a *safe*, widely-held pick — most managers have "
+    f"them, so **not** owning one is a rank risk if they haul) · 💎 **differential** = ≤{DIFFERENTIAL_OWN:.0f}% "
+    "owned (a low-owned punt) · 🔥 transferred in · ❄️ transferred out · 💰↑ price rising · 💸↓ price falling · "
+    "📈 in form. (Momentum/form are live from GW1.)"
+)
+
 
 def set_piece_flags(player) -> list:
     """First-choice set-piece duty flags for a player (ADR-081) — ⚽ pens · 🚩 corners · 🎯 FK, each

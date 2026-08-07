@@ -60,6 +60,13 @@ def test_availability_flag_is_distinct_from_crowd_and_rating():
     assert not (flags & set("🟢🟡🟠🔴🟦💎🔥❄️📈"))
 
 
+def test_crowd_legend_explains_template_and_tracks_the_thresholds():
+    # tester asked "what does template mean?" — the shared legend must say so, with the real thresholds
+    from src.analytics import CROWD_LEGEND
+    assert "template" in CROWD_LEGEND and f"≥{TEMPLATE_OWN:.0f}% owned" in CROWD_LEGEND
+    assert "differential" in CROWD_LEGEND and f"≤{DIFFERENTIAL_OWN:.0f}%" in CROWD_LEGEND
+
+
 def test_template_and_differential_by_ownership():
     assert "🟦 template" in crowd_flags(_p(selected_by=TEMPLATE_OWN))          # ≥ 20%
     assert "💎 differential" in crowd_flags(_p(selected_by=DIFFERENTIAL_OWN))  # ≤ 5%

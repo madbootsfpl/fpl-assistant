@@ -11,6 +11,7 @@ from src.analytics.chips import CHIP_NAMES, chip_advisor
 from src.analytics.cleansheet import defensive_solidity
 from src.analytics.crowd import (
     AVAILABILITY_LEGEND,
+    CROWD_LEGEND,
     DIFFERENTIAL_OWN,
     SET_PIECE_LEGEND,
     TREND_BYS,
@@ -76,6 +77,7 @@ __all__ = [
     "chance_factor",
     "AVAILABILITY_LEGEND",
     "SET_PIECE_LEGEND",
+    "CROWD_LEGEND",
     "availability_flag",
     "crowd_flags",
     "set_piece_flags",

@@ -10,6 +10,7 @@ import streamlit as st
 
 from src.analytics import (
     AVAILABILITY_LEGEND,
+    CROWD_LEGEND,
     SET_PIECE_LEGEND,
     availability_flag,
     crowd_flags,
@@ -59,8 +60,10 @@ def render_pool(rows, sel, photos, badges):
               "Trends": " ".join(crowd_flags(p))} for p in page]
     st.dataframe(table, width="stretch", hide_index=True,
                  column_config=column_config(table[0] if table else [],
-                                             help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND}))
+                                             help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND,
+                                                   "Trends": CROWD_LEGEND}))
     st.caption(AVAILABILITY_LEGEND)
+    st.caption(CROWD_LEGEND)
     by_value = sort == "value"
     field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")
     top = sorted(ranked, key=lambda p: -((p.get(field) or 0)))[:15]

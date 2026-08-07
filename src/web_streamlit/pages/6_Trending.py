@@ -7,7 +7,7 @@ A display lens, never xP. Ownership works now; the momentum/form boards light up
 
 import streamlit as st
 
-from src.analytics import crowd_flags, trending
+from src.analytics import CROWD_LEGEND, crowd_flags, trending
 from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
@@ -66,6 +66,7 @@ else:
 
     # A shared filter (ADR-064): Team / Position / Player, AND-combinable — applied to every board.
     sel = filter_controls(players, key="trending")
+    st.caption(CROWD_LEGEND)                           # explain the Trends flags (e.g. what "template" means)
     tabs = st.tabs([b[1] for b in _BOARDS] + ["💬 Talked about"])
     for tab, (by, label, header) in zip(tabs, _BOARDS):
         with tab:
