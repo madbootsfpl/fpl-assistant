@@ -172,9 +172,20 @@ def test_rename_blank_keeps_the_old_name():
     assert web_squads.rename({"name": "A", "player_ids": [1]}, "   ")["name"] == "A"   # never nameless
 
 
-def test_set_bench_keeps_player_id_order():
+def test_set_bench_preserves_the_given_order():
+    # ADR-079: bench_ids order IS the sub priority, so set_bench keeps the given order (not player_ids order)
     squad = {"player_ids": [5, 3, 9, 1], "bench_ids": []}
-    assert web_squads.set_bench(squad, [9, 5])["bench_ids"] == [5, 9]   # player_ids order, not arg order
+    assert web_squads.set_bench(squad, [9, 5])["bench_ids"] == [9, 5]
+
+
+def test_move_bench_sub_reorders_outfield_and_keeps_the_gk_fixed():
+    # ADR-079: swap an outfield sub in priority; the bench GK (keeper-only) is excluded + kept last
+    by_id = {1: {"position": "GK"}, 2: {"position": "DEF"}, 3: {"position": "MID"}, 4: {"position": "FWD"}}
+    squad = {"bench_ids": [2, 3, 4, 1]}                        # outfield priority 2,3,4 + GK 1
+    assert web_squads.move_bench_sub(squad, 3, "up", by_id)["bench_ids"] == [3, 2, 4, 1]   # 3 (2nd) → 1st
+    assert web_squads.move_bench_sub(squad, 2, "down", by_id)["bench_ids"] == [3, 2, 4, 1]  # 2 (1st) → 2nd
+    assert web_squads.move_bench_sub(squad, 2, "up", by_id)["bench_ids"] == [2, 3, 4, 1]    # already 1st → no-op
+    assert web_squads.move_bench_sub(squad, 1, "up", by_id)["bench_ids"] == [2, 3, 4, 1]    # GK excluded → no-op
 
 
 def test_set_captain_accepts_an_owned_player():

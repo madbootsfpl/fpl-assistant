@@ -80,12 +80,30 @@ def set_captain(squad: dict, captain_id) -> dict:
 
 
 def set_bench(squad: dict, bench_ids) -> dict:
-    """A copy of `squad` with a new bench (the rest are the XI). Kept in `player_ids` order. Display/
-    analysis honour it; legality of the resulting XI is the caller's soft warning (ADR-022, warn-not-block),
-    not a block here."""
-    chosen = set(bench_ids)
+    """A copy of `squad` with a new bench (the rest are the XI). The **order is the sub priority**
+    (ADR-079) — preserved as given, not re-sorted. Display/analysis honour the *set*; the order drives the
+    auto-sub priority. Legality of the resulting XI is the caller's soft warning (ADR-022), not a block."""
     new = dict(squad)
-    new["bench_ids"] = [i for i in squad["player_ids"] if i in chosen]
+    new["bench_ids"] = list(bench_ids)
+    return new
+
+
+def move_bench_sub(squad: dict, player_id: int, direction: str, by_id) -> dict:
+    """Move an **outfield** bench player up/down one step in the sub priority (ADR-079).
+
+    Copy-not-mutate (ADR-055). The bench GK is keeper-only, so it's excluded from the reorder and kept last.
+    A no-op if `player_id` isn't an outfield sub, or it's already at the end it's moving toward. `by_id`
+    maps id → player (for the position lookup); `direction` is "up" (higher priority) or "down"."""
+    bench = squad.get("bench_ids", [])
+    outfield = [i for i in bench if i in by_id and by_id[i]["position"] != "GK"]
+    gk = [i for i in bench if i not in outfield]                 # the GK (and any unknown id) kept aside
+    if player_id in outfield:
+        idx = outfield.index(player_id)
+        swap = idx - 1 if direction == "up" else idx + 1
+        if 0 <= swap < len(outfield):
+            outfield[idx], outfield[swap] = outfield[swap], outfield[idx]
+    new = dict(squad)
+    new["bench_ids"] = outfield + gk
     return new
 
 
