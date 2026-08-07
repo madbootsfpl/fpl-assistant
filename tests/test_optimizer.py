@@ -13,6 +13,7 @@ from src.analytics.optimizer import (
     XI_FLEX,
     archetype_bands,
     available_players,
+    bench_order,
     best_legal_xi,
     is_unavailable,
     legal_xi_issues,
@@ -33,6 +34,23 @@ def p(id, position, price, points, team=None, name=None):
         "total_points": points,
         "team": team or f"T{id}",   # distinct team by default (club cap irrelevant)
     }
+
+
+def test_bench_order_ranks_outfield_by_xp_and_separates_the_gk():
+    # ADR-078: outfield bench by xP (1st = highest), the bench GK last as "GK" (keeper-only)
+    bench = [p(1, "GK", 4.0, 0), p(2, "DEF", 4.5, 0), p(3, "MID", 5.0, 0), p(4, "FWD", 6.0, 0)]
+    scores = {1: 0.5, 2: 2.1, 3: 5.4, 4: 3.3}
+    order = bench_order(bench, scores)
+    assert [(role, pl["id"]) for role, pl in order] == [("1st", 3), ("2nd", 4), ("3rd", 2), ("GK", 1)]
+
+
+def test_bench_order_is_empty_safe_and_tie_stable():
+    assert bench_order([], {}) == []
+    # all-zero xP → still ordered (stable), GK separate, no crash on a missing score
+    bench = [p(1, "GK", 4.0, 0), p(2, "MID", 5.0, 0), p(3, "MID", 5.0, 0)]
+    order = bench_order(bench, {})              # no scores at all → treated as 0
+    assert [role for role, _ in order] == ["1st", "2nd", "GK"]
+    assert {pl["id"] for _, pl in order} == {1, 2, 3}
 
 
 def formation_11(points_by_pos=None, price=4.0):

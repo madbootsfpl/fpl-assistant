@@ -330,6 +330,25 @@ def best_legal_xi(owned, scores) -> set:
     return {p["id"] for p in result["selected"]}
 
 
+_BENCH_ROLES = ("1st", "2nd", "3rd", "4th")
+
+
+def bench_order(bench, scores) -> list:
+    """The recommended auto-sub priority for a declared bench (ADR-078).
+
+    When a starter plays 0 minutes, FPL brings on the first bench player (in your set order) that keeps a
+    legal XI; the **bench GK only ever replaces the starting keeper**. As a recommendation we rank the
+    **outfield** bench by `scores` (id → xP) — your most valuable player first — then list the bench GK
+    separately. Returns ``[(role, player)]`` with role "1st"/"2nd"/"3rd" for the outfield subs and "GK"
+    for the keeper. Empty-safe (a Row or a dict).
+    """
+    outfield = sorted((p for p in bench if p["position"] != "GK"),
+                      key=lambda p: (scores.get(p["id"], 0) or 0), reverse=True)
+    order = [(_BENCH_ROLES[i], p) for i, p in enumerate(outfield)]
+    order += [("GK", p) for p in bench if p["position"] == "GK"]
+    return order
+
+
 def objective_scores(players, objective: str, upcoming=None) -> dict:
     """Per-player score {id: value} for the chosen squad objective (ADR-011).
 
