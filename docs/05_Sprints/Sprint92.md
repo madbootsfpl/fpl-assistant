@@ -109,4 +109,27 @@ recommended_applies`). ruff clean, full suite **634** green.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **632 → 634** (+2); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-243 — the model + mutations (ADR-079).** `bench_ids` order *is* the sub priority: `set_bench`
+  preserves order; a pure `move_bench_sub` swaps an outfield sub up/down (GK excluded, keeper-only).
+- **US-244 — the My Squad reorder UI.** The "🔁 Bench order" line shows the stored order; ⬆/⬇ per outfield
+  sub persist a reorder; a "↻ Use recommended (xP) order" button applies the xP ranking.
+
+**What went well**
+- **The order was free to carry meaning** — the analytics use `bench_ids` as a *set*, so making it ordered
+  broke nothing (the green suite proved it); only the display/edit changed.
+- **Honest to the rules** — the GK is excluded from the reorder (keeper-only), so the priority isn't
+  misleading.
+- **Compounds** — the display uses the horizon-aware xP; the "recommended" button reuses Sprint-091's
+  `bench_order`; the edit follows the copy-not-mutate model (ADR-055).
+
+**Watch-outs / follow-ups**
+- Existing saved squads' `bench_ids` order was arbitrary → now read as priority; "Use recommended" gives a
+  sensible one-click reset. Harmless (the analytics never used the order).
+- Possible later: set the bench order **on Build** so a fresh squad starts in the recommended order; annotate
+  the pitch bench cards with the sub number.
+- The benign `seed.db` byte-touch recurred during manual smokes → restored; pytest leaves it clean.
+
+See `Sprint92_Lessons_Learnt.md` for the detailed retro.

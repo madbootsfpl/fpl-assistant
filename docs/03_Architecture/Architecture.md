@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 092 (2026-08-07)** — *Set the bench order*, per **ADR-079** (US-243/244; refines ADR-055/078). The
+  `bench_ids` **order** now means the sub priority. **US-243:** `set_bench` **preserves** the given order
+  (was squad-position order); a pure `move_bench_sub(squad, player_id, direction, by_id)` swaps an
+  **outfield** sub up/down (bounds-checked, no-op at the ends), excludes the **bench GK** (keeper-only) and
+  keeps it last; copy-not-mutate (ADR-055). The change didn't ripple — the analytics use `bench_ids` as a
+  **set**. **US-244:** `render_my_squad`'s "🔁 Bench order" line reads the **stored** order (outfield
+  1st/2nd/3rd + the GK separate, built from `bench_ids` not owned order); a "Reorder the bench" expander gives
+  each outfield sub **⬆/⬇** buttons → `move_bench_sub` → `set_active_squad` + rerun, plus a **"↻ Use
+  recommended (xP) order"** button → `set_bench` with `bench_order`'s ranking. Mutates `session_state` (no
+  server writes); the order rides in the `squad.json` download. 632 → 634 tests.
 - **Sprint 091 (2026-08-07)** — *Bench order — the auto-sub priority*, per **ADR-078** (US-241/242). No
   auto-sub logic existed. **US-241:** a pure `analytics/optimizer.py::bench_order(bench, scores)` (next to
   `best_legal_xi`) → `[(role, player)]`: the **outfield** bench ranked by xP → "1st"/"2nd"/"3rd", then the
