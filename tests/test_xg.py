@@ -16,6 +16,13 @@ def test_render_xg_shows_columns_and_values():
     assert "Haaland" in out
     assert "28.2" in out          # xGI value shown
 
+def test_render_xg_shows_an_availability_fit_flag():
+    # US-235 (ADR-074): the xg table has a last Fit column too
+    row = {**_row("Hurt", 5.0, 1.0, 6.0, 10.0), "status": "i", "chance": 0}
+    out = render_xg_table([row])
+    assert "Fit" in out and "🚑" in out
+
+
 def test_render_xg_respects_the_limit():
     rows = [_row(f"P{i}", i, 0, i, 0) for i in range(30)]
     out = render_xg_table(rows, limit=5)

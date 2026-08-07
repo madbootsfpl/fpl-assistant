@@ -42,7 +42,7 @@ change.
 - [x] **US-234 (clickable Ask examples)** — each example prompt on the Ask page is a **button**; clicking it
       runs the question (same grounded pipeline + history as typing it). A shared helper feeds both the chat
       box and the buttons; the built-squad "Use this squad →" bridge still works.
-- [ ] **US-235 (CLI availability flags)** — a **Fit** column (🚑/🚫/⛔/❓, blank = available) as the **last**
+- [x] **US-235 (CLI availability flags)** — a **Fit** column (🚑/🚫/⛔/❓, blank = available) as the **last**
       column on `render_player_table` (→ `table`/`search`/`filter`) and `render_xg_table` (→ `xg`), reusing
       `availability_flag`. Byte-exact table tests updated. Extends ADR-074.
 - [ ] **US-236 (chance% on ❓)** — `availability_flag` shows the chance on a doubtful player (`❓ 75%` when
@@ -59,7 +59,7 @@ change.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-234 | **Clickable Ask examples** — a button per example on the Ask page that runs it (shared handler). | Medium | ✅ Done | ~¼ session |
-| US-235 | **CLI availability flags** — a last-column **Fit** flag on `render_player_table` (table/search/filter) + `render_xg_table` (xg). Extends ADR-074. | Medium | ⬜ To do | ~¼–½ session |
+| US-235 | **CLI availability flags** — a last-column **Fit** flag on `render_player_table` (table/search/filter) + `render_xg_table` (xg). Extends ADR-074. | Medium | ✅ Done | ~¼–½ session |
 | US-236 | **chance% on ❓** — `availability_flag` appends the chance on doubtful (`❓ 75%`). | Low | ⬜ To do | ~¼ session |
 
 ---
@@ -102,6 +102,15 @@ stash `built_squad`) used by **both** the chat box and the buttons; clicking a b
 (unified). The build-answer "Use this squad →" bridge is unchanged. No new ADR (extends US-227). Smoke: 7
 example buttons; clicking one records a grounded turn. Updated the US-227 test → clickable
 (`test_ask_page_example_prompts_are_clickable`). ruff clean, full suite **622** green.
+
+**US-235 (CLI availability flags).** Added `Col("Fit", 4, "<", availability_flag)` as the **last** column of
+`ui/table.py::_COLS` (→ `table`/`search`/`filter`) and `ui/xg.py::_COLS` (→ `xg`), importing
+`availability_flag` from `src.analytics` (a valid ui→analytics dependency; `rank_players` does `dict(row)` so
+`status`/`chance` survive). Last-column placement means an emoji's ~2-cell terminal width can't push the
+aligned columns before it out of line — verified on real data (Garner/J.Timber 🚑, Wharton ❓, fit players
+blank; Player…Val/£m stay aligned). The existing byte-exact table/xg tests are substring-based + their
+fixtures lack `status` (→ blank, empty-safe), so none needed changing. Extends ADR-074 (no new ADR). +2
+tests. ruff clean, full suite **624** green.
 
 ---
 

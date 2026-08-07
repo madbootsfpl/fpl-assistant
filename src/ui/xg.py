@@ -9,6 +9,8 @@ The table shape (header / divider / aligned rows) comes from the shared renderer
 (`ui._table`, ADR-025); this module supplies the columns, title, and footer.
 """
 
+from src.analytics import availability_flag
+
 from ._table import Col, render_rows
 
 _NAME_W = 17  # also the truncation width, so it's named
@@ -26,6 +28,7 @@ _COLS = [
     Col("xA", 6, ">", lambda r: f"{_n(r['xa']):.1f}"),
     Col("xGI", 6, ">", lambda r: f"{_n(r['xgi']):.1f}"),
     Col("xGC", 6, ">", lambda r: f"{_n(r['xgc']):.1f}"),
+    Col("Fit", 4, "<", availability_flag),   # availability last (ADR-074); blank = available
 ]
 
 

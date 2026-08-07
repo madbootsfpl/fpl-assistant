@@ -8,6 +8,8 @@ The table shape (header / divider / aligned rows) comes from the shared renderer
 (`ui._table`, ADR-025); this module supplies the columns, title, and footer.
 """
 
+from src.analytics import availability_flag
+
 from ._table import Col, render_rows
 
 # Fixed column widths, so everything lines up regardless of the data.
@@ -35,6 +37,9 @@ _COLS = [
     Col("Price", 6, ">", lambda r: f"£{r['price']:.1f}m"),
     Col("Pts", 5, ">", lambda r: str(r["total_points"])),
     Col("Val/£m", 7, ">", _value_str),
+    # Availability last (ADR-074): 🚑/🚫/⛔/❓, blank = available. Kept last so an emoji's terminal width
+    # can't push the aligned columns before it out of line.
+    Col("Fit", 4, "<", availability_flag),
 ]
 
 
