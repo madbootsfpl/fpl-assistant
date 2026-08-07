@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 095 (2026-08-07)** — *Set-piece takers & the differential lens*, per **ADR-081** (US-249/250).
+  **US-249 (ingest):** `corners_order` (from `corners_and_indirect_freekicks_order`) + `freekicks_order`
+  (from `direct_freekicks_order`) added to the `Player` model + `from_api`, and to storage — the
+  `_MIGRATIONS` dict (auto-ALTERed on open), CREATE TABLE, the upsert, and `save_players`; `get_players` picks
+  them up unchanged via `SELECT p.*`. A pure, empty-safe `analytics/crowd.py::set_piece_flags(player)` →
+  `⚽ pens` · `🚩 corners` · `🎯 FK` for each duty whose order == 1 (the first-choice taker). **US-250 (view):**
+  `views/players.py::render_set_pieces` — a `_board` of Player/Team/Pos/Fit + **Pen/Corners/FK** order +
+  **Own%/Val/£m**, through the shared filter, sorted pen-takers-first, with a low-ownership **differential**
+  caption + per-column tooltips (only players with a set-piece duty are listed); a **"Set pieces"** option on
+  the Players segmented control; a compact **"Set"** `set_piece_flags` column on the Pool; `Pen`/`Corners`/`FK`
+  → `%d` in `formats.py`. **Display-only** — `decision_xp`/the analytics are unchanged (a lens, like the
+  availability/crowd flags); penalty duty already feeds captaincy. `refresh` + `reseed` populated real data
+  (573 players, **38** first-choice takers). +7 tests; no server writes.
 - **Sprint 094 (2026-08-07)** — *Pronoun-aware chat*, per **ADR-080** (US-247/248; refines ADR-047).
   **US-247:** a pure `_resolve_pronoun(question, context)` rewrites a pronoun (he·him·his·she·her·they·them·
   their, whole-word/case-insensitive; possessives → `name's`) → the last turn's **sole** subject (resolves

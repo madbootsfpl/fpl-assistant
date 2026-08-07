@@ -119,6 +119,10 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 - ✅ A **"trends"** `ask`/`chat` intent + a **Trending page** — most-owned / transferred in-out / in-form
   boards over a pure `trending` helper (Sprint 067, US-193/194). Ownership works now; momentum/form light up
   at GW1.
+- ✅ **Set-piece takers + a differential lens** — ingest the corner/FK order fields + `set_piece_flags`; a
+  Players **"Set pieces"** view (pen/corner/FK takers + Own%/Val/£m, filterable) + a Pool flag; find
+  low-ownership set-piece takers (Sprint 095, US-249/250, ADR-081). Display-only; a gated set-piece xP boost
+  is a possible later modelling step.
 
 **Tier 2 — external / extended signals (started Sprint 064, ADR-058; degrade gracefully like ClubElo).**
 - ✅ **Community Signals** — a Reddit **RSS** buzz counter (`r/FantasyPL/.rss?limit=100`, **no auth/secret**

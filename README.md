@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**80 ADRs · 640 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**81 ADRs · 647 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -183,9 +183,11 @@ just another way to look at it. Two edges, both reusing the exact same engine:
 **Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing + **7 sidebar tabs**; the two
 consolidated tabs switch views with a lazy segmented control:
 - **Players** — a **Team · Position · Player** filter over the **Pool** (photos; the **table first**, a
-  top-15 bar below; page through all, sort) plus stat views: **over/under-perf · Defensive Contribution ·
-  clean sheets · xG** (season-to-date; clean sheets & xG carry a relative **🟢…🔴 quality rating** vs the
-  players shown; every table has a **🚑/🚫/⛔/❓ Fit** availability column)
+  top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag) plus stat views: **Set pieces**
+  (who takes **penalties · corners · free-kicks** + Own%/Val/£m — a low-ownership **differential** lens) ·
+  **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date; clean sheets & xG carry a
+  relative **🟢…🔴 quality rating** vs the players shown; every table has a **🚑/🚫/⛔/❓ Fit** availability
+  column)
 - **Fixtures** — a colour-coded fixture **ticker** with team badges
 - **Squads** — a **Gameweeks-ahead** dropdown (1–8) sets the prediction horizon for the whole tab · **Build**
   (the full `squad` options → the optimal 15; a **formation preview** with each shape's **projected XI xP** +

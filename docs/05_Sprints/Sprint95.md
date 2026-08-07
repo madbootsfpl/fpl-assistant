@@ -1,7 +1,7 @@
 # Sprint 095: Set-piece takers & the differential lens
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (ingest two set-piece fields + a Players "Set pieces" view)
 **Carried Over:** none
 
@@ -114,4 +114,35 @@ first), with a caption on the low-ownership-differential angle + per-column tool
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **640 → 647** (+7); ruff clean; CI-parity green.
+ADRs **80 → 81** (ADR-081). Real data refreshed + reseeded (573 players, **38** first-choice takers).
+
+**Delivered**
+- **US-249 — ingest set-piece orders (ADR-081).** `corners_order` / `freekicks_order` on the `Player`
+  model + `from_api`, and the storage schema/upsert/`save_players` (auto-migrated). A pure, empty-safe
+  `set_piece_flags(player)` helper (⚽ pens · 🚩 corners · 🎯 FK for the first-choice taker). `refresh` +
+  `reseed` populated real data.
+- **US-250 — Set pieces view + Pool flag.** A "Set pieces" board (Pen/Corners/FK order + Own%/Val/£m,
+  filterable, pen-takers-first, differential caption) + a compact "Set" flag column on the Pool.
+
+**What went well**
+- **The migration path made the schema change frictionless** — two new columns dropped into `_MIGRATIONS`
+  and `get_players`' `SELECT p.*` picked them up with no query change; de-risked by verifying the FPL fields
+  live *before* writing the ADR.
+- **Reused the differential lens, didn't invent one** — "low-ownership taker" fell straight out of the
+  existing Own% + Val/£m + the sortable board; no new metric, no scoring change.
+- **Display-only kept the blast radius tiny** — `decision_xp`/the analytics are untouched; the whole feature
+  is a lens (like crowd/availability flags), so the 640 existing tests stayed green.
+- **Real data validated the value** — B.Fernandes (pens+FK), Palmer, Isak surface as first-choice takers;
+  10 low-own (≤5%) pen takers (Buendía, Wood…) are exactly the differentials the owner asked for.
+
+**Watch-outs / follow-ups**
+- **Needs a refresh to populate** — the columns are NULL until `refresh`; the view is honestly empty
+  otherwise (an info note). The deploy carries the data via the committed `seed.db` (done this sprint).
+- **Set-piece orders shift in-season** — managers change takers; the board reflects the current snapshot,
+  updated on refresh like the rest of the data.
+- **Not a scoring signal (yet)** — a *lens*, not xP. Penalty duty already feeds captaincy; a gated
+  "set-piece xP boost" in `decision_xp` remains a possible later modelling item (deferred, ADR-081).
+- **Elite Manager Comparison** (the other big intake request) stays GW1-gated — needs live mini-league data.
+
+See `Sprint95_Lessons_Learnt.md` for the detailed retro.

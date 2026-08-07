@@ -17,10 +17,12 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
 - ⏳ **Elite Manager Comparison** — how your squad compares to top-ranked managers + what the **Top 1,000**
   are doing (captain trends, transfer flow). *Needs:* the FPL leagues API + per-manager picks; **picks are
   public only from the GW1 deadline (2026-08-21)** → no data preseason. Build post-GW1.
-- ✅ **Set Piece & Ownership Data** — who takes **penalties · corners · free-kicks** for each team, plus
-  **ownership combinations** to find high-value, low-ownership **differentials**. *Data:* `penalties_order` +
-  `selected_by` already ingested; **corners/free-kick orders need adding** (`corners_and_indirect_freekicks_
-  order`, `direct_freekicks_order` — in the FPL API; 2 fields + a migration). **Buildable now, no gating.**
+- ✅ **DONE (Sprint 095, ADR-081)** — **Set Piece & Ownership Data** — who takes **penalties · corners ·
+  free-kicks** for each team, plus **ownership combinations** to find high-value, low-ownership
+  **differentials**. Ingested `corners_order` + `freekicks_order` (auto-migrated); `set_piece_flags`;
+  a Players **"Set pieces"** view (Pen/Corners/FK order + Own%/Val/£m, filterable, differential caption) + a
+  Pool **"Set"** flag. Display-only; `refresh`+`reseed` populated real data (38 first-choice takers).
+  *(Follow-up, deferred: a gated set-piece xP boost in `decision_xp` — a modelling change, not a lens.)*
 - ◑ **Chip Strategy Guidance** — AI advice on when to use **Wildcard · Free Hit · Bench Boost · Triple
   Captain** from your squad, fixtures, and mini-league position. *Feasible now:* fixture-run / DGW-BGW /
   bench-strength timing (reuses `team_fdr`, bench-aware builds). *Gated:* mini-league position (needs league
