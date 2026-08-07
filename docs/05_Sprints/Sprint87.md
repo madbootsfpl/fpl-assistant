@@ -108,4 +108,26 @@ mentions desc; ≤30 → a count caption, >30 → a "Page" selectbox + "Showing 
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **619 → 622** (+3); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-232 — bigger sample (ADR-076).** The Reddit RSS client now requests `?limit=100`
+  (`config.REDDIT_RSS_LIMIT`), so "Talked about" counts mentions across ~100 posts instead of 25 — the
+  counter (`community_buzz`) was already correct.
+- **US-233 — paginate the board.** The (now longer) buzz list pages at 30 via the shared `paginate`.
+
+**What went well**
+- **Diagnosed before fixing.** A live fetch showed the counter produced 1–4 (not 1) — the real cause was the
+  25-post sample (35/51 players at "1"). The fix targeted the sample size, not the (correct) maths.
+- **Reused what worked** — the counter and `paginate` were untouched/reused; the change is one URL param +
+  one wiring line.
+- **The 429 during planning was informative** — it confirmed the degrade-gracefully path (ADR-059) and why
+  the board is cached + button-gated.
+
+**Watch-outs / follow-ups**
+- **Live re-verify pending** — Reddit throttled during planning, so the higher counts are a manual smoke
+  when Reddit isn't rate-limiting. The unit tests pin the count logic + the `?limit=100` request.
+- The Cloud IP may still be blocked (unchanged) → it degrades to the "unavailable" note.
+- Preseason buzz is thin (megathreads dominate); it sharpens in-season.
+
+See `Sprint87_Lessons_Learnt.md` for the detailed retro.

@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**75 ADRs · 619 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**76 ADRs · 622 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -193,8 +193,8 @@ consolidated tabs switch views with a lazy segmented control:
   transfer · flags) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps, **Apply**) · **Captain**
   (and **set** yours) — the manage views share one squad picker
 - **Ask** — a grounded **chat** with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**
-- **News** (official player news) · **Trending** (crowd boards + **💬 Community Signals**) · **Help** (a
-  step-by-step guide)
+- **News** (official player news) · **Trending** (crowd boards + **💬 Community Signals** — mentions across
+  the latest ~100 r/FantasyPL posts, paginated) · **Help** (a step-by-step guide)
 
 **Your squad, in the browser (ADR-054/055).** In **Squads → Build**, name it, *Download* a `squad.json` (that file
 *is* your save — the same JSON the CLI's `SquadStore` uses, so it's interoperable) and *Use this squad*;

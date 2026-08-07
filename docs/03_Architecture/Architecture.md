@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 087 (2026-08-07)** — *"Talked about" — count mentions across a bigger sample*, per **ADR-076**
+  (US-232/233, refines ADR-059). A tester saw "1 mention regardless"; a **live fetch** showed the counter is
+  fine (it produced 1–4) — the cause is the sample: Reddit's default `.rss` returns only **25 posts**, so
+  35/51 players sit at "1". **US-232:** `RedditRssClient.get_subreddit_rss(..., *, limit=config.
+  REDDIT_RSS_LIMIT)` appends **`?limit=100`** to the URL (new `config.REDDIT_RSS_LIMIT = 100`), so
+  `community_buzz` counts mentions across ~100 posts (the counter is unchanged — it already sums every match
+  across every entry; the defaulted `limit` keeps the fake clients / `community_signals` compatible).
+  **US-233:** the (now longer) board pages via the shared `paginate(buzz, key="buzz", per_page=30)`, sorted
+  by mentions desc. Still a cached, button-gated, degrade-on-failure buzz lens; `decision_xp` untouched; no
+  server writes. (Reddit `429`'d during planning — the graceful-degradation path; a live count re-verify is a
+  DoD smoke.) 619 → 622 tests.
 - **Sprint 086 (2026-08-07)** — *The XI score in the formation preview*, per **ADR-075** (US-230/231). The
   Build page's "🔎 Preview the best XI in a given shape" showed the XI but no total. **US-230:**
   `render_build` now sums the previewed XI's displayed `xP` into a `st.metric("Projected XI — {shape}",

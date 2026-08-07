@@ -11,7 +11,7 @@ and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens �
 buzz), plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags —
 ADR-070; the **AI Tips** tab) and **casual-readable stat boards** (a relative 🟢…🔴 quality rating —
 ADR-071/073; consistently formatted numbers — ADR-072; **🚑 availability flags** in every player table —
-ADR-074; a **projected-XI score + formation comparison** on Build — ADR-075). **75 ADRs · 619 tests · CI
+ADR-074; a **projected-XI score + formation comparison** on Build — ADR-075). **76 ADRs · 622 tests · CI
 green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
 form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
 wired dormant** (Sprint 069): GW1 is a switch-flip.
@@ -118,9 +118,10 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   at GW1.
 
 **Tier 2 — external / extended signals (started Sprint 064, ADR-058; degrade gracefully like ClubElo).**
-- ✅ **Community Signals** — a Reddit **RSS** buzz counter (`r/FantasyPL/.rss`, **no auth/secret** — the
-  `.json` API 403s), surfaced as a Trending "💬 Talked about" board; degrade-gracefully + cached +
-  button-gated (Sprint 068, US-195, ADR-059). *Cloud-IP may block → degrades. Buzz, not sentiment.*
+- ✅ **Community Signals** — a Reddit **RSS** buzz counter (`r/FantasyPL/.rss?limit=100`, **no auth/secret**
+  — the `.json` API 403s), surfaced as a paginated Trending "💬 Talked about" board that counts mentions
+  across the latest ~100 posts (Sprint 087, ADR-076); degrade-gracefully + cached + button-gated (Sprint
+  068, US-195, ADR-059). *Cloud-IP may block → degrades. Buzz, not sentiment.*
 - ✅ FPL official **news lens** — the stored `player.news` + `scout_news_link` on a **News** page
   (Sprint 064, US-190).
 - ✅ **Import your team by manager-ID** — the public FPL entry API → the session active squad (Sprint 064,
