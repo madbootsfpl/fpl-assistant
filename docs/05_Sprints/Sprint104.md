@@ -126,6 +126,19 @@ the Why/Risk/Confidence for the top move.
   99 + reasons and **verifies ✓**. (Against the all-players pool the same pick is 69/Medium — the +0.2 lead
   over Haaland surfaces as a "narrow lead" risk: honest, context-aware grounding.)
 
+**US-270 — transfer explainability (extends ADR-089).** ✅ Done.
+- `explain.py`: `transfer_confidence(gain, …)` (scales with the XI-gain margin — a ≥3 gain reads High; capped
+  by a doubtful buy) + `explain_transfer(move, in_row, horizon)` → ✓ reasons (**+gain to your XI** · higher
+  projected points · on penalties · set-pieces · frees cash · template · in form) + ⚠ risks (costs £ from the
+  bank · **selling the out player** · doubtful buy · big differential · marginal gain). Exported.
+- `_decide_transfer` (single-move path): computes the explanation from the buy's full row, sets a
+  self-contained `detail` (Why/Risk/Confidence) + puts confidence/why/risk in `facts` (so narration
+  **verifies ✓**).
+- **Tests (+2):** `transfer_confidence` scales with the gain + is capped/bounded; `explain_transfer` lists the
+  gain/price/signals + is empty-safe. **700** green, ruff clean.
+- **Manual smoke (TS):** *Ampadu → Zubimendi · Confidence 95/100 · High* + Why (✓ +9.3 XI over 5 GW · 17.1 vs
+  7.8 xP) + Risk (⚠ selling Ampadu · big differential); the LLM restates the 95 + reasons and **verifies ✓**.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

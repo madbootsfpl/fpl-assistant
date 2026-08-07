@@ -5,7 +5,13 @@
 must temper coin-flips / doubts.
 """
 
-from src.analytics import captain_confidence, confidence_band, explain_captain
+from src.analytics import (
+    captain_confidence,
+    confidence_band,
+    explain_captain,
+    explain_transfer,
+    transfer_confidence,
+)
 
 
 def test_confidence_band_cutoffs():
@@ -62,3 +68,37 @@ def test_explain_captain_skips_gated_zero_signals_and_is_empty_safe():
     assert not any("narrow lead" in r.lower() for r in ex.risks)
     assert any("Big differential" in r for r in ex.risks)      # 3% owned
     assert explain_captain([], rows) is None                    # empty-safe
+
+
+# ── US-270: transfer explainability ───────────────────────────────────────────
+
+def test_transfer_confidence_scales_with_the_gain():
+    assert transfer_confidence(0.3) < transfer_confidence(2.5)          # a bigger XI gain → more confident
+    assert transfer_confidence(3.0) >= 75                               # a clear upgrade → High
+    doubt = transfer_confidence(3.0, doubtful_in=True, chance_in=25)    # capped by the buy's chance
+    assert doubt <= round(25 * 0.8)
+    assert 1 <= transfer_confidence(0.1) <= 99                          # bounded
+
+
+def _move(**kw):
+    base = {"position": "MID", "gain": 2.4,
+            "out": {"id": 1, "web_name": "Old", "team": "AAA", "price": 7.0, "xp": 4.0},
+            "in": {"id": 2, "web_name": "New", "team": "BBB", "price": 8.0, "xp": 6.5}}
+    base.update(kw)
+    return base
+
+
+def test_explain_transfer_lists_the_gain_price_and_signals():
+    in_row = {"penalties_order": 1, "corners_order": None, "freekicks_order": None,
+              "selected_by": 45.0, "form": 0.0, "status": "a", "chance": None}
+    ex = explain_transfer(_move(), in_row, horizon=5)
+    why = " | ".join(ex.reasons)
+    assert "+2.4 to your starting XI over 5 GW" in why
+    assert "Higher projected points (6.5 vs 4.0)" in why
+    assert "On penalties" in why and "Template pick (45% owned)" in why
+
+    risk = " | ".join(ex.risks)
+    assert "Costs £1.0m from your bank" in risk                         # buy is £1.0m pricier
+    assert "Selling Old (4.0 xP)" in risk
+    assert ex.band == confidence_band(ex.confidence)
+    assert explain_transfer(None, in_row) is None                      # empty-safe

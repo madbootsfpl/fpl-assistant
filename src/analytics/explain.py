@@ -103,3 +103,63 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
         doubtful=top.get("doubtful"), chance=top.get("chance"),
     )
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
+
+
+_CLEAR_GAIN = 3.0   # an XI-xP gain of this over the horizon reads as a "clear" upgrade
+
+
+def transfer_confidence(gain, *, doubtful_in=False, chance_in=None) -> int:
+    """A transparent confidence heuristic for a single swap (ADR-089), 1–99 — how clearly it's an upgrade
+    (the XI-xP gain) tempered by a doubtful buy. Not a probability."""
+    clearness = min(1.0, max(0.0, gain or 0.0) / _CLEAR_GAIN)
+    score = 40 + 55 * clearness                      # a tiny positive gain ≈ 40; a ≥3 gain ≈ 95
+    if doubtful_in:
+        score = min(score, (chance_in if chance_in is not None else 50) * 0.8)
+    return max(1, min(99, round(score)))
+
+
+def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
+    """Explain a single transfer (ADR-089): grounded ✓ reasons + ⚠ risks + a confidence. `move` is a
+    `suggest_transfers` dict (`out`/`in` summaries + `gain`, the XI improvement); `in_row` is the buy's full
+    player row (ownership / set-pieces / status the summary doesn't carry). None if there's no move."""
+    if not move:
+        return None
+    buy, sell = move["in"], move["out"]
+    gain = move.get("gain")
+    price_delta = round((buy.get("price") or 0) - (sell.get("price") or 0), 1)
+    status = _get(in_row, "status")
+    doubtful = status == "d"
+
+    reasons, risks = [], []
+    # ✓ Why
+    if gain is not None:
+        reasons.append(f"+{gain} to your starting XI over {horizon} GW")
+    if (buy.get("xp") or 0) > (sell.get("xp") or 0):
+        reasons.append(f"Higher projected points ({buy['xp']} vs {sell['xp']})")
+    if _get(in_row, "penalties_order") == 1:
+        reasons.append("On penalties")
+    if _get(in_row, "freekicks_order") == 1 or _get(in_row, "corners_order") == 1:
+        reasons.append("Takes set-pieces")
+    if price_delta < 0:
+        reasons.append(f"Frees £{-price_delta:.1f}m")
+    own = _get(in_row, "selected_by")
+    if own is not None and own >= TEMPLATE_OWN:
+        reasons.append(f"Template pick ({own:.0f}% owned)")
+    form = _get(in_row, "form")
+    if form is not None and form >= FORM_MIN:
+        reasons.append(f"In form ({form})")
+
+    # ⚠ Risk
+    if price_delta > 0:
+        risks.append(f"Costs £{price_delta:.1f}m from your bank")
+    risks.append(f"Selling {sell['web_name']} ({sell.get('xp')} xP)")
+    if doubtful:
+        chance = _get(in_row, "chance")
+        risks.append("Doubtful buy" + (f" ({chance}% chance)" if chance is not None else ""))
+    if own is not None and 0 < own <= DIFFERENTIAL_OWN:
+        risks.append(f"Big differential ({own:.0f}% owned)")
+    if gain is not None and gain < 1.0:
+        risks.append(f"Marginal gain (+{gain})")
+
+    score = transfer_confidence(gain, doubtful_in=doubtful, chance_in=_get(in_row, "chance"))
+    return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))

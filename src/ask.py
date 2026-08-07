@@ -30,6 +30,7 @@ from src.analytics import (
     chip_advisor,
     decision_xp,
     explain_captain,
+    explain_transfer,
     gameweek_plan,
     minutes_weight_from_history,
     select_squad,
@@ -408,13 +409,24 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
         return {"message": "That's the last positive-gain upgrade I can find — nothing more."}
     m = moves[rank]
     ordinal = f" #{rank + 1}" if rank else ""
+    # Explainability (ADR-089): grounded Why/Risk/Confidence for the swap, from the buy's full row.
+    explanation = explain_transfer(m, {p["id"]: p for p in players}.get(m["in"]["id"], {}), horizon=_HORIZON)
+    facts = _transfer_facts(m)
+    if explanation is not None:
+        facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
+        facts["why"] = "; ".join(explanation.reasons) or "none"
+        facts["risk"] = "; ".join(explanation.risks) or "none noted"
+    detail = "\n".join([f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
+                        f"{m['in']['web_name']}", "", render_explanation(explanation)])
     return {
+        "detail": detail,   # self-contained Why/Risk/Confidence block (the truth, LLM or not)
         "headline": f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
                     f"{m['in']['web_name']} (+{m['gain']} XI xP over {_HORIZON} GW)",
-        "facts": _transfer_facts(m),
+        "facts": facts,
         "subjects": [m["out"]["web_name"], m["in"]["web_name"]],
-        "task": f"explain in 2 short sentences why selling {m['out']['web_name']} and buying "
-                f"{m['in']['web_name']} improves the starting XI",
+        "task": f"explain in 2-3 short sentences why selling {m['out']['web_name']} and buying "
+                f"{m['in']['web_name']} improves the XI, reflecting the confidence + ✓ reasons / ⚠ risks "
+                "— using ONLY the facts",
     }
 
 

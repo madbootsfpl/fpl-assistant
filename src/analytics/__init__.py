@@ -28,6 +28,8 @@ from src.analytics.explain import (
     captain_confidence,
     confidence_band,
     explain_captain,
+    explain_transfer,
+    transfer_confidence,
 )
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
 from src.analytics.form import blend_form, form_rate
@@ -82,7 +84,9 @@ __all__ = [
     "deadline_urgency",
     "gameweek_context",
     "explain_captain",
+    "explain_transfer",
     "captain_confidence",
+    "transfer_confidence",
     "confidence_band",
     "Explanation",
     "gameweek_plan",
