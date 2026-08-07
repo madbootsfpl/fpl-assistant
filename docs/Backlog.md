@@ -23,10 +23,11 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   a Players **"Set pieces"** view (Pen/Corners/FK order + Own%/Val/£m, filterable, differential caption) + a
   Pool **"Set"** flag. Display-only; `refresh`+`reseed` populated real data (38 first-choice takers).
   *(Follow-up, deferred: a gated set-piece xP boost in `decision_xp` — a modelling change, not a lens.)*
-- ◑ **Chip Strategy Guidance** — AI advice on when to use **Wildcard · Free Hit · Bench Boost · Triple
-  Captain** from your squad, fixtures, and mini-league position. *Feasible now:* fixture-run / DGW-BGW /
-  bench-strength timing (reuses `team_fdr`, bench-aware builds). *Gated:* mini-league position (needs league
-  data, GW1). The Roadmap's *chip optimisers*.
+- ◑ **DONE (v0) — Chip Strategy Guidance** (Sprint 096, US-251/252, ADR-082) — AI advice on when to use
+  **Wildcard · Free Hit · Bench Boost · Triple Captain**. Delivered: `chip_advisor` (per-GW `by_gameweek`
+  reductions + `best_legal_xi`) → a grounded `chips` `ask`/`chat` intent + a Squads **"Chips"** view. *Still
+  deferred:* **DGW/BGW** detection (in-season — every GW has 10 fixtures preseason) + **mini-league position**
+  (leagues API, GW1); a season-long scan; a standalone CLI `chips` command.
 - ◑ **Price Change Predictor** — an indicator flagging players about to **rise/fall** in value, to time
   transfers. *Data:* `transfers_in/out_event` + `cost_change_event/start` already ingested, **but net
   transfers are 0 preseason** → the predictor lights up at **GW1**. Plumbing buildable now (a directional

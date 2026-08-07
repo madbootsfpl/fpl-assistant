@@ -19,7 +19,7 @@ st.markdown(
 )
 
 st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · AI Tips · "
-           "Health · Transfer · Captain** with the buttons at the top.")
+           "Chips · Health · Transfer · Captain** with the buttons at the top.")
 
 with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=True):
     st.markdown(
@@ -44,7 +44,7 @@ with st.expander("3 · Check its health  →  **Squads → Health**"):
         "**weak links** worth upgrading. This is the same engine the CLI uses — one honest xP number."
     )
 
-with st.expander("4 · Plan your week & improve it  →  **Squads → AI Tips · Transfer · Captain**"):
+with st.expander("4 · Plan your week & improve it  →  **Squads → AI Tips · Chips · Transfer · Captain**"):
     st.markdown(
         "**AI Tips** is the fastest answer — one grounded view of who to **captain**, any **lineup** "
         "change, one **transfer** to consider, and any **flagged** players (injuries / doubts), all checked "
@@ -54,7 +54,10 @@ with st.expander("4 · Plan your week & improve it  →  **Squads → AI Tips ·
         "legal XI) — set your **bank** with the slider, or ask for a **coordinated plan** of 2–3. "
         "**Apply** a swap to your session squad.\n\n"
         "**Captain** ranks who to (vice-)captain this gameweek by expected points, with the opponent + "
-        "penalty duty, and a template-vs-differential steer. **Set as captain** to keep it."
+        "penalty duty, and a template-vs-differential steer. **Set as captain** to keep it.\n\n"
+        "**Chips** tells you **when** to play each chip — **Triple Captain · Bench Boost · Free Hit · "
+        "Wildcard** — from your squad's projected points over the chosen horizon (also checked, ✓/⚠). "
+        "Fixture-run based for now; double/blank gameweeks and mini-league position sharpen it in-season."
     )
 
 with st.expander("5 · Do your research  →  Players · Fixtures · Trending · News"):

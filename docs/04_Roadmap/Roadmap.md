@@ -145,8 +145,10 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 
 ## Later — advanced optimisation & evaluation
 
-- ⬜ **Chip optimisers** — Wildcard / Free Hit (the 15-man build exists), Bench Boost (bench-aware exists),
-  Triple Captain.
+- ◑ **Chip optimisers** — ✅ a v0 **chip-timing advisor** (`chip_advisor`, a grounded `ask` intent + a Squads
+  "Chips" view): when to play Wildcard / Free Hit / Bench Boost / Triple Captain, from the squad's per-GW xP +
+  fixture run (Sprint 096, US-251/252, ADR-082). Deferred: **DGW/BGW** detection (in-season) + **mini-league
+  position** (leagues API, GW1) to sharpen it; a season-long (38-GW) scan; a standalone CLI `chips` command.
 - ⬜ **Probabilistic xMins (the full ML model)** — per-fixture expected-minutes *probabilities* from
   schedule density, European congestion, rotation profiles. Needs in-season per-GW minutes to train
   (post-GW1) + external European-fixture data + a real ML effort — a later, data-gated phase. The rigorous

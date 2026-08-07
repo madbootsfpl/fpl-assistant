@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 096 (2026-08-07)** — *Chip Strategy Guidance*, per **ADR-082** (US-251/252). **US-251:** a pure
+  `analytics/chips.py::chip_advisor(owned, by_gameweek_by_id, gameweeks)` reduces the per-GW xP (`by_gameweek`,
+  ADR-032) + `best_legal_xi` per GW into a best GW/window per chip — **Triple Captain** = the max single
+  starter's ceiling GW · **Bench Boost** = the best all-15 GW (with the bench's share) · **Free Hit** = the
+  weakest best-XI GW · **Wildcard** = the weakest rolling 3-GW window (clamped to the horizon). An **assembler**
+  (the `gameweek_plan`/ADR-070 shape) — no new analytics, so the chip answer can't diverge from the standalone
+  tools. A `chips` `ask`/`chat` intent (`_decide_chips` + `_chips_facts`, reusing `_squad_xp` so the horizon xP
+  matches the transfer/analyse/gameweek tools) is narrated + **verified** (✓/⚠, ADR-037); `ui/chips.py::
+  render_chip_advice` is the block CLI + web reuse. Routing adds `_INTENT_KEYWORDS["chips"]` **first** with
+  distinctive phrases (`chip`/`chips`/`chip strategy`/`which chip`/`triple captain`/`free hit`/`use my bench
+  boost`/`use my wildcard`) — **not** bare `bench boost`/`wildcard` (they stay `build_squad` — "build me a
+  squad for a bench boost" must build) nor bare `captain`/`bench`; a routing test pins the guard. **US-252:** a
+  Squads **"Chips"** view (after AI Tips) — `views/squads.py::render_chips` routes through `ask.answer(active_
+  squad=…, horizon=…)` + `render_ask`, horizon-aware, degrading to the block without Ollama. Fixture-run + xP
+  based — DGW/BGW timing + mini-league position deferred (in-season / GW1, no `events` table / no DGW preseason
+  — verified). Display-only; `decision_xp`/the analytics unchanged; no server writes. +11 tests.
 - **Sprint 095 (2026-08-07)** — *Set-piece takers & the differential lens*, per **ADR-081** (US-249/250).
   **US-249 (ingest):** `corners_order` (from `corners_and_indirect_freekicks_order`) + `freekicks_order`
   (from `direct_freekicks_order`) added to the `Player` model + `from_api`, and to storage — the

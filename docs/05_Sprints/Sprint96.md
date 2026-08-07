@@ -1,7 +1,7 @@
 # Sprint 096: Chip Strategy Guidance — a fixture-run chip-window advisor
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a `chip_advisor` assembler + an `ask` intent + a Squads "Chips" view)
 **Carried Over:** none
 
@@ -144,4 +144,36 @@ season-long (38-GW) windows (v0 uses the tab horizon ≤8); a standalone CLI `ch
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **647 → 658** (+11); ruff clean; CI-parity green.
+ADRs **81 → 82** (ADR-082). No data change (an assembler over the existing xP).
+
+**Delivered**
+- **US-251 — `chip_advisor` + grounded `chips` intent (ADR-082).** A pure `analytics/chips.py::chip_advisor`
+  reduces the per-GW xP (`by_gameweek`) + `best_legal_xi` into a best GW/window per chip (TC/BB/FH/WC); a
+  `chips` `ask`/`chat` intent narrated + verified; `ui/chips.py::render_chip_advice` is the shared block.
+- **US-252 — Squads "Chips" view.** A segmented-control option routing through `ask.answer` (degrades without
+  Ollama), horizon-aware, honest captions.
+
+**What went well**
+- **The assembler pattern paid off again** — `decision_xp` already returns `by_gameweek` (ADR-032), so all four
+  chips are argmax/argmin reductions of numbers we already compute. No new analytics, no drift; the whole
+  feature is pure + a thin intent + a thin view.
+- **De-risked before the gate** — a live check confirmed `by_gameweek` sums to the total, `team_fdr` has a
+  usable spread, and there are no DGW/BGW / no `events` table preseason. That turned the ADR into a
+  known-scope decision and kept the honest captions accurate.
+- **Routing collisions handled cleanly** — `triple captain` ⊃ "captain", `bench boost` ⊃ "bench", `wildcard`
+  ∈ build. Distinctive multi-word chip phrases placed *first*, deliberately excluding the bare colliding
+  words, so a routing test pins that "build me a squad for a bench boost" still builds.
+- **The grounding net proved itself live** — with Ollama present the local model's chip narration drifted
+  (invented a figure, miscounted), and `verify_grounding` flagged it (⚠) while the authoritative block stayed
+  correct. Exactly the ADR-037 contract, visible in a real smoke.
+
+**Watch-outs / follow-ups**
+- **Preseason-flat fixtures** → the chip windows sit close together now (e.g. TC/BB both land GW1); the
+  mechanism is correct and spreads as fixtures diverge in-season. Captioned honestly.
+- **Deferred (in ADR-082):** DGW/BGW detection (in-season); **mini-league position** (needs the leagues API →
+  GW1); a season-long (38-GW) scan (v0 uses the ≤8 tab horizon); a standalone CLI `chips` command.
+- **Weak local narration** → the block is the source of truth and the ⚠ trust line is honest; a stronger LLM
+  (or the cloud's degrade-to-block) reads better. No code issue.
+
+See `Sprint96_Lessons_Learnt.md` for the detailed retro.
