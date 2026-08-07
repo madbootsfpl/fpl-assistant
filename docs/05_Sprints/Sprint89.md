@@ -43,7 +43,7 @@ params).
       Transfer** (each passes it to `decision_xp` / `analyse_squad` / the transfer renderers). The views'
       xP/projection reflects N GW; the analysis label already adapts. **Captain** is unchanged with a "always
       the next gameweek" caption.
-- [ ] **US-238 (AI Tips respects it)** — `ask.answer(..., horizon=N)` (a new, backward-compatible param)
+- [x] **US-238 (AI Tips respects it)** — `ask.answer(..., horizon=N)` (a new, backward-compatible param)
       threaded to `_decide_gameweek` → `_squad_xp`; the gameweek plan's transfer line reads "over N GW" (not
       a hard 5). The AI Tips view passes the selected horizon. Captain within the plan stays next-GW.
 - [ ] **No drift** — default 5 preserves today's behaviour; `decision_xp`/the analytics unchanged; the CLI /
@@ -57,7 +57,7 @@ params).
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-237 | **GW selector + analytic views** — a shared "Gameweeks ahead" dropdown (1–8, default 5) threaded through Build · My Squad · Health · Transfer. Captain = next-GW. ADR-077. | High | ✅ Done | ~½ session |
-| US-238 | **AI Tips respects the horizon** — a `horizon` param on `ask.answer` → the gameweek plan; the plan label reads "over N GW". | Medium | ⬜ To do | ~½ session |
+| US-238 | **AI Tips respects the horizon** — a `horizon` param on `ask.answer` → the gameweek plan; the plan label reads "over N GW". | Medium | ✅ Done | ~½ session |
 
 ---
 
@@ -101,6 +101,15 @@ No analytics change (reuses the existing horizon params). Smoke: default 5; set 
 column + "2 GW", no GW5. Tests: +2 (the selector drives the horizon; the Captain caption); **5 positional
 `selectbox`/`slider` tests re-pointed to select by label** (a new page-level selectbox shifted indices) —
 the label-not-index lesson. ruff clean, full suite **627** green.
+
+**US-238 (AI Tips respects the horizon).** Threaded a backward-compatible `horizon` keyword through the ask
+layer: `answer(..., horizon=_HORIZON)` → `_fresh` → `_dispatch` → `_decide_gameweek(..., horizon=…)` →
+`_squad_xp(..., horizon=…)` (default `_HORIZON`, so the other squad decides + the CLI/Ask tab are unchanged).
+`render_gameweek_plan(plan, squad_name, horizon=…)` now labels the transfer window ("over N GW", or "next GW"
+for 1). The AI Tips view passes the selected `horizon` into `ask.answer`. Smoke: `render_gameweek_plan`
+horizon 5/2/1 → "over 5 GW"/"over 2 GW"/"next GW"; `_decide_gameweek(horizon=2)` → detail has "over 2 GW".
+Fixed one grounded-gameweek test's `_squad_xp` monkeypatch to accept the new kwarg; +1 horizon assertion.
+ruff clean, full suite **627** green.
 
 ---
 

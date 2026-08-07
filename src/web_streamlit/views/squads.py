@@ -439,15 +439,15 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
 
 
 # ---- AI Tips (a grounded gameweek plan; ADR-070, labelled "AI Tips" per US-226) ---------------------
-def render_ai_tips(squad_name, squad):
+def render_ai_tips(squad_name, squad, *, horizon=5):
     """A grounded gameweek recommendation for the picked squad — captain · lineup · a transfer · flags.
 
     Shown under the **AI Tips** tab. Routes through `ask.answer` (analytics decide, the LLM narrates,
-    every figure/name checked, ADR-037), reusing the session squad. Degrades to the plan + facts without
-    Ollama (the cloud). No server writes.
+    every figure/name checked, ADR-037), reusing the session squad. `horizon` (ADR-077) sets the
+    lineup/transfer window; the captain is always next-GW. Degrades without Ollama. No server writes.
     """
     st.caption("Your whole week in one view — who to **captain**, any **lineup** change, one **transfer** "
                "to consider, and any **flagged** players. The analytics decide; the answer is checked "
                "against the data (✓/⚠).")
-    result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad)
+    result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon)
     st.code(render_ask(result), language=None)

@@ -520,7 +520,7 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     }
     monkeypatch.setattr(
         ask, "_squad_xp",
-        lambda store, name, active_squad=None: (
+        lambda store, name, active_squad=None, *, horizon=5: (
             {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {1: 6.2, 2: 3.1}, {}, [], {}),
     )
     monkeypatch.setattr(ask, "gameweek_plan", lambda *a, **k: plan)
@@ -528,11 +528,16 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     decision = _decide_gameweek(_FakeStore(), "TST")
     assert "This week — squad 'TST'" in decision["detail"]
     assert "Haaland" in decision["subjects"] and "Palmer" in decision["subjects"]   # owned + the buy
+    assert "over 5 GW" in decision["detail"]                                        # default horizon
 
     res = assemble("q", "gameweek", decision,
                    narrator=lambda p: "Captain Haaland (xP 6.2). Consider Saka to Palmer (+1.9).",
                    known_names=["Haaland", "Saka", "Palmer", "Isak"])
     assert res.trust == {"numbers": [], "names": []}                                 # every figure/name traces
+
+    # US-238 (ADR-077): a chosen horizon flows through to the plan's transfer window
+    narrowed = _decide_gameweek(_FakeStore(), "TST", horizon=2)
+    assert "over 2 GW" in narrowed["detail"]
 
 
 def test_assemble_handles_no_decision():

@@ -28,12 +28,13 @@ def _lineup_line(lineup) -> str:
     return f"start {starts} — bench {benched}"
 
 
-def _transfer_line(transfer) -> str:
+def _transfer_line(transfer, horizon: int = 5) -> str:
     if not transfer:
         return "no positive-gain upgrade — hold your transfer"
     out, inc = transfer["out"], transfer["in"]
+    window = f"over {horizon} GW" if horizon != 1 else "next GW"
     return (f"{out['web_name']} ({out['team']}) → {inc['web_name']} ({inc['team']})  "
-            f"(+{transfer['gain']} XI xP over 5 GW)")
+            f"(+{transfer['gain']} XI xP {window})")
 
 
 def _flags_line(flags) -> str:
@@ -45,13 +46,14 @@ def _flags_line(flags) -> str:
     )
 
 
-def render_gameweek_plan(plan, squad_name) -> str:
-    """The one-gameweek plan as a readable block (ADR-070)."""
+def render_gameweek_plan(plan, squad_name, horizon: int = 5) -> str:
+    """The one-gameweek plan as a readable block (ADR-070). `horizon` labels the transfer's window
+    (ADR-077); the captain + lineup are inherently about the immediate week."""
     return "\n".join([
         f"This week — squad '{squad_name}'",
         "",
         f"  Captain:  {_captain_line(plan['captain'])}",
         f"  Lineup:   {_lineup_line(plan['lineup'])}",
-        f"  Transfer: {_transfer_line(plan['transfer'])}",
+        f"  Transfer: {_transfer_line(plan['transfer'], horizon)}",
         f"  Flags:    {_flags_line(plan['flags'])}",
     ])

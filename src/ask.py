@@ -318,17 +318,18 @@ def _analyse_facts(analysis: dict) -> dict:
     }
 
 
-def _squad_xp(store: Storage, squad_name: str, active_squad=None):
-    """Shared setup for transfer/analyse: the squad's owned rows + xP (+ per-GW) over the horizon.
+def _squad_xp(store: Storage, squad_name: str, active_squad=None, *, horizon=_HORIZON):
+    """Shared setup for transfer/analyse/gameweek: the squad's owned rows + xP (+ per-GW) over the horizon.
 
-    xP is weighted by expected minutes (xMins v0, ADR-038) — `ask` is a decision, so default-on.
+    xP is weighted by expected minutes (xMins v0, ADR-038) — `ask` is a decision, so default-on. `horizon`
+    defaults to `_HORIZON` (5); the web's AI Tips passes the user's *Gameweeks ahead* choice (ADR-077).
     """
     squad = _load_squad(squad_name, active_squad)
     if squad is None:
         return None
     players = store.get_players()
     upcoming = store.get_upcoming_fixtures()
-    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=_HORIZON,
+    ranked = decision_xp(players, upcoming, store.get_history_by_code(), horizon=horizon,
                          gw_history_by_code=store.get_gw_history_by_code())   # form: ADR-060, dormant now
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -498,14 +499,16 @@ def _gameweek_facts(plan: dict) -> dict:
     }
 
 
-def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None) -> dict | None:
+def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
+                     *, horizon=_HORIZON) -> dict | None:
     """Analytics DECIDE a one-gameweek plan (ADR-070): captain · lineup · a transfer · flags.
 
     An assembly of the existing primitives (via `gameweek_plan`), humanised for narration and
     verified — the LLM never decides anything. Reuses `_squad_xp` so the horizon xP is the same the
-    transfer/analyse tools use (no drift).
+    transfer/analyse tools use (no drift). `horizon` (ADR-077) drives the lineup/transfer window; the
+    captain is always next-GW.
     """
-    data = _squad_xp(store, squad_name, active_squad)
+    data = _squad_xp(store, squad_name, active_squad, horizon=horizon)
     if data is None:
         return None
     squad, players, owned, xp_by_id, _by_gw, _gws, _weight = data
@@ -526,7 +529,7 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None) 
     # so verify_grounding (ADR-037) doesn't flag a legitimately-named player.
     subjects = [p["web_name"] for p in owned] + ([tr["in"]["web_name"]] if tr else [])
     return {
-        "detail": render_gameweek_plan(plan, squad_name),   # the exact plan, shown with or without prose
+        "detail": render_gameweek_plan(plan, squad_name, horizon=horizon),   # the plan, with/without prose
         "headline": f"This week (squad '{squad_name}'): captain "
                     f"{cap['web_name'] if cap else '—'}",
         "facts": _gameweek_facts(plan),
@@ -1197,12 +1200,13 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
 
 
 def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
-              *, count: int = 1, rank: int = 0, active_squad=None) -> dict | None:
+              *, count: int = 1, rank: int = 0, active_squad=None, horizon=_HORIZON) -> dict | None:
     """Run the decision engine for `intent` (shared by `answer` and `converse`).
 
     `count`/`rank` are threaded so a conversational follow-up can ask for an N-transfer plan or
     the Nth-best pick (ADR-047); the intents that don't rank ignore them. `active_squad` is the
     session squad so squad-scoped intents see the loaded team, not only saved squads (Sprint 066).
+    `horizon` (ADR-077) is consumed by the gameweek intent; the others keep the `_HORIZON` default.
     """
     if intent == "transfer":
         return _decide_transfer(store, squad, count, rank=rank, active_squad=active_squad)
@@ -1211,7 +1215,7 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "start_bench":
         return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "gameweek":
-        return _decide_gameweek(store, squad, active_squad=active_squad)
+        return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon)
     if intent == "compare":
         return _decide_compare(store, question)
     if intent == "build_squad":
@@ -1236,12 +1240,14 @@ def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
     return None
 
 
-def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None):
+def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None,
+           horizon=_HORIZON):
     """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
 
     A successful answer becomes the new context; a fallback/soft-failure leaves the running
     context untouched (so a later "why?" still refers to the last *good* turn). `active_squad` is the
     session squad so "captain <its name>" / "analyse my team" use the loaded team (Sprint 066).
+    `horizon` (ADR-077) is threaded to the gameweek intent for the AI Tips view.
     """
     intent, squad = route(question, _known_squad_names(active_squad))
     # "my team" / "my squad" → the loaded session squad (when one is active and no name matched).
@@ -1255,7 +1261,8 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
         return replace(prompt, question=question), context
 
     count = _transfer_count(question)
-    decision = _dispatch(intent, store, question, squad, count=count, active_squad=active_squad)
+    decision = _dispatch(intent, store, question, squad, count=count, active_squad=active_squad,
+                         horizon=horizon)
     known = [p["web_name"] for p in store.get_players()] if decision else ()
     result = assemble(question, intent, decision, narrator, known_names=known)
     new_context = context
@@ -1333,17 +1340,19 @@ def converse(question: str, context: "Context | None", *, store: Storage,
 
 
 def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
-           active_squad=None) -> AskResult:
+           active_squad=None, horizon=_HORIZON) -> AskResult:
     """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional.
 
     The one-shot entry point: a single `converse` turn with no prior context (so a follow-up-only
     line falls through to the normal fallback, exactly as before). `active_squad` (the session
     squad, ADR-054/055) lets squad-scoped questions use the loaded team, not only saved squads.
+    `horizon` (ADR-077) sets the gameweek-plan window for the AI Tips view; defaults to `_HORIZON` (5)
+    so the CLI / Ask tab are unchanged.
     """
     own_store = store is None
     store = store or Storage()
     try:
-        result, _context = _fresh(question, None, store, narrator, active_squad)
+        result, _context = _fresh(question, None, store, narrator, active_squad, horizon=horizon)
         return result
     finally:
         if own_store:

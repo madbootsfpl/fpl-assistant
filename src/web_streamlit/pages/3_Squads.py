@@ -52,7 +52,7 @@ else:
         views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
                               horizon=horizon)
     elif view == "AI Tips":
-        views.render_ai_tips(squad_name, squad)
+        views.render_ai_tips(squad_name, squad, horizon=horizon)
     elif view == "Health":
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
                             horizon=horizon)
