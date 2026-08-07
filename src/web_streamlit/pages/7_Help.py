@@ -6,7 +6,10 @@ refresh, and no input controls. It complements Home (the short overview) with a 
 
 import streamlit as st
 
+from src.web_streamlit.access import require_access
+
 st.set_page_config(page_title="Help · FPL Assistant", page_icon="⚽", layout="wide")
+require_access()          # opt-in beta gate (ADR-087)
 st.title("🧭 Help")
 st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *narrates* — and every "
            "answer is checked against the data (a ✓/⚠ trust line). Your squad lives in **your session** — "

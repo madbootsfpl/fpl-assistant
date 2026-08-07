@@ -12,9 +12,11 @@ import streamlit as st
 from src.analytics import next_deadline
 from src.storage import Storage
 from src.ui.deadline import deadline_banner
+from src.web_streamlit.access import require_access
 from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="FPL Assistant", page_icon="⚽", layout="wide")
+require_access()          # opt-in beta gate (ADR-087) — a no-op unless FPL_ACCESS_CODE is set
 render_data_status()
 st.title("⚽ FPL Assistant")
 st.caption("A read-only view over the analytics — the CLI stays the engine (ADR-051/052).")

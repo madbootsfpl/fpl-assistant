@@ -11,6 +11,7 @@ from src.analytics import CROWD_LEGEND, crowd_flags, trending
 from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
+from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.filters import filter_controls
@@ -35,6 +36,7 @@ _BOARDS = [
 ]
 
 st.set_page_config(page_title="Trending · FPL Assistant", page_icon="⚽", layout="wide")
+require_access()          # opt-in beta gate (ADR-087)
 render_data_status()
 st.title("📈 Trending")
 st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction.")
