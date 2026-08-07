@@ -1,7 +1,7 @@
 # Sprint 097: Set-piece attributes on My Squad (parity with Trends)
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (display-only — reuses `set_piece_flags` from Sprint 095)
 **Carried Over:** none
 
@@ -116,4 +116,30 @@ beside "In trends" (the incoming buy's flags).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **658 → 659** (+1 test, +2 assertions on existing);
+ruff clean; CI-parity green. No new ADR (display-only, extends **ADR-081**). No data/analytics change.
+
+**Delivered**
+- **US-253 — pitch cards.** `pitch.py::_card` shows a `set_piece_flags` caption line (⚽/🚩/🎯) beneath
+  Trends, for a first-choice taker — empty-safe, parallel to Trends. My Squad is the only pitch surface.
+- **US-254 — squad tables.** A **"Set"** column next to **"Trends"** on Build (×2) · Health · Captain, and an
+  **"In set"** column on Transfer (the incoming buy). `SET_PIECE_LEGEND` moved to `analytics/crowd.py` for
+  reuse; `render_player_table` gained an optional `help=` for the tooltip.
+
+**What went well**
+- **The Sprint 095 groundwork paid off** — `set_piece_flags` + the ingested order fields already existed, so
+  this was pure display: one caption line + one column per table, no analytics touched.
+- **Followed the tester's own frame** — "like it does for Trends" mapped to the exact two surfaces Trends
+  uses (pitch caption + table column), so the feature is consistent by construction, not bolted on.
+- **A small, well-placed refactor** — moving `SET_PIECE_LEGEND` to `crowd.py` (next to `AVAILABILITY_LEGEND`)
+  and adding `help=` to `render_player_table` removed a duplicate and gave every squad table a tooltip.
+- **Deterministic tests** — the pitch test asserts the set-piece caption **count equals** the selected
+  squad's owned takers (not just "≥1"), so it can't silently pass on an empty render.
+
+**Watch-outs / follow-ups**
+- **Transfer's "In set" only shows when swaps exist** — preseason there are often no positive-gain upgrades,
+  so the column appears once the bank yields a swap (same as "In trends"; the test drives a bank to prove it).
+- **Set-piece orders are a snapshot** — they shift in-season as managers change takers; refreshed with the
+  rest of the data (as noted in ADR-081).
+
+See `Sprint97_Lessons_Learnt.md` for the detailed retro.

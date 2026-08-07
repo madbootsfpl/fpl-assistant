@@ -33,9 +33,10 @@ with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=Tr
 
 with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=True):
     st.markdown(
-        "Your active squad as a **formation pitch**. Edit it: **rename**, **swap** any player "
-        "(legality-checked), set the **bench** (pick 4). Every change updates your session and the "
-        "**Download**. New team? Switch back to the **Build** view."
+        "Your active squad as a **formation pitch**. Each card shows the player's **Trends** and their "
+        "**set-piece duty** (⚽ penalties · 🚩 corners · 🎯 free-kicks — for the first-choice taker). Edit it: "
+        "**rename**, **swap** any player (legality-checked), set the **bench** (pick 4). Every change updates "
+        "your session and the **Download**. New team? Switch back to the **Build** view."
     )
 
 with st.expander("3 · Check its health  →  **Squads → Health**"):

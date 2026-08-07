@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 097 (2026-08-07)** — *Set-piece attributes on My Squad* (tester feedback; **no new ADR** — extends
+  **ADR-081**, display-only). **US-253:** `web_streamlit/pitch.py::_card` adds a `set_piece_flags` caption line
+  (⚽ pens · 🚩 corners · 🎯 FK) beneath the `crowd_flags` (Trends) line — empty-safe, for a first-choice taker
+  only; the My Squad pitch cards. **US-254:** a **"Set"** column (`" ".join(set_piece_flags(p))`) next to the
+  existing **"Trends"** on the squad tables — `render_build` (the 15 + the formation-preview XI),
+  `render_health`, `render_captain` — plus an **"In set"** column beside "In trends" on `render_transfer` (the
+  incoming buy). `SET_PIECE_LEGEND` moved from `views/players.py` → `analytics/crowd.py` (next to
+  `AVAILABILITY_LEGEND`, exported) so both the Players page and the Squads tables reuse it; `tables.py::
+  render_player_table` gained an optional `help=` (threaded to `column_config(..., help=…)`) so the text "Set"
+  column carries the legend tooltip. Reuses the Sprint-095 `set_piece_flags` + ingested order fields;
+  `decision_xp`/the analytics unchanged; no server writes. +1 test (the pitch caption count equals the squad's
+  owned takers) + 2 assertions (Captain "Set"; Transfer "In set").
 - **Sprint 096 (2026-08-07)** — *Chip Strategy Guidance*, per **ADR-082** (US-251/252). **US-251:** a pure
   `analytics/chips.py::chip_advisor(owned, by_gameweek_by_id, gameweeks)` reduces the per-GW xP (`by_gameweek`,
   ADR-032) + `best_legal_xi` per GW into a best GW/window per chip — **Triple Captain** = the max single
