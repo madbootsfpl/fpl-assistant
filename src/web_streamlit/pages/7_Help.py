@@ -112,6 +112,13 @@ with st.expander("7 · Save your team  →  Download, upload, or import by manag
         "loads in the CLI too."
     )
 
+with st.expander("8 · Tell us what you think  →  the **📣 Feedback** tab"):
+    st.markdown(
+        "Testing the beta? The **📣 Feedback** tab (bottom of the sidebar) is a quick form — what worked, what "
+        "broke, what you'd add. Leave an email if you'd like a reply or to join the founding-tester list. "
+        "(You can still open a GitHub issue if you prefer.)"
+    )
+
 st.divider()
 st.markdown(
     "**Good to know.** The *N players · data as of …* caption on each tab shows how fresh the data is (the "

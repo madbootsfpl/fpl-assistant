@@ -455,6 +455,21 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 102 (2026-08-07)** — *Beta enablement — an opt-in access gate + feedback capture*, per **ADR-087**
+  (US-263/264; owner "beta-setup sprint"). **US-263:** `web_streamlit/access.py` — a safe `secret(key, default)`
+  (try `st.secrets` → except → `os.environ` → default; `st.secrets` *raises* without a `secrets.toml`, so it's
+  read inside try/except) + `require_access()` (a no-op unless **`FPL_ACCESS_CODE`** is set; else a 🔒
+  private-beta prompt that `st.stop()`s the page until the code matches, remembering success in
+  `st.session_state`, then `st.rerun()`), called right after `st.set_page_config(...)` on **all 8 pages**. A
+  *shared* code — no accounts, no server state. **US-264:** a **📣 Feedback** page — an `st.form` that on submit
+  POSTs `{message, email, source}` to **`FPL_FEEDBACK_WEBHOOK`** (best-effort, 6s timeout, try/except),
+  **degrading to a GitHub-issue link** when the webhook is unset or the POST fails; a **"✋ Join the beta"**
+  `link_button` to **`FPL_SIGNUP_URL`** (Home + Feedback, shown only when set) for the founding-tester email
+  list; `docs/BETA.md` is the owner runbook (secrets · a Google Apps Script sink · a signup form · recruiting ·
+  comps). **All opt-in via secrets, off by default** — the public deploy + CI are unchanged until configured
+  (a test pins `secret()` never crashing + the gate open-when-unset / block-then-unlock). The only outbound
+  write is the feedback POST to the owner's *own* sink — no user data is persisted on our infra, so the
+  read-only guardrail (`no .save(`) still holds. Accounts/DB/payments deferred (DIRECTION §1). +6 tests.
 - **Sprint 101 (2026-08-07)** — *Pitch on Build + a season countdown / deadline banner* (owner request).
   **US-261 (pitch on Build; reuses ADR-084):** `views/squads.py::render_build` splits the built 15 into the XI
   (`best_legal_xi`) + bench, orders the bench via `bench_order`, builds a `next_opp` map (`team_schedule`), and

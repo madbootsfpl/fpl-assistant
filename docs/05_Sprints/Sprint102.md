@@ -1,7 +1,7 @@
 # Sprint 102: Beta enablement — an access gate, in-app feedback, and a runbook
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (an opt-in access gate + an in-app feedback form + a beta runbook)
 **Carried Over:** none
 
@@ -131,4 +131,32 @@ for a beta) — all in DIRECTION §1, revisited only if the beta proves demand.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **680 → 686** (+6); ruff clean; CI-parity green.
+ADRs **86 → 87** (ADR-087). Everything **opt-in / off by default** — the public deploy + CI are unchanged.
+
+**Delivered**
+- **US-263 — access-code gate.** `require_access()` on every page, gated by `FPL_ACCESS_CODE`; open when unset;
+  a safe `secret()` getter (st.secrets → env, never raises).
+- **US-264 — feedback + signup + runbook.** A 📣 Feedback tab (form → `FPL_FEEDBACK_WEBHOOK`, degrades to
+  GitHub), a "Join the beta" link (`FPL_SIGNUP_URL`), and `docs/BETA.md`.
+
+**What went well**
+- **Off-by-default kept the blast radius zero.** No secret → the gate is open, feedback points to GitHub, the
+  signup link is hidden — so the live app + the 680 existing tests didn't budge; the new behaviour is proven by
+  monkeypatching the secrets in tests.
+- **Caught the real trap early.** `st.secrets.get()` *raises* without a `secrets.toml` — the `secret()` helper's
+  try/except (pinned by a test) is what stops local/CI from crashing.
+- **No pivot needed.** A shared code + an in-app form + an external email form deliver a controllable beta
+  **without** accounts/auth/a DB — exactly the DIRECTION §3 plan; the read-only guardrail still holds (feedback
+  POSTs to the owner's own sink).
+- **A runbook, not just code.** `docs/BETA.md` means the owner can flip it on (three secrets) and recruit
+  without me.
+
+**Watch-outs / follow-ups**
+- **Shared code = light security** — fine for a read-only public-data beta; not for anything sensitive.
+- **Community Cloud limits** — 50 testers may strain the free tier (noted in BETA.md); a sturdier host is the
+  first real nudge toward the multi-user step (DIRECTION §1).
+- **Feedback POST is the one outbound side-effect** — best-effort, to the owner's sink, degrades to GitHub; it
+  never persists user data on our infra.
+
+See `Sprint102_Lessons_Learnt.md` for the detailed retro.

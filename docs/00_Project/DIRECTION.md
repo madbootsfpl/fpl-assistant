@@ -58,6 +58,12 @@ real API and proven demand.
 You can do this **without building auth**. The goal is: some access control, low-friction feedback, and the
 ability to honour a future "free for X years" promise.
 
+> ✅ **Built (Sprint 102, ADR-087):** the beta *infrastructure* is in place and **opt-in** — a shared
+> access-code gate (`FPL_ACCESS_CODE`), an in-app **📣 Feedback** tab (→ `FPL_FEEDBACK_WEBHOOK`, degrades to
+> GitHub), and a **"Join the beta"** email-capture link (`FPL_SIGNUP_URL`). **Off by default**; flip it on by
+> setting the three secrets and recruit — runbook: **[../BETA.md](../BETA.md)**. What remains is the owner's
+> (create the forms/webhook, set the secrets, post on Reddit).
+
 - **Access** — keep the URL open, optionally behind a shared **access code** (a Streamlit password/secret
   gate). No accounts needed.
 - **Recruit + capture** — a **Google / Tally signup form** that collects **emails** and tags people as
