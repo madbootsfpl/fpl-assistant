@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 105 (2026-08-07)** — *Explainability for squad-build & chips* (extends **ADR-089**; owner request).
+  **US-271:** `analytics/explain.py` — `squad_confidence(xi_reliability, spent_fraction)` (documented:
+  `100·(0.7·reliability + 0.3·spent)`) + `explain_squad(selected, xp_by_id, weight_by_id, *, budget, xi_ids,
+  horizon)` → ✓ (optimised on xP · XI projects N · spent £X of £Y · top picks · a playing bench) + ⚠ (£ unspent
+  · rotation-risk starters · doubtful in the 15 · differential-heavy · weak bench). `_decide_build_squad`
+  computes it, puts confidence/why/risk into `facts` (narration verifies), prepends `render_explanation` to the
+  `detail`; the Build page shows it above the pitch. **US-272:** `chip_advisor` exposes a per-chip **`margin`**
+  (a `_gap` helper — how clearly the recommended GW/window beats the next-best: TC/BB by the max, FH/WC by the
+  min); `chip_confidence(margin, value)` (a **relative** separation — margin ÷ the chip's own value, so one
+  formula spans TC ceilings / BB totals / FH-WC XI-xP; ≥15% → High, near-flat → Low) + `explain_chips(advice)`;
+  `ui/chips.py::render_chip_advice(confidences=…)` appends `· Confidence NN/100 · Band` per chip; `_decide_chips`
+  wires it in (+ facts). The web Chips view inherits it (it routes through `ask.answer`). Preseason the weeks
+  are near-uniform → all chips honestly read **Low**, sharpening in-season. Every confidence + reason is
+  computed from the data; no engine change; +5 tests.
 - **Sprint 104 (2026-08-07)** — *Explainability in Ask — Why · Risk · Confidence*, per **ADR-089** (US-269/270;
   tester feedback). **US-269:** `analytics/explain.py` (pure) — an `Explanation` (reasons ✓ · risks ⚠ ·
   confidence · band); `captain_confidence(...)` a **documented, transparent** heuristic (`100·(0.45·plays +

@@ -1,7 +1,7 @@
 # Sprint 105: Explainability for squad-build & chips
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (extend the ADR-089 framework to two more decisions)
 **Carried Over:** none
 
@@ -131,4 +131,30 @@ position sharpen this in-season"* stays the honest ⚠). `ui/chips.py::render_ch
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **700 → 705** (+5; 2 Build tests updated); ruff clean;
+CI-parity green. **No new ADR** (extends ADR-089). No engine change — `explain` reads existing signals.
+
+**Delivered**
+- **US-271 — squad-build.** `explain_squad` + `squad_confidence` (reliability × budget-use) → Confidence·Why·
+  Risk in the build answer (Ask) + the Build page.
+- **US-272 — chips.** `chip_advisor` exposes a per-chip `margin`; `explain_chips`/`chip_confidence` (a relative
+  separation) → a confidence per chip in the chip block (Ask/chat + the Chips view).
+
+**What went well**
+- **The framework paid off — one pattern, four decisions.** Captain · transfer · squad · chips all share the
+  `Explanation` shape + `confidence_band`; each new `explain_*` just reads the signals the decision already
+  computed. No engine change, small diffs.
+- **The chip confidence is honest by construction.** Preseason the gameweeks are near-uniform, so the
+  margins are tiny → all chips read **Low** — which is *correct* (no window is clearly best yet). A confidence
+  that's honestly low is more trustworthy than a confident-looking guess; it rises as fixtures spread.
+- **A relative margin normalised across chips.** TC ceilings (~xP), BB totals (~tens) and FH/WC XI-xP live on
+  different scales — dividing the margin by each chip's own value made one `chip_confidence` work for all four.
+- **Grounding held again** — every confidence + reason is data; the build answer's narration still verifies ✓.
+
+**Watch-outs / follow-ups**
+- **Squad/chip confidence are heuristics** (labelled) — a squad's "confidence" is inherently fuzzier than a
+  captain choice; framed as reliability + value / GW-separation, not a probability.
+- **Deferred:** explainability for the gameweek "AI Tips" plan (same pattern); the gated squad "why" signals
+  (form / news) enrich it at GW1; a richer web-native render beyond the monospace block.
+
+See `Sprint105_Lessons_Learnt.md` for the detailed retro.
