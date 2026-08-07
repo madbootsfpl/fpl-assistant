@@ -306,6 +306,21 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
         assert df["Rating"].astype(str).str.contains("🟢|🟡|🟠|🔴", regex=True).any()
 
 
+def test_stat_boards_show_the_availability_fit_column():
+    # ADR-074 / US-229: every stat board gains the Fit column (raw rows on xG; a lookup on the trimmed ones)
+    for view in ("Over / under-perf", "Defensive Contribution", "Clean sheets", "xG / xA / xGI"):
+        at = _run(_PAGES / "1_Players.py")
+        if not at.segmented_control:
+            return
+        at.segmented_control[0].set_value(view).run()
+        assert not at.exception, f"{view} raised: {at.exception}"
+        if not at.dataframe:
+            continue
+        df = at.dataframe[0].value
+        assert "Fit" in df.columns, f"{view} missing the Fit column"
+        assert set(df["Fit"].astype(str)) & {"🚑", "🚫", "⛔", "❓"}, f"{view} has no flags on page 1"
+
+
 def test_xg_board_rates_only_meaningful_players():
     # ADR-071/073: the xG board rates xGI, but only for outfield players with minutes — the column is
     # named "xGI rating" and sits before xGC; goalkeepers (xGI ≈ noise) are left unrated (—).

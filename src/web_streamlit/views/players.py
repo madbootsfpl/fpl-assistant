@@ -72,18 +72,37 @@ def render_pool(rows, sel, photos, badges):
     )
 
 
-def _board(stat_rows, columns, badges, key, col_help=None):
+def _fit_lookup(players):
+    """A `(web_name, team) → availability flag` map, for the trimmed stat rows that lack `status`
+    (ADR-074). The full `players` list is passed to each board, so no analytics change is needed."""
+    flag = {(p["web_name"], p["team"]): availability_flag(p) for p in players}
+    return lambda r: flag.get((r["web_name"], r["team"]), "")
+
+
+def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
     """A paginated stat table: a team badge + the given {column: value_of} spec (season-to-date).
 
-    `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071). Column formatting +
-    alignment come from the shared convention (ADR-072) via `column_config`."""
+    `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071). When `flag` is given
+    (a row → availability emoji, ADR-074), a compact **Fit** column + a legend caption are added. Column
+    formatting + alignment come from the shared convention (ADR-072) via `column_config`."""
     page = paginate(stat_rows, key=key, per_page=50)
-    table = [{"badge": badges.get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
-              "Pos": r["position"], **{head: value_of(r) for head, value_of in columns.items()}}
-             for r in page]
-    st.dataframe(table, hide_index=True, width="stretch",
-                 column_config=column_config(["badge", "Player", "Team", "Pos", *columns],
-                                             help=col_help))
+
+    def _row(r):
+        base = {"badge": badges.get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
+                "Pos": r["position"]}
+        if flag is not None:
+            base["Fit"] = flag(r)                       # right after Pos, before the metrics
+        base.update({head: value_of(r) for head, value_of in columns.items()})
+        return base
+
+    table = [_row(r) for r in page]
+    labels = ["badge", "Player", "Team", "Pos", *(["Fit"] if flag is not None else []), *columns]
+    help_ = dict(col_help or {})
+    if flag is not None:
+        help_["Fit"] = AVAILABILITY_LEGEND
+    st.dataframe(table, hide_index=True, width="stretch", column_config=column_config(labels, help=help_))
+    if flag is not None:
+        st.caption(AVAILABILITY_LEGEND)
 
 
 def render_over_under(players, sel, badges):
@@ -95,7 +114,8 @@ def render_over_under(players, sel, badges):
         col_help={"Mins": "Minutes played this season.",
                   "Actual": "Actual attacking points scored (season total).",
                   "Exp": "Expected attacking points from xGI (season total).",
-                  "Diff": "Actual − Expected. + = over-performing (may regress), − = under (may bounce)."})
+                  "Diff": "Actual − Expected. + = over-performing (may regress), − = under (may bounce)."},
+        flag=_fit_lookup(players))
 
 
 def render_defcon(players, sel, badges):
@@ -107,7 +127,8 @@ def render_defcon(players, sel, badges):
         col_help={"Mins": "Minutes played this season.",
                   "DC/90": "Defensive Contribution actions per 90 minutes (a rate, not a total).",
                   "Thr": "The position's DefCon points threshold.",
-                  "Margin": "DC/90 − threshold. + = clears the bar reliably; higher is better."})
+                  "Margin": "DC/90 − threshold. + = clears the bar reliably; higher is better."},
+        flag=_fit_lookup(players))
 
 
 def render_cleansheet(players, sel, badges):
@@ -121,7 +142,8 @@ def render_cleansheet(players, sel, badges):
         badges, key="stats_clean",
         col_help={"Mins": "Minutes played this season.",
                   "xGC/90": "Expected goals the team conceded per 90 while this player was on. Lower = better.",
-                  "Rating": "Quality vs the players shown (best 20% 🟢 … worst 20% 🔴), with the percentile."})
+                  "Rating": "Quality vs the players shown (best 20% 🟢 … worst 20% 🔴), with the percentile."},
+        flag=_fit_lookup(players))
 
 
 def render_xg(players, sel, badges):
@@ -142,4 +164,5 @@ def render_xg(players, sel, badges):
                   "xGI": "xG + xA — expected goal involvements (season total). Higher = better.",
                   "xGI rating": "Attacking quality (xGI) vs outfield players with ≥900 mins (best 20% 🟢 … "
                                 "worst 20% 🔴). Keepers & low-minutes players aren't rated (—).",
-                  "xGC": "Expected goals conceded while on the pitch (season total)."})
+                  "xGC": "Expected goals conceded while on the pitch (season total)."},
+        flag=availability_flag)   # xG uses raw player rows (they carry status)

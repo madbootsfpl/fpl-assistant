@@ -40,7 +40,7 @@ legend and a pointer to News for detail. Display-only; the analytics and ranking
       available), with a stable vocabulary (🚑 i · 🚫 s · ⛔ u/n · ❓ d). A **Fit** column on the **Players
       Pool** (blank = available), a one-line **legend** caption, and a header tooltip. Distinct from the
       rating circles (🟢🟡🟠🔴) so the two don't blur.
-- [ ] **US-229 (stat boards)** — the **Fit** column on all four stat boards (**over/under · DefCon · clean
+- [x] **US-229 (stat boards)** — the **Fit** column on all four stat boards (**over/under · DefCon · clean
       sheets · xG**): direct on xG (raw rows), via a `{(web_name, team): flag}` lookup on the three trimmed
       boards. Same legend/tooltip. No analytics change.
 - [ ] **No drift** — `crowd_flags`, the rating (ADR-071/073), the number formatting (ADR-072), and the
@@ -55,7 +55,7 @@ legend and a pointer to News for detail. Display-only; the analytics and ranking
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-228 | **Availability flag helper + Pool** — `availability_flag(player)` (🚑/🚫/⛔/❓, blank=available) + a **Fit** column + legend on the Players Pool. ADR-074. | High | ✅ Done | ~½ session |
-| US-229 | **Flags on the stat boards** — the Fit column on over/under · DefCon · clean sheets · xG (join via the full players list for the trimmed boards). | Medium | ⬜ To do | ~¼ session |
+| US-229 | **Flags on the stat boards** — the Fit column on over/under · DefCon · clean sheets · xG (join via the full players list for the trimmed boards). | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -99,6 +99,15 @@ gains the Fit tooltip; the legend caption is shared.
 Smoke (real data): the Pool's Fit column shows 🚑 for injured players (Saliba/J.Timber et al.) and blank for
 the fit. Tests: +3 (`availability_flag` per status + distinct-from-other-flags; the Pool Fit column + legend).
 ruff clean, full suite **616** green.
+
+**US-229 (Fit column on the stat boards).** Extended the flag to all four boards via `_board`. `_board` now
+takes an optional `flag=(row → emoji)`: when given, it inserts a **Fit** column (right after Pos), the Fit
+tooltip, and the shared legend caption — one place, so all boards are consistent. **xG** passes
+`flag=availability_flag` (raw rows carry `status`); **over/under · DefCon · clean sheets** pass a
+`_fit_lookup(players)` closure — a `{(web_name, team): flag}` map built from the full `players` list each
+render func already receives (so the trimmed analytics dicts need no `status`). No analytics change.
+Smoke: all four boards show 🚑/❓/🚫 in the Fit column, no crash. +1 test (`test_stat_boards_show_the_
+availability_fit_column`). ruff clean, full suite **617** green.
 
 ---
 
