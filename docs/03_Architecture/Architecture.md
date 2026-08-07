@@ -455,6 +455,23 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 099 (2026-08-07)** — *My Squad pitch redesign (FFH-style)*, per **ADR-084** (US-257/258; tester
+  feedback: *"looks like a poor cousin — redesign closer to Fantasy Football Hub"*). **US-257:** `web_streamlit/
+  pitch.py::render_pitch` is rewritten to emit **one self-contained HTML/CSS block** via
+  `st.markdown(unsafe_allow_html=True)` — a **green pitch** (mow-stripe `repeating-linear-gradient` + a faint
+  centre circle, inset border) with **formation rows** (GK/DEF/MID/FWD) + a **bench strip**; each player a
+  **kit card** (`_kit_html`): the photo/club-shirt `<img>` (or a 👕 placeholder), the name, an **xP chip**,
+  **£m · next opponent (H/A)**, and the **crowd + set-piece flags**. Every text value `html.escape`d; the lines
+  are unindented so Markdown doesn't treat the HTML as a code block; relative units + `flex-wrap` reflow it; a
+  green surface + light cards read on both Streamlit themes; no JS. **US-258:** the **(C)** captain armband
+  (`.c-badge`) and the **sub-number** badge (`.s-badge`, 1/2/3/GK, `title` = the full role) are overlaid on the
+  kit via a positioned `.pic` wrapper; a hover-lift (respects `prefers-reduced-motion`) + spacing polish. The
+  pitch stays **display-only** — every edit control (swap/reorder/rename/download) is a separate widget, so
+  `render_pitch`'s signature is unchanged and interactivity is untouched. Verified Streamlit 1.61.1 keeps the
+  `<style>`/`<div>`/`<img>` and the HTML is inspectable via `AppTest.markdown` — the 3 pitch-content tests were
+  rewired from `st.caption` to the HTML blob. Replaces the informal Sprint-062 native-card-grid "no custom CSS"
+  call. No data/engine change; no server writes. A faithful Artifact preview (real squad + SVG jerseys for the
+  CSP-blocked CDN) gave the owner a visual sign-off.
 - **Sprint 098 (2026-08-07)** — *Club-shirt image fallback + captain double-points* (tester feedback).
   **US-255 (no ADR — display mechanics):** ~a quarter of players carry a valid photo `code` but the CDN **403s**
   the file, so `web_streamlit/badges.py::photo_url_by_id(players, teams)` now returns the **photo when served,

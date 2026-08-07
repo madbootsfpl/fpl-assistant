@@ -33,7 +33,8 @@ with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=Tr
 
 with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=True):
     st.markdown(
-        "Your active squad as a **formation pitch**. Each card shows the player's **Trends** and their "
+        "Your active squad as a **green formation pitch** — kits laid out GK→FWD with a bench strip, each with "
+        "an xP chip, a **(C)** armband and sub-number badges. Each card shows the player's **Trends** and their "
         "**set-piece duty** (⚽ penalties · 🚩 corners · 🎯 free-kicks — for the first-choice taker); a player "
         "with no photo shows their **club shirt**. The summary's **Projected XI** includes your **captain's "
         "×2 — for the next gameweek only** (captaincy is re-picked each week). Edit it: **rename**, **swap** "

@@ -1,7 +1,7 @@
 # Sprint 099: Redesign the My Squad pitch — an FFH-style green pitch
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a styled HTML/CSS pitch in place of the native card-grid)
 **Carried Over:** none
 
@@ -135,4 +135,33 @@ any animation/drag-drop (out of scope — Streamlit + no JS).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done; owner reviewed the visual preview and approved ("the pitch
+looks great"). Test count **663** (3 pitch-content tests rewired, no net new); ruff clean; CI-parity green.
+ADRs **83 → 84** (ADR-084). No data/engine change (display-only).
+
+**Delivered**
+- **US-257 — the FFH-style pitch (ADR-084).** `render_pitch` now emits one self-contained HTML/CSS block — a
+  green pitch with formation rows + a bench strip, each player a kit card (image · name · xP chip · £ ·
+  opponent · flags).
+- **US-258 — badges & polish.** The (C) armband + sub-number badges overlaid on the kit, a 👕 placeholder, a
+  hover lift, and spacing polish. A faithful **Artifact preview** (real RoboTS squad, SVG jerseys) let the
+  owner review + approve before deploy.
+
+**What went well**
+- **Verified feasibility before the gate** — confirmed Streamlit 1.61.1 keeps `<style>`/`<div>`/`<img>` and the
+  HTML is inspectable via `AppTest.markdown`, so the redesign was both buildable and testable.
+- **Zero interactivity risk** — because the pitch was already display-only (edit controls are separate
+  widgets), the whole redesign touched one file (`pitch.py`) and one test file.
+- **The preview closed the loop** — I can't see the tester's FFH reference and the owner couldn't run the app
+  mid-sprint, so a published Artifact (the real CSS/HTML with real squad data, SVG jerseys for the blocked
+  CDN) turned a subjective "does it look right?" into a concrete yes.
+- **US-255 paid off again** — the photo-or-shirt resolver means every kit renders on the pitch.
+
+**Watch-outs / follow-ups**
+- **Custom CSS is now in the edge** (ADR-084) — kept to one self-contained, JS-free, display-only block with
+  scoped class names, so a future Streamlit restyle can't break a control or a decision.
+- **No declared bench → the pitch shows all 15** in position rows (pre-existing; the bench strip appears once a
+  bench is set). A later tweak could auto-derive a display XI when no bench is declared.
+- **Reuse on Build** (the formation preview is still a table) is a deferred consistency win.
+
+See `Sprint99_Lessons_Learnt.md` for the detailed retro.

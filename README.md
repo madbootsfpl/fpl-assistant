@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**83 ADRs · 663 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**84 ADRs · 663 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -192,8 +192,8 @@ consolidated tabs switch views with a lazy segmented control:
 - **Fixtures** — a colour-coded fixture **ticker** with team badges
 - **Squads** — a **Gameweeks-ahead** dropdown (1–8) sets the prediction horizon for the whole tab · **Build**
   (the full `squad` options → the optimal 15; a **formation preview** with each shape's **projected XI xP** +
-  a compare-all-formations table) · **My Squad** (a formation-pitch view — each card shows Trends + **set-piece
-  duty** ⚽/🚩/🎯;
+  a compare-all-formations table) · **My Squad** (a **green FFH-style pitch** — kits in formation + a bench
+  strip, xP chips, a (C) armband + sub badges; each card shows Trends + **set-piece duty** ⚽/🚩/🎯;
   edit: rename/swap/bench/captain/download; a **quick-stats summary** — Projected XI (incl. the **captain ×2
   for next GW only**) / Captain / Bench xP + who's injured/doubtful — and a **bench order** you can see and
   **reorder** (auto-sub priority)) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
