@@ -182,6 +182,10 @@ def render_build(players, upcoming, history, gw_history, photos, badges):
             for p in xi_result["selected"]:
                 p["xp"] = display_xp.get(p["id"], 0)
                 p["minutes_weight"] = weight_by_id.get(p["id"], 1.0)
+            xi_xp = sum(display_xp.get(p["id"], 0) for p in xi_result["selected"])
+            st.metric(f"Projected XI — {shape}", f"{xi_xp:.1f} xP",
+                      help="Total projected xP of this shape's best XI. Switch the formation (or tick "
+                           "'Compare all formations') to see the effect of a different shape.")
             render_player_table([{
                 "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
                 "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],

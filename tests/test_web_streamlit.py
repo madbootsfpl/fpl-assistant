@@ -369,6 +369,17 @@ def test_build_page_returns_a_squad(monkeypatch):
     assert not at.exception
 
 
+def test_build_formation_preview_shows_the_xi_score():
+    # US-230 (ADR-075): the "Preview the best XI in a shape" expander shows a Projected XI xP total
+    at = _run(_PAGES / "3_Squads.py")
+    if not at.code:                                        # no data locally → the "run refresh" note
+        return
+    mets = [(m.label, str(m.value)) for m in at.metric]
+    xi = [(lbl, val) for lbl, val in mets if "Projected XI" in lbl]
+    assert xi, f"expected a Projected XI metric, got {mets}"
+    assert "xP" in xi[0][1] and any(ch.isdigit() for ch in xi[0][1])   # a numeric xP total
+
+
 def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
     at = _run(_PAGES / "3_Squads.py")
     if not at.code:                                        # no data locally → the "run refresh" note
