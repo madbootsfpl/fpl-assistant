@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 103 (2026-08-07)** — *Deadline countdown enhancements* (owner request; all four picked).
+  **US-267 (extends ADR-086):** `analytics/deadline.py` — pure `deadline_urgency(time_left)` (calm >24h · today
+  <24h · imminent <2h) + `gameweek_context(fixtures, gameweek)` (`{matches, first_kickoff}`, empty-safe).
+  `ui/deadline.py::deadline_banner` now **escalates** (⏳ → 🟠 → 🔴, with a *· N matches · first kick-off …*
+  clause), and a shared `deadline_line(fixtures, now)` → `(gameweek, deadline, text, urgency)`. Home picks the
+  widget by urgency (`st.info`/`warning`/`error`) + a `st.page_link` nudge to Squads when close; Squads a
+  compact caption. **US-268, per ADR-088:** `web_streamlit/countdown.py::countdown_html(gw, deadline, now,
+  urgency)` — a self-contained HTML/CSS + `setInterval` **Days:Hrs:Mins:Secs** clock (urgency-coloured; cells
+  **server-filled** so it's readable without JS; ticks client-side off the embedded deadline ISO, stops at 0);
+  `render_countdown` embeds it via **`st.iframe`** (JS-enabled — the modern replacement for the deprecated
+  `components.v1.html`). The **first client-side JS** in the app — one self-contained block, no external
+  scripts, only our own ISO/int embedded, display-only; the US-267 text line is the no-JS fallback beneath.
+  On Home the clock is the hero. All logic is pure + `now`-injected → deterministic tests (the clock's HTML,
+  not its JS). No engine change; no server writes. +7 tests.
 - **Sprint 102 (2026-08-07)** — *Beta enablement — an opt-in access gate + feedback capture*, per **ADR-087**
   (US-263/264; owner "beta-setup sprint"). **US-263:** `web_streamlit/access.py` — a safe `secret(key, default)`
   (try `st.secrets` → except → `os.environ` → default; `st.secrets` *raises* without a `secrets.toml`, so it's

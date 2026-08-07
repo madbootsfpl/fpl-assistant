@@ -22,8 +22,9 @@ st.markdown(
 )
 
 st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · AI Tips · "
-           "Chips · Health · Transfer · Captain** with the buttons at the top. The **Home** tab and the top "
-           "of **Squads** show a ⏳ **countdown to the next deadline**.")
+           "Chips · Health · Transfer · Captain** with the buttons at the top. **Home** shows a ⏳ **live "
+           "deadline clock** that ticks down and turns 🟠 then 🔴 as it nears — with a nudge to set your "
+           "captain, transfers and chip before it locks.")
 
 with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=True):
     st.markdown(

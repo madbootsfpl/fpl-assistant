@@ -1,7 +1,7 @@
 # Sprint 103: Deadline countdown — urgency, context, an action nudge, and a live clock
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (urgency + context + nudge as pure/server-side; then a live JS clock)
 **Carried Over:** none
 
@@ -127,4 +127,29 @@ push; a clock on every page (Home is enough).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done (all four owner-picked enhancements). Test count **686 → 693**
+(+7); ruff clean; CI-parity green. ADRs **87 → 88** (ADR-088). Display-only; the analytics/engine unchanged.
+
+**Delivered**
+- **US-267 — urgency + context + nudge.** The banner escalates (⏳ → 🟠 → 🔴), shows the GW's matches + first
+  kick-off, and (when close) nudges the pre-deadline actions. Pure `deadline_urgency`/`gameweek_context`.
+- **US-268 — a live ticking clock.** A self-contained `countdown_html` (Days:Hrs:Mins:Secs, urgency-coloured)
+  embedded via `st.iframe`; the hero on Home, with the text line as the no-JS fallback.
+
+**What went well**
+- **All logic stayed pure + `now`-injected** — urgency, context, and the clock's HTML are unit-tested
+  deterministically; no flaky clocks.
+- **Server-fill + client-tick = graceful** — the clock's cells are filled server-side (readable if JS is
+  blocked) and the static text line sits beneath, so the countdown is never a blank box.
+- **Caught the API deprecation** — the smoke surfaced that `components.v1.html` is deprecated; switched to
+  `st.iframe` (the current JS-enabled embed), so no warning and no looming removal.
+- **The preview ran for real** — the clock is pure HTML/JS (no CDN), so the Artifact ticked live — a true
+  visual sign-off, not a mock.
+
+**Watch-outs / follow-ups**
+- **First JS in the app** — kept to one self-contained block (no external scripts, only our own ISO/int), so
+  no injection surface; it can't touch app logic.
+- **Iframe ≠ Streamlit theme** — the clock is a deliberately self-styled dark card that reads on both themes.
+- **Deferred:** "N of *your* players play first" (a per-squad join); a clock on every page; notifications.
+
+See `Sprint103_Lessons_Learnt.md` for the detailed retro.

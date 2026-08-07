@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**87 ADRs · 686 tests · CI green.** New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
+**88 ADRs · 693 tests · CI green.** New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
 (features · what's gated until GW1 · backlog · roadmap) and **[Direction & options](docs/00_Project/DIRECTION.md)**
 (hobby vs multi-user/paid · mobile · wider testing). Running a beta? **[BETA.md](docs/BETA.md)**. Also the
 [Roadmap](docs/04_Roadmap/Roadmap.md).
@@ -183,8 +183,8 @@ local database (`data/fpl.db`).
 A thin, **read-only, local** web view over the same analytics — the CLI stays the engine; the web is
 just another way to look at it. Two edges, both reusing the exact same engine:
 
-**Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing (with a ⏳ **next-deadline countdown**,
-ADR-086) + **7 sidebar tabs**; the two consolidated tabs switch views with a lazy segmented control:
+**Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing (with a ⏳ **live deadline clock** that
+ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs** (incl. a beta 📣 Feedback tab); the two consolidated tabs switch views with a lazy segmented control:
 - **Players** — a **Team · Position · Player** filter over the **Pool** (photos, falling back to the **club
   shirt** when a player has none; the **table first**, a
   top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag) plus stat views: **Set pieces**
