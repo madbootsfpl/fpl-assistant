@@ -100,4 +100,25 @@ below (unchanged). XI cards untouched. Smoke: the pitch bench shows 🔁 1st/2nd
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **634 → 636** (+2); ruff clean; CI-parity green. No
+new ADR (extends ADR-078/079).
+
+**Delivered**
+- **US-245 — Build → recommended bench order.** A built squad's `bench_ids` come out xP-ordered (outfield
+  highest-first, GK last) — a sensible auto-sub priority out of the box.
+- **US-246 — pitch sub numbers.** The My Squad pitch bench cards show 🔁 1st/2nd/3rd/GK sub, in priority
+  order.
+
+**What went well**
+- **Both were tiny, reused what was there** — US-245 was one line (`bench_order`/`display_xp` in scope);
+  US-246 added a `bench_roles` param to a My-Squad-only renderer + a `_card` caption.
+- **The bench-order feature is now end-to-end** — start (Build), see (pitch + line), set (reorder) — each
+  sprint building on the last.
+- 634 → 636 tests; ruff + CI-parity green; seed clean.
+
+**Watch-outs / follow-ups**
+- The pitch bench row is now ordered by sub priority (was position) — intended, and it matches the line.
+- Backlog still open (season-timely as GW1 nears): season countdown; GW1 readiness dry-run; pronoun-aware
+  chat; server-side squad persistence.
+
+See `Sprint93_Lessons_Learnt.md` for the detailed retro.

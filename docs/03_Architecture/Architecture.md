@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 093 (2026-08-07)** — *Bench-order polish* (US-245/246; **no new ADR** — extends ADR-078/079).
+  **US-245:** `render_build`'s saved squad orders `bench_ids` via `bench_order(bench_players, display_xp)`
+  (outfield by xP, GK last), so a *Download* / *Use this squad* starts in the recommended sub priority (still
+  reorderable). **US-246:** `pitch.py` — `_card(..., sub_role=None)` renders a "🔁 1st sub" / "🔁 GK sub"
+  caption; `render_pitch(..., bench_roles=None)` orders the bench row by priority (`_ROLE_ORDER`) and labels
+  each card; `render_my_squad` computes the `bench_roles` map (from the stored order) before the pitch call.
+  Display/edit only; the analytics use `bench_ids` as a set. The bench-order feature is now end-to-end (start
+  · see · set). 634 → 636 tests.
 - **Sprint 092 (2026-08-07)** — *Set the bench order*, per **ADR-079** (US-243/244; refines ADR-055/078). The
   `bench_ids` **order** now means the sub priority. **US-243:** `set_bench` **preserves** the given order
   (was squad-position order); a pure `move_bench_sub(squad, player_id, direction, by_id)` swaps an
