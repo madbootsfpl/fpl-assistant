@@ -9,7 +9,9 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**86 ADRs · 679 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**86 ADRs · 680 tests · CI green.** New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
+(features · what's gated until GW1 · backlog · roadmap) and **[Direction & options](docs/00_Project/DIRECTION.md)**
+(hobby vs multi-user/paid · mobile · wider testing). Also the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
