@@ -609,6 +609,17 @@ def test_build_page_returns_a_squad(monkeypatch):
     assert not at.exception
 
 
+def test_build_shows_the_squad_on_the_pitch():
+    # US-261 (ADR-084 reuse): the built 15 render on the green pitch (a full 15 kit cards) + the table below
+    at = _run(_PAGES / "3_Squads.py")
+    if not at.code:                                        # no data locally → the info branch
+        return
+    blob = " ".join(m.value for m in at.markdown)
+    assert "fpl-pitch" in blob                             # the pitch container
+    assert blob.count('class="kit"') == 15                 # the whole 15 on the pitch (XI + bench)
+    assert len(at.dataframe) >= 1                          # the sortable detail table is still there
+
+
 def test_build_formation_preview_shows_the_xi_score():
     # US-230 (ADR-075): the "Preview the best XI in a shape" expander shows a Projected XI xP total
     at = _run(_PAGES / "3_Squads.py")

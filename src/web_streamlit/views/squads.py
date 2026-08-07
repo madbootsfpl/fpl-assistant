@@ -165,6 +165,15 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
         st.caption(f"Optimised on **{objective}**; the xP column is the forward reference metric "
                    "(xMins-weighted).")
 
+    # The optimal 15 on the green pitch (US-261, reuses ADR-084) — the XI in formation + the bench in the
+    # recommended sub order; no captain on a fresh build. The sortable table + summary sit below.
+    xi_players = [p for p in selected if p["id"] in xi]
+    bench_players = [p for p in selected if p["id"] not in xi]
+    bench_roles = {p["id"]: role for role, p in bench_order(bench_players, display_xp)}
+    next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in selected}}
+    render_pitch(xi_players, bench_players, captain_id=None, xp_by_id=display_xp, photos=photos,
+                 next_opp=next_opp, bench_roles=bench_roles)
+
     render_player_table([{
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
