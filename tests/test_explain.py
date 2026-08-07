@@ -138,3 +138,39 @@ def test_explain_squad_lists_the_build_signals_and_flags_risks():
     assert "rotation-risk starter" in risk               # id 15's 0.4 weight
     assert ex.band == confidence_band(ex.confidence)
     assert explain_squad([], xp, weight, budget=100.0, xi_ids=[]) is None   # empty-safe
+
+
+# ── US-272: chip explainability ───────────────────────────────────────────────
+
+def test_chip_confidence_low_when_flat_high_when_clear():
+    from src.analytics import chip_confidence
+    assert chip_confidence(0.2, 60.0) < 55            # a tiny margin vs a big value → Low (preseason-flat)
+    assert chip_confidence(12.0, 60.0) >= 75          # a 20% separation → High (a clear window)
+    assert 1 <= chip_confidence(0.0, 0.0) <= 99       # empty-safe + bounded
+
+
+def test_explain_chips_gives_a_confidence_per_chip():
+    from src.analytics import confidence_band, explain_chips
+    advice = {
+        "triple_captain": {"player_xp": 8.0, "margin": 3.0},   # a clear standout GW
+        "bench_boost": {"squad_total": 60.0, "margin": 0.4},   # near-flat
+        "free_hit": {"xi_total": 45.0, "margin": 0.3},
+        "wildcard": {"avg_xi": 46.0, "margin": 0.4},
+    }
+    out = explain_chips(advice)
+    assert set(out) == {"triple_captain", "bench_boost", "free_hit", "wildcard"}
+    assert out["triple_captain"]["confidence"] > out["bench_boost"]["confidence"]   # clear beats flat
+    assert out["bench_boost"]["band"] == confidence_band(out["bench_boost"]["confidence"])
+    assert explain_chips(None) is None                # empty-safe
+
+
+def test_chip_advisor_exposes_a_margin_per_chip():
+    from src.analytics import chip_advisor
+    owned = [{"id": i + 1, "web_name": f"P{i+1}", "team": f"T{i%6+1}",
+              "position": (["GK", "GK"] + ["DEF"]*5 + ["MID"]*5 + ["FWD"]*3)[i],
+              "price": 5.0, "total_points": 0} for i in range(15)]
+    # GW1 spikes player 8 → a clear Triple-Captain margin; GW2/3 flatter
+    by_gw = {p["id"]: {1: (20.0 if p["id"] == 8 else 2.0), 2: 3.0, 3: 3.0} for p in owned}
+    advice = chip_advisor(owned, by_gw, [1, 2, 3])
+    assert advice["triple_captain"]["margin"] > 0     # GW1 ceiling clearly beats the others
+    assert all("margin" in advice[c] for c in ("triple_captain", "bench_boost", "free_hit", "wildcard"))

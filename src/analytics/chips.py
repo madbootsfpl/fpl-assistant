@@ -20,6 +20,16 @@ def _points(by_gameweek_by_id, owned, gw) -> dict:
     return {p["id"]: (by_gameweek_by_id.get(p["id"], {}) or {}).get(gw, 0.0) for p in owned}
 
 
+def _gap(values, *, largest) -> float:
+    """The separation between the best and the next-best value (US-272) — how clearly the recommended
+    gameweek/window wins. `largest=True` when the best is the max (TC/BB), False when it's the min (FH/WC).
+    0.0 when there's nothing to compare against."""
+    if len(values) < 2:
+        return 0.0
+    ordered = sorted(values, reverse=largest)
+    return round(abs(ordered[0] - ordered[1]), 1)
+
+
 def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
     """Recommend the best gameweek (or window) for each chip, from the squad's per-GW xP.
 
@@ -45,6 +55,13 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
             "squad_total": round(sum(pts.values()), 1),
         }
 
+    # The `margin` on each chip is how clearly the recommended gameweek/window beats the next-best — the
+    # separation the explainability layer turns into a confidence (small margin = a preseason-flat, low-confidence
+    # call). ADR-089.
+    tc_ceilings = [max((per_gw[gw]["pts"][i] for i in per_gw[gw]["xi"]), default=0.0) for gw in gameweeks]
+    bb_totals = [per_gw[gw]["squad_total"] for gw in gameweeks]
+    xi_totals = [per_gw[gw]["xi_total"] for gw in gameweeks]
+
     # Triple Captain — the single starter with the highest ceiling in any GW (a TC only lifts a starter).
     tc_gw, tc_id, tc_val = None, None, -1.0
     for gw in gameweeks:
@@ -58,6 +75,7 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
         "player": tc_player,
         "player_xp": round(tc_val, 1),
         "extra_points": round(tc_val, 1),   # TC = ×3 vs a ×2 captain → an extra ×1 of the player's GW xP
+        "margin": _gap(tc_ceilings, largest=True),
     }
 
     # Bench Boost — the GW where all 15 score most (the bench's points count this week).
@@ -67,6 +85,7 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
         "gameweek": bb_gw,
         "squad_total": bb["squad_total"],
         "bench_points": round(bb["squad_total"] - bb["xi_total"], 1),
+        "margin": _gap(bb_totals, largest=True),
     }
 
     # Free Hit — the squad's weakest single week (lowest best-XI xP): a one-off to cover a bad GW.
@@ -74,17 +93,21 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
     free_hit = {
         "gameweek": fh_gw,
         "xi_total": per_gw[fh_gw]["xi_total"],
+        "margin": _gap(xi_totals, largest=False),   # how much lower the worst week is than the next-worst
     }
 
     # Wildcard — the weakest sustained stretch (lowest rolling window of best-XI xP): reset before it.
     window = min(_WILDCARD_WINDOW, len(gameweeks))
     starts = range(len(gameweeks) - window + 1)
-    best_start = min(starts, key=lambda s: sum(per_gw[gameweeks[s + k]]["xi_total"] for k in range(window)))
+    win_avgs = [round(sum(per_gw[gameweeks[s + k]]["xi_total"] for k in range(window)) / window, 1)
+                for s in starts]
+    best_start = min(starts, key=lambda s: win_avgs[s])
     win_gws = gameweeks[best_start:best_start + window]
     wildcard = {
         "window": (win_gws[0], win_gws[-1]),
         "gameweeks": list(win_gws),
-        "avg_xi": round(sum(per_gw[g]["xi_total"] for g in win_gws) / window, 1),
+        "avg_xi": win_avgs[best_start],
+        "margin": _gap(win_avgs, largest=False),
     }
 
     return {

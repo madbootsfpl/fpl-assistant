@@ -30,6 +30,7 @@ from src.analytics import (
     chip_advisor,
     decision_xp,
     explain_captain,
+    explain_chips,
     explain_squad,
     explain_transfer,
     gameweek_plan,
@@ -632,14 +633,18 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
     advice = chip_advisor(owned, by_gameweek_by_id, gameweeks)
     if advice is None:
         return None
+    confidences = explain_chips(advice)   # a per-chip confidence (ADR-089) — Low preseason (near-flat weeks)
     tc = advice["triple_captain"]
     # subjects = the named TC player (the prose may name them), so verify_grounding (ADR-037) doesn't flag it.
     subjects = [tc["player"]["web_name"]] if tc["player"] else []
+    facts = _chips_facts(advice)
+    facts["confidence"] = "; ".join(f"{c.replace('_', ' ')} {v['confidence']}/100 ({v['band']})"
+                                    for c, v in confidences.items())
     return {
-        "detail": render_chip_advice(advice, squad_name, horizon=horizon),
+        "detail": render_chip_advice(advice, squad_name, horizon=horizon, confidences=confidences),
         "headline": f"Chip strategy (squad '{squad_name}'): "
                     f"Triple Captain GW{tc['gameweek']}, Bench Boost GW{advice['bench_boost']['gameweek']}",
-        "facts": _chips_facts(advice),
+        "facts": facts,
         "subjects": subjects,
         "task": "in 3-4 short sentences, say which gameweek to play each chip (Triple Captain, Bench Boost, "
                 "Free Hit, Wildcard) and why, using ONLY the facts; note it sharpens in-season",

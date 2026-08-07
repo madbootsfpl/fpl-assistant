@@ -28,8 +28,15 @@ def _wc_line(wc) -> str:
     return f"{span} — your weakest stretch (avg XI {wc['avg_xi']} xP); reset before it"
 
 
-def render_chip_advice(advice, squad_name, horizon: int = 8) -> str:
-    """The chip advice as a readable block (ADR-082). `horizon` labels the window the advice looked over.
+def _conf(confidences, chip) -> str:
+    """' · Confidence 43/100 · Low' from an `explain_chips` dict, or '' when none given (US-272)."""
+    c = (confidences or {}).get(chip)
+    return f"  · Confidence {c['confidence']}/100 · {c['band']}" if c else ""
+
+
+def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -> str:
+    """The chip advice as a readable block (ADR-082). `horizon` labels the window the advice looked over;
+    `confidences` (from `explain_chips`, ADR-089) appends a per-chip confidence.
 
     Fixture-run + xP based — the closing note is honest about what sharpens in-season."""
     if not advice:
@@ -38,11 +45,12 @@ def render_chip_advice(advice, squad_name, horizon: int = 8) -> str:
     return "\n".join([
         f"Chip strategy — squad '{squad_name}' ({window})",
         "",
-        f"  Triple Captain: {_tc_line(advice['triple_captain'])}",
-        f"  Bench Boost:    {_bb_line(advice['bench_boost'])}",
-        f"  Free Hit:       {_fh_line(advice['free_hit'])}",
-        f"  Wildcard:       {_wc_line(advice['wildcard'])}",
+        f"  Triple Captain: {_tc_line(advice['triple_captain'])}{_conf(confidences, 'triple_captain')}",
+        f"  Bench Boost:    {_bb_line(advice['bench_boost'])}{_conf(confidences, 'bench_boost')}",
+        f"  Free Hit:       {_fh_line(advice['free_hit'])}{_conf(confidences, 'free_hit')}",
+        f"  Wildcard:       {_wc_line(advice['wildcard'])}{_conf(confidences, 'wildcard')}",
         "",
-        "  Note: based on your fixture run + projected points. Double/blank gameweeks and mini-league",
+        "  Confidence = how clearly that gameweek beats the alternatives (a heuristic; low when the weeks are",
+        "  close). Based on your fixture run + projected points — double/blank gameweeks and mini-league",
         "  position sharpen this in-season (live from GW1).",
     ])

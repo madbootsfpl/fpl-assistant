@@ -218,3 +218,36 @@ def explain_squad(selected, xp_by_id, weight_by_id, *, budget, xi_ids, horizon=5
 
     score = squad_confidence(reliability, (cost / budget) if budget else 1.0)
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
+
+
+# ── Chips (US-272, extends ADR-089) ───────────────────────────────────────────
+
+_CLEAR_CHIP_MARGIN = 0.15   # a recommended chip GW that beats the next-best by ≥15% (relative) is "clear"
+
+# chip → the field holding the recommended gameweek's headline value (to normalise the margin against).
+_CHIP_VALUE_KEY = {
+    "triple_captain": "player_xp", "bench_boost": "squad_total",
+    "free_hit": "xi_total", "wildcard": "avg_xi",
+}
+
+
+def chip_confidence(margin, value) -> int:
+    """A transparent confidence for a chip recommendation (ADR-089), 1–99 — how clearly the recommended
+    gameweek/window beats the next-best, **relative** to its own scale. Small margin → Low (preseason the
+    gameweeks are near-uniform, so this honestly reads Low/Medium and sharpens in-season). Not a probability."""
+    rel = (abs(margin or 0.0) / value) if value else 0.0
+    clear = min(1.0, rel / _CLEAR_CHIP_MARGIN)
+    return max(1, min(99, round(40 + 55 * clear)))
+
+
+def explain_chips(advice) -> dict | None:
+    """Per-chip confidence for a `chip_advisor` result (ADR-089): `{chip: {confidence, band}}`, from each
+    chip's `margin` (best vs next-best gameweek) relative to its value. None if there's no advice."""
+    if not advice:
+        return None
+    out = {}
+    for chip, value_key in _CHIP_VALUE_KEY.items():
+        rec = advice.get(chip) or {}
+        conf = chip_confidence(rec.get("margin"), rec.get(value_key))
+        out[chip] = {"confidence": conf, "band": confidence_band(conf)}
+    return out

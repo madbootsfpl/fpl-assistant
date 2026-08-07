@@ -113,6 +113,20 @@ position sharpen this in-season"* stays the honest ⚠). `ui/chips.py::render_ch
   XI 233.6 · spent £100 · top picks · bench 72.2) + Risk (⚠ 1 rotation-risk starter); shown in Ask (verifies
   ✓) and on the web Build page above the squad.
 
+**US-272 — chip explainability (extends ADR-089).** ✅ Done.
+- `chip_advisor` now exposes a per-chip **`margin`** (a `_gap` helper — how clearly the recommended
+  gameweek/window beats the next-best: TC/BB by the max, FH/WC by the min).
+- `explain.py`: `chip_confidence(margin, value)` (a **relative** separation — margin ÷ the chip's own value;
+  ≥15% → clear/High; near-flat → Low) + `explain_chips(advice)` → `{chip: {confidence, band}}`. Exported.
+- `ui/chips.py::render_chip_advice(confidences=…)` appends `· Confidence NN/100 · Band` to each chip line + a
+  note on what confidence means; `_decide_chips` computes it, passes it, and adds it to `facts`. The web
+  **Chips** view inherits it (it routes through `ask.answer`).
+- **Tests (+3):** `chip_confidence` Low-when-flat / High-when-clear + bounded; `explain_chips` a confidence per
+  chip (clear beats flat) + empty-safe; `chip_advisor` exposes a margin per chip. **705** green, ruff clean.
+- **Manual smoke (RoboTS):** all four chips read **40–49/100 · Low** preseason — honest (the gameweeks are
+  near-uniform, so no window is clearly best); they sharpen in-season as fixtures spread. The block explains
+  the confidence.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective
