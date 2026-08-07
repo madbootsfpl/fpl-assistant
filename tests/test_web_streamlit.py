@@ -144,6 +144,16 @@ def test_squads_ai_tips_view_renders_a_gameweek_plan():
     assert "This week" in at.code[0].value                 # the plan block header (the plan is for this GW)
 
 
+def test_squads_chips_view_renders_chip_advice():
+    # ADR-082 / US-252: the "Chips" view routes through ask.answer → the grounded chip block renders
+    # (no Ollama in the test → the advice block + facts, no prose), no crash
+    at = _squads_view("Chips")
+    assert len(at.code) == 1                               # the rendered chip advice
+    block = at.code[0].value
+    assert "Chip strategy" in block                        # the advice block header
+    assert all(chip in block for chip in ("Triple Captain", "Bench Boost", "Free Hit", "Wildcard"))
+
+
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     at = _squads_view("Transfer")
     assert any(s.label == "Squad" for s in at.selectbox)   # the squad picker (a GW selector is also present)

@@ -523,3 +523,20 @@ def render_ai_tips(squad_name, squad, *, horizon=5):
                "against the data (✓/⚠).")
     result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon)
     st.code(render_ask(result), language=None)
+
+
+# ---- Chips (a grounded chip-strategy advisor; ADR-082) ----------------------------------------------
+def render_chips(squad_name, squad, *, horizon=5):
+    """A grounded chip-strategy recommendation for the picked squad — when to play each chip.
+
+    Shown under the **Chips** tab. Routes through `ask.answer` (analytics decide, the LLM narrates, every
+    figure/name checked, ADR-037), reusing the session squad. `horizon` (ADR-077) sets the window it looks
+    over. Fixture-run + xP based — double/blank gameweeks and mini-league position sharpen it in-season.
+    Degrades without Ollama. No server writes.
+    """
+    st.caption("When to play each chip — **Triple Captain · Bench Boost · Free Hit · Wildcard** — from your "
+               "squad's projected points over the selected horizon. The analytics decide; the answer is "
+               "checked against the data (✓/⚠). Double/blank gameweeks and mini-league position sharpen this "
+               "in-season (live from GW1).")
+    result = ask.answer(f"which chip should I use for {squad_name}?", active_squad=squad, horizon=horizon)
+    st.code(render_ask(result), language=None)

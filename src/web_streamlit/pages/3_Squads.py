@@ -21,9 +21,10 @@ st.title("🧩 Squads")
 st.caption("Everything for your team in one place — build it, tweak it, and get this week's plan.")
 
 view = st.segmented_control(
-    "Tool", ["Build", "My Squad", "AI Tips", "Health", "Transfer", "Captain"], default="Build",
+    "Tool", ["Build", "My Squad", "AI Tips", "Chips", "Health", "Transfer", "Captain"], default="Build",
     help="Build a new squad, then manage the one you're working on. **AI Tips** = a grounded gameweek "
-         "plan (captain · lineup · a transfer · flags) for your squad.")
+         "plan (captain · lineup · a transfer · flags) for your squad. **Chips** = when to play each chip "
+         "(Triple Captain · Bench Boost · Free Hit · Wildcard).")
 
 # The prediction horizon flows through every sub-tab (ADR-077). Default 5 = today's behaviour.
 horizon = st.selectbox(
@@ -53,6 +54,8 @@ else:
                               horizon=horizon)
     elif view == "AI Tips":
         views.render_ai_tips(squad_name, squad, horizon=horizon)
+    elif view == "Chips":
+        views.render_chips(squad_name, squad, horizon=horizon)
     elif view == "Health":
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
                             horizon=horizon)

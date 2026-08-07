@@ -127,6 +127,19 @@ season-long (38-GW) windows (v0 uses the tab horizon ≤8); a standalone CLI `ch
   BB GW1 (all 15 project 62.3, bench +13.0), FH GW4 (XI 46.5), WC GW3–GW5 (avg XI 46.8). Preseason-flat but
   the mechanism is correct.
 
+**US-252 — Squads "Chips" view.** ✅ Done. (No new ADR — extends ADR-082.)
+- `views/squads.py::render_chips(squad_name, squad, *, horizon)` — mirrors `render_ai_tips`: routes through
+  `ask.answer("which chip should I use for <squad>?", active_squad=…, horizon=…)` + `render_ask`, degrading
+  to the plain advice block without Ollama; a caption frames the fixture-run basis + what sharpens in-season.
+- `pages/3_Squads.py`: **"Chips"** added to the segmented control (after AI Tips), horizon-aware, dispatched
+  lazily; the control's help updated.
+- **Tests (+1):** the Chips view renders the advice block with all four chips (AppTest). **658** green,
+  ruff clean.
+- **Manual smoke (demo squad, Ollama present):** the block is correct (TC/BB/FH/WC with facts). The local LLM
+  narration drifted (invented "45.5", miscounted) — and the **verifier flagged it** ("⚠ Unverified … figures
+  2, 45.5 — the data above is the source of truth"). Exactly the ADR-037 safety net: the block is
+  authoritative, the prose is a checked bonus. Not a bug — honest behaviour on a weak local LLM.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective
