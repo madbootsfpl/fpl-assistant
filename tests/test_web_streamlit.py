@@ -538,6 +538,34 @@ def test_trending_page_shows_a_leaderboard():
     assert any(b.label.startswith("Show what") for b in at.button)
 
 
+def test_talked_about_board_paginates(monkeypatch):
+    # US-233 (ADR-076): a big buzz list (a 100-post sample mentions many players) pages at 30
+    import streamlit as st
+
+    from src.api import reddit
+    from src.storage import Storage
+
+    store = Storage()
+    names = [p["web_name"] for p in store.get_players() if len(p["web_name"] or "") >= 4][:35]
+    store.close()
+    if len(names) < 31:
+        return                                                # need >30 mentioned to trigger a page control
+    rss = ('<feed xmlns="http://www.w3.org/2005/Atom">'
+           + "".join(f'<entry><link href="https://r.test/{i}"/><title>{n} watch</title></entry>'
+                     for i, n in enumerate(names))
+           + "</feed>")
+    st.cache_data.clear()                                     # don't inherit another test's cached fetch
+    monkeypatch.setattr(reddit.RedditRssClient, "get_subreddit_rss", lambda self, *a, **k: rss)
+
+    at = _run(_PAGES / "6_Trending.py")
+    btn = [b for b in at.button if b.label.startswith("Show what")]
+    assert btn, "the Talked about button should exist"
+    btn[0].click().run()
+    assert not at.exception
+    assert any(sb.label == "Page" for sb in at.selectbox), "the buzz board should paginate (>30 mentioned)"
+    assert any("Showing 1–30 of" in c.value for c in at.caption)
+
+
 def test_trending_filter_narrows_the_owned_board():
     # ADR-064 reuse: the shared Team/Position/Player filter narrows Trending (the owned board is populated)
     at = _run(_PAGES / "6_Trending.py")

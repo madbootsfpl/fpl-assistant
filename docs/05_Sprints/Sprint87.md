@@ -40,7 +40,7 @@ best-effort **buzz lens** (ADR-059) — cached, button-gated, degrades on failur
       sums every match across every entry — a test pins that a player mentioned in **N** entries counts **N**
       (not 1). The caption says "across the latest ~100 r/FantasyPL posts". Degrade-gracefully unchanged
       (429/403/timeout → the existing "unavailable" note).
-- [ ] **US-233 (paginate the board)** — the "Talked about" list is **paginated** (reuse `paginate`,
+- [x] **US-233 (paginate the board)** — the "Talked about" list is **paginated** (reuse `paginate`,
       per_page=30, like the other Trending boards), still sorted by mentions desc, so a 100-post sample's
       long list stays navigable.
 - [ ] **No drift** — it stays a display-only buzz lens (a test still asserts `decision_xp` is untouched);
@@ -54,7 +54,7 @@ best-effort **buzz lens** (ADR-059) — cached, button-gated, degrades on failur
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-232 | **Bigger RSS sample** — request `?limit=100` so "Talked about" counts mentions across ~100 posts (not 25); confirm the count is the true total. ADR-076 (refines ADR-059). | High | ✅ Done | ~¼ session |
-| US-233 | **Paginate the board** — page the (now longer) "Talked about" list at 30, sorted by mentions desc. | Medium | ⬜ To do | ~¼ session |
+| US-233 | **Paginate the board** — page the (now longer) "Talked about" list at 30, sorted by mentions desc. | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -97,6 +97,12 @@ board looked uniform only because the default `.rss` is **25 posts** (35/51 play
 Tests: +2 (a player in 4 posts counts **4**, not 1; the client requests `…/.rss?limit=100`). ruff clean,
 full suite **621** green. (Live re-verify is a DoD smoke — Reddit 429'd during planning, which is the
 degrade path.)
+
+**US-233 (paginate the board).** The "Talked about" list now pages via the shared `paginate(buzz,
+key="buzz", per_page=30)` (like the other Trending boards) — `for r in paginate(buzz, …)` — still sorted by
+mentions desc; ≤30 → a count caption, >30 → a "Page" selectbox + "Showing X–Y of N". +1 test
+(`test_talked_about_board_paginates`: a 35-player fixture → the page control appears; monkeypatched RSS +
+`st.cache_data.clear()` so it's deterministic). ruff clean, full suite **622** green.
 
 ---
 

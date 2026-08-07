@@ -93,7 +93,8 @@ else:
                 else:
                     st.caption(f"{len(buzz)} players mentioned across the latest ~100 posts — expand a name "
                                "to read them. (Surnames can collide — the photo/badge shows who matched.)")
-                    for r in buzz:
+                    # A 100-post sample mentions many players → page like the other Trending boards (ADR-076).
+                    for r in paginate(buzz, key="buzz", per_page=30):
                         c_photo, c_badge, c_body = st.columns([1, 1, 12], vertical_alignment="center")
                         if photos.get(r["id"]):
                             c_photo.image(photos[r["id"]], width=44)
