@@ -18,6 +18,7 @@ FORMATS = {
     "£m": "%.1f", "Val/£m": "%.1f", "Own%": "%.1f", "Form": "%.1f", "ICT": "%.1f",
     "xP": "%.1f", "Actual": "%.1f", "Exp": "%.1f", "DC/90": "%.1f", "Thr": "%.1f",
     "Pts": "%d", "Mins": "%d",
+    "Pen": "%d", "Corners": "%d", "FK": "%d",        # set-piece order (1 = first-choice), ADR-081
     "xG": "%.2f", "xA": "%.2f", "xGI": "%.2f", "xGC": "%.2f", "xGC/90": "%.2f",
     "Diff": "%+.1f", "Margin": "%+.1f", "+xP": "%+.1f",
 }

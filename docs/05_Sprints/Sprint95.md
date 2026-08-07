@@ -97,6 +97,19 @@ first), with a caption on the low-ownership-differential angle + per-column tool
 - **Real data (`refresh` + `reseed`):** 573 players; **38** first-choice takers. Differential lens works —
   e.g. **Buendía** / **Wood** are low-own (≤5%) penalty takers; **B.Fernandes** is pens + FK. seed.db updated.
 
+**US-250 — Set pieces view + Pool flag (ADR-081 §3).** ✅ Done. (No new ADR — extends ADR-081.)
+- `views/players.py`: `render_set_pieces(players, sel, badges)` — a `_board` of Player · Team · Pos · Fit ·
+  **Pen · Corners · FK** (order ints, 1 = first-choice, blank if none) · **Own% · Val/£m**, through the
+  shared filter, sorted pen-takers-first then by ownership; a caption frames the low-own **differential**
+  angle + per-column tooltips. Only players with a set-piece duty are listed.
+- Pool gains a compact **"Set"** column (`set_piece_flags` → ⚽/🚩/🎯) + a `SET_PIECE_LEGEND` tooltip.
+- `pages/1_Players.py`: **"Set pieces"** added to the segmented control (lazy — only the selected view runs).
+- `formats.py`: `Pen`/`Corners`/`FK` → `%d` (right-aligned, sortable order ints).
+- **Tests (+2):** the Set-pieces board renders the order columns through the filter; the Pool has a "Set"
+  column. **647** green, ruff clean.
+- **Manual smoke (real data):** Set pieces lists first-choice takers (B.Fernandes pens+FK, Palmer pens+FK,
+  Isak pens…); sorting Own% ascending surfaces low-own takers; the Pool shows ⚽/🚩/🎯 flags.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

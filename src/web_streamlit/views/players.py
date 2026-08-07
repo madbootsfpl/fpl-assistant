@@ -16,6 +16,7 @@ from src.analytics import (
     defensive_solidity,
     over_under,
     rank_players,
+    set_piece_flags,
 )
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.formats import column_config
@@ -24,6 +25,10 @@ from src.web_streamlit.ratings import LEGEND, rating_cell
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 _RATING_MIN_MINUTES = 900   # the "enough to be meaningful" bar (matches the other boards; ADR-073)
+
+# The shared one-line legend for set-piece duty (ADR-081) — used on the Pool "Set" column + the board.
+SET_PIECE_LEGEND = ("Set pieces: ⚽ penalties · 🚩 corners · 🎯 free-kicks — shown for the **first-choice** "
+                    "taker (blank = not on set pieces).")
 
 
 def _sorted(players, sort_by):
@@ -53,9 +58,11 @@ def render_pool(rows, sel, photos, badges):
               "Fit": availability_flag(p),
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
               "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
+              "Set": " ".join(set_piece_flags(p)),
               "Trends": " ".join(crowd_flags(p))} for p in page]
     st.dataframe(table, width="stretch", hide_index=True,
-                 column_config=column_config(table[0] if table else [], help={"Fit": AVAILABILITY_LEGEND}))
+                 column_config=column_config(table[0] if table else [],
+                                             help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND}))
     st.caption(AVAILABILITY_LEGEND)
     by_value = sort == "value"
     field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")
@@ -103,6 +110,36 @@ def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
     st.dataframe(table, hide_index=True, width="stretch", column_config=column_config(labels, help=help_))
     if flag is not None:
         st.caption(AVAILABILITY_LEGEND)
+
+
+def render_set_pieces(players, sel, badges):
+    """Who takes penalties / corners / free-kicks (ADR-081) — the order ints (1 = first-choice) alongside
+    Own% + Val/£m, so a **low-owned taker** (a prime differential) stands out. Display-only; reuses the
+    shared filter. Only players with a set-piece duty are listed."""
+    st.caption("Who takes **penalties · corners · free-kicks** for each team — the **order** (1 = "
+               "first-choice taker, higher = backup). A set-piece taker with a **low Own%** is a prime "
+               "**differential** — sort by **Own%** ascending to surface under-owned takers. " + SET_PIECE_LEGEND)
+    ranked = rank_players(players, sort_by="value")     # attach Val/£m
+    takers = [p for p in ranked
+              if p.get("penalties_order") or p.get("corners_order") or p.get("freekicks_order")]
+    rows = apply_filter(takers, sel)
+    if not rows:
+        st.info("No set-piece takers match those filters — clear a filter, or run `python app.py refresh` "
+                "to populate the set-piece data.")
+        return
+    # Default order: first-choice penalty takers first (order 1 → top), then most-owned within.
+    rows = sorted(rows, key=lambda p: (p.get("penalties_order") or 99, -(p.get("selected_by") or 0)))
+    _board(rows, {
+        "Pen": lambda r: r.get("penalties_order"), "Corners": lambda r: r.get("corners_order"),
+        "FK": lambda r: r.get("freekicks_order"),
+        "Own%": lambda r: r.get("selected_by"), "Val/£m": lambda r: r.get("value")},
+        badges, key="stats_setpiece",
+        col_help={"Pen": "Penalty order — 1 = first-choice taker (blank = not on penalties).",
+                  "Corners": "Corner / indirect free-kick order — 1 = first-choice.",
+                  "FK": "Direct (shooting) free-kick order — 1 = first-choice.",
+                  "Own%": "% of managers who own this player. Low + set-piece duty = a differential.",
+                  "Val/£m": "Points per £1m of price — season value."},
+        flag=_fit_lookup(players))
 
 
 def render_over_under(players, sel, badges):

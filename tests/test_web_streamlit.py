@@ -267,6 +267,29 @@ def test_player_stats_filter_narrows_a_board():
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
+def test_set_pieces_board_renders_the_order_columns():
+    # ADR-081 / US-250: the "Set pieces" view shows Pen/Corners/FK order + Own%/Val/£m through the filter
+    at = _run(_PAGES / "1_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Set pieces").run()
+    assert not at.exception
+    if at.dataframe:                                          # populated DB → a board with the order columns
+        cols = at.dataframe[0].value.columns.tolist()
+        assert {"Pen", "Corners", "FK", "Own%", "Val/£m"} <= set(cols)
+    else:
+        assert len(at.info) >= 1                              # empty (unpopulated) → an honest note
+
+
+def test_pool_shows_a_set_piece_column():
+    # ADR-081 / US-250: the Pool gains a compact "Set" column (⚽/🚩/🎯 for first-choice takers)
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    df = at.dataframe[0].value
+    assert "Set" in df.columns
+
+
 def test_pool_shows_an_availability_fit_column():
     # ADR-074: the Pool has a Fit column (🚑/🚫/⛔/❓, blank = available) + a legend caption
     at = _run(_PAGES / "1_Players.py")

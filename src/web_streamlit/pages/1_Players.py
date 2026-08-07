@@ -32,10 +32,13 @@ else:
     # One shared filter (ADR-064) — applies to the pool and every stat board (price no-op on stat rows).
     sel = filter_controls(rows, key="players", with_price=True)
     view = st.segmented_control(
-        "View", ["Pool", "Over / under-perf", "Defensive Contribution", "Clean sheets", "xG / xA / xGI"],
+        "View", ["Pool", "Set pieces", "Over / under-perf", "Defensive Contribution", "Clean sheets",
+                 "xG / xA / xGI"],
         default="Pool", help="Switch between the player pool and the season-to-date stat boards.")
 
-    if view == "Over / under-perf":
+    if view == "Set pieces":
+        views.render_set_pieces(rows, sel, badges)
+    elif view == "Over / under-perf":
         views.render_over_under(rows, sel, badges)
     elif view == "Defensive Contribution":
         views.render_defcon(rows, sel, badges)
