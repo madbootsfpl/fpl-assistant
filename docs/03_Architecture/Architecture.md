@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 104 (2026-08-07)** — *Explainability in Ask — Why · Risk · Confidence*, per **ADR-089** (US-269/270;
+  tester feedback). **US-269:** `analytics/explain.py` (pure) — an `Explanation` (reasons ✓ · risks ⚠ ·
+  confidence · band); `captain_confidence(...)` a **documented, transparent** heuristic (`100·(0.45·plays +
+  0.40·clearness + 0.15·fixture) + penalty`, clamped 1–99, capped by chance when doubtful — `clearness` = the
+  xP lead over the runner-up, so a coin-flip self-tempers); `confidence_band`; `explain_captain(picks,
+  players_by_id)` builds the grounded ✓/⚠ from the pick + player rows (xP · penalties · set-pieces · xMins ·
+  ownership · fixture · form), gated-zero signals omitted. `ui/explain.py::render_explanation` is the shared
+  Confidence·Why·Risk block. `_decide_captain` sets a self-contained `detail` (scope + block) and puts
+  confidence/why/risk into `facts` so a narrated number still **verifies** (ADR-037); wired into Ask, the web
+  Captain tab, and the CLI `captain`. **US-270:** `transfer_confidence` (scales with the XI-gain margin; capped
+  by a doubtful buy) + `explain_transfer(move, in_row)` (✓ +gain to the XI · higher xP · penalties · set-pieces
+  · frees cash · template; ⚠ costs £ · selling the out player · doubtful buy · big differential · marginal
+  gain), wired into `_decide_transfer`. **Every reason and the number are computed from the data — the LLM only
+  phrases them (still verified); an explanation can't be a hallucination.** No engine change; `explain` reads
+  the signals a decision already computed; confidence is a heuristic (not a probability), gated signals (form ·
+  % of team goals · opponent xGC) light up at GW1. +7 tests.
 - **Sprint 103 (2026-08-07)** — *Deadline countdown enhancements* (owner request; all four picked).
   **US-267 (extends ADR-086):** `analytics/deadline.py` — pure `deadline_urgency(time_left)` (calm >24h · today
   <24h · imminent <2h) + `gameweek_context(fixtures, gameweek)` (`{matches, first_kickoff}`, empty-safe).

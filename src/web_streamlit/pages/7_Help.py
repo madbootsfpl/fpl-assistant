@@ -85,9 +85,11 @@ with st.expander("5 · Do your research  →  Players · Fixtures · Trending ·
 with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)"):
     st.markdown(
         "Type a question. **Squad & player** questions are answered by the analytics and the **✓/⚠** line "
-        "shows they were checked against the data. **FPL rules** are answered from a curated knowledge base "
-        "(also **✓**). Open **tactics** questions get a general answer clearly labelled **ℹ not checked "
-        "against your data** — so you always know what's grounded. Things to try (copy-paste):"
+        "shows they were checked against the data. **Captain & transfer** answers also show **why** — a "
+        "**Confidence** (a heuristic, e.g. *72 / 100 · Medium*) with a **Why** (✓ the signals for it) and a "
+        "**Risk** (⚠ against), all computed from the data so you can trust or challenge it. **FPL rules** are "
+        "answered from a curated knowledge base (also **✓**). Open **tactics** questions get a general answer "
+        "clearly labelled **ℹ not checked against your data**. Things to try (copy-paste):"
     )
     st.code(
         'build me a squad for £100m with 3 differentials\n'

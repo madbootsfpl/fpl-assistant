@@ -1,7 +1,7 @@
 # Sprint 104: Explainability in Ask — Why · Risk · Confidence
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a grounded explainability framework + captain, then transfer)
 **Carried Over:** none
 
@@ -143,4 +143,32 @@ the Why/Risk/Confidence for the top move.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **693 → 700** (+7); ruff clean; CI-parity green.
+ADRs **88 → 89** (ADR-089). No engine change — `explain` reads the signals a decision already computed.
+
+**Delivered**
+- **US-269 — framework + captain.** `analytics/explain.py` (Explanation · captain_confidence · explain_captain)
+  + `ui/explain.py`; a **Confidence · Why · Risk** block in Ask, the web Captain tab, and the CLI.
+- **US-270 — transfer.** `explain_transfer` + `transfer_confidence`, wired into the Ask transfer answer.
+
+**What went well**
+- **Grounding stayed intact under a feature that's *about* reasoning.** Every ✓/⚠ and the confidence are
+  computed from real signals; the LLM only phrases them and is verified — so an explanation can't be a
+  hallucination. The block shows with or without the model.
+- **The confidence is honest, not fake-precise.** The same B.Fernandes pick reads 99/High within his own
+  squad (a clear lead) but 69/Medium against the whole pool (a +0.2 coin-flip with Haaland surfaces as a
+  "narrow lead" risk) — the number *tempers* itself, exactly as a heuristic should.
+- **Reused what existed.** No new analytics — the picks/moves already carried the signals; the player rows
+  filled the rest. One reusable `Explanation` shape now serves captain + transfer.
+- **The formula is auditable.** The confidence weights live in one documented place (`explain.py` + ADR-089),
+  so it's calibratable — not a black box.
+
+**Watch-outs / follow-ups**
+- **Confidence is a heuristic, not a probability** — labelled as such in the block; a calibrated model is a
+  later, in-season effort.
+- **Preseason-gated signals** (form / "% of team goals" / opponent xGC rank) are omitted until they light up
+  at GW1 — an honest, thinner "why" now, richer later.
+- **Deferred:** explainability for squad-build + chips (same framework); a richer web-native render (metric +
+  markdown) beyond the monospace block.
+
+See `Sprint104_Lessons_Learnt.md` for the detailed retro.

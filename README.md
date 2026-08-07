@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**88 ADRs · 693 tests · CI green.** New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
+**89 ADRs · 700 tests · CI green.** New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
 (features · what's gated until GW1 · backlog · roadmap) and **[Direction & options](docs/00_Project/DIRECTION.md)**
 (hobby vs multi-user/paid · mobile · wider testing). Running a beta? **[BETA.md](docs/BETA.md)**. Also the
 [Roadmap](docs/04_Roadmap/Roadmap.md).
@@ -205,8 +205,10 @@ ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs
   Wildcard**) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps, **Apply**) · **Captain**
   (and **set** yours) — the manage views share one squad picker
 - **Ask** — a grounded, **conversational** chat (follow-ups + pronouns: *"why?"*, *"compare him to …"*) with
-  its ✓/⚠ trust line; it also explains **FPL rules** from a curated KB (verified ✓) and answers open **tactics**
-  labelled **ℹ not-verified** (the AI Chat Assistant, ADR-085); a *build a squad* answer offers **Use this squad →**
+  its ✓/⚠ trust line; captain & transfer answers show **explainability** — a **Confidence · Why (✓) · Risk (⚠)**
+  block, every reason computed from the data (ADR-089); it also explains **FPL rules** from a curated KB
+  (verified ✓) and answers open **tactics** labelled **ℹ not-verified** (the AI Chat Assistant, ADR-085); a
+  *build a squad* answer offers **Use this squad →**
 - **News** (official player news) · **Trending** (crowd boards + **💬 Community Signals** — mentions across
   the latest ~100 r/FantasyPL posts, paginated) · **Help** (a step-by-step guide)
 
