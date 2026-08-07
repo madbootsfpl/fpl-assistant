@@ -421,6 +421,25 @@ def test_my_squad_shows_a_quick_stats_summary():
     assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
 
 
+def test_my_squad_pitch_cards_show_set_piece_attributes():
+    # US-253 (ADR-081): each pitch card shows a set-piece line (⚽/🚩/🎯) for a first-choice taker,
+    # like the Trends line — display-only. Assert the count of set-piece captions matches the owned takers.
+    from src.analytics import set_piece_flags
+    from src.squads import SquadStore
+    from src.storage import Storage
+
+    at = _squads_view("My Squad")
+    assert not at.exception
+    picker = next((s for s in at.selectbox if s.label == "Squad"), None)
+    squad = SquadStore().load(picker.value) if picker else None
+    if not squad:
+        return                                          # no pickable squad (empty env) → nothing to assert
+    players = {p["id"]: p for p in Storage().get_players()}
+    expected = sum(1 for i in squad["player_ids"] if i in players and set_piece_flags(players[i]))
+    shown = sum(1 for c in at.caption if any(e in c.value for e in ("⚽", "🚩", "🎯")))
+    assert shown == expected                            # every owned taker's card shows the flags, no more
+
+
 def test_my_squad_shows_the_bench_order():
     # US-242 (ADR-078): My Squad shows an auto-sub bench-order line for a squad with a declared bench
     from src.storage import Storage

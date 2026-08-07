@@ -2,12 +2,13 @@
 
 A robust, native card-grid — position rows (GK / DEF / MID / FWD) + a bench row — not a custom-CSS pitch
 (owner's call: robustness first). Each card keeps the info the table showed: photo · name (+ **(C)**) ·
-team · £ · xP · next opponent (H/A) · crowd flags. Pure presentation over data the page already holds.
+team · £ · xP · next opponent (H/A) · crowd flags · set-piece duty. Pure presentation over data the page
+already holds.
 """
 
 import streamlit as st
 
-from src.analytics import crowd_flags
+from src.analytics import crowd_flags, set_piece_flags
 
 _ROWS = ("GK", "DEF", "MID", "FWD")
 _ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
@@ -32,6 +33,9 @@ def _card(player, *, captain_id, xp_by_id, photos, next_opp, sub_role=None) -> N
         flags = crowd_flags(player)
         if flags:
             st.caption(" ".join(flags))
+        set_pieces = set_piece_flags(player)   # first-choice pen/corner/FK duty (US-253, ADR-081)
+        if set_pieces:
+            st.caption(" ".join(set_pieces))
 
 
 _ROLE_ORDER = {"1st": 0, "2nd": 1, "3rd": 2, "4th": 3, "GK": 4}
