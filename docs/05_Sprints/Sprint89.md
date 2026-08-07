@@ -115,4 +115,28 @@ ruff clean, full suite **627** green.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **625 → 627** (+2 net, after re-pointing 5 positional
+widget refs to label); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-237 — the selector + analytic views (ADR-077).** A shared "Gameweeks ahead" dropdown (1–8, default 5)
+  threaded through Build · My Squad · Health · Transfer. Captain stays next-GW (a caption says so).
+- **US-238 — AI Tips respects it.** A backward-compatible `horizon` param through the ask layer → the
+  gameweek plan; the transfer line reads "over N GW".
+
+**What went well**
+- **The analytics already took a horizon** — the feature was plumbing a user choice where 5 was implicit; no
+  analytics change, and default 5 kept every number identical for anyone who leaves it.
+- **Honest per-view** — Captain is a one-week decision, so it's held at next-GW with a caption rather than
+  pretending the horizon applies.
+- **The ask-layer thread stayed minimal** — a defaulted `horizon` on `answer`/`_fresh`/`_dispatch`/
+  `_decide_gameweek`/`_squad_xp` reached only the gameweek intent; the CLI, the Ask tab, and the other
+  squad decides are untouched (default `_HORIZON`).
+
+**Watch-outs / follow-ups**
+- **Positional widget tests bit again** — a new page-level selectbox shifted indices; 5 refs re-pointed to
+  select **by label**. Worth keeping every Squads-page widget assertion label-based.
+- A longer horizon is noisier (fixtures further out); the manager chooses, the tool shows what's asked.
+- The Ask tab / chat still use the default 5 (no horizon control there) — a possible later addition.
+
+See `Sprint89_Lessons_Learnt.md` for the detailed retro.

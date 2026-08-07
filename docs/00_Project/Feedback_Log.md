@@ -8,6 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-07 | Owner | Squads (all sub-tabs) | Want to **select the number of gameweeks** predicted over — 4–6 for a wildcard/start, 1–2 mid-season; a dropdown throughout the tab. | 💡 | ✅ Sprint 089 (US-237/238, ADR-077) — a "Gameweeks ahead" dropdown (1–8, default 5) across Build · My Squad · Health · Transfer · AI Tips; Captain stays next-GW |
 | 2026-08-07 | Owner | Trending → Talked about | Only shows **1 mention** regardless of the number of mentions — can we count **all mentions**? | 🟠 wrong | ✅ Sprint 087 (US-232/233, ADR-076) — the counter was fine (1–4); the default feed is only 25 posts → now `?limit=100` (~100 posts) + the board paginated |
 | 2026-08-07 | Owner | Squads → Build | On the **Preview the best XI in a shape**, show the **XI score** so a user can see the effect of different formations. | 💡 | ✅ Sprint 086 (US-230/231, ADR-075) — a "Projected XI xP" metric per shape + a gated compare-all-formations table (Δ vs best) |
 | 2026-08-06 | Owner | Players → xG | **Flaw in logic:** goalkeepers with `xGI 0`/`0.04` are rated **🟢 excellent** — "how can 0 be good and 56 be good?" | 🟠 wrong | ✅ Sprint 084 (US-225, ADR-073) — rate xGI only for outfield ≥900-min players (vs that pool); GKs/low-minutes show `—`; column renamed "xGI rating" beside xGI |

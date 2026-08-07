@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 089 (2026-08-07)** — *A configurable prediction horizon on the Squads tab*, per **ADR-077**
+  (US-237/238). The analytics already took a `horizon` (`decision_xp`/`analyse_squad`); the web Squads views
+  hard-used the default 5. **US-237:** a shared `st.selectbox("Gameweeks ahead", 1..8, default 5)` on
+  `pages/3_Squads.py`, threaded as a keyword `horizon` into `render_build`/`render_my_squad`/`render_health`/
+  `render_transfer` (each → `decision_xp` / `analyse_squad` / the transfer renderers' label). **Captain** is
+  next-GW (a one-week decision) with a caption. **US-238:** a backward-compatible `horizon` param on
+  `ask.answer` threaded `_fresh → _dispatch → _decide_gameweek → _squad_xp` (default `_HORIZON`, so the CLI /
+  Ask tab / other squad decides are unchanged); `render_gameweek_plan(..., horizon=…)` labels the transfer
+  window ("over N GW"). Default 5 = unchanged behaviour; no analytics change; no server writes. (A new
+  page-level selectbox shifted widget indices → 5 positional test refs re-pointed to select **by label**.)
+  625 → 627 tests.
 - **Sprint 088 (2026-08-07)** — *UX polish: clickable Ask examples · CLI availability flags · chance% on ❓*
   (US-234/235/236; **no new ADR** — extends US-227 / ADR-074). **US-234:** the Ask page's example prompts are
   now **buttons** — a shared `_ask(question)` helper (answer → `render_ask` → append to history → stash
