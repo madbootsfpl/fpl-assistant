@@ -25,6 +25,12 @@ view = st.segmented_control(
     help="Build a new squad, then manage the one you're working on. **AI Tips** = a grounded gameweek "
          "plan (captain · lineup · a transfer · flags) for your squad.")
 
+# The prediction horizon flows through every sub-tab (ADR-077). Default 5 = today's behaviour.
+horizon = st.selectbox(
+    "Gameweeks ahead", list(range(1, 9)), index=4,
+    help="How many upcoming gameweeks the projections look over — short for mid-season, longer for a "
+         "wildcard / start of season. (Captaincy is always the next gameweek.)")
+
 store = Storage()
 try:
     players = store.get_players()
@@ -39,16 +45,19 @@ finally:
 if not players:
     st.info("No players — run `python app.py refresh` first.")
 elif view == "Build":
-    views.render_build(players, upcoming, history, gw_history, photos, badges)
+    views.render_build(players, upcoming, history, gw_history, photos, badges, horizon=horizon)
 else:
     squad_name, squad = squad_picker()      # one picker feeds the four manage views
     if view == "My Squad":
-        views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos)
+        views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
+                              horizon=horizon)
     elif view == "AI Tips":
         views.render_ai_tips(squad_name, squad)
     elif view == "Health":
-        views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges)
+        views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
+                            horizon=horizon)
     elif view == "Transfer":
-        views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos)
+        views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
+                              horizon=horizon)
     elif view == "Captain":
         views.render_captain(squad_name, squad, players, upcoming, history, photos, badges)

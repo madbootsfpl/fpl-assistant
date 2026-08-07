@@ -69,7 +69,7 @@ def _formation_xi_scores(pool, budget, include, exclude, scores, display_xp):
 
 # ---- Build (the full CLI `squad` options → a saveable 15; ADR-062) ---------------------------------
 
-def render_build(players, upcoming, history, gw_history, photos, badges):
+def render_build(players, upcoming, history, gw_history, photos, badges, *, horizon=5):
     by_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m": p["id"]
                 for p in sorted(players, key=lambda p: (p["web_name"] or "").lower())}
     labels = list(by_label)
@@ -120,12 +120,13 @@ def render_build(players, upcoming, history, gw_history, photos, badges):
         st.warning(w)
 
     if objective == "xp":
-        ranked = decision_xp(players, upcoming, history, minutes_weighted=not no_xmins,
+        ranked = decision_xp(players, upcoming, history, horizon=horizon, minutes_weighted=not no_xmins,
                              gw_history_by_code=gw_history)
         scores = {r["id"]: r["xp"] for r in ranked}
     else:
         scores = objective_scores(players, objective)
-        ranked = decision_xp(players, upcoming, history, gw_history_by_code=gw_history)   # xP for display
+        ranked = decision_xp(players, upcoming, history, horizon=horizon,
+                             gw_history_by_code=gw_history)   # xP for display
     display_xp = {r["id"]: r["xp"] for r in ranked}
     weight_by_id = {r["id"]: r["minutes_weight"] for r in ranked}
 
@@ -228,13 +229,14 @@ def render_build(players, upcoming, history, gw_history, photos, badges):
 
 # ---- My Squad (view & edit the active squad; ADR-055) ----------------------------------------------
 
-def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos):
+def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5):
     st.caption("Tweak your squad here — rename · swap · bench · download. 🔧 To **build a fresh one** with "
                "the full option set, switch to **Build**.")
     by_id = {p["id"]: p for p in players}
     owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
     xp_by_id = {r["id"]: r["xp"]
-                for r in decision_xp(players, upcoming, history, gw_history_by_code=gw_history)}
+                for r in decision_xp(players, upcoming, history, horizon=horizon,
+                                     gw_history_by_code=gw_history)}
     bench_ids = set(squad.get("bench_ids") or [])
     captain_id = squad.get("captain_id")
 
@@ -318,18 +320,18 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
 # ---- Health (analyse the squad over the next 5 GW; ADR-031) ----------------------------------------
 
-def render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges):
+def render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *, horizon=5):
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to analyse.")
         return
-    ranked = decision_xp(players, upcoming, history, gw_history_by_code=gw_history)
+    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     bench_ids = set(squad.get("bench_ids") or [])
     xi_ids = ({p["id"] for p in owned if p["id"] not in bench_ids} if bench_ids
               else best_legal_xi(owned, xp_by_id))
     analysis = analyse_squad(
-        owned, xi_ids, xp_by_id,
+        owned, xi_ids, xp_by_id, horizon=horizon,
         by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
         gameweeks=ranked[0]["gameweeks"] if ranked else [],
         weight_by_id={r["id"]: r["minutes_weight"] for r in ranked},
@@ -346,7 +348,7 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
 
 # ---- Transfer (best XI-aware swaps; ADR-046) -------------------------------------------------------
 
-def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos):
+def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5):
     col1, col2 = st.columns(2)
     bank = col1.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5,
                        help="Spare money you can add on top of selling a player.")
@@ -357,13 +359,13 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to improve.")
         return
-    ranked = decision_xp(players, upcoming, history, gw_history_by_code=gw_history)
+    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     bench_ids = squad.get("bench_ids", [])
     if count > 1:
         plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=count)
         st.code(render_transfer_plan(
-            plan, squad_name, bank=bank,
+            plan, squad_name, bank=bank, horizon=horizon,
             by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
             gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=True,
         ), language=None)
@@ -376,7 +378,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
             "Pos": s["position"], "+xP": s["gain"],
             "In trends": " ".join(crowd_flags(by_id.get(s["in"]["id"], {}))),
         } for s in swaps])
-        st.code(render_transfers(swaps, squad_name, bank=bank, show_xmins=True), language=None)
+        st.code(render_transfers(swaps, squad_name, bank=bank, horizon=horizon, show_xmins=True),
+                language=None)
 
         if swaps:
             labels = [f"{s['out']['web_name']} → {s['in']['web_name']}  (+{s['gain']} xP)" for s in swaps]
@@ -399,6 +402,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
 # ---- Captain (who to (vice-)captain; ADR-029) ------------------------------------------------------
 
 def render_captain(squad_name, squad, players, upcoming, history, photos, badges):
+    st.caption("Captaincy is always the **next gameweek** (a one-week decision) — the *Gameweeks ahead* "
+               "selector doesn't change it.")
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to captain.")

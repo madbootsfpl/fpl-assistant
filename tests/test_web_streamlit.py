@@ -132,7 +132,7 @@ def _squads_view(view):
 def test_squads_page_analyses_the_demo_squad():
     # Health view: the demo seed populates the picker (ADR-054) → an analysis renders, no crash
     at = _squads_view("Health")
-    assert len(at.selectbox) == 1                          # the squad picker (demo + session)
+    assert any(s.label == "Squad" for s in at.selectbox)   # the squad picker (a GW selector is also present)
     assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
 
@@ -146,9 +146,9 @@ def test_squads_ai_tips_view_renders_a_gameweek_plan():
 
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     at = _squads_view("Transfer")
-    assert len(at.selectbox) == 1                          # the squad picker (demo always present)
+    assert any(s.label == "Squad" for s in at.selectbox)   # the squad picker (a GW selector is also present)
     assert len(at.code) == 1 or len(at.info) >= 1          # the swaps (or a "no upgrades" note)
-    at.slider[0].set_value(3.0).run()                      # move the bank slider → recompute, no crash
+    next(s for s in at.slider if s.label == "Bank (£m)").set_value(3.0).run()   # move the bank → recompute
     assert not at.exception
 
 
@@ -219,7 +219,8 @@ def test_consumer_views_use_a_session_active_squad():
         at.run()
         at.segmented_control[0].set_value(view).run()
         assert not at.exception, f"Squads[{view}] raised: {at.exception}"
-        assert any("My squad (yours)" in o for o in at.selectbox[0].options)
+        picker = next(s for s in at.selectbox if s.label == "Squad")   # by label (a GW selector was added)
+        assert any("My squad (yours)" in o for o in picker.options)
 
 
 def test_help_page_renders_the_guide_without_data():
@@ -354,6 +355,26 @@ def test_every_tab_has_an_emoji_led_header():
         assert at.title and emoji in at.title[0].value, f"{fname} title missing {emoji}"
 
 
+def test_squads_gameweeks_selector_drives_the_horizon():
+    # US-237 (ADR-077): a "Gameweeks ahead" dropdown (default 5) flows into Health — set it to 2 and
+    # the analysis projects over 2 GW (a GW2 column, no GW5)
+    at = _run(_PAGES / "3_Squads.py")
+    gw = [s for s in at.selectbox if s.label == "Gameweeks ahead"]
+    assert gw and gw[0].value == 5                          # present, default 5 (today's behaviour)
+    gw[0].set_value(2).run()
+    at.segmented_control[0].set_value("Health").run()
+    assert not at.exception
+    if at.code:
+        blob = " ".join(c.value for c in at.code)
+        assert "2 GW" in blob and "GW2" in blob and "GW5" not in blob   # horizon narrowed to 2
+
+
+def test_captain_view_notes_it_is_next_gameweek():
+    # US-237: captaincy is a one-week decision — a caption says the GW selector doesn't apply
+    at = _squads_view("Captain")
+    assert any("next gameweek" in c.value.lower() for c in at.caption)
+
+
 def test_my_squad_points_to_build():
     # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
     at = _squads_view("My Squad")
@@ -438,7 +459,7 @@ def test_build_page_objective_switch_rebuilds(monkeypatch):
     at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
-    at.selectbox[0].set_value("xgi").run()
+    next(s for s in at.selectbox if s.label == "Objective").set_value("xgi").run()
     assert not at.exception and at.code
 
 
@@ -457,8 +478,7 @@ def test_build_page_formation_preview_is_display_only(monkeypatch):
     at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
-    assert len(at.selectbox) >= 2                          # [0] objective, [1] formation preview
-    at.selectbox[1].set_value("4-3-3").run()
+    next(s for s in at.selectbox if s.label == "Formation").set_value("4-3-3").run()
     assert not at.exception
     assert len(at.get("download_button")) == 1             # only the full-15 build is downloadable
 
