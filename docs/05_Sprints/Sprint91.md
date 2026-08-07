@@ -99,4 +99,27 @@ ruff clean, full suite **632** green.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **629 → 632** (+3); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-241 — the `bench_order` helper (ADR-078).** Pure: outfield bench by xP (1st/2nd/3rd) + the bench GK
+  separate (keeper-only). Empty-safe, tie-stable, exported.
+- **US-242 — My Squad bench-order line.** A "🔁 Bench order (auto-subs)" caption naming the subs in priority
+  with their xP + the FPL-rule explainer.
+
+**What went well**
+- **Honest scope** — a *recommendation* (order by value), not a per-blank auto-sub simulator; the caption
+  states the real rule ("the first that keeps a legal XI"), so it doesn't over-claim.
+- **Correct on the one rule that matters** — the bench GK is separated (it only replaces the keeper), so the
+  ordering isn't misleading.
+- **Compounds** — reuses the horizon-aware xP (the order tracks the Sprint-089 *Gameweeks ahead* selector);
+  a clean helper-then-display split.
+- 629 → 632 tests; ruff + CI-parity green.
+
+**Watch-outs / follow-ups**
+- Only shown with a **declared bench** (a squad without one has no bench slots to order) — intended.
+- Possible later: annotate the pitch bench cards with the sub number; let the user *set* the order; or
+  simulate specific blanks. All deferred (the ADR notes them).
+- The benign `seed.db` byte-touch recurred during manual smokes → restored; pytest leaves it clean.
+
+See `Sprint91_Lessons_Learnt.md` for the detailed retro.

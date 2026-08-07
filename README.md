@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**77 ADRs · 629 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**78 ADRs · 632 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -191,7 +191,7 @@ consolidated tabs switch views with a lazy segmented control:
   (the full `squad` options → the optimal 15; a **formation preview** with each shape's **projected XI xP** +
   a compare-all-formations table) · **My Squad** (a formation-pitch view;
   edit: rename/swap/bench/captain/download; a **quick-stats summary** — Projected XI / Captain / Bench xP +
-  who's injured/doubtful) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
+  who's injured/doubtful — and a **bench order** (auto-sub priority)) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
   **Health** (5-GW analysis) · **Transfer** (XI-aware swaps, **Apply**) · **Captain**
   (and **set** yours) — the manage views share one squad picker
 - **Ask** — a grounded **chat** with its ✓/⚠ trust line; a *build a squad* answer offers **Use this squad →**

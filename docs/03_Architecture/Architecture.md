@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 091 (2026-08-07)** — *Bench order — the auto-sub priority*, per **ADR-078** (US-241/242). No
+  auto-sub logic existed. **US-241:** a pure `analytics/optimizer.py::bench_order(bench, scores)` (next to
+  `best_legal_xi`) → `[(role, player)]`: the **outfield** bench ranked by xP → "1st"/"2nd"/"3rd", then the
+  **bench GK** → "GK" (it only ever replaces the starting keeper); empty-safe, tie-stable. **US-242:**
+  `render_my_squad` shows a "🔁 Bench order (auto-subs)" caption naming the subs with their (horizon-aware)
+  xP + the FPL-rule explainer ("the first that keeps a legal XI; the bench GK only covers your keeper"),
+  shown when a bench is declared. A **recommendation** (order by value), not a per-blank simulator;
+  display-only, no analytics drift. 629 → 632 tests.
 - **Sprint 090 (2026-08-07)** — *A quick-stats summary on the My Squad banner* (US-239/240; **no new ADR** —
   reuses ADR-074/077). `render_my_squad` now renders a `st.columns(5)` metrics row above the pitch —
   **Projected XI ({horizon} GW)** · **Captain (2×)** · **Bench** · **Unavailable** · **Doubtful** — reusing

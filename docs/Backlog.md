@@ -10,7 +10,10 @@ nice-to-haves and tech-debt.)*
   `min_differentials` constraint (≤5% owned — pinned so it bites); `squad --full --differential N` +
   NL "… with N differentials". Completes the archetype trio (low-cost / premium / differential).
 
-- **Bench order** — which bench player subs on first (Sprint 012 sequel).
+- ~~**Bench order**~~ — **DONE** (Sprint 091, US-241/242, **ADR-078**). A pure `bench_order(bench, scores)`
+  (outfield by xP → 1st/2nd/3rd + the bench GK, keeper-only), shown on **My Squad** as a "🔁 Bench order
+  (auto-subs)" line with the FPL-rule explainer. A recommendation (order by value), not a per-blank
+  simulator. *Still open:* let the user *set* the order / annotate the pitch cards / simulate specific blanks.
 - ~~**Availability flags in the ranking views**~~ — **DONE (web)** (Sprint 085, US-228/229, **ADR-074**). A
   shared `availability_flag(player)` (🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful; blank =
   available) + a **Fit** column on the **Players Pool** and all **four stat boards**; display-only, reuses
