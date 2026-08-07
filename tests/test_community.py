@@ -48,6 +48,37 @@ def test_community_buzz_accepts_sqlite_rows():
     assert [(r["web_name"], r["mentions"]) for r in buzz] == [("Haaland", 3), ("Saka", 2)]
 
 
+def test_community_buzz_counts_every_mentioning_post():
+    # US-232 (the tester's bug): a player mentioned across N distinct posts counts N — not capped at 1
+    rss = ('<feed xmlns="http://www.w3.org/2005/Atom">'
+           + "".join(f'<entry><link href="https://r.test/{i}"/><title>Salah watch #{i}</title></entry>'
+                     for i in range(4))
+           + "</feed>")
+    buzz = community_buzz(rss, [{"id": 1, "web_name": "Salah"}], limit=5)
+    assert buzz[0]["mentions"] == 4 and len(buzz[0]["posts"]) == 4
+
+
+def test_reddit_client_requests_the_configured_post_limit(monkeypatch):
+    # US-232 (ADR-076): the client asks Reddit for ~100 posts (a bigger sample → meaningful counts)
+    from src.api import reddit
+
+    captured = {}
+
+    class _Resp:
+        text = "<feed/>"
+
+        def raise_for_status(self):
+            pass
+
+    def _fake_get(url, **kw):
+        captured["url"] = url
+        return _Resp()
+
+    monkeypatch.setattr(reddit.requests, "get", _fake_get)
+    reddit.RedditRssClient().get_subreddit_rss()
+    assert captured["url"] == "https://www.reddit.com/r/FantasyPL/.rss?limit=100"
+
+
 def test_community_buzz_is_empty_safe():
     assert community_buzz("not xml at all", _PLAYERS) == []   # a parse error → [], no crash
     assert community_buzz("", _PLAYERS) == []

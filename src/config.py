@@ -46,6 +46,9 @@ CLUBELO_BASE_URL = "http://api.clubelo.com"
 REDDIT_RSS_URL = "https://www.reddit.com/r/{}/.rss"
 REDDIT_SUBREDDIT = "FantasyPL"
 REDDIT_TIMEOUT = 5
+# How many recent posts to pull for the "Talked about" buzz count (ADR-076). Reddit's RSS max is 100;
+# a bigger sample makes mention counts meaningful (the default 25 posts left most players at "1 mention").
+REDDIT_RSS_LIMIT = 100
 
 # In-season form blend (ADR-060) — DORMANT until GW1 (2026-08-21). The one xP recipe (ADR-041)
 # blends a rolling, minutes-aware points-per-90 (from per-GW `player_history`) into a player's rate:

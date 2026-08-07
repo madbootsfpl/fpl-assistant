@@ -34,10 +34,13 @@ class RedditRssClient:
         self.backoff = backoff
         self.sleep = sleep
 
-    def get_subreddit_rss(self, subreddit: str = config.REDDIT_SUBREDDIT) -> str:
-        """Fetch a subreddit's RSS (Atom XML). Transient failures retry once (ADR-020); a permanent one
-        (403/404/429) fails fast. On final failure raises `RedditError`, so the caller degrades."""
-        url = self.url_template.format(subreddit)
+    def get_subreddit_rss(self, subreddit: str = config.REDDIT_SUBREDDIT,
+                          *, limit: int = config.REDDIT_RSS_LIMIT) -> str:
+        """Fetch a subreddit's RSS (Atom XML), the latest `limit` posts (Reddit's RSS max is 100 — a bigger
+        sample makes the buzz count meaningful, ADR-076). Transient failures retry once (ADR-020); a
+        permanent one (403/404/429) fails fast. On final failure raises `RedditError`, so the caller
+        degrades."""
+        url = f"{self.url_template.format(subreddit)}?limit={limit}"
 
         def fetch() -> str:
             response = requests.get(

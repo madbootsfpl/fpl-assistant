@@ -77,21 +77,22 @@ else:
 
     # Community Signals (ADR-059) — Reddit RSS buzz. Button-gated (no fetch on load) + cached; degrades.
     with tabs[-1]:
-        st.caption("**Community Signals** — who r/FantasyPL is talking about right now (post mentions, a "
-                   "buzz lens — not sentiment or a prediction). Best-effort: cached, may be unavailable "
-                   "on the live app.")
+        st.caption("**Community Signals** — who r/FantasyPL is talking about across the latest **~100 posts** "
+                   "(post mentions, a buzz lens — not sentiment or a prediction). Best-effort: cached, may "
+                   "be unavailable on the live app.")
         if st.button("Show what's being talked about",
-                     help="Fetch r/FantasyPL and count player mentions (best-effort; cached ~30 min)."):
+                     help="Fetch r/FantasyPL (the latest ~100 posts) and count player mentions "
+                          "(best-effort; cached ~30 min)."):
             rss = _cached_reddit_rss()
             if rss is None:
                 st.info("Community buzz is unavailable right now (Reddit didn't respond).")
             else:
-                buzz = community_buzz(rss, players, limit=len(players))   # all mentioned (usually few)
+                buzz = community_buzz(rss, players, limit=len(players))   # all mentioned, ranked
                 if not buzz:
                     st.info("No current-player mentions in the latest r/FantasyPL posts.")
                 else:
-                    st.caption(f"{len(buzz)} players mentioned — expand a name to read the posts. "
-                               "(Surnames can collide — the photo/badge shows who actually matched.)")
+                    st.caption(f"{len(buzz)} players mentioned across the latest ~100 posts — expand a name "
+                               "to read them. (Surnames can collide — the photo/badge shows who matched.)")
                     for r in buzz:
                         c_photo, c_badge, c_body = st.columns([1, 1, 12], vertical_alignment="center")
                         if photos.get(r["id"]):
