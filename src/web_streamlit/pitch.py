@@ -29,43 +29,57 @@ repeating-linear-gradient(0deg,#218a4c 0 44px,#1e8047 44px 88px);
 border-radius:16px;padding:16px 8px 20px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.28);
 }
 .fpl-pitch .row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0;}
-.fpl-pitch .kit{width:80px;text-align:center;color:#fff;}
-.fpl-pitch .kit img{width:46px;height:46px;object-fit:contain;display:block;margin:0 auto 4px;
+.fpl-pitch .kit{width:80px;text-align:center;color:#fff;transition:transform .12s ease;}
+.fpl-pitch .kit:hover{transform:translateY(-3px);}
+.fpl-pitch .pic{position:relative;width:46px;height:46px;margin:0 auto 4px;}
+.fpl-pitch .pic img{width:46px;height:46px;object-fit:contain;display:block;
 filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}
+.fpl-pitch .noimg{width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+font-size:1.5rem;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}
+.fpl-pitch .c-badge{position:absolute;top:-5px;right:-6px;width:17px;height:17px;border-radius:50%;
+background:#ffd23f;color:#1a1a1a;font-size:.62rem;font-weight:800;line-height:17px;text-align:center;
+box-shadow:0 1px 2px rgba(0,0,0,.45);}
+.fpl-pitch .s-badge{position:absolute;top:-5px;left:-6px;height:17px;min-width:17px;border-radius:9px;
+background:#0a7a34;color:#fff;font-size:.6rem;font-weight:700;line-height:17px;text-align:center;padding:0 4px;
+box-shadow:0 1px 2px rgba(0,0,0,.45);}
 .fpl-pitch .name{font-weight:700;font-size:.76rem;line-height:1.05;text-shadow:0 1px 2px rgba(0,0,0,.5);
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fpl-pitch .xp{display:inline-block;margin-top:2px;padding:0 7px;border-radius:9px;background:#fff;
-color:#0a7a34;font-weight:700;font-size:.72rem;}
+color:#0a7a34;font-weight:700;font-size:.72rem;box-shadow:0 1px 2px rgba(0,0,0,.25);}
 .fpl-pitch .meta{font-size:.64rem;opacity:.92;text-shadow:0 1px 2px rgba(0,0,0,.5);margin-top:2px;}
-.fpl-pitch .cap{color:#ffd23f;font-weight:800;}
 .fpl-pitch .flags{font-size:.66rem;margin-top:2px;line-height:1.2;}
-.fpl-pitch .sub{font-size:.62rem;color:#eafff0;opacity:.9;margin-bottom:2px;}
 .fpl-pitch .bench-label{color:#eafff0;font-size:.72rem;letter-spacing:.12em;text-align:center;
 margin:18px 0 2px;opacity:.85;text-transform:uppercase;}
 .fpl-pitch .bench{background:rgba(0,0,0,.16);border-radius:12px;padding:10px 6px;margin-top:2px;}
 </style>
 """
 
+# Sub role → the short badge text on a bench kit (US-258): the auto-sub priority number, or "GK" for the
+# keeper (it only ever replaces the starting keeper). ADR-078/079.
+_SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
+
 
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, sub_role=None) -> str:
-    """One player's kit card (ADR-084) — image · name (+ (C)) · xP chip · £ · next opponent · crowd/set-piece
-    flags · sub badge. Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup."""
+    """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
+    · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
+    Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup."""
     e = html.escape
     img = photos.get(player["id"], "")
-    img_html = f'<img src="{e(img)}" alt="">' if img else ""
-    cap = ' <span class="cap">(C)</span>' if player["id"] == captain_id else ""
+    # The image (photo/shirt via US-255); a neutral 👕 placeholder if even the shirt is missing (no crash).
+    pic = f'<img src="{e(img)}" alt="">' if img else '<div class="noimg">👕</div>'
+    if player["id"] == captain_id:
+        pic += '<span class="c-badge" title="Captain">C</span>'
+    if sub_role:
+        pic += (f'<span class="s-badge" title="{e(sub_role)} sub">'
+                f'{e(_SUB_BADGE.get(sub_role, sub_role))}</span>')
     xp = round(xp_by_id.get(player["id"], 0), 1)
     opp = next_opp.get(player["team"])
     opp_str = f'{e(opp["opponent"])} ({e(opp["venue"])})' if opp else "—"
     meta = f'£{player["price"]:.1f}m · {opp_str}'
     flags = crowd_flags(player) + set_piece_flags(player)
     flags_html = f'<div class="flags">{e(" ".join(flags))}</div>' if flags else ""
-    sub_html = ""
-    if sub_role:
-        label = "GK sub" if sub_role == "GK" else f"{sub_role} sub"
-        sub_html = f'<div class="sub">🔁 {e(label)}</div>'
-    return (f'<div class="kit">{sub_html}{img_html}'
-            f'<div class="name">{e(player["web_name"])}{cap}</div>'
+    return (f'<div class="kit"><div class="pic">{pic}</div>'
+            f'<div class="name">{e(player["web_name"])}</div>'
             f'<div class="xp">{xp}</div>'
             f'<div class="meta">{meta}</div>{flags_html}</div>')
 

@@ -120,6 +120,17 @@ any animation/drag-drop (out of scope — Streamlit + no JS).
   (C), 5 set-piece emojis, xP chips — renders without error. (US-258 turns (C)/subs into proper badges + more
   polish.)
 
+**US-258 — badges, flags & polish (ADR-084).** ✅ Done.
+- The **(C)** is now a gold **armband badge** overlaid on the kit (a `.pic` wrapper with `.c-badge`
+  positioned top-right); the sub role is a green **number badge** (`.s-badge`: 1/2/3/GK, top-left, `title`
+  carries the full role). A **👕 placeholder** replaces a missing image (belt-and-braces atop US-255's shirt).
+  Kit **hover lift** (respects `prefers-reduced-motion`), an xP-chip shadow, and tidier spacing.
+- **Tests:** rewired the bench-subs test to the new badges — `title="1st/GK sub"`, one `.s-badge` per bench
+  player, and a captain `.c-badge` (the squad now sets a captain). **663** green, ruff clean.
+- **Visual preview (Artifact):** published a faithful, self-contained preview of the pitch with the real
+  RoboTS squad (SVG jerseys stand in for the CDN photos the sandbox blocks) so the redesign can be reviewed +
+  steered before deploy.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

@@ -521,7 +521,9 @@ def test_my_squad_pitch_labels_the_bench_subs():
         return
     ids = [p["id"] for p in gks + defs + mids + fwds]
     bench = [defs[4]["id"], mids[4]["id"], fwds[2]["id"], gks[1]["id"]]
-    squad = {"name": "BenchLabels", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+    # a starting captain too, to assert the armband badge (US-258)
+    squad = {"name": "BenchLabels", "player_ids": ids, "bench_ids": bench, "cost": 100.0,
+             "captain_id": mids[0]["id"]}
 
     at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
     at.session_state["squad"] = squad
@@ -529,7 +531,10 @@ def test_my_squad_pitch_labels_the_bench_subs():
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
     blob = " ".join(m.value for m in at.markdown)         # the pitch is one HTML block (ADR-084)
-    assert "🔁 1st sub" in blob and "🔁 GK sub" in blob
+    # US-258: sub role → a corner badge (title carries the role); the captain → a "C" armband badge
+    assert 'title="1st sub"' in blob and 'title="GK sub"' in blob
+    assert blob.count('class="s-badge"') == len(bench)     # one sub badge per bench player
+    assert 'class="c-badge"' in blob                       # the captain armband
 
 
 def test_my_squad_bench_reorder_persists_and_recommended_applies():
