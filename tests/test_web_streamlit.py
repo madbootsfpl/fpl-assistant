@@ -880,7 +880,32 @@ def test_photo_url_helper():
     assert photo_url(12345).endswith("/p12345.png")
     assert photo_url(None) == ""                            # no code → no image
     m = photo_url_by_id([{"id": 1, "code": 999}, {"id": 2, "code": None}])
-    assert m[1].endswith("/p999.png") and m[2] == ""        # by player id; missing code → empty
+    assert m[1].endswith("/p999.png") and m[2] == ""        # by player id; missing code → empty (no teams)
+
+
+def test_shirt_url_helper():
+    # US-255: the club-shirt kit image by team code — GK (`_1`) variant for keepers, empty on no code
+    from src.web_streamlit.badges import shirt_url
+    assert shirt_url(3).endswith("/shirt_3-66.png")             # outfield
+    assert shirt_url(3, "GK").endswith("/shirt_3_1-66.png")     # keeper variant
+    assert shirt_url(None) == ""                                # no team code → no image (no crash)
+
+
+def test_photo_url_by_id_falls_back_to_the_club_shirt(monkeypatch):
+    # US-255: a player whose photo the CDN doesn't serve → the club shirt (GK variant for keepers);
+    # a player with a served photo keeps it. The existence sweep is monkeypatched (no network).
+    from src.web_streamlit import badges
+    teams = [{"short_name": "ARS", "code": 3}, {"short_name": "LIV", "code": 11}]
+    players = [
+        {"id": 1, "code": 100, "team": "ARS", "position": "MID"},   # photo present
+        {"id": 2, "code": 200, "team": "ARS", "position": "FWD"},   # photo missing → outfield shirt
+        {"id": 3, "code": 300, "team": "LIV", "position": "GK"},    # photo missing → GK shirt
+    ]
+    monkeypatch.setattr(badges, "_missing_photo_codes", lambda codes: frozenset({200, 300}))
+    m = badges.photo_url_by_id(players, teams)
+    assert m[1].endswith("/p100.png")                          # present → the photo
+    assert m[2].endswith("/shirt_3-66.png")                    # missing → the outfield shirt
+    assert m[3].endswith("/shirt_11_1-66.png")                 # missing keeper → the GK shirt
 
 
 def test_squad_views_show_image_tables():

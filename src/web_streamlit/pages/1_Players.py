@@ -21,8 +21,9 @@ st.caption("The whole player pool + the stat boards — filter, sort, and see wh
 store = Storage()
 try:
     rows = store.get_players()
-    badges = badge_url_by_short_name(store.get_teams())     # {short_name: badge URL}
-    photos = photo_url_by_id(rows)                          # {player id: photo URL}
+    teams = store.get_teams()
+    badges = badge_url_by_short_name(teams)                 # {short_name: badge URL}
+    photos = photo_url_by_id(rows, teams)                   # {player id: photo, else the club shirt}
 finally:
     store.close()
 

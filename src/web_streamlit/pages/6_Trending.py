@@ -42,8 +42,9 @@ st.caption("Free FPL crowd data — ownership · transfers · form. A community 
 store = Storage()
 try:
     players = store.get_players()
-    photos = photo_url_by_id(players)
-    badges = badge_url_by_short_name(store.get_teams())
+    teams = store.get_teams()
+    photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
+    badges = badge_url_by_short_name(teams)
 finally:
     store.close()
 
