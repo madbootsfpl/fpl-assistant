@@ -87,6 +87,9 @@ stays the engine**). Two steps taken:
 - ✅ **Deployed** to Streamlit Community Cloud (Sprint 053, ADR-053; runbook: `docs/DEPLOY.md`) — public,
   read-only; a committed `data/seed.db` + `seed_squads.json` seed it. The core stays the one engine; the
   guardrail test (core imports no web) carries over.
+- ✅ **A redesigned My Squad pitch** (Sprint 099, ADR-084) — a green FFH-style CSS pitch (kits in formation,
+  xP chips, (C) armband + sub badges), now reused on **Build** too (Sprint 101, US-261); and a **⏳ next-
+  deadline countdown** banner on Home + Squads, derived from fixtures (Sprint 101, ADR-086).
 
 ---
 

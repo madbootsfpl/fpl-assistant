@@ -1,7 +1,7 @@
 # Sprint 101: Pitch on Build + a season countdown / deadline banner
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (reuse the pitch on Build; a deadline banner derived from fixtures)
 **Carried Over:** none
 
@@ -122,4 +122,29 @@ each interaction).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **672 → 679** (+7); ruff clean; CI-parity green.
+ADRs **85 → 86** (ADR-086). No engine change (a pitch reuse + a pure derivation + a display).
+
+**Delivered**
+- **US-261 — pitch on Build.** The optimal 15 render on the green pitch (reuse `render_pitch`, ADR-084) above
+  the sortable table — the picture *and* the detail.
+- **US-262 — deadline banner (ADR-086).** A pure `next_deadline(fixtures, now)` (earliest kickoff − 90 min,
+  rolling each GW) + `deadline_banner` (countdown + UK time), on Home + Squads. No new ingest.
+
+**What went well**
+- **Both were reuse, not new machinery** — the pitch was already a pure renderer; the deadline came from the
+  `kickoff_time` we already store. Small, low-risk changes.
+- **Verified the data first** — 380/380 fixtures carry `kickoff_time`, so the derive-from-fixtures call (no
+  `events` table) was a safe, lightweight decision (owner's preference, ADR-016).
+- **Pure + `now`-injected** — `next_deadline`/`deadline_banner` are deterministic and unit-tested (including
+  the roll-forward and the UK-time conversion); no flaky "today" tests.
+- **It rolls all season** — a countdown to GW1 now, the next GW's deadline once the season starts.
+
+**Watch-outs / follow-ups**
+- **Derived deadline vs the API's exact `deadline_time`** — they match (kickoff − 90); a later `events` ingest
+  could pin it if FPL ever set an atypical deadline (deferred).
+- **No live tick** — the banner recomputes each interaction (fine for a days-away deadline; a JS ticker was
+  out of scope).
+- **Build now solves + renders a pitch + a table** — a touch more render work per Build; still snappy.
+
+See `Sprint101_Lessons_Learnt.md` for the detailed retro.

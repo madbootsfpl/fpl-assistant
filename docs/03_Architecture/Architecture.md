@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 101 (2026-08-07)** — *Pitch on Build + a season countdown / deadline banner* (owner request).
+  **US-261 (pitch on Build; reuses ADR-084):** `views/squads.py::render_build` splits the built 15 into the XI
+  (`best_legal_xi`) + bench, orders the bench via `bench_order`, builds a `next_opp` map (`team_schedule`), and
+  calls `render_pitch(..., captain_id=None)` **above** the sortable table + `render_squad` block — the picture
+  *and* the detail; display-only, no engine change. **US-262, per ADR-086:** a pure
+  `analytics/deadline.py::next_deadline(fixtures, now)` derives the next FPL deadline from the stored
+  `kickoff_time` — each gameweek's **earliest** kickoff − 90 minutes, returning the first `(gw, deadline)`
+  still ahead of `now` (so it **rolls forward** once a gameweek locks); tz-aware, empty-safe. **No `events`
+  ingest** — the derivation matches the API's `deadline_time`, and `storage.get_upcoming_fixtures` just adds
+  `f.kickoff_time` to its SELECT (additive). `ui/deadline.py::deadline_banner(gw, deadline, now)` formats a
+  days/hours countdown + the date in **UK time** (stdlib `zoneinfo`). Shown as a prominent `st.info` on **Home**
+  and a compact caption on **Squads**, each passing `datetime.now(timezone.utc)`; `now`-injected so the logic is
+  deterministically tested (incl. roll-forward + UK-time). No engine change; no server writes. +7 tests.
 - **Sprint 100 (2026-08-07)** — *AI Chat Assistant — a grounded rules KB + a labelled free-form mode*, per
   **ADR-085** (US-259/260; owner intake). **US-259:** `src/fpl_rules.py` — a `RULES` list of **13** authoritative
   `{topic, cues, fact}` entries (scoring · clean sheets/saves · bonus/BPS · Defensive Contribution · chips ·
