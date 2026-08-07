@@ -8,6 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-07 | Owner | Squads → My Squad | Use the banner real estate for a **quick-view team summary** — xP over the gameweeks, players injured/suspended, etc. | 💡 | ✅ Sprint 090 (US-239/240) — a metrics row (Projected XI / Captain / Bench / Unavailable / Doubtful) + a who's-flagged caption |
 | 2026-08-07 | Owner | Squads (all sub-tabs) | Want to **select the number of gameweeks** predicted over — 4–6 for a wildcard/start, 1–2 mid-season; a dropdown throughout the tab. | 💡 | ✅ Sprint 089 (US-237/238, ADR-077) — a "Gameweeks ahead" dropdown (1–8, default 5) across Build · My Squad · Health · Transfer · AI Tips; Captain stays next-GW |
 | 2026-08-07 | Owner | Trending → Talked about | Only shows **1 mention** regardless of the number of mentions — can we count **all mentions**? | 🟠 wrong | ✅ Sprint 087 (US-232/233, ADR-076) — the counter was fine (1–4); the default feed is only 25 posts → now `?limit=100` (~100 posts) + the board paginated |
 | 2026-08-07 | Owner | Squads → Build | On the **Preview the best XI in a shape**, show the **XI score** so a user can see the effect of different formations. | 💡 | ✅ Sprint 086 (US-230/231, ADR-075) — a "Projected XI xP" metric per shape + a gated compare-all-formations table (Δ vs best) |

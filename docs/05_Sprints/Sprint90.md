@@ -102,4 +102,26 @@ player). ruff clean, full suite **629** green.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **627 → 629** (+2); ruff clean; CI-parity green. No
+new ADR (reuses ADR-074/077).
+
+**Delivered**
+- **US-239 — the metrics row.** Above the pitch: Projected XI (N GW) · Captain (2×) · Bench · Unavailable ·
+  Doubtful, alongside the existing £value / legal-15 banner.
+- **US-240 — who's flagged.** A caption naming the injured/suspended/doubtful players (with flags), else
+  "✓ all 15 available".
+
+**What went well**
+- **All from data already on hand** — the horizon-aware `xp_by_id`, `is_unavailable`, `availability_flag`
+  (with the US-236 chance%), and `captain_id`. Display-only, no analytics change, no new ADR.
+- **It compounds prior sprints** — the Projected-XI metric moves with the Sprint-089 *Gameweeks ahead*
+  selector, and the flagged line reuses the Sprint-088 chance% on ❓.
+- **A correctness catch** — "Projected XI" uses the best legal XI (11), not all 15, matching Health.
+
+**Watch-outs / follow-ups**
+- The pitch still shows all 15 when no bench is declared (pre-existing); the summary uses the best XI, so
+  the numbers are meaningful either way.
+- A benign `seed.db` byte-touch can appear after a manual AppTest smoke (content unchanged, 572=572); pytest
+  itself leaves it clean. Habit: `git checkout -- data/seed.db` before staging if it shows dirty.
+
+See `Sprint90_Lessons_Learnt.md` for the detailed retro.

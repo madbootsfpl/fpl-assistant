@@ -455,6 +455,14 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 090 (2026-08-07)** — *A quick-stats summary on the My Squad banner* (US-239/240; **no new ADR** —
+  reuses ADR-074/077). `render_my_squad` now renders a `st.columns(5)` metrics row above the pitch —
+  **Projected XI ({horizon} GW)** · **Captain (2×)** · **Bench** · **Unavailable** · **Doubtful** — reusing
+  the horizon-aware `xp_by_id`, `is_unavailable`, and `captain_id`; the £value / legal-15 banner stays.
+  **US-239:** the Projected XI uses the declared XI (if a bench is set) else `best_legal_xi` (same as Health),
+  so it's the best **11** and Bench the other 4. **US-240:** a caption names the flagged owned players with
+  their `availability_flag` (❓ carries the chance%), or "✓ all 15 available". All display-only, from data
+  already on hand; no analytics change; no server writes. 627 → 629 tests.
 - **Sprint 089 (2026-08-07)** — *A configurable prediction horizon on the Squads tab*, per **ADR-077**
   (US-237/238). The analytics already took a `horizon` (`decision_xp`/`analyse_squad`); the web Squads views
   hard-used the default 5. **US-237:** a shared `st.selectbox("Gameweeks ahead", 1..8, default 5)` on
