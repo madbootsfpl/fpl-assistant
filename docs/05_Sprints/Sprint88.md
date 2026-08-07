@@ -123,4 +123,27 @@ still holds; +1 test (`❓ 75%`, `❓ 0%`, and that only doubtful appends the ch
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 3/3 stories done. Test count **622 → 625** (+3); ruff clean; CI-parity green.
+No new ADR (all three extend US-227 / ADR-074).
+
+**Delivered**
+- **US-234 — clickable Ask examples.** A button per example runs it through a shared `_ask()` helper (same
+  pipeline + history as typing).
+- **US-235 — CLI availability flags.** A last-column **Fit** flag (🚑/🚫/⛔/❓) on `table`/`search`/`filter`
+  + `xg`.
+- **US-236 — chance% on ❓.** `availability_flag` appends the chance for a doubtful player (`❓ 75%`).
+
+**What went well**
+- **One shared helper, two surfaces** — `_ask()` unified the chat box + buttons; `availability_flag`'s one
+  change enriched both the web and CLI Fit columns.
+- **Last-column placement dodged the CLI alignment trap** — an emoji's ~2-cell width can't cascade into the
+  aligned columns before it; the byte-exact table/xg tests (substring-based, statusless fixtures) needed no
+  changes.
+- Small, independent wins landed cleanly; 622 → 625 tests, all green.
+
+**Watch-outs / follow-ups**
+- `❓ 75%` slightly overflows the CLI's width-4 Fit column — harmless (it's last), just cosmetic.
+- CLI `xg` and the ranking views now flag availability; the momentum/News surfaces still hold the detail.
+- **Reseed** (done earlier today) already carries Sprints 081–088 code to the deploy on the next redeploy.
+
+See `Sprint88_Lessons_Learnt.md` for the detailed retro.

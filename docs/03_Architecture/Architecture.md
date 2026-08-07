@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 088 (2026-08-07)** — *UX polish: clickable Ask examples · CLI availability flags · chance% on ❓*
+  (US-234/235/236; **no new ADR** — extends US-227 / ADR-074). **US-234:** the Ask page's example prompts are
+  now **buttons** — a shared `_ask(question)` helper (answer → `render_ask` → append to history → stash
+  `built_squad`) feeds both the chat box and the buttons; clicking runs it + `st.rerun()`
+  (`st.chat_input` can't be pre-filled). **US-235:** a last-column **Fit** flag (🚑/🚫/⛔/❓) on
+  `ui/table.py` (→ `table`/`search`/`filter`) and `ui/xg.py` (→ `xg`), reusing `availability_flag` — kept
+  **last** so an emoji's ~2-cell terminal width can't cascade into the aligned columns (the byte-exact
+  substring tests + statusless fixtures needed no changes). **US-236:** `availability_flag` appends the
+  chance for a doubtful player (`❓ 75%`), enriching the web Fit column + the new CLI column from one edit.
+  Display-only; `decision_xp`/the analytics untouched; no server writes. 622 → 625 tests.
 - **Sprint 087 (2026-08-07)** — *"Talked about" — count mentions across a bigger sample*, per **ADR-076**
   (US-232/233, refines ADR-059). A tester saw "1 mention regardless"; a **live fetch** showed the counter is
   fine (it produced 1–4) — the cause is the sample: Reddit's default `.rss` returns only **25 posts**, so
