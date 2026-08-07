@@ -1240,6 +1240,28 @@ def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
     return None
 
 
+_PRONOUNS = ("he", "him", "his", "she", "her", "they", "them", "their")
+_PRONOUN_RE = re.compile(r"\b(" + "|".join(_PRONOUNS) + r")\b", re.IGNORECASE)
+
+
+def _resolve_pronoun(question: str, context: "Context | None") -> str:
+    """Rewrite a pronoun → the last turn's **sole** subject (ADR-080), so "is he worth it?" means the last
+    player. Only when the antecedent is unambiguous (exactly one subject); a no-op otherwise. Substitutes
+    the player's *name* for whatever pronoun the user typed (possessives → `name's`) — it never assigns a
+    pronoun to anyone."""
+    if context is None or not context.decision:
+        return question
+    subjects = context.decision.get("subjects") or []
+    if len(subjects) != 1:
+        return question
+    antecedent = subjects[0]
+
+    def _repl(m):
+        return f"{antecedent}'s" if m.group(0).lower() in ("his", "their") else antecedent
+
+    return _PRONOUN_RE.sub(_repl, question)
+
+
 def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None,
            horizon=_HORIZON):
     """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
@@ -1249,6 +1271,7 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
     session squad so "captain <its name>" / "analyse my team" use the loaded team (Sprint 066).
     `horizon` (ADR-077) is threaded to the gameweek intent for the AI Tips view.
     """
+    question = _resolve_pronoun(question, context)          # "is he worth it?" → the last player (ADR-080)
     intent, squad = route(question, _known_squad_names(active_squad))
     # "my team" / "my squad" → the loaded session squad (when one is active and no name matched).
     if not squad and active_squad and active_squad.get("name") \

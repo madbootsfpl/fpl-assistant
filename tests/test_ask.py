@@ -27,6 +27,7 @@ from src.ask import (
     _lineup_change,
     _match_players,
     _plan_facts,
+    _resolve_pronoun,
     _shortlist_query,
     _squad_budget,
     _swap_position,
@@ -75,6 +76,37 @@ def test_a_pointed_captain_question_still_beats_gameweek():
 def test_gameweek_asks_for_a_squad_when_missing():
     r = ask.answer("what should I do this week", narrator=lambda p: "unused")
     assert r.intent == "gameweek" and "squad" in r.message.lower()
+
+
+def test_resolve_pronoun_rewrites_to_the_sole_subject():
+    # ADR-080: a pronoun → the last turn's single subject; possessives → name's
+    ctx = Context(intent="worth", decision={"subjects": ["Haaland"], "facts": {}})
+    assert _resolve_pronoun("is he worth captaining?", ctx) == "is Haaland worth captaining?"
+    assert _resolve_pronoun("compare him to Isak", ctx) == "compare Haaland to Isak"
+    assert _resolve_pronoun("what are his fixtures?", ctx) == "what are Haaland's fixtures?"
+
+
+def test_resolve_pronoun_is_a_no_op_when_ambiguous_or_no_pronoun():
+    two = Context(intent="compare", decision={"subjects": ["Haaland", "Salah"], "facts": {}})
+    assert _resolve_pronoun("is he better?", two) == "is he better?"        # 2 subjects → ambiguous
+    one = Context(intent="worth", decision={"subjects": ["Haaland"], "facts": {}})
+    assert _resolve_pronoun("best midfielders under £8m", one) == "best midfielders under £8m"  # no pronoun
+    assert _resolve_pronoun("is he worth it?", None) == "is he worth it?"   # no context
+    assert _resolve_pronoun("the theatre", one) == "the theatre"           # 'the' not matched (whole-word)
+
+
+def test_pronoun_resolves_across_a_converse_turn():
+    # a real chat: worth(Haaland) → "compare him to Isak" resolves 'him' → Haaland → the compare intent
+    from src import ask
+    from src.storage import Storage
+
+    store = Storage()
+    try:
+        _r1, ctx = ask.converse("is Haaland worth the money?", None, store=store, narrator=lambda p: None)
+        r2, _c2 = ask.converse("compare him to Isak", ctx, store=store, narrator=lambda p: None)
+    finally:
+        store.close()
+    assert r2.intent == "compare" and not r2.message   # resolved + routed, not a "name a player" fallback
 
 
 def test_lineup_change_reports_no_saved_bench():
