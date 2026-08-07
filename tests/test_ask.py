@@ -19,6 +19,8 @@ from src.ask import (
     _bench_mode,
     _build_prompt,
     _captain_facts,
+    _chips_facts,
+    _decide_chips,
     _decide_compare,
     _decide_gameweek,
     _decide_shortlist,
@@ -76,6 +78,27 @@ def test_a_pointed_captain_question_still_beats_gameweek():
 def test_gameweek_asks_for_a_squad_when_missing():
     r = ask.answer("what should I do this week", narrator=lambda p: "unused")
     assert r.intent == "gameweek" and "squad" in r.message.lower()
+
+
+def test_routes_chips_for_chip_questions():
+    # ADR-082: the distinctive chip phrases route to the chips intent...
+    assert route("which chip should I use for TS?", known_squads=["TS"]) == ("chips", "TS")
+    assert route("chip strategy", known_squads=[])[0] == "chips"
+    assert route("when should I use my bench boost?", known_squads=[])[0] == "chips"
+    assert route("triple captain advice", known_squads=[])[0] == "chips"
+    assert route("use my wildcard?", known_squads=[])[0] == "chips"
+
+
+def test_chips_intent_does_not_hijack_the_build_captain_or_bench_routes():
+    # the chip phrases are chosen so they can't steal the existing routes (the collision guard, ADR-082)
+    assert route("build me a squad for a bench boost", known_squads=[])[0] == "build_squad"
+    assert route("who should I captain from TS?", known_squads=["TS"])[0] == "captain"
+    assert route("who should I start from TS?", known_squads=["TS"])[0] == "start_bench"
+
+
+def test_chips_asks_for_a_squad_when_missing():
+    r = ask.answer("which chip should I use", narrator=lambda p: "unused")
+    assert r.intent == "chips" and "squad" in r.message.lower()
 
 
 def test_resolve_pronoun_rewrites_to_the_sole_subject():
@@ -570,6 +593,50 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     # US-238 (ADR-077): a chosen horizon flows through to the plan's transfer window
     narrowed = _decide_gameweek(_FakeStore(), "TST", horizon=2)
     assert "over 2 GW" in narrowed["detail"]
+
+
+def test_chips_facts_read_plainly_and_carry_every_number():
+    advice = {
+        "triple_captain": {"gameweek": 1, "player": {"web_name": "Haaland", "team": "MCI"},
+                           "player_xp": 9.0, "extra_points": 9.0},
+        "bench_boost": {"gameweek": 2, "squad_total": 62.0, "bench_points": 13.0},
+        "free_hit": {"gameweek": 4, "xi_total": 46.0},
+        "wildcard": {"window": (3, 5), "gameweeks": [3, 4, 5], "avg_xi": 47.0},
+    }
+    facts = _chips_facts(advice)
+    assert facts["triple_captain"].startswith("GW1: Haaland (MCI) — xP 9.0")
+    assert "all 15 project 62.0 xP" in facts["bench_boost"] and "adds 13.0" in facts["bench_boost"]
+    assert facts["free_hit"] == "GW4: your best XI projects only 46.0 xP — your weakest single week"
+    assert "GW3 to GW5" in facts["wildcard"] and "average XI 47.0 xP" in facts["wildcard"]
+
+
+def test_decide_chips_is_grounded_and_verified(monkeypatch):
+    # ADR-082: the decision carries the advice as `detail`, names the TC player as a subject, and a
+    # narration that restates only the facts verifies clean (✓, ADR-037).
+    owned = [{"id": 1, "web_name": "Haaland"}, {"id": 2, "web_name": "Saka"}]
+    advice = {
+        "triple_captain": {"gameweek": 1, "player": {"web_name": "Haaland", "team": "MCI"},
+                           "player_xp": 9.0, "extra_points": 9.0},
+        "bench_boost": {"gameweek": 2, "squad_total": 62.0, "bench_points": 13.0},
+        "free_hit": {"gameweek": 4, "xi_total": 46.0},
+        "wildcard": {"window": (3, 5), "gameweeks": [3, 4, 5], "avg_xi": 47.0},
+    }
+    monkeypatch.setattr(
+        ask, "_squad_xp",
+        lambda store, name, active_squad=None, *, horizon=5: (
+            {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {}, {}, [1, 2, 3, 4], {}),
+    )
+    monkeypatch.setattr(ask, "chip_advisor", lambda *a, **k: advice)
+
+    decision = _decide_chips(_FakeStore(), "TST", horizon=8)
+    assert "Chip strategy — squad 'TST'" in decision["detail"]
+    assert decision["subjects"] == ["Haaland"]                       # the named TC player
+
+    res = assemble("q", "chips", decision,
+                   narrator=lambda p: "Triple Captain in GW1 (Haaland, xP 9.0). Bench Boost GW2 "
+                                      "(62.0 xP). Free Hit GW4 (46.0). Wildcard GW3 to GW5 (47.0).",
+                   known_names=["Haaland", "Saka"])
+    assert res.trust == {"numbers": [], "names": []}                 # every figure/name traces
 
 
 def test_assemble_handles_no_decision():

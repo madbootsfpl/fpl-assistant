@@ -27,6 +27,7 @@ from src.analytics import (
     baseline_rate,
     best_legal_xi,
     captain_picks,
+    chip_advisor,
     decision_xp,
     gameweek_plan,
     minutes_weight_from_history,
@@ -41,6 +42,7 @@ from src.analytics.captain import _next_opponent
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
+from src.ui.chips import render_chip_advice
 from src.ui.compare import render_compare
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
@@ -55,7 +57,13 @@ _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 
 # Keyword → intent. Order matters (first match wins); the LLM decides none of this.
 _INTENT_KEYWORDS = {
-    # trends first: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
+    # chips first (ADR-082): distinctive chip phrases only, so they win before captain/bench/build without
+    # hijacking them. NOT bare "bench boost"/"wildcard" (they stay with build_squad — "build me a squad for a
+    # bench boost" must still build); NOT bare "captain"/"bench" (those stay their own intents).
+    "chips": ("chip strategy", "which chip", "what chip", "chips", " chip ", "chip?", "use a chip",
+              "triple captain", "free hit", "use my bench boost", "use my wildcard", "when to bench boost",
+              "when to wildcard", "play my bench boost", "play my wildcard"),
+    # trends: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
     "trends": ("trending", "most owned", "most picked", "most transferred", "most sold", "most bought",
                "in form", "risers", "fallers", "bandwagon", "most popular"),
     # worth (a single-player value verdict, ADR-061) before captain/transfer so "worth buying" isn't
@@ -536,6 +544,69 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         "subjects": subjects,
         "task": "give a brief 'this week' recommendation in 3-4 short sentences — who to captain, any "
                 "lineup change, one transfer to consider, and any injury/doubt flags — using ONLY the facts",
+    }
+
+
+def _chips_facts(advice: dict) -> dict:
+    """Self-describing facts for the chip advice (ADR-082) — every number present so the verifier
+    (ADR-037) can trace it, and each field reads plainly so the LLM can't conflate the chips."""
+    tc = advice["triple_captain"]
+    p = tc["player"]
+    triple_captain = (
+        f"GW{tc['gameweek']}: "
+        + (f"{p['web_name']} ({p['team']})" if p else "no eligible starter")
+        + f" — xP {tc['player_xp']} that GW (the squad's highest single-GW ceiling)")
+
+    bb = advice["bench_boost"]
+    bench_boost = (f"GW{bb['gameweek']}: all 15 project {bb['squad_total']} xP, "
+                   f"of which the bench adds {bb['bench_points']}")
+
+    fh = advice["free_hit"]
+    free_hit = (f"GW{fh['gameweek']}: your best XI projects only {fh['xi_total']} xP "
+                f"— your weakest single week")
+
+    wc = advice["wildcard"]
+    a, b = wc["window"]
+    span = f"GW{a}" if a == b else f"GW{a} to GW{b}"
+    wildcard = (f"{span}: your weakest stretch (average XI {wc['avg_xi']} xP) — reset before it")
+
+    return {
+        "triple_captain": triple_captain,
+        "bench_boost": bench_boost,
+        "free_hit": free_hit,
+        "wildcard": wildcard,
+    }
+
+
+def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
+                  *, horizon=_HORIZON) -> dict | None:
+    """Analytics DECIDE when to play each chip (ADR-082): Triple Captain · Bench Boost · Free Hit · Wildcard.
+
+    An assembly of the per-GW xP (`chip_advisor` over `by_gameweek`), humanised for narration and
+    verified — the LLM never decides anything. Reuses `_squad_xp` so the horizon xP is the same the
+    transfer/analyse/gameweek tools use (no drift). `horizon` (ADR-077) drives the window.
+    """
+    data = _squad_xp(store, squad_name, active_squad, horizon=horizon)
+    if data is None:
+        return None
+    squad, _players, owned, _xp_by_id, by_gameweek_by_id, gameweeks, _weight = data
+    if not owned:
+        return None
+
+    advice = chip_advisor(owned, by_gameweek_by_id, gameweeks)
+    if advice is None:
+        return None
+    tc = advice["triple_captain"]
+    # subjects = the named TC player (the prose may name them), so verify_grounding (ADR-037) doesn't flag it.
+    subjects = [tc["player"]["web_name"]] if tc["player"] else []
+    return {
+        "detail": render_chip_advice(advice, squad_name, horizon=horizon),
+        "headline": f"Chip strategy (squad '{squad_name}'): "
+                    f"Triple Captain GW{tc['gameweek']}, Bench Boost GW{advice['bench_boost']['gameweek']}",
+        "facts": _chips_facts(advice),
+        "subjects": subjects,
+        "task": "in 3-4 short sentences, say which gameweek to play each chip (Triple Captain, Bench Boost, "
+                "Free Hit, Wildcard) and why, using ONLY the facts; note it sharpens in-season",
     }
 
 
@@ -1216,6 +1287,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "gameweek":
         return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon)
+    if intent == "chips":
+        return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon)
     if intent == "compare":
         return _decide_compare(store, question)
     if intent == "build_squad":
@@ -1233,9 +1306,10 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
 
 def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
     """The 'name a squad' prompt for the squad-scoped intents (or None if fine)."""
-    if intent in ("transfer", "analyse", "start_bench", "gameweek") and not squad:
+    if intent in ("transfer", "analyse", "start_bench", "gameweek", "chips") and not squad:
         verb = {"transfer": "what transfer", "analyse": "analyse",
-                "start_bench": "who should I start", "gameweek": "what should I do this week"}[intent]
+                "start_bench": "who should I start", "gameweek": "what should I do this week",
+                "chips": "which chip should I use"}[intent]
         return AskResult("", intent, message=f'Name a saved squad, e.g. ask "{verb} for <squad>?"')
     return None
 
