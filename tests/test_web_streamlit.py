@@ -375,6 +375,19 @@ def test_captain_view_notes_it_is_next_gameweek():
     assert any("next gameweek" in c.value.lower() for c in at.caption)
 
 
+def test_my_squad_shows_a_quick_stats_summary():
+    # US-239: My Squad shows a summary metrics row (Projected XI over the horizon · Captain · Bench ·
+    # Unavailable · Doubtful), and the Projected-XI label tracks the Gameweeks-ahead selector
+    at = _squads_view("My Squad")
+    labels = [m.label for m in at.metric]
+    assert any("Projected XI" in lbl for lbl in labels)
+    assert {"Bench", "Unavailable", "Doubtful"} <= set(labels) and any("Captain" in lbl for lbl in labels)
+
+    gw = [s for s in at.selectbox if s.label == "Gameweeks ahead"][0]
+    gw.set_value(2).run()
+    assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
+
+
 def test_my_squad_points_to_build():
     # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
     at = _squads_view("My Squad")

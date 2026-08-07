@@ -240,6 +240,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     bench_ids = set(squad.get("bench_ids") or [])
     captain_id = squad.get("captain_id")
 
+    xi = [p for p in owned if p["id"] not in bench_ids]
+    bench = [p for p in owned if p["id"] in bench_ids]
+
     issues = squad_15_issues(owned)
     cost = round(sum(p["price"] for p in owned), 1)
     if issues:
@@ -249,9 +252,26 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         st.success(f"£{cost:.1f}m — ✓ a legal 15" if over <= 0
                    else f"£{cost:.1f}m — ✓ legal, ⚠ £{over:.1f}m over the £{FPL_BUDGET:.0f}m budget")
 
+    # A quick-view team summary (US-239) — reuses the horizon-aware xP + availability; display-only.
+    # The projected XI is the declared XI (if a bench is set) else the best legal XI — same as Health.
+    gw_label = "next GW" if horizon == 1 else f"{horizon} GW"
+    xi_ids = ({p["id"] for p in owned} - bench_ids) if bench_ids else best_legal_xi(owned, xp_by_id)
+    xi_xp = sum(xp_by_id.get(i, 0) for i in xi_ids)
+    bench_xp = sum(xp_by_id.get(p["id"], 0) for p in owned if p["id"] not in xi_ids)
+    cap_xp = xp_by_id.get(captain_id) if captain_id else None
+    unavailable = sum(1 for p in owned if is_unavailable(p))
+    doubtful = sum(1 for p in owned if p["status"] == "d")
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric(f"Projected XI ({gw_label})", f"{xi_xp:.1f} xP",
+              help="Your starting XI's projected points over the selected Gameweeks-ahead horizon.")
+    m2.metric("Captain (2×)", f"{cap_xp * 2:.1f} xP" if cap_xp is not None else "—",
+              help="Your captain's projected points, doubled. Set one on the Captain tab.")
+    m3.metric("Bench", f"{bench_xp:.1f} xP", help="Your bench's projected points (bench strength).")
+    m4.metric("Unavailable", unavailable,
+              help="Owned players injured / suspended / unavailable (🚑 / 🚫 / ⛔).")
+    m5.metric("Doubtful", doubtful, help="Owned players flagged doubtful (❓).")
+
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
-    xi = [p for p in owned if p["id"] not in bench_ids]
-    bench = [p for p in owned if p["id"] in bench_ids]
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp)
 
     st.divider()
