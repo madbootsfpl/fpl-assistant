@@ -32,8 +32,10 @@ nice-to-haves and tech-debt.)*
   the position median · a tiered verdict). Grounded; the plain shortlist stays byte-identical. *(Value
   (xP/£m) already existed on the shortlist, ADR-042; this added the ownership lens + the single-player
   judgment.)* The differential filter sharpens at GW1 as ownership concentrates.
-- **Persisted / pronoun-aware chat** — `chat` (Sprint 047, ADR-047) holds the last turn in memory only.
-  A later step: resolve pronouns ("is **he** worth captaining?") and/or persist context across runs.
+- ~~**Pronoun-aware chat**~~ — **DONE** (Sprint 094, US-247/248, **ADR-080**). `_resolve_pronoun` rewrites a
+  pronoun → the last turn's sole subject ("is **he** worth it?" → the last player); the web Ask now threads
+  `Context` (`converse`) so pronouns + follow-ups work in the browser too. *Still open:* **persist** the chat
+  context across runs (the other half of this line).
 - **Team-level squad-fixtures view** — the alternative lens deferred at Sprint 049 (ADR-049): rank a
   squad's **teams** (with player-counts) rather than one row per player. A small option on the existing
   squad-scoped fixtures mode.

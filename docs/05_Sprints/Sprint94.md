@@ -111,4 +111,28 @@ him to Isak" resolves (mentions both); "why?" re-narrates. +1 test
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **636 → 640** (+4); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-247 — pronoun resolution (ADR-080).** `_resolve_pronoun` rewrites a pronoun → the last turn's sole
+  subject (unambiguous only; possessives → `name's`), wired into `_fresh`.
+- **US-248 — conversational web Ask.** Threads `Context` via `session_state` + `converse`, so pronouns *and*
+  the why/next/what-about follow-ups now work in the web chat.
+
+**What went well**
+- **The rewrite-then-route design kept grounding intact** — resolution is a deterministic text substitution
+  before routing; the LLM never resolves anything, and every turn is still verified.
+- **A safety win baked in** — we substitute the player's *name* for the pronoun the user typed; we never
+  infer or assign a pronoun (consistent with the they/them default).
+- **A bonus fell out** — US-248 gave the web Ask the conversational follow-ups it never had; the first turn
+  is unchanged, so nothing regressed.
+- 636 → 640 tests; ruff + CI-parity green.
+
+**Watch-outs / follow-ups**
+- Resolution fires **only on a single antecedent** — a `compare A and B` turn leaves a pronoun alone
+  (intended; the user can name the player).
+- Context lives in `session_state` (per session) — not persisted across runs; persisting it (the other half
+  of the backlog line) is a possible later step.
+- The web Ask now runs the follow-up path — an improvement; a test pins the first turn is unchanged.
+
+See `Sprint94_Lessons_Learnt.md` for the detailed retro.

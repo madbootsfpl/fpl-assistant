@@ -13,8 +13,9 @@ ADR-070; the **AI Tips** tab) and **casual-readable stat boards** (a relative �
 ADR-071/073; consistently formatted numbers — ADR-072; **🚑 availability flags** in every player table —
 ADR-074, incl. the CLI ranking tables + a chance% on ❓; a **projected-XI score + formation comparison** on
 Build — ADR-075; a **configurable prediction horizon** across the Squads tab — ADR-077; a **My Squad quick-stats summary** +
-a **bench order** you can see, **set**, and that starts sensibly — ADR-078/079). **79 ADRs · 636 tests · CI
-green.** Preseason (0 gameweeks; **GW1 deadline 2026-08-21**), so
+a **bench order** you can see, **set**, and that starts sensibly — ADR-078/079; a **pronoun-aware**,
+follow-up-capable chat in the browser — ADR-080). **80 ADRs · 640 tests · CI green.** Preseason (0
+gameweeks; **GW1 deadline 2026-08-21**), so
 form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
 wired dormant** (Sprint 069): GW1 is a switch-flip.
 

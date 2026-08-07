@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 094 (2026-08-07)** — *Pronoun-aware chat*, per **ADR-080** (US-247/248; refines ADR-047).
+  **US-247:** a pure `_resolve_pronoun(question, context)` rewrites a pronoun (he·him·his·she·her·they·them·
+  their, whole-word/case-insensitive; possessives → `name's`) → the last turn's **sole** subject (resolves
+  only when there's exactly one antecedent), wired as the first line of `_fresh` — so it fires in
+  `converse`/`chat` and is a **no-op for the context-less one-shot `answer`**. It substitutes the player's
+  *name* for the pronoun the user typed (never assigns a pronoun). **US-248:** `pages/4_Ask.py` threads a
+  `Context` in `st.session_state` and calls `ask.converse` (a `Storage` per turn) instead of `answer`, so the
+  web chat gains **pronouns + the existing why/next/what-about follow-ups**; the first turn (context=None) is
+  identical to before. Analytics decide, LLM narrates, every turn still verified (ADR-037); no server writes.
+  636 → 640 tests.
 - **Sprint 093 (2026-08-07)** — *Bench-order polish* (US-245/246; **no new ADR** — extends ADR-078/079).
   **US-245:** `render_build`'s saved squad orders `bench_ids` via `bench_order(bench_players, display_xp)`
   (outfield by xP, GK last), so a *Download* / *Use this squad* starts in the recommended sub priority (still
