@@ -266,6 +266,18 @@ def test_player_stats_filter_narrows_a_board():
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
+def test_pool_shows_an_availability_fit_column():
+    # ADR-074: the Pool has a Fit column (🚑/🚫/⛔/❓, blank = available) + a legend caption
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    df = at.dataframe[0].value
+    assert "Fit" in df.columns
+    flags = set(df["Fit"].astype(str))
+    assert flags & {"🚑", "🚫", "⛔", "❓"}                 # at least one flagged player on the first page
+    assert any("injured" in c.value for c in at.caption)   # the availability legend
+
+
 def test_pool_number_columns_stay_numeric_formatting_is_display_only():
     # ADR-072: money/value columns are formatted via NumberColumn (display) — the frame still holds the
     # raw numbers (not pre-rounded strings), so they stay sortable and truthful.

@@ -97,3 +97,19 @@ def crowd_flags(player) -> list:
         flags.append("📈 form")
 
     return flags
+
+
+# FPL status codes → a compact availability flag (ADR-074). Chosen distinct from the rating circles
+# (🟢🟡🟠🔴) so a player's availability and their quality rating don't blur. "a" (available) → no flag.
+_AVAILABILITY_FLAG = {"i": "🚑", "s": "🚫", "u": "⛔", "n": "⛔", "d": "❓"}
+
+# The shared one-line legend for the Fit column (Pool + the stat boards).
+AVAILABILITY_LEGEND = ("Fit: 🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful "
+                       "(blank = available) — see **News** for details.")
+
+
+def availability_flag(player) -> str:
+    """A one-emoji availability flag for a player row — 🚑 injured · 🚫 suspended · ⛔ unavailable ·
+    ❓ doubtful — or `""` when available. Display-only; empty-safe (a Row or a dict). See ADR-023 for
+    the status codes; the News page holds the full text."""
+    return _AVAILABILITY_FLAG.get(_get(player, "status"), "")

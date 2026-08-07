@@ -9,6 +9,8 @@ import altair as alt
 import streamlit as st
 
 from src.analytics import (
+    AVAILABILITY_LEGEND,
+    availability_flag,
     crowd_flags,
     defcon_reliability,
     defensive_solidity,
@@ -48,11 +50,13 @@ def render_pool(rows, sel, photos, badges):
     page = paginate(ranked, key="players", per_page=50)
     table = [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
+              "Fit": availability_flag(p),
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
               "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
               "Trends": " ".join(crowd_flags(p))} for p in page]
     st.dataframe(table, width="stretch", hide_index=True,
-                 column_config=column_config(table[0] if table else []))
+                 column_config=column_config(table[0] if table else [], help={"Fit": AVAILABILITY_LEGEND}))
+    st.caption(AVAILABILITY_LEGEND)
     by_value = sort == "value"
     field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")
     top = sorted(ranked, key=lambda p: -((p.get(field) or 0)))[:15]

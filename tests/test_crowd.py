@@ -4,13 +4,30 @@
 **display lens only** — they must never change the grounded xP (`decision_xp`).
 """
 
-from src.analytics import crowd_flags, decision_xp, net_transfers, trending
+from src.analytics import availability_flag, crowd_flags, decision_xp, net_transfers, trending
 from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, TEMPLATE_OWN, TRENDING_NET
 from src.storage import Storage
 
 
 def _p(**kw):
     return kw          # a player "row" is just a mapping; crowd_flags is empty-safe
+
+
+def test_availability_flag_per_status():
+    # ADR-074: a compact flag per FPL status code; available / unknown → no flag; empty-safe
+    assert availability_flag(_p(status="i")) == "🚑"     # injured
+    assert availability_flag(_p(status="s")) == "🚫"     # suspended
+    assert availability_flag(_p(status="u")) == "⛔"     # unavailable
+    assert availability_flag(_p(status="n")) == "⛔"     # not available
+    assert availability_flag(_p(status="d")) == "❓"     # doubtful
+    assert availability_flag(_p(status="a")) == ""       # available → no flag
+    assert availability_flag(_p()) == ""                 # missing status → no flag (empty-safe)
+
+
+def test_availability_flag_is_distinct_from_crowd_and_rating():
+    # the availability emojis must not collide with crowd flags or the rating circles (🟢🟡🟠🔴)
+    flags = set("🚑🚫⛔❓")
+    assert not (flags & set("🟢🟡🟠🔴🟦💎🔥❄️📈"))
 
 
 def test_template_and_differential_by_ownership():

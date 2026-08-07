@@ -9,8 +9,10 @@ from src.analytics.analyse import analyse_squad
 from src.analytics.captain import captain_picks
 from src.analytics.cleansheet import defensive_solidity
 from src.analytics.crowd import (
+    AVAILABILITY_LEGEND,
     DIFFERENTIAL_OWN,
     TREND_BYS,
+    availability_flag,
     crowd_flags,
     net_transfers,
     trending,
@@ -63,6 +65,8 @@ __all__ = [
     "captain_picks",
     "gameweek_plan",
     "chance_factor",
+    "AVAILABILITY_LEGEND",
+    "availability_flag",
     "crowd_flags",
     "net_transfers",
     "trending",
