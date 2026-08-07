@@ -23,6 +23,7 @@ from src.ask import (
     _decide_chips,
     _decide_compare,
     _decide_gameweek,
+    _decide_rules,
     _decide_shortlist,
     _decide_worth,
     _gameweek_facts,
@@ -99,6 +100,45 @@ def test_chips_intent_does_not_hijack_the_build_captain_or_bench_routes():
 def test_chips_asks_for_a_squad_when_missing():
     r = ask.answer("which chip should I use", narrator=lambda p: "unused")
     assert r.intent == "chips" and "squad" in r.message.lower()
+
+
+def test_routes_rules_for_general_fpl_questions():
+    # ADR-085: question-shaped rules cues route to the rules intent
+    for q in ("how does bench boost work?", "how do transfers work?", "how many points for a goal?",
+              "when is the deadline?", "how does defensive contribution work?"):
+        assert route(q, known_squads=["TS"])[0] == "rules", q
+
+
+def test_rules_intent_does_not_hijack_squad_commands():
+    # rules cues are general/question-shaped, so squad commands keep their intents (the collision guard)
+    assert route("fix my bench", known_squads=[])[0] == "start_bench"
+    assert route("what transfer should I make", known_squads=[])[0] == "transfer"
+    assert route("how good is my squad", known_squads=[])[0] == "analyse"
+    assert route("which chip should I use for TS?", known_squads=["TS"])[0] == "chips"
+    assert route("build me a squad for a bench boost", known_squads=[])[0] == "build_squad"
+
+
+def test_decide_rules_is_grounded_and_verified():
+    # ADR-085: the rules answer is the curated facts; a narration restating them verifies clean (✓),
+    # an invented number is flagged (⚠), and without a model the facts block still shows.
+    decision = _decide_rules("how do transfers work?")
+    assert "transfers" in decision["facts"] and "FPL rules" in decision["detail"]
+
+    ok = assemble("q", "rules", decision,
+                  narrator=lambda p: "You get 1 free transfer a week, saved up to 5; extras cost 4 points.")
+    assert ok.trust == {"numbers": [], "names": []}                 # every figure traces to the KB facts
+
+    bad = assemble("q", "rules", decision, narrator=lambda p: "Extra transfers cost 99 points.")
+    assert bad.trust == {"numbers": ["99"], "names": []}            # the invented figure is flagged
+
+    degraded = assemble("q", "rules", decision, narrator=lambda p: None)
+    assert degraded.detail and degraded.trust is None              # the facts block is the truth without a model
+
+
+def test_decide_rules_lists_topics_when_nothing_specific_matches():
+    # a rules-shaped question with no known topic → the "what I can explain" message (US-260 makes it free-form)
+    decision = _decide_rules("how does the offside rule work?")
+    assert decision.get("message") and "explain" in decision["message"].lower()
 
 
 def test_resolve_pronoun_rewrites_to_the_sole_subject():

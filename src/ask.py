@@ -39,6 +39,7 @@ from src.analytics import (
     trending,
 )
 from src.analytics.captain import _next_opponent
+from src.fpl_rules import TOPIC_LABELS, match_rules
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
@@ -47,6 +48,7 @@ from src.ui.compare import render_compare
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
 from src.ui.gameweek import render_gameweek_plan
+from src.ui.rules import render_rules
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
 from src.ui.startbench import render_start_bench
@@ -57,7 +59,15 @@ _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 
 # Keyword → intent. Order matters (first match wins); the LLM decides none of this.
 _INTENT_KEYWORDS = {
-    # chips first (ADR-082): distinctive chip phrases only, so they win before captain/bench/build without
+    # rules first (ADR-085): question-shaped, general cues so a rules question ("how does bench boost work",
+    # "how do transfers work") beats the squad intents — WITHOUT stealing squad commands, which are imperative
+    # / squad-scoped ("fix my bench", "what transfer should I make") and match none of these.
+    "rules": ("how does", "how do ", "how is a", "how are", "what is a", "what are the", "what's a",
+              "what happens", "how many points", "how much do", "the rules", "fpl rules", "scoring",
+              "clean sheet", "bonus point", "defensive contribution", "defcon", "price change", "price rise",
+              "price fall", "sell-on", "auto sub", "auto-sub", "autosub", "when is the deadline",
+              "double gameweek", "blank gameweek", "explain the rules"),
+    # chips (ADR-082): distinctive chip phrases only, so they win before captain/bench/build without
     # hijacking them. NOT bare "bench boost"/"wildcard" (they stay with build_squad — "build me a squad for a
     # bench boost" must still build); NOT bare "captain"/"bench" (those stay their own intents).
     "chips": ("chip strategy", "which chip", "what chip", "chips", " chip ", "chip?", "use a chip",
@@ -607,6 +617,26 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
         "subjects": subjects,
         "task": "in 3-4 short sentences, say which gameweek to play each chip (Triple Captain, Bench Boost, "
                 "Free Hit, Wildcard) and why, using ONLY the facts; note it sharpens in-season",
+    }
+
+
+def _decide_rules(question: str) -> dict | None:
+    """Analytics-free but GROUNDED: answer an FPL-rules question from the curated KB (ADR-085).
+
+    `match_rules` selects the authoritative facts the question is about; the LLM narrates ONLY those and is
+    verified (✓, ADR-037) — it never sources rules from its own memory. A rules-shaped question that matches
+    no specific topic gets a "here's what I can explain" message (US-260 replaces this with a free-form
+    answer). Not squad-scoped."""
+    matched = match_rules(question)
+    if not matched:
+        return {"message": "I can explain FPL rules on: " + ", ".join(TOPIC_LABELS)
+                + '. Try "how does bench boost work?" or "how do transfers work?".'}
+    return {
+        "detail": render_rules(matched),                       # the curated facts — the truth, LLM or not
+        "facts": {topic: fact for topic, fact in matched},
+        "subjects": [],
+        "task": "answer the user's FPL rules question in 2-4 short sentences using ONLY these official rules "
+                "facts; do not state any rule that isn't given here",
     }
 
 
@@ -1289,6 +1319,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon)
     if intent == "chips":
         return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon)
+    if intent == "rules":
+        return _decide_rules(question)
     if intent == "compare":
         return _decide_compare(store, question)
     if intent == "build_squad":

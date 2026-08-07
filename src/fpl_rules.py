@@ -1,0 +1,126 @@
+"""A curated, authoritative FPL-rules knowledge base (Sprint 100, ADR-085).
+
+The AI Chat Assistant answers **rules** questions from *these* facts — never the LLM's memory (which
+hallucinates rules). The LLM only phrases the matched facts, and the answer is **verified** against them
+(✓, ADR-037). Pure data + a keyword matcher; no I/O.
+
+Facts are phrased for the **2025/26** season. If the FPL rules change, update this one file. Keep each `fact`
+short, self-describing, and numeric where the number is the answer (so the verifier can trace it).
+"""
+
+# Each entry: a `topic` (a stable id), the `cues` that a question about it contains, and the authoritative
+# `fact` string. `match_rules` returns every entry whose cue appears in the question, in list order.
+RULES = [
+    {
+        "topic": "scoring",
+        "cues": ("points for", "how many points", "scoring", "points scored", "points system",
+                 "worth how many", "goal worth", "assist worth"),
+        "fact": ("Scoring: playing up to 60 minutes = 1 point, 60+ minutes = 2. A goal is worth 6 (GK/DEF), "
+                 "5 (MID) or 4 (FWD); an assist is 3. A yellow card is −1, a red −3, an own goal −2, a missed "
+                 "penalty −2."),
+    },
+    {
+        "topic": "clean_sheets",
+        "cues": ("clean sheet", "cleansheet", "goals conceded", "saves", "penalty save", "keeper points",
+                 "goalkeeper points"),
+        "fact": ("Clean sheets & keepers: a clean sheet is 4 points for a GK/DEF and 1 for a MID (0 for a "
+                 "FWD), only if the player plays 60+ minutes. A GK gets 1 point per 3 saves and 5 for a "
+                 "penalty save. GK/DEF lose 1 point for every 2 goals their team concedes."),
+    },
+    {
+        "topic": "bonus",
+        "cues": ("bonus point", "bps", "bonus points system", "how is bonus", "how are bonus"),
+        "fact": ("Bonus points: the three best performers in a match by the Bonus Points System (BPS) get 3, "
+                 "2 and 1 extra point. BPS rewards goals, assists, saves, tackles and more, and penalises "
+                 "cards, misses and goals conceded."),
+    },
+    {
+        "topic": "defensive_contribution",
+        "cues": ("defensive contribution", "defcon", "def con", "cbit", "tackles and interceptions",
+                 "recoveries points"),
+        "fact": ("Defensive Contribution (2024/25 onwards): a defender who reaches 10 clearances, blocks, "
+                 "interceptions and tackles (CBIT) in a match earns 2 points; a midfielder or forward earns 2 "
+                 "for reaching 12 of those actions plus ball recoveries."),
+    },
+    {
+        "topic": "chips",
+        "cues": ("chip", "wildcard", "free hit", "bench boost", "triple captain", "how do chips",
+                 "how does the wildcard", "which chips"),
+        "fact": ("Chips: Wildcard = unlimited free transfers this gameweek, kept permanently. Free Hit = "
+                 "unlimited transfers for one gameweek only, then your squad reverts. Bench Boost = your "
+                 "bench's points count this gameweek. Triple Captain = your captain scores 3× instead of 2×. "
+                 "Each chip can be used once per half of the season (a fresh set unlocks around gameweek 20)."),
+    },
+    {
+        "topic": "transfers",
+        "cues": ("transfer", "free transfer", "how many transfers", "transfer hit", "points hit",
+                 "-4", "minus 4", "roll transfer", "save transfer", "extra transfer"),
+        "fact": ("Transfers: you get 1 free transfer each gameweek. Unused free transfers roll over, up to a "
+                 "maximum of 5 saved. Each transfer beyond your free ones costs 4 points. A Wildcard or Free "
+                 "Hit gives unlimited transfers that gameweek with no points hit."),
+    },
+    {
+        "topic": "price_changes",
+        "cues": ("price change", "price rise", "price fall", "value change", "sell-on", "sell on fee",
+                 "player value", "price go up"),
+        "fact": ("Prices: a player's price rises or falls in £0.1m steps based on how many managers are "
+                 "transferring them in or out. When you sell a player for more than you paid, you keep 50% of "
+                 "the profit (rounded down to £0.1m) — the rest is a sell-on fee."),
+    },
+    {
+        "topic": "squad_rules",
+        "cues": ("squad rules", "how many players", "budget", "£100", "100m", "max per club", "3 per club",
+                 "three per club", "how much money", "starting budget"),
+        "fact": ("Squad: 15 players — 2 goalkeepers, 5 defenders, 5 midfielders, 3 forwards — within a £100.0m "
+                 "budget, and no more than 3 players from any one club."),
+    },
+    {
+        "topic": "formation",
+        "cues": ("formation", "how many defenders", "valid lineup", "valid formation", "how many can i play",
+                 "starting eleven", "starting xi rules"),
+        "fact": ("Formations: your starting XI is 11 players with exactly 1 goalkeeper, at least 3 defenders "
+                 "and at least 1 forward — so valid shapes range from 3-4-3 to 5-4-1 (3–5 DEF, 2–5 MID, "
+                 "1–3 FWD)."),
+    },
+    {
+        "topic": "captain",
+        "cues": ("captain", "vice", "armband", "double points", "who captains"),
+        "fact": ("Captain: your captain scores double points. If your captain plays 0 minutes, your "
+                 "vice-captain is doubled instead."),
+    },
+    {
+        "topic": "autosubs",
+        "cues": ("auto sub", "auto-sub", "autosub", "automatic sub", "bench order", "substitution",
+                 "if a player doesn't play"),
+        "fact": ("Auto-subs: if a starter plays 0 minutes, the highest-priority bench outfielder who keeps a "
+                 "valid formation is automatically substituted in. Your bench goalkeeper only ever replaces "
+                 "your starting goalkeeper."),
+    },
+    {
+        "topic": "deadline",
+        "cues": ("deadline", "when is the deadline", "cut off", "cut-off", "lock time", "when do teams lock"),
+        "fact": ("Deadline: your team locks 90 minutes before the kickoff of the first match of the "
+                 "gameweek. Transfers, captain and chips must be set before then."),
+    },
+    {
+        "topic": "gameweeks",
+        "cues": ("double gameweek", "blank gameweek", "dgw", "bgw", "how many gameweeks", "38 gameweek",
+                 "season length"),
+        "fact": ("Season: there are 38 gameweeks. Later in the season some are Double Gameweeks (a team plays "
+                 "twice) or Blank Gameweeks (a team doesn't play) due to cup and rescheduling — these are when "
+                 "chips like Bench Boost and Triple Captain are often most valuable."),
+    },
+]
+
+# The human list of what the assistant can explain — shown when a rules question matches no specific topic.
+TOPIC_LABELS = ("scoring", "clean sheets & saves", "bonus points", "defensive contribution", "chips",
+                "transfers & hits", "price changes", "squad rules", "formations", "captaincy", "auto-subs",
+                "deadlines", "double/blank gameweeks")
+
+
+def match_rules(question: str, limit: int = 4) -> list:
+    """The curated `(topic, fact)` pairs a rules question is about — every entry whose cue appears in the
+    question, in KB order, capped at `limit`. Empty when nothing matches (the caller then goes free-form)."""
+    q = (question or "").lower()
+    hits = [(e["topic"], e["fact"]) for e in RULES if any(cue in q for cue in e["cues"])]
+    return hits[:limit]

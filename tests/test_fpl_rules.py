@@ -1,0 +1,33 @@
+"""Tests for the curated FPL-rules knowledge base (Sprint 100, ADR-085).
+
+`match_rules` is a pure keyword matcher over authoritative facts — the assistant answers rules questions from
+*these* facts, never the LLM's memory. Every fact must be a non-empty string.
+"""
+
+from src.fpl_rules import RULES, match_rules
+
+
+def test_match_rules_finds_the_right_topic():
+    def topics(q):
+        return [t for t, _ in match_rules(q)]
+    assert topics("how does bench boost work?") == ["chips"]
+    assert topics("how do transfers work?") == ["transfers"]
+    assert topics("when is the deadline?") == ["deadline"]
+    assert "clean_sheets" in topics("how many points for a clean sheet?")   # (also 'scoring' — a fuller answer)
+    assert "squad_rules" in topics("what is the budget and max per club?")
+
+
+def test_match_rules_can_return_several_topics_capped():
+    hits = match_rules("how do chips and transfers and price changes work?", limit=4)
+    topics = [t for t, _ in hits]
+    assert {"chips", "transfers", "price_changes"} <= set(topics)
+    assert len(match_rules("how do chips and transfers and price changes work?", limit=2)) == 2   # cap honoured
+
+
+def test_match_rules_empty_when_nothing_matches():
+    assert match_rules("what's the meaning of life?") == []      # → the caller goes free-form (US-260)
+    assert match_rules("") == []                                 # empty-safe
+
+
+def test_every_rule_has_a_nonempty_fact():
+    assert RULES and all(e["topic"] and e["cues"] and e["fact"].strip() for e in RULES)
