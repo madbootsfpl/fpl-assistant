@@ -25,12 +25,13 @@ def test_home_renders():
     _run(_APP)
 
 
-def test_home_shows_the_deadline_banner():
-    # US-262 (ADR-086): Home shows the next-deadline countdown when fixtures have kickoff times
+def test_home_shows_the_deadline_countdown():
+    # US-262/267/268 (ADR-086/088): Home shows the next-deadline countdown — a live clock + a text caption
     at = _run(_APP)
-    if not at.info:                                        # no data locally → no banner (empty-safe)
-        return
-    assert any("deadline" in i.value.lower() for i in at.info)   # the ⏳ GW deadline banner
+    caps = [c.value for c in at.caption]
+    if not any("deadline" in c.lower() for c in caps) and not any("in " in c for c in caps):
+        return                                             # no data locally → no banner (empty-safe)
+    assert any("deadline" in c.lower() for c in caps)      # the ⏳ GW deadline text line beneath the clock
 
 
 def test_players_page_shows_a_table():

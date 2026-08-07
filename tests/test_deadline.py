@@ -90,8 +90,9 @@ def test_deadline_banner_escalates_with_urgency():
     assert "10 matches" in calm and "first kick-off" in calm          # the context clause
 
 
-def test_deadline_line_returns_text_and_urgency():
+def test_deadline_line_returns_gameweek_deadline_text_and_urgency():
     now = datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc)
-    text, urgency = deadline_line(_fixtures(), now)
+    gameweek, deadline, text, urgency = deadline_line(_fixtures(), now)
+    assert gameweek == 1 and deadline == datetime(2026, 8, 21, 17, 30, tzinfo=timezone.utc)
     assert "GW1 deadline" in text and urgency == "calm"
     assert deadline_line([], now) is None                            # nothing ahead → None

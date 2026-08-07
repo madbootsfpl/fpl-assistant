@@ -109,6 +109,20 @@ push; a clock on every page (Home is enough).
 - **Manual smoke:** Home shows *"⏳ GW1 deadline: Fri 21 Aug, 18:30 (UK) — in 13 days, 20h · 10 matches · first
   kick-off Fri 20:00"* (calm → st.info, no nudge); injected near-times escalate to 🟠 then 🔴 with the nudge.
 
+**US-268 — live ticking clock (ADR-088).** ✅ Done.
+- `web_streamlit/countdown.py`: a pure `countdown_html(gw, deadline, now, urgency)` — a self-contained
+  HTML/CSS + `setInterval` **Days : Hrs : Mins : Secs** clock, urgency-coloured (green/amber/red), cells
+  **server-filled** (readable without JS) and ticked client-side off the embedded deadline ISO (stops at 0 →
+  "deadline passed"); `render_countdown` embeds it via **`st.iframe`** (JS-enabled; the modern replacement for
+  the deprecated `components.v1.html`). `deadline_line` now returns `(gameweek, deadline, text, urgency)`.
+- **Home**: the **live clock** is the hero, with the US-267 text line as a `st.caption` (the accessible,
+  no-JS fallback) + the nudge; Squads keeps the compact caption.
+- **Tests (+3, 2 updated):** `_parts` (split + clamp); `countdown_html` embeds the ISO + tick + server-filled
+  cells + UK subtitle; urgency colours; `deadline_line` returns the 4-tuple; the Home test reads the caption.
+  **693** green, ruff clean (no deprecation warning).
+- **Visual preview (Artifact):** a live, ticking preview of the three states (calm/today/imminent) — pure
+  HTML/JS so it runs in the sandbox: https://claude.ai/code/artifact/ba067e4a-9a38-422d-b822-c2169baddf8b
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

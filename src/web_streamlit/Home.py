@@ -12,6 +12,7 @@ import streamlit as st
 from src.storage import Storage
 from src.ui.deadline import deadline_line
 from src.web_streamlit.access import require_access, secret
+from src.web_streamlit.countdown import render_countdown
 from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="FPL Assistant", page_icon="⚽", layout="wide")
@@ -27,8 +28,9 @@ try:
 finally:
     _store.close()
 if _line:
-    _text, _urgency = _line
-    {"calm": st.info, "today": st.warning, "imminent": st.error}[_urgency](_text)
+    _gw, _deadline, _text, _urgency = _line
+    render_countdown(_gw, _deadline, datetime.now(timezone.utc), _urgency)   # the live clock (ADR-088)
+    st.caption(_text)          # the accessible, no-JS text line (context + date) beneath the clock
     if _urgency != "calm":     # a nudge to the pre-deadline actions when it's close
         st.page_link("pages/3_Squads.py",
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")

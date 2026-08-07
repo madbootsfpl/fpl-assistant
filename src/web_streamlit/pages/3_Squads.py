@@ -51,7 +51,7 @@ finally:
 
 _line = deadline_line(upcoming, datetime.now(timezone.utc))    # the next FPL deadline (ADR-086/US-267)
 if _line:
-    st.caption(_line[0])                                       # compact; the emoji conveys urgency
+    st.caption(_line[2])                                       # the text; the emoji conveys urgency
 
 if not players:
     st.info("No players — run `python app.py refresh` first.")

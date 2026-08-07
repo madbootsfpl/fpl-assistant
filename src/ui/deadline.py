@@ -65,11 +65,12 @@ def deadline_banner(gameweek: int, deadline: datetime, now: datetime, context=No
 
 
 def deadline_line(fixtures, now):
-    """The banner text + its urgency for the next deadline — `(text, urgency)`, or None when nothing's ahead.
-    One place for the compute; the web edge picks a widget colour from the urgency and shows a nudge."""
+    """Everything the edge needs for the next deadline — `(gameweek, deadline, text, urgency)`, or None when
+    nothing's ahead. One place for the compute; the web picks a widget colour from the urgency, shows a nudge,
+    and (on Home) feeds the live clock the gameweek + deadline."""
     nd = next_deadline(fixtures, now)
     if not nd:
         return None
     gameweek, deadline = nd
     text = deadline_banner(gameweek, deadline, now, gameweek_context(fixtures, gameweek))
-    return text, deadline_urgency(deadline - now)
+    return gameweek, deadline, text, deadline_urgency(deadline - now)
