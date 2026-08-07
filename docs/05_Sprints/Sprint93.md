@@ -37,7 +37,7 @@ the line below it. Display/edit only; no analytics change.
 - [x] **US-245 (Build → recommended order)** — `render_build`'s saved squad orders `bench_ids` by
       `bench_order(bench, display_xp)` (outfield by xP → 1st/2nd/3rd, then the GK), so *Download* / *Use this
       squad →* start in the recommended priority (still user-reorderable in My Squad).
-- [ ] **US-246 (pitch sub numbers)** — `render_pitch` accepts a `bench_roles` map (id → "1st"/"2nd"/"3rd"/
+- [x] **US-246 (pitch sub numbers)** — `render_pitch` accepts a `bench_roles` map (id → "1st"/"2nd"/"3rd"/
       "GK"); the bench row is ordered by that priority and each `_card` shows a **"🔁 1st sub"** (or "GK
       sub") caption. My Squad passes the roles it already computes; the XI cards are unchanged.
 - [ ] **No drift** — display-only; the analytics use `bench_ids` as a set (unchanged); existing **634** stay
@@ -51,7 +51,7 @@ the line below it. Display/edit only; no analytics change.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-245 | **Build → recommended bench order** — order the saved `bench_ids` by `bench_order` (xP) so a built squad starts sensibly. | High | ✅ Done | ~¼ session |
-| US-246 | **Sub numbers on the pitch** — `render_pitch` labels bench cards with the sub role (1st/2nd/3rd/GK). | Medium | ⬜ To do | ~¼ session |
+| US-246 | **Sub numbers on the pitch** — `render_pitch` labels bench cards with the sub role (1st/2nd/3rd/GK). | Medium | ✅ Done | ~¼ session |
 
 ---
 
@@ -88,6 +88,13 @@ sub") when given. `render_pitch(..., bench_roles=None)`: order the bench row by 
 one-line change (`bench_order`/`display_xp` already in scope); no new ADR. Smoke: a built squad's bench →
 MID 18.4 · FWD 17.7 · DEF 16.9 · GK last (outfield xP-desc ✓). +1 test
 (`test_build_starts_the_bench_in_recommended_order`). ruff clean, full suite **635** green.
+
+**US-246 (pitch sub numbers).** `pitch.py`: `_card(..., sub_role=None)` renders a **"🔁 1st sub"** / "🔁 GK
+sub" caption on a bench card; `render_pitch(..., bench_roles=None)` orders the bench row by priority
+(`_ROLE_ORDER`: 1st<2nd<3rd<GK) and labels each card. `render_my_squad` computes the `bench_roles` map (from
+the stored order) **before** the pitch call and passes it; the "🔁 Bench order" line + reorder expander stay
+below (unchanged). XI cards untouched. Smoke: the pitch bench shows 🔁 1st/2nd/3rd/GK sub in priority order.
++1 test (`test_my_squad_pitch_labels_the_bench_subs`). ruff clean, full suite **636** green.
 
 ---
 

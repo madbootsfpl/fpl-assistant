@@ -415,6 +415,33 @@ def test_my_squad_shows_the_bench_order():
     assert "1st" in line and "GK" in line and "auto-sub" in line.lower()
 
 
+def test_my_squad_pitch_labels_the_bench_subs():
+    # US-246: the pitch bench cards show the sub role (1st/2nd/3rd + GK)
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [defs[4]["id"], mids[4]["id"], fwds[2]["id"], gks[1]["id"]]
+    squad = {"name": "BenchLabels", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+    caps = [c.value for c in at.caption]
+    assert any("🔁 1st sub" in c for c in caps) and any("🔁 GK sub" in c for c in caps)
+
+
 def test_my_squad_bench_reorder_persists_and_recommended_applies():
     # US-244 (ADR-079): ⬆/⬇ reorders the stored bench priority (persists); "Use recommended" applies xP order
     from src.storage import Storage
