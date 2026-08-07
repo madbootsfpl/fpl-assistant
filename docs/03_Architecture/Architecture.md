@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 085 (2026-08-07)** — *Availability flags in the player tables*, per **ADR-074** (US-228/229). The
+  squad/captain views warned about injuries but the ranking tables didn't. A shared
+  `analytics/crowd.py::availability_flag(player)` (next to `crowd_flags`) → **🚑 injured · 🚫 suspended · ⛔
+  unavailable · ❓ doubtful** (`""` = available), chosen distinct from the rating circles; a shared
+  `AVAILABILITY_LEGEND`. A compact **Fit** column on the **Players Pool** (US-228) and all **four stat
+  boards** (US-229): the Pool + xG flag their raw rows directly; the trimmed boards (over/under · DefCon ·
+  clean sheets) build a `{(web_name, team): flag}` lookup from the full `players` list each render func
+  already receives, so `_board(flag=…)` adds the column/tooltip/legend uniformly — **no analytics change**.
+  Reuses ingested `status`/`chance` (ADR-023); display-only; no server writes (60 of 572 flagged preseason).
+  613 → 617 tests.
 - **Sprint 084 (2026-08-06)** — *Fix the xG rating flaw + rename This week→AI Tips + Ask examples*, per
   **ADR-073** (US-225/226/227). A tester spotted goalkeepers rated "🟢 excellent" on the xG board — xGI is
   ~0 for GKs, 172 players have 0 minutes, and the rating pool was *all shown rows*, so a GK-filtered view

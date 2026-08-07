@@ -11,8 +11,11 @@ nice-to-haves and tech-debt.)*
   NL "… with N differentials". Completes the archetype trio (low-cost / premium / differential).
 
 - **Bench order** — which bench player subs on first (Sprint 012 sequel).
-- **Availability flags in the ranking views** — surface injury/suspension flags in
-  `table`/`xg`/etc. the way `squad` does (Sprint 022 sequel).
+- ~~**Availability flags in the ranking views**~~ — **DONE (web)** (Sprint 085, US-228/229, **ADR-074**). A
+  shared `availability_flag(player)` (🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful; blank =
+  available) + a **Fit** column on the **Players Pool** and all **four stat boards**; display-only, reuses
+  ingested `status` (no analytics change). *Still open:* the **CLI** ranking views (`table`/`xg`) + a chance%
+  on the doubtful flag.
 - **Ceiling / "differential" captaincy** — `captain` (Sprint 027, ADR-029) ranks by *mean* xP,
   which favours nailed-on premiums. A ceiling/variance view would surface high-upside punts — but
   it needs variance/form data we don't have yet. Revisit once in-season data accrues.

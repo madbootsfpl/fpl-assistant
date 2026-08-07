@@ -113,4 +113,29 @@ availability_fit_column`). ruff clean, full suite **617** green.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **613 → 617** (+4); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-228 — availability flag helper + Pool (ADR-074).** `availability_flag(player)` (🚑 injured · 🚫
+  suspended · ⛔ unavailable · ❓ doubtful; blank = available), a shared `AVAILABILITY_LEGEND`, and a compact
+  **Fit** column on the Players Pool.
+- **US-229 — Fit on the stat boards.** The same column on over/under · DefCon · clean sheets · xG, via a
+  small `_board(flag=…)` extension.
+
+**What went well**
+- **Reused ingested data, zero analytics drift.** `status`/`chance` were already there; a display helper +
+  a view-side lookup (for the trimmed boards) meant the analytics dicts stayed untouched.
+- **One refactor covered four boards** — `_board`'s optional `flag=` inserts the column + tooltip + legend
+  in one place, so the boards can't drift; the join for the trimmed boards keyed off the full `players`
+  list each render func already had.
+- **Distinct vocabulary** — the availability emojis are guarded (a test) against colliding with the crowd
+  flags or the rating circles, so a glance reads cleanly.
+
+**Watch-outs / follow-ups**
+- Emoji-only can be cryptic → mitigated with a legend caption + a header tooltip + the News tab for detail;
+  there's no per-cell hover in `st.dataframe`.
+- The trimmed boards join by `(web_name, team)` (the dicts lack an id) — fine for a display flag.
+- **CLI ranking views** (`table`/`xg`) don't show the flag yet — a possible follow-up.
+- **Reseed the deploy** so testers see Sprints 081–085 (the Cloud seed is still 570-player / stale).
+
+See `Sprint85_Lessons_Learnt.md` for the detailed retro.

@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**73 ADRs · 613 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**74 ADRs · 617 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -185,7 +185,7 @@ consolidated tabs switch views with a lazy segmented control:
 - **Players** — a **Team · Position · Player** filter over the **Pool** (photos; the **table first**, a
   top-15 bar below; page through all, sort) plus stat views: **over/under-perf · Defensive Contribution ·
   clean sheets · xG** (season-to-date; clean sheets & xG carry a relative **🟢…🔴 quality rating** vs the
-  players shown)
+  players shown; every table has a **🚑/🚫/⛔/❓ Fit** availability column)
 - **Fixtures** — a colour-coded fixture **ticker** with team badges
 - **Squads** — **Build** (the full `squad` options → the optimal 15) · **My Squad** (a formation-pitch view;
   edit: rename/swap/bench/captain/download) · **AI Tips** (a grounded gameweek plan — captain · lineup · a
