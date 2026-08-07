@@ -9,6 +9,10 @@ from datetime import datetime, timedelta
 
 _LEAD = timedelta(minutes=90)   # a gameweek locks 90 minutes before its first kickoff
 
+# Urgency thresholds for the countdown (US-267) — how close the deadline is.
+_IMMINENT = timedelta(hours=2)
+_TODAY = timedelta(hours=24)
+
 
 def _get(row, key):
     """A fixture-row field (sqlite Row or dict), or None if absent."""
@@ -46,3 +50,22 @@ def next_deadline(fixtures, now: datetime):
         if deadline > now:
             return gw, deadline
     return None
+
+
+def deadline_urgency(time_left: timedelta) -> str:
+    """How close a deadline is (US-267): `imminent` (< 2h), `today` (< 24h), else `calm`. Used to escalate
+    the banner's colour + copy. A non-positive `time_left` still reads as `imminent`."""
+    if time_left < _IMMINENT:
+        return "imminent"
+    if time_left < _TODAY:
+        return "today"
+    return "calm"
+
+
+def gameweek_context(fixtures, gameweek) -> dict:
+    """What's coming in `gameweek` (US-267): `{matches, first_kickoff}` — the number of fixtures and the
+    earliest `kickoff_time` (a datetime), from the fixtures we already read. Empty-safe: `{matches: 0,
+    first_kickoff: None}` when the gameweek has none/unparseable."""
+    kickoffs = [ko for f in fixtures
+                if _get(f, "event") == gameweek and (ko := _parse(_get(f, "kickoff_time"))) is not None]
+    return {"matches": len(kickoffs), "first_kickoff": min(kickoffs) if kickoffs else None}

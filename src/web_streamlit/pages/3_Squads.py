@@ -10,9 +10,8 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from src.analytics import next_deadline
 from src.storage import Storage
-from src.ui.deadline import deadline_banner
+from src.ui.deadline import deadline_line
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import render_sidebar, squad_picker
@@ -50,9 +49,9 @@ try:
 finally:
     store.close()
 
-_nd = next_deadline(upcoming, datetime.now(timezone.utc))    # the next FPL deadline (ADR-086)
-if _nd:
-    st.caption(deadline_banner(_nd[0], _nd[1], datetime.now(timezone.utc)))
+_line = deadline_line(upcoming, datetime.now(timezone.utc))    # the next FPL deadline (ADR-086/US-267)
+if _line:
+    st.caption(_line[0])                                       # compact; the emoji conveys urgency
 
 if not players:
     st.info("No players — run `python app.py refresh` first.")

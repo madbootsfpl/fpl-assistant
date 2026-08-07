@@ -9,9 +9,8 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from src.analytics import next_deadline
 from src.storage import Storage
-from src.ui.deadline import deadline_banner
+from src.ui.deadline import deadline_line
 from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.status import render_data_status
 
@@ -21,14 +20,18 @@ render_data_status()
 st.title("⚽ FPL Assistant")
 st.caption("A read-only view over the analytics — the CLI stays the engine (ADR-051/052).")
 
-# The next FPL deadline — a countdown to GW1 now, rolling forward each gameweek (ADR-086).
+# The next FPL deadline — a countdown that escalates in urgency (ADR-086/US-267), rolling forward each GW.
 _store = Storage()
 try:
-    _nd = next_deadline(_store.get_upcoming_fixtures(), datetime.now(timezone.utc))
+    _line = deadline_line(_store.get_upcoming_fixtures(), datetime.now(timezone.utc))
 finally:
     _store.close()
-if _nd:
-    st.info(deadline_banner(_nd[0], _nd[1], datetime.now(timezone.utc)))
+if _line:
+    _text, _urgency = _line
+    {"calm": st.info, "today": st.warning, "imminent": st.error}[_urgency](_text)
+    if _urgency != "calm":     # a nudge to the pre-deadline actions when it's close
+        st.page_link("pages/3_Squads.py",
+                     label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
 st.markdown(
     """
 Use the **sidebar** to explore (each tab with a segmented control switches views inside it):
