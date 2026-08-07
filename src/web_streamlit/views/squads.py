@@ -26,6 +26,7 @@ from src.analytics import (
     crowd_flags,
     decision_xp,
     explain_captain,
+    explain_squad,
     is_unavailable,
     legal_xi_issues,
     minutes_weight_from_history,
@@ -40,6 +41,7 @@ from src.analytics import (
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
 from src.ui.captain import render_captain_picks
+from src.ui.explain import render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
 from src.web_streamlit.pitch import render_pitch
@@ -165,6 +167,10 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
     if objective != "xp":
         st.caption(f"Optimised on **{objective}**; the xP column is the forward reference metric "
                    "(xMins-weighted).")
+
+    # Explainability (ADR-089/US-271): why this build — Confidence · Why · Risk, above the pitch.
+    st.code(render_explanation(explain_squad(selected, display_xp, weight_by_id, budget=budget,
+                                             xi_ids=xi, horizon=horizon)), language=None)
 
     # The optimal 15 on the green pitch (US-261, reuses ADR-084) — the XI in formation + the bench in the
     # recommended sub order; no captain on a fresh build. The sortable table + summary sit below.

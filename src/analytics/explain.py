@@ -163,3 +163,58 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
 
     score = transfer_confidence(gain, doubtful_in=doubtful, chance_in=_get(in_row, "chance"))
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
+
+
+# ── Squad build (US-271, extends ADR-089) ─────────────────────────────────────
+
+def squad_confidence(xi_reliability, spent_fraction) -> int:
+    """A transparent confidence heuristic for a built 15 (ADR-089), 1–99 — how solid the build is: the XI's
+    average expected-minutes **reliability** + how well it **used the budget**. Not a probability."""
+    reliability = min(1.0, max(0.0, xi_reliability if xi_reliability is not None else 1.0))
+    spent = min(1.0, max(0.0, spent_fraction if spent_fraction is not None else 1.0))
+    return max(1, min(99, round(100 * (0.7 * reliability + 0.3 * spent))))
+
+
+def explain_squad(selected, xp_by_id, weight_by_id, *, budget, xi_ids, horizon=5) -> Explanation | None:
+    """Explain a built squad (ADR-089): grounded ✓ reasons + ⚠ risks + a confidence. `selected` are the 15
+    picked player rows (each with `price`/`position`; ownership/status read off the row); `xi_ids` the starting
+    XI; `xp_by_id`/`weight_by_id` the projection + xMins. None if there's nothing selected."""
+    if not selected:
+        return None
+    cost = round(sum(p["price"] for p in selected), 1)
+    xi = [p for p in selected if p["id"] in set(xi_ids)]
+    bench = [p for p in selected if p["id"] not in set(xi_ids)]
+    xi_xp = round(sum(xp_by_id.get(p["id"], 0) for p in xi), 1)
+    bench_xp = round(sum(xp_by_id.get(p["id"], 0) for p in bench), 1)
+    unspent = round((budget or 0) - cost, 1)
+    reliability = (sum(weight_by_id.get(p["id"], 1.0) for p in xi) / len(xi)) if xi else 1.0
+    top = sorted(selected, key=lambda p: -xp_by_id.get(p["id"], 0))[:3]
+
+    reasons, risks = [], []
+    # ✓ Why
+    reasons.append("Optimised on projected points (xP)")
+    reasons.append(f"Starting XI projects {xi_xp} over {horizon} GW")
+    if budget:
+        reasons.append(f"Spent £{cost:.1f}m of £{budget:.1f}m")
+    reasons.append("Top picks: " + ", ".join(f"{p['web_name']} ({p['position']})" for p in top))
+    if bench_xp > 0:
+        reasons.append(f"Bench projects {bench_xp} (rotation cover)")
+
+    # ⚠ Risk
+    if unspent >= 0.5:
+        risks.append(f"£{unspent:.1f}m unspent")
+    rotation = [p for p in xi if (weight_by_id.get(p["id"], 1.0)) < _START_MINUTES]
+    if rotation:
+        risks.append(f"{len(rotation)} rotation-risk starter{'s' if len(rotation) != 1 else ''}"
+                     " (low expected minutes)")
+    doubtful = [p for p in selected if _get(p, "status") == "d"]
+    if doubtful:
+        risks.append(f"{len(doubtful)} doubtful in the 15")
+    diffs = [p for p in selected if 0 < (_get(p, "selected_by") or 100) <= DIFFERENTIAL_OWN]
+    if len(diffs) >= 4:
+        risks.append(f"Differential-heavy ({len(diffs)} ≤{DIFFERENTIAL_OWN:.0f}% owned — higher variance)")
+    if bench and bench_xp < 4.0:
+        risks.append(f"Weak bench (projects {bench_xp})")
+
+    score = squad_confidence(reliability, (cost / budget) if budget else 1.0)
+    return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))

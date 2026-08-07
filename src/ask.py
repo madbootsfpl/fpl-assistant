@@ -30,6 +30,7 @@ from src.analytics import (
     chip_advisor,
     decision_xp,
     explain_captain,
+    explain_squad,
     explain_transfer,
     gameweek_plan,
     minutes_weight_from_history,
@@ -842,13 +843,21 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
     if constrained:
         facts["requested_structure"] = (f"at least {cheap or 0} low-cost, {premium or 0} premium "
                                         f"and {differential or 0} differential players")
+    # Explainability (ADR-089): grounded Why/Risk/Confidence for the build, above the squad table.
+    explanation = explain_squad(picks, xp_by_id, weight_by_id, budget=budget, xi_ids=xi_ids, horizon=_HORIZON)
+    if explanation is not None:
+        facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
+        facts["why"] = "; ".join(explanation.reasons)
+        facts["risk"] = "; ".join(explanation.risks) or "none noted"
+    detail = "\n".join([render_explanation(explanation), "",
+                        render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids,
+                                     bench_boost=bench_boost)])
     return {
-        "detail": render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids,
-                               bench_boost=bench_boost),
+        "detail": detail,
         "facts": facts,
         "subjects": [p["web_name"] for p in picks],
-        "task": "in 2 short sentences, state the starting XI's projected points and name a couple of "
-                "standout picks",
+        "task": "in 2-3 short sentences, state the starting XI's projected points, name a couple of standout "
+                "picks, and reflect the confidence + any ⚠ risk — using ONLY the facts",
         # ADR-062: the built 15 in SquadStore shape, so a web edge can offer "Use this squad →".
         "squad": {
             "name": "My squad",

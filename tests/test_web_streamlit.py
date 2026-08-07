@@ -634,8 +634,8 @@ def test_my_squad_points_to_build():
 
 def test_build_page_returns_a_squad(monkeypatch):
     at = _run(_PAGES / "3_Squads.py")
-    # a squad is rendered (or the "no data" note if the DB is empty) — no crash
-    assert len(at.code) == 1 or len(at.info) >= 1
+    # a squad is rendered (the explanation block + the squad table) — or the "no data" note; no crash
+    assert len(at.code) >= 1 or len(at.info) >= 1
     # move an archetype control → rebuild, still no crash
     at.number_input[0].set_value(3).run()                  # 3 low-cost players
     assert not at.exception
@@ -724,7 +724,7 @@ def test_build_page_renders_non_zero_xp(monkeypatch):
     at = _run(_PAGES / "3_Squads.py")
     if not at.code:
         return
-    out = at.code[0].value
+    out = next((c.value for c in at.code if "Total:" in c.value), "")   # the squad table (not the explanation)
     assert "xMins" in out and "xP" in out                  # the xp-objective columns
     total = next((ln for ln in out.splitlines() if ln.startswith("Total:")), "")
     assert "projected" in total and "projected 0.0 xP" not in total   # a real total, not zeros

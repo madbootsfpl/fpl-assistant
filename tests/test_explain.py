@@ -9,7 +9,9 @@ from src.analytics import (
     captain_confidence,
     confidence_band,
     explain_captain,
+    explain_squad,
     explain_transfer,
+    squad_confidence,
     transfer_confidence,
 )
 
@@ -102,3 +104,37 @@ def test_explain_transfer_lists_the_gain_price_and_signals():
     assert "Selling Old (4.0 xP)" in risk
     assert ex.band == confidence_band(ex.confidence)
     assert explain_transfer(None, in_row) is None                      # empty-safe
+
+
+# ── US-271: squad-build explainability ────────────────────────────────────────
+
+def test_squad_confidence_rewards_reliability_and_budget_use():
+    assert squad_confidence(0.95, 1.0) > squad_confidence(0.6, 0.6)   # reliable + fully spent → higher
+    assert squad_confidence(0.5, 0.4) < 75                            # rotation-heavy + money left → lower
+    assert 1 <= squad_confidence(0.9, 0.99) <= 99                     # bounded
+
+
+def _sq(**kw):
+    # a 15 with an id/web_name/price/position + ownership/status; two players are the XI-bench split
+    base = {"selected_by": 20.0, "status": "a"}
+    base.update(kw)
+    return base
+
+
+def test_explain_squad_lists_the_build_signals_and_flags_risks():
+    selected = [{"id": i, "web_name": f"P{i}", "position": "MID", "price": 6.0, **_sq()} for i in range(1, 16)]
+    xp = {i: 5.0 for i in range(1, 16)}
+    weight = {i: 0.9 for i in range(1, 16)}
+    xi_ids = list(range(1, 12))                          # first 11 start
+    weight[11] = 0.4                                     # one rotation-risk starter (in the XI)
+    ex = explain_squad(selected, xp, weight, budget=100.0, xi_ids=xi_ids, horizon=5)
+
+    why = " | ".join(ex.reasons)
+    assert "Optimised on projected points (xP)" in why
+    assert "Starting XI projects 55.0 over 5 GW" in why  # 11 × 5.0
+    assert "Spent £90.0m of £100.0m" in why              # 15 × £6.0m
+    risk = " | ".join(ex.risks)
+    assert "£10.0m unspent" in risk                      # 100 − 90
+    assert "rotation-risk starter" in risk               # id 15's 0.4 weight
+    assert ex.band == confidence_band(ex.confidence)
+    assert explain_squad([], xp, weight, budget=100.0, xi_ids=[]) is None   # empty-safe

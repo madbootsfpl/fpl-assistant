@@ -28,7 +28,9 @@ from src.analytics.explain import (
     captain_confidence,
     confidence_band,
     explain_captain,
+    explain_squad,
     explain_transfer,
+    squad_confidence,
     transfer_confidence,
 )
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
@@ -85,8 +87,10 @@ __all__ = [
     "gameweek_context",
     "explain_captain",
     "explain_transfer",
+    "explain_squad",
     "captain_confidence",
     "transfer_confidence",
+    "squad_confidence",
     "confidence_band",
     "Explanation",
     "gameweek_plan",
