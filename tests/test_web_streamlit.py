@@ -530,6 +530,30 @@ def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
     assert squad["name"] == "My squad" and 11 <= len(squad["player_ids"]) <= 15
 
 
+def test_build_starts_the_bench_in_recommended_order():
+    # US-245 (ADR-078/079): a built squad's bench_ids come out in recommended (xP) order — outfield
+    # highest-xP first, the GK last
+    from src.analytics import decision_xp
+    from src.storage import Storage
+
+    at = _run(_PAGES / "3_Squads.py")
+    if not at.code:
+        return
+    next(b for b in at.button if b.label.startswith("Use this squad")).click().run()
+    squad = at.session_state["squad"]
+
+    store = Storage()
+    rows = store.get_players()
+    xp = {r["id"]: r["xp"]
+          for r in decision_xp(rows, store.get_upcoming_fixtures(), store.get_history_by_code())}
+    store.close()
+    by_id = {p["id"]: p for p in rows}
+    bench = [by_id[i] for i in squad["bench_ids"] if i in by_id]
+    outfield_xps = [xp.get(p["id"], 0) for p in bench if p["position"] != "GK"]
+    assert outfield_xps == sorted(outfield_xps, reverse=True)   # outfield by xP desc
+    assert bench[-1]["position"] == "GK"                        # the GK last
+
+
 def test_build_page_renders_non_zero_xp(monkeypatch):
     # regression (US-172): Build must attach xp/minutes_weight so the table + projected total aren't zeros
     at = _run(_PAGES / "3_Squads.py")

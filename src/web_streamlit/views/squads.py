@@ -171,10 +171,13 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
     st.code(render_squad(result, budget=budget, objective=objective, full=True,
                          xi_ids=xi_ids, bench_boost=bench_boost), language=None)
 
+    # Start the bench in the recommended (xP) sub order (ADR-078/079) — outfield by xP, then the GK;
+    # still user-reorderable in My Squad.
+    bench_players = [p for p in selected if p["id"] not in xi]
     squad = {
         "player_ids": [p["id"] for p in selected],
         "player_names": [p["web_name"] for p in selected],
-        "bench_ids": [p["id"] for p in selected if p["id"] not in xi],
+        "bench_ids": [pl["id"] for _role, pl in bench_order(bench_players, display_xp)],
         "cost": result["total_cost"],
         "saved_at": datetime.date.today().isoformat(),
     }
