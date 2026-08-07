@@ -1,7 +1,7 @@
 # Sprint 098: Club-shirt image fallback + captain double-points in the My Squad projection
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a cached image resolver + a captaincy-aware projected-XI total)
 **Carried Over:** none
 
@@ -137,4 +137,33 @@ existence at `refresh` (the cached edge sweep is simpler and offline-after-warm)
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **659 → 663** (+4); ruff clean; CI-parity green.
+ADRs **82 → 83** (ADR-083). No data/engine change (both display-only).
+
+**Delivered**
+- **US-255 — club-shirt image fallback.** `photo_url_by_id` returns the photo when the CDN serves it, else the
+  club shirt (GK variant), via a cached, degrading existence sweep; kept out of the suite by an autouse
+  conftest fixture.
+- **US-256 — captain double-points, next-GW only (ADR-083).** The My Squad Projected XI adds the captain's ×2
+  for the next GW only (`captain_bonus`), with a caption that the double is a one-week thing.
+
+**What went well**
+- **De-risked the image approach on real data first** — proved the bootstrap `photo` field is `{code}.jpg`
+  for everyone (no signal) and that ~25% of photos 403, so an existence check was clearly necessary; then
+  chose the edge-cached sweep + a conftest patch so the suite stays offline (verified: 663 tests, ~45s).
+- **Answered the tester's own design question honestly** — captaincy is a weekly decision, so next-GW-only
+  doubling (with an explicit one-GW caption per the owner steer) beats an optimistic whole-horizon double.
+- **Reused what existed** — the captain's next-GW xP came straight from `by_gameweek` (ADR-032); a tiny pure
+  `captain_bonus` made it unit-testable; the engine never moved.
+- **Both display-only** — the grounded `decision_xp` is untouched; the changes live entirely in the web edge.
+
+**Watch-outs / follow-ups**
+- **First-load photo sweep** — the deployed app runs one ~573-HEAD existence sweep on first render (cached
+  ~daily, degrades on failure). A one-time few-second cost; acceptable for a display nicety. (A refresh-time
+  precompute is the alternative if it ever bites.)
+- **Mixed-horizon projection** — Projected XI (N GW) + captain's next-GW bonus is spelled out in the caption
+  so it can't be misread; a benched captain adds nothing (FPL auto-subs to the vice), also captioned.
+- **Chips in My Squad** — deferred; the **Chips** tab (ADR-082) already models TC/BB (next-GW). No My Squad
+  chip toggle this sprint.
+
+See `Sprint98_Lessons_Learnt.md` for the detailed retro.

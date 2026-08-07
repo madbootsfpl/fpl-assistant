@@ -455,6 +455,21 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 098 (2026-08-07)** — *Club-shirt image fallback + captain double-points* (tester feedback).
+  **US-255 (no ADR — display mechanics):** ~a quarter of players carry a valid photo `code` but the CDN **403s**
+  the file, so `web_streamlit/badges.py::photo_url_by_id(players, teams)` now returns the **photo when served,
+  else the club shirt** (`shirt_{team_code}[_1]-66.png`, GK variant by position) via a **cached** existence
+  sweep `_missing_photo_codes` (threaded HEADs, short timeout) that **degrades to "all present"** on any error;
+  `teams` threaded through the Players/Squads/Trending/News pages. The bootstrap `photo` field is `{code}.jpg`
+  for everyone (no signal), so an existence check is required — kept in the edge (cached, one first-load sweep)
+  and **out of the test suite** via an autouse `conftest.py` fixture that patches the sweep. **US-256, per
+  ADR-083:** the My Squad **"Projected XI (N GW)"** summary now adds the captain's **×2 for the next GW only**
+  — a pure `web_streamlit/squads.py::captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw)` returns the
+  captain's next-GW xP (from `by_gameweek`, ADR-032) when the captain is set **and in the XI** (benched/unset →
+  0); `render_my_squad` folds it into the total, reframes "Captain (2×)" to next-GW doubled, and shows a
+  **caption** that the ×2 is a one-week thing when horizon > 1 (owner steer). Whole-horizon doubling was
+  rejected (captaincy is a weekly decision). Both display-only — `decision_xp`/the engine unchanged; no server
+  writes. +4 tests.
 - **Sprint 097 (2026-08-07)** — *Set-piece attributes on My Squad* (tester feedback; **no new ADR** — extends
   **ADR-081**, display-only). **US-253:** `web_streamlit/pitch.py::_card` adds a `set_piece_flags` caption line
   (⚽ pens · 🚩 corners · 🎯 FK) beneath the `crowd_flags` (Trends) line — empty-safe, for a first-choice taker

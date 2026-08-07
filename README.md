@@ -9,7 +9,7 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**82 ADRs · 659 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
+**83 ADRs · 663 tests · CI green.** See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
 
@@ -182,7 +182,8 @@ just another way to look at it. Two edges, both reusing the exact same engine:
 
 **Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing + **7 sidebar tabs**; the two
 consolidated tabs switch views with a lazy segmented control:
-- **Players** — a **Team · Position · Player** filter over the **Pool** (photos; the **table first**, a
+- **Players** — a **Team · Position · Player** filter over the **Pool** (photos, falling back to the **club
+  shirt** when a player has none; the **table first**, a
   top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag) plus stat views: **Set pieces**
   (who takes **penalties · corners · free-kicks** + Own%/Val/£m — a low-ownership **differential** lens) ·
   **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date; clean sheets & xG carry a
@@ -193,8 +194,9 @@ consolidated tabs switch views with a lazy segmented control:
   (the full `squad` options → the optimal 15; a **formation preview** with each shape's **projected XI xP** +
   a compare-all-formations table) · **My Squad** (a formation-pitch view — each card shows Trends + **set-piece
   duty** ⚽/🚩/🎯;
-  edit: rename/swap/bench/captain/download; a **quick-stats summary** — Projected XI / Captain / Bench xP +
-  who's injured/doubtful — and a **bench order** you can see and **reorder** (auto-sub priority)) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
+  edit: rename/swap/bench/captain/download; a **quick-stats summary** — Projected XI (incl. the **captain ×2
+  for next GW only**) / Captain / Bench xP + who's injured/doubtful — and a **bench order** you can see and
+  **reorder** (auto-sub priority)) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
   **Chips** (a grounded chip-strategy advisor — when to play **Triple Captain · Bench Boost · Free Hit ·
   Wildcard**) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps, **Apply**) · **Captain**
   (and **set** yours) — the manage views share one squad picker
