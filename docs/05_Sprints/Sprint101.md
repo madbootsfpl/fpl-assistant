@@ -104,6 +104,20 @@ each interaction).
 - **Manual smoke:** Build shows the optimal 15 on the green pitch (XI in formation + bench strip), with the
   table beneath.
 
+**US-262 — season countdown / deadline banner (ADR-086).** ✅ Done.
+- `analytics/deadline.py::next_deadline(fixtures, now)` — pure, tz-aware: each gameweek's **earliest**
+  `kickoff_time` − 90 min; returns the first `(gw, deadline)` still ahead of `now`, **rolling forward** once a
+  deadline passes; empty-safe (no event/kickoff → skipped, None when nothing ahead). Exported from `analytics`.
+- `storage.get_upcoming_fixtures` now returns `f.kickoff_time` (additive; existing callers ignore it).
+- `ui/deadline.py::deadline_banner(gw, deadline, now)` → *"⏳ GW1 deadline: Fri 21 Aug, 18:30 (UK) — in 14
+  days"* — a days/hours countdown + the date in **UK time** (stdlib `zoneinfo`).
+- Wired: a prominent `st.info` banner on **Home** + a compact caption on **Squads**, each passing
+  `datetime.now(timezone.utc)`. Empty-safe (no deadline → nothing).
+- **Tests (+6):** `next_deadline` (earliest − 90, roll-forward, empty-safe); `deadline_banner` (UK time +
+  the countdown, and an hours/minutes case); the Home banner renders. **679** green, ruff clean.
+- **Manual smoke:** Home + Squads show *"⏳ GW1 deadline: Fri 21 Aug, 18:30 (UK) — in 13 days, 21h"* (17:30
+  UTC → 18:30 BST); rolls to GW2 once GW1's deadline passes. No new ingest — derived from fixtures.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

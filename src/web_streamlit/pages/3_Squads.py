@@ -6,9 +6,13 @@ manage views sharing one squad picker. Only the selected view computes (lazy). E
 renderers; no server writes (your squad lives in the session — download to keep it).
 """
 
+from datetime import datetime, timezone
+
 import streamlit as st
 
+from src.analytics import next_deadline
 from src.storage import Storage
+from src.ui.deadline import deadline_banner
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import render_sidebar, squad_picker
 from src.web_streamlit.status import render_data_status
@@ -43,6 +47,10 @@ try:
     badges = badge_url_by_short_name(teams)
 finally:
     store.close()
+
+_nd = next_deadline(upcoming, datetime.now(timezone.utc))    # the next FPL deadline (ADR-086)
+if _nd:
+    st.caption(deadline_banner(_nd[0], _nd[1], datetime.now(timezone.utc)))
 
 if not players:
     st.info("No players — run `python app.py refresh` first.")

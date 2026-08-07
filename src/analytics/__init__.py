@@ -20,6 +20,7 @@ from src.analytics.crowd import (
     set_piece_flags,
     trending,
 )
+from src.analytics.deadline import next_deadline
 from src.analytics.defcon import defcon_reliability
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
 from src.analytics.form import blend_form, form_rate
@@ -70,6 +71,7 @@ __all__ = [
     "captain_picks",
     "chip_advisor",
     "CHIP_NAMES",
+    "next_deadline",
     "gameweek_plan",
     "chance_factor",
     "AVAILABILITY_LEGEND",

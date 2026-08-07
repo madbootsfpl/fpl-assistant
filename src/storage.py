@@ -514,7 +514,7 @@ class Storage:
 
         sql = f"""
             SELECT f.event, f.team_h, f.team_a,
-                   f.team_h_difficulty, f.team_a_difficulty,
+                   f.team_h_difficulty, f.team_a_difficulty, f.kickoff_time,
                    th.short_name AS home, ta.short_name AS away,
                    th.strength_overall_home AS home_team_strength,
                    ta.strength_overall_away AS away_team_strength

@@ -5,14 +5,28 @@ Players · Fixtures · Analyse · Ask · Transfer · Build · Captain · My Squa
 engine the CLI does and changes nothing in `src/`. Run:  python -m src.web_streamlit
 """
 
+from datetime import datetime, timezone
+
 import streamlit as st
 
+from src.analytics import next_deadline
+from src.storage import Storage
+from src.ui.deadline import deadline_banner
 from src.web_streamlit.status import render_data_status
 
 st.set_page_config(page_title="FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
 st.title("⚽ FPL Assistant")
 st.caption("A read-only view over the analytics — the CLI stays the engine (ADR-051/052).")
+
+# The next FPL deadline — a countdown to GW1 now, rolling forward each gameweek (ADR-086).
+_store = Storage()
+try:
+    _nd = next_deadline(_store.get_upcoming_fixtures(), datetime.now(timezone.utc))
+finally:
+    _store.close()
+if _nd:
+    st.info(deadline_banner(_nd[0], _nd[1], datetime.now(timezone.utc)))
 st.markdown(
     """
 Use the **sidebar** to explore (each tab with a segmented control switches views inside it):

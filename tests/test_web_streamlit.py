@@ -25,6 +25,14 @@ def test_home_renders():
     _run(_APP)
 
 
+def test_home_shows_the_deadline_banner():
+    # US-262 (ADR-086): Home shows the next-deadline countdown when fixtures have kickoff times
+    at = _run(_APP)
+    if not at.info:                                        # no data locally → no banner (empty-safe)
+        return
+    assert any("deadline" in i.value.lower() for i in at.info)   # the ⏳ GW deadline banner
+
+
 def test_players_page_shows_a_table():
     at = _run(_PAGES / "1_Players.py")
     assert len(at.dataframe) == 1 or len(at.info) == 1     # a table, or the "run refresh" note
