@@ -126,6 +126,23 @@ LLM for the deployed app (free-form needs a local/hosted model — the deploy de
 - **Real-LLM smoke (Ollama on):** `ask "how does bench boost work?"` → the model phrased the chip facts from
   the KB and the answer **verified ✓** ("every figure and name traces to the data").
 
+**US-260 — the labelled free-form tail (ADR-085).** ✅ Done.
+- `assemble` gains a **free-form** branch: a `{"free_form": True}` decision → a scoped LLM answer
+  (`_free_form_prompt`: general rules/tactics only, **never** a specific player/pick), returned with
+  `trust={"free_form": True}`; **no model → the `_FALLBACK` help message**. Both fallbacks now route here: an
+  unrecognised question (`intent is None` → intent `"chat"`) and a rules-shaped question with no curated fact
+  (`_decide_rules` no-match).
+- `ui/ask.py`: `render_ask` shows a free-form answer (prose, no grounded decision), and `_trust_line` gains
+  the **ℹ "General FPL advice — not checked against your data"** third state (alongside ✓ / ⚠).
+- The **Ask tab + CLI `chat`** get this for free (they already call `converse`); added two rules example
+  prompts + an intro caption naming the three answer types (✓ grounded · ✓ rules · ℹ tactics).
+- **Tests (+2, 1 updated):** an unrecognised question → a free-form answer tagged ℹ, degrading to the help
+  message without a model; `_decide_rules` no-match → the free-form decision; the one-shot unrecognised test
+  updated (now intent `"chat"`, same help message). **672** green, ruff clean.
+- **Real-LLM smoke:** `ask "any general advice for a first-time manager?"` → a helpful answer + the honest
+  **ℹ not-verified** label; grounded/rules answers keep their ✓. Never makes a squad decision (those stay
+  grounded).
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

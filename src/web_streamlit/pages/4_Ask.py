@@ -17,9 +17,10 @@ from src.web_streamlit.status import render_data_status
 st.set_page_config(page_title="Ask · FPL Assistant", page_icon="⚽", layout="wide")
 render_data_status()
 st.title("💬 Ask")
-st.caption("Captaincy · transfers · your squad · comparisons · build a squad · best players · fixtures. "
-           "The analytics decide; the answer is checked against the data. Follow-ups build on the last "
-           "turn — try *\"why?\"* or *\"compare him to …\"*.")
+st.caption("Captaincy · transfers · your squad · comparisons · build a squad · best players · fixtures — the "
+           "analytics decide and the answer is **checked** against the data (✓). It also explains **FPL "
+           "rules** from a curated knowledge base (✓), and answers open **tactics** questions labelled "
+           "**ℹ not verified**. Follow-ups build on the last turn — try *\"why?\"* or *\"compare him to …\"*.")
 
 _active = active_squad()          # so "captain <its name>" / "analyse my team" use your loaded squad
 if _active:
@@ -36,7 +37,8 @@ _EXAMPLES = [
     "best differential midfielders under £8m",
     "is Haaland worth the money?",
     "what transfer should I make for my-team?",
-    "which of my-team's teams have the best fixtures?",
+    "how does bench boost work?",              # a rules question — answered from the curated KB, verified ✓
+    "how do transfers and hits work?",         # ↑ (US-259/260, ADR-085)
     "when does Arsenal play next?",
 ]
 

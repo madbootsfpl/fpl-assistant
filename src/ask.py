@@ -39,7 +39,7 @@ from src.analytics import (
     trending,
 )
 from src.analytics.captain import _next_opponent
-from src.fpl_rules import TOPIC_LABELS, match_rules
+from src.fpl_rules import match_rules
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
@@ -629,8 +629,8 @@ def _decide_rules(question: str) -> dict | None:
     answer). Not squad-scoped."""
     matched = match_rules(question)
     if not matched:
-        return {"message": "I can explain FPL rules on: " + ", ".join(TOPIC_LABELS)
-                + '. Try "how does bench boost work?" or "how do transfers work?".'}
+        # a rules-shaped question we have no curated fact for → the labelled free-form tail (US-260)
+        return {"free_form": True, "question": question}
     return {
         "detail": render_rules(matched),                       # the curated facts — the truth, LLM or not
         "facts": {topic: fact for topic, fact in matched},
@@ -1271,6 +1271,17 @@ def _build_prompt(decision: dict) -> str:
     )
 
 
+def _free_form_prompt(question: str) -> str:
+    """A scoped prompt for the free-form tail (ADR-085): general FPL rules/tactics only, and **never** a
+    specific player/pick recommendation (those come from the grounded tools + are verified)."""
+    return (
+        "You are a helpful Fantasy Premier League assistant. Answer this general FPL question in 2-4 short "
+        "sentences with rules or tactical guidance only. Do NOT recommend specific players, prices, or picks "
+        "— those come from the app's data tools. If it isn't about FPL, say you only help with FPL.\n\n"
+        f"QUESTION: {question}"
+    )
+
+
 def assemble(question: str, intent: str | None, decision: dict | None, narrator,
              known_names=()) -> AskResult:
     """Turn a decision into an AskResult — narrating, verifying, and degrading if needed.
@@ -1286,6 +1297,11 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
                          message="No result — run `refresh`, and check the squad name.")
     if decision.get("message"):   # a soft, specific failure (e.g. compare: not found / ambiguous)
         return AskResult(question, intent, message=decision["message"])
+    if decision.get("free_form"):   # a general FPL question — ungrounded, clearly labelled (ADR-085)
+        prose = narrator(_free_form_prompt(decision.get("question", question)))
+        if not prose:                                  # no model → the honest help message
+            return AskResult(question, intent, message=_FALLBACK)
+        return AskResult(question, intent, explanation=prose, trust={"free_form": True})
     explanation = narrator(_build_prompt(decision))   # str, or None if unavailable
     trust = None
     if explanation:
@@ -1383,8 +1399,8 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
     if not squad and active_squad and active_squad.get("name") \
             and re.search(r"\bmy (team|squad|side|xi)\b", question, re.IGNORECASE):
         squad = active_squad["name"]
-    if intent is None:
-        return assemble(question, None, None, narrator), context
+    if intent is None:   # nothing grounded matched → the labelled free-form tail (ADR-085), or the help text
+        return assemble(question, "chat", {"free_form": True, "question": question}, narrator), context
     prompt = _needs_squad(intent, squad)
     if prompt is not None:
         return replace(prompt, question=question), context

@@ -135,10 +135,29 @@ def test_decide_rules_is_grounded_and_verified():
     assert degraded.detail and degraded.trust is None              # the facts block is the truth without a model
 
 
-def test_decide_rules_lists_topics_when_nothing_specific_matches():
-    # a rules-shaped question with no known topic → the "what I can explain" message (US-260 makes it free-form)
+def test_decide_rules_falls_back_to_free_form_when_no_topic_matches():
+    # US-260 (ADR-085): a rules-shaped question with no curated fact → the labelled free-form tail
     decision = _decide_rules("how does the offside rule work?")
-    assert decision.get("message") and "explain" in decision["message"].lower()
+    assert decision == {"free_form": True, "question": "how does the offside rule work?"}
+
+
+def test_free_form_answer_is_labelled_and_degrades(monkeypatch):
+    # US-260 (ADR-085): an unrecognised question → a free-form answer tagged ℹ (not verified); no model → help.
+    from src.ui.ask import render_ask
+
+    # a fake store so route()/_fresh run without touching the real DB for player names
+    class _S:
+        def get_players(self):
+            return []
+
+    r, _ = converse("what's your general philosophy on early-season teams?", None, store=_S(),
+                    narrator=lambda p: "Early on, favour proven minutes and good fixtures over punts.")
+    assert r.intent == "chat" and r.trust == {"free_form": True}
+    assert "not checked" in render_ask(r).lower()                      # the ℹ label is shown
+
+    degraded, _ = converse("what's your general philosophy on early-season teams?", None, store=_S(),
+                           narrator=lambda p: None)
+    assert degraded.message and degraded.explanation is None           # no model → the honest help message
 
 
 def test_resolve_pronoun_rewrites_to_the_sole_subject():
@@ -899,12 +918,13 @@ def test_converse_nudges_a_followup_with_no_context():
     assert ctx is None and "Ask a question first" in result.message
 
 
-def test_answer_one_shot_is_unchanged_for_an_unrecognised_question(monkeypatch):
-    # the one-shot `ask` is `converse` with no context → a follow-up-only line still falls back
+def test_answer_one_shot_degrades_to_help_for_an_unrecognised_question(monkeypatch):
+    # US-260 (ADR-085): an unrecognised question takes the free-form path (intent "chat"); with no model it
+    # still degrades to the same help message — the honest fallback is unchanged.
     monkeypatch.setattr(ask, "SquadStore", lambda: types.SimpleNamespace(names=lambda: []))
     store = types.SimpleNamespace(get_players=lambda: [])
     result = ask.answer("what is the meaning of life", store=store, narrator=lambda p: None)
-    assert result.intent is None and "captaincy" in result.message
+    assert result.intent == "chat" and "captaincy" in result.message
 
 
 def test_chat_transcript_threads_context_and_stops_at_quit(monkeypatch):
