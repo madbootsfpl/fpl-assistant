@@ -1,7 +1,7 @@
 # Sprint 100: The AI Chat Assistant — a grounded rules KB + a labelled free-form mode
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a curated FPL-rules KB + a grounded `rules` intent, then a labelled free-form tail)
 **Carried Over:** none
 
@@ -147,4 +147,35 @@ LLM for the deployed app (free-form needs a local/hosted model — the deploy de
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **663 → 672** (+9); ruff clean; CI-parity green.
+ADRs **84 → 85** (ADR-085). No analytics/engine change (a router extension + a curated data file).
+
+**Delivered**
+- **US-259 — curated rules KB + a grounded `rules` intent (ADR-085).** `fpl_rules.py` (13 authoritative
+  entries) + a `rules` intent that answers from the KB, **verified (✓)**, degrading to the facts without a
+  model. Routing answers general rules questions without stealing squad commands.
+- **US-260 — the labelled free-form tail.** Open tactical questions get an LLM answer tagged **ℹ not
+  verified**, degrading to the help message without a model; never makes a squad decision.
+
+**What went well**
+- **The trust model held under a hard case.** The verifier catching Ollama's chip hallucination (a real event
+  this session) was the evidence that shaped the whole design: rules from a **curated KB** (verified), not the
+  LLM's memory — with a clearly-labelled **ℹ** lane for genuinely open questions.
+- **One clean seam.** `route()==None` + the `rules`-no-match both funnel into a single `{free_form: True}`
+  branch in `assemble`, so the Ask tab and CLI `chat` got the whole feature **for free** (they already call
+  `converse`) — no page plumbing.
+- **Routing collisions handled the now-familiar way.** Question-shaped rules cues placed first beat the squad
+  intents for "how does X work" without stealing "fix my bench" / "what transfer" / "which chip" — pinned by
+  tests.
+- **Three honest states on screen** — ✓ grounded · ✓ rules · ℹ tactics — so the boundary is never hidden.
+
+**Watch-outs / follow-ups**
+- **KB staleness** — FPL tweaks rules between seasons; it's one small file, phrased current-season (2025/26),
+  easy to update.
+- **Free-form needs a model** — the deployed app has no Ollama, so it degrades to **rules + grounded** (still
+  useful); free-form works locally. A hosted LLM would light it up on the deploy (deferred).
+- **Tactical questions with grounded keywords** ("… or …", "differential", "transfer") route to the grounded
+  intent, not free-form — correct by design; free-form is the tail for genuinely-unmatched questions.
+- Deferred: RAG / a larger KB; multi-turn free-form memory beyond the existing `Context`.
+
+See `Sprint100_Lessons_Learnt.md` for the detailed retro.

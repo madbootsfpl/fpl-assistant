@@ -455,6 +455,24 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 100 (2026-08-07)** — *AI Chat Assistant — a grounded rules KB + a labelled free-form mode*, per
+  **ADR-085** (US-259/260; owner intake). **US-259:** `src/fpl_rules.py` — a `RULES` list of **13** authoritative
+  `{topic, cues, fact}` entries (scoring · clean sheets/saves · bonus/BPS · Defensive Contribution · chips ·
+  transfers/hits · price changes · squad rules · formations · captaincy · auto-subs · deadline · DGW/BGW) +
+  a pure `match_rules(question)`. A **`rules`** intent placed **first** in `_INTENT_KEYWORDS` on *question-
+  shaped* cues (how does / how do / what is a / how many points / when is the deadline / defensive contribution
+  …) that don't collide with the (imperative / squad-scoped) squad commands; `_decide_rules` selects the KB
+  facts → narrated + **verified** (✓, ADR-037) via the existing `assemble`/`verify_grounding` path, degrading
+  to the raw facts (`ui/rules.py::render_rules`) without a model. Rules come from the **curated KB, not the
+  LLM's memory** — which hallucinated chip facts this session (the verifier caught it). **US-260:** a **free-
+  form** tail — `assemble` gains a `{"free_form": True}` branch that asks the LLM a *scoped* general question
+  (`_free_form_prompt`: rules/tactics only, **never** a specific player/pick) and returns
+  `trust={"free_form": True}`; `_trust_line` gains a third state **ℹ "General FPL advice — not checked against
+  your data"** (beside ✓/⚠); no model → the `_FALLBACK` help. Both fallbacks funnel here: an unrecognised
+  question (`route()==None` → intent `"chat"`) and a rules-shaped question with no curated fact
+  (`_decide_rules` no-match). The **Ask** tab + CLI `chat` inherit it (they already call `converse`) — plus two
+  rules example prompts + an intro caption naming the three answer types. Grounded squad/player questions +
+  `decision_xp` unchanged; no server writes. +9 tests.
 - **Sprint 099 (2026-08-07)** — *My Squad pitch redesign (FFH-style)*, per **ADR-084** (US-257/258; tester
   feedback: *"looks like a poor cousin — redesign closer to Fantasy Football Hub"*). **US-257:** `web_streamlit/
   pitch.py::render_pitch` is rewritten to emit **one self-contained HTML/CSS block** via

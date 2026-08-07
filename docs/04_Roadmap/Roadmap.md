@@ -57,6 +57,10 @@ wired dormant** (Sprint 069): GW1 is a switch-flip.
   the data (✓/⚠ trust line, ADR-037). The LLM (local Ollama) is optional — degrades to decision + facts.
 - **`chat`** (ADR-047) — a conversational mode where follow-ups build on the last turn (why / next /
   what-about), still analytics-decided each turn.
+- ✅ **AI Chat Assistant** (Sprint 100, ADR-085) — the Ask tab also answers **FPL rules** from a curated
+  knowledge base (`src/fpl_rules.py`, **verified ✓**) and open **tactics** questions free-form, clearly
+  labelled **ℹ not verified** (never a specific pick). Grounded squad/player questions unchanged — three
+  honest states: ✓ grounded · ✓ rules · ℹ tactics.
 - **`fixtures`** (ADR-048/049/067) — a league FDR ranking, a single team's schedule, a **squad's players by
   their fixture run**, or a **squad's teams** ranked by their run (with player-counts, via a "teams" cue);
   team names resolve or ask, never guess.

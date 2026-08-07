@@ -9,11 +9,12 @@ nice-to-haves and tech-debt.)*
 Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/plumbing now, sharpens at GW1 ·
 ⏳ GW1-gated · 🧭 needs a design/ADR):
 
-- ◑🧭 **AI Chat Assistant** — a 24/7 chatbot for FPL **rules**, squad questions, and tactical advice tailored
-  to your team. *Tension:* the Ask tab is a **grounded** intent-router (analytics decide, the LLM only
-  narrates + is verified, ADR-034/037) — a free-form "rules/tactics" chatbot is ungrounded general knowledge.
-  Needs a design (a scoped "general FPL knowledge" mode alongside the grounded intents, clearly labelled as
-  *not verified*), an ADR, and a willing LLM. Conversational plumbing already exists (ADR-047/080).
+- ✅ **DONE (Sprint 100, US-259/260, ADR-085)** — **AI Chat Assistant** — a 24/7 chatbot for FPL **rules**,
+  squad questions, and tactical advice. Delivered: a curated **rules KB** (`src/fpl_rules.py`) answered by a
+  grounded `rules` intent (**verified ✓**); a **labelled free-form** tail for open tactics (**ℹ not verified**,
+  never a specific pick); grounded squad/player questions unchanged. The "scoped general-knowledge mode
+  clearly labelled not-verified" this line called for. *Follow-ups:* a hosted LLM for the deploy (free-form
+  needs a model — the cloud degrades to rules + grounded); grow the KB.
 - ⏳ **Elite Manager Comparison** — how your squad compares to top-ranked managers + what the **Top 1,000**
   are doing (captain trends, transfer flow). *Needs:* the FPL leagues API + per-manager picks; **picks are
   public only from the GW1 deadline (2026-08-21)** → no data preseason. Build post-GW1.
