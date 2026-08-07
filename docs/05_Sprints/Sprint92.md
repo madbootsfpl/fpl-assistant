@@ -39,7 +39,7 @@ or one-click the **recommended (xP)** order — and it **persists** in the sessi
       **preserves** the given order (not squad-position); a `move_bench_sub(squad, player_id, direction, by_id)`
       mutation swaps an **outfield** sub with its neighbour (GK excluded, stays fixed). Pure, tested
       (reorder, GK-excluded, edge bounds). Refines ADR-055/078.
-- [ ] **US-244 (the My Squad reorder UI)** — the "🔁 Bench order" line shows the **stored** order (outfield in
+- [x] **US-244 (the My Squad reorder UI)** — the "🔁 Bench order" line shows the **stored** order (outfield in
       priority + GK separate); a reorder control (⬆/⬇ per outfield sub) persists via `move_bench_sub`; a
       **"Use recommended (xP) order"** button applies `bench_order`'s ranking. All mutate `session_state`
       (no server writes).
@@ -54,7 +54,7 @@ or one-click the **recommended (xP)** order — and it **persists** in the sessi
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-243 | **Bench-order model + mutations** — `set_bench` preserves order; `move_bench_sub` swaps an outfield sub in priority (GK excluded). ADR-079. | High | ✅ Done | ~½ session |
-| US-244 | **My Squad reorder UI** — show the stored order + ⬆/⬇ reorder + a "Use recommended (xP) order" button. | Medium | ⬜ To do | ~½ session |
+| US-244 | **My Squad reorder UI** — show the stored order + ⬆/⬇ reorder + a "Use recommended (xP) order" button. | Medium | ✅ Done | ~½ session |
 
 ---
 
@@ -95,6 +95,15 @@ the GK), and keeps the GK last (keeper-only). Copy-not-mutate (ADR-055). The `se
 ripple — the analytics use `bench_ids` as a **set** (633 green proves it). Updated the old
 `test_set_bench_keeps_player_id_order` → `test_set_bench_preserves_the_given_order`; +1 `move_bench_sub` test
 (reorder · GK-excluded · edge bounds). ruff clean, full suite **633** green.
+
+**US-244 (the My Squad reorder UI).** The "🔁 Bench order" line now reads the **stored** order — built from
+`bench_ids` (outfield labelled 1st/2nd/3rd + the GK separate), not the xP sort. A **"Reorder the bench"**
+expander shows each outfield sub with **⬆/⬇** buttons (disabled at the ends) → `move_bench_sub` →
+`set_active_squad` + rerun, plus a **"↻ Use recommended (xP) order"** button → `set_bench` with
+`bench_order`'s xP ranking. All mutate `session_state` (no server writes); the order rides in the download.
+Smoke: a non-xP bench shows its stored order; ⬆ the 2nd sub → it becomes 1st and **persists** (`bench_ids[0]`
+updated); "Use recommended" applies the xP order. +1 test (`test_my_squad_bench_reorder_persists_and_
+recommended_applies`). ruff clean, full suite **634** green.
 
 ---
 

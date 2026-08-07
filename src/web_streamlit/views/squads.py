@@ -43,6 +43,7 @@ from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
     FPL_BUDGET,
     apply_transfer,
+    move_bench_sub,
     rename,
     set_active_squad,
     set_bench,
@@ -284,13 +285,37 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp)
 
-    # Bench order (US-242) — who subs on first if a starter blanks (auto-sub priority; ADR-078).
-    order = bench_order(bench, xp_by_id)
-    if order:
-        subs = " · ".join(f"**{role}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
-                          for role, p in order)
-        st.caption(f"🔁 **Bench order** (auto-subs): {subs} — FPL brings on the first that keeps a legal XI; "
+    # Bench order (US-242/244) — the auto-sub priority (the stored order, ADR-079), reorderable (⬆/⬇).
+    bench_ordered = [by_id[i] for i in (squad.get("bench_ids") or []) if i in by_id]
+    outfield_subs = [p for p in bench_ordered if p["position"] != "GK"]
+    gk_sub = next((p for p in bench_ordered if p["position"] == "GK"), None)
+    _SUB_LABEL = ("1st", "2nd", "3rd", "4th")
+    if bench_ordered:
+        line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
+                          for i, p in enumerate(outfield_subs))
+        if gk_sub:
+            line += f" · **GK** {gk_sub['web_name']}"
+        st.caption(f"🔁 **Bench order** (auto-subs): {line} — FPL brings on the first that keeps a legal XI; "
                    "the bench GK only covers your keeper.")
+        with st.expander("Reorder the bench (auto-sub priority)"):
+            for i, p in enumerate(outfield_subs):
+                c_name, c_up, c_down = st.columns([6, 1, 1])
+                c_name.write(f"**{_SUB_LABEL[i]}** {p['web_name']} · "
+                             f"{round(xp_by_id.get(p['id'], 0), 1)} xP")
+                if c_up.button("⬆", key=f"bench_up_{p['id']}", disabled=(i == 0),
+                               help="Move this sub up the priority."):
+                    set_active_squad(move_bench_sub(squad, p["id"], "up", by_id))
+                    st.rerun()
+                if c_down.button("⬇", key=f"bench_down_{p['id']}", disabled=(i == len(outfield_subs) - 1),
+                                 help="Move this sub down the priority."):
+                    set_active_squad(move_bench_sub(squad, p["id"], "down", by_id))
+                    st.rerun()
+            if st.button("↻ Use recommended (xP) order",
+                         help="Order the outfield subs by expected points (highest first)."):
+                rec_ids = ([p["id"] for role, p in bench_order(bench_ordered, xp_by_id) if role != "GK"]
+                           + ([gk_sub["id"]] if gk_sub else []))
+                set_active_squad(set_bench(squad, rec_ids))
+                st.rerun()
 
     st.divider()
     st.subheader("Edit")
