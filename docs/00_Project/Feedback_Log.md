@@ -8,6 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-07 | Owner | Squads → Build | On the **Preview the best XI in a shape**, show the **XI score** so a user can see the effect of different formations. | 💡 | ✅ Sprint 086 (US-230/231, ADR-075) — a "Projected XI xP" metric per shape + a gated compare-all-formations table (Δ vs best) |
 | 2026-08-06 | Owner | Players → xG | **Flaw in logic:** goalkeepers with `xGI 0`/`0.04` are rated **🟢 excellent** — "how can 0 be good and 56 be good?" | 🟠 wrong | ✅ Sprint 084 (US-225, ADR-073) — rate xGI only for outfield ≥900-min players (vs that pool); GKs/low-minutes show `—`; column renamed "xGI rating" beside xGI |
 | 2026-08-06 | Owner | Squads | Rename the **This week** tab to **AI Tips**. | 💡 | ✅ Sprint 084 (US-226) — label renamed; the gameweek engine (ADR-070) unchanged |
 | 2026-08-06 | Owner | Ask | Show a few **example prompts** in the Ask tab. | 💡 | ✅ Sprint 084 (US-227) — an expander of 7 copy-paste examples |

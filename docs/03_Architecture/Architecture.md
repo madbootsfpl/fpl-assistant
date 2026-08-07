@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 086 (2026-08-07)** — *The XI score in the formation preview*, per **ADR-075** (US-230/231). The
+  Build page's "🔎 Preview the best XI in a given shape" showed the XI but no total. **US-230:**
+  `render_build` now sums the previewed XI's displayed `xP` into a `st.metric("Projected XI — {shape}",
+  "{xi_xp} xP")` (free — the shape's `select_squad` solve already runs). **US-231:** a default-off
+  **"Compare all formations"** checkbox → `_formation_xi_scores(...)` solves the best XI for each of the 7
+  legal shapes and a `st.dataframe` ranks them **Formation · XI xP · Δ vs best** (desc; inline `NumberColumn`
+  formatting, ADR-072); an illegal shape → blank. **Gated** because a Streamlit expander body runs even when
+  collapsed, so the 7 extra ILP solves fire only on tick. Reuses `select_squad` + the build's
+  `scores`/`display_xp`; display-only (the saveable build is still a full 15, ADR-062); no analytics change,
+  no server writes. Real spread: 3-5-2 254.1 → 5-4-1 246.0 (8.1 xP). 617 → 619 tests.
 - **Sprint 085 (2026-08-07)** — *Availability flags in the player tables*, per **ADR-074** (US-228/229). The
   squad/captain views warned about injuries but the ranking tables didn't. A shared
   `analytics/crowd.py::availability_flag(player)` (next to `crowd_flags`) → **🚑 injured · 🚫 suspended · ⛔

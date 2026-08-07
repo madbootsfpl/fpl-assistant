@@ -102,4 +102,26 @@ gated` — absent by default, 7 rows ranked on tick). ruff clean, full suite **6
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **617 → 619** (+2); ruff clean; CI-parity green.
+
+**Delivered**
+- **US-230 — the XI score (ADR-075).** The Build "🔎 Preview the best XI in a shape" expander shows a
+  `st.metric("Projected XI — {shape}", "{xi_xp} xP")` — a free sum of the previewed XI's xP.
+- **US-231 — compare all formations.** A default-off checkbox → a table ranking all 7 shapes by XI xP with
+  Δ vs best; the 7 extra ILP solves run only on tick.
+
+**What went well**
+- **Real data justified the feature and the shape.** The 8.1 xP spread (3-5-2 254.1 → 5-4-1 246.0) made the
+  score clearly decision-relevant, and the comparison table surfaces it at a glance.
+- **The perf trap was spotted at planning** — a Streamlit expander runs its body even collapsed, so the
+  comparison was gated behind a checkbox rather than slowing every Build render.
+- **Zero analytics change** — reused `select_squad` + the build's `scores`/`display_xp`; display-only, the
+  saved build still a full 15.
+
+**Watch-outs / follow-ups**
+- For non-`xp` objectives, the score is the XI's projected xP (not the optimised metric) — consistent with
+  the existing per-row xP column + the "xP is the reference metric" caption.
+- The comparison is 7 ILP solves on tick — acceptable and user-initiated; if it ever feels slow, caching
+  keyed on (objective, budget, include/exclude) is the next lever.
+
+See `Sprint86_Lessons_Learnt.md` for the detailed retro.
