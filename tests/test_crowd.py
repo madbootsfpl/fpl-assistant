@@ -19,9 +19,16 @@ def test_availability_flag_per_status():
     assert availability_flag(_p(status="s")) == "🚫"     # suspended
     assert availability_flag(_p(status="u")) == "⛔"     # unavailable
     assert availability_flag(_p(status="n")) == "⛔"     # not available
-    assert availability_flag(_p(status="d")) == "❓"     # doubtful
+    assert availability_flag(_p(status="d")) == "❓"     # doubtful, chance unknown → just the flag
     assert availability_flag(_p(status="a")) == ""       # available → no flag
     assert availability_flag(_p()) == ""                 # missing status → no flag (empty-safe)
+
+
+def test_availability_flag_shows_the_chance_on_a_doubtful_player():
+    # US-236: a doubtful player carries the chance of playing (❓ 75%) when known
+    assert availability_flag(_p(status="d", chance=75)) == "❓ 75%"
+    assert availability_flag(_p(status="d", chance=0)) == "❓ 0%"     # 0% is a real value, still shown
+    assert availability_flag(_p(status="i", chance=25)) == "🚑"      # only doubtful appends the chance
 
 
 def test_availability_flag_is_distinct_from_crowd_and_rating():

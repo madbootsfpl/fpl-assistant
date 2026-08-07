@@ -109,7 +109,12 @@ AVAILABILITY_LEGEND = ("Fit: 🚑 injured · 🚫 suspended · ⛔ unavailable �
 
 
 def availability_flag(player) -> str:
-    """A one-emoji availability flag for a player row — 🚑 injured · 🚫 suspended · ⛔ unavailable ·
-    ❓ doubtful — or `""` when available. Display-only; empty-safe (a Row or a dict). See ADR-023 for
-    the status codes; the News page holds the full text."""
-    return _AVAILABILITY_FLAG.get(_get(player, "status"), "")
+    """A compact availability flag for a player row — 🚑 injured · 🚫 suspended · ⛔ unavailable ·
+    ❓ doubtful — or `""` when available. A **doubtful** player carries the chance of playing when known
+    (`❓ 75%`, US-236). Display-only; empty-safe (a Row or a dict). See ADR-023 for the status codes; the
+    News page holds the full text."""
+    status = _get(player, "status")
+    if status == "d":
+        chance = _get(player, "chance")
+        return f"❓ {chance}%" if chance is not None else "❓"
+    return _AVAILABILITY_FLAG.get(status, "")

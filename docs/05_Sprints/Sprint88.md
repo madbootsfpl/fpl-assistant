@@ -45,7 +45,7 @@ change.
 - [x] **US-235 (CLI availability flags)** — a **Fit** column (🚑/🚫/⛔/❓, blank = available) as the **last**
       column on `render_player_table` (→ `table`/`search`/`filter`) and `render_xg_table` (→ `xg`), reusing
       `availability_flag`. Byte-exact table tests updated. Extends ADR-074.
-- [ ] **US-236 (chance% on ❓)** — `availability_flag` shows the chance on a doubtful player (`❓ 75%` when
+- [x] **US-236 (chance% on ❓)** — `availability_flag` shows the chance on a doubtful player (`❓ 75%` when
       `chance` is present, else `❓`); other statuses unchanged. Improves the web Fit column + the new CLI
       column at once. The legend still reads "❓ doubtful".
 - [ ] **No drift** — display-only; `decision_xp`/the analytics unchanged; existing **622** stay green (some
@@ -60,7 +60,7 @@ change.
 |---|---|---|---|---|
 | US-234 | **Clickable Ask examples** — a button per example on the Ask page that runs it (shared handler). | Medium | ✅ Done | ~¼ session |
 | US-235 | **CLI availability flags** — a last-column **Fit** flag on `render_player_table` (table/search/filter) + `render_xg_table` (xg). Extends ADR-074. | Medium | ✅ Done | ~¼–½ session |
-| US-236 | **chance% on ❓** — `availability_flag` appends the chance on doubtful (`❓ 75%`). | Low | ⬜ To do | ~¼ session |
+| US-236 | **chance% on ❓** — `availability_flag` appends the chance on doubtful (`❓ 75%`). | Low | ✅ Done | ~¼ session |
 
 ---
 
@@ -111,6 +111,13 @@ aligned columns before it out of line — verified on real data (Garner/J.Timber
 blank; Player…Val/£m stay aligned). The existing byte-exact table/xg tests are substring-based + their
 fixtures lack `status` (→ blank, empty-safe), so none needed changing. Extends ADR-074 (no new ADR). +2
 tests. ruff clean, full suite **624** green.
+
+**US-236 (chance% on ❓).** `analytics/crowd.py::availability_flag` now appends the chance for a **doubtful**
+player: `status == "d"` → `f"❓ {chance}%"` when `chance` is known (via the empty-safe `_get`), else `"❓"`;
+other statuses unchanged. One helper change enriches **both** the web Fit column and the new CLI Fit column at
+once. Smoke (real data): Wharton/Šeško/Hudson-Odoi → `❓ 75%`. The existing "d → ❓" (no chance) assertion
+still holds; +1 test (`❓ 75%`, `❓ 0%`, and that only doubtful appends the chance). ruff clean, full suite
+**625** green.
 
 ---
 
