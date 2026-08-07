@@ -471,9 +471,11 @@ def test_my_squad_pitch_cards_show_set_piece_attributes():
     if not squad:
         return                                          # no pickable squad (empty env) → nothing to assert
     players = {p["id"]: p for p in Storage().get_players()}
-    expected = sum(1 for i in squad["player_ids"] if i in players and set_piece_flags(players[i]))
-    shown = sum(1 for c in at.caption if any(e in c.value for e in ("⚽", "🚩", "🎯")))
-    assert shown == expected                            # every owned taker's card shows the flags, no more
+    # US-257 (ADR-084): the pitch is one HTML block — the set-piece emojis live in the markdown, not captions.
+    expected = sum(len(set_piece_flags(players[i])) for i in squad["player_ids"] if i in players)
+    blob = " ".join(m.value for m in at.markdown)
+    shown = sum(blob.count(e) for e in ("⚽", "🚩", "🎯"))
+    assert shown == expected                            # every owned taker's set-piece flags render on the pitch
 
 
 def test_my_squad_shows_the_bench_order():
@@ -526,8 +528,8 @@ def test_my_squad_pitch_labels_the_bench_subs():
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
-    caps = [c.value for c in at.caption]
-    assert any("🔁 1st sub" in c for c in caps) and any("🔁 GK sub" in c for c in caps)
+    blob = " ".join(m.value for m in at.markdown)         # the pitch is one HTML block (ADR-084)
+    assert "🔁 1st sub" in blob and "🔁 GK sub" in blob
 
 
 def test_my_squad_bench_reorder_persists_and_recommended_applies():
@@ -745,12 +747,14 @@ def test_my_squad_page_renders_with_a_legality_banner_and_download():
 
 
 def test_my_squad_pitch_view_lays_out_the_squad():
-    # US-187: the squad renders as a formation card-grid — a card (markdown name) per player, not a table
+    # US-187 / US-257 (ADR-084): the squad renders as a styled formation pitch (one HTML block), not a table
     at = _squads_view("My Squad")
     if not at.get("download_button"):                      # no data locally → the info branch
         return
     assert len(at.dataframe) == 0                          # the pitch replaced the dataframe
-    assert len(at.markdown) >= 11                          # ≥ an XI of player-name cards
+    blob = " ".join(m.value for m in at.markdown)
+    assert "fpl-pitch" in blob                             # the pitch container
+    assert blob.count('class="kit"') >= 11                 # ≥ an XI of kit cards
 
 
 def test_my_squad_swap_adopts_and_mutates_the_session_squad():
