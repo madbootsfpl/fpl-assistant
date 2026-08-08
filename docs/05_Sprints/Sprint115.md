@@ -1,7 +1,7 @@
 # Sprint 115: Signal feeds — a media-headlines lens + sharper "talked about"
 
 **Dates:** 2026-08-16 (planned)
-**Status:** 🟢 In progress (2/2 stories built — retro pending)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a generic best-effort RSS lens + a Reddit variant — display-only, no xP)
 **Carried Over:** none
 
@@ -52,7 +52,7 @@ Football Scout · BBC Football · a YouTube FPL creator), and the **Trending** "
 - [x] **No drift** — display/lens only; `decision_xp`/the analytics/grounding unchanged; the read-only web
       guardrail holds (no server writes); the new fetches are best-effort + tested with a **fake/parsed
       fixture** (no live network in tests); **746** green (739 → +7: parse/aggregate/degrade + reddit-top + render checks); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help, ADR-093 (the signal-source policy +
+- [x] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help, ADR-093 (the signal-source policy +
       the media lens).
 
 ---
@@ -145,4 +145,36 @@ lens); NLP/sentiment over the headlines (we show titles + links, not analysis).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **739 → 746** (+7: parse RSS/Atom, per-feed degrade,
+reddit-top URL, News + Trending render checks). Ruff clean; CI-parity green. **New ADR-093** (signal-source
+policy + the media lens). No analytics change — display lenses; **no new dependency** and **no live network in
+the suite**.
+
+**Delivered**
+- **US-291 — media-headlines lens on News.** A generic best-effort RSS/Atom aggregator (`api/feeds.py`) driven
+  by `config.MEDIA_FEEDS` (Fantasy Football Scout + BBC Football live; YouTube documented), as an opt-in,
+  cached, per-feed-degrading Headlines section.
+- **US-292 — sharper "talked about" on Trending.** A weekly-top Reddit discussions list (titles + links)
+  beside the buzz counter.
+
+**What went well**
+- **The review did the heavy lifting.** Verifying each feed *from the environment* before planning turned "12
+  sources" into "4 adopt / 8 defer, here's why" — and ADR-093 records the policy so the next feed request is a
+  30-second triage, not a debate.
+- **One generic parser covered everything.** `parse_feed` handles RSS `<item>` **and** Atom `<entry>`, so FFS,
+  BBC, YouTube **and** Reddit's `.rss` all flow through the same tested path — no per-source code, no
+  `feedparser` dependency.
+- **Best-effort by construction.** Every fetch is button-gated + cached + per-feed try/except, so a 403 or a
+  slow feed never touches page load — and the tests prove it with fixtures + a fake client (zero live network).
+- **Honest about YouTube.** Rather than hard-code a channel-id I couldn't verify (the sandbox hits YouTube's
+  consent wall), I shipped the mechanism + a documented slot — the owner drops one in.
+
+**Watch-outs / follow-ups**
+- **Cloud IP blocking is real** — FFS/BBC/Reddit may 403/rate-limit from the Streamlit Cloud IP (Reddit's
+  `.rss` already does intermittently); the degrade path + cache are the mitigation, but headlines may show
+  "unavailable" on the deploy.
+- **YouTube is wired, not populated** — needs a verified `channel_id` (owner to supply, or resolve out-of-band).
+- **Deferred (ADR-093):** Reddit `.json`/HTML scraping/Transfermarkt/odds; NLP over the headlines (we show
+  titles + links, not derived analysis). Odds remain a potential *Tier-3 modelling* item, not a lens.
+
+See `Sprint115_Lessons_Learnt.md` for the detailed retro.

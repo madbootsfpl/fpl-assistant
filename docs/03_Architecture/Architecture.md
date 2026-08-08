@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 115 (2026-08-16)** — *Signal feeds: a media-headlines lens + sharper "talked about"* (owner intake;
+  **ADR-093**, display lenses — never xP). Reviewed ~12 external sources; adopted the public, no-auth,
+  FPL-relevant **RSS/Atom** feeds and deferred scraping/auth/odds. **US-291:** `api/feeds.py` — a best-effort
+  `MediaFeedsClient` (our UA, tight timeout, retry-once, raise → the caller degrades) + a pure
+  `parse_feed(xml, limit)` handling **both** RSS `<item>` and Atom `<entry>` with stdlib `ElementTree`
+  (**no new dependency**; empty-safe). `web_streamlit/media.py::media_headlines` aggregates `config.MEDIA_FEEDS`
+  **per-feed** (a failing/empty feed is skipped). The **News** tab gains an opt-in **Headlines** section —
+  button-gated, `st.cache_data(1800)`, grouped by source, links out; **Fantasy Football Scout** + **BBC
+  Football** shipped active (YouTube via a documented `MEDIA_FEEDS` slot + `MEDIA_YOUTUBE_URL` — the sandbox
+  couldn't resolve a channel-id). **US-292:** `RedditRssClient.get_top_weekly()` (the `top/.rss?t=week` variant,
+  `config.REDDIT_TOP_WEEK_URL`) powers a button-gated, cached **"🔥 Top discussions this week"** list beside the
+  buzz counter on **Trending**, reusing `parse_feed`. All best-effort (cache + gate + degrade); no server
+  writes; **no live network in tests** (fixtures + a fake client). +7 tests (746).
 - **Sprint 114 (2026-08-15)** — *Four-tier ownership badges: one ownership language* (tester feedback;
   display/lens, extends ADR-057 + ADR-089; no analytics change). **US-289:** a pure
   `analytics/crowd.py::ownership_tier(player)` → **💎 differential** (≤5%) · **⭐ popular** (5–20%) · **🟦

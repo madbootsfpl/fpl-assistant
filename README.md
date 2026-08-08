@@ -59,10 +59,12 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
   (four ownership tiers 💎 differential · ⭐ popular · 🟦 template · 👑 essential, plus 💰 price · 🔥 trending ·
   📈 form) across the player/squad views, and a
   **"trends"** `ask` intent. *(Ownership works now; momentum/form light up at GW1, 2026-08-21.)*
-- **News** — official FPL player news (injuries · doubts · returns), most serious first.
+- **News** — official FPL player news (injuries · doubts · returns), most serious first, plus an opt-in
+  **📰 Headlines** lens aggregating FPL-relevant public RSS (Fantasy Football Scout · BBC Football; a YouTube
+  slot to fill) — titles + links, best-effort/cached (ADR-093).
 - **Import your team by manager-ID** — pull your real FPL squad from the public entry API (picks from GW1).
 - **Community Signals** — who r/FantasyPL is talking about right now, from the public Reddit **RSS** feed
-  (mention *buzz*, not sentiment; best-effort — degrades to "unavailable" if the feed can't be reached).
+  (mention *buzz*, not sentiment) + the week's **🔥 top discussions** — best-effort, degrades to "unavailable".
 
 ## Planned (not yet built)
 

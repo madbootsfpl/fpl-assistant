@@ -95,8 +95,12 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   `transfers_in/out_event` · `cost_change_*` · `form` · `ict_index` (+ components) · `value_form`; crowd
   **flags** on Players/Build/Analyse/My Squad/Captain/Transfer; a **"trends"** `ask` intent + a **Trending**
   page. **Tier 2** (ADR-058/059): an FPL **news lens**, **manager-ID import**, and **Community Signals**
-  (Reddit RSS buzz). **Tier 3** (backtest crowd-follow vs xP-only) + **keyed** Reddit/pundit sentiment
-  remain open → Roadmap *Phase 6 / Later*. Momentum/form boards light up at **GW1 (2026-08-21)**.
+  (Reddit RSS buzz). **Tier 2b — media feeds** (Sprint 115, ADR-093): a **📰 Headlines** lens on News
+  (Fantasy Football Scout + BBC Football public RSS; a YouTube slot) + a Reddit **weekly-top** discussions list
+  on Trending — all public/no-auth, best-effort, display-only. *Deferred (ADR-093):* Reddit `.json`/HTML
+  scraping/Transfermarkt; **betting/odds** and NLP over headlines (odds = a possible **Tier-3 modelling** input,
+  not a lens). **Tier 3** (backtest crowd-follow vs xP-only) remains open → Roadmap *Later*. Momentum/form
+  boards light up at **GW1 (2026-08-21)**.
 
 - **Cloud squads — server-side persistence (Path 2)** — the seamless upgrade to Sprint 057's
   download/upload squads: a **"Save as `<name>` / Load `<name>`"** backed by a free external DB (e.g.
