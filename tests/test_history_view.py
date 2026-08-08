@@ -10,9 +10,11 @@ from src.ui.history import render_player_history
 _PLAYER = {"web_name": "Haaland", "team": "MCI", "position": "FWD", "code": 1}
 _SEASONS = [
     {"season_name": "2023/24", "total_points": 217, "minutes": 2553, "starts": 29,
-     "expected_goal_involvements": 31.8, "expected_goals_conceded": 25.6},
+     "expected_goal_involvements": 31.8, "expected_goals_conceded": 25.6,
+     "start_cost": 14.0, "end_cost": 14.3},
     {"season_name": "2024/25", "total_points": 181, "minutes": 2736, "starts": 31,
-     "expected_goal_involvements": 23.9, "expected_goals_conceded": 41.3},
+     "expected_goal_involvements": 23.9, "expected_goals_conceded": 41.3,
+     "start_cost": 15.0, "end_cost": 14.9},
 ]
 _GWS = [{"round": 1, "total_points": 13, "minutes": 90},
         {"round": 2, "total_points": 2, "minutes": 78}]
@@ -26,6 +28,17 @@ def test_player_history_assembles_seasons_and_gameweeks_with_pp90():
     assert [g["round"] for g in h["gameweeks"]] == [1, 2]
 
 
+def test_player_history_carries_price_and_change():
+    # US-297: the price columns (already £m) + the season's ± change.
+    s = player_history(_PLAYER, _SEASONS, [])["seasons"]
+    assert s[0]["start_cost"] == 14.0 and s[0]["end_cost"] == 14.3 and s[0]["change"] == 0.3
+    assert s[1]["change"] == round(14.9 - 15.0, 1)                     # a fall → negative
+    # empty-safe: a missing cost → change None (no crash), and the renderer shows "—"
+    missing = player_history(_PLAYER, [{"season_name": "2020/21", "total_points": 5, "minutes": 90}], [])
+    assert missing["seasons"][0]["change"] is None
+    assert "—" in render_player_history(missing)
+
+
 def test_player_history_is_empty_safe():
     h = player_history(_PLAYER, [], [])
     assert h["seasons"] == [] and h["gameweeks"] == []
@@ -37,6 +50,7 @@ def test_render_shows_season_table_and_a_gw1_note_when_no_gameweeks():
     out = render_player_history(player_history(_PLAYER, _SEASONS, []))
     assert "History — Haaland (MCI, FWD)" in out and "Past seasons" in out
     assert "2023/24" in out and "217" in out and "Pts/90" in out       # the season table + its columns
+    assert "£14.0→14.3" in out                                         # US-297: the price column
     assert "fills once the season starts (GW1)" in out                 # per-GW dormant note
 
 

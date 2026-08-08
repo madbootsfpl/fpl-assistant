@@ -6,6 +6,14 @@ renderer (ADR-025). Pure formatting over `analytics.player_history`; display-onl
 
 from ._table import Col, render_rows
 
+
+def _price(r) -> str:
+    """`£start→end` (both £m), or "—" when a cost is missing (US-297)."""
+    if r.get("start_cost") is None or r.get("end_cost") is None:
+        return "—"
+    return f"£{r['start_cost']:.1f}→{r['end_cost']:.1f}"
+
+
 _SEASON_COLS = [
     Col("Season", 9, "<", lambda r: str(r["season"])),
     Col("Pts", 5, ">", lambda r: str(r["points"])),
@@ -14,6 +22,7 @@ _SEASON_COLS = [
     Col("Pts/90", 7, ">", lambda r: f"{r['pp90']:.1f}"),
     Col("xGI", 6, ">", lambda r: f"{r['xgi']:.1f}" if r["xgi"] is not None else "—"),
     Col("xGC", 6, ">", lambda r: f"{r['xgc']:.1f}" if r["xgc"] is not None else "—"),
+    Col("£m", 13, ">", _price),
 ]
 
 _GW_COLS = [

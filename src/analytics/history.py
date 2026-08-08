@@ -26,6 +26,7 @@ def player_history(player, seasons, gameweeks) -> dict:
     out_seasons = []
     for r in seasons or []:
         pts, mins = _get(r, "total_points") or 0, _get(r, "minutes") or 0
+        start, end = _get(r, "start_cost"), _get(r, "end_cost")          # already £m (ingest converts tenths)
         out_seasons.append({
             "season": _get(r, "season_name") or "?",
             "points": pts,
@@ -34,6 +35,9 @@ def player_history(player, seasons, gameweeks) -> dict:
             "pp90": _pp90(pts, mins),
             "xgi": _get(r, "expected_goal_involvements"),
             "xgc": _get(r, "expected_goals_conceded"),
+            "start_cost": start,
+            "end_cost": end,
+            "change": round(end - start, 1) if (start is not None and end is not None) else None,
         })
     out_gw = [{"round": _get(r, "round"), "points": _get(r, "total_points") or 0,
                "minutes": _get(r, "minutes") or 0} for r in (gameweeks or [])]
