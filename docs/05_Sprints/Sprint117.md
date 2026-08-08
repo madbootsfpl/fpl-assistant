@@ -1,7 +1,7 @@
 # Sprint 117: A `history <player>` view — past seasons now, per-GW at GW1
 
 **Dates:** 2026-08-18 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** 🟢 In progress (2/2 stories built — retro pending)
 **Capacity:** ~1 session (a read-view + a grounded `ask` intent over data we already ingest)
 **Carried Over:** none
 
@@ -35,18 +35,18 @@ via a grounded `ask`/`chat` intent. A read-view over existing data; the analytic
 verified (✓).
 
 #### Success Criteria
-- [ ] **US-295 (the `history <player>` view — analytics + CLI)** — a pure `analytics/history.py::player_history`
+- [x] **US-295 (the `history <player>` view — analytics + CLI)** — a pure `analytics/history.py::player_history`
       (assemble `get_history_past` + `get_by_code` into a display shape: past-season rows + any per-GW rows) +
       `ui/history.py::render_player_history` (a season table — season · Pts · Mins · xGI · … — + a per-GW trend
       block, or a "per-GW fills from GW1" note); a CLI **`history <player>`** command (the positional player
       resolves a name → the view; `history --backfill` still ingests; bare `history` keeps its help). Empty-safe
       (unknown player → a clear message).
-- [ ] **US-296 (a grounded `history` ask/chat intent)** — a `history` intent + `_decide_history` that reuses the
+- [x] **US-296 (a grounded `history` ask/chat intent)** — a `history` intent + `_decide_history` that reuses the
       analytics + renderer → narrated + **verified** (✓, ADR-037), degrading to the facts block without Ollama;
       routed on distinctive cues (*"history"*, *"last season"*, *"how did X do"*, *"X's record"*) placed so it
       doesn't steal squad/worth commands. Inherited by the **Ask** tab + CLI `chat`; the player resolves or asks.
-- [ ] **No drift** — a read-view/lens only; `decision_xp`/the analytics unchanged; the read-only web guardrail
-      holds; existing **751** stay green (+ history view / intent tests); ruff clean.
+- [x] **No drift** — a read-view/lens only; `decision_xp`/the analytics unchanged; the read-only web guardrail
+      holds; **762** green (751 → +11: view + CLI + intent tests); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help (extends **ADR-027/060** (history) +
       **ADR-037** (grounded ask) — noted; a short **ADR-094** only if we want the intent recorded, agreed at
       the gate).
@@ -78,7 +78,7 @@ follow); the price column until the cost units are verified; cross-player compar
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-295 | **`history <player>` view (analytics + CLI)** — past-season line + a per-GW trend; empty-safe. | High | ⬜ To do | ~½ session |
-| US-296 | **A grounded `history` ask/chat intent** — "how did X do?" → the view, narrated + verified. | High | ⬜ To do | ~½ session |
+| US-296 | **A grounded `history` ask/chat intent** — "how did X do?" → the view, narrated + verified. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -117,7 +117,20 @@ follow); the price column until the cost units are verified; cross-player compar
   tests) — caught it (the suite count dropped), restored the original from git, and moved the new view tests to
   `tests/test_history_view.py`.
 
-_(US-296 next — "start US-296".)_
+**US-296 — a grounded `history` ask/chat intent.** ✅ Done.
+- A **`history`** intent in `_INTENT_KEYWORDS` (cues: *history · last season · last year · how did · track
+  record · past seasons · season by season · season record*), placed **after `worth`** so *"is X worth it"*
+  still routes to worth and *"who should I captain?"* stays captain — verified by a routing test.
+- `ask._decide_history(store, question)` resolves the named player (`_match_players`, ADR-039), builds
+  `player_history`, renders the view as `detail`, and puts the **last season's pts/mins/xGI + the season count**
+  into `facts` — so a narrated number **verifies (✓, ADR-037)**; degrades on an ambiguous/absent player or one
+  with no backfill. Wired into `_dispatch`; the **Ask** tab + CLI `chat` inherit it.
+- **Verified on real data:** *"Haaland's history"* → the season table, `facts.last_season` = *"2025/26: 239
+  pts over 2953 mins, 28.17 xGI"*; *"how did Haaland do last season?"* also routes to `history`.
+- **Tests (+3):** routing (history vs worth vs captain); `_decide_history` grounds the seasons + facts (verifies
+  ✓); degrades without a named player. **762** green, ruff clean.
+- **Manual smoke:** `ask "Haaland's history"` narrates his recent seasons with the ✓ trust line (degrades to the
+  facts block without Ollama).
 
 ---
 

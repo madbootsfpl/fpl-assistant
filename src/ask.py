@@ -37,6 +37,7 @@ from src.analytics import (
     explain_worth,
     gameweek_plan,
     minutes_weight_from_history,
+    player_history,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
@@ -56,6 +57,7 @@ from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
 from src.ui.gameweek import render_gameweek_plan
+from src.ui.history import render_player_history
 from src.ui.rules import render_rules
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
@@ -103,6 +105,10 @@ _INTENT_KEYWORDS = {
     # caught by "buy"; the phrases are value-specific, so "worth captaining" still falls to captain.
     "worth": ("worth the money", "worth it", "good value", "value for money", "worth buying",
               "worth the price", "worth the cost"),
+    # history (US-296): a single-player season record — distinctive phrases so it wins for "X's history" /
+    # "how did X do last season" without stealing worth ("is X worth it") or the squad commands.
+    "history": ("history", "last season", "last year", "how did", "track record", "past seasons",
+                "season by season", "season record"),
     "captain": ("captain", "armband"),
     "transfer": ("transfer", "sell", "buy", "swap"),
     "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
@@ -1011,6 +1017,43 @@ def _value_verdict(ratio: float) -> str:
     return "pricey for the output"
 
 
+def _decide_history(store: Storage, question: str) -> dict | None:
+    """A single player's season record (US-296, ADR-027/060) — past seasons + this-season per-GW, GROUNDED.
+
+    Reuses `player_history` + `render_player_history`; the facts carry the last season's points/minutes/xGI so a
+    narrated number verifies (✓). Degrades on an ambiguous / absent player, or one with no backfilled history.
+    """
+    players = store.get_players()
+    if not players:
+        return None
+    matched = _match_players(question, players)
+    ambiguous = [wn for wn, ps in matched.items() if len(ps) > 1]
+    if ambiguous:
+        return {"message": f"More than one player called '{ambiguous[0]}' — name the team too."}
+    if not matched:
+        return {"message": 'Name a player, e.g. ask "Haaland\'s history".'}
+
+    target = next(iter(matched.values()))[0]
+    hist = player_history(target, store.get_history_past(target["code"]), store.get_history(target["code"]))
+    seasons = hist["seasons"]
+    if not seasons and not hist["gameweeks"]:
+        return {"message": f"No history stored for {target['web_name']} yet — run `history --backfill` first "
+                           "(past-season data; per-GW form fills once the season starts)."}
+    facts = {"player": f"{target['web_name']} ({target['team']}, {target['position']})",
+             "seasons_on_record": len(seasons)}
+    if seasons:
+        last = seasons[-1]
+        xgi = f", {last['xgi']} xGI" if last["xgi"] is not None else ""
+        facts["last_season"] = f"{last['season']}: {last['points']} pts over {last['minutes']} mins{xgi}"
+    return {
+        "detail": render_player_history(hist),
+        "facts": facts,
+        "subjects": [target["web_name"]],
+        "task": "in 1-2 short sentences, summarise this player's recent seasons (points + minutes), using ONLY "
+                "the facts — do not invent any number",
+    }
+
+
 def _decide_worth(store: Storage, question: str) -> dict | None:
     """Analytics DECIDE a single player's value (ADR-061): xP/£m, rank among available same-position
     players, and how it sits vs the position median → a tiered verdict; the LLM only phrases it.
@@ -1437,6 +1480,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_shortlist(store, question, rank=rank)
     if intent == "worth":
         return _decide_worth(store, question)
+    if intent == "history":
+        return _decide_history(store, question)
     if intent == "trends":
         return _decide_trends(store, question)
     if intent == "fixtures":

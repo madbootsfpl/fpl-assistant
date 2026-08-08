@@ -23,6 +23,7 @@ from src.ask import (
     _decide_chips,
     _decide_compare,
     _decide_gameweek,
+    _decide_history,
     _decide_rules,
     _decide_shortlist,
     _decide_worth,
@@ -432,6 +433,41 @@ def test_render_shortlist_rationale_adds_a_why_and_standout_signals():
     assert "Nailed (18.0 xP) — nailed" in out                         # mw ≥ 0.7 → nailed
     assert "Rotated (17.0 xP) — rotation risk" in out and "🎯 FK" in out   # mw < 0.7 → risk + set-piece
     assert "Standout signals" not in render_shortlist(rows, "Best MID — by xP")   # plain: no rationale block
+
+
+# ---- history intent (US-296) — single-player season record ------------------
+
+def test_routes_history_without_stealing_worth_or_squad_commands():
+    assert route("Haaland's history", known_squads=[])[0] == "history"
+    assert route("how did Haaland do last season?", known_squads=[])[0] == "history"
+    assert route("Palmer past seasons", known_squads=[])[0] == "history"
+    assert route("is Haaland worth the money?", known_squads=[])[0] == "worth"       # worth still wins
+    assert route("who should I captain?", known_squads=[])[0] == "captain"           # not history
+
+
+def test_decide_history_grounds_a_players_seasons_and_verifies():
+    # US-296: the answer carries a rendered detail + facts (last season pts/mins) so narration verifies.
+    from src.storage import Storage
+    store = Storage()
+    try:
+        has = any(p["web_name"] == "Haaland" and store.get_history_past(p["code"]) for p in store.get_players())
+    finally:
+        store.close()
+    if not has:
+        return
+    d = _decide_history(Storage(), "Haaland's history")
+    assert "History — Haaland" in d["detail"] and "Past seasons" in d["detail"]
+    assert "player" in d["facts"] and d["facts"]["seasons_on_record"] >= 1
+    assert "last_season" in d["facts"] and "pts" in d["facts"]["last_season"]
+    assert d["subjects"] == ["Haaland"]
+
+
+def test_decide_history_degrades_without_a_player():
+    import types
+    store = types.SimpleNamespace(get_players=lambda: [{"id": 1, "web_name": "Solo", "team": "X",
+                                                        "position": "MID", "code": 1}])
+    d = _decide_history(store, "show me a history")           # no named player
+    assert "Name a player" in d["message"]
 
 
 # ---- worth intent (ADR-061) — single-player value verdict -------------------
