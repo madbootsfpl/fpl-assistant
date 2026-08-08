@@ -103,7 +103,7 @@ ADR-094); native `st.login()` (the "product" upgrade path); server-render timing
 |---|---|---|---|---|
 | ADR-094 | **Cross-device persistence** — handle-keyed free store (design gate; build = Sprint 123). | High | ✅ Done | gate |
 | ADR-095 | **Running a wider beta** — prod/staging + protection + backup + monitoring. | High | ✅ Done | gate |
-| US-305 | **Safeguard the code** — LICENSE (PolyForm-NC) + mirror-backup Action + BACKUP.md. | High | ⬜ To do | ~¼ session |
+| US-305 | **Safeguard the code** — LICENSE (PolyForm-NC) + mirror-backup Action + BACKUP.md. | High | ✅ Done | ~¼ session |
 | US-306 | **Beta go-live enablement** — enrich the feedback payload + a BETA.md go-live checklist. | High | ⬜ To do | ~¼ session |
 
 ---
@@ -154,6 +154,14 @@ _(these need your account/clicks; the sprint delivers the code + the runbooks)_
   deferred until the free tier demonstrably struggles (the honest real-risk note: free-tier RAM/idle-sleep at
   20–50 users, not measurement). The cheap code lands in US-305/306; the rest are owner runbook actions. Added to
   the ADR index. Design/decision record — no code; suite unchanged at **775**.
+- **US-305 (safeguard the code)** — added **`LICENSE`** (PolyForm Noncommercial 1.0.0, verbatim, with a
+  `Required Notice: © 2026 Tony Sheridan` header) + a **README "License"** section; a **mirror-backup** Action
+  (`.github/workflows/mirror.yml`) that bare-`--mirror`-clones the repo and `push --mirror`s to
+  `${{ secrets.MIRROR_URL }}` on **push + a daily cron + manual dispatch**, **secret-gated** (a `gate` step skips
+  everything when `MIRROR_URL` is unset → inert on forks / until the owner opts in, no CI change); and a
+  **`docs/BACKUP.md`** runbook (the mirror setup, a `git bundle` offline fallback, a restore playbook, and a note
+  that the committed seed data rides along). Validated: `mirror.yml` parses as YAML (jobs `mirror`; triggers
+  push/schedule/workflow_dispatch). No Python changed — ruff clean, suite stands at **775**.
 
 ---
 

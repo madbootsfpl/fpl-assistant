@@ -255,4 +255,10 @@ python -m src.web                    # serves http://127.0.0.1:8000
 Both are local-only, read-only, and need no auth. (Why two? A measured spike — ADR-051 — chose Streamlit
 to grow; the FastAPI edge is kept frozen as the lean HTTP reference.)
 
+## License
+
+Source-available under the **[PolyForm Noncommercial License 1.0.0](LICENSE)** — you're welcome to read, learn
+from, and tinker with the code for **non-commercial** purposes; commercial use isn't granted (ADR-095). © 2026
+Tony Sheridan.
+
 Created by Tony Sheridan.

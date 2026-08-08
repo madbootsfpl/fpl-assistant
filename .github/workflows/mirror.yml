@@ -1,0 +1,44 @@
+name: Mirror backup
+
+# Mirror the whole repo (all branches + tags) to a second git remote, so GitHub isn't a
+# single point of failure (ADR-095). Inert by default: it does nothing until the owner sets
+# the MIRROR_URL secret (a push URL that already carries a token / deploy key), so forks and
+# an unconfigured repo never see a failing run.
+#
+# Set it up: create a free mirror repo (Codeberg / GitLab), then add a repo secret
+#   MIRROR_URL = https://<user>:<token>@codeberg.org/<user>/<repo>.git
+# See docs/BACKUP.md.
+
+on:
+  push:
+  schedule:
+    - cron: "17 4 * * *"   # a daily safety net (~04:17 UTC), independent of pushes
+  workflow_dispatch:        # a manual "back up now" button
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Is the mirror configured?
+        id: gate
+        env:
+          MIRROR_URL: ${{ secrets.MIRROR_URL }}
+        run: |
+          if [ -z "$MIRROR_URL" ]; then
+            echo "No MIRROR_URL secret set — skipping (the mirror is inert until you add it)."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mirror-clone this repo and push it to the backup remote
+        if: steps.gate.outputs.configured == 'true'
+        env:
+          MIRROR_URL: ${{ secrets.MIRROR_URL }}
+        run: |
+          # A bare --mirror clone is a faithful copy of every ref (branches + tags); push it on.
+          # (The repo is public, so the clone needs no auth; if it ever goes private, add a token
+          #  to the clone URL too — see docs/BACKUP.md.)
+          git clone --mirror "https://github.com/${GITHUB_REPOSITORY}.git" repo-mirror.git
+          git -C repo-mirror.git push --mirror "$MIRROR_URL"
+          echo "Mirrored ${GITHUB_REPOSITORY} to the backup remote."
