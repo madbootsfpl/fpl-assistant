@@ -6,6 +6,8 @@ assembled (`gameweek_plan`). It shows with or without the LLM (the prose is a bo
 `render_ask`, in the web's Squads → AI Tips view.
 """
 
+from .explain import render_explanation
+
 
 def _captain_line(cap) -> str:
     if not cap:
@@ -58,6 +60,9 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
     ex = explanation or {}
     cap_ex, tr_ex = ex.get("captain"), ex.get("transfer")
     lines = [f"This week — squad '{squad_name}'", ""]
+
+    if ex.get("overall"):   # the plan-level Confidence · Why · Risk summary (US-274, ADR-089)
+        lines += [render_explanation(ex["overall"]), ""]
 
     lines.append(f"  Captain:  {_captain_line(plan['captain'])}{_conf(cap_ex)}")
     if cap_ex and cap_ex.reasons:

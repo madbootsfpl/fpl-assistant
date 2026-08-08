@@ -115,6 +115,19 @@ signals (form/news) enrich it at GW1; a richer web-native render.
   set-pieces* · *Transfer Ampadu → Zubimendi · Confidence 95/100 · High · Why: +9.3 XI, higher xP* — in Ask
   and the web AI Tips view.
 
+**US-274 — plan-level Confidence · Why · Risk (extends ADR-089).** ✅ Done.
+- `explain_gameweek`'s **`overall`** Explanation — a `gameweek_confidence` (captain-driven, −8 per flagged
+  player) + Why (✓ clear captain w/ its confidence · a positive-gain upgrade available · lineup tweaks · or
+  "no changes needed") + Risk (⚠ the flagged players, or "none — all available").
+- `render_gameweek_plan` prepends the **Confidence · Why · Risk** block at the top of the plan (via
+  `render_explanation`); `_decide_gameweek` puts `confidence/why/risk` into `facts` so a narrated number
+  **verifies ✓**.
+- **Tests (+2 assertions):** the gameweek grounded test now also asserts the plan carries the Confidence block
+  + the per-recommendation Why, and that `facts` holds confidence/why. **707** green, ruff clean.
+- **Manual smoke (TS):** the plan leads with *Confidence 69/100 · Medium · Why: clear captain B.Fernandes
+  (69/100) · a positive-gain upgrade (+9.3) · Risk: none — all available*, then the per-recommendation Whys;
+  the LLM narration restates the values and **verifies ✓** — in Ask, `chat`, and the web AI Tips view.
+
 ---
 
 ### 🏁 Sprint Review & Retrospective

@@ -573,6 +573,12 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     cap, tr = plan["captain"], plan["transfer"]
     # Explainability (ADR-089): per-recommendation Why/Confidence (captain + transfer reused) + an overall read.
     explanation = explain_gameweek(plan, {p["id"]: p for p in players}, xp_by_id, horizon=horizon)
+    facts = _gameweek_facts(plan)
+    overall = explanation["overall"] if explanation else None
+    if overall is not None:   # the plan-level confidence + why/risk in the facts, so narration verifies (US-274)
+        facts["confidence"] = f"{overall.confidence}/100 ({overall.band})"
+        facts["why"] = "; ".join(overall.reasons)
+        facts["risk"] = "; ".join(overall.risks)
     # subjects = every owned player (the prose may name any starter) + the transfer buy (not owned),
     # so verify_grounding (ADR-037) doesn't flag a legitimately-named player.
     subjects = [p["web_name"] for p in owned] + ([tr["in"]["web_name"]] if tr else [])
@@ -580,7 +586,7 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         "detail": render_gameweek_plan(plan, squad_name, horizon=horizon, explanation=explanation),
         "headline": f"This week (squad '{squad_name}'): captain "
                     f"{cap['web_name'] if cap else '—'}",
-        "facts": _gameweek_facts(plan),
+        "facts": facts,
         "subjects": subjects,
         "task": "give a brief 'this week' recommendation in 3-4 short sentences — who to captain, any "
                 "lineup change, one transfer to consider, and any injury/doubt flags — using ONLY the facts",

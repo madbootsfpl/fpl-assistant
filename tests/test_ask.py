@@ -643,6 +643,9 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     assert "This week — squad 'TST'" in decision["detail"]
     assert "Haaland" in decision["subjects"] and "Palmer" in decision["subjects"]   # owned + the buy
     assert "over 5 GW" in decision["detail"]                                        # default horizon
+    # US-273/274 (ADR-089): explainability — a plan-level Confidence + a per-recommendation Why
+    assert "Confidence:" in decision["detail"] and "Why:" in decision["detail"]
+    assert "confidence" in decision["facts"] and "why" in decision["facts"]         # in the facts → verifiable
 
     res = assemble("q", "gameweek", decision,
                    narrator=lambda p: "Captain Haaland (xP 6.2). Consider Saka to Palmer (+1.9).",
