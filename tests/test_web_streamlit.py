@@ -120,14 +120,30 @@ def test_players_page_sorts_by_team_and_paginates():
 def test_fixtures_ticker_grid_and_weeks_selector():
     # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
     at = _run(_PAGES / "2_Fixtures.py")
-    assert len(at.dataframe) == 1 or len(at.info) == 1
+    assert len(at.dataframe) >= 1 or len(at.info) == 1     # US-301 added a second (targets) table
     if not at.dataframe:
         return
-    cols = list(at.dataframe[0].value.columns)
+    cols = list(at.dataframe[0].value.columns)             # the ticker is the first dataframe
     assert "Team" in cols and sum(c.startswith("GW") for c in cols) == 6   # default 6 weeks
     at.slider[0].set_value(3).run()                                        # → 3 GW columns
     assert not at.exception
     assert sum(c.startswith("GW") for c in at.dataframe[0].value.columns) == 3
+
+
+def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
+    # US-301: a "Target by fixtures" section names the best available players from the easiest-run teams,
+    # scoped by a Position filter.
+    at = _run(_PAGES / "2_Fixtures.py")
+    if not at.dataframe:
+        return                                             # no data → nothing to target
+    assert any(s.value == "🎯 Target by fixtures" for s in at.subheader)
+    targets = at.dataframe[-1].value                       # the targets table is last
+    assert {"Team", "Player", "Pos", "xP", "Fit"} <= set(targets.columns)
+    pos = next(s for s in at.segmented_control if s.label == "Position")
+    pos.set_value("DEF").run()
+    assert not at.exception
+    scoped = at.dataframe[-1].value
+    assert list(scoped["Pos"].unique()) == ["DEF"]         # only defenders after the filter
 
 
 def _squads_view(view):

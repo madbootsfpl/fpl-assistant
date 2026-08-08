@@ -8,7 +8,7 @@ opponent + (H/A) shaded green (easy) → red (hard). Reuses `fixture_ticker` (wh
 import pandas as pd
 import streamlit as st
 
-from src.analytics import fixture_ticker
+from src.analytics import decision_xp, fixture_ticker, target_by_fixtures, team_fdr
 from src.storage import Storage
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name
@@ -27,6 +27,9 @@ store = Storage()
 try:
     upcoming = store.get_upcoming_fixtures()
     badges = badge_url_by_short_name(store.get_teams())
+    players = store.get_players()
+    history = store.get_history_by_code()
+    gw_history = store.get_gw_history_by_code()
 finally:
     store.close()
 
@@ -67,3 +70,39 @@ else:
         hide_index=True, width="stretch",
         column_config={"badge": st.column_config.ImageColumn("", width="small")},
     )
+
+    # 🎯 Target by fixtures (US-301) — turn "which teams have a good run" into "who to buy" for a new
+    # squad / wildcard: the best available players from the easiest-run teams, ranked by the app's xP.
+    st.divider()
+    st.subheader("🎯 Target by fixtures")
+    st.caption("The best available players from the easiest-run teams over your window — for planning a "
+               "new squad or a wildcard. Ranked by expected points (xP).")
+    position = st.segmented_control(
+        "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="target_pos",
+        help="Filter the targets to one position (e.g. which defenders have the best runs).")
+    ranked = decision_xp(players, upcoming, history, horizon=weeks, gw_history_by_code=gw_history)
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    targets = target_by_fixtures(team_fdr(upcoming, next_n=weeks), players, xp_by_id, position=position)
+    if targets:
+        target_rows = [{
+            "Team": t["team"],
+            "FDR": t["avg_difficulty"],
+            "Next": ", ".join(t["opponents"]),
+            "Player": t["web_name"],
+            "Pos": t["position"],
+            "£m": t["price"],
+            "Own%": t["selected_by"],
+            "Fit": t["fit"],
+            "xP": t["xp"],
+        } for t in targets]
+        st.dataframe(
+            pd.DataFrame(target_rows), hide_index=True, width="stretch",
+            column_config={
+                "FDR": st.column_config.NumberColumn("FDR", format="%.1f", help="Average fixture difficulty"),
+                "£m": st.column_config.NumberColumn("£m", format="£%.1fm"),
+                "Own%": st.column_config.NumberColumn("Own%", format="%.1f"),
+                "xP": st.column_config.NumberColumn("xP", format="%.1f", help="Expected points (the app's one metric)"),
+            },
+        )
+    else:
+        st.caption("No available targets for that position in the top-run teams.")

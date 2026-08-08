@@ -78,6 +78,7 @@ from src.analytics.price import (
     price_prediction,
     price_pressure,
 )
+from src.analytics.targets import target_by_fixtures
 from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import baseline_rate, decision_xp, fallback_rate, player_xp
@@ -159,6 +160,7 @@ __all__ = [
     "suggest_transfers",
     "team_fdr",
     "team_schedule",
+    "target_by_fixtures",
     "fixture_ticker",
     "player_history",
 ]
