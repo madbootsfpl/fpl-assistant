@@ -6,7 +6,7 @@ assembled (`gameweek_plan`). It shows with or without the LLM (the prose is a bo
 `render_ask`, in the web's Squads → AI Tips view.
 """
 
-from .explain import render_explanation
+from .explain import MODEL_NOTE, render_explanation
 
 
 def _captain_line(cap) -> str:
@@ -76,4 +76,6 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
         lines.append("            Why: " + " · ".join(tr_ex.reasons[:2]))
 
     lines.append(f"  Flags:    {_flags_line(plan['flags'])}")
+    if explanation:                       # the honest attribution closing an explained plan (US-278)
+        lines += ["", MODEL_NOTE]
     return "\n".join(lines)

@@ -73,4 +73,5 @@ else:
         views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
                               horizon=horizon)
     elif view == "Captain":
-        views.render_captain(squad_name, squad, players, upcoming, history, photos, badges)
+        team_names = {t["short_name"]: t["name"] for t in teams}   # "MUN" → "Man Utd" (US-278)
+        views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names)

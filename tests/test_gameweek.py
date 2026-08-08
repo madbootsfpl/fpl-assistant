@@ -70,6 +70,14 @@ def test_render_gameweek_plan_shows_all_four_sections():
     assert "start Saka — bench Foden" in out
     assert "Watkins (AVL) → Isak (NEW)" in out and "+1.3 XI xP" in out
     assert "Foden (doubtful, 75%)" in out
+    assert "Model note:" not in out                             # US-278: no note without an explanation
+
+
+def test_render_gameweek_plan_appends_the_model_note_when_explained():
+    from src.analytics.explain import Explanation
+    ex = {"overall": Explanation(reasons=["Clear captain"], risks=[], confidence=60, band="Medium")}
+    out = render_gameweek_plan(_FULL_PLAN, "TS", explanation=ex)
+    assert "Model note:" in out                                 # the honest footer closes the explained plan
 
 
 def test_render_gameweek_plan_degraded_branches():

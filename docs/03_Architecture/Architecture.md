@@ -455,6 +455,24 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 108 (2026-08-09)** — *A structured "Captain Pick" answer + a shared Model note* (tester feedback;
+  display-only, extends **ADR-089**). **US-277:** the captaincy answer is now the tester's mockup — a new
+  `ui/captain.py::render_captain_pick(ranked, explanation, *, scope, team_names)` builds a card: header + scope ·
+  🥇 pick (`Team · Pos` via a `short_name→name` map from `get_teams` · `Projected: N pts`) · a clean
+  `Confidence: NN/100 (Band)` · Why ✓ / Risks ⚠ · **Alternatives** 🥈🥉 (+xP) · a Model note. The wording lives at
+  the single source (`explain_captain`: "Penalty taker", "Set-piece involvement", "Expected ~N mins", "Strong
+  fixture vs {OPP}", "Only +{gap} pts ahead of {name}", "Highest projected points" without the redundant number).
+  `_decide_captain` renders it, so CLI `ask`/`chat` + the web Ask tab inherit it; the facts still feed the
+  verifier (✓). **US-278:** a shared `ui/explain.py::MODEL_NOTE` (the "analytics decide, AI explains" attribution
+  + the folded "heuristic, not a probability" caveat) closes **all five** explained answers **once** — captain
+  (via the card), transfer + build (appended in `_decide_transfer`/`_decide_build_squad` + the web Build page),
+  chips (`render_chip_advice` when confidences) and the gameweek plan (`render_gameweek_plan` when explained,
+  once at the foot — never inside the composite). `render_explanation`'s confidence line went clean
+  (`NN/100 (Band)`); `explain_transfer` phrasing aligned. The **CLI `captain` + web Captain tab** now render the
+  same card — `render_captain_picks` was refactored to **delegate** to `render_captain_pick` (retiring the old
+  mono shortlist table + its `ui/_table`/`expected_minutes` machinery; the web keeps its rich photo table above
+  the card; Alternatives grow past 🥈🥉 with plain "N." so `captain --limit N` still lists N). No analytics
+  change; +5 net tests (713).
 - **Sprint 107 (2026-08-08)** — *Ask readability + a "fit" ✅ emoji* (tester feedback; display-only, extends
   **ADR-052/074**). **US-275:** the Ask answer renders with `st.code(answer, language=None, wrap_lines=True)` so
   long narration wraps while the aligned tables / plan / Why-Risk blocks stay readable; after the history

@@ -138,9 +138,9 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
     if (buy.get("xp") or 0) > (sell.get("xp") or 0):
         reasons.append(f"Higher projected points ({buy['xp']} vs {sell['xp']})")
     if _get(in_row, "penalties_order") == 1:
-        reasons.append("On penalties")
+        reasons.append("Penalty taker")                        # phrasing aligned across the family (US-278)
     if _get(in_row, "freekicks_order") == 1 or _get(in_row, "corners_order") == 1:
-        reasons.append("Takes set-pieces")
+        reasons.append("Set-piece involvement")
     if price_delta < 0:
         reasons.append(f"Frees £{-price_delta:.1f}m")
     own = _get(in_row, "selected_by")

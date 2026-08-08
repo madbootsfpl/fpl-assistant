@@ -19,10 +19,9 @@ def render_explanation(explanation) -> str:
     """`explanation` is an `analytics.Explanation`. One block: a Confidence line + Why (✓) / Risk (⚠) lists."""
     if explanation is None:
         return ""
-    lines = [
-        f"Confidence: {explanation.confidence} / 100 · {explanation.band}   "
-        "(a heuristic from the signals below — not a probability)",
-    ]
+    # A clean confidence line (US-277/278) — the "heuristic, not a probability" caveat now lives once in the
+    # shared MODEL_NOTE that closes the answer.
+    lines = [f"Confidence: {explanation.confidence}/100 ({explanation.band})"]
     if explanation.reasons:
         lines.append("")
         lines.append("Why")

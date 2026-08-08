@@ -28,7 +28,9 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
 - Save and reload your own squad (re-priced, with current injuries + departures)
 
 **Decision support (Phase 3)** — recommend *and explain*, composed on the above:
-- **`captain`** — the best captain picks for the next GW (by xP), with opponent + penalty duty
+- **`captain`** — a structured **Captain Pick** card for the next GW (by xP): the 🥇 pick (Team · Pos ·
+  Projected pts) · a Confidence · **Why**/**Risks** · 🥈🥉 **Alternatives** · a **Model note** (data-driven; AI
+  explains)
 - **`transfer`** — the best single legal transfers for your squad (≤3/club, budget), ranked by **XI
   improvement** (how much a swap lifts your best legal XI, so bench-fodder upgrades don't top the list);
   `--raw` for the old raw-xP-gain ranking

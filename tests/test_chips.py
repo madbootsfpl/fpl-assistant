@@ -77,3 +77,13 @@ def test_render_chip_advice_shows_every_chip_and_the_caption():
 
 def test_render_chip_advice_handles_no_advice():
     assert "no data" in render_chip_advice(None, "TST")
+
+
+def test_render_chip_advice_appends_the_model_note_only_when_explained():
+    # US-278: the shared Model note closes an explained answer — here, when per-chip confidences are shown.
+    from src.analytics.explain import explain_chips
+    owned = _squad()
+    advice = chip_advisor(owned, _by_gameweek(owned), [1, 2, 3, 4])
+    assert "Model note:" not in render_chip_advice(advice, "TST", horizon=4)          # no confidences
+    explained = render_chip_advice(advice, "TST", horizon=4, confidences=explain_chips(advice))
+    assert "Model note:" in explained

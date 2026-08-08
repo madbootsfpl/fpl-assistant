@@ -22,6 +22,16 @@ def test_confidence_band_cutoffs():
     assert confidence_band(40) == "Low"
 
 
+def test_render_explanation_has_a_clean_confidence_line_and_no_caveat():
+    # US-278: the "heuristic, not a probability" caveat moved to the shared MODEL_NOTE, so the block's
+    # confidence line is clean and matches the card format ("NN/100 (Band)").
+    from src.analytics.explain import Explanation
+    from src.ui.explain import render_explanation
+    out = render_explanation(Explanation(reasons=["r"], risks=["k"], confidence=69, band="Medium"))
+    assert "Confidence: 69/100 (Medium)" in out
+    assert "not a probability" not in out and "/ 100 ·" not in out
+
+
 def test_captain_confidence_is_bounded_and_reflects_the_signals():
     # a nailed-on runaway pick at home → High
     hi = captain_confidence(0.95, 1.2, penalty=True, venue="H", difficulty=2, doubtful=False, chance=None)
@@ -97,7 +107,7 @@ def test_explain_transfer_lists_the_gain_price_and_signals():
     why = " | ".join(ex.reasons)
     assert "+2.4 to your starting XI over 5 GW" in why
     assert "Higher projected points (6.5 vs 4.0)" in why
-    assert "On penalties" in why and "Template pick (45% owned)" in why
+    assert "Penalty taker" in why and "Template pick (45% owned)" in why
 
     risk = " | ".join(ex.risks)
     assert "Costs £1.0m from your bank" in risk                         # buy is £1.0m pricier

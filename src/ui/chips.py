@@ -6,6 +6,8 @@ analytics assembled (`chip_advisor`). It shows with or without the LLM (the pros
 web's Squads → Chips view.
 """
 
+from .explain import MODEL_NOTE
+
 
 def _tc_line(tc) -> str:
     p = tc["player"]
@@ -42,7 +44,7 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
     if not advice:
         return f"Chip strategy — squad '{squad_name}': no data yet (refresh, or add players)."
     window = f"next {horizon} GW" if horizon != 1 else "next GW"
-    return "\n".join([
+    lines = [
         f"Chip strategy — squad '{squad_name}' ({window})",
         "",
         f"  Triple Captain: {_tc_line(advice['triple_captain'])}{_conf(confidences, 'triple_captain')}",
@@ -53,4 +55,7 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
         "  Confidence = how clearly that gameweek beats the alternatives (a heuristic; low when the weeks are",
         "  close). Based on your fixture run + projected points — double/blank gameweeks and mini-league",
         "  position sharpen this in-season (live from GW1).",
-    ])
+    ]
+    if confidences:                       # the honest attribution closing an explained answer (US-278)
+        lines += ["", MODEL_NOTE]
+    return "\n".join(lines)

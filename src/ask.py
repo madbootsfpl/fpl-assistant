@@ -51,7 +51,7 @@ from src.ui.analyse import render_squad_analysis
 from src.ui.captain import render_captain_pick
 from src.ui.chips import render_chip_advice
 from src.ui.compare import render_compare
-from src.ui.explain import render_explanation
+from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
 from src.ui.gameweek import render_gameweek_plan
@@ -427,7 +427,7 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
         facts["why"] = "; ".join(explanation.reasons) or "none"
         facts["risk"] = "; ".join(explanation.risks) or "none noted"
     detail = "\n".join([f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
-                        f"{m['in']['web_name']}", "", render_explanation(explanation)])
+                        f"{m['in']['web_name']}", "", render_explanation(explanation), "", MODEL_NOTE])
     return {
         "detail": detail,   # self-contained Why/Risk/Confidence block (the truth, LLM or not)
         "headline": f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
@@ -872,7 +872,7 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
         facts["risk"] = "; ".join(explanation.risks) or "none noted"
     detail = "\n".join([render_explanation(explanation), "",
                         render_squad(result, budget=budget, objective="xp", full=True, xi_ids=xi_ids,
-                                     bench_boost=bench_boost)])
+                                     bench_boost=bench_boost), "", MODEL_NOTE])
     return {
         "detail": detail,
         "facts": facts,

@@ -1,7 +1,7 @@
 # Sprint 108: A structured "Captain Pick" answer + a shared Model note
 
 **Dates:** 2026-08-09 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a presentation upgrade of explainability — no analytics change)
 **Carried Over:** none
 
@@ -66,19 +66,19 @@ note** — and that same Model note + sharper phrasing carry across the **whole 
 throughout: the analytics decide, the wording only presents; every number still verifies (✓, ADR-037).
 
 #### Success Criteria
-- [ ] **US-277 (the structured Captain Pick answer)** — a new renderer produces the mockup layout: a
+- [x] **US-277 (the structured Captain Pick answer)** — a new renderer produces the mockup layout: a
       **`Captain Pick`** header; the 🥇 pick as a card (**name** / **Team · Pos** / **Projected: N pts**); a
       clean **`Confidence: NN/100 (Band)`** line; **Why** (✓) and **Risks** (⚠); an **Alternatives** section
       (🥈 / 🥉 with name + pts); and the **Model note** footer. Reuses `explain_captain` + the ranked `picks`;
       phrasing aligned to the mockup. Wired into `_decide_captain` → CLI `ask`/`chat` + web **Ask** + web
       **Captain**. Scope (a squad vs all players) is preserved as a small subheading.
-- [ ] **US-278 (a shared Model note + phrasing, everywhere)** — a single reusable **`MODEL_NOTE`** (with the
+- [x] **US-278 (a shared Model note + phrasing, everywhere)** — a single reusable **`MODEL_NOTE`** (with the
       folded heuristic caveat) appended **once** to each explained answer — **transfer · squad · chips ·
       gameweek** as well as captain (never repeated inside the composite gameweek block); the sharper phrasing
       applied where it reads naturally; and the **CLI `captain`** command brought into the structured format.
-- [ ] **No drift** — display-only; `explain_*`/`captain_confidence`/the analytics unchanged; the ✓/⚠ grounding
-      still verifies; existing **708** stay green (captain/explain assertions updated for the new wording);
-      ruff clean.
+- [x] **No drift** — display-only; `explain_*`/`captain_confidence`/the analytics unchanged; the ✓/⚠ grounding
+      still verifies; **713** green (708 → +5 net: card, delegation, model-note ×2, clean-line — after the
+      xMins-table test was replaced); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends **ADR-089** — noted; a short
       **ADR-090** only if we decide to formalise the Model note as a contract element, agreed at the gate).
 
@@ -124,8 +124,8 @@ all edges first; a visual pass can follow if wanted. DGW/BGW-aware alternatives 
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-277 | **Structured "Captain Pick" answer** — the mockup card (medal · Team·Pos · Projected · Confidence · Why · Risks · Alternatives 🥈🥉) in Ask/CLI/web. | High | ⬜ To do | ~½ session |
-| US-278 | **Shared Model note + phrasing** — one honest footer across captain·transfer·squad·chips·gameweek; caveat folded in; CLI `captain` on the new format. | High | ⬜ To do | ~½ session |
+| US-277 | **Structured "Captain Pick" answer** — the mockup card (medal · Team·Pos · Projected · Confidence · Why · Risks · Alternatives 🥈🥉) in Ask/CLI/web. | High | ✅ Done | ~½ session |
+| US-278 | **Shared Model note + phrasing** — one honest footer across captain·transfer·squad·chips·gameweek; caveat folded in; CLI `captain` on the new format. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -169,10 +169,64 @@ all edges first; a visual pass can follow if wanted. DGW/BGW-aware alternatives 
 - **Manual smoke:** `ask "who should I captain?"` → matches the mockup (B.Fernandes · Man Utd · MID · 5.9 ·
   69/100 Medium · 🥈 Haaland 5.7 · 🥉 Mbeumo 5.0); squad-scoped it self-tempers to 99/High.
 
-_(US-278 next — "start US-278".)_
+**US-278 — a shared Model note + phrasing across the family.** ✅ Done.
+- **`MODEL_NOTE`** (the honest attribution + the folded heuristic caveat) now closes every **explained** answer
+  exactly once: captain (via the card), **transfer** + **build** (appended in `_decide_transfer` /
+  `_decide_build_squad` and on the web Build page), **chips** (in `render_chip_advice` when confidences are
+  shown) and the **gameweek** plan (in `render_gameweek_plan` when an explanation is given — once at the foot,
+  never inside the composite). Verified 1× on each of the five via a live smoke.
+- **`render_explanation`'s confidence line is now clean** — `Confidence: NN/100 (Band)` (matching the card);
+  the "a heuristic … not a probability" caveat was removed (it lives once in `MODEL_NOTE`). One edit, inherited
+  by transfer/build/gameweek + every web view that shows the block.
+- **Phrasing aligned** — `explain_transfer` now says "Penalty taker" / "Set-piece involvement" (parity with the
+  captain wording from US-277).
+- **The CLI `captain` command + the web Captain tab now show the same card.** `render_captain_picks` was
+  refactored to **delegate to `render_captain_pick`** (retiring the old mono shortlist table + its xMins/pen
+  columns — that detail now reads as the Why lines; the web Captain tab keeps its rich photo table above the
+  card). Both pass a `short_name → name` map so the CLI/web also read "Man Utd". The card's Alternatives grow
+  past 🥈🥉 with plain "N." markers, so `captain --limit N` still lists N.
+- **Tests (+3, several updated):** a `render_explanation` clean-line test; Model-note tests for the chips +
+  gameweek renderers; the captain xMins-table test replaced by a card-delegation test; transfer/CLI wording
+  assertions updated. **713** green, ruff clean.
+- **Manual smoke:** all five explained answers close with the Model note once; the web Captain tab renders the
+  card (friendly team, note once).
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **710 → 713** (+5 new, −2 replaced/obsolete: a card
+test, a render-delegation test, model-note tests for chips + gameweek, a clean-line test; the xMins-table test
+retired). Ruff clean; CI-parity green. **No new ADR** (both extend ADR-089 — presentation). No analytics change
+— every confidence/reason is still computed from data and verifies (✓, ADR-037).
+
+**Delivered**
+- **US-277 — the structured Captain Pick answer.** `render_captain_pick` builds the tester's mockup (medal pick
+  · Team·Pos · Projected · clean Confidence · Why · Risks · Alternatives 🥈🥉 · Model note) from `explain_captain`
+  + the ranked picks; wording nudged at the single source. Ask (CLI + web) inherit it.
+- **US-278 — a shared Model note + phrasing.** One honest `MODEL_NOTE` closes all five explained answers once;
+  `render_explanation`'s confidence line went clean (caveat folded in); the CLI `captain` + web Captain tab now
+  render the same card via a delegating `render_captain_picks`.
+
+**What went well**
+- **The numbers already matched the mockup** — verifying on real data at planning showed this was pure
+  presentation (B.Fernandes 5.9 · 69/100 Medium already came out of the engine), so the sprint carried no
+  analytics risk.
+- **One wording source, many surfaces** — nudging the strings inside `explain_captain`/`explain_transfer` meant
+  the CLI, the web, the Ask answer and the gameweek composite all changed together, for free.
+- **The Model note landed once, everywhere** — placing it at each *answer* boundary (renderer tail or assembler)
+  rather than inside `render_explanation` kept the composite gameweek plan from repeating it three times.
+- **A real consolidation** — `render_captain_picks` shrank from a bespoke table renderer to a thin delegate;
+  `ui/captain.py` lost its `_table`/`expected_minutes` machinery. Smaller module, one captain presentation.
+
+**Watch-outs / follow-ups**
+- **The CLI captain lost its columnar xMins/pen table.** Deliberate (the card + Why lines carry the essentials;
+  the web keeps a rich photo table), but a power-user who scanned `captain --limit 10` as a table now reads a
+  medal list. Easy to re-add an xMins line to the card if wanted.
+- **Two Why/Risk styles coexist** — the captain *card* uses "Why / Risks" with flush ✓/⚠; the shared
+  `render_explanation` (transfer/build/gameweek) uses "Why / Risk" indented. Acceptable (the card is bespoke),
+  but a future pass could unify them.
+- **Deferred:** a web-*native* styled captain card (medals/chips as HTML) — the text card reads well on all
+  edges first; formalising `MODEL_NOTE` as an ADR element if it becomes contractual.
+
+See `Sprint108_Lessons_Learnt.md` for the detailed retro.

@@ -41,7 +41,7 @@ from src.analytics import (
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
 from src.ui.captain import render_captain_picks
-from src.ui.explain import render_explanation
+from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
 from src.web_streamlit.pitch import render_pitch
@@ -168,9 +168,10 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
         st.caption(f"Optimised on **{objective}**; the xP column is the forward reference metric "
                    "(xMins-weighted).")
 
-    # Explainability (ADR-089/US-271): why this build — Confidence · Why · Risk, above the pitch.
+    # Explainability (ADR-089/US-271): why this build — Confidence · Why · Risk, above the pitch, closed by
+    # the shared Model note (US-278).
     st.code(render_explanation(explain_squad(selected, display_xp, weight_by_id, budget=budget,
-                                             xi_ids=xi, horizon=horizon)), language=None)
+                                             xi_ids=xi, horizon=horizon)) + "\n\n" + MODEL_NOTE, language=None)
 
     # The optimal 15 on the green pitch (US-261, reuses ADR-084) — the XI in formation + the bench in the
     # recommended sub order; no captain on a fresh build. The sortable table + summary sit below.
@@ -514,7 +515,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
 
 # ---- Captain (who to (vice-)captain; ADR-029) ------------------------------------------------------
 
-def render_captain(squad_name, squad, players, upcoming, history, photos, badges):
+def render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names=None):
     st.caption("Captaincy is always the **next gameweek** (a one-week decision) — the *Gameweeks ahead* "
                "selector doesn't change it.")
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
@@ -535,8 +536,8 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
     st.caption("Captaincy risk: a **🟦 template** captain is safe (most managers own them); a "
                "**💎 differential** captain is a bigger rank swing — upside and downside.")
     explanation = explain_captain(picks, owned_by_id)   # grounded Why/Risk/Confidence (ADR-089)
-    st.code(render_captain_picks(picks, squad_name=squad_name, show_xmins=True, explanation=explanation),
-            language=None)
+    st.code(render_captain_picks(picks, squad_name=squad_name, explanation=explanation,
+                                 team_names=team_names), language=None)
 
     current = squad.get("captain_id")
     if current:

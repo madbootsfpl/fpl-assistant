@@ -103,10 +103,16 @@ def test_render_captain_pick_is_empty_safe():
     assert render_captain_pick([], None).startswith("No captain candidates")
 
 
-def test_render_shows_the_xmins_column_only_when_on():
-    picks = [{"web_name": "Kelleher", "team": "BRE", "position": "GK", "xp": 3.9,
-              "penalty_taker": False, "opponent": "CHE", "venue": "H", "minutes_weight": 0.62}]
-    on = render_captain_picks(picks, show_xmins=True)
-    assert "xMins" in on and " 56" in on         # 0.62 × 90 → 56 expected minutes
-    off = render_captain_picks(picks, show_xmins=False)
-    assert "xMins" not in off                     # --no-xmins reproduces the original table
+def test_render_captain_picks_delegates_to_the_card_with_friendly_teams():
+    # US-278: the CLI/web captain surface is now the same structured card, with a friendly team name and a
+    # scope line; a squad name scopes it, and the runner-ups become the Alternatives.
+    picks = [
+        {"web_name": "B.Fernandes", "team": "MUN", "position": "MID", "xp": 5.9},
+        {"web_name": "Haaland", "team": "MCI", "position": "FWD", "xp": 5.7},
+    ]
+    ex = Explanation(reasons=["Highest projected points"], risks=[], confidence=70, band="Medium")
+    out = render_captain_picks(picks, squad_name="RoboTS", explanation=ex, team_names={"MUN": "Man Utd"})
+    assert out.startswith("Captain Pick") and "from squad 'RoboTS'" in out
+    assert "🥇 B.Fernandes" in out and "Man Utd · MID" in out
+    assert "Alternatives\n🥈 Haaland 5.7 pts" in out and "Model note:" in out
+    assert render_captain_picks([], squad_name="RoboTS").startswith("No captain candidates in squad")

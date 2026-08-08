@@ -488,8 +488,9 @@ def cmd_captain(args) -> None:
             history_by_code=history_by_code,
         )
         explanation = explain_captain(picks, {p["id"]: p for p in players})   # Why/Risk/Confidence (ADR-089)
-        print(render_captain_picks(picks, squad_name=squad_name, show_xmins=not args.no_xmins,
-                                   explanation=explanation))
+        team_names = {t["short_name"]: t["name"] for t in store.get_teams()}  # "MUN" → "Man Utd" (US-278)
+        print(render_captain_picks(picks, squad_name=squad_name, explanation=explanation,
+                                   team_names=team_names))
     finally:
         store.close()
 
