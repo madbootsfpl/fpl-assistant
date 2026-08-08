@@ -205,13 +205,40 @@ def test_captain_bonus_is_the_next_gw_double_only_for_a_starting_captain():
     assert web_squads.captain_bonus(7, {7, 8}, by_gw, next_gw=None) == 0.0   # no gameweeks → 0 (empty-safe)
 
 
-# --- the guardrail: the web never writes squads server-side --------------------------------------
+# --- the guardrail: the web never writes squads to the *local* DB/files -------------------------
+# (ADR-094 revises the ADR-053/054 invariant: the ONE deliberate server write is the opt-in,
+#  secret-gated `cloud_store` squad save — a named exception, pinned as secret-gated below.)
 
 def test_web_edges_never_call_squadstore_save():
-    # persistence is the user's downloaded file (ADR-054) — no web page may write squads.json
+    # local persistence is the user's downloaded file (ADR-054) — no web page may write squads.json
     for edge in ("web", "web_streamlit"):
         for path in (_ROOT / "src" / edge).rglob("*.py"):
             assert ".save(" not in path.read_text(), f"{path} must not write via SquadStore.save"
+
+
+def test_cloud_store_squad_write_is_secret_gated(monkeypatch):
+    # ADR-094: the cross-device store is OFF by default — without its secrets it can't read or write, so the
+    # public deploy stays read-only until the owner opts in.
+    from src.web_streamlit import cloud_store
+
+    monkeypatch.delenv("FPL_STORE_URL", raising=False)
+    monkeypatch.delenv("FPL_STORE_KEY", raising=False)
+    assert cloud_store.is_configured() is False        # feature hidden by the UI when this is False
+    assert cloud_store.load_squad("anyone") is None    # no read without secrets
+
+    called = False
+
+    def boom(*a, **k):                                 # any HTTP write here would be a leak
+        nonlocal called
+        called = True
+        raise AssertionError("cloud_store must not POST without secrets")
+
+    monkeypatch.setattr("requests.post", boom)
+    try:
+        cloud_store.save_squad("anyone", {"name": "x"})
+    except RuntimeError:
+        pass                                           # refused before any request — correct
+    assert called is False
 
 
 def test_web_edges_never_persist_chat_context():
