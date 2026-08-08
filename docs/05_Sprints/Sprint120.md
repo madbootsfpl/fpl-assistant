@@ -1,7 +1,7 @@
 # Sprint 120: Fixtures for planning — target players by run + a "my squad" lens
 
-**Dates:** 2026-08-21 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-21
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½–¾ session (two display lenses on the Fixtures page — no analytics change)
 **Carried Over:** none
 
@@ -36,18 +36,20 @@ runs" into "**who to buy**", and let you focus the ticker on **your own** teams.
 xP analytics untouched.
 
 #### Success Criteria
-- [ ] **US-301 (🎯 Target by fixtures)** — below the ticker, for the **top teams by easiest run** over the chosen
+- [x] **US-301 (🎯 Target by fixtures)** — below the ticker, for the **top teams by easiest run** over the chosen
       horizon, name each team's **best available players** (ranked by the app's xP), with **price · Own% · Fit** —
       plus a **position filter** (All/GK/DEF/MID/FWD). So a wildcard/new-squad planner sees who rides the best
       runs. Unavailable players (🚑/🚫/⛔) excluded; a clear empty note.
-- [ ] **US-302 (a "my squad" lens on the ticker)** — a **scope toggle**: **All teams** (current) vs **My squad**
+- [x] **US-302 (a "my squad" lens on the ticker)** — a **scope toggle**: **All teams** (current) vs **My squad**
       (the ADR-049 team lens), restricting the ticker rows to the **active squad's teams** with a **player-count**
       column — so you can spot which of *your* teams have hard runs (sell / avoid on a wildcard). A note when no
       squad is loaded.
-- [ ] **No drift** — display lenses only; `team_fdr`/`fixture_ticker`/`decision_xp` unchanged; the read-only web
-      guardrail holds; existing **766** stay green (+ target-list / squad-scope tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (**realises ADR-049** (the deferred team
-      lens); US-301 extends the fixtures ADRs — the ranking metric is the one design call to lock at the gate).
+- [x] **No drift** — display lenses only; `team_fdr`/`fixture_ticker`/`decision_xp` unchanged; the read-only web
+      guardrail holds; existing **766** stay green (**771** with +5); ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log, Backlog (US-302 brings the **ADR-049** team
+      lens — already in `ask`/`chat` via **ADR-067** — to the web ticker; US-301's ranking metric locked at the
+      gate = **`decision_xp`**; a new `analytics/targets.py`, no new ADR — a display composition of the fixtures +
+      xP families).
 
 ---
 
@@ -77,8 +79,8 @@ polish); wiring fixture-ease *into* Build's objective (a modelling change, not a
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-301 | **🎯 Target by fixtures** — best available players from the easiest-run teams (+ a position filter). | High | ⬜ To do | ~½ session |
-| US-302 | **A "my squad" lens on the ticker** — scope to your teams + a player-count (ADR-049 realised). | High | ⬜ To do | ~¼ session |
+| US-301 | **🎯 Target by fixtures** — best available players from the easiest-run teams (+ a position filter). | High | ✅ Done | ~½ session |
+| US-302 | **A "my squad" lens on the ticker** — scope to your teams + a player-count (ADR-049 lens → web ticker; cf. ADR-067). | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -107,7 +109,8 @@ polish); wiring fixture-ease *into* Build's objective (a modelling change, not a
   composition — no analytics change. Smoke: 18 targets (6×3); top teams' best players listed; DEF filter → only
   defenders. +4 tests (3 unit in `tests/test_targets.py` + 1 page AppTest); updated the ticker test (now 2 tables).
   ruff clean. **770** total.
-- **US-302 (a "my squad" lens on the ticker)** — realises the deferred **ADR-049** team lens. Added a
+- **US-302 (a "my squad" lens on the ticker)** — brings the **ADR-049** team lens (already in `ask`/`chat` via
+  **ADR-067**) to the **web ticker**. Added a
   `st.segmented_control("Show", ["All teams","My squad"], default="All teams")` above the ticker in
   `pages/2_Fixtures.py`; on **My squad** it reads `active_squad()`, maps `player_ids → team` via the players
   list (`Counter`), filters the ticker rows to the owned teams, and adds a **"Players"** count column (the
@@ -121,4 +124,56 @@ polish); wiring fixture-ease *into* Build's objective (a modelling change, not a
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped. The Fixtures page is now a **planning aid**, not just a reference:
+**🎯 Target by fixtures** turns "which teams have a good run" into "who to buy" (the best available players from
+the easiest-run teams, ranked by xP, filterable by position), and a **My squad** ticker lens scopes the grid to
+your own teams (with a player-count) so you can spot hard runs to sell/avoid. Display lenses only — `team_fdr`,
+`fixture_ticker` and `decision_xp` are untouched.
+
+**Delivered**
+- **US-301** — a new pure `analytics/targets.py::target_by_fixtures(...)` (composes `team_fdr` easiest-first with
+  the one `decision_xp` metric; unavailable dropped, doubtful kept with its Fit); a **🎯 Target by fixtures**
+  section on `pages/2_Fixtures.py` with a **Position** filter. +4 tests (3 unit + 1 page).
+- **US-302** — an **All teams / My squad** scope toggle on the ticker (`active_squad()` → `player_ids → team`
+  Counter → filter rows + a **Players** count); a no-squad note + all-teams fall-back. Brings the ADR-049 team
+  lens (already in `ask`/`chat` via **ADR-067**) to the **web ticker**. +1 page test.
+
+**Gate decision (US-301)** — rank targets by **`decision_xp`** (the one xP metric, ADR-041), confirmed on real
+data: it differs meaningfully from raw points preseason (Isak xP 16.9 vs 41 pts — his baseline carries over) and
+keeps every recommendation consistent. No new ADR — a display composition of the fixtures + xP families.
+
+**Verified at planning (real data)** — FPL difficulty is populated preseason (`team_fdr` ranks all 20 teams: LIV
+2.6 → FUL 3.6), so the shortlist has genuine data now; player `team` = short_name, joining straight to the
+ticker; `active_squad()` gives the squad scope. Smoke: 18 targets (6×3), DEF filter → only defenders; My squad →
+11 owned teams + a Players column summing to 15; no-squad → the note + fall-back.
+
+**Metrics** — 771 tests (766 → +5), all green · ruff clean · 93 ADRs (no new) · 2 stories, ~¾ session.
+
+**Bonus (found at planning)** — the CLI **Fit column** + the **chance%** on the doubtful flag (an old backlog
+bullet) turned out already done (`table`/`xg` carry `fit_flag`; `❓ 75%` via US-236) — marked closed in the
+Backlog. A reminder that *verifying the design on real data first* catches "already shipped" before you build it.
+
+**What went well**
+- One pure assembler (`target_by_fixtures`) with a thin page edge — unit-testable, no drift, reuses existing xP.
+- The two lenses are complementary (buy new vs. hold/sell) and both reuse `team_fdr`/`fixture_ticker` untouched.
+- Planning-on-real-data paid off twice: locked the xP metric with evidence, and caught an already-done item.
+
+**Even better if**
+- The target shortlist is fixed at top-6 teams × 3 players — no control to widen it (deferred; keeps it scannable).
+- No **price/affordability** filter on the targets yet (a natural follow-up — reuse the Sprint-119 bank idea).
+- The target ranking ignores **fixture ease within the team's own list** (every player of a team shares the
+  team FDR) — fine for a shortlist, but a per-player fixture-weighted xP would be a modelling change (→ Roadmap).
+
+**Deferred / backlog** — a "best XI by fixtures" auto-shortlist (Build's job — link, don't duplicate); an FDR
+**source** toggle (fpl/custom/elo) on the page; a price/position-count filter on the targets; wiring fixture-ease
+*into* Build's objective (a modelling change, not a lens).
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **One thing to change next sprint:**
+- **Does the Target-by-fixtures shortlist help your planning? (1–5):**

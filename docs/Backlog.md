@@ -54,8 +54,10 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
 - ~~**Availability flags in the ranking views**~~ — **DONE (web)** (Sprint 085, US-228/229, **ADR-074**). A
   shared `availability_flag(player)` (🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful; blank =
   available) + a **Fit** column on the **Players Pool** and all **four stat boards**; display-only, reuses
-  ingested `status` (no analytics change). *Still open:* the **CLI** ranking views (`table`/`xg`) + a chance%
-  on the doubtful flag.
+  ingested `status` (no analytics change). ~~*Still open:* the **CLI** ranking views (`table`/`xg`) + a chance%
+  on the doubtful flag.~~ **DONE** — the CLI `table`/`xg` already carry a **Fit** column (`fit_flag`, ✅ =
+  available, US-276) and the doubtful flag already shows the **chance%** (`❓ 75%`, US-236). (Confirmed at
+  Sprint 120 planning.)
 - **Ceiling / "differential" captaincy** — `captain` (Sprint 027, ADR-029) ranks by *mean* xP,
   which favours nailed-on premiums. A ceiling/variance view would surface high-upside punts — but
   it needs variance/form data we don't have yet. Revisit once in-season data accrues.
@@ -75,9 +77,11 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   context across runs.~~ **DONE** (Sprint 110, US-281, **ADR-091**) — a local, TTL'd `chat_context` store; the
   CLI `ask`/`chat` remember the last turn across separate runs; the multi-user web stays session-only
   (read-only). *(Web cross-session persistence would need client storage → deferred.)*
-- **Team-level squad-fixtures view** — the alternative lens deferred at Sprint 049 (ADR-049): rank a
-  squad's **teams** (with player-counts) rather than one row per player. A small option on the existing
-  squad-scoped fixtures mode.
+- ~~**Team-level squad-fixtures view**~~ — **DONE**. The ADR-049 team lens shipped in **`ask`/`chat`** first
+  (ADR-067: a "by team" `fixtures` mode via `render_squad_team_fixtures`); **Sprint 120, US-302** brings it to the
+  **web ticker** — a **"My squad"** scope restricting the rows to your squad's **teams** with a **player-count**
+  column. *(Companion: US-301's "🎯 Target by fixtures" — the best players to buy from the easiest-run teams,
+  `analytics/targets.py`.)*
 
 ### Web UI ideas (from the Sprint 054 review — owner's notes)
 

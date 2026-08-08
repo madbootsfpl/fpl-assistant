@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 120 (2026-08-21)** — *Fixtures for planning: target players by run + a "my squad" lens* (display
+  lenses; a new `analytics/targets.py` + **realises ADR-049**; no analytics change — owner feedback: the Fixtures
+  view is needed for planning a new squad / wildcard). **US-301:** a pure `analytics.target_by_fixtures(team_ranked,
+  players, xp_by_id, *, position, top_teams=6, per_team=3)` — for the easiest-run teams (`team_fdr`, easiest-first)
+  it takes each team's **available** players (`is_unavailable` dropped; a *doubtful* player stays with its
+  `fit_flag`), ranks by the one **`decision_xp`** metric (ADR-041), keeps the top `per_team`. Wired into
+  `pages/2_Fixtures.py` below the ticker as a **🎯 Target by fixtures** section: a **Position** `st.segmented_control`
+  → a `st.dataframe` (Team · FDR · Next · Player · Pos · £m · Own% · Fit · xP) over the same weeks window. Turns
+  "which teams have a good run" into "who to buy". **US-302:** an **All teams / My squad** scope toggle above the
+  ticker — on *My squad* it reads `active_squad()`, maps `player_ids → team` (a `Counter`), filters the ticker rows
+  to the owned teams and adds a **"Players"** count column (the shading path unchanged); no squad → a note + a
+  fall-back to all teams. Brings the ADR-049 team lens (already in `ask`/`chat` via **ADR-067**) to the **web
+  ticker**. Display-only; `team_fdr`/`fixture_ticker`/`decision_xp` unchanged. +5 tests (771).
 - **Sprint 119 (2026-08-20)** — *My Squad edit: a position filter + an affordable check* (edit-UI only; extends
   **ADR-055** (the editable squad); no analytics change). Both stories live in `web_streamlit/views/squads.py`'s
   "Swap a player" expander (`render_my_squad`). **US-299:** a `st.segmented_control("Position", ["All","GK","DEF",

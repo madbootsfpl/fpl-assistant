@@ -8,6 +8,7 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-21 | Owner | Fixtures | The Fixtures view is needed for **planning a new squad / wildcard** — in addition to what's there. | 💡 | ✅ Sprint 120 (US-301/302) — a "🎯 Target by fixtures" shortlist (best players from the easiest-run teams, by xP, + a position filter) + a "My squad" ticker lens (scope to your teams + a player-count). |
 | 2026-08-20 | Owner | Squads → My Squad | The **Edit (swap)** should have a **position filter** (GK/DEF/MID/FWD) and an **affordable** checkbox. | 💡 | ✅ Sprint 119 (US-299/300) — a Position segmented control scopes "Replace"; an "Affordable only" checkbox + a bank caption scope "With". |
 | 2026-08-17 | Owner | All | **Hover-over tooltips** seem to have stopped working. | 🟠 regression | ✅ Sprint 116 (US-293) — the `help=` are all still set (coverage test passes; no global CSS); **pinned `streamlit==1.61.1`** so the deploy matches the tested version (an unpinned auto-upgrade likely changed hover rendering). Verify on the live deploy after redeploy |
 | 2026-08-17 | Owner | reseed | Does `reseed` call **ClubElo**? It used to — I don't see it now. | 🟡 confusing | ✅ Sprint 116 (US-293) — it always did (via `refresh`); `cmd_reseed` had dropped the Elo count from its printout. Now reports *"N Elo ratings (ClubElo)"* / *"kept last-known"* |
