@@ -10,10 +10,11 @@ from src.analytics import (
     decision_xp,
     fit_flag,
     net_transfers,
+    ownership_tier,
     set_piece_flags,
     trending,
 )
-from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, TEMPLATE_OWN, TRENDING_NET
+from src.analytics.crowd import DIFFERENTIAL_OWN, ESSENTIAL_OWN, FORM_MIN, TEMPLATE_OWN, TRENDING_NET
 from src.storage import Storage
 
 
@@ -67,23 +68,29 @@ def test_availability_flag_shows_the_chance_on_a_doubtful_player():
 
 
 def test_availability_flag_is_distinct_from_crowd_and_rating():
-    # the availability emojis must not collide with crowd flags or the rating circles (🟢🟡🟠🔴)
+    # the availability emojis must not collide with crowd flags (incl. the ⭐/👑 tiers) or the rating circles
     flags = set("🚑🚫⛔❓")
-    assert not (flags & set("🟢🟡🟠🔴🟦💎🔥❄️📈"))
+    assert not (flags & set("🟢🟡🟠🔴🟦💎⭐👑🔥❄️📈"))
 
 
-def test_crowd_legend_explains_template_and_tracks_the_thresholds():
-    # tester asked "what does template mean?" — the shared legend must say so, with the real thresholds
+def test_crowd_legend_explains_all_four_ownership_tiers():
+    # US-289: the shared legend names the four tiers with their thresholds.
     from src.analytics import CROWD_LEGEND
-    assert "template" in CROWD_LEGEND and f"≥{TEMPLATE_OWN:.0f}% owned" in CROWD_LEGEND
-    assert "differential" in CROWD_LEGEND and f"≤{DIFFERENTIAL_OWN:.0f}%" in CROWD_LEGEND
+    for word in ("differential", "popular", "template", "essential"):
+        assert word in CROWD_LEGEND
+    assert f"≤{DIFFERENTIAL_OWN:.0f}%" in CROWD_LEGEND and f">{ESSENTIAL_OWN:.0f}%" in CROWD_LEGEND
 
 
-def test_template_and_differential_by_ownership():
-    assert "🟦 template" in crowd_flags(_p(selected_by=TEMPLATE_OWN))          # ≥ 20%
-    assert "💎 differential" in crowd_flags(_p(selected_by=DIFFERENTIAL_OWN))  # ≤ 5%
-    mid = crowd_flags(_p(selected_by=10.0))                                    # in between → neither
-    assert "template" not in " ".join(mid) and "differential" not in " ".join(mid)
+def test_ownership_tier_by_band():
+    # US-289: 💎 ≤5 · ⭐ 5–20 · 🟦 20–60 · 👑 >60 (empty-safe); crowd_flags shows exactly one tier.
+    assert ownership_tier(_p(selected_by=DIFFERENTIAL_OWN)) == "💎 differential"   # 5.0 → ≤5
+    assert ownership_tier(_p(selected_by=0.0)) == "💎 differential"               # 0% included
+    assert ownership_tier(_p(selected_by=10.0)) == "⭐ popular"                    # 5–20 (was unbadged before)
+    assert ownership_tier(_p(selected_by=TEMPLATE_OWN)) == "🟦 template"           # 20 → template
+    assert ownership_tier(_p(selected_by=ESSENTIAL_OWN)) == "🟦 template"          # 60 → still template
+    assert ownership_tier(_p(selected_by=74.5)) == "👑 essential"                  # >60 → essential
+    assert ownership_tier(_p()) == ""                                             # no ownership → no tier
+    assert crowd_flags(_p(selected_by=74.5)) == ["👑 essential"]                   # exactly one tier flag
 
 
 def test_price_flags_on_cost_change_sign():

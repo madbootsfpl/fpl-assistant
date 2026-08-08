@@ -8,7 +8,8 @@ form ones at GW1 (0 in preseason).
 
 # Tunable thresholds (ADR-057), calibrated on the live FPL data.
 TEMPLATE_OWN = 20.0        # ≥ this % owned → a "template" pick (≈ the top ~17 today)
-DIFFERENTIAL_OWN = 5.0     # 0 < own ≤ this % → a "differential" (reuse ADR-044)
+DIFFERENTIAL_OWN = 5.0     # ≤ this % owned → a "differential" (matches the differential filter, ADR-061)
+ESSENTIAL_OWN = 60.0       # > this % owned → "essential" (a must-own; tunable, GW1-calibrated, US-289)
 FORM_MIN = 6.0             # ≥ this recent avg pts/GW → "in form" (calibrate at GW1)
 TRENDING_NET = 50_000      # |net transfers this GW| ≥ this → trending in/out (calibrate at GW1)
 
@@ -66,20 +67,35 @@ def trending(players, by="owned", limit=10):
     return [{**dict(p), "trend": _trend_display_value(p, by)} for p in ranked[:limit]]
 
 
+def ownership_tier(player) -> str:
+    """The ownership tier for a player row (US-289, extends ADR-057) — one of **💎 differential** (≤5%),
+    **⭐ popular** (5–20%), **🟦 template** (20–60%) or **👑 essential** (>60%), or `""` when ownership is
+    absent. A display **lens** (never xP); the boundaries are the tunable `DIFFERENTIAL_OWN` / `TEMPLATE_OWN` /
+    `ESSENTIAL_OWN`. The differential cut matches the "best differential" filter (ADR-061)."""
+    own = _get(player, "selected_by")
+    if own is None:
+        return ""
+    if own <= DIFFERENTIAL_OWN:      # ≤5% — a low-owned punt, high rank upside
+        return "💎 differential"
+    if own < TEMPLATE_OWN:           # 5–20% — well-owned but not widespread
+        return "⭐ popular"
+    if own <= ESSENTIAL_OWN:         # 20–60% — commonly owned, a safer pick
+        return "🟦 template"
+    return "👑 essential"            # >60% — a must-own; going without is a major rank risk
+
+
 def crowd_flags(player) -> list:
     """Short crowd/sentiment flags for a player row — empty-safe, display-only (ADR-057).
 
-    Ownership (`template` / `differential`), transfer momentum (`🔥 in` / `❄️ out`), price movement
-    (`💰↑` / `💸↓`) and recent form (`📈 form`). Absent / zero signals simply produce no flag.
+    An ownership **tier** (💎 differential / ⭐ popular / 🟦 template / 👑 essential, US-289), transfer momentum
+    (`🔥 in` / `❄️ out`), price movement (`💰↑` / `💸↓`) and recent form (`📈 form`). Absent / zero signals
+    simply produce no flag.
     """
     flags = []
 
-    own = _get(player, "selected_by")
-    if own is not None:
-        if own >= TEMPLATE_OWN:
-            flags.append("🟦 template")
-        elif 0 < own <= DIFFERENTIAL_OWN:
-            flags.append("💎 differential")
+    tier = ownership_tier(player)
+    if tier:
+        flags.append(tier)
 
     net = net_transfers(player)
     if net is not None:
@@ -111,13 +127,15 @@ AVAILABILITY_LEGEND = ("Fit: ✅ available · 🚑 injured · 🚫 suspended · 
 SET_PIECE_LEGEND = ("Set pieces: ⚽ penalties · 🚩 corners · 🎯 free-kicks — shown for the **first-choice** "
                     "taker (blank = not on set pieces).")
 
-# The shared legend for the crowd/sentiment "Trends" flags (tester asked "what does template mean?"). The
-# ownership numbers track the tunable thresholds above.
+# The shared legend for the crowd/sentiment "Trends" flags. Ownership is now four tiers (US-289); the numbers
+# track the tunable thresholds above.
 CROWD_LEGEND = (
-    f"Trends: 🟦 **template** = ≥{TEMPLATE_OWN:.0f}% owned (a *safe*, widely-held pick — most managers have "
-    f"them, so **not** owning one is a rank risk if they haul) · 💎 **differential** = ≤{DIFFERENTIAL_OWN:.0f}% "
-    "owned (a low-owned punt) · 🔥 transferred in · ❄️ transferred out · 💰↑ price rising · 💸↓ price falling · "
-    "📈 in form. (Momentum/form are live from GW1.)"
+    f"Trends — ownership: 💎 **differential** ≤{DIFFERENTIAL_OWN:.0f}% (low-owned, high rank upside) · "
+    f"⭐ **popular** {DIFFERENTIAL_OWN:.0f}–{TEMPLATE_OWN:.0f}% (well-owned, not widespread) · 🟦 **template** "
+    f"{TEMPLATE_OWN:.0f}–{ESSENTIAL_OWN:.0f}% (commonly owned, a safer pick) · 👑 **essential** "
+    f">{ESSENTIAL_OWN:.0f}% (a must-own — going without is a major rank risk). Plus 🔥 transferred in · "
+    "❄️ transferred out · 💰↑ price rising · 💸↓ price falling · 📈 in form. (Ownership concentrates — and "
+    "momentum/form go live — once the season starts.)"
 )
 
 
