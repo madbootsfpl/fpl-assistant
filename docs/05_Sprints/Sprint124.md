@@ -98,7 +98,7 @@ data); a My-Squad "list my handles" view.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-309 | **The `cloud_store` adapter + guardrail revision** — Supabase save/load/delete, secret-gated. | High | ✅ Done | ~½ session |
-| US-310 | **My-Squad "☁ Save/Load across devices" UI** — handle + Save/Load/Clear + a privacy note. | High | ⬜ To do | ~½ session |
+| US-310 | **My-Squad "☁ Save/Load across devices" UI** — handle + Save/Load/Clear + a privacy note. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -138,6 +138,15 @@ _(the sprint delivers the code + the runbook; the store needs your account)_
   `requests.post` that would raise is never called). +8 tests (`tests/test_cloud_store.py` ×7 + the guardrail);
   no live network (monkeypatched `requests` + env). ruff clean. **789** total. The write path exists but is
   **off** until the owner sets the secrets (Sprint's US-310 wires the UI).
+- **US-310 (the My-Squad "☁ Save/Load across devices" UI + a privacy note)** — in `render_my_squad` (after
+  Rename), an expander shown **only when `cloud_store.is_configured()`**: a **handle** input + **Save / Load /
+  Clear** (each disabled until the handle cleans to ≥2 chars; each try/excepts → a friendly degrade note). Save →
+  `save_squad`; Load → `set_active_squad` + `st.rerun`; Clear → `delete_squad`. A plain **privacy caption** (what's
+  stored · no login · a handle isn't security · Clear removes it) + a format hint on a bad handle. Added
+  `docs/CLOUD_SQUADS.md` (the owner's Supabase setup: the `squads` table SQL + anon RLS policies + the two
+  secrets + a test + a privacy/turn-off section). Smoke: unconfigured → no expander; configured (fake store) →
+  Save upserts `handle=tony17`, Load adopts "Cloud XI" into the session. +2 page tests (hidden-without-secrets;
+  save+load configured). ruff clean. **791** total.
 
 ---
 

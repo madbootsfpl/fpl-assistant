@@ -44,6 +44,7 @@ from src.ui.ask import render_ask
 from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
+from src.web_streamlit import cloud_store
 from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
@@ -388,6 +389,43 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         if st.button("Rename"):
             set_active_squad(rename(squad, new_name))
             st.rerun()
+
+    # ☁ Cross-device save/load (US-310, ADR-094) — only when the owner has configured the store; otherwise the
+    # app stays download/upload-only (ADR-054). A handle is the key — no login.
+    if cloud_store.is_configured():
+        with st.expander("☁ Save / Load across devices"):
+            handle = st.text_input("Your handle", key="cloud_handle",
+                                   help="A name only you'd guess — it's the key to your squad on any device.")
+            clean = cloud_store.clean_handle(handle)
+            c_save, c_load, c_clear = st.columns(3)
+            if c_save.button("Save", disabled=not clean, key="cloud_save"):
+                try:
+                    cloud_store.save_squad(clean, squad)
+                    st.success(f"Saved as **{clean}** — load it on any device with that handle.")
+                except Exception:
+                    st.error("Couldn't save just now — your download still works. Try again shortly.")
+            if c_load.button("Load", disabled=not clean, key="cloud_load"):
+                try:
+                    loaded = cloud_store.load_squad(clean)
+                except Exception:
+                    loaded = None
+                    st.error("Couldn't reach the store — try again shortly.")
+                if loaded:
+                    set_active_squad(loaded)
+                    st.success(f"Loaded **{clean}**.")
+                    st.rerun()
+                elif clean:
+                    st.info(f"No squad saved under **{clean}** yet — Save one first.")
+            if c_clear.button("Clear", disabled=not clean, key="cloud_clear"):
+                try:
+                    cloud_store.delete_squad(clean)
+                    st.success(f"Cleared **{clean}**.")
+                except Exception:
+                    st.error("Couldn't clear just now — try again shortly.")
+            if handle and not clean:
+                st.caption("A handle is 2–32 letters, numbers, - or _.")
+            st.caption("Stored: your handle + squad (public FPL players), **no login**. Anyone who knows the "
+                       "handle can read or overwrite it — use one only you'd guess. **Clear** removes it.")
 
     with st.expander("Swap a player", expanded=True):
         if owned:

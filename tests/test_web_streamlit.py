@@ -1014,6 +1014,45 @@ def test_my_squad_rename_updates_the_active_squad():
     assert at.session_state["squad"]["name"] == "Dream Team"
 
 
+class _StoreResp:
+    def __init__(self, data=None):
+        self._data = [] if data is None else data
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._data
+
+
+def test_my_squad_cloud_save_load_hidden_without_secrets(monkeypatch):
+    # US-310 (ADR-094): the ☁ cross-device store is secret-gated — with no FPL_STORE_URL/KEY it's invisible.
+    monkeypatch.delenv("FPL_STORE_URL", raising=False)
+    monkeypatch.delenv("FPL_STORE_KEY", raising=False)
+    at = _squads_view("My Squad")
+    assert not any(t.label == "Your handle" for t in at.text_input)          # no cloud UI when unconfigured
+
+
+def test_my_squad_cloud_save_and_load_when_configured(monkeypatch):
+    # US-310: configured → Save upserts under the handle; Load adopts the stored squad into the session.
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    posted = {}
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None: posted.update(body=json) or _StoreResp())
+    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
+        [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
+    at = _squads_view("My Squad")
+    handle = [t for t in at.text_input if t.label == "Your handle"]
+    if not handle:
+        return                                                              # no owned squad → nothing to save
+    handle[0].set_value("Tony17").run()
+    next(b for b in at.button if b.label == "Save").click().run()
+    assert not at.exception and posted["body"]["handle"] == "tony17"        # cleaned + upserted
+    next(b for b in at.button if b.label == "Load").click().run()
+    assert at.session_state["squad"]["name"] == "Cloud XI"                  # adopted into the session
+
+
 def test_my_squad_set_bench_picks_four():
     at = _squads_view("My Squad")
     if not at.multiselect or not any(b.label == "Set bench" for b in at.button):
