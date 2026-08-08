@@ -96,6 +96,7 @@ with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)")
         'build me a squad for £100m with 3 differentials\n'
         'best differential midfielders under £8m\n'
         'is Haaland worth the money?\n'
+        "Haaland's history                   # a player's season record (past seasons + per-GW from GW1)\n"
         'what should I do this week for my-team?\n'
         'who should I captain from my-team?\n'
         'how does bench boost work?          # a rules question → ✓ from the knowledge base\n'

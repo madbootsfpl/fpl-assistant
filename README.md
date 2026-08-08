@@ -120,6 +120,7 @@ The app is driven by subcommands (see ADR-003):
 ```bash
 python app.py refresh                          # fetch FPL data (players, teams, fixtures)
 python app.py reseed                           # refresh, then copy the cache to the committed seed (deploy)
+python app.py history Haaland                  # a player's season-by-season record (past seasons + per-GW)
 python app.py history --backfill               # backfill past-season history (once per season)
 python app.py table --sort value --limit 20    # players, ranked by points or value (£m)
 python app.py search haaland                   # find players by name
@@ -173,6 +174,7 @@ python app.py ask "build me a squad for a bench boost" # maximise all 15
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
 python app.py ask "best differential forwards under £7m"   # low-owned (≤5%) picks + a why (benefit + signals)
 python app.py ask "is Haaland worth the money?"        # a value verdict + a grounded Why · Risk · Confidence
+python app.py ask "Haaland's history"                  # a player's season record, narrated + verified (✓)
 python app.py ask "who has the best fixtures over the next 5?"   # league fixture-difficulty ranking
 python app.py ask "when does Arsenal play next?"       # one team's upcoming fixtures (venue + difficulty)
 python app.py ask "which of my-team's players have the best fixtures?"   # your players by their fixture run

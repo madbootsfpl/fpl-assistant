@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 117 (2026-08-18)** — *A `history <player>` view: past seasons now, per-GW at GW1* (a read-view over
+  data we already ingest; extends ADR-027/060 + ADR-037; no analytics change). **US-295:** a pure
+  `analytics/history.py::player_history(player, seasons, gameweeks)` → `{player, seasons, gameweeks}` (normalised
+  past-season rows with **Pts/90** + this-season per-GW rows; empty-safe — a lens, never xP) + `ui/history.py::
+  render_player_history` (a season table + a per-GW trend, or a "fills once the season starts (GW1)" note); the
+  CLI `history` command gained a positional `<player>` (`_resolve_player`: exact web_name wins, else a unique
+  substring; ambiguous/none → a clear message) → the view, while `history --backfill` still runs the ingest.
+  Real past-season data now (`player_history_past`, 2019 rows); the per-GW half lights up at GW1. **US-296:** a
+  grounded `history` intent (`_INTENT_KEYWORDS`, after `worth`) + `ask._decide_history` — resolves the named
+  player (`_match_players`), renders the view as `detail`, and puts the last season's pts/mins/xGI + the season
+  count into `facts` so a narrated number verifies (✓, ADR-037); degrades on ambiguous/absent/no-backfill;
+  inherited by the Ask tab + CLI `chat`. +11 tests (762). *(An accidental overwrite of the existing
+  `tests/test_history.py` ingestion tests was caught via the suite count + restored; the new view tests live in
+  `tests/test_history_view.py`.)*
 - **Sprint 116 (2026-08-17)** — *Two feedback fixes + a web-native Captain Pick card* (fixes + display;
   US-294 extends ADR-084 + ADR-089). **US-293:** (a) **pinned `streamlit==1.61.1`** in `requirements.txt` so the
   Community Cloud deploy matches the tested version — the likely fix for "hover-overs stopped working" (the

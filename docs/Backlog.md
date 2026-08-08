@@ -183,8 +183,10 @@ Deferred below.)*
 - Attack/Defence FDR split (needs `strength_attack_*` / `strength_defence_*`).
 - ~~**Per-GW history ingestion**~~ — **DONE (wired, dormant)** (Sprint 069, US-196, **ADR-060**). A
   `player_history` table filled by the *existing* `element-summary` backfill (the one call already carries
-  `history`); empty preseason → live at GW1. Still open: a `history <player>` season-trend / rolling-form
-  **view** over the new per-GW data.
+  `history`); empty preseason → live at GW1. ~~Still open: a `history <player>` view.~~ **DONE** (Sprint 117,
+  US-295/296) — `analytics/history.player_history` + `ui/history` + a CLI **`history <player>`** command + a
+  grounded **`history` ask/chat intent** (past seasons real now, per-GW at GW1; verified ✓). *Follow-ups: a
+  per-season price column (cost units verified); a web History tab / rolling-form sparkline.*
 - ~~**In-season form blend into xP**~~ — **DONE (wired, dormant)** (Sprint 069, US-197, ADR-060). A
   rolling-**pp90** form term in the one `decision_xp` recipe behind `FORM_WEIGHT = 0`. Still open at GW1:
   set the weight + **calibrate** the weight/window on real form.

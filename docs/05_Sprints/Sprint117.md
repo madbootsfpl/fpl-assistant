@@ -1,7 +1,7 @@
 # Sprint 117: A `history <player>` view — past seasons now, per-GW at GW1
 
 **Dates:** 2026-08-18 (planned)
-**Status:** 🟢 In progress (2/2 stories built — retro pending)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a read-view + a grounded `ask` intent over data we already ingest)
 **Carried Over:** none
 
@@ -47,9 +47,8 @@ verified (✓).
       doesn't steal squad/worth commands. Inherited by the **Ask** tab + CLI `chat`; the player resolves or asks.
 - [x] **No drift** — a read-view/lens only; `decision_xp`/the analytics unchanged; the read-only web guardrail
       holds; **762** green (751 → +11: view + CLI + intent tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help (extends **ADR-027/060** (history) +
-      **ADR-037** (grounded ask) — noted; a short **ADR-094** only if we want the intent recorded, agreed at
-      the gate).
+- [x] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help (extends **ADR-027/060** (history) +
+      **ADR-037** (grounded ask) — no new ADR; a read-view over existing data + a grounded intent).
 
 ---
 
@@ -77,7 +76,7 @@ follow); the price column until the cost units are verified; cross-player compar
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-295 | **`history <player>` view (analytics + CLI)** — past-season line + a per-GW trend; empty-safe. | High | ⬜ To do | ~½ session |
+| US-295 | **`history <player>` view (analytics + CLI)** — past-season line + a per-GW trend; empty-safe. | High | ✅ Done | ~½ session |
 | US-296 | **A grounded `history` ask/chat intent** — "how did X do?" → the view, narrated + verified. | High | ✅ Done | ~½ session |
 
 ---
@@ -136,4 +135,35 @@ follow); the price column until the cost units are verified; cross-player compar
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **751 → 762** (+11: 8 view/CLI + 3 intent). Ruff clean;
+CI-parity green. **No new ADR** (extends ADR-027/060 history + ADR-037 grounded ask). No analytics change — a
+read-view lens over data we already ingest.
+
+**Delivered**
+- **US-295 — the `history <player>` view.** A pure `player_history` assembler + `render_player_history` + the
+  CLI `history <player>` command — real past-season data now (Haaland's 4 seasons), per-GW at GW1.
+- **US-296 — a grounded `history` intent.** *"how did X do?"* → the view, narrated + verified (✓), on the Ask
+  tab + CLI chat.
+
+**What went well**
+- **Real data now, not dormant.** The plan checked the DB first — `player_history_past` had 2019 real rows —
+  so the feature is useful immediately (past seasons), with the per-GW half lighting up at GW1.
+- **Reused the grounded-ask machinery.** `_decide_history` = `_match_players` + `player_history` + the renderer
+  + facts; the intent slotted after `worth` so routing stayed clean. A new "read a player's record" question
+  cost a small assembler and a cue list.
+- **Everything verifies.** Putting the last season's numbers into `facts` means the LLM narration is checked
+  (✓) — a history answer can't drift from the stored data.
+- **A grounding-safe layering.** History is a lens: a `decision_xp`-invariance concern doesn't even arise (it
+  never touches xP), and the read-only web guardrail holds.
+
+**Watch-outs / follow-ups**
+- **I clobbered an existing test file.** My first `Write` overwrote `tests/test_history.py` (the ingestion
+  tests); I caught it via the dropped suite count, restored from git, and moved the new tests to
+  `test_history_view.py`. **Lesson: check for an existing module before `Write`-ing a new test file** — prefer
+  a distinct name or an `Edit`.
+- **Price columns deferred though now verified.** The stored `start_cost`/`end_cost` are already £m (the
+  ingestion test confirms `115 → 11.5`) — a clean follow-up to add a per-season price/change column.
+- **Deferred:** a web **History** tab / rolling-form charts (the table reads well first); cross-player history
+  comparison.
+
+See `Sprint117_Lessons_Learnt.md` for the detailed retro.
