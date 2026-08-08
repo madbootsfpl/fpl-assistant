@@ -391,33 +391,43 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
     with st.expander("Swap a player", expanded=True):
         if owned:
-            out_label = {f"{p['position']} {p['web_name']} (£{p['price']:.1f}m)": p["id"] for p in
-                         sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
-            out_choice = st.selectbox("Replace", list(out_label), key="swap_out",
-                                      help="The player to transfer out.")
-            out_id = out_label[out_choice]
-            out = by_id[out_id]
-            owned_ids = {p["id"] for p in owned}
-            cands = sorted((p for p in players if p["position"] == out["position"]
-                            and p["id"] not in owned_ids and not is_unavailable(p)),
-                           key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
-            in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
-                        f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in cands}
-            if in_label:
-                in_choice = st.selectbox("With", list(in_label), key="swap_in",
-                                         help="The same-position player to bring in (ranked by xP).")
-                if st.button("Swap →"):
-                    ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_label[in_choice],
-                                                                   players)
-                    if not ok:
-                        st.error("Can't swap — that would leave an illegal squad: " + "; ".join(swap_issues))
-                    else:
-                        set_active_squad(new)
-                        msg = f"Swapped **{out['web_name']} → {by_id[in_label[in_choice]]['web_name']}**."
-                        st.warning(f"{msg}  ⚠ {warning}") if warning else st.success(msg)
-                        st.rerun()
+            # Filter which of your players to swap out by position (US-299) — a swap is same-position, so this
+            # scopes the whole edit ("change my forwards" → FWD).
+            pos_filter = st.segmented_control(
+                "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="swap_pos",
+                help="Filter which of your players to swap out by position.")
+            out_pool = [p for p in owned if pos_filter in (None, "All") or p["position"] == pos_filter]
+            if not out_pool:
+                st.caption(f"No {pos_filter} players in your squad.")
             else:
-                st.caption("No available replacements in that position.")
+                out_label = {f"{p['position']} {p['web_name']} (£{p['price']:.1f}m)": p["id"] for p in
+                             sorted(out_pool, key=lambda x: (_ORDER.get(x["position"], 9), x["web_name"]))}
+                out_choice = st.selectbox("Replace", list(out_label), key="swap_out",
+                                          help="The player to transfer out.")
+                out_id = out_label[out_choice]
+                out = by_id[out_id]
+                owned_ids = {p["id"] for p in owned}
+                cands = sorted((p for p in players if p["position"] == out["position"]
+                                and p["id"] not in owned_ids and not is_unavailable(p)),
+                               key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
+                in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
+                            f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in cands}
+                if in_label:
+                    in_choice = st.selectbox("With", list(in_label), key="swap_in",
+                                             help="The same-position player to bring in (ranked by xP).")
+                    if st.button("Swap →"):
+                        ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_label[in_choice],
+                                                                       players)
+                        if not ok:
+                            st.error("Can't swap — that would leave an illegal squad: "
+                                     + "; ".join(swap_issues))
+                        else:
+                            set_active_squad(new)
+                            msg = f"Swapped **{out['web_name']} → {by_id[in_label[in_choice]]['web_name']}**."
+                            st.warning(f"{msg}  ⚠ {warning}") if warning else st.success(msg)
+                            st.rerun()
+                else:
+                    st.caption("No available replacements in that position.")
 
     with st.expander("Set the bench (pick 4)"):
         labels = {f"{p['position']} {p['web_name']}": p["id"] for p in

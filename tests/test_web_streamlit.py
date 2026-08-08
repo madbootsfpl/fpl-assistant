@@ -864,6 +864,19 @@ def test_my_squad_swap_adopts_and_mutates_the_session_squad():
     assert "squad" in at.session_state and at.session_state["squad"].get("cost")   # adopted + re-costed
 
 
+def test_my_squad_swap_position_filter_scopes_the_replace_list():
+    # US-299: a Position filter on the Swap expander scopes "Replace" to owned players of that position.
+    at = _squads_view("My Squad")
+    pos = next((s for s in at.segmented_control if s.label == "Position"), None)
+    if pos is None:                                        # no owned squad / no swap UI → nothing to filter
+        return
+    replace = next((s for s in at.selectbox if s.label == "Replace"), None)
+    assert replace is not None and len(replace.options) == 15   # All → every owned player
+    pos.set_value("GK").run()
+    replace = next(s for s in at.selectbox if s.label == "Replace")
+    assert replace.options and all(o.startswith("GK ") for o in replace.options)   # scoped to GKs
+
+
 def test_my_squad_rename_updates_the_active_squad():
     at = _squads_view("My Squad")
     name_inputs = [t for t in at.text_input if t.label == "Squad name"]   # not the sidebar manager-ID
