@@ -106,12 +106,14 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   not a lens). **Tier 3** (backtest crowd-follow vs xP-only) remains open → Roadmap *Later*. Momentum/form
   boards light up at **GW1 (2026-08-21)**.
 
-- **Cloud squads — server-side persistence (Path 2)** — the seamless upgrade to Sprint 057's
-  download/upload squads: a **"Save as `<name>` / Load `<name>`"** backed by a free external DB (e.g.
-  Supabase/Postgres via `st.connection`) + a secret in Streamlit; persistent across sessions/devices, no
-  files to manage. *Needs:* an external DB account, a secret, a persistence adapter, and the first
-  server-side writes; optionally light per-user identity later. Revisit once download/upload friction
-  proves it's worth it.
+- **Cloud squads — server-side persistence (Path 2)** — ◑ **design agreed (ADR-094), build = Sprint 123.** The
+  seamless upgrade to Sprint 057's download/upload: **cross-device** save/load backed by a free external DB.
+  **ADR-094 (Sprint 122)** commits to a **handle-keyed Supabase store** (no login — a user-chosen handle is the
+  key), a thin swappable `cloud_store` adapter (`save_squad`/`load_squad`, secret-gated via
+  `FPL_STORE_URL`/`FPL_STORE_KEY`), revising the read-only invariant to one opt-in, tested write; ~£0. **Build
+  (Sprint 123):** the adapter + a My-Squad "☁ Save/Load across devices" expander + the guardrail-test revision +
+  a privacy/"clear my squad" note + the owner's Supabase setup. Native `st.login()` = the deferred "product"
+  upgrade (the adapter interface is chosen so a handle → an authed user id needs no re-architecting).
 
 ### Done (kept for the trail)
 

@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 122 (2026-08-23)** — *Foundations for wider testing* (a **decisions/foundations** sprint — two ADR
+  gates + two cheap safeguards; no user-facing feature; the read-only guardrail holds — no server writes landed).
+  **ADR-094 (design gate, no code):** cross-device squad persistence via a **handle-keyed Supabase store** (no
+  login — the handle is the key), a thin swappable `cloud_store` adapter; **revises the read-only invariant**
+  (one opt-in, secret-gated squad write); ~£0; **build gated to Sprint 123**. **ADR-095:** the beta-ops decisions
+  — a **prod/staging** two-app split (`master`→staging, `main`→prod-for-testers, promote by merge), **public +
+  PolyForm Noncommercial** LICENSE, a **mirror backup**, and an external **uptime monitor** (all ~£0, opt-in).
+  **US-305:** a `LICENSE` (PolyForm-NC) + a secret-gated `.github/workflows/mirror.yml` (mirror all refs to a 2nd
+  remote, inert until `MIRROR_URL` set) + `docs/BACKUP.md`. **US-306:** the **feedback payload** gains
+  `page`/`version`/`ts` (`pages/8_Feedback.py`; `_app_version()` via `importlib.metadata`) + a `docs/BETA.md`
+  go-live checklist + a `docs/DEPLOY.md` prod/staging section. +1 test (776); 2 ADRs (→ 95).
 - **Sprint 121 (2026-08-22)** — *Finish the fixtures planner: a budget cap + value on the targets* (display only;
   extends `analytics/targets.py` + the Fixtures page; reuses ADR-041 xP + ADR-042 value — no new ADR). Both stories
   make **🎯 Target by fixtures** budget-aware. **US-303:** a `max_price` param on `target_by_fixtures` drops

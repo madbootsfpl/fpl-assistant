@@ -169,6 +169,11 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 
 ## Infrastructure (carried)
 
+- ◑ **Cross-device squad persistence** — **design agreed (ADR-094, Sprint 122); build = Sprint 123.** A
+  handle-keyed free store (Supabase, no login) so a squad follows you between devices; the first opt-in,
+  secret-gated server write (revising the read-only invariant). Native `st.login()` = the deferred "product"
+  upgrade. **Beta ops** decided too (ADR-095): a prod/staging split, public + PolyForm-NC LICENSE, a mirror
+  backup, an uptime monitor.
 - ⬜ Session/cookie **auth** for user-specific data (`/my-team/{id}/`) — unlocks a manager-ID fetch in
   `analyse`/`transfer`.
 - ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.

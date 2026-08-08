@@ -1,7 +1,7 @@
 # Sprint 122: Foundations for wider testing — decisions + cheap safeguards
 
-**Dates:** 2026-08-23 (planned)
-**Status:** 📝 Planned (0/2 stories · 2 ADRs)
+**Dates:** 2026-08-23
+**Status:** ✅ Complete (2/2 stories · 2 ADRs)
 **Capacity:** ~¾ session (a **decisions/foundations** sprint — two ADR gates + two low-risk stories; lighter code)
 **Carried Over:** none
 
@@ -42,24 +42,24 @@ ADRs* (so the next sprint builds against an agreed design) and *ship the cheap s
 backup, feedback go-live). No new user-facing feature; the persistence **build** is gated to Sprint 123.
 
 #### Success Criteria
-- [ ] **ADR-094 — Cross-device squad persistence (design gate, no build).** Commit to a **handle-keyed free-tier
+- [x] **ADR-094 — Cross-device squad persistence (design gate, no build).** Commit to a **handle-keyed free-tier
       store** (Supabase; **no login** — a user-chosen handle is the key); supersede the relevant part of ADR-054;
       define how the **read-only guardrail evolves** (a *scoped, opt-in* save/load — still no per-account auth, no
       PII beyond the handle) and the cost (**£0**, free tier ≫ 50 users). **Build deferred to Sprint 123.**
-- [ ] **ADR-095 — Running a wider beta (ops).** Record: (a) a **prod/staging** two-app split (a stable branch →
+- [x] **ADR-095 — Running a wider beta (ops).** Record: (a) a **prod/staging** two-app split (a stable branch →
       the testers' app; the working branch → staging; promote by merge); (b) **code protection** = stay public +
       a **PolyForm Noncommercial** LICENSE; (c) **backup** = a mirror remote + a scheduled Action; (d)
       **monitoring** = an external uptime monitor + the Cloud Analytics tab. All **£0**.
-- [ ] **US-305 (safeguard the code)** — add the **LICENSE** (PolyForm-NC 1.0.0) + a README line; add a
+- [x] **US-305 (safeguard the code)** — add the **LICENSE** (PolyForm-NC 1.0.0) + a README line; add a
       **mirror-backup** GitHub Action (`.github/workflows/mirror.yml`, no-op until the owner adds the mirror
       remote + secret) + a **`docs/BACKUP.md`** runbook.
-- [ ] **US-306 (beta go-live enablement)** — enrich the **feedback payload** (auto **app-version** + **timestamp**
+- [x] **US-306 (beta go-live enablement)** — enrich the **feedback payload** (auto **app-version** + **timestamp**
       + an optional **"Which page?"** selectbox) with a test; add a **go-live checklist** to `docs/BETA.md`
       (feedback Sheet + secrets + the prod/staging deploy + the uptime monitor). Extends ADR-087.
-- [ ] **No drift** — the read-only guardrail still holds (no server writes land this sprint — persistence is
-      design-only); existing **775** stay green (+ the feedback-payload test); ruff clean; CI unaffected (the
-      mirror Action is additive + secret-gated).
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help (n/a), Feedback_Log, Backlog, DEPLOY.md (prod/staging),
+- [x] **No drift** — the read-only guardrail still holds (no server writes land this sprint — persistence is
+      design-only); existing **775** stay green (**776** with +1); ruff clean; CI unaffected (the mirror Action is
+      additive + secret-gated).
+- [x] Docs: PROJECT_STATUS, Architecture, README, Help (n/a), Feedback_Log, Backlog, DEPLOY.md (prod/staging),
       BETA.md, BACKUP.md; ADR-index += ADR-094/095.
 
 ---
@@ -175,4 +175,56 @@ _(these need your account/clicks; the sprint delivers the code + the runbooks)_
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ a **foundations sprint** — the owner's five strategy questions reviewed and turned into two
+recorded decisions + two cheap safeguards. The headline finding held up: **all of it is ~£0** on free tiers past
+50 testers; the real cost is *complexity + posture*, and several pieces were already scaffolded. No user-facing
+feature, no server writes — the read-only guardrail is intact.
+
+**Delivered**
+- **ADR-094** — cross-device persistence design gate: a **handle-keyed Supabase store** (no login), a swappable
+  `cloud_store` adapter, a *revised* read-only invariant (one opt-in, tested write). **Build = Sprint 123.**
+- **ADR-095** — beta-ops: a **prod/staging** split · **public + PolyForm-NC** LICENSE · a **mirror backup** · an
+  external **uptime monitor**. All ~£0, opt-in, stay-hobby; the honest real-risk note (free-tier RAM, not lag).
+- **US-305** — `LICENSE` (PolyForm-NC) + a secret-gated `mirror.yml` (inert until `MIRROR_URL`) + `BACKUP.md`.
+- **US-306** — feedback payload += `page`/`version`/`ts` (+1 test); a `BETA.md` go-live checklist + a `DEPLOY.md`
+  prod/staging section.
+
+**The five questions → answers (all ~£0)**
+1. *Cross-device squads* → handle-keyed Supabase store (ADR-094; build next sprint).
+2. *Feedback operational* → it was **already built** (ADR-087) — needs a Sheet sink + a secret (owner, ~10 min);
+   enriched with page/version/ts this sprint.
+3. *Perf metrics* → a free external uptime/latency monitor + Cloud Analytics; the real risk is the free tier
+   struggling, which the monitor surfaces.
+4. *Dev/test/prod* → a two-app prod/staging split (not three tiers) — stops a mid-sprint push breaking testers.
+5. *Hobby vs product / protect + backup* → stay hobby, public + PolyForm-NC LICENSE, a mirror backup; private
+   deferred (the past friction was Community Cloud, not GitHub).
+
+**Metrics** — 776 tests (775 → +1) · ruff + CI-parity green · **95 ADRs** (+2) · 2 stories + 2 gates, ~¾ session.
+
+**What went well**
+- **Planning-first paid off again** — found the feedback form already built, and diagnosed the *real* "going
+  private" blocker (Community Cloud, not GitHub), so the advice was concrete not generic.
+- **Everything opt-in / inert by default** — the mirror Action skips without a secret; the LICENSE is inert text;
+  monitoring is external — so CI, forks and the public deploy are untouched until the owner flips a switch.
+- **Gated the big build** — persistence is an ADR, not a rushed implementation; Sprint 123 builds against an
+  agreed design (the gate rule).
+
+**Even better if**
+- The persistence build is the real work + risk (first server write, the guardrail revision) — this sprint only
+  de-risked it; Sprint 123 must be careful with the invariant test.
+- Several deliverables are **owner runbook actions** (Sheet, uptime, mirror remote, the 2nd app) — the sprint
+  ships the code/docs; the beta isn't "live" until the owner runs them (captured in the plan's Owner block).
+
+**Deferred / backlog** — the persistence **build** (Sprint 123); native `st.login()` (product path); going
+**private**; server-render timing in logs; a paid host (only if the free tier struggles); branch protection on
+`main`.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Which owner runbook action to do first:** _(feedback Sheet · uptime monitor · mirror remote · staging app)_
+- **Comfort with the hobby-vs-product posture (1–5):**
