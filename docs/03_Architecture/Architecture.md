@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 123 (2026-08-24)** — *Feedback to your inbox* (owner set up **fpl.assistant@proton.me**; display/link
+  + payload-field only — no new server write, the read-only guardrail holds; extends **ADR-087**, no new ADR).
+  **⚠️ Constraint:** Proton has no free SMTP, so the app can't send mail directly — two free routes instead.
+  **US-307:** a pure `web_streamlit/feedback.py::feedback_mailto(email, message, page, version)` (URL-encoded;
+  own module so it's importable/unit-testable past the page's numeric prefix) → an always-available **"✉ Email
+  your feedback"** `st.link_button` + a **pre-filled** "✉ Email this feedback" on submit when there's no webhook
+  (or a POST fails), addressed to `FPL_FEEDBACK_EMAIL` (default fpl.assistant@proton.me); the dev-only GitHub link
+  demoted. **US-308:** the webhook POST gains `_subject` (FormSubmit) + `access_key` when `FPL_FEEDBACK_KEY` is
+  set (Web3Forms), so the same `requests.post` works with a **form-to-email relay** or the existing Sheet sink;
+  `docs/BETA.md` splits the sink into **1A (Sheet)** / **1B (relay → the inbox)** + a why-not-SMTP note. +6 tests
+  (781); `tests/test_feedback.py` covers the mailto builder.
 - **Sprint 122 (2026-08-23)** — *Foundations for wider testing* (a **decisions/foundations** sprint — two ADR
   gates + two cheap safeguards; no user-facing feature; the read-only guardrail holds — no server writes landed).
   **ADR-094 (design gate, no code):** cross-device squad persistence via a **handle-keyed Supabase store** (no

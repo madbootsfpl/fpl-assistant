@@ -1,7 +1,7 @@
 # Sprint 123: Feedback to your inbox — a mailto route + an email relay
 
-**Dates:** 2026-08-24 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-24
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (a small, high-value enablement — a mailto route + relay compatibility + docs)
 **Carried Over:** the **ADR-094 persistence build** — *re-deferred to a later sprint* at the owner's request
 (this sprint prioritises getting feedback flowing to the new inbox); still gated + ready.
@@ -36,19 +36,19 @@ pre-filled email** that works with zero setup, plus the option to wire the in-ap
 for structured capture. Replace the dev-only GitHub fallback as the primary path for non-dev testers.
 
 #### Success Criteria
-- [ ] **US-307 (a `mailto:` email route)** — a config'd `FPL_FEEDBACK_EMAIL` (default **fpl.assistant@proton.me**)
+- [x] **US-307 (a `mailto:` email route)** — a config'd `FPL_FEEDBACK_EMAIL` (default **fpl.assistant@proton.me**)
       and a **pre-filled email route**: an always-available **"✉ Email your feedback"** link, *and* — when no
       webhook is set — a submit builds a **pre-filled mailto** (subject + the typed message + page + version) so
       one click opens the tester's mail client ready to send. The GitHub link demotes to a secondary "prefer
       GitHub?" line. A pure, unit-tested `feedback_mailto(...)` helper.
-- [ ] **US-308 (email-relay compatibility + docs)** — make the JSON POST work with a **free form-to-email relay**:
+- [x] **US-308 (email-relay compatibility + docs)** — make the JSON POST work with a **free form-to-email relay**:
       add a `_subject` (FormSubmit honours it) and, when `FPL_FEEDBACK_KEY` is set, an `access_key` (Web3Forms) to
       the payload; `email` stays the reply-to. Document in `docs/BETA.md` how to point `FPL_FEEDBACK_WEBHOOK` at a
       relay → **fpl.assistant@proton.me** (FormSubmit zero-signup, or Web3Forms with a key), incl. the why-not-SMTP
       note + FormSubmit's one-time confirmation click.
-- [ ] **No drift** — display/link + payload-field only; no new server-write path (the POST already existed); the
-      read-only guardrail holds; existing **776** stay green (+ mailto/relay tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README (n/a), Help (n/a), Feedback_Log, BETA.md (extends **ADR-087**;
+- [x] **No drift** — display/link + payload-field only; no new server-write path (the POST already existed); the
+      read-only guardrail holds; existing **776** stay green (**781** with +5 net); ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README (n/a), Help (n/a), Feedback_Log, BETA.md (extends **ADR-087**;
       no new ADR — a route/config change).
 
 ---
@@ -134,4 +134,49 @@ _(the sprint delivers the code + docs; you pick a route)_
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped. In-app feedback now reaches **fpl.assistant@proton.me** two ways: a
+**zero-setup pre-filled `mailto:`** (works the moment it deploys) and, optionally, the **in-app form via a free
+form-to-email relay** (structured capture). Display/link + payload-field only — no new server write, the
+read-only guardrail holds.
+
+**Delivered**
+- **US-307** — a pure `web_streamlit/feedback.py::feedback_mailto(...)` (own importable module, unit-tested) →
+  an always-available "✉ Email your feedback" + a pre-filled "✉ Email this feedback" on submit when no webhook;
+  `FPL_FEEDBACK_EMAIL` (default fpl.assistant@proton.me); GitHub demoted. +5 tests.
+- **US-308** — `_subject` + an optional `access_key` on the POST → the same request works with FormSubmit /
+  Web3Forms / a Sheet; `docs/BETA.md` §1 split into **1A (Sheet)** / **1B (relay)** + a why-not-SMTP note. +1 test.
+
+**Verified at planning (real data)** — the `mailto:` builds + renders (`st.link_button`); the fallback was a
+dev-only GitHub link; `secret(key, default)` gives the address a default; **Proton has no free SMTP** (the
+constraint that shaped the whole design — relay/mailto, not direct send).
+
+**Metrics** — 781 tests (776 → +5 net) · ruff + CI-parity green · 95 ADRs (no new) · 2 stories, ~½ session.
+
+**What went well**
+- **Named the SMTP constraint up front** — so the design went straight to the two free routes instead of a
+  dead-end "just send an email" path.
+- **The mailto route needs zero owner setup** — feedback flows the instant it deploys; the relay is a nice-to-have
+  on top, not a blocker.
+- **One POST, many sinks** — `_subject`/`access_key` make the *same* request work with a Sheet, FormSubmit, or
+  Web3Forms; the owner picks without a code change.
+- **Refactored for testability** — moving `feedback_mailto` into its own module (past the page's numeric prefix)
+  made it unit-testable, matching the "small importable helpers" pattern.
+
+**Even better if**
+- The `mailto:` opens the tester's mail client (a hop), and can't attach a screenshot — fine for a hobby beta;
+  the relay is the smoother in-app path for those who'd rather not leave the page.
+- FormSubmit's one-time confirmation click is a small owner speed-bump (documented).
+
+**Deferred / backlog** — direct **SMTP** send (Proton has no free SMTP → a paid Bridge/plan; only if a relay
+proves insufficient); a captcha/anti-spam on the relay (only if abused); the **ADR-094 persistence build**
+(re-deferred this sprint — still gated + ready).
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Which feedback route to lean on:** _(the zero-setup mailto · or wire the relay for structured capture)_
+- **Ready to recruit testers now? (1–5):**
