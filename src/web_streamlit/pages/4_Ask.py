@@ -79,12 +79,15 @@ for question, answer in st.session_state.history:
 # Nudge the newest answer into view — the app runs in an iframe with same-origin access, so scroll the parent
 # to the bottom after the history renders (US-275). The `/*turn N*/` token makes the script **unique per turn**
 # so Streamlit re-renders it and the scroll re-runs every answer — including the example-button path, which
-# doesn't get chat_input's native scroll (US-283, tester feedback). A no-op / invisible when there's no history.
+# doesn't get chat_input's native scroll (US-283). It scrolls **several times over ~0.8 s** (instant, not
+# smooth) so it lands reliably after the example expander collapses + any late layout settles, and Streamlit's
+# scroll-restore can't win mid-animation (US-287, tester: "works for some, not all"). No-op without history.
 if st.session_state.history:
     _turn = len(st.session_state.history)
     st.iframe(
-        "<script>/*turn " + str(_turn) + "*/setTimeout(function(){try{var w=window.parent;"
-        "w.scrollTo({top:w.document.body.scrollHeight,behavior:'smooth'});}catch(e){}}, 150);</script>",
+        "<script>/*turn " + str(_turn) + "*/(function(){var w=window.parent;"
+        "function s(){try{w.scrollTo(0,w.document.body.scrollHeight);}catch(e){}}"
+        "[50,200,450,800].forEach(function(d){setTimeout(s,d);});})();</script>",
         height=1,
     )
 

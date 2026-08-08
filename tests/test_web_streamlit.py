@@ -947,15 +947,17 @@ def test_ask_page_example_prompts_are_clickable():
     assert at.get("code")[0].wrap_lines is True             # US-275: the answer wraps (readable sentences)
 
 
-def test_ask_scroll_nudge_is_unique_per_turn():
-    # US-283 (tester feedback): the scroll nudge must re-fire each answer (so an example click scrolls too), so
-    # its script carries the turn count — Streamlit only re-runs a component when its inputs change.
+def test_ask_scroll_nudge_is_unique_per_turn_and_multi_tick():
+    # US-283/US-287: the scroll nudge re-fires each answer (unique per turn) and scrolls to the bottom several
+    # times (instant) so it lands reliably after layout settles — not one smooth attempt that lands sometimes.
     at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
     at.chat_input[0].set_value("how does bench boost work?").run()
     first = at.get("iframe")[-1].proto.srcdoc
     at.chat_input[0].set_value("how do transfers work?").run()
     second = at.get("iframe")[-1].proto.srcdoc
     assert "/*turn 1*/" in first and "/*turn 2*/" in second and first != second   # unique → re-renders/re-runs
+    assert "[50,200,450,800]" in second and "forEach" in second and "scrollHeight" in second   # US-287: multi-tick
+    assert "behavior:'smooth'" not in second                                      # instant (scroll-restore can't win)
 
 
 def test_ask_page_example_prompts_name_the_loaded_squad():
