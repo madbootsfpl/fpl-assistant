@@ -68,10 +68,20 @@ with st.expander("💡 Example questions — click one to ask it", expanded=not 
             _ask(example)
             st.rerun()
 
-# Replay the conversation so far.
+# Replay the conversation so far. `wrap_lines` wraps long sentences while keeping the aligned tables/blocks
+# readable (US-275).
 for question, answer in st.session_state.history:
     st.chat_message("user").write(question)
-    st.chat_message("assistant").code(answer, language=None)
+    st.chat_message("assistant").code(answer, language=None, wrap_lines=True)
+
+# Nudge the newest answer into view — the app runs in an iframe with same-origin access, so scroll the parent
+# to the bottom after the history renders (US-275). A no-op / invisible when there's no history.
+if st.session_state.history:
+    st.iframe(
+        "<script>setTimeout(function(){try{var w=window.parent;"
+        "w.scrollTo({top:w.document.body.scrollHeight,behavior:'smooth'});}catch(e){}}, 120);</script>",
+        height=1,
+    )
 
 prompt = st.chat_input("Ask a question…")
 if prompt:

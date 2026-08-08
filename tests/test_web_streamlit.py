@@ -915,6 +915,7 @@ def test_ask_page_example_prompts_are_clickable():
     btn = next(b for b in at.button if b.key == "example_0")
     btn.click().run()                                       # clicking runs the grounded pipeline
     assert not at.exception and len(at.session_state["history"]) == 1
+    assert at.get("code")[0].wrap_lines is True             # US-275: the answer wraps (readable sentences)
 
 
 def test_ask_page_is_conversational_pronouns_and_followups():
