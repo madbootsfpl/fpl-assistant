@@ -81,7 +81,7 @@ insufficient); a captcha/anti-spam on the relay (FormSubmit has basic spam filte
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-307 | **A `mailto:` email route** — a pre-filled "✉ Email your feedback" to fpl.assistant@proton.me. | High | ✅ Done | ~¼ session |
-| US-308 | **Email-relay compatibility + docs** — POST works with FormSubmit/Web3Forms → the inbox. | High | ⬜ To do | ~¼ session |
+| US-308 | **Email-relay compatibility + docs** — POST works with FormSubmit/Web3Forms → the inbox. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -120,6 +120,15 @@ _(the sprint delivers the code + docs; you pick a route)_
   `mailto:fpl.assistant@proton.me`; submit w/o webhook → a second mailto carrying the message + page. +5 tests
   (4 unit in `tests/test_feedback.py` + the renamed page AppTest now asserting the pre-filled email). ruff clean.
   **780** total.
+- **US-308 (email-relay compatibility + docs)** — extended the webhook POST payload with **`_subject`**
+  (`"FPL Assistant beta feedback — {page}"` — FormSubmit honours it) and, when `secret("FPL_FEEDBACK_KEY")` is
+  set, **`access_key`** (Web3Forms) — so the *same* `requests.post(webhook, json=…)` now works with a free
+  **form-to-email relay** *or* the existing Google-Sheet sink (which ignores both). Documented in `docs/BETA.md`:
+  the switches list gains `FPL_FEEDBACK_KEY`/`FPL_FEEDBACK_EMAIL` + a **why-not-SMTP** note (Proton has no free
+  SMTP), and §1 splits into **1A (a Sheet)** / **1B (an email relay → fpl.assistant@proton.me)** covering
+  FormSubmit (no signup, one-time confirmation) + Web3Forms (needs the key). +2 tests (the Sprint-122 payload test
+  now asserts `_subject` + no `access_key` by default; a new test asserts `access_key` is added when the key is
+  set). ruff clean. **781** total.
 
 ---
 

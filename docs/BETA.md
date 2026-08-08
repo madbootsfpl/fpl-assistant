@@ -7,14 +7,16 @@ ADR-087-beta-access-and-feedback.md) · [DIRECTION.md](00_Project/DIRECTION.md) 
 
 ---
 
-## The three switches (Streamlit secrets)
+## The switches (Streamlit secrets)
 
 Set these in **Streamlit Community Cloud → Manage app → Settings → Secrets** (TOML). All optional; unset = off.
 
 ```toml
-FPL_ACCESS_CODE     = "your-shared-beta-code"                 # gates entry; testers type it once per session
-FPL_FEEDBACK_WEBHOOK = "https://script.google.com/.../exec"    # in-app feedback POSTs here (see below)
-FPL_SIGNUP_URL      = "https://forms.gle/your-signup-form"     # the founding-tester email-capture form
+FPL_ACCESS_CODE      = "your-shared-beta-code"                 # gates entry; testers type it once per session
+FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/<token>"    # in-app feedback POSTs here (§1: a Sheet OR a relay)
+FPL_FEEDBACK_KEY     = "your-web3forms-access-key"             # only if you use Web3Forms as the relay (§1B)
+FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"               # the mailto fallback address (default: this)
+FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"    # the founding-tester email-capture form
 ```
 
 (Locally you can use the same names as **environment variables** instead.)
@@ -22,23 +24,40 @@ FPL_SIGNUP_URL      = "https://forms.gle/your-signup-form"     # the founding-te
 - **`FPL_ACCESS_CODE`** — when set, every page shows a 🔒 prompt until the code is entered. Rotate by editing
   the secret. It's a *shared* code (a beta gate, not per-user security) — fine here (the app is read-only,
   public FPL data).
-- **`FPL_FEEDBACK_WEBHOOK`** — where the in-app **📣 Feedback** form POSTs (`{message, email, source}`). Unset →
-  the form politely points testers to a GitHub issue instead.
+- **`FPL_FEEDBACK_WEBHOOK`** — where the in-app **📣 Feedback** form POSTs (`{message, email, source, page,
+  version, ts, _subject}`). Point it at a **Google Sheet** (§1A) *or* a **form-to-email relay** (§1B) that
+  forwards to your inbox. **Unset → the form offers a pre-filled email** (`FPL_FEEDBACK_EMAIL`) — so feedback
+  reaches you even with no webhook (US-307).
+- **`FPL_FEEDBACK_KEY`** — only for the **Web3Forms** relay (§1B); it's sent as `access_key`. Leave unset for a
+  Sheet or for FormSubmit.
+- **`FPL_FEEDBACK_EMAIL`** — the address the in-app **"✉ Email your feedback"** / fallback links open (a
+  `mailto:`). Defaults to `fpl.assistant@proton.me`; set it to change the inbox.
 - **`FPL_SIGNUP_URL`** — a link shown on **Home** + **Feedback** ("✋ Join the beta"). Unset → hidden.
+
+> **Why a relay / mailto, not direct email?** Sending mail from the app would need SMTP credentials, and
+> **Proton has no free SMTP** (it needs the paid Bridge). So feedback reaches your inbox either via a free
+> **form-to-email relay** (structured, in-app submit — §1B) or the **pre-filled `mailto:`** (the tester's own
+> mail client — zero setup, always on).
 
 ---
 
-## 1. The feedback sink (a Google Sheet, ~10 min)
+## 1. The feedback sink — pick one (both zero-cost)
 
-Simplest zero-cost webhook — a Google Apps Script bound to a Sheet:
+The in-app form POSTs JSON to `FPL_FEEDBACK_WEBHOOK`. Point it at a **Sheet** (1A, a running log) *or* an **email
+relay** (1B, straight to your inbox). **Skip this entirely** and the form still works — it offers a **pre-filled
+email** to `FPL_FEEDBACK_EMAIL` (the tester's mail app → your inbox), so you can recruit before wiring anything.
 
-1. Create a Google **Sheet** ("FPL beta feedback") with headers: `timestamp · message · email · source`.
+### 1A. A Google Sheet (~10 min) — a running log
+
+A Google Apps Script bound to a Sheet:
+
+1. Create a Google **Sheet** ("FPL beta feedback") with headers: `timestamp · message · email · page · version`.
 2. **Extensions → Apps Script**, paste:
    ```js
    function doPost(e) {
      const d = JSON.parse(e.postData.contents);
      SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
-       .appendRow([new Date(), d.message || "", d.email || "", d.source || ""]);
+       .appendRow([new Date(), d.message || "", d.email || "", d.page || "", d.version || ""]);
      return ContentService.createTextOutput("ok");
    }
    ```
@@ -46,7 +65,21 @@ Simplest zero-cost webhook — a Google Apps Script bound to a Sheet:
    that's `FPL_FEEDBACK_WEBHOOK`.
 4. Test: submit the in-app form; a row should appear in the Sheet.
 
-*(Any service that accepts a JSON POST works — Formspree, a Zapier/Make webhook, a Tally webhook, etc.)*
+### 1B. An email relay (~5 min) — straight to fpl.assistant@proton.me
+
+Free form-to-email services forward a POST to your inbox — the app's payload already carries `_subject`, the
+message, the page, and the version.
+
+- **FormSubmit** (no signup): use `FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/<random-token>"` (get the
+  token from formsubmit.co by tying it to fpl.assistant@proton.me — the token hides your address in the repo).
+  **First submit sends a one-time confirmation email — click it once**, then feedback flows to the inbox.
+- **Web3Forms** (needs a key): create an access key at web3forms.com for fpl.assistant@proton.me, then set
+  `FPL_FEEDBACK_WEBHOOK = "https://api.web3forms.com/submit"` **and** `FPL_FEEDBACK_KEY = "<your-access-key>"`
+  (the app sends it as `access_key`).
+
+Test: submit the in-app form → an email lands in fpl.assistant@proton.me.
+
+*(Any service accepting a JSON POST works — Formspree, a Zapier/Make webhook, a Tally webhook, etc.)*
 
 ## 2. The signup form (email capture, ~5 min)
 
@@ -89,8 +122,9 @@ Everything below is **£0** and opt-in. Tick them off, then post the invite.
 
 ## Turning it off
 
-Delete the three secrets → the app is fully public again, feedback falls back to GitHub, the signup link
-disappears. No redeploy needed beyond saving secrets (reboot if Cloud serves a stale build).
+Delete the secrets → the app is fully public again: the access gate opens, the signup link disappears, and
+feedback falls back to the **pre-filled email** (`FPL_FEEDBACK_EMAIL`) then a GitHub issue. No redeploy needed
+beyond saving secrets (reboot if Cloud serves a stale build).
 
 ---
 

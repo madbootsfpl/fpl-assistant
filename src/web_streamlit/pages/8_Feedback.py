@@ -73,7 +73,13 @@ if sent:
                 "page": page,
                 "version": _app_version(),
                 "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                # US-308: work with a free form-to-email relay too — FormSubmit reads `_subject`; Web3Forms
+                # needs an `access_key` (only when FPL_FEEDBACK_KEY is set). A Google-Sheet sink ignores both.
+                "_subject": f"FPL Assistant beta feedback — {page}",
             }
+            access_key = secret("FPL_FEEDBACK_KEY")
+            if access_key:
+                payload["access_key"] = access_key
             try:
                 requests.post(webhook, json=payload, timeout=6)
                 st.success("Thanks — your feedback was sent! 🎉")

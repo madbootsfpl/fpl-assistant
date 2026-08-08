@@ -541,7 +541,8 @@ def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
 
 
 def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
-    # US-306 (ADR-087): a submitted report POSTs an enriched payload — page + app-version + a timestamp.
+    # US-306/308 (ADR-087): a submitted report POSTs an enriched, relay-ready payload — page + app-version
+    # + a timestamp + a _subject; the Web3Forms access_key is added only when FPL_FEEDBACK_KEY is set.
     monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
     captured = {}
 
@@ -563,6 +564,21 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
     assert payload["page"] == "Fixtures"
     assert payload["version"] and payload["source"] == "fpl-assistant-beta"
     assert "T" in payload["ts"]                                          # an ISO timestamp
+    assert payload["_subject"].endswith("Fixtures")                     # US-308: FormSubmit subject
+    assert "access_key" not in payload                                  # no Web3Forms key set → omitted
+
+
+def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
+    # US-308: when FPL_FEEDBACK_KEY is set, the POST carries it as access_key (Web3Forms), else it's omitted.
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://api.web3forms.com/submit")
+    monkeypatch.setenv("FPL_FEEDBACK_KEY", "test-access-key")
+    captured = {}
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, timeout=None: captured.update(json=json) or type("R", (), {})())
+    at = _run(_PAGES / "8_Feedback.py")
+    at.text_area[0].set_value("Nice work").run()
+    next(b for b in at.button if b.label == "Send feedback").click().run()
+    assert captured["json"]["access_key"] == "test-access-key"
 
 
 def test_squads_gameweeks_selector_drives_the_horizon():
