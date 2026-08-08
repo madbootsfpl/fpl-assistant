@@ -42,3 +42,16 @@ def player_history(player, seasons, gameweeks) -> dict:
     out_gw = [{"round": _get(r, "round"), "points": _get(r, "total_points") or 0,
                "minutes": _get(r, "minutes") or 0} for r in (gameweeks or [])]
     return {"player": player, "seasons": out_seasons, "gameweeks": out_gw}
+
+
+def align_seasons(hist_a, hist_b, *, key: str = "points") -> list[dict]:
+    """Outer-join two players' seasons on the season label for a side-by-side comparison (US-312).
+
+    `hist_a`/`hist_b` are `player_history(...)` results. Returns `[{"season", "a", "b"}]` sorted by season
+    label — `a`/`b` are each player's value for `key` (e.g. "points"), or `None` for a season only one played.
+    Pure/display; nothing here feeds `decision_xp`.
+    """
+    a_by = {s["season"]: s.get(key) for s in hist_a.get("seasons", [])}
+    b_by = {s["season"]: s.get(key) for s in hist_b.get("seasons", [])}
+    return [{"season": season, "a": a_by.get(season), "b": b_by.get(season)}
+            for season in sorted(a_by.keys() | b_by.keys())]

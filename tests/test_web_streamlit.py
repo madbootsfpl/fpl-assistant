@@ -422,6 +422,21 @@ def test_players_history_view_shows_a_season_table_for_a_known_player():
     cols = list(at.dataframe[0].value.columns) if at.dataframe else []
     assert "Season" in cols and "£ start" in cols and "Pts/90" in cols       # the native season table
     assert any("fills once the season starts (GW1)" in c.value for c in at.caption)   # per-GW dormant note
+    assert any("🟢" in str(v) or "🔴" in str(v) or v == "0.0"                 # US-311: Δ£ carries an up/down cue
+               for v in at.dataframe[0].value["Δ£"].tolist())
+
+    # US-312: pick a second player in "Compare with" → a side-by-side season table appears.
+    cmp = next((s for s in at.selectbox if s.label == "Compare with (optional)"), None)
+    if cmp is None:
+        return
+    other = next((o for o in cmp.options if o != "—" and not o.startswith("Haaland")), None)
+    if other is None:
+        return
+    n_before = len(at.dataframe)
+    cmp.set_value(other).run()
+    assert not at.exception
+    assert len(at.dataframe) > n_before                                       # a comparison table was added
+    assert "Season" in at.dataframe[-1].value.columns
 
 
 def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):

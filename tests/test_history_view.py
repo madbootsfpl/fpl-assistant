@@ -4,7 +4,7 @@
 formats it. A read-view lens — never `decision_xp`.
 """
 
-from src.analytics import player_history
+from src.analytics import align_seasons, player_history
 from src.ui.history import render_player_history
 from src.web_streamlit.views.players import _delta_cell
 
@@ -46,6 +46,22 @@ def test_delta_cell_colours_the_price_move():
     assert _delta_cell(-0.4) == "−0.4 🔴"        # a real minus sign
     assert _delta_cell(0.0) == "0.0"
     assert _delta_cell(None) == "—"
+
+
+def test_align_seasons_outer_joins_on_the_season_label():
+    # US-312: two players' seasons align on the label; a season only one played → None for the other.
+    a = {"seasons": [{"season": "2022/23", "points": 200}, {"season": "2023/24", "points": 226}]}
+    b = {"seasons": [{"season": "2023/24", "points": 180}, {"season": "2024/25", "points": 150}]}
+    assert align_seasons(a, b, key="points") == [
+        {"season": "2022/23", "a": 200, "b": None},          # only A played
+        {"season": "2023/24", "a": 226, "b": 180},           # both
+        {"season": "2024/25", "a": None, "b": 150},          # only B played
+    ]
+
+
+def test_align_seasons_is_empty_safe():
+    assert align_seasons({"seasons": []}, {"seasons": []}) == []
+    assert align_seasons({}, {}) == []
 
 
 def test_player_history_is_empty_safe():

@@ -70,7 +70,7 @@ chart still render for the primary player; the comparison is **additive** below.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-311 | **A coloured Δ£** — 🟢 rise / 🔴 fall on the History season table. | High | ✅ Done | ~¼ session |
-| US-312 | **Cross-player History comparison** — a 2nd player overlaid (season table + chart). | High | ⬜ To do | ~¼ session |
+| US-312 | **Cross-player History comparison** — a 2nd player overlaid (season table + chart). | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -91,6 +91,14 @@ chart still render for the primary player; the comparison is **additive** below.
   (fall, a real minus sign) / `0.0` (flat) / `—` (None); the History season table's `Δ£` now uses it (a text
   column). Display only — `player_history` untouched. Smoke: the History table renders Δ£ with 🟢/🔴 (`['+0.4 🟢',
   '+0.2 🟢', '0.0', …]`). +1 unit test (`test_delta_cell_colours_the_price_move`). ruff clean. **792** total.
+- **US-312 (cross-player comparison)** — added a pure `analytics/history.py::align_seasons(hist_a, hist_b, *,
+  key="points")` (outer-join on the season label → `[{season, a, b}]`, None-fill for a season only one played;
+  exported from `analytics`). In `render_history`: a **"Compare with (optional)"** `st.selectbox` (excludes the
+  primary, "—" default) → a 2nd on-demand `player_history` read → a **season table** (Season · *A* · *B* points,
+  same-name disambiguated by team) + a **`st.line_chart`** overlaying both season-points series. No selection →
+  the single-player view is byte-unchanged. Display only. Smoke: compare → a 2nd dataframe `[Season, Haaland,
+  A.Becker]` + chart, no exception. +2 unit tests (`align_seasons` outer-join + empty-safe) + the History page
+  AppTest extended (Δ£ cue + the compare table). ruff clean. **794** total.
 
 ---
 

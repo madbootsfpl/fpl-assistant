@@ -13,6 +13,7 @@ from src.analytics import (
     CROWD_LEGEND,
     PRICE_LEGEND,
     SET_PIECE_LEGEND,
+    align_seasons,
     crowd_flags,
     defcon_reliability,
     defensive_solidity,
@@ -264,3 +265,27 @@ def render_history(rows, photos, badges):
         st.line_chart([{"GW": g["round"], "Points": g["points"]} for g in gws], x="GW", y="Points")
     else:
         st.caption("📈 Per-gameweek form fills once the season starts (GW1).")
+
+    # US-312: optionally overlay a second player's season points (real past-season data now).
+    others = {lbl: p for lbl, p in by_label.items() if p["id"] != player["id"]}
+    cmp_label = st.selectbox("Compare with (optional)", ["—", *others],
+                             help="Overlay a second player's season points, side by side.")
+    cmp_player = others.get(cmp_label)
+    if cmp_player:
+        store = Storage()
+        try:
+            hist2 = player_history(cmp_player, store.get_history_past(cmp_player["code"]),
+                                   store.get_history(cmp_player["code"]))
+        finally:
+            store.close()
+        a_name, b_name = player["web_name"], cmp_player["web_name"]
+        if b_name == a_name:                                 # disambiguate two same-named players
+            b_name = f"{cmp_player['web_name']} ({cmp_player['team']})"
+        rows_c = align_seasons(hist, hist2, key="points")
+        if rows_c:
+            table_c = [{"Season": r["season"], a_name: r["a"], b_name: r["b"]} for r in rows_c]
+            st.caption(f"Season points — **{a_name}** vs **{b_name}**")
+            st.dataframe(table_c, width="stretch", hide_index=True)
+            st.line_chart(table_c, x="Season", y=[a_name, b_name])
+        else:
+            st.caption(f"No season history to compare for {a_name} and {b_name}.")
