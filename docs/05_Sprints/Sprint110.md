@@ -1,7 +1,7 @@
 # Sprint 110: Chat robustness — remembered context + a bigger rules KB
 
 **Dates:** 2026-08-11 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a small persistence layer + curated content)
 **Carried Over:** none
 
@@ -38,19 +38,19 @@ invocations and a restarted chat — and it *knows more* — the curated rules K
 questions, still grounded + verified (✓). The web stays read-only (session-only memory, unchanged).
 
 #### Success Criteria
-- [ ] **US-281 (remember the conversation across runs)** — a small **`src/chat_context.py`** that saves/loads a
+- [x] **US-281 (remember the conversation across runs)** — a small **`src/chat_context.py`** that saves/loads a
       `Context` ↔ a local JSON file (`config.CHAT_CONTEXT_PATH`, git-ignored) with a **timestamp + TTL** (a
       stale context is ignored, so an old "why?" doesn't resurface an ancient turn). The **CLI `ask`** loads the
       context → `converse` → saves the new one (so *"ask …"* then *"ask why?"* works); the **CLI `chat`** REPL
       **resumes** the saved context on start + saves each turn, and a **"forget"/"reset"** word clears it. The
       **web is unchanged** (session-only; the store is CLI-only, never imported by `web_streamlit`).
-- [ ] **US-282 (grow the rules KB)** — **~8 new** authoritative entries (player flags/availability · pre-season
+- [x] **US-282 (grow the rules KB)** — **~8 new** authoritative entries (player flags/availability · pre-season
       unlimited transfers · one chip per gameweek · bench points · wildcard timing · mini-leagues · overall vs
       gameweek rank · team value & selling price), each short + numeric where the number is the answer;
       `TOPIC_LABELS` extended. The `rules` intent picks them up and still **verifies** (✓, ADR-085/037).
-- [ ] **No drift** — the analytics + grounding untouched; `ask.answer`/`converse` stay pure (the persistence is
-      in the CLI handler only, so the web + tests are unaffected); the read-only web guardrail holds; existing
-      **716** stay green (+ new context/KB tests); ruff clean.
+- [x] **No drift** — the analytics + grounding untouched; `ask.answer`/`converse` stay pure (the persistence is
+      in the CLI handler only, so the web + tests are unaffected); the read-only web guardrail holds; **726**
+      green (716 → +10: chat-context store/resume/CLI, KB coverage); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Backlog, ADR index (a short **ADR-091** for persisted
       chat context — agreed at the gate).
 
@@ -84,8 +84,8 @@ read-only server); a hosted LLM for the deploy's free-form tail; an LLM intent c
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-281 | **Remember the conversation across runs** — a local, TTL'd `chat_context` store; CLI `ask`/`chat` load+save; web session-only (ADR-091). | High | ⬜ To do | ~½ session |
-| US-282 | **Grow the curated rules KB** — ~8 new grounded entries + `TOPIC_LABELS`; still verified. | High | ⬜ To do | ~½ session |
+| US-281 | **Remember the conversation across runs** — a local, TTL'd `chat_context` store; CLI `ask`/`chat` load+save; web session-only (ADR-091). | High | ✅ Done | ~½ session |
+| US-282 | **Grow the curated rules KB** — 8 new grounded entries + routing + `TOPIC_LABELS`; still verified. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -125,10 +125,59 @@ read-only server); a hosted LLM for the deploy's free-form tail; an LLM intent c
 - **Manual smoke:** `ask "who should I captain from all players?"` then a separate `ask "why?"` re-explains the
   pick; `ask "forget"` clears the file.
 
-_(US-282 next — "start US-282".)_
+**US-282 — grow the curated rules KB.** ✅ Done.
+- **8 new authoritative entries** in `fpl_rules.py::RULES` (13 → **21**): **flags** (🔴 unavailable / 🟡 75-50-25%
+  doubt) · **preseason_transfers** (unlimited free before the GW1 deadline) · **chip_limits** (one chip per GW) ·
+  **bench_points** (only the XI scores, except Bench Boost) · **wildcard_timing** (two per season, 2nd ~GW20) ·
+  **leagues** (Classic total-points vs Head-to-Head 3/1/0) · **ranking** (Overall vs Gameweek rank) ·
+  **team_value** (selling price = buy + ½ the rise). Each short + numeric where the number is the answer.
+  `TOPIC_LABELS` extended to 21.
+- **Routing extended too** — the new questions contain words that route to *squad* intents ("transfers",
+  "wildcards", "bench"), so I added **specific** rules cues (`yellow flag`, `before gameweek`, `two chips`,
+  `bench points`, `how many wildcards`, `head to head`, `overall rank`, `selling price`, … + `what does`) that
+  win first **without hijacking** the imperative squad commands. All 8 now route to `rules` and answer
+  **verified (✓)** from the KB, not the LLM's memory.
+- **Only well-established rules** — nothing speculative (the KB exists precisely to avoid hallucinated rules).
+- **Tests (+2):** each new topic answers its natural question; topic ids are unique. No routing regressions.
+  **726** green, ruff clean.
+- **Manual smoke:** *"what does the yellow flag mean?"*, *"how many wildcards do I get?"*, *"what is my selling
+  price?"* etc. all answer from the KB with the ✓ trust line.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **716 → 726** (+10: chat-context store/resume/CLI +
+the web guardrail, and KB coverage/uniqueness). Ruff clean; CI-parity green. **New ADR-091** (persisted chat
+context). No analytics change — a CLI persistence layer + curated content; the grounding still verifies.
+
+**Delivered**
+- **US-281 — remember the conversation across runs (ADR-091).** A local, git-ignored, TTL'd `chat_context`
+  store; the CLI `ask` loads→converse→saves (so *"ask …"* then a separate *"ask why?"* resolves) and `chat`
+  resumes + persists per turn (a "forget" clears it). The pure `ask.answer`/`converse` API is untouched; the
+  multi-user web keeps `session_state` (a guardrail test enforces it).
+- **US-282 — grow the rules KB.** 8 new grounded entries (flags · preseason transfers · one-chip-per-GW · bench
+  points · wildcard timing · leagues · ranking · team value) + the routing cues that make them verify ✓.
+
+**What went well**
+- **The pure core made the persistence a thin edge.** Because `converse` already takes an injected context and
+  returns the next one, "persist across runs" was a small CLI wrapper (load → converse → save) — no change to
+  the analytics or the web.
+- **Designing around the read-only web.** Keeping the store CLI-only (and asserting the web never imports it)
+  preserved the no-server-writes guarantee on the multi-user deploy — the constraint shaped a clean split.
+- **Best-effort persistence.** Save/load swallow errors and a TTL bounds staleness, so a nice-to-have feature
+  can never crash a turn or resurface an ancient answer.
+- **Caught the real gap in US-282.** Growing the KB only helps if the question *routes* to the rules intent —
+  spotting that "what does the yellow flag mean?" fell to free-form turned a content task into a content +
+  routing task, so all 8 now verify ✓ instead of ℹ.
+
+**Watch-outs / follow-ups**
+- **A guardrail false-positive.** The web names a `session_state` key `chat_context`, so a naïve substring scan
+  flagged it; the guardrail now targets the module import + its calls. A reminder that string-scan guardrails
+  need precise anchors.
+- **The rules routing is substring-based** — the new cues are specific enough not to hijack squad commands, but
+  the cue list is growing; an LLM/intent classifier is the eventual answer (deferred).
+- **Deferred:** web cross-session persistence (needs client storage; server-side would break read-only); a
+  hosted LLM for the deploy's free-form tail; keep growing the KB as questions arrive.
+
+See `Sprint110_Lessons_Learnt.md` for the detailed retro.

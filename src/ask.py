@@ -77,10 +77,18 @@ _INTENT_KEYWORDS = {
     # "how do transfers work") beats the squad intents — WITHOUT stealing squad commands, which are imperative
     # / squad-scoped ("fix my bench", "what transfer should I make") and match none of these.
     "rules": ("how does", "how do ", "how is a", "how are", "what is a", "what are the", "what's a",
-              "what happens", "how many points", "how much do", "the rules", "fpl rules", "scoring",
-              "clean sheet", "bonus point", "defensive contribution", "defcon", "price change", "price rise",
-              "price fall", "sell-on", "auto sub", "auto-sub", "autosub", "when is the deadline",
-              "double gameweek", "blank gameweek", "explain the rules"),
+              "what does", "what happens", "how many points", "how much do", "the rules", "fpl rules",
+              "scoring", "clean sheet", "bonus point", "defensive contribution", "defcon", "price change",
+              "price rise", "price fall", "sell-on", "auto sub", "auto-sub", "autosub", "when is the deadline",
+              "double gameweek", "blank gameweek", "explain the rules",
+              # new topics (US-282) — specific phrases so they win over the squad intents without hijacking them
+              "yellow flag", "red flag", "chance of playing", "player flag", "before gameweek",
+              "before the season", "unlimited transfers before", "preseason transfer", "one chip per",
+              "two chips", "chips in one gameweek", "multiple chips", "bench points", "do bench players score",
+              "does my bench score", "how many wildcards", "two wildcards", "second wildcard", "wildcard reset",
+              "mini league", "mini-league", "classic league", "head to head", "head-to-head", "h2h",
+              "how do leagues", "overall rank", "gameweek rank", "world rank", "team value", "selling price",
+              "in the bank", "buy price", "squad value"),
     # chips (ADR-082): distinctive chip phrases only, so they win before captain/bench/build without
     # hijacking them. NOT bare "bench boost"/"wildcard" (they stay with build_squad — "build me a squad for a
     # bench boost" must still build); NOT bare "captain"/"bench" (those stay their own intents).

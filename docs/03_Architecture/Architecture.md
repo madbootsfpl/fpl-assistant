@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 110 (2026-08-11)** — *Chat robustness: remembered context + a bigger rules KB* (owner steer;
+  **ADR-091** + extends ADR-085; no analytics change). **US-281:** a new `src/chat_context.py`
+  (`save_context`/`load_context`/`clear_context`) persists one `Context` ↔ a **local, git-ignored** JSON
+  (`config.CHAT_CONTEXT_PATH`) with a **timestamp + 2h TTL** — best-effort (stale/missing/corrupt/shape-drift →
+  `None`, never a crash; `now`-injected for deterministic tests). The CLI `cmd_ask` loads → `converse` → saves
+  (so *"ask …"* then a separate *"ask why?"* resolves), with `--forget` + a *"forget"/"reset"* word to clear;
+  `cmd_chat` seeds the REPL with the saved context and persists each turn. `chat_transcript` gained a `context=`
+  seed and now yields `(result, context)` (its one test updated). The pure `ask.answer`/`converse` API is
+  unchanged (persistence is a CLI wrapper), and `web_streamlit` **never imports the store** — it keeps
+  per-session `st.session_state` (a guardrail test asserts it, anchored on the import/calls, not the
+  same-named session_state key). **US-282:** `fpl_rules.py::RULES` grew **13 → 21** (flags · preseason_transfers
+  · chip_limits · bench_points · wildcard_timing · leagues · ranking · team_value), `TOPIC_LABELS` to 21, and —
+  crucially — the `rules` **routing cues** were extended with specific phrases (`yellow flag`, `two chips`,
+  `how many wildcards`, `head to head`, `selling price`, … + `what does`) that win over the squad intents
+  without hijacking them, so each new question routes to `rules` and **verifies ✓** from the KB rather than
+  falling to free-form. +10 tests (726).
 - **Sprint 109 (2026-08-10)** — *Captaincy scopes to your squad by default + a clear "best overall"* (tester
   feedback; **ADR-090**, routing/display only). A tester found *"who should I captain from my-team?"* answered
   from **all** players. Root cause: `ask._fresh` resolved "my team" via `re.search(r"\bmy (team|…)\b")` — which

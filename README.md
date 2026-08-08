@@ -50,6 +50,9 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
 - **`chat`** — an interactive `ask` where **follow-ups build on the last answer**: "who should I
   captain from TS?" → **"why?"** → **"and the second best?"** → **"what about defenders?"**. Same
   discipline (analytics decide, every turn verified); the only new thing is memory of the last turn.
+  The last turn is **remembered across runs** (ADR-091), so a follow-up works even as a separate `ask`
+  command; `ask --forget` (or asking *"forget"*) clears it. It also explains **FPL rules** from a curated,
+  verified knowledge base (21 topics — scoring, chips, transfers, flags, leagues, price changes, …).
 
 **Crowd & community signals (Phase 6)** — a *complementary lens*, never folded into xP:
 - **Trends** — most-owned · most transferred in/out · in-form boards (free FPL crowd data), crowd **flags**

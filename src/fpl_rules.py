@@ -110,12 +110,77 @@ RULES = [
                  "twice) or Blank Gameweeks (a team doesn't play) due to cup and rescheduling — these are when "
                  "chips like Bench Boost and Triple Captain are often most valuable."),
     },
+    {
+        "topic": "flags",
+        "cues": ("flag", "yellow flag", "red flag", "chance of playing", "what does the flag", "is he a doubt",
+                 "75%", "50%", "25%", "player status"),
+        "fact": ("Player flags: a red flag means unavailable (injured/suspended/not expected to play — 0% "
+                 "chance). A yellow/orange flag means a doubt, with the chance of playing shown as 75%, 50% or "
+                 "25%. No flag = expected to be available. The player's news explains the reason."),
+    },
+    {
+        "topic": "preseason_transfers",
+        "cues": ("before the season", "before gameweek 1", "before the first deadline", "preseason transfers",
+                 "unlimited transfers before", "rebuild before"),
+        "fact": ("Before the season starts you can make unlimited free transfers and rebuild your squad as "
+                 "often as you like, up to the Gameweek 1 deadline — no points cost. The 1-free-transfer rule "
+                 "only begins once the season is under way."),
+    },
+    {
+        "topic": "chip_limits",
+        "cues": ("two chips", "more than one chip", "chips in one gameweek", "same gameweek chip", "stack chips",
+                 "one chip per", "multiple chips"),
+        "fact": ("You can play only one chip per gameweek. Each chip (Wildcard, Free Hit, Bench Boost, Triple "
+                 "Captain) is used once per half of the season, with a fresh set unlocking around Gameweek 20."),
+    },
+    {
+        "topic": "bench_points",
+        "cues": ("bench points", "do bench players score", "does my bench score", "substitutes score",
+                 "points on the bench", "bench count"),
+        "fact": ("Only your starting XI scores each gameweek — your four bench players don't, unless you play "
+                 "the Bench Boost chip (which counts all 15). A bench player can still come on via an auto-sub "
+                 "if a starter plays 0 minutes."),
+    },
+    {
+        "topic": "wildcard_timing",
+        "cues": ("how many wildcards", "two wildcards", "second wildcard", "wildcard reset", "when can i "
+                 "wildcard", "wildcard expire", "wildcard deadline"),
+        "fact": ("Wildcards: you get two per season — one for the first half and one for the second (the second "
+                 "unlocks around Gameweek 20). An unused first-half Wildcard is lost at the halfway point; "
+                 "within its half a Wildcard has no time limit and makes every transfer that gameweek free."),
+    },
+    {
+        "topic": "leagues",
+        "cues": ("mini league", "mini-league", "classic league", "head to head", "head-to-head", "h2h",
+                 "how do leagues", "league scoring", "join a league"),
+        "fact": ("Leagues: a Classic league ranks managers by total points (you can join any time and are "
+                 "scored from the gameweek you join). A Head-to-Head league pits two managers' gameweek scores "
+                 "against each other — 3 points for a win, 1 for a draw, 0 for a loss."),
+    },
+    {
+        "topic": "ranking",
+        "cues": ("overall rank", "overall points", "gameweek rank", "how is rank", "rank calculated",
+                 "world rank", "total points"),
+        "fact": ("Ranking: your Overall Rank is your position among all managers by total points across the "
+                 "season so far; your Gameweek Rank is just that week's score. Points are only deducted by −4 "
+                 "transfer hits and the usual card/own-goal/missed-penalty deductions."),
+    },
+    {
+        "topic": "team_value",
+        "cues": ("team value", "selling price", "in the bank", "itb", "how much can i sell", "buy price",
+                 "profit on a player", "squad value"),
+        "fact": ("Team value = your squad's value plus money in the bank. When a player's price rises, your "
+                 "selling price is the buy price plus half the rise (rounded down to £0.1m) — you don't keep "
+                 "all the profit. A price fall comes off your selling price in full."),
+    },
 ]
 
 # The human list of what the assistant can explain — shown when a rules question matches no specific topic.
 TOPIC_LABELS = ("scoring", "clean sheets & saves", "bonus points", "defensive contribution", "chips",
                 "transfers & hits", "price changes", "squad rules", "formations", "captaincy", "auto-subs",
-                "deadlines", "double/blank gameweeks")
+                "deadlines", "double/blank gameweeks", "player flags & availability", "pre-season transfers",
+                "one chip per gameweek", "bench points", "wildcard timing", "mini-leagues",
+                "overall vs gameweek rank", "team value & selling price")
 
 
 def match_rules(question: str, limit: int = 4) -> list:

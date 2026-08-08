@@ -29,5 +29,24 @@ def test_match_rules_empty_when_nothing_matches():
     assert match_rules("") == []                                 # empty-safe
 
 
+def test_match_rules_covers_the_new_topics():
+    # US-282: the KB grew — each new topic answers its natural question.
+    def topic(q):
+        return [t for t, _ in match_rules(q)]
+    assert "flags" in topic("what does the yellow flag mean?")
+    assert "preseason_transfers" in topic("can I make unlimited transfers before gameweek 1?")
+    assert "chip_limits" in topic("can I play two chips in one gameweek?")
+    assert "bench_points" in topic("do bench players score points?")
+    assert "wildcard_timing" in topic("how many wildcards do I get?")
+    assert "leagues" in topic("how does a head-to-head league work?")
+    assert "ranking" in topic("how is my overall rank calculated?")
+    assert "team_value" in topic("what is my selling price?")
+
+
+def test_rules_topics_are_unique():
+    topics = [e["topic"] for e in RULES]
+    assert len(topics) == len(set(topics))       # no duplicate topic ids
+
+
 def test_every_rule_has_a_nonempty_fact():
     assert RULES and all(e["topic"] and e["cues"] and e["fact"].strip() for e in RULES)

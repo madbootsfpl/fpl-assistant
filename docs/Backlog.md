@@ -14,7 +14,9 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   grounded `rules` intent (**verified ✓**); a **labelled free-form** tail for open tactics (**ℹ not verified**,
   never a specific pick); grounded squad/player questions unchanged. The "scoped general-knowledge mode
   clearly labelled not-verified" this line called for. *Follow-ups:* a hosted LLM for the deploy (free-form
-  needs a model — the cloud degrades to rules + grounded); grow the KB.
+  needs a model — the cloud degrades to rules + grounded); ~~grow the KB~~ **grown 13 → 21 topics** (Sprint 110,
+  US-282: flags · preseason transfers · one-chip-per-GW · bench points · wildcard timing · leagues · ranking ·
+  team value) + the routing cues so each verifies ✓. Keep growing as questions arrive.
 - ⏳ **Elite Manager Comparison** — how your squad compares to top-ranked managers + what the **Top 1,000**
   are doing (captain trends, transfer flow). *Needs:* the FPL leagues API + per-manager picks; **picks are
   public only from the GW1 deadline (2026-08-21)** → no data preseason. Build post-GW1.
@@ -64,8 +66,10 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   judgment.)* The differential filter sharpens at GW1 as ownership concentrates.
 - ~~**Pronoun-aware chat**~~ — **DONE** (Sprint 094, US-247/248, **ADR-080**). `_resolve_pronoun` rewrites a
   pronoun → the last turn's sole subject ("is **he** worth it?" → the last player); the web Ask now threads
-  `Context` (`converse`) so pronouns + follow-ups work in the browser too. *Still open:* **persist** the chat
-  context across runs (the other half of this line).
+  `Context` (`converse`) so pronouns + follow-ups work in the browser too. ~~*Still open:* persist the chat
+  context across runs.~~ **DONE** (Sprint 110, US-281, **ADR-091**) — a local, TTL'd `chat_context` store; the
+  CLI `ask`/`chat` remember the last turn across separate runs; the multi-user web stays session-only
+  (read-only). *(Web cross-session persistence would need client storage → deferred.)*
 - **Team-level squad-fixtures view** — the alternative lens deferred at Sprint 049 (ADR-049): rank a
   squad's **teams** (with player-counts) rather than one row per player. A small option on the existing
   squad-scoped fixtures mode.
