@@ -166,6 +166,67 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
 
 
+# ── Worth / value (US-284, extends ADR-089 + ADR-061) ─────────────────────────
+_PREMIUM_PRICE = 9.0   # a player at/above this reads as a "premium" (a value pick still ties up budget)
+
+
+def worth_confidence(ratio, rank_percentile, *, penalty: bool = False) -> int:
+    """A transparent confidence for a value verdict (1–99, not a probability): mostly how far the player's
+    xP/£m sits above the position **median** (`ratio`; 1.5× → full), plus where it ranks in the position
+    (`rank_percentile`, 1.0 = best value), with a small penalty-taker nudge."""
+    value = min(1.0, max(0.0, (ratio or 0.0) / 1.5))
+    place = min(1.0, max(0.0, rank_percentile if rank_percentile is not None else 0.5))
+    score = 100 * (0.6 * value + 0.4 * place) + (4 if penalty else 0)
+    return max(1, min(99, round(score)))
+
+
+def explain_worth(row, *, value, median, rank, n_peers, xp, horizon: int = 5) -> Explanation | None:
+    """Explain a single player's **value** verdict (ADR-061): grounded ✓ reasons + ⚠ risks + a confidence.
+
+    `row` is the player row; `value` its xP/£m; `median` the position median; `rank`/`n_peers` its value rank
+    among available same-position players; `xp` its projected points over `horizon` GW. All computed from the
+    data — never the LLM. None if there's no row."""
+    if row is None:
+        return None
+    pos = _get(row, "position") or "player"
+    ratio = (value / median) if median else 0.0
+    percentile = (1 - (rank - 1) / n_peers) if (rank and n_peers) else 0.5
+    penalty = _get(row, "penalties_order") == 1
+
+    reasons, risks = [], []
+    # ✓ Why it's worth it
+    if xp is not None:
+        reasons.append(f"Projects {xp} points over {horizon} GW")
+    if median and ratio >= 1.0:
+        reasons.append(f"Above the {pos} median value ({value:.2f} vs {median:.2f} xP/£m)")
+    if rank and n_peers and rank <= max(1, n_peers // 3):
+        reasons.append(f"Top-third value for a {pos} (#{rank} of {n_peers})")
+    if penalty:
+        reasons.append("Penalty taker")
+    if _get(row, "freekicks_order") == 1 or _get(row, "corners_order") == 1:
+        reasons.append("Set-piece involvement")
+    own = _get(row, "selected_by")
+    if own is not None and own >= TEMPLATE_OWN:
+        reasons.append(f"Template pick ({own:.0f}% owned)")
+    form = _get(row, "form")
+    if form is not None and form >= FORM_MIN:
+        reasons.append(f"In form ({form})")
+
+    # ⚠ Risk / the case against
+    if median and ratio < 1.0:
+        risks.append(f"Below the {pos} median value ({value:.2f} vs {median:.2f} xP/£m)")
+    if rank and n_peers and rank > n_peers // 2:
+        risks.append(f"Mid-pack value (#{rank} of {n_peers} {pos}s)")
+    price = _get(row, "price")
+    if price is not None and price >= _PREMIUM_PRICE:
+        risks.append(f"Premium price (£{price}m ties up budget)")
+    if own is not None and 0 < own <= DIFFERENTIAL_OWN:
+        risks.append(f"Big differential ({own:.0f}% owned)")
+
+    score = worth_confidence(ratio, percentile, penalty=penalty)
+    return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
+
+
 # ── Squad build (US-271, extends ADR-089) ─────────────────────────────────────
 
 def squad_confidence(xi_reliability, spent_fraction) -> int:

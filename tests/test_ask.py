@@ -464,6 +464,10 @@ def test_decide_worth_good_value_with_rank_and_median():
     assert d["facts"]["value"] == "1.20 xP per £m"
     assert "0.83" in d["facts"]["position_median_value"]
     assert d["subjects"] == ["Aaa"]
+    # US-284: the answer now explains *why* — a grounded Confidence·Why·Risk block + the Model note, and the
+    # values are facts (so a narrated number verifies).
+    assert "Confidence:" in d["detail"] and "Why" in d["detail"] and "Model note:" in d["detail"]
+    assert "confidence" in d["facts"] and "why" in d["facts"]
 
 
 def test_decide_worth_pricey_for_expensive_low_output():

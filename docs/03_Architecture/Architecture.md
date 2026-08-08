@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 111 (2026-08-12)** — *Ask tab polish: readable rules, reliable scroll, an explained "worth"* (tester
+  feedback; display/explainability, extends ADR-085/052/089/061; no analytics change). **US-283a:** the
+  multi-item rules facts (chips · scoring · clean sheets · leagues) are authored with embedded bullet lines;
+  `ui/rules.py::render_rules` prints a multi-line fact **verbatim** (a single-concept fact stays one `•`), blank
+  line between facts — so a list reads item-per-line. The `fact` keeps the same numbers/names, so `match_rules`
+  + the verifier are unchanged (still ✓). **US-283b:** the `4_Ask.py` scroll nudge embeds a **`/*turn N*/`**
+  token (`len(history)`) so it's unique per turn — Streamlit re-runs a component only when its inputs change, so
+  the static US-275 iframe didn't re-fire on later turns and the example-button path never scrolled (typing used
+  `st.chat_input`'s native scroll); now the `scrollTo(bottom)` runs on every answer. **US-284:** a new
+  `analytics/explain.py::explain_worth(row, *, value, median, rank, n_peers, xp, horizon)` + a documented
+  `worth_confidence` (value-vs-median ratio, then the rank percentile, + a penalty nudge) build a grounded ✓ Why
+  / ⚠ Risk (projects N pts · above/below the position median · top-third / mid-pack value · penalty taker ·
+  set-pieces · template · premium-price / big-differential) for a value verdict; `_decide_worth` renders
+  `detail = verdict + render_explanation(ex) + MODEL_NOTE` (so it explains without Ollama) and puts
+  confidence/why/risk into `facts` so a narrated number verifies (ADR-037). Same pattern as captain/transfer;
+  the verdict/rank/median engine is unchanged. +4 tests (730).
 - **Sprint 110 (2026-08-11)** — *Chat robustness: remembered context + a bigger rules KB* (owner steer;
   **ADR-091** + extends ADR-085; no analytics change). **US-281:** a new `src/chat_context.py`
   (`save_context`/`load_context`/`clear_context`) persists one `Context` ↔ a **local, git-ignored** JSON

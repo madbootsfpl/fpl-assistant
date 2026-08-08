@@ -11,8 +11,10 @@ from src.analytics import (
     explain_captain,
     explain_squad,
     explain_transfer,
+    explain_worth,
     squad_confidence,
     transfer_confidence,
+    worth_confidence,
 )
 
 
@@ -20,6 +22,34 @@ def test_confidence_band_cutoffs():
     assert confidence_band(90) == "High" and confidence_band(75) == "High"
     assert confidence_band(60) == "Medium" and confidence_band(55) == "Medium"
     assert confidence_band(40) == "Low"
+
+
+def test_explain_worth_grounds_value_reasons_and_risks():
+    # US-284: a grounded Why/Risk/Confidence for a value verdict — computed from the value, rank + median.
+    good = {"position": "FWD", "price": 15.5, "penalties_order": 1, "corners_order": None,
+            "freekicks_order": None, "selected_by": 75.0, "form": 0.0, "status": "a"}
+    ex = explain_worth(good, value=1.87, median=0.99, rank=19, n_peers=62, xp=29.0, horizon=5)
+    why, risk = " | ".join(ex.reasons), " | ".join(ex.risks)
+    assert "Projects 29.0 points over 5 GW" in why
+    assert "Above the FWD median value (1.87 vs 0.99 xP/£m)" in why
+    assert "Top-third value for a FWD (#19 of 62)" in why and "Penalty taker" in why
+    assert "Premium price (£15.5m ties up budget)" in risk    # a value premium still ties up budget
+    assert ex.confidence >= 75 and ex.band == confidence_band(ex.confidence)
+
+    poor = {"position": "MID", "price": 8.0, "penalties_order": None, "corners_order": None,
+            "freekicks_order": None, "selected_by": 3.0, "form": 0.0, "status": "a"}
+    ex2 = explain_worth(poor, value=0.40, median=1.00, rank=50, n_peers=60, xp=8.0, horizon=5)
+    risk2 = " | ".join(ex2.risks)
+    assert "Below the MID median value (0.40 vs 1.00 xP/£m)" in risk2
+    assert "Mid-pack value (#50 of 60 MIDs)" in risk2 and "Big differential (3% owned)" in risk2
+    assert ex2.confidence < ex.confidence                     # worse value → lower confidence
+    assert explain_worth(None, value=0, median=0, rank=None, n_peers=0, xp=0) is None   # empty-safe
+
+
+def test_worth_confidence_is_bounded_and_reflects_value():
+    assert 1 <= worth_confidence(0.0, 0.0) <= 99
+    assert 1 <= worth_confidence(None, None) <= 99            # empty-safe
+    assert worth_confidence(2.0, 1.0, penalty=True) > worth_confidence(0.3, 0.1)   # better value → higher
 
 
 def test_render_explanation_has_a_clean_confidence_line_and_no_caveat():

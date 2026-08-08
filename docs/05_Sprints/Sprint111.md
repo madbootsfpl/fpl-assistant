@@ -1,7 +1,7 @@
 # Sprint 111: Ask tab polish — readable rules, reliable scroll, an explained "worth"
 
 **Dates:** 2026-08-12 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (Ask presentation + explainability — no analytics change)
 **Carried Over:** none
 
@@ -39,18 +39,18 @@ an example **scrolls to the answer**, and *"is X worth it?"* shows a grounded **
 just numbers). Presentation + explainability only; the analytics/grounding untouched, every number still ✓.
 
 #### Success Criteria
-- [ ] **US-283 (readable rules + reliable scroll)** — (a) the multi-item rules facts (chips, scoring, clean
+- [x] **US-283 (readable rules + reliable scroll)** — (a) the multi-item rules facts (chips, scoring, clean
       sheets, leagues …) render as **bullets** (a lead line + `• item` lines + any trailing note), in the web +
       CLI, with the grounding still verifying (the fact keeps the same numbers/names); (b) the example-question
       **auto-scroll** fires every time — the nudge is made **unique per turn** so Streamlit re-runs it.
-- [ ] **US-284 (an explained "worth")** — `explain_worth(...)` builds a grounded **Confidence · Why (✓) · Risk
+- [x] **US-284 (an explained "worth")** — `explain_worth(...)` builds a grounded **Confidence · Why (✓) · Risk
       (⚠)** for a value verdict (✓ top-tier value / strong xP over the horizon / on penalties / set-pieces /
       template; ⚠ premium price / below-median value / mid-pack rank / big differential), computed **from the
       data** (never the LLM). `_decide_worth` renders it as the `detail` (so it explains **without** Ollama) and
       puts confidence/why/risk in `facts` so a narrated number **verifies (✓)**; closed by the shared
       **Model note**.
-- [ ] **No drift** — display/explainability only; `decision_xp`/`match_rules`/the analytics unchanged; existing
-      **726** stay green (+ new rules-format / scroll / worth-explain tests); ruff clean.
+- [x] **No drift** — display/explainability only; `decision_xp`/`match_rules`/the analytics unchanged; **730**
+      green (726 → +4: rules bullets, scroll-per-turn, explain_worth, worth_confidence); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends **ADR-085** (rules display),
       **ADR-052** (Ask scroll) and **ADR-089** (worth explainability) — noted; no new ADR).
 
@@ -85,8 +85,8 @@ other answers); a web-native worth card.
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-283 | **Readable rules + reliable scroll** — bullet the multi-item rules facts; make the example-click auto-scroll fire every turn. | High | ⬜ To do | ~½ session |
-| US-284 | **An explained "worth"** — a grounded Why · Risk · Confidence for "is X worth it?" (+ Model note), verified. | High | ⬜ To do | ~½ session |
+| US-283 | **Readable rules + reliable scroll** — bullet the multi-item rules facts; make the example-click auto-scroll fire every turn. | High | ✅ Done | ~½ session |
+| US-284 | **An explained "worth"** — a grounded Why · Risk · Confidence for "is X worth it?" (+ Model note), verified. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -122,10 +122,54 @@ other answers); a web-native worth card.
   clean.
 - **Manual smoke:** the bench-boost answer reads as bullets; two Ask turns emit distinct scroll scripts.
 
-_(US-284 next — "start US-284".)_
+**US-284 — an explained "worth".** ✅ Done.
+- New `analytics/explain.py::explain_worth(row, *, value, median, rank, n_peers, xp, horizon)` + a documented
+  `worth_confidence` (mostly value-vs-median ratio, then the position rank percentile, + a penalty nudge) →
+  a grounded **✓ Why** (projects N pts · above the position median · top-third value · penalty taker ·
+  set-pieces · template · in form) / **⚠ Risk** (below-median · mid-pack rank · premium price ties up budget ·
+  big differential). Empty-safe.
+- `_decide_worth` builds it, renders `detail = verdict + render_explanation(ex) + MODEL_NOTE`, and puts
+  confidence/why/risk into `facts` — so the answer **explains itself without Ollama** (the tester's example
+  showed only the raw Facts block) and a narrated number still **verifies ✓**. The verdict/rank/median engine
+  is unchanged.
+- **Tests (+2):** `explain_worth` grounds ✓/⚠ for a good-value (Haaland-like) and a poor-value player (worse
+  value → lower confidence; empty-safe); `worth_confidence` bounded + reflects value; the `_decide_worth` test
+  now asserts the Confidence·Why·Risk block + Model note + the facts. **730** green, ruff clean.
+- **Manual smoke:** *"is Haaland worth the money?"* → *good value · Confidence 92/High · ✓ Projects 29.0 …
+  Penalty taker … · ⚠ Premium price (£15.5m …) · Model note* — grounded, no Ollama needed.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **726 → 730** (+4: rules bullets, scroll-per-turn,
+`explain_worth`, `worth_confidence`). Ruff clean; CI-parity green. **No new ADR** (extends ADR-085 rules
+display · ADR-052 Ask scroll · ADR-089/061 worth explainability). No analytics change; every number still ✓.
+
+**Delivered**
+- **US-283 — readable rules + reliable scroll.** The multi-item rules facts (chips · scoring · clean sheets ·
+  leagues) render as bullets; the Ask scroll nudge is now unique per turn so it re-fires on every answer
+  (including example clicks).
+- **US-284 — an explained "worth".** `explain_worth` + `worth_confidence` add a grounded Confidence · Why ·
+  Risk to *"is X worth it?"*, closed by the Model note — so it explains itself without Ollama.
+
+**What went well**
+- **Each fix traced to a precise cause.** The scroll bug was a Streamlit component-memoization quirk (identical
+  iframe → JS doesn't re-run); the dense rules were a single-string fact; the value answer simply had no
+  `detail`. Naming each cause made all three small.
+- **Grounding held through a display change.** Reformatting the rules facts with bullets kept the same
+  numbers/names, so `match_rules` + the verifier were untouched and the answer still verifies ✓.
+- **The explainability framework paid off again.** A fifth decision (`worth`) got Why · Risk · Confidence by
+  reusing `render_explanation` + `MODEL_NOTE` + `confidence_band` — a new `explain_worth`/`worth_confidence`
+  and a few lines of wiring, self-tempering (a poor-value player reads a lower confidence).
+- **Honest nuance.** The "premium price ties up budget" risk on a *good-value* premium (Haaland) is the kind of
+  two-sided read the tester wanted — value and its cost, both grounded.
+
+**Watch-outs / follow-ups**
+- **The value pools are noisy preseason** — 62 "FWDs" includes many 0-xP fringe players, so a "top-third"
+  rank reads generous; it sharpens as xP spreads in-season (the same caveat as the existing verdict).
+- **`_PREMIUM_PRICE` is a flat £9.0m** — position-blind (a £9m defender is very premium, a £9m forward mid);
+  fine as a display lens, revisit if it misleads.
+- **Deferred:** rich web **markdown** for rules (mono bullets read well + keep parity); a web-native worth card.
+
+See `Sprint111_Lessons_Learnt.md` for the detailed retro.

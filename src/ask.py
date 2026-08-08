@@ -34,6 +34,7 @@ from src.analytics import (
     explain_gameweek,
     explain_squad,
     explain_transfer,
+    explain_worth,
     gameweek_plan,
     minutes_weight_from_history,
     select_squad,
@@ -1045,20 +1046,32 @@ def _decide_worth(store: Storage, question: str) -> dict | None:
 
     pos = target["position"]
     rank_str = f"{rank} of {len(peers)} {pos}s" if rank else f"unranked among {pos}s"
+    headline = (f"{target['web_name']} (£{target['price']}m): {verdict} — {tval:.2f} xP/£m, "
+                f"{rank_str} by value; {pos} median {median:.2f}")
+    # Explainability (ADR-089, US-284): grounded Why/Risk/Confidence for *why* it's worth it — computed from
+    # the data, closed by the shared Model note; so the answer explains itself even without Ollama.
+    explanation = explain_worth(target, value=tval, median=median, rank=rank, n_peers=len(peers),
+                                xp=xp_by_id.get(target["id"], 0), horizon=_HORIZON)
+    facts = {
+        "player": f"{target['web_name']} ({target['team']}, {pos}, £{target['price']}m)",
+        "expected_points": f"xP {xp_by_id.get(target['id'], 0)} over the next {_HORIZON} GW",
+        "value": f"{tval:.2f} xP per £m",
+        "position_rank_by_value": rank_str,
+        "position_median_value": f"{median:.2f} xP per £m",
+        "verdict": verdict,
+    }
+    if explanation is not None:
+        facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
+        facts["why"] = "; ".join(explanation.reasons) or "none"
+        facts["risk"] = "; ".join(explanation.risks) or "none noted"
+    detail = "\n".join([headline, "", render_explanation(explanation), "", MODEL_NOTE])
     return {
-        "headline": f"{target['web_name']} (£{target['price']}m): {verdict} — {tval:.2f} xP/£m, "
-                    f"{rank_str} by value; {pos} median {median:.2f}",
-        "facts": {
-            "player": f"{target['web_name']} ({target['team']}, {pos}, £{target['price']}m)",
-            "expected_points": f"xP {xp_by_id.get(target['id'], 0)} over the next {_HORIZON} GW",
-            "value": f"{tval:.2f} xP per £m",
-            "position_rank_by_value": rank_str,
-            "position_median_value": f"{median:.2f} xP per £m",
-            "verdict": verdict,
-        },
+        "detail": detail,          # the verdict + Confidence·Why·Risk block — the truth, with or without prose
+        "headline": headline,
+        "facts": facts,
         "subjects": [target["web_name"]],
-        "task": f"in 1-2 short sentences, say whether {target['web_name']} is worth the money, "
-                "citing the value and the rank",
+        "task": f"in 2-3 short sentences, say whether {target['web_name']} is worth the money, citing the "
+                "value + rank and reflecting the confidence and the ✓ reasons / ⚠ risks — using ONLY the facts",
     }
 
 

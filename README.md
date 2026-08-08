@@ -169,7 +169,7 @@ python app.py ask "build me a squad for rotation"      # bench-aware (strong XI 
 python app.py ask "build me a squad for a bench boost" # maximise all 15
 python app.py ask "best midfielders under £8m"         # top players by xP (position + price filters)
 python app.py ask "best differential forwards under £7m"   # low-owned (≤5%) picks, xP-ranked (+Own%)
-python app.py ask "is Haaland worth the money?"        # a single-player value verdict (xP/£m + rank + median)
+python app.py ask "is Haaland worth the money?"        # a value verdict + a grounded Why · Risk · Confidence
 python app.py ask "who has the best fixtures over the next 5?"   # league fixture-difficulty ranking
 python app.py ask "when does Arsenal play next?"       # one team's upcoming fixtures (venue + difficulty)
 python app.py ask "which of my-team's players have the best fixtures?"   # your players by their fixture run
