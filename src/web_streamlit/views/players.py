@@ -12,10 +12,10 @@ from src.analytics import (
     AVAILABILITY_LEGEND,
     CROWD_LEGEND,
     SET_PIECE_LEGEND,
-    availability_flag,
     crowd_flags,
     defcon_reliability,
     defensive_solidity,
+    fit_flag,
     over_under,
     rank_players,
     set_piece_flags,
@@ -53,7 +53,7 @@ def render_pool(rows, sel, photos, badges):
     page = paginate(ranked, key="players", per_page=50)
     table = [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
-              "Fit": availability_flag(p),
+              "Fit": fit_flag(p),
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
               "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
               "Set": " ".join(set_piece_flags(p)),
@@ -80,9 +80,9 @@ def render_pool(rows, sel, photos, badges):
 
 
 def _fit_lookup(players):
-    """A `(web_name, team) → availability flag` map, for the trimmed stat rows that lack `status`
-    (ADR-074). The full `players` list is passed to each board, so no analytics change is needed."""
-    flag = {(p["web_name"], p["team"]): availability_flag(p) for p in players}
+    """A `(web_name, team) → Fit flag` map, for the trimmed stat rows that lack `status` (ADR-074).
+    The full `players` list is passed to each board, so no analytics change is needed."""
+    flag = {(p["web_name"], p["team"]): fit_flag(p) for p in players}
     return lambda r: flag.get((r["web_name"], r["team"]), "")
 
 
@@ -202,4 +202,4 @@ def render_xg(players, sel, badges):
                   "xGI rating": "Attacking quality (xGI) vs outfield players with ≥900 mins (best 20% 🟢 … "
                                 "worst 20% 🔴). Keepers & low-minutes players aren't rated (—).",
                   "xGC": "Expected goals conceded while on the pitch (season total)."},
-        flag=availability_flag)   # xG uses raw player rows (they carry status)
+        flag=fit_flag)   # xG uses raw player rows (they carry status)

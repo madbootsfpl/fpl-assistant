@@ -32,7 +32,7 @@ def test_table_has_header_and_rows():
 
 
 def test_table_shows_an_availability_fit_flag():
-    # US-235 (ADR-074): the CLI table has a last Fit column — 🚑 injured, blank = available
+    # US-235 (ADR-074) + US-276: the CLI table's Fit column — 🚑 injured, ✅ available
     rows = [
         {"web_name": "Hurt", "team": "ARS", "position": "DEF", "price": 5.0,
          "total_points": 50, "value": 10.0, "status": "i", "chance": 0},
@@ -41,6 +41,7 @@ def test_table_shows_an_availability_fit_flag():
     ]
     out = render_player_table(rows)
     assert "Fit" in out and "🚑" in out               # the header + the injured flag
+    assert "✅" in out                                # US-276: the fit player reads ✅, not blank
 
 
 def test_undefined_value_renders_as_dash():

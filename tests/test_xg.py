@@ -17,10 +17,11 @@ def test_render_xg_shows_columns_and_values():
     assert "28.2" in out          # xGI value shown
 
 def test_render_xg_shows_an_availability_fit_flag():
-    # US-235 (ADR-074): the xg table has a last Fit column too
-    row = {**_row("Hurt", 5.0, 1.0, 6.0, 10.0), "status": "i", "chance": 0}
-    out = render_xg_table([row])
-    assert "Fit" in out and "🚑" in out
+    # US-235 (ADR-074) + US-276: the xg table's Fit column — 🚑 injured, ✅ available
+    hurt = {**_row("Hurt", 5.0, 1.0, 6.0, 10.0), "status": "i", "chance": 0}
+    fit = {**_row("Ready", 6.0, 1.0, 6.0, 10.0), "status": "a"}
+    out = render_xg_table([hurt, fit])
+    assert "Fit" in out and "🚑" in out and "✅" in out
 
 
 def test_render_xg_respects_the_limit():

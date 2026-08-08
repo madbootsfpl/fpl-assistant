@@ -1,7 +1,7 @@
 # Sprint 107: Ask readability + a "fit" emoji
 
 **Dates:** 2026-08-08 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** 🟢 In progress (2/2 stories built — retro pending)
 **Capacity:** ~½ session (two display fixes from tester feedback)
 **Carried Over:** none
 
@@ -34,15 +34,15 @@
 positive **✅** for fit players (not just blank) — small, honest display fixes; the analytics/engine untouched.
 
 #### Success Criteria
-- [ ] **US-275 (Ask readability + auto-scroll)** — render Ask answers with **`st.code(…, wrap_lines=True)`** so
+- [x] **US-275 (Ask readability + auto-scroll)** — render Ask answers with **`st.code(…, wrap_lines=True)`** so
       long sentences wrap (tables/blocks still align); after replaying the history, a small **scroll-to-bottom**
       (an `st.iframe`/`components` script, same-origin) brings the latest Q&A into view. No content change.
-- [ ] **US-276 (a "fit" emoji)** — a `fit_flag(player)` display helper = the availability flag when flagged,
+- [x] **US-276 (a "fit" emoji)** — a `fit_flag(player)` display helper = the availability flag when flagged,
       else **✅** (fit); used in the **Fit** column on the **Pool**, the **stat boards**, and the **CLI** tables.
       `availability_flag` is **unchanged** (its `""`-for-fit truthiness still drives the flagged-players logic).
       The `AVAILABILITY_LEGEND` gains "✅ fit".
-- [ ] **No drift** — display-only; `availability_flag` semantics + the analytics unchanged; existing **707**
-      stay green (Fit-column tests updated to expect ✅ for fit); ruff clean.
+- [x] **No drift** — display-only; `availability_flag` semantics + the analytics unchanged; existing **707**
+      stay green (708 with the new `fit_flag` test); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help (extends ADR-052/074 — noted).
 
 ---
@@ -69,8 +69,8 @@ The truthiness-based flagged logic (My Squad caption, gameweek flags) keeps usin
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-275 | **Ask readability + auto-scroll** — `wrap_lines=True` + a scroll-to-bottom nudge. | High | ⬜ To do | ~¼ session |
-| US-276 | **A "fit" ✅ emoji** — a `fit_flag` display helper on the Fit columns; legend updated. | High | ⬜ To do | ~¼ session |
+| US-275 | **Ask readability + auto-scroll** — `wrap_lines=True` + a scroll-to-bottom nudge. | High | ✅ Done | ~¼ session |
+| US-276 | **A "fit" ✅ emoji** — a `fit_flag` display helper on the Fit columns; legend updated. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -97,6 +97,20 @@ The truthiness-based flagged logic (My Squad caption, gameweek flags) keeps usin
 - **Tests (+1 assertion):** the clickable-examples test now asserts the rendered answer has `wrap_lines=True`.
   **707** green, ruff clean. (Fixed `st.iframe` height: 0 is invalid → 1.)
 - **Manual smoke:** a long Ask answer wraps instead of overflowing; the page scrolls down to the latest answer.
+
+**US-276 — a "fit" ✅ emoji.** ✅ Done.
+- New display helper **`analytics/crowd.py::fit_flag(player)`** = `availability_flag(player) or "✅"` — the
+  concern flag (🚑/🚫/⛔/❓) when flagged, else a positive **✅** (a tester asked a fit player to *read* as fit,
+  not sit blank). Empty-safe; exported from `analytics`.
+- **`availability_flag` is deliberately unchanged** — it still returns `""` for a fit player, which is the
+  truthiness test the "who's-flagged" logic relies on (the My Squad caption at `views/squads.py`, the
+  gameweek-plan flags). Only the **Fit-column display** sources swapped to `fit_flag`: the **Pool** + the
+  `_fit_lookup`/`_board` stat boards (`views/players.py`), and the **CLI** `ui/table.py` + `ui/xg.py`.
+- `AVAILABILITY_LEGEND` now leads with **"✅ available"** (dropped the "blank = available" note).
+- **Tests (+1, ~4 updated):** a direct `fit_flag` test (✅ for fit / missing, the concern flag otherwise, and
+  `availability_flag` still `""` for fit); Pool asserts ✅ present + no blank cells; the stat boards + CLI
+  table/xg assert ✅. **708** green, ruff clean.
+- **Manual smoke:** `fit_flag` returns ✅ / 🚑 / ❓ 75% as expected.
 
 ---
 

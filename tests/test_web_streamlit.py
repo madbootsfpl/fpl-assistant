@@ -313,14 +313,15 @@ def test_pool_shows_a_set_piece_column():
 
 
 def test_pool_shows_an_availability_fit_column():
-    # ADR-074: the Pool has a Fit column (🚑/🚫/⛔/❓, blank = available) + a legend caption
+    # ADR-074 + US-276: the Pool's Fit column shows ✅ for fit players (not blank) and 🚑/🚫/⛔/❓ for concerns
     at = _run(_PAGES / "1_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
     assert "Fit" in df.columns
     flags = set(df["Fit"].astype(str))
-    assert flags & {"🚑", "🚫", "⛔", "❓"}                 # at least one flagged player on the first page
+    assert "✅" in flags                                   # US-276: fit players read positively, not blank
+    assert "" not in flags                                 # no blank cells now — fit is ✅
     assert any("injured" in c.value for c in at.caption)   # the availability legend
 
 
@@ -364,7 +365,7 @@ def test_stat_boards_show_the_availability_fit_column():
             continue
         df = at.dataframe[0].value
         assert "Fit" in df.columns, f"{view} missing the Fit column"
-        assert set(df["Fit"].astype(str)) & {"🚑", "🚫", "⛔", "❓"}, f"{view} has no flags on page 1"
+        assert "✅" in set(df["Fit"].astype(str)), f"{view} shows no ✅ fit flag"   # US-276
 
 
 def test_xg_board_rates_only_meaningful_players():

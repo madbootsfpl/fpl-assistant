@@ -104,8 +104,8 @@ def crowd_flags(player) -> list:
 _AVAILABILITY_FLAG = {"i": "🚑", "s": "🚫", "u": "⛔", "n": "⛔", "d": "❓"}
 
 # The shared one-line legend for the Fit column (Pool + the stat boards).
-AVAILABILITY_LEGEND = ("Fit: 🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful "
-                       "(blank = available) — see **News** for details.")
+AVAILABILITY_LEGEND = ("Fit: ✅ available · 🚑 injured · 🚫 suspended · ⛔ unavailable · ❓ doubtful "
+                       "— see **News** for details.")
 
 # The shared one-line legend for the set-piece "Set" column/line (Players + the Squads tables, ADR-081).
 SET_PIECE_LEGEND = ("Set pieces: ⚽ penalties · 🚩 corners · 🎯 free-kicks — shown for the **first-choice** "
@@ -145,3 +145,12 @@ def availability_flag(player) -> str:
         chance = _get(player, "chance")
         return f"❓ {chance}%" if chance is not None else "❓"
     return _AVAILABILITY_FLAG.get(status, "")
+
+
+def fit_flag(player) -> str:
+    """The **Fit-column** display flag — the availability flag when the player is a concern (🚑/🚫/⛔/❓),
+    else a positive **✅** (fit). A tester asked for a fit player to read as ✅ rather than a blank cell
+    (US-276). Display-only; empty-safe. Note this is deliberately *separate* from `availability_flag`,
+    which must keep returning `""` for a fit player — that `""` is the truthiness test the "who's flagged"
+    logic relies on (the My Squad caption, the gameweek-plan flags)."""
+    return availability_flag(player) or "✅"

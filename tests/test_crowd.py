@@ -8,6 +8,7 @@ from src.analytics import (
     availability_flag,
     crowd_flags,
     decision_xp,
+    fit_flag,
     net_transfers,
     set_piece_flags,
     trending,
@@ -45,6 +46,17 @@ def test_availability_flag_per_status():
     assert availability_flag(_p(status="d")) == "❓"     # doubtful, chance unknown → just the flag
     assert availability_flag(_p(status="a")) == ""       # available → no flag
     assert availability_flag(_p()) == ""                 # missing status → no flag (empty-safe)
+
+
+def test_fit_flag_shows_check_for_fit_else_the_availability_flag():
+    # US-276: the Fit-column helper reads ✅ for a fit player and the availability flag for a concern.
+    assert fit_flag(_p(status="a")) == "✅"               # available → positive ✅ (not blank)
+    assert fit_flag(_p()) == "✅"                         # missing status → treated as fit (empty-safe)
+    assert fit_flag(_p(status="i")) == "🚑"              # injured → the concern flag, unchanged
+    assert fit_flag(_p(status="d", chance=75)) == "❓ 75%"  # doubtful still carries the chance
+    # the invariant US-276 rests on: availability_flag itself is UNCHANGED (still "" for fit — the
+    # truthiness that drives the "who's flagged" logic on My Squad + the gameweek plan).
+    assert availability_flag(_p(status="a")) == ""
 
 
 def test_availability_flag_shows_the_chance_on_a_doubtful_player():
