@@ -49,6 +49,20 @@ REDDIT_TIMEOUT = 5
 # How many recent posts to pull for the "Talked about" buzz count (ADR-076). Reddit's RSS max is 100;
 # a bigger sample makes mention counts meaningful (the default 25 posts left most players at "1 mention").
 REDDIT_RSS_LIMIT = 100
+# The weekly "top discussions" variant (Sprint 115, US-292) — the same public RSS, `top` sorted over the week.
+REDDIT_TOP_WEEK_URL = "https://www.reddit.com/r/{}/top/.rss?t=week"
+
+# Media-headlines lens (Sprint 115, ADR-093) — public RSS/Atom feeds, no auth, best-effort (cached + gated +
+# degrade). A display lens (never xP). Add/remove a feed by editing this list. To add a YouTube creator, find
+# its channel id (open the channel → View source → search "channelId", a `UC…` value) and append:
+#   {"name": "YouTube — <creator>", "url": MEDIA_YOUTUBE_URL.format("UCxxxxxxxxxxxxxxxxxxxxxx")}
+MEDIA_YOUTUBE_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={}"
+MEDIA_FEEDS = [
+    {"name": "Fantasy Football Scout", "url": "https://www.fantasyfootballscout.co.uk/feed/"},
+    {"name": "BBC Football", "url": "https://feeds.bbci.co.uk/sport/football/rss.xml"},
+]
+MEDIA_FEED_TIMEOUT = 5        # per-feed budget (best-effort, like Reddit/ClubElo)
+MEDIA_FEED_LIMIT = 6         # headlines shown per source
 
 # In-season form blend (ADR-060) — DORMANT until GW1 (2026-08-21). The one xP recipe (ADR-041)
 # blends a rolling, minutes-aware points-per-90 (from per-GW `player_history`) into a player's rate:

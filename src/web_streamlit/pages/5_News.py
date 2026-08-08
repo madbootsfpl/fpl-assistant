@@ -9,7 +9,13 @@ import streamlit as st
 from src.storage import Storage
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
+from src.web_streamlit.media import media_headlines
 from src.web_streamlit.status import render_data_status
+
+
+@st.cache_data(ttl=1800, show_spinner=False)     # ~30 min — best-effort (ADR-093); the feeds can rate-limit
+def _cached_headlines():
+    return media_headlines()
 
 # FPL status codes → a readable label; the order also drives severity sorting (worst first).
 _STATUS = {"u": "Out", "i": "Injured", "s": "Suspended", "n": "Unavailable", "d": "Doubtful", "a": "Available"}
@@ -53,3 +59,20 @@ else:
                 "Source": st.column_config.LinkColumn("Source", display_text="read more"),
             },
         )
+
+# --- Headlines lens (Sprint 115, ADR-093) — public RSS/Atom, opt-in, cached, degrade-gracefully -------------
+st.divider()
+st.subheader("📰 Headlines — FPL analysis & football news")
+st.caption("FPL-relevant public feeds (Fantasy Football Scout · BBC Football). Fetched on demand; titles link "
+           "to the source. A community/media lens — not a prediction, and never part of xP.")
+if st.button("Load headlines", help="Fetch the latest FPL/football headlines (best-effort; cached ~30 min)."):
+    with st.spinner("Fetching feeds…"):
+        groups = _cached_headlines()
+    if not groups:
+        st.info("Couldn't reach the feeds right now — they can rate-limit; try again shortly.")
+    else:
+        for source, items in groups.items():
+            st.markdown(f"**{source}**")
+            for it in items:
+                when = f"  ·  _{it['published'][:16]}_" if it.get("published") else ""
+                st.markdown(f"- [{it['title']}]({it['link']}){when}")

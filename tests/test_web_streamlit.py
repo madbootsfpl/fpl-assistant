@@ -933,6 +933,14 @@ def test_news_page_lists_flagged_players_or_all_clear():
         assert at.success or at.info                       # "no current news" (or the run-refresh note)
 
 
+def test_news_page_has_the_headlines_lens_gated_no_network():
+    # US-291 (ADR-093): a Headlines section + a button, rendered WITHOUT fetching (no click → no live network).
+    at = _run(_PAGES / "5_News.py")
+    assert not at.exception
+    assert any("Headlines" in s.value for s in at.subheader)
+    assert any(b.label == "Load headlines" for b in at.button)   # opt-in — the feeds fetch only on click
+
+
 def test_ask_page_example_prompts_are_clickable():
     # US-227/US-234: the Ask page lists example questions as buttons; clicking one runs it
     at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
