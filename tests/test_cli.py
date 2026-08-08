@@ -84,6 +84,17 @@ def test_reseed_refreshes_the_live_cache_then_copies_it_to_the_seed(tmp_path, mo
     assert live.exists() and seed.exists()                       # the seed is a copy of the fresh cache
     out = capsys.readouterr().out
     assert "570 players" in out and "commit" in out.lower()      # counts + the push-to-update reminder
+    assert "20 Elo ratings (ClubElo)" in out                     # US-293: reseed reports ClubElo again
+
+
+def test_reseed_reports_clubelo_kept_last_known_on_a_zero_elo_refresh(tmp_path, monkeypatch, capsys):
+    # US-293: when ClubElo is unavailable, refresh returns n_elo=0 → reseed says it kept the last-known Elo.
+    from src import cli, config
+    monkeypatch.setattr(config, "LIVE_DB_PATH", str(tmp_path / "fpl.db"))
+    monkeypatch.setattr(config, "SEED_DB_PATH", str(tmp_path / "seed.db"))
+    monkeypatch.setattr(cli.ingest, "refresh", lambda store: (570, 20, 380, 0))
+    cli.cmd_reseed(None)
+    assert "kept last-known" in capsys.readouterr().out
 
 
 def test_table_command_defaults_to_limit_20():

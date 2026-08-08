@@ -12,7 +12,8 @@ pulp          # integer-programming solver for the squad optimiser (ADR-008)
 
 # Web UI (optional — the CLI runs without these). Two read-only edges over the same analytics:
 #   Streamlit (the UI we grow, ADR-051/052) — run: `python -m src.web_streamlit`
-streamlit     # the interactive web edge (multipage; ~21 transitive pkgs — web-only)
+streamlit==1.61.1     # the interactive web edge — PINNED so the Community Cloud deploy matches the tested
+                      # version (an unpinned auto-upgrade changed hover-tooltip rendering; Sprint 116/US-293)
 #   FastAPI (frozen, a lean HTTP reference, ADR-050) — run: `python -m src.web`
 fastapi       # the read-only FastAPI edge over the analytics
 uvicorn       # local dev server (127.0.0.1)

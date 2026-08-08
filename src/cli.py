@@ -97,16 +97,19 @@ def cmd_reseed(args) -> None:
     """
     store = Storage(db_path=config.LIVE_DB_PATH)
     try:
-        n_players, n_teams, n_fixtures, _ = ingest.refresh(store)
+        n_players, n_teams, n_fixtures, n_elo = ingest.refresh(store)
     except FplApiError as exc:
         print(f"Could not refresh FPL data: {exc}")
         return
     finally:
         store.close()   # flush + unlock before copying the file
 
+    # ClubElo is best-effort (ADR-010) — report whether it refreshed or kept the last-known Elo (US-293:
+    # `reseed` used to look silent on Elo because it dropped this count).
+    elo_note = f"{n_elo} Elo ratings (ClubElo)" if n_elo else "0 Elo ratings (ClubElo kept last-known)"
     shutil.copyfile(config.LIVE_DB_PATH, config.SEED_DB_PATH)
     print(
-        f"Refreshed {n_players} players, {n_teams} teams, {n_fixtures} fixtures into "
+        f"Refreshed {n_players} players, {n_teams} teams, {n_fixtures} fixtures and {elo_note} into "
         f"{config.LIVE_DB_PATH} and copied it to {config.SEED_DB_PATH}.\n"
         "To update the live app: commit + push (Community Cloud auto-redeploys, or Reboot it)."
     )
