@@ -210,6 +210,18 @@ def render_xg(players, sel, badges):
         flag=fit_flag)   # xG uses raw player rows (they carry status)
 
 
+def _delta_cell(change) -> str:
+    """The season price move as a signed value + an up/down cue (US-311): `+0.5 🟢` (rise) / `−0.3 🔴` (fall);
+    a flat or unknown move → a plain dash. Pure/display."""
+    if change is None:
+        return "—"
+    if change > 0:
+        return f"+{change:.1f} 🟢"
+    if change < 0:
+        return f"−{abs(change):.1f} 🔴"      # a real minus sign, not a hyphen
+    return "0.0"
+
+
 def render_history(rows, photos, badges):
     """A player's season history on the web (US-298, ADR-027/060) — pick a player → a season table + a per-GW
     trend + the price move. Reuses `analytics.player_history`; the per-GW half is empty preseason (fills at
@@ -243,7 +255,8 @@ def render_history(rows, photos, badges):
     if seasons:
         table = [{"Season": s["season"], "Pts": s["points"], "Mins": s["minutes"], "Starts": s["starts"],
                   "Pts/90": s["pp90"], "xGI": s["xgi"], "xGC": s["xgc"],
-                  "£ start": s["start_cost"], "£ end": s["end_cost"], "Δ£": s["change"]} for s in seasons]
+                  "£ start": s["start_cost"], "£ end": s["end_cost"], "Δ£": _delta_cell(s["change"])}
+                 for s in seasons]
         st.dataframe(table, width="stretch", hide_index=True,
                      column_config=column_config(table[0]))
     if gws:

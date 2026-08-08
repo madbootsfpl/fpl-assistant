@@ -6,6 +6,7 @@ formats it. A read-view lens — never `decision_xp`.
 
 from src.analytics import player_history
 from src.ui.history import render_player_history
+from src.web_streamlit.views.players import _delta_cell
 
 _PLAYER = {"web_name": "Haaland", "team": "MCI", "position": "FWD", "code": 1}
 _SEASONS = [
@@ -37,6 +38,14 @@ def test_player_history_carries_price_and_change():
     missing = player_history(_PLAYER, [{"season_name": "2020/21", "total_points": 5, "minutes": 90}], [])
     assert missing["seasons"][0]["change"] is None
     assert "—" in render_player_history(missing)
+
+
+def test_delta_cell_colours_the_price_move():
+    # US-311: the web Δ£ cell gains an up/down cue — 🟢 rise, 🔴 fall, plain for flat/unknown.
+    assert _delta_cell(0.3) == "+0.3 🟢"
+    assert _delta_cell(-0.4) == "−0.4 🔴"        # a real minus sign
+    assert _delta_cell(0.0) == "0.0"
+    assert _delta_cell(None) == "—"
 
 
 def test_player_history_is_empty_safe():
