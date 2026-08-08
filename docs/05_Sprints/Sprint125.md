@@ -1,7 +1,7 @@
 # Sprint 125: History polish — a coloured Δ£ + cross-player comparison
 
-**Dates:** 2026-08-26 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-26
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (two display touches on the web History view — real past-season data, no setup)
 **Carried Over:** none
 
@@ -33,16 +33,16 @@ an optional **second player** overlaid (season points + a side-by-side table). D
 assembler + analytics untouched.
 
 #### Success Criteria
-- [ ] **US-311 (a coloured Δ£)** — on the season table, show Δ£ with an up/down cue: **🟢 for a rise, 🔴 for a
+- [x] **US-311 (a coloured Δ£)** — on the season table, show Δ£ with an up/down cue: **🟢 for a rise, 🔴 for a
       fall** (e.g. `+0.5 🟢` / `−0.3 🔴`; flat/None → a plain dash). Matches the approved preview.
-- [ ] **US-312 (cross-player comparison)** — a **"Compare with (optional)"** selectbox (excludes the primary
+- [x] **US-312 (cross-player comparison)** — a **"Compare with (optional)"** selectbox (excludes the primary
       player); when set, an aligned **season table** (Season · *A* Pts · *B* Pts, outer-joined on season) + a
       **line chart overlaying both players' season points**. No selection → the current single-player view is
       byte-unchanged.
-- [ ] **No drift** — display only; `player_history`/`decision_xp` unchanged; the read-only guardrail holds;
-      existing **791** stay green (+ align/colour tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log, Backlog (extends **ADR-027/060/069**; no
-      new ADR — display).
+- [x] **No drift** — display only; `player_history`/`decision_xp` unchanged; the read-only guardrail holds;
+      existing **791** stay green (**794** with +3); ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README, Backlog (extends **ADR-027/060/069**; no new ADR — display).
+      _(Help has no History line; no genuine Feedback_Log item — this traces to Sprint 118's retro.)_
 
 ---
 
@@ -104,4 +104,43 @@ chart still render for the primary player; the comparison is **additive** below.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped — the web History view reads better (a **🟢/🔴 Δ£**) and now **compares** (a
+second player overlaid). Display-only on real past-season data; the history assembler + `decision_xp` untouched.
+A light, tester-visible win before recruiting.
+
+**Delivered**
+- **US-311** — `_delta_cell(change)` → the season table's Δ£ shows an up/down cue (`+0.5 🟢` / `−0.4 🔴` / `0.0` /
+  `—`). +1 unit test.
+- **US-312** — a pure `align_seasons(hist_a, hist_b, key="points")` (outer-join on the season label, None-fill) +
+  a "Compare with (optional)" selectbox → a side-by-side season table + an overlaid season-points line chart.
+  +2 unit tests + the History page AppTest extended.
+
+**Verified at planning + build** — real data now (Saka = 8 past seasons with points + `change`), so both the
+colour cue and the overlay have genuine data; the per-GW sparkline stays GW1-gated (deferred). Smoke: Δ£ renders
+🟢/🔴; compare → a second table (`[Season, Haaland, A.Becker]`) + a chart, no exception.
+
+**Metrics** — 794 tests (791 → +3) · ruff + CI-parity green · 95 ADRs (no new) · 2 stories, ~½ session.
+
+**What went well**
+- **A pure helper for the merge** — `align_seasons` (outer-join) is unit-tested in isolation; the view stays a
+  thin renderer, matching the "build once, surface many" pattern of the history feature.
+- **Additive, non-destructive** — the compare is *below* the single-player view; no selection → byte-unchanged.
+- **Matched the approved preview** — the emoji Δ£ (not a Styler) is simple, robust, and exactly what Tony saw.
+
+**Even better if**
+- The overlay is **season points** only (the headline) — xGI / Pts-90 could be a stat picker later.
+- The per-GW **sparkline** overlay (the richer form comparison) is GW1-gated — this is the season-level version.
+- Two-player only — a 3rd would crowd the table; 2 is the useful comparison.
+
+**Deferred / backlog** — a rolling-form **sparkline** overlay (per-GW → GW1); a **stat picker** for the overlay
+(xGI/Pts-90); >2-player comparison.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Does the compare view help you scan players (1–5):**
+- **One thing to change next sprint:**

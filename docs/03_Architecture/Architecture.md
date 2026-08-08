@@ -455,6 +455,13 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 125 (2026-08-26)** — *History polish* (display-only on the web History view; `player_history`/
+  `decision_xp` untouched; extends ADR-027/060/069, no new ADR). **US-311:** `views/players.py::_delta_cell` — the
+  season table's **Δ£** shows an up/down cue (`+0.5 🟢` rise / `−0.4 🔴` fall / `0.0` / `—`). **US-312:** a pure
+  `analytics/history.py::align_seasons(hist_a, hist_b, *, key="points")` (outer-join on the season label,
+  None-fill) + a **"Compare with (optional)"** selectbox → a side-by-side **season table** (Season · *A* · *B*
+  points) + a **line chart** overlaying both season-points series (real past-season data now; the per-GW sparkline
+  stays GW1-gated). No selection → the single-player view is byte-unchanged. +3 tests (794).
 - **Sprint 124 (2026-08-25)** — *Cross-device squads* — **implements ADR-094**; the **first server-side write**
   from the web edge, so the read-only invariant (ADR-053/054) is deliberately revised: *no local DB/squad-file
   writes; the one server write is this opt-in, secret-gated squad save* (a tested exception). **US-309:** a new

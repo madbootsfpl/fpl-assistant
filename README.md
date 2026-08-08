@@ -204,7 +204,7 @@ ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs
   (who takes **penalties · corners · free-kicks** + Own%/Val/£m — a low-ownership **differential** lens) ·
   **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date; clean sheets & xG carry a
   relative **🟢…🔴 quality rating** vs the players shown; every table has a **Fit** availability column —
-  **✅ fit** · 🚑/🚫/⛔/❓ concerns) · **History** (pick a player → their season-by-season record + a per-GW trend)
+  **✅ fit** · 🚑/🚫/⛔/❓ concerns) · **History** (pick a player → their season-by-season record with a **🟢/🔴 price move** + a per-GW trend; **compare** a 2nd player side-by-side)
 - **Fixtures** — a colour-coded fixture **ticker** with team badges (scope it to **your squad** to see your teams'
   runs), plus a **🎯 Target by fixtures** shortlist: the best players to buy from the easiest-run teams — for
   planning a new squad or a wildcard, filterable by **position**, capped by a **max price**, and sortable by

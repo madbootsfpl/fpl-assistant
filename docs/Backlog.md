@@ -192,7 +192,9 @@ Deferred below.)*
   grounded **`history` ask/chat intent** (past seasons real now, per-GW at GW1; verified ✓). ~~*Follow-ups: a
   per-season price column; a web History view.*~~ **DONE** (Sprint 118, US-297/298) — a **£start→end · Δ£**
   column across CLI/Ask + a **web "History" view** on Players (season `st.dataframe` + a per-GW line chart).
-  *Still open: a rolling-form sparkline; a coloured web Δ£; cross-player comparison.*
+  ~~*Still open: a rolling-form sparkline; a coloured web Δ£; cross-player comparison.*~~ **coloured Δ£** (🟢/🔴)
+  + **cross-player comparison** (a 2nd player overlaid — `align_seasons` + a season table & line chart) **DONE**
+  (Sprint 125, US-311/312). *Still open: a rolling-form **sparkline** overlay (per-GW → GW1-gated).*
 - ~~**In-season form blend into xP**~~ — **DONE (wired, dormant)** (Sprint 069, US-197, ADR-060). A
   rolling-**pp90** form term in the one `decision_xp` recipe behind `FORM_WEIGHT = 0`. Still open at GW1:
   set the weight + **calibrate** the weight/window on real form.
