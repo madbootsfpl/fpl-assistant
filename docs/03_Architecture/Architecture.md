@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 116 (2026-08-17)** — *Two feedback fixes + a web-native Captain Pick card* (fixes + display;
+  US-294 extends ADR-084 + ADR-089). **US-293:** (a) **pinned `streamlit==1.61.1`** in `requirements.txt` so the
+  Community Cloud deploy matches the tested version — the likely fix for "hover-overs stopped working" (the
+  ADR-065 `help=` coverage test passes; the pitch CSS is scoped, so no code regression); (b) `cli.py::cmd_reseed`
+  now captures + prints `n_elo` (*"…and N Elo ratings (ClubElo)"* / *"kept last-known"*) — `reseed` always
+  called ClubElo via `refresh`→`_refresh_elo`, only the printout dropped the count. **US-294:** a new
+  `web_streamlit/captain_card.py` (the `pitch.py` pattern) — a pure `captain_card_html(ranked, explanation, *,
+  scope, team_names)` + `render_captain_card` that `st.markdown`s one self-contained HTML/CSS block: the 🥇 pick
+  (Team·Pos + a projected-xP chip) · a Confidence·Band pill (green/amber/red) · Why (✓) / Risks (⚠) columns ·
+  Alternatives (🥈/🥉), theme-neutral (scoped `.cap-card`, rgba-grey neutrals, text inherits), every value
+  `html.escape`d, no JS. The web **Captain** view renders it in place of the mono `render_captain_picks` block
+  (the rich picks table stays above; the mono renderer stays the CLI surface); reuses `explain_captain` — no
+  analytics change. A faithful Artifact preview (both themes) was owner-approved. +5 tests (751).
 - **Sprint 115 (2026-08-16)** — *Signal feeds: a media-headlines lens + sharper "talked about"* (owner intake;
   **ADR-093**, display lenses — never xP). Reviewed ~12 external sources; adopted the public, no-auth,
   FPL-relevant **RSS/Atom** feeds and deferred scraping/auth/odds. **US-291:** `api/feeds.py` — a best-effort

@@ -28,6 +28,9 @@ the few-clicks part, which **you run** (Claude can't create the account).
    - *(Optional)* **Advanced settings → Python version:** `3.13` (the project needs ≥ 3.11).
 3. **Deploy.** Community Cloud runs `pip install -r requirements.txt` (which installs the project via
    `-e .`) and then `streamlit run src/web_streamlit/Home.py`. First build takes ~2–5 min.
+   > **Streamlit is pinned** (`streamlit==1.61.1`) so the deploy renders on the version we build/test on — an
+   > unpinned auto-upgrade once changed hover-tooltip rendering (Sprint 116). Bump it **deliberately**: raise
+   > the pin, run the suite + a local `python -m src.web_streamlit` smoke, then commit.
 4. **Live** → the app opens at `https://<auto-name>.streamlit.app`. *(Optional)* In the app’s **Settings →
    General**, set a nicer **custom subdomain**, e.g. `fpl-assistant.streamlit.app`.
 5. **Verify:** **Home** (all six pages in the sidebar) · **Players** (photos + the scatter) · **Fixtures**
