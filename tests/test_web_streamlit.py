@@ -146,6 +146,18 @@ def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
     assert list(scoped["Pos"].unique()) == ["DEF"]         # only defenders after the filter
 
 
+def test_fixtures_target_max_price_cap_drops_dearer_targets():
+    # US-303: the Max price slider caps the target list to affordable players.
+    at = _run(_PAGES / "2_Fixtures.py")
+    if not at.dataframe:
+        return
+    cap = next(s for s in at.slider if s.label == "Max price")
+    cap.set_value(6.0).run()
+    assert not at.exception
+    capped = at.dataframe[-1].value
+    assert capped["£m"].max() <= 6.0                       # nothing dearer than the cap survives
+
+
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     # US-302 (ADR-049): a "My squad" scope restricts the ticker to your teams + a Players count column.
     from src.web_streamlit.squads import demo_squads

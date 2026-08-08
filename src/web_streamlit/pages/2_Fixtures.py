@@ -99,9 +99,13 @@ else:
     position = st.segmented_control(
         "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="target_pos",
         help="Filter the targets to one position (e.g. which defenders have the best runs).")
+    # US-303: a budget cap — show only targets you can afford (for a wildcard / a tight new squad).
+    max_price = st.slider("Max price", 4.0, 15.5, 15.5, step=0.5, key="target_max_price",
+                          help="Show only targets at or below this price (£m). Full range = show all.")
     ranked = decision_xp(players, upcoming, history, horizon=weeks, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
-    targets = target_by_fixtures(team_fdr(upcoming, next_n=weeks), players, xp_by_id, position=position)
+    targets = target_by_fixtures(team_fdr(upcoming, next_n=weeks), players, xp_by_id,
+                                 position=position, max_price=max_price)
     if targets:
         target_rows = [{
             "Team": t["team"],

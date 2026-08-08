@@ -13,15 +13,16 @@ from src.analytics.crowd import fit_flag
 from src.analytics.optimizer import is_unavailable
 
 
-def target_by_fixtures(team_ranked, players, xp_by_id, *, position=None,
+def target_by_fixtures(team_ranked, players, xp_by_id, *, position=None, max_price=None,
                        top_teams: int = 6, per_team: int = 3) -> list[dict]:
     """The best available players to buy from the easiest-run teams (a planning lens).
 
     `team_ranked` is `team_fdr(...)` output (easiest run first). For the first `top_teams`, take
     that team's players — optionally filtered to `position` (one of GK/DEF/MID/FWD; `None`/"All"
-    keeps every position) — drop the unavailable (🚑/🚫/⛔; a *doubtful* player stays, carrying its
-    Fit), rank by `xp_by_id`, and keep the top `per_team`. Returns a flat list of rows, ordered
-    easiest-team-first then xP-desc, each:
+    keeps every position) and to `max_price` (£m; drop pricier players *before* the per-team pick,
+    so a budget cap reveals the best *affordable* names rather than truncating) — drop the
+    unavailable (🚑/🚫/⛔; a *doubtful* player stays, carrying its Fit), rank by `xp_by_id`, and keep
+    the top `per_team`. Returns a flat list of rows, ordered easiest-team-first then xP-desc, each:
     `{team, avg_difficulty, opponents, id, web_name, position, price, selected_by, fit, xp}`.
     """
     by_team: dict = defaultdict(list)
@@ -29,6 +30,8 @@ def target_by_fixtures(team_ranked, players, xp_by_id, *, position=None,
         if is_unavailable(p):
             continue
         if position and position != "All" and p["position"] != position:
+            continue
+        if max_price is not None and (p["price"] is None or p["price"] > max_price):
             continue
         by_team[p["team"]].append(p)
 

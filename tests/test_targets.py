@@ -42,6 +42,20 @@ def test_unavailable_players_are_dropped_but_doubtful_stays_with_its_fit():
     assert rows[0]["fit"] == "❓ 75%" and rows[1]["fit"] == "✅"
 
 
+def test_max_price_drops_pricier_players_before_the_per_team_pick():
+    # US-303: a budget cap filters candidates before the top-per-team pick, so a cheaper name surfaces.
+    team_ranked = _team_ranked("EASY")
+    players = [
+        _player(1, "EASY", "MID", price=12.0), _player(2, "EASY", "MID", price=5.0),
+        _player(3, "EASY", "MID", price=4.5),
+    ]
+    xp = {1: 9.0, 2: 6.0, 3: 5.0}                            # the dearest has the highest xP
+    uncapped = target_by_fixtures(team_ranked, players, xp, per_team=1)
+    assert [r["id"] for r in uncapped] == [1]                # dearest wins uncapped
+    capped = target_by_fixtures(team_ranked, players, xp, per_team=1, max_price=6.0)
+    assert [r["id"] for r in capped] == [2]                  # dearest dropped → best affordable surfaces
+
+
 def test_position_filter_scopes_the_targets():
     team_ranked = _team_ranked("EASY")
     players = [_player(1, "EASY", "DEF"), _player(2, "EASY", "MID")]
