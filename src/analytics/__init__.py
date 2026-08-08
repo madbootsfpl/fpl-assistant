@@ -69,6 +69,12 @@ from src.analytics.optimizer import (
     squad_15_issues,
 )
 from src.analytics.overperf import over_under
+from src.analytics.price import (
+    PRICE_LEGEND,
+    price_flag,
+    price_prediction,
+    price_pressure,
+)
 from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import baseline_rate, decision_xp, fallback_rate, player_xp
@@ -119,6 +125,10 @@ __all__ = [
     "trending",
     "TREND_BYS",
     "DIFFERENTIAL_OWN",
+    "price_pressure",
+    "price_prediction",
+    "price_flag",
+    "PRICE_LEGEND",
     "decision_xp",
     "blend_form",
     "form_rate",
