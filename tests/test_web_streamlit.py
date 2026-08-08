@@ -539,6 +539,31 @@ def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
     assert any("Join the beta" in b.label for b in at.get("link_button"))
 
 
+def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
+    # US-306 (ADR-087): a submitted report POSTs an enriched payload — page + app-version + a timestamp.
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
+    captured = {}
+
+    def fake_post(url, json=None, timeout=None):    # no network in tests — capture the payload
+        captured["url"] = url
+        captured["json"] = json
+        return type("R", (), {})()
+
+    monkeypatch.setattr("requests.post", fake_post)
+    at = _run(_PAGES / "8_Feedback.py")
+    assert any(s.label == "Which page?" for s in at.selectbox)          # the page picker exists
+    at.text_area[0].set_value("Fixtures target list is great").run()
+    next(s for s in at.selectbox if s.label == "Which page?").set_value("Fixtures").run()
+    next(b for b in at.button if b.label == "Send feedback").click().run()
+
+    assert not at.exception and captured.get("url") == "https://example.test/sink"
+    payload = captured["json"]
+    assert payload["message"] == "Fixtures target list is great"
+    assert payload["page"] == "Fixtures"
+    assert payload["version"] and payload["source"] == "fpl-assistant-beta"
+    assert "T" in payload["ts"]                                          # an ISO timestamp
+
+
 def test_squads_gameweeks_selector_drives_the_horizon():
     # US-237 (ADR-077): a "Gameweeks ahead" dropdown (default 5) flows into Health — set it to 2 and
     # the analysis projects over 2 GW (a GW2 column, no GW5)

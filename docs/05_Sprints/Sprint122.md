@@ -104,7 +104,7 @@ ADR-094); native `st.login()` (the "product" upgrade path); server-render timing
 | ADR-094 | **Cross-device persistence** — handle-keyed free store (design gate; build = Sprint 123). | High | ✅ Done | gate |
 | ADR-095 | **Running a wider beta** — prod/staging + protection + backup + monitoring. | High | ✅ Done | gate |
 | US-305 | **Safeguard the code** — LICENSE (PolyForm-NC) + mirror-backup Action + BACKUP.md. | High | ✅ Done | ~¼ session |
-| US-306 | **Beta go-live enablement** — enrich the feedback payload + a BETA.md go-live checklist. | High | ⬜ To do | ~¼ session |
+| US-306 | **Beta go-live enablement** — enrich the feedback payload + a BETA.md go-live checklist. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -162,6 +162,14 @@ _(these need your account/clicks; the sprint delivers the code + the runbooks)_
   **`docs/BACKUP.md`** runbook (the mirror setup, a `git bundle` offline fallback, a restore playbook, and a note
   that the committed seed data rides along). Validated: `mirror.yml` parses as YAML (jobs `mirror`; triggers
   push/schedule/workflow_dispatch). No Python changed — ruff clean, suite stands at **775**.
+- **US-306 (beta go-live enablement)** — enriched the **feedback payload** (`pages/8_Feedback.py`): a
+  **"Which page?"** `st.selectbox` in the form + `page`/`version`/`ts` added to the POST (`version` via
+  `importlib.metadata.version("fpl-assistant")` → `_app_version()` with a `PackageNotFoundError` fallback; `ts` an
+  ISO-UTC timestamp). Degrade-to-GitHub behaviour unchanged. +1 test (a monkeypatched-`requests.post` AppTest
+  asserting the enriched payload — page=Fixtures, version, an ISO ts). Added a **go-live checklist** to
+  `docs/BETA.md` (feedback Sheet + secrets + signup + access code + prod/staging + uptime + backup) and a
+  **Prod/staging (ADR-095)** section to `docs/DEPLOY.md` (two apps: `main`→prod-for-testers, `master`→staging,
+  promote by merge). ruff clean. **776** total.
 
 ---
 

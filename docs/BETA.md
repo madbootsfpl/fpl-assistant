@@ -70,6 +70,23 @@ confirmation so testers can get in.
   *Manage app → ⋮*, or move to a sturdier host (that's also the first nudge toward the multi-user step,
   DIRECTION §1).
 
+## ✅ Go-live checklist (do these before recruiting)
+
+Everything below is **£0** and opt-in. Tick them off, then post the invite.
+
+- [ ] **Feedback sink live** — the Google Sheet + Apps Script (§1) is deployed, and `FPL_FEEDBACK_WEBHOOK` is set
+      in Streamlit secrets. Submit the in-app **📣 Feedback** form → a row appears in the Sheet. *(US-306: each
+      row now also carries the **page**, the **app version**, and a **timestamp**, so a report is easy to place.)*
+- [ ] **Signup form** — `FPL_SIGNUP_URL` set (§2); the "✋ Join the beta" button shows on Home + Feedback.
+- [ ] **Access code** — decide whether to gate (§3): set `FPL_ACCESS_CODE`, or leave open. Share the code with
+      testers if set.
+- [ ] **Prod/staging split** — the app testers use runs off the **stable** branch (`main`); you iterate on
+      **staging** (`master`) and promote by merge, so a mid-sprint push can't break the beta
+      ([ADR-095](06_Decisions/ADR-095-running-a-wider-beta.md); see [DEPLOY.md](DEPLOY.md#prodstaging-adr-095)).
+- [ ] **Uptime monitor** — add the live URL to a free monitor (UptimeRobot / Better-Uptime, ~5-min ping) → you'll
+      get response-time trends + a downtime alert if the free tier struggles under tester load.
+- [ ] **Backup** — the mirror is active (a `MIRROR_URL` secret is set; see [BACKUP.md](BACKUP.md)).
+
 ## Turning it off
 
 Delete the three secrets → the app is fully public again, feedback falls back to GitHub, the signup link

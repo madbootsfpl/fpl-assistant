@@ -55,6 +55,24 @@ the few-clicks part, which **you run** (Claude can't create the account).
 
 ---
 
+## Prod/staging (ADR-095)
+
+Once you have real testers, don't let a mid-sprint push break the app they're using. Run **two** Community Cloud
+apps off **two branches** — same repo, £0:
+
+| App | Branch | Who uses it | Redeploys when |
+|-----|--------|-------------|----------------|
+| **Prod** | `main` (stable) | your **testers** | you **merge** `master → main` (deliberate) |
+| **Staging** | `master` (working) | **you**, to smoke-test | every push to `master` |
+
+- **Set it up:** you already deploy off `master` — either repoint that app to `main` (make it prod) and create a
+  new app off `master` (staging), or add a second app off `main`. Same main file (`src/web_streamlit/Home.py`).
+- **Promote:** when staging looks good, `git checkout main && git merge master && git push` → prod redeploys.
+- **Rule of thumb:** *push freely to `master` (staging); testers only ever move when you merge to `main`.*
+- *(Optional tightening: branch protection on `main` so prod only advances via a reviewed merge.)*
+
+---
+
 ## Troubleshooting
 
 | Symptom | Fix |
