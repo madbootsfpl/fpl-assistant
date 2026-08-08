@@ -1,7 +1,7 @@
 # Sprint 121: Finish the fixtures planner — a budget cap + value on the targets
 
-**Dates:** 2026-08-22 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-22
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (two controls + a column on the 🎯 Target-by-fixtures list — display only)
 **Carried Over:** none
 
@@ -32,16 +32,16 @@
 show/sort by **Val/£m** so a tight-budget planner finds the best pick per £. Display only; analytics untouched.
 
 #### Success Criteria
-- [ ] **US-303 (a max-price cap)** — a **`Max price`** slider (£4.0m–£15.5m, default max = all) above the Target
+- [x] **US-303 (a max-price cap)** — a **`Max price`** slider (£4.0m–£15.5m, default max = all) above the Target
       table; `target_by_fixtures` filters candidates to `price ≤ cap` **before** picking each team's top players.
       A clear note when the cap empties the list.
-- [ ] **US-304 (value column + sort)** — a **Val/£m** column (the app's `points_per_million`, ADR-042) on the
+- [x] **US-304 (value column + sort)** — a **Val/£m** column (the app's `points_per_million`, ADR-042) on the
       Target table + a **`Sort`** toggle (**xP** / **Val/£m**) that switches the per-team ranking key. xP stays the
       default (consistent with the section's headline metric).
-- [ ] **No drift** — display only; `target_by_fixtures` gains `max_price`/`sort_by`/`value_by_id` params but the
+- [x] **No drift** — display only; `target_by_fixtures` gains `max_price`/`sort_by`/`value_by_id` params but the
       FDR + xP + value analytics are unchanged; the read-only web guardrail holds; existing **771** stay green
-      (+ cap / value-sort tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends the **fixtures + xP/value** families
+      (**775** with +4); ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends the **fixtures + xP/value** families
       — ADR-041/042; no new ADR — a display lens).
 
 ---
@@ -70,8 +70,8 @@ bigger); a **"widen"** control (top-N teams / per-team count — the cap+sort co
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-303 | **A max-price cap on the targets** — a slider; show only affordable picks per team. | High | ⬜ To do | ~¼ session |
-| US-304 | **Value column + sort** — a Val/£m column + an xP↔Val/£m sort toggle. | High | ⬜ To do | ~¼ session |
+| US-303 | **A max-price cap on the targets** — a slider; show only affordable picks per team. | High | ✅ Done | ~¼ session |
+| US-304 | **Value column + sort** — a Val/£m column + an xP↔Val/£m sort toggle. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -109,4 +109,46 @@ bigger); a **"widen"** control (top-N teams / per-team count — the cap+sort co
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped. **🎯 Target by fixtures** is now **budget-aware**: a **Max price** slider
+caps the list to what you can afford, and a **Val/£m** column + an **xP↔Val/£m** sort surface bang-for-buck for a
+tight wildcard budget. Both extended the existing `target_by_fixtures` (+ four small page controls); the FDR, xP
+and value analytics are untouched.
+
+**Delivered**
+- **US-303** — a `max_price` param that drops pricier players *before* the per-team top-K pick (so a cap reveals
+  the best *affordable* name, not a truncation); a `Max price` slider. +2 tests.
+- **US-304** — `sort_by` ("xp"/"value") + `value_by_id` params (every row carries `value`); a **Val/£m** column
+  (`points_per_million`, ADR-042 — the app's one value metric) + a **Sort** toggle (xP default). +2 tests.
+
+**Verified at planning (real data)** — prices span £4.0m–£15.5m (a clean slider domain); `points_per_million` is
+the app's single Val/£m, so reusing it keeps **one** value definition (Pool / stat boards / targets). Smoke: cap
+£6.0m → dearer names swapped for cheaper same-team picks; Sort → Val/£m surfaces Keane £5.0m / Shaw £4.5m.
+
+**Metrics** — 775 tests (771 → +4), all green · ruff clean · 93 ADRs (no new) · 2 stories, ~½ session.
+
+**What went well**
+- One function grew four small params (`position`/`max_price`/`sort_by`/`value_by_id`) and stayed pure + unit-
+  testable — the page is still a thin renderer.
+- **Reused the one value metric** (ADR-042) rather than inventing an xP/£m — no second "value" to reconcile.
+- The "filter before the per-team pick" detail (a cap *reveals* affordable names) is what makes the slider useful
+  rather than a blunt truncation — and a unit test pins it.
+
+**Even better if**
+- Affordability is a flat **price cap**, not **squad-aware** (bank + a sell) — that needs the Fixtures page to
+  know your squad (deferred; bigger).
+- The Val/£m is **points-based** (last-season points per £m) — it under-rates new signings whose xP is high but
+  whose points are low (Isak). Honest and consistent with the rest of the app, but a known limitation of Val/£m.
+- No **"widen"** control (top-N teams / per-team count) — the cap + sort cover the budget case; deferred.
+
+**Deferred / backlog** — squad-aware affordability (cap = bank + a sell); a "widen" control; an xP/£m *future*-
+value metric (a second value definition — deliberately avoided; ADR-042 stays the one Val/£m).
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **One thing to change next sprint:**
+- **Does the budget-aware Target list fit how you'd plan a wildcard? (1–5):**

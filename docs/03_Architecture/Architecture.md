@@ -455,6 +455,16 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 121 (2026-08-22)** — *Finish the fixtures planner: a budget cap + value on the targets* (display only;
+  extends `analytics/targets.py` + the Fixtures page; reuses ADR-041 xP + ADR-042 value — no new ADR). Both stories
+  make **🎯 Target by fixtures** budget-aware. **US-303:** a `max_price` param on `target_by_fixtures` drops
+  players over the cap **in the grouping loop, before** the per-team top-K pick (so a cap surfaces the best
+  *affordable* name, not a truncation); a `st.slider("Max price", 4.0, 15.5, 15.5)` on the page. **US-304:**
+  `sort_by` ("xp"/"value") + `value_by_id` params — the per-team ranking key switches to `value_by_id` when
+  sorting by value, and every row carries `value`; the page builds `value_by_id` from `points_per_million(
+  total_points, price)` (the app's one **Val/£m**, ADR-042), adds a **Val/£m** column and a
+  `st.segmented_control("Sort", ["xP","Val/£m"], default="xP")`. One value definition across the app (no new
+  metric); `team_fdr`/`decision_xp`/`points_per_million` unchanged. +4 tests (775).
 - **Sprint 120 (2026-08-21)** — *Fixtures for planning: target players by run + a "my squad" lens* (display
   lenses; a new `analytics/targets.py` + **realises ADR-049**; no analytics change — owner feedback: the Fixtures
   view is needed for planning a new squad / wildcard). **US-301:** a pure `analytics.target_by_fixtures(team_ranked,

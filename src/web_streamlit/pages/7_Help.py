@@ -80,7 +80,7 @@ with st.expander("5 · Do your research  →  Players · Fixtures · Trending ·
         "buttons at the top.\n"
         "- **Fixtures** — a colour-coded **difficulty ticker** (pick 1–8 gameweeks; scope it to **your "
         "squad**) + a **🎯 Target by fixtures** shortlist — who to buy from the easiest-run teams (for a new "
-        "squad / wildcard).\n"
+        "squad / wildcard); filter by **position**, cap the **max price**, and sort by **xP** or **Val/£m**.\n"
         "- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + "
         "**Community Signals** (what r/FantasyPL is talking about).\n"
         "- **News** — official injury / doubt / return news, most serious first."
