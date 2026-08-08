@@ -193,10 +193,12 @@ def test_transfer_page_apply_mutates_the_session_squad():
     assert squad.get("name") and squad.get("cost")         # named + re-costed (no sidebar crash)
 
 
-def test_captain_page_renders_for_the_demo_squad():
+def test_captain_page_renders_the_pick_card_or_a_note():
+    # US-294: the web Captain view renders the styled HTML card (not the mono block) — or a "no data" note.
     at = _squads_view("Captain")
     assert len(at.selectbox) >= 1                          # the squad picker (+ a set-captain selector)
-    assert len(at.code) == 1 or len(at.info) >= 1          # the captain picks (or a "no data" note)
+    blobs = " ".join(m.value for m in at.markdown)
+    assert ("cap-card" in blobs and "🥇 Captain Pick" in blobs) or len(at.info) >= 1
 
 
 def test_captain_page_shows_crowd_flags_and_template_risk():

@@ -41,10 +41,10 @@ from src.analytics import (
 )
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
-from src.ui.captain import render_captain_picks
 from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
+from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
     FPL_BUDGET,
@@ -550,8 +550,8 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
     st.caption("Captaincy risk: a **🟦 template** captain is safe (most managers own them); a "
                "**💎 differential** captain is a bigger rank swing — upside and downside.")
     explanation = explain_captain(picks, owned_by_id)   # grounded Why/Risk/Confidence (ADR-089)
-    st.code(render_captain_picks(picks, squad_name=squad_name, explanation=explanation,
-                                 team_names=team_names), language=None)
+    render_captain_card(picks, explanation, scope=f"from squad '{squad_name}'",   # a styled card (US-294)
+                        team_names=team_names)
 
     current = squad.get("captain_id")
     if current:
