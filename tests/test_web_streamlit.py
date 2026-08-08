@@ -919,6 +919,18 @@ def test_ask_page_example_prompts_are_clickable():
     assert at.get("code")[0].wrap_lines is True             # US-275: the answer wraps (readable sentences)
 
 
+def test_ask_page_example_prompts_name_the_loaded_squad():
+    # US-280: with a squad loaded, the example buttons read its real name (so "my-team" → your squad and the
+    # click scopes correctly), instead of the literal "my-team".
+    at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30)
+    at.session_state["squad"] = {"name": "RoboTS", "player_ids": list(range(1, 16)),
+                                 "player_names": [f"P{i}" for i in range(1, 16)], "bench_ids": [], "cost": 100.0}
+    at.run()
+    assert not at.exception
+    labels = [b.label for b in at.button if b.key and b.key.startswith("example_")]
+    assert any("RoboTS" in lbl for lbl in labels) and not any("my-team" in lbl for lbl in labels)
+
+
 def test_ask_page_is_conversational_pronouns_and_followups():
     # US-248 (ADR-047/080): the web Ask threads Context, so a pronoun resolves to the last player and a
     # follow-up builds on the last turn

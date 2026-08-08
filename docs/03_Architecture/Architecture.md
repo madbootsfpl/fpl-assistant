@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 109 (2026-08-10)** — *Captaincy scopes to your squad by default + a clear "best overall"* (tester
+  feedback; **ADR-090**, routing/display only). A tester found *"who should I captain from my-team?"* answered
+  from **all** players. Root cause: `ask._fresh` resolved "my team" via `re.search(r"\bmy (team|…)\b")` — which
+  matches a **space** but not the **hyphen** the app's own example prompts use. **US-279:** one rule replaces
+  the phrase-match — `if not squad and intent in _SQUAD_DEFAULT_INTENTS and active_squad and not
+  _EXPLICIT_GLOBAL.search(question): squad = active_squad["name"]` — so with a squad loaded, a squad-scoped
+  question with no named squad and no explicit-global cue (`all players|everyone|best overall|from all|any
+  player`) **defaults to the loaded squad**. Fixes the hyphen at the root, makes a bare *"who should I
+  captain?"* scope to your team, keeps captaincy's global best-picks mode via the explicit cue, and is gated to
+  the squad intents (captain·transfer·analyse·start_bench·gameweek·chips) so a global *fixtures*/compare
+  question isn't scoped. The CLI has no `active_squad`, so it's global-by-default (unchanged). **US-280:**
+  `render_captain_pick` gained `heading` + `nudge` — `_decide_captain` sends the global answer as **"Best
+  Captain Picks · all players"** + a scope nudge and the scoped one as **"Captain Pick · from squad 'X'"**, so
+  the default is never silent; the Ask example buttons personalise to the loaded squad's name
+  (`example.replace("my-team", _active["name"])`). No analytics change; +3 tests (716). A routing test isolates
+  `SquadStore` to a temp file (its default path binds at import, so ambient saved squads would otherwise leak).
 - **Sprint 108 (2026-08-09)** — *A structured "Captain Pick" answer + a shared Model note* (tester feedback;
   display-only, extends **ADR-089**). **US-277:** the captaincy answer is now the tester's mockup — a new
   `ui/captain.py::render_captain_pick(ranked, explanation, *, scope, team_names)` builds a card: header + scope ·

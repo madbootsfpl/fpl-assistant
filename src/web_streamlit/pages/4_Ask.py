@@ -62,10 +62,12 @@ def _ask(question):
 
 
 # A few starter prompts — click one to ask it (US-234). Expanded until the first turn, then it folds away.
+# When a squad is loaded, the examples name it (US-280) so "my-team" → your real squad and the click scopes.
 with st.expander("💡 Example questions — click one to ask it", expanded=not st.session_state.history):
     for i, example in enumerate(_EXAMPLES):
-        if st.button(example, key=f"example_{i}", use_container_width=True):
-            _ask(example)
+        label = example.replace("my-team", _active["name"]) if _active else example
+        if st.button(label, key=f"example_{i}", use_container_width=True):
+            _ask(label)
             st.rerun()
 
 # Replay the conversation so far. `wrap_lines` wraps long sentences while keeping the aligned tables/blocks

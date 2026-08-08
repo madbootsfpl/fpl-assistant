@@ -44,7 +44,9 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
   compare / **build a squad** / **best players in a position** / **fixtures & difficulty**). The
   **analytics decide**; a **local LLM (Ollama) only narrates** — and every answer is **checked
   against the data** (a ✓/⚠ trust line: figures and names are verified, not just instructed). `ask`
-  works without the LLM (it falls back to the decision + facts).
+  works without the LLM (it falls back to the decision + facts). With a squad loaded, squad questions
+  (*"who should I captain?"*) **scope to your team by default**; say *"from all players"* for the global
+  best picks (ADR-090).
 - **`chat`** — an interactive `ask` where **follow-ups build on the last answer**: "who should I
   captain from TS?" → **"why?"** → **"and the second best?"** → **"what about defenders?"**. Same
   discipline (analytics decide, every turn verified); the only new thing is memory of the last turn.

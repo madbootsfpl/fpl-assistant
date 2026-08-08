@@ -10,19 +10,22 @@ from .explain import MODEL_NOTE
 _MEDALS = ("🥇", "🥈", "🥉")
 
 
-def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None) -> str:
+def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None,
+                        heading: str = "Captain Pick", nudge: str = "") -> str:
     """The structured **Captain Pick** card (ADR-089, US-277) — the mockup a tester asked for.
 
     A medal pick (`Team · Pos` · `Projected: N pts`), a clean Confidence line, the grounded Why (✓) / Risks
     (⚠) from the `Explanation`, the runner-up **Alternatives** (🥈/🥉 + their xP), and the shared Model note.
     `ranked` is the `captain_picks` list already sliced so `[0]` is the chosen pick (its runner-ups are the
-    alternatives); `team_names` maps a team short code → a friendly name ("MUN" → "Man Utd"). Pure/empty-safe.
+    alternatives); `team_names` maps a team short code → a friendly name ("MUN" → "Man Utd"). `heading`
+    distinguishes a squad-scoped pick ("Captain Pick") from the global one ("Best Captain Picks", US-280);
+    `nudge` is an optional guidance line (e.g. how to scope). Pure/empty-safe.
     """
     if not ranked:
         return "No captain candidates — run `refresh` first."
     top = ranked[0]
     team = (team_names or {}).get(top.get("team"), top.get("team") or "")
-    lines = ["Captain Pick"]
+    lines = [heading]
     if scope:
         lines.append(scope)
     lines += [
@@ -44,6 +47,8 @@ def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None
             pos = i + 2                                         # 🥈 2nd · 🥉 3rd · plain "N." beyond (US-278)
             marker = _MEDALS[pos - 1] if pos <= len(_MEDALS) else f"{pos}."
             lines.append(f"{marker} {a['web_name']} {a['xp']:.1f} pts")
+    if nudge:
+        lines += ["", nudge]
     lines += ["", MODEL_NOTE]
     return "\n".join(lines)
 

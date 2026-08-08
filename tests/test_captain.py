@@ -96,6 +96,18 @@ def test_render_captain_pick_is_the_structured_card():
     assert "Model note:" in out and out.count("🥇") == 1
 
 
+def test_render_captain_pick_heading_and_nudge_for_the_global_answer():
+    # US-280: the global answer reads "Best Captain Picks" + a scope nudge; a scoped answer keeps the plain
+    # "Captain Pick" heading and shows no nudge.
+    ranked = [{"web_name": "B.Fernandes", "team": "MUN", "position": "MID", "xp": 5.9}]
+    ex = Explanation(reasons=["Highest projected points"], risks=[], confidence=69, band="Medium")
+    glob = render_captain_pick(ranked, ex, scope="all players", heading="Best Captain Picks",
+                               nudge="Showing all players — say X to scope.")
+    assert glob.startswith("Best Captain Picks") and "Showing all players" in glob
+    scoped = render_captain_pick(ranked, ex, scope="from squad 'RoboTS'")   # defaults: heading + no nudge
+    assert scoped.startswith("Captain Pick") and "Showing all players" not in scoped
+
+
 def test_render_captain_pick_is_empty_safe():
     ex = Explanation(reasons=["Highest projected points"], risks=[], confidence=80, band="High")
     solo = render_captain_pick([{"web_name": "Solo", "team": "ARS", "position": "FWD", "xp": 6.0}], ex)

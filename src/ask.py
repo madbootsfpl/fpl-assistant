@@ -303,12 +303,16 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
         facts["why"] = "; ".join(explanation.reasons) or "none"
         facts["risk"] = "; ".join(explanation.risks) or "none noted"
     # The structured Captain Pick card (US-277): medal · Team·Pos · Projected · Confidence · Why · Risks ·
-    # Alternatives · Model note. The scope line names a squad (all-players stays clean, like the mockup);
-    # a "next" follow-up (rank>0) is flagged.
+    # Alternatives · Model note. Global vs scoped read differently (US-280): "Best Captain Picks — all players"
+    # (with a nudge on how to scope) vs "Captain Pick — from squad 'X'". A "next" follow-up (rank>0) is flagged.
+    is_global = squad_name is None
     scope_bits = [f"Option #{rank + 1}"] if rank else []
-    scope_bits.append(f"from {scope}" if squad_name else scope)   # "from squad 'X'" | "all players"
+    scope_bits.append(scope if is_global else f"from {scope}")    # "all players" | "from squad 'X'"
+    heading = "Best Captain Picks" if is_global else "Captain Pick"
+    nudge = ('Showing all players — say "captain from my team" (with a squad loaded) to scope to your squad.'
+             if is_global else "")
     detail = render_captain_pick(picks[rank:], explanation, scope=" · ".join(scope_bits),
-                                 team_names=team_names)
+                                 team_names=team_names, heading=heading, nudge=nudge)
     return {
         "detail": detail,   # shown with or without prose (the block is the truth)
         "headline": f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW",

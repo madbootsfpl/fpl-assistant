@@ -1020,8 +1020,10 @@ def test_ask_captain_defaults_to_the_loaded_squad_hyphen_and_bare(tmp_path, monk
     assert "squad 'ZZTestXI'" in bare                                     # default-to-loaded-squad
     glob = render_ask(ask.answer("who should I captain from all players?", active_squad=active))
     assert "all players" in glob and "squad 'ZZTestXI'" not in glob       # explicit-global escapes
+    assert "Best Captain Picks" in glob and "to scope to your squad" in glob   # US-280: reframed + nudged
+    assert "Best Captain Picks" not in bare and "Captain Pick" in bare    # the scoped answer reads differently
     cli = render_ask(ask.answer("who should I captain?"))                 # no active squad → global (CLI)
-    assert "all players" in cli
+    assert "all players" in cli and "Best Captain Picks" in cli
 
 
 def test_ask_captain_explains_with_confidence_and_verifies():
