@@ -158,6 +158,24 @@ def test_fixtures_target_max_price_cap_drops_dearer_targets():
     assert capped["£m"].max() <= 6.0                       # nothing dearer than the cap survives
 
 
+def test_fixtures_target_value_column_and_sort_toggle():
+    # US-304: a Val/£m column + a Sort toggle that reorders each team's picks by value.
+    at = _run(_PAGES / "2_Fixtures.py")
+    if not at.dataframe:
+        return
+    by_xp = at.dataframe[-1].value
+    assert "Val/£m" in by_xp.columns
+    sort = next(s for s in at.segmented_control if s.label == "Sort")
+    assert sort.value == "xP"                               # xP is the default
+    sort.set_value("Val/£m").run()
+    assert not at.exception
+    by_value = at.dataframe[-1].value
+    # within the first team's block, value sort is non-increasing
+    first_team = by_value.iloc[0]["Team"]
+    block = by_value[by_value["Team"] == first_team]["Val/£m"].dropna().tolist()
+    assert block == sorted(block, reverse=True)
+
+
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     # US-302 (ADR-049): a "My squad" scope restricts the ticker to your teams + a Players count column.
     from src.web_streamlit.squads import demo_squads

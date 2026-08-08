@@ -96,6 +96,14 @@ bigger); a **"widen"** control (top-N teams / per-team count — the cap+sort co
   only — no analytics change. Smoke: full → 18 rows (max £12.0m); cap £6.0m → 18 rows all ≤ £6.0m (dearer names
   swapped for cheaper same-team picks); cap £4.0m → 11 rows. +2 tests (1 unit in `test_targets.py` that proves the
   cap swaps in the best affordable, not just truncates + 1 page AppTest). ruff clean.
+- **US-304 (value column + sort)** — added `sort_by` ("xp"/"value") + `value_by_id` params to `target_by_fixtures`:
+  the per-team ranking key becomes `value_by_id` when `sort_by=="value"`, and every row now carries `value`. Page:
+  built `value_by_id` from `points_per_million(total_points, price)` (the app's one Val/£m, ADR-042), added a
+  `st.segmented_control("Sort", ["xP","Val/£m"], default="xP")` and a **Val/£m** column (`NumberColumn`, `%.1f`).
+  xP stays the default (the section's headline metric). Display only — no new value metric. Smoke: by xP → EVE
+  Pickford/Tarkowski/Mykolenko; by Val/£m → Tarkowski/Keane/Pickford (a cheaper high-value pick rises). +2 tests
+  (1 unit: value sort reranks + the row carries value; 1 page AppTest: the column + a non-increasing value block).
+  ruff clean. **775** total.
 
 ---
 

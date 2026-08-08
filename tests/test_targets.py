@@ -63,3 +63,18 @@ def test_position_filter_scopes_the_targets():
 
     assert [r["id"] for r in target_by_fixtures(team_ranked, players, xp, position="DEF")] == [1]
     assert [r["id"] for r in target_by_fixtures(team_ranked, players, xp, position="All")] == [2, 1]
+
+
+def test_sort_by_value_reranks_by_value_and_carries_it_in_the_row():
+    # US-304: sort_by="value" ranks each team's picks by value_by_id (Val/£m), not xP.
+    team_ranked = _team_ranked("EASY")
+    players = [_player(1, "EASY", "MID"), _player(2, "EASY", "MID")]
+    xp = {1: 9.0, 2: 5.0}                                    # id 1 wins by xP
+    value = {1: 2.0, 2: 6.0}                                 # id 2 wins by value
+
+    by_xp = target_by_fixtures(team_ranked, players, xp, value_by_id=value)
+    assert [r["id"] for r in by_xp] == [1, 2]                # default = xP order
+    assert by_xp[0]["value"] == 2.0                          # value carried in every row
+
+    by_value = target_by_fixtures(team_ranked, players, xp, sort_by="value", value_by_id=value)
+    assert [r["id"] for r in by_value] == [2, 1]             # re-ranked by value

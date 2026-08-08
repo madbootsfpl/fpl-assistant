@@ -10,7 +10,7 @@ from collections import Counter
 import pandas as pd
 import streamlit as st
 
-from src.analytics import decision_xp, fixture_ticker, target_by_fixtures, team_fdr
+from src.analytics import decision_xp, fixture_ticker, points_per_million, target_by_fixtures, team_fdr
 from src.storage import Storage
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name
@@ -95,17 +95,22 @@ else:
     st.divider()
     st.subheader("🎯 Target by fixtures")
     st.caption("The best available players from the easiest-run teams over your window — for planning a "
-               "new squad or a wildcard. Ranked by expected points (xP).")
+               "new squad or a wildcard.")
     position = st.segmented_control(
         "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="target_pos",
         help="Filter the targets to one position (e.g. which defenders have the best runs).")
     # US-303: a budget cap — show only targets you can afford (for a wildcard / a tight new squad).
     max_price = st.slider("Max price", 4.0, 15.5, 15.5, step=0.5, key="target_max_price",
                           help="Show only targets at or below this price (£m). Full range = show all.")
+    # US-304: rank each team's picks by xP (default) or Val/£m (points per £m, ADR-042 — bang-for-buck).
+    sort_label = st.segmented_control("Sort", ["xP", "Val/£m"], default="xP", key="target_sort",
+                                      help="Rank each team's targets by expected points, or by value per £m.")
     ranked = decision_xp(players, upcoming, history, horizon=weeks, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
-    targets = target_by_fixtures(team_fdr(upcoming, next_n=weeks), players, xp_by_id,
-                                 position=position, max_price=max_price)
+    value_by_id = {p["id"]: points_per_million(p["total_points"], p["price"]) for p in players}
+    targets = target_by_fixtures(
+        team_fdr(upcoming, next_n=weeks), players, xp_by_id, position=position, max_price=max_price,
+        sort_by="value" if sort_label == "Val/£m" else "xp", value_by_id=value_by_id)
     if targets:
         target_rows = [{
             "Team": t["team"],
@@ -117,6 +122,7 @@ else:
             "Own%": t["selected_by"],
             "Fit": t["fit"],
             "xP": t["xp"],
+            "Val/£m": t["value"],
         } for t in targets]
         st.dataframe(
             pd.DataFrame(target_rows), hide_index=True, width="stretch",
@@ -125,6 +131,7 @@ else:
                 "£m": st.column_config.NumberColumn("£m", format="£%.1fm"),
                 "Own%": st.column_config.NumberColumn("Own%", format="%.1f"),
                 "xP": st.column_config.NumberColumn("xP", format="%.1f", help="Expected points (the app's one metric)"),
+                "Val/£m": st.column_config.NumberColumn("Val/£m", format="%.1f", help="Points per £m (value)"),
             },
         )
     else:
