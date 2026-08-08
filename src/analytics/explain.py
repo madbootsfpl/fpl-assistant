@@ -65,36 +65,37 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
     gap = round((xp or 0) - (runner["xp"] or 0), 1) if runner else None
 
     reasons, risks = [], []
-    # ✓ Why
+    # ✓ Why — phrasing aligned to the Captain Pick card (US-277); the projected xP lives on the card's
+    # "Projected" line, so the reason drops the redundant number.
     if xp is not None:
-        reasons.append(f"Highest projected points ({xp})")
+        reasons.append("Highest projected points")
     if top.get("penalty_taker"):
-        reasons.append("On penalties")
+        reasons.append("Penalty taker")
     if _get(row, "freekicks_order") == 1 or _get(row, "corners_order") == 1:
-        reasons.append("Takes set-pieces")
+        reasons.append("Set-piece involvement")
     if mins is not None and mins >= _START_MINUTES:
-        reasons.append(f"Expected to start (~{round(mins * 90)} mins)")
+        reasons.append(f"Expected ~{round(mins * 90)} mins")
     own = _get(row, "selected_by")
     if own is not None and own >= TEMPLATE_OWN:
         reasons.append(f"Template pick ({own:.0f}% owned)")
     if difficulty is not None and (difficulty <= 2 or venue == "H"):
-        reasons.append(f"Favourable fixture ({top.get('opponent') or 'TBC'})")
+        reasons.append(f"Strong fixture vs {top.get('opponent') or 'TBC'}")
     form = _get(row, "form")
     if form is not None and form >= FORM_MIN:
         reasons.append(f"In form ({form})")
 
     # ⚠ Risk
     if venue == "A":
-        risks.append(f"Away fixture ({top.get('opponent') or 'TBC'})")
+        risks.append("Away fixture")
     if top.get("doubtful"):
         chance = top.get("chance")
         risks.append("Doubtful" + (f" ({chance}% chance)" if chance is not None else ""))
     if mins is not None and mins < _START_MINUTES:
         risks.append(f"Rotation risk (~{round(mins * 90)} mins)")
     if difficulty is not None and difficulty >= 4:
-        risks.append(f"Tough fixture ({top.get('opponent') or 'TBC'})")
+        risks.append(f"Tough fixture vs {top.get('opponent') or 'TBC'}")
     if runner is not None and gap is not None and gap < 0.5:
-        risks.append(f"Narrow lead over {runner['web_name']} (+{gap})")
+        risks.append(f"Only +{gap} pts ahead of {runner['web_name']}")
     if own is not None and 0 < own <= DIFFERENTIAL_OWN:
         risks.append(f"Big differential ({own:.0f}% owned)")
 

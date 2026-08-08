@@ -8,9 +8,46 @@ sees *why*. Built on the shared table renderer (ui._table, ADR-025).
 from src.analytics.minutes import expected_minutes
 
 from ._table import Col, render_rows
-from .explain import render_explanation
+from .explain import MODEL_NOTE, render_explanation
 
 _NAME_W = 17
+_MEDALS = ("🥇", "🥈", "🥉")
+
+
+def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None) -> str:
+    """The structured **Captain Pick** card (ADR-089, US-277) — the mockup a tester asked for.
+
+    A medal pick (`Team · Pos` · `Projected: N pts`), a clean Confidence line, the grounded Why (✓) / Risks
+    (⚠) from the `Explanation`, the runner-up **Alternatives** (🥈/🥉 + their xP), and the shared Model note.
+    `ranked` is the `captain_picks` list already sliced so `[0]` is the chosen pick (its runner-ups are the
+    alternatives); `team_names` maps a team short code → a friendly name ("MUN" → "Man Utd"). Pure/empty-safe.
+    """
+    if not ranked:
+        return "No captain candidates — run `refresh` first."
+    top = ranked[0]
+    team = (team_names or {}).get(top.get("team"), top.get("team") or "")
+    lines = ["Captain Pick"]
+    if scope:
+        lines.append(scope)
+    lines += [
+        "",
+        f"🥇 {top['web_name']}",
+        f"{team} · {top.get('position') or ''}",
+        f"Projected: {top['xp']:.1f} pts",
+    ]
+    if explanation is not None:
+        lines += ["", f"Confidence: {explanation.confidence}/100 ({explanation.band})"]
+        if explanation.reasons:
+            lines += ["", "Why", *[f"✓ {r}" for r in explanation.reasons]]
+        if explanation.risks:
+            lines += ["", "Risks", *[f"⚠ {r}" for r in explanation.risks]]
+    alternatives = ranked[1:3]
+    if alternatives:
+        lines += ["", "Alternatives"]
+        lines += [f"{_MEDALS[i + 1]} {a['web_name']} {a['xp']:.1f} pts"
+                  for i, a in enumerate(alternatives)]
+    lines += ["", MODEL_NOTE]
+    return "\n".join(lines)
 
 
 def _name(r) -> str:

@@ -49,14 +49,14 @@ def test_explain_captain_lists_grounded_reasons_and_risks():
     ex = explain_captain([top, runner], rows)
 
     why = " | ".join(ex.reasons)
-    assert "Highest projected points (6.0)" in why
-    assert "On penalties" in why and "Takes set-pieces" in why
-    assert "Expected to start" in why and "Template pick (48% owned)" in why
-    assert "Favourable fixture (HUL)" in why                    # difficulty 2
+    assert "Highest projected points" in why                   # US-277: no redundant number (it's on the card)
+    assert "Penalty taker" in why and "Set-piece involvement" in why
+    assert "Expected ~" in why and "Template pick (48% owned)" in why
+    assert "Strong fixture vs HUL" in why                       # difficulty 2
 
     risk = " | ".join(ex.risks)
-    assert "Away fixture (HUL)" in risk
-    assert "Narrow lead over Runner (+0.1)" in risk
+    assert "Away fixture" in risk
+    assert "Only +0.1 pts ahead of Runner" in risk
     assert ex.band == confidence_band(ex.confidence)
 
 

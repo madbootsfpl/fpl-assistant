@@ -6,7 +6,8 @@ Offline, plain dicts.
 """
 
 from src.analytics import captain_picks
-from src.ui.captain import render_captain_picks
+from src.analytics.explain import Explanation
+from src.ui.captain import render_captain_pick, render_captain_picks
 
 
 def _player(pid, pos, ppg, team_id=1, status="a", pens=None, chance=None, code=None):
@@ -74,6 +75,32 @@ def test_limit_is_respected():
     players = [_player(i, "MID", 10 - i) for i in range(1, 6)]
     picks = captain_picks(players, FIXTURES, limit=3)
     assert len(picks) == 3
+
+
+def test_render_captain_pick_is_the_structured_card():
+    # US-277 (ADR-089): the tester's "Captain Pick" mockup — medal · Team·Pos · Projected · Confidence ·
+    # Why · Risks · Alternatives 🥈🥉 · Model note. The friendly team name comes from the short-code map.
+    ranked = [
+        {"web_name": "B.Fernandes", "team": "MUN", "position": "MID", "xp": 5.9},
+        {"web_name": "Haaland", "team": "MCI", "position": "FWD", "xp": 5.7},
+        {"web_name": "Rice", "team": "ARS", "position": "MID", "xp": 4.5},
+    ]
+    ex = Explanation(reasons=["Highest projected points", "Penalty taker"],
+                     risks=["Away fixture", "Only +0.2 pts ahead of Haaland"], confidence=69, band="Medium")
+    out = render_captain_pick(ranked, ex, scope="all players", team_names={"MUN": "Man Utd"})
+    assert out.startswith("Captain Pick")
+    assert "🥇 B.Fernandes" in out and "Man Utd · MID" in out and "Projected: 5.9 pts" in out
+    assert "Confidence: 69/100 (Medium)" in out                 # clean line; the caveat is in the Model note
+    assert "Why\n✓ Highest projected points" in out and "Risks\n⚠ Away fixture" in out
+    assert "Alternatives\n🥈 Haaland 5.7 pts\n🥉 Rice 4.5 pts" in out
+    assert "Model note:" in out and out.count("🥇") == 1
+
+
+def test_render_captain_pick_is_empty_safe():
+    ex = Explanation(reasons=["Highest projected points"], risks=[], confidence=80, band="High")
+    solo = render_captain_pick([{"web_name": "Solo", "team": "ARS", "position": "FWD", "xp": 6.0}], ex)
+    assert "Alternatives" not in solo                           # no runner-ups → no Alternatives section
+    assert render_captain_pick([], None).startswith("No captain candidates")
 
 
 def test_render_shows_the_xmins_column_only_when_on():

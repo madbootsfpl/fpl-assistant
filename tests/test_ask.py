@@ -1006,7 +1006,8 @@ def test_ask_captain_explains_with_confidence_and_verifies():
     assert "Confidence:" in r.detail and "Why" in r.detail      # the grounded explanation block
     assert "confidence" in r.facts and "why" in r.facts         # the values are facts (so narration verifies)
     rendered = render_ask(r)
-    assert "✓" in rendered and "/ 100 ·" in rendered            # score + band shown
+    assert "✓" in rendered and "Captain Pick" in rendered       # US-277: the structured card
+    assert "Alternatives" in rendered and "Model note:" in rendered   # runner-ups + the honest footer
 
 
 # --- trends intent (Sprint 067) — community "trending" from free FPL crowd data --------------------

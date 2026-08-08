@@ -48,6 +48,7 @@ from src.fpl_rules import match_rules
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
+from src.ui.captain import render_captain_pick
 from src.ui.chips import render_chip_advice
 from src.ui.compare import render_compare
 from src.ui.explain import render_explanation
@@ -264,6 +265,7 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
     upcoming = store.get_upcoming_fixtures()
     history_by_code = store.get_history_by_code()
     baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
+    team_names = {t["short_name"]: t["name"] for t in store.get_teams()}   # "MUN" → "Man Utd" (US-277)
     scope = "all players"
     if squad_name:
         squad = _load_squad(squad_name, active_squad)
@@ -293,8 +295,13 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
         facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
         facts["why"] = "; ".join(explanation.reasons) or "none"
         facts["risk"] = "; ".join(explanation.risks) or "none noted"
-    detail = "\n".join([f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW", "",
-                        render_explanation(explanation)])   # self-contained block (scope + Why/Risk/Confidence)
+    # The structured Captain Pick card (US-277): medal · Team·Pos · Projected · Confidence · Why · Risks ·
+    # Alternatives · Model note. The scope line names a squad (all-players stays clean, like the mockup);
+    # a "next" follow-up (rank>0) is flagged.
+    scope_bits = [f"Option #{rank + 1}"] if rank else []
+    scope_bits.append(f"from {scope}" if squad_name else scope)   # "from squad 'X'" | "all players"
+    detail = render_captain_pick(picks[rank:], explanation, scope=" · ".join(scope_bits),
+                                 team_names=team_names)
     return {
         "detail": detail,   # shown with or without prose (the block is the truth)
         "headline": f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW",

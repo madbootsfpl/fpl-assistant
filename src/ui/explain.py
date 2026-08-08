@@ -6,6 +6,15 @@ challenge it. The confidence is a transparent heuristic (from the signals listed
 """
 
 
+# The honest attribution line closing an explained answer (ADR-089): the analytics decide, the LLM only
+# phrases — and the confidence is a heuristic, not a probability (the caveat folded in here, US-277/278).
+MODEL_NOTE = (
+    "Model note:\n"
+    "The recommendation is data-driven; AI explains the reasoning. "
+    "Confidence is a heuristic from the signals, not a probability."
+)
+
+
 def render_explanation(explanation) -> str:
     """`explanation` is an `analytics.Explanation`. One block: a Confidence line + Why (✓) / Risk (⚠) lists."""
     if explanation is None:
