@@ -1575,22 +1575,33 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
 
 
 _EXIT_WORDS = {"quit", "exit", "q", "bye", "done"}
+_RESET_WORDS = {"forget", "reset", "start over", "new chat", "forget it"}
 
 
-def chat_transcript(lines, *, store: Storage, narrator=llm.narrate, active_squad=None):
-    """Thread a `Context` across `lines`, yielding an AskResult per answered line (ADR-047).
+def is_reset(text: str) -> bool:
+    """True when a line asks to forget the conversation (ADR-091) — so `ask`/`chat` can clear the context."""
+    return (text or "").strip().lower() in _RESET_WORDS
 
-    The pure heart of the `chat` REPL: blank lines are skipped, an exit word stops the session,
-    and every other line is a conversational turn whose context carries to the next. Kept free of
-    I/O (input/print) so it's unit-tested with a list of lines and a fake narrator.
+
+def chat_transcript(lines, *, store: Storage, narrator=llm.narrate, active_squad=None, context=None):
+    """Thread a `Context` across `lines`, yielding `(AskResult, context)` per answered line (ADR-047).
+
+    The pure heart of the `chat` REPL: blank lines are skipped, an exit word stops the session, a
+    reset word ("forget") drops the context, and every other line is a conversational turn whose
+    context carries to the next. `context` seeds the thread so a **saved** context resumes a chat
+    (ADR-091). Kept free of I/O (input/print) so it's unit-tested with a list of lines; the caller
+    persists the yielded context.
     """
-    context = None
     for line in lines:
         text = line.strip()
         if text.lower() in _EXIT_WORDS:
             return
         if not text:
             continue
+        if is_reset(text):
+            context = None
+            yield AskResult(text, None, message="Okay — I've forgotten the last turn. Ask me anything."), None
+            continue
         result, context = converse(text, context, store=store, narrator=narrator,
                                    active_squad=active_squad)
-        yield result
+        yield result, context

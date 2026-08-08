@@ -4,11 +4,14 @@ These check that commands and options are parsed into the right shape and routed
 to the right handler — no database or network involved.
 """
 
+from types import SimpleNamespace
+
 import pytest
 
 from src.cli import (
     build_parser,
     cmd_analyse,
+    cmd_ask,
     cmd_captain,
     cmd_chat,
     cmd_fdr,
@@ -29,6 +32,36 @@ from src.cli import (
 def test_chat_command_parses_with_no_args():
     args = build_parser().parse_args(["chat"])       # an interactive REPL — no positional/flags
     assert args.command == "chat" and args.handler is cmd_chat
+
+
+def test_ask_parses_the_forget_flag():
+    args = build_parser().parse_args(["ask", "why?", "--forget"])
+    assert args.command == "ask" and args.handler is cmd_ask and args.forget is True
+
+
+def test_ask_remembers_the_last_turn_across_runs(capsys, monkeypatch, tmp_path):
+    # ADR-091: two separate `ask` invocations — the second ("why?") builds on the first via the persisted
+    # context (a real DB run; skip cleanly if the seed has no players).
+    from src import chat_context, config
+    from src.storage import Storage
+
+    store = Storage()
+    try:
+        has_players = bool(store.get_players())
+    finally:
+        store.close()
+    if not has_players:
+        return
+
+    monkeypatch.setattr(config, "CHAT_CONTEXT_PATH", str(tmp_path / "chat_context.json"))
+    cmd_ask(SimpleNamespace(question="who should I captain from all players?", forget=False))
+    capsys.readouterr()                                          # drop the first answer
+    cmd_ask(SimpleNamespace(question="why?", forget=False))      # a separate run
+    out = capsys.readouterr().out
+    assert "Ask a question first" not in out and "captain" in out.lower()   # resolved, not the no-context nudge
+
+    cmd_ask(SimpleNamespace(question="forget", forget=False))   # the reset word clears the file
+    assert chat_context.load_context() is None
 
 
 def test_reseed_command_routes_to_its_handler():

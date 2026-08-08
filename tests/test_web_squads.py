@@ -212,3 +212,16 @@ def test_web_edges_never_call_squadstore_save():
     for edge in ("web", "web_streamlit"):
         for path in (_ROOT / "src" / edge).rglob("*.py"):
             assert ".save(" not in path.read_text(), f"{path} must not write via SquadStore.save"
+
+
+def test_web_edges_never_persist_chat_context():
+    # ADR-091: the persisted chat context is local, single-user CLI state — the multi-user web keeps
+    # per-session st.session_state (a key it happens to name "chat_context") and must never import or call
+    # the shared-file store. Scan for the module import + its calls, not the session_state key.
+    for edge in ("web", "web_streamlit"):
+        for path in (_ROOT / "src" / edge).rglob("*.py"):
+            text = path.read_text()
+            assert "import chat_context" not in text and "from src.chat_context" not in text, \
+                f"{path} must not import the CLI chat_context store"
+            for call in ("chat_context.save_context", "chat_context.load_context", "chat_context.clear_context"):
+                assert call not in text, f"{path} must not persist chat context ({call})"

@@ -940,11 +940,26 @@ def test_chat_transcript_threads_context_and_stops_at_quit(monkeypatch):
 
     monkeypatch.setattr(ask, "converse", fake_converse)
     lines = ["who should I captain?", "", "  ", "why?", "quit", "never reached"]
-    results = list(ask.chat_transcript(lines, store=object(), narrator=lambda p: None))
+    turns = list(ask.chat_transcript(lines, store=object(), narrator=lambda p: None))
 
-    assert [r.headline for r in results] == ["ans:who should I captain?", "ans:why?"]
+    assert [r.headline for r, _ctx in turns] == ["ans:who should I captain?", "ans:why?"]   # yields (result, ctx)
+    assert [ctx for _r, ctx in turns] == ["ctx-after-who should I captain?", "ctx-after-why?"]  # ctx for persisting
     assert seen == [("who should I captain?", None),        # first turn starts with no context…
                     ("why?", "ctx-after-who should I captain?")]   # …then the last turn's context
+
+
+def test_chat_transcript_resumes_a_seeded_context_and_forget_resets(monkeypatch):
+    # ADR-091: a saved context seeds the thread (resume across runs); "forget" drops it (yields None context).
+    def fake_converse(q, ctx, *, store, narrator=None, active_squad=None):
+        return AskResult(q, "x", headline=f"ans:{q}"), f"ctx-after-{q}"
+
+    monkeypatch.setattr(ask, "converse", fake_converse)
+    turns = list(ask.chat_transcript(["why?", "forget", "who's the best?"], store=object(),
+                                     context="resumed-ctx"))
+    # the first turn builds on the seeded context; "forget" yields a None context; the next starts fresh
+    assert turns[0][0].headline == "ans:why?"
+    assert turns[1][1] is None and "forgotten" in turns[1][0].message
+    assert turns[2][0].headline == "ans:who's the best?"
 
 
 # --- Sprint 066: `ask` sees the session active squad (Feedback_Log — the web Ask bug) ---------------

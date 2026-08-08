@@ -72,6 +72,11 @@ CLUBELO_TIMEOUT = 5
 # **demo** squads (seed_squads.json) so the web pages have a squad to show (ADR-054).
 SQUADS_PATH = "data/squads.json" if os.path.exists("data/squads.json") else "data/seed_squads.json"
 
+# Where the CLI persists the last conversational turn (ADR-091) so a follow-up ("why?", "and the next?") works
+# across separate `ask`/`chat` runs. Local, single-user, git-ignored (data/*.json). The multi-user web never
+# writes it — it keeps per-session `st.session_state`.
+CHAT_CONTEXT_PATH = "data/chat_context.json"
+
 # The FPL API can reject requests that don't look like they came from a browser,
 # so we send a simple, honest User-Agent that identifies this project.
 USER_AGENT = "fpl-assistant/0.1 (learning project)"

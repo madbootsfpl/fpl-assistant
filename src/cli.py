@@ -11,7 +11,7 @@ See ADR-003 for why this is argparse + subcommands.
 import argparse
 import shutil
 
-from src import ask, config, ingest
+from src import ask, chat_context, config, ingest
 from src.analytics import (
     DEFAULT_BUDGET,
     FULL_BUDGET,
@@ -499,9 +499,23 @@ def cmd_ask(args) -> None:
     """Answer a natural-language question, grounded in the analytics (ADR-034).
 
     The analytics decide; a local LLM only narrates. Works without the LLM (degrades to the
-    decision + facts).
+    decision + facts). The last turn is remembered across runs (ADR-091), so a follow-up
+    ("why?", "and the next?") works even as a separate `ask` command; `--forget` (or asking
+    "forget"/"reset") clears it.
     """
-    print(render_ask(ask.answer(args.question)))
+    if getattr(args, "forget", False) or ask.is_reset(args.question):
+        chat_context.clear_context()
+        print("Okay — I've forgotten the last turn." if ask.is_reset(args.question)
+              else "Conversation memory cleared.")
+        if ask.is_reset(args.question):
+            return
+    store = Storage()
+    try:
+        result, new_ctx = ask.converse(args.question, chat_context.load_context(), store=store)
+    finally:
+        store.close()
+    chat_context.save_context(new_ctx)          # local, single-user (ADR-091); the web never persists
+    print(render_ask(result))
 
 
 def _prompt_lines(prompt: str = "\n> "):
@@ -522,11 +536,14 @@ def cmd_chat(args) -> None:
     defenders?" build on it. Degrades without the LLM, exactly like `ask`.
     """
     store = Storage()
+    resumed = chat_context.load_context()       # resume the last turn across runs (ADR-091)
     print('Chat with your FPL assistant. Ask a question, then follow up — "why?", "and the second '
-          'best?", "what about defenders?". Type "quit" (or Ctrl-D) to exit.')
+          'best?", "what about defenders?". Type "forget" to start over, "quit" (or Ctrl-D) to exit.'
+          + ("  (Resuming your last conversation.)" if resumed else ""))
     try:
-        for result in ask.chat_transcript(_prompt_lines(), store=store):
+        for result, ctx in ask.chat_transcript(_prompt_lines(), store=store, context=resumed):
             print(render_ask(result))
+            chat_context.save_context(ctx)      # persist each turn (None after a "forget" → clears)
     finally:
         store.close()
 
@@ -736,6 +753,8 @@ def build_parser() -> argparse.ArgumentParser:
         "ask", help="Ask a natural-language question, grounded in the analytics (local LLM)"
     )
     p_ask.add_argument("question", help='e.g. "who should I captain from my-team?"')
+    p_ask.add_argument("--forget", action="store_true",
+                       help="Clear the remembered conversation before answering (ADR-091)")
     p_ask.set_defaults(handler=cmd_ask)
 
     p_chat = sub.add_parser(
