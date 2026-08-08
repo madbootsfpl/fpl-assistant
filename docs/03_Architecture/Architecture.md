@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 106 (2026-08-08)** — *Explainability for the AI Tips gameweek plan* (extends **ADR-089**; owner
+  request) — the last major decision to get it. **US-273:** `gameweek_plan` runs the captain with `limit=3` and
+  returns `captain_ranked` (additive) so the captain explanation has a runner-up. `analytics/explain.py::
+  explain_gameweek(plan, players_by_id, xp_by_id, *, horizon)` → `{captain, transfer, lineup, overall}` —
+  **reuses** `explain_captain` (on `captain_ranked`) + `explain_transfer` (on the plan's move + the buy's row),
+  adds a grounded lineup rationale (*"Start X over Y — higher projected xP: a vs b"*). `ui/gameweek.py::
+  render_gameweek_plan(explanation=…)` appends `· Confidence NN/100 · Band` + a compact Why to the captain +
+  transfer lines and the lineup line. **US-274:** `gameweek_confidence(captain_conf, n_flags)` (captain-driven,
+  −8 per flagged player) + an **overall** `Explanation` (Why = clear captain / a positive-gain upgrade / lineup
+  tweaks / no-change; Risk = the flagged players); `render_gameweek_plan` prepends it as a top-of-plan
+  Confidence · Why · Risk block, and `_decide_gameweek` puts confidence/why/risk into `facts` so a narrated
+  number verifies (ADR-037). `explain_captain`/`explain_gameweek` hardened to tolerate a missing id. Mostly
+  reuse — no new heuristics beyond the plan-level confidence; no engine change; the web AI Tips view inherits it
+  (routes through `ask.answer`). +2 tests. **Explainability now covers every decision the tester named.**
 - **Sprint 105 (2026-08-07)** — *Explainability for squad-build & chips* (extends **ADR-089**; owner request).
   **US-271:** `analytics/explain.py` — `squad_confidence(xi_reliability, spent_fraction)` (documented:
   `100·(0.7·reliability + 0.3·spent)`) + `explain_squad(selected, xp_by_id, weight_by_id, *, budget, xi_ids,

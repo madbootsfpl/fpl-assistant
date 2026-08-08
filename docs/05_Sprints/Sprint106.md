@@ -1,7 +1,7 @@
 # Sprint 106: Explainability for the AI Tips gameweek plan
 
 **Dates:** 2026-08-07 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (reuse the explain framework for a composite decision)
 **Carried Over:** none
 
@@ -132,4 +132,34 @@ signals (form/news) enrich it at GW1; a richer web-native render.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **705 → 707** (+2 explain tests, +2 assertions);
+ruff clean; CI-parity green. **No new ADR** (extends ADR-089). No engine change (one additive captain-limit
+tweak + reuse).
+
+**Delivered**
+- **US-273 — per-recommendation.** `explain_gameweek` reuses `explain_captain` + `explain_transfer` on the
+  plan's own picks, adds a grounded lineup rationale; the plan lines gain a Confidence + a compact Why.
+- **US-274 — plan-level.** A `gameweek_confidence` (captain-driven, tempered by flags) + a top-of-plan
+  Confidence · Why · Risk; facts wired so narration verifies.
+
+**What went well**
+- **The composite was mostly reuse.** The plan's two big levers already had explanations — `explain_gameweek`
+  is a thin orchestration (captain + transfer explanations + a lineup rationale + an overall read), so this was
+  a small, low-risk sprint that *finished* the explainability rollout.
+- **The flags were already the risks.** The plan surfaces doubtful/unavailable players; framing them as the
+  week's ⚠ Risk needed no new data — the explanation just points at what the plan already shows.
+- **Hardening fell out.** A stubbed test plan (captain/transfer dicts without ids) exposed that `explain_*`
+  assumed an id; making them tolerate a missing id is honest empty-safety for real edge cases too.
+- **Grounding held across a composite** — every confidence + reason is data; the narration still verifies ✓.
+
+**Watch-outs / follow-ups**
+- **Two confidences on screen** (the plan's overall + the captain's) — deliberate: the captain drives the week,
+  so its number both stands alone and feeds the overall; the copy makes the relationship clear ("clear captain:
+  X (69/100)").
+- **Deferred:** a confidence on the lineup change itself (the one-line rationale is enough); the gated "why"
+  signals (form/news) enrich it at GW1; a richer web-native render.
+
+**Milestone:** explainability now covers **every decision** the tester's model named — captain · transfer ·
+squad-build · chips · the AI Tips gameweek plan.
+
+See `Sprint106_Lessons_Learnt.md` for the detailed retro.
