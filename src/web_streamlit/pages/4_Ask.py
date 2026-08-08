@@ -77,11 +77,14 @@ for question, answer in st.session_state.history:
     st.chat_message("assistant").code(answer, language=None, wrap_lines=True)
 
 # Nudge the newest answer into view — the app runs in an iframe with same-origin access, so scroll the parent
-# to the bottom after the history renders (US-275). A no-op / invisible when there's no history.
+# to the bottom after the history renders (US-275). The `/*turn N*/` token makes the script **unique per turn**
+# so Streamlit re-renders it and the scroll re-runs every answer — including the example-button path, which
+# doesn't get chat_input's native scroll (US-283, tester feedback). A no-op / invisible when there's no history.
 if st.session_state.history:
+    _turn = len(st.session_state.history)
     st.iframe(
-        "<script>setTimeout(function(){try{var w=window.parent;"
-        "w.scrollTo({top:w.document.body.scrollHeight,behavior:'smooth'});}catch(e){}}, 120);</script>",
+        "<script>/*turn " + str(_turn) + "*/setTimeout(function(){try{var w=window.parent;"
+        "w.scrollTo({top:w.document.body.scrollHeight,behavior:'smooth'});}catch(e){}}, 150);</script>",
         height=1,
     )
 

@@ -48,5 +48,15 @@ def test_rules_topics_are_unique():
     assert len(topics) == len(set(topics))       # no duplicate topic ids
 
 
+def test_render_rules_bullets_a_multi_item_fact():
+    # US-283 (tester feedback): a list fact (chips) reads item-per-line; a single-concept fact is one bullet.
+    from src.ui.rules import render_rules
+    chips = render_rules(match_rules("how does bench boost work?"))
+    assert chips.startswith("FPL rules") and "Chips:" in chips
+    for chip in ("Wildcard", "Free Hit", "Bench Boost", "Triple Captain"):
+        assert f"• {chip}" in chips                              # each chip on its own bullet line
+    assert render_rules(match_rules("when is the deadline?")).count("•") == 1   # single fact → one bullet
+
+
 def test_every_rule_has_a_nonempty_fact():
     assert RULES and all(e["topic"] and e["cues"] and e["fact"].strip() for e in RULES)

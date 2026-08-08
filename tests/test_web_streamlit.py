@@ -919,6 +919,17 @@ def test_ask_page_example_prompts_are_clickable():
     assert at.get("code")[0].wrap_lines is True             # US-275: the answer wraps (readable sentences)
 
 
+def test_ask_scroll_nudge_is_unique_per_turn():
+    # US-283 (tester feedback): the scroll nudge must re-fire each answer (so an example click scrolls too), so
+    # its script carries the turn count — Streamlit only re-runs a component when its inputs change.
+    at = AppTest.from_file(str(_PAGES / "4_Ask.py"), default_timeout=30).run()
+    at.chat_input[0].set_value("how does bench boost work?").run()
+    first = at.get("iframe")[-1].proto.srcdoc
+    at.chat_input[0].set_value("how do transfers work?").run()
+    second = at.get("iframe")[-1].proto.srcdoc
+    assert "/*turn 1*/" in first and "/*turn 2*/" in second and first != second   # unique → re-renders/re-runs
+
+
 def test_ask_page_example_prompts_name_the_loaded_squad():
     # US-280: with a squad loaded, the example buttons read its real name (so "my-team" → your squad and the
     # click scopes correctly), instead of the literal "my-team".

@@ -15,17 +15,19 @@ RULES = [
         "topic": "scoring",
         "cues": ("points for", "how many points", "scoring", "points scored", "points system",
                  "worth how many", "goal worth", "assist worth"),
-        "fact": ("Scoring: playing up to 60 minutes = 1 point, 60+ minutes = 2. A goal is worth 6 (GK/DEF), "
-                 "5 (MID) or 4 (FWD); an assist is 3. A yellow card is −1, a red −3, an own goal −2, a missed "
-                 "penalty −2."),
+        "fact": ("Scoring:\n"
+                 "  • Appearance: 1 point up to 60 minutes, 2 points for 60+.\n"
+                 "  • Goal: 6 (GK/DEF), 5 (MID), 4 (FWD); an assist is 3.\n"
+                 "  • Cards: yellow −1, red −3; own goal −2; missed penalty −2."),
     },
     {
         "topic": "clean_sheets",
         "cues": ("clean sheet", "cleansheet", "goals conceded", "saves", "penalty save", "keeper points",
                  "goalkeeper points"),
-        "fact": ("Clean sheets & keepers: a clean sheet is 4 points for a GK/DEF and 1 for a MID (0 for a "
-                 "FWD), only if the player plays 60+ minutes. A GK gets 1 point per 3 saves and 5 for a "
-                 "penalty save. GK/DEF lose 1 point for every 2 goals their team concedes."),
+        "fact": ("Clean sheets & keepers:\n"
+                 "  • Clean sheet: 4 points (GK/DEF), 1 (MID), 0 (FWD) — only with 60+ minutes played.\n"
+                 "  • Goalkeeper: 1 point per 3 saves; 5 points for a penalty save.\n"
+                 "  • GK/DEF lose 1 point for every 2 goals their team concedes."),
     },
     {
         "topic": "bonus",
@@ -46,10 +48,12 @@ RULES = [
         "topic": "chips",
         "cues": ("chip", "wildcard", "free hit", "bench boost", "triple captain", "how do chips",
                  "how does the wildcard", "which chips"),
-        "fact": ("Chips: Wildcard = unlimited free transfers this gameweek, kept permanently. Free Hit = "
-                 "unlimited transfers for one gameweek only, then your squad reverts. Bench Boost = your "
-                 "bench's points count this gameweek. Triple Captain = your captain scores 3× instead of 2×. "
-                 "Each chip can be used once per half of the season (a fresh set unlocks around gameweek 20)."),
+        "fact": ("Chips:\n"
+                 "  • Wildcard = unlimited free transfers this gameweek, kept permanently.\n"
+                 "  • Free Hit = unlimited transfers for one gameweek only, then your squad reverts.\n"
+                 "  • Bench Boost = your bench's points count this gameweek.\n"
+                 "  • Triple Captain = your captain scores 3× instead of 2×.\n"
+                 "  Each chip is used once per half of the season (a fresh set unlocks around gameweek 20)."),
     },
     {
         "topic": "transfers",
@@ -153,9 +157,10 @@ RULES = [
         "topic": "leagues",
         "cues": ("mini league", "mini-league", "classic league", "head to head", "head-to-head", "h2h",
                  "how do leagues", "league scoring", "join a league"),
-        "fact": ("Leagues: a Classic league ranks managers by total points (you can join any time and are "
-                 "scored from the gameweek you join). A Head-to-Head league pits two managers' gameweek scores "
-                 "against each other — 3 points for a win, 1 for a draw, 0 for a loss."),
+        "fact": ("Leagues:\n"
+                 "  • Classic: ranked by total points — join any time, scored from the gameweek you join.\n"
+                 "  • Head-to-Head: two managers' gameweek scores compared — 3 points for a win, 1 a draw, "
+                 "0 a loss."),
     },
     {
         "topic": "ranking",
