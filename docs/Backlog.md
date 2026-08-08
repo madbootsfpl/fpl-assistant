@@ -31,10 +31,15 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   reductions + `best_legal_xi`) → a grounded `chips` `ask`/`chat` intent + a Squads **"Chips"** view. *Still
   deferred:* **DGW/BGW** detection (in-season — every GW has 10 fixtures preseason) + **mini-league position**
   (leagues API, GW1); a season-long scan; a standalone CLI `chips` command.
-- ◑ **Price Change Predictor** — an indicator flagging players about to **rise/fall** in value, to time
-  transfers. *Data:* `transfers_in/out_event` + `cost_change_event/start` already ingested, **but net
-  transfers are 0 preseason** → the predictor lights up at **GW1**. Plumbing buildable now (a directional
-  **flag, not truth**), dormant like the Data-Hardening prep (ADR-060).
+- ✅ **DONE (Sprint 112, US-285/286, ADR-092)** — **Price Change Predictor** — an indicator flagging players
+  about to **rise/fall** in value, to time transfers. Delivered: `analytics/price.py::price_pressure` =
+  `net_transfers ÷ selected_by%` (ownership-normalised → comparable; the constant total-manager count cancels,
+  so no new ingest), `price_prediction` (rise/fall/stable), `price_flag` (🔺/🔻, distinct from the retrospective
+  💰/💸); a **Price** column on the Pool + a **My Squad** transfer-timing nudge, with an honest "live from GW1"
+  caption. A directional **flag, not truth**; a **lens** (never `decision_xp` — an invariance test pins it);
+  **0 preseason → live at GW1**. *Still open at GW1:* calibrate the thresholds on real net transfers; an
+  absolute "% to the next change" (needs `total_players` + a since-last-change counter); a CLI column + an
+  `ask` "who's about to rise?" intent.
 
 ## Enhancements
 

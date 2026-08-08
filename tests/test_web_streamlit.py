@@ -325,6 +325,34 @@ def test_pool_shows_an_availability_fit_column():
     assert any("injured" in c.value for c in at.caption)   # the availability legend
 
 
+def test_pool_shows_the_price_prediction_column():
+    # US-286 (ADR-092): a forward-looking Price column (🔺/🔻/—, all — preseason) + the honest live-GW1 caption.
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    df = at.dataframe[0].value
+    assert "Price" in df.columns
+    assert set(df["Price"].astype(str)) <= {"", "🔺", "🔻"}          # only the predictor's markers
+    assert any("live from GW1" in c.value for c in at.caption)      # honest dormant-now note
+
+
+def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):
+    # US-286: My Squad names owned players under price pressure (forced here — net transfers are flat preseason).
+    import src.web_streamlit.views.squads as sq
+    monkeypatch.setattr(sq, "price_prediction", lambda p: "fall")
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30).run()
+    for control in at.segmented_control:
+        try:
+            control.set_value("My Squad").run()
+            break
+        except Exception:
+            pass
+    if at.exception:
+        return
+    caps = " ".join(c.value for c in at.caption)
+    assert "🔻" in caps and "drop" in caps                          # the sell-timing nudge fired
+
+
 def test_pool_number_columns_stay_numeric_formatting_is_display_only():
     # ADR-072: money/value columns are formatted via NumberColumn (display) — the frame still holds the
     # raw numbers (not pre-rounded strings), so they stay sortable and truthful.

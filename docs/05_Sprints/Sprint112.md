@@ -1,7 +1,7 @@
 # Sprint 112: Price Change Predictor (a directional lens, wired dormant → live GW1)
 
 **Dates:** 2026-08-13 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a small analytics lens + presentation — no xP change)
 **Carried Over:** none
 
@@ -38,18 +38,18 @@ the Players pool and My Squad to help **time transfers**, built wired-but-dorman
 Display/analytics-lens only; the engine + xP untouched.
 
 #### Success Criteria
-- [ ] **US-285 (price-pressure engine)** — a pure `analytics/price.py`: `price_pressure(player)` =
+- [x] **US-285 (price-pressure engine)** — a pure `analytics/price.py`: `price_pressure(player)` =
       **net transfers ÷ ownership%** (signed; `None` when either is absent; **0 preseason**); `price_prediction`
       → **rise / fall / stable** via tunable `config` thresholds (GW1-calibrated); a `price_flag` display helper
       (a **distinct** rise/fall marker, not the retrospective 💰/💸). Reuses `net_transfers`; `decision_xp`
       **unchanged** (an invariance test pins it).
-- [ ] **US-286 (surface it)** — a **Price** prediction column on the **Players Pool** (🔺 rising / 🔻 falling /
+- [x] **US-286 (surface it)** — a **Price** prediction column on the **Players Pool** (🔺 rising / 🔻 falling /
       — stable + a `PRICE_LEGEND` + an honest *"directional pressure from net transfers — a flag, not the exact
       price/timing; live from GW1"* caption); and on **My Squad** a **transfer-timing nudge** naming owned
       players **likely to fall** (*consider selling before the drop*) or **rise** (*hold / buy now*). Display
       only; no server writes.
-- [ ] **No drift** — a lens only; `decision_xp`/the analytics unchanged; preseason it reads all *stable*/"—"
-      with the live-GW1 note; existing **730** stay green (+ new price tests); ruff clean.
+- [x] **No drift** — a lens only; `decision_xp`/the analytics unchanged; preseason it reads all *stable*/"—"
+      with the live-GW1 note; **737** green (730 → +7: 5 price-engine + Pool column + My Squad nudge); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help, ADR index (a short **ADR-092** for the
       predictor — agreed at the gate).
 
@@ -92,8 +92,8 @@ bootstrap); a CLI column; a price-move backtest (Tier-3, post-GW1); an `ask` "wh
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-285 | **Price-pressure engine** — `price_pressure`/`price_prediction`/`price_flag` (net ÷ ownership; dormant → GW1); xP untouched (ADR-092). | High | ⬜ To do | ~½ session |
-| US-286 | **Surface the prediction** — a Price column on the Pool + a My Squad sell/hold nudge; legend + live-GW1 caption. | High | ⬜ To do | ~½ session |
+| US-285 | **Price-pressure engine** — `price_pressure`/`price_prediction`/`price_flag` (net ÷ ownership; dormant → GW1); xP untouched (ADR-092). | High | ✅ Done | ~½ session |
+| US-286 | **Surface the prediction** — a Price column on the Pool + a My Squad sell/hold nudge; legend + live-GW1 caption. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -129,10 +129,51 @@ bootstrap); a CLI column; a price-move backtest (Tier-3, post-GW1); an `ask` "wh
 - **Tests (+5):** pressure = net÷own (signed, `None`-safe, 0 flat); prediction thresholds; flag mapping (+
   distinct from 💰/💸); the xP invariance. **735** green, ruff clean.
 
-_(US-286 next — "start US-286".)_
+**US-286 — surface the prediction.** ✅ Done.
+- **Players Pool:** a new **"Price"** column (`price_flag` → 🔺 rising / 🔻 falling / — stable) between Own% and
+  Form, with the `PRICE_LEGEND` as its tooltip **and** a caption — honest that it's *directional pressure, a
+  flag not the exact price/timing; live from GW1*. Distinct from the retrospective crowd 💰↑/💸↓ in Trends.
+- **My Squad:** a **transfer-timing nudge** after the who's-flagged line — names owned players predicted to
+  **fall** (*sell before the change to keep value*) or **rise** (*hold, or buy now*); preseason (flat net
+  transfers) it shows the honest dormant note *"💷 No price moves flagged … live from GW1."*
+- **Display-only** — reuses the US-285 engine; no server writes (the read-only guardrail holds); the Pool's
+  numeric columns + the other flags are unchanged.
+- **Tests (+2):** the Pool has a Price column (only 🔺/🔻/"" markers, all "—" preseason) + the live-GW1 caption;
+  My Squad's nudge lists a 🔻 player under forced pressure. **737** green, ruff clean.
+- **Manual smoke:** Players → Pool shows the Price column + the live-GW1 caption (all stable now); My Squad
+  shows the dormant price note; a forced-pressure player reads 🔺/🔻.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **730 → 737** (+7: 5 price-engine + a Pool column + a
+My Squad nudge). Ruff clean; CI-parity green. **New ADR-092** (price-change predictor). No analytics change —
+a display/analytics **lens**; a `decision_xp` invariance test pins it.
+
+**Delivered**
+- **US-285 — price-pressure engine (ADR-092).** `analytics/price.py`: `price_pressure` (net ÷ ownership%),
+  `price_prediction` (rise/fall/stable), `price_flag` (🔺/🔻) — wired dormant (0 preseason → live GW1), never xP.
+- **US-286 — surface it.** A **Price** column on the Players Pool + a **transfer-timing nudge** on My Squad,
+  with an honest "live from GW1" caption; display-only.
+
+**What went well**
+- **The maths cancelled the missing data.** FPL's price threshold scales with ownership, so `net ÷ selected_by%`
+  makes players comparable **and** the (unavailable) total-manager count cancels for direction + relative
+  magnitude — so a principled signal needed *no* new ingest, no `total_players`, no since-last-change counter.
+- **Honest about the limits.** It's framed as *directional pressure — a flag, not the exact price/timing*, with
+  a "live from GW1" caption and a distinct 🔺/🔻 (vs the retrospective 💰/💸) — no false precision.
+- **The lens invariant held.** The predictor reads the same transfer fields the crowd lens does, and the
+  `decision_xp` invariance test (force 5M net-in → 🔺 fires, xP identical) proves it never leaks into the
+  recommendations.
+- **Dormant-but-visible.** Preseason it reads all "—"/stable, but the Pool column + legend and the My Squad
+  dormant note make the feature discoverable now and a switch-flip at GW1 (raise/calibrate the thresholds).
+
+**Watch-outs / follow-ups**
+- **Thresholds are uncalibrated placeholders** (`PRICE_RISE/FALL_PRESSURE` = 20k net per 1% owned) — chosen so
+  nothing fires on flat data; **calibrate on real net transfers at GW1** (like `TRENDING_NET`/`FORM_WEIGHT`).
+- **No absolute "% to the next change"** — that needs `total_players` + a since-last-change counter (neither in
+  bootstrap); the v0 gives direction + relative magnitude only. A GW1/Tier-3 refinement.
+- **Deferred:** a CLI Price column; an `ask` "who's about to rise?" intent; a price-move backtest post-GW1.
+
+See `Sprint112_Lessons_Learnt.md` for the detailed retro.

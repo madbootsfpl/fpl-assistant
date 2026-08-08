@@ -194,7 +194,8 @@ just another way to look at it. Two edges, both reusing the exact same engine:
 ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs** (incl. a beta 📣 Feedback tab); the two consolidated tabs switch views with a lazy segmented control:
 - **Players** — a **Team · Position · Player** filter over the **Pool** (photos, falling back to the **club
   shirt** when a player has none; the **table first**, a
-  top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag) plus stat views: **Set pieces**
+  top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag; a **🔺/🔻 Price** change predictor
+  — directional pressure from net transfers, live from GW1) plus stat views: **Set pieces**
   (who takes **penalties · corners · free-kicks** + Own%/Val/£m — a low-ownership **differential** lens) ·
   **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date; clean sheets & xG carry a
   relative **🟢…🔴 quality rating** vs the players shown; every table has a **Fit** availability column —

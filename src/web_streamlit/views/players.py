@@ -11,12 +11,14 @@ import streamlit as st
 from src.analytics import (
     AVAILABILITY_LEGEND,
     CROWD_LEGEND,
+    PRICE_LEGEND,
     SET_PIECE_LEGEND,
     crowd_flags,
     defcon_reliability,
     defensive_solidity,
     fit_flag,
     over_under,
+    price_flag,
     rank_players,
     set_piece_flags,
 )
@@ -55,14 +57,15 @@ def render_pool(rows, sel, photos, badges):
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
               "Fit": fit_flag(p),
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
-              "Own%": p["selected_by"], "Form": p.get("form"), "ICT": p.get("ict_index"),
-              "Set": " ".join(set_piece_flags(p)),
+              "Own%": p["selected_by"], "Price": price_flag(p), "Form": p.get("form"),
+              "ICT": p.get("ict_index"), "Set": " ".join(set_piece_flags(p)),
               "Trends": " ".join(crowd_flags(p))} for p in page]
     st.dataframe(table, width="stretch", hide_index=True,
                  column_config=column_config(table[0] if table else [],
                                              help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND,
-                                                   "Trends": CROWD_LEGEND}))
+                                                   "Price": PRICE_LEGEND, "Trends": CROWD_LEGEND}))
     st.caption(AVAILABILITY_LEGEND)
+    st.caption(PRICE_LEGEND)
     st.caption(CROWD_LEGEND)
     by_value = sort == "value"
     field, bar_label = ("value", "Val/£m") if by_value else ("total_points", "Pts")

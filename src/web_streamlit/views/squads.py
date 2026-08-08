@@ -31,6 +31,7 @@ from src.analytics import (
     legal_xi_issues,
     minutes_weight_from_history,
     objective_scores,
+    price_prediction,
     select_squad,
     set_piece_flags,
     squad_15_issues,
@@ -323,6 +324,19 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                    + " — see the **News** tab for detail.")
     else:
         st.caption("✓ All 15 available.")
+
+    # Price timing (US-286, ADR-092) — flag owned players under buying/selling pressure, to time transfers.
+    falling = [p["web_name"] for p in owned if price_prediction(p) == "fall"]
+    rising = [p["web_name"] for p in owned if price_prediction(p) == "rise"]
+    if falling or rising:
+        bits = []
+        if falling:
+            bits.append("🔻 may **drop** (sell before the change to keep value): " + ", ".join(falling))
+        if rising:
+            bits.append("🔺 **rising** (hold, or buy now): " + ", ".join(rising))
+        st.caption(" · ".join(bits) + " — directional pressure from net transfers, not exact timing.")
+    else:
+        st.caption("💷 No price moves flagged (net transfers are flat preseason — live from GW1).")
 
     # Bench order (US-242/244/246) — the auto-sub priority (the stored order, ADR-079), reorderable (⬆/⬇).
     bench_ordered = [by_id[i] for i in (squad.get("bench_ids") or []) if i in by_id]

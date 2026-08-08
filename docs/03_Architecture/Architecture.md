@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 112 (2026-08-13)** — *Price Change Predictor (a directional lens, wired dormant → GW1)* (owner
+  intake; **ADR-092**, a display/analytics lens — never xP). **US-285:** a pure `analytics/price.py`:
+  `price_pressure(player)` = `net_transfers(player) ÷ selected_by%` (signed; `None` when either is absent; **0**
+  on flat preseason data), `price_prediction` → rise/fall/stable via module thresholds
+  `PRICE_RISE_PRESSURE`/`PRICE_FALL_PRESSURE` (calibrated at GW1), and `price_flag` → 🔺/🔻/"" (a **distinct
+  forward-looking** marker, not the retrospective crowd 💰↑/💸↓ which reads `cost_change_event`). Dividing by
+  ownership makes players comparable **and** the constant total-manager count cancels for direction + relative
+  magnitude, so no `total_players`/ingest/schema change is needed (an absolute "% to change" would need it — a
+  GW1 refinement). Reuses `net_transfers`; exported from `analytics`. A `decision_xp` **invariance** test (force
+  5M net-in → 🔺 fires) shows xP is identical — the lens never leaks into the recommendations. **US-286:** a
+  **Price** column on the Players Pool (`views/players.py`, via `price_flag`) with `PRICE_LEGEND` (tooltip +
+  caption) + an honest "live from GW1" note, and a My Squad transfer-timing **nudge** (`views/squads.py`) naming
+  owned players predicted to fall (*sell before the change*) / rise (*hold, or buy now*), with a dormant note
+  preseason. Display-only; the read-only web guardrail holds. +7 tests (737).
 - **Sprint 111 (2026-08-12)** — *Ask tab polish: readable rules, reliable scroll, an explained "worth"* (tester
   feedback; display/explainability, extends ADR-085/052/089/061; no analytics change). **US-283a:** the
   multi-item rules facts (chips · scoring · clean sheets · leagues) are authored with embedded bullet lines;
