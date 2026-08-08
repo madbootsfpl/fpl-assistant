@@ -987,6 +987,43 @@ def test_ask_captain_scopes_to_the_active_session_squad():
     assert "all players" in without                                          # the old fallback
 
 
+def test_ask_captain_defaults_to_the_loaded_squad_hyphen_and_bare(tmp_path, monkeypatch):
+    # ADR-090: with a squad loaded, a hyphenated "my-team" AND a bare question both scope to it; an
+    # explicit-global cue escapes to all players; and with no active squad it stays global (CLI parity).
+    import src.ask as ask_mod
+    from src.squads import SquadStore
+    from src.storage import Storage
+    from src.ui.ask import render_ask
+
+    # Isolate the saved-squad store to an empty temp file, so ambient saved squads (RoboTS/TS) can't make
+    # "my-team" resolve to a different saved squad — the routing then sees only the active squad.
+    empty = str(tmp_path / "squads.json")
+    monkeypatch.setattr(ask_mod, "SquadStore", lambda path=empty: SquadStore(path))
+
+    store = Storage()
+    try:
+        players = [dict(p) for p in store.get_players()]
+    finally:
+        store.close()
+    if not players:
+        return
+
+    def cheap(pos, n):
+        return sorted((p for p in players if p["position"] == pos), key=lambda p: p["price"])[:n]
+    picks = cheap("GK", 2) + cheap("DEF", 5) + cheap("MID", 5) + cheap("FWD", 3)
+    active = {"name": "ZZTestXI", "player_ids": [p["id"] for p in picks],
+              "player_names": [p["web_name"] for p in picks], "bench_ids": [], "cost": 100.0}
+
+    hyphen = render_ask(ask.answer("who should I captain from my-team?", active_squad=active))
+    assert "squad 'ZZTestXI'" in hyphen and "all players" not in hyphen   # the reported bug, fixed
+    bare = render_ask(ask.answer("who should I captain?", active_squad=active))
+    assert "squad 'ZZTestXI'" in bare                                     # default-to-loaded-squad
+    glob = render_ask(ask.answer("who should I captain from all players?", active_squad=active))
+    assert "all players" in glob and "squad 'ZZTestXI'" not in glob       # explicit-global escapes
+    cli = render_ask(ask.answer("who should I captain?"))                 # no active squad → global (CLI)
+    assert "all players" in cli
+
+
 def test_ask_captain_explains_with_confidence_and_verifies():
     # US-269 (ADR-089): the captain answer carries a grounded Why/Risk/Confidence block + facts, and a
     # narration restating those values verifies clean (✓); the LLM never invents a reason or the number.

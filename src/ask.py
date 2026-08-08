@@ -64,6 +64,13 @@ from src.ui.trending import render_trending
 
 _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 
+# Squad-scoped intents that default to the loaded squad when none is named (ADR-090); `analyse` is the router's
+# fallback intent. Deliberately excludes fixtures/compare/worth/etc. so a *global* question isn't scoped.
+_SQUAD_DEFAULT_INTENTS = frozenset({"captain", "transfer", "analyse", "start_bench", "gameweek", "chips"})
+
+# An explicit "answer globally" cue — escapes the ADR-090 default (captaincy's global "best picks" mode).
+_EXPLICIT_GLOBAL = re.compile(r"\b(all players|everyone|best overall|from all|any player)\b", re.IGNORECASE)
+
 # Keyword → intent. Order matters (first match wins); the LLM decides none of this.
 _INTENT_KEYWORDS = {
     # rules first (ADR-085): question-shaped, general cues so a rules question ("how does bench boost work",
@@ -1450,9 +1457,13 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
     """
     question = _resolve_pronoun(question, context)          # "is he worth it?" → the last player (ADR-080)
     intent, squad = route(question, _known_squad_names(active_squad))
-    # "my team" / "my squad" → the loaded session squad (when one is active and no name matched).
-    if not squad and active_squad and active_squad.get("name") \
-            and re.search(r"\bmy (team|squad|side|xi)\b", question, re.IGNORECASE):
+    # Default squad questions to the loaded session squad (ADR-090): when a squad is active and none was named
+    # and the question isn't explicitly global, use it. This fixes "my-team" (hyphen) — no phrase-matching —
+    # and makes a bare "who should I captain?" scope to your team; an explicit-global cue escapes to all players
+    # (captaincy's global mode). Gated to the squad-scoped intents so a global fixtures/compare question isn't
+    # scoped. The CLI has no active_squad, so it stays global-by-default.
+    if not squad and intent in _SQUAD_DEFAULT_INTENTS and active_squad and active_squad.get("name") \
+            and not _EXPLICIT_GLOBAL.search(question):
         squad = active_squad["name"]
     if intent is None:   # nothing grounded matched → the labelled free-form tail (ADR-085), or the help text
         return assemble(question, "chat", {"free_form": True, "question": question}, narrator), context
