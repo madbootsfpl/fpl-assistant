@@ -36,8 +36,8 @@ else:
     sel = filter_controls(rows, key="players", with_price=True)
     view = st.segmented_control(
         "View", ["Pool", "Set pieces", "Over / under-perf", "Defensive Contribution", "Clean sheets",
-                 "xG / xA / xGI"],
-        default="Pool", help="Switch between the player pool and the season-to-date stat boards.")
+                 "xG / xA / xGI", "History"],
+        default="Pool", help="Switch between the player pool, the stat boards, and a player's season history.")
 
     if view == "Set pieces":
         views.render_set_pieces(rows, sel, badges)
@@ -49,5 +49,7 @@ else:
         views.render_cleansheet(rows, sel, badges)
     elif view == "xG / xA / xGI":
         views.render_xg(rows, sel, badges)
+    elif view == "History":                                 # a per-player season history (US-298)
+        views.render_history(rows, photos, badges)
     else:                                                   # "Pool" (default; also if the control resets)
         views.render_pool(rows, sel, photos, badges)

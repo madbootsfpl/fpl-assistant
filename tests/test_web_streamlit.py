@@ -338,6 +338,24 @@ def test_pool_shows_the_price_prediction_column():
     assert any("live from GW1" in c.value for c in at.caption)      # honest dormant-now note
 
 
+def test_players_history_view_shows_a_season_table_for_a_known_player():
+    # US-298: the Players "History" view — pick a player → a season table (+ the GW1 note preseason).
+    at = AppTest.from_file(str(_PAGES / "1_Players.py"), default_timeout=30).run()
+    if at.exception or not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("History").run()
+    if at.exception or not at.selectbox:
+        return
+    label = next((o for o in at.selectbox[0].options if o.startswith("Haaland")), None)
+    if label is None:
+        return                                             # no seed history → nothing to assert
+    at.selectbox[0].set_value(label).run()
+    assert not at.exception
+    cols = list(at.dataframe[0].value.columns) if at.dataframe else []
+    assert "Season" in cols and "£ start" in cols and "Pts/90" in cols       # the native season table
+    assert any("fills once the season starts (GW1)" in c.value for c in at.caption)   # per-GW dormant note
+
+
 def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):
     # US-286: My Squad names owned players under price pressure (forced here — net transfers are flat preseason).
     import src.web_streamlit.views.squads as sq

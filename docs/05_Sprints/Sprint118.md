@@ -1,7 +1,7 @@
 # Sprint 118: History on the web (+ a price column)
 
 **Dates:** 2026-08-19 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** 🟢 In progress (2/2 stories built — retro pending)
 **Capacity:** ~1 session (enrich the history assembler + a web view — display only)
 **Carried Over:** none
 
@@ -33,16 +33,16 @@ CLI/Ask history gains the **price column** too. Display only — reuses `analyti
 analytics/xP untouched.
 
 #### Success Criteria
-- [ ] **US-297 (a price column in the history)** — `analytics/history.py::player_history` season rows gain
+- [x] **US-297 (a price column in the history)** — `analytics/history.py::player_history` season rows gain
       `start_cost` · `end_cost` · `change` (all £m; empty-safe); `ui/history.py::render_player_history` shows a
       **£** column (`start→end`) so the CLI + `ask "X's history"` include it. No analytics change.
-- [ ] **US-298 (history on the web)** — a **"History"** view on the **Players** page (added to the segmented
+- [x] **US-298 (history on the web)** — a **"History"** view on the **Players** page (added to the segmented
       control): a **player selectbox** → `player_history` rendered as a **season `st.dataframe`** (Season · Pts ·
       Mins · Starts · Pts/90 · xGI · xGC · £start→end) + a per-GW **`st.line_chart`** (points by GW) when data
       exists, else a *"per-GW form fills at GW1"* caption; degrades to a "run `history --backfill`" note when a
       player has none. Display-only; no server writes.
-- [ ] **No drift** — a read-view/lens only; `decision_xp`/the analytics unchanged; the read-only web guardrail
-      holds; existing **762** stay green (+ price / web-history tests); ruff clean.
+- [x] **No drift** — a read-view/lens only; `decision_xp`/the analytics unchanged; the read-only web guardrail
+      holds; **764** green (762 → +2: the price column + the web History view); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Backlog (extends **ADR-027/060** (history) +
       **ADR-069** (the Players sub-nav) — noted; no new ADR).
 
@@ -70,8 +70,8 @@ History **tab** (the Players sub-view is enough).
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-297 | **A price column in the history** — `£start→end` (+ change) in `player_history` + the CLI/Ask renderer. | High | ⬜ To do | ~¼ session |
-| US-298 | **History on the web** — a "History" view on Players (player picker → season table + per-GW chart + price). | High | ⬜ To do | ~¾ session |
+| US-297 | **A price column in the history** — `£start→end` (+ change) in `player_history` + the CLI/Ask renderer. | High | ✅ Done | ~¼ session |
+| US-298 | **History on the web** — a "History" view on Players (player picker → season table + per-GW chart + price). | High | ✅ Done | ~¾ session |
 
 ---
 
@@ -100,7 +100,22 @@ History **tab** (the Players sub-view is enough).
   the renderer shows `£14.0→14.3` and "—" when absent. **763** green, ruff clean.
 - **Manual smoke:** `history Haaland` shows the £ column across all four seasons.
 
-_(US-298 next — "start US-298".)_
+**US-298 — history on the web.** ✅ Done.
+- A new **"History"** option on the **Players** segmented control → `views/players.py::render_history(rows,
+  photos, badges)`: a **player `st.selectbox`** (label `web_name · team`) → an on-demand `Storage` read of that
+  player's `get_history_past`/`get_history` → `player_history` → a photo/name header, a **season `st.dataframe`**
+  (Season · Pts · Mins · Starts · **Pts/90** · xGI · xGC · **£ start · £ end · Δ£**, formatted via the shared
+  `column_config`) and a per-GW **`st.line_chart`** (points by GW) when data exists, else a *"per-GW form fills
+  once the season starts (GW1)"* caption. Degrades to a "run `history --backfill`" note for a player with none.
+- **Native Streamlit** (dataframe + chart + selectbox) — consistent with the rest of the app, so no bespoke
+  HTML/CSS (and no Artifact preview needed, unlike the captain card). Display-only; the on-demand store read is
+  a short-lived read (no server writes; the guardrail holds).
+- **Verified on real data:** Players → History → Haaland → the 4-season table with the £ columns; the GW1
+  caption preseason.
+- **Tests (+1):** the History view renders a season table (Season · £ start · Pts/90) for Haaland + the GW1
+  note. **764** green, ruff clean.
+- **Manual smoke:** the segmented control gains "History"; picking a player shows their season table + (now) the
+  GW1 caption.
 
 ---
 

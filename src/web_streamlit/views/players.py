@@ -18,10 +18,12 @@ from src.analytics import (
     defensive_solidity,
     fit_flag,
     over_under,
+    player_history,
     price_flag,
     rank_players,
     set_piece_flags,
 )
+from src.storage import Storage
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.formats import column_config
 from src.web_streamlit.paginate import paginate
@@ -206,3 +208,46 @@ def render_xg(players, sel, badges):
                                 "worst 20% 🔴). Keepers & low-minutes players aren't rated (—).",
                   "xGC": "Expected goals conceded while on the pitch (season total)."},
         flag=fit_flag)   # xG uses raw player rows (they carry status)
+
+
+def render_history(rows, photos, badges):
+    """A player's season history on the web (US-298, ADR-027/060) — pick a player → a season table + a per-GW
+    trend + the price move. Reuses `analytics.player_history`; the per-GW half is empty preseason (fills at
+    GW1). Display-only; an on-demand `Storage` read per selection (no server writes)."""
+    st.caption("A player's season-by-season record (points · minutes · **Pts/90** · xGI/xGC · price). "
+               "The per-gameweek trend fills once the season starts (GW1).")
+    by_label = {f"{p['web_name']} · {p['team']}": p for p in sorted(rows, key=lambda p: p["web_name"] or "")}
+    label = st.selectbox("Player", list(by_label), help="Pick a player to see their history.")
+    player = by_label.get(label)
+    if not player:
+        return
+
+    store = Storage()                                        # a short-lived read for the selected player only
+    try:
+        hist = player_history(player, store.get_history_past(player["code"]),
+                              store.get_history(player["code"]))
+    finally:
+        store.close()
+
+    c_photo, c_name = st.columns([1, 9], vertical_alignment="center")
+    if photos.get(player["id"]):
+        c_photo.image(photos[player["id"]], width=52)
+    c_name.markdown(f"### {player['web_name']} · {player['team']} · {player['position']}")
+
+    seasons, gws = hist["seasons"], hist["gameweeks"]
+    if not seasons and not gws:
+        st.info(f"No history stored for {player['web_name']} yet — run `python app.py history --backfill` "
+                "(past-season data; per-GW form fills once the season starts).")
+        return
+
+    if seasons:
+        table = [{"Season": s["season"], "Pts": s["points"], "Mins": s["minutes"], "Starts": s["starts"],
+                  "Pts/90": s["pp90"], "xGI": s["xgi"], "xGC": s["xgc"],
+                  "£ start": s["start_cost"], "£ end": s["end_cost"], "Δ£": s["change"]} for s in seasons]
+        st.dataframe(table, width="stretch", hide_index=True,
+                     column_config=column_config(table[0]))
+    if gws:
+        st.caption(f"This season — points per gameweek ({len(gws)} played):")
+        st.line_chart([{"GW": g["round"], "Points": g["points"]} for g in gws], x="GW", y="Points")
+    else:
+        st.caption("📈 Per-gameweek form fills once the season starts (GW1).")
