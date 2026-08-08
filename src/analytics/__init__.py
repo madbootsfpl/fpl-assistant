@@ -45,6 +45,7 @@ from src.analytics.explain import (
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
 from src.analytics.form import blend_form, form_rate
 from src.analytics.gameweek import gameweek_plan
+from src.analytics.history import player_history
 from src.analytics.minutes import (
     availability_weight,
     chance_factor,
@@ -159,4 +160,5 @@ __all__ = [
     "team_fdr",
     "team_schedule",
     "fixture_ticker",
+    "player_history",
 ]

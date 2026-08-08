@@ -64,6 +64,42 @@ def test_ask_remembers_the_last_turn_across_runs(capsys, monkeypatch, tmp_path):
     assert chat_context.load_context() is None
 
 
+def test_history_parses_a_player_and_the_backfill_flag():
+    from src.cli import cmd_history
+    args = build_parser().parse_args(["history", "Haaland"])
+    assert args.command == "history" and args.player == "Haaland" and args.handler is cmd_history
+    bf = build_parser().parse_args(["history", "--backfill", "--limit", "5"])
+    assert bf.player is None and bf.backfill is True and bf.limit == 5
+
+
+def test_history_player_view_renders_or_notes(capsys):
+    # US-295: `history <player>` shows the past-season record (real-DB smoke; skip if the seed has no history).
+    from types import SimpleNamespace
+
+    from src import cli
+    from src.storage import Storage
+
+    store = Storage()
+    try:
+        haaland = next((p for p in store.get_players() if p["web_name"] == "Haaland"), None)
+        has = haaland and store.get_history_past(haaland["code"])
+    finally:
+        store.close()
+    if not has:
+        return
+    cli.cmd_history(SimpleNamespace(player="Haaland", backfill=False, limit=None))
+    out = capsys.readouterr().out
+    assert "History — Haaland" in out and "Past seasons" in out
+
+
+def test_history_unknown_player_is_a_clear_message(capsys):
+    from types import SimpleNamespace
+
+    from src import cli
+    cli.cmd_history(SimpleNamespace(player="Zzzznope", backfill=False, limit=None))
+    assert "No player matching" in capsys.readouterr().out
+
+
 def test_reseed_command_routes_to_its_handler():
     args = build_parser().parse_args(["reseed"])     # no args — refresh + copy to the seed
     assert args.command == "reseed" and args.handler is cmd_reseed

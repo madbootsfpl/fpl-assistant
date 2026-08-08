@@ -33,6 +33,7 @@ from src.analytics import (
     minutes_weight_from_history,
     objective_scores,
     over_under,
+    player_history,
     player_xp,
     rank_players,
     resolve_players,
@@ -52,6 +53,7 @@ from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
 from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_team_fixtures
+from src.ui.history import render_player_history
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_loaded_squad, render_squad
 from src.ui.table import render_player_table
@@ -115,17 +117,51 @@ def cmd_reseed(args) -> None:
     )
 
 
-def cmd_history(args) -> None:
-    """Backfill past-season + per-GW history for all stored players (ADR-027/060).
+def _resolve_player(players, name: str):
+    """A stored player matching `name` (an exact web_name wins, else a unique substring), or None with a
+    printed nudge when there's no match or it's ambiguous (US-295)."""
+    q = name.strip().lower()
+    exact = [p for p in players if (p["web_name"] or "").lower() == q]
+    if exact:
+        return exact[0]
+    contains = [p for p in players if q and q in (p["web_name"] or "").lower()]
+    if len(contains) == 1:
+        return contains[0]
+    if not contains:
+        print(f"No player matching '{name}'. Try a surname, e.g. `history Haaland`.")
+    else:
+        names = ", ".join(sorted({p["web_name"] for p in contains})[:8])
+        print(f"Several players match '{name}': {names}. Be more specific.")
+    return None
 
-    A throttled, resumable job — kept out of `refresh`. One `element-summary` call per
-    player stores both past-season aggregates and this-season per-GW rows (the latter
-    empty preseason, live at GW1). `--limit N` backfills only the first N players.
+
+def cmd_history(args) -> None:
+    """A player's season history (`history <player>`) — or backfill it (`history --backfill`, ADR-027/060).
+
+    `history <player>` shows the past-season record (real now) + this-season per-GW trend (fills at GW1).
+    `--backfill` is the throttled, resumable ingest (one `element-summary` call per player); `--limit N` slices.
     """
+    if getattr(args, "player", None):                            # the view (US-295)
+        store = Storage()
+        try:
+            players = store.get_players()
+            if not players:
+                print("No players stored yet — run `refresh` first.")
+                return
+            target = _resolve_player(players, args.player)
+            if target is None:
+                return
+            hist = player_history(target, store.get_history_past(target["code"]),
+                                  store.get_history(target["code"]))
+            print(render_player_history(hist))
+        finally:
+            store.close()
+        return
+
     if not args.backfill:
         print(
-            "Nothing to do. Try `history --backfill` to fetch past-season data "
-            "(a few minutes for all players; add --limit N for a slice)."
+            "Nothing to do. Try `history <player>` for a player's record, or `history --backfill` "
+            "to fetch past-season data (a few minutes for all players; add --limit N for a slice)."
         )
         return
 
@@ -740,7 +776,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_reseed.set_defaults(handler=cmd_reseed)
 
     p_history = sub.add_parser(
-        "history", help="Backfill past-season player history (once per season)"
+        "history", help="A player's season history (`history <player>`), or --backfill to fetch it"
+    )
+    p_history.add_argument(
+        "player", nargs="?",
+        help="Show this player's past-season record + this-season per-GW trend (e.g. `history Haaland`)",
     )
     p_history.add_argument(
         "--backfill", action="store_true",
