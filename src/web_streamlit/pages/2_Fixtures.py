@@ -5,6 +5,8 @@ opponent + (H/A) shaded green (easy) → red (hard). Reuses `fixture_ticker` (wh
 `team_schedule`) — no core change, no new analytics.
 """
 
+from collections import Counter
+
 import pandas as pd
 import streamlit as st
 
@@ -12,6 +14,7 @@ from src.analytics import decision_xp, fixture_ticker, target_by_fixtures, team_
 from src.storage import Storage
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name
+from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 
 # FPL difficulty 1–5 → a green→red band (mirrors the fixture-ticker palette).
@@ -38,13 +41,29 @@ if not upcoming:
 else:
     weeks = st.slider("Weeks to show", 1, 8, 6,
                       help="How many upcoming gameweeks to show in the difficulty ticker.")
+    # US-302 (ADR-049): focus the ticker on your own teams — which of *your* teams face a hard run.
+    scope = st.segmented_control("Show", ["All teams", "My squad"], default="All teams", key="ticker_scope",
+                                 help="Focus the ticker on the teams in your active squad.")
+    my_counts: dict = {}
+    if scope == "My squad":
+        squad = active_squad()
+        if not squad:
+            st.caption("No squad loaded — build or upload one on the **Squads** tab, then come back.")
+        else:
+            by_id = {p["id"]: p for p in players}
+            my_counts = Counter(by_id[i]["team"] for i in squad["player_ids"] if i in by_id)
+
     ticker = fixture_ticker(upcoming, next_n=weeks, source="fpl")
     gws = ticker["gameweeks"]
     gw_cols = [f"GW{g}" for g in gws]
 
+    # When scoped to the squad, keep only the owned teams and add a "Players" count column.
+    ticker_rows = [r for r in ticker["rows"] if r["team"] in my_counts] if my_counts else ticker["rows"]
     display_rows, diff_rows = [], []
-    for r in ticker["rows"]:
+    for r in ticker_rows:
         disp = {"badge": badges.get(r["team"], ""), "Team": r["team"]}
+        if my_counts:
+            disp["Players"] = my_counts.get(r["team"], 0)
         diff = {}
         for gw, col in zip(gws, gw_cols):
             cell = r["cells"].get(gw)

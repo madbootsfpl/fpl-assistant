@@ -146,6 +146,28 @@ def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
     assert list(scoped["Pos"].unique()) == ["DEF"]         # only defenders after the filter
 
 
+def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
+    # US-302 (ADR-049): a "My squad" scope restricts the ticker to your teams + a Players count column.
+    from src.web_streamlit.squads import demo_squads
+    at = _run(_PAGES / "2_Fixtures.py")
+    if not at.dataframe:
+        return
+    all_teams = at.dataframe[0].value
+    assert "Players" not in all_teams.columns               # default = All teams, no count column
+    scope = next(s for s in at.segmented_control if s.label == "Show")
+    squads = demo_squads()
+    if not squads:
+        scope.set_value("My squad").run()                   # no squad → a note + fall back to all teams
+        assert any("No squad loaded" in c.value for c in at.caption)
+        return
+    at.session_state["squad"] = next(iter(squads.values()))
+    scope.set_value("My squad").run()
+    assert not at.exception
+    scoped = at.dataframe[0].value
+    assert "Players" in scoped.columns and len(scoped) <= len(all_teams)   # scoped to owned teams
+    assert scoped["Players"].sum() == 15                    # a full squad's 15 players across its teams
+
+
 def _squads_view(view):
     # ADR-069: open the Squads page and switch its segmented control to a manage/build view
     at = _run(_PAGES / "3_Squads.py")

@@ -107,6 +107,15 @@ polish); wiring fixture-ease *into* Build's objective (a modelling change, not a
   composition — no analytics change. Smoke: 18 targets (6×3); top teams' best players listed; DEF filter → only
   defenders. +4 tests (3 unit in `tests/test_targets.py` + 1 page AppTest); updated the ticker test (now 2 tables).
   ruff clean. **770** total.
+- **US-302 (a "my squad" lens on the ticker)** — realises the deferred **ADR-049** team lens. Added a
+  `st.segmented_control("Show", ["All teams","My squad"], default="All teams")` above the ticker in
+  `pages/2_Fixtures.py`; on **My squad** it reads `active_squad()`, maps `player_ids → team` via the players
+  list (`Counter`), filters the ticker rows to the owned teams, and adds a **"Players"** count column (the
+  shading path is unchanged — the count column isn't a GW column so it stays blank). No squad loaded → a caption
+  pointing to the Squads tab, and the ticker falls back to all teams (never an empty page). The Target section
+  stays all-teams (it's about buying *new* players). Smoke: All teams → 20 rows, no count; My squad (demo
+  injected) → 11 owned teams + a Players column summing to 15; no-squad → the note + all-teams fallback. +1 page
+  AppTest. ruff clean. **771** total.
 
 ---
 
