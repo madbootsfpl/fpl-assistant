@@ -43,7 +43,8 @@ with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=Tr
         "**set-piece duty** (⚽ penalties · 🚩 corners · 🎯 free-kicks — for the first-choice taker); a player "
         "with no photo shows their **club shirt**. The summary's **Projected XI** includes your **captain's "
         "×2 — for the next gameweek only** (captaincy is re-picked each week). Edit it: **rename**, **swap** "
-        "any player (legality-checked), set the **bench** (pick 4). Every change updates your session and the "
+        "any player (legality-checked) — filter the swap by **position** and tick **Affordable only** to hide "
+        "replacements over your **bank** — set the **bench** (pick 4). Every change updates your session and the "
         "**Download**. New team? Switch back to the **Build** view."
     )
 

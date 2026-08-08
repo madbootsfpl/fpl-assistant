@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 119 (2026-08-20)** — *My Squad edit: a position filter + an affordable check* (edit-UI only; extends
+  **ADR-055** (the editable squad); no analytics change). Both stories live in `web_streamlit/views/squads.py`'s
+  "Swap a player" expander (`render_my_squad`). **US-299:** a `st.segmented_control("Position", ["All","GK","DEF",
+  "MID","FWD"], default="All")` at the top scopes the **"Replace"** options to `owned` of that position (sorted by
+  position then name), with a *"No {POS} players in your squad."* caption when it empties; the "With" candidates
+  already key off the picked player's position, so they follow. **US-300:** `bank = FPL_BUDGET − sum(owned
+  prices)` shown as a `st.caption("Bank: £X.Xm")`, plus a `st.checkbox("Affordable only")` that filters the
+  **"With"** candidates to `price ≤ out.price + bank` (a *pre-filter* — `apply_transfer` still enforces the budget
+  on **Swap →**), with a *"No affordable replacement (≤ £X.Xm) — untick to see all."* caption when the filter
+  empties a non-empty list. Edit-UI only (no `apply_transfer`/`decision_xp` change); the session-only edit model +
+  read-only web guardrail hold. +2 tests (766).
 - **Sprint 118 (2026-08-19)** — *History on the web (+ a price column)* (display only; extends ADR-027/060 +
   ADR-069; no analytics change). **US-297:** `analytics/history.py::player_history` season rows now carry
   `start_cost`/`end_cost` (already £m — the ingest converts tenths) + `change` (`round(end−start,1)`, `None`

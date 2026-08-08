@@ -1,7 +1,7 @@
 # Sprint 119: My Squad edit — a position filter + an "affordable" check
 
-**Dates:** 2026-08-20 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-20
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (two small edit-UI affordances — display only)
 **Carried Over:** none
 
@@ -34,16 +34,16 @@
 untouched.
 
 #### Success Criteria
-- [ ] **US-299 (a position filter on the swap)** — a **GK · DEF · MID · FWD** filter (+ **All**) at the top of
+- [x] **US-299 (a position filter on the swap)** — a **GK · DEF · MID · FWD** filter (+ **All**) at the top of
       the "Swap a player" expander that scopes the **"Replace"** selectbox to owned players of that position
       (the "With" candidates stay same-position as the picked player). A clear note when you own none of a
       position.
-- [ ] **US-300 (an "affordable" checkbox)** — an **"Affordable only"** checkbox that filters the **"With"**
+- [x] **US-300 (an "affordable" checkbox)** — an **"Affordable only"** checkbox that filters the **"With"**
       candidates to `price ≤ out.price + bank`, plus a **bank caption** (*"Bank: £X.Xm"*). The swap still
       validates on apply (unchanged); the checkbox just hides what wouldn't fit.
-- [ ] **No drift** — edit-UI only; `apply_transfer`/`decision_xp`/the analytics unchanged; the session-only edit
-      model + read-only web guardrail hold; existing **764** stay green (+ filter/affordable tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends **ADR-055** (the editable squad) —
+- [x] **No drift** — edit-UI only; `apply_transfer`/`decision_xp`/the analytics unchanged; the session-only edit
+      model + read-only web guardrail hold; existing **764** stay green (**766** with +2); ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends **ADR-055** (the editable squad) —
       noted; no new ADR).
 
 ---
@@ -69,8 +69,8 @@ common case); filtering the transfer/build pickers (this is scoped to My Squad e
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-299 | **Position filter on the swap** — GK/DEF/MID/FWD (+ All) scoping the "Replace" list. | High | ⬜ To do | ~¼ session |
-| US-300 | **"Affordable only" checkbox** — hide replacements you can't afford; show the bank. | High | ⬜ To do | ~¼ session |
+| US-299 | **Position filter on the swap** — GK/DEF/MID/FWD (+ All) scoping the "Replace" list. | High | ✅ Done | ~¼ session |
+| US-300 | **"Affordable only" checkbox** — hide replacements you can't afford; show the bank. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -106,4 +106,48 @@ common case); filtering the transfer/build pickers (this is scoped to My Squad e
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped. Editing your team is quicker: the "Swap a player" expander now has a
+**Position** filter (All/GK/DEF/MID/FWD) scoping the "Replace" list, a **bank caption**, and an **"Affordable
+only"** checkbox scoping the "With" candidates to `price ≤ out.price + bank`. Edit-UI only — the swap engine
+(`apply_transfer`), `decision_xp`, and the analytics are untouched; the session-only edit model + read-only web
+guardrail hold. Extends **ADR-055**; no new ADR.
+
+**Delivered**
+- **US-299** — `st.segmented_control("Position", …)` at the top of the expander (`render_my_squad`); "Replace"
+  builds from `owned` filtered by it (sorted position→name); a *"No {POS} players in your squad."* caption when
+  empty. +1 test (`test_my_squad_swap_position_filter_scopes_the_replace_list`).
+- **US-300** — `bank = FPL_BUDGET − sum(owned prices)` → `st.caption("Bank: £X.Xm")`; a
+  `st.checkbox("Affordable only")` filtering the "With" candidates to `price ≤ out.price + bank` (a pre-filter —
+  `apply_transfer` still enforces the budget on **Swap →**); a *"No affordable replacement (≤ £X.Xm) — untick to
+  see all."* caption when it empties a non-empty list. +1 test
+  (`test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank`).
+
+**Verified at planning (real data)** — the current swap is same-position by design, so the position filter scopes
+"Replace" and the affordable check scopes "With"; `FPL_BUDGET = 100.0`, so bank is derivable; `apply_transfer`
+already validates budget (the checkbox is a UX pre-filter, not new enforcement). Smoke on the demo squad: All → 15
+Replace options, GK → 2; bank £0.0m (fully-spent), "Affordable only" drops "With" 60 → 42.
+
+**Metrics** — 766 tests (764 → +2), all green · ruff clean · 93 ADRs (no new) · 2 stories, ~½ session.
+
+**What went well**
+- Reused the existing swap shape end-to-end — no analytics/engine change, so risk stayed in the view.
+- The affordable check is a pure display filter over the already-budgeted engine — no double-source-of-truth.
+
+**Even better if**
+- The candidate list has no price/xP **sort toggle** or **max-price slider** yet (deferred — the affordable
+  check covers the common "what fits" case).
+- The transfer/build pickers don't get the same position/affordable filters (out of scope — the feedback was
+  My Squad edit).
+
+**Deferred / backlog** — a price/xP sort toggle + a max-price slider on the candidate list; the same filters on
+the Transfer/Build pickers.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **One thing to change next sprint:**
+- **Confidence in the swap UX (1–5):**
