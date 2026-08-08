@@ -8,10 +8,25 @@ heuristic** (documented in ADR-089), not a calibrated probability.
 
 from dataclasses import dataclass, field
 
-from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, TEMPLATE_OWN
+from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, ownership_label
 
 _START_MINUTES = 0.7   # xMins weight ≥ this → "expected to start"; below → a rotation risk
 _CLEAR_LEAD = 0.8      # an xP lead of this over the runner-up reads as a "clear" pick
+
+
+def _ownership_signal(row):
+    """The ownership tier as a **(✓ reason, ⚠ risk)** pair for an explanation (US-290), so the "why" speaks the
+    same tier language as the badges (ADR-057/US-289): **essential**/**template** read as a *widely-owned =
+    safer* reason, a **differential** as a *variance* risk, **popular**/absent → neither."""
+    own = _get(row, "selected_by")
+    tier = ownership_label(row)
+    if tier == "essential":
+        return f"Essential ({own:.0f}% owned)", None
+    if tier == "template":
+        return f"Template pick ({own:.0f}% owned)", None
+    if tier == "differential":
+        return None, f"Differential ({own:.0f}% owned)"
+    return None, None      # popular / absent → no ownership reason or risk
 
 
 @dataclass
@@ -75,9 +90,9 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
         reasons.append("Set-piece involvement")
     if mins is not None and mins >= _START_MINUTES:
         reasons.append(f"Expected ~{round(mins * 90)} mins")
-    own = _get(row, "selected_by")
-    if own is not None and own >= TEMPLATE_OWN:
-        reasons.append(f"Template pick ({own:.0f}% owned)")
+    own_reason, own_risk = _ownership_signal(row)   # the ownership tier as a ✓ reason / ⚠ risk (US-290)
+    if own_reason:
+        reasons.append(own_reason)
     if difficulty is not None and (difficulty <= 2 or venue == "H"):
         reasons.append(f"Strong fixture vs {top.get('opponent') or 'TBC'}")
     form = _get(row, "form")
@@ -96,8 +111,8 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
         risks.append(f"Tough fixture vs {top.get('opponent') or 'TBC'}")
     if runner is not None and gap is not None and gap < 0.5:
         risks.append(f"Only +{gap} pts ahead of {runner['web_name']}")
-    if own is not None and 0 < own <= DIFFERENTIAL_OWN:
-        risks.append(f"Big differential ({own:.0f}% owned)")
+    if own_risk:
+        risks.append(own_risk)
 
     score = captain_confidence(
         mins, gap, penalty=top.get("penalty_taker"), venue=venue, difficulty=difficulty,
@@ -143,9 +158,9 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
         reasons.append("Set-piece involvement")
     if price_delta < 0:
         reasons.append(f"Frees £{-price_delta:.1f}m")
-    own = _get(in_row, "selected_by")
-    if own is not None and own >= TEMPLATE_OWN:
-        reasons.append(f"Template pick ({own:.0f}% owned)")
+    own_reason, own_risk = _ownership_signal(in_row)   # the ownership tier as a ✓ reason / ⚠ risk (US-290)
+    if own_reason:
+        reasons.append(own_reason)
     form = _get(in_row, "form")
     if form is not None and form >= FORM_MIN:
         reasons.append(f"In form ({form})")
@@ -157,8 +172,8 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
     if doubtful:
         chance = _get(in_row, "chance")
         risks.append("Doubtful buy" + (f" ({chance}% chance)" if chance is not None else ""))
-    if own is not None and 0 < own <= DIFFERENTIAL_OWN:
-        risks.append(f"Big differential ({own:.0f}% owned)")
+    if own_risk:
+        risks.append(own_risk)
     if gain is not None and gain < 1.0:
         risks.append(f"Marginal gain (+{gain})")
 
@@ -205,9 +220,9 @@ def explain_worth(row, *, value, median, rank, n_peers, xp, horizon: int = 5) ->
         reasons.append("Penalty taker")
     if _get(row, "freekicks_order") == 1 or _get(row, "corners_order") == 1:
         reasons.append("Set-piece involvement")
-    own = _get(row, "selected_by")
-    if own is not None and own >= TEMPLATE_OWN:
-        reasons.append(f"Template pick ({own:.0f}% owned)")
+    own_reason, own_risk = _ownership_signal(row)   # the ownership tier as a ✓ reason / ⚠ risk (US-290)
+    if own_reason:
+        reasons.append(own_reason)
     form = _get(row, "form")
     if form is not None and form >= FORM_MIN:
         reasons.append(f"In form ({form})")
@@ -220,8 +235,8 @@ def explain_worth(row, *, value, median, rank, n_peers, xp, horizon: int = 5) ->
     price = _get(row, "price")
     if price is not None and price >= _PREMIUM_PRICE:
         risks.append(f"Premium price (£{price}m ties up budget)")
-    if own is not None and 0 < own <= DIFFERENTIAL_OWN:
-        risks.append(f"Big differential ({own:.0f}% owned)")
+    if own_risk:
+        risks.append(own_risk)
 
     score = worth_confidence(ratio, percentile, penalty=penalty)
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))

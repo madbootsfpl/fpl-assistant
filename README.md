@@ -56,7 +56,8 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
 
 **Crowd & community signals (Phase 6)** — a *complementary lens*, never folded into xP:
 - **Trends** — most-owned · most transferred in/out · in-form boards (free FPL crowd data), crowd **flags**
-  (🟦 template · 💎 differential · 💰 price · 🔥 trending · 📈 form) across the player/squad views, and a
+  (four ownership tiers 💎 differential · ⭐ popular · 🟦 template · 👑 essential, plus 💰 price · 🔥 trending ·
+  📈 form) across the player/squad views, and a
   **"trends"** `ask` intent. *(Ownership works now; momentum/form light up at GW1, 2026-08-21.)*
 - **News** — official FPL player news (injuries · doubts · returns), most serious first.
 - **Import your team by manager-ID** — pull your real FPL squad from the public entry API (picks from GW1).

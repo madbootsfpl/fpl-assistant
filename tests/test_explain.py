@@ -41,9 +41,20 @@ def test_explain_worth_grounds_value_reasons_and_risks():
     ex2 = explain_worth(poor, value=0.40, median=1.00, rank=50, n_peers=60, xp=8.0, horizon=5)
     risk2 = " | ".join(ex2.risks)
     assert "Below the MID median value (0.40 vs 1.00 xP/£m)" in risk2
-    assert "Mid-pack value (#50 of 60 MIDs)" in risk2 and "Big differential (3% owned)" in risk2
+    assert "Mid-pack value (#50 of 60 MIDs)" in risk2 and "Differential (3% owned)" in risk2
     assert ex2.confidence < ex.confidence                     # worse value → lower confidence
     assert explain_worth(None, value=0, median=0, rank=None, n_peers=0, xp=0) is None   # empty-safe
+
+
+def test_explanations_speak_the_ownership_tier_vocabulary():
+    # US-290: the "why" uses the same tier words as the badges — essential / template (✓), differential (⚠),
+    # popular / absent (neither).
+    from src.analytics.explain import _ownership_signal
+    assert _ownership_signal({"selected_by": 74.0}) == ("Essential (74% owned)", None)
+    assert _ownership_signal({"selected_by": 45.0}) == ("Template pick (45% owned)", None)
+    assert _ownership_signal({"selected_by": 3.0}) == (None, "Differential (3% owned)")
+    assert _ownership_signal({"selected_by": 12.0}) == (None, None)     # popular → neither
+    assert _ownership_signal({}) == (None, None)                        # absent → neither
 
 
 def test_worth_confidence_is_bounded_and_reflects_value():
@@ -108,7 +119,7 @@ def test_explain_captain_skips_gated_zero_signals_and_is_empty_safe():
     ex = explain_captain([top, runner], rows)
     assert not any("in form" in r.lower() for r in ex.reasons)
     assert not any("narrow lead" in r.lower() for r in ex.risks)
-    assert any("Big differential" in r for r in ex.risks)      # 3% owned
+    assert any("Differential (3% owned)" in r for r in ex.risks)   # 3% owned → the differential-tier risk (US-290)
     assert explain_captain([], rows) is None                    # empty-safe
 
 

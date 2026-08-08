@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 114 (2026-08-15)** — *Four-tier ownership badges: one ownership language* (tester feedback;
+  display/lens, extends ADR-057 + ADR-089; no analytics change). **US-289:** a pure
+  `analytics/crowd.py::ownership_tier(player)` → **💎 differential** (≤5%) · **⭐ popular** (5–20%) · **🟦
+  template** (20–60%) · **👑 essential** (>60%), via `DIFFERENTIAL_OWN`/`TEMPLATE_OWN`/new `ESSENTIAL_OWN=60`;
+  `crowd_flags` swaps its 2-tier 🟦/💎 block for it, so the four tiers propagate to every Trends-column surface
+  (Pool · Build · Analyse · My Squad pitch · Captain · Trending) and each player shows exactly one tier (the
+  5–20% band was previously unbadged). `CROWD_LEGEND` rewritten to the four tiers; still a **lens** (the
+  `decision_xp` invariant holds). **US-290:** `ownership_label(player)` (the tier word) drives a shared
+  `explain.py::_ownership_signal(row)` → a **(✓ reason, ⚠ risk)** pair (essential/template → ✓ · differential →
+  ⚠ · popular/absent → neither), used by `explain_captain`/`explain_transfer`/`explain_worth`, so the "why"
+  speaks the same language as the badges (Haaland reads *"Essential (74% owned)"*). The Trending page + Pool
+  inherit the rewritten legend; Help updated. +1 net test (739); the now-unused `TEMPLATE_OWN` import was dropped
+  from `explain.py`.
 - **Sprint 113 (2026-08-14)** — *A robust Ask scroll + an explained differential shortlist* (tester feedback;
   display/rationale, extends ADR-052 + ADR-042/061; no analytics change). **US-287:** the Ask example-click
   auto-scroll ("worked for some, not all") replaced its single `setTimeout(…, 150ms)` **smooth** scroll with a

@@ -1,7 +1,7 @@
 # Sprint 114: Four-tier ownership badges — one ownership language
 
 **Dates:** 2026-08-15 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (a crowd-lens refinement + the explanation vocabulary — no analytics change)
 **Carried Over:** none
 
@@ -36,19 +36,19 @@
 explanation refinement; the analytics/xP untouched (the ownership lens never feeds `decision_xp`).
 
 #### Success Criteria
-- [ ] **US-289 (four-tier ownership badges, everywhere)** — a pure `analytics/crowd.py::ownership_tier(player)`
+- [x] **US-289 (four-tier ownership badges, everywhere)** — a pure `analytics/crowd.py::ownership_tier(player)`
       → **💎 differential** (≤5%) · **⭐ popular** (5–20%) · **🟦 template** (20–60%) · **👑 essential** (>60%),
       via `DIFFERENTIAL_OWN` / `TEMPLATE_OWN` / a new **`ESSENTIAL_OWN = 60`** (tunable, GW1-calibrated);
       `crowd_flags` uses it (replacing the 2-tier block), so it propagates to the Pool, Build, Analyse, My
       Squad, Captain and Trending. `CROWD_LEGEND` rewritten to the four tiers with the tester's meanings. Still
       a **lens** (never xP). Empty-safe.
-- [ ] **US-290 (one language in the "why" + Trending/Help)** — the explanation ownership wording uses the tier
+- [x] **US-290 (one language in the "why" + Trending/Help)** — the explanation ownership wording uses the tier
       label: a **>60%** pick reads **"Essential (N% owned)"** (✓), a **20–60%** pick **"Template pick (N%
       owned)"** (✓), a **≤5%** pick **"Differential (N% owned)"** (⚠) — across `explain_captain` /
       `explain_worth` / `explain_transfer` / `explain_squad`. The Trending page + Help show the tier legend.
-- [ ] **No drift** — display/vocabulary only; `decision_xp`/the ranking/grounding unchanged (the ownership lens
-      still never touches xP — the invariant test holds); existing **738** stay green (crowd/explain assertions
-      updated for the tiers); ruff clean.
+- [x] **No drift** — display/vocabulary only; `decision_xp`/the ranking/grounding unchanged (the ownership lens
+      still never touches xP — the invariant test holds); **739** green (crowd/explain assertions updated for
+      the tiers); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends **ADR-057** (crowd lens) +
       **ADR-089** (explainability) — noted; no new ADR).
 
@@ -87,8 +87,8 @@ thresholds beyond the three constants; a `worth`-style tier verdict.
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-289 | **Four-tier ownership badges** — `ownership_tier` (💎/⭐/🟦/👑) in `crowd_flags`, everywhere; legend rewritten. | High | ⬜ To do | ~½ session |
-| US-290 | **One ownership language** — the tier vocabulary in the explanations (Essential/Template/Differential) + the Trending/Help legend. | High | ⬜ To do | ~½ session |
+| US-289 | **Four-tier ownership badges** — `ownership_tier` (💎/⭐/🟦/👑) in `crowd_flags`, everywhere; legend rewritten. | High | ✅ Done | ~½ session |
+| US-290 | **One ownership language** — the tier vocabulary in the explanations (Essential/Template/Differential) + the Trending/Help legend. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -123,10 +123,57 @@ thresholds beyond the three constants; a `worth`-style tier verdict.
 - **Tests (net +1):** `ownership_tier` per band + empty-safe + `crowd_flags` shows exactly one tier; the legend
   names all four; the distinctness test covers ⭐/👑. **738** green, ruff clean.
 
-_(US-290 next — "start US-290".)_
+**US-290 — one ownership language in the "why" + Trending/Help.** ✅ Done.
+- New `analytics/crowd.py::ownership_label(player)` (the tier **word**, no emoji) drives a shared
+  `explain.py::_ownership_signal(row)` → a **(✓ reason, ⚠ risk)** pair: **essential** → *"Essential (N%
+  owned)"* (✓) · **template** → *"Template pick (N% owned)"* (✓) · **differential** → *"Differential (N%
+  owned)"* (⚠) · **popular**/absent → neither. `explain_captain` / `explain_transfer` / `explain_worth` all use
+  it (replacing the flat "Template pick"/"Big differential" strings), so the "why" speaks the **same** language
+  as the badges — e.g. Haaland's worth/captain reason now reads **"Essential (74% owned)"** matching his 👑.
+- **Trending + Pool inherit the tiers for free** — they already render `CROWD_LEGEND` (rewritten in US-289), so
+  the four-tier legend shows there; the **Help** page's ownership steer now reads *"💎 differential → 👑
+  essential"*.
+- **Low churn** — most explain tests use a 20–60% player → still "Template pick"; only the two "Big
+  differential" assertions became "Differential", and TEMPLATE_OWN's now-unused import was dropped.
+- **Tests (+1, 2 updated):** `_ownership_signal` maps each tier (essential/template ✓ · differential ⚠ ·
+  popular/absent → neither); the captain/worth differential-risk assertions updated. The `decision_xp`
+  invariant still holds (ownership never feeds xP). **739** green, ruff clean.
+- **Manual smoke:** `ask "is Haaland worth the money?"` → *"✓ Essential (74% owned)"*; `ask "who should I
+  captain?"` → *"✓ Template pick (49% owned)"*; the Trending legend lists the four tiers.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **738 → 739** (+1 net: an `ownership_tier` band test +
+a tier-vocabulary test; the old 2-tier tests folded in). Ruff clean; CI-parity green. **No new ADR** (extends
+ADR-057 crowd lens + ADR-089 explainability). No analytics change — an ownership lens + vocabulary; the
+`decision_xp` invariant holds.
+
+**Delivered**
+- **US-289 — four-tier ownership badges (everywhere).** `ownership_tier` (💎/⭐/🟦/👑) in `crowd_flags`, so the
+  four tiers show on every Trends-column surface + the legend names them; the 5–20% "popular" band is badged for
+  the first time.
+- **US-290 — one ownership language.** The explanations adopt the tier vocabulary (Essential/Template/
+  Differential) via a shared `_ownership_signal`, so the "why" matches the badges everywhere.
+
+**What went well**
+- **One shared function propagated the whole change.** Because `crowd_flags` is *the* Trends column, refining
+  the ownership block updated the Pool, Build, Analyse, My Squad, Captain and Trending in one edit — no
+  per-surface work.
+- **Verified the challenge on real data.** The distribution (500/57/15/1) confirmed the proposal fills genuine
+  gaps (57 unbadged "popular", 1 mis-lumped "essential") before committing — the tester's badges were right.
+- **The vocabulary unified cheaply.** A tiny `ownership_label` + `_ownership_signal` let three explain
+  functions speak the tier language with one helper, and low test churn (most fixtures sit in 20–60%).
+- **The lens stayed a lens.** Ownership feeds badges + wording only; the `decision_xp` invariant test still
+  proves it never reaches xP.
+
+**Watch-outs / follow-ups**
+- **Preseason ~500/573 read 💎** (ownership is concentrated low before the season) — honest, and the legend
+  says it sharpens at GW1; the tiers become far more useful once ownership spreads.
+- **Thresholds (5/20/60) are tunable placeholders** — `ESSENTIAL_OWN` especially is a first guess; **calibrate
+  at GW1** as ownership concentrates (some may prefer >50% for "essential").
+- **Deferred:** a dedicated ownership-tier *column* (the badge is enough); a `worth`-style tier verdict; the
+  "popular" tier as an explicit (neutral) note in the "why".
+
+See `Sprint114_Lessons_Learnt.md` for the detailed retro.

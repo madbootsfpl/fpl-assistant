@@ -84,6 +84,13 @@ def ownership_tier(player) -> str:
     return "👑 essential"            # >60% — a must-own; going without is a major rank risk
 
 
+def ownership_label(player) -> str:
+    """The ownership tier **word** (no emoji) — `differential` | `popular` | `template` | `essential` | `""`.
+    Lets the explanations (US-290) speak the same ownership language as the badges."""
+    tier = ownership_tier(player)
+    return tier.split(" ", 1)[1] if tier else ""
+
+
 def crowd_flags(player) -> list:
     """Short crowd/sentiment flags for a player row — empty-safe, display-only (ADR-057).
 
