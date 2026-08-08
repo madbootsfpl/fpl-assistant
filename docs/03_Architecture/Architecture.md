@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 107 (2026-08-08)** — *Ask readability + a "fit" ✅ emoji* (tester feedback; display-only, extends
+  **ADR-052/074**). **US-275:** the Ask answer renders with `st.code(answer, language=None, wrap_lines=True)` so
+  long narration wraps while the aligned tables / plan / Why-Risk blocks stay readable; after the history
+  replays, a `height=1` same-origin `st.iframe` runs `window.parent.scrollTo(…, behavior:'smooth')` in a
+  `setTimeout` (wrapped in try/catch → no-ops if ever cross-origin) to bring the newest Q&A into view. **US-276:**
+  a new `analytics/crowd.py::fit_flag(player)` = `availability_flag(player) or "✅"` — a fit player now reads **✅**
+  instead of a blank cell across the Pool + the stat boards (`views/players.py`) and the CLI `ui/table.py` /
+  `ui/xg.py`. Crucially `availability_flag` is **unchanged** (still `""` for a fit player): its emptiness doubles
+  as the "is this player a concern?" truthiness test the who's-flagged logic relies on (My Squad's caption, the
+  gameweek-plan flags), so a *separate* display helper keeps the Fit column positive **and** that logic intact;
+  `AVAILABILITY_LEGEND` now leads with "✅ available". No engine/analytics change; +1 test (Fit-column
+  assertions strengthened to expect ✅).
 - **Sprint 106 (2026-08-08)** — *Explainability for the AI Tips gameweek plan* (extends **ADR-089**; owner
   request) — the last major decision to get it. **US-273:** `gameweek_plan` runs the captain with `limit=3` and
   returns `captain_ranked` (additive) so the captain explanation has a runner-up. `analytics/explain.py::

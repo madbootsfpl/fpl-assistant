@@ -1,7 +1,7 @@
 # Sprint 107: Ask readability + a "fit" emoji
 
 **Dates:** 2026-08-08 (planned)
-**Status:** 🟢 In progress (2/2 stories built — retro pending)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (two display fixes from tester feedback)
 **Carried Over:** none
 
@@ -116,4 +116,32 @@ The truthiness-based flagged logic (My Squad caption, gameweek flags) keeps usin
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **707 → 708** (+1 `fit_flag` test, several Fit-column
+assertions strengthened to expect ✅); ruff clean; CI-parity green. **No new ADR** (extends ADR-052 for the Ask
+display, ADR-074 for the Fit column). No engine/analytics change — both stories are display-only.
+
+**Delivered**
+- **US-275 — Ask readability + auto-scroll.** Answers render with `st.code(…, wrap_lines=True)` so long
+  narration wraps while the aligned tables/blocks stay readable; a `height=1` same-origin `st.iframe` nudge
+  smooth-scrolls the parent to the newest Q&A after the history replays.
+- **US-276 — a "fit" ✅ emoji.** A new `fit_flag(player)` display helper (`availability_flag(player) or "✅"`)
+  makes a fit player read ✅ instead of blank across the Pool, the stat boards and the CLI tables;
+  `availability_flag` stays `""`-for-fit so the who's-flagged logic is untouched.
+
+**What went well**
+- **Both were small, honest display fixes** straight from tester feedback — no engine risk, quick to verify.
+- **The `""`-for-fit invariant was the whole design of US-276.** Rather than changing `availability_flag`
+  (which doubles as a truthiness test), a *separate* `fit_flag` keeps the Fit column positive **and** the
+  flagged-player logic intact — a clean split of "display" from "is-a-concern".
+- **`wrap_lines=True` was a one-word fix** that solved the readability complaint without restructuring — and
+  keeps the monospace alignment the tables rely on.
+- **The scroll nudge reused the known same-origin iframe trick** (from the countdown clock, Sprint 101/103).
+
+**Watch-outs / follow-ups**
+- **The scroll nudge is best-effort** — it depends on same-origin `window.parent` access; it's wrapped in a
+  `try/catch` and simply no-ops if the host ever sandboxes the frame. Fine for the current deploy.
+- **`st.iframe` height can't be 0** (raises `StreamlitInvalidHeightError`) — used `height=1` for "invisible".
+- **Deferred:** nothing material. A richer web-native Ask render (markdown bubbles instead of a mono block)
+  remains the standing explainability/UI polish item.
+
+See `Sprint107_Lessons_Learnt.md` for the detailed retro.

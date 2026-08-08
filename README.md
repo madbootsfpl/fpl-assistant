@@ -190,8 +190,8 @@ ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs
   top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag) plus stat views: **Set pieces**
   (who takes **penalties · corners · free-kicks** + Own%/Val/£m — a low-ownership **differential** lens) ·
   **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date; clean sheets & xG carry a
-  relative **🟢…🔴 quality rating** vs the players shown; every table has a **🚑/🚫/⛔/❓ Fit** availability
-  column)
+  relative **🟢…🔴 quality rating** vs the players shown; every table has a **Fit** availability column —
+  **✅ fit** · 🚑/🚫/⛔/❓ concerns)
 - **Fixtures** — a colour-coded fixture **ticker** with team badges
 - **Squads** — a **Gameweeks-ahead** dropdown (1–8) sets the prediction horizon for the whole tab · **Build**
   (the full `squad` options → the optimal 15, shown on the **green pitch** + a sortable table; a **formation
