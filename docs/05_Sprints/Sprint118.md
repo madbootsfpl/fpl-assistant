@@ -1,7 +1,7 @@
 # Sprint 118: History on the web (+ a price column)
 
 **Dates:** 2026-08-19 (planned)
-**Status:** 🟢 In progress (2/2 stories built — retro pending)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (enrich the history assembler + a web view — display only)
 **Carried Over:** none
 
@@ -43,8 +43,8 @@ analytics/xP untouched.
       player has none. Display-only; no server writes.
 - [x] **No drift** — a read-view/lens only; `decision_xp`/the analytics unchanged; the read-only web guardrail
       holds; **764** green (762 → +2: the price column + the web History view); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Backlog (extends **ADR-027/060** (history) +
-      **ADR-069** (the Players sub-nav) — noted; no new ADR).
+- [x] Docs: PROJECT_STATUS, Architecture, README, Help, Backlog (extends **ADR-027/060** (history) +
+      **ADR-069** (the Players sub-nav) — no new ADR).
 
 ---
 
@@ -121,4 +121,32 @@ History **tab** (the Players sub-view is enough).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **762 → 764** (+2: the price column + the web History
+view). Ruff clean; CI-parity green. **No new ADR** (extends ADR-027/060 history + ADR-069 the Players sub-nav).
+No analytics change — display only, reusing `analytics.player_history`.
+
+**Delivered**
+- **US-297 — a price column** (`£start→end` + `Δ£`) across the history assembler + the CLI/Ask renderer, once
+  the cost units were confirmed to be £m.
+- **US-298 — history on the web** — a "History" view on the Players page (player picker → a native season
+  dataframe + a per-GW line chart + the price), completing the CLI + Ask + web arc.
+
+**What went well**
+- **The engine did the work.** Both stories reused `analytics.player_history` — US-297 added three fields,
+  US-298 rendered the same shape natively — so the CLI, Ask and web all speak one history source.
+- **The web slotted into the existing sub-nav.** A new "History" option on the Players `st.segmented_control`
+  added a per-player view beside the per-board stat views with no new page or tab.
+- **Native where native fits.** A dataframe + line chart + selectbox reads consistently with the rest of the
+  app and needed no bespoke HTML/CSS or a design sign-off — the opposite call from the captain card, and the
+  right one here.
+- **Verified the units before shipping the price.** The Sprint-117 caveat (a mis-divided debug) was resolved by
+  reading the ingestion test (`115 → 11.5` = £m), so the column is trustworthy.
+
+**Watch-outs / follow-ups**
+- **The per-GW line chart is untested live** — per-GW is empty preseason, so only the dataframe + GW1 caption
+  are exercised now; the chart lights up (and wants a look) at GW1.
+- **The default selectbox player may lack history** (a fringe player) → the "run --backfill" note; fine, but a
+  reason to default to a high-profile player later if wanted.
+- **Deferred:** a rolling-form sparkline; cross-player history comparison; the web `Δ£` as a coloured up/down.
+
+See `Sprint118_Lessons_Learnt.md` for the detailed retro.

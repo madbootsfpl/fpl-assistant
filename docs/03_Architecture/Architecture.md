@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 118 (2026-08-19)** — *History on the web (+ a price column)* (display only; extends ADR-027/060 +
+  ADR-069; no analytics change). **US-297:** `analytics/history.py::player_history` season rows now carry
+  `start_cost`/`end_cost` (already £m — the ingest converts tenths) + `change` (`round(end−start,1)`, `None`
+  when absent); `ui/history.py::render_player_history` gained a `£m` column (`£start→end`), so the CLI + Ask
+  history show a season's price move. **US-298:** a new `web_streamlit/views/players.py::render_history(rows,
+  photos, badges)` — a player `st.selectbox` → an on-demand `Storage` read (`get_history_past`/`get_history`) →
+  `player_history` → a photo/name header, a native **season `st.dataframe`** (Season · Pts · Mins · Starts ·
+  Pts/90 · xGI · xGC · £ start · £ end · Δ£, via the shared `column_config`) + a per-GW `st.line_chart` when
+  data exists, else a "fills at GW1" caption; degrades to a "run `history --backfill`" note. Added as a
+  **"History"** option on the Players `st.segmented_control`. Native Streamlit (no bespoke CSS, no design
+  sign-off — unlike the captain card); display-only, a short-lived read (no server writes). The history feature
+  is now complete across CLI · Ask · web. +2 tests (764).
 - **Sprint 117 (2026-08-18)** — *A `history <player>` view: past seasons now, per-GW at GW1* (a read-view over
   data we already ingest; extends ADR-027/060 + ADR-037; no analytics change). **US-295:** a pure
   `analytics/history.py::player_history(player, seasons, gameweeks)` → `{player, seasons, gameweeks}` (normalised
