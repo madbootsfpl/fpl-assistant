@@ -106,14 +106,12 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   not a lens). **Tier 3** (backtest crowd-follow vs xP-only) remains open → Roadmap *Later*. Momentum/form
   boards light up at **GW1 (2026-08-21)**.
 
-- **Cloud squads — server-side persistence (Path 2)** — ◑ **design agreed (ADR-094), build = Sprint 123.** The
-  seamless upgrade to Sprint 057's download/upload: **cross-device** save/load backed by a free external DB.
-  **ADR-094 (Sprint 122)** commits to a **handle-keyed Supabase store** (no login — a user-chosen handle is the
-  key), a thin swappable `cloud_store` adapter (`save_squad`/`load_squad`, secret-gated via
-  `FPL_STORE_URL`/`FPL_STORE_KEY`), revising the read-only invariant to one opt-in, tested write; ~£0. **Build
-  (Sprint 123):** the adapter + a My-Squad "☁ Save/Load across devices" expander + the guardrail-test revision +
-  a privacy/"clear my squad" note + the owner's Supabase setup. Native `st.login()` = the deferred "product"
-  upgrade (the adapter interface is chosen so a handle → an authed user id needs no re-architecting).
+- ~~**Cloud squads — server-side persistence (Path 2)**~~ — **DONE** (Sprint 124, US-309/310, **ADR-094**).
+  **Cross-device** save/load: `web_streamlit/cloud_store.py` (handle-keyed **Supabase** save/load/delete,
+  best-effort, secret-gated `FPL_STORE_URL`/`FPL_STORE_KEY`) + a My-Squad **☁ Save/Load across devices** expander
+  (no login — the handle is the key) + `docs/CLOUD_SQUADS.md`. The **first server-side write** — the read-only
+  invariant was revised (one opt-in, tested, secret-gated write); off by default. Native `st.login()` = the
+  deferred "product" upgrade (the adapter interface fits it). ~£0 (Supabase free tier).
 
 ### Done (kept for the trail)
 

@@ -44,7 +44,8 @@ with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=Tr
         "with no photo shows their **club shirt**. The summary's **Projected XI** includes your **captain's "
         "×2 — for the next gameweek only** (captaincy is re-picked each week). Edit it: **rename**, **swap** "
         "any player (legality-checked) — filter the swap by **position** and tick **Affordable only** to hide "
-        "replacements over your **bank** — set the **bench** (pick 4). Every change updates your session and the "
+        "replacements over your **bank** — set the **bench** (pick 4). If cross-device is enabled, **☁ Save/Load "
+        "across devices** by a handle. Every change updates your session and the "
         "**Download**. New team? Switch back to the **Build** view."
     )
 

@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 124 (2026-08-25)** — *Cross-device squads* — **implements ADR-094**; the **first server-side write**
+  from the web edge, so the read-only invariant (ADR-053/054) is deliberately revised: *no local DB/squad-file
+  writes; the one server write is this opt-in, secret-gated squad save* (a tested exception). **US-309:** a new
+  `web_streamlit/cloud_store.py` — `is_configured()` · `save_squad` (Supabase REST upsert:
+  `Prefer: resolution=merge-duplicates`, `{handle, data}`) · `load_squad → dict|None` (`?handle=eq.<h>&select=data`)
+  · `delete_squad` · `clean_handle` (lower-case `[a-z0-9_-]`, 2–32 — guards the `eq.` filter); config via
+  `access.secret` (`FPL_STORE_URL`/`FPL_STORE_KEY`), best-effort via `api.retry.with_retry`. Guardrail: kept the
+  `.save(` scan **and** added `test_cloud_store_squad_write_is_secret_gated` (unset secrets → `is_configured()`
+  False, no read, `save_squad` refuses before any HTTP). **US-310:** a My-Squad **"☁ Save / Load across devices"**
+  expander (`render_my_squad`, shown only when configured) — a handle + Save/Load/Clear (degrade gracefully) + a
+  privacy caption; `docs/CLOUD_SQUADS.md` for the owner Supabase setup. **No login** — the handle is the key
+  (hobby-beta trade-off); native `st.login()` = the deferred product path (the adapter interface fits it). Off by
+  default (no secrets → the feature is hidden + inert). +10 tests (791); no live network (monkeypatched `requests`).
 - **Sprint 123 (2026-08-24)** — *Feedback to your inbox* (owner set up **fpl.assistant@proton.me**; display/link
   + payload-field only — no new server write, the read-only guardrail holds; extends **ADR-087**, no new ADR).
   **⚠️ Constraint:** Proton has no free SMTP, so the app can't send mail directly — two free routes instead.

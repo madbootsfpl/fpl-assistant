@@ -214,7 +214,7 @@ ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs
   preview** with each shape's **projected XI xP** + a compare-all-formations table) · **My Squad** (a **green
   FFH-style pitch** — kits in formation + a bench
   strip, xP chips, a (C) armband + sub badges; each card shows Trends + **set-piece duty** ⚽/🚩/🎯;
-  edit: rename/swap (with a **position filter** + an **"Affordable only"** check + your **bank**)/bench/captain/download; a **quick-stats summary** — Projected XI (incl. the **captain ×2
+  edit: rename/swap (with a **position filter** + an **"Affordable only"** check + your **bank**)/bench/captain/download (+ optional **☁ Save/Load across devices** by a handle when the cloud store is configured — ADR-094); a **quick-stats summary** — Projected XI (incl. the **captain ×2
   for next GW only**) / Captain / Bench xP + who's injured/doubtful — and a **bench order** you can see and
   **reorder** (auto-sub priority)) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
   **Chips** (a grounded chip-strategy advisor — when to play **Triple Captain · Bench Boost · Free Hit ·

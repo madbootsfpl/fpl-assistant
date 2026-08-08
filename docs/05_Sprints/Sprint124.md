@@ -1,7 +1,7 @@
 # Sprint 124: Cross-device squads — build the handle-keyed cloud store (ADR-094)
 
-**Dates:** 2026-08-25 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-25
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~¾–1 session (the **first server-side write** + the read-only guardrail revision — the careful one)
 **Carried Over:** the ADR-094 design gate (now being built)
 
@@ -39,22 +39,22 @@ cross-device sync at ~£0, no login. Off by default (unset secrets → invisible
 new server write is scoped, secret-gated, and tested.
 
 #### Success Criteria
-- [ ] **US-309 (the `cloud_store` adapter + the guardrail revision)** — `web_streamlit/cloud_store.py`:
+- [x] **US-309 (the `cloud_store` adapter + the guardrail revision)** — `web_streamlit/cloud_store.py`:
       `is_configured()`, `save_squad(handle, squad)` (Supabase upsert), `load_squad(handle) -> dict | None`,
       `delete_squad(handle)`, `_clean_handle` (sanitised: lower-case, `[a-z0-9_-]`, bounded). Secret-gated
       (`FPL_STORE_URL`/`FPL_STORE_KEY`), best-effort (`with_retry` + timeout, raise → degrade). Unit-tested with a
       monkeypatched `requests`; the **read-only invariant evolves** — keep the `.save(` scan **and** add a
       secret-gated test (unset secrets → `is_configured()` False → no write, feature hidden).
-- [ ] **US-310 (the My-Squad "☁ Save/Load across devices" UI + a privacy note)** — in `render_my_squad`, when
+- [x] **US-310 (the My-Squad "☁ Save/Load across devices" UI + a privacy note)** — in `render_my_squad`, when
       `cloud_store.is_configured()`: an expander with a **handle** input + **Save** / **Load** / **Clear**
       buttons; Save→`save_squad`, Load→`set_active_squad`+`st.rerun`, Clear→`delete_squad`; a **privacy caption**
       (what's stored · no login · a handle isn't security · Clear removes it); degrade with a friendly note on
       failure. **Hidden entirely when unconfigured.** Plus a `docs/CLOUD_SQUADS.md` owner-setup runbook.
-- [ ] **No unintended drift** — the *only* new server write is `cloud_store.save_squad`/`delete_squad`, secret-
-      gated + off by default; the download/upload path (ADR-054) still works; existing **781** stay green (+
-      adapter/UI/guardrail tests); ruff clean; CI (no secrets) sees the feature off.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log, Backlog, DEPLOY.md/BETA.md, CLOUD_SQUADS.md
-      (implements **ADR-094**; the ADR moves from "design gate" to "built").
+- [x] **No unintended drift** — the *only* new server write is `cloud_store.save_squad`/`delete_squad`, secret-
+      gated + off by default; the download/upload path (ADR-054) still works; existing **781** stay green (**791**
+      with +10); ruff clean; CI (no secrets) sees the feature off.
+- [x] Docs: PROJECT_STATUS, Architecture, README, Help, Backlog, Roadmap, CLOUD_SQUADS.md (implements **ADR-094**;
+      the ADR moves from "design gate" to "built").
 
 ---
 
@@ -152,4 +152,54 @@ _(the sprint delivers the code + the runbook; the store needs your account)_
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped — **cross-device squads is built** (ADR-094), the app's first server-side
+write. Save a squad under a handle on one device, load it on another; ~£0 (Supabase free), no login. It's the
+one sprint that changed the read-only architecture, so the guardrail work was the focus — and the invariant now
+*evolved deliberately and testably* rather than being quietly broken.
+
+**Delivered**
+- **US-309** — `web_streamlit/cloud_store.py` (Supabase upsert/select/delete, `clean_handle`, best-effort via
+  `with_retry`, secret-gated); the read-only invariant revised — the `.save(` scan kept **plus** a new
+  secret-gated test proving no read/write happens without the secrets. +8 tests.
+- **US-310** — a My-Squad **"☁ Save / Load across devices"** expander (shown only when configured) + a privacy
+  caption; `docs/CLOUD_SQUADS.md` owner setup. +2 tests.
+
+**Verified at planning + build** — the squad is a small JSON dict (store whole); `with_retry` is the best-effort
+pattern; config via `secret()` → env in tests; **no live network** (monkeypatched `requests`); unset secrets →
+the feature is invisible + inert. Smoke: unconfigured → no expander; configured (fake store) → Save upserts
+`handle=tony17`, Load adopts "Cloud XI" into the session.
+
+**Metrics** — 791 tests (781 → +10) · ruff + CI-parity green · 95 ADRs (no new — ADR-094 built) · 2 stories,
+~¾ session.
+
+**What went well**
+- **The guardrail evolved honestly.** Rather than let `save_squad` slip past the `.save(` scan by luck, a
+  dedicated test pins the *real* property: without secrets there is no read, and `save_squad` refuses **before
+  any HTTP** (a monkeypatched `requests.post` set to raise is never reached).
+- **Off by default = safe by default.** The whole feature is secret-gated: CI, forks and the current public
+  deploy see it hidden + inert, so this big change ships with zero risk to existing users.
+- **A thin, swappable adapter** — the interface takes a handle now but fits an authenticated `st.login()` id
+  later without a rewrite (ADR-094).
+- **The download/upload path (ADR-054) still works** — the cloud store is an *additive* convenience with a
+  fallback, not a replacement.
+
+**Even better if**
+- A handle isn't security — anyone who knows it can overwrite it (a documented hobby-beta trade-off; `st.login()`
+  is the deferred fix).
+- No "handle already taken?" check yet (a nicety; a collision just overwrites — the caption warns to pick an
+  un-guessable handle).
+- The store needs the owner's ~10-min Supabase setup before it's live — the code + runbook ship, the account step
+  is the owner's.
+
+**Deferred / backlog** — native `st.login()` (product identity); a handle-availability check; encryption /
+rate-limiting; a "list my saved handles" view.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **When you'll wire up Supabase:** _(now, before recruiting testers · or later)_
+- **Comfort with the first server write behind the guardrail (1–5):**
