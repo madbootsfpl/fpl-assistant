@@ -1,7 +1,7 @@
 # Sprint 113: A robust Ask scroll + an explained differential shortlist
 
 **Dates:** 2026-08-14 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~1 session (Ask presentation + explainability — no analytics change)
 **Carried Over:** none
 
@@ -36,16 +36,16 @@
 Presentation + a grounded rationale; the analytics/ranking untouched.
 
 #### Success Criteria
-- [ ] **US-287 (robust auto-scroll)** — the Ask scroll nudge scrolls the parent to the bottom **several times
+- [x] **US-287 (robust auto-scroll)** — the Ask scroll nudge scrolls the parent to the bottom **several times
       over ~0.8 s** (instant), still **unique per turn**, so it lands reliably regardless of the
       expander-collapse / rerun-timing (not a single smooth attempt). No content change.
-- [ ] **US-288 (explain the differential shortlist)** — the **differential** shortlist answer gains a grounded
+- [x] **US-288 (explain the differential shortlist)** — the **differential** shortlist answer gains a grounded
       **"Why a differential?"** lead (the rank-lever benefit + the variance trade-off) and a compact **per-pick
       "why these"** — each leader's standout signal from the data (highest xP · nailed ~N mins / rotation risk ·
       set-pieces · penalty taker · in form), gracefully thin preseason. The **plain** shortlist stays
       byte-identical; the answer still **verifies (✓)**.
-- [ ] **No drift** — display/rationale only; `decision_xp`/the ranking unchanged; existing **737** stay green
-      (+ new scroll / differential-why tests); ruff clean.
+- [x] **No drift** — display/rationale only; `decision_xp`/the ranking unchanged; **738** green (737 → +1 net:
+      the scroll test now checks multi-tick; +1 shortlist-rationale test); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Feedback_Log (extends **ADR-052** (Ask scroll) +
       **ADR-042/061** (shortlist) — noted; no new ADR).
 
@@ -76,8 +76,8 @@ per-pick confidence scores (a list isn't a single decision); a web-native card.
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-287 | **Robust Ask auto-scroll** — a multi-tick instant scroll (per turn) so it lands reliably. | High | ⬜ To do | ~¼ session |
-| US-288 | **Explain the differential shortlist** — a grounded benefit lead + per-pick standout signals. | High | ⬜ To do | ~½ session |
+| US-287 | **Robust Ask auto-scroll** — a multi-tick instant scroll (per turn) so it lands reliably. | High | ✅ Done | ~¼ session |
+| US-288 | **Explain the differential shortlist** — a grounded benefit lead + per-pick standout signals. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -105,10 +105,56 @@ per-pick confidence scores (a list isn't a single decision); a web-native card.
   `[50,200,450,800]` `forEach` scroll to `scrollHeight`, no `smooth`). **737** green, ruff clean.
 - **Manual smoke:** clicking example questions scrolls to the answer each time.
 
-_(US-288 next — "start US-288".)_
+**US-288 — explain the differential shortlist.** ✅ Done.
+- The **differential** shortlist answer now leads with a grounded **"Why a differential?"** — the rank-lever
+  benefit (*few own a ≤5%-owned player → a haul gains rank on the template, a blank costs little relative rank*)
+  + the **variance** trade-off (*play them for upside, not safety*).
+- A per-pick **"Standout signals (ranked by xP)"** block for the top 3 — each leader's grounded signal from a
+  new `ui/shortlist.py::_pick_signals(row)`: **nailed ~N mins** vs **rotation risk ~N mins**, **set-piece**
+  duty (⚽/🚩/🎯) and **in form** — thin preseason (form/set-pieces sparse → richer at GW1). e.g. *Stach (18.4
+  xP) — rotation risk ~62 mins · 🎯 FK · Zubimendi (17.1 xP) — nailed ~78 mins* — the caveat is itself useful
+  "why these ones".
+- `render_shortlist` gained a `rationale=` param (lead + signals); **the plain shortlist is byte-identical**
+  (no rationale). The facts still carry the ranked-by + top players, so the answer **verifies ✓** (the per-pick
+  signals live in the grounded detail, not the LLM's facts, so no verifier risk).
+- **Tests (+1, 1 extended):** a `render_shortlist` rationale test (lead + nailed/rotation + set-piece signals;
+  plain stays block-free); the differential decide test asserts the lead + signals. **738** green, ruff clean.
+- **Manual smoke:** `ask "best differential midfielders under £8m"` leads with the benefit + names each
+  leader's standout signal; the plain "best midfielders under £8m" is unchanged.
 
 ---
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ Successful — 2/2 stories done. Test count **737 → 738** (+1 net: the scroll test now checks
+multi-tick; a new shortlist-rationale test). Ruff clean; CI-parity green. **No new ADR** (extends ADR-052 Ask
+scroll · ADR-042/061 shortlist). No analytics change — the ranking + grounding are untouched.
+
+**Delivered**
+- **US-287 — robust Ask auto-scroll.** The single smooth `setTimeout` became a **multi-tick instant** scroll
+  (`[50,200,450,800]`), still unique per turn — so it lands reliably regardless of the expander collapse /
+  rerun timing.
+- **US-288 — explain the differential shortlist.** A grounded **"Why a differential?"** lead + a per-pick
+  **standout signals** block (nailed/rotation · set-pieces · form); the plain shortlist stays byte-identical.
+
+**What went well**
+- **Diagnosed the "works for some, not all".** A single smooth scroll fires once and loses to Streamlit's
+  scroll-restore + the expander collapse; scrolling *instantly, several times* over ~0.8 s is the robust fix.
+- **The benefit carried the "why".** Preseason the per-pick signals are thin (mostly minutes), so leading with
+  the *strategy* rationale — the always-valuable part — was the right emphasis; the signals layer in where
+  known and sharpen at GW1.
+- **Grounding stayed clean by placement.** Per-pick signals live in the **detail** (the grounded truth block
+  the tester sees), not in the LLM's facts — so no number can slip into the narration unverified.
+- **Byte-identical plain path.** A single `rationale=` param gated the whole addition, so the non-differential
+  shortlist output is unchanged (a test pins it).
+
+**Watch-outs / follow-ups**
+- **Instant multi-tick isn't fully browser-testable** — AppTest can't run the iframe JS, so the test asserts
+  the emitted script (unique per turn + the multi-tick delays + no `smooth`); the behaviour itself is a manual
+  smoke.
+- **"rotation risk" at the 0.7 xMins line reads slightly harsh** for a ~62-min player (Stach) — deliberate
+  (consistent with `explain_captain`'s start threshold) and honest, but a candidate to soften if testers push.
+- **Deferred:** a "why" on the plain shortlist (its rationale is just "ranked by xP"); per-pick confidence; a
+  web-native shortlist card.
+
+See `Sprint113_Lessons_Learnt.md` for the detailed retro.

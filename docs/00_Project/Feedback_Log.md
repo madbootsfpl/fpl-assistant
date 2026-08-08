@@ -8,6 +8,8 @@ come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); 
 
 | Date | Tester | Tab | What happened / suggested | Severity | → Backlog? |
 |------|--------|-----|---------------------------|----------|-----------|
+| 2026-08-14 | Owner | Ask | The example-click **auto-scroll** works for *some* answers, not all — still scroll manually sometimes. | 🟠 polish | ✅ Sprint 113 (US-287, extends ADR-052) — the single smooth scroll → a multi-tick **instant** scroll ([50,200,450,800]ms), so it lands reliably after layout settles |
+| 2026-08-14 | Owner | Ask | *"best differential midfielders under £8m"* needs a **why** — the benefit of a differential, and maybe why these ones. | 💡 | ✅ Sprint 113 (US-288, extends ADR-042/061) — a grounded "Why a differential?" lead (rank lever + variance) + a per-pick "standout signals" block (nailed/rotation · set-pieces · form); plain shortlist unchanged, still ✓ |
 | 2026-08-12 | Owner | Ask | Rules answers are a **dense paragraph** — a multi-item fact (chips) should read as **bullets**. | 🟡 polish | ✅ Sprint 111 (US-283, extends ADR-085) — the chips/scoring/clean-sheets/leagues facts render item-per-line; grounding unchanged (still ✓) |
 | 2026-08-12 | Owner | Ask | Clicking an **example question** doesn't auto-scroll to the answer (typing your own does). | 🟠 polish | ✅ Sprint 111 (US-283, extends ADR-052) — the static scroll nudge didn't re-run; now unique per turn (`/*turn N*/`) so it fires on every answer |
 | 2026-08-12 | Owner | Ask | *"is X worth the money?"* should explain **why** — like the captain/transfer answers. | 💡 | ✅ Sprint 111 (US-284, extends ADR-089/061) — `explain_worth` adds a grounded Confidence · Why · Risk + Model note; explains without Ollama, verified ✓ |

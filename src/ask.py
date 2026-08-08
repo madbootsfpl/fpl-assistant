@@ -978,13 +978,18 @@ def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | No
         "top_players": [f"{r['web_name']} ({r['position']}, £{r['price']}m, xP {r['xp']})"
                         for r in rows[:3]],
     }
+    lead = None
     if differential:
         facts["filter"] = f"differentials only (≤{DIFFERENTIAL_OWN:.0f}% owned)"
         facts["top_players"] = [
             f"{r['web_name']} ({r['position']}, £{r['price']}m, {r['selected_by']}% owned, xP {r['xp']})"
             for r in rows[:3]]
+        # Why a differential (US-288, tester feedback) — the rank-lever benefit + the variance trade-off.
+        lead = (f"Why a differential? Few managers own a ≤{DIFFERENTIAL_OWN:.0f}%-owned player, so if they "
+                "haul you gain rank on the template — and a blank costs you little relative rank. The "
+                "trade-off is variance: play them for upside, not safety. Ranked by xP; standout signals below.")
     return {
-        "detail": render_shortlist(rows, title, show_own=differential),
+        "detail": render_shortlist(rows, title, show_own=differential, rationale=lead),
         "facts": facts,
         "subjects": [r["web_name"] for r in rows],
         "task": "in 2 short sentences, summarise these top players (name a couple and why they lead)",

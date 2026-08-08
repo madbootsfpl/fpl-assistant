@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 113 (2026-08-14)** — *A robust Ask scroll + an explained differential shortlist* (tester feedback;
+  display/rationale, extends ADR-052 + ADR-042/061; no analytics change). **US-287:** the Ask example-click
+  auto-scroll ("worked for some, not all") replaced its single `setTimeout(…, 150ms)` **smooth** scroll with a
+  **multi-tick instant** one — `[50,200,450,800].forEach(d => setTimeout(scrollToBottom, d))` — still carrying
+  the `/*turn N*/` per-turn token, so it lands reliably after the example expander collapses + late layout and
+  Streamlit's scroll-restore can't override it mid-animation. **US-288:** `_decide_shortlist` (differential
+  branch) builds a grounded **"Why a differential?"** lead (rank-lever benefit + variance trade-off) and
+  `ui/shortlist.py` gained `_pick_signals(row)` (nailed/rotation ~N mins · set-piece duty · in form) + a
+  `rationale=` param on `render_shortlist` that prepends the lead + a per-pick *Standout signals* block for the
+  top 3. The **plain** shortlist is byte-identical (no rationale); the per-pick signals live in the grounded
+  **detail**, not the LLM facts, so the answer still verifies (✓, ADR-037). +1 net test (738).
 - **Sprint 112 (2026-08-13)** — *Price Change Predictor (a directional lens, wired dormant → GW1)* (owner
   intake; **ADR-092**, a display/analytics lens — never xP). **US-285:** a pure `analytics/price.py`:
   `price_pressure(player)` = `net_transfers(player) ÷ selected_by%` (signed; `None` when either is absent; **0**

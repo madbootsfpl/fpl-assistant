@@ -383,6 +383,8 @@ def test_shortlist_differential_filters_by_ownership():
     assert d["subjects"] == ["Diff"]                       # the template is filtered out
     assert "≤5% owned" in d["detail"]                      # the caption + Own% column
     assert "3.0" in d["detail"]                            # Diff's ownership shown
+    assert "Why a differential?" in d["detail"]            # US-288: the benefit lead
+    assert "Standout signals" in d["detail"] and "Diff (" in d["detail"]   # per-pick "why these"
 
 
 def test_shortlist_message_when_nothing_matches_the_filter():
@@ -414,6 +416,22 @@ def test_render_shortlist_show_own_adds_ownership_column():
     out = render_shortlist([_row("Diff", 6.0, 18.0, 0.9, 2.5)],
                            "Best differential MID — by expected points (xP)", show_own=True)
     assert "Own%" in out and "2.5" in out             # the ownership column + value
+
+
+def test_render_shortlist_rationale_adds_a_why_and_standout_signals():
+    # US-288: a rationale prepends the benefit lead + per-pick standout signals; without it, byte-identical.
+    def _row(name, xp, w, **extra):
+        base = {"web_name": name, "team": "ARS", "position": "MID", "price": 6.0, "status": "a",
+                "chance": None, "xp": xp, "minutes_weight": w, "selected_by": 2.0,
+                "penalties_order": None, "corners_order": None, "freekicks_order": None, "form": 0.0}
+        return {**base, **extra}
+    rows = [_row("Nailed", 18.0, 0.9), _row("Rotated", 17.0, 0.5, freekicks_order=1)]
+    out = render_shortlist(rows, "Best differential MID — by xP", show_own=True,
+                           rationale="Why a differential? Play them for upside.")
+    assert "Why a differential?" in out and "Standout signals (ranked by xP):" in out
+    assert "Nailed (18.0 xP) — nailed" in out                         # mw ≥ 0.7 → nailed
+    assert "Rotated (17.0 xP) — rotation risk" in out and "🎯 FK" in out   # mw < 0.7 → risk + set-piece
+    assert "Standout signals" not in render_shortlist(rows, "Best MID — by xP")   # plain: no rationale block
 
 
 # ---- worth intent (ADR-061) — single-player value verdict -------------------
