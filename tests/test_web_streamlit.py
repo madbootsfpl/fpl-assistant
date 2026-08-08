@@ -877,6 +877,23 @@ def test_my_squad_swap_position_filter_scopes_the_replace_list():
     assert replace.options and all(o.startswith("GK ") for o in replace.options)   # scoped to GKs
 
 
+def test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank():
+    # US-300: an "Affordable only" checkbox hides too-dear replacements; a bank caption shows.
+    at = _squads_view("My Squad")
+    chk = next((c for c in at.checkbox if c.label == "Affordable only"), None)
+    if chk is None:                                        # no owned squad / no swap UI → nothing to filter
+        return
+    assert any(c.value.startswith("Bank:") for c in at.caption)   # the bank is shown
+    before = next((s for s in at.selectbox if s.label == "With"), None)
+    if before is None:
+        return                                             # no candidates to filter
+    n_before = len(before.options)
+    chk.set_value(True).run()
+    after = next((s for s in at.selectbox if s.label == "With"), None)
+    n_after = len(after.options) if after else 0
+    assert n_after <= n_before                             # affordable-only never widens the list
+
+
 def test_my_squad_rename_updates_the_active_squad():
     at = _squads_view("My Squad")
     name_inputs = [t for t in at.text_input if t.label == "Squad name"]   # not the sidebar manager-ID

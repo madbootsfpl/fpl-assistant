@@ -396,6 +396,12 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             pos_filter = st.segmented_control(
                 "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="swap_pos",
                 help="Filter which of your players to swap out by position.")
+            # Your bank drives affordability (US-300): a swap out → in fits when in.price ≤ out.price + bank.
+            bank = round(FPL_BUDGET - sum(p["price"] for p in owned), 1)
+            st.caption(f"Bank: £{bank:.1f}m")
+            affordable_only = st.checkbox(
+                "Affordable only", value=False, key="swap_affordable",
+                help="Hide replacements that would push you over budget (the swap still checks this on apply).")
             out_pool = [p for p in owned if pos_filter in (None, "All") or p["position"] == pos_filter]
             if not out_pool:
                 st.caption(f"No {pos_filter} players in your squad.")
@@ -410,8 +416,11 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 cands = sorted((p for p in players if p["position"] == out["position"]
                                 and p["id"] not in owned_ids and not is_unavailable(p)),
                                key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
+                budget_in = out["price"] + bank                # the most a replacement can cost and still fit
+                affordable = [p for p in cands if p["price"] <= budget_in]
+                shown = affordable if affordable_only else cands
                 in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
-                            f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in cands}
+                            f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in shown}
                 if in_label:
                     in_choice = st.selectbox("With", list(in_label), key="swap_in",
                                              help="The same-position player to bring in (ranked by xP).")
@@ -426,6 +435,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                             msg = f"Swapped **{out['web_name']} → {by_id[in_label[in_choice]]['web_name']}**."
                             st.warning(f"{msg}  ⚠ {warning}") if warning else st.success(msg)
                             st.rerun()
+                elif affordable_only and cands:
+                    st.caption(f"No affordable replacement (≤ £{budget_in:.1f}m) — untick to see all.")
                 else:
                     st.caption("No available replacements in that position.")
 

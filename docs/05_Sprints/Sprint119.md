@@ -95,6 +95,12 @@ common case); filtering the transfer/build pickers (this is scoped to My Squad e
   your squad."* caption when the filter empties. The "With" candidates already key off the picked player's
   position, so they follow. Smoke (AppTest): All → 15 Replace options; GK → the 2 GKs only. +1 test
   (`test_my_squad_swap_position_filter_scopes_the_replace_list`). ruff clean. Edit-UI only — no analytics change.
+- **US-300 (an "affordable" checkbox)** — added `bank = FPL_BUDGET − sum(owned prices)` with a `st.caption("Bank:
+  £X.Xm")`, plus a `st.checkbox("Affordable only", value=False)`. When ticked, the "With" candidates filter to
+  `price ≤ out.price + bank` (a pre-filter — `apply_transfer` still enforces the budget on **Swap →**). A caption
+  *"No affordable replacement (≤ £X.Xm) — untick to see all."* when the filter empties a non-empty list. Smoke:
+  bank reads £0.0m for the fully-spent demo squad; ticking drops "With" 60 → 42. +1 test
+  (`test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank`). ruff clean.
 
 ---
 
