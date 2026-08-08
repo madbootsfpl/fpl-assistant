@@ -1,9 +1,10 @@
 """Feedback — a low-friction way for beta testers to tell us what worked / broke (Sprint 102, ADR-087).
 
-An in-app form that POSTs to the owner's own sink (`FPL_FEEDBACK_WEBHOOK` — e.g. a Google Apps Script), so
-non-devs don't need a GitHub account. Best-effort: it degrades to a GitHub-issue link when the webhook isn't
-configured or the POST fails. A "Join the beta" link points to the owner's signup form (`FPL_SIGNUP_URL`) for
-the founding-tester email list. No user data is persisted on our infra — the POST goes to the owner's sink.
+An in-app form that POSTs to the owner's own sink (`FPL_FEEDBACK_WEBHOOK` — e.g. a Google Apps Script or a
+form-to-email relay, US-308) so non-devs don't need a GitHub account. When no webhook is set (or a POST fails)
+it degrades to a **pre-filled email** to `FPL_FEEDBACK_EMAIL` (US-307) — one click opens the tester's mail app —
+with a GitHub-issue link as a last resort. A "Join the beta" link points to the owner's signup form
+(`FPL_SIGNUP_URL`). No user data is persisted on our infra — the POST/email goes to the owner's own inbox/sink.
 """
 
 from datetime import datetime, timezone
@@ -13,6 +14,7 @@ import requests
 import streamlit as st
 
 from src.web_streamlit.access import require_access, secret
+from src.web_streamlit.feedback import feedback_mailto
 
 _GITHUB_ISSUE = "https://github.com/tesheridan/fpl-assistant/issues/new"
 # The pages a tester might be reporting about (US-306) — so feedback carries where it happened.
@@ -32,10 +34,16 @@ st.title("📣 Feedback")
 st.caption("Testing the beta? Tell us what worked, what broke, or what you'd love next — it goes straight to "
            "the team. Thank you 🙏")
 
+feedback_email = secret("FPL_FEEDBACK_EMAIL", "fpl.assistant@proton.me")
+
 signup = secret("FPL_SIGNUP_URL")
 if signup:
     st.link_button("✋ Join the beta (founding testers)", signup,
                    help="Sign up with your email — founding testers get free access as the app grows.")
+
+# US-307: an always-available email route — opens the tester's mail app pre-addressed to the inbox.
+st.link_button("✉ Email your feedback", feedback_mailto(feedback_email),
+               help=f"Opens your mail app, pre-addressed to {feedback_email}.")
 
 with st.form("feedback", clear_on_submit=True):
     message = st.text_area("Your feedback", placeholder="What worked? What broke? What would you add?",
@@ -50,10 +58,12 @@ if sent:
     if not message.strip():
         st.warning("Add a note first, then send.")
     else:
+        # A one-click pre-filled email to the inbox — the fallback when there's no webhook, or a POST fails.
+        mailto = feedback_mailto(feedback_email, message.strip(), page, _app_version())
         webhook = secret("FPL_FEEDBACK_WEBHOOK")
         if not webhook:
-            st.info(f"In-app feedback isn't wired up yet — please [open a GitHub issue]({_GITHUB_ISSUE}) "
-                    "instead. Thanks!")
+            st.info("In-app sending isn't set up — one click emails it to us (opens your mail app):")
+            st.link_button("✉ Email this feedback", mailto)
         else:
             # US-306: enrich with where/when/what-version so a report carries context (ADR-087 intent).
             payload = {
@@ -68,6 +78,7 @@ if sent:
                 requests.post(webhook, json=payload, timeout=6)
                 st.success("Thanks — your feedback was sent! 🎉")
             except requests.RequestException:
-                st.error(f"Couldn't send just now — please [open a GitHub issue]({_GITHUB_ISSUE}) instead.")
+                st.error("Couldn't send just now — one click emails it to us instead:")
+                st.link_button("✉ Email this feedback", mailto)
 
 st.caption(f"Prefer GitHub? You can also [open an issue]({_GITHUB_ISSUE}).")

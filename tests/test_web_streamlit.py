@@ -517,19 +517,20 @@ def test_every_tab_has_an_emoji_led_header():
         assert at.title and emoji in at.title[0].value, f"{fname} title missing {emoji}"
 
 
-def test_feedback_page_form_degrades_to_github_without_a_webhook():
-    # US-264 (ADR-087): the Feedback form renders; with no FPL_FEEDBACK_WEBHOOK a submit points to GitHub
-    # (no network in tests), and the "Join the beta" link is hidden until FPL_SIGNUP_URL is set.
+def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
+    # US-307: with no FPL_FEEDBACK_WEBHOOK a submit offers a pre-filled mailto to the inbox (no network),
+    # and the "Join the beta" link is hidden until FPL_SIGNUP_URL is set.
     at = _run(_PAGES / "8_Feedback.py")
     assert not at.exception
     assert at.text_area and any(b.label == "Send feedback" for b in at.button)   # the form is there
     assert not any("Join the beta" in b.label for b in at.get("link_button"))     # no signup URL configured
-    ta = at.text_area[0]
-    ta.set_value("Bench boost explanation was great, one typo on Trending.").run()
+    assert any(b.label == "✉ Email your feedback" for b in at.get("link_button")) # always-available route
+    at.text_area[0].set_value("Bench boost explanation was great, one typo on Trending.").run()
+    next(s for s in at.selectbox if s.label == "Which page?").set_value("Trending").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert not at.exception
-    blob = " ".join(i.value for i in at.info) + " ".join(c.value for c in at.caption)
-    assert "github" in blob.lower()                              # degraded to the GitHub issue link, no POST
+    mailtos = [b.url for b in at.get("link_button") if str(b.url).startswith("mailto:")]
+    assert any("fpl.assistant@proton.me" in u and "typo" in u for u in mailtos)   # pre-filled email to the inbox
 
 
 def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
