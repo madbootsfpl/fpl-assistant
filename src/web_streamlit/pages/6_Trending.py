@@ -8,6 +8,7 @@ A display lens, never xP. Ownership works now; the momentum/form boards light up
 import streamlit as st
 
 from src.analytics import CROWD_LEGEND, crowd_flags, trending
+from src.api.feeds import parse_feed
 from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
@@ -24,6 +25,15 @@ def _cached_reddit_rss():
     """The r/FantasyPL RSS text, or None on any failure (ADR-059 — best-effort, degrade gracefully)."""
     try:
         return RedditRssClient().get_subreddit_rss()
+    except RedditError:
+        return None
+
+
+@st.cache_data(ttl=1800, show_spinner=False)      # the week's top posts (US-292), cached like the buzz feed
+def _cached_reddit_top():
+    """The week's top r/FantasyPL posts as RSS text, or None on any failure (best-effort, degrade)."""
+    try:
+        return RedditRssClient().get_top_weekly()
     except RedditError:
         return None
 
@@ -109,3 +119,20 @@ else:
                                 title = post["title"] or "(untitled post)"
                                 st.markdown(f"- [{title}]({post['link']})" if post["link"]
                                             else f"- {title}")
+
+        # The week's top discussions (US-292) — what's actually being talked about, not just a mention count.
+        st.divider()
+        st.caption("**🔥 Top discussions this week** — the highest-voted r/FantasyPL posts (a buzz lens, not a "
+                   "prediction; best-effort, cached ~30 min).")
+        if st.button("Show this week's top discussions",
+                     help="Fetch r/FantasyPL's top posts this week (best-effort; cached ~30 min)."):
+            top_rss = _cached_reddit_top()
+            if top_rss is None:
+                st.info("Top discussions are unavailable right now (Reddit didn't respond).")
+            else:
+                posts = parse_feed(top_rss, limit=10)
+                if not posts:
+                    st.info("No top posts found this week.")
+                else:
+                    for post in posts:
+                        st.markdown(f"- [{post['title']}]({post['link']})")

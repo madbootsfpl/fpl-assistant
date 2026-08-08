@@ -1,7 +1,7 @@
 # Sprint 115: Signal feeds — a media-headlines lens + sharper "talked about"
 
 **Dates:** 2026-08-16 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Status:** 🟢 In progress (2/2 stories built — retro pending)
 **Capacity:** ~1 session (a generic best-effort RSS lens + a Reddit variant — display-only, no xP)
 **Carried Over:** none
 
@@ -39,19 +39,19 @@ Football Scout · BBC Football · a YouTube FPL creator), and the **Trending** "
 **top discussions** (Reddit weekly-top) — both best-effort, cached, display-only. No scraping, no secret, no xP.
 
 #### Success Criteria
-- [ ] **US-291 (a media-headlines lens on News)** — a generic best-effort `api/feeds.py::MediaFeedsClient` +
+- [x] **US-291 (a media-headlines lens on News)** — a generic best-effort `api/feeds.py::MediaFeedsClient` +
       a pure parser (`title` · `link` · `published`, handling RSS `<item>` and Atom `<entry>`) driven by a
       **`config.MEDIA_FEEDS`** list (Fantasy Football Scout · BBC Football · YouTube). A **Headlines** section
       on the **News** tab — button-gated, **`st.cache_data`** (~30 min), grouped by source (title + link +
       date), each linking back to the source; a per-feed degrade (skip a failed feed; all-failed → a graceful
       note). Display-only, no secret.
-- [ ] **US-292 (sharper "talked about")** — the Trending **Community Signals** gains a **"🔥 Top discussions
+- [x] **US-292 (sharper "talked about")** — the Trending **Community Signals** gains a **"🔥 Top discussions
       this week"** list from Reddit **`top/.rss?t=week`** (top N post titles + links) — reusing
       `RedditRssClient` (a URL variant), button-gated + cached + degrade-gracefully, alongside the existing
       buzz counter.
-- [ ] **No drift** — display/lens only; `decision_xp`/the analytics/grounding unchanged; the read-only web
+- [x] **No drift** — display/lens only; `decision_xp`/the analytics/grounding unchanged; the read-only web
       guardrail holds (no server writes); the new fetches are best-effort + tested with a **fake/parsed
-      fixture** (no live network in tests); existing **739** stay green; ruff clean.
+      fixture** (no live network in tests); **746** green (739 → +7: parse/aggregate/degrade + reddit-top + render checks); ruff clean.
 - [ ] Docs: PROJECT_STATUS, Architecture, Roadmap, Backlog, README, Help, ADR-093 (the signal-source policy +
       the media lens).
 
@@ -87,8 +87,8 @@ lens); NLP/sentiment over the headlines (we show titles + links, not analysis).
 
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
-| US-291 | **Media-headlines lens (News)** — a generic best-effort RSS/Atom aggregator (FFS · BBC · YouTube) as an opt-in Headlines section; cached, degrade-gracefully (ADR-093). | High | ⬜ To do | ~½ session |
-| US-292 | **Sharper "talked about" (Trending)** — Reddit weekly-top discussions (titles + links) beside the buzz counter. | High | ⬜ To do | ~¼ session |
+| US-291 | **Media-headlines lens (News)** — a generic best-effort RSS/Atom aggregator (FFS · BBC · YouTube) as an opt-in Headlines section; cached, degrade-gracefully (ADR-093). | High | ✅ Done | ~½ session |
+| US-292 | **Sharper "talked about" (Trending)** — Reddit weekly-top discussions (titles + links) beside the buzz counter. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -127,7 +127,19 @@ lens); NLP/sentiment over the headlines (we show titles + links, not analysis).
   button render **without fetching** (no click → no live network). **745** green, ruff clean.
 - **Manual smoke:** `media_headlines()` returns FFS + BBC headlines with links; junk/empty degrade to `[]`.
 
-_(US-292 next — "start US-292".)_
+**US-292 — sharper "talked about" on Trending.** ✅ Done.
+- `RedditRssClient.get_top_weekly()` fetches the **`top/.rss?t=week`** variant (`config.REDDIT_TOP_WEEK_URL`),
+  same best-effort contract (raise `RedditError` → the caller degrades). Reuses the generic **`parse_feed`**
+  (Reddit's `.rss` is Atom — verified: real titles + links).
+- **Trending → Community Signals** gains a **"🔥 Top discussions this week"** list beside the buzz counter —
+  **button-gated** ("Show this week's top discussions"), a cached `_cached_reddit_top()`, the top ~10 post
+  titles linking out; degrades to a note if Reddit doesn't respond. Shows *what's actually being discussed*, not
+  just a mention count.
+- **Tests (+1, 1 extended):** `get_top_weekly` hits the top-week URL (faked HTTP); the Trending render test
+  asserts the top-discussions button + caption are present **without fetching** (no live network). **746**
+  green, ruff clean.
+- **Manual smoke:** `get_top_weekly` → *"Are Haaland, Fernandes and Gabriel Worth Their Price?"*, *"Bruno
+  Guimarães to Arsenal"*, … (real weekly-top FPL discussion).
 
 ---
 

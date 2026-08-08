@@ -79,6 +79,23 @@ def test_reddit_client_requests_the_configured_post_limit(monkeypatch):
     assert captured["url"] == "https://www.reddit.com/r/FantasyPL/.rss?limit=100"
 
 
+def test_reddit_client_top_weekly_hits_the_top_week_url(monkeypatch):
+    # US-292: the "top discussions this week" list fetches the top?t=week RSS variant.
+    from src.api import reddit
+
+    captured = {}
+
+    class _Resp:
+        text = "<feed/>"
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(reddit.requests, "get", lambda url, **kw: (captured.update(url=url) or _Resp()))
+    reddit.RedditRssClient().get_top_weekly()
+    assert captured["url"] == "https://www.reddit.com/r/FantasyPL/top/.rss?t=week"
+
+
 def test_community_buzz_is_empty_safe():
     assert community_buzz("not xml at all", _PLAYERS) == []   # a parse error → [], no crash
     assert community_buzz("", _PLAYERS) == []

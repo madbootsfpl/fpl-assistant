@@ -54,3 +54,20 @@ class RedditRssClient:
         except requests.RequestException as exc:
             attempts = self.retries + 1 if is_transient(exc) else 1
             raise RedditError(f"Failed to fetch {url} after {attempts} attempt(s): {exc}") from exc
+
+    def get_top_weekly(self, subreddit: str = config.REDDIT_SUBREDDIT) -> str:
+        """The subreddit's **top posts this week** as RSS (Atom), for the "top discussions" list (US-292).
+        Same best-effort contract as `get_subreddit_rss` — raises `RedditError` on failure so the caller
+        degrades."""
+        url = config.REDDIT_TOP_WEEK_URL.format(subreddit)
+
+        def fetch() -> str:
+            response = requests.get(url, timeout=self.timeout, headers={"User-Agent": config.USER_AGENT})
+            response.raise_for_status()
+            return response.text
+
+        try:
+            return with_retry(fetch, retries=self.retries, backoff=self.backoff, sleep=self.sleep)
+        except requests.RequestException as exc:
+            attempts = self.retries + 1 if is_transient(exc) else 1
+            raise RedditError(f"Failed to fetch {url} after {attempts} attempt(s): {exc}") from exc

@@ -873,6 +873,9 @@ def test_trending_page_shows_a_leaderboard():
         assert "Player" in cols and "Trends" in cols        # a crowd leaderboard with flags
     # Community Signals (ADR-059): a button-gated "Talked about" board — present, no fetch on load
     assert any(b.label.startswith("Show what") for b in at.button)
+    # US-292: the week's top-discussions list — also button-gated (no fetch on load, no live network)
+    assert any(b.label == "Show this week's top discussions" for b in at.button)
+    assert any("Top discussions this week" in c.value for c in at.caption)
 
 
 def test_talked_about_board_paginates(monkeypatch):
