@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 129 (2026-08-30)** — *Build the DefCon opposition magnifier* (owner idea; **ADR-097 refined + built**,
+  wired-dormant; a modelling change to `decision_xp`, not a lens). **Persistence reviewed:** cross-device squads
+  (ADR-094) is done + dormant — owner-activated via the two Supabase secrets; no build. **The refinement:** the
+  baseline already includes a player's DefCon points, so rather than add a component, the magnifier **re-weights
+  the DefCon share already in the baseline by fixture** — a **delta** `defcon_pts_per_match · (magnifier − 1)`, 0
+  at neutral → no double-count. **US-318:** `analytics/defcon_xp.py::defcon_points_per_match` (`2·P(clear)` from
+  `defcon_per90` vs `THRESHOLD`; 0 for GK/no-data) + `defcon_magnifier(FDR difficulty)` (band ~0.5–1.5, neutral at
+  mid; a clean-sheet proxy — no odds); `DEFCON_P_SCALE`/band = GW1-calibratable constants. **US-319:** a per-GW
+  delta in `player_xp` folded into `by_gameweek` (still sums to xp, ADR-032), gated by
+  `config.DEFCON_MAGNIFIER_WEIGHT = 0` (invariance-pinned — the 816 stay byte-identical at 0); `defcon_xp` on the
+  row + a weight-aware "🛡 DefCon fixture edge" reason. Verified active: a nailed DEF **+1.0 vs a strong opponent /
+  −1.0 vs a weak one**. Calibrate + backtest at GW1. +11 tests (822).
 - **Sprint 128 (2026-08-29)** — *CLI catch-up* (surfacing only — no new analytics, no new ADR; the CLI/`ask`
   reach parity with web). **US-316:** a **CLI `chips`** command (`cli.py::cmd_chips`, mirrors `cmd_analyse`) —
   load a saved squad → the horizon `decision_xp` (with `by_gameweek`) → `chip_advisor` + `explain_chips` → the

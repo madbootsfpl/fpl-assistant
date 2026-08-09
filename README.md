@@ -44,6 +44,10 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
   where a player's history *doesn't* already price the duty (new signings / role changes — no double-counting).
   **Off by default** (`SET_PIECE_WEIGHT = 0`); when on, a pick's explanation names the grounded edge. Calibrate
   at GW1.
+- **DefCon fixture magnifier** (ADR-097) — a defender's **defensive-contribution** points shift with the fixture
+  (more vs a strong opponent, less vs a weak one). The magnifier **re-weights the DefCon share already in the
+  baseline** (no double-counting), from an FDR clean-sheet proxy (no betting odds). **Off by default**
+  (`DEFCON_MAGNIFIER_WEIGHT = 0`); when on, a "🛡 DefCon fixture edge" reason. Calibrate at GW1.
 
 **Natural language (Phase 4)** — grounded, and optional:
 - **`ask "..."`** — ask a question in plain English (captain / transfer / squad health / start-bench /

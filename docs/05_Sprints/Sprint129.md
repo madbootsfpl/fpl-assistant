@@ -1,7 +1,7 @@
 # Sprint 129: Build the DefCon opposition magnifier (wired-dormant) + persistence review
 
-**Dates:** 2026-08-30 (planned)
-**Status:** 📝 Planned (0/2 stories · 1 ADR refinement)
+**Dates:** 2026-08-30
+**Status:** ✅ Complete (2/2 stories · 1 ADR refinement)
 **Capacity:** ~¾–1 session (a **modelling** build on `decision_xp` — the careful one; wired-dormant)
 **Carried Over:** the ADR-097 design gate (now being built, with a refined approach)
 
@@ -39,22 +39,22 @@ xP byte-identical; an invariance test pins it), and **auditable** (`defcon_xp` o
 Calibrate the P(clear) mapping + the magnifier band at GW1.
 
 #### Success Criteria
-- [ ] **ADR-097 refinement (gate → built)** — record the **delta** approach (re-weight the DefCon portion in the
+- [x] **ADR-097 refinement (gate → built)** — record the **delta** approach (re-weight the DefCon portion in the
       baseline, don't add a new component → no double-counting); the P(clear-threshold) model + the FDR
       clean-sheet proxy; `DEFCON_MAGNIFIER_WEIGHT` dormant + invariance-pinned; a *modelling* change (not a lens);
       GW1 calibration. Mark ADR-097 **built**.
-- [ ] **US-318 (the pure DefCon-magnifier analytics)** — `analytics/defcon_xp.py`:
+- [x] **US-318 (the pure DefCon-magnifier analytics)** — `analytics/defcon_xp.py`:
       `defcon_points_per_match(player)` → `2 · P(clear)` from `defcon_per90` vs the position `THRESHOLD` (0 for
       GK/ineligible/no data; a documented, GW1-calibratable P-mapping) + `defcon_magnifier(difficulty)` → a
       clamped fixture multiplier (weak opp / low difficulty → ~0.5–0.75; strong / high → ~1.25–1.5; the owner's
       band). Pure + unit-tested.
-- [ ] **US-319 (wire the delta into `decision_xp`, dormant + auditable)** — `config.DEFCON_MAGNIFIER_WEIGHT = 0.0`;
+- [x] **US-319 (wire the delta into `decision_xp`, dormant + auditable)** — `config.DEFCON_MAGNIFIER_WEIGHT = 0.0`;
       in `player_xp`, add per-fixture `defcon_pts_per_match · w · (defcon_magnifier(d) − 1)` (minutes-weighted)
       to xp — **`w = 0` → 0 delta → xP byte-identical**; a `defcon_xp` field on the row (the net delta; 0
       dormant); a weight-aware explanation reason ("🛡 DefCon fixture edge (+X)") when active.
-- [ ] **No unintended drift** — with the weight 0 the existing **811** stay green (xP unchanged everywhere); the
+- [x] **No unintended drift** — with the weight 0 the existing **811** stay green (xP unchanged everywhere); the
       lens invariance (crowd/price) holds; ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Backlog, ADR-index (ADR-097 built); a persistence status note.
+- [x] Docs: PROJECT_STATUS, Architecture, README, Backlog, ADR-index (ADR-097 built); a persistence status note.
 
 ---
 
@@ -149,4 +149,51 @@ Elo/xGC proxy refinement beyond FDR; the **persistence handle-taken hint** (opti
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ the owner's **DefCon opposition magnifier** is built — a fixture-context re-weighting of the DefCon
+points *already in the baseline*, wired-dormant and auditable. The review reframed the design (the delta approach)
+so it can't double-count, and confirmed **persistence is done + dormant** (owner-activated via the two Supabase
+secrets — no build).
+
+**Delivered**
+- **ADR-097 refined** — gate → built: the **delta** approach (re-weight the baseline's DefCon share, don't add a
+  component → no double-count); the P(clear)/FDR-proxy design; `DEFCON_MAGNIFIER_WEIGHT` dormant; GW1 calibration.
+- **US-318** — `analytics/defcon_xp.py`: `defcon_points_per_match` (`2·P(clear)`) + `defcon_magnifier(FDR)` (band
+  ~0.5–1.5, neutral at mid). +5 unit tests.
+- **US-319** — the per-GW delta in `player_xp` (folded into `by_gameweek`; sums to xp), `DEFCON_MAGNIFIER_WEIGHT
+  = 0`, `defcon_xp` on the row + a "🛡 DefCon fixture edge" reason. +6 tests.
+
+**Verified** — dormant → the full 816 byte-identical (invariance); active — a per90-15 DEF gains **+1.0 vs a
+strong opponent** (diff 5) and loses **−1.0 vs a weak one** (diff 1); GK → 0; `by_gameweek` still sums to xp.
+
+**Metrics** — 822 tests (811 → +11) · ruff + CI-parity green · 97 ADRs (ADR-097 refined, no new) · 2 stories + a
+gate refinement, ~1 session.
+
+**What went well**
+- **The review caught the double-counting before the build** — the "delta on the portion already in the baseline"
+  reframe (vs "add a component") is what makes it correct *and* dormant-by-default; the same pattern-recognition
+  that saved the set-piece term (ADR-096).
+- **No new plumbing** — `player_xp` already carried the per-fixture difficulty the magnifier needs; folding the
+  delta into `by_gameweek` kept the ADR-032 "sums to xp" invariant intact.
+- **Wired-dormant = zero-risk** — at weight 0 the 816 are byte-identical; the owner flips it and calibrates at GW1.
+- **Auditable + honest** — a lift shows a grounded "🛡 edge (+X)"; a drag isn't dressed up as a ✓ reason (the xp
+  already reflects it).
+
+**Even better if**
+- The **P(clear) mapping** (`DEFCON_P_SCALE`) + the **magnifier band** are coarse guesses — GW1 returns calibrate
+  them (that's the point of dormant).
+- The clean-sheet proxy is **FDR only** — an Elo/xGC refinement is a deferred nicety.
+- The **transferred-player** team-share adjustment (a mover's `defcon_per90` reflects the old team) is still
+  deferred — the fixture magnifier fixes the opponent, not the new-team share.
+
+**Deferred / backlog** — GW1: set the weight + tune `DEFCON_P_SCALE`/band + **backtest**; the team-share
+adjustment; a separate clean-sheet-xP magnifier (opposite direction); the persistence handle-taken hint.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Activate cross-device squads (Supabase) now, or wait? (now/wait):**
+- **Confidence in the DefCon delta design (1–5):**

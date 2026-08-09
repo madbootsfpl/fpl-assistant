@@ -64,15 +64,14 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   on the doubtful flag.~~ **DONE** — the CLI `table`/`xg` already carry a **Fit** column (`fit_flag`, ✅ =
   available, US-276) and the doubtful flag already shows the **chance%** (`❓ 75%`, US-236). (Confirmed at
   Sprint 120 planning.)
-- **DefCon opposition magnifier** (owner idea, 2026-08-27) — ◑ **design gate = ADR-097 (Sprint 127); build at
-  GW1.** Scale a player's **DefCon xP** by the **fixture's defensive context**: a clean-sheet-*unlikely* game
-  (strong opponent) → more defensive actions → **higher** DefCon (×1.25–1.5); a clean-sheet-*likely* game (weak
-  opponent) → **lower** (×0.5–0.75). The clean-sheet probability comes from an **FDR / xGC / Elo proxy** — **no
-  betting odds** (ADR-093 deferred those; the proxy suffices). *Prerequisites/nuances:* **DefCon xP** isn't in
-  `decision_xp` yet (model it first, from `defcon_per90`); the **transferred-player** problem — a player's
-  `defcon_per90` reflects their *old* team, so a mover is mis-priced (the same "history doesn't capture the new
-  context" issue as ADR-096's set-piece guard); **wired-dormant** + calibrate the magnifier band + the DefCon-xP
-  weight on **real GW1+ returns**. A *modelling* change (alters `decision_xp`), not a lens.
+- ~~**DefCon opposition magnifier**~~ (owner idea, 2026-08-27) — **BUILT wired-dormant** (Sprint 129, US-318/319,
+  **ADR-097** refined). Scale a player's DefCon by the **fixture's defensive context** (strong opponent → more
+  DefCon; weak → less) via an **FDR clean-sheet proxy** — **no betting odds**. **Refined to the delta approach:**
+  the baseline already includes DefCon points, so the magnifier **re-weights that share** (`defcon_pts_per_match ·
+  (magnifier − 1)`), **0 at neutral → no double-count**. `analytics/defcon_xp.py` + a per-GW delta in `player_xp`
+  behind `DEFCON_MAGNIFIER_WEIGHT = 0` (invariance-pinned) + `defcon_xp` + a "🛡 DefCon fixture edge" reason.
+  *Deferred to GW1:* set the weight + tune `DEFCON_P_SCALE`/band + **backtest** on real returns; the
+  **transferred-player** team-share adjustment; a separate clean-sheet-xP magnifier (opposite direction).
 - **In-app email** (owner question, 2026-08-27) — **answered, no build.** The in-app Feedback form **already**
   emails you when `FPL_FEEDBACK_WEBHOOK` points at a **relay** (FormSubmit/Web3Forms, US-308) — that *is* in-app
   email (Send → your inbox, no mail client). Direct **SMTP** send isn't free (**Proton has no free SMTP** → paid
