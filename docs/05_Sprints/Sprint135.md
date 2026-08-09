@@ -40,7 +40,7 @@ off by default (gate-active / store-configured); the analytics + `cloud_store`/`
       confirm ("Log out of the beta on this device? You'll re-enter to get back in.") with a **primary "Log out"**
       → `logout()` and **"Cancel"** → dismiss (session unchanged). Confirm/Cancel keyed so tests target them. The
       US-328 immediate-re-gate test is updated to confirm-through; a new test asserts "asks first / Cancel keeps in".
-- [ ] **US-331 (☁ Save/Load in the sidebar)** — extract the cloud block into `squads.render_cloud_sync()` and call
+- [x] **US-331 (☁ Save/Load in the sidebar)** — extract the cloud block into `squads.render_cloud_sync()` and call
       it in `render_sidebar()` (under "Your squad"), reading the active squad from session; **Save** disabled with
       a hint when no squad is active, **Load**/**Clear** as today. Removed from the My Squad body (optional pointer
       caption). Secret-gated (hidden unless the store is configured). The My-Squad cloud tests move to the sidebar.
@@ -83,7 +83,7 @@ calls it (secret-gated). Remove the block from `render_my_squad`; leave a captio
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-329 | **Confirm on Log out** — an `st.dialog` modal in front of `logout()`. | Med | ✅ Done | ~¼ session |
-| US-331 | **☁ Save/Load in the Squads sidebar** — move the cross-device block into `render_sidebar()`. | Med | ⬜ To do | ~¼ session |
+| US-331 | **☁ Save/Load in the Squads sidebar** — move the cross-device block into `render_sidebar()`. | Med | ✅ Done | ~¼ session |
 
 ---
 
@@ -111,6 +111,16 @@ calls it (secret-gated). Remove the block from `render_my_squad`; leave a captio
   real browser). +3 AppTests (asks-to-confirm-not-logout · confirm → re-gates + clears · Cancel → stays signed in,
   no clear); the old immediate-re-gate test became the "asks to confirm" one. ruff clean. **864 → 866.**
   (US-331 next: move the ☁ Save/Load block into the Squads sidebar.)
+- **US-331 (☁ Save/Load in the sidebar)** — moved the cross-device block out of the My Squad body into a new
+  `squads.render_cloud_sync()` called from `render_sidebar()`, so it shows in the **Squads sidebar** (under *Your
+  squad*) on **every sub-view**. Secret-gated as before (`cloud_store.is_configured()` → hidden on the read-only
+  deploy). It **Saves the session's active squad** (`active_squad()`) — since `squad_picker` doesn't make a
+  *demo* active, **Save is disabled with a hint until you've built/uploaded/loaded/edited a squad**; **Load**/
+  **Clear** work by handle any time (Load sets the active squad). Left a one-line **pointer caption** in My Squad
+  ("☁ Save/Load is now in the sidebar"). Moved (not duplicated — same widget keys can't render twice). Re-pointed
+  the 3 My-Squad cloud AppTests to the sidebar + an active squad, and added a **Save-disabled-without-a-squad**
+  test. ruff clean. **866 → 867.** No analytics change; the ADR-094 server-write posture (opt-in, secret-gated) is
+  unchanged — this is a pure UI relocation.
 
 ---
 

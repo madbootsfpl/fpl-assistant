@@ -1118,50 +1118,61 @@ class _StoreResp:
         return self._data
 
 
-def test_my_squad_cloud_save_load_hidden_without_secrets(monkeypatch):
-    # US-310 (ADR-094): the ☁ cross-device store is secret-gated — with no FPL_STORE_URL/KEY it's invisible.
+def _squads_with_active(monkeypatch):
+    """Run the Squads page with the store configured and an **active squad** in session (US-331: the ☁ Save/Load
+    is now in the sidebar and Saves the session's active squad)."""
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    at = _run(_PAGES / "3_Squads.py")
+    at.session_state["squad"] = {"name": "My XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
+    at.run()                                                                # the sidebar now sees the active squad
+    return at
+
+
+def test_cloud_save_load_hidden_in_sidebar_without_secrets(monkeypatch):
+    # US-310/331 (ADR-094): the ☁ cross-device store is secret-gated — with no FPL_STORE_URL/KEY it's invisible.
     monkeypatch.delenv("FPL_STORE_URL", raising=False)
     monkeypatch.delenv("FPL_STORE_KEY", raising=False)
-    at = _squads_view("My Squad")
+    at = _run(_PAGES / "3_Squads.py")
     assert not any(t.label == "Your handle" for t in at.text_input)          # no cloud UI when unconfigured
 
 
-def test_my_squad_cloud_save_and_load_when_configured(monkeypatch):
-    # US-310: configured → Save upserts under the handle; Load adopts the stored squad into the session.
-    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
-    monkeypatch.setenv("FPL_STORE_KEY", "k")
+def test_cloud_save_and_load_in_the_sidebar(monkeypatch):
+    # US-331: the ☁ Save/Load lives in the Squads sidebar now → Save the active squad; Load adopts a stored one.
     posted = {}
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None: posted.update(body=json) or _StoreResp())
     monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
         [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
-    at = _squads_view("My Squad")
-    handle = [t for t in at.text_input if t.label == "Your handle"]
-    if not handle:
-        return                                                              # no owned squad → nothing to save
-    handle[0].set_value("Tony17").run()
+    at = _squads_with_active(monkeypatch)
+    next(t for t in at.text_input if t.label == "Your handle").set_value("Tony17").run()
     next(b for b in at.button if b.label == "Save").click().run()
     assert not at.exception and posted["body"]["handle"] == "tony17"        # cleaned + upserted
     next(b for b in at.button if b.label == "Load").click().run()
     assert at.session_state["squad"]["name"] == "Cloud XI"                  # adopted into the session
 
 
-def test_my_squad_cloud_save_warns_when_the_handle_is_taken(monkeypatch):
-    # US-321: exists() → True (a row comes back) → the Save reports an overwrite, not a plain "saved"
-    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
-    monkeypatch.setenv("FPL_STORE_KEY", "k")
+def test_cloud_save_in_sidebar_warns_when_the_handle_is_taken(monkeypatch):
+    # US-321/331: exists() → True (a row comes back) → the Save reports an overwrite, not a plain "saved"
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None: _StoreResp())
     monkeypatch.setattr("requests.get",   # exists() sees a stored row for this handle
                         lambda url, params=None, headers=None, timeout=None: _StoreResp([{"handle": "tony17"}]))
-    at = _squads_view("My Squad")
-    handle = [t for t in at.text_input if t.label == "Your handle"]
-    if not handle:
-        return
-    handle[0].set_value("tony17").run()
+    at = _squads_with_active(monkeypatch)
+    next(t for t in at.text_input if t.label == "Your handle").set_value("tony17").run()
     next(b for b in at.button if b.label == "Save").click().run()
     assert not at.exception
     assert any("overwrote" in w.value for w in at.warning)                  # a "handle taken" warning, not "saved"
+
+
+def test_cloud_save_disabled_without_an_active_squad(monkeypatch):
+    # US-331: the sidebar renders on any sub-view; Save needs an active squad (Load works any time).
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    at = _run(_PAGES / "3_Squads.py")                                       # Build view, no active squad in session
+    assert any(t.label == "Your handle" for t in at.text_input)             # the cloud UI is present (sidebar)…
+    save = next(b for b in at.button if b.label == "Save")
+    assert save.disabled                                                     # …but Save is disabled until you have one
 
 
 def test_my_squad_set_bench_picks_four():

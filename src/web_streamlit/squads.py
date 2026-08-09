@@ -218,3 +218,56 @@ def render_sidebar() -> None:
                     st.success(message)
                 else:
                     st.info(message)
+
+    render_cloud_sync()          # ☁ cross-device Save/Load in the sidebar (US-331) — below the squad controls
+
+
+def render_cloud_sync() -> None:
+    """The ☁ cross-device **Save / Load** (US-310/331, ADR-094), shown in the **Squads sidebar** so it's visible on
+    every sub-view — not buried under My Squad. **Secret-gated:** hidden unless the store is configured (the app
+    otherwise stays download/upload-only, ADR-054). **Save** needs an active squad (disabled + a hint otherwise);
+    **Load**/**Clear** work by handle and set the session's active squad. A handle is the key — no login."""
+    from src.web_streamlit import cloud_store
+    if not cloud_store.is_configured():
+        return
+    squad = active_squad()
+    with st.sidebar, st.expander("☁ Save / Load across devices"):
+        handle = st.text_input("Your handle", key="cloud_handle",
+                               help="A name only you'd guess — it's the key to your squad on any device.")
+        clean = cloud_store.clean_handle(handle)
+        c_save, c_load, c_clear = st.columns(3)
+        if c_save.button("Save", disabled=not (clean and squad), key="cloud_save"):
+            try:
+                taken = cloud_store.exists(clean)              # US-321: new vs overwrite (a handle isn't private)
+                cloud_store.save_squad(clean, squad)
+                if taken:
+                    st.warning(f"Updated **{clean}** — overwrote the squad already saved under that handle. "
+                               "(Handles aren't private — pick one only you'd guess.)")
+                else:
+                    st.success(f"Saved as **{clean}** — load it on any device with that handle.")
+            except Exception as exc:   # surface the real store error (e.g. an RLS policy), not a blind note
+                st.error(f"Save failed — **{cloud_store.store_error(exc)}**. Your download still works.")
+        if c_load.button("Load", disabled=not clean, key="cloud_load"):
+            try:
+                loaded = cloud_store.load_squad(clean)
+            except Exception as exc:
+                loaded = None
+                st.error(f"Load failed — **{cloud_store.store_error(exc)}**.")
+            if loaded:
+                set_active_squad(loaded)
+                st.success(f"Loaded **{clean}**.")
+                st.rerun()
+            elif clean:
+                st.info(f"No squad saved under **{clean}** yet — Save one first.")
+        if c_clear.button("Clear", disabled=not clean, key="cloud_clear"):
+            try:
+                cloud_store.delete_squad(clean)
+                st.success(f"Cleared **{clean}**.")
+            except Exception as exc:
+                st.error(f"Clear failed — **{cloud_store.store_error(exc)}**.")
+        if handle and not clean:
+            st.caption("A handle is 2–32 letters, numbers, - or _.")
+        if not squad:
+            st.caption("Build or load a squad first to **Save** it — **Load** works any time.")
+        st.caption("Stored: your handle + squad (public FPL players), **no login**. Anyone who knows the "
+                   "handle can read or overwrite it — use one only you'd guess. **Clear** removes it.")
