@@ -221,8 +221,16 @@ def test_logout_control_names_the_email_in_registration_mode(monkeypatch):
     assert any("Signed in as tester@example.com" in c.value for c in at.caption)
 
 
-def test_clicking_the_sidebar_logout_re_gates(monkeypatch):
-    """The real sidebar button (not a harness) logs the device out end-to-end on Home."""
+def _confirm_yes(at):
+    return [b for b in at.button if b.key == "_beta_logout_yes"]
+
+
+def _confirm_no(at):
+    return [b for b in at.button if b.key == "_beta_logout_no"]
+
+
+def test_clicking_the_sidebar_logout_asks_to_confirm(monkeypatch):
+    """US-329: the sidebar "Log out" opens a confirm — it does NOT log out on the click."""
     monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
     monkeypatch.setattr(remember, "read", lambda: "letmein")
     monkeypatch.setattr(remember, "clear", lambda: None)
@@ -230,5 +238,33 @@ def test_clicking_the_sidebar_logout_re_gates(monkeypatch):
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert _unlocked(at)
     _logout_buttons(at)[0].click().run()
+    assert at.session_state[access._OK] is True         # still signed in — the confirm hasn't fired
+    assert _confirm_yes(at) and _confirm_no(at)          # the confirm modal is showing
+
+
+def test_confirming_the_dialog_logs_out(monkeypatch):
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    cleared = []
+    monkeypatch.setattr(remember, "read", lambda: "letmein")
+    monkeypatch.setattr(remember, "clear", lambda: cleared.append(True))
+    monkeypatch.setattr(remember, "write", lambda *a, **k: None)
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    _logout_buttons(at)[0].click().run()                 # open the confirm
+    _confirm_yes(at)[0].click().run()                    # confirm
     assert access._OK not in at.session_state
-    assert any("beta" in t.value.lower() for t in at.title)           # back to the lock screen
+    assert cleared == [True]
+    assert any("beta" in t.value.lower() for t in at.title)   # re-gated
+
+
+def test_cancelling_the_dialog_keeps_you_signed_in(monkeypatch):
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    cleared = []
+    monkeypatch.setattr(remember, "read", lambda: "letmein")
+    monkeypatch.setattr(remember, "clear", lambda: cleared.append(True))
+    monkeypatch.setattr(remember, "write", lambda *a, **k: None)
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    _logout_buttons(at)[0].click().run()                 # open the confirm
+    _confirm_no(at)[0].click().run()                     # cancel
+    assert at.session_state[access._OK] is True          # still signed in
+    assert cleared == []                                 # no cookie clear
+    assert _unlocked(at)

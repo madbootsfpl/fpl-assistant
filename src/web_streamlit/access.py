@@ -17,6 +17,7 @@ _PENDING = "_beta_remember"  # session: a value to write to the "remember me" co
 _CLEAR = "_beta_clear"    # session: a pending cookie *clear* to render on the next clean run (logout, ADR-099)
 _FORGOTTEN = "_beta_forgotten"  # session: logged out — ignore the cookie for the rest of this session (ADR-099)
 _LOADING = "_beta_cookie_checked"  # session: we've given the cookie component one run to deliver (ADR-099/Sprint 134)
+_CONFIRMING = "_beta_confirming"   # session: the "Log out?" confirm modal is open (US-329)
 
 
 def secret(key: str, default: str | None = None) -> str | None:
@@ -134,16 +135,34 @@ def _maybe_wait_for_cookie() -> None:
     st.stop()
 
 
+@st.dialog("Log out?")
+def _confirm_logout() -> None:
+    """A confirm modal so a mis-click doesn't reset the device (US-329). Confirm → `logout()`; Cancel → dismiss.
+    Kept open across reruns by `_CONFIRMING` (see `_render_account`) — a dialog only stays interactive while its
+    body is re-called each run, so the flag re-calls it until the tester picks."""
+    st.write("This signs you out on **this device** — you'll re-enter the beta to get back in.")
+    c1, c2 = st.columns(2)
+    if c1.button("Log out", type="primary", key="_beta_logout_yes", use_container_width=True):
+        st.session_state.pop(_CONFIRMING, None)
+        logout()
+    if c2.button("Cancel", key="_beta_logout_no", use_container_width=True):
+        st.session_state.pop(_CONFIRMING, None)
+        st.rerun()
+
+
 def _render_account() -> None:
     """A small sidebar line + a **Log out** button, so a tester can reset a shared device (ADR-099). Rendered only
-    when a gate is active and the session has passed — the open/public deploy shows nothing (off by default)."""
+    when a gate is active and the session has passed — the open/public deploy shows nothing (off by default).
+    Clicking "Log out" opens a confirm modal (US-329, `_CONFIRMING`) rather than logging out on the click."""
     if not gate_active():
         return
     with st.sidebar:
         email = st.session_state.get(_EMAIL)
         st.caption(f"🔓 Signed in as {email}" if email else "🔓 Signed in to the beta")
         if st.button("Log out", key="_beta_logout", use_container_width=True):
-            logout()
+            st.session_state[_CONFIRMING] = True
+    if st.session_state.get(_CONFIRMING):      # keep the modal open across reruns until a choice is made
+        _confirm_logout()
 
 
 def _remembered_code(code: str) -> bool:
