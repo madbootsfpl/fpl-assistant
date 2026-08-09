@@ -46,6 +46,23 @@ def _headers(key):
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
 
+def store_error(exc) -> str:
+    """A human-readable reason from a failed store request — Supabase's own error message + hint when
+    present, else the HTTP status, else the exception text. So the UI shows the *real* cause (e.g. a row-level
+    security policy) instead of a blind 'couldn't save'. Pure — takes the raised exception."""
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            data = response.json()
+        except Exception:
+            data = None
+        if isinstance(data, dict) and data.get("message"):
+            hint = data.get("hint") or data.get("details")
+            return data["message"] + (f" ({hint})" if hint else "")
+        return f"HTTP {getattr(response, 'status_code', '?')}"
+    return str(exc) or "couldn't reach the store"
+
+
 def save_squad(handle: str, squad: dict) -> None:
     """Upsert `squad` (the whole SquadStore dict) under `handle`. Raises on a bad handle or a failed write."""
     url, key = _config()
@@ -100,7 +117,10 @@ def exists(handle: str) -> bool:
         r.raise_for_status()
         return r
 
-    return bool(with_retry(_get, retries=1).json())
+    try:
+        return bool(with_retry(_get, retries=1).json())
+    except requests.RequestException:
+        return False        # best-effort hint — never block the Save (which will surface the real error)
 
 
 def delete_squad(handle: str) -> None:

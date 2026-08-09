@@ -100,6 +100,31 @@ def test_exists_reflects_whether_a_row_is_stored(configured, monkeypatch):
     assert cloud_store.exists("tony17") is False                         # nothing stored
 
 
+def test_store_error_surfaces_the_supabase_message():
+    # the app must show the real cause (an RLS policy, a bad key), not a blind "couldn't save"
+    import requests
+
+    class _Err(requests.HTTPError):
+        def __init__(self, status, body):
+            self.response = type("R", (), {"status_code": status, "json": lambda s: body})()
+
+    rls = _Err(403, {"message": 'new row violates row-level security policy for table "squads"',
+                     "hint": "add an anon insert policy"})
+    assert cloud_store.store_error(rls) == \
+        'new row violates row-level security policy for table "squads" (add an anon insert policy)'
+    assert cloud_store.store_error(_Err(401, {"message": "No API key found in request"})) == \
+        "No API key found in request"
+    assert cloud_store.store_error(requests.Timeout("timed out")) == "timed out"   # no response → the text
+
+
+def test_exists_is_best_effort_and_never_raises(configured, monkeypatch):
+    # a failing existence hint must NOT block a Save (which will surface the real error) → returns False
+    import requests
+    monkeypatch.setattr("requests.get",
+                        lambda *a, **k: (_ for _ in ()).throw(requests.ConnectionError("down")))
+    assert cloud_store.exists("tony17") is False
+
+
 def test_exists_false_without_secrets(monkeypatch):
     monkeypatch.delenv("FPL_STORE_URL", raising=False)
     monkeypatch.delenv("FPL_STORE_KEY", raising=False)

@@ -407,14 +407,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                                    "(Handles aren't private — pick one only you'd guess.)")
                     else:
                         st.success(f"Saved as **{clean}** — load it on any device with that handle.")
-                except Exception:
-                    st.error("Couldn't save just now — your download still works. Try again shortly.")
+                except Exception as exc:   # surface the real store error (e.g. an RLS policy), not a blind note
+                    st.error(f"Save failed — **{cloud_store.store_error(exc)}**. Your download still works.")
             if c_load.button("Load", disabled=not clean, key="cloud_load"):
                 try:
                     loaded = cloud_store.load_squad(clean)
-                except Exception:
+                except Exception as exc:
                     loaded = None
-                    st.error("Couldn't reach the store — try again shortly.")
+                    st.error(f"Load failed — **{cloud_store.store_error(exc)}**.")
                 if loaded:
                     set_active_squad(loaded)
                     st.success(f"Loaded **{clean}**.")
@@ -425,8 +425,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 try:
                     cloud_store.delete_squad(clean)
                     st.success(f"Cleared **{clean}**.")
-                except Exception:
-                    st.error("Couldn't clear just now — try again shortly.")
+                except Exception as exc:
+                    st.error(f"Clear failed — **{cloud_store.store_error(exc)}**.")
             if handle and not clean:
                 st.caption("A handle is 2–32 letters, numbers, - or _.")
             st.caption("Stored: your handle + squad (public FPL players), **no login**. Anyone who knows the "
