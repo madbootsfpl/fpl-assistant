@@ -14,7 +14,7 @@ import requests
 import streamlit as st
 
 from src.web_streamlit.access import require_access, secret
-from src.web_streamlit.feedback import feedback_mailto
+from src.web_streamlit.feedback import feedback_mailto, relay_result
 
 _GITHUB_ISSUE = "https://github.com/tesheridan/fpl-assistant/issues/new"
 # The pages a tester might be reporting about (US-306) — so feedback carries where it happened.
@@ -81,10 +81,19 @@ if sent:
             if access_key:
                 payload["access_key"] = access_key
             try:
-                requests.post(webhook, json=payload, timeout=6)
-                st.success("Thanks — your feedback was sent! 🎉")
+                resp = requests.post(webhook, json=payload, timeout=6)
             except requests.RequestException:
-                st.error("Couldn't send just now — one click emails it to us instead:")
+                st.error("Couldn't reach the feedback service — one click emails it to us instead:")
                 st.link_button("✉ Email this feedback", mailto)
+            else:
+                ok, note = relay_result(resp)   # read the real result, not a blind "sent" (US-308 fix)
+                if ok:
+                    st.success("Thanks — your feedback was sent! 🎉")
+                else:
+                    st.warning(f"The feedback service didn't accept it — **{note}**. "
+                               "One click emails it to us instead:")
+                    st.link_button("✉ Email this feedback", mailto)
+                    st.caption("_Owner: if this says 'confirm your email', check the inbox for a FormSubmit "
+                               "activation link and click it once; otherwise check the webhook address._")
 
 st.caption(f"Prefer GitHub? You can also [open an issue]({_GITHUB_ISSUE}).")

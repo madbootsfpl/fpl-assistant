@@ -1,8 +1,34 @@
-"""Tests for the feedback mailto helper (US-307)."""
+"""Tests for the feedback helpers — the mailto builder (US-307) + the relay-result reader (US-308 fix)."""
 
 from urllib.parse import parse_qs, urlparse
 
-from src.web_streamlit.feedback import feedback_mailto
+from src.web_streamlit.feedback import feedback_mailto, relay_result
+
+
+class _Resp:
+    def __init__(self, status=200, body=None):
+        self.status_code = status
+        self._body = body
+
+    def json(self):
+        if self._body is None:
+            raise ValueError("no json")
+        return self._body
+
+
+def test_relay_result_reads_formsubmit_success_flag():
+    # a stalled relay (address not confirmed) → NOT ok, surface the message (the bug this fixes)
+    ok, note = relay_result(_Resp(200, {"success": "false", "message": "Please confirm your email address"}))
+    assert ok is False and note == "Please confirm your email address"
+    # delivered — success as a string or a bool
+    assert relay_result(_Resp(200, {"success": "true"}))[0] is True
+    assert relay_result(_Resp(200, {"success": True}))[0] is True
+
+
+def test_relay_result_treats_non_json_2xx_as_sent_and_4xx_as_failure():
+    assert relay_result(_Resp(200, None))[0] is True                 # a Sheet sink returning "ok" (non-JSON)
+    ok, note = relay_result(_Resp(404, None))
+    assert ok is False and "404" in note
 
 
 def _parts(href):
