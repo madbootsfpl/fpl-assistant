@@ -102,3 +102,51 @@ def test_stale_registration_cookie_shows_the_gate(monkeypatch):
     monkeypatch.setattr(remember, "read", lambda: "pruned@example.com")
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert any("beta" in t.value.lower() for t in at.title)   # the registration lock screen
+
+
+# --- logout (ADR-099, US-327) --------------------------------------------------------
+
+def test_gate_active_is_false_when_open():
+    assert access.gate_active() is False                       # no code / no cap → the public deploy
+
+
+def test_gate_active_is_true_with_a_shared_code(monkeypatch):
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    assert access.gate_active() is True
+
+
+def test_gate_active_is_true_in_registration_mode(monkeypatch):
+    monkeypatch.setenv("FPL_USER_CAP", "10")
+    monkeypatch.setattr(user_store, "is_configured", lambda: True)
+    assert access.gate_active() is True
+
+
+# A tiny harness: pass the gate, then a button that calls logout() (the real sidebar control is US-328).
+_LOGOUT_HARNESS = (
+    "import streamlit as st\n"
+    "from src.web_streamlit.access import require_access, logout, _OK\n"
+    "require_access()\n"
+    "st.write('passed' if st.session_state.get(_OK) else 'gated')\n"
+    "if st.button('Log out'):\n"
+    "    logout()\n"
+)
+
+
+def test_logout_clears_the_session_cookie_and_re_gates(monkeypatch):
+    """A valid cookie admits; clicking Log out clears the session, clears the cookie (deferred), and — even
+    though the stale cookie still reads valid this session — does not re-admit (the _FORGOTTEN guard)."""
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    cleared = []
+    monkeypatch.setattr(remember, "read", lambda: "letmein")          # a valid cookie is present all along
+    monkeypatch.setattr(remember, "clear", lambda: cleared.append(True))
+    monkeypatch.setattr(remember, "write", lambda *a, **k: None)
+
+    at = AppTest.from_string(_LOGOUT_HARNESS, default_timeout=30).run()
+    assert at.session_state[access._OK] is True                       # the cookie admitted
+    assert any(m.value == "passed" for m in at.markdown)
+
+    at.button[0].click().run()                                        # Log out
+    assert cleared == [True]                                          # the cookie clear was rendered (deferred)
+    assert access._OK not in at.session_state                         # session dropped
+    assert at.session_state[access._FORGOTTEN] is True
+    assert any("beta" in t.value.lower() for t in at.title)           # re-gated (not re-admitted from the cookie)

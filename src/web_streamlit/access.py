@@ -14,6 +14,8 @@ import streamlit as st
 _OK = "_beta_ok"          # session flag: this session passed the gate
 _EMAIL = "_beta_email"    # session: the registered tester email (registration mode, ADR-098)
 _PENDING = "_beta_remember"  # session: a value to write to the "remember me" cookie on the next clean run (ADR-099)
+_CLEAR = "_beta_clear"    # session: a pending cookie *clear* to render on the next clean run (logout, ADR-099)
+_FORGOTTEN = "_beta_forgotten"  # session: logged out — ignore the cookie for the rest of this session (ADR-099)
 
 
 def secret(key: str, default: str | None = None) -> str | None:
@@ -45,7 +47,9 @@ def require_access() -> None:
 
     A "remember me" cookie (ADR-099) lets a device that has passed the gate skip it after a browser refresh: on
     load the cookie is read (natively, no flash) and **re-validated** before it's trusted; on a fresh pass the
-    value is written back. Any cookie failure degrades to today's per-session gate."""
+    value is written back. Any cookie failure degrades to today's per-session gate. A "Log out" control clears
+    both (the cookie clear is deferred here too, so a `st.rerun()` can't drop it)."""
+    _flush_clear()                 # render a pending logout cookie-clear on this clean run (before any stop/rerun)
     if st.session_state.get(_OK):
         _flush_remember()          # write the "remember me" cookie on this clean run (post-login/refresh)
         return
@@ -77,9 +81,42 @@ def _flush_remember() -> None:
         remember.write(value)
 
 
+def gate_active() -> bool:
+    """True when *some* gate is configured — **registration** (`FPL_USER_CAP` set + the store configured) or
+    **shared-code** (`FPL_ACCESS_CODE` set). False = the open/public deploy (so the account/logout UI stays off
+    by default there)."""
+    cap = _user_cap()
+    if cap is not None:
+        from src.web_streamlit import user_store
+        if user_store.is_configured():
+            return True
+    return bool(secret("FPL_ACCESS_CODE"))
+
+
+def logout() -> None:
+    """Log out of the beta on this device: drop the session flags, **queue** the cookie clear (deferred, like the
+    write — a `st.rerun()` now would discard the remove component), and set `_FORGOTTEN` so the stale cookie can't
+    re-admit this session (it's cleared from the browser on the next request). Then rerun to show the gate."""
+    st.session_state[_FORGOTTEN] = True
+    st.session_state[_CLEAR] = True
+    for key in (_OK, _EMAIL, _PENDING):
+        st.session_state.pop(key, None)
+    st.rerun()
+
+
+def _flush_clear() -> None:
+    """Render a pending cookie *clear* once, on a clean run (this runs before the gate's `st.stop()`, which — unlike
+    `st.rerun()` — keeps the run's output, so the remove component reaches the browser). Mirrors `_flush_remember`."""
+    if st.session_state.pop(_CLEAR, None):
+        from src.web_streamlit import remember
+        remember.clear()
+
+
 def _remembered_code(code: str) -> bool:
     """True (and passes the session) if the "remember me" cookie holds the *current* shared code — so rotating
     `FPL_ACCESS_CODE` invalidates every remember cookie. A stale/absent cookie → False (the gate shows)."""
+    if st.session_state.get(_FORGOTTEN):       # just logged out — ignore the (not-yet-cleared) cookie this session
+        return False
     from src.web_streamlit import remember
     if remember.read() == code:
         st.session_state[_OK] = True
@@ -90,6 +127,8 @@ def _remembered_code(code: str) -> bool:
 def _remembered_registration(user_store) -> bool:
     """True (and passes the session) if the cookie holds an email that is *still registered* — so a pruned
     tester's stale cookie fails. A store hiccup or an unknown/absent email → False (the gate shows)."""
+    if st.session_state.get(_FORGOTTEN):       # just logged out — ignore the (not-yet-cleared) cookie this session
+        return False
     from src.web_streamlit import remember
     email = remember.read()
     if not email:
