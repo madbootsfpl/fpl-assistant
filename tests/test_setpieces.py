@@ -75,3 +75,32 @@ def test_decision_xp_activates_set_piece_when_weight_set(monkeypatch):
     # current tier (no history) pen taker → 5 + 1.0·PENALTY_BONUS
     r = decision_xp([_player(penalties_order=1)], [_fixture()], {}, horizon=1)
     assert r[0]["xp"] == round(5.0 + PENALTY_BONUS, 1)
+
+
+# ---- US-314: the grounded contribution + the weight-aware explanation --------
+
+def test_player_xp_records_the_set_piece_contribution():
+    pen = _player(penalties_order=1)
+    assert player_xp([pen], [_fixture()])[0]["set_piece_xp"] == 0.0               # dormant → 0
+    active = player_xp([pen], [_fixture()], set_piece_weight=1.0)[0]
+    assert active["set_piece_xp"] == round(PENALTY_BONUS, 1)                      # the term's share of xp
+    hist = player_xp([pen], [_fixture()], baseline_by_code={100: 5.0}, set_piece_weight=1.0)[0]
+    assert hist["set_piece_xp"] == 0.0                                           # hist tier → not applied
+
+
+def test_penalty_reason_is_weight_aware_and_grounded():
+    from src.analytics.explain import _penalty_reason
+    assert _penalty_reason(0.0) == "Penalty taker"                               # dormant → the lens phrasing
+    assert _penalty_reason(0.3) == "Penalty taker (+0.3 xP set-piece edge)"      # active → the grounded edge
+
+
+def test_explain_captain_shows_the_set_piece_edge_when_active():
+    from src.analytics.explain import explain_captain
+    picks = [{"id": 1, "xp": 6.3, "penalty_taker": True, "set_piece_xp": 0.3,
+              "minutes_weight": 1.0, "venue": "H", "difficulty": 3}]
+    exp = explain_captain(picks, {1: {"penalties_order": 1, "form": None}})
+    assert any("set-piece edge" in r for r in exp.reasons)                        # grounded reason present
+    # dormant (no contribution) → the plain lens reason, unchanged
+    picks[0]["set_piece_xp"] = 0.0
+    exp0 = explain_captain(picks, {1: {"penalties_order": 1, "form": None}})
+    assert "Penalty taker" in exp0.reasons and not any("edge" in r for r in exp0.reasons)

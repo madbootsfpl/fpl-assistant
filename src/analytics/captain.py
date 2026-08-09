@@ -7,6 +7,7 @@ keepers have none), and penalties are *context, not a score bump* (a taker's ret
 already in their xP — adding a bonus would double-count).
 """
 
+from src import config
 from src.analytics.optimizer import is_unavailable
 from src.analytics.xp import player_xp
 
@@ -45,6 +46,7 @@ def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl",
         baseline_by_code=baseline_by_code,
         is_available=lambda p: not is_unavailable(p),   # count doubtful, not only 'a'
         minutes_weight=minutes_weight, history_by_code=history_by_code,
+        set_piece_weight=config.SET_PIECE_WEIGHT,       # ADR-096: reflect the set-piece term (dormant → no-op)
     )
     by_id = {p["id"]: p for p in candidates}
 

@@ -90,7 +90,7 @@ tier.
 |---|---|---|---|---|
 | ADR-096 | **Gated set-piece xP term** — tier-restricted rate bonus, wired-dormant (the design gate). | High | ✅ Done | gate |
 | US-313 | **The term** — `set_piece_bonus` + `SET_PIECE_WEIGHT` in `player_xp` (non-`hist` tiers); invariance. | High | ✅ Done | ~½ session |
-| US-314 | **Make it auditable** — the contribution is explained + grounded when active. | High | ⬜ To do | ~¼ session |
+| US-314 | **Make it auditable** — the contribution is explained + grounded when active. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -128,6 +128,16 @@ tier.
   (`tests/test_setpieces.py`: the bonus scoring; player_xp dormant-vs-active + the tier guard + non-taker;
   decision_xp invariance + activation). **The full 794 stayed byte-identical at weight 0** (invariance holds);
   ruff clean. **801** total.
+- **US-314 (make it auditable)** — `player_xp` rows now carry **`set_piece_xp`** — the term's *share* of the xp
+  (`weight · applied_bonus · Σ horizon multipliers`; **0.0 when dormant** or on the `hist` tier), a grounded
+  per-player number. `captain_picks` now passes `set_piece_weight=config.SET_PIECE_WEIGHT` (dormant → no-op) so
+  captain reflects the term and carries `set_piece_xp` via `**r`. A weight-aware `explain._penalty_reason(set_
+  piece_xp)`: active (`>0`) → **"Penalty taker (+X xP set-piece edge)"** (the number is real → a narrated figure
+  verifies, ADR-037); dormant/`hist` → the plain lens "Penalty taker" (byte-identical). Wired into
+  `explain_captain` (via the pick) + `explain_transfer` (via the buy summary). Smoke: dormant `set_piece_xp` 0 →
+  plain reason; active current-tier → `+0.3 xP` edge; hist-tier → 0 (unchanged). +3 tests. The **new row field
+  didn't break any of the 801** (no strict-dict test regressed); dormant explanations byte-identical. ruff clean.
+  **804** total.
 
 ---
 

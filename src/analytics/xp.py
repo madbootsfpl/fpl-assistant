@@ -172,9 +172,10 @@ def player_xp(
             rate = blend_form(rate, fr[0], fr[1], form_weight)
         # Set-piece term (ADR-096) — a per-90 rate bonus for dead-ball takers, but ONLY where the rate
         # isn't the trusted historical baseline (which already prices an established taker's pens →
-        # double-counting). DORMANT at set_piece_weight 0 → rate unchanged (the ADR-041 invariant holds).
-        if set_piece_weight and rate is not None and rate_source != "hist":
-            rate += set_piece_weight * set_piece_bonus(p)
+        # double-counting). DORMANT at set_piece_weight 0 → applied_sp 0 → rate unchanged (ADR-041 invariant).
+        applied_sp = (set_piece_weight * set_piece_bonus(p)
+                      if (set_piece_weight and rate is not None and rate_source != "hist") else 0.0)
+        rate = rate + applied_sp if rate is not None else rate
         available = is_available(p)
         gw_map = diff_by_team_gw.get(p["team_id"], {})
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
@@ -186,6 +187,7 @@ def player_xp(
         if rate is None or not available:
             by_gameweek = {gw: 0.0 for gw in horizon_events}
             xp = 0.0
+            set_piece_xp = 0.0
         else:
             # Per-GW xP unrounded, so the total is exactly today's number (ADR-032);
             # per-GW cells are rounded only for display. The minutes weight scales both.
@@ -195,6 +197,10 @@ def player_xp(
             }
             xp = round(sum(unrounded.values()), 1)
             by_gameweek = {gw: round(v, 1) for gw, v in unrounded.items()}
+            # The set-piece term's share of xp (US-314): the applied rate bonus × mins × horizon
+            # multipliers. 0 when dormant — so a pick can be shown/grounded with its set-piece edge.
+            total_mult = sum(sum(_multiplier(d) for d in gw_map.get(gw, [])) for gw in horizon_events)
+            set_piece_xp = round(weight * applied_sp * total_mult, 1)
 
         results.append({
             "id": p["id"],
@@ -210,6 +216,7 @@ def player_xp(
             "by_gameweek": by_gameweek,               # ADR-032: {gw → xP}, sums to `xp`
             "gameweeks": list(horizon_events),
             "minutes_weight": round(weight, 2),       # xMins v0 weight applied (1.0 without the hook)
+            "set_piece_xp": set_piece_xp,             # ADR-096: the set-piece term's share of xp (0 dormant)
         })
 
     results.sort(key=lambda r: r["xp"], reverse=True)

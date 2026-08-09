@@ -65,6 +65,15 @@ def _get(row, key):
         return None
 
 
+def _penalty_reason(set_piece_xp) -> str:
+    """The penalty-taker ✓ reason (US-314/ADR-096). When the set-piece xP term is **active** and moved this
+    pick's xp (`set_piece_xp > 0`), name the grounded edge so a narrated figure verifies; otherwise the plain
+    display-lens phrasing (dormant → byte-identical). The number is real (it's the term's share of xp)."""
+    if set_piece_xp:
+        return f"Penalty taker (+{set_piece_xp} xP set-piece edge)"
+    return "Penalty taker"
+
+
 def explain_captain(picks, players_by_id) -> Explanation | None:
     """Explain the top captain pick (ADR-089): grounded ✓ reasons + ⚠ risks + a confidence. `picks` is the
     ranked `captain_picks` list (the runner-up sharpens the 'narrow lead' risk); `players_by_id` gives the
@@ -85,7 +94,7 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
     if xp is not None:
         reasons.append("Highest projected points")
     if top.get("penalty_taker"):
-        reasons.append("Penalty taker")
+        reasons.append(_penalty_reason(top.get("set_piece_xp")))
     if _get(row, "freekicks_order") == 1 or _get(row, "corners_order") == 1:
         reasons.append("Set-piece involvement")
     if mins is not None and mins >= _START_MINUTES:
@@ -153,7 +162,8 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
     if (buy.get("xp") or 0) > (sell.get("xp") or 0):
         reasons.append(f"Higher projected points ({buy['xp']} vs {sell['xp']})")
     if _get(in_row, "penalties_order") == 1:
-        reasons.append("Penalty taker")                        # phrasing aligned across the family (US-278)
+        # Grounded set-piece edge when the term moved the buy's xp (US-314); else the display-lens phrasing.
+        reasons.append(_penalty_reason(buy.get("set_piece_xp") or _get(in_row, "set_piece_xp")))
     if _get(in_row, "freekicks_order") == 1 or _get(in_row, "corners_order") == 1:
         reasons.append("Set-piece involvement")
     if price_delta < 0:
