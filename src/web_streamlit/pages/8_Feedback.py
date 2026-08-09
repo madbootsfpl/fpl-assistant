@@ -17,6 +17,10 @@ from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.feedback import feedback_mailto, relay_result
 
 _GITHUB_ISSUE = "https://github.com/tesheridan/fpl-assistant/issues/new"
+# FormSubmit (and similar relays) reject requests with no Origin/Referer as an anti-abuse measure — and this
+# form POSTs server-side (Streamlit's backend), so it must send one or the relay 403s with a "web server"
+# error. Any https origin passes a non-domain-locked form; override via FPL_FEEDBACK_ORIGIN for your app URL.
+_DEFAULT_ORIGIN = "https://fpl-assistant.streamlit.app"
 # The pages a tester might be reporting about (US-306) — so feedback carries where it happened.
 _PAGES = ("(not sure)", "Home", "Players", "Fixtures", "Squads", "Ask", "News", "Trending", "Help")
 
@@ -80,8 +84,11 @@ if sent:
             access_key = secret("FPL_FEEDBACK_KEY")
             if access_key:
                 payload["access_key"] = access_key
+            # Send an Origin/Referer so a relay accepts this server-side POST (see _DEFAULT_ORIGIN).
+            origin = secret("FPL_FEEDBACK_ORIGIN", _DEFAULT_ORIGIN)
+            headers = {"Origin": origin, "Referer": origin}
             try:
-                resp = requests.post(webhook, json=payload, timeout=6)
+                resp = requests.post(webhook, json=payload, headers=headers, timeout=6)
             except requests.RequestException:
                 st.error("Couldn't reach the feedback service — one click emails it to us instead:")
                 st.link_button("✉ Email this feedback", mailto)

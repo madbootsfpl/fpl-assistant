@@ -561,9 +561,10 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
     monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
     captured = {}
 
-    def fake_post(url, json=None, timeout=None):    # no network in tests — capture the payload
+    def fake_post(url, json=None, headers=None, timeout=None):   # no network in tests — capture the payload
         captured["url"] = url
         captured["json"] = json
+        captured["headers"] = headers
         return type("R", (), {})()
 
     monkeypatch.setattr("requests.post", fake_post)
@@ -580,6 +581,7 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
     assert payload["version"] and payload["source"] == "fpl-assistant-beta"
     assert "T" in payload["ts"]                                          # an ISO timestamp
     assert payload["_subject"].endswith("Fixtures")                     # US-308: FormSubmit subject
+    assert (captured["headers"] or {}).get("Origin", "").startswith("http")   # server-side Origin for FormSubmit
     assert "access_key" not in payload                                  # no Web3Forms key set → omitted
 
 
@@ -589,7 +591,8 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
     monkeypatch.setenv("FPL_FEEDBACK_KEY", "test-access-key")
     captured = {}
     monkeypatch.setattr("requests.post",
-                        lambda url, json=None, timeout=None: captured.update(json=json) or type("R", (), {})())
+                        lambda url, json=None, headers=None, timeout=None:
+                        captured.update(json=json) or type("R", (), {})())
     at = _run(_PAGES / "8_Feedback.py")
     at.text_area[0].set_value("Nice work").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
