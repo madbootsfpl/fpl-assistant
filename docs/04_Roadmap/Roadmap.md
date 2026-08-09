@@ -174,9 +174,11 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   server write (the read-only invariant revised + tested); off by default. Owner setup: `docs/CLOUD_SQUADS.md`.
   Native `st.login()` = the deferred "product" upgrade (the adapter interface fits it). **Beta ops** also decided
   (ADR-095): a prod/staging split, public + PolyForm-NC LICENSE, a mirror backup, an uptime monitor.
-- ✅ **"Remember me" across a refresh** — **DONE (Sprint 132, ADR-099).** A first-party cookie persists a passed
-  gate (native read via `st.context.cookies`; a quarantined component writes) so a refresh keeps a tester in; the
-  value is re-validated on load (pruned tester / rotated code locked out); off by default.
+- 🔬 **"Remember me" across a refresh** — built (Sprint 132, ADR-099); **read-path fixed Sprint 134 (US-330)** and
+  **awaiting the owner's Safari + Chrome re-smoke**. The value is re-validated on load (pruned tester / rotated code
+  locked out); off by default. Sprint 132's native read didn't persist (a cookie-jar mismatch — component-iframe
+  write vs top-level read); now read + write both go through the component. **If the re-smoke still fails → pivot
+  to `st.login()`** (native persistence + verified identity; Sprint 134 Option 2).
 - ✅ **"Log out" link** — **DONE (Sprint 133, extends ADR-099).** A sidebar "Log out" clears the cookie + session
   and re-shows the gate (reset a shared device); deferred clear + a `_beta_forgotten` re-admit guard; off on the
   open deploy. Deferred: a confirm dialog, a **signed token**; native `st.login()` (hard identity) is still the

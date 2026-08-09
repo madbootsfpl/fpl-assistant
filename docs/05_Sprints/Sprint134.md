@@ -208,7 +208,47 @@ _(filled as the story lands)_
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** 🔬 **code-complete, awaiting the owner's browser re-smoke.** Tester feedback said "remember me"
+didn't persist on Safari or Chrome; root-caused it to a **cookie-jar mismatch** (component-iframe write vs
+native top-level read) and fixed the **read** to go through the same component. The decision path is fully
+tested, but the *real* proof — the iframe cookie surviving a refresh in a browser — is the owner's re-smoke.
+
+**Delivered**
+- **US-330** — `remember.read()` reads through `_controller().get()` (same jar as `write`); `remember.available()`
+  + `access._maybe_wait_for_cookie()` handle the component's one-run delivery delay with a "Checking your device…"
+  placeholder (one-shot, component-gated, never hangs); native-read reverted. +4 tests. ADR-099 corrected.
+- **US-329 (confirm on Log out)** — **deferred**: pointless to polish a logout until persistence is confirmed.
+
+**Verified (in tests)** — read/write/clear share one jar; `available()` gates the wait; the placeholder shows
+(not the gate) when a component is present + the cookie hasn't arrived, and the gate shows after one run (no
+infinite wait); no component → no wait. Existing gate/logout tests green (two set `available()=False` for the
+headless path). **Not yet verified (needs a browser):** the actual cookie surviving a refresh — the owner re-smoke.
+
+**Metrics** — 864 tests (860 → +4) · ruff + CI-parity green · **99 ADRs** (ADR-099 corrected, no new ADR) · 1
+story built + 1 deferred, ~⅓ session.
+
+**What went well**
+- **Read the source, found the real cause** — the component writes `document.cookie` in its iframe; the native
+  read looked at the app's top-level jar. Grepping the component build turned a mystery into a one-line diagnosis.
+- **Targeted, reversible fix** — read through the same component (one jar); no dependency change, model unchanged.
+- **The over-engineering was named and undone** — Sprint 132's "native read to avoid a flash" was the very thing
+  that broke persistence; this reverts to component-read + the one-run wait it had tried to avoid, honestly.
+- **The wait is safe** — one-shot + component-gated, so headless/blocked never hangs and the 864 stay green.
+
+**Even better if**
+- **The fix is unproven until the re-smoke** — AppTest can't run the component, so a green suite is necessary, not
+  sufficient. If a refresh still re-prompts, the component-cookie path is a dead end in the Cloud iframe sandbox.
+- **Escalation is pre-agreed** — if the re-smoke fails, go straight to **`st.login()`** (Option 2), not a third
+  cookie iteration.
+- **A small first-visit quirk** — a brand-new tester (no cookie) sees "Checking your device…" for one run before
+  the gate. Harmless; could be suppressed later if it grates.
+
+**Deferred / backlog** — the **confirm on Log out** (US-329, once persistence holds); **`st.login()`** as the
+robust fallback if the re-smoke fails; a **signed token**; and the big body: **GW1 (2026-08-21) calibration** +
+momentum + live manager import.
+
+**Follow-up marker:** ⏳ **owner re-smoke on Safari + Chrome** → then either close remember-me as working (and pick
+up US-329 confirm) or open the `st.login()` pivot.
 
 ---
 

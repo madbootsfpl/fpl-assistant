@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 134 (2026-08-09)** — *Fix "remember me" persistence* (corrects **ADR-099**, no new ADR; 🔬 awaiting the
+  owner's browser re-smoke). Tester feedback: the cookie didn't survive a refresh on **Safari or Chrome**. Root
+  cause = a **cookie-jar mismatch** — `streamlit-cookies-controller` writes `document.cookie` **inside its iframe**,
+  but `remember.read()` read via `st.context.cookies` (the cookies sent to the **Streamlit server on the top-level
+  request**), so the read never saw the write. **US-330:** `remember.read()` now reads through the **same
+  component** (`_controller().get()`, same jar as `write`) + a new `remember.available()`. The component syncs on a
+  **rerun**, so `access._maybe_wait_for_cookie()` gives it one run behind a "🔑 Checking your device…" placeholder
+  (one-shot via `_beta_cookie_checked`, gated on `available()` → a headless run / blocked cookies never hang, just
+  show the gate). Native-read (`_request_cookies`) reverted. +4 tests (860→864; two set `available()=False` for the
+  headless path). **AppTest has no browser → the real proof is the owner re-smoke**; if it still fails, the agreed
+  escalation is native `st.login()` (Sprint 134 Option 2). Confirm-on-Log-out (US-329) deferred behind the re-smoke.
 - **Sprint 133 (2026-08-09)** — *A "Log out" link* (extends **ADR-099**, no new ADR). Let a tester **reset a
   shared device**: a sidebar control clears the "remember me" cookie + the session and re-shows the gate.
   **US-327:** in `access.py` — `gate_active()` (registration or shared-code configured), `logout()` (set
