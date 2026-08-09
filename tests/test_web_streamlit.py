@@ -46,6 +46,18 @@ def test_players_page_has_a_top15_bar_when_data_present():
         assert at.get("arrow_vega_lite_chart") or at.get("vega_lite_chart")
 
 
+def test_players_card_view_renders_a_player_card():
+    # US-343 (ADR-084): the "Card" view → a player selectbox → the self-contained player-card HTML block
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return                                                 # no data → nothing to card
+    at.segmented_control[0].set_value("Card").run()
+    assert not at.exception
+    assert any(s.label == "Player" for s in at.selectbox)      # the picker
+    blob = " ".join(m.value for m in at.markdown)
+    assert "pl-card" in blob and "Player Card" in blob         # the card + its brand band rendered
+
+
 def test_players_page_shows_the_crowd_lens_columns():
     # US-183 / ADR-057: the Players table gains Form · ICT · Trends (crowd flags), display-only
     at = _run(_PAGES / "1_Players.py")

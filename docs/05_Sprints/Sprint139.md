@@ -52,7 +52,7 @@ HTML (ADR-084), fed by data we already hold.
       when given) + a **position-adaptive** 2-col stat grid via a pure `_stat_rows(player)` (FWD/MID → goals·xGI·
       ICT·assists; DEF → xGC·DefCon/90·CBI·tackles; GK → xGC·recoveries·CBI; all + PPG·Value·Ownership·Minutes).
       Every value `html.escape`d; empty-safe; no JS. Unit/AppTest-covered (the right stats per position; escaping).
-- [ ] **US-343 (wire into Players)** — a **"Card"** option on the Players `st.segmented_control` → a **player
+- [x] **US-343 (wire into Players)** — a **"Card"** option on the Players `st.segmented_control` → a **player
       selectbox** (scoped by the existing filter) → the card. The view loads the player's team **fixtures** (next 3
       + FDR) + computes **`decision_xp`** for the pool (our Projected xP, wrapped in `analytics.timed`) + reuses
       `photo_url`/`badge_url`. Degrades cleanly (no fixtures → no pills; xP unavailable → no chip). AppTest-covered.
@@ -106,7 +106,7 @@ tabs (Trending / My Squad) if it proves popular.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-342 | **The card renderer** — `player_card.py` (self-contained HTML, position-adaptive stats). | High | ✅ Done | ~⅓ session |
-| US-343 | **Wire into the Players tab** — a "Card" view (selectbox → card) + fixtures + Projected xP. | High | ⬜ To do | ~⅓ session |
+| US-343 | **Wire into the Players tab** — a "Card" view (selectbox → card) + fixtures + Projected xP. | High | ✅ Done | ~⅓ session |
 | US-344 | **The My Squad pitch** — a hover popover (compact card) + a player picker → the full card. | Med | ⬜ To do | ~⅓ session |
 
 ---
@@ -137,6 +137,14 @@ tabs (Trending / My Squad) if it proves popular.
   **Artifact preview** to the *real* renderer output for FWD/DEF/GK (position-adaptive, real data + Projected xP) —
   matches the approved mock. Display-only; no engine change. ruff clean. **916 → 925.** (US-343 wires the Players
   "Card" view; US-344 the pitch hover popover + picker.)
+- **US-343 (the Players "Card" view)** — added a **"Card"** option to the Players `st.segmented_control` (2nd, after
+  Pool) → `views.render_card(rows, sel, teams, photos, badges)`: a **player selectbox** scoped by the shared filter
+  → `render_player_card` with the team's **next-3 fixtures** (a new `_card_fixtures` helper: opp · H/A · FDR) +
+  the real **photo/badge** (`photos`/`badges`) + our **Projected xP** from a lazy, `analytics.timed`-wrapped
+  `decision_xp` compute (per selection). Empty-safe (no filter matches → a note; no xP → the chip hides).
+  **+1 AppTest** (Card view → the picker + the `pl-card` HTML + brand band render, no exception). *(Fixed a
+  mis-placed insertion that split `render_history` — functions now live at the module end.)* Display-only; no
+  engine change. ruff clean. **925 → 926.** (US-344 = the My Squad pitch hover popover + picker.)
 
 ---
 

@@ -38,11 +38,14 @@ else:
     # One shared filter (ADR-064) — applies to the pool and every stat board (price no-op on stat rows).
     sel = filter_controls(rows, key="players", with_price=True)
     view = st.segmented_control(
-        "View", ["Pool", "Set pieces", "Over / under-perf", "Defensive Contribution", "Clean sheets",
+        "View", ["Pool", "Card", "Set pieces", "Over / under-perf", "Defensive Contribution", "Clean sheets",
                  "xG / xA / xGI", "History"],
-        default="Pool", help="Switch between the player pool, the stat boards, and a player's season history.")
+        default="Pool", help="Switch between the player pool, a rich **player card**, the stat boards, and a "
+                             "player's season history.")
 
-    if view == "Set pieces":
+    if view == "Card":                                     # a rich, position-adaptive player card (US-343)
+        views.render_card(rows, sel, teams, photos, badges)
+    elif view == "Set pieces":
         views.render_set_pieces(rows, sel, badges)
     elif view == "Over / under-perf":
         views.render_over_under(rows, sel, badges)

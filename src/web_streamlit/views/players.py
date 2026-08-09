@@ -289,3 +289,48 @@ def render_history(rows, photos, badges):
             st.line_chart(table_c, x="Season", y=[a_name, b_name])
         else:
             st.caption(f"No season history to compare for {a_name} and {b_name}.")
+
+
+def _card_fixtures(store, short, n=3):
+    """The next `n` fixtures for a team → `[{opp, home, fdr}]` for the card's FDR pills. Empty-safe."""
+    out = []
+    for f in store.get_upcoming_fixtures(short)[:n]:
+        home = f["home"] == short                            # `home`/`away` are the short names (ADR-004)
+        opp = f["away"] if home else f["home"]
+        out.append({"opp": opp, "home": home,
+                    "fdr": f["team_h_difficulty"] if home else f["team_a_difficulty"]})
+    return out
+
+
+def render_card(rows, sel, teams, photos, badges):
+    """A rich, position-adaptive **player card** (US-343, ADR-084): pick a player -> their card (photo, badge,
+    3-GW FDR fixtures, our **Projected xP**, ownership/set-piece flags, position-adaptive stats). Scoped by the
+    shared filter; a short-lived Storage read + one decision_xp compute per selection (timed). Display-only."""
+    from src.analytics import decision_xp
+    from src.web_streamlit import analytics
+    from src.web_streamlit.player_card import render_player_card
+
+    pool = apply_filter(rows, sel)
+    if not pool:
+        st.info("No players match the filter.")
+        return
+    by_label = {f"{p['web_name']} · {p['team']}": p for p in sorted(pool, key=lambda p: p["web_name"] or "")}
+    player = by_label.get(st.selectbox("Player", list(by_label), help="Pick a player to see their card."))
+    if not player:
+        return
+
+    short = player["team"]
+    team_names = {t["short_name"]: t["name"] for t in teams}
+    store = Storage()                                        # short-lived: fixtures + our projected xP
+    try:
+        with analytics.timed("analysis", page="Players"):    # perf: the decision_xp compute (ADR-100)
+            ranked = decision_xp(rows, store.get_upcoming_fixtures(), store.get_history_by_code(),
+                                 horizon=1, gw_history_by_code=store.get_gw_history_by_code())
+        xp = {r["id"]: r["xp"] for r in ranked}
+        fixtures = _card_fixtures(store, short)
+    finally:
+        store.close()
+
+    render_player_card(player, team_name=team_names.get(short, short),
+                       photo_url=photos.get(player["id"]), badge_url=badges.get(short),
+                       fixtures=fixtures, projected_xp=xp.get(player["id"]))
