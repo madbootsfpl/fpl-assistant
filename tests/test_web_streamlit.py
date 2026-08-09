@@ -599,6 +599,69 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
     assert captured["json"]["access_key"] == "test-access-key"
 
 
+# --- the capped registration gate (ADR-098, US-324) ---------------------------------------------
+
+def _fake_user_store(monkeypatch, rows):
+    """A tiny in-memory beta_users on the Supabase REST shape: GET filters/counts, POST appends."""
+    def fake_get(url, params=None, headers=None, timeout=None):
+        if params and "email" in params:
+            e = params["email"].split("eq.", 1)[1]
+            return _StoreResp([{"email": e}] if e in rows else [])
+        return _StoreResp([{"email": e} for e in rows])
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        rows.append(json["email"])
+        return _StoreResp()
+
+    monkeypatch.setattr("requests.get", fake_get)
+    monkeypatch.setattr("requests.post", fake_post)
+
+
+def _registration_env(monkeypatch, cap="2"):
+    monkeypatch.setenv("FPL_USER_CAP", cap)
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+
+
+def test_gate_is_off_by_default():
+    # US-324: no cap / no code → the app is open (no gate), byte-identical to today
+    at = _run(_PAGES / "8_Feedback.py")
+    assert not at.exception
+    assert not any("private beta" in (t.value or "") for t in at.title)   # no gate title
+    assert any(b.label == "Send feedback" for b in at.button)              # the real page rendered
+
+
+def test_registration_gate_admits_with_code_and_email(monkeypatch):
+    _registration_env(monkeypatch)
+    rows = []
+    _fake_user_store(monkeypatch, rows)
+    at = _run(_PAGES / "8_Feedback.py")
+    assert any(t.label == "Invite code" for t in at.text_input)           # registration mode shows both fields
+    assert any(t.label == "Your email" for t in at.text_input)
+    next(t for t in at.text_input if t.label == "Invite code").set_value("nope").run()
+    next(t for t in at.text_input if t.label == "Your email").set_value("a@b.com").run()
+    next(b for b in at.button if "Join" in b.label).click().run()
+    assert any("invite code" in (e.value or "").lower() for e in at.error) and rows == []   # wrong code blocks
+    next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
+    next(t for t in at.text_input if t.label == "Your email").set_value("A@b.com").run()
+    next(b for b in at.button if "Join" in b.label).click().run()
+    assert not at.exception and rows == ["a@b.com"] and at.session_state["_beta_ok"] is True   # cleaned + in
+
+
+def test_registration_gate_full_shows_the_waitlist(monkeypatch):
+    _registration_env(monkeypatch, cap="0")                               # already full
+    monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/waitlist")
+    _fake_user_store(monkeypatch, [])
+    at = _run(_PAGES / "8_Feedback.py")
+    next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
+    next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
+    next(b for b in at.button if "Join" in b.label).click().run()
+    assert any("full" in (w.value or "").lower() for w in at.warning)     # the beta-full note
+    assert any("waitlist" in b.label.lower() for b in at.get("link_button"))
+    assert not any(b.label == "Send feedback" for b in at.button)         # gate stopped the page — not admitted
+
+
 def test_squads_gameweeks_selector_drives_the_horizon():
     # US-237/315 (ADR-077): a "Gameweeks ahead" box-select (default 5) flows into Health — set it to 2 and
     # the analysis projects over 2 GW (a GW2 column, no GW5)

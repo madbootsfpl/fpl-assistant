@@ -90,7 +90,7 @@ native `st.login()` (hard per-user identity — the product path); a true concur
 |---|---|---|---|---|
 | ADR-098 | **Capped email-registration gate** — the soft-control access mode (the gate). | High | ✅ Done | gate |
 | US-323 | **The `user_store`** — `beta_users` register/count/is_registered on Supabase. | High | ✅ Done | ~⅓ session |
-| US-324 | **The registration gate** — code + email + cap in `require_access`. | High | ⬜ To do | ~½ session |
+| US-324 | **The registration gate** — code + email + cap in `require_access`. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -138,6 +138,16 @@ native `st.login()` (hard per-user identity — the product path); a true concur
   accepted). Probe: register A@b.com/c@d.com at cap 2 → in/in; a repeat → in (no dup); a 3rd → full. +7 tests
   (endpoint derivation · not-configured · email hygiene · the cap logic · idempotent · bad-email · is_registered).
   ruff clean. **836** total. (US-324 wires it into the access gate.)
+- **US-324 (the registration gate)** — extended `access.require_access`: a `_user_cap()` (parses `FPL_USER_CAP`
+  to a non-negative int, else `None`) drives a third mode by precedence — **registration** (cap set +
+  `user_store.is_configured()`) → **shared-code** → **open**. `_registration_gate(cap)`: an `st.form` with an
+  **Invite code** (when `FPL_ACCESS_CODE` set) + **email**; on Join → validate the code, then `user_store.register`
+  → **"in"** (`session[_beta_ok]=True`, remember `_beta_email`, rerun) / **"full"** (a "beta full ({cap} testers)"
+  warning + a `FPL_SIGNUP_URL` waitlist link) / a **ValueError** (bad email) or store error (surfaced via
+  `cloud_store.store_error`) → shown, `st.stop()`. Lazy imports of `user_store`/`store_error` avoid the
+  access↔user_store cycle. **Off by default** — unset cap → the existing code/open gate, unchanged. +3 AppTests
+  (off-by-default; admit with code+email + wrong-code blocks; at-cap → waitlist). **The full 836 stayed green**
+  (the gate is a no-op without the cap — invariance). ruff clean. **839** total.
 
 ---
 
