@@ -4,6 +4,33 @@ Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features li
 consolidated [Roadmap](04_Roadmap/Roadmap.md) — "Next / Then / Later"; this file holds the small
 nice-to-haves and tech-debt.)*
 
+## Tester feedback — 2026-08-10 intake
+
+Triaged by size: 🩹 quick fix (a small sprint of these) · 🧩 small UX fix · 🧭 feature (needs a gate/decision).
+
+- 🩹 **Player-card season label is wrong/misleading** — the card band hardcodes **"Season 24/25"**, but preseason
+  the stats shown are **last season's carryover**. Label it **"Last season"** (preseason) — and the **current
+  season** once GW1 has played — not a fixed/likely-wrong year. `player_card.py` (`plc-title` band). *(One-liner.)*
+- 🧩 **Player-card hover popover truncates** — the compact hover card on the My Squad pitch cuts off / shows too
+  much to fit. Shrink it (fewer stats, smaller type) and/or fix clipping (it may be cut by a container). Verify on
+  the deploy (esp. bench kits). `pitch.py` (`.kit-pop`) + the `compact` card in `player_card.py`.
+- 🩹 **Trending — surface "🔥 Top discussions" first** — the **Community Signals** list is long and buries the
+  **🔥 Top discussions this week**; reorder so Top discussions shows first (it's the sharper lens). `6_Trending.py`
+  (the "💬 Talked about" tab).
+- 🩹 **Players price filter excludes the most expensive player** — the Max-price slider caps at **£15.0m**, so
+  **Haaland (£15.5m)** is filtered out. Set the max to the **highest player price** (0 → max), not a fixed 15.0.
+  `filters.py` (`filter_controls`, `with_price`). *(One-liner.)*
+- 🧭 **Waitlist capture at the cap (ADR-098 extension)** — when registration is **full**, **record the would-be
+  tester's email** (a `waitlist` row in the existing Supabase, reusing the store) so the owner can invite them
+  later — instead of only linking `FPL_SIGNUP_URL`. Consented (they're trying to join); a small opt-in server
+  write like `beta_users`. Needs a gate.
+- 🧭 **Capture email on a wrong invite code (ADR-098 extension) — privacy call** — record the email (+ "bad code")
+  of a **failed** registration so the owner can invite later. Doable the same way, **but** it stores emails of
+  people who didn't have a valid code (possible typos/randoms) — decide if it's worth it, keep it minimal +
+  owner-only, and note it in the privacy posture before building.
+- 🩹 **Help — mention ☁ Save/Load in the "Save your team" step** — add that **☁ Save/Load across devices**
+  (sidebar) exists and is likely the **better** option (vs download/upload). `7_Help.py` (step 7). *(Copy tweak.)*
+
 ## Requested features — 2026-08-07 intake (owner)
 
 Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/plumbing now, sharpens at GW1 ·
