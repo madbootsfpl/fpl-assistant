@@ -12,11 +12,12 @@ ADR-087-beta-access-and-feedback.md) · [DIRECTION.md](00_Project/DIRECTION.md) 
 Set these in **Streamlit Community Cloud → Manage app → Settings → Secrets** (TOML). All optional; unset = off.
 
 ```toml
-FPL_ACCESS_CODE      = "your-shared-beta-code"                 # gates entry; testers type it once per session
-FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/<token>"    # in-app feedback POSTs here (§1: a Sheet OR a relay)
-FPL_FEEDBACK_KEY     = "your-web3forms-access-key"             # only if you use Web3Forms as the relay (§1B)
-FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"               # the mailto fallback address (default: this)
-FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"    # the founding-tester email-capture form
+FPL_ACCESS_CODE      = "your-shared-beta-code"                     # gates entry; testers type it once per session
+FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/you@proton.me"  # in-app feedback POSTs here (§1: a Sheet OR a relay)
+FPL_FEEDBACK_ORIGIN  = "https://your-app.streamlit.app"           # the app URL FormSubmit sees (§1B) — anti-abuse
+FPL_FEEDBACK_KEY     = "your-web3forms-access-key"                 # only if you use Web3Forms as the relay (§1B)
+FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"                   # the mailto fallback address (default: this)
+FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form
 ```
 
 (Locally you can use the same names as **environment variables** instead.)
@@ -28,6 +29,10 @@ FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"    # the founding-te
   version, ts, _subject}`). Point it at a **Google Sheet** (§1A) *or* a **form-to-email relay** (§1B) that
   forwards to your inbox. **Unset → the form offers a pre-filled email** (`FPL_FEEDBACK_EMAIL`) — so feedback
   reaches you even with no webhook (US-307).
+- **`FPL_FEEDBACK_ORIGIN`** — the app URL the relay sees as the `Origin`/`Referer`. FormSubmit (anti-abuse)
+  **rejects a POST with no origin** — and this form POSTs *server-side* (Streamlit's backend, no browser origin),
+  so the app always sends one. Defaults to a sensible app URL; **set it to your real Streamlit URL** if you ever
+  domain-lock the form. Harmless for a Sheet/Web3Forms.
 - **`FPL_FEEDBACK_KEY`** — only for the **Web3Forms** relay (§1B); it's sent as `access_key`. Leave unset for a
   Sheet or for FormSubmit.
 - **`FPL_FEEDBACK_EMAIL`** — the address the in-app **"✉ Email your feedback"** / fallback links open (a
@@ -70,14 +75,35 @@ A Google Apps Script bound to a Sheet:
 Free form-to-email services forward a POST to your inbox — the app's payload already carries `_subject`, the
 message, the page, and the version.
 
-- **FormSubmit** (no signup): use `FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/<random-token>"` (get the
-  token from formsubmit.co by tying it to fpl.assistant@proton.me — the token hides your address in the repo).
-  **First submit sends a one-time confirmation email — click it once**, then feedback flows to the inbox.
-- **Web3Forms** (needs a key): create an access key at web3forms.com for fpl.assistant@proton.me, then set
-  `FPL_FEEDBACK_WEBHOOK = "https://api.web3forms.com/submit"` **and** `FPL_FEEDBACK_KEY = "<your-access-key>"`
-  (the app sends it as `access_key`).
+**FormSubmit** (no signup) — two gotchas that will bite if you skip them:
 
-Test: submit the in-app form → an email lands in fpl.assistant@proton.me.
+1. **Use the `/ajax/` endpoint** — the app POSTs **JSON**, so:
+   `FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/fpl.assistant@proton.me"` (or `…/ajax/<random-token>` from
+   formsubmit.co to hide the address). The plain `formsubmit.co/<addr>` endpoint expects an HTML form and won't
+   work here.
+2. **Activate the form (one-time).** The first submit makes FormSubmit email an **"Activate Form"** link to the
+   address — **open it (check spam) and click it once**. Until then it holds submissions.
+
+The app already handles FormSubmit's **anti-abuse origin check**: FormSubmit rejects a POST with no
+`Origin`/`Referer` (*"…open this page through a web server…"*), and this form runs **server-side**, so it sends
+`FPL_FEEDBACK_ORIGIN` for you. If you domain-lock the form later, set `FPL_FEEDBACK_ORIGIN` to your real app URL.
+**No `FPL_FEEDBACK_KEY`** for FormSubmit.
+
+**Web3Forms** (needs a key, robust server-side) — create an access key at web3forms.com for the inbox, then set
+`FPL_FEEDBACK_WEBHOOK = "https://api.web3forms.com/submit"` **and** `FPL_FEEDBACK_KEY = "<your-access-key>"` (the
+app sends it as `access_key`). No origin/activation dance.
+
+**Test it:** submit the in-app **📣 Feedback** form → the form now shows the **real** result (delivered ✓ / the
+relay's message if not) — no more false "sent". An email should land in the inbox.
+
+> **Troubleshooting — "it says sent but nothing arrives":** almost always the FormSubmit **Activate Form** email
+> hasn't been clicked, or the webhook address doesn't exactly match your mailbox. Test the endpoint directly:
+> ```bash
+> curl -s -X POST https://formsubmit.co/ajax/<your-addr> -H "Content-Type: application/json" \
+>   -H "Origin: https://your-app.streamlit.app" -d '{"message":"test","_subject":"FPL test"}'
+> ```
+> `"needs Activation"` → click the email; the *"web server"* message → the Origin header is missing (the app
+> sends it, a bare curl needs `-H Origin: …`); an address error → fix the webhook.
 
 *(Any service accepting a JSON POST works — Formspree, a Zapier/Make webhook, a Tally webhook, etc.)*
 
@@ -107,9 +133,10 @@ confirmation so testers can get in.
 
 Everything below is **£0** and opt-in. Tick them off, then post the invite.
 
-- [ ] **Feedback sink live** — the Google Sheet + Apps Script (§1) is deployed, and `FPL_FEEDBACK_WEBHOOK` is set
-      in Streamlit secrets. Submit the in-app **📣 Feedback** form → a row appears in the Sheet. *(US-306: each
-      row now also carries the **page**, the **app version**, and a **timestamp**, so a report is easy to place.)*
+- [ ] **Feedback sink live** — a Sheet (§1A) *or* an email relay (§1B) is set as `FPL_FEEDBACK_WEBHOOK`. **For
+      FormSubmit:** the `/ajax/` endpoint + click the one-time **Activate Form** email. Submit the in-app **📣
+      Feedback** form → it shows **"sent ✓"** (the real result) and the row/email arrives. *(Each carries the
+      **page**, **app version**, and a **timestamp**, US-306.)*
 - [ ] **Signup form** — `FPL_SIGNUP_URL` set (§2); the "✋ Join the beta" button shows on Home + Feedback.
 - [ ] **Access code** — decide whether to gate (§3): set `FPL_ACCESS_CODE`, or leave open. Share the code with
       testers if set.
