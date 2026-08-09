@@ -52,6 +52,7 @@ def require_access() -> None:
     _flush_clear()                 # render a pending logout cookie-clear on this clean run (before any stop/rerun)
     if st.session_state.get(_OK):
         _flush_remember()          # write the "remember me" cookie on this clean run (post-login/refresh)
+        _render_account()          # sidebar: "Signed in … · Log out" (only when a gate is active)
         return
 
     cap = _user_cap()
@@ -59,6 +60,7 @@ def require_access() -> None:
         from src.web_streamlit import user_store  # lazy: user_store imports `secret` from here (avoid the cycle)
         if user_store.is_configured():
             if _remembered_registration(user_store):   # a still-valid cookie → skip the gate
+                _render_account()                      # show the account control on the admitting run too
                 return
             _registration_gate(cap)                    # stops the page unless admitted
             return
@@ -68,6 +70,7 @@ def require_access() -> None:
     if not code:
         return
     if _remembered_code(code):     # a cookie holding the current code → skip the gate
+        _render_account()          # show the account control on the admitting run too
         return
     _code_gate(code)               # stops the page unless the right code is entered
 
@@ -110,6 +113,18 @@ def _flush_clear() -> None:
     if st.session_state.pop(_CLEAR, None):
         from src.web_streamlit import remember
         remember.clear()
+
+
+def _render_account() -> None:
+    """A small sidebar line + a **Log out** button, so a tester can reset a shared device (ADR-099). Rendered only
+    when a gate is active and the session has passed — the open/public deploy shows nothing (off by default)."""
+    if not gate_active():
+        return
+    with st.sidebar:
+        email = st.session_state.get(_EMAIL)
+        st.caption(f"🔓 Signed in as {email}" if email else "🔓 Signed in to the beta")
+        if st.button("Log out", key="_beta_logout", use_container_width=True):
+            logout()
 
 
 def _remembered_code(code: str) -> bool:

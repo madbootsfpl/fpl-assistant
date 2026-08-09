@@ -46,7 +46,7 @@ every page, and **only** when a gate is active (open mode is untouched, byte-ide
       queue the cookie clear, rerun), and `_flush_clear()` (render `remember.clear()` once on a clean run — the
       mirror of `_flush_remember`). The cookie-restore helpers **short-circuit when `_beta_forgotten`** so a
       just-logged-out session can't be re-admitted from the stale cookie. Unit/AppTest-covered.
-- [ ] **US-328 (the sidebar control)** — `_render_account()`: when `gate_active()` and the session has passed,
+- [x] **US-328 (the sidebar control)** — `_render_account()`: when `gate_active()` and the session has passed,
       render at the foot of the sidebar a caption (**"Signed in as {email}"** in registration mode, else **"Signed
       in to the beta"**) + a **"Log out"** button → `logout()`. Wired into `require_access` (render on the passed
       branch; `_flush_clear()` at the top). **Open mode → nothing renders.** AppTest-covered.
@@ -105,7 +105,7 @@ scope; `st.login()` is the answer if that's ever needed.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-327 | **The logout mechanism** — `gate_active`/`logout`/`_flush_clear` + `_beta_forgotten` suppressor. | High | ✅ Done | ~¼ session |
-| US-328 | **The sidebar control** — `_render_account()` ("Signed in as X · Log out") wired into `require_access`. | High | ⬜ To do | ~¼ session |
+| US-328 | **The sidebar control** — `_render_account()` ("Signed in as X · Log out") wired into `require_access`. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -145,6 +145,15 @@ scope; `st.login()` is the answer if that's ever needed.
   cookie clear is rendered, the session is dropped, `_beta_forgotten` is set, and the gate re-shows *despite* the
   stale cookie still reading valid). ruff clean. **856** total. (US-328 adds the sidebar "Log out" control that
   calls `logout()`.)
+- **US-328 (the sidebar control)** — added `_render_account()`: when `gate_active()` and the session has passed,
+  it renders at the foot of the sidebar a caption (**"🔓 Signed in as {email}"** in registration mode, else **"🔓
+  Signed in to the beta"**) + a full-width **"Log out"** button → `logout()`. Wired into `require_access` on the
+  passed branch. **A gap found + fixed:** the control must also render on the **cookie-admit** run (where `_OK` is
+  set inside `_remembered_*` and `require_access` returns *before* the top branch) — otherwise after a refresh the
+  "Log out" wouldn't appear until the next interaction; added `_render_account()` to both admit paths. **Off by
+  default** — open mode (`gate_active()` False) renders nothing (an explicit test). **+4 AppTests** — no control
+  in open mode · control + "Signed in" caption when passed · the caption **names the email** in registration mode
+  · clicking the **real sidebar button** re-gates end-to-end on Home. ruff clean. **860** total.
 
 ---
 

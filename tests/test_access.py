@@ -150,3 +150,48 @@ def test_logout_clears_the_session_cookie_and_re_gates(monkeypatch):
     assert access._OK not in at.session_state                         # session dropped
     assert at.session_state[access._FORGOTTEN] is True
     assert any("beta" in t.value.lower() for t in at.title)           # re-gated (not re-admitted from the cookie)
+
+
+# --- the sidebar "Log out" control (ADR-099, US-328) ---------------------------------
+
+def _logout_buttons(at):
+    return [b for b in at.button if b.key == "_beta_logout"]
+
+
+def test_no_logout_control_in_open_mode():
+    """The open/public deploy shows no account control — off by default (byte-identical)."""
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    assert not _logout_buttons(at)
+
+
+def test_logout_control_shows_when_passed(monkeypatch):
+    """A passed shared-code session gets a sidebar Log out button + a 'Signed in to the beta' caption."""
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    monkeypatch.setattr(remember, "read", lambda: "letmein")          # admit via a valid cookie
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    assert _unlocked(at)
+    assert _logout_buttons(at)
+    assert any("Signed in" in c.value for c in at.caption)
+
+
+def test_logout_control_names_the_email_in_registration_mode(monkeypatch):
+    monkeypatch.setenv("FPL_USER_CAP", "10")
+    monkeypatch.setattr(user_store, "is_configured", lambda: True)
+    monkeypatch.setattr(user_store, "is_registered", lambda email: True)
+    monkeypatch.setattr(remember, "read", lambda: "tester@example.com")
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    assert _logout_buttons(at)
+    assert any("Signed in as tester@example.com" in c.value for c in at.caption)
+
+
+def test_clicking_the_sidebar_logout_re_gates(monkeypatch):
+    """The real sidebar button (not a harness) logs the device out end-to-end on Home."""
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    monkeypatch.setattr(remember, "read", lambda: "letmein")
+    monkeypatch.setattr(remember, "clear", lambda: None)
+    monkeypatch.setattr(remember, "write", lambda *a, **k: None)
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    assert _unlocked(at)
+    _logout_buttons(at)[0].click().run()
+    assert access._OK not in at.session_state
+    assert any("beta" in t.value.lower() for t in at.title)           # back to the lock screen
