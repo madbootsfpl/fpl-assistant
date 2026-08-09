@@ -179,6 +179,11 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   tester / rotated code locked out); off by default. Sprint 132's native read didn't persist (a cookie-jar mismatch
   — component-iframe write vs top-level read); now read + write both go through the component. `st.login()` (native
   persistence + verified identity) stays a *future option*, no longer a needed escalation.
+- 🚧 **Beta usage & experience analytics** — **foundation DONE (Sprint 136, ADR-100).** Anonymous, opt-in
+  (`FPL_ANALYTICS`), fail-silent usage + `perf` events → a Supabase `events` table (reuses the store, no new
+  secret); `session_started`/`page_viewed` on all pages; the guardrail (never affects the app). **Owner smoke:**
+  create the table + set the flag (ANALYTICS.md). **Sprint 137:** full event coverage + perf timers + a gated
+  admin view. Deferred further: batching, a BI dashboard, cohorts.
 - ✅ **"Log out" link** — **DONE (Sprint 133, extends ADR-099).** A sidebar "Log out" clears the cookie + session
   and re-shows the gate (reset a shared device); deferred clear + a `_beta_forgotten` re-admit guard; off on the
   open deploy. Deferred: a confirm dialog, a **signed token**; native `st.login()` (hard identity) is still the

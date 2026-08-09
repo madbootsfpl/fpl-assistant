@@ -76,6 +76,14 @@ ability to honour a future "free for X years" promise.
 > setting the three secrets and recruit — runbook: **[../BETA.md](../BETA.md)**. What remains is the owner's
 > (create the forms/webhook, set the secrets, post on Reddit).
 
+> ✅ **Built (Sprint 136, ADR-100):** **anonymous usage & experience analytics** — see what testers use, whether
+> they return, and whether the app feels fast/reliable, **without a separate analytics project**. `analytics.py`
+> writes small usage + `perf` events to a Supabase `events` table (reuses the store, no new secret), **opt-in**
+> behind **`FPL_ANALYTICS`**, **anonymous** (a session id + a returning-device id, no PII, not the handle), **no
+> third-party service**, and **fail-silent** (it can never slow or break a session). Runbook:
+> **[../ANALYTICS.md](../ANALYTICS.md)**. This answers "watch the host / understand usage" below with data. Not
+> the accounts/auth pivot — it observes the app, not identities. (Full coverage + a gated admin view = Sprint 137.)
+
 - **Access** — keep the URL open, optionally behind a shared **access code** (a Streamlit password/secret
   gate). No accounts needed.
 - **Recruit + capture** — a **Google / Tally signup form** that collects **emails** and tags people as

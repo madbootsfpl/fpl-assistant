@@ -19,6 +19,7 @@ FPL_FEEDBACK_KEY     = "your-web3forms-access-key"                 # only if you
 FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"                   # the mailto fallback address (default: this)
 FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form / waitlist
 FPL_USER_CAP         = "10"                                        # cap registered testers (§4); unset = shared code only
+FPL_ANALYTICS        = "1"                                         # anonymous usage/perf analytics (ADR-100); unset = off
 ```
 
 (Locally you can use the same names as **environment variables** instead.)
@@ -39,6 +40,10 @@ FPL_USER_CAP         = "10"                                        # cap registe
 - **`FPL_FEEDBACK_EMAIL`** — the address the in-app **"✉ Email your feedback"** / fallback links open (a
   `mailto:`). Defaults to `fpl.assistant@proton.me`; set it to change the inbox.
 - **`FPL_SIGNUP_URL`** — a link shown on **Home** + **Feedback** ("✋ Join the beta"). Unset → hidden.
+- **`FPL_ANALYTICS`** — turns on **anonymous usage & experience analytics** (ADR-100): what testers use, whether
+  they return, and how fast/reliable it feels — written to a Supabase `events` table (reuses the store secrets, no
+  new one). **Off by default**; **anonymous** (no PII, not the handle); **fail-silent** (never affects the app).
+  Needs the `events` table + one flag — full runbook: **[ANALYTICS.md](ANALYTICS.md)**.
 
 > **Why a relay / mailto, not direct email?** Sending mail from the app would need SMTP credentials, and
 > **Proton has no free SMTP** (it needs the paid Bridge). So feedback reaches your inbox either via a free

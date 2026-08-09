@@ -208,7 +208,54 @@ polish deferred until there's real beta data.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ a **provable, safe** analytics foundation — opt-in, anonymous, fire-and-forget, fail-silent — that
+records usage (sessions, returning users, page views) + a `perf` primitive to a Supabase `events` table, **pinned
+so it can't affect the app or leak PII**. Full event coverage + perf timers + the admin view are Sprint 137.
+
+**Delivered**
+- **ADR-100** — the analytics write path: the 3rd opt-in, secret-gated server write; fire-and-forget + fail-silent;
+  off by default (`FPL_ANALYTICS` + the store); anonymous (session id + `fpl_anon` returning id); no PII/3rd-party.
+- **US-332** — `analytics.py`: `is_enabled`/`session_id`/`track` (fire-and-forget daemon thread, swallow-all,
+  no-op when off)/`timed` + `config.APP_VERSION`. +10 tests.
+- **US-333** — named cookies in `remember.py` + `anon_id()` (returning-user resolution, defer-then-mint so a
+  loading run can't inflate unique-users). +4 tests.
+- **US-334** — `boot(page)` (session_started once + page_viewed) wired into all 9 surfaces + `docs/ANALYTICS.md` +
+  the guardrail (a raising store never breaks a page; no write when off). +4 tests.
+
+**Verified** — disabled → no thread, no POST, the suite byte-identical (867 → 885 with analytics off in every
+existing test); enabled → an anonymised payload (exact key-set, no PII); a raising store / a build failure both
+swallowed; `boot` emits session_started once; the anon id resolves returning vs mints new without double-counting.
+*(The real Supabase write is the owner smoke — enable `FPL_ANALYTICS` + create the table.)*
+
+**Metrics** — 885 tests (867 → +18: US-332 +10, US-333 +4, US-334 +4) · ruff + CI-parity green · **100 ADRs** (+1)
+· 3 stories + a gate, ~1 session.
+
+**What went well**
+- **"Never affect the app" is the tested invariant, not a hope** — the guardrail (a raising store → the page still
+  renders) + off-by-default (no secrets → zero writes, byte-identical) are pinned, so the #1 rule can't erode.
+- **Reused everything** — the store client pattern (endpoint derived, no new secret) + the *verified* cookie
+  component for the returning id; the whole feature is a sibling table + a thin client.
+- **Fire-and-forget was the right call** — building the payload on the main thread (session state safe) then
+  POSTing on a daemon thread keeps every rerun non-blocking; a lost event never matters.
+- **Caught the double-count trap early** — deferring the anon-id mint until the cookie settled avoids minting a new
+  id on the loading run (which would inflate unique-users) — the Sprint 134 lesson, reused.
+- **Off-by-default kept the 9-page wiring safe** — `boot()` no-ops without the flag, so instrumenting every page
+  changed nothing for the suite.
+
+**Even better if**
+- **The real write is unproven until the owner smoke** — AppTest can't POST to Supabase; enabling the flag +
+  creating the table + watching rows land is the confirmation (like the cookie re-smoke).
+- **Thread-per-event** is fine for a hobby beta but would need batching at volume (documented, deferred).
+- **`error` + feature events are thin so far** — only session/page/perf are wired; the per-feature events + perf
+  timers land in Sprint 137 where the call sites live.
+
+**Deferred / backlog** — **Sprint 137:** the feature events (`squad_created`/`analysis_run`/`player_viewed`/
+`squad_*`/`feedback_*`) + `error` at the key sites + perf timers on the key ops + a **minimal gated admin view**
+(`FPL_ADMIN_KEY`). Further: event batching (if volume grows); a full BI dashboard; cohort/funnel analysis. And the
+big body: **GW1 (2026-08-21) calibration** + momentum + live manager import.
+
+**Follow-up marker:** ⏳ **owner smoke** — create the `events` table (ANALYTICS.md) + set `FPL_ANALYTICS=1`, use
+the app, confirm rows land + the app is unaffected → then Sprint 137 (coverage + admin).
 
 ---
 

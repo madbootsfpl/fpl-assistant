@@ -455,6 +455,21 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 136 (2026-08-09)** — *Beta usage & experience analytics — foundation* (**ADR-100**). An **opt-in,
+  anonymous, fail-silent** observation layer over the app (never the FPL model). **US-332:**
+  `web_streamlit/analytics.py` — `is_enabled()` (`FPL_ANALYTICS` truthy **and** the store configured),
+  `session_id()` (per-session `uuid4`), `track(event, *, page, duration_ms, ok, **meta)` (builds the anonymised
+  payload on the main thread, POSTs it **fire-and-forget on a daemon thread**, wrapped so **nothing can raise into
+  the app**; a hard no-op when off), `timed(op)` (a `perf` event), `boot(page)` (session_started once + page_viewed);
+  the `events` endpoint is derived from `FPL_STORE_URL` (**no new secret**); `config.APP_VERSION`. **US-333:**
+  generalised `remember.py` to **named cookies** so an anonymous `fpl_anon` returning-user id rides the verified
+  component; `anon_id()` **defers-then-mints** (once the cookie settles) so the loading run can't inflate
+  unique-users. **US-334:** `analytics.boot("<Name>")` wired into all 9 surfaces + `docs/ANALYTICS.md` + **the
+  guardrail** (a raising store never breaks a page; no write when off → byte-identical). The **3rd** opt-in,
+  secret-gated server write (after ADR-094/098) — the read-only invariant names three exceptions, each pinned.
+  **Anonymous + minimal:** two random ids, small events, **no PII / no click-mouse-screen tracking / no 3rd-party
+  service / no full squad**. +18 tests (867→885). Full event coverage + perf timers + a gated admin view = Sprint
+  137; **owner smoke pending** (create the table + set the flag).
 - **Sprint 135 (2026-08-09)** — *Confirm on Log out + ☁ Save/Load in the Squads sidebar* (extends **ADR-099** /
   **ADR-094**, no new ADR). **US-329:** `access._confirm_logout()` (`@st.dialog`) — the sidebar "Log out" opens a
   confirm (Log out → `logout()` / Cancel → dismiss) so a mis-click can't reset a device; a `_beta_confirming`
