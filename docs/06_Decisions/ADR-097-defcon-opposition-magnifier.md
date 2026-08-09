@@ -1,13 +1,20 @@
-# Architectural Decision Record: A fixture-context DefCon magnifier (design gate)
+# Architectural Decision Record: A fixture-context DefCon magnifier
 
 **Decision ID:** ADR-097
-**Date:** 2026-08-28
-**Status:** Accepted — **design gate only; no code. Build at GW1 (needs real DefCon returns to calibrate).**
-**Superseded By / Replaces:** would extend the **one xP metric** (`decision_xp`/`player_xp`, ADR-041) with a
-**DefCon-xP component + a fixture magnifier** — a **modelling** change to the rate, not a lens (ADR-057 still
-governs crowd/price/media). Builds on the DefCon reliability lens (ADR-018), the clean-sheet solidity lens
-(ADR-019), the FDR/Elo strength model (ADR-004/005/010), and mirrors the **tier-guard** insight from the
-set-piece term (ADR-096). No betting odds (deferred, ADR-093 — a proxy suffices).
+**Date:** 2026-08-28 (design gate) · **refined + built 2026-08-30 (Sprint 129)**
+**Status:** Accepted — **refined to the "delta" approach + built wired-dormant (`DEFCON_MAGNIFIER_WEIGHT = 0`);
+calibrate at GW1 on real DefCon returns.**
+**Superseded By / Replaces:** extends the **one xP metric** (`decision_xp`/`player_xp`, ADR-041) with a
+**fixture magnifier on the DefCon points *already in the baseline*** — a **modelling** change, not a lens
+(ADR-057 still governs crowd/price/media). Builds on the DefCon reliability lens (ADR-018), the clean-sheet
+solidity lens (ADR-019), the FDR/Elo strength model (ADR-004/005/010), and mirrors the **no-double-count**
+insight from the set-piece term (ADR-096). No betting odds (deferred, ADR-093 — a proxy suffices).
+
+> **⚠️ Refinement (Sprint 129 build).** The original gate proposed *adding* a new **DefCon-xP component**. Building
+> it surfaced the double-counting trap: a player's historical baseline (`total_points`) **already includes** their
+> DefCon points. So the build instead **re-weights the DefCon portion already in the baseline by fixture** — a
+> **delta** `defcon_pts_per_match × (magnifier − 1)`, which is **0 at a neutral magnifier** (naturally dormant, no
+> double-count). §1–§2 of the Decision below are updated to this delta approach; everything else stands.
 **Deciders / Participants:** Tony Sheridan (Owner), ChatGPT (Technical Lead), Claude Code (Implementation)
 
 ---
@@ -28,8 +35,10 @@ dominates a weak opponent. The owner's worked examples (using clean-sheet odds a
   ranks by `per90 − threshold`. `xgc` is stored; `defensive_solidity` (ADR-019) ranks clean-sheet prospect by
   xGC/90. FDR/Elo give per-fixture opponent strength. → **a clean-sheet-probability *proxy* exists without
   betting odds.**
-- **⚠️ DefCon points are NOT in `decision_xp` today** — the recipe uses a total-points-based rate. So a magnifier
-  has **nothing to scale yet**: a **DefCon-xP component is a prerequisite**.
+- **⚠️ The baseline ALREADY includes DefCon points.** `decision_xp` uses a `total_points`-based rate, and
+  `total_points` covers defensive-contribution points. So *adding* a separate DefCon-xP component would
+  **double-count** — instead the magnifier **re-weights the DefCon share already in the baseline** (the delta,
+  above). No new "component" is added to the total; only its fixture *distribution* is adjusted.
 - **⚠️ A key subtlety — clean sheets and DefCon pull opposite ways.** Clean-sheet points (4 pts, DEF/GK) are
   **more** likely vs a *weak* opponent; DefCon points (2 pts, all outfield) are **more** likely vs a *strong*
   one. So the same "clean-sheet proxy" magnifies the two components **inversely** — they must not share one
@@ -50,30 +59,32 @@ dominates a weak opponent. The owner's worked examples (using clean-sheet odds a
 
 ### ✅ Decision
 
-**Adopt (as a design) a DefCon-xP component in the one recipe, scaled by a fixture magnifier derived from a
-clean-sheet *proxy* (FDR/xGC/Elo) — wired-dormant, calibrated at GW1. This ADR is the gate; no code ships now.**
+**Re-weight the DefCon points already in the baseline by fixture — a delta, gated by `DEFCON_MAGNIFIER_WEIGHT`
+(default 0), wired-dormant + auditable; calibrate at GW1. Built this sprint (US-318/319).**
 
-**1. A DefCon-xP component (the prerequisite).** Model per-match DefCon points as `≈ 2 · P(clear threshold)`,
-where `P(clear)` maps a player's `defcon_per90` vs their position threshold (ADR-018) to a probability (a
-reliable clearer → high P). Summed over the horizon fixtures, tier-aware like the scoring rate (a low-minutes
-sample is untrusted). This is the number the magnifier scales.
+**1. The DefCon points per match (the portion to re-weight).** `defcon_points_per_match(player) ≈ 2 · P(clear
+threshold)`, where `P(clear)` maps `defcon_per90` vs the position `THRESHOLD` (DEF 10 · MID/FWD 12; ADR-018) to a
+probability (`clamp(0.5 + (per90 − threshold) / DEFCON_P_SCALE, 0, 1)`; GK/no-data → 0). This estimates the DefCon
+share the baseline already prices — it is **not added** to xP; it is what the magnifier scales.
 
-**2. A fixture magnifier from a clean-sheet proxy.** Per fixture, a **clean-sheet probability proxy**
-`cs_prob(team, opponent)` from the strength model (opponent attacking strength via FDR/Elo, team solidity via
-xGC) — **no betting odds**. The DefCon magnifier is **inverse** to `cs_prob` (defend more when a clean sheet is
-unlikely), clamped to a sane band (the owner's ~**0.5–1.5**): `defcon_xp' = defcon_xp · clamp(m(cs_prob),
-0.5, 1.5)`. *(If/when a clean-sheet-xP component is modelled, it takes the **opposite** magnifier — CS more
-likely vs weak opponents — so the two are separate multipliers.)*
+**2. A fixture magnifier from a clean-sheet proxy → a delta.** Per fixture, `defcon_magnifier(difficulty)` maps
+the player's **FDR difficulty** (a clean-sheet-probability proxy — strong opponent = high difficulty = more
+defending) to a multiplier in the owner's band (~**0.5–1.5**; neutral at mid-difficulty), **no betting odds**.
+The effect on xP is a **delta**, not a replacement:
+`defcon_delta = Σ_fixtures weight · defcon_points_per_match · DEFCON_MAGNIFIER_WEIGHT · (magnifier(d) − 1)`,
+added to xp. At `magnifier = 1` (or weight 0) the delta is **0** → xP unchanged (no double-count, dormant).
+*(A clean-sheet-xP magnifier would take the **opposite** direction — CS more likely vs weak opponents — a
+separate multiplier, deferred.)*
 
 **3. The transferred-player caution.** The fixture magnifier fixes the *opponent* context, not the *new team's*
 baseline defensive share. Recorded as a known limit; a **team-level defensive-share adjustment** (scale
 `defcon_per90` by the new team's expected possession/defensive load vs the old) is a **deferred** extension —
 mirroring the ADR-096 "history doesn't capture the new context" guard.
 
-**4. Wired-dormant + auditable.** A `DEFCON_XP_WEIGHT` / `DEFCON_MAGNIFIER` knob at neutral (like
-`SET_PIECE_WEIGHT`), so `decision_xp` is byte-identical until turned on (an invariance test pins it). When
-active, the DefCon component + the applied magnifier are exposed as grounded numbers (a `defcon_xp` field + an
-explanation reason), so a narrated figure verifies (ADR-037/089).
+**4. Wired-dormant + auditable.** `config.DEFCON_MAGNIFIER_WEIGHT = 0` (like `SET_PIECE_WEIGHT`) → the delta is 0
+and `decision_xp` is byte-identical until turned on (an invariance test pins it). When active, the net delta is a
+grounded number (a `defcon_xp` field on the row + a weight-aware "🛡 DefCon fixture edge (+X)" explanation reason),
+so a narrated figure verifies (ADR-037/089).
 
 **5. A modelling change, not a lens.** It alters `decision_xp` (like form/xMins/set-pieces); ADR-057's lens rule
 (crowd/price/media never touch xP) is unchanged and stays tested.
@@ -121,9 +132,13 @@ explanation reason), so a narrated figure verifies (ADR-037/089).
 
 ### 🧾 Status & follow-ups
 
-- **Accepted as a design gate — no code.** The build is a future (GW1) sprint, gated on this ADR.
-- **Build (GW1):** a DefCon-xP component (from `defcon_per90` → `P(clear)`); the `cs_prob` proxy (FDR/xGC/Elo);
-  the inverse magnifier (clamped ~0.5–1.5), `DEFCON_*` knobs dormant + an invariance test; `defcon_xp` on the row
-  + a grounded reason; then calibrate the mapping/band/weights on real DefCon returns.
-- **Deferred:** a team-level defensive-share adjustment for transfers; a separate clean-sheet-xP component (with
-  the opposite magnifier); a betting-odds input (still unnecessary given the proxy).
+- **Built wired-dormant (Sprint 129, US-318/319):** `analytics/defcon_xp.py` (`defcon_points_per_match` +
+  `defcon_magnifier`) + the **delta** wired into `player_xp` behind `config.DEFCON_MAGNIFIER_WEIGHT = 0` (an
+  invariance test pins "weight 0 → xP byte-identical"); `defcon_xp` on the row + a weight-aware "🛡 DefCon fixture
+  edge" reason.
+- **GW1 calibration:** set `DEFCON_MAGNIFIER_WEIGHT`, tune `DEFCON_P_SCALE` (the P(clear) mapping) + the magnifier
+  band, and **backtest** on real DefCon returns (do magnified DefCon defenders beat the flat ones vs strong
+  opponents?).
+- **Deferred:** a team-level defensive-share adjustment for transfers; a separate clean-sheet-xP magnifier (the
+  opposite direction); an Elo/xGC proxy refinement beyond FDR; a betting-odds input (unnecessary — the proxy
+  suffices).

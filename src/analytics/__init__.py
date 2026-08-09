@@ -26,6 +26,7 @@ from src.analytics.crowd import (
 )
 from src.analytics.deadline import deadline_urgency, gameweek_context, next_deadline
 from src.analytics.defcon import defcon_reliability
+from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.explain import (
     Explanation,
     captain_confidence,
@@ -145,6 +146,8 @@ __all__ = [
     "minutes_weight_from_history",
     "is_unavailable",
     "defcon_reliability",
+    "defcon_points_per_match",
+    "defcon_magnifier",
     "defensive_solidity",
     "elo_difficulty_bands",
     "legal_xi_issues",
