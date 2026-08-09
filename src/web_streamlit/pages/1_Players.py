@@ -24,8 +24,9 @@ st.caption("The whole player pool + the stat boards — filter, sort, and see wh
 
 store = Storage()
 try:
-    rows = store.get_players()
-    teams = store.get_teams()
+    with analytics.timed("data_load", page="Players"):     # perf: FPL data loading (ADR-100, US-336)
+        rows = store.get_players()
+        teams = store.get_teams()
     badges = badge_url_by_short_name(teams)                 # {short_name: badge URL}
     photos = photo_url_by_id(rows, teams)                   # {player id: photo, else the club shirt}
 finally:

@@ -44,7 +44,7 @@ headline numbers in-app. All still opt-in, anonymous, and fail-silent (unchanged
       (`{component}`) at the key try/except sites (data-load, cloud, feedback, analysis). `page_viewed("Feedback")`
       already covers *feedback_opened*. Tests: each fires when enabled (monkeypatched `track`); **no handle/PII** in
       any payload; still a no-op when off.
-- [ ] **US-336 (perf timers)** — wrap the user-visible ops in `analytics.timed(op, page=…)`: **`data_load`** (the
+- [x] **US-336 (perf timers)** — wrap the user-visible ops in `analytics.timed(op, page=…)`: **`data_load`** (the
       per-page `Storage` read), **`analysis`** (the `decision_xp`/`select_squad` calls in the squad views),
       **`squad_save`** / **`squad_load`** (the `cloud_store` calls) → `perf` events (duration + ok). Tests: a `perf`
       event with a positive duration on success; `ok=False` + re-raise on failure; no-op when off.
@@ -101,7 +101,7 @@ create policy "anon events read" on events for select using (true);   -- server-
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-335 | **Feature events + error** — `squad_*`/`analysis_run`/`feedback_submitted`/`error`. | High | ✅ Done | ~⅓ session |
-| US-336 | **Perf timers** — `data_load`/`analysis`/`squad_save`/`squad_load` via `analytics.timed`. | Med | ⬜ To do | ~¼ session |
+| US-336 | **Perf timers** — `data_load`/`analysis`/`squad_save`/`squad_load` via `analytics.timed`. | Med | ✅ Done | ~¼ session |
 | US-337 | **The gated admin view** — `pages/9_Admin.py` (`FPL_ADMIN_KEY`) reads + summarises `events`. | High | ⬜ To do | ~½ session |
 
 ---
@@ -138,6 +138,14 @@ create policy "anon events read" on events for select using (true);   -- server-
   is at the web layer; each is a no-op when off (existing suite unchanged). **+4 tests** (events fire at their
   sites via a captured `track`; **the handle/message never appear in any payload**). ruff clean. **885 → 889.**
   (US-336 adds perf timers; US-337 the admin view.)
+- **US-336 (perf timers)** — wrapped the user-visible ops in `analytics.timed(op, page="Squads")` → `perf` events
+  (duration + ok): **`data_load`** (the `Storage` reads on **Squads** + **Players**), **`analysis`** (the
+  `select_squad` optimiser in `render_build`), **`squad_save`**/**`squad_load`** (the `cloud_store` calls). Timed
+  the **compute/IO only, not full renders** — a render contains `st.rerun()` (a `RerunException`) which `timed`
+  would otherwise record as a failure; wrapping just the calculation/IO keeps `ok` honest and avoids per-rerun
+  noise. A failed op emits `perf(ok=False)` *and* its `error` event (US-335) — both signals. **+2 tests** (Squads
+  emits `data_load` + `analysis` perf with an int duration; Save/Load emit `squad_save`/`squad_load` perf). ruff
+  clean. **889 → 891.** (US-337 = the gated admin view that reads + summarises these.)
 
 ---
 

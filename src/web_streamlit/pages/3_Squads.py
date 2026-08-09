@@ -43,11 +43,12 @@ horizon = st.segmented_control(
 
 store = Storage()
 try:
-    players = store.get_players()
-    upcoming = store.get_upcoming_fixtures()
-    history = store.get_history_by_code()
-    gw_history = store.get_gw_history_by_code()      # in-season form (ADR-060; dormant now)
-    teams = store.get_teams()
+    with analytics.timed("data_load", page="Squads"):    # perf: FPL data loading (ADR-100, US-336)
+        players = store.get_players()
+        upcoming = store.get_upcoming_fixtures()
+        history = store.get_history_by_code()
+        gw_history = store.get_gw_history_by_code()   # in-season form (ADR-060; dormant now)
+        teams = store.get_teams()
     photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
     badges = badge_url_by_short_name(teams)
 finally:

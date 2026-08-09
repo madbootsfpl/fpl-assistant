@@ -239,7 +239,8 @@ def render_cloud_sync() -> None:
         if c_save.button("Save", disabled=not (clean and squad), key="cloud_save"):
             try:
                 taken = cloud_store.exists(clean)              # US-321: new vs overwrite (a handle isn't private)
-                cloud_store.save_squad(clean, squad)
+                with analytics.timed("squad_save", page="Squads"):   # perf (US-336)
+                    cloud_store.save_squad(clean, squad)
                 analytics.track("squad_saved")                 # usage only — NO handle/contents (anonymity, US-335)
                 if taken:
                     st.warning(f"Updated **{clean}** — overwrote the squad already saved under that handle. "
@@ -251,7 +252,8 @@ def render_cloud_sync() -> None:
                 st.error(f"Save failed — **{cloud_store.store_error(exc)}**. Your download still works.")
         if c_load.button("Load", disabled=not clean, key="cloud_load"):
             try:
-                loaded = cloud_store.load_squad(clean)
+                with analytics.timed("squad_load", page="Squads"):   # perf (US-336)
+                    loaded = cloud_store.load_squad(clean)
             except Exception as exc:
                 loaded = None
                 analytics.track("error", component="squad_load")

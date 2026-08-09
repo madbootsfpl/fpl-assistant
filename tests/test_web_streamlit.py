@@ -1220,6 +1220,33 @@ def test_feedback_submitted_event(monkeypatch):
         assert "fixture ticker" not in str(kw).lower()
 
 
+# --- analytics perf timers (ADR-100, US-336) ----------------------------------------
+
+def test_squads_page_emits_data_load_and_analysis_perf(monkeypatch):
+    events = _capture_events(monkeypatch)
+    _run(_PAGES / "3_Squads.py")                         # Build view: loads data + runs the optimiser
+    perf = [(kw.get("op"), kw.get("page"), kw.get("ok")) for e, kw in events if e == "perf"]
+    assert ("data_load", "Squads", True) in perf         # FPL data loading timed
+    assert any(op == "analysis" and ok for op, _p, ok in perf)   # the squad-optimiser calculation timed
+    for _e, kw in events:                                # perf carries a duration, never PII
+        if _e == "perf":
+            assert isinstance(kw.get("duration_ms"), int) and kw["duration_ms"] >= 0
+
+
+def test_squad_save_and_load_emit_perf_events(monkeypatch):
+    events = _capture_events(monkeypatch)
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None: _StoreResp())
+    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
+        [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
+    at = _squads_with_active(monkeypatch)
+    next(t for t in at.text_input if t.label == "Your handle").set_value("tony17").run()
+    next(b for b in at.button if b.label == "Save").click().run()
+    assert any(e == "perf" and kw.get("op") == "squad_save" for e, kw in events)
+    next(b for b in at.button if b.label == "Load").click().run()
+    assert any(e == "perf" and kw.get("op") == "squad_load" for e, kw in events)
+
+
 def test_cloud_save_disabled_without_an_active_squad(monkeypatch):
     # US-331: the sidebar renders on any sub-view; Save needs an active squad (Load works any time).
     monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")

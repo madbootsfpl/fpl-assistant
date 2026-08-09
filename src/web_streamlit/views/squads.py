@@ -144,12 +144,13 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
     forced = set(include) | set(declared_bench)
     pool = players if include_unavailable else available_players(players, keep_ids=forced)[0]
     bands = archetype_bands(cheap=cheap or None, premium=premium or None)
-    result = select_squad(
-        pool, budget=budget, formation=SQUAD_15, size=15,
-        include_ids=include, exclude_ids=exclude, bench_ids=declared_bench,
-        scores=scores, band_minimums=bands, min_differentials=differential or None,
-        bench_weight=WEEKLY_BENCH_WEIGHT if weekly else None,
-    )
+    with analytics.timed("analysis", page="Squads"):     # perf: the squad-optimiser calculation (US-336)
+        result = select_squad(
+            pool, budget=budget, formation=SQUAD_15, size=15,
+            include_ids=include, exclude_ids=exclude, bench_ids=declared_bench,
+            scores=scores, band_minimums=bands, min_differentials=differential or None,
+            bench_weight=WEEKLY_BENCH_WEIGHT if weekly else None,
+        )
 
     if result["status"] != "Optimal":
         st.error(f"No squad fits those options within £{budget:.1f}m — relax the constraints "
