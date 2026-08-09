@@ -22,6 +22,7 @@ names/emails/IPs, not the squad handle, no full squad, no click/mouse/screen tra
 import threading
 import time
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
 
 import requests
@@ -162,6 +163,77 @@ def _post(url: str, key: str, payload: dict) -> None:
         requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT)
     except Exception:
         return
+
+
+def recent_events(limit: int = 2000):
+    """Read the most recent events (the **first analytics READ**, US-337 — for the admin view only). Best-effort:
+    a list of row dicts, or ``None`` on failure. Needs an **anon SELECT policy** on `events` (docs/ANALYTICS.md);
+    the anon key is server-side (Streamlit secrets), never sent to a browser, and events are anonymous."""
+    url, key = _events_endpoint()
+    if not url:
+        return None
+    try:
+        headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+        resp = requests.get(f"{url}?select=*&order=ts.desc&limit={int(limit)}", headers=headers, timeout=6)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception:
+        return None
+
+
+def _percentile(sorted_vals, pct):
+    """A linear-interpolation percentile of an already-sorted list (empty → None). Pure."""
+    if not sorted_vals:
+        return None
+    k = (len(sorted_vals) - 1) * pct / 100.0
+    lo = int(k)
+    hi = min(lo + 1, len(sorted_vals) - 1)
+    return round(sorted_vals[lo] * (1 - (k - lo)) + sorted_vals[hi] * (k - lo))
+
+
+def summarise(rows):
+    """Aggregate event rows into headline stats — **pure** (no I/O), so it's unit-tested directly. All anonymous:
+    session/device counts, returning devices (seen on 2+ distinct days), top pages, event counts, a success rate,
+    and median/P95 duration per timed op."""
+    rows = rows or []
+    sessions = {r.get("session_id") for r in rows if r.get("session_id")}
+    devices = {r.get("anon_id") for r in rows if r.get("anon_id")}
+    days_by_device = {}
+    for r in rows:
+        anon, ts = r.get("anon_id"), r.get("ts")
+        if anon and ts:
+            days_by_device.setdefault(anon, set()).add(ts[:10])      # the date part of the ISO timestamp
+    returning = sum(1 for days in days_by_device.values() if len(days) >= 2)
+
+    event_counts = Counter(r.get("event") for r in rows if r.get("event"))
+    page_counts = Counter(r.get("page") for r in rows
+                          if r.get("event") == "page_viewed" and r.get("page"))
+    oks = [r.get("ok") for r in rows if isinstance(r.get("ok"), bool)]
+    success_pct = round(100 * sum(oks) / len(oks)) if oks else None
+
+    durations = {}
+    for r in rows:
+        if r.get("event") == "perf" and isinstance(r.get("duration_ms"), (int, float)):
+            op = (r.get("meta") or {}).get("op") or "?"
+            durations.setdefault(op, []).append(r["duration_ms"])
+    perf = []
+    for op, ds in sorted(durations.items()):
+        ds.sort()
+        perf.append({"op": op, "n": len(ds), "p50_ms": _percentile(ds, 50), "p95_ms": _percentile(ds, 95)})
+
+    tss = [r["ts"] for r in rows if r.get("ts")]
+    return {
+        "events": len(rows),
+        "sessions": len(sessions),
+        "devices": len(devices),
+        "returning": returning,
+        "top_pages": [{"page": p, "views": n} for p, n in page_counts.most_common(10)],
+        "event_counts": [{"event": e, "count": n} for e, n in event_counts.most_common()],
+        "success_pct": success_pct,
+        "perf": perf,
+        "since": min(tss) if tss else None,
+        "until": max(tss) if tss else None,
+    }
 
 
 class timed:

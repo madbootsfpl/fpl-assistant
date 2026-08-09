@@ -328,10 +328,10 @@ def test_help_page_renders_the_guide_without_data():
 
 def test_sidebar_pages():
     # ADR-069: 12 → 7 core tabs (Player Stats merged into Players, the 5 squad tools into Squads);
-    # ADR-087 (US-264) adds a beta Feedback tab.
+    # ADR-087 (US-264) adds a beta Feedback tab; ADR-100 (US-337) adds a gated Admin tab.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["1_Players.py", "2_Fixtures.py", "3_Squads.py", "4_Ask.py",
-                              "5_News.py", "6_Trending.py", "7_Help.py", "8_Feedback.py"])
+                              "5_News.py", "6_Trending.py", "7_Help.py", "8_Feedback.py", "9_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
         assert not (_PAGES / gone).exists()
@@ -521,7 +521,8 @@ def test_xg_board_rates_only_meaningful_players():
 
 
 _TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_Squads.py": "🧩", "4_Ask.py": "💬",
-              "5_News.py": "📰", "6_Trending.py": "📈", "7_Help.py": "🧭", "8_Feedback.py": "📣"}
+              "5_News.py": "📰", "6_Trending.py": "📈", "7_Help.py": "🧭", "8_Feedback.py": "📣",
+              "9_Admin.py": "📊"}
 
 
 def test_every_tab_has_an_emoji_led_header():

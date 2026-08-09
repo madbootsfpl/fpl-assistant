@@ -255,3 +255,92 @@ def test_no_analytics_write_when_disabled(monkeypatch):
     monkeypatch.setattr("requests.post", lambda *a, **k: pytest.fail("no analytics POST when disabled"))
     at = AppTest.from_file(_home(), default_timeout=30).run()
     assert not at.exception
+
+
+# --- summarise(): pure aggregation for the admin view (US-337) -----------------------
+
+_SAMPLE = [
+    {"event": "session_started", "session_id": "s1", "anon_id": "a1", "ts": "2026-08-01T10:00:00Z", "ok": True},
+    {"event": "page_viewed", "session_id": "s1", "anon_id": "a1", "page": "Squads", "ts": "2026-08-01T10:00:01Z"},
+    {"event": "page_viewed", "session_id": "s1", "anon_id": "a1", "page": "Squads", "ts": "2026-08-01T10:00:02Z"},
+    {"event": "page_viewed", "session_id": "s2", "anon_id": "a1", "page": "Players", "ts": "2026-08-02T09:00:00Z"},
+    {"event": "perf", "session_id": "s2", "anon_id": "a1", "duration_ms": 100, "ok": True,
+     "meta": {"op": "data_load"}, "ts": "2026-08-02T09:00:01Z"},
+    {"event": "perf", "session_id": "s2", "anon_id": "a1", "duration_ms": 300, "ok": True,
+     "meta": {"op": "data_load"}, "ts": "2026-08-02T09:00:02Z"},
+    {"event": "squad_saved", "session_id": "s3", "anon_id": "a2", "ts": "2026-08-02T11:00:00Z"},
+    {"event": "error", "session_id": "s3", "anon_id": "a2", "ok": False, "ts": "2026-08-02T11:00:01Z"},
+]
+
+
+def test_summarise_counts_sessions_devices_and_returning():
+    s = analytics.summarise(_SAMPLE)
+    assert s["events"] == 8
+    assert s["sessions"] == 3                              # s1, s2, s3
+    assert s["devices"] == 2                               # a1, a2
+    assert s["returning"] == 1                             # a1 seen on 08-01 AND 08-02; a2 only one day
+
+
+def test_summarise_top_pages_events_and_success():
+    s = analytics.summarise(_SAMPLE)
+    assert s["top_pages"][0] == {"page": "Squads", "views": 2}      # most-viewed first
+    assert {"event": "page_viewed", "count": 3} in s["event_counts"]
+    # ok booleans: session_started(T), 2×perf(T), error(F) → 3/4 = 75%
+    assert s["success_pct"] == 75
+
+
+def test_summarise_perf_median_and_p95():
+    s = analytics.summarise(_SAMPLE)
+    dl = next(p for p in s["perf"] if p["op"] == "data_load")
+    assert dl["n"] == 2 and dl["p50_ms"] == 200 and dl["p95_ms"] == 290   # of [100, 300]
+
+
+def test_summarise_is_empty_safe():
+    s = analytics.summarise([])
+    assert s["events"] == 0 and s["sessions"] == 0 and s["perf"] == [] and s["success_pct"] is None
+
+
+def test_recent_events_reads_or_degrades(monkeypatch):
+    monkeypatch.setenv("FPL_STORE_URL", "https://p.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+
+    class _R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [{"event": "page_viewed"}]
+    monkeypatch.setattr("requests.get", lambda url, headers=None, timeout=None: _R())
+    assert analytics.recent_events() == [{"event": "page_viewed"}]
+
+    monkeypatch.setattr("requests.get", lambda *a, **k: (_ for _ in ()).throw(ConnectionError("down")))
+    assert analytics.recent_events() is None               # a store failure degrades to None (the page shows a note)
+
+
+# --- the gated admin page (US-337) --------------------------------------------------
+
+def _admin():
+    from pathlib import Path
+    return str(Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "pages" / "9_Admin.py")
+
+
+def test_admin_is_inert_without_a_key(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.delenv("FPL_ADMIN_KEY", raising=False)
+    at = AppTest.from_file(_admin(), default_timeout=30).run()
+    assert not at.exception
+    assert any("isn't configured" in i.value for i in at.info)
+    assert not at.metric                                   # no dashboard
+
+
+def test_admin_locked_until_the_right_key(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("FPL_ADMIN_KEY", "s3cret")
+    at = AppTest.from_file(_admin(), default_timeout=30).run()
+    at.text_input[0].set_value("wrong").run()
+    assert at.error and not at.metric                      # locked
+    at.text_input[0].set_value("s3cret").run()
+    # unlocked → reads events (monkeypatch) and renders metrics
+    monkeypatch.setattr(analytics, "recent_events", lambda: _SAMPLE)
+    at.run()
+    assert at.metric and any(m.label == "Sessions" for m in at.metric)

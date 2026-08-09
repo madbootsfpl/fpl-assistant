@@ -1,7 +1,7 @@
 # Sprint 137: Analytics coverage — feature events, perf timers, a gated admin view
 
 **Dates:** 2026-08-09
-**Status:** 📝 Planned (3 stories · no new ADR — extends ADR-100)
+**Status:** ✅ Complete (US-335/336/337 · no new ADR — extends ADR-100 · retro pending)
 **Capacity:** ~1 session (instrumentation is one-liners; the admin view is the meat)
 **Carried Over:** the Sprint 136 fast-follow (this sprint)
 
@@ -48,7 +48,7 @@ headline numbers in-app. All still opt-in, anonymous, and fail-silent (unchanged
       per-page `Storage` read), **`analysis`** (the `decision_xp`/`select_squad` calls in the squad views),
       **`squad_save`** / **`squad_load`** (the `cloud_store` calls) → `perf` events (duration + ok). Tests: a `perf`
       event with a positive duration on success; `ok=False` + re-raise on failure; no-op when off.
-- [ ] **US-337 (the gated admin view)** — `pages/9_Admin.py`, gated by **`FPL_ADMIN_KEY`** (an owner password;
+- [x] **US-337 (the gated admin view)** — `pages/9_Admin.py`, gated by **`FPL_ADMIN_KEY`** (an owner password;
       **inert when unset** → the public deploy shows a "not configured" note). Reads recent `events` (via the anon
       key + an anon SELECT policy) and shows, aggregated **in Python**: sessions · unique/returning devices · top
       pages/features · success vs failure rate · **median/P95** per timed op — `st.metric`s + small tables/a bar.
@@ -102,7 +102,7 @@ create policy "anon events read" on events for select using (true);   -- server-
 |---|---|---|---|---|
 | US-335 | **Feature events + error** — `squad_*`/`analysis_run`/`feedback_submitted`/`error`. | High | ✅ Done | ~⅓ session |
 | US-336 | **Perf timers** — `data_load`/`analysis`/`squad_save`/`squad_load` via `analytics.timed`. | Med | ✅ Done | ~¼ session |
-| US-337 | **The gated admin view** — `pages/9_Admin.py` (`FPL_ADMIN_KEY`) reads + summarises `events`. | High | ⬜ To do | ~½ session |
+| US-337 | **The gated admin view** — `pages/9_Admin.py` (`FPL_ADMIN_KEY`) reads + summarises `events`. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -146,6 +146,16 @@ create policy "anon events read" on events for select using (true);   -- server-
   noise. A failed op emits `perf(ok=False)` *and* its `error` event (US-335) — both signals. **+2 tests** (Squads
   emits `data_load` + `analysis` perf with an int duration; Save/Load emit `squad_save`/`squad_load` perf). ruff
   clean. **889 → 891.** (US-337 = the gated admin view that reads + summarises these.)
+- **US-337 (the gated admin view)** — the **first analytics READ**. `analytics.recent_events()` (a best-effort GET
+  of the last ~2000 events; **None** on failure) + a **pure** `analytics.summarise(rows)` (sessions · devices ·
+  **returning** = a device on 2+ distinct days · top pages · event counts · success rate · **median/P95** per op,
+  via a linear-interpolation `_percentile`). `pages/9_Admin.py` is thin: `require_access()` → an **`FPL_ADMIN_KEY`**
+  password gate (**inert when unset** → a "not configured" note; wrong key → locked) → on unlock, `st.metric`s +
+  top-pages/event tables + a perf table; best-effort (a store error → a note, never a crash). Needs an **anon
+  SELECT policy** on `events` (the anon key is server-side; events are anonymous) — documented. Updated the
+  page-list + emoji tests for the 10th (**📊 Admin**) tab. **+7 tests** (`summarise` counts/top-pages/success/
+  median-P95/empty-safe; `recent_events` reads/degrades; the admin gate inert/locked/unlocked). ruff clean.
+  **891 → 898.** **Sprint 137 complete** — full analytics coverage + a self-serve admin view.
 
 ---
 

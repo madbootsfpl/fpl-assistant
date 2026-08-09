@@ -35,6 +35,11 @@ create table if not exists events (
 alter table events enable row level security;
 drop policy if exists "anon events insert" on events;
 create policy "anon events insert" on events for insert with check (true);
+
+-- For the in-app Admin view (US-337): let the (server-side) anon key READ events too. The anon key lives in
+-- Streamlit secrets and is never sent to a browser; events are anonymous — so this only lets your server read them.
+drop policy if exists "anon events read" on events;
+create policy "anon events read" on events for select using (true);
 ```
 *(INSERT-only for the app: testers' browsers can add events but never read them back. You read via the Supabase
 SQL editor — the service role — or the admin view.)*
@@ -46,9 +51,11 @@ SQL editor — the service role — or the admin view.)*
 
 The store secrets are already set (for squads). Add the one flag:
 ```toml
-FPL_ANALYTICS = "1"     # "1"/"true"/"yes"/"on" turns analytics on; unset (or anything else) = fully off
+FPL_ANALYTICS = "1"                # "1"/"true"/"yes"/"on" turns analytics on; unset (or anything else) = fully off
+FPL_ADMIN_KEY = "a-long-password"  # unlocks the in-app Admin tab for you only; unset → the tab is inert
 ```
-Reboot the app. Unset the flag any time → analytics is completely off again.
+Reboot the app. Unset `FPL_ANALYTICS` any time → analytics is completely off again. Unset `FPL_ADMIN_KEY` → the
+**Admin** tab shows a "not configured" note (testers can't read the numbers).
 
 ## 3. What's collected (and what isn't)
 
@@ -61,9 +68,17 @@ service.** `meta` holds only small structured context. The returning id lives in
 `analysis_run`, `player_viewed`, `squad_saved`, `squad_loaded`, `feedback_opened`, `feedback_submitted` as
 instrumentation grows (Sprint 137).
 
-## 4. Inspect it (SQL)
+## 4. Inspect it — the Admin tab (US-337)
 
-Run these in the Supabase SQL editor (an admin view lands next sprint):
+Open the **📊 Admin** tab (bottom of the sidebar) → enter your **`FPL_ADMIN_KEY`** → a read-only dashboard:
+**Events · Sessions · Devices · Returning** metrics, **most-viewed pages**, **event counts**, a **success rate**,
+and **median / P95** duration per timed op (`data_load` · `analysis` · `squad_save` · `squad_load`). It reads the
+last ~2000 events (via the anon key + the SELECT policy above) and aggregates **in the app** — best-effort, so a
+store hiccup shows a note, never a crash. Unset the key → the tab is inert; a wrong key → locked.
+
+## 4b. Inspect it (raw SQL)
+
+Or run these directly in the Supabase SQL editor:
 ```sql
 -- Unique returning devices, and sessions, in the last 7 days
 select count(distinct anon_id) as devices, count(distinct session_id) as sessions
@@ -103,8 +118,9 @@ is byte-identical), and **a raising store never breaks a page**.
 Delete `FPL_ANALYTICS` (or set it to anything non-truthy) → analytics is fully off; existing rows stay in Supabase
 until you delete them / the table.
 
-## Later (Sprint 137, deferred)
+## Later (deferred)
 
-Full event coverage (`squad_*`, `analysis_run`, `player_viewed`, `feedback_*`) + perf timers on the key operations
-+ a **minimal gated admin view** (`FPL_ADMIN_KEY`) that runs the queries above. A full BI dashboard, event
-batching, and cohort/funnel analysis are out of scope until there's meaningful beta data.
+Sprint 137 added the feature events (`squad_*`, `analysis_run`, `feedback_submitted`), `error`, perf timers, and
+the gated Admin view. Still deferred until there's meaningful beta data: a full **BI dashboard**, event
+**batching** (if volume grows), and **cohort/funnel** analysis. (`player_viewed` was intentionally skipped as
+low-value/chatty.)
