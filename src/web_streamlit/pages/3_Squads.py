@@ -31,11 +31,13 @@ view = st.segmented_control(
          "plan (captain · lineup · a transfer · flags) for your squad. **Chips** = when to play each chip "
          "(Triple Captain · Bench Boost · Free Hit · Wildcard).")
 
-# The prediction horizon flows through every sub-tab (ADR-077). Default 5 = today's behaviour.
-horizon = st.selectbox(
-    "Gameweeks ahead", list(range(1, 9)), index=4,
+# The prediction horizon flows through every sub-tab (ADR-077). A box select (US-315) over a handful of
+# useful windows — short for mid-season, up to 10 for a wildcard / start of season. Default 5 = today's
+# behaviour; deselecting the segmented control falls back to 5.
+horizon = st.segmented_control(
+    "Gameweeks ahead", [1, 2, 3, 4, 5, 10], default=5,
     help="How many upcoming gameweeks the projections look over — short for mid-season, longer for a "
-         "wildcard / start of season. (Captaincy is always the next gameweek.)")
+         "wildcard / start of season. (Captaincy is always the next gameweek.)") or 5
 
 store = Storage()
 try:

@@ -597,17 +597,29 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
 
 
 def test_squads_gameweeks_selector_drives_the_horizon():
-    # US-237 (ADR-077): a "Gameweeks ahead" dropdown (default 5) flows into Health — set it to 2 and
+    # US-237/315 (ADR-077): a "Gameweeks ahead" box-select (default 5) flows into Health — set it to 2 and
     # the analysis projects over 2 GW (a GW2 column, no GW5)
     at = _run(_PAGES / "3_Squads.py")
-    gw = [s for s in at.selectbox if s.label == "Gameweeks ahead"]
-    assert gw and gw[0].value == 5                          # present, default 5 (today's behaviour)
+    gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
+    assert gw and gw[0].value == 5 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-315
     gw[0].set_value(2).run()
     at.segmented_control[0].set_value("Health").run()
     assert not at.exception
     if at.code:
         blob = " ".join(c.value for c in at.code)
         assert "2 GW" in blob and "GW2" in blob and "GW5" not in blob   # horizon narrowed to 2
+
+
+def test_squads_gameweeks_box_select_offers_ten(monkeypatch):
+    # US-315: the box-select includes 10 (a wildcard/start-of-season horizon) and it flows through.
+    at = _squads_view("My Squad")
+    gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
+    if not gw:
+        return
+    assert 10 in [int(o) for o in gw[0].options]           # the requested long window is offered
+    gw[0].set_value(10).run()
+    assert not at.exception
+    assert any(m.label == "Projected XI (10 GW)" for m in at.metric)   # 10 drives the horizon
 
 
 def test_captain_view_notes_it_is_next_gameweek():
@@ -624,7 +636,7 @@ def test_my_squad_shows_a_quick_stats_summary():
     assert any("Projected XI" in lbl for lbl in labels)
     assert {"Bench", "Unavailable", "Doubtful"} <= set(labels) and any("Captain" in lbl for lbl in labels)
 
-    gw = [s for s in at.selectbox if s.label == "Gameweeks ahead"][0]
+    gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"][0]
     gw.set_value(2).run()
     assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
 
