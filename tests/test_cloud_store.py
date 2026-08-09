@@ -87,6 +87,25 @@ def test_load_returns_the_row_data_or_none(configured, monkeypatch):
     assert cloud_store.load_squad("tony17") is None
 
 
+def test_exists_reflects_whether_a_row_is_stored(configured, monkeypatch):
+    # US-321: exists() → True when a row comes back, False when empty (a light select, just the key)
+    def fake_get(url, params=None, headers=None, timeout=None):
+        assert params == {"handle": "eq.tony17", "select": "handle"}     # a minimal existence check
+        return _Resp([{"handle": "tony17"}])
+
+    monkeypatch.setattr("requests.get", fake_get)
+    assert cloud_store.exists("Tony17") is True                          # cleaned + found
+
+    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp([]))
+    assert cloud_store.exists("tony17") is False                         # nothing stored
+
+
+def test_exists_false_without_secrets(monkeypatch):
+    monkeypatch.delenv("FPL_STORE_URL", raising=False)
+    monkeypatch.delenv("FPL_STORE_KEY", raising=False)
+    assert cloud_store.exists("tony17") is False                         # unconfigured → no read
+
+
 def test_delete_targets_the_handle(configured, monkeypatch):
     seen = {}
     monkeypatch.setattr("requests.delete",

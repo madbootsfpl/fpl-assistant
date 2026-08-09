@@ -71,7 +71,7 @@ work (set-piece/DefCon/form weights) — the big body of work, waiting on real d
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-320 | **Document the FormSubmit setup** — BETA.md §1B (Origin, activation, `FPL_FEEDBACK_ORIGIN`). | High | ✅ Done | ~¼ session |
-| US-321 | **A "handle taken?" hint on ☁ Save** — `cloud_store.exists` + a new-vs-overwrite message. | High | ⬜ To do | ~¼ session |
+| US-321 | **A "handle taken?" hint on ☁ Save** — `cloud_store.exists` + a new-vs-overwrite message. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -96,6 +96,13 @@ work (set-piece/DefCon/form weights) — the big body of work, waiting on real d
   ("needs Activation" → click the email; the "web server" message → the Origin header; an address error → fix the
   webhook). Updated the **go-live checklist** feedback line to cover the relay + activation. Doc-only — suite
   unchanged at **824**.
+- **US-321 (a "handle taken?" hint on ☁ Save)** — added `cloud_store.exists(handle)` (a light `select=handle`
+  select → `bool(rows)`; `False` when unconfigured / bad handle). In `render_my_squad`'s ☁ Save handler:
+  `taken = cloud_store.exists(clean)` **before** the upsert → on Save, **new vs overwrite** ("Saved as **tony17**"
+  vs a ⚠ "Updated **tony17** — overwrote the squad already saved under that handle (handles aren't private…)").
+  Only on the Save **click** (no per-rerun network calls); the ☁ expander stays secret-gated. +3 tests
+  (`exists` found/empty + unconfigured; a UI overwrite-warning test). Smoke: `exists('tony17')` True/False on a
+  monkeypatched store. ruff clean. **827** total.
 
 ---
 

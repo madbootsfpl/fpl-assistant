@@ -1083,6 +1083,24 @@ def test_my_squad_cloud_save_and_load_when_configured(monkeypatch):
     assert at.session_state["squad"]["name"] == "Cloud XI"                  # adopted into the session
 
 
+def test_my_squad_cloud_save_warns_when_the_handle_is_taken(monkeypatch):
+    # US-321: exists() → True (a row comes back) → the Save reports an overwrite, not a plain "saved"
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None: _StoreResp())
+    monkeypatch.setattr("requests.get",   # exists() sees a stored row for this handle
+                        lambda url, params=None, headers=None, timeout=None: _StoreResp([{"handle": "tony17"}]))
+    at = _squads_view("My Squad")
+    handle = [t for t in at.text_input if t.label == "Your handle"]
+    if not handle:
+        return
+    handle[0].set_value("tony17").run()
+    next(b for b in at.button if b.label == "Save").click().run()
+    assert not at.exception
+    assert any("overwrote" in w.value for w in at.warning)                  # a "handle taken" warning, not "saved"
+
+
 def test_my_squad_set_bench_picks_four():
     at = _squads_view("My Squad")
     if not at.multiselect or not any(b.label == "Set bench" for b in at.button):

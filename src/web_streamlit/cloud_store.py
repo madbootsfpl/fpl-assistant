@@ -84,6 +84,25 @@ def load_squad(handle: str) -> dict | None:
     return rows[0]["data"] if rows else None
 
 
+def exists(handle: str) -> bool:
+    """True if a squad is already saved under `handle` (US-321) — a light select (just the key, not the
+    data). `False` when unconfigured, a bad handle, or nothing stored. Used to warn before a Save overwrites."""
+    url, key = _config()
+    if not (url and key):
+        return False
+    h = clean_handle(handle)
+    if not h:
+        return False
+    params = {"handle": f"eq.{h}", "select": "handle"}
+
+    def _get():
+        r = requests.get(url, params=params, headers=_headers(key), timeout=_TIMEOUT)
+        r.raise_for_status()
+        return r
+
+    return bool(with_retry(_get, retries=1).json())
+
+
 def delete_squad(handle: str) -> None:
     """Remove the squad saved under `handle` (a "clear my saved squad", ADR-094). No-op if unconfigured."""
     url, key = _config()

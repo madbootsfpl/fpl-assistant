@@ -400,8 +400,13 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             c_save, c_load, c_clear = st.columns(3)
             if c_save.button("Save", disabled=not clean, key="cloud_save"):
                 try:
+                    taken = cloud_store.exists(clean)              # US-321: new vs overwrite (a handle isn't private)
                     cloud_store.save_squad(clean, squad)
-                    st.success(f"Saved as **{clean}** — load it on any device with that handle.")
+                    if taken:
+                        st.warning(f"Updated **{clean}** — overwrote the squad already saved under that handle. "
+                                   "(Handles aren't private — pick one only you'd guess.)")
+                    else:
+                        st.success(f"Saved as **{clean}** — load it on any device with that handle.")
                 except Exception:
                     st.error("Couldn't save just now — your download still works. Try again shortly.")
             if c_load.button("Load", disabled=not clean, key="cloud_load"):
