@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 133 (2026-08-09)** — *A "Log out" link* (extends **ADR-099**, no new ADR). Let a tester **reset a
+  shared device**: a sidebar control clears the "remember me" cookie + the session and re-shows the gate.
+  **US-327:** in `access.py` — `gate_active()` (registration or shared-code configured), `logout()` (set
+  `_beta_forgotten`, drop `_beta_ok`/`_beta_email`/`_beta_remember`, queue `_beta_clear`, rerun), `_flush_clear()`
+  (render `remember.clear()` once on a clean run — the mirror of `_flush_remember`; a `st.rerun()` after the remove
+  would discard it), and a `_beta_forgotten` guard in the cookie-restore helpers so a just-logged-out session
+  can't be re-admitted from the still-present native-read cookie (it clears from the browser on the next request).
+  **US-328:** `_render_account()` — a sidebar caption ("Signed in as {email}" / "Signed in to the beta") + a
+  "Log out" button → `logout()`, wired into `require_access` on the passed branch **and** the cookie-admit run
+  (else "Log out" wouldn't show until the next rerun after a refresh). **Off by default** — `gate_active()` False
+  (the open deploy) → nothing renders (byte-identical; a test pins it). +8 tests (860). Deferred: a confirm, a
+  signed token, `st.login()`.
 - **Sprint 132 (2026-08-09)** — *A "remember me" cookie for the beta gate* (**ADR-099** — a client-side
   convenience over ADR-087/098, not a new access path). Kill the friction where **every browser refresh
   re-prompts** for the code/email (`st.session_state` is wiped on a full refresh). **US-325:**

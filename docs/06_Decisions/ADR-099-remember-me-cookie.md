@@ -148,5 +148,11 @@ persistence) remains the **deferred** hard-auth upgrade; this buys "register onc
   PROJECT_STATUS, Architecture, README).
 - **Owner actions:** none to configure — "remember me" ships in `requirements.txt` and layers on whatever gate you
   already run. Smoke it: pass the gate → refresh → stay in; private tab / clear cookies → re-prompts; iOS ~weekly.
-- **Deferred:** a **"not you? / log out"** link (uses `remember.clear()` — plumbing lands now, UI later); a
-  **signed token** instead of the raw value; native **`st.login()`** (hard, verified identity — the product path).
+- **Follow-up built — the "Log out" link (Sprint 133, US-327/328).** A sidebar **"Log out"** (gated on
+  `gate_active()`, off on the open deploy) that `remember.clear()`s the cookie + drops the session and re-shows the
+  gate. Two traps handled the same way the write was: the clear is **deferred** to a clean run (a `st.rerun()`
+  after `remember.clear()` would discard the remove component), and a **`_beta_forgotten`** session flag suppresses
+  re-admit from the still-present native-read cookie until the clear reaches the browser on the next request. The
+  control renders on the passed branch *and* the cookie-admit run. **No new ADR** — recorded here as an extension.
+- **Deferred:** a **confirm** on Log out (only if a mis-click becomes an issue); a **signed token** instead of the
+  raw value; native **`st.login()`** (hard, verified identity — the product path).

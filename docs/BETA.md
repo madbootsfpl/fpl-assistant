@@ -129,6 +129,9 @@ confirmation so testers can get in.
 >   **removing a tester from `beta_users`** locks that cookie out immediately.
 > - **To not be remembered:** use a private tab, or clear the site's cookies. If cookies are blocked, the app just
 >   falls back to asking each session (today's behaviour).
+> - **A "Log out" link** (Sprint 133) sits at the foot of the sidebar once a tester is in ("Signed in as … · Log
+>   out"). Clicking it clears the cookie + the session and re-shows the gate — handy on a **shared device** or to
+>   switch tester. It's per-device (there's no server session), and it only appears when a gate is active.
 
 ---
 

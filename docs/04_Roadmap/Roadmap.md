@@ -176,9 +176,11 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   (ADR-095): a prod/staging split, public + PolyForm-NC LICENSE, a mirror backup, an uptime monitor.
 - ✅ **"Remember me" across a refresh** — **DONE (Sprint 132, ADR-099).** A first-party cookie persists a passed
   gate (native read via `st.context.cookies`; a quarantined component writes) so a refresh keeps a tester in; the
-  value is re-validated on load (pruned tester / rotated code locked out); off by default. A **"not you? / log
-  out"** link (`remember.clear()` plumbing exists) and a **signed token** are deferred; native `st.login()` (hard
-  identity) is still the product-path upgrade above.
+  value is re-validated on load (pruned tester / rotated code locked out); off by default.
+- ✅ **"Log out" link** — **DONE (Sprint 133, extends ADR-099).** A sidebar "Log out" clears the cookie + session
+  and re-shows the gate (reset a shared device); deferred clear + a `_beta_forgotten` re-admit guard; off on the
+  open deploy. Deferred: a confirm dialog, a **signed token**; native `st.login()` (hard identity) is still the
+  product-path upgrade above.
 - ⬜ Session/cookie **auth** for user-specific data (`/my-team/{id}/`) — unlocks a manager-ID fetch in
   `analyse`/`transfer`.
 - ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.

@@ -159,7 +159,49 @@ scope; `st.login()` is the answer if that's ever needed.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ a tester can **reset a shared device / switch accounts** — a sidebar **"Log out"** clears the
+"remember me" cookie + the session and re-shows the gate, reliably (the clear actually persists), on every page,
+and **only** when a gate is active (the open deploy is untouched). The `remember.clear()` plumbing from Sprint 132
+is now wired to a control.
+
+**Delivered**
+- **US-327** — the mechanism in `access.py`: `gate_active()` · `logout()` (drop the session flags, queue a
+  deferred cookie clear, rerun) · `_flush_clear()` (render `remember.clear()` on a clean run — the mirror of
+  `_flush_remember`) · a `_beta_forgotten` guard so a just-logged-out session can't be re-admitted from the
+  still-present native-read cookie. +4 tests.
+- **US-328** — `_render_account()`: a sidebar caption ("Signed in as {email}" / "Signed in to the beta") + a
+  "Log out" button → `logout()`, wired into `require_access` (incl. the cookie-admit run). +4 AppTests.
+
+**Verified** — open mode → no control, the gate byte-identical (the existing 4 access tests + a new explicit
+"no control in open mode"); a valid cookie admits + shows the control; logout clears the session, renders the
+cookie clear, sets `_beta_forgotten`, and re-gates **despite** the stale cookie still reading valid; the real
+sidebar button re-gates end-to-end on Home. *(The real browser cookie-clear roundtrip = the manual smoke, riding
+on the Sprint 132 write smoke.)*
+
+**Metrics** — 860 tests (852 → +8: US-327 +4, US-328 +4) · ruff + CI-parity green · **99 ADRs** (no new ADR — a
+recorded extension of ADR-099) · 2 stories, ~⅓ session.
+
+**What went well**
+- **Reused the deferred-cookie pattern** — the logout clear is the exact mirror of the Sprint 132 write (defer to
+  a clean run so `st.rerun()` can't discard it); no new machinery, just the symmetric case.
+- **Named the second trap up front** — a native-read cookie still reads valid the moment you log out, so a
+  `_beta_forgotten` session flag suppresses re-admit until the clear lands on the next request. Designed in, tested.
+- **Off by default preserved** — the account UI is gated on `gate_active()`, so the public deploy renders nothing
+  and the invariance holds (byte-identical, pinned by a test).
+- **Caught the admit-run gap** — the control has to render on the cookie-admit run, not just the next rerun, or
+  "Log out" would be missing right after a refresh. Fixed before it could ship.
+
+**Even better if**
+- **The clear roundtrip is the one untested edge** — like the write, it needs a browser; the manual smoke covers
+  it, and it shares fate with the Sprint 132 write smoke (if that persists, so does the clear).
+- **No confirm on Log out** — a single click resets the device (that *is* the intent for a shared device); if a
+  mis-click becomes a complaint, a lightweight confirm is a small follow-up.
+- **"Log out everywhere" isn't possible** here (no server session) — per-device by design; `st.login()` is the
+  answer if verified cross-device identity is ever needed.
+
+**Deferred / backlog** — a **confirm** on Log out (only if wanted); a **signed token** instead of the raw cookie
+value; native **`st.login()`** (hard identity — the product path); and the big body: **GW1 (2026-08-21)
+calibration** (set-piece/DefCon/form) + momentum + live manager import.
 
 ---
 

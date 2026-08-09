@@ -175,9 +175,10 @@ Deferred below.)*
 
 ## Validated, deferred
 
-- **A "not you? / log out" link** — deferred follow-up from Sprint 132 (ADR-099). The `remember.clear()` plumbing
-  exists; add a small control (sidebar or gate) that clears the "remember me" cookie so a shared device can be
-  reset. Low effort; UI-placement is the only open question.
+- ~~**A "not you? / log out" link**~~ — **DONE** (Sprint 133, US-327/328, extends ADR-099). A sidebar "Log out"
+  (gated on `gate_active()`, off on the open deploy) clears the "remember me" cookie + the session and re-shows the
+  gate — deferred clear (mirrors the write) + a `_beta_forgotten` re-admit guard. A **confirm dialog** on Log out
+  is a deferred follow-up (only if a mis-click becomes an issue).
 - **A signed/opaque "remember me" token** instead of the raw email/code cookie — deferred from Sprint 132 as
   over-engineering for a hobby beta (re-validating the raw value against `beta_users` / the code already gives the
   "pruned tester / rotated code is rejected" property). Revisit only if the raw value in the cookie becomes a
