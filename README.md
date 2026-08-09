@@ -38,6 +38,10 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
 - **Expected minutes (xMins v0)** — every recommendation **weights xP by expected playing time**
   (`chance_of_playing%` × a historical minutes share), so rotation risks don't out-rank nailed-on
   starters. Shown as expected minutes; use `--no-xmins` for the raw "assumes 90" number.
+- **Set-piece xP term** (ADR-096) — a small xP edge for **penalty / corner / free-kick takers**, applied only
+  where a player's history *doesn't* already price the duty (new signings / role changes — no double-counting).
+  **Off by default** (`SET_PIECE_WEIGHT = 0`); when on, a pick's explanation names the grounded edge. Calibrate
+  at GW1.
 
 **Natural language (Phase 4)** — grounded, and optional:
 - **`ask "..."`** — ask a question in plain English (captain / transfer / squad health / start-bench /

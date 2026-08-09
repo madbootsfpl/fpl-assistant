@@ -25,7 +25,10 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   **differentials**. Ingested `corners_order` + `freekicks_order` (auto-migrated); `set_piece_flags`;
   a Players **"Set pieces"** view (Pen/Corners/FK order + Own%/Val/£m, filterable, differential caption) + a
   Pool **"Set"** flag. Display-only; `refresh`+`reseed` populated real data (38 first-choice takers).
-  *(Follow-up, deferred: a gated set-piece xP boost in `decision_xp` — a modelling change, not a lens.)*
+  *(Follow-up: ~~a gated set-piece xP boost in `decision_xp` — a modelling change, not a lens.~~ **DONE** —
+  Sprint 126, US-313/314, **ADR-096**: a tier-restricted `set_piece_bonus` in the rate (only where the baseline
+  doesn't already price the duty → no double-counting), **wired-dormant** (`SET_PIECE_WEIGHT = 0`) + auditable
+  (`set_piece_xp` + a grounded reason). Calibrate + backtest the weight at GW1.)*
 - ◑ **DONE (v0) — Chip Strategy Guidance** (Sprint 096, US-251/252, ADR-082) — AI advice on when to use
   **Wildcard · Free Hit · Bench Boost · Triple Captain**. Delivered: `chip_advisor` (per-GW `by_gameweek`
   reductions + `best_legal_xi`) → a grounded `chips` `ask`/`chat` intent + a Squads **"Chips"** view. *Still

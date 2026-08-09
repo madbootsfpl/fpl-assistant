@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 126 (2026-08-27)** — *A gated set-piece xP term* (**ADR-096** — a **modelling** change to `decision_xp`,
+  not a lens; wired-dormant so today's numbers are unchanged). **US-313:** `analytics/setpieces.py::set_piece_bonus`
+  (a per-90 rate bonus: pens `0.30` > corners/FK `0.10` each, #1 duty only) + `config.SET_PIECE_WEIGHT = 0.0`;
+  wired into `player_xp` after the form blend, **only when `rate_source != "hist"`** — the trusted baseline
+  already prices an established taker's pens, so the boost applies only to fallback/current tiers (new
+  signings/role-changers), never double-counting. At weight 0 every xP is byte-identical (invariance test;
+  verified on real data — a weight of 0.5 moved only 3 fallback-tier takers, 0 of 17 hist-tier). **US-314:**
+  `player_xp` rows carry **`set_piece_xp`** (the term's share of xp; 0 dormant); `captain_picks` passes the weight
+  (dormant → no-op); a weight-aware `explain._penalty_reason` shows **"Penalty taker (+X xP set-piece edge)"** when
+  active (the number grounds → a narration verifies, ADR-037), the plain lens reason when dormant. Calibrate +
+  backtest the weight at GW1. +10 tests (804).
 - **Sprint 125 (2026-08-26)** — *History polish* (display-only on the web History view; `player_history`/
   `decision_xp` untouched; extends ADR-027/060/069, no new ADR). **US-311:** `views/players.py::_delta_cell` — the
   season table's **Δ£** shows an up/down cue (`+0.5 🟢` rise / `−0.4 🔴` fall / `0.0` / `—`). **US-312:** a pure

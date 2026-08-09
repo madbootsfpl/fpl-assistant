@@ -1,7 +1,7 @@
 # Sprint 126: A gated set-piece xP term (wired-dormant, calibrate at GW1)
 
-**Dates:** 2026-08-27 (planned)
-**Status:** 📝 Planned (0/2 stories · 1 ADR)
+**Dates:** 2026-08-27
+**Status:** ✅ Complete (2/2 stories · 1 ADR)
 **Capacity:** ~¾ session (a **modelling** change to the one xP metric — an ADR gate + a careful, tested term)
 **Carried Over:** none
 
@@ -39,22 +39,22 @@ tier where it doesn't double-count, **off by default** (no change today; an inva
 **transparent** (the contribution is explainable + grounded when active). Calibrate the weight at GW1.
 
 #### Success Criteria
-- [ ] **ADR-096 (the gate)** — record: the term = a **rate bonus** from set-piece duties (pens > corners/FK),
+- [x] **ADR-096 (the gate)** — record: the term = a **rate bonus** from set-piece duties (pens > corners/FK),
       applied **only to the fallback/current tiers** (avoids double-counting the `hist` baseline);
       `SET_PIECE_WEIGHT = 0.0` **wired-dormant** (ADR-060 pattern); a **modelling** change (not a lens, ADR-057);
       the invariance-at-0 pin; the GW1 calibration/backtest plan; the honest limits.
-- [ ] **US-313 (the term)** — a pure `set_piece_bonus(player) -> float` (from `penalties_order`/`corners_order`/
+- [x] **US-313 (the term)** — a pure `set_piece_bonus(player) -> float` (from `penalties_order`/`corners_order`/
       `freekicks_order`) + `config.SET_PIECE_WEIGHT` + the wiring in `player_xp` (rate += `SET_PIECE_WEIGHT ·
       bonus`, **non-`hist` tiers only**). Tests: **weight 0 → xP byte-identical** (the ADR-041/060 invariant); a
       positive weight **lifts a fallback-tier pen taker** and **leaves a `hist`-tier taker unchanged**; a
       non-taker unchanged.
-- [ ] **US-314 (make it auditable)** — when active, the set-piece contribution is **explainable + grounded**: the
+- [x] **US-314 (make it auditable)** — when active, the set-piece contribution is **explainable + grounded**: the
       explanation reasons gain a "⚽ on penalties — a set-piece xP edge (+X)" line and the number enters the
       **facts** so a narrated figure still verifies (ADR-037/089); a config/legend note. Dormant → nothing shown
       (no change).
-- [ ] **No unintended drift** — with `SET_PIECE_WEIGHT = 0` the existing **794** stay green (xP unchanged
+- [x] **No unintended drift** — with `SET_PIECE_WEIGHT = 0` the existing **794** stay green (xP unchanged
       everywhere); the lens invariance tests (crowd/price) still hold; ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README, Help, Backlog, ADR-index (+ADR-096).
+- [x] Docs: PROJECT_STATUS, Architecture, README, Backlog, ADR-index (+ADR-096). _(Help unchanged — the term is dormant, not yet a user-facing feature.)_
 
 ---
 
@@ -143,4 +143,52 @@ tier.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ a proper **modelling** sprint — a gated set-piece term in the one `decision_xp` metric, shipped
+**dormant** (today's numbers unchanged) and **auditable** (a grounded reason when active). The planning insight —
+the baseline already prices an established taker's pens — shaped the whole design: the term applies **only where
+the history doesn't capture the duty** (the fallback/current tiers), so it can't double-count.
+
+**Delivered**
+- **ADR-096** — the gate: a tier-restricted rate bonus, wired-dormant (`FORM_WEIGHT` pattern), a modelling change
+  (not a lens), the double-counting rationale, invariance-at-0, and the GW1 calibration/backtest plan.
+- **US-313** — `set_piece_bonus` (pens > corners/FK) + `SET_PIECE_WEIGHT` wired into `player_xp` on the non-`hist`
+  tiers; the invariance holds (the full 794 byte-identical at 0). +7 tests.
+- **US-314** — `set_piece_xp` on the row (the grounded share of xp); `captain_picks` passes the weight; a
+  weight-aware "Penalty taker (+X xP set-piece edge)" reason (verifies when active, plain lens when dormant). +3.
+
+**Verified on real data** — with a weight of 0.5, only **3 fallback-tier** pen takers' xP moved; **0 of the 17
+hist-tier** takers changed (no double-counting) — exactly the ADR-096 design. Default weight 0 → the entire suite
+byte-identical.
+
+**Metrics** — 804 tests (794 → +10) · ruff + CI-parity green · **96 ADRs** (+1) · 2 stories + 1 gate, ~¾ session.
+
+**What went well**
+- **Planning found the trap before the code did.** Reading `player_xp` surfaced the double-counting risk; the
+  **tier guard** (`rate_source != "hist"`) turned it into a clean, testable rule instead of a subtle bug.
+- **Wired-dormant = zero-risk modelling.** Shipping at weight 0 with an invariance test means the change lands
+  with no effect on current picks; the owner flips the weight to see it live and calibrates at GW1.
+- **A modelling change stayed auditable** — the contribution is a real number on the row (`set_piece_xp`) and the
+  explanation names it, so turning it on never becomes a black box (the grounding ethos held).
+- **The lens/xP line stayed crisp** — recorded explicitly that this is an xP term (like form/xMins), *not* a lens
+  (ADR-057), which still governs crowd/price/media and stays tested.
+
+**Even better if**
+- The tier guard is a **heuristic** for "history doesn't capture the duty" — a long-history role-changer still
+  lands on `hist` and gets no boost (the guard errs toward *not* double-counting — the safer failure).
+- The magnitudes (pens 0.30 / set-plays 0.10) are **coarse guesses** (no per-team penalty rate) — that's what the
+  GW1 backtest is for.
+- The transfer explanation shows the edge only if the buy summary carries `set_piece_xp`; the captain path is the
+  clean one (via the pick). Both are honest when dormant.
+
+**Deferred / backlog** — the **GW1 calibration + backtest** (set the weight on real returns); per-team
+penalty-rate modelling; a mid-season duty-change detector; auto-detecting "newly the taker" beyond the rate tier.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **When to switch the term on:** _(a conservative weight now, to eyeball it · or wait for GW1 returns)_
+- **Confidence in the no-double-count design (1–5):**
