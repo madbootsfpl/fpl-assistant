@@ -16,6 +16,7 @@ _EMAIL = "_beta_email"    # session: the registered tester email (registration m
 _PENDING = "_beta_remember"  # session: a value to write to the "remember me" cookie on the next clean run (ADR-099)
 _CLEAR = "_beta_clear"    # session: a pending cookie *clear* to render on the next clean run (logout, ADR-099)
 _FORGOTTEN = "_beta_forgotten"  # session: logged out — ignore the cookie for the rest of this session (ADR-099)
+_LOADING = "_beta_cookie_checked"  # session: we've given the cookie component one run to deliver (ADR-099/Sprint 134)
 
 
 def secret(key: str, default: str | None = None) -> str | None:
@@ -115,6 +116,24 @@ def _flush_clear() -> None:
         remember.clear()
 
 
+def _maybe_wait_for_cookie() -> None:
+    """Give the cookie component one run to deliver its value before showing the gate (Sprint 134).
+
+    The component syncs its cookie to Python on a **rerun**, not the first run of a session — so on a cold
+    refresh `remember.read()` is `None` even when a valid cookie exists. Wait exactly one run (showing a neutral
+    placeholder instead of flashing the gate); the component's own load then reruns us, and the second read sees
+    the value. **One-shot** (`_LOADING`) and **only when the component is present** (`remember.available()`), so a
+    browser without it — or a headless test — falls straight through to the gate and never hangs."""
+    if st.session_state.get(_LOADING):         # already gave it a run this session
+        return
+    st.session_state[_LOADING] = True
+    from src.web_streamlit import remember
+    if not remember.available():               # no component (blocked / headless) → don't wait, show the gate
+        return
+    st.caption("🔑 Checking your device…")
+    st.stop()
+
+
 def _render_account() -> None:
     """A small sidebar line + a **Log out** button, so a tester can reset a shared device (ADR-099). Rendered only
     when a gate is active and the session has passed — the open/public deploy shows nothing (off by default)."""
@@ -133,9 +152,12 @@ def _remembered_code(code: str) -> bool:
     if st.session_state.get(_FORGOTTEN):       # just logged out — ignore the (not-yet-cleared) cookie this session
         return False
     from src.web_streamlit import remember
-    if remember.read() == code:
+    value = remember.read()
+    if value == code:
         st.session_state[_OK] = True
         return True
+    if value is None:                          # maybe the component hasn't delivered yet — wait one run
+        _maybe_wait_for_cookie()
     return False
 
 
@@ -147,6 +169,7 @@ def _remembered_registration(user_store) -> bool:
     from src.web_streamlit import remember
     email = remember.read()
     if not email:
+        _maybe_wait_for_cookie()               # maybe the component hasn't delivered yet — wait one run
         return False
     try:
         registered = user_store.is_registered(email)

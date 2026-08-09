@@ -143,6 +143,16 @@ persistence) remains the **deferred** hard-auth upgrade; this buys "register onc
 
 ### 🧾 Status & follow-ups
 
+- **⚠️ Correction (Sprint 134) — the read path was wrong.** The "native read" above (`st.context.cookies`) reads
+  the cookies the browser sends to the **Streamlit server on the top-level request**, but the component writes
+  `document.cookie` **inside its own iframe** — **different cookie jars**, so the native read never saw the
+  component's write and **nothing persisted** (owner verified on Safari *and* Chrome). **Fixed:** `remember.read()`
+  now reads through the **same component** (`_controller().get()`, same jar as `write`). The cost is the loading
+  delay this ADR originally tried to avoid: the component delivers its value on a **rerun**, so the gate waits one
+  run via `access._maybe_wait_for_cookie()` (a "Checking your device…" placeholder, one-shot + component-gated so
+  it never hangs). So the earlier "native read → no loading run to flash" claim is **superseded** — component-read
+  + a one-run wait is the working design. (US-330.) If the re-smoke still fails, the escalation is native
+  **`st.login()`** — Option 2 in `docs/05_Sprints/Sprint134.md`.
 - **Accepted.** Built this sprint: US-325 (`remember.py` — the guarded cookie seam + the dependency) + US-326
   (wire restore-on-load / set-on-pass into `require_access`, degrading gracefully); docs updated (BETA.md,
   PROJECT_STATUS, Architecture, README).

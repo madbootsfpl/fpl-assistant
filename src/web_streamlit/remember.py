@@ -4,20 +4,24 @@ A thin, **guarded** seam so a tester who has passed the access gate on a device 
 across a full browser refresh — `st.session_state` is wiped on a refresh/new tab, so the pass
 otherwise has to be re-typed every time.
 
-The read and write halves are deliberately asymmetric, because Streamlit is:
+**Read and write both go through the cookie component** (`streamlit-cookies-controller`, the single
+dependency, quarantined in `_controller()`). This is the fix from Sprint 134: an earlier version read
+natively via `st.context.cookies`, but that reads the cookies the browser sends to the *Streamlit
+server* on the top-level request, while the component writes `document.cookie` **inside its own
+iframe** — two different cookie jars, so the native read never saw the component's write and nothing
+persisted (verified on Safari + Chrome). Reading through the same component keeps write and read in the
+*same* jar, so a remembered value survives a refresh.
 
-- **read** — native + read-only via `st.context.cookies` (the cookies the browser sent with the
-  page request). Available **immediately** on a cold load, with **no component and no "loading"
-  rerun** — so restoring a session never flashes the gate.
-- **write** — Streamlit has no native "set cookie", and a DIY `document.cookie` runs in a
-  sandboxed component iframe (wrong origin), so setting one needs a small cookie component
-  (`streamlit-cookies-controller`, the single dependency). It is imported lazily and quarantined
-  in `_controller()`.
+The cost of component-read: the component delivers its value to Python on a **rerun**, not the first
+run of a session — so `read()` returns `None` on a cold load's first run even when a valid cookie
+exists. The gate handles this by waiting exactly one run (`access._maybe_wait_for_cookie`, showing a
+neutral placeholder instead of flashing the prompt) — hence `available()`, which tells the gate whether
+a `None` read might just be "still loading" vs "no component at all".
 
-Everything degrades to a **no-op** (`read()` → `None`, `write`/`clear` do nothing) if the browser
-blocks cookies or the component is missing/erroring — so import, CI, AppTest and private-mode paths
-stay safe and the gate falls back to its per-session behaviour ("off by default / fail safe",
-ADR-099). The gate must therefore treat `read()` returning `None` as simply "not remembered".
+Everything degrades to a **no-op** (`read()` → `None`, `write`/`clear` do nothing, `available()` →
+`False`) if the browser blocks cookies or the component is missing/erroring — so import, CI, AppTest and
+private-mode paths stay safe and the gate falls back to its per-session behaviour ("off by default /
+fail safe", ADR-099). The gate must therefore treat `read()` returning `None` as simply "not remembered".
 
 What's stored is *what proves the pass* in the active gate mode — the registered email (registration
 mode) or the shared code (shared-code mode). The gate **re-validates** that value on load
@@ -25,38 +29,44 @@ mode) or the shared code (shared-code mode). The gate **re-validates** that valu
 the cookie: it remembers a pass, it does not grant access.
 """
 
-import streamlit as st
-
 COOKIE = "fpl_beta"       # first-party cookie name (the value = the registered email or the shared code)
 TTL_DAYS = 30             # ~30-day remember; iOS Safari ITP caps JS-set cookies at ~7 regardless (ADR-099)
 _DAY_SECONDS = 24 * 60 * 60
 
 
-def _request_cookies():
-    """The cookies the browser sent with this page request (read-only, native — no component/iframe)."""
-    return st.context.cookies
+def _controller():
+    """The cookie component — reads *and* writes the cookie (same iframe jar, so a write is readable back).
+
+    Isolated so the one dependency and any failure live here (the callers below swallow exceptions).
+    Constructing it renders the read component **once per session** (it caches into `st.session_state`),
+    so constructing a fresh one per read/write/available is safe (no duplicate widget).
+    """
+    from streamlit_cookies_controller import CookieController
+    return CookieController()
 
 
 def read():
-    """The remembered value from this request's cookies, or ``None`` if absent / unreadable.
+    """The remembered value from the cookie, or ``None`` if absent / unreadable / **not yet delivered**.
 
-    Native and instant on a cold load (no component, no "loading" rerun), so the gate can restore a
-    remembered session without ever flashing the prompt.
+    Read through the component (same jar as `write`). The component syncs its value on a *rerun*, so this
+    is ``None`` on the first run of a cold load even when a cookie exists — the gate waits one run for it
+    (see `access._maybe_wait_for_cookie`), using `available()` to tell "still loading" from "no component".
     """
     try:
-        return _request_cookies().get(COOKIE) or None
+        return _controller().get(COOKIE) or None
     except Exception:
         return None
 
 
-def _controller():
-    """The cookie component — used only to *write* (Streamlit reads cookies natively but can't set them).
-
-    Isolated so the one dependency and any failure live here (the callers below swallow exceptions).
-    Constructing it renders once per session then reuses the cached copy, so a per-call construct is safe.
-    """
-    from streamlit_cookies_controller import CookieController
-    return CookieController()
+def available():
+    """True if the cookie component can be constructed — so a ``None`` `read()` may just be "still loading",
+    not "no component". The gate uses this to decide whether to wait one run for the cookie to arrive (and to
+    never wait when there's no component, e.g. a headless test or a browser with the component blocked)."""
+    try:
+        _controller()
+        return True
+    except Exception:
+        return False
 
 
 def write(value, days=TTL_DAYS):
@@ -75,8 +85,8 @@ def write(value, days=TTL_DAYS):
 
 
 def clear():
-    """Best-effort: forget the cookie (plumbing for a future "not you? / log out"). No-op if the
-    component is unavailable."""
+    """Best-effort: forget the cookie (the "Log out" control drives this). No-op if the component is
+    unavailable. Also deferred to a clean run by the gate, so a `st.rerun()` can't discard the remove."""
     try:
         _controller().remove(COOKIE)
     except Exception:

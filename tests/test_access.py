@@ -38,6 +38,7 @@ def test_app_is_open_when_no_code_is_configured():
 
 def test_gate_blocks_then_unlocks_with_the_right_code(monkeypatch):
     monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    monkeypatch.setattr(remember, "available", lambda: False)   # headless: no cookie component to wait on
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert any("beta" in t.value.lower() for t in at.title)     # the lock screen, not the app
     assert at.text_input                                        # a code prompt is shown
@@ -75,6 +76,7 @@ def test_a_code_pass_writes_the_remember_cookie(monkeypatch):
     monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
     written = []
     monkeypatch.setattr(remember, "read", lambda: None)          # no cookie yet
+    monkeypatch.setattr(remember, "available", lambda: False)    # don't wait on the component in the test
     monkeypatch.setattr(remember, "write", lambda value, **kw: written.append(value))
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     at.text_input[0].set_value("letmein").run()
@@ -100,8 +102,43 @@ def test_stale_registration_cookie_shows_the_gate(monkeypatch):
     monkeypatch.setattr(user_store, "is_configured", lambda: True)
     monkeypatch.setattr(user_store, "is_registered", lambda email: False)
     monkeypatch.setattr(remember, "read", lambda: "pruned@example.com")
+    monkeypatch.setattr(remember, "available", lambda: False)
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert any("beta" in t.value.lower() for t in at.title)   # the registration lock screen
+
+
+# --- the cookie "loading run" (ADR-099, US-330 / Sprint 134) -------------------------
+# Reading through the component means the value arrives on a rerun, not run 1 — the gate waits one run
+# (a placeholder, not a gate flash) when the component is present, then shows the gate if still nothing.
+
+def test_cookie_loading_shows_a_placeholder_not_the_gate(monkeypatch):
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    monkeypatch.setattr(remember, "read", lambda: None)          # not delivered yet
+    monkeypatch.setattr(remember, "available", lambda: True)     # a component is present → wait one run
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    assert any("Checking your device" in c.value for c in at.caption)   # the placeholder
+    assert not any("beta" in t.value.lower() for t in at.title)         # the gate hasn't flashed
+    assert at.session_state[access._LOADING] is True
+
+
+def test_gate_shows_after_the_one_run_wait(monkeypatch):
+    """Second run: the wait is spent (_LOADING set) and the cookie still isn't there → the gate shows."""
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    monkeypatch.setattr(remember, "read", lambda: None)
+    monkeypatch.setattr(remember, "available", lambda: True)
+    at = AppTest.from_file(_HOME, default_timeout=30).run()   # run 1 → placeholder
+    at.run()                                                  # run 2 → the component still delivered nothing
+    assert any("beta" in t.value.lower() for t in at.title)  # the gate, no infinite wait
+
+
+def test_no_wait_when_no_component(monkeypatch):
+    """A browser without the component (or a headless run) must not wait — straight to the gate."""
+    monkeypatch.setenv("FPL_ACCESS_CODE", "letmein")
+    monkeypatch.setattr(remember, "read", lambda: None)
+    monkeypatch.setattr(remember, "available", lambda: False)
+    at = AppTest.from_file(_HOME, default_timeout=30).run()
+    assert not any("Checking your device" in c.value for c in at.caption)
+    assert any("beta" in t.value.lower() for t in at.title)
 
 
 # --- logout (ADR-099, US-327) --------------------------------------------------------
