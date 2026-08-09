@@ -1,0 +1,162 @@
+"""A rich, position-adaptive **Player Card** for the Streamlit edge (Sprint 139, US-342; the pitch/card pattern,
+ADR-084).
+
+**One self-contained HTML/CSS block** (no JS) via `st.markdown(unsafe_allow_html=True)`: a header (photo · club
+badge · Team · Position · £price · name) + **FDR fixture pills** + flags (ownership tier · set-pieces · availability
+· a **Projected-xP** chip) + a **two-column stat grid whose rows adapt to the player's position** (FWD/MID lead on
+goals/xGI/ICT; DEF on xGC/DefCon-90/CBI; GK on xGC/recoveries). A **fixed dark surface** — like the green pitch, it
+reads on either Streamlit theme; every value is `html.escape`d. Display-only; never touches xP.
+
+A `compact=True` variant (header + a few key stats, no brand band) feeds the My Squad pitch hover popover (US-344).
+Fed by data the page already holds (the `Player` row + `crowd`/price flags); the Projected xP is optional
+(`decision_xp`) — the chip just hides when it's not supplied.
+"""
+
+import html
+
+import streamlit as st
+
+from src.analytics.crowd import availability_flag, ownership_tier, set_piece_flags
+
+# Scoped to `.pl-card`; a fixed dark surface (its own colours, like the pitch) that reads on both themes. Lines
+# unindented so `st.markdown` doesn't treat the CSS as a code block.
+_CARD_CSS = """
+<style>
+.pl-card{background:linear-gradient(180deg,#111821,#0c121a);border:1px solid rgba(255,255,255,.09);
+border-radius:18px;overflow:hidden;color:#f2f6fb;margin:.5rem 0;box-shadow:0 18px 40px -22px rgba(0,0,0,.7);
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
+.pl-card .plc-head{display:flex;gap:16px;padding:18px 20px 14px;align-items:center;}
+.pl-card .plc-photo{width:84px;height:84px;border-radius:50%;flex:none;background:#1b2430;
+border:2px solid rgba(255,255,255,.16);overflow:hidden;}
+.pl-card .plc-photo img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;}
+.pl-card .plc-id{min-width:0;flex:1;}
+.pl-card .plc-meta{display:flex;align-items:center;gap:8px;color:#aab6c6;font-size:.9rem;font-weight:500;}
+.pl-card .plc-meta img{width:18px;height:18px;}
+.pl-card .plc-meta b{color:#f2f6fb;}
+.pl-card .plc-name{font-size:1.7rem;font-weight:800;line-height:1.05;letter-spacing:-.02em;margin:.12rem 0 .5rem;}
+.pl-card .plc-fix{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.pl-card .plc-gw{color:#7c8899;font-size:.78rem;font-weight:600;}
+.pl-card .plc-pill{border-radius:999px;padding:4px 10px;font-size:.74rem;font-weight:700;color:#fff;
+white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.3) inset;}
+.pl-card .plc-flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.pl-card .plc-flag{font-size:.72rem;font-weight:700;background:rgba(255,255,255,.06);
+border:1px solid rgba(255,255,255,.09);padding:3px 8px;border-radius:999px;color:#e6edf5;}
+.pl-card .plc-flag.proj{color:#5eead4;}
+.pl-card .plc-band{display:flex;justify-content:space-between;align-items:center;margin:2px 14px 0;padding:9px 14px;
+border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);}
+.pl-card .plc-brand{font-weight:800;font-size:.72rem;letter-spacing:.08em;color:#aab6c6;text-transform:uppercase;}
+.pl-card .plc-title{font-weight:800;color:#5eead4;}
+.pl-card .plc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:10px 22px 20px;}
+.pl-card .plc-stat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 2px;
+border-bottom:1px solid rgba(255,255,255,.08);}
+.pl-card .plc-stat .l{color:#aab6c6;font-size:.9rem;}
+.pl-card .plc-stat .v{font-weight:800;font-size:1.25rem;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+.pl-card.compact .plc-name{font-size:1.3rem;} .pl-card.compact .plc-grid{padding:6px 18px 14px;}
+</style>
+"""
+
+# FDR → colour (green easy · amber neutral · red hard), matching the Fixtures ticker feel.
+_FDR = {1: "#22a559", 2: "#22a559", 3: "#c98a1a", 4: "#d64545", 5: "#7f1d1d"}
+
+
+def _i(v):
+    return f"{int(v):,}" if v is not None else None
+
+
+def _f(v, dp):
+    return f"{v:.{dp}f}" if v is not None else None
+
+
+def _stat_rows(player, *, compact=False):
+    """(label, value) rows adapted to the player's **position** (ADR-084). Pure; skips missing values. Compact
+    keeps the header-relevant few for the pitch popover."""
+    p = dict(player)
+    pos = (p.get("position") or "").upper()
+    price = p.get("price") or 0
+    pts = p.get("total_points")
+    own = p.get("selected_by")
+    catalog = {
+        "pts": ("FPL Points", _i(pts)),
+        "ppg": ("Points / game", _f(p.get("points_per_game"), 1)),
+        "mins": ("Minutes", _i(p.get("minutes"))),
+        "value": ("Value", f"{pts / price:.1f} pts/£m" if pts is not None and price else None),
+        "own": ("Ownership", f"{own:.1f}%" if own is not None else None),
+        "goals": ("Goals", _i(p.get("goals_scored"))),
+        "assists": ("Assists", _i(p.get("assists"))),
+        "xg": ("Expected Goals", _f(p.get("xg"), 2)),
+        "xa": ("Expected Assists", _f(p.get("xa"), 2)),
+        "xgi": ("xG Involvement", _f(p.get("xgi"), 2)),
+        "xgc": ("Expected GC", _f(p.get("xgc"), 2)),
+        "def90": ("DefCon / 90", _f(p.get("defcon_per90"), 2)),
+        "cbi": ("Clr + Blk + Int", _i(p.get("cbi"))),
+        "tackles": ("Tackles", _i(p.get("tackles"))),
+        "recov": ("Recoveries", _i(p.get("recoveries"))),
+        "ict": ("ICT Index", _f(p.get("ict_index"), 1)),
+    }
+    order = {
+        "FWD": ["pts", "ppg", "goals", "xgi", "xg", "own", "assists", "value", "xa", "ict", "mins", "def90"],
+        "MID": ["pts", "ppg", "goals", "xgi", "assists", "own", "xa", "value", "def90", "ict", "mins", "recov"],
+        "DEF": ["pts", "ppg", "xgc", "def90", "cbi", "own", "tackles", "value", "goals", "assists", "mins", "recov"],
+        "GK": ["pts", "ppg", "xgc", "def90", "cbi", "own", "recov", "value", "mins"],
+    }.get(pos, ["pts", "ppg", "goals", "assists", "xgi", "own", "value", "mins"])
+    if compact:
+        order = order[:5]
+    return [(catalog[k][0], catalog[k][1]) for k in order if catalog[k][1] is not None]
+
+
+def player_card_html(player, *, team_name="", photo_url=None, badge_url=None,
+                     fixtures=None, projected_xp=None, compact=False) -> str:
+    """The player card as an HTML string (pure — no Streamlit; testable). Empty-safe. `fixtures` is a list of
+    `{"opp","home","fdr"}` (first 3 shown); `projected_xp` a float (our `decision_xp`) → a chip, or None to hide."""
+    if not player:
+        return ""
+    e = html.escape
+    p = dict(player)
+    name = e(p.get("web_name") or "")
+    pos = e(p.get("position") or "")
+    price = p.get("price")
+    price_html = f"£{price:.1f}m" if price is not None else ""
+
+    photo = f'<img src="{e(str(photo_url))}" alt="{name}">' if photo_url else ""
+    badge = f'<img src="{e(str(badge_url))}" alt="{e(team_name)}"> ' if badge_url else ""
+
+    fx = list(fixtures or [])[:3]
+    fix_html = ""
+    if fx:
+        pills = "".join(
+            f'<span class="plc-pill" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
+            f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</span>'
+            for f in fx)
+        fix_html = f'<div class="plc-fix"><span class="plc-gw">Next {len(fx)}</span>{pills}</div>'
+
+    flags = []
+    if projected_xp is not None:
+        flags.append(f'<span class="plc-flag proj">◆ Proj. {projected_xp:.1f} xP</span>')
+    if tier := ownership_tier(p):
+        flags.append(f'<span class="plc-flag">{e(tier)}</span>')          # tier carries its own emoji
+    flags += [f'<span class="plc-flag">{e(sp)}</span>' for sp in set_piece_flags(p)]
+    if avail := availability_flag(p):
+        flags.append(f'<span class="plc-flag">{e(avail)}</span>')
+    flags_html = f'<div class="plc-flags">{"".join(flags)}</div>' if flags else ""
+
+    grid = "".join(
+        f'<div class="plc-stat"><span class="l">{e(lbl)}</span><span class="v">{e(val)}</span></div>'
+        for lbl, val in _stat_rows(p, compact=compact))
+    band = "" if compact else (
+        '<div class="plc-band"><span class="plc-brand">⚽ FPL Assistant</span>'
+        '<span class="plc-title">Player Card</span><span class="plc-brand">Season 24/25</span></div>')
+
+    return (
+        f'{_CARD_CSS}<div class="pl-card{" compact" if compact else ""}">'
+        f'<div class="plc-head"><div class="plc-photo">{photo}</div>'
+        f'<div class="plc-id"><div class="plc-meta">{badge}{e(team_name)} · {pos} · <b>{price_html}</b></div>'
+        f'<div class="plc-name">{name}</div>{fix_html}{flags_html}</div></div>'
+        f'{band}<div class="plc-grid">{grid}</div></div>'
+    )
+
+
+def render_player_card(player, **kwargs) -> None:
+    """Render the player card (US-342). Display-only; a no-op when there's no player."""
+    markup = player_card_html(player, **kwargs)
+    if markup:
+        st.markdown(markup, unsafe_allow_html=True)

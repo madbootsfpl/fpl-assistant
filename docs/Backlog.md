@@ -175,6 +175,12 @@ Deferred below.)*
 
 ## Validated, deferred
 
+- **Player-card "advanced" stats via Understat/FBref** — the player card (Sprint 139) ships with our FPL data; the
+  extra FFH-style stats **Key Passes** + **Shots in the Box** aren't in the FPL API but *are* reachable from a free
+  **Understat/FBref** fetch (per-shot coords → "in box"; KP direct). This is the `soccerdata`/Understat integration
+  evaluated + deferred in **ADR-016** (heavy: player-matching, scraping fragility, a bigger dep). Revisit as its own
+  sprint + a data-source decision if the card wants them. **Big Chances / Big Chances Created are Opta-proprietary
+  (paid) — not planned.**
 - ~~**A "not you? / log out" link**~~ — **DONE** (Sprint 133, US-327/328, extends ADR-099). A sidebar "Log out"
   (gated on `gate_active()`, off on the open deploy) clears the "remember me" cookie + the session and re-shows the
   gate — deferred clear (mirrors the write) + a `_beta_forgotten` re-admit guard. A **confirm dialog** on Log out
