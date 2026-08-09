@@ -1,7 +1,7 @@
 # Sprint 128: CLI catch-up — a `chips` command + a price "who's about to rise?" intent
 
-**Dates:** 2026-08-29 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-29
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (two surfacing stories — reuse existing analytics + renderers; no new analytics)
 **Carried Over:** none
 
@@ -35,18 +35,18 @@
 to rise?"` — reusing the existing analytics + renderers. No new analytics; grounded; degrade honestly preseason.
 
 #### Success Criteria
-- [ ] **US-316 (a CLI `chips` command)** — `python app.py chips <squad> [--next N] [--type …] [--no-xmins]`
+- [x] **US-316 (a CLI `chips` command)** — `python app.py chips <squad> [--next N] [--type …] [--no-xmins]`
       mirrors `cmd_analyse`: load the saved squad, build the horizon `decision_xp` (with `by_gameweek`), call
       `chip_advisor` + `explain_chips`, print `render_chip_advice`. Unknown/absent squad → the same friendly
       nudge `analyse` gives (list the saved names). Agrees with `ask`/web by construction (one assembly).
-- [ ] **US-317 (a price "who's about to rise?" `ask`/`chat` intent)** — a `price` intent (`_INTENT_KEYWORDS` +
+- [x] **US-317 (a price "who's about to rise?" `ask`/`chat` intent)** — a `price` intent (`_INTENT_KEYWORDS` +
       `_decide_price`) ranks the pool by `price_pressure`/`price_prediction` → the likely **risers 🔺** (and
       **fallers 🔻**), a grounded shortlist; **preseason → a "no price movement yet (live at GW1)" note** (0
       pressure). Works in `ask` + `chat`; the LLM narrates only the facts (verified ✓).
-- [ ] **No drift** — surfacing only; `decision_xp`/`chip_advisor`/`price_*` unchanged; existing **805** stay
-      green (+ chips-CLI / price-intent tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README (the CLI `chips` + the new `ask` intent), Help (n/a — CLI/ask),
-      Feedback_Log (n/a), Backlog (mark the two follow-ups done), ADR-index (no new ADR — surfacing).
+- [x] **No drift** — surfacing only; `decision_xp`/`chip_advisor`/`price_*` unchanged; existing **805** stay
+      green (**811** with +6); ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README (the CLI `chips` + the new `ask` intent), Backlog
+      (the two follow-ups marked done); no new ADR — surfacing.
 
 ---
 
@@ -121,4 +121,46 @@ item); chip-timing that spans DGW/BGW (in-season).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ both stories shipped — the terminal/`ask` reach parity on two web-only features, purely by
+**surfacing** existing analytics. A CLI `chips` command (reusing the renderer) and a `price` "who's about to
+rise?" `ask`/`chat` intent, both degrading honestly until GW1. No new analytics, no ADR.
+
+**Delivered**
+- **US-316** — `cli.py::cmd_chips` (mirrors `cmd_analyse`) → `chip_advisor` + the existing `render_chip_advice`;
+  a `chips` subparser. Matches `ask`/web by construction (one `decision_xp` recipe). +3 tests.
+- **US-317** — a `price` intent (placed first, prediction-specific cues) + `_decide_price` → likely risers 🔺 /
+  fallers 🔻 by `price_pressure`, grounded; a new `ui/price.py`. Preseason → a "live at GW1" message. +3 tests.
+
+**Verified at planning + build** — chips was fully assembled + rendered already (no CLI edge); price analytics
+exist but had no `ask` intent; the routing was checked for collisions ("price risers" → price, "how do price
+rises work?" → rules, "who are the risers?" → trends).
+
+**Metrics** — 811 tests (805 → +6) · ruff + CI-parity green · 97 ADRs (no new) · 2 stories, ~½ session.
+
+**What went well**
+- **Reuse paid off** — both stories are thin edges over existing analytics + renderers; the CLI chips advice
+  can't drift from `ask`/web because it's the *same* `decision_xp` assembly.
+- **Routing precedence handled carefully** — placing `price` first (with prediction-specific cues) fixed the
+  "price risers" → rules collision without stealing genuine rules questions; the checks pin it.
+- **Honest degrade preserved** — the price intent returns a first-class "live at GW1" message preseason, matching
+  the trends/momentum pattern, so it never fabricates movement from flat data.
+- **The lens line held** — the price intent is display only; `decision_xp` is untouched.
+
+**Even better if**
+- The price intent's value is small **preseason** (net transfers flat) — it's built + tested, but it earns its
+  keep from GW1 when transfers flow.
+- A **CLI price column** on `table`/`xg` was deferred (the `ask` intent covers the "who's rising?" query).
+
+**Deferred / backlog** — a CLI price column; an absolute "% to the next price change" (needs a GW1 counter);
+DGW/BGW chip-timing (in-season). The buildable-now backlog is now essentially exhausted before **GW1
+(2026-08-21)**, which unlocks the calibration work (set-piece/DefCon/form + momentum).
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Pause small work until GW1, or keep banking polish? (pause/keep):**
+- **Confidence the CLI/ask are at parity now (1–5):**

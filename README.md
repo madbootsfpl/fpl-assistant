@@ -35,6 +35,8 @@ delivering — plus a grounded **"this week" gameweek recommendation** (captain 
   improvement** (how much a swap lifts your best legal XI, so bench-fodder upgrades don't top the list);
   `--raw` for the old raw-xP-gain ranking
 - **`analyse`** — a saved squad's health over N GWs (projected XI xP, weak links, injuries), cross-linked
+- **`chips`** — when to play each chip for a saved squad (Triple Captain · Bench Boost · Free Hit · Wildcard),
+  with a per-chip confidence
 - **Expected minutes (xMins v0)** — every recommendation **weights xP by expected playing time**
   (`chance_of_playing%` × a historical minutes share), so rotation risks don't out-rank nailed-on
   starters. Shown as expected minutes; use `--no-xmins` for the raw "assumes 90" number.
@@ -169,7 +171,9 @@ python app.py ask "who should I captain from my-team?"
 python app.py ask "what transfer should I make for my-team?"
 python app.py ask "which 3 transfers for my-team?"
 python app.py ask "analyse my-team"
+python app.py chips --squad my-team              # when to play each chip (TC · BB · FH · WC) + confidence
 python app.py ask "who should I start from my-team?"   # best legal XI (xMins-weighted) vs your bench
+python app.py ask "who's about to rise?"               # likely price risers 🔺 / fallers 🔻 (live at GW1)
 python app.py ask "Haaland or Saka?"                   # compare two players side by side
 python app.py ask "build me a squad for £100m"         # the optimal 15 on xP, within budget
 python app.py ask "build me a squad for £100m with 3 low cost players and 1 premium player"

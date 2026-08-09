@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 128 (2026-08-29)** — *CLI catch-up* (surfacing only — no new analytics, no new ADR; the CLI/`ask`
+  reach parity with web). **US-316:** a **CLI `chips`** command (`cli.py::cmd_chips`, mirrors `cmd_analyse`) —
+  load a saved squad → the horizon `decision_xp` (with `by_gameweek`) → `chip_advisor` + `explain_chips` → the
+  existing `ui/chips.py::render_chip_advice`; a `chips` subparser; reuses the one `decision_xp` recipe → the CLI
+  advice matches `ask`/web by construction. **US-317:** a **`price`** `ask`/`chat` intent — a prediction-specific
+  keyword set (placed first so "who's about to rise?"/"price risers" beat rules' "price rise" + trends' "risers")
+  + `_decide_price` ranking the pool by `price_pressure` into likely **risers 🔺 / fallers 🔻** (`price_prediction`,
+  ADR-092), grounded (facts/subjects/task, ADR-037), a new `ui/price.py::render_price_movers`; **preseason (flat
+  net transfers) → a first-class "live at GW1" message**. A **lens** — never `decision_xp`. +6 tests (811).
 - **Sprint 127 (2026-08-28)** — *A Gameweeks box-select + the DefCon magnifier design gate* (owner feedback).
   **US-315:** the Squads "Gameweeks ahead" `st.selectbox(range(1,9))` → a `st.segmented_control([1,2,3,4,5,10],
   default=5)` (a box-select including a **10**-GW wildcard window); the horizon flows through the tab unchanged;
