@@ -36,8 +36,11 @@ from src.analytics import (
     explain_transfer,
     explain_worth,
     gameweek_plan,
+    is_unavailable,
     minutes_weight_from_history,
     player_history,
+    price_prediction,
+    price_pressure,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
@@ -58,6 +61,7 @@ from src.ui.fdr import render_fdr_table
 from src.ui.fixtures import render_squad_fixtures, render_squad_team_fixtures, render_team_fixtures
 from src.ui.gameweek import render_gameweek_plan
 from src.ui.history import render_player_history
+from src.ui.price import render_price_movers
 from src.ui.rules import render_rules
 from src.ui.shortlist import render_shortlist
 from src.ui.squad import render_squad
@@ -76,7 +80,15 @@ _EXPLICIT_GLOBAL = re.compile(r"\b(all players|everyone|best overall|from all|an
 
 # Keyword → intent. Order matters (first match wins); the LLM decides none of this.
 _INTENT_KEYWORDS = {
-    # rules first (ADR-085): question-shaped, general cues so a rules question ("how does bench boost work",
+    # price predictor (ADR-092) FIRST among the price words: prediction-specific phrases ("who's about to
+    # rise?", "price risers") so they beat rules' explanatory "price rise"/"price change" and trends' bare
+    # "risers"/"fallers". A genuine rules question ("how do price rises work") carries none of these.
+    "price": ("about to rise", "about to fall", "about to go up", "about to go down", "about to drop",
+              "about to change price", "going to rise", "going to fall", "rise in price", "fall in price",
+              "drop in price", "price prediction", "price predictions", "price risers", "price fallers",
+              "who's rising", "who is rising", "who's going up", "predicted to rise", "predicted to fall",
+              "who will rise", "who will fall", "likely to rise", "likely to fall"),
+    # rules (ADR-085): question-shaped, general cues so a rules question ("how does bench boost work",
     # "how do transfers work") beats the squad intents — WITHOUT stealing squad commands, which are imperative
     # / squad-scoped ("fix my bench", "what transfer should I make") and match none of these.
     "rules": ("how does", "how do ", "how is a", "how are", "what is a", "what are the", "what's a",
@@ -1174,6 +1186,45 @@ def _decide_trends(store: Storage, question: str) -> dict | None:
     }
 
 
+_PRICE_N = 5   # how many likely risers / fallers to name
+
+
+def _decide_price(store: Storage, question: str) -> dict | None:
+    """Who's likely to rise/fall in price next — the directional predictor (ADR-092), a lens (never xP).
+
+    Net transfers per 1% ownership → a rise/fall flag. **0 on flat preseason data** → a clear 'live at GW1'
+    message; it lights up when transfers flow in-season.
+    """
+    players = store.get_players()
+    if not players:
+        return None
+    pool = [p for p in players if not is_unavailable(p)]
+    risers = sorted((p for p in pool if price_prediction(p) == "rise"),
+                    key=lambda p: price_pressure(p) or 0, reverse=True)[:_PRICE_N]
+    fallers = sorted((p for p in pool if price_prediction(p) == "fall"),
+                     key=lambda p: price_pressure(p) or 0)[:_PRICE_N]
+    if not risers and not fallers:
+        return {"message": "No price movement predicted yet — net transfers are flat preseason. The price "
+                           "predictor lights up at GW1 (2026-08-21), then flags likely risers 🔺 / fallers 🔻."}
+
+    def _disp(p):
+        return {"web_name": p["web_name"], "team": p["team"], "position": p["position"],
+                "selected_by": p["selected_by"], "pressure": price_pressure(p)}
+
+    riser_rows, faller_rows = [_disp(p) for p in risers], [_disp(p) for p in fallers]
+    return {
+        "detail": render_price_movers(riser_rows, faller_rows),
+        "facts": {
+            "likely_risers": [f"{r['web_name']} ({r['position']})" for r in riser_rows[:3]] or ["none"],
+            "likely_fallers": [f"{r['web_name']} ({r['position']})" for r in faller_rows[:3]] or ["none"],
+            "basis": "net transfers per 1% ownership — a directional flag, not the exact price/timing",
+        },
+        "subjects": [r["web_name"] for r in riser_rows + faller_rows],
+        "task": "in 2 short sentences, say who's likely to rise or fall in price from the facts — it's a "
+                "directional flag (not the exact price/timing) and it sharpens in-season",
+    }
+
+
 # ---- fixtures / FDR intent (ADR-048) ----------------------------------------
 
 _FIXTURES_N = 8   # how many teams the league FDR ranking shows
@@ -1484,6 +1535,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_history(store, question)
     if intent == "trends":
         return _decide_trends(store, question)
+    if intent == "price":
+        return _decide_price(store, question)
     if intent == "fixtures":
         return _decide_fixtures(store, question, squad, active_squad=active_squad)
     return _decide_analyse(store, squad, active_squad=active_squad)

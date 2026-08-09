@@ -24,6 +24,7 @@ from src.ask import (
     _decide_compare,
     _decide_gameweek,
     _decide_history,
+    _decide_price,
     _decide_rules,
     _decide_shortlist,
     _decide_worth,
@@ -250,6 +251,42 @@ def test_match_players_flags_an_ambiguous_name():
     players = [_pl(1, "Palmer", "CHE"), _pl(2, "Palmer", "AVL")]
     matched = _match_players("compare Palmer", players)
     assert len(matched["Palmer"]) == 2       # same web_name, two players → ambiguous
+
+
+def _pp(pid, name, tin, tout, own, status="a"):
+    # a price-test player row (US-317): net transfers + ownership drive price_pressure
+    return {"id": pid, "web_name": name, "team": "ARS", "position": "MID", "status": status,
+            "transfers_in_event": tin, "transfers_out_event": tout, "selected_by": own}
+
+
+def test_routes_price_for_prediction_questions():
+    # US-317: price-prediction phrasing hits the predictor; a rules Q about price stays rules; bare risers = trends
+    assert route("who's about to rise?", known_squads=[])[0] == "price"
+    assert route("which players are about to fall in price?", known_squads=[])[0] == "price"
+    assert route("price risers", known_squads=[])[0] == "price"
+    assert route("how do price rises work?", known_squads=[])[0] == "rules"
+    assert route("who are the risers?", known_squads=[])[0] == "trends"
+
+
+def test_decide_price_is_a_preseason_message_when_flat():
+    # US-317: 0 net transfers (preseason) → no movers → a clear 'live at GW1' message
+    store = types.SimpleNamespace(get_players=lambda: [_pp(1, "Flat", 0, 0, 20)])
+    d = _decide_price(store, "who's about to rise?")
+    assert "GW1" in d["message"] and "flat" in d["message"].lower()
+
+
+def test_decide_price_names_risers_and_fallers():
+    # US-317: a big +net/own → 🔺 rise; a big −net/own → 🔻 fall; the movers are named + grounded
+    store = types.SimpleNamespace(get_players=lambda: [
+        _pp(1, "Riser", 120_000, 0, 5),        # pressure +24,000 ≥ threshold → rise
+        _pp(2, "Faller", 0, 120_000, 5),       # pressure −24,000 → fall
+        _pp(3, "Stable", 100, 100, 50),        # net 0 → stable
+    ])
+    d = _decide_price(store, "who's about to rise or fall?")
+    assert "Riser" in d["subjects"] and "Faller" in d["subjects"] and "Stable" not in d["subjects"]
+    assert any("Riser" in r for r in d["facts"]["likely_risers"])
+    assert any("Faller" in r for r in d["facts"]["likely_fallers"])
+    assert "🔺" in d["detail"] and "🔻" in d["detail"]
 
 
 def test_match_players_is_bounded_to_whole_names():

@@ -79,7 +79,7 @@ item); chip-timing that spans DGW/BGW (in-season).
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-316 | **A CLI `chips` command** — surface `chip_advisor` in the terminal (reuses the renderer). | High | ✅ Done | ~¼ session |
-| US-317 | **A price "who's about to rise?" `ask`/`chat` intent** — surface `price_prediction`. | High | ⬜ To do | ~¼ session |
+| US-317 | **A price "who's about to rise?" `ask`/`chat` intent** — surface `price_prediction`. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -106,6 +106,16 @@ item); chip-timing that spans DGW/BGW (in-season).
   ask/web by construction** (no drift). Smoke: `python app.py chips --squad TS` prints the four chips (Triple
   Captain GW3 Haaland · Bench Boost GW7 · Free Hit GW6 · Wildcard GW4–6) with confidences; unknown squad → the
   nudge. +3 tests (routing · unknown-squad nudge · real-DB advice). ruff clean. **808** total.
+- **US-317 (a price "who's about to rise?" `ask`/`chat` intent)** — added a **`price`** intent to
+  `_INTENT_KEYWORDS` (prediction-specific cues: "about to rise/fall", "price risers/fallers", "likely to
+  rise/fall", …), placed **first** so it beats rules' explanatory "price rise" + trends' bare "risers" (verified:
+  "who's about to rise?"/"price risers" → price; "how do price rises work?" → rules; "who are the risers?" →
+  trends). `_decide_price` ranks the available pool by `price_pressure` → the likely **risers 🔺 / fallers 🔻**
+  (`price_prediction`), grounded (facts + subjects + task); a new `ui/price.py::render_price_movers`. **Preseason
+  (net transfers flat → 0 pressure) → a first-class "no movement yet — live at GW1" message.** Dispatched in
+  `_dispatch` (so `ask` + `chat` both route it). A **lens** — never `decision_xp`. +3 tests (routing · preseason
+  message · active risers/fallers named). Smoke: preseason → the GW1 note; forced pressure → Riser +24,000 🔺 /
+  Faller −24,000 🔻. ruff clean. **811** total.
 
 ---
 
