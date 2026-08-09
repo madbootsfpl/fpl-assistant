@@ -14,6 +14,7 @@ from src.cli import (
     cmd_ask,
     cmd_captain,
     cmd_chat,
+    cmd_chips,
     cmd_fdr,
     cmd_filter,
     cmd_fixtures,
@@ -98,6 +99,29 @@ def test_history_unknown_player_is_a_clear_message(capsys):
     from src import cli
     cli.cmd_history(SimpleNamespace(player="Zzzznope", backfill=False, limit=None))
     assert "No player matching" in capsys.readouterr().out
+
+
+def test_chips_command_routes_and_parses():
+    # US-316: `chips --squad X` routes to cmd_chips with a horizon
+    args = build_parser().parse_args(["chips", "--squad", "TS", "--next", "8"])
+    assert args.command == "chips" and args.handler is cmd_chips and args.squad == "TS" and args.next == 8
+
+
+def test_chips_unknown_squad_nudges_with_saved_names(capsys):
+    # US-316: an unknown squad prints the friendly nudge (like `analyse`), no crash
+    cmd_chips(SimpleNamespace(squad="no-such-squad", next=8, type="fpl", no_xmins=False))
+    assert "No saved squad 'no-such-squad'" in capsys.readouterr().out
+
+
+def test_chips_command_advises_for_a_saved_squad(capsys):
+    # US-316: real-DB smoke — a saved demo squad prints the four chips (skip if none saved / no data)
+    from src.squads import SquadStore
+    names = SquadStore().names()
+    if not names:
+        return
+    cmd_chips(SimpleNamespace(squad=names[0], next=8, type="fpl", no_xmins=False))
+    out = capsys.readouterr().out
+    assert "Chip strategy" in out and "Triple Captain" in out and "Bench Boost" in out
 
 
 def test_reseed_command_routes_to_its_handler():

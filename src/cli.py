@@ -24,11 +24,13 @@ from src.analytics import (
     baseline_rate,
     best_legal_xi,
     captain_picks,
+    chip_advisor,
     decision_xp,
     defcon_reliability,
     defensive_solidity,
     elo_difficulty_bands,
     explain_captain,
+    explain_chips,
     is_unavailable,
     minutes_weight_from_history,
     objective_scores,
@@ -49,6 +51,7 @@ from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
 from src.ui.captain import render_captain_picks
+from src.ui.chips import render_chip_advice
 from src.ui.cleansheet import render_cleansheet
 from src.ui.defcon import render_defcon
 from src.ui.fdr import render_fdr_table
@@ -636,6 +639,46 @@ def cmd_analyse(args) -> None:
         store.close()
 
 
+def cmd_chips(args) -> None:
+    """Advise when to play each chip for a saved squad (ADR-082) — the CLI edge over `chip_advisor`."""
+    store = Storage()
+    try:
+        squad = SquadStore().load(args.squad)
+        if squad is None:
+            names = SquadStore().names()
+            hint = f" Saved: {', '.join(names)}." if names else " None saved yet."
+            print(f"No saved squad '{args.squad}'.{hint}")
+            return
+
+        players = store.get_players()
+        upcoming = store.get_upcoming_fixtures()
+        if not players:
+            print("No players — run `refresh` first.")
+            return
+
+        owned = [p for p in players if p["id"] in set(squad["player_ids"])]   # departed ids drop out
+        if not owned:
+            print(f"Squad '{args.squad}' has no current players.")
+            return
+
+        # The shared decision-xP recipe (ADR-041) — so the CLI chip advice matches ask/web by construction.
+        ranked = decision_xp(
+            players, upcoming, store.get_history_by_code(),
+            source=args.type, horizon=args.next, minutes_weighted=not args.no_xmins,
+            gw_history_by_code=store.get_gw_history_by_code(),
+        )
+        by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}
+        gameweeks = ranked[0]["gameweeks"] if ranked else []
+
+        advice = chip_advisor(owned, by_gameweek_by_id, gameweeks)
+        if advice is None:
+            print("Not enough data to advise on chips yet — try after `refresh`.")
+            return
+        print(render_chip_advice(advice, args.squad, horizon=args.next, confidences=explain_chips(advice)))
+    finally:
+        store.close()
+
+
 def cmd_transfer(args) -> None:
     """Suggest the best single transfers for a saved squad (ADR-030)."""
     store = Storage()
@@ -919,6 +962,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Don't weight xP by expected minutes (xMins v0) — show the raw 'assumes 90' number",
     )
     p_analyse.set_defaults(handler=cmd_analyse)
+
+    p_chips = sub.add_parser(
+        "chips", help="Advise when to play each chip (Triple Captain · Bench Boost · Free Hit · Wildcard)"
+    )
+    p_chips.add_argument("--squad", required=True, help="The saved squad to advise on (see `squad --save`)")
+    p_chips.add_argument("--next", type=int, default=8,
+                         help="Horizon: look for the best chip gameweek over the next N (default 8)")
+    p_chips.add_argument("--type", choices=["fpl", "custom"], default="fpl",
+                         help="Difficulty source used in the xP calc (default fpl)")
+    p_chips.add_argument("--no-xmins", action="store_true",
+                         help="Don't weight xP by expected minutes (xMins v0)")
+    p_chips.set_defaults(handler=cmd_chips)
 
     p_xg = sub.add_parser("xg", help="Rank players by expected goal involvement (xG + xA)")
     p_xg.add_argument("--pos", help="Filter to a position: GK, DEF, MID or FWD")
