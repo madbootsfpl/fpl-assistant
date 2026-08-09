@@ -12,6 +12,7 @@ import streamlit as st
 
 from src.storage import Storage
 from src.ui.deadline import deadline_line
+from src.web_streamlit import analytics
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import render_sidebar, squad_picker
@@ -20,6 +21,7 @@ from src.web_streamlit.views import squads as views
 
 st.set_page_config(page_title="Squads · FPL Assistant", page_icon="⚽", layout="wide")
 require_access()          # opt-in beta gate (ADR-087)
+analytics.boot("Squads")
 render_data_status()
 render_sidebar()
 st.title("🧩 Squads")

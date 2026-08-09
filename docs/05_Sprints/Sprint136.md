@@ -1,7 +1,7 @@
 # Sprint 136: Beta usage & experience analytics (foundation)
 
 **Dates:** 2026-08-09
-**Status:** 🚧 In progress (ADR-100 accepted · 3 foundation stories to build; Sprint 137 = coverage + admin)
+**Status:** ✅ Foundation complete (ADR-100 + US-332/333/334 · retro pending) — Sprint 137 = full coverage + admin
 **Capacity:** foundation ≈ 1 session; full instrumentation + admin ≈ a second
 **Carried Over:** none
 
@@ -64,11 +64,11 @@ documented SQL (a minimal admin view is a fast-follow).
 - [x] **US-333 (the returning-user anon id)** — a `fpl_anon` UUID cookie via `remember.py` (read/write through the
       component), attached to events as `anon_id`; minted once (settled, no double-count), best-effort. If the
       cookie is unavailable, events still carry `session_id` (sessions counted; returning degrades gracefully).
-- [ ] **US-334 (core wiring + the guardrail)** — `session_started` (once/session) + `page_viewed` (per page) via a
+- [x] **US-334 (core wiring + the guardrail)** — `session_started` (once/session) + `page_viewed` (per page) via a
       shared boot hook; `error` on the key try/except sites; **the guardrail**: a test that a raising/389-ing store
       **never** breaks a page, and that **unset `FPL_ANALYTICS` / no store → zero writes, zero threads, the suite
       byte-identical**. (The remaining events + perf timers + admin view = Sprint 137, below.)
-- [ ] **Docs** — ADR-100 + index; a new **`docs/ANALYTICS.md`** (owner runbook: the `events` table SQL + RLS, the
+- [x] **Docs** — ADR-100 + index; a new **`docs/ANALYTICS.md`** (owner runbook: the `events` table SQL + RLS, the
       `FPL_ANALYTICS` flag, the inspection SQL queries); DIRECTION (records the analytics decision); BETA.md link;
       PROJECT_STATUS; Architecture.
 
@@ -131,7 +131,7 @@ polish deferred until there's real beta data.
 | ADR-100 | **The analytics write path** — opt-in, secret-gated, fire-and-forget, anonymous, fail-silent. | High | ✅ Done | gate |
 | US-332 | **The analytics client** — `analytics.py`: `is_enabled`/`session_id`/`track`/`timed` + `APP_VERSION`. | High | ✅ Done | ~⅓ session |
 | US-333 | **Returning-user anon id** — a `fpl_anon` UUID cookie via `remember.py`, attached to events. | Med | ✅ Done | ~¼ session |
-| US-334 | **Core wiring + the guardrail** — `session_started`/`page_viewed`/`error` + fail-silent/off-by-default tests. | High | ⬜ To do | ~¼ session |
+| US-334 | **Core wiring + the guardrail** — `session_started`/`page_viewed`/`error` + fail-silent/off-by-default tests. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -192,6 +192,17 @@ polish deferred until there's real beta data.
   event as `anon_id` (US-332 already reads it); unresolved → events still carry `session_id`. **+4 tests** (named
   cookie roundtrip + gate delegation; returning cookie → no mint; **defer-then-mint** across the loading run;
   mint-without-a-component). ruff clean. **877 → 881.** (US-334 wires session/page/error + the guardrail.)
+- **US-334 (core wiring + the guardrail)** — added `analytics.boot(page)`: once-per-session `session_started` (a
+  `_analytics_started` flag) + a `page_viewed`, and it primes the `fpl_anon` resolution early; a hard no-op when
+  off, and it can never raise into the page. Wired **`analytics.boot("<Name>")` into all 9 surfaces** (Home + the 8
+  pages, right after `require_access()`) — the wiring is **byte-identical with analytics off** (the existing suite
+  stays green). Wrote **`docs/ANALYTICS.md`** (the `events` DDL + anon-insert RLS + the RLS gotcha; the
+  `FPL_ANALYTICS` flag; what's collected vs not — anonymous/minimal; the inspection SQL incl. median/P95 via
+  `percentile_cont`; how it fails safe; turn-off). **+4 tests** — boot emits `session_started` **once** then
+  `page_viewed` per page · boot no-ops when off · **THE guardrail: a raising store never breaks a page** (Home
+  renders, `at.exception` None, post run synchronously to force the raise) · **no POST when disabled**. ruff clean.
+  **881 → 885.** *(`error` + the feature events + perf timers + the admin view = Sprint 137.)* **Foundation
+  complete — provable, safe write path.**
 
 ---
 

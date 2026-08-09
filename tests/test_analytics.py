@@ -203,3 +203,55 @@ def test_anon_id_mints_immediately_without_a_component(monkeypatch):
     at, minted = _anon_app(monkeypatch, existing=None, available=False)
     at.run()                                                                  # no component → no waiting
     assert at.session_state["result"] and minted and minted[0][0] == "fpl_anon"
+
+
+# --- boot(): session_started once + page_viewed (US-334) -----------------------------
+
+def test_boot_emits_session_started_once_then_page_viewed(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    events = []
+    monkeypatch.setattr(analytics, "is_enabled", lambda: True)
+    monkeypatch.setattr(analytics, "anon_id", lambda: None)
+    monkeypatch.setattr(analytics, "track", lambda event, **kw: events.append((event, kw.get("page"))))
+    script = ("from src.web_streamlit import analytics\n"
+              "analytics.boot('Home')\n"       # first render this session
+              "analytics.boot('Squads')\n")    # a later page — session_started must NOT repeat
+    AppTest.from_string(script).run()
+    assert events == [("session_started", "Home"), ("page_viewed", "Home"), ("page_viewed", "Squads")]
+
+
+def test_boot_is_a_no_op_when_disabled(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setattr(analytics, "is_enabled", lambda: False)
+    monkeypatch.setattr(analytics, "track", lambda *a, **k: pytest.fail("no track when analytics is off"))
+    AppTest.from_string("from src.web_streamlit import analytics\nanalytics.boot('Home')\n").run()
+
+
+# --- THE guardrail: analytics can never affect the app (ADR-100) ---------------------
+
+def _home():
+    from pathlib import Path
+    return str(Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "Home.py")
+
+
+def test_analytics_failure_never_breaks_a_page(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("FPL_STORE_URL", "https://p.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    monkeypatch.setenv("FPL_ANALYTICS", "1")                 # analytics ON
+    _thread_spy(monkeypatch, run=True)                       # run the post inline so a raise happens synchronously
+
+    def boom(*a, **k):
+        raise ConnectionError("supabase down")
+    monkeypatch.setattr("requests.post", boom)
+    at = AppTest.from_file(_home(), default_timeout=30).run()
+    assert not at.exception                                  # a raising analytics store never reaches the app
+    assert any("FPL Assistant" in t.value for t in at.title)  # the page rendered
+
+
+def test_no_analytics_write_when_disabled(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.delenv("FPL_ANALYTICS", raising=False)       # off by default
+    monkeypatch.setattr("requests.post", lambda *a, **k: pytest.fail("no analytics POST when disabled"))
+    at = AppTest.from_file(_home(), default_timeout=30).run()
+    assert not at.exception

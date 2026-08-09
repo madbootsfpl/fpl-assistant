@@ -36,7 +36,24 @@ _ANON = "_analytics_anon"         # session: the resolved returning-user id (cac
 _ANON_SETTLED = "_analytics_anon_settled"   # session: we've given the fpl_anon cookie one run to load
 _ANON_COOKIE = "fpl_anon"         # a first-party, anonymous, long-lived returning-user id (US-333)
 _ANON_DAYS = 365
+_STARTED = "_analytics_started"   # session: session_started already emitted this session
 _TRUTHY = {"1", "true", "yes", "on"}
+
+
+def boot(page: str) -> None:
+    """Call once per page render (right after `require_access`): emit `session_started` **once per session**, then a
+    `page_viewed`. Resolving the returning-user id here primes the `fpl_anon` cookie early. Best-effort — a hard
+    no-op when analytics is off, and it can **never** raise into the page."""
+    try:
+        if not is_enabled():
+            return
+        anon_id()                                   # prime the returning-user cookie resolution
+        if not st.session_state.get(_STARTED):
+            st.session_state[_STARTED] = True
+            track("session_started", page=page)
+        track("page_viewed", page=page)
+    except Exception:
+        return
 
 
 def is_enabled() -> bool:

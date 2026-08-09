@@ -13,6 +13,7 @@ from importlib.metadata import PackageNotFoundError, version
 import requests
 import streamlit as st
 
+from src.web_streamlit import analytics
 from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.feedback import feedback_mailto, relay_result
 
@@ -34,6 +35,7 @@ def _app_version() -> str:
 
 st.set_page_config(page_title="Feedback · FPL Assistant", page_icon="⚽", layout="wide")
 require_access()          # opt-in beta gate (ADR-087)
+analytics.boot("Feedback")
 st.title("📣 Feedback")
 st.caption("Testing the beta? Tell us what worked, what broke, or what you'd love next — it goes straight to "
            "the team. Thank you 🙏")

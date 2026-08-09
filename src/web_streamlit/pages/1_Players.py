@@ -8,6 +8,7 @@ xG, ADR-063). Only the selected view computes (lazy). Reuses the CLI analytics; 
 import streamlit as st
 
 from src.storage import Storage
+from src.web_streamlit import analytics
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import filter_controls
@@ -16,6 +17,7 @@ from src.web_streamlit.views import players as views
 
 st.set_page_config(page_title="Players · FPL Assistant", page_icon="⚽", layout="wide")
 require_access()          # opt-in beta gate (ADR-087)
+analytics.boot("Players")
 render_data_status()
 st.title("👟 Players")
 st.caption("The whole player pool + the stat boards — filter, sort, and see who's over/under-performing.")

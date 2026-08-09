@@ -12,6 +12,7 @@ from src.api.feeds import parse_feed
 from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
+from src.web_streamlit import analytics
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
@@ -47,6 +48,7 @@ _BOARDS = [
 
 st.set_page_config(page_title="Trending · FPL Assistant", page_icon="⚽", layout="wide")
 require_access()          # opt-in beta gate (ADR-087)
+analytics.boot("Trending")
 render_data_status()
 st.title("📈 Trending")
 st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction.")
