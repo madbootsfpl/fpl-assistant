@@ -160,7 +160,48 @@ tabs (Trending / My Squad) if it proves popular.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ a **rich, position-adaptive player card** — owner-approved via a real-data preview — now lives in
+**two places**: a **Card view** on Players and a **hover popover + picker** on the My Squad pitch. Fed by our
+existing data; beats the FFH card on Projected xP · Value · Ownership tier · DefCon/90 · set-pieces. Display-only,
+no engine change.
+
+**Delivered**
+- **US-342** — `player_card.py`: a self-contained HTML card (ADR-084), a pure position-adaptive `_stat_rows`, FDR
+  pills + flags + a Projected-xP chip, a `compact` variant. +9 tests.
+- **US-343** — a Players **"Card"** view (selectbox → full card) + next-3 fixtures + our `decision_xp`. +1 test.
+- **US-344** — split `CARD_CSS`/`card_body`; a pure-CSS **hover popover** per kit + a **picker** → the full card on
+  My Squad; friendly team names threaded. +2 tests.
+
+**Verified** — the stat sets adapt (a GK has no goals; a DEF has xGC + DefCon/90); everything is `html.escape`d (an
+injection test); the Card view renders on selection; the pitch embeds `kit-pop` popovers with the CSS included once;
+the picker shows the full card. Existing suite green (**916 → 928**); the pre-existing set-piece test updated
+honestly for the hover card.
+
+**Metrics** — 928 tests (916 → +12) · ruff + CI-parity green · **101 ADRs** (no new ADR — extends ADR-084) · 3
+stories, ~¾ session.
+
+**What went well**
+- **Preview-first, on real data** — a faithful Artifact (Haaland's real values, then the *real renderer* for
+  FWD/DEF/GK) got sign-off before wiring; the "which Opta stats can we even get" reality was surfaced up front, so
+  we shipped honest data (ours) not faked Opta.
+- **Reused the card pattern** — a third self-contained HTML card (pitch/captain family); splitting `CARD_CSS` from
+  `card_body` let the pitch reuse it **once** across 15 kits instead of duplicating the stylesheet.
+- **Named the Streamlit limit, then designed around it** — a static markdown pitch can't call back to Python, so
+  "click a kit" became a **picker** (which also covers touch), and **hover** became the pure-CSS win.
+- **Position-adaptive from real rows** — verified the DEF/GK stat sets on Gabriel/Raya before building, so the grid
+  is meaningful per position, not a striker's stats for a keeper.
+
+**Even better if**
+- **The hover popover is a browser thing** — AppTest confirms the markup + the picker path, but the popover's
+  positioning/no-clipping is really seen in a browser; worth a quick look on the deploy (esp. edge/bench kits).
+- **Advanced Opta stats are out** — Key Passes / Shots-in-Box are backlogged (an Understat fetch, ADR-016); Big
+  Chances is Opta-paid (dropped). The card leans on our differentiators instead.
+- **The card computes `decision_xp` per selection** — lazy + `analytics.timed`, same as Squads; fine at this scale,
+  cache it if a busy tab ever feels slow.
+
+**Deferred / backlog** — the Understat advanced stats; a card on other tabs (Trending / Pool inline) if popular; a
+bespoke clickable-pitch component (fragile — only if the picker proves insufficient). And the big body: **GW1
+(2026-08-21) calibration** (the tooling shipped Sprint 138) + momentum + live manager import.
 
 ---
 

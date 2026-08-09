@@ -41,7 +41,9 @@ with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=Tr
 with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=True):
     st.markdown(
         "Your active squad as a **green formation pitch** — kits laid out GK→FWD with a bench strip, each with "
-        "an xP chip, a **(C)** armband and sub-number badges. Each card shows the player's **Trends** and their "
+        "an xP chip, a **(C)** armband and sub-number badges. **Hover a shirt** (desktop) — or use **👤 View a "
+        "player's card** — for a **rich player card** (photo · fixtures · Projected xP · key stats). Each card "
+        "shows the player's **Trends** and their "
         "**set-piece duty** (⚽ penalties · 🚩 corners · 🎯 free-kicks — for the first-choice taker); a player "
         "with no photo shows their **club shirt**. The summary's **Projected XI** includes your **captain's "
         "×2 — for the next gameweek only** (captaincy is re-picked each week). Edit it: **rename**, **swap** "
@@ -77,7 +79,9 @@ with st.expander("4 · Plan your week & improve it  →  **Squads → AI Tips ·
 with st.expander("5 · Do your research  →  Players · Fixtures · Trending · News"):
     st.markdown(
         "- **Players** — the whole pool (filter by **team / position / player**, sort, page through all — "
-        "the **table first**, a top-15 chart below) **plus** the stat views: over/under-performance · "
+        "the **table first**, a top-15 chart below); a **Card** view (pick a player → a **rich player card**: "
+        "photo · fixtures · **Projected xP** · position-adaptive stats) **plus** the stat views: "
+        "over/under-performance · "
         "Defensive Contribution · clean sheets · xG (season-to-date). On **clean sheets / xG** a "
         "**🟢…🔴 quality rating** shows how a player stacks up *vs the players shown*. Switch views with the "
         "buttons at the top.\n"

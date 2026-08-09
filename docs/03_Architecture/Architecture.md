@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 139 (2026-08-10)** — *A rich player card, in two places* (extends **ADR-084**, no new ADR;
+  display-only). **US-342:** `web_streamlit/player_card.py` — a self-contained HTML/CSS card (the pitch/captain
+  family): `card_body` (CSS-less) + `player_card_html` (`CARD_CSS` + body) + `render_player_card`; a pure,
+  **position-adaptive** `_stat_rows` (FWD/MID → goals/xGI/ICT · DEF → xGC/DefCon-90/CBI/tackles · GK →
+  xGC/recoveries; skips missing) + FDR fixture pills + flags (ownership tier · set-pieces · availability · a
+  **Projected-xP** chip = our `decision_xp`). A fixed dark surface (reads on both themes); every value
+  `html.escape`d; no JS. **US-343:** a Players **"Card"** view (`views/players.py::render_card`) — a filter-scoped
+  selectbox → the card + next-3 fixtures (`_card_fixtures`) + a lazy, `timed` `decision_xp` for the xP. **US-344:**
+  the My Squad pitch — split `CARD_CSS`/`card_body` so the pitch includes the stylesheet **once** and embeds a
+  compact `card_body` per kit as a pure-CSS **hover popover** (`.kit:hover .kit-pop`); a **"View a player's card"**
+  picker → the full card (the all-device/touch path — a static markdown pitch can't call back to Python).
+  Ships with **our** data; Understat's Key-Passes/Shots-in-Box backlogged (ADR-016), Big Chances (Opta-paid)
+  dropped. +12 tests (916→928). No engine change; the one-xP + read-only invariants hold.
 - **Sprint 138 (2026-08-09)** — *GW1 Data Hardening: the calibration harness + the runbook (prep)* (**ADR-101**).
   Makes GW1 (2026-08-21) a **switch-flip** for the dormant form/set-piece/DefCon weights — the *tooling*, not the
   values (there's no per-GW data to calibrate against until ~GW4+). **US-340:** `analytics/backtest.py` — **pure +
