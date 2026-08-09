@@ -13,6 +13,7 @@ import streamlit as st
 
 _OK = "_beta_ok"          # session flag: this session passed the gate
 _EMAIL = "_beta_email"    # session: the registered tester email (registration mode, ADR-098)
+_PENDING = "_beta_remember"  # session: a value to write to the "remember me" cookie on the next clean run (ADR-099)
 
 
 def secret(key: str, default: str | None = None) -> str | None:
@@ -40,26 +41,79 @@ def _user_cap():
 def require_access() -> None:
     """Gate the page (ADR-087/098). By precedence: **registration** (`FPL_USER_CAP` set + the store configured —
     a shared code + an email, admitted up to the cap), else **shared-code** (`FPL_ACCESS_CODE`), else **open**.
-    A no-op once this session has passed. Call once, right after `st.set_page_config(...)`, on every page."""
+    A no-op once this session has passed. Call once, right after `st.set_page_config(...)`, on every page.
+
+    A "remember me" cookie (ADR-099) lets a device that has passed the gate skip it after a browser refresh: on
+    load the cookie is read (natively, no flash) and **re-validated** before it's trusted; on a fresh pass the
+    value is written back. Any cookie failure degrades to today's per-session gate."""
     if st.session_state.get(_OK):
+        _flush_remember()          # write the "remember me" cookie on this clean run (post-login/refresh)
         return
 
     cap = _user_cap()
     if cap is not None:
         from src.web_streamlit import user_store  # lazy: user_store imports `secret` from here (avoid the cycle)
         if user_store.is_configured():
-            _registration_gate(cap)                # stops the page unless admitted
+            if _remembered_registration(user_store):   # a still-valid cookie → skip the gate
+                return
+            _registration_gate(cap)                    # stops the page unless admitted
             return
 
     # Shared-code / open (ADR-087) — unchanged when registration mode is off.
     code = secret("FPL_ACCESS_CODE")
     if not code:
         return
+    if _remembered_code(code):     # a cookie holding the current code → skip the gate
+        return
+    _code_gate(code)               # stops the page unless the right code is entered
+
+
+def _flush_remember() -> None:
+    """Write a pending "remember me" cookie, once, on a clean run. Deferred from the gate's success because a
+    `st.rerun()` there would discard the set component before it reached the browser (ADR-099)."""
+    value = st.session_state.pop(_PENDING, None)
+    if value:
+        from src.web_streamlit import remember
+        remember.write(value)
+
+
+def _remembered_code(code: str) -> bool:
+    """True (and passes the session) if the "remember me" cookie holds the *current* shared code — so rotating
+    `FPL_ACCESS_CODE` invalidates every remember cookie. A stale/absent cookie → False (the gate shows)."""
+    from src.web_streamlit import remember
+    if remember.read() == code:
+        st.session_state[_OK] = True
+        return True
+    return False
+
+
+def _remembered_registration(user_store) -> bool:
+    """True (and passes the session) if the cookie holds an email that is *still registered* — so a pruned
+    tester's stale cookie fails. A store hiccup or an unknown/absent email → False (the gate shows)."""
+    from src.web_streamlit import remember
+    email = remember.read()
+    if not email:
+        return False
+    try:
+        registered = user_store.is_registered(email)
+    except Exception:
+        return False
+    if registered:
+        st.session_state[_OK] = True
+        st.session_state[_EMAIL] = user_store.clean_email(email)
+        return True
+    return False
+
+
+def _code_gate(code: str) -> None:
+    """The shared-code prompt (ADR-087). On the right code, remember it and rerun; the write is deferred to the
+    post-login run via `_PENDING` so the rerun doesn't drop it. Stops the page until the code is entered."""
     st.title("🔒 FPL Assistant — private beta")
     st.caption("This is a closed beta. Enter the access code you were given to continue.")
     entered = st.text_input("Access code", type="password", key="_beta_code")
     if entered and entered == code:
         st.session_state[_OK] = True
+        st.session_state[_PENDING] = code
         st.rerun()
     elif entered:
         st.error("That code isn't right — check the one you were sent.")
@@ -95,6 +149,7 @@ def _registration_gate(cap: int) -> None:
             if status == "in":
                 st.session_state[_OK] = True
                 st.session_state[_EMAIL] = user_store.clean_email(email)
+                st.session_state[_PENDING] = user_store.clean_email(email)   # remember me (ADR-099)
                 st.rerun()
             elif status == "full":
                 st.warning(f"The beta is full right now ({cap} testers). More spots open as it grows.")

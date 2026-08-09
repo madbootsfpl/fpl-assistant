@@ -23,14 +23,13 @@ work on phones/tablets (per-device).
 **Verified at planning (code + the platform):**
 - **The pass simply isn't persisted client-side.** Nothing about the *store* is at fault — `session_state` is
   session-scoped and a refresh starts a new session. A cookie is the missing durable marker.
-- **Streamlit 1.61.1 can *read* cookies but not *write* them.** `st.context.cookies` exists (read-only, the
-  request's cookies). There is **no native API to set a cookie**, and a DIY `document.cookie` injected via
-  `st.components.v1.html` runs in a **sandboxed iframe** — it sets the *iframe's* cookie, not the app's first-party
-  one. Reliable set/read therefore needs a small **cookie component** that bridges the iframe↔parent. → one
-  dependency; that is the trade this ADR weighs.
-- **The value arrives on a rerun, not the first run.** These components deliver the cookie to Python on a
-  follow-up script run, so a cold refresh runs once with "nothing yet" before the value lands — we must avoid
-  flashing the gate in that window.
+- **Streamlit 1.61.1 can *read* cookies natively but not *write* them.** `st.context.cookies` (read-only, the
+  request's cookies) is populated **immediately** on a cold load — so the **read** path needs *no* component and
+  has **no "loading" rerun**, which means restoring a remembered session never flashes the gate. **Writing** is
+  the hard half: there is **no native API to set a cookie**, and a DIY `document.cookie` injected via
+  `st.components.v1.html` runs in a **sandboxed iframe** (wrong origin). So only the **write** needs a small
+  **cookie component** — one dependency, and the read side stays native. (This is better than reading *through*
+  the component, which would deliver the value only on a follow-up run and risk a gate flash — avoided entirely.)
 - **Mobile caveats are real, not bugs.** **Per-device** (each phone/tablet/laptop registers once);
   **private/incognito won't persist**; **iOS Safari's ITP** caps client-JS (`document.cookie`) cookies at **~7
   days**, so iOS users re-register roughly weekly while Android/desktop get the full ~30.
@@ -58,17 +57,21 @@ the **current** `FPL_ACCESS_CODE` (**rotating the code** invalidates every remem
 nothing the live gate wouldn't at that moment — it's a re-checked convenience, not a bypass.
 
 **2. A quarantined seam — `web_streamlit/remember.py`.** A thin wrapper exposing `read() -> str | None`,
-`write(value, days=30)`, `clear()`. The cookie component is **lazily imported inside** these functions and every
-call is wrapped in `try/except`: if the component is **missing or errors**, `read()` returns `None` and
-`write`/`clear` **no-op**. This is what makes import, CI, AppTest, and private-mode paths safe, and keeps the gate
-a no-op without a readable cookie. The concrete component (candidate **`streamlit-cookies-controller`** — small,
-focused, maintained) and its 1.61.1 compatibility are **verified at build**; the seam means swapping it is local.
+`write(value, days=30)`, `clear()`. **Read** is native (`st.context.cookies`, behind a `_request_cookies()` seam
+for tests) — instant, no component. **Write/clear** lazily import the cookie component (**`streamlit-cookies-
+controller` 0.0.4**, pinned, verified at build) inside `_controller()`. Every call is wrapped in `try/except`: an
+unreadable cookie or a missing/erroring component ⇒ `read()` returns `None` and `write`/`clear` **no-op**. This is
+what makes import, CI, AppTest, and private-mode paths safe and keeps the gate a no-op without a readable cookie;
+the seam means swapping the component is local.
 
-**3. Wiring the gate.** At the top of `require_access`: if already passed this session → return; else
-`remember.read()` → if a value is present **and** `_valid_for_mode(value)` (the pure, unit-tested decision) → set
-`session[_beta_ok]` (+ `_beta_email` in registration mode) and **skip the prompt**; otherwise show today's gate
-and, **on success, additionally `remember.write(<email|code>)`**. The **first-load loading run** (value not yet
-delivered) is treated as *don't show the gate yet* to avoid a flash of the code prompt.
+**3. Wiring the gate.** At the top of `require_access`: if already passed this session → `_flush_remember()`
+(below) then return; else, for the active mode, `remember.read()` → if a value is present **and** it re-validates
+(`user_store.is_registered(email)` / `== FPL_ACCESS_CODE`) → set `session[_beta_ok]` (+ `_beta_email` in
+registration mode) and **skip the prompt**; otherwise show today's gate. **On a fresh pass** the value is stashed
+in `session[_beta_remember]` and the gate reruns; the *next* (clean) run does `_flush_remember()` →
+`remember.write(...)`. The write is **deferred** because a `st.rerun()` immediately after a component `set` would
+discard it before it reached the browser — writing on the post-login run avoids that. (Native read means there is
+**no loading run to flash** — the value is in the request from the first run.)
 
 **4. TTL + the iOS cap — recorded honestly.** ~**30-day** expiry (a balance: long enough to stop re-typing, short
 enough that an abandoned device forgets). **iOS Safari ITP** caps JS-set cookies at **~7 days** regardless — iOS
@@ -128,11 +131,13 @@ persistence) remains the **deferred** hard-auth upgrade; this buys "register onc
 - **A cookie value is client-readable** (the email or the shared code). *Mitigation:* first-party, on the user's
   own device, their own data; the code is a hobby-beta shared secret and rotating it invalidates cookies anyway.
   Hard identity = the deferred `st.login()`.
-- **The first-load rerun could flash the gate.** *Mitigation:* render the reader early and treat "still loading"
-  as *don't prompt yet*; covered by the manual smoke (no-flash check).
-- **Testability** — the real cookie roundtrip needs a browser (AppTest can't). *Mitigation:* the decision
-  (`_valid_for_mode`) is pure + unit-tested and the seam is monkeypatched in tests; the iframe roundtrip is a
-  manual smoke.
+- **No loading-run flash.** *Resolved at build:* reading natively via `st.context.cookies` gives the value on the
+  first run, so a remembered session restores with no flash (no reader component to wait on). The manual smoke
+  still confirms no flash on a real refresh.
+- **Testability** — the real cookie *write* needs a browser (AppTest can't run the component). *Mitigation:* read
+  goes through `_request_cookies` (monkeypatched to a dict) and write/clear through `_controller` (a fake); the
+  gate's restore/re-validate/deferred-write are AppTest-covered with `remember` monkeypatched; the real iframe
+  write is a manual smoke.
 
 ---
 

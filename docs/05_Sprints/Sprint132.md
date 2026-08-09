@@ -1,7 +1,7 @@
 # Sprint 132: "Remember me" — persist the passed gate across a browser refresh
 
 **Dates:** 2026-08-09
-**Status:** 🚧 In progress (ADR-099 accepted · 2 stories to build)
+**Status:** 🚧 In progress (ADR-099 + US-325 + US-326 built · retro pending)
 **Capacity:** ~½ session (one small dependency + a guarded cookie seam + wiring the gate)
 **Carried Over:** none
 
@@ -58,7 +58,7 @@ and **byte-identical** when cookies are unavailable.
       and **no-ops / returns `None` if the component is missing or errors** (so import + all non-browser paths are
       safe). Adds the one dependency to `requirements.txt` (+ the rebuild-token bump so Community Cloud reinstalls).
       Unit-tested with a **fake controller** (roundtrip) and with the component **absent** (no-op / `None`).
-- [ ] **US-326 (wire the gate)** — in `access.require_access`: **on load**, before prompting, `remember.read()` →
+- [x] **US-326 (wire the gate)** — in `access.require_access`: **on load**, before prompting, `remember.read()` →
       validate per mode (`is_registered` / `== code`) → on success set `session[_beta_ok]` (+ `_beta_email`) and
       skip the gate; **on a successful gate pass**, `remember.write(<email|code>)`; handle the **first-load
       loading run** (don't flash the gate). **Off by default / unavailable → the existing gate, unchanged.** Tests
@@ -120,7 +120,7 @@ native `st.login()` (the hard-auth path).
 |---|---|---|---|---|
 | ADR-099 | **Persistent "remember me" cookie** — the dependency + TTL + re-validation + degradation (the gate). | High | ✅ Done | gate |
 | US-325 | **The cookie seam** — `remember.py`: guarded `read`/`write`/`clear` over a cookie component (+ the dep). | High | ✅ Done | ~¼ session |
-| US-326 | **Wire the gate** — restore-on-load (re-validated) + set-on-pass in `require_access`; degrade gracefully. | High | ⬜ To do | ~¼ session |
+| US-326 | **Wire the gate** — restore-on-load (re-validated) + set-on-pass in `require_access`; degrade gracefully. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -174,6 +174,22 @@ native `st.login()` (the hard-auth path).
   fake controller + a broken-controller seam): write→read roundtrip, clear forgets, none-when-unset, empty-value
   no-op, a multi-day `max_age`, and graceful degradation (unavailable → `None`/no-op; a runtime error swallowed).
   ruff clean. **847** total. (US-326 wires it into `require_access`.)
+- **US-326 (wire the gate)** — a **design win found at build**: Streamlit 1.61.1 reads cookies **natively**
+  (`st.context.cookies` — the request's cookies, populated on the first run), so I made `remember.read()` native
+  (behind a `_request_cookies()` seam) and left the **component for writes only**. That **removes the loading-run
+  flash entirely** — a remembered session restores on run 1, no reader component to wait on. Refined `remember.py`
+  accordingly (+ updated its tests to the read/write split, still 8). Wired `access.require_access`: on load it
+  tries the cookie per mode — `_remembered_code(code)` (skip if the cookie == the **current** `FPL_ACCESS_CODE`,
+  so a rotation invalidates it) / `_remembered_registration(user_store)` (skip if `is_registered(email)` — a
+  **pruned tester's** stale cookie fails; a store hiccup → gate); a stale/absent cookie falls through to today's
+  gate. On a **fresh pass** the value is stashed in `session[_beta_remember]` and the gate reruns; the next clean
+  run runs `_flush_remember()` → `remember.write(...)`. The write is **deferred** because a `st.rerun()` right
+  after a component `set` would discard it before it reached the browser — writing on the post-login run avoids
+  that. Split the shared-code prompt into `_code_gate` (mirrors `_registration_gate`). **Off by default** —
+  no cookie (`st.context.cookies` empty in AppTest/CI) → the gate is byte-identical; the existing **4** access
+  tests stay green. **+5 AppTests** (code-cookie skips the gate · **stale** code cookie re-prompts · a code pass
+  **writes** the cookie, deferred · registration cookie skips + restores the email · **pruned** email re-prompts).
+  ruff clean. **852** total. Also refreshed **ADR-099** to record the native-read realisation.
 
 ---
 
