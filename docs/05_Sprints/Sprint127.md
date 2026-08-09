@@ -85,7 +85,7 @@ in-app-email relay setup (owner action, no build).
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-315 | **A Gameweeks box-select** — segmented control `[1,2,3,4,5,10]` on Squads. | High | ✅ Done | ~¼ session |
-| ADR-097 | **DefCon opposition magnifier** — the design gate (no build; build at GW1). | High | ⬜ To do | gate |
+| ADR-097 | **DefCon opposition magnifier** — the design gate (no build; build at GW1). | High | ✅ Done | gate |
 
 ---
 
@@ -114,6 +114,15 @@ in-app-email relay setup (owner action, no build).
   old selectbox (now `at.segmented_control`), + a new `test_squads_gameweeks_box_select_offers_ten` (10 is
   offered + drives "Projected XI (10 GW)"). Smoke: options `[1,2,3,4,5,10]`, default 5, picking 10 flows through
   Health/My Squad with no exception. Display only. ruff clean. **805** total.
+- **ADR-097 (DefCon opposition magnifier — design gate)** — wrote `docs/06_Decisions/ADR-097-defcon-opposition-
+  magnifier.md` (Accepted; **no code**). Records: a **DefCon-xP** component (from `defcon_per90` → `P(clear the
+  threshold)`; the prerequisite — DefCon isn't in `decision_xp` yet) scaled by a **fixture magnifier inverse to a
+  clean-sheet-probability proxy** (FDR/xGC/Elo — **no betting odds**), clamped ~0.5–1.5 (the owner's band). **Two
+  traps captured:** clean-sheet vs DefCon points move **oppositely** vs opponent strength (→ separate
+  multipliers), and the **transferred-player** baseline reflects the *old* team (a deferred team-share
+  adjustment, cf. ADR-096's guard). A **modelling** change (not a lens, ADR-057); **wired-dormant** +
+  invariance-pinned + auditable (a grounded `defcon_xp` + reason); **build + calibrate at GW1** (needs real DefCon
+  returns). Added to the ADR index. No tests/code (design gate) — suite unchanged at **805**.
 
 ---
 
