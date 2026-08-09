@@ -164,5 +164,8 @@ persistence) remains the **deferred** hard-auth upgrade; this buys "register onc
   after `remember.clear()` would discard the remove component), and a **`_beta_forgotten`** session flag suppresses
   re-admit from the still-present native-read cookie until the clear reaches the browser on the next request. The
   control renders on the passed branch *and* the cookie-admit run. **No new ADR** — recorded here as an extension.
-- **Deferred:** a **confirm** on Log out (only if a mis-click becomes an issue); a **signed token** instead of the
-  raw value; native **`st.login()`** (hard, verified identity — the product path).
+- **Follow-up built — the confirm on Log out (Sprint 135, US-329).** Clicking the sidebar "Log out" now opens a
+  `st.dialog` confirm (Log out → `logout()` / Cancel → dismiss) so a mis-click can't reset a device. A
+  `_beta_confirming` session flag re-calls the dialog each run so it stays interactive. No new ADR.
+- **Deferred:** a **signed token** instead of the raw value; native **`st.login()`** (hard, verified identity — the
+  product path).

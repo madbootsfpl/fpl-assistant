@@ -455,8 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
-- **Sprint 134 (2026-08-09)** — *Fix "remember me" persistence* (corrects **ADR-099**, no new ADR; 🔬 awaiting the
-  owner's browser re-smoke). Tester feedback: the cookie didn't survive a refresh on **Safari or Chrome**. Root
+- **Sprint 135 (2026-08-09)** — *Confirm on Log out + ☁ Save/Load in the Squads sidebar* (extends **ADR-099** /
+  **ADR-094**, no new ADR). **US-329:** `access._confirm_logout()` (`@st.dialog`) — the sidebar "Log out" opens a
+  confirm (Log out → `logout()` / Cancel → dismiss) so a mis-click can't reset a device; a `_beta_confirming`
+  session flag re-calls the dialog each run so it stays interactive (a `st.dialog` isn't re-opened on the next run
+  by the opener alone — and AppTest doesn't auto-persist it). **US-331:** the ☁ cross-device Save/Load moved from
+  the My Squad body into `squads.render_cloud_sync()`, called by `render_sidebar()` → it renders in the **Squads
+  sidebar** on every sub-view. It **Saves the session's active squad** (`active_squad()` — `squad_picker` doesn't
+  make a *demo* active, so **Save is disabled with a hint until you have one**); Load/Clear by handle; secret-gated;
+  **moved, not duplicated** (fixed widget keys) with a pointer caption in My Squad. No analytics change; the ADR-094
+  opt-in, secret-gated single squad-save write is unchanged. +4 tests (864→867).
+- **Sprint 134 (2026-08-09)** — *Fix "remember me" persistence* (corrects **ADR-099**, no new ADR; ✅ owner-verified
+  on Safari + Chrome). Tester feedback: the cookie didn't survive a refresh on **Safari or Chrome**. Root
   cause = a **cookie-jar mismatch** — `streamlit-cookies-controller` writes `document.cookie` **inside its iframe**,
   but `remember.read()` read via `st.context.cookies` (the cookies sent to the **Streamlit server on the top-level
   request**), so the read never saw the write. **US-330:** `remember.read()` now reads through the **same

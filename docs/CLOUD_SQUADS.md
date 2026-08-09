@@ -56,10 +56,12 @@ FPL_STORE_KEY = "<your-anon-public-key>"
 
 ## 3. Test it
 
-1. Reload the app → **Squads → My Squad → ☁ Save / Load across devices** now appears.
-2. Type a **handle** (e.g. `tony17`) → **Save**. In Supabase → **Table editor → squads**, a row appears.
-3. On another device (or a fresh browser), open the app → My Squad → enter the same handle → **Load** → your
-   squad appears. **Clear** removes it.
+1. Reload the app → open the **Squads** tab → **☁ Save / Load across devices** now appears in the **sidebar**
+   (under *Your squad*), on any sub-view (Sprint 135, US-331).
+2. Build or upload a squad (so it's your **active** squad — Save is disabled until then), type a **handle** (e.g.
+   `tony17`) → **Save**. In Supabase → **Table editor → squads**, a row appears.
+3. On another device (or a fresh browser), open the app → **Squads** → enter the same handle in the sidebar →
+   **Load** → your squad appears. **Clear** removes it.
 
 ---
 

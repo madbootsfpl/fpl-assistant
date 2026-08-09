@@ -45,8 +45,8 @@ with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=Tr
         "×2 — for the next gameweek only** (captaincy is re-picked each week). Edit it: **rename**, **swap** "
         "any player (legality-checked) — filter the swap by **position** and tick **Affordable only** to hide "
         "replacements over your **bank** — set the **bench** (pick 4). If cross-device is enabled, **☁ Save/Load "
-        "across devices** by a handle. Every change updates your session and the "
-        "**Download**. New team? Switch back to the **Build** view."
+        "across devices** by a handle is in the **sidebar** (under *Your squad*), on any Squads sub-view. Every "
+        "change updates your session and the **Download**. New team? Switch back to the **Build** view."
     )
 
 with st.expander("3 · Check its health  →  **Squads → Health**"):

@@ -126,7 +126,43 @@ calls it (secret-gated). Remove the block from `render_my_squad`; leave a captio
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ two small UI wins on the now-verified beta gate + cross-device squads: (1) **"Log out" asks to
+confirm** so a mis-click can't reset a device; (2) **☁ Save/Load is surfaced in the Squads sidebar**, visible on
+every sub-view instead of buried under My Squad. Both off by default (gate-active / store-configured); no analytics
+change.
+
+**Delivered**
+- **US-329** — `access._confirm_logout()` (`@st.dialog`): the sidebar "Log out" opens a confirm (Log out → `logout()`
+  / Cancel → dismiss); a `_beta_confirming` flag keeps the modal interactive across reruns. +3 AppTests.
+- **US-331** — `squads.render_cloud_sync()` in `render_sidebar()`: the ☁ Save/Load moved to the sidebar, Saving the
+  session's active squad (disabled with a hint when none), secret-gated, a pointer caption left in My Squad. +1
+  test net.
+
+**Verified** — Log out asks first; confirm re-gates + clears; Cancel keeps the session; open mode shows no control.
+The ☁ controls render in the sidebar when configured (Save/Load/Clear drive `cloud_store`), Save is disabled with
+no active squad, and nothing shows when unconfigured. Existing suite green (**864 → 867**).
+
+**Metrics** — 867 tests (+3 US-329, +1 net US-331) · ruff + CI-parity green · **99 ADRs** (no new ADR — extends
+ADR-099 / ADR-094) · 2 stories, ~½ session.
+
+**What went well**
+- **Right-sized both** — a confirm is a small gate in front of the existing `logout()`; the ☁ move is a widget
+  relocation reusing `cloud_store`. No new ADR, no dependency, no analytics touched.
+- **Found the dialog-persistence gotcha early** — a `st.dialog` needs its body re-called each run to stay
+  interactive (AppTest doesn't auto-persist it); the `_beta_confirming` flag fixes both the test and the browser.
+- **Kept the semantics honest** — the sidebar Saves the *active* squad (not a display-only demo), so Save is
+  disabled until you actually have one; the ADR-094 secret-gated single-write posture is unchanged.
+- **Moved, didn't duplicate** — same widget keys can't render twice, so it's a clean move + a pointer caption.
+
+**Even better if**
+- **The sidebar renders before the view sets the active squad** — so right after building, the ☁ Save reflects the
+  active squad on the *next* run (Streamlit's normal rerun); fine in practice, worth remembering.
+- **`st.dialog` is newer surface** — the confirm decision path is AppTest-covered, but the modal's look/scroll on
+  small screens is only really seen in a browser (a light manual smoke).
+
+**Deferred / backlog** — a **signed token** instead of the raw cookie value; native **`st.login()`** (hard identity
+— the product path); and the big body: **GW1 (2026-08-21) calibration** (set-piece/DefCon/form) + momentum + live
+manager import.
 
 ---
 
