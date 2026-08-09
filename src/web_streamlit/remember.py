@@ -45,17 +45,33 @@ def _controller():
     return CookieController()
 
 
-def read():
-    """The remembered value from the cookie, or ``None`` if absent / unreadable / **not yet delivered**.
+def read_cookie(name: str):
+    """A named first-party cookie's value via the component, or ``None`` (unavailable / not set / still loading).
 
-    Read through the component (same jar as `write`). The component syncs its value on a *rerun*, so this
-    is ``None`` on the first run of a cold load even when a cookie exists — the gate waits one run for it
-    (see `access._maybe_wait_for_cookie`), using `available()` to tell "still loading" from "no component".
-    """
+    Read through the component (same jar as `write_cookie`). The component syncs its value on a *rerun*, so this
+    is ``None`` on the first run of a cold load even when a cookie exists — callers that need it early wait one run
+    (see `access._maybe_wait_for_cookie` / `analytics._cookie_settled`), using `available()` to tell "still
+    loading" from "no component". Used for `fpl_beta` (the gate) and `fpl_anon` (the analytics returning-user id)."""
     try:
-        return _controller().get(COOKIE) or None
+        return _controller().get(name) or None
     except Exception:
         return None
+
+
+def write_cookie(name: str, value, days=TTL_DAYS):
+    """Best-effort: set a named first-party cookie to ``value`` for ~``days``. A no-op if ``value`` is empty or the
+    component is unavailable. Render on a *clean* run — a `st.rerun()` right after would discard the set component."""
+    if not value:
+        return
+    try:
+        _controller().set(name, value, max_age=days * _DAY_SECONDS)
+    except Exception:
+        return
+
+
+def read():
+    """The gate's remembered value (`fpl_beta`), or ``None``. See `read_cookie` for the loading-run caveat."""
+    return read_cookie(COOKIE)
 
 
 def available():
@@ -70,18 +86,9 @@ def available():
 
 
 def write(value, days=TTL_DAYS):
-    """Best-effort: remember ``value`` for ~``days`` via a first-party cookie. A no-op if ``value`` is
-    empty or the component is unavailable (a browser that blocks cookies just isn't remembered).
-
-    Note for callers: render this on a *clean* run — a ``st.rerun()`` immediately after would discard the
-    set component before it reaches the browser. The gate defers the write to the post-login run for this.
-    """
-    if not value:
-        return
-    try:
-        _controller().set(COOKIE, value, max_age=days * _DAY_SECONDS)
-    except Exception:
-        return
+    """Remember the gate's value (`fpl_beta`) for ~``days``. The gate **defers** this to a clean post-login run
+    (a `st.rerun()` right after would discard the set component before it reaches the browser)."""
+    write_cookie(COOKIE, value, days)
 
 
 def clear():

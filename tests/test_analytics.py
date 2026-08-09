@@ -163,3 +163,43 @@ def test_session_id_is_stable_within_a_session():
     )
     at = AppTest.from_string(script).run()
     assert at.session_state["a"] == at.session_state["b"] and len(at.session_state["a"]) >= 16
+
+
+# --- anon_id: the returning-user cookie (US-333) ------------------------------------
+
+_ANON_SCRIPT = (
+    "import streamlit as st\n"
+    "from src.web_streamlit import analytics\n"
+    "st.session_state['result'] = analytics.anon_id()\n"
+)
+
+
+def _anon_app(monkeypatch, *, existing, available):
+    from streamlit.testing.v1 import AppTest
+
+    from src.web_streamlit import remember
+    minted = []
+    monkeypatch.setattr(remember, "read_cookie", lambda name: existing)
+    monkeypatch.setattr(remember, "available", lambda: available)
+    monkeypatch.setattr(remember, "write_cookie", lambda name, value, **kw: minted.append((name, value)))
+    return AppTest.from_string(_ANON_SCRIPT), minted
+
+
+def test_anon_id_returns_the_existing_cookie(monkeypatch):
+    at, minted = _anon_app(monkeypatch, existing="returning-abc", available=True)
+    at.run()
+    assert at.session_state["result"] == "returning-abc" and minted == []     # returning → no mint
+
+
+def test_anon_id_defers_on_the_loading_run_then_mints(monkeypatch):
+    at, minted = _anon_app(monkeypatch, existing=None, available=True)
+    at.run()                                                                  # run 1: still loading → defer
+    assert at.session_state["result"] is None and minted == []                # crucially, no mint yet
+    at.run()                                                                  # run 2: settled → mint + write
+    assert at.session_state["result"] and minted and minted[0][0] == "fpl_anon"
+
+
+def test_anon_id_mints_immediately_without_a_component(monkeypatch):
+    at, minted = _anon_app(monkeypatch, existing=None, available=False)
+    at.run()                                                                  # no component → no waiting
+    assert at.session_state["result"] and minted and minted[0][0] == "fpl_anon"

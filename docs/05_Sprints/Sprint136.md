@@ -61,7 +61,7 @@ documented SQL (a minimal admin view is a fast-follow).
       `timed(op, page=None)` (a context manager → a `perf` event with duration + ok). `config.APP_VERSION`. **No
       thread, no write when disabled.** Fully unit-tested (monkeypatched requests/thread): enabled → the right
       anonymised payload; disabled → no-op; a raising store → swallowed; **no PII / no squad data** in the payload.
-- [ ] **US-333 (the returning-user anon id)** — a `fpl_anon` UUID cookie via `remember.py` (read/write through the
+- [x] **US-333 (the returning-user anon id)** — a `fpl_anon` UUID cookie via `remember.py` (read/write through the
       component), attached to events as `anon_id`; minted once (settled, no double-count), best-effort. If the
       cookie is unavailable, events still carry `session_id` (sessions counted; returning degrades gracefully).
 - [ ] **US-334 (core wiring + the guardrail)** — `session_started` (once/session) + `page_viewed` (per page) via a
@@ -130,7 +130,7 @@ polish deferred until there's real beta data.
 |---|---|---|---|---|
 | ADR-100 | **The analytics write path** — opt-in, secret-gated, fire-and-forget, anonymous, fail-silent. | High | ✅ Done | gate |
 | US-332 | **The analytics client** — `analytics.py`: `is_enabled`/`session_id`/`track`/`timed` + `APP_VERSION`. | High | ✅ Done | ~⅓ session |
-| US-333 | **Returning-user anon id** — a `fpl_anon` UUID cookie via `remember.py`, attached to events. | Med | ⬜ To do | ~¼ session |
+| US-333 | **Returning-user anon id** — a `fpl_anon` UUID cookie via `remember.py`, attached to events. | Med | ✅ Done | ~¼ session |
 | US-334 | **Core wiring + the guardrail** — `session_started`/`page_viewed`/`error` + fail-silent/off-by-default tests. | High | ⬜ To do | ~¼ session |
 
 ---
@@ -182,6 +182,16 @@ polish deferred until there's real beta data.
   **anonymised** payload (exact key set) · **no-PII** scan (no email/@/handle/player_ids/ip) · a **raising store
   swallowed** · **build failure swallowed** (no thread) · `timed` perf + failure-reraise · session-id stability.
   ruff clean. **867 → 877.** (US-333 wires the `fpl_anon` returning-user id; US-334 the core wiring + guardrail.)
+- **US-333 (the returning-user anon id)** — generalised `remember.py` to **named cookies** (`read_cookie(name)` /
+  `write_cookie(name, value, days)`; the gate's `read`/`write` now delegate — non-breaking, same jar), so the
+  analytics `fpl_anon` cookie rides the **verified** component alongside `fpl_beta`. `analytics.anon_id()` resolves
+  best-effort (never raises): session cache → the existing `fpl_anon` cookie (a **returning** device) → **mint a
+  `uuid4` + write it**, but **only once the component has settled** (`_cookie_settled`, a one-shot mirroring the
+  gate's wait) so a still-loading first run **can't overwrite a returning id / inflate unique-users**; no component
+  → mint session-only. Anonymous, long-lived (365d), independent of the handle + the gate cookie. Attached to every
+  event as `anon_id` (US-332 already reads it); unresolved → events still carry `session_id`. **+4 tests** (named
+  cookie roundtrip + gate delegation; returning cookie → no mint; **defer-then-mint** across the loading run;
+  mint-without-a-component). ruff clean. **877 → 881.** (US-334 wires session/page/error + the guardrail.)
 
 ---
 

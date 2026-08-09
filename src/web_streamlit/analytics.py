@@ -32,7 +32,10 @@ from src.web_streamlit.access import secret
 
 _TIMEOUT = 3
 _SESSION = "_analytics_session"   # session: a random per-session id
-_ANON = "_analytics_anon"         # session: the resolved returning-user id (populated by US-333); None until then
+_ANON = "_analytics_anon"         # session: the resolved returning-user id (cached once known)
+_ANON_SETTLED = "_analytics_anon_settled"   # session: we've given the fpl_anon cookie one run to load
+_ANON_COOKIE = "fpl_anon"         # a first-party, anonymous, long-lived returning-user id (US-333)
+_ANON_DAYS = 365
 _TRUTHY = {"1", "true", "yes", "on"}
 
 
@@ -67,8 +70,42 @@ def session_id() -> str:
 
 
 def anon_id():
-    """The returning-user id (the `fpl_anon` cookie, resolved by US-333), or `None` until it's known; no PII."""
-    return st.session_state.get(_ANON)
+    """The returning-user id — a random `fpl_anon` cookie (US-333), or `None` until it's resolved. No PII.
+
+    Resolution (best-effort, never raises): the session cache → the existing `fpl_anon` cookie (a *returning*
+    device) → **mint** a new `uuid4` and write it, but **only once the cookie component has settled** (so a
+    still-loading first run doesn't overwrite a returning id and inflate unique-users). Anonymous and independent
+    of the squad handle and the `fpl_beta` gate cookie. When unresolved, events still carry `session_id`."""
+    cached = st.session_state.get(_ANON)
+    if cached:
+        return cached
+    try:
+        from src.web_streamlit import remember
+        existing = remember.read_cookie(_ANON_COOKIE)
+        if existing:                              # a returning device
+            st.session_state[_ANON] = existing
+            return existing
+        if _cookie_settled():                     # no cookie AND the component has had its run → mint
+            minted = uuid.uuid4().hex
+            remember.write_cookie(_ANON_COOKIE, minted, days=_ANON_DAYS)
+            st.session_state[_ANON] = minted
+            return minted
+    except Exception:
+        return None
+    return None                                   # still loading → defer; events carry session_id only for now
+
+
+def _cookie_settled() -> bool:
+    """Has the `fpl_anon` cookie component had one run to deliver its value? One-shot per session, and only when a
+    component is actually present — so we don't mint a fresh id (overwriting a returning one) on the first
+    'loading' run, and we never wait forever when there's no component (mint session-only instead)."""
+    from src.web_streamlit import remember
+    if st.session_state.get(_ANON_SETTLED):
+        return True
+    if not remember.available():                  # no component → nothing will ever load; safe to mint now
+        return True
+    st.session_state[_ANON_SETTLED] = True        # give it this run to load; trust the read next run
+    return False
 
 
 def track(event: str, *, page=None, duration_ms=None, ok=True, **meta) -> None:

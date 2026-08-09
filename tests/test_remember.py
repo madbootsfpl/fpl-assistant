@@ -44,6 +44,16 @@ def test_read_is_none_when_nothing_set(monkeypatch):
     assert remember.read() is None
 
 
+def test_named_cookies_roundtrip_and_the_gate_delegates(monkeypatch):
+    # US-333: named read/write_cookie back both fpl_beta (the gate) and fpl_anon (analytics), same jar.
+    store = _use_fake(monkeypatch)
+    remember.write_cookie("fpl_anon", "anon-xyz")
+    assert remember.read_cookie("fpl_anon") == "anon-xyz"
+    assert remember.read_cookie("missing") is None
+    remember.write("beta-val")                                  # the gate helpers delegate to the named ones
+    assert remember.read() == "beta-val" and store["fpl_beta"] == "beta-val"
+
+
 def test_clear_forgets_the_value(monkeypatch):
     _use_fake(monkeypatch)
     remember.write("tester@example.com")
