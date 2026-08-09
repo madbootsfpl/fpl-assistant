@@ -526,6 +526,25 @@ class Storage:
         """
         return self.conn.execute(sql, params).fetchall()
 
+    def get_fixtures_by_event(self, event: int) -> list[sqlite3.Row]:
+        """All fixtures for one gameweek (finished or not), same shape as `get_upcoming_fixtures`.
+
+        Used by the calibration backtest (ADR-101): to predict a *past* gameweek walk-forward, we need its
+        fixtures — which `get_upcoming_fixtures` (finished = 0) excludes. A stored-column filter, no analytics."""
+        sql = """
+            SELECT f.event, f.team_h, f.team_a,
+                   f.team_h_difficulty, f.team_a_difficulty, f.kickoff_time,
+                   th.short_name AS home, ta.short_name AS away,
+                   th.strength_overall_home AS home_team_strength,
+                   ta.strength_overall_away AS away_team_strength
+            FROM fixtures f
+            JOIN teams th ON f.team_h = th.id
+            JOIN teams ta ON f.team_a = ta.id
+            WHERE f.event = ?
+            ORDER BY f.id
+        """
+        return self.conn.execute(sql, [event]).fetchall()
+
     def count_players(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]
 

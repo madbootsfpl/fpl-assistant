@@ -9,9 +9,11 @@ from types import SimpleNamespace
 import pytest
 
 from src.cli import (
+    _parse_range,
     build_parser,
     cmd_analyse,
     cmd_ask,
+    cmd_calibrate,
     cmd_captain,
     cmd_chat,
     cmd_chips,
@@ -38,6 +40,25 @@ def test_chat_command_parses_with_no_args():
 def test_ask_parses_the_forget_flag():
     args = build_parser().parse_args(["ask", "why?", "--forget"])
     assert args.command == "ask" and args.handler is cmd_ask and args.forget is True
+
+
+def test_calibrate_parses_weight_and_range():
+    args = build_parser().parse_args(["calibrate"])
+    assert args.command == "calibrate" and args.handler is cmd_calibrate
+    assert args.weight == "form" and args.range is None                 # sensible defaults
+    args = build_parser().parse_args(["calibrate", "--weight", "defcon", "--range", "0,1,0.1"])
+    assert args.weight == "defcon" and args.range == "0,1,0.1"
+
+
+def test_parse_range_is_inclusive():
+    assert _parse_range("0,0.5,0.25") == [0.0, 0.25, 0.5]
+
+
+def test_calibrate_reports_insufficient_preseason(capsys):
+    # ADR-101: no per-GW returns yet (seed DB) → the harness says "not enough gameweeks", never a crash / a flip.
+    cmd_calibrate(SimpleNamespace(weight="form", range=None))
+    out = capsys.readouterr().out
+    assert "Not enough gameweeks" in out and "GW4" in out
 
 
 def test_ask_remembers_the_last_turn_across_runs(capsys, monkeypatch, tmp_path):

@@ -1,7 +1,7 @@
 # Sprint 138: GW1 Data Hardening — the calibration harness + the runbook (prep)
 
 **Dates:** 2026-08-09
-**Status:** 🚧 In progress (ADR-101 accepted · 2 stories to build) — **prep now; weight *values* are a GW1+ follow-up**
+**Status:** ✅ Complete (ADR-101 + US-340/341 · retro pending) — **tooling + runbook ready; weight *values* = GW1+ follow-up**
 **Capacity:** ~1 session (a backtest harness + a runbook + a features smoke)
 **Carried Over:** the long-deferred Data-Hardening body (Sprint 069 wired it dormant)
 
@@ -54,7 +54,7 @@ set of GW1-gated features. No weight is changed this sprint (no data yet); the t
       and `sweep(weight_name, values, ...) → [(value, metrics)]` + the best. Weight-agnostic (demo on `FORM_WEIGHT`;
       extends to set-piece/DefCon). Fully unit-tested on **synthetic** data (a known-rank set → Spearman ≈ 1; a
       sweep picks the best); empty/thin data → a clear "not enough GWs yet".
-- [ ] **US-341 (the CLI + the runbook + the features verify)** — a `python app.py calibrate --weight form
+- [x] **US-341 (the CLI + the runbook + the features verify)** — a `python app.py calibrate --weight form
       [--range …]` command that runs the sweep on the stored `player_history` and prints the metric per value + the
       recommendation (or "need ≥N GWs"). A **`docs/GW1_RUNBOOK.md`** — the exact ordered checklist (GW1: backfill +
       verify features; GW3–6: `calibrate` → set the weight → re-run the invariance test → commit; per-weight). A
@@ -103,7 +103,7 @@ momentum/DGW-BGW season features. This sprint makes those a documented flip.
 |---|---|---|---|---|
 | ADR-101 | **Calibration methodology** — rank-correlation + walk-forward + overfitting guards (the gate). | High | ✅ Done | gate |
 | US-340 | **The backtest harness** — `analytics/backtest.py` (pairs/metrics/sweep), synthetic-tested. | High | ✅ Done | ~½ session |
-| US-341 | **CLI `calibrate` + `GW1_RUNBOOK.md` + the features smoke.** | High | ⬜ To do | ~⅓ session |
+| US-341 | **CLI `calibrate` + `GW1_RUNBOOK.md` + the features smoke.** | High | ✅ Done | ~⅓ session |
 
 ---
 
@@ -152,6 +152,19 @@ momentum/DGW-BGW season features. This sprint makes those a documented flip.
   overlap · per-GW averaging · **no-leakage walk-forward** · triple-building · sweep insufficient/best/flat-curve.
   **No engine change — the weights stay 0, xP byte-identical.** ruff clean. **898 → 910.** (US-341 wires the
   `calibrate` CLI + the runbook + the features smoke.)
+- **US-341 (CLI + runbook + features smoke)** — added `cmd_calibrate` (`python app.py calibrate --weight
+  form|set_piece|defcon [--range start,stop,step]`): loads the per-GW history, and **preseason short-circuits with
+  "not enough gameweeks (have N, need ≥4)"**; once ≥4 GWs exist it builds a **decision_xp-backed walk-forward
+  predictor** — for each round it uses the fixtures for that event (new `Storage.get_fixtures_by_event`, since
+  `get_upcoming_fixtures` excludes finished) + the **swept weight** (temporarily `setattr(config, attr, v)`,
+  restored) + the truncated `gw_history`, keyed by `code` — runs `backtest.sweep`, and prints a ρ/MAE/hit@20 table
+  + the recommendation (or "no clear signal → leave at 0"). **Read-only — it never sets a weight** (the owner
+  commits, ADR-101). Wrote **`docs/GW1_RUNBOOK.md`** (the ordered checklist: GW1 backfill + verify features; ~GW4–6
+  `calibrate` → set → invariance test → commit, one weight at a time) + a `config.py` pointer. **+6 tests** — the
+  `calibrate` argparse/defaults · `_parse_range` inclusive · the **insufficient-preseason** path on the seed DB
+  (no crash, no flip) · a **GW1-readiness smoke** (price predictor dormant/None-safe · trending empty-safe ·
+  manager-import degrades on an empty payload). The full walk-forward predictor is **validated at GW4+** on real
+  data (documented). ruff clean. **910 → 916.** **Sprint 138 complete — GW1 is a switch-flip.**
 
 ---
 

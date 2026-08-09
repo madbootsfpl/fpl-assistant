@@ -71,8 +71,9 @@ MEDIA_FEED_LIMIT = 6         # headlines shown per source
 # blends a rolling, minutes-aware points-per-90 (from per-GW `player_history`) into a player's rate:
 #     rate = (1 − w)·base + w·form_pp90,   w = FORM_WEIGHT × confidence
 # Preseason there is no per-GW history AND FORM_WEIGHT is 0, so xP is unchanged (an invariance test
-# pins this). The GW1 flip: run `history --backfill` (now also per-GW), then raise FORM_WEIGHT
-# (calibrate then — start small, e.g. 0.3). FORM_GAMEWEEKS is the rolling window (last N GWs).
+# pins this). The GW1 flip (ADR-101 / docs/GW1_RUNBOOK.md): run `history --backfill`, then at ~GW4+
+# `python app.py calibrate --weight form` — it backtests + recommends a value; set it here + update the
+# invariance test + commit. FORM_GAMEWEEKS is the rolling window (last N GWs).
 FORM_WEIGHT = 0.0
 FORM_GAMEWEEKS = 5
 

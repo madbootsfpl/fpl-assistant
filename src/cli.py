@@ -778,6 +778,78 @@ def cmd_filter(args) -> None:
     store.close()
 
 
+# The dormant weights the calibration backtest can tune (ADR-101), mapped to their config attribute.
+_CALIBRATE_WEIGHTS = {"form": "FORM_WEIGHT", "set_piece": "SET_PIECE_WEIGHT", "defcon": "DEFCON_MAGNIFIER_WEIGHT"}
+
+
+def _parse_range(spec: str) -> list[float]:
+    """`"start,stop,step"` → an inclusive list of weight values (e.g. `"0,0.5,0.05"`)."""
+    start, stop, step = (float(x) for x in spec.split(","))
+    values, v = [], start
+    while v <= stop + 1e-9:
+        values.append(round(v, 6))
+        v += step
+    return values
+
+
+def cmd_calibrate(args) -> None:
+    """Calibrate a dormant weight on **real returns** via a walk-forward backtest (ADR-101).
+
+    Sweeps a weight (default `form`) and prints the rank correlation (+ MAE / hit-rate) per value plus a
+    recommendation — or, until enough gameweeks have been played (~GW4+), that there isn't enough data yet.
+    **Read-only:** it never changes the weight; the owner commits the recommended value (see docs/GW1_RUNBOOK.md).
+    """
+    from src.analytics import backtest
+    from src.analytics.xp import decision_xp
+
+    weight = args.weight
+    attr = _CALIBRATE_WEIGHTS[weight]
+    values = _parse_range(args.range) if args.range else _parse_range("0,0.5,0.05")
+
+    store = Storage()
+    try:
+        gw_history = store.get_gw_history_by_code()
+        played = backtest.rounds_with_actuals(gw_history)
+        if len(played) < backtest.MIN_GWS:
+            print(f"Not enough gameweeks yet — have {len(played)}, need ≥{backtest.MIN_GWS}. "
+                  "Real calibration is ~GW4+ once returns accrue (see docs/GW1_RUNBOOK.md).")
+            return
+
+        players = store.get_players()
+        history = store.get_history_by_code()
+        code_by_id = store.get_player_codes()          # id → stable element_code (to key predictions like actuals)
+        fixtures_cache: dict[int, list] = {}
+
+        def make_predict(value):
+            def predict(before, n):
+                upcoming = fixtures_cache.setdefault(n, store.get_fixtures_by_event(n))
+                old = getattr(config, attr)
+                setattr(config, attr, value)               # sweep the weight for this decision_xp run (restored below)
+                try:
+                    ranked = decision_xp(players, upcoming, history, horizon=1, gw_history_by_code=before)
+                finally:
+                    setattr(config, attr, old)
+                return {code_by_id[r["id"]]: r["xp"] for r in ranked if r["id"] in code_by_id}
+            return predict
+
+        result = backtest.sweep(gw_history, make_predict, values)
+    finally:
+        store.close()
+
+    print(f"Calibrating {weight} ({attr}) over {result['gws']} gameweeks — walk-forward, rank correlation (ADR-101).\n")
+    print(f"  {'weight':>7}  {'ρ (rank)':>9}  {'MAE':>6}  {'hit@20':>6}")
+    for row in result["rows"]:
+        rho = f"{row['spearman']:.3f}" if row["spearman"] is not None else "   —"
+        mae = f"{row['mae']:.2f}" if row["mae"] is not None else "  —"
+        hit = f"{row['hit_rate']:.2f}" if row["hit_rate"] is not None else "  —"
+        print(f"  {row['weight']:>7.3f}  {rho:>9}  {mae:>6}  {hit:>6}")
+    if result["best"] is not None:
+        print(f"\nRecommended {attr} ≈ {result['best']:.3f} (highest rank correlation; the smaller value on a flat "
+              f"curve). Set it in config.py + update the invariance test, then commit (docs/GW1_RUNBOOK.md).")
+    else:
+        print("\nNo clear signal yet — leave the weight at 0 and re-run as more gameweeks play.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fpl-assistant",
@@ -1119,6 +1191,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_filter.add_argument("--team", help="Team short name, e.g. ARS")
     p_filter.add_argument("--max-price", type=float, help="Maximum price in £m")
     p_filter.set_defaults(handler=cmd_filter)
+
+    p_cal = sub.add_parser(
+        "calibrate", help="Backtest a dormant weight on real returns + recommend a value (ADR-101; ~GW4+)")
+    p_cal.add_argument("--weight", choices=list(_CALIBRATE_WEIGHTS), default="form",
+                       help="Which dormant weight to calibrate (default form)")
+    p_cal.add_argument("--range", help="Sweep as 'start,stop,step' (default '0,0.5,0.05')")
+    p_cal.set_defaults(handler=cmd_calibrate)
 
     return parser
 
