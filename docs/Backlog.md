@@ -175,6 +175,15 @@ Deferred below.)*
 
 ## Validated, deferred
 
+- **A "not you? / log out" link** — deferred follow-up from Sprint 132 (ADR-099). The `remember.clear()` plumbing
+  exists; add a small control (sidebar or gate) that clears the "remember me" cookie so a shared device can be
+  reset. Low effort; UI-placement is the only open question.
+- **A signed/opaque "remember me" token** instead of the raw email/code cookie — deferred from Sprint 132 as
+  over-engineering for a hobby beta (re-validating the raw value against `beta_users` / the code already gives the
+  "pruned tester / rotated code is rejected" property). Revisit only if the raw value in the cookie becomes a
+  concern (would need server-side token↔identity mapping). Native `st.login()` (verified identity + native cookie
+  persistence) is the bigger hard-auth upgrade above it.
+
 - **soccerdata / npXG** — evaluated in Sprint 015 ([ADR-016](06_Decisions/ADR-016-soccerdata-evaluation.md)).
   Matching works (~95% FPL↔Understat) and npXG is real, **but** the value is narrow
   (penalties score points in FPL, so penalty-inclusive xG is the relevant signal) and the

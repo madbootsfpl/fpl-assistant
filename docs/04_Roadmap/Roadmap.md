@@ -174,6 +174,11 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
   server write (the read-only invariant revised + tested); off by default. Owner setup: `docs/CLOUD_SQUADS.md`.
   Native `st.login()` = the deferred "product" upgrade (the adapter interface fits it). **Beta ops** also decided
   (ADR-095): a prod/staging split, public + PolyForm-NC LICENSE, a mirror backup, an uptime monitor.
+- ✅ **"Remember me" across a refresh** — **DONE (Sprint 132, ADR-099).** A first-party cookie persists a passed
+  gate (native read via `st.context.cookies`; a quarantined component writes) so a refresh keeps a tester in; the
+  value is re-validated on load (pruned tester / rotated code locked out); off by default. A **"not you? / log
+  out"** link (`remember.clear()` plumbing exists) and a **signed token** are deferred; native `st.login()` (hard
+  identity) is still the product-path upgrade above.
 - ⬜ Session/cookie **auth** for user-specific data (`/my-team/{id}/`) — unlocks a manager-ID fetch in
   `analyse`/`transfer`.
 - ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.

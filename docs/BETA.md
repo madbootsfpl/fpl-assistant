@@ -120,6 +120,16 @@ comp tier.
 Set `FPL_ACCESS_CODE` to something shareable (e.g. `fpl-beta-2026`). Put it in your Reddit post / signup
 confirmation so testers can get in.
 
+> **"Remember me" is automatic (ADR-099).** Once a tester passes the gate on a device, a small first-party cookie
+> keeps them in across a **browser refresh/restart** — no re-typing the code/email. Nothing to configure: it ships
+> in `requirements.txt` (`streamlit-cookies-controller`). Good to know:
+> - **Per device** — each phone/tablet/laptop is remembered once. **Private/incognito** tabs aren't remembered.
+> - **~30 days**, but **iOS Safari caps it at ~7 days** (Apple's ITP), so iPhone/iPad testers re-register weekly.
+> - **It grants nothing new** — the cookie is *re-validated* on every load, so **rotating `FPL_ACCESS_CODE`** or
+>   **removing a tester from `beta_users`** locks that cookie out immediately.
+> - **To not be remembered:** use a private tab, or clear the site's cookies. If cookies are blocked, the app just
+>   falls back to asking each session (today's behaviour).
+
 ---
 
 ## 4. Cap the number of testers (self-registration, ~10 min) — ADR-098

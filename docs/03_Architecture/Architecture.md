@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 132 (2026-08-09)** — *A "remember me" cookie for the beta gate* (**ADR-099** — a client-side
+  convenience over ADR-087/098, not a new access path). Kill the friction where **every browser refresh
+  re-prompts** for the code/email (`st.session_state` is wiped on a full refresh). **US-325:**
+  `web_streamlit/remember.py` — a guarded seam: **read** is native (`st.context.cookies` — the request's cookies,
+  available on run 1, so restoring never flashes the gate); **write/clear** lazily import a small cookie component
+  (`streamlit-cookies-controller`, the one dependency) inside `_controller()`; every call `try/except` → a
+  missing/blocked cookie ⇒ `read()` None / `write`/`clear` no-op. **US-326:** `access.require_access` restores a
+  remembered session per mode — `_remembered_code` (skip iff the cookie == the **current** `FPL_ACCESS_CODE` — a
+  rotation invalidates it) / `_remembered_registration` (skip iff `is_registered(email)` — a **pruned** tester's
+  cookie fails); a stale/absent cookie → today's gate. On a fresh pass the value is stashed in `_beta_remember`
+  and the gate reruns; the next clean run does `_flush_remember()` → `remember.write(...)` — **deferred** because a
+  `st.rerun()` right after a component `set` discards it. Split the shared-code prompt into `_code_gate`. Cookie
+  value = *what proves the pass* (email/code); it grants no new access (re-validated each load) and adds no server
+  state (the email already lives in `beta_users`). **Off by default** — empty cookies in AppTest/CI → the gate is
+  byte-identical (the 4 access tests unchanged). +13 tests (852). `remember.clear()` = plumbing for a later
+  "log out"; native `st.login()` = the deferred hard-auth path.
 - **Sprint 131 (2026-09-01)** — *A capped email-registration gate* (**ADR-098** — a new access mode; softens the
   "no accounts" stance without the accounts/auth/paid pivot). Control tester numbers before the ramp: a visitor
   enters the **shared invite code + their email** and is admitted up to a **variable `FPL_USER_CAP`**; at the cap →

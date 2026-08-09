@@ -262,6 +262,8 @@ facts (no Ollama narration).
 inbox** (a form-to-email relay / a pre-filled mailto); **cross-device squads** (a handle-keyed store, ADR-094);
 and a **capped registration gate** (ADR-098) — testers join with the code + an email up to a variable
 `FPL_USER_CAP`, so you control the numbers and know who's in. *Soft* control, not accounts/auth (DIRECTION §1).
+A **"remember me" cookie** (ADR-099) keeps a tester in across a browser refresh — the pass is re-validated on
+load, so a pruned tester / rotated code is locked out; off by default when cookies are unavailable.
 
 **FastAPI** — a lean, frozen server-rendered edge (ADR-050), kept as a reference:
 

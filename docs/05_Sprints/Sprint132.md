@@ -195,7 +195,49 @@ native `st.login()` (the hard-auth path).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ the refresh friction is gone — a device that has passed the gate is **remembered across a browser
+refresh/restart** (~30 days; ~7 on iOS), while the gate stays **off by default**, **re-validated**, and
+**byte-identical** when cookies are unavailable. Not the `st.login()` hard-auth pivot — a cheap convenience over
+the existing gate.
+
+**Delivered**
+- **ADR-099** — the "remember me" cookie: read natively (`st.context.cookies`) / write via one small component;
+  store *what proves the pass* (email or code) and **re-validate on load**; TTL ~30d / iOS ~7d; graceful
+  degradation; not a new access path.
+- **US-325** — `web_streamlit/remember.py`: a **guarded** `read`/`write`/`clear` seam (no-op when the component is
+  absent) + the pinned dependency. +8 tests.
+- **US-326** — `require_access` restores a remembered session per mode (re-validated) and writes the cookie on a
+  fresh pass (**deferred** to the clean post-login run so the rerun doesn't drop it); `_code_gate` split out. +5
+  AppTests.
+
+**Verified** — no cookie (AppTest/CI) → the gate is byte-identical (the existing 4 access tests stay green); a
+valid code/email cookie skips the prompt; a **stale** code (rotated) or **pruned** email cookie still re-prompts;
+a code pass writes the cookie once, after the rerun. *(The real iframe write roundtrip = the manual smoke — needs
+a browser.)*
+
+**Metrics** — 852 tests (839 → +13: US-325 +8, US-326 +5) · ruff + CI-parity green · **99 ADRs** (+1) · 2 stories
++ a gate, ~½ session.
+
+**What went well**
+- **Native read was the unlock** — reaching for `st.context.cookies` (read-only, in the request) instead of
+  reading *through* the component removed the loading-run flash entirely and shrank the component's job to writes.
+- **Re-validate, don't just trust** — the cookie remembers a *pass*, and `is_registered` / `== current code`
+  re-checks it on every load, so a pruned tester or a rotated code is locked out. It grants nothing new.
+- **Quarantined the dependency** — one lazily-imported, `try/except`-wrapped seam; a missing/blocked cookie
+  degrades to today's gate, so import/CI/AppTest/private-mode all stay safe and the 839 stay byte-identical.
+- **Deferred the write** — spotting that `st.rerun()` after a component `set` discards it, and writing on the
+  clean post-login run, avoided a silent "didn't persist" bug before it could ship.
+
+**Even better if**
+- **The write roundtrip is the one untested edge** — AppTest has no browser, so the real cookie set is a manual
+  smoke; if a future Streamlit changes component/rerun timing, that's where it'd surface.
+- **iOS ~7-day / per-device / private-mode** re-prompts are platform reality, not solvable here — `st.login()`
+  (native persistence + verified identity) is the deferred upgrade if that friction bites.
+- **No "log out" yet** — `remember.clear()` plumbing exists; the UI is a deferred follow-up.
+
+**Deferred / backlog** — a **"not you? / log out"** link (uses `remember.clear()`); a **signed token** instead of
+the raw value; native **`st.login()`** (hard identity — the product path); and the big body: **GW1 (2026-08-21)
+calibration** (set-piece/DefCon/form) + momentum + live manager import.
 
 ---
 
