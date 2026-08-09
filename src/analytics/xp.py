@@ -13,6 +13,7 @@ from src import config
 from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
 from src.analytics.minutes import minutes_weight_from_history
+from src.analytics.setpieces import set_piece_bonus
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
 _BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
@@ -124,7 +125,7 @@ def _status_is_active(p) -> bool:
 def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
     is_available=None, minutes_weight=None, history_by_code=None,
-    form_by_code=None, form_weight: float = 0.0,
+    form_by_code=None, form_weight: float = 0.0, set_piece_weight: float = 0.0,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -169,6 +170,11 @@ def player_xp(
         fr = form_by_code.get(code)
         if fr is not None and form_weight and rate is not None:
             rate = blend_form(rate, fr[0], fr[1], form_weight)
+        # Set-piece term (ADR-096) — a per-90 rate bonus for dead-ball takers, but ONLY where the rate
+        # isn't the trusted historical baseline (which already prices an established taker's pens →
+        # double-counting). DORMANT at set_piece_weight 0 → rate unchanged (the ADR-041 invariant holds).
+        if set_piece_weight and rate is not None and rate_source != "hist":
+            rate += set_piece_weight * set_piece_bonus(p)
         available = is_available(p)
         gw_map = diff_by_team_gw.get(p["team_id"], {})
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
@@ -237,4 +243,5 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
         players, upcoming, source=source, horizon=horizon,
         baseline_by_code=baseline_by_code, minutes_weight=weight, history_by_code=history_by_code,
         form_by_code=form_by_code, form_weight=config.FORM_WEIGHT,
+        set_piece_weight=config.SET_PIECE_WEIGHT,
     )

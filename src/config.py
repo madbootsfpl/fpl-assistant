@@ -73,6 +73,13 @@ MEDIA_FEED_LIMIT = 6         # headlines shown per source
 FORM_WEIGHT = 0.0
 FORM_GAMEWEEKS = 5
 
+# Set-piece xP term (ADR-096) — DORMANT (SET_PIECE_WEIGHT = 0). The one xP recipe adds a small per-90
+# rate bonus for set-piece takers (penalties > corners/free-kicks) — but ONLY on the fallback/current
+# rate tiers, NOT the trusted historical baseline (which already prices an established taker's pens →
+# double-counting). At 0 it's a no-op, so xP is unchanged today (an invariance test pins this). GW1:
+# raise the weight + backtest on real returns; start small.
+SET_PIECE_WEIGHT = 0.0
+
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 

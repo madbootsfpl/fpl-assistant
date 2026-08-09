@@ -78,6 +78,7 @@ from src.analytics.price import (
     price_prediction,
     price_pressure,
 )
+from src.analytics.setpieces import set_piece_bonus
 from src.analytics.targets import target_by_fixtures
 from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
 from src.analytics.value import points_per_million, rank_players
@@ -150,6 +151,7 @@ __all__ = [
     "squad_15_issues",
     "objective_scores",
     "over_under",
+    "set_piece_bonus",
     "baseline_rate",
     "player_xp",
     "points_per_million",
