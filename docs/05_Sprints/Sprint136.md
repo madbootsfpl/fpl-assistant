@@ -150,8 +150,8 @@ polish deferred until there's real beta data.
    data**; `timed` emits a `perf` event with duration + ok; the anon id persists across sessions (mocked cookie);
    the **guardrail** (raising store → pages render; no secrets → zero writes → suite byte-identical). Existing
    **867** stay green; ruff clean.
-2. **Manual smoke** — with the store + `FPL_ANALYTICS=1`: use the app → rows land in Supabase `events`; unset the
-   flag → none; kill the network → the app is unaffected.
+2. **Manual smoke** — ✅ **passed (2026-08-09):** with the store + `FPL_ANALYTICS=1`, using the app → **rows land**
+   in Supabase `events` (anonymous), the app unaffected. (Unset the flag → none; a blocked insert → app still fine.)
 3. **Docs** — ADR-100 + index; `docs/ANALYTICS.md`; DIRECTION; BETA.md; PROJECT_STATUS; Architecture.
 
 ---
@@ -243,8 +243,8 @@ swallowed; `boot` emits session_started once; the anon id resolves returning vs 
   changed nothing for the suite.
 
 **Even better if**
-- **The real write is unproven until the owner smoke** — AppTest can't POST to Supabase; enabling the flag +
-  creating the table + watching rows land is the confirmation (like the cookie re-smoke).
+- ✅ **The real write is now proven** — owner smoke (2026-08-09): `events` table + `FPL_ANALYTICS=1` → **rows
+  land**, the app unaffected. (AppTest can't POST to Supabase, so this owner confirmation was the missing piece.)
 - **Thread-per-event** is fine for a hobby beta but would need batching at volume (documented, deferred).
 - **`error` + feature events are thin so far** — only session/page/perf are wired; the per-feature events + perf
   timers land in Sprint 137 where the call sites live.
@@ -254,8 +254,9 @@ swallowed; `boot` emits session_started once; the anon id resolves returning vs 
 (`FPL_ADMIN_KEY`). Further: event batching (if volume grows); a full BI dashboard; cohort/funnel analysis. And the
 big body: **GW1 (2026-08-21) calibration** + momentum + live manager import.
 
-**Follow-up marker:** ⏳ **owner smoke** — create the `events` table (ANALYTICS.md) + set `FPL_ANALYTICS=1`, use
-the app, confirm rows land + the app is unaffected → then Sprint 137 (coverage + admin).
+**Follow-up marker:** ✅ **owner smoke passed (2026-08-09)** — the `events` table created + `FPL_ANALYTICS=1`;
+**rows are landing** in Supabase (anonymous session/page events), the app unaffected. The write path is verified
+end-to-end. Next: **Sprint 137** (full event coverage + perf timers + a gated admin view).
 
 ---
 
