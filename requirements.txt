@@ -3,7 +3,7 @@
 # NOTE: Community Cloud caches the env and only reinstalls `-e .` when THIS FILE changes. When a deploy
 # imports stale `src` symbols after a source-only change, bump the rebuild token below to force a clean
 # reinstall (Sprint 058: new symbols weren't picked up until this was bumped).
-# rebuild-token: 2026-08-05-01
+# rebuild-token: 2026-08-09-01
 -e .
 
 # Runtime dependencies
@@ -14,6 +14,9 @@ pulp          # integer-programming solver for the squad optimiser (ADR-008)
 #   Streamlit (the UI we grow, ADR-051/052) — run: `python -m src.web_streamlit`
 streamlit==1.61.1     # the interactive web edge — PINNED so the Community Cloud deploy matches the tested
                       # version (an unpinned auto-upgrade changed hover-tooltip rendering; Sprint 116/US-293)
+streamlit-cookies-controller==0.0.4   # "remember me" — persist a passed access gate across a browser refresh
+                      # (ADR-099/Sprint 132). Only used behind the guarded src/web_streamlit/remember.py seam,
+                      # which no-ops if it's missing — so the gate/CLI/CI never depend on it. PINNED like streamlit.
 #   FastAPI (frozen, a lean HTTP reference, ADR-050) — run: `python -m src.web`
 fastapi       # the read-only FastAPI edge over the analytics
 uvicorn       # local dev server (127.0.0.1)
