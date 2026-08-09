@@ -1,7 +1,7 @@
 # Sprint 130: Beta-readiness tidy — FormSubmit docs + a "handle taken?" hint
 
-**Dates:** 2026-08-31 (planned)
-**Status:** 📝 Planned (0/2 stories)
+**Dates:** 2026-08-31
+**Status:** ✅ Complete (2/2 stories)
 **Capacity:** ~½ session (a docs story + a small persistence UX polish — low risk)
 **Carried Over:** none
 
@@ -32,19 +32,18 @@
 is clearer (it tells you when a handle already exists). Small, low-risk; no analytics change.
 
 #### Success Criteria
-- [ ] **US-320 (document the FormSubmit setup)** — rewrite `docs/BETA.md` §1B + the secrets list: the
+- [x] **US-320 (document the FormSubmit setup)** — rewrite `docs/BETA.md` §1B + the secrets list: the
       **`/ajax/<addr>`** endpoint, the **`Origin`/`Referer`** requirement for a server-side POST +
       **`FPL_FEEDBACK_ORIGIN`** (set to your app URL if it isn't the default), the **"Activate Form"** one-time
       click (and the tell-tale "web server" / "needs Activation" messages), and that the form now shows the
       **real** relay result. Note FormSubmit needs **no key** (that's Web3Forms).
-- [ ] **US-321 (a "handle taken?" hint on ☁ Save)** — a lightweight `cloud_store.exists(handle)` (a minimal
+- [x] **US-321 (a "handle taken?" hint on ☁ Save)** — a lightweight `cloud_store.exists(handle)` (a minimal
       Supabase select); on **Save**, report **new vs overwrite** ("Saved as **tony17**" vs "Updated **tony17** —
       overwrote the squad already saved under that handle"). Only on the click (no per-rerun network calls); the
       ☁ expander stays secret-gated. A unit test for `exists` + a UI test.
-- [ ] **No drift** — docs + a display/UX touch only; `cloud_store` write path, the read-only guardrail, and the
+- [x] **No drift** — docs + a display/UX touch only; `cloud_store` write path, the read-only guardrail, and the
       analytics are unchanged; existing **824** stay green (+ the `exists`/UI tests); ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture (brief), BETA.md, CLOUD_SQUADS.md (the handle hint), Backlog (the
-      FormSubmit + handle items). No new ADR.
+- [x] Docs: PROJECT_STATUS, Architecture, BETA.md, CLOUD_SQUADS.md (the handle hint). No new ADR.
 
 ---
 
@@ -108,4 +107,48 @@ work (set-piece/DefCon/form weights) — the big body of work, waiting on real d
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ a small beta-readiness tidy — the FormSubmit setup is now fully documented (closing the doc debt
+from the live fix), and the cross-device ☁ Save warns when a handle is already taken. Docs + a UX touch; no
+analytics change, the 824 still green.
+
+**Delivered**
+- **US-320** — `docs/BETA.md` rewritten: `FPL_FEEDBACK_ORIGIN`, the `/ajax/` endpoint, the server-side Origin note,
+  the one-time **Activate Form** click, a Troubleshooting `curl` that decodes FormSubmit's messages; the go-live
+  checklist updated. Doc-only.
+- **US-321** — `cloud_store.exists(handle)` + a **new-vs-overwrite** message on the ☁ Save (a shared handle isn't
+  silently clobbered). +3 tests.
+
+**Context — the interstitial feedback fix.** Mid-sprint, the live feedback form wouldn't email: the app POSTs
+*server-side*, so FormSubmit rejected it (no Origin), **and** the form reported "sent" regardless. Fixed both
+(an Origin/Referer header + `feedback.relay_result` reading the real reply), verified end-to-end
+(`{"success":"true"}` → an email in the inbox), then this sprint documented it.
+
+**Metrics** — 827 tests (822 → +5 across the fix + this sprint) · ruff + CI-parity green · 97 ADRs (no new) ·
+2 stories, ~½ session.
+
+**What went well**
+- **Turned a live debugging session into durable docs** — the exact wall the owner hit (Origin + activation) is
+  now in the runbook, with a `curl` that self-diagnoses. The next setup won't need a debugging round.
+- **Fixed the *silent-success* bug at the root** — a form that always says "sent" is worse than one that errors;
+  reading the relay's real reply is the honest behaviour.
+- **A cheap, well-placed check** — `exists()` runs only on the Save click (not per rerun), so the "handle taken?"
+  warning costs one request, not a network call on every keystroke.
+
+**Even better if**
+- A **random-suffix suggestion** (a further collision nicety) is still deferred — the overwrite warning covers the
+  common case.
+- The feedback fix needs the owner to **redeploy** (reboot the Streamlit app) to take effect — code's pushed.
+
+**Deferred / backlog** — the suffix suggestion; a CLI price column; and the big body: **GW1 (2026-08-21)
+calibration** (set-piece/DefCon/form weights + a backtest), momentum boards, live manager import — all waiting on
+real in-season data.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Reboot the app to pick up the feedback fix? (done / to-do):**
+- **Is the beta ready to recruit testers now? (1–5):**

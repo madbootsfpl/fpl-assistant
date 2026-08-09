@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 130 (2026-08-31)** — *Beta-readiness tidy* (docs + a small UX polish; no analytics, no new ADR).
+  **Feedback-relay fix (interstitial):** the form was reporting "sent" on any response — now `feedback.relay_result`
+  reads FormSubmit/Web3Forms `{success, message}` and shows the real result; and the form sends an
+  **`Origin`/`Referer`** header (`FPL_FEEDBACK_ORIGIN`, default the app URL) so FormSubmit accepts the
+  **server-side** POST (its anti-abuse rejects origin-less requests — the "web server" error). **US-320:**
+  documented the FormSubmit setup end-to-end in `docs/BETA.md` (the `/ajax/` endpoint, the Origin note + the
+  secret, the one-time **Activate Form** click, a Troubleshooting `curl`), closing the doc debt. **US-321:**
+  `cloud_store.exists(handle)` (a light select) + the ☁ Save now warns **new vs overwrite** ("overwrote the squad
+  already saved under that handle") so a shared handle isn't silently clobbered (ADR-094). +5 tests (827).
 - **Sprint 129 (2026-08-30)** — *Build the DefCon opposition magnifier* (owner idea; **ADR-097 refined + built**,
   wired-dormant; a modelling change to `decision_xp`, not a lens). **Persistence reviewed:** cross-device squads
   (ADR-094) is done + dormant — owner-activated via the two Supabase secrets; no build. **The refinement:** the

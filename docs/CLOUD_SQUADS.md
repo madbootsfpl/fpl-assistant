@@ -54,7 +54,8 @@ FPL_STORE_KEY = "<your-anon-public-key>"
 - One row per handle: `{handle, data, updated_at}`, where `data` is the squad dict (public FPL player ids +
   names, bench, cost, name). **No login, no email, no personal data** beyond the handle the tester chooses.
 - The in-app caption tells testers plainly: *"no login; anyone who knows the handle can read or overwrite it; use
-  one only you'd guess; Clear removes it."*
+  one only you'd guess; Clear removes it."* **Save** also warns when a handle is **already taken** ("overwrote the
+  squad already saved under that handle", US-321), so a shared handle isn't clobbered silently.
 - **Turn it off:** delete the two secrets → the expander disappears and the app is read-only again. (Existing
   rows stay in Supabase until you delete the table/project.)
 
