@@ -170,7 +170,50 @@ momentum/DGW-BGW season features. This sprint makes those a documented flip.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ **GW1 is now a documented switch-flip.** The calibration harness (walk-forward, rank-correlation)
++ the `calibrate` CLI + `GW1_RUNBOOK.md` are built and tested; the GW1-gated features degrade cleanly. **No weight
+was changed** (there's no data yet) — the values are the data-gated GW1+ follow-up, and the runbook says exactly
+what to run when.
+
+**Delivered**
+- **ADR-101** — the calibration methodology: walk-forward, **Spearman rank correlation** primary (MAE/hit-rate
+  checks), one weight at a time, overfitting guards, recommend-not-auto-flip.
+- **US-340** — `analytics/backtest.py`: pure + read-only, injected predictor; walk-forward pairs (no leakage),
+  Spearman/MAE/hit-rate, a weight `sweep` with the smaller-on-flat guard. +12 synthetic tests.
+- **US-341** — `python app.py calibrate` (insufficient preseason → the decision_xp walk-forward sweep at GW4+),
+  `Storage.get_fixtures_by_event`, `docs/GW1_RUNBOOK.md`, a GW1-readiness smoke. +6 tests.
+
+**Verified** — the metrics/no-leakage/sweep are pinned on synthetic data; the CLI reports "insufficient" on the
+seed DB (no crash, no flip); the gated features (price/trending/manager-import) degrade cleanly preseason. **The
+weights stay 0 → xP byte-identical** (the invariance holds). Existing suite green (**898 → 916**).
+
+**Metrics** — 916 tests (898 → +18: US-340 +12, US-341 +6) · ruff + CI-parity green · **101 ADRs** (+1) · 2 stories
++ a gate, ~1 session.
+
+**What went well**
+- **Named the hard constraint first** — there's *no data to calibrate against until GW4+*, so the honest sprint is
+  the tooling + runbook, not the weight values. Framing that up front kept the scope right (readiness, not a guess).
+- **Decoupled the harness** — injecting the predictor made `backtest.py` pure and **fully testable on synthetic
+  data now**, independent of decision_xp; the CLI wires the real predictor.
+- **No-leakage is a test, not a hope** — the walk-forward "only rounds < N" guarantee is pinned by a test that
+  records the newest round the predictor is ever shown.
+- **Recommend, don't auto-flip** — the CLI never sets a weight; the owner commits it. The one-xP invariant stays
+  owner-controlled and the model can't silently move.
+
+**Even better if**
+- **The full predictor is unproven until GW4+** — no real returns exist, so the decision_xp walk-forward path only
+  runs for real once the season plays; the runbook flags "sanity-check the first `calibrate` run".
+- **`analysis_run`-style noise doesn't apply here, but thin-data noise does** — the min-GW guard + flat-curve
+  preference + "read the whole curve" are the mitigations; early recommendations should be treated as provisional.
+- **Fixture reconstruction is a proxy** — using each event's stored fixtures for the walk-forward is reasonable, but
+  a mid-season data quirk (postponements, DGWs) could need care; revisit if a `calibrate` run looks off.
+
+**Deferred / backlog (the GW1+ flip, data-gated)** — run `calibrate` on live returns and **set** `FORM_WEIGHT`
+(then set-piece, then DefCon) + update the invariance test; rolling 3-/6-GW windows; DGW/BGW + momentum season
+features; elite-manager comparison.
+
+**Follow-up marker:** ⏳ **GW1 (2026-08-21)** — the owner runs `history --backfill` + verifies the gated features;
+then ~GW4–6 `calibrate` per weight (docs/GW1_RUNBOOK.md). The tooling is ready.
 
 ---
 

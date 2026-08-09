@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 138 (2026-08-09)** — *GW1 Data Hardening: the calibration harness + the runbook (prep)* (**ADR-101**).
+  Makes GW1 (2026-08-21) a **switch-flip** for the dormant form/set-piece/DefCon weights — the *tooling*, not the
+  values (there's no per-GW data to calibrate against until ~GW4+). **US-340:** `analytics/backtest.py` — **pure +
+  read-only**, the **predictor is injected** (so it imports no analytics/config and is synthetic-tested now);
+  `pairs()` builds **walk-forward** `(predicted, actual, round)` triples using **only rounds < N** (no leakage);
+  metrics `spearman` / `mean_gw_spearman` (primary) / `mae` / `hit_rate`; a weight `sweep()` returning
+  `{gws, rows, best}` (best = the smallest value within `_FLAT_EPS` of the top ρ — the overfitting guard;
+  `insufficient` below `MIN_GWS=4`). **US-341:** a `python app.py calibrate --weight form|set_piece|defcon` CLI —
+  preseason it reports "not enough gameweeks"; at GW4+ it builds a **decision_xp-backed walk-forward** predictor
+  (a new `Storage.get_fixtures_by_event`, since `get_upcoming_fixtures` excludes finished; the swept weight via a
+  temporary `config` override) and prints a ρ/MAE/hit table + a recommendation. **Recommend-not-flip** — it never
+  sets a weight (the owner commits it, `docs/GW1_RUNBOOK.md`). The weights stay 0 (**xP byte-identical**, the
+  invariance holds); the engine is untouched. +18 tests (898→916). Real calibration is the data-gated GW1+ flip.
 - **Sprint 137 (2026-08-09)** — *Analytics coverage: feature events, perf timers, a gated admin view* (extends
   **ADR-100**, no new ADR). **US-335:** feature events + `error` at the web sites — `analysis_run` (one site in the
   Squads dispatcher), `squad_created` (the "Use this squad →" click), `squad_saved`/`squad_loaded` (in

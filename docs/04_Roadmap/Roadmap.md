@@ -96,7 +96,10 @@ stays the engine**). Two steps taken:
 ## Then — Data Hardening (post-GW1)
 
 The substance that comes alive once the season runs (GW1 = 2026-08-21). **Prep done, dormant** (Sprint 069,
-ADR-060) — GW1 is a flip (`history --backfill` + raise `FORM_WEIGHT`):
+ADR-060) — GW1 is a flip (`history --backfill` + calibrate the weights). **The calibration tooling is now built**
+(Sprint 138, ADR-101): a walk-forward backtest (`analytics/backtest.py`) + `python app.py calibrate` + the
+**[GW1_RUNBOOK](../GW1_RUNBOOK.md)** — the flip is documented and measurable, no longer a guess. Real calibration
+runs at ~GW4–6 (no per-GW data preseason); the harness **recommends**, the owner **commits** (weights stay 0).
 - ◑ **Per-GW `history` ingestion** — a `player_history` table filled by the *existing* `element-summary`
   walk (empty preseason → live GW1). *(Full 567-player backfill can ride sooner.)* (Sprint 069, US-196.)
 - ◑ **In-season form blend into xP** — a dormant rolling-**pp90** form term in the one `decision_xp` recipe
