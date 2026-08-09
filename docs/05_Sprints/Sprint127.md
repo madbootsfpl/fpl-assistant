@@ -1,7 +1,7 @@
 # Sprint 127: A Gameweeks box-select + the DefCon magnifier design gate
 
-**Dates:** 2026-08-28 (planned)
-**Status:** 📝 Planned (0/1 story · 1 ADR)
+**Dates:** 2026-08-28
+**Status:** ✅ Complete (1/1 story · 1 ADR)
 **Capacity:** ~½ session (a small UI win + a design gate for a big modelling idea — no analytics change ships)
 **Carried Over:** none
 
@@ -40,18 +40,18 @@ by recording its design (ADR-097) so a future (GW1) sprint builds against an agr
 ships this sprint.
 
 #### Success Criteria
-- [ ] **US-315 (a Gameweeks box-select)** — replace the "Gameweeks ahead" `st.selectbox` with a
+- [x] **US-315 (a Gameweeks box-select)** — replace the "Gameweeks ahead" `st.selectbox` with a
       `st.segmented_control([1, 2, 3, 4, 5, 10], default=5)` on the Squads page; the chosen horizon flows into the
       tab exactly as today (Health/Transfer/Captain/My Squad). A test that the control renders + drives the
       horizon.
-- [ ] **ADR-097 (the DefCon magnifier — design gate, no build)** — record: a **fixture-context magnifier** on a
+- [x] **ADR-097 (the DefCon magnifier — design gate, no build)** — record: a **fixture-context magnifier** on a
       **DefCon-xP** component, `magnifier = f(clean-sheet proxy)` from **FDR/xGC/Elo** (no betting odds); the
       **prerequisite** (model DefCon in xP first); the **transferred-player** nuance (baseline reflects the old
       team — a tier-guard-style caution, cf. ADR-096); **wired-dormant** + **GW1 calibration/backtest**; a
       *modelling* change (not a lens, ADR-057); the honest limits.
-- [ ] **No drift** — US-315 is display only; ADR-097 ships **no code**; existing **804** stay green; ruff clean.
-- [ ] Docs: PROJECT_STATUS, Architecture, README/Help (Gameweeks control), Feedback_Log (the 3 items — done),
-      Backlog (the DefCon idea + the in-app-email clarification), ADR-index (+ADR-097).
+- [x] **No drift** — US-315 is display only; ADR-097 ships **no code**; existing **804** stay green; ruff clean.
+- [x] Docs: PROJECT_STATUS, Architecture, README (Gameweeks control), Feedback_Log (the 3 items),
+      Backlog (the DefCon idea + the in-app-email clarification), ADR-index (+ADR-097). _(Help has no Gameweeks line.)_
 
 ---
 
@@ -128,4 +128,50 @@ in-app-email relay setup (owner action, no build).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ a focused **feedback-response** sprint — a quick UI win + serious engagement with a big idea. The
+"Gameweeks ahead" control is now a box-select including a **10**-GW window; the owner's **DefCon opposition
+magnifier** is recorded as a design gate (ADR-097) so a GW1 sprint builds against an agreed plan; and the "in-app
+email" question was **answered** (already possible via the relay — no build). All three feedback items logged.
+
+**Delivered**
+- **US-315** — the Squads "Gameweeks ahead" `st.segmented_control([1,2,3,4,5,10], default=5)`; the horizon flows
+  through unchanged. +1 test (10 offered + drives a 10-GW projection); the two old selectbox tests updated.
+- **ADR-097** — the DefCon magnifier design gate: a DefCon-xP component × a fixture magnifier from an FDR/xGC/Elo
+  clean-sheet **proxy** (no odds), clamped ~0.5–1.5; two traps + the prerequisite recorded; wired-dormant; build
+  at GW1.
+
+**Verified at planning** — `defcon_per90` (363/573) + `xgc` are real, so a DefCon rate + clean-sheet proxy exist
+without betting data; but DefCon points aren't in `decision_xp` yet, and the magnitudes need in-season returns —
+so a gate, not a build.
+
+**Metrics** — 805 tests (804 → +1) · ruff + CI-parity green · **97 ADRs** (+1) · 1 story + 1 gate, ~½ session.
+
+**What went well**
+- **Answered a "why can't we…" honestly** — we *can* (the relay is in-app email); the real blocker is Proton's
+  no-free-SMTP, and the fix is a 5-min config, not code. Clear beats hand-wavy.
+- **Engaged the big idea without over-committing** — the ADR captures the design *and* the traps (the
+  opposite-direction clean-sheet/DefCon effect; the transferred-player baseline), which is exactly the value of a
+  gate: the eventual build avoids the pitfalls.
+- **Reused a hard-won pattern** — the transferred-player nuance is the same "history doesn't capture the new
+  context" guard as the set-piece term (ADR-096); recognising it early will save the DefCon build the same trap.
+- **The proxy insight** — the owner framed it in betting odds, but the FDR/xGC/Elo strength model already gives
+  the same opposition signal, so no auth-walled odds are needed.
+
+**Even better if**
+- The DefCon build is genuinely GW1-gated (new-season data) — this sprint is the design, not the feature.
+- The Gameweeks jump from 5 → 10 skips 6–9 (a deliberate, owner-chosen set); a slider would be continuous but the
+  box-select is what was asked for and reads cleaner.
+
+**Deferred / backlog** — the **DefCon build** (GW1, gated by ADR-097): a DefCon-xP component + the fixture
+magnifier + a team-share adjustment for transfers; the owner's **relay setup** for in-app email (config, no
+build).
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Set up the FormSubmit relay for in-app email? (y/n):**
+- **Confidence the DefCon design is the right shape (1–5):**

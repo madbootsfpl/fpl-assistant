@@ -455,6 +455,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 127 (2026-08-28)** — *A Gameweeks box-select + the DefCon magnifier design gate* (owner feedback).
+  **US-315:** the Squads "Gameweeks ahead" `st.selectbox(range(1,9))` → a `st.segmented_control([1,2,3,4,5,10],
+  default=5)` (a box-select including a **10**-GW wildcard window); the horizon flows through the tab unchanged;
+  display only. **ADR-097 (design gate, no code):** the owner's **DefCon opposition magnifier** — a **DefCon-xP**
+  component (from `defcon_per90` → `P(clear threshold)`; the prerequisite, DefCon isn't in `decision_xp` yet)
+  scaled by a **fixture magnifier inverse to a clean-sheet-probability proxy** (FDR/xGC/Elo — **no betting
+  odds**), clamped ~0.5–1.5. Records two traps: clean-sheet vs DefCon points move **oppositely** vs opponent
+  strength (separate multipliers), and the **transferred-player** baseline reflects the *old* team (a deferred
+  team-share adjustment, cf. ADR-096). A modelling change (not a lens); wired-dormant + auditable; **build +
+  calibrate at GW1**. Also **answered** the "in-app email" question (the relay already does it; Proton has no
+  free SMTP — no build) and logged all three feedback items. +1 test (805).
 - **Sprint 126 (2026-08-27)** — *A gated set-piece xP term* (**ADR-096** — a **modelling** change to `decision_xp`,
   not a lens; wired-dormant so today's numbers are unchanged). **US-313:** `analytics/setpieces.py::set_piece_bonus`
   (a per-90 rate bonus: pens `0.30` > corners/FK `0.10` each, #1 duty only) + `config.SET_PIECE_WEIGHT = 0.0`;

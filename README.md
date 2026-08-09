@@ -213,7 +213,7 @@ ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs
   runs), plus a **🎯 Target by fixtures** shortlist: the best players to buy from the easiest-run teams — for
   planning a new squad or a wildcard, filterable by **position**, capped by a **max price**, and sortable by
   **xP** or **Val/£m** (bang-for-buck)
-- **Squads** — a **Gameweeks-ahead** dropdown (1–8) sets the prediction horizon for the whole tab · **Build**
+- **Squads** — a **Gameweeks-ahead** box-select (1 · 2 · 3 · 4 · 5 · 10) sets the prediction horizon for the whole tab · **Build**
   (the full `squad` options → the optimal 15, shown on the **green pitch** + a sortable table; a **formation
   preview** with each shape's **projected XI xP** + a compare-all-formations table) · **My Squad** (a **green
   FFH-style pitch** — kits in formation + a bench
