@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 131 (2026-09-01)** — *A capped email-registration gate* (**ADR-098** — a new access mode; softens the
+  "no accounts" stance without the accounts/auth/paid pivot). Control tester numbers before the ramp: a visitor
+  enters the **shared invite code + their email** and is admitted up to a **variable `FPL_USER_CAP`**; at the cap →
+  a waitlist note (`FPL_SIGNUP_URL`). **US-323:** `web_streamlit/user_store.py` — a `beta_users(email, created_at)`
+  table in the **existing Supabase** (endpoint derived from `FPL_STORE_URL`, reusing the key — no new secret):
+  `register(email, cap) → "in"|"full"` (idempotent for a known email; capped for a new one), `count`,
+  `is_registered`, `clean_email`; best-effort, reuses `cloud_store.store_error`. **US-324:** `access.require_access`
+  gains a third mode by precedence — **registration** (cap set + store configured) → **shared-code** → **open**;
+  `_registration_gate` = an `st.form` (code + email) → admit / waitlist / surface a store error; the email is
+  session-remembered. **Soft** by design (self-declared email, no verification — the code is the anti-abuse lever;
+  the cap is a *registered*-not-concurrent load proxy). **The 2nd opt-in, secret-gated server write** (after the
+  ADR-094 squad save) — the read-only invariant names two exceptions; **off by default** (unset cap → today's gate,
+  invariance-pinned). Native `st.login()` = the deferred hard-auth path. +10 tests (839).
 - **Sprint 130 (2026-08-31)** — *Beta-readiness tidy* (docs + a small UX polish; no analytics, no new ADR).
   **Feedback-relay fix (interstitial):** the form was reporting "sent" on any response — now `feedback.relay_result`
   reads FormSubmit/Web3Forms `{success, message}` and shows the real result; and the form sends an

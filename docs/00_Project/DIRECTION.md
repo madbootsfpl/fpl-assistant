@@ -32,8 +32,20 @@ avoids on purpose:
 **Stripe** + a proper host. It's well-trodden (weeks, not months), but it turns a hobby app into a *product
 with ongoing ops and cost*.
 
-**Verdict:** don't build this until demand is proven. The current no-backend design is a feature, not a gap —
-it's why the app is cheap, private and simple. Revisit when the beta shows sustained, repeat usage.
+**Verdict:** don't build the *hard* pivot (accounts/auth/payments) until demand is proven. The no-backend design
+stays a feature, not a gap.
+
+> **Decision (2026-09-01, ADR-098) — a *soft* step taken, the *hard* pivot still deferred.** To control tester
+> numbers before recruiting (protect the free tier) and know who's in, we added a **capped email-registration
+> gate**: a visitor enters the **shared invite code + their email** and is admitted up to a **variable
+> `FPL_USER_CAP`** (raise it 10 → 20 → 50 as performance holds); at the cap → a waitlist note. Backed by a small
+> `beta_users` table in the **existing Supabase** (reuses the cross-device-squads store, no new secret). It's
+> **soft** — the email is self-declared (no passwords/OAuth/verification), so it's *counting + knowing*, not
+> security; the code is the real anti-abuse lever. This **softens** "no accounts" without the pivot above:
+> **no auth, no per-user product storage, no payments, same host**. The cap limits *registered* users (a load
+> proxy); a paid host is the escalation (ADR-095). **Off by default** (unset the cap → the old code/open gate).
+> The **hard** version — real per-user identity via native **`st.login()`** (Google) — remains the deferred
+> upgrade if the beta becomes a product.
 
 ---
 

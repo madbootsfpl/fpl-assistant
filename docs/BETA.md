@@ -17,7 +17,8 @@ FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/you@proton.me"  # in-app feed
 FPL_FEEDBACK_ORIGIN  = "https://your-app.streamlit.app"           # the app URL FormSubmit sees (§1B) — anti-abuse
 FPL_FEEDBACK_KEY     = "your-web3forms-access-key"                 # only if you use Web3Forms as the relay (§1B)
 FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"                   # the mailto fallback address (default: this)
-FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form
+FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form / waitlist
+FPL_USER_CAP         = "10"                                        # cap registered testers (§4); unset = shared code only
 ```
 
 (Locally you can use the same names as **environment variables** instead.)
@@ -121,10 +122,44 @@ confirmation so testers can get in.
 
 ---
 
+## 4. Cap the number of testers (self-registration, ~10 min) — ADR-098
+
+To **control how many testers can use the app** (so the free tier doesn't strain) and **know who they are**, turn
+on the **capped registration gate**: a visitor enters the **invite code + their email** and is admitted up to a
+**cap you set**; at the cap they see a *"beta full — join the waitlist"* note. **Soft control** — the email is
+self-declared (no passwords/verification), the code gates *who can* register, the cap bounds *how many*. Reuses
+the cross-device-squads Supabase (§ `docs/CLOUD_SQUADS.md`) — **no new store secret**.
+
+1. **A users table** (same Supabase project as squads) — SQL Editor, idempotent:
+   ```sql
+   create table if not exists beta_users (
+     email       text primary key,
+     created_at  timestamptz not null default now()
+   );
+   alter table beta_users enable row level security;
+   drop policy if exists "anon users read"   on beta_users;
+   drop policy if exists "anon users write"  on beta_users;
+   create policy "anon users read"  on beta_users for select using (true);
+   create policy "anon users write" on beta_users for insert with check (true);
+   ```
+   *(Or `alter table beta_users disable row level security;` — same anon-open access, one line. This is the #1
+   gotcha, exactly like the squads table.)*
+2. **Turn it on:** set **`FPL_USER_CAP = 10`** in Streamlit secrets (keep `FPL_ACCESS_CODE` — it's the invite).
+   The gate switches from the plain code prompt to **code + email**. Unset it → back to the code-only gate.
+3. **Run it:** raise the cap (`20`, `50`…) as performance holds — one edit. **See / manage testers** in Supabase
+   → **Table editor → beta_users** (each row = a tester's email; **delete a row to free a seat**). At the cap,
+   new visitors are pointed to `FPL_SIGNUP_URL` as the waitlist.
+
+> **Soft, by design.** A determined person could type a fake or a second email; that's fine for a hobby beta
+> gating public FPL data — you're *counting + knowing*, not securing. Hard per-user identity (Google `st.login()`)
+> is the deferred upgrade (ADR-098 / DIRECTION §1).
+
+---
+
 ## Recruiting (Reddit etc.)
 
 - Post in **r/FantasyPL** (and similar) with a short pitch, the **signup link**, and the **access code**.
-- Set expectations: *closed beta · preseason data · no accounts yet · your squad is a downloadable file · feedback via the 📣 tab.*
+- Set expectations: *closed beta (limited spots — register with the code + your email) · preseason data · your squad saves across devices by a handle · feedback via the 📣 tab.*
 - **Watch the host:** Streamlit Community Cloud is a small free tier — if 50 testers strain it, reboot from
   *Manage app → ⋮*, or move to a sturdier host (that's also the first nudge toward the multi-user step,
   DIRECTION §1).
@@ -140,6 +175,8 @@ Everything below is **£0** and opt-in. Tick them off, then post the invite.
 - [ ] **Signup form** — `FPL_SIGNUP_URL` set (§2); the "✋ Join the beta" button shows on Home + Feedback.
 - [ ] **Access code** — decide whether to gate (§3): set `FPL_ACCESS_CODE`, or leave open. Share the code with
       testers if set.
+- [ ] **Cap the numbers** *(optional, recommended)* — set `FPL_USER_CAP` (§4) + the `beta_users` table → testers
+      register with the code + an email, capped; raise the cap as perf holds; see who's in via the Supabase table.
 - [ ] **Prod/staging split** — the app testers use runs off the **stable** branch (`main`); you iterate on
       **staging** (`master`) and promote by merge, so a mid-sprint push can't break the beta
       ([ADR-095](06_Decisions/ADR-095-running-a-wider-beta.md); see [DEPLOY.md](DEPLOY.md#prodstaging-adr-095)).

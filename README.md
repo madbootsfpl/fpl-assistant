@@ -258,6 +258,11 @@ python -m src.web_streamlit          # serves http://localhost:8501  (Ctrl-C to 
 [docs/DEPLOY.md](docs/DEPLOY.md); ADR-053).* Public + read-only; in the cloud, **Ask** shows the decision +
 facts (no Ollama narration).
 
+**Running a beta?** Opt-in, all £0 (see [BETA.md](docs/BETA.md)): a shared **access code**; **feedback → your
+inbox** (a form-to-email relay / a pre-filled mailto); **cross-device squads** (a handle-keyed store, ADR-094);
+and a **capped registration gate** (ADR-098) — testers join with the code + an email up to a variable
+`FPL_USER_CAP`, so you control the numbers and know who's in. *Soft* control, not accounts/auth (DIRECTION §1).
+
 **FastAPI** — a lean, frozen server-rendered edge (ADR-050), kept as a reference:
 
 ```bash

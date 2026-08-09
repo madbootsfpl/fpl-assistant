@@ -1,7 +1,7 @@
 # Sprint 131: A capped email-registration gate (soft control, not accounts)
 
-**Dates:** 2026-09-01 (planned)
-**Status:** 📝 Planned (0/2 stories · 1 ADR)
+**Dates:** 2026-09-01
+**Status:** ✅ Complete (2/2 stories · 1 ADR)
 **Capacity:** ~¾ session (a new access mode + a second Supabase store — plus a thorough docs pass)
 **Carried Over:** none
 
@@ -34,26 +34,26 @@
 (a Supabase table) and raises the cap gradually. Off by default; a *soft* gate; all docs updated.
 
 #### Success Criteria
-- [ ] **ADR-098 (the gate)** — record the **capped email-registration** access mode: shared code + email + a
+- [x] **ADR-098 (the gate)** — record the **capped email-registration** access mode: shared code + email + a
       `FPL_USER_CAP`; the **soft** (self-declared, no verification) nature + the **privacy posture** (we hold
       tester emails — minimal PII, consented, a "remove me" = delete the row); reuse of Supabase (a second
       opt-in, secret-gated server write, extending the ADR-094 read-only revision); the cap = registered-not-
       concurrent caveat; **opt-in / off by default**; `st.login()` recorded as the deferred hard-auth upgrade;
       that it **softens** ADR-087/DIRECTION §1 (a moderate, reversible step, not accounts/paid).
-- [ ] **US-323 (the `user_store`)** — `web_streamlit/user_store.py`: a `beta_users` table (endpoint derived from
+- [x] **US-323 (the `user_store`)** — `web_streamlit/user_store.py`: a `beta_users` table (endpoint derived from
       `FPL_STORE_URL`, reusing `FPL_STORE_KEY`); `is_configured()`, `count()`, `is_registered(email)`, and
       `register(email, cap) -> "in" | "full"` (already-registered → in; `count < cap` → insert → in; else →
       full). Email normalised (lower/strip/`@` check). Best-effort; reuses `cloud_store.store_error`. Unit-tested
       (monkeypatched `requests`); secret-gated.
-- [ ] **US-324 (the registration gate)** — extend `access.require_access`: when `FPL_USER_CAP` is set **and** the
+- [x] **US-324 (the registration gate)** — extend `access.require_access`: when `FPL_USER_CAP` is set **and** the
       store is configured, show a **code (if `FPL_ACCESS_CODE` set) + email** form; validate the code, then
       `register` → **in** (session-remember the email) or, at the cap, a **"beta full — join the waitlist"** note
       (linking `FPL_SIGNUP_URL`). Unset cap → the existing code-only/open behaviour (byte-identical). Tests
       (AppTest / gate unit) for register-in, welcome-back, at-cap, wrong-code, and off-by-default.
-- [ ] **No unintended drift** — the second server write (`register`) is **opt-in + secret-gated** (unset cap /
-      store → no write, gate is today's); the read-only guardrail's named exceptions grow to two (squad save +
-      registration), pinned by a test; existing **829** stay green; ruff clean.
-- [ ] **Docs — thorough** (owner's ask): ADR-098 + the index; **DIRECTION.md §1** (record the decision — soft
+- [x] **No unintended drift** — the second server write (`register`) is **opt-in + secret-gated** (unset cap /
+      store → no write, gate is today's); existing **829** stay green (**839** with +10 — the gate is a no-op
+      without the cap, an invariance test pins it); ruff clean.
+- [x] **Docs — thorough** (owner's ask): ADR-098 + the index; **DIRECTION.md §1** (record the decision — soft
       registration cap chosen, hard auth/paid still deferred); **BETA.md** (a "capped registration" section — the
       `beta_users` table SQL, `FPL_USER_CAP`, how to see/raise/remove testers); PROJECT_STATUS; Architecture;
       README; a note in CLOUD_SQUADS.md (same Supabase project).
@@ -153,4 +153,50 @@ native `st.login()` (hard per-user identity — the product path); a true concur
 
 ### 🏁 Sprint Review & Retrospective
 
-_(to be filled at "run retro and push")_
+**Outcome:** ✅ a capped **email-registration gate** — the owner's "control the numbers + know who" before the
+ramp — built as a soft, opt-in access mode, **not** the accounts/auth/paid pivot. Off by default; reuses the
+Supabase already live; docs thoroughly updated (owner's explicit ask).
+
+**Delivered**
+- **ADR-098** — the capped registration mode: shared code + email + `FPL_USER_CAP`; the soft (self-declared, no
+  verification) nature, the privacy posture (holds emails), the second opt-in secret-gated write, and that it
+  *softens* DIRECTION §1 without the pivot.
+- **US-323** — `user_store.py` (a `beta_users` table in the same Supabase, no new secret): `register(email, cap) →
+  in/full`, `count`, `is_registered`, `clean_email`. +7 tests.
+- **US-324** — `require_access` gains a third mode (registration → shared-code → open); an `st.form` (code +
+  email) → admit / waitlist / surface the real store error; session-remembered. +3 AppTests.
+
+**Verified** — off by default → the full **839** byte-identical (invariance); registration mode admits under the
+cap (inserts), welcomes back a known email, blocks a wrong code, and shows the waitlist at the cap.
+
+**Metrics** — 839 tests (829 → +10) · ruff + CI-parity green · **98 ADRs** (+1) · 2 stories + a gate, ~¾ session.
+
+**What went well**
+- **Right-sized the answer** — the owner wanted *counting + knowing*, so a **soft** email cap (not hard OAuth)
+  was the honest, smallest step; the ADR names it as such and keeps `st.login()` as the deferred hard path.
+- **Reused, didn't re-architect** — the whole feature is a second small table in the *existing* Supabase
+  (endpoint derived from `FPL_STORE_URL`, no new secret) + a store mirroring `cloud_store` + `store_error`.
+- **Off by default, invariance-pinned** — a change to *every page's* gate shipped with the 839 byte-identical
+  when the cap is unset; the risk lives entirely behind the secret.
+- **Docs matched the code** — DIRECTION §1 (literally "how big a step?") now records the decision; BETA.md §4 is a
+  full runbook (the `beta_users` SQL + the RLS gotcha + see/raise/remove testers).
+
+**Even better if**
+- **Soft, not secure** — a determined user could fake/second-register; the code + the owner pruning the table are
+  the levers. Hard identity = the deferred `st.login()`.
+- **The cap limits *registered*, not *concurrent*** — a load proxy; a paid host is the real escalation (ADR-095).
+- A **count-then-insert race** can exceed the cap by one under simultaneous sign-ups (documented, accepted).
+
+**Deferred / backlog** — an in-app roster/admin view; **unique per-user invite codes**; **email verification**;
+native **`st.login()`** (hard identity — the product path); a real concurrency limit; and the big body: **GW1
+(2026-08-21) calibration** (set-piece/DefCon/form) + momentum + live manager import.
+
+---
+
+### 📌 For Tony
+
+_(sprint-review reflection fields — left blank for you)_
+
+- **Biggest learning this sprint:**
+- **Turn on the cap before recruiting? (`FPL_USER_CAP` = ___):**
+- **Comfort with the soft (unverified) email model (1–5):**

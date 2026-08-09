@@ -3,6 +3,9 @@
 Let testers **save a squad on one device and load it on another** via a free **Supabase** store, keyed by a
 user-chosen **handle** (no login). Background: [ADR-094](06_Decisions/ADR-094-cross-device-squad-persistence.md).
 
+> **Same Supabase project also powers the capped registration gate** (ADR-098) — a second `beta_users` table
+> reusing these same `FPL_STORE_URL`/`FPL_STORE_KEY` secrets. See [BETA.md §4](BETA.md) to cap tester numbers.
+
 **Off by default:** until you set the two secrets below, the "☁ Save / Load across devices" expander is hidden
 and the app stays read-only (download/upload only, ADR-054). Setting them is the *only* thing that turns on the
 one server-side write the app makes.
