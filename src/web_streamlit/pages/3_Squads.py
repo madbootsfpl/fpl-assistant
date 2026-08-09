@@ -63,6 +63,7 @@ elif view == "Build":
     views.render_build(players, upcoming, history, gw_history, photos, badges, horizon=horizon)
 else:
     squad_name, squad = squad_picker()      # one picker feeds the four manage views
+    analytics.track("analysis_run", view=view)   # usage: which manage view was run (no squad contents)
     if view == "My Squad":
         views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
                               horizon=horizon)

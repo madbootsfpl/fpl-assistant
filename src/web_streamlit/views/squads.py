@@ -44,7 +44,7 @@ from src.ui.ask import render_ask
 from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
-from src.web_streamlit import cloud_store
+from src.web_streamlit import analytics, cloud_store
 from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
@@ -211,6 +211,7 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
                        mime="application/json", use_container_width=True)
     if use.button("Use this squad →", use_container_width=True):
         set_active_squad({**squad, "name": name})
+        analytics.track("squad_created", mode=mode)   # a deliberate build → active (no squad contents; just the mode)
         st.success(f"Set **{name}** as your active squad — switch to My Squad to tweak it.")
 
     with st.expander("🔎 Preview the best XI in a given shape (display only — not saved)"):

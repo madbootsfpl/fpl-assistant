@@ -227,7 +227,7 @@ def render_cloud_sync() -> None:
     every sub-view — not buried under My Squad. **Secret-gated:** hidden unless the store is configured (the app
     otherwise stays download/upload-only, ADR-054). **Save** needs an active squad (disabled + a hint otherwise);
     **Load**/**Clear** work by handle and set the session's active squad. A handle is the key — no login."""
-    from src.web_streamlit import cloud_store
+    from src.web_streamlit import analytics, cloud_store
     if not cloud_store.is_configured():
         return
     squad = active_squad()
@@ -240,21 +240,25 @@ def render_cloud_sync() -> None:
             try:
                 taken = cloud_store.exists(clean)              # US-321: new vs overwrite (a handle isn't private)
                 cloud_store.save_squad(clean, squad)
+                analytics.track("squad_saved")                 # usage only — NO handle/contents (anonymity, US-335)
                 if taken:
                     st.warning(f"Updated **{clean}** — overwrote the squad already saved under that handle. "
                                "(Handles aren't private — pick one only you'd guess.)")
                 else:
                     st.success(f"Saved as **{clean}** — load it on any device with that handle.")
             except Exception as exc:   # surface the real store error (e.g. an RLS policy), not a blind note
+                analytics.track("error", component="squad_save")
                 st.error(f"Save failed — **{cloud_store.store_error(exc)}**. Your download still works.")
         if c_load.button("Load", disabled=not clean, key="cloud_load"):
             try:
                 loaded = cloud_store.load_squad(clean)
             except Exception as exc:
                 loaded = None
+                analytics.track("error", component="squad_load")
                 st.error(f"Load failed — **{cloud_store.store_error(exc)}**.")
             if loaded:
                 set_active_squad(loaded)
+                analytics.track("squad_loaded")                # usage only — NO handle/contents (anonymity, US-335)
                 st.success(f"Loaded **{clean}**.")
                 st.rerun()
             elif clean:

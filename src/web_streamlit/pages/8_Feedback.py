@@ -92,11 +92,13 @@ if sent:
             try:
                 resp = requests.post(webhook, json=payload, headers=headers, timeout=6)
             except requests.RequestException:
+                analytics.track("error", component="feedback", page=page)
                 st.error("Couldn't reach the feedback service — one click emails it to us instead:")
                 st.link_button("✉ Email this feedback", mailto)
             else:
                 ok, note = relay_result(resp)   # read the real result, not a blind "sent" (US-308 fix)
                 if ok:
+                    analytics.track("feedback_submitted", page=page)   # engagement (no message content)
                     st.success("Thanks — your feedback was sent! 🎉")
                 else:
                     st.warning(f"The feedback service didn't accept it — **{note}**. "

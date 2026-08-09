@@ -1165,6 +1165,61 @@ def test_cloud_save_in_sidebar_warns_when_the_handle_is_taken(monkeypatch):
     assert any("overwrote" in w.value for w in at.warning)                  # a "handle taken" warning, not "saved"
 
 
+# --- analytics feature events (ADR-100, US-335) — capture the track() calls at their sites ----------
+
+def _capture_events(monkeypatch):
+    from src.web_streamlit import analytics
+    events = []
+    monkeypatch.setattr(analytics, "track", lambda event, **kw: events.append((event, kw)))
+    return events
+
+
+def test_analysis_run_event_on_a_manage_view(monkeypatch):
+    events = _capture_events(monkeypatch)
+    _squads_view("Health")
+    assert any(e == "analysis_run" and kw.get("view") == "Health" for e, kw in events)
+
+
+def test_squad_created_event_on_use_this_squad(monkeypatch):
+    events = _capture_events(monkeypatch)
+    at = _run(_PAGES / "3_Squads.py")                    # Build view (default)
+    use = [b for b in at.button if b.label.startswith("Use this squad")]
+    if not use:
+        return                                           # no build (empty pool) → nothing to create
+    use[0].click().run()
+    assert any(e == "squad_created" for e, kw in events)
+
+
+def test_squad_saved_and_loaded_events_carry_no_handle(monkeypatch):
+    events = _capture_events(monkeypatch)
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None: _StoreResp())
+    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
+        [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
+    at = _squads_with_active(monkeypatch)
+    next(t for t in at.text_input if t.label == "Your handle").set_value("tony17").run()
+    next(b for b in at.button if b.label == "Save").click().run()
+    assert any(e == "squad_saved" for e, kw in events)
+    next(b for b in at.button if b.label == "Load").click().run()
+    assert any(e == "squad_loaded" for e, kw in events)
+    # anonymity: the handle (a chosen, semi-identifying key) must never appear in any analytics payload
+    for _e, kw in events:
+        assert "tony17" not in str(kw).lower() and "handle" not in kw
+
+
+def test_feedback_submitted_event(monkeypatch):
+    events = _capture_events(monkeypatch)
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None: type("R", (), {})())
+    at = _run(_PAGES / "8_Feedback.py")
+    at.text_area[0].set_value("Love the fixture ticker").run()
+    next(b for b in at.button if b.label == "Send feedback").click().run()
+    assert any(e == "feedback_submitted" for e, kw in events)
+    for _e, kw in events:                                 # no message content in the event
+        assert "fixture ticker" not in str(kw).lower()
+
+
 def test_cloud_save_disabled_without_an_active_squad(monkeypatch):
     # US-331: the sidebar renders on any sub-view; Save needs an active squad (Load works any time).
     monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
