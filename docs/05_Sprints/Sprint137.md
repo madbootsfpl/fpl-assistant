@@ -161,7 +161,50 @@ create policy "anon events read" on events for select using (true);   -- server-
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ the analytics now answer the **full** question — *what's used, by how many, how reliably, how fast* —
+and the owner reads it in a **📊 Admin** tab instead of hand-running SQL. Built on the Sprint 136 foundation; still
+opt-in, anonymous, fail-silent (ADR-100 unchanged).
+
+**Delivered**
+- **US-335** — feature events + `error` at the action sites (`analysis_run`/`squad_created`/`squad_saved`/
+  `squad_loaded`/`feedback_submitted`/`error`), one-liners, anonymity-tested (no handle/message in any payload).
+- **US-336** — perf timers (`data_load`/`analysis`/`squad_save`/`squad_load`) via `analytics.timed`, wrapping the
+  compute/IO (not full renders, so `st.rerun` isn't misread as a failure).
+- **US-337** — the first analytics **read**: `recent_events` + a pure `summarise`, behind a gated `pages/9_Admin.py`
+  (`FPL_ADMIN_KEY`), rendering sessions/devices/returning + top pages + success + median/P95.
+
+**Verified** — the events fire at their sites and carry **no PII/handle/message**; `perf` events carry an int
+duration; `summarise` is pinned (counts, returning across days, median/P95, empty-safe); the admin page is inert
+without the key, locked on a wrong key, and renders on the right key with mocked events; still off by default (no
+`FPL_ANALYTICS` → nothing; no `FPL_ADMIN_KEY` → inert). Existing suite green (**885 → 898**).
+
+**Metrics** — 898 tests (885 → +13: US-335 +4, US-336 +2, US-337 +7) · ruff + CI-parity green · **100 ADRs** (no
+new ADR) · 3 stories, ~1 session.
+
+**What went well**
+- **Anonymity stayed testable** — every event site is pinned to carry no handle/message; the sharp edge
+  (`squad_saved` logging the handle) was designed out and asserted, not hoped.
+- **Perf timing without the rerun trap** — timing the compute/IO (not the render) keeps `ok` honest, since a
+  Streamlit render raises `RerunException` on every button; a spurious "failure" per click would have been noise.
+- **The read stayed minimal + safe** — a pure `summarise` (unit-tested) + a thin page; the first read is gated by
+  an owner password and an anon SELECT policy (server-side key, anonymous data), best-effort so it can't crash.
+- **One-liner instrumentation** — the client's no-op-when-off design meant wiring events/timers changed nothing
+  for the suite; the diff is small and the risk low.
+
+**Even better if**
+- **The admin read is unproven until the owner smoke** — AppTest mocks the read; adding the anon SELECT policy +
+  `FPL_ADMIN_KEY` and seeing the real dashboard is the confirmation (like the write smoke).
+- **`analysis_run` fires per manage-view render** — a reasonable usage proxy, but it over-weights a left-open tab;
+  the owner can count *distinct sessions per view* rather than raw counts. Batching/dedup is deferred.
+- **Coverage is the key pages, not every page** — `data_load` is timed on Squads + Players (the heaviest/most-used);
+  more pages are a trivial add if a specific one looks slow.
+
+**Deferred / backlog** — event **batching** (if volume grows); a full **BI dashboard**; **cohort/funnel** analysis;
+`player_viewed` (skipped as low-value). And the big body: **GW1 (2026-08-21) calibration** + momentum + live
+manager import.
+
+**Follow-up marker:** ⏳ **owner smoke** — add the anon **SELECT** policy + set **`FPL_ADMIN_KEY`**, open the 📊
+Admin tab, confirm the dashboard reads real events. Then the analytics epic (ADR-100) is fully closed.
 
 ---
 

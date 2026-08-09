@@ -156,6 +156,12 @@ core events (`session_started`/`page_viewed`/`error`) + the table/docs — a *pr
   docs: `docs/ANALYTICS.md`, DIRECTION, BETA.md, PROJECT_STATUS, Architecture.
 - **Owner actions:** create the `events` table (+ anon-insert RLS, `ANALYTICS.md`); set `FPL_ANALYTICS = "1"` to
   turn it on (store secrets already set); inspect via the `ANALYTICS.md` SQL. Unset the flag → fully off.
-- **Deferred (Sprint 137):** full event coverage (`squad_created`/`analysis_run`/`player_viewed`/`squad_saved`/
-  `squad_loaded`/`feedback_*`) + perf timers on the key ops + a **minimal gated admin view** (`FPL_ADMIN_KEY`).
-  Further deferred: event batching (if volume grows); a full BI dashboard; cohort/funnel analysis.
+- **Built Sprint 137 (coverage):** US-335 (feature events `analysis_run`/`squad_created`/`squad_saved`/
+  `squad_loaded`/`feedback_submitted` + `error`, anonymity-tested — `player_viewed` skipped as low-value),
+  US-336 (perf timers `data_load`/`analysis`/`squad_save`/`squad_load`, timing the compute/IO not renders),
+  US-337 (the **first analytics read** — a best-effort `recent_events` + a pure `summarise`, behind a gated
+  `pages/9_Admin.py`/`FPL_ADMIN_KEY`, needing an **anon SELECT policy** on `events`). **Foundation write
+  owner-verified** (rows landing, 2026-08-09); **admin read = owner smoke pending** (add the SELECT policy + the key).
+- **Owner actions:** create the `events` table (+ anon-insert RLS, `ANALYTICS.md`); set `FPL_ANALYTICS = "1"`;
+  for the Admin tab, add the **anon SELECT policy** + set **`FPL_ADMIN_KEY`**. Unset the flags → off / inert.
+- **Deferred:** event **batching** (if volume grows); a full **BI dashboard**; **cohort/funnel** analysis.

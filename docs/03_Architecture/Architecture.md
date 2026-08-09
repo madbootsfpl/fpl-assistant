@@ -455,6 +455,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 137 (2026-08-09)** — *Analytics coverage: feature events, perf timers, a gated admin view* (extends
+  **ADR-100**, no new ADR). **US-335:** feature events + `error` at the web sites — `analysis_run` (one site in the
+  Squads dispatcher), `squad_created` (the "Use this squad →" click), `squad_saved`/`squad_loaded` (in
+  `render_cloud_sync` — **no handle/contents**), `feedback_submitted`, and `error` in the cloud/feedback `except`
+  blocks; instrument at the **web layer only** (the engine is untouched). **US-336:** perf timers via
+  `analytics.timed` on `data_load` (Squads + Players `Storage` reads), `analysis` (the `select_squad` optimiser),
+  and `squad_save`/`squad_load` — timing the **compute/IO, not full renders** (a render raises `RerunException`,
+  which `timed` would else record as a failure). **US-337:** the **first analytics read** — `recent_events()`
+  (best-effort GET, None on failure) + a **pure `summarise()`** (sessions · devices · returning [2+ distinct
+  days] · top pages · event counts · success rate · median/P95 per op) behind `pages/9_Admin.py`, gated by
+  **`FPL_ADMIN_KEY`** (inert when unset). Reads via the anon key + an **anon SELECT policy** on `events` (the key is
+  server-side; events anonymous). **Anonymity pinned** (no handle/message in any payload). +13 tests (885→898).
 - **Sprint 136 (2026-08-09)** — *Beta usage & experience analytics — foundation* (**ADR-100**). An **opt-in,
   anonymous, fail-silent** observation layer over the app (never the FPL model). **US-332:**
   `web_streamlit/analytics.py` — `is_enabled()` (`FPL_ANALYTICS` truthy **and** the store configured),
