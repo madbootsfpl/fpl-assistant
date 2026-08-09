@@ -69,8 +69,8 @@ default / fail safe unchanged. **Owner re-smokes on Safari + Chrome** to confirm
    the cookie hasn't arrived, then shows the gate (no infinite wait); **no component → no wait** (headless/blocked).
    Existing gate/logout tests still green (two updated to `available()=False` for the headless path). **864** total;
    ruff clean.
-2. **Manual smoke (owner) — the real test** — on the deployed app, **Safari + Chrome**: pass the gate → refresh →
-   **stay in** (a brief "Checking…" is fine); private tab / clear cookies → re-prompt; Log out → re-gate.
+2. **Manual smoke (owner) — the real test** — ✅ **passed (2026-08-09, Safari + Chrome):** pass the gate → refresh →
+   **stay in**. (Private tab / clear cookies → re-prompt; Log out → re-gate.)
 3. **Docs** — this Sprint doc + Lessons; ADR-099 updated (read-path correction); PROJECT_STATUS; Architecture.
 
 ### 📝 Session Progress Log
@@ -208,10 +208,11 @@ _(filled as the story lands)_
 
 ### 🏁 Sprint Review & Retrospective
 
-**Outcome:** 🔬 **code-complete, awaiting the owner's browser re-smoke.** Tester feedback said "remember me"
-didn't persist on Safari or Chrome; root-caused it to a **cookie-jar mismatch** (component-iframe write vs
-native top-level read) and fixed the **read** to go through the same component. The decision path is fully
-tested, but the *real* proof — the iframe cookie surviving a refresh in a browser — is the owner's re-smoke.
+**Outcome:** ✅ **fixed and verified in-browser.** Tester feedback said "remember me" didn't persist on Safari or
+Chrome; root-caused it to a **cookie-jar mismatch** (component-iframe write vs native top-level read) and fixed the
+**read** to go through the same component. **Owner re-smoke confirmed: works on Safari and Chrome (2026-08-09)** —
+a refresh keeps the tester in. The `st.login()` escalation is no longer needed; the deferred confirm-on-Log-out
+(US-329) is now unblocked.
 
 **Delivered**
 - **US-330** — `remember.read()` reads through `_controller().get()` (same jar as `write`); `remember.available()`
@@ -247,8 +248,9 @@ story built + 1 deferred, ~⅓ session.
 robust fallback if the re-smoke fails; a **signed token**; and the big body: **GW1 (2026-08-21) calibration** +
 momentum + live manager import.
 
-**Follow-up marker:** ⏳ **owner re-smoke on Safari + Chrome** → then either close remember-me as working (and pick
-up US-329 confirm) or open the `st.login()` pivot.
+**Follow-up marker:** ✅ **owner re-smoke passed on Safari + Chrome (2026-08-09)** — remember-me is working end-to-
+end. Next: the deferred **US-329 confirm-on-Log-out** is unblocked; `st.login()` stays a future *option*, not a
+needed escalation.
 
 ---
 

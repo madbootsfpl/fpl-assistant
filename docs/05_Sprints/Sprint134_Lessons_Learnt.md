@@ -189,7 +189,7 @@ python -m pytest tests/test_remember.py tests/test_access.py -q   # the seam + t
 
 # Summary
 
-**Sprint Outcome:** ☐ Successful ☑ Partially Successful (code-complete — awaiting the owner browser re-smoke) ☐ Needs Follow-up
+**Sprint Outcome:** ☑ Successful (owner re-smoke confirmed on Safari + Chrome, 2026-08-09) ☐ Partially Successful ☐ Needs Follow-up
 
 **Stories Completed:**
 
