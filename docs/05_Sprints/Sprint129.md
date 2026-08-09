@@ -91,7 +91,7 @@ Elo/xGC proxy refinement beyond FDR; the **persistence handle-taken hint** (opti
 |---|---|---|---|---|
 | ADR-097 | **Refine → the delta approach** (re-weight the baseline's DefCon portion; no double-count). | High | ✅ Done | gate |
 | US-318 | **The pure DefCon-magnifier analytics** — `defcon_points_per_match` + `defcon_magnifier`. | High | ✅ Done | ~⅓ session |
-| US-319 | **Wire the delta into `decision_xp`** — dormant + invariance + auditable. | High | ⬜ To do | ~½ session |
+| US-319 | **Wire the delta into `decision_xp`** — dormant + invariance + auditable. | High | ✅ Done | ~½ session |
 
 ---
 
@@ -135,6 +135,15 @@ Elo/xGC proxy refinement beyond FDR; the **persistence handle-taken hint** (opti
   the band are documented, GW1-calibratable constants. Exported both. Probe: DEF per90 15→2.0 / 10→1.0 / 5→0.0;
   MID/FWD threshold 12; GK→0. Magnifier: diff 1→0.5, 3→1.0, 5→1.5, None→1.0, 6→1.5 (clamped). +5 unit tests.
   ruff clean. **816** total. (US-319 wires the delta into `player_xp`, gated by `DEFCON_MAGNIFIER_WEIGHT`.)
+- **US-319 (wire the delta into `decision_xp`, dormant + auditable)** — `config.DEFCON_MAGNIFIER_WEIGHT = 0.0`;
+  in `player_xp` (after the base per-GW xp), a **per-GW delta** `weight · defcon_weight · defcon_points_per_match ·
+  Σ(defcon_magnifier(d) − 1)` folded **into `by_gameweek`** (so it still sums to xp, ADR-032), with `defcon_xp` =
+  the net delta on the row; `decision_xp` + `captain_picks` pass `config.DEFCON_MAGNIFIER_WEIGHT`. Auditability:
+  `explain._defcon_reason(defcon_xp)` → "🛡 DefCon fixture edge (+X)" when active **and** a lift (>0); None when
+  dormant or a drag (so dormant explanations are byte-identical) — wired into `explain_captain`/`explain_transfer`.
+  **Verified:** dormant → `defcon_xp` 0 + the full 816 byte-identical (invariance); active — a per90-15 DEF gains
+  **+1.0** vs a strong opponent (diff 5 → mag 1.5) and **−1.0** vs a weak one (diff 1 → mag 0.5); GK → 0;
+  by_gameweek sums to xp. +6 tests. ruff clean. **822** total.
 
 ---
 

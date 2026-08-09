@@ -47,6 +47,7 @@ def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl",
         is_available=lambda p: not is_unavailable(p),   # count doubtful, not only 'a'
         minutes_weight=minutes_weight, history_by_code=history_by_code,
         set_piece_weight=config.SET_PIECE_WEIGHT,       # ADR-096: reflect the set-piece term (dormant → no-op)
+        defcon_weight=config.DEFCON_MAGNIFIER_WEIGHT,   # ADR-097: reflect the DefCon magnifier (dormant → no-op)
     )
     by_id = {p["id"]: p for p in candidates}
 

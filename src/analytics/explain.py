@@ -74,6 +74,15 @@ def _penalty_reason(set_piece_xp) -> str:
     return "Penalty taker"
 
 
+def _defcon_reason(defcon_xp):
+    """A grounded DefCon fixture-magnifier reason (US-319/ADR-097) when the term is active and *lifts* this
+    pick's xp (`defcon_xp > 0` — a favourable defensive run). None when dormant (0) or a drag (≤ 0), so
+    dormant explanations are byte-identical. The number is the magnifier's net delta on xp."""
+    if defcon_xp and defcon_xp > 0:
+        return f"🛡 DefCon fixture edge (+{defcon_xp} xP)"
+    return None
+
+
 def explain_captain(picks, players_by_id) -> Explanation | None:
     """Explain the top captain pick (ADR-089): grounded ✓ reasons + ⚠ risks + a confidence. `picks` is the
     ranked `captain_picks` list (the runner-up sharpens the 'narrow lead' risk); `players_by_id` gives the
@@ -97,6 +106,9 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
         reasons.append(_penalty_reason(top.get("set_piece_xp")))
     if _get(row, "freekicks_order") == 1 or _get(row, "corners_order") == 1:
         reasons.append("Set-piece involvement")
+    defcon = _defcon_reason(top.get("defcon_xp"))
+    if defcon:
+        reasons.append(defcon)
     if mins is not None and mins >= _START_MINUTES:
         reasons.append(f"Expected ~{round(mins * 90)} mins")
     own_reason, own_risk = _ownership_signal(row)   # the ownership tier as a ✓ reason / ⚠ risk (US-290)
@@ -164,6 +176,9 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
     if _get(in_row, "penalties_order") == 1:
         # Grounded set-piece edge when the term moved the buy's xp (US-314); else the display-lens phrasing.
         reasons.append(_penalty_reason(buy.get("set_piece_xp") or _get(in_row, "set_piece_xp")))
+    defcon = _defcon_reason(buy.get("defcon_xp") or _get(in_row, "defcon_xp"))
+    if defcon:
+        reasons.append(defcon)
     if _get(in_row, "freekicks_order") == 1 or _get(in_row, "corners_order") == 1:
         reasons.append("Set-piece involvement")
     if price_delta < 0:

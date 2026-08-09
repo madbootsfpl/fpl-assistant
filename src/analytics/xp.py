@@ -10,6 +10,7 @@ per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek)
 """
 
 from src import config
+from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
 from src.analytics.minutes import minutes_weight_from_history
@@ -126,6 +127,7 @@ def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
     is_available=None, minutes_weight=None, history_by_code=None,
     form_by_code=None, form_weight: float = 0.0, set_piece_weight: float = 0.0,
+    defcon_weight: float = 0.0,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -188,6 +190,7 @@ def player_xp(
             by_gameweek = {gw: 0.0 for gw in horizon_events}
             xp = 0.0
             set_piece_xp = 0.0
+            defcon_xp = 0.0
         else:
             # Per-GW xP unrounded, so the total is exactly today's number (ADR-032);
             # per-GW cells are rounded only for display. The minutes weight scales both.
@@ -195,12 +198,23 @@ def player_xp(
                 gw: weight * rate * sum(_multiplier(d) for d in gw_map.get(gw, []))
                 for gw in horizon_events
             }
-            xp = round(sum(unrounded.values()), 1)
-            by_gameweek = {gw: round(v, 1) for gw, v in unrounded.items()}
             # The set-piece term's share of xp (US-314): the applied rate bonus × mins × horizon
             # multipliers. 0 when dormant — so a pick can be shown/grounded with its set-piece edge.
             total_mult = sum(sum(_multiplier(d) for d in gw_map.get(gw, [])) for gw in horizon_events)
             set_piece_xp = round(weight * applied_sp * total_mult, 1)
+            # DefCon fixture magnifier (ADR-097) — a DELTA that re-weights the DefCon points already in the
+            # baseline: 2·P(clear) · Σ(magnifier(d) − 1) per GW, minutes-weighted. 0 at weight 0 → xp
+            # unchanged (invariance), no double-count. Folded into by_gameweek so it still sums to xp (ADR-032).
+            defcon_pm = defcon_points_per_match(p)
+            defcon_by_gw = {
+                gw: weight * defcon_weight * defcon_pm
+                    * sum(defcon_magnifier(d) - 1.0 for d in gw_map.get(gw, []))
+                for gw in horizon_events
+            }
+            unrounded = {gw: unrounded[gw] + defcon_by_gw[gw] for gw in horizon_events}
+            xp = round(sum(unrounded.values()), 1)
+            by_gameweek = {gw: round(v, 1) for gw, v in unrounded.items()}
+            defcon_xp = round(sum(defcon_by_gw.values()), 1)
 
         results.append({
             "id": p["id"],
@@ -217,6 +231,7 @@ def player_xp(
             "gameweeks": list(horizon_events),
             "minutes_weight": round(weight, 2),       # xMins v0 weight applied (1.0 without the hook)
             "set_piece_xp": set_piece_xp,             # ADR-096: the set-piece term's share of xp (0 dormant)
+            "defcon_xp": defcon_xp,                   # ADR-097: the DefCon magnifier's net delta (0 dormant)
         })
 
     results.sort(key=lambda r: r["xp"], reverse=True)
@@ -251,4 +266,5 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
         baseline_by_code=baseline_by_code, minutes_weight=weight, history_by_code=history_by_code,
         form_by_code=form_by_code, form_weight=config.FORM_WEIGHT,
         set_piece_weight=config.SET_PIECE_WEIGHT,
+        defcon_weight=config.DEFCON_MAGNIFIER_WEIGHT,
     )

@@ -80,6 +80,13 @@ FORM_GAMEWEEKS = 5
 # raise the weight + backtest on real returns; start small.
 SET_PIECE_WEIGHT = 0.0
 
+# DefCon fixture magnifier (ADR-097) — DORMANT (DEFCON_MAGNIFIER_WEIGHT = 0). The one xP recipe re-weights
+# the DefCon points ALREADY in the baseline by fixture — a delta `defcon_pts_per_match · (magnifier − 1)`
+# (more DefCon vs a strong opponent, less vs a weak one). 0 at neutral / weight 0 → no delta, so xP is
+# unchanged today (an invariance test pins this) and it never double-counts. GW1: raise the weight +
+# calibrate DEFCON_P_SCALE / the magnifier band on real DefCon returns.
+DEFCON_MAGNIFIER_WEIGHT = 0.0
+
 # How long (in seconds) to wait for the API before giving up.
 REQUEST_TIMEOUT = 10
 
