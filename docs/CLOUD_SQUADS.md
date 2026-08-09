@@ -13,7 +13,7 @@ one server-side write the app makes.
 
 1. Sign up at [supabase.com](https://supabase.com) (free tier) → **New project**. Note the project's **API URL**
    and **anon public** key (Project **Settings → API**).
-2. Open **SQL Editor** and run:
+2. Open **SQL Editor** and run (idempotent — safe to re-run):
    ```sql
    create table if not exists squads (
      handle      text primary key,
@@ -23,6 +23,10 @@ one server-side write the app makes.
 
    -- Beta access with NO login: allow the anon key to read/write this one table.
    alter table squads enable row level security;
+   drop policy if exists "anon squads read"   on squads;
+   drop policy if exists "anon squads write"  on squads;
+   drop policy if exists "anon squads update" on squads;
+   drop policy if exists "anon squads delete" on squads;
    create policy "anon squads read"   on squads for select using (true);
    create policy "anon squads write"  on squads for insert with check (true);
    create policy "anon squads update" on squads for update using (true) with check (true);
@@ -30,6 +34,13 @@ one server-side write the app makes.
    ```
    *(A handle isn't security — this is a hobby beta on public FPL data. Anyone who knows a handle can read or
    overwrite it, by design, ADR-094.)*
+
+   > **⚠️ #1 gotcha — Row-Level Security.** If a Save shows *"new row violates row-level security policy"*, the
+   > table has RLS **on** but no permissive policy. The block above fixes it (the `drop … if exists` lines make it
+   > safe to re-run — a raw `create policy` errors if it already exists, which can leave the batch half-applied).
+   > **Simplest alternative** for a hobby beta: `alter table squads disable row level security;` — the same
+   > anon-open access, one line. (Since a handle isn't security anyway, the permissive policies and no-RLS are
+   > functionally identical here.) SQL changes apply immediately — no reboot needed; just click Save again.
 
 ## 2. Wire the secrets (Streamlit)
 
