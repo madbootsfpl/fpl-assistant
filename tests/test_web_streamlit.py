@@ -772,7 +772,9 @@ def test_my_squad_pitch_cards_show_set_piece_attributes():
     expected = sum(len(set_piece_flags(players[i])) for i in squad["player_ids"] if i in players)
     blob = " ".join(m.value for m in at.markdown)
     shown = sum(blob.count(e) for e in ("⚽", "🚩", "🎯"))
-    assert shown == expected                            # every owned taker's set-piece flags render on the pitch
+    # Every owned taker's set-piece flags render on the pitch — now in the kit line AND the hover card (US-344),
+    # so each shows at least once (the popover repeats them; a lone-kit exact count no longer holds).
+    assert shown >= expected
 
 
 def test_my_squad_shows_the_bench_order():
@@ -1268,6 +1270,25 @@ def test_cloud_save_disabled_without_an_active_squad(monkeypatch):
     assert any(t.label == "Your handle" for t in at.text_input)             # the cloud UI is present (sidebar)…
     save = next(b for b in at.button if b.label == "Save")
     assert save.disabled                                                     # …but Save is disabled until you have one
+
+
+def test_my_squad_pitch_has_hover_card_popovers():
+    # US-344 (ADR-084): each kit embeds a compact player-card popover (shown on :hover), card CSS included once
+    at = _squads_view("My Squad")
+    blob = " ".join(m.value for m in at.markdown)
+    assert "fpl-pitch" in blob and "kit-pop" in blob          # the pitch + the per-kit popovers
+    assert blob.count("linear-gradient(180deg,#111821,#0c121a)") == 1   # the card CSS is on the page just once
+
+
+def test_my_squad_card_picker_shows_the_full_card():
+    # US-344: a "View a player's card" picker → the full player card below the pitch
+    at = _squads_view("My Squad")
+    picker = [s for s in at.selectbox if "View a player's card" in (s.label or "")]
+    assert picker                                             # the picker exists
+    if len(picker[0].options) > 1:
+        picker[0].set_value(picker[0].options[1]).run()
+        assert not at.exception
+        assert any("Player Card" in m.value for m in at.markdown)   # the full card's brand band
 
 
 def test_my_squad_set_bench_picks_four():

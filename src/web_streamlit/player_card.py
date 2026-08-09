@@ -19,8 +19,9 @@ import streamlit as st
 from src.analytics.crowd import availability_flag, ownership_tier, set_piece_flags
 
 # Scoped to `.pl-card`; a fixed dark surface (its own colours, like the pitch) that reads on both themes. Lines
-# unindented so `st.markdown` doesn't treat the CSS as a code block.
-_CARD_CSS = """
+# unindented so `st.markdown` doesn't treat the CSS as a code block. Public so the pitch can include it **once**
+# and drop a CSS-less `card_body(...)` per kit (US-344, avoids 15× the stylesheet).
+CARD_CSS = """
 <style>
 .pl-card{background:linear-gradient(180deg,#111821,#0c121a);border:1px solid rgba(255,255,255,.09);
 border-radius:18px;overflow:hidden;color:#f2f6fb;margin:.5rem 0;box-shadow:0 18px 40px -22px rgba(0,0,0,.7);
@@ -104,10 +105,11 @@ def _stat_rows(player, *, compact=False):
     return [(catalog[k][0], catalog[k][1]) for k in order if catalog[k][1] is not None]
 
 
-def player_card_html(player, *, team_name="", photo_url=None, badge_url=None,
-                     fixtures=None, projected_xp=None, compact=False) -> str:
-    """The player card as an HTML string (pure — no Streamlit; testable). Empty-safe. `fixtures` is a list of
-    `{"opp","home","fdr"}` (first 3 shown); `projected_xp` a float (our `decision_xp`) → a chip, or None to hide."""
+def card_body(player, *, team_name="", photo_url=None, badge_url=None,
+              fixtures=None, projected_xp=None, compact=False) -> str:
+    """The player card's `<div>` **without** the `<style>` (pure; empty-safe). Use when the CSS is already on the
+    page (the pitch includes `CARD_CSS` once). `fixtures` is a list of `{"opp","home","fdr"}` (first 3 shown);
+    `projected_xp` a float (our `decision_xp`) → a chip, or None to hide."""
     if not player:
         return ""
     e = html.escape
@@ -147,12 +149,18 @@ def player_card_html(player, *, team_name="", photo_url=None, badge_url=None,
         '<span class="plc-title">Player Card</span><span class="plc-brand">Season 24/25</span></div>')
 
     return (
-        f'{_CARD_CSS}<div class="pl-card{" compact" if compact else ""}">'
+        f'<div class="pl-card{" compact" if compact else ""}">'
         f'<div class="plc-head"><div class="plc-photo">{photo}</div>'
         f'<div class="plc-id"><div class="plc-meta">{badge}{e(team_name)} · {pos} · <b>{price_html}</b></div>'
         f'<div class="plc-name">{name}</div>{fix_html}{flags_html}</div></div>'
         f'{band}<div class="plc-grid">{grid}</div></div>'
     )
+
+
+def player_card_html(player, **kwargs) -> str:
+    """The full card — `CARD_CSS` + the body (pure; empty-safe)."""
+    body = card_body(player, **kwargs)
+    return f"{CARD_CSS}{body}" if body else ""
 
 
 def render_player_card(player, **kwargs) -> None:

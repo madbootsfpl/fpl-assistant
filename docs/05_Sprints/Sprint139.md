@@ -1,7 +1,7 @@
 # Sprint 139: A rich player card on the Players tab
 
 **Dates:** 2026-08-09
-**Status:** 📝 Planned (2 stories · no new ADR — extends ADR-084)
+**Status:** ✅ Complete (US-342/343/344 · no new ADR — extends ADR-084 · retro pending)
 **Capacity:** ~¾–1 session (a self-contained HTML card + two wirings; display-only)
 **Carried Over:** none
 
@@ -56,7 +56,7 @@ HTML (ADR-084), fed by data we already hold.
       selectbox** (scoped by the existing filter) → the card. The view loads the player's team **fixtures** (next 3
       + FDR) + computes **`decision_xp`** for the pool (our Projected xP, wrapped in `analytics.timed`) + reuses
       `photo_url`/`badge_url`. Degrades cleanly (no fixtures → no pills; xP unavailable → no chip). AppTest-covered.
-- [ ] **US-344 (the My Squad pitch)** — reuse the renderer for a **compact** card on the pitch: a pure-CSS
+- [x] **US-344 (the My Squad pitch)** — reuse the renderer for a **compact** card on the pitch: a pure-CSS
       **hover popover** per kit (extends the existing `.kit:hover`; absolute-positioned, parent overflow allowed) +
       a **player picker** (selectbox: "👤 View a player's card") above/below the pitch → the **full** card (the
       all-device / touch path). Same self-contained HTML, `html.escape`d, no JS. Degrades (no photo → shirt; no
@@ -107,7 +107,7 @@ tabs (Trending / My Squad) if it proves popular.
 |---|---|---|---|---|
 | US-342 | **The card renderer** — `player_card.py` (self-contained HTML, position-adaptive stats). | High | ✅ Done | ~⅓ session |
 | US-343 | **Wire into the Players tab** — a "Card" view (selectbox → card) + fixtures + Projected xP. | High | ✅ Done | ~⅓ session |
-| US-344 | **The My Squad pitch** — a hover popover (compact card) + a player picker → the full card. | Med | ⬜ To do | ~⅓ session |
+| US-344 | **The My Squad pitch** — a hover popover (compact card) + a player picker → the full card. | Med | ✅ Done | ~⅓ session |
 
 ---
 
@@ -145,6 +145,16 @@ tabs (Trending / My Squad) if it proves popular.
   **+1 AppTest** (Card view → the picker + the `pl-card` HTML + brand band render, no exception). *(Fixed a
   mis-placed insertion that split `render_history` — functions now live at the module end.)* Display-only; no
   engine change. ruff clean. **925 → 926.** (US-344 = the My Squad pitch hover popover + picker.)
+- **US-344 (the My Squad pitch)** — refactored `player_card.py` to split **`CARD_CSS`** (public) + **`card_body`**
+  (CSS-less) so the pitch includes the stylesheet **once** and drops a compact card per kit. `pitch.py`: each kit
+  gains a pure-CSS **hover popover** (`.kit:hover .kit-pop` — an absolute-positioned compact card; `.kit`
+  `position:relative`, popover `z-index:40`; no clipping since the pitch containers are `overflow:visible`) using
+  `card_body(..., compact=True)` with the pitch's own `xp_by_id` as Projected xP. `render_my_squad` gains a **"👤
+  View a player's card"** picker → the **full** card (fixtures from `upcoming`, our xP) — the all-device/touch path
+  (a static pitch can't call back to Python). Threaded `teams` → friendly team names. **+2 tests** (the pitch
+  embeds `kit-pop` popovers with the CSS once; the picker renders the full card); updated the pre-existing
+  set-piece test (the hover card now repeats the flags → `>= expected`). Display-only; no engine change. ruff
+  clean. **926 → 928.** **Sprint 139 complete — the card lives in both places.**
 
 ---
 

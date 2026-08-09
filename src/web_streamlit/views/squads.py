@@ -263,13 +263,14 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
 
 # ---- My Squad (view & edit the active squad; ADR-055) ----------------------------------------------
 
-def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5):
+def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
     st.caption("Tweak your squad here — rename · swap · bench · download. 🔧 To **build a fresh one** with "
                "the full option set, switch to **Build**.")
     by_id = {p["id"]: p for p in players}
     owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
     ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    team_names = {t["short_name"]: t["name"] for t in (teams or [])}   # short → friendly name (the card, US-344)
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}     # per-GW xP (ADR-032) for the captain
     next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     bench_ids = set(squad.get("bench_ids") or [])
@@ -353,7 +354,22 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp,
-                 bench_roles=bench_roles)
+                 team_names=team_names, bench_roles=bench_roles)
+
+    # US-344: pick a player → their **full** card (the all-device path; on desktop, hovering a kit shows a
+    # compact card). Reuses the card renderer with the squad's data (fixtures from `upcoming`, our xP).
+    from src.web_streamlit.player_card import render_player_card
+    owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
+    picked = owned_by_label.get(st.selectbox("👤 View a player's card", ["—", *owned_by_label],
+                                             help="Or hover a shirt on the pitch (desktop)."))
+    if picked:
+        short = picked["team"]
+        fx = [{"opp": (f["away"] if f["home"] == short else f["home"]),
+               "home": f["home"] == short,
+               "fdr": f["team_h_difficulty"] if f["home"] == short else f["team_a_difficulty"]}
+              for f in upcoming if short in (f["home"], f["away"])][:3]
+        render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
+                           fixtures=fx, projected_xp=xp_by_id.get(picked["id"]))
 
     if bench_ordered:
         line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"

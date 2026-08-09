@@ -12,6 +12,7 @@ import html
 import streamlit as st
 
 from src.analytics import crowd_flags, set_piece_flags
+from src.web_streamlit.player_card import CARD_CSS, card_body
 
 _ROWS = ("GK", "DEF", "MID", "FWD")
 _ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
@@ -51,6 +52,12 @@ color:#0a7a34;font-weight:700;font-size:.72rem;box-shadow:0 1px 2px rgba(0,0,0,.
 .fpl-pitch .bench-label{color:#eafff0;font-size:.72rem;letter-spacing:.12em;text-align:center;
 margin:18px 0 2px;opacity:.85;text-transform:uppercase;}
 .fpl-pitch .bench{background:rgba(0,0,0,.16);border-radius:12px;padding:10px 6px;margin-top:2px;}
+.fpl-pitch .kit{position:relative;}
+.fpl-pitch .kit:hover{z-index:40;}
+.fpl-pitch .kit-pop{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);
+width:290px;max-width:78vw;display:none;z-index:40;text-align:left;cursor:default;}
+.fpl-pitch .kit:hover .kit-pop{display:block;}
+.fpl-pitch .kit-pop .pl-card{margin:0;}
 </style>
 """
 
@@ -59,7 +66,7 @@ margin:18px 0 2px;opacity:.85;text-transform:uppercase;}
 _SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
 
 
-def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, sub_role=None) -> str:
+def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
     Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup."""
@@ -78,13 +85,18 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, sub_role=None) 
     meta = f'£{player["price"]:.1f}m · {opp_str}'
     flags = crowd_flags(player) + set_piece_flags(player)
     flags_html = f'<div class="flags">{e(" ".join(flags))}</div>' if flags else ""
+    # On hover: a compact player card (US-344). Reuses the card renderer (CSS is on the page once); the kit already
+    # shows next-opp, so the popover carries no fixture pills. `card_body` html-escapes its own values.
+    pop = card_body(player, team_name=(team_names or {}).get(player["team"], player["team"]),
+                    photo_url=img or None, projected_xp=xp_by_id.get(player["id"]), compact=True)
+    pop_html = f'<div class="kit-pop">{pop}</div>' if pop else ""
     return (f'<div class="kit"><div class="pic">{pic}</div>'
             f'<div class="name">{e(player["web_name"])}</div>'
             f'<div class="xp">{xp}</div>'
-            f'<div class="meta">{meta}</div>{flags_html}</div>')
+            f'<div class="meta">{meta}</div>{flags_html}{pop_html}</div>')
 
 
-def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, bench_roles=None) -> None:
+def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None) -> None:
     """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
 
     `xi` / `bench` are player rows; `next_opp` maps a team short_name → its next fixture cell
@@ -92,8 +104,8 @@ def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, bench_rol
     when given, the bench is ordered by that priority. Emits one self-contained HTML/CSS block (no JS) —
     display-only; the edit controls live on the page.
     """
-    kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp)
-    parts = [_PITCH_CSS, '<div class="fpl-pitch">']
+    kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names)
+    parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
 
     for pos in _ROWS:
         line = [p for p in xi if p["position"] == pos]

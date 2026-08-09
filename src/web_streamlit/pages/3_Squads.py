@@ -67,7 +67,7 @@ else:
     analytics.track("analysis_run", view=view)   # usage: which manage view was run (no squad contents)
     if view == "My Squad":
         views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
-                              horizon=horizon)
+                              teams=teams, horizon=horizon)
     elif view == "AI Tips":
         views.render_ai_tips(squad_name, squad, horizon=horizon)
     elif view == "Chips":
