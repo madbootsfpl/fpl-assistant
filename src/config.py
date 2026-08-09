@@ -7,6 +7,9 @@ easily. See docs/03_Architecture/Architecture.md (§4 Components — "Config").
 
 import os
 
+# The app version, stamped on analytics events (ADR-100) so usage/perf can be read per release.
+APP_VERSION = "0.0.1"
+
 # Base URL for the official FPL API.
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
