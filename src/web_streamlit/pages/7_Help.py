@@ -121,7 +121,9 @@ with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)")
 
 with st.expander("7 · Save your team  →  Download, upload, or import by manager-ID"):
     st.markdown(
-        "Your squad is per-session (no accounts). **Download** the `squad.json` to keep it — re-**upload** "
+        "Your squad is per-session (no accounts). The easiest way to keep it: **☁ Save / Load across devices** "
+        "in the **sidebar** (under *Your squad*) — save under a handle, load it on any device (that's usually the "
+        "better option). Otherwise **Download** the `squad.json` to keep it — re-**upload** "
         "it from the sidebar next time, or **import your real FPL team by manager-ID** (the sidebar; your "
         "team's numeric id from its URL — picks are public from the GW1 deadline). The same `squad.json` "
         "loads in the CLI too."

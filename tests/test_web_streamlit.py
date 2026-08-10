@@ -46,6 +46,33 @@ def test_players_page_has_a_top15_bar_when_data_present():
         assert at.get("arrow_vega_lite_chart") or at.get("vega_lite_chart")
 
 
+def test_players_price_filter_includes_the_priciest_player():
+    # US-345: the Max-price cap follows the highest player price, so the £15.5m player isn't filtered out
+    import pandas as pd
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    df = at.dataframe[0].value
+    df = df if isinstance(df, pd.DataFrame) else pd.DataFrame(df)
+    assert "Player" in df.columns and (df["Player"] == "Haaland").any()   # the £15.5m asset isn't filtered out
+
+
+def test_trending_top_discussions_before_community_signals():
+    # US-345: surface 🔥 Top discussions first; the long Community Signals list sits below
+    at = _run(_PAGES / "6_Trending.py")
+    caps = [c.value for c in at.caption]
+    top = next((i for i, c in enumerate(caps) if "Top discussions this week" in c), None)
+    comm = next((i for i, c in enumerate(caps) if "Community Signals" in c), None)
+    assert top is not None and comm is not None and top < comm
+
+
+def test_help_save_step_mentions_cloud_save_load():
+    # US-345: the "Save your team" step points at ☁ Save/Load across devices (the sidebar option)
+    at = _run(_PAGES / "7_Help.py")
+    blob = " ".join(m.value for m in at.markdown)
+    assert "☁ Save / Load across devices" in blob
+
+
 def test_players_card_view_renders_a_player_card():
     # US-343 (ADR-084): the "Card" view → a player selectbox → the self-contained player-card HTML block
     at = _run(_PAGES / "1_Players.py")

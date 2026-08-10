@@ -55,6 +55,12 @@ def test_card_html_carries_identity_and_stats():
     assert "239" in h and "Player Card" in h                 # a stat + the brand band
 
 
+def test_card_band_says_last_season_not_a_hardcoded_year():
+    # US-345: preseason the stats are last season's carryover — label it honestly, not "Season 24/25"
+    h = player_card.player_card_html(_FWD, team_name="Man City")
+    assert "Last season" in h and "24/25" not in h
+
+
 def test_card_html_escapes_everything():
     evil = {**_FWD, "web_name": "<script>x</script>", "position": "FWD"}
     h = player_card.player_card_html(evil, team_name='"><img>')

@@ -146,7 +146,7 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
         for lbl, val in _stat_rows(p, compact=compact))
     band = "" if compact else (
         '<div class="plc-band"><span class="plc-brand">⚽ FPL Assistant</span>'
-        '<span class="plc-title">Player Card</span><span class="plc-brand">Season 24/25</span></div>')
+        '<span class="plc-title">Player Card</span><span class="plc-brand">Last season</span></div>')
 
     return (
         f'<div class="pl-card{" compact" if compact else ""}">'

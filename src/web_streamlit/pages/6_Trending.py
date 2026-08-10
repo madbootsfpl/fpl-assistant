@@ -93,6 +93,23 @@ else:
 
     # Community Signals (ADR-059) — Reddit RSS buzz. Button-gated (no fetch on load) + cached; degrades.
     with tabs[-1]:
+        # The week's top discussions first (US-292 / US-345) — the sharper lens; the long mention board sits below.
+        st.caption("**🔥 Top discussions this week** — the highest-voted r/FantasyPL posts (a buzz lens, not a "
+                   "prediction; best-effort, cached ~30 min).")
+        if st.button("Show this week's top discussions",
+                     help="Fetch r/FantasyPL's top posts this week (best-effort; cached ~30 min)."):
+            top_rss = _cached_reddit_top()
+            if top_rss is None:
+                st.info("Top discussions are unavailable right now (Reddit didn't respond).")
+            else:
+                posts = parse_feed(top_rss, limit=10)
+                if not posts:
+                    st.info("No top posts found this week.")
+                else:
+                    for post in posts:
+                        st.markdown(f"- [{post['title']}]({post['link']})")
+
+        st.divider()
         st.caption("**Community Signals** — who r/FantasyPL is talking about across the latest **~100 posts** "
                    "(post mentions, a buzz lens — not sentiment or a prediction). Best-effort: cached, may "
                    "be unavailable on the live app.")
@@ -121,20 +138,3 @@ else:
                                 title = post["title"] or "(untitled post)"
                                 st.markdown(f"- [{title}]({post['link']})" if post["link"]
                                             else f"- {title}")
-
-        # The week's top discussions (US-292) — what's actually being talked about, not just a mention count.
-        st.divider()
-        st.caption("**🔥 Top discussions this week** — the highest-voted r/FantasyPL posts (a buzz lens, not a "
-                   "prediction; best-effort, cached ~30 min).")
-        if st.button("Show this week's top discussions",
-                     help="Fetch r/FantasyPL's top posts this week (best-effort; cached ~30 min)."):
-            top_rss = _cached_reddit_top()
-            if top_rss is None:
-                st.info("Top discussions are unavailable right now (Reddit didn't respond).")
-            else:
-                posts = parse_feed(top_rss, limit=10)
-                if not posts:
-                    st.info("No top posts found this week.")
-                else:
-                    for post in posts:
-                        st.markdown(f"- [{post['title']}]({post['link']})")

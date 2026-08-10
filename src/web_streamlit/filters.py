@@ -7,6 +7,8 @@ so the two pages' widgets don't collide. Field reads tolerate `sqlite3.Row` (Pla
 analytics) rows alike. Display-only — it never mutates the input.
 """
 
+import math
+
 import streamlit as st
 
 _POSITIONS = ["GK", "DEF", "MID", "FWD"]
@@ -45,7 +47,10 @@ def filter_controls(players, *, key: str, with_price: bool = False) -> dict:
     player_sel = cols[2].multiselect("Player", names, key=pkey,
                                      help="Pick specific players (scoped to the team/position above; "
                                           "empty = all).")
-    max_price = (cols[3].slider("Max price (£m)", 3.5, 15.0, 15.0, step=0.5, key=f"{key}_price",
+    # The cap is the highest player price rounded up to £0.5 (never below £15) — so the priciest player (e.g.
+    # Haaland £15.5m) is never filtered out by a stale fixed max (US-345).
+    price_hi = max(15.0, math.ceil(max((_get(p, "price") or 0.0) for p in players) * 2) / 2) if players else 15.0
+    max_price = (cols[3].slider("Max price (£m)", 0.0, price_hi, price_hi, step=0.5, key=f"{key}_price",
                                 help="Hide players priced above this.")
                  if with_price else None)
     return {"teams": set(team_sel), "positions": set(pos_sel),
