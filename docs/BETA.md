@@ -176,6 +176,35 @@ the cross-device-squads Supabase (§ `docs/CLOUD_SQUADS.md`) — **no new store 
 > gating public FPL data — you're *counting + knowing*, not securing. Hard per-user identity (Google `st.login()`)
 > is the deferred upgrade (ADR-098 / DIRECTION §1).
 
+### 4a. Capture would-be testers (the waitlist, optional) — ADR-102
+
+When registration is capped, someone who tries after the cap is full — **or** who mistypes the invite code — is
+turned away. Turn on the **waitlist** to **record their email** so you can invite them later. Same Supabase project,
+**no new secret** (it derives its endpoint from `FPL_STORE_URL`, like `beta_users`); **off until the table exists**.
+
+1. **A waitlist table** (same project) — SQL Editor, idempotent:
+   ```sql
+   create table if not exists beta_waitlist (
+     email       text primary key,
+     reason      text,                                   -- 'full' (over the cap) | 'bad_code' (wrong invite code)
+     created_at  timestamptz not null default now()
+   );
+   alter table beta_waitlist enable row level security;
+   drop policy if exists "anon waitlist write" on beta_waitlist;
+   create policy "anon waitlist write" on beta_waitlist for insert with check (true);
+   ```
+   *(Insert-only for the anon key — the app **writes** but never reads it back; you read it in the dashboard. Or
+   `alter table beta_waitlist disable row level security;` — the same anon-open write, one line.)*
+2. **It's automatic** once the table exists + `FPL_USER_CAP` is set: an over-cap or wrong-code attempt lands a row
+   (best-effort — a store hiccup never blocks the gate). **No table → no write** (the capture is simply skipped).
+3. **Invite from it:** Supabase → **Table editor → beta_waitlist**. `reason='full'` = wanted in but the cap was full;
+   `reason='bad_code'` = mistyped the code (could be a typo or a random). Free a seat (delete a `beta_users` row or
+   raise `FPL_USER_CAP`), send them the code, then **delete the waitlist row**.
+
+> **Privacy (ADR-102).** This holds emails of people you **didn't** admit — including wrong-code attempts. It's
+> minimal (email + reason + time), owner-only, and *"remove me" = delete the row*. You're opting into the wrong-code
+> capture knowingly; drop the `bad_code` rows if you only want the genuine over-cap waitlist.
+
 ---
 
 ## Recruiting (Reddit etc.)

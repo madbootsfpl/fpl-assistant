@@ -650,7 +650,8 @@ def _fake_user_store(monkeypatch, rows):
         return _StoreResp([{"email": e} for e in rows])
 
     def fake_post(url, json=None, headers=None, timeout=None):
-        rows.append(json["email"])
+        if url.endswith("/beta_users"):                      # only a registration insert records a user (ADR-098);
+            rows.append(json["email"])                       # a beta_waitlist write (ADR-102) goes to another table
         return _StoreResp()
 
     monkeypatch.setattr("requests.get", fake_get)
@@ -700,6 +701,37 @@ def test_registration_gate_full_shows_the_waitlist(monkeypatch):
     assert any("full" in (w.value or "").lower() for w in at.warning)     # the beta-full note
     assert any("waitlist" in b.label.lower() for b in at.get("link_button"))
     assert not any(b.label == "Send feedback" for b in at.button)         # gate stopped the page — not admitted
+
+
+def _capture_waitlist(monkeypatch):
+    from src.web_streamlit import waitlist
+    calls = []
+    monkeypatch.setattr(waitlist, "add", lambda email, reason: calls.append((email, reason)))
+    return calls
+
+
+def test_waitlist_captures_a_wrong_code_email(monkeypatch):
+    # ADR-102 (US-347): a wrong invite code + an email → the email is captured (reason="bad_code")
+    _registration_env(monkeypatch)
+    _fake_user_store(monkeypatch, [])
+    calls = _capture_waitlist(monkeypatch)
+    at = _run(_PAGES / "8_Feedback.py")
+    next(t for t in at.text_input if t.label == "Invite code").set_value("wrong").run()
+    next(t for t in at.text_input if t.label == "Your email").set_value("hopeful@b.com").run()
+    next(b for b in at.button if "Join" in b.label).click().run()
+    assert ("hopeful@b.com", "bad_code") in calls
+
+
+def test_waitlist_captures_an_over_cap_email(monkeypatch):
+    # ADR-102: at the cap → the email is captured (reason="full") so the owner can invite later
+    _registration_env(monkeypatch, cap="0")
+    _fake_user_store(monkeypatch, [])
+    calls = _capture_waitlist(monkeypatch)
+    at = _run(_PAGES / "8_Feedback.py")
+    next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
+    next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
+    next(b for b in at.button if "Join" in b.label).click().run()
+    assert ("late@b.com", "full") in calls
 
 
 def test_squads_gameweeks_selector_drives_the_horizon():

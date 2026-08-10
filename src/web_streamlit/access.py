@@ -219,7 +219,7 @@ def _code_gate(code: str) -> None:
 def _registration_gate(cap: int) -> None:
     """The capped email-registration gate (ADR-098): a shared invite code (if set) + an email, admitted up to
     `cap`. Remembers the email in the session; at the cap → a waitlist note. Stops the page until admitted."""
-    from src.web_streamlit import user_store
+    from src.web_streamlit import user_store, waitlist
     from src.web_streamlit.cloud_store import store_error
 
     code = secret("FPL_ACCESS_CODE")
@@ -232,6 +232,7 @@ def _registration_gate(cap: int) -> None:
 
     if joined:
         if code and (entered_code or "") != code:
+            waitlist.add(email, "bad_code")                   # ADR-102: capture the email (best-effort, no-op if empty)
             st.error("That invite code isn't right — check the one you were sent.")
         else:
             try:
@@ -248,6 +249,7 @@ def _registration_gate(cap: int) -> None:
                 st.session_state[_PENDING] = user_store.clean_email(email)   # remember me (ADR-099)
                 st.rerun()
             elif status == "full":
+                waitlist.add(email, "full")                   # ADR-102: capture the email so the owner can invite later
                 st.warning(f"The beta is full right now ({cap} testers). More spots open as it grows.")
                 if signup := secret("FPL_SIGNUP_URL"):
                     st.link_button("✋ Join the waitlist", signup)

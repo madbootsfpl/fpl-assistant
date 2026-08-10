@@ -48,12 +48,12 @@ wrong code) — into one Supabase table, off by default, so the owner can invite
       copy; Trending order).
 - [x] **US-346 (card hover fit)** — the compact hover popover **fits without truncation**: trim the compact stat set
       (~4) + tighten type/width; verify no clipping. AppTest (the compact popover renders) + a manual browser check.
-- [ ] **ADR-102 (the gate)** — record the **beta waitlist**: capture the email on a **failed** registration
+- [x] **ADR-102 (the gate)** — record the **beta waitlist**: capture the email on a **failed** registration
       (cap-full **or** wrong invite code) into one `beta_waitlist` table (reuses the store, no new secret); the
       **privacy posture** (holds emails of the *non-admitted*, incl. wrong-code — minimal, "remove me = delete the
       row", owner-only); **off by default** (registration mode + store); a **4th** opt-in, secret-gated server write
       (after squad-save/registration/analytics); extends **ADR-098**.
-- [ ] **US-347 (the waitlist)** — `web_streamlit/waitlist.py` (`add(email, reason)` → a `beta_waitlist` upsert,
+- [x] **US-347 (the waitlist)** — `web_streamlit/waitlist.py` (`add(email, reason)` → a `beta_waitlist` upsert,
       best-effort, `reason ∈ {"full","bad_code"}`, reuses `user_store`'s endpoint-derivation + `clean_email`); wire
       into `_registration_gate` — on **"full"** and on a **wrong code with an email**, `waitlist.add(...)` (never
       blocks the gate). Off by default; idempotent (email PK). Unit-tested (monkeypatched requests) + a gate test.
@@ -91,8 +91,8 @@ no cap → no write). The owner sees the list in Supabase → invite → optiona
 |---|---|---|---|---|
 | US-345 | **Polish bundle** — price max · card label · Trending order · Help copy. | High | ✅ Done | ~¼ session |
 | US-346 | **Card hover fit** — the compact popover shows without truncation. | Med | ✅ Done | ~¼ session |
-| ADR-102 | **The beta waitlist** — capture failed-registration emails (the gate). | High | ⬜ To do | gate |
-| US-347 | **The waitlist store + wiring** — `waitlist.py` + `_registration_gate`. | High | ⬜ To do | ~¼ session |
+| ADR-102 | **The beta waitlist** — capture failed-registration emails (the gate). | High | ✅ Done | gate |
+| US-347 | **The waitlist store + wiring** — `waitlist.py` + `_registration_gate`. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -135,6 +135,29 @@ no cap → no write). The owner sees the list in Supabase → invite → optiona
   shown beneath the full cards. Tightened the compact test (`<= 4` stats). Display-only. ruff clean. **932** (no
   net test change). *(The exact fit is a browser thing — the manual smoke on the deploy confirms no clipping,
   esp. bench kits.)* (Next: ADR-102 + US-347 the waitlist.)
+- **ADR-102 (the gate)** — wrote `docs/06_Decisions/ADR-102-beta-waitlist.md` (Accepted). Records the **beta
+  waitlist**: on a **failed** registration (cap **full** or a **wrong invite code**), capture the email into **one**
+  `beta_waitlist(email, reason ∈ {full,bad_code}, created_at)` table in the existing Supabase (endpoint derived,
+  **no new secret**, like `beta_users`), via `waitlist.add(email, reason)` wired into the two `_registration_gate`
+  failure branches. **Best-effort + never blocks** the gate (wrapped like the analytics write); **off by default**
+  (registration mode + store) — the **4th** opt-in secret-gated server write (read-only invariant names four
+  exceptions). **Privacy recorded honestly:** holds emails of the *non-admitted*, incl. wrong-code (typos/randoms)
+  — minimal, owner-only, "remove me = delete the row"; the owner opted into the wrong-code capture knowingly.
+  Alternatives (signup-link only ✗, #5-only, two mechanisms ✗, new secret ✗, verification ✗). Added to the ADR
+  index. **102 ADRs.** No code — suite unchanged at **932**. (US-347 builds `waitlist.py` + the wiring.)
+- **US-347 (the waitlist store + wiring)** — new `web_streamlit/waitlist.py`: `add(email, reason)` derives the
+  `beta_waitlist` endpoint from `FPL_STORE_URL`'s base (reusing `FPL_STORE_KEY` — **no new secret**), cleans the
+  email via `user_store.clean_email`, and upserts `{email, reason}` with `Prefer: resolution=merge-duplicates`
+  (idempotent on the email PK). **Best-effort + fail-silent** — a no-op when the store is unset / the email is
+  malformed, and it **swallows any store failure** so it can never raise or block the gate. Wired into
+  `access._registration_gate`'s two failure branches: a **wrong invite code** with an email → `add(email,
+  "bad_code")`; **over the cap** (`status == "full"`) → `add(email, "full")` (then the existing beta-full note +
+  `FPL_SIGNUP_URL`). **Off by default** (needs the store + `FPL_USER_CAP`). **+7 tests:** 5 store tests
+  (`test_waitlist.py` — endpoint derivation · upsert body/headers · no-op without the store · ignores a bad/empty/
+  None email · swallows a `ConnectionError`) + 2 gate tests (the gate captures a wrong-code email and an over-cap
+  email). Made the shared `_fake_user_store` POST fake **URL-aware** (only a `/beta_users` POST records a user) so a
+  `beta_waitlist` write doesn't pollute the registration test's rows. BETA.md §4a documents the table SQL
+  (insert-only anon RLS) + how to invite from it + the privacy posture. ruff clean. **932 → 939.**
 
 ---
 
