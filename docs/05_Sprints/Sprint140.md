@@ -46,7 +46,7 @@ wrong code) — into one Supabase table, off by default, so the owner can invite
       before Community Signals; (d) Help step 7 mentions **☁ Save/Load** (sidebar) as the better keep-your-team
       option. Display/config only. Small tests where they bite (price max admits the top player; card label; Help
       copy; Trending order).
-- [ ] **US-346 (card hover fit)** — the compact hover popover **fits without truncation**: trim the compact stat set
+- [x] **US-346 (card hover fit)** — the compact hover popover **fits without truncation**: trim the compact stat set
       (~4) + tighten type/width; verify no clipping. AppTest (the compact popover renders) + a manual browser check.
 - [ ] **ADR-102 (the gate)** — record the **beta waitlist**: capture the email on a **failed** registration
       (cap-full **or** wrong invite code) into one `beta_waitlist` table (reuses the store, no new secret); the
@@ -90,7 +90,7 @@ no cap → no write). The owner sees the list in Supabase → invite → optiona
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-345 | **Polish bundle** — price max · card label · Trending order · Help copy. | High | ✅ Done | ~¼ session |
-| US-346 | **Card hover fit** — the compact popover shows without truncation. | Med | ⬜ To do | ~¼ session |
+| US-346 | **Card hover fit** — the compact popover shows without truncation. | Med | ✅ Done | ~¼ session |
 | ADR-102 | **The beta waitlist** — capture failed-registration emails (the gate). | High | ⬜ To do | gate |
 | US-347 | **The waitlist store + wiring** — `waitlist.py` + `_registration_gate`. | High | ⬜ To do | ~¼ session |
 
@@ -128,6 +128,13 @@ no cap → no write). The owner sees the list in Supabase → invite → optiona
   keep-your-team option. Display/config only. **+4 tests** (the pool includes the £15.5m player · the card says
   "Last season" not "24/25" · Trending order · Help mentions ☁). ruff clean. **928 → 932.** (US-346 = the card
   hover-popover fit; then ADR-102 + US-347 the waitlist.)
+- **US-346 (card hover fit)** — the compact hover popover (My Squad pitch) was truncating; **zoomed it down**:
+  compact `_stat_rows` now returns **4** stats (was 5), added `.pl-card.compact` CSS overrides (58px photo, smaller
+  name/meta/flags/stat type, tighter padding), and narrowed the pitch `.kit-pop` to **250px** — so the whole card
+  fits without cutting off. Full card (Players) unchanged. Refreshed the **Artifact preview** with the compact card
+  shown beneath the full cards. Tightened the compact test (`<= 4` stats). Display-only. ruff clean. **932** (no
+  net test change). *(The exact fit is a browser thing — the manual smoke on the deploy confirms no clipping,
+  esp. bench kits.)* (Next: ADR-102 + US-347 the waitlist.)
 
 ---
 

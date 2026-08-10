@@ -55,7 +55,7 @@ margin:18px 0 2px;opacity:.85;text-transform:uppercase;}
 .fpl-pitch .kit{position:relative;}
 .fpl-pitch .kit:hover{z-index:40;}
 .fpl-pitch .kit-pop{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);
-width:290px;max-width:78vw;display:none;z-index:40;text-align:left;cursor:default;}
+width:250px;max-width:76vw;display:none;z-index:40;text-align:left;cursor:default;}
 .fpl-pitch .kit:hover .kit-pop{display:block;}
 .fpl-pitch .kit-pop .pl-card{margin:0;}
 </style>

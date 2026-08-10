@@ -83,7 +83,7 @@ def test_compact_drops_the_band_and_trims_stats():
     compact = player_card.player_card_html(_FWD, team_name="Man City", compact=True)
     assert "Player Card" in full and "Player Card" not in compact      # no brand band when compact
     assert "compact" in compact and "Haaland" in compact
-    assert len(_labels(_FWD, compact=True)) <= 5 < len(_labels(_FWD))  # fewer stat rows
+    assert len(_labels(_FWD, compact=True)) <= 4 < len(_labels(_FWD))  # trimmed stats so the popover fits (US-346)
 
 
 def test_empty_safe():

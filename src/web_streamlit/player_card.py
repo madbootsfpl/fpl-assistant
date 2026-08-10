@@ -52,7 +52,14 @@ border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,25
 border-bottom:1px solid rgba(255,255,255,.08);}
 .pl-card .plc-stat .l{color:#aab6c6;font-size:.9rem;}
 .pl-card .plc-stat .v{font-weight:800;font-size:1.25rem;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
-.pl-card.compact .plc-name{font-size:1.3rem;} .pl-card.compact .plc-grid{padding:6px 18px 14px;}
+.pl-card.compact .plc-head{padding:12px 14px 8px;gap:12px;}
+.pl-card.compact .plc-photo{width:58px;height:58px;}
+.pl-card.compact .plc-meta{font-size:.8rem;}
+.pl-card.compact .plc-name{font-size:1.15rem;margin:.08rem 0 .35rem;}
+.pl-card.compact .plc-flags{margin-top:6px;} .pl-card.compact .plc-flag{font-size:.66rem;padding:2px 7px;}
+.pl-card.compact .plc-grid{padding:4px 14px 12px;gap:0 16px;}
+.pl-card.compact .plc-stat{padding:6px 2px;}
+.pl-card.compact .plc-stat .l{font-size:.8rem;} .pl-card.compact .plc-stat .v{font-size:1.02rem;}
 </style>
 """
 
@@ -101,7 +108,7 @@ def _stat_rows(player, *, compact=False):
         "GK": ["pts", "ppg", "xgc", "def90", "cbi", "own", "recov", "value", "mins"],
     }.get(pos, ["pts", "ppg", "goals", "assists", "xgi", "own", "value", "mins"])
     if compact:
-        order = order[:5]
+        order = order[:4]                                    # fewer stats so the hover popover fits (US-346)
     return [(catalog[k][0], catalog[k][1]) for k in order if catalog[k][1] is not None]
 
 
