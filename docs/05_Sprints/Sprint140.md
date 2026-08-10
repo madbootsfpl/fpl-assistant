@@ -1,7 +1,7 @@
 # Sprint 140: Tester-feedback polish + a beta waitlist
 
 **Dates:** 2026-08-10
-**Status:** 📝 Planned (polish stories + a waitlist gate) — **awaiting ADR-102 for the waitlist**
+**Status:** ✅ Complete — US-345/346 + ADR-102 + US-347 (932 → 939 tests)
 **Capacity:** ~¾ session (four one-liners + a card-fit tweak + a small store feature)
 **Carried Over:** none
 
@@ -163,7 +163,35 @@ no cap → no write). The owner sees the list in Supabase → invite → optiona
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — all four success criteria met. Four tester-visible polish fixes (US-345) + the card
+hover-popover fit (US-346) + the **beta waitlist** (ADR-102 gate + US-347 store/wiring). Display/store-only — no
+engine or xP change; the read-only invariant now names a **4th** opt-in secret-gated write (squad-save · registration
+· analytics · **waitlist**).
+
+**Shipped**
+- **US-345** — price filter caps at the highest player price (Haaland £15.5m shows) · card band **"Last season"** ·
+  Trending **🔥 Top discussions first** · Help step 7 leads with **☁ Save/Load**. +4 tests.
+- **US-346** — compact card trimmed to **4** stats + `.pl-card.compact` overrides + a 250px `.kit-pop` → the pitch
+  hover popover fits without truncation. Full card unchanged.
+- **ADR-102** — the beta-waitlist decision + privacy posture (holds the *non-admitted*, incl. wrong-code; owner-only;
+  "remove me = delete the row"). 102 ADRs.
+- **US-347** — `web_streamlit/waitlist.py` (`add(email, reason)` → a `beta_waitlist` upsert, best-effort, no new
+  secret) wired into `_registration_gate`'s two failure branches (cap-full → `full`, wrong-code → `bad_code`). Off by
+  default. +7 tests. BETA.md §4a documents the table + how to invite.
+
+**Tests:** 932 → **939** (+7). ruff clean; CI-parity green.
+
+**What went well:** the polish items were tiny + verified real at planning; the waitlist reused the store pattern
+(4th time, no new secret); a real ADR for the privacy surface.
+
+**Challenges:** adding the wrong-code waitlist write broke a *pre-existing* gate test — the shared `_fake_user_store`
+POST fake recorded **any** POST as a registration. Fixed honestly by making the fake **URL-aware** (only a
+`/beta_users` POST records a user), so it now models the real two-table boundary.
+
+**Owner follow-ups (not builds):** create the `beta_waitlist` table (BETA.md §4a) to enable capture; browser-check
+the five polish items on the deploy; GW1 (2026-08-21) calibration flip remains data-gated (GW4–6).
+
+**Lessons:** `docs/05_Sprints/Sprint140_Lessons_Learnt.md`.
 
 ---
 

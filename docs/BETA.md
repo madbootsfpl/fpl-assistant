@@ -228,6 +228,8 @@ Everything below is **£0** and opt-in. Tick them off, then post the invite.
       testers if set.
 - [ ] **Cap the numbers** *(optional, recommended)* — set `FPL_USER_CAP` (§4) + the `beta_users` table → testers
       register with the code + an email, capped; raise the cap as perf holds; see who's in via the Supabase table.
+- [ ] **Waitlist** *(optional)* — create the `beta_waitlist` table (§4a) → an over-cap or wrong-code attempt records
+      its email so you can invite them later. No new secret; off until the table exists.
 - [ ] **Prod/staging split** — the app testers use runs off the **stable** branch (`main`); you iterate on
       **staging** (`master`) and promote by merge, so a mid-sprint push can't break the beta
       ([ADR-095](06_Decisions/ADR-095-running-a-wider-beta.md); see [DEPLOY.md](DEPLOY.md#prodstaging-adr-095)).

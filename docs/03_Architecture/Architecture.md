@@ -455,6 +455,21 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 140 (2026-08-10)** — *Tester-feedback polish + a beta waitlist* (**ADR-102**; the polish extends
+  ADR-084, no new ADR). **US-345 (polish):** the Players **price filter** max = the highest player price rounded to
+  £0.5 (so **Haaland £15.5m** shows, was a stale fixed £15.0); the card band reads **"Last season"** (was the
+  misleading "Season 24/25"); Trending shows **🔥 Top discussions first**; Help step 7 leads with **☁ Save/Load**.
+  **US-346 (card fit):** the compact card → **4** stats + `.pl-card.compact` overrides + a 250px `.kit-pop`, so the
+  pitch hover popover fits without truncation (full card unchanged). **US-347 (the waitlist):**
+  `web_streamlit/waitlist.py` — `add(email, reason)` derives a `beta_waitlist` endpoint from `FPL_STORE_URL`'s base
+  (reuses `FPL_STORE_KEY`, **no new secret**), cleans the email, and upserts `{email, reason}` with
+  `merge-duplicates` (idempotent on the email PK); **best-effort + fail-silent** (a no-op without the store / on a
+  bad email; swallows any store failure — never raises or blocks the gate). Wired into `access._registration_gate`'s
+  two failure branches: a wrong invite code → `bad_code`, over the cap → `full`. **Off by default** (needs the store
+  + `FPL_USER_CAP`) — the **4th** opt-in, secret-gated server write (after squad-save/registration/analytics); the
+  read-only invariant now names **four** exceptions. Test upkeep: the shared `_fake_user_store` POST fake made
+  **URL-aware** (only a `/beta_users` POST records a user) so a waitlist write no longer pollutes the registration
+  test. +7 tests (932→939). Display/store-only; the one-xP invariant holds.
 - **Sprint 139 (2026-08-10)** — *A rich player card, in two places* (extends **ADR-084**, no new ADR;
   display-only). **US-342:** `web_streamlit/player_card.py` — a self-contained HTML/CSS card (the pitch/captain
   family): `card_body` (CSS-less) + `player_card_html` (`CARD_CSS` + body) + `render_player_card`; a pure,
