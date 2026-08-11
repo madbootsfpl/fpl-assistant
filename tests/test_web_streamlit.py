@@ -970,6 +970,43 @@ def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
     assert defs[4]["id"] not in new_bench and defs[0]["id"] in new_bench   # on → XI, off → bench
 
 
+def test_my_squad_card_picker_prefills_bring_off():
+    # US-352: picking a *starter* in the "👤 View a player's card" picker pre-fills the Substitute "Bring off";
+    # picking a *bench* player shows a hint (they're a bring-on, not a bring-off).
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # GK + 3 outfield
+    squad = {"name": "PrefillTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+
+    picker = next(s for s in at.selectbox if s.label == "👤 View a player's card")
+    starter = defs[0]                                          # a first-choice DEF (in the XI)
+    picker.set_value(f"{starter['web_name']} · {starter['team']}").run()
+    off = next(s for s in at.selectbox if s.key == "sub_off")
+    assert off.value == f"{starter['position']} {starter['web_name']}"    # Bring off pre-filled to the pick
+
+    benched = defs[4]                                          # a bench player → a hint, not a prefill
+    next(s for s in at.selectbox if s.label == "👤 View a player's card") \
+        .set_value(f"{benched['web_name']} · {benched['team']}").run()
+    assert any(benched["web_name"] in c.value and "bring off" in c.value.lower() for c in at.caption)
+
+
 def test_my_squad_flags_unavailable_players_by_name():
     # US-240: My Squad names the flagged players (with their flag), else "all 15 available"
     from src.storage import Storage

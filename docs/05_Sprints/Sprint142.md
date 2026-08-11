@@ -83,7 +83,7 @@ reasoning); drag-and-drop; auto-suggest the best legal sub by xP.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-351 | **The Substitute control** — bring off ↔ bring on (legal-only) + `substitute()` helper. | High | ✅ Done | ~⅓ session |
-| US-352 | **Picker pre-fill** — the card picker seeds "Bring off". | Med | ⬜ To do | ~¼ session |
+| US-352 | **Picker pre-fill** — the card picker seeds "Bring off". | Med | ✅ Done | ~¼ session |
 
 ---
 
@@ -115,6 +115,14 @@ reasoning); drag-and-drop; auto-suggest the best legal sub by xP.
   the bench GK isn't offered for an outfield off, a swap updates the session bench). ruff clean. **939 → 944.**
   *(Baseline was 939 — Sprint 141 branding is parked/uncommitted, so it added no tests; the plan's "942" was an
   estimate.)* (US-352 next: the card picker pre-fills "Bring off".)
+- **US-352 (picker pre-fill — the "both" wiring)** — the "👤 View a player's card" picker now **seeds** the
+  Substitute control: picking a **starter** pre-fills **"Bring off"** to that player; picking a **bench** player
+  shows a hint (*"…is on your bench — pick a starter to bring off, then choose them under Bring on"*). **Edge-
+  triggered** on a `_sub_prefill_for` session marker (compares the picked id to the last-seen), so it seeds **once
+  per pick** and you can still change "Bring off" freely afterwards; the seed writes `st.session_state["sub_off"]`
+  before the selectbox is created (a valid option, since a starter is always in the XI). Display/session-state only.
+  **+1 AppTest** (picking a starter pre-fills Bring off; picking a bench player shows the hint). ruff clean.
+  **944 → 945.**
 
 ---
 

@@ -372,6 +372,15 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
                            fixtures=fx, projected_xp=xp_by_id.get(picked["id"]))
 
+    # US-352: the card picker **seeds** the substitution — picking a *starter* pre-fills "Bring off" (edge-
+    # triggered on `_sub_prefill_for`, so it seeds once per pick and you can still change Bring off freely);
+    # picking a *bench* player shows a hint (they're a bring-*on*, not a bring-off).
+    picked_id = picked["id"] if picked else None
+    if picked_id != st.session_state.get("_sub_prefill_for"):
+        st.session_state["_sub_prefill_for"] = picked_id
+        if picked_id is not None and picked_id not in bench_ids:      # a starter → seed Bring off
+            st.session_state["sub_off"] = f"{picked['position']} {picked['web_name']}"
+
     # US-351: a direct **substitution** near the pitch — bring a starter OFF (to the bench) and a bench player
     # ON (into the XI). Reuses `substitute` (set_bench + legal_xi_issues); only legal swaps are offered (GK↔GK;
     # a swap that keeps a legal formation). The static pitch card can't hold a working button (S139 — HTML in a
@@ -379,10 +388,13 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # Edit, below) stays as the bulk path.
     if xi and bench:
         with st.expander("🔁 Substitute — swap a starter with a bench player", expanded=True):
+            if picked and picked["id"] in bench_ids:                 # US-352: a benched pick is a bring-*on*
+                st.caption(f"👆 **{picked['web_name']}** is on your bench — pick a starter to **bring off**, "
+                           f"then choose **{picked['web_name']}** under *Bring on*.")
             off_label = {f"{p['position']} {p['web_name']}": p["id"]
                          for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))}
             off_choice = st.selectbox("Bring off (from your XI)", list(off_label), key="sub_off",
-                                      help="The starter to move to the bench.")
+                                      help="The starter to move to the bench (the card picker above pre-fills this).")
             off_id = off_label[off_choice]
             # Only bench players whose swap-in keeps a legal XI (the helper returns no issues).
             legal_ons = [p for p in bench if not substitute(squad, off_id, p["id"], by_id)[1]]
