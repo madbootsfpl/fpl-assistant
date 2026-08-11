@@ -455,6 +455,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 141 (2026-08-11)** — *MADBOOTS — the rebrand* (**ADR-103**). Rename the product's **user-facing**
+  surfaces **FPL Assistant → MADBOOTS** (one word — the two-tone MAD-purple/BOOTS-orange split carries the
+  word-break), tagline *Fantasy Football, Calculated.* — folded in as **accents** on the current light/theme-aware
+  app (approach B; a dark reskin deferred). **US-348:** a single **`web_streamlit/brand.py`** source of truth
+  (`NAME`/`TAGLINE` + a pure `page_config()`), swapping every visible "FPL Assistant" → "MADBOOTS" (all ~10 pages'
+  tab titles, the Home header, the beta gate ×2, the player-card band, the feedback subject, the FastAPI title +
+  `base.html`) + a **guard test** (no stray old name in `src/`); the two borderline ids flip (`USER_AGENT` →
+  `madboots/0.1`, CLI `prog` → `madboots`) — the package/repo + the 14 `FPL_*` secrets **unchanged**. **US-349:** the
+  **MB badge** (`assets/madboots-badge.png`, transparent, owner-approved via a real-badge Artifact preview) becomes
+  `page_config`'s **`page_icon`** (the favicon on every tab) + the small mark on the Home header (`st.image` + the
+  two-tone `wordmark_html()`), the beta gate, and the player-card band (a 64² data URI — the compact pitch popover
+  has no band, so no per-kit weight). **US-350:** a quiet **not-affiliated** `DISCLAIMER` footer (Home + gates) + the
+  live identity-doc rebrand (README/PRODUCT/Charter/DIRECTION/Testing_Guide/Roadmap; the Journal/sprint-logs/ADRs/
+  changelog + the `fpl-assistant` package refs kept as the record). **Display/asset-only** — `brand.py` is pure (no
+  Streamlit import); the analytics/decision core, the one-xP metric, and the read-only guardrail are untouched. +6
+  tests (952→958). The repo-transfer + `madboots.com` changeover is a **separate bundled backlog item**.
 - **Sprint 143 (2026-08-11)** — *Clearer transfers — My Squad + accept the AI plan* (extends **ADR-055** +
   **ADR-046**, no new ADR; from tester feedback). Grounding found ~⅔ already shipped, so *clarify + one feature*.
   **US-353:** My Squad's "Swap a player" expander → **"Transfer"** (owner's steer: plain *Transfer*) with a caption

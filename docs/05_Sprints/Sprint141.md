@@ -1,9 +1,7 @@
 # Sprint 141: MAD BOOTS — the rebrand (visible surfaces, accent approach)
 
 **Dates:** 2026-08-10
-**Status:** 🚧 In progress — **ADR-103 Accepted**; badge art sorted (`madboots.png`, transparent, owner-approved via
-the real-badge preview); name settled as **MADBOOTS** (one word — the colour split carries the word-break). Building
-US-348 → US-350.
+**Status:** ✅ Complete — ADR-103 + US-348/349/350 (the visible product is **MADBOOTS**). 952 → 958 tests.
 **Capacity:** ~1 session (a display-name swap · an SVG badge + a wordmark · a footer + live-doc rebrand)
 **Carried Over:** none
 
@@ -171,7 +169,33 @@ package/repo/`FPL_*` secrets (**not** planned — invisible, high-risk).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — the product is rebranded **FPL Assistant → MADBOOTS** across every user-facing surface,
+folded in as **accents** on the current light/theme-aware app (approach B). Display/asset-only — no engine/xP/secret
+change; the internal `fpl-assistant` package + `FPL_*` secrets are unchanged (ADR-103).
+
+**The arc:** planned 2026-08-10, then **parked pending art** (the AI mascot wouldn't shrink to a favicon), un-parked
+2026-08-11 once the owner produced a clean transparent badge (`madboots.png`) — **owner-approved via a real-badge
+Artifact preview** before any wiring. Mid-sprint the name tightened to **MADBOOTS** (one word — the two-tone colour
+split carries the break, matching the one-word domain/handle).
+
+**Shipped**
+- **ADR-103** — the brand identity (name/tagline/mark-system/theme-B/keep-internal/disclaimer). 103 ADRs.
+- **US-348** — `brand.py` (name/tagline/`page_config`) + the ~19 visible swaps + the tagline + `USER_AGENT`/CLI
+  `prog`. +3 tests (incl. a guard: no stray "FPL Assistant" in `src/`).
+- **US-349** — the badge favicon on every tab + `badge_path`/`badge_data_uri`/`wordmark_html`; the Home header, the
+  beta gate ×2, and the player-card band. +2 tests.
+- **US-350** — the not-affiliated disclaimer (Home + gates) + the live identity-doc rebrand. +1 test.
+
+**Tests:** 952 → **958** (+6). ruff clean; CI-parity green. Badge assets ship (not gitignored).
+
+**What went well:** the real-asset preview de-risked the look; one `brand.py` source of truth; honest visible/
+invisible split (kept `FPL_*` + the package).
+
+**Owner follow-ups:** the browser smoke (favicon/wordmark/badge render browser-side); the **bundled infra
+changeover** (repo transfer → `madbootsfpl` + `madboots.streamlit.app` + forward `madboots.com`, `docs/Backlog.md`);
+deferred — the illustration hero, a vector/designer redraw, a dark reskin, a landing page.
+
+**Lessons:** `docs/05_Sprints/Sprint141_Lessons_Learnt.md`.
 
 ---
 
