@@ -455,6 +455,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 143 (2026-08-11)** — *Clearer transfers — My Squad + accept the AI plan* (extends **ADR-055** +
+  **ADR-046**, no new ADR; from tester feedback). Grounding found ~⅔ already shipped, so *clarify + one feature*.
+  **US-353:** My Squad's "Swap a player" expander → **"Transfer"** (owner's steer: plain *Transfer*) with a caption
+  distinguishing it from the S142 **🔁 Substitute** (*Substitute = lineup XI↔bench · Transfer = a **new** player,
+  sells one of the 15; same-position only*); its widgets read **Transfer out / Bring in / Transfer →**. A **live
+  overspend flag** — the projected 15-cost + bank (or a *£X over £100m* warning) computed each rerun, shown **before**
+  apply — plus an opt-in **"Include injured/suspended"** toggle (drops the `not is_unavailable` filter). **US-354:**
+  a new `apply_transfer_plan(squad, plan, players)` in `web_streamlit/squads.py` (the N-transfer counterpart of
+  `apply_transfer` — maps every `out.id → in.id` from the `suggest_transfer_plan` moves, one `squad_15_issues`
+  check, recomputes cost + a soft over-budget warning, clears a sold captain; copy-not-mutate) behind an **"Apply
+  this plan →"** button on `render_transfer`'s `count>1` branch (the coordinated plan was **display-only**; a single
+  swap could already be applied). **Session-state only** (mutates like the existing controls); the one-xP +
+  read-only invariants hold. +7 tests (945→952). No engine change.
 - **Sprint 142 (2026-08-11)** — *An intuitive substitution on My Squad* (extends **ADR-055** + the S139 picker, no
   new ADR; from tester feedback). Subbing was awkward — the only path was the "Set the bench (pick 4)" multiselect
   (re-pick all four). **US-351:** a `substitute(squad, off_id, on_id, by_id)` helper in `web_streamlit/squads.py`

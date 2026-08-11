@@ -1,7 +1,7 @@
 # Sprint 143: Clearer transfers — My Squad + accept the AI plan
 
 **Dates:** 2026-08-11
-**Status:** 📝 Planned — awaiting sign-off (no new ADR; extends ADR-055/046)
+**Status:** ✅ Complete — US-353 + US-354 (no new ADR; extends ADR-055/046). 945 → 952 tests
 **Capacity:** ~½–¾ session (a My Squad transfer polish + one real feature)
 **Carried Over:** none
 
@@ -135,7 +135,29 @@ transfer" shortcut; wildcard/free-hit-aware planning.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — both stories in. Transfers are now clearly named and complete: My Squad's transfer control
+is renamed **Transfer** (distinct from the S142 **🔁 Substitute**) with a **live overspend flag** + an opt-in
+**include-injured** toggle; the Transfer page can **accept the coordinated AI plan**, not just a single swap.
+Session-state only — no engine/xP/server change; the one-xP + read-only invariants hold.
+
+**Grounding paid off:** planning found ~⅔ of the ask already shipped (My Squad already had a free-choice transfer;
+the Transfer page already applied a single swap). So the sprint was **clarify + one real feature**, not build-from-
+zero — and it fixed a confusion we'd introduced ourselves (Substitute vs "Swap a player").
+
+**Shipped**
+- **US-353** — rename "Swap a player" → **Transfer** (+ a Substitute-vs-Transfer caption; controls read Transfer
+  out / Bring in / Transfer →); a **live** projected-cost/bank flag before apply; an opt-in **Include
+  injured/suspended** toggle. +2 tests, +2 updated for the renamed labels.
+- **US-354** — `apply_transfer_plan()` (the N-transfer counterpart of `apply_transfer`: map all `out→in`, one
+  legality check, cost + soft over-budget warning, clear a sold captain) + an **"Apply this plan →"** button on the
+  Transfer page's multi-transfer branch. +5 tests.
+
+**Tests:** 945 → **952** (+7). ruff clean; CI-parity green.
+
+**Owner follow-up (browser smoke):** My Squad — Transfer reads distinctly from Substitute, a pricey buy flags the
+overspend live, the include-injured toggle surfaces flagged players; Transfer page — a 2–3 transfer plan applies.
+
+**Lessons:** `docs/05_Sprints/Sprint143_Lessons_Learnt.md`.
 
 ---
 
