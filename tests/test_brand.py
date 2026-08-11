@@ -40,6 +40,12 @@ def test_wordmark_is_two_tone_madboots():
     assert brand.PURPLE in w and brand.ORANGE in w            # two-tone
 
 
+def test_disclaimer_is_not_affiliated():
+    # US-350 (ADR-103): a quiet not-affiliated line — the product is named, on official FPL data.
+    d = brand.DISCLAIMER
+    assert brand.NAME in d and "not affiliated" in d.lower() and "Premier League" in d
+
+
 def test_no_stray_old_product_name_in_src():
     # US-348 (ADR-103): the visible product name is rebranded everywhere — no "FPL Assistant" left in code/templates.
     hits = [str(f.relative_to(_SRC))

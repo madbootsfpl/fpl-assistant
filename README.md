@@ -1,8 +1,12 @@
-# FPL Assistant
+# MADBOOTS
+
+**Fantasy Football, Calculated.**
 
 [![CI](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml)
 
 A personal Fantasy Premier League analytics assistant — a command-line tool you can also **talk to**.
+*(The internal package/repo stays `fpl-assistant`; MADBOOTS is the product brand — ADR-103. Not affiliated with
+the Premier League or the official Fantasy Premier League game.)*
 
 **Status:** Phases 1 (*CLI Analytics MVP*), 3 (*decision support* — captain · transfer · squad analysis)
 and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **complete**. A **read-only web UI**

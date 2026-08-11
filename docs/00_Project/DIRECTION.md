@@ -1,4 +1,4 @@
-# FPL Assistant — Direction & Options
+# MADBOOTS — Direction & Options
 
 A record of the **strategic** questions (2026-08-07) and the options explored, so the direction is captured
 and shareable on GitHub. This is deliberately honest about effort and trade-offs; nothing here is committed —

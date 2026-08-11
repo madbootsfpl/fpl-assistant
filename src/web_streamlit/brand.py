@@ -14,6 +14,8 @@ from pathlib import Path
 
 NAME = "MADBOOTS"                              # the display name — one word; the wordmark is two-tone (MAD/BOOTS)
 TAGLINE = "Fantasy Football, Calculated."
+# Legal hygiene (ADR-103): a named product on official FPL data — a quiet, honest not-affiliated line.
+DISCLAIMER = f"{NAME} is not affiliated with the Premier League or the official Fantasy Premier League game."
 
 # Brand palette (ADR-103)
 PURPLE = "#8B2FC9"

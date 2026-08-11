@@ -216,6 +216,7 @@ def _code_gate(code: str) -> None:
         st.rerun()
     elif entered:
         st.error("That code isn't right — check the one you were sent.")
+    st.caption(brand.DISCLAIMER)             # US-350 (ADR-103): the not-affiliated line on the gate
     st.stop()
 
 
@@ -257,4 +258,5 @@ def _registration_gate(cap: int) -> None:
                 st.warning(f"The beta is full right now ({cap} testers). More spots open as it grows.")
                 if signup := secret("FPL_SIGNUP_URL"):
                     st.link_button("✋ Join the waitlist", signup)
+    st.caption(brand.DISCLAIMER)             # US-350 (ADR-103): the not-affiliated line on the gate
     st.stop()

@@ -101,7 +101,7 @@ package/repo/`FPL_*` secrets (**not** planned — invisible, high-risk).
 | ADR-103 | **The MADBOOTS brand identity** — name/tagline/marks/theme-B/keep-internal/disclaimer. | High | ✅ Done | gate |
 | US-348 | **Display swap + tagline** — ~19 visible surfaces `FPL Assistant → MADBOOTS`. | High | ✅ Done | ~⅓ session |
 | US-349 | **Badge + wordmark** — `brand.py` + the MB badge favicon + the CSS wordmark. | High | ✅ Done | ~⅓ session |
-| US-350 | **Disclaimer + live-doc rebrand** — not-affiliated line + README/Help/BETA. | Med | ⬜ To do | ~¼ session |
+| US-350 | **Disclaimer + live-doc rebrand** — not-affiliated line + README/identity docs. | Med | ✅ Done | ~¼ session |
 
 ---
 
@@ -157,6 +157,15 @@ package/repo/`FPL_*` secrets (**not** planned — invisible, high-risk).
   band, so no per-kit weight). **+2 tests** (the badge favicon/asset/data-URI · the two-tone wordmark) + updated the
   access/analytics assertions (Home's brand moved from an `st.title` to the wordmark markdown). Assets ship (not
   gitignored). ruff clean. **955 → 957.**
+- **US-350 (disclaimer + live-doc rebrand)** — a `brand.DISCLAIMER` (*"MADBOOTS is not affiliated with the Premier
+  League or the official Fantasy Premier League game."*) rendered as a quiet **footer** on Home + on **both beta
+  gates** (where new users land). Rebranded the **live identity docs** — `README.md` (title → **MADBOOTS** + the
+  tagline + a note the internal package stays `fpl-assistant`), `PRODUCT.md`, `Project_Charter.md`, `DIRECTION.md`,
+  `Testing_Guide.md`, `Roadmap.md` (title swaps). **Left the historical record** as-is (the Journal, the sprint
+  logs, the ADRs + index, the Architecture changelog, and the Handbook's `fpl-assistant` venv/dir setup — the
+  package name, kept). **+1 test** (the disclaimer constant) + a Home-footer assertion. ruff clean. **957 → 958.**
+  **Sprint 141 complete — the visible product is MADBOOTS** (badge favicon · two-tone wordmark · tagline ·
+  disclaimer); internal `fpl-assistant` + `FPL_*` secrets unchanged.
 
 ---
 

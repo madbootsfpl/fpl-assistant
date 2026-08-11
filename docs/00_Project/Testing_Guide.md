@@ -1,4 +1,4 @@
-# FPL Assistant — Tester Guide
+# MADBOOTS — Tester Guide
 
 Thanks for trying it out! This is a **read-only** Fantasy Premier League analytics assistant — it helps you
 build a squad, pick a captain, plan transfers, and analyse your team, all grounded in the FPL data. Nothing

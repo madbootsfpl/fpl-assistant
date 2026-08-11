@@ -1,4 +1,4 @@
-# FPL Assistant — Product Overview
+# MADBOOTS — Product Overview
 
 A reader-friendly map of **what the app does today**, **what's gated until the season starts**, **what's next**,
 and how that sits on the roadmap. For the live engineering status see

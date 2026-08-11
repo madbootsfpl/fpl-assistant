@@ -73,3 +73,6 @@ _signup = secret("FPL_SIGNUP_URL")          # a founding-tester signup link, onl
 if _signup:
     st.link_button("✋ Join the beta (founding testers)", _signup,
                    help="Sign up with your email — founding testers get free access as the app grows.")
+
+st.divider()
+st.caption(brand.DISCLAIMER)                 # US-350 (ADR-103): the not-affiliated line

@@ -1,6 +1,6 @@
 # Project Charter
 
-**Project Name:** FPL Assistant *(Working Title)*
+**Project Name:** MADBOOTS *(the internal package stays `fpl-assistant`)*
 
 **Version:** 1.0
 

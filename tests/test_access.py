@@ -36,6 +36,7 @@ def test_app_is_open_when_no_code_is_configured():
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert not at.exception
     assert _unlocked(at)                                        # the real app (the MADBOOTS wordmark), not the lock
+    assert any("not affiliated" in c.value.lower() for c in at.caption)   # US-350: the disclaimer footer
 
 
 def test_gate_blocks_then_unlocks_with_the_right_code(monkeypatch):

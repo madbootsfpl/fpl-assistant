@@ -1,4 +1,4 @@
-# FPL Assistant Roadmap
+# MADBOOTS Roadmap
 
 *Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page; kept current through Sprint 068.
 Phase 1 was delivered as a **CLI** (ADR-002/003), not the original web-first plan; that original 5-phase
