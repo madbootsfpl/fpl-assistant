@@ -4,6 +4,31 @@ Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features li
 consolidated [Roadmap](04_Roadmap/Roadmap.md) — "Next / Then / Later"; this file holds the small
 nice-to-haves and tech-debt.)*
 
+## Branding — MAD BOOTS rebrand (⏸ parked pending art)
+
+Rename the product **FPL Assistant → MAD BOOTS** (tagline **"Fantasy Football, Calculated."**), `madboots.com`
+secured. The **sprint plan is drafted** (`docs/05_Sprints/Sprint141.md`, uncommitted) — approach **B** (marks as
+accents on the current light/theme-aware app), keep the internal `fpl-assistant` package + `FPL_*` secrets. **Blocked
+on a mark that renders well:** the AI-generated badge doesn't survive tracing to a favicon (lost teeth, muddy
+colours). Owner is reviewing art options — the steer is **two marks**: a detailed **hero** illustration *and* a
+deliberately **simple small icon** (MB monogram / a clean boot) designed for 16–32px. **Resume at `start ADR-103`
+once the art is sorted.**
+
+- 🧭 **Brand infrastructure changeover** *(do it all together, in one coordinated session, alongside the rebrand —
+  not piecemeal; the live beta can briefly blink offline)*. Owner secured **@madbootsfpl** across socials + GitHub.
+  - **Q1 — move the repo to `madbootsfpl`.** Use GitHub **Transfer** (preserves history/issues/stars + auto-redirects
+    the old URL), *not* a fresh repo. **Gotcha:** breaks the Streamlit Cloud source link → must **reconnect** the app
+    + re-grant Streamlit access to the new account (GitHub Actions secrets don't transfer; Streamlit secrets are
+    safe). *(An Org `madboots` is the tidier long-term home but optional — a user/org can't share the `@madbootsfpl`
+    name he grabbed.)* Code-side: update the git remote + the hardcoded repo URLs in `Home.py`/`8_Feedback.py` + docs.
+  - **Q2 — the domain.** (1) Rename the Streamlit subdomain → **`madboots.streamlit.app`** (free, one setting).
+    (2) **301-forward `madboots.com` → the app** (registrar/Cloudflare — **no masking**). **Ceiling:** Streamlit
+    *Community* Cloud has **no custom-domain** support (paid/Snowflake only), so the URL bar shows `…streamlit.app`
+    after the redirect; a tiny free **static landing page** (Cloudflare/GitHub Pages) is the nicer long-term front
+    door (+ a home for the hero illustration). **Flags:** renaming the subdomain **logs everyone out** (the
+    remember-me cookie is first-party per-domain; cloud-saved squads survive, keyed by handle) and breaks
+    `_DEFAULT_ORIGIN`/`FPL_FEEDBACK_ORIGIN` (code-side, handled in the rebrand sprint).
+
 ## Tester feedback — 2026-08-10 intake
 
 Triaged by size: 🩹 quick fix (a small sprint of these) · 🧩 small UX fix · 🧭 feature (needs a gate/decision).
