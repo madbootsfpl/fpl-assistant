@@ -23,6 +23,7 @@ def test_card_shows_pick_confidence_why_risks_and_alternatives():
     assert "69/100 · Medium" in h and "cc-med" in h                          # confidence pill (Medium band)
     assert "✓ Penalty taker" in h and "⚠ Away fixture" in h                  # Why / Risks
     assert "🥈 Haaland 5.7" in h and "🥉 Rice 4.5" in h                       # Alternatives
+    assert 'class="cc-brand"' in h and 'aria-label="MADBOOTS"' in h          # US-355: the MADBOOTS mark
 
 
 def test_card_band_drives_the_pill_class():

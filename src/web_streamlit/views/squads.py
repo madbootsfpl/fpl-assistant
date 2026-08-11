@@ -362,7 +362,7 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # compact card). Reuses the card renderer with the squad's data (fixtures from `upcoming`, our xP).
     from src.web_streamlit.player_card import render_player_card
     owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
-    picked = owned_by_label.get(st.selectbox("👤 View a player's card", ["—", *owned_by_label],
+    picked = owned_by_label.get(st.selectbox("👤 View your player's card", ["—", *owned_by_label],
                                              help="Or hover a shirt on the pitch (desktop)."))
     if picked:
         short = picked["team"]

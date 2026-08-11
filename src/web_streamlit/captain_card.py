@@ -11,6 +11,8 @@ import html
 
 import streamlit as st
 
+from src.web_streamlit import brand
+
 # Scoped to `.cap-card`; rgba-grey neutrals read on both themes, chips carry explicit colours. Lines unindented
 # so `st.markdown` doesn't treat the CSS as a code block.
 _CARD_CSS = """
@@ -34,6 +36,9 @@ font-size:.85rem;}
 .cap-card ul{margin:0;padding-left:1.15rem;}
 .cap-card li{margin:.12rem 0;}
 .cap-card .cc-alts{opacity:.92;font-size:.92rem;border-top:1px solid rgba(128,128,128,.25);padding-top:.5rem;}
+.cap-card .cc-brand{margin-top:.55rem;padding-top:.5rem;border-top:1px solid rgba(128,128,128,.25);
+display:flex;align-items:center;justify-content:space-between;}
+.cap-card .cc-brand .cc-t{text-transform:uppercase;letter-spacing:.08em;font-size:.68rem;opacity:.55;}
 </style>
 """
 
@@ -76,7 +81,10 @@ def captain_card_html(ranked, explanation, *, scope: str = "", team_names=None) 
         f'<div class="cc-pick"><span class="cc-name">{e(top["web_name"])}</span>'
         f'<span class="cc-team">{e(team)} · {e(top.get("position") or "")}</span>{proj}{conf_html}</div>'
         f'<div class="cc-cols">{why_html}{risk_html}</div>'
-        f'{alts_html}</div>'
+        f'{alts_html}'
+        # US-355: the MADBOOTS mark — the captain card joins the player card's brand family (ADR-103/084).
+        f'<div class="cc-brand">{brand.mark_html(badge_px=15, font_px=12)}'
+        f'<span class="cc-t">Captain Pick</span></div></div>'
     )
 
 

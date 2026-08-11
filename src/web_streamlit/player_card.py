@@ -152,12 +152,10 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
     grid = "".join(
         f'<div class="plc-stat"><span class="l">{e(lbl)}</span><span class="v">{e(val)}</span></div>'
         for lbl, val in _stat_rows(p, compact=compact))
-    brand_mark = (      # US-349: the MB badge + the two-tone MADBOOTS wordmark (ADR-103)
-        f'<span class="plc-brand" style="display:inline-flex;align-items:center;gap:6px">'
-        f'<img src="{brand.badge_data_uri()}" alt="" style="height:15px;width:auto"/>'
-        f'<span style="color:{brand.PURPLE_LT}">MAD</span><span style="color:{brand.ORANGE}">BOOTS</span></span>')
+    # US-349/355: the shared MB badge + two-tone MADBOOTS lockup (US-355 fixes the MAD/BOOTS gap); PURPLE_LT
+    # reads on the band's dark ground.
     band = "" if compact else (
-        f'<div class="plc-band">{brand_mark}'
+        f'<div class="plc-band">{brand.mark_html(badge_px=15, font_px=12, purple=brand.PURPLE_LT)}'
         '<span class="plc-title">Player Card</span><span class="plc-brand">Last season</span></div>')
 
     return (

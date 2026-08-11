@@ -49,6 +49,20 @@ def page_config(page: str | None = None) -> dict:
             "page_icon": PAGE_ICON, "layout": "wide"}
 
 
+def mark_html(badge_px: int = 15, font_px: int = 12, purple: str = PURPLE) -> str:
+    """The MB badge **+** the two-tone MADBOOTS wordmark as one compact lockup — for card bands/footers (the player
+    card, the captain card). MAD+BOOTS are a **single** flex child (wrapped in one span), so the badge↔word `gap`
+    can never fall *inside* the word — the colour split (`purple` · orange) carries the break. `purple` lets the
+    caller pick a shade legible on the surface (e.g. `PURPLE_LT` on a dark band)."""
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:6px;line-height:1">'
+        f'<img src="{badge_data_uri()}" alt="" style="height:{badge_px}px;width:auto"/>'
+        f'<span aria-label="{NAME}" style="font-weight:900;font-style:italic;font-size:{font_px}px;'
+        f'letter-spacing:-.01em">'
+        f'<span aria-hidden="true" style="color:{purple}">MAD</span>'
+        f'<span aria-hidden="true" style="color:{ORANGE}">BOOTS</span></span></span>')
+
+
 def wordmark_html(px: int = 38) -> str:
     """The two-tone **MADBOOTS** wordmark as inline HTML — **MAD** purple · **BOOTS** orange, the colour split doing
     the word-break (no literal space). `aria-label` carries the whole-word accessible text; the coloured spans are

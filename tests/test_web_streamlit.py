@@ -989,7 +989,7 @@ def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
 
 
 def test_my_squad_card_picker_prefills_bring_off():
-    # US-352: picking a *starter* in the "👤 View a player's card" picker pre-fills the Substitute "Bring off";
+    # US-352: picking a *starter* in the "👤 View your player's card" picker pre-fills the Substitute "Bring off";
     # picking a *bench* player shows a hint (they're a bring-on, not a bring-off).
     from src.storage import Storage
 
@@ -1013,14 +1013,14 @@ def test_my_squad_card_picker_prefills_bring_off():
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
 
-    picker = next(s for s in at.selectbox if s.label == "👤 View a player's card")
+    picker = next(s for s in at.selectbox if s.label == "👤 View your player's card")
     starter = defs[0]                                          # a first-choice DEF (in the XI)
     picker.set_value(f"{starter['web_name']} · {starter['team']}").run()
     off = next(s for s in at.selectbox if s.key == "sub_off")
     assert off.value == f"{starter['position']} {starter['web_name']}"    # Bring off pre-filled to the pick
 
     benched = defs[4]                                          # a bench player → a hint, not a prefill
-    next(s for s in at.selectbox if s.label == "👤 View a player's card") \
+    next(s for s in at.selectbox if s.label == "👤 View your player's card") \
         .set_value(f"{benched['web_name']} · {benched['team']}").run()
     assert any(benched["web_name"] in c.value and "bring off" in c.value.lower() for c in at.caption)
 
@@ -1495,7 +1495,7 @@ def test_my_squad_pitch_has_hover_card_popovers():
 def test_my_squad_card_picker_shows_the_full_card():
     # US-344: a "View a player's card" picker → the full player card below the pitch
     at = _squads_view("My Squad")
-    picker = [s for s in at.selectbox if "View a player's card" in (s.label or "")]
+    picker = [s for s in at.selectbox if "View your player's card" in (s.label or "")]
     assert picker                                             # the picker exists
     if len(picker[0].options) > 1:
         picker[0].set_value(picker[0].options[1]).run()

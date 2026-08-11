@@ -40,6 +40,15 @@ def test_wordmark_is_two_tone_madboots():
     assert brand.PURPLE in w and brand.ORANGE in w            # two-tone
 
 
+def test_mark_html_is_one_lockup_no_word_gap():
+    # US-355: the badge + wordmark is ONE inline-flex, so MAD/BOOTS aren't separate flex children — the badge↔word
+    # gap can't fall *inside* the word (the bug the tester saw as "MAD BOOTS").
+    m = brand.mark_html()
+    assert m.count("inline-flex") == 1
+    assert 'aria-label="MADBOOTS"' in m and ">MAD<" in m and ">BOOTS<" in m
+    assert brand.ORANGE in m and "data:image/png;base64," in m   # two-tone + the badge
+
+
 def test_disclaimer_is_not_affiliated():
     # US-350 (ADR-103): a quiet not-affiliated line — the product is named, on official FPL data.
     d = brand.DISCLAIMER
