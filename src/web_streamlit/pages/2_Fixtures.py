@@ -12,7 +12,7 @@ import streamlit as st
 
 from src.analytics import decision_xp, fixture_ticker, points_per_million, target_by_fixtures, team_fdr
 from src.storage import Storage
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name
 from src.web_streamlit.squads import active_squad
@@ -21,7 +21,7 @@ from src.web_streamlit.status import render_data_status
 # FPL difficulty 1–5 → a green→red band (mirrors the fixture-ticker palette).
 _DIFF_COLOR = {1: "#166534", 2: "#22c55e", 3: "#b7791f", 4: "#ef4444", 5: "#991b1b"}
 
-st.set_page_config(page_title="Fixtures · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config("Fixtures"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Fixtures")
 render_data_status()

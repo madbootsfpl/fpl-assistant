@@ -11,12 +11,12 @@ import streamlit as st
 from src import ask
 from src.storage import Storage
 from src.ui.ask import render_ask
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 from src.web_streamlit.squads import active_squad, set_active_squad
 from src.web_streamlit.status import render_data_status
 
-st.set_page_config(page_title="Ask · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config("Ask"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Ask")
 render_data_status()

@@ -9,10 +9,10 @@ a crash. The heavy lifting is `analytics.summarise` (pure); this page just rende
 
 import streamlit as st
 
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access, secret
 
-st.set_page_config(page_title="Admin · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config("Admin"))
 require_access()          # testers still pass the beta gate first (ADR-087)
 analytics.boot("Admin")
 st.title("📊 Admin — beta analytics")

@@ -15,7 +15,7 @@ _HOME = str(Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "Hom
 
 def _unlocked(at):
     """True if the real app rendered (not the beta lock screen)."""
-    return any("FPL Assistant" in t.value and "beta" not in t.value.lower() for t in at.title)
+    return any("MADBOOTS" in t.value and "beta" not in t.value.lower() for t in at.title)
 
 
 def test_secret_never_raises_without_a_secrets_file():
@@ -33,7 +33,7 @@ def test_app_is_open_when_no_code_is_configured():
     # the default: no gate → Home renders its real title (not the lock screen)
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert not at.exception
-    assert at.title and "FPL Assistant" in at.title[0].value and "beta" not in at.title[0].value.lower()
+    assert at.title and "MADBOOTS" in at.title[0].value and "beta" not in at.title[0].value.lower()
 
 
 def test_gate_blocks_then_unlocks_with_the_right_code(monkeypatch):
@@ -47,7 +47,7 @@ def test_gate_blocks_then_unlocks_with_the_right_code(monkeypatch):
     assert at.error                                             # a wrong code is rejected
 
     at.text_input[0].set_value("letmein").run()
-    assert any("FPL Assistant" in t.value and "beta" not in t.value.lower() for t in at.title)   # unlocked
+    assert any("MADBOOTS" in t.value and "beta" not in t.value.lower() for t in at.title)   # unlocked
 
 
 # --- "remember me" cookie (ADR-099, US-326) ------------------------------------------

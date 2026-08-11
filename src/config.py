@@ -1,4 +1,4 @@
-"""Central configuration for the FPL Assistant.
+"""Central configuration for MADBOOTS (the fpl-assistant package — internal name kept, ADR-103).
 
 Keeping endpoints, timeouts and headers in one place means the rest of the code
 never hard-codes URLs, and tests (or a future config file) can override them
@@ -111,7 +111,7 @@ CHAT_CONTEXT_PATH = "data/chat_context.json"
 
 # The FPL API can reject requests that don't look like they came from a browser,
 # so we send a simple, honest User-Agent that identifies this project.
-USER_AGENT = "fpl-assistant/0.1 (learning project)"
+USER_AGENT = "madboots/0.1 (learning project)"   # brand courtesy string sent to the FPL API (ADR-103)
 
 # Where the local SQLite cache lives. The live cache (fpl.db) is a generated file, gitignored (see
 # .gitignore). On a fresh clone / a public deploy it's absent, so fall back to the committed **seed

@@ -13,7 +13,7 @@ from importlib.metadata import PackageNotFoundError, version
 import requests
 import streamlit as st
 
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.feedback import feedback_mailto, relay_result
 
@@ -33,7 +33,7 @@ def _app_version() -> str:
     except PackageNotFoundError:
         return "unknown"
 
-st.set_page_config(page_title="Feedback · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config("Feedback"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Feedback")
 st.title("📣 Feedback")
@@ -81,7 +81,7 @@ if sent:
                 "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 # US-308: work with a free form-to-email relay too — FormSubmit reads `_subject`; Web3Forms
                 # needs an `access_key` (only when FPL_FEEDBACK_KEY is set). A Google-Sheet sink ignores both.
-                "_subject": f"FPL Assistant beta feedback — {page}",
+                "_subject": f"{brand.NAME} beta feedback — {page}",
             }
             access_key = secret("FPL_FEEDBACK_KEY")
             if access_key:

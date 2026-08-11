@@ -8,6 +8,8 @@ directly). No Streamlit here — just string building.
 
 from urllib.parse import quote
 
+from src.web_streamlit import brand
+
 
 def feedback_mailto(email: str, message: str = "", page: str = "", version: str = "") -> str:
     """A `mailto:` href to the feedback inbox, pre-filled with the message + a page/version footer.
@@ -16,7 +18,7 @@ def feedback_mailto(email: str, message: str = "", page: str = "", version: str 
     route); a submitted message → a one-click "email this to us". `page == "(not sure)"` (the picker's
     default) is treated as no page. Subject and body are URL-encoded, so spaces and newlines are safe.
     """
-    subject = "FPL Assistant beta feedback"
+    subject = f"{brand.NAME} beta feedback"
     if page and page != "(not sure)":
         subject += f" — {page}"
     footer = " | ".join(part for part in (f"page: {page}" if page and page != "(not sure)" else "",

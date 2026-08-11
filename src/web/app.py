@@ -24,7 +24,8 @@ from src.ui.table import render_player_table
 _TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _HOME_LIMIT = 30   # how many players the home view lists
 
-app = FastAPI(title="FPL Assistant", docs_url=None, redoc_url=None)
+# title = brand.NAME (ADR-103); hardcoded here — the FastAPI edge doesn't import the web_streamlit brand module.
+app = FastAPI(title="MADBOOTS", docs_url=None, redoc_url=None)
 
 
 @app.get("/", response_class=HTMLResponse)

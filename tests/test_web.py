@@ -20,7 +20,7 @@ client = TestClient(app)
 def test_home_lists_players():
     r = client.get("/")
     assert r.status_code == 200
-    assert "FPL Assistant" in r.text          # the shell rendered
+    assert "MADBOOTS" in r.text          # the shell rendered
     assert "<pre>" in r.text                   # the players table is shown (reused renderer)
 
 

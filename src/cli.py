@@ -852,8 +852,8 @@ def cmd_calibrate(args) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="fpl-assistant",
-        description="A personal Fantasy Premier League analytics assistant.",
+        prog="madboots",
+        description="MADBOOTS — a personal Fantasy Premier League analytics assistant.",
         epilog=(
             "Examples:\n"
             "  python app.py refresh\n"

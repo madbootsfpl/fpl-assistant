@@ -17,6 +17,7 @@ import html
 import streamlit as st
 
 from src.analytics.crowd import availability_flag, ownership_tier, set_piece_flags
+from src.web_streamlit import brand
 
 # Scoped to `.pl-card`; a fixed dark surface (its own colours, like the pitch) that reads on both themes. Lines
 # unindented so `st.markdown` doesn't treat the CSS as a code block. Public so the pitch can include it **once**
@@ -151,8 +152,8 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
     grid = "".join(
         f'<div class="plc-stat"><span class="l">{e(lbl)}</span><span class="v">{e(val)}</span></div>'
         for lbl, val in _stat_rows(p, compact=compact))
-    band = "" if compact else (
-        '<div class="plc-band"><span class="plc-brand">⚽ FPL Assistant</span>'
+    band = "" if compact else (      # US-349 swaps the ⚽ + text for the MB badge + the two-tone wordmark
+        f'<div class="plc-band"><span class="plc-brand">⚽ {html.escape(brand.NAME)}</span>'
         '<span class="plc-title">Player Card</span><span class="plc-brand">Last season</span></div>')
 
     return (

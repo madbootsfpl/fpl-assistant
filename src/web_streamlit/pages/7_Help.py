@@ -6,10 +6,10 @@ refresh, and no input controls. It complements Home (the short overview) with a 
 
 import streamlit as st
 
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 
-st.set_page_config(page_title="Help · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config("Help"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Help")
 st.title("🧭 Help")

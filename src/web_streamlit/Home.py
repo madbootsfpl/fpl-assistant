@@ -11,17 +11,17 @@ import streamlit as st
 
 from src.storage import Storage
 from src.ui.deadline import deadline_line
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.countdown import render_countdown
 from src.web_streamlit.status import render_data_status
 
-st.set_page_config(page_title="FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config())
 require_access()          # opt-in beta gate (ADR-087) — a no-op unless FPL_ACCESS_CODE is set
 analytics.boot("Home")    # anonymous usage analytics (ADR-100) — a no-op unless FPL_ANALYTICS is set
 render_data_status()
-st.title("⚽ FPL Assistant")
-st.caption("A read-only view over the analytics — the CLI stays the engine (ADR-051/052).")
+st.title(f"⚽ {brand.NAME}")   # US-349 upgrades this to the badge + two-tone CSS wordmark
+st.caption(f"**{brand.TAGLINE}** · a read-only view over the analytics (the CLI stays the engine, ADR-051/052).")
 
 # The next FPL deadline — a countdown that escalates in urgency (ADR-086/US-267), rolling forward each GW.
 _store = Storage()

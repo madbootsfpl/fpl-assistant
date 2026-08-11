@@ -11,6 +11,8 @@ import os
 
 import streamlit as st
 
+from src.web_streamlit import brand
+
 _OK = "_beta_ok"          # session flag: this session passed the gate
 _EMAIL = "_beta_email"    # session: the registered tester email (registration mode, ADR-098)
 _PENDING = "_beta_remember"  # session: a value to write to the "remember me" cookie on the next clean run (ADR-099)
@@ -204,8 +206,8 @@ def _remembered_registration(user_store) -> bool:
 def _code_gate(code: str) -> None:
     """The shared-code prompt (ADR-087). On the right code, remember it and rerun; the write is deferred to the
     post-login run via `_PENDING` so the rerun doesn't drop it. Stops the page until the code is entered."""
-    st.title("🔒 FPL Assistant — private beta")
-    st.caption("This is a closed beta. Enter the access code you were given to continue.")
+    st.title(f"🔒 {brand.NAME} — private beta")
+    st.caption(f"**{brand.TAGLINE}** · a closed beta. Enter the access code you were given to continue.")
     entered = st.text_input("Access code", type="password", key="_beta_code")
     if entered and entered == code:
         st.session_state[_OK] = True
@@ -223,8 +225,8 @@ def _registration_gate(cap: int) -> None:
     from src.web_streamlit.cloud_store import store_error
 
     code = secret("FPL_ACCESS_CODE")
-    st.title("🔒 FPL Assistant — private beta")
-    st.caption("A closed beta with limited spots. Enter your invite code and email to join.")
+    st.title(f"🔒 {brand.NAME} — private beta")
+    st.caption(f"**{brand.TAGLINE}** · a closed beta with limited spots. Enter your invite code and email to join.")
     with st.form("beta_register"):
         entered_code = st.text_input("Invite code", type="password") if code else None
         email = st.text_input("Your email", help="So we know who's testing — used only for the beta.")

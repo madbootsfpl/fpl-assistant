@@ -583,7 +583,7 @@ _TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_Squads.py": "�
 
 
 def test_every_tab_has_an_emoji_led_header():
-    # US-222: each tab's title leads with a distinct emoji (like Home's ⚽ FPL Assistant), no crash
+    # US-222: each tab's title leads with a distinct emoji (like Home's ⚽ MADBOOTS), no crash
     for fname, emoji in _TAB_EMOJI.items():
         at = _run(_PAGES / fname)
         assert not at.exception, f"{fname} raised: {at.exception}"

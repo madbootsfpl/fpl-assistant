@@ -7,7 +7,7 @@ Degrades to "no current news" when everyone's fit. No external calls, no xP — 
 import streamlit as st
 
 from src.storage import Storage
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.media import media_headlines
@@ -22,7 +22,7 @@ def _cached_headlines():
 _STATUS = {"u": "Out", "i": "Injured", "s": "Suspended", "n": "Unavailable", "d": "Doubtful", "a": "Available"}
 _SEVERITY = {"u": 0, "i": 1, "s": 2, "n": 3, "d": 4, "a": 5}
 
-st.set_page_config(page_title="News · FPL Assistant", page_icon="⚽", layout="wide")
+st.set_page_config(**brand.page_config("News"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("News")
 render_data_status()
