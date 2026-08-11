@@ -188,6 +188,43 @@ def test_move_bench_sub_reorders_outfield_and_keeps_the_gk_fixed():
     assert web_squads.move_bench_sub(squad, 1, "up", by_id)["bench_ids"] == [2, 3, 4, 1]    # GK excluded → no-op
 
 
+# --- substitute (US-351): a lineup change (starter ↔ bench), legality-checked -----------------------
+
+def _benched(owned):
+    # bench a GK + one of each line → the XI is a legal 4-4-2 (GK 1, DEF 3-6, MID 8-11, FWD 13-14)
+    return _squad(owned, bench_ids=[2, 7, 12, 15])            # GK2 · DEF7 · MID12 · FWD15
+
+
+def test_substitute_swaps_a_legal_outfield_pair():
+    players, owned = _market()
+    by_id = {p["id"]: p for p in players}
+    new, issues = web_squads.substitute(_benched(owned), 3, 7, by_id)   # DEF 3 (XI) ↔ DEF 7 (bench)
+    assert not issues                                         # 4-4-2 preserved (still 4 DEF)
+    assert new["bench_ids"] == [2, 3, 12, 15]                 # off (3) takes on's (7) bench/priority slot
+    assert new["player_ids"] == owned                         # the 15 are unchanged — only the XI/bench split moved
+
+
+def test_substitute_allows_a_legal_formation_change():
+    players, owned = _market()
+    by_id = {p["id"]: p for p in players}
+    new, issues = web_squads.substitute(_benched(owned), 3, 12, by_id)  # DEF 3 off, MID 12 on → 3-5-2
+    assert not issues and new["bench_ids"] == [2, 7, 3, 15]
+
+
+def test_substitute_refuses_removing_the_only_gk():
+    players, owned = _market()
+    by_id = {p["id"]: p for p in players}
+    _new, issues = web_squads.substitute(_benched(owned), 1, 7, by_id)  # GK 1 off, DEF 7 on → 0 GK
+    assert any("GK" in i for i in issues)                     # illegal → the caller must not commit it
+
+
+def test_substitute_allows_a_gk_for_gk_swap():
+    players, owned = _market()
+    by_id = {p["id"]: p for p in players}
+    new, issues = web_squads.substitute(_benched(owned), 1, 2, by_id)   # GK 1 (XI) ↔ GK 2 (bench)
+    assert not issues and 2 not in set(new["bench_ids"]) and 1 in set(new["bench_ids"])
+
+
 def test_set_captain_accepts_an_owned_player():
     assert web_squads.set_captain({"player_ids": [1, 2, 3]}, 2)["captain_id"] == 2
 

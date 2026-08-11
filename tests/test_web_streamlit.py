@@ -929,6 +929,47 @@ def test_my_squad_bench_reorder_persists_and_recommended_applies():
     assert not at.exception
 
 
+def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
+    # US-351: the 🔁 Substitute control brings a starter OFF (to the bench) and a bench player ON (into the
+    # XI), offering only legal swaps (the bench GK isn't a legal bring-on for an outfield starter).
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # GK + 3 outfield → XI is a legal 4-4-2
+    squad = {"name": "SubTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+
+    off = next((s for s in at.selectbox if s.key == "sub_off"), None)
+    assert off is not None and next((s for s in at.selectbox if s.key == "sub_on"), None) is not None
+    assert next((b for b in at.button if b.key == "do_sub"), None) is not None
+
+    # Bring off the first-choice DEF (a starter), bring on the benched DEF — a legal same-count swap.
+    off.set_value(next(o for o in off.options if defs[0]["web_name"] in o)).run()
+    on = next(s for s in at.selectbox if s.key == "sub_on")
+    assert not any(gks[1]["web_name"] in o for o in on.options)      # the bench GK isn't a legal outfield sub
+    on.set_value(next(o for o in on.options if defs[4]["web_name"] in o)).run()
+    next(b for b in at.button if b.key == "do_sub").click().run()
+    assert not at.exception
+
+    new_bench = set(at.session_state["squad"]["bench_ids"])
+    assert defs[4]["id"] not in new_bench and defs[0]["id"] in new_bench   # on → XI, off → bench
+
+
 def test_my_squad_flags_unavailable_players_by_name():
     # US-240: My Squad names the flagged players (with their flag), else "all 15 available"
     from src.storage import Storage

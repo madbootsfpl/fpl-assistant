@@ -10,7 +10,7 @@ import json
 
 import streamlit as st
 
-from src.analytics import squad_15_issues
+from src.analytics import legal_xi_issues, squad_15_issues
 from src.manager import fetch_manager_team
 from src.squads import SquadStore
 from src.storage import Storage
@@ -116,6 +116,24 @@ def move_bench_sub(squad: dict, player_id: int, direction: str, by_id) -> dict:
     new = dict(squad)
     new["bench_ids"] = outfield + gk
     return new
+
+
+def substitute(squad: dict, off_id: int, on_id: int, by_id) -> tuple[dict, list]:
+    """Substitute a starter for a bench player on a **copy** of `squad` (a lineup change, not a transfer;
+    ADR-055/079). `off_id` (a current XI player) goes to the bench, **taking `on_id`'s slot** in the sub
+    order; `on_id` (a current bench player) comes into the XI. The set of 15 is unchanged — only the
+    XI/bench split moves.
+
+    Returns `(new_squad, issues)` where `issues` is the resulting XI's legality (`legal_xi_issues`): a
+    non-empty list means the caller must **not** commit it — e.g. subbing the only GK for an outfielder
+    (0 keepers), or a swap that breaks the formation. Copy-not-mutate; no server write (the caller sets the
+    active squad). The UI offers only bring-ons that come back with **no** issues."""
+    bench = squad.get("bench_ids", [])
+    new_bench = [off_id if i == on_id else i for i in bench]     # on → XI; off takes on's bench (priority) slot
+    new = set_bench(squad, new_bench)
+    bench_set = set(new["bench_ids"])
+    xi = [by_id[i] for i in new["player_ids"] if i not in bench_set and i in by_id]
+    return new, legal_xi_issues(xi)
 
 
 def apply_transfer(squad: dict, out_id: int, in_id: int, players,

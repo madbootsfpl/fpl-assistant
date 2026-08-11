@@ -56,6 +56,7 @@ from src.web_streamlit.squads import (
     set_active_squad,
     set_bench,
     set_captain,
+    substitute,
 )
 from src.web_streamlit.tables import render_player_table
 
@@ -371,6 +372,39 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
                            fixtures=fx, projected_xp=xp_by_id.get(picked["id"]))
 
+    # US-351: a direct **substitution** near the pitch — bring a starter OFF (to the bench) and a bench player
+    # ON (into the XI). Reuses `substitute` (set_bench + legal_xi_issues); only legal swaps are offered (GK↔GK;
+    # a swap that keeps a legal formation). The static pitch card can't hold a working button (S139 — HTML in a
+    # markdown block can't call back to Python), so this is the widget equivalent. "Set the bench (pick 4)" (in
+    # Edit, below) stays as the bulk path.
+    if xi and bench:
+        with st.expander("🔁 Substitute — swap a starter with a bench player", expanded=True):
+            off_label = {f"{p['position']} {p['web_name']}": p["id"]
+                         for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))}
+            off_choice = st.selectbox("Bring off (from your XI)", list(off_label), key="sub_off",
+                                      help="The starter to move to the bench.")
+            off_id = off_label[off_choice]
+            # Only bench players whose swap-in keeps a legal XI (the helper returns no issues).
+            legal_ons = [p for p in bench if not substitute(squad, off_id, p["id"], by_id)[1]]
+            if legal_ons:
+                on_label = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
+                            for p in legal_ons}
+                on_choice = st.selectbox("Bring on (from your bench)", list(on_label), key="sub_on",
+                                         help="The bench player to bring into your XI — only legal swaps shown.")
+                if st.button("Substitute →", key="do_sub"):
+                    new, sub_issues = substitute(squad, off_id, on_label[on_choice], by_id)
+                    if sub_issues:      # belt-and-braces: the filter already excludes these
+                        st.error("Can't substitute — that leaves an illegal XI: " + "; ".join(sub_issues))
+                    else:
+                        set_active_squad(new)
+                        st.success(f"Subbed **{by_id[off_id]['web_name']} → "
+                                   f"{by_id[on_label[on_choice]]['web_name']}** — the bench updates too.")
+                        st.rerun()
+            else:
+                why = ("the bench GK only covers your keeper" if by_id[off_id]["position"] == "GK"
+                       else "no bench player keeps a legal formation")
+                st.caption(f"No legal swap for **{by_id[off_id]['web_name']}** — {why}.")
+
     if bench_ordered:
         line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
                           for i, p in enumerate(outfield_subs))
@@ -464,7 +498,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 else:
                     st.caption("No available replacements in that position.")
 
-    with st.expander("Set the bench (pick 4)"):
+    with st.expander("Set the whole bench at once (pick 4)"):
+        st.caption("Bulk edit — re-pick all four bench players. For a single swap, use **🔁 Substitute** "
+                   "(above the Edit section).")
         labels = {f"{p['position']} {p['web_name']}": p["id"] for p in
                   sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
         default = [lab for lab, i in labels.items() if i in bench_ids]
