@@ -459,7 +459,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     if cloud_store.is_configured():
         st.caption("☁ **Save / Load across devices** is now in the **sidebar** (under *Your squad*).")
 
-    with st.expander("Swap a player", expanded=True):
+    with st.expander("Transfer", expanded=True):
+        st.caption("🔁 **Substitute** (above) swaps your **lineup** (XI↔bench); a **Transfer** brings in a "
+                   "**new** player — it sells one of your 15. Same-position only (the squad is a fixed 2/5/5/3).")
         if owned:
             # Filter which of your players to swap out by position (US-299) — a swap is same-position, so this
             # scopes the whole edit ("change my forwards" → FWD).
@@ -469,22 +471,29 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             # Your bank drives affordability (US-300): a swap out → in fits when in.price ≤ out.price + bank.
             bank = round(FPL_BUDGET - sum(p["price"] for p in owned), 1)
             st.caption(f"Bank: £{bank:.1f}m")
-            affordable_only = st.checkbox(
+            c_aff, c_flag = st.columns(2)
+            affordable_only = c_aff.checkbox(
                 "Affordable only", value=False, key="swap_affordable",
-                help="Hide replacements that would push you over budget (the swap still checks this on apply).")
+                help="Hide replacements that would push you over budget (the transfer still checks on apply).")
+            # US-353: opt-in — also list flagged (🚑/🚫/⛔) replacements (off by default) so you can plan around
+            # or toward a returning player.
+            include_flagged = c_flag.checkbox(
+                "Include injured/suspended", value=False, key="swap_flagged",
+                help="Also list flagged (injured/suspended/unavailable) replacements — off by default.")
             out_pool = [p for p in owned if pos_filter in (None, "All") or p["position"] == pos_filter]
             if not out_pool:
                 st.caption(f"No {pos_filter} players in your squad.")
             else:
                 out_label = {f"{p['position']} {p['web_name']} (£{p['price']:.1f}m)": p["id"] for p in
                              sorted(out_pool, key=lambda x: (_ORDER.get(x["position"], 9), x["web_name"]))}
-                out_choice = st.selectbox("Replace", list(out_label), key="swap_out",
-                                          help="The player to transfer out.")
+                out_choice = st.selectbox("Transfer out", list(out_label), key="swap_out",
+                                          help="The player to sell.")
                 out_id = out_label[out_choice]
                 out = by_id[out_id]
                 owned_ids = {p["id"] for p in owned}
                 cands = sorted((p for p in players if p["position"] == out["position"]
-                                and p["id"] not in owned_ids and not is_unavailable(p)),
+                                and p["id"] not in owned_ids
+                                and (include_flagged or not is_unavailable(p))),
                                key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
                 budget_in = out["price"] + bank                # the most a replacement can cost and still fit
                 affordable = [p for p in cands if p["price"] <= budget_in]
@@ -492,17 +501,24 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
                             f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in shown}
                 if in_label:
-                    in_choice = st.selectbox("With", list(in_label), key="swap_in",
+                    in_choice = st.selectbox("Bring in", list(in_label), key="swap_in",
                                              help="The same-position player to bring in (ranked by xP).")
-                    if st.button("Swap →"):
-                        ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_label[in_choice],
-                                                                       players)
+                    in_id = in_label[in_choice]
+                    # US-353: flag the overspend **live** — the projected 15-cost after this transfer, before apply.
+                    proj = round(cost - out["price"] + by_id[in_id]["price"], 1)
+                    if proj > FPL_BUDGET:
+                        st.warning(f"⚠ After this transfer: £{proj:.1f}m — **£{proj - FPL_BUDGET:.1f}m over** the "
+                                   f"£{FPL_BUDGET:.0f}m budget (allowed — prices drift — but flagged).")
+                    else:
+                        st.caption(f"After this transfer: £{proj:.1f}m · bank £{FPL_BUDGET - proj:.1f}m.")
+                    if st.button("Transfer →"):
+                        ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_id, players)
                         if not ok:
-                            st.error("Can't swap — that would leave an illegal squad: "
+                            st.error("Can't transfer — that would leave an illegal squad: "
                                      + "; ".join(swap_issues))
                         else:
                             set_active_squad(new)
-                            msg = f"Swapped **{out['web_name']} → {by_id[in_label[in_choice]]['web_name']}**."
+                            msg = f"Transferred **{out['web_name']} → {by_id[in_id]['web_name']}**."
                             st.warning(f"{msg}  ⚠ {warning}") if warning else st.success(msg)
                             st.rerun()
                 elif affordable_only and cands:

@@ -1220,15 +1220,15 @@ def test_my_squad_swap_adopts_and_mutates_the_session_squad():
 
 
 def test_my_squad_swap_position_filter_scopes_the_replace_list():
-    # US-299: a Position filter on the Swap expander scopes "Replace" to owned players of that position.
+    # US-299/353: a Position filter on the Transfer expander scopes "Transfer out" to owned players of that position.
     at = _squads_view("My Squad")
     pos = next((s for s in at.segmented_control if s.label == "Position"), None)
-    if pos is None:                                        # no owned squad / no swap UI → nothing to filter
+    if pos is None:                                        # no owned squad / no transfer UI → nothing to filter
         return
-    replace = next((s for s in at.selectbox if s.label == "Replace"), None)
+    replace = next((s for s in at.selectbox if s.label == "Transfer out"), None)
     assert replace is not None and len(replace.options) == 15   # All → every owned player
     pos.set_value("GK").run()
-    replace = next(s for s in at.selectbox if s.label == "Replace")
+    replace = next(s for s in at.selectbox if s.label == "Transfer out")
     assert replace.options and all(o.startswith("GK ") for o in replace.options)   # scoped to GKs
 
 
@@ -1239,14 +1239,71 @@ def test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank():
     if chk is None:                                        # no owned squad / no swap UI → nothing to filter
         return
     assert any(c.value.startswith("Bank:") for c in at.caption)   # the bank is shown
-    before = next((s for s in at.selectbox if s.label == "With"), None)
+    before = next((s for s in at.selectbox if s.label == "Bring in"), None)
     if before is None:
         return                                             # no candidates to filter
     n_before = len(before.options)
     chk.set_value(True).run()
-    after = next((s for s in at.selectbox if s.label == "With"), None)
+    after = next((s for s in at.selectbox if s.label == "Bring in"), None)
     n_after = len(after.options) if after else 0
     assert n_after <= n_before                             # affordable-only never widens the list
+
+
+def test_my_squad_transfer_control_labels_and_live_projection():
+    # US-353: the control reads as a "Transfer" (distinct from 🔁 Substitute) with a Substitute-vs-Transfer
+    # caption, and shows a LIVE projected-cost/bank line before you apply.
+    at = _squads_view("My Squad")
+    assert any("Substitute" in c.value and "Transfer" in c.value and "new" in c.value for c in at.caption)
+    if not any(b.label == "Transfer →" for b in at.button):
+        return                                             # no pickable replacement in this env → nothing to flag
+    proj = [c.value for c in at.caption] + [w.value for w in at.warning]
+    assert any("After this transfer" in t for t in proj)   # the live projection/bank (or over-budget) line
+
+
+def test_my_squad_transfer_include_injured_surfaces_a_flagged_player():
+    # US-353: the opt-in "Include injured/suspended" toggle adds flagged same-position players to "Bring in".
+    from src.analytics import is_unavailable
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+    flagged = next((p for p in rows if is_unavailable(p)), None)
+    if flagged is None:
+        return                                             # no flagged player in the data → nothing to surface
+    pos = flagged["position"]
+
+    def take(position, n):
+        return [r for r in rows if r["position"] == position and r["id"] != flagged["id"]][:n]
+
+    picks = []
+    for position, n in {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}.items():
+        got = take(position, n)
+        if len(got) < n:
+            return
+        picks += got
+    ids = [p["id"] for p in picks]
+    if flagged["id"] in ids:
+        return
+    squad = {"name": "FlagTest", "player_ids": ids, "bench_ids": ids[11:], "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+
+    out = next((s for s in at.selectbox if s.label == "Transfer out"), None)
+    out_opt = next((o for o in out.options if o.startswith(f"{pos} ")), None) if out else None
+    if out_opt is None:
+        return
+    out.set_value(out_opt).run()
+    before = next((s for s in at.selectbox if s.label == "Bring in"), None)
+    before_has = bool(before and any(flagged["web_name"] in o for o in before.options))
+    next(c for c in at.checkbox if c.label == "Include injured/suspended").set_value(True).run()
+    after = next((s for s in at.selectbox if s.label == "Bring in"), None)
+    after_has = bool(after and any(flagged["web_name"] in o for o in after.options))
+    assert not before_has and after_has                    # the flagged player appears only with the toggle on
 
 
 def test_my_squad_rename_updates_the_active_squad():
