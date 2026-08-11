@@ -165,6 +165,37 @@ def apply_transfer(squad: dict, out_id: int, in_id: int, players,
     return True, [], warning, new
 
 
+def apply_transfer_plan(squad: dict, plan: list, players,
+                        budget: float = FPL_BUDGET) -> tuple[bool, list, str | None, dict | None]:
+    """Apply a **coordinated plan** of transfers (each `{out:{id,…}, in:{id,…}}`, from `suggest_transfer_plan`)
+    to a **copy** of `squad`, in one atomic step (ADR-046/055).
+
+    The N-transfer counterpart of `apply_transfer`: maps every `out.id → in.id`, then validates the **whole**
+    result once (`squad_15_issues`). Returns `(ok, issues, warning, new_squad)` — a structurally illegal result
+    → `ok=False` + `issues`, no change; legal → `ok=True` and the mutated `new_squad` (ids/names/bench updated,
+    a captain that was sold cleared), plus a **soft** over-`budget` `warning` (never blocks — prices drift). No
+    server write: the caller sets it active."""
+    by_id = {p["id"]: p for p in players}
+    out_to_in = {m["out"]["id"]: m["in"]["id"] for m in plan}
+    new_ids = [out_to_in.get(i, i) for i in squad["player_ids"]]
+    new_players = [by_id[i] for i in new_ids if i in by_id]
+    issues = squad_15_issues(new_players)
+    if issues:
+        return False, issues, None, None
+
+    new = dict(squad)
+    new["player_ids"] = new_ids
+    new["player_names"] = [by_id[i]["web_name"] for i in new_ids]
+    new["bench_ids"] = [out_to_in.get(i, i) for i in squad.get("bench_ids", [])]
+    if new.get("captain_id") in out_to_in:                # a captain that was sold in the plan → clear it
+        new["captain_id"] = None
+    cost = round(sum(by_id[i]["price"] for i in new_ids), 1)
+    new["cost"] = cost
+    warning = (f"£{cost - budget:.1f}m over the £{budget:.0f}m budget"
+               if budget is not None and cost > budget else None)
+    return True, [], warning, new
+
+
 def parse_uploaded(uploaded) -> tuple[dict | None, str | None]:
     """Validate an uploaded `squad.json` → (squad_dict, error). Accepts a bare squad dict or a
     `{name: squad}` file (the SquadStore format); checks the ids exist in the current data."""

@@ -297,6 +297,24 @@ def test_transfer_page_apply_mutates_the_session_squad():
     assert not at.exception
     squad = at.session_state["squad"]                      # an active squad now exists…
     assert before is None or squad["player_ids"] != before  # …and it changed (or was just adopted)
+
+
+def test_transfer_page_applies_a_coordinated_plan():
+    # US-354: the Transfer page can APPLY a coordinated multi-transfer AI plan (not just display it)
+    at = _squads_view("Transfer")
+    count = next((s for s in at.slider if s.label.startswith("Transfers")), None)
+    if count is None:
+        return
+    count.set_value(2).run()
+    next(s for s in at.slider if s.label == "Bank (£m)").set_value(10.0).run()   # dearer upgrades → a plan appears
+    apply = [b for b in at.button if b.label == "Apply this plan →"]
+    if not apply:                                          # no positive-gain 2-plan on this DB → nothing to apply
+        return
+    before = list(at.session_state["squad"]["player_ids"]) if "squad" in at.session_state else None
+    apply[0].click().run()
+    assert not at.exception
+    squad = at.session_state["squad"]
+    assert before is None or squad["player_ids"] != before  # the plan changed the squad (or was just adopted)
     assert squad.get("name") and squad.get("cost")         # named + re-costed (no sidebar crash)
 
 

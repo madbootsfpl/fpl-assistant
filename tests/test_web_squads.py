@@ -162,6 +162,48 @@ def test_apply_transfer_warns_over_budget_but_still_applies():
     assert ok and new["cost"] == 101.0 and warning and "over" in warning
 
 
+# --- apply_transfer_plan (US-354): accept a coordinated multi-transfer plan ----------------------
+
+def _move(players, out_id, in_id, gain=1.0):
+    """One plan move in the `suggest_transfer_plan` shape (the fields `apply_transfer_plan` reads)."""
+    by_id = {p["id"]: p for p in players}
+    o, i = by_id[out_id], by_id[in_id]
+    return {"position": o["position"], "gain": gain,
+            "out": {"id": o["id"], "web_name": o["web_name"], "price": o["price"]},
+            "in": {"id": i["id"], "web_name": i["web_name"], "price": i["price"]}}
+
+
+def test_apply_transfer_plan_applies_all_moves():
+    players, owned = _market()                                # unowned: 100 (MID), 200 (GK)
+    plan = [_move(players, 8, 100), _move(players, 1, 200)]   # MID 8→100 and GK 1→200 (both same-position)
+    ok, issues, warning, new = web_squads.apply_transfer_plan(_squad(owned), plan, players)
+    assert ok and not issues and warning is None
+    assert 8 not in new["player_ids"] and 1 not in new["player_ids"]
+    assert 100 in new["player_ids"] and 200 in new["player_ids"]
+    assert new["cost"] == 75.0                                # 15 × £5.0m, same-price swaps
+
+
+def test_apply_transfer_plan_refuses_an_illegal_result():
+    players, owned = _market()
+    plan = [_move(players, 8, 200)]                           # MID → GK → 3 GK / 4 MID, illegal
+    ok, issues, warning, new = web_squads.apply_transfer_plan(_squad(owned), plan, players)
+    assert not ok and new is None and any("GK" in i for i in issues)
+
+
+def test_apply_transfer_plan_warns_over_budget_but_applies():
+    players, owned = _market()
+    next(p for p in players if p["id"] == 100)["price"] = 31.0   # 75 − 5 + 31 = £101m → £1 over
+    ok, _, warning, new = web_squads.apply_transfer_plan(_squad(owned), [_move(players, 8, 100)], players)
+    assert ok and new["cost"] == 101.0 and warning and "over" in warning
+
+
+def test_apply_transfer_plan_clears_a_sold_captain():
+    players, owned = _market()
+    plan = [_move(players, 8, 100)]
+    _, _, _, new = web_squads.apply_transfer_plan(_squad(owned, captain_id=8), plan, players)
+    assert new["captain_id"] is None                          # the captain (8) was sold in the plan → cleared
+
+
 # --- rename / set_bench (ADR-055) ----------------------------------------------------------------
 
 def test_rename_sets_the_name():

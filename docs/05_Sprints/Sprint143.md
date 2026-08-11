@@ -88,7 +88,7 @@ transfer" shortcut; wildcard/free-hit-aware planning.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-353 | **My Squad transfer — rename + live overspend flag + include-unavailable.** | High | ✅ Done | ~⅓ session |
-| US-354 | **Accept the AI transfer plan** — `apply_transfer_plan` + the Transfer-page button. | High | ⬜ To do | ~⅓ session |
+| US-354 | **Accept the AI transfer plan** — `apply_transfer_plan` + the Transfer-page button. | High | ✅ Done | ~⅓ session |
 
 ---
 
@@ -119,6 +119,17 @@ transfer" shortcut; wildcard/free-hit-aware planning.
   session-state only. **+2 tests** (the control's label/caption + the live projection line · the include-injured
   toggle surfaces a flagged player) + **2 updated** (the renamed "Transfer out"/"Bring in" labels). ruff clean.
   **945 → 947.** (US-354 next: accept a coordinated AI plan on the Transfer page.)
+- **US-354 (accept the AI transfer plan)** — a new **`apply_transfer_plan(squad, plan, players)`** in
+  `web_streamlit/squads.py` — the N-transfer counterpart of `apply_transfer`: maps every `out.id → in.id` from the
+  `suggest_transfer_plan` moves, validates the **whole** result once (`squad_15_issues`), recomputes cost + a soft
+  over-budget warning, and clears a captain sold in the plan; returns `(ok, issues, warning, new_squad)`,
+  copy-not-mutate, no server write. Wired into `render_transfer`'s **multi-transfer** (`count>1`) branch: below the
+  plan table, a **net-spend / +xP caption** + an **"Apply this plan →"** button → applies all transfers at once
+  (`set_active_squad` + `st.rerun`; an illegal result surfaces the issues, no change). Previously the coordinated
+  plan was **display-only** — only a single suggested swap could be applied. **+5 tests:** 4 helper unit tests
+  (applies all moves + updates cost · refuses an illegal result · warns over budget but applies · clears a sold
+  captain) + 1 AppTest (the Transfer page's 2-plan **applies** and mutates the session squad). ruff clean.
+  **947 → 952.**
 
 ---
 

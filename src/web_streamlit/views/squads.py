@@ -50,6 +50,7 @@ from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
     FPL_BUDGET,
     apply_transfer,
+    apply_transfer_plan,
     captain_bonus,
     move_bench_sub,
     rename,
@@ -605,6 +606,23 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
             by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
             gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=True,
         ), language=None)
+        # US-354: accept the whole coordinated plan (not just a single swap) — all transfers at once, legality +
+        # a soft over-budget flag, then set it as the session squad. Mirrors the single-swap apply below.
+        if plan:
+            net = round(sum(m["in"]["price"] - m["out"]["price"] for m in plan), 1)
+            gain = round(sum(m["gain"] for m in plan), 1)
+            st.caption(f"Applying this makes **{len(plan)}** transfer(s) at once — net spend "
+                       f"£{net:+.1f}m · +{gain:.1f} projected xP.")
+            if st.button("Apply this plan →", key="apply_plan",
+                         help="Make all of these transfers on your session squad in one step."):
+                ok, issues, warning, new = apply_transfer_plan(squad, plan, players)
+                if not ok:
+                    st.error("Can't apply — that would leave an illegal squad: " + "; ".join(issues))
+                else:
+                    set_active_squad(new)
+                    done = f"Applied **{len(plan)}** transfer(s) — new cost £{new['cost']:.1f}m."
+                    st.warning(f"{done}  ⚠ {warning}") if warning else st.success(done)
+                    st.rerun()
     else:
         swaps = suggest_transfers(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, limit=5)
         by_id = {p["id"]: p for p in players}
