@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 144 (2026-08-11)** — *Brand polish — tester feedback* (extends **ADR-103**/**ADR-084**, no new ADR;
+  display-only). Three nits on the fresh rebrand. **US-355:** (#1) the My Squad card picker → **"View your player's
+  card"** (it's your squad); (#2) fixed the player-card wordmark's **MAD/BOOTS gap** — a US-349 regression where the
+  band's brand mark was one `inline-flex` with **three** children (badge · `MAD` · `BOOTS`) so `gap:6px` fell
+  *between* MAD and BOOTS — by extracting a shared **`brand.mark_html(badge_px, font_px, purple)`** (the badge +
+  wordmark as one lockup with MAD+BOOTS wrapped in a **single** flex child) and using it in the band; (#3) the
+  **captain card** (`captain_card.py`) gains the same mark as a `cc-brand` footer (theme-aware) — joining the
+  player-card brand family. Branding the *hover* popovers was declined (owner steer — the compact card is slimmed +
+  ~15 on the pitch + already under MADBOOTS chrome). +1 test (958→959).
 - **Sprint 141 (2026-08-11)** — *MADBOOTS — the rebrand* (**ADR-103**). Rename the product's **user-facing**
   surfaces **FPL Assistant → MADBOOTS** (one word — the two-tone MAD-purple/BOOTS-orange split carries the
   word-break), tagline *Fantasy Football, Calculated.* — folded in as **accents** on the current light/theme-aware

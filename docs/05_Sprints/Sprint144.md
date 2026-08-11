@@ -73,4 +73,15 @@ two-tone wordmark, MAD+BOOTS as one flex child) used by both the player-card ban
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — three tester-flagged brand nits fixed in one story. Display-only; no engine/xP change.
+
+- **#1** picker copy → "View your player's card". **#2** the MAD/BOOTS **gap bug** (a US-349 regression: the band's
+  brand mark was one `inline-flex` with three children, so `gap:6px` fell between MAD and BOOTS) — fixed by a shared
+  **`brand.mark_html()`** (badge + wordmark as one lockup, MAD+BOOTS in a single span). **#3** the **captain card**
+  gains the same mark. **#4** (branding the hover popovers) skipped by owner steer.
+- **Bonus:** the mark is now **DRY** — one helper feeds both the player-card band and the captain card.
+- **Tests:** 958 → **959** (+1). ruff clean; CI-parity green.
+- **Lesson:** a `gap` on a flex container hits **every** child boundary — wrap the parts that must stay together in
+  one child. And a new shared helper (`mark_html`) is the moment to fix a duplicated bug once, not twice.
+- **Owner smoke:** the band reads MADBOOTS (no gap); the Captain card shows the mark on both themes; the picker copy.
+- **Lessons:** `docs/05_Sprints/Sprint144_Lessons_Learnt.md`.
