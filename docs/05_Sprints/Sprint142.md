@@ -1,7 +1,7 @@
 # Sprint 142: An intuitive substitution on My Squad
 
 **Dates:** 2026-08-11
-**Status:** 📝 Planned — awaiting sign-off (no new ADR; extends ADR-055)
+**Status:** ✅ Complete — US-351 + US-352 (no new ADR; extends ADR-055). 939 → 945 tests
 **Capacity:** ~½ session (a small helper + a view control + a picker pre-fill)
 **Carried Over:** none
 
@@ -128,7 +128,31 @@ reasoning); drag-and-drop; auto-suggest the best legal sub by xP.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — both stories in. My Squad substitutions went from a clunky "re-pick all four" multiselect
+to a direct **🔁 Substitute** control (bring off ↔ bring on, **only legal swaps offered**) with the pitch **card
+picker pre-filling "Bring off"**. Session-state only — no engine/xP/server change; the one-xP + read-only invariants
+hold.
+
+**Shipped**
+- **US-351** — `substitute()` helper (`set_bench` + `legal_xi_issues`, returns `(new_squad, issues)`) + the "🔁
+  Substitute" control near the pitch (legality-as-filter: only issue-free bring-ons listed). The old "Set the bench
+  (pick 4)" multiselect relabelled + kept below as the bulk path. +5 tests.
+- **US-352** — the "👤 View a player's card" picker seeds "Bring off" (edge-triggered on `_sub_prefill_for`); a
+  benched pick shows a hint. +1 test.
+
+**Tests:** 939 → **945** (+6). ruff clean; CI-parity green.
+
+**What went well:** faithful to the tester's intent within the platform limit; legality-as-filter means the control
+can't produce an illegal XI; reused existing helpers (no new rules).
+
+**Constraint navigated (again):** a working button *on* the hover card is impossible — the pitch is one static
+`st.markdown` HTML block that can't call back to Python (the Sprint 139 wall). Named it up front, gave the owner the
+three shapes that *do* fit, built the chosen one ("both": widgets + the picker bridge).
+
+**Owner follow-up (browser smoke):** pick a starter on the picker → "Bring off" pre-fills → pick a bench player →
+Substitute → the pitch + bench update; the only-GK case isn't offered; a benched pick hints.
+
+**Lessons:** `docs/05_Sprints/Sprint142_Lessons_Learnt.md`.
 
 ---
 

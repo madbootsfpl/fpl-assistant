@@ -455,6 +455,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Sprint 142 (2026-08-11)** — *An intuitive substitution on My Squad* (extends **ADR-055** + the S139 picker, no
+  new ADR; from tester feedback). Subbing was awkward — the only path was the "Set the bench (pick 4)" multiselect
+  (re-pick all four). **US-351:** a `substitute(squad, off_id, on_id, by_id)` helper in `web_streamlit/squads.py`
+  (copy-not-mutate; `off` → bench taking `on`'s priority slot, `on` → XI; the 15 unchanged) returning
+  `(new_squad, issues)` via `set_bench` + `legal_xi_issues` — and a **"🔁 Substitute"** control on My Squad (below
+  the pitch + card picker): **Bring off** (a starter) ↔ **Bring on** (a bench player) where **only legal swaps are
+  listed** (the bring-on list is pre-filtered to swaps `legal_xi_issues` clears — so GK↔GK, and outfield swaps that
+  keep a legal formation; the apply path re-checks too). The old multiselect is relabelled + kept below as the bulk
+  path. **US-352:** the "👤 View a player's card" picker **seeds** the control — a *starter* pick pre-fills "Bring
+  off" (edge-triggered on a `_sub_prefill_for` session marker, so once per pick + still user-editable), a *bench*
+  pick shows a hint. A working button *on* the hover card is impossible (the pitch is one static `st.markdown` block
+  that can't call back to Python — the Sprint 139 wall), so it's real widgets near the pitch + the picker as the
+  bridge. **Session-state only** (mutates the bench like the existing controls); the one-xP + read-only invariants
+  hold. +6 tests (939→945). No engine change.
 - **Sprint 140 (2026-08-10)** — *Tester-feedback polish + a beta waitlist* (**ADR-102**; the polish extends
   ADR-084, no new ADR). **US-345 (polish):** the Players **price filter** max = the highest player price rounded to
   £0.5 (so **Haaland £15.5m** shows, was a stale fixed £15.0); the card band reads **"Last season"** (was the
