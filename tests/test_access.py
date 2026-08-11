@@ -14,8 +14,10 @@ _HOME = str(Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "Hom
 
 
 def _unlocked(at):
-    """True if the real app rendered (not the beta lock screen)."""
-    return any("MADBOOTS" in t.value and "beta" not in t.value.lower() for t in at.title)
+    """True if the real app rendered (not the beta lock screen). Home's brand is now the two-tone MADBOOTS
+    **wordmark** (markdown, US-349), not an `st.title`; the lock screen is an `st.title` containing 'beta'."""
+    branded = any("MADBOOTS" in m.value for m in at.markdown)      # the wordmark's aria-label
+    return branded and not any("beta" in t.value.lower() for t in at.title)
 
 
 def test_secret_never_raises_without_a_secrets_file():
@@ -33,7 +35,7 @@ def test_app_is_open_when_no_code_is_configured():
     # the default: no gate → Home renders its real title (not the lock screen)
     at = AppTest.from_file(_HOME, default_timeout=30).run()
     assert not at.exception
-    assert at.title and "MADBOOTS" in at.title[0].value and "beta" not in at.title[0].value.lower()
+    assert _unlocked(at)                                        # the real app (the MADBOOTS wordmark), not the lock
 
 
 def test_gate_blocks_then_unlocks_with_the_right_code(monkeypatch):
@@ -47,7 +49,7 @@ def test_gate_blocks_then_unlocks_with_the_right_code(monkeypatch):
     assert at.error                                             # a wrong code is rejected
 
     at.text_input[0].set_value("letmein").run()
-    assert any("MADBOOTS" in t.value and "beta" not in t.value.lower() for t in at.title)   # unlocked
+    assert _unlocked(at)                                        # the right code unlocks the real app
 
 
 # --- "remember me" cookie (ADR-099, US-326) ------------------------------------------

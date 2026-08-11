@@ -246,7 +246,7 @@ def test_analytics_failure_never_breaks_a_page(monkeypatch):
     monkeypatch.setattr("requests.post", boom)
     at = AppTest.from_file(_home(), default_timeout=30).run()
     assert not at.exception                                  # a raising analytics store never reaches the app
-    assert any("MADBOOTS" in t.value for t in at.title)  # the page rendered
+    assert any("MADBOOTS" in m.value for m in at.markdown)   # the page rendered (the two-tone wordmark, US-349)
 
 
 def test_no_analytics_write_when_disabled(monkeypatch):

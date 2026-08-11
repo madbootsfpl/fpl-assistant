@@ -206,6 +206,7 @@ def _remembered_registration(user_store) -> bool:
 def _code_gate(code: str) -> None:
     """The shared-code prompt (ADR-087). On the right code, remember it and rerun; the write is deferred to the
     post-login run via `_PENDING` so the rerun doesn't drop it. Stops the page until the code is entered."""
+    st.image(brand.badge_path(), width=68)                # US-349: the badge on the gate (ADR-103)
     st.title(f"🔒 {brand.NAME} — private beta")
     st.caption(f"**{brand.TAGLINE}** · a closed beta. Enter the access code you were given to continue.")
     entered = st.text_input("Access code", type="password", key="_beta_code")
@@ -225,6 +226,7 @@ def _registration_gate(cap: int) -> None:
     from src.web_streamlit.cloud_store import store_error
 
     code = secret("FPL_ACCESS_CODE")
+    st.image(brand.badge_path(), width=68)                # US-349: the badge on the gate (ADR-103)
     st.title(f"🔒 {brand.NAME} — private beta")
     st.caption(f"**{brand.TAGLINE}** · a closed beta with limited spots. Enter your invite code and email to join.")
     with st.form("beta_register"):

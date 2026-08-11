@@ -20,7 +20,10 @@ st.set_page_config(**brand.page_config())
 require_access()          # opt-in beta gate (ADR-087) — a no-op unless FPL_ACCESS_CODE is set
 analytics.boot("Home")    # anonymous usage analytics (ADR-100) — a no-op unless FPL_ANALYTICS is set
 render_data_status()
-st.title(f"⚽ {brand.NAME}")   # US-349 upgrades this to the badge + two-tone CSS wordmark
+# US-349: the badge + the two-tone MADBOOTS wordmark (ADR-103), replacing the old ⚽-emoji title.
+_logo, _name = st.columns([1, 7], vertical_alignment="center")
+_logo.image(brand.badge_path(), width=78)
+_name.markdown(brand.wordmark_html(42), unsafe_allow_html=True)
 st.caption(f"**{brand.TAGLINE}** · a read-only view over the analytics (the CLI stays the engine, ADR-051/052).")
 
 # The next FPL deadline — a countdown that escalates in urgency (ADR-086/US-267), rolling forward each GW.

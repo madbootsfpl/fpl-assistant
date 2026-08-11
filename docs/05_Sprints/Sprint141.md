@@ -100,7 +100,7 @@ package/repo/`FPL_*` secrets (**not** planned — invisible, high-risk).
 |---|---|---|---|---|
 | ADR-103 | **The MADBOOTS brand identity** — name/tagline/marks/theme-B/keep-internal/disclaimer. | High | ✅ Done | gate |
 | US-348 | **Display swap + tagline** — ~19 visible surfaces `FPL Assistant → MADBOOTS`. | High | ✅ Done | ~⅓ session |
-| US-349 | **Badge + wordmark** — `brand.py` + the MB SVG favicon + the CSS wordmark. | High | ⬜ To do | ~⅓ session |
+| US-349 | **Badge + wordmark** — `brand.py` + the MB badge favicon + the CSS wordmark. | High | ✅ Done | ~⅓ session |
 | US-350 | **Disclaimer + live-doc rebrand** — not-affiliated line + README/Help/BETA. | Med | ⬜ To do | ~¼ session |
 
 ---
@@ -146,6 +146,17 @@ package/repo/`FPL_*` secrets (**not** planned — invisible, high-risk).
   (`test_brand.py`: the constants · `page_config` titles/layout · a **guard** that no `"FPL Assistant"` remains in
   `src/` `.py`/`.html`) + updated the feedback/analytics/web/access assertions to the new name. ruff clean.
   **952 → 955.** (US-349 next: the badge favicon on every page + the two-tone CSS wordmark.)
+- **US-349 (the badge favicon + the two-tone wordmark)** — copied the approved transparent badge into
+  **`src/web_streamlit/assets/`** (a 298² square-padded `madboots-badge.png` for the favicon/header + a 64²
+  `madboots-badge-64.png` for the inline card band). Grew **`brand.py`**: `page_config`'s **`page_icon` is now the
+  badge** (so every page's browser tab shows the MB mark, not the ⚽ emoji); `badge_path()` (for `st.image`),
+  `badge_data_uri()` (cached base64, for inline HTML), and **`wordmark_html(px)`** — the two-tone **MADBOOTS**
+  wordmark (MAD purple · BOOTS orange, an `aria-label` carrying the whole word). Wired: the **Home header** = the
+  badge (`st.image`) + the wordmark (replacing the ⚠-emoji `st.title`); the **beta gate ×2** = the badge above the
+  title; the **player-card brand band** = the small badge + the two-tone wordmark (the compact pitch popover has no
+  band, so no per-kit weight). **+2 tests** (the badge favicon/asset/data-URI · the two-tone wordmark) + updated the
+  access/analytics assertions (Home's brand moved from an `st.title` to the wordmark markdown). Assets ship (not
+  gitignored). ruff clean. **955 → 957.**
 
 ---
 
