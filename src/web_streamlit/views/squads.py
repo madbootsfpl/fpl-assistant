@@ -496,6 +496,18 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                                 and p["id"] not in owned_ids
                                 and (include_flagged or not is_unavailable(p))),
                                key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
+                # US-356: the same-position list is long — let the tester narrow it by team + a max price.
+                c_team, c_price = st.columns(2)
+                team_filter = c_team.selectbox(
+                    "Team", ["All", *sorted({p["team"] for p in cands})], key="swap_team",
+                    help="Filter the bring-in list to one club.")
+                cand_hi = max([p["price"] for p in cands], default=15.0)
+                price_cap = c_price.slider(
+                    "Max price (£m)", 0.0, cand_hi, cand_hi, step=0.5, key="swap_maxprice",
+                    help="Only show replacements at or below this price.")
+                cands = [p for p in cands
+                         if (team_filter in (None, "All") or p["team"] == team_filter)
+                         and p["price"] <= price_cap]
                 budget_in = out["price"] + bank                # the most a replacement can cost and still fit
                 affordable = [p for p in cands if p["price"] <= budget_in]
                 shown = affordable if affordable_only else cands
@@ -525,7 +537,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 elif affordable_only and cands:
                     st.caption(f"No affordable replacement (≤ £{budget_in:.1f}m) — untick to see all.")
                 else:
-                    st.caption("No available replacements in that position.")
+                    st.caption("No replacements match — try a different **Team** / a higher **Max price** "
+                               "(or untick *Affordable only*).")
 
     with st.expander("Set the whole bench at once (pick 4)"):
         st.caption("Bulk edit — re-pick all four bench players. For a single swap, use **🔁 Substitute** "

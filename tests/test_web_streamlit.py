@@ -1267,6 +1267,27 @@ def test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank():
     assert n_after <= n_before                             # affordable-only never widens the list
 
 
+def test_my_squad_transfer_team_and_price_filters_narrow_the_list():
+    # US-356: the bring-in list gains Team + Max-price filters that narrow the (long) same-position list.
+    at = _squads_view("My Squad")
+    team = next((s for s in at.selectbox if s.label == "Team"), None)
+    price = next((s for s in at.slider if s.label == "Max price (£m)"), None)
+    if team is None or price is None:
+        return                                             # no owned squad / no transfer UI
+    bring = next((s for s in at.selectbox if s.label == "Bring in"), None)
+    if bring is None:
+        return                                             # no candidates to filter
+    n_all = len(bring.options)
+    picks = [o for o in team.options if o != "All"]
+    if not picks:
+        return
+    team.set_value(picks[0]).run()                         # filter to one club
+    after = next((s for s in at.selectbox if s.label == "Bring in"), None)
+    if after:
+        assert all(f"· {picks[0]} ·" in o for o in after.options)   # only that club's players now
+        assert len(after.options) <= n_all                          # a filter never widens the list
+
+
 def test_my_squad_transfer_control_labels_and_live_projection():
     # US-353: the control reads as a "Transfer" (distinct from 🔁 Substitute) with a Substitute-vs-Transfer
     # caption, and shows a LIVE projected-cost/bank line before you apply.
