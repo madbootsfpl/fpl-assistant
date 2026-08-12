@@ -358,12 +358,17 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp,
                  team_names=team_names, bench_roles=bench_roles)
 
-    # US-344: pick a player → their **full** card (the all-device path; on desktop, hovering a kit shows a
-    # compact card). Reuses the card renderer with the squad's data (fixtures from `upcoming`, our xP).
+    # ⚙ Player actions (ADR-108, US-365) — one selection drives the **full card** + **Make captain** (and
+    # Substitute, below — folded in by US-366) in one panel on the golden page. Native selectbox+button → it
+    # works on phone/tablet, and gives mobile the full card the desktop-only hover popover never could. Reuses
+    # the card renderer + `set_captain` — no analytics change.
     from src.web_streamlit.player_card import render_player_card
+    st.subheader("⚙ Player actions")
+    st.caption("Pick a player → view their card, make them captain, or substitute. "
+               "Works on phone too (the pitch hover is desktop-only).")
     owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
-    picked = owned_by_label.get(st.selectbox("👤 View your player's card", ["—", *owned_by_label],
-                                             help="Or hover a shirt on the pitch (desktop)."))
+    picked = owned_by_label.get(st.selectbox("Select a player", ["—", *owned_by_label], key="pa_pick",
+                                             help="Or hover a shirt on the pitch (desktop only)."))
     if picked:
         short = picked["team"]
         fx = [{"opp": (f["away"] if f["home"] == short else f["home"]),
@@ -372,6 +377,13 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
               for f in upcoming if short in (f["home"], f["away"])][:3]
         render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
                            fixtures=fx, projected_xp=xp_by_id.get(picked["id"]))
+        # 👑 Make captain — moved onto the pitch view (was stranded in the Captain sub-tab). One click; ×2 next GW.
+        if picked["id"] == captain_id:
+            st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")
+        elif st.button(f"👑 Make {picked['web_name']} captain", key="pa_captain"):
+            set_active_squad(set_captain(squad, picked["id"]))
+            st.success(f"Captain set: **{picked['web_name']} (C)** — they score ×2 next gameweek.")
+            st.rerun()
 
     # US-352: the card picker **seeds** the substitution — picking a *starter* pre-fills "Bring off" (edge-
     # triggered on `_sub_prefill_for`, so it seeds once per pick and you can still change Bring off freely);

@@ -1016,14 +1016,14 @@ def test_my_squad_card_picker_prefills_bring_off():
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
 
-    picker = next(s for s in at.selectbox if s.label == "👤 View your player's card")
+    picker = next(s for s in at.selectbox if s.label == "Select a player")   # ADR-108 panel selector
     starter = defs[0]                                          # a first-choice DEF (in the XI)
     picker.set_value(f"{starter['web_name']} · {starter['team']}").run()
     off = next(s for s in at.selectbox if s.key == "sub_off")
     assert off.value == f"{starter['position']} {starter['web_name']}"    # Bring off pre-filled to the pick
 
     benched = defs[4]                                          # a bench player → a hint, not a prefill
-    next(s for s in at.selectbox if s.label == "👤 View your player's card") \
+    next(s for s in at.selectbox if s.label == "Select a player") \
         .set_value(f"{benched['web_name']} · {benched['team']}").run()
     assert any(benched["web_name"] in c.value and "bring off" in c.value.lower() for c in at.caption)
 
@@ -1565,12 +1565,46 @@ def test_my_squad_pitch_has_hover_card_popovers():
 def test_my_squad_card_picker_shows_the_full_card():
     # US-344: a "View a player's card" picker → the full player card below the pitch
     at = _squads_view("My Squad")
-    picker = [s for s in at.selectbox if "View your player's card" in (s.label or "")]
-    assert picker                                             # the picker exists
+    picker = [s for s in at.selectbox if s.label == "Select a player"]   # ADR-108 panel selector (was the picker)
+    assert picker                                             # the panel's player selector exists
     if len(picker[0].options) > 1:
         picker[0].set_value(picker[0].options[1]).run()
         assert not at.exception
         assert any("Player Card" in m.value for m in at.markdown)   # the full card's brand band
+
+
+def test_my_squad_panel_make_captain_sets_the_captain():
+    # US-365 (ADR-108): the player-actions panel's "👑 Make captain" button sets captain_id on the session squad —
+    # the action moved onto the pitch view (was stranded in the Captain sub-tab, needing a re-pick + a tab switch).
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
+    squad = {"name": "CaptainTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+
+    target = mids[0]                                          # a starter to captain
+    next(s for s in at.selectbox if s.label == "Select a player") \
+        .set_value(f"{target['web_name']} · {target['team']}").run()
+    btn = next(b for b in at.button if "captain" in b.label.lower() and target["web_name"] in b.label)
+    btn.click().run()
+    assert not at.exception
+    assert at.session_state["squad"]["captain_id"] == target["id"]      # captain set from the pitch panel
 
 
 def test_my_squad_set_bench_picks_four():
