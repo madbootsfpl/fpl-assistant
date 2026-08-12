@@ -20,6 +20,7 @@ FPL_BUDGET = 100.0
 
 _SESSION_KEY = "squad"
 _UPLOAD_APPLIED = "_squad_upload_id"
+_CLOUD_LINKED = "_cloud_linked_handle"   # the handle this squad is Saved/Loaded under → mirror edits to the cloud
 
 
 def active_squad():
@@ -29,6 +30,24 @@ def active_squad():
 
 def set_active_squad(squad: dict) -> None:
     st.session_state[_SESSION_KEY] = squad
+    _autosync(squad)                     # keep a cloud-linked squad in sync across devices (US-357/C1)
+
+
+def _autosync(squad: dict) -> None:
+    """Best-effort: mirror an edit to the cloud when this squad is **linked** to a handle (the user Saved or Loaded
+    it this session, `_CLOUD_LINKED`) and the store is configured — so a **captain** / transfer / bench change syncs
+    across devices (US-357/C1), not just the *last manual Save*. **Fail-silent** — a sync hiccup never blocks the
+    edit; the manual Save stays the source of truth. Only fires for cloud-linked squads (a built/uploaded squad with
+    no handle writes nothing — the opt-in server-write invariant holds, ADR-094/054)."""
+    handle = st.session_state.get(_CLOUD_LINKED)
+    if not handle:
+        return
+    try:
+        from src.web_streamlit import cloud_store
+        if cloud_store.is_configured():
+            cloud_store.save_squad(handle, squad)
+    except Exception:
+        return
 
 
 def demo_squads() -> dict:
@@ -290,6 +309,7 @@ def render_cloud_sync() -> None:
                 taken = cloud_store.exists(clean)              # US-321: new vs overwrite (a handle isn't private)
                 with analytics.timed("squad_save", page="Squads"):   # perf (US-336)
                     cloud_store.save_squad(clean, squad)
+                st.session_state[_CLOUD_LINKED] = clean        # link → auto-sync future edits (US-357/C1)
                 analytics.track("squad_saved")                 # usage only — NO handle/contents (anonymity, US-335)
                 if taken:
                     st.warning(f"Updated **{clean}** — overwrote the squad already saved under that handle. "
@@ -308,18 +328,23 @@ def render_cloud_sync() -> None:
                 analytics.track("error", component="squad_load")
                 st.error(f"Load failed — **{cloud_store.store_error(exc)}**.")
             if loaded:
+                st.session_state[_CLOUD_LINKED] = clean        # link first, so autosync targets this handle
                 set_active_squad(loaded)
                 analytics.track("squad_loaded")                # usage only — NO handle/contents (anonymity, US-335)
-                st.success(f"Loaded **{clean}**.")
+                st.success(f"Loaded **{clean}** — edits now auto-sync across devices.")
                 st.rerun()
             elif clean:
                 st.info(f"No squad saved under **{clean}** yet — Save one first.")
         if c_clear.button("Clear", disabled=not clean, key="cloud_clear"):
             try:
                 cloud_store.delete_squad(clean)
+                if st.session_state.get(_CLOUD_LINKED) == clean:
+                    st.session_state.pop(_CLOUD_LINKED, None)   # unlink — stop syncing to a cleared handle
                 st.success(f"Cleared **{clean}**.")
             except Exception as exc:
                 st.error(f"Clear failed — **{cloud_store.store_error(exc)}**.")
+        if linked := st.session_state.get(_CLOUD_LINKED):
+            st.caption(f"🔄 **Auto-syncing** your edits (captain, transfers, bench…) to **{linked}** across devices.")
         if handle and not clean:
             st.caption("A handle is 2–32 letters, numbers, - or _.")
         if not squad:

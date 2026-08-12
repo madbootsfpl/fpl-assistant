@@ -69,6 +69,19 @@ def test_save_upserts_with_auth_and_the_handle_key(configured, monkeypatch):
     assert seen["headers"]["Authorization"] == "Bearer anon-key-123"
 
 
+def test_save_round_trips_the_captain(configured, monkeypatch):
+    # US-357/C1: the store persists the WHOLE squad dict — including captain_id — so a saved captain loads back.
+    seen = {}
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None: seen.update(body=json) or _Resp())
+    squad = {"name": "My XI", "player_ids": [1, 2, 3], "bench_ids": [3], "captain_id": 2}
+    cloud_store.save_squad("tony17", squad)
+    assert seen["body"]["data"]["captain_id"] == 2             # the captain goes into the stored blob
+
+    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp([{"data": squad}]))
+    assert cloud_store.load_squad("tony17")["captain_id"] == 2  # …and comes back on load
+
+
 def test_save_rejects_a_bad_handle(configured, monkeypatch):
     monkeypatch.setattr("requests.post", lambda *a, **k: _Resp())
     with pytest.raises(ValueError):

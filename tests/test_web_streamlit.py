@@ -1355,6 +1355,39 @@ def test_my_squad_rename_updates_the_active_squad():
     assert at.session_state["squad"]["name"] == "Dream Team"
 
 
+def test_cloud_linked_squad_autosyncs_edits(monkeypatch):
+    # US-357/C1: once a squad is linked to a cloud handle (Saved/Loaded), edits auto-sync — so a captain (or any
+    # edit) persists across devices, not just the last manual Save.
+    from src.storage import Storage
+
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    synced = []
+    monkeypatch.setattr("src.web_streamlit.cloud_store.save_squad", lambda h, s: synced.append((h, dict(s))))
+
+    store = Storage()
+    ids = [p["id"] for p in store.get_players()][:15]
+    store.close()
+    if len(ids) < 15:
+        return
+    squad = {"name": "Sync", "player_ids": ids, "bench_ids": ids[11:], "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_Squads.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.session_state["_cloud_linked_handle"] = "myhandle"      # linked (as if Saved/Loaded under this handle)
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not at.exception
+
+    name = next((t for t in at.text_input if t.label == "Squad name"), None)   # the Rename edit → set_active_squad
+    if name is None or not any(b.label == "Rename" for b in at.button):
+        return
+    name.set_value("Renamed").run()
+    next(b for b in at.button if b.label == "Rename").click().run()
+    assert not at.exception
+    assert any(h == "myhandle" and s.get("name") == "Renamed" for h, s in synced)   # the edit auto-synced
+
+
 class _StoreResp:
     def __init__(self, data=None):
         self._data = [] if data is None else data

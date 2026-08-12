@@ -46,7 +46,7 @@ tee up the cold-start data floor (B) as a gated ADR-104 story.
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-356 | **Transfer filters** — team + max-price on the bring-in list. | High | ✅ Done | ~¼ session |
-| US-357 | **Captain persists on load** — round-trip + close the set-after-save gap. | High | ⬜ To do | ~¼ session |
+| US-357 | **Captain persists on load** — round-trip + close the set-after-save gap. | High | ✅ Done | ~¼ session |
 | — | **B: cold-start data floor** → its own **ADR-104** (changes `decision_xp`) — NOT built here. | High | 🔒 gate next | investigation |
 
 ---
@@ -69,6 +69,16 @@ tee up the cold-start data floor (B) as a gated ADR-104 story.
   fast. The "no replacements" fallback caption is now filter-aware (points at Team / Max price). Display-only.
   **+1 test** (a Team filter narrows the list to that club + never widens). ruff clean. **959 → 960.** (US-357 next:
   captain persists on load.)
+- **US-357 (captain persists on load — auto-sync)** — root-caused: `cloud_store` already stores the **whole squad
+  dict** (incl `captain_id`) and returns it verbatim, so the captain persists *if saved* — the gap was **set-after-
+  save** (no mechanism to keep a cloud squad in sync after you edit it). Fix: **auto-sync**. A squad becomes
+  **linked** to a handle on cloud **Save**/**Load** (`_cloud_linked_handle`); `set_active_squad` now calls a
+  best-effort `_autosync` that mirrors the edit back to the cloud when linked + the store is configured — so a
+  **captain** (or transfer/bench/sub) change syncs across devices, not just the last manual Save. **Fail-silent**
+  (never blocks the edit); **only for cloud-linked squads** (a built/uploaded squad with no handle writes nothing —
+  the opt-in server-write invariant holds, ADR-094/054); **Clear** unlinks; the sidebar shows a **🔄 Auto-syncing
+  to `<handle>`** line. **+2 tests** (the store round-trips `captain_id`; an edit on a linked squad auto-syncs to
+  the handle). ruff clean. **960 → 962.**
 
 ---
 
