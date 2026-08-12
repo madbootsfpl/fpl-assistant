@@ -19,7 +19,7 @@ _INPUTS = ("selectbox", "multiselect", "slider", "number_input", "text_input", "
 # The consolidated pages default to their first view (Players→Pool, Squads→Build); those views' input
 # controls all carry help. Manage-view widgets get their help when their view is selected (kept from
 # Sprint 074; not re-checked here — the default-view check is the standing gate).
-_COVERED = ["1_Players.py", "2_Fixtures.py", "3_Squads.py", "6_Trending.py"]
+_COVERED = ["1_Players.py", "2_Fixtures.py", "4_Squad_Lab.py", "7_Trending.py"]
 
 
 def _inputs(at):

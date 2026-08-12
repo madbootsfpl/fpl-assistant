@@ -37,7 +37,7 @@ if _line:
     render_countdown(_gw, _deadline, datetime.now(timezone.utc), _urgency)   # the live clock (ADR-088)
     st.caption(_text)          # the accessible, no-JS text line (context + date) beneath the clock
     if _urgency != "calm":     # a nudge to the pre-deadline actions when it's close
-        st.page_link("pages/3_Squads.py",
+        st.page_link("pages/3_My_Squad.py",
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
 st.markdown(
     """
