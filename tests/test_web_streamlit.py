@@ -85,6 +85,23 @@ def test_players_card_view_renders_a_player_card():
     assert "pl-card" in blob and "Player Card" in blob         # the card + its brand band rendered
 
 
+def test_players_card_view_compares_two_players():
+    # US-370 (ADR-110): the Card view's 🔍 "Compare with (same position)" picker → the two-player comparison card.
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return                                                 # no data → nothing to compare
+    at.segmented_control[0].set_value("Card").run()
+    assert not at.exception
+    cmp = next((s for s in at.selectbox if s.label and "Compare with" in s.label), None)
+    assert cmp is not None                                     # the compare picker exists
+    if len(cmp.options) <= 1:
+        return                                                 # only "—" (no same-position peer) → nothing to compare
+    cmp.set_value(cmp.options[1]).run()                        # pick a same-position player
+    assert not at.exception
+    blob = " ".join(m.value for m in at.markdown)
+    assert "cmp-card" in blob and "cmp-grid" in blob           # the merged comparison rendered (not the single card)
+
+
 def test_players_page_shows_the_crowd_lens_columns():
     # US-183 / ADR-057: the Players table gains Form · ICT · Trends (crowd flags), display-only
     at = _run(_PAGES / "1_Players.py")

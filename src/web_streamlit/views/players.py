@@ -308,7 +308,7 @@ def render_card(rows, sel, teams, photos, badges):
     shared filter; a short-lived Storage read + one decision_xp compute per selection (timed). Display-only."""
     from src.analytics import decision_xp
     from src.web_streamlit import analytics
-    from src.web_streamlit.player_card import render_player_card
+    from src.web_streamlit.player_card import render_player_card, render_player_compare
 
     pool = apply_filter(rows, sel)
     if not pool:
@@ -319,6 +319,15 @@ def render_card(rows, sel, teams, photos, badges):
     if not player:
         return
 
+    # US-370 (ADR-110): compare with another **same-position** player, side by side. A searchable picker (Streamlit
+    # selectboxes filter as you type) scoped to the same position (across all players, not just the filter) so the
+    # stat rows always align. "—" = the single card.
+    same_pos = sorted((p for p in rows if p["position"] == player["position"] and p["id"] != player["id"]),
+                      key=lambda p: p["web_name"] or "")
+    cmp_by_label = {f"{p['web_name']} · {p['team']}": p for p in same_pos}
+    cmp = cmp_by_label.get(st.selectbox("🔍 Compare with (same position)", ["—", *cmp_by_label],
+                                        help="Type to search a same-position player to compare side by side."))
+
     short = player["team"]
     team_names = {t["short_name"]: t["name"] for t in teams}
     store = Storage()                                        # short-lived: fixtures + our projected xP
@@ -328,9 +337,19 @@ def render_card(rows, sel, teams, photos, badges):
                                  horizon=1, gw_history_by_code=store.get_gw_history_by_code())
         xp = {r["id"]: r["xp"] for r in ranked}
         fixtures = _card_fixtures(store, short)
+        cmp_fixtures = _card_fixtures(store, cmp["team"]) if cmp else None
     finally:
         store.close()
 
-    render_player_card(player, team_name=team_names.get(short, short),
-                       photo_url=photos.get(player["id"]), badge_url=badges.get(short),
-                       fixtures=fixtures, projected_xp=xp.get(player["id"]))
+    if cmp:                                                  # the two-player comparison (ADR-110)
+        cshort = cmp["team"]
+        render_player_compare(
+            player, cmp,
+            a_team=team_names.get(short, short), b_team=team_names.get(cshort, cshort),
+            a_photo=photos.get(player["id"]), b_photo=photos.get(cmp["id"]),
+            a_fixtures=fixtures, b_fixtures=cmp_fixtures,
+            a_xp=xp.get(player["id"]), b_xp=xp.get(cmp["id"]))
+    else:
+        render_player_card(player, team_name=team_names.get(short, short),
+                           photo_url=photos.get(player["id"]), badge_url=badges.get(short),
+                           fixtures=fixtures, projected_xp=xp.get(player["id"]))
