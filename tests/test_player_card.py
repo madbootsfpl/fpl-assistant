@@ -138,6 +138,7 @@ def test_compare_card_html_two_headers_xp_and_stat_winner():
     assert "Haaland" in h and "Isak" in h and h.count('class="cmp-hdr"') == 2
     assert 'cmp-xp win">◆ 5.7 xP' in h and 'cmp-xp">◆ 4.9 xP' in h    # a's xP wins (5.7 > 4.9)
     assert 'cmp-v win">27' in h                      # a wins Goals → tinted
+    assert "Boot Battle" in h and "Last season" in h  # the MADBOOTS brand band (wave-3 feedback)
     assert compare_card_html(_FWD, None) == ""       # empty-safe
 
 

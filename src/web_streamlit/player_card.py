@@ -80,7 +80,7 @@ border:2px solid rgba(255,255,255,.16);overflow:hidden;}
 background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);padding:2px 8px;border-radius:999px;}
 .pl-card .cmp-xp.win{color:#5eead4;border-color:rgba(94,234,212,.4);}
 .pl-card .cmp-fix{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:7px;}
-.pl-card .cmp-grid{border-top:1px solid rgba(255,255,255,.09);margin-top:4px;}
+.pl-card .cmp-grid{margin-top:8px;}
 .pl-card .cmp-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:8px 2px;
 border-bottom:1px solid rgba(255,255,255,.07);}
 .pl-card .cmp-v{font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums;color:#e6edf5;}
@@ -304,7 +304,11 @@ def compare_card_html(a, b, *, a_team="", b_team="", a_photo=None, b_photo=None,
         f'<span class="cmp-l">{e(label)}</span>'
         f'<span class="cmp-v{" win" if win == "b" else ""}">{e(fb)}</span></div>'
         for label, fa, fb, win in compare_rows(a, b))
-    return f'<div class="pl-card cmp-card"><div class="cmp-body">{heads}<div class="cmp-grid">{rows}</div></div></div>'
+    # The MADBOOTS brand band — mirrors the single card's (US-355), titled "Boot Battle" (wave-3 feedback).
+    band = (f'<div class="plc-band">{brand.mark_html(badge_px=15, font_px=12, purple=brand.PURPLE_LT)}'
+            '<span class="plc-title">Boot Battle</span><span class="plc-brand">Last season</span></div>')
+    return (f'<div class="pl-card cmp-card"><div class="cmp-body">{heads}{band}'
+            f'<div class="cmp-grid">{rows}</div></div></div>')
 
 
 def render_player_compare(a, b, **kwargs) -> None:
