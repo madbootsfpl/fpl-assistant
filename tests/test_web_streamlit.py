@@ -1657,6 +1657,43 @@ def test_my_squad_pitch_popover_shows_per_gameweek_xp():
     assert 'class="plc-gwcol total"' not in blob             # no Total column (dropped — owner steer)
 
 
+def test_my_squad_per_gw_card_is_horizon_independent():
+    # Wave-3 feedback (ADR-109): the per-GW card row always shows GW1–3, even when "Gameweeks ahead" = 1 (it used to
+    # leave GW2/GW3 at 0.0). The selected player's panel-card per-GW cells match between horizon 1 and horizon 5.
+    import re
+
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
+    squad = {"name": "HzTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+    target = mids[0]
+
+    def pergw(hz):
+        at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+        at.session_state["squad"] = squad
+        at.run()
+        at.segmented_control[0].set_value("My Squad").run()
+        next(s for s in at.segmented_control if s.label == "Gameweeks ahead").set_value(hz).run()
+        next(s for s in at.selectbox if s.label == "Select a player") \
+            .set_value(f"{target['web_name']} · {target['team']}").run()
+        card = next((m.value for m in at.markdown if "Player Card" in m.value), "")   # the panel full card
+        return re.findall(r'plc-gwxp">([0-9.]+)<', card)
+
+    v1, v5 = pergw(1), pergw(5)
+    assert len(v1) == 3 and v1 == v5                 # 3 GWs, identical regardless of "Gameweeks ahead"
+
+
 def test_my_squad_set_bench_picks_four():
     at = _squads_view("My Squad")
     if not at.multiselect or not any(b.label == "Set bench" for b in at.button):

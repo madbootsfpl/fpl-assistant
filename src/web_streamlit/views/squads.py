@@ -277,9 +277,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     # Per-GW fixtures + xP for the player card (ADR-109): each owned player's next-≤3 fixtures with the xP for that
     # gameweek (aligned by `event` number). Feeds the ⚙ panel card (US-367) + the pitch hover popover (US-368).
+    # The card row **always shows GW1–3, independent of the page horizon** (wave-3 feedback: a horizon of 1 used to
+    # leave GW2/GW3 at 0). Reuse `ranked` when it already spans ≥3 GWs; else compute a fixed-3 view just for the card.
+    card_bg_by_id = by_gameweek_by_id if horizon >= 3 else {
+        r["id"]: r["by_gameweek"]
+        for r in decision_xp(players, upcoming, history, horizon=3, gw_history_by_code=gw_history)}
     fixtures_by_id = {}
     for _p in owned:
-        _bg = by_gameweek_by_id.get(_p["id"], {})
+        _bg = card_bg_by_id.get(_p["id"], {})
         fixtures_by_id[_p["id"]] = [
             {"opp": s["opponent"], "home": s["venue"] == "H", "fdr": s.get("difficulty"),
              "xp": _bg.get(s["event"])}
