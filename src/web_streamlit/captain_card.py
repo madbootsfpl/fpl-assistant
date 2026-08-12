@@ -1,7 +1,7 @@
 """A web-native **Captain Pick** card for the Streamlit edge (Sprint 116, US-294; the pitch pattern, ADR-084).
 
 Renders the same grounded decision as the mono `render_captain_picks` block (ADR-089) — the 🥇 pick (Team · Pos
-· a Projected-xP chip) · a Confidence·Band pill · Why (✓) / Risks (⚠) · Alternatives (🥈/🥉 + xP) — as **one
+· a Projected-xP chip) · a Confidence·Band pill · Edge (✓) / Risk (⚠) · Alternatives (🥈/🥉 + xP) — as **one
 self-contained HTML/CSS block** (no JS) via `st.markdown(unsafe_allow_html=True)`. Neutral, theme-aware colours
 (text inherits the Streamlit theme; the chips carry their own); every value is `html.escape`d. Pure presentation
 over data the page already holds — display-only; never touches xP.

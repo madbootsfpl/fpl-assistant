@@ -28,7 +28,7 @@ st.title("🧩 My Squad")
 st.caption("Your team in one place — see it, tweak it, and get this week's plan. Build a fresh one in **Squad Lab**.")
 
 if active_squad() is None:   # US-360: no team built/loaded yet → point new users at the builder (the views use a demo)
-    st.info("🛠️ **No team yet?** The views below use a demo — build your own in the **🥾 Squad Lab** tab "
+    st.info("🛠️ **No team yet?** The views below use a demo — build your own in the **🧪 Squad Lab** tab "
             "(in the sidebar), then it lands here.")
 
 view = st.segmented_control(

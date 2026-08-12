@@ -24,11 +24,11 @@ st.markdown(
 )
 
 st.caption("Your team lives on the **My Squad** tab — switch **My Squad · AI Tips · Captain · Transfer · Chips · "
-           "Health** with the buttons at the top; **build a new one** in the **🥾 Squad Lab** tab. **Home** shows a "
+           "Health** with the buttons at the top; **build a new one** in the **🧪 Squad Lab** tab. **Home** shows a "
            "⏳ **live deadline clock** that ticks down and turns 🟠 then 🔴 as it nears — with a nudge to set your "
            "captain, transfers and chip before it locks.")
 
-with st.expander("1 · Build your squad  →  **🥾 Squad Lab**", expanded=True):
+with st.expander("1 · Build your squad  →  **🧪 Squad Lab**", expanded=True):
     st.markdown(
         "Pick a **budget** and shape the 15 with the options: **archetypes** (cheap / premium / "
         "differential), **include / exclude** specific players, a **declared bench**, the **objective** "
@@ -55,7 +55,7 @@ with st.expander("2 · Make it yours  →  **My Squad**", expanded=True):
         "(pick 4). *(**Substitute** = a lineup change; **Transfer** = a new player — they're separate.)* If "
         "cross-device is enabled, **☁ Save/Load "
         "across devices** by a handle is in the **sidebar** (under *Your squad*), on any My Squad sub-view. Every "
-        "change updates your session and the **Download**. New team? Build one in the **🥾 Squad Lab** tab."
+        "change updates your session and the **Download**. New team? Build one in the **🧪 Squad Lab** tab."
     )
 
 with st.expander("3 · Check its health  →  **My Squad → Health**"):
@@ -103,7 +103,7 @@ with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)")
     st.markdown(
         "Type a question. **Squad & player** questions are answered by the analytics and the **✓/⚠** line "
         "shows they were checked against the data. **Captain & transfer** answers also show **why** — a "
-        "**Confidence** (a heuristic, e.g. *72 / 100 · Medium*) with a **Why** (✓ the signals for it) and a "
+        "**Confidence** (a heuristic, e.g. *72 / 100 · Medium*) with an **Edge** (✓ the signals for it) and a "
         "**Risk** (⚠ against), all computed from the data so you can trust or challenge it. **FPL rules** are "
         "answered from a curated knowledge base (also **✓**). Open **tactics** questions get a general answer "
         "clearly labelled **ℹ not checked against your data**. Things to try (copy-paste):"

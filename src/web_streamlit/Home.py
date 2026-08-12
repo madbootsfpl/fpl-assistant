@@ -49,7 +49,7 @@ Use the **sidebar** to explore (each tab with a segmented control switches views
 - **My Squad** — your team + its tools: the **pitch view & edit** (rename · substitute · transfer · bench ·
   captain · download) plus **AI Tips** (a grounded gameweek plan) · **Captain** · **Transfer** (XI-aware swaps) ·
   **Chips** · **Health** (5-GW analysis)
-- **Squad Lab** — 🥾 **build a fresh 15** (the full optimiser: budget · objective · archetypes · build modes) —
+- **Squad Lab** — 🧪 **build a fresh 15** (the full optimiser: budget · objective · archetypes · build modes) —
   for the season start, a wildcard, or a revamp; **Use this squad →** sends it to My Squad
 - **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
 - **News** — official FPL player news (injuries · doubts · returns), most serious first

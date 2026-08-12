@@ -24,8 +24,7 @@ require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Squad Lab")
 render_data_status()
 render_sidebar()
-st.image(brand.badge_path(), width=60)   # US-360: the MADBOOTS mascot on the builder
-st.title("🥾 Squad Lab")
+st.title("🧪 Squad Lab")   # wave-2 feedback: a lab motif (was the boot emoji + the MADBOOTS mascot image)
 st.caption("**Build your squad** — the full optimiser. New season, a wildcard, or a revamp. **Use this squad →** "
            "sends it to **My Squad** to manage.")
 

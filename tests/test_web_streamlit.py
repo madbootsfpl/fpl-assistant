@@ -580,7 +580,7 @@ def test_xg_board_rates_only_meaningful_players():
         assert ratings <= {"—"}, f"goalkeepers should not be rated on xGI, got {ratings}"
 
 
-_TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_My_Squad.py": "🧩", "4_Squad_Lab.py": "🥾",
+_TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_My_Squad.py": "🧩", "4_Squad_Lab.py": "🧪",
               "5_Ask.py": "💬", "6_News.py": "📰", "7_Trending.py": "📈", "8_Help.py": "🧭",
               "9_Feedback.py": "📣", "10_Admin.py": "📊"}
 

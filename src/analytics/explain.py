@@ -374,7 +374,7 @@ def gameweek_confidence(captain_confidence_score, n_flags: int) -> int:
 
 def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None:
     """Explain a gameweek plan (ADR-089): reuse the captain + transfer explanations, add a lineup rationale,
-    and give the week an overall Confidence · Why · Risk. Returns `{captain, transfer, lineup, overall}` (each
+    and give the week an overall Confidence · Edge · Risk. Returns `{captain, transfer, lineup, overall}` (each
     an `Explanation` / list), or None if there's no plan."""
     if not plan:
         return None
