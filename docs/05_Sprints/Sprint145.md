@@ -1,8 +1,8 @@
 # Sprint 145: P0 quick-wins (tester feedback, 2026-08-12)
 
 **Dates:** 2026-08-12
-**Status:** 🚧 In progress
-**Capacity:** ~½ session (two quick fixes; the data floor is gated separately)
+**Status:** ✅ Complete — US-356/357 + ADR-104/US-358. 959 → 964 tests
+**Capacity:** ~½ session (two quick fixes; the data floor gated + built)
 **Carried Over:** none
 
 > **Direction:** the first P0 items from the 2026-08-12 intake. **A3** (transfer filters) + **C1** (captain persists
@@ -96,4 +96,28 @@ tee up the cold-start data floor (B) as a gated ADR-104 story.
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — the first P0 items from the 2026-08-12 intake. Two turned out **different from the surface
+report** once grounded on the real data, producing smaller, more honest fixes.
+
+**Shipped**
+- **US-356** — Transfer bring-in **Team + Max-price** filters (a long list narrows fast). +1 test.
+- **US-357** — captain-persists-on-load via **auto-sync**: a cloud-linked squad (Saved/Loaded under a handle) mirrors
+  every edit to the cloud, so a captain/transfer/bench change syncs across devices — not just the last manual Save.
+  Fail-silent; only for linked squads; Clear unlinks; a sidebar "🔄 Auto-syncing" line. +2 tests.
+- **ADR-104 + US-358** — the **cold-start xP floor**: **69 available players** projected **0** at GW1 (no history →
+  preseason `ppg` 0). Floor with FPL's own **`ep_next`** (`rate = max(ppg, ep_next)`, `rate_source="ep_next"`, not
+  minutes-re-weighted). Verified: the 69 rise to sane values; established players byte-identical; a flagged player
+  stays 0. **Reframe recorded** — we do *not* chase FFH (for a player *with* history, our number is *above* FPL's own
+  `ep_next`, so FFH is the outlier). One invariance test updated (+3 ADR-104 tests).
+
+**Tests:** 959 → **964**. ruff clean; CI-parity green.
+
+**What went well:** grounding reframed both the captain "bug" (a UX sync gap) and the data "gap" (FFH bullishness);
+the metric change was targeted (one invariance test); auto-sync is a real robustness win + a down-payment on the
+persistence review.
+
+**Owner follow-ups:** the browser smokes (transfer filters · save+captain cross-device · cold-start players non-zero
+· established unchanged). The P1 items (IA restructure · persistence+Google-auth · per-GW display · player-actions ·
+vocabulary) remain in the intake.
+
+**Lessons:** `docs/05_Sprints/Sprint145_Lessons_Learnt.md`.

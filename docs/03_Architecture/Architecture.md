@@ -464,6 +464,23 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 145 (2026-08-12)** — *P0 quick-wins (2026-08-12 tester feedback)* (**ADR-104** for the data floor; the
+  two quick fixes no new ADR). **US-356:** the My Squad **Transfer** bring-in list gains a **Team** selectbox + a
+  **Max-price** slider (alongside position/affordable/injured) so the long same-position list narrows. **US-357
+  (captain persists):** root-caused as a *set-after-save* gap — `cloud_store` already round-trips the whole squad
+  dict (incl `captain_id`), but nothing synced after an edit. Fix: a squad becomes **linked** to a handle on cloud
+  Save/Load (`_cloud_linked_handle`); `set_active_squad` now best-effort **auto-syncs** the edit to the cloud when
+  linked + configured, so a captain/transfer/bench change syncs across devices. Fail-silent; **only for
+  cloud-linked** squads (no handle → no write; the opt-in server-write invariant holds, ADR-094/054); Clear unlinks;
+  a sidebar "🔄 Auto-syncing" line. **ADR-104 / US-358 (cold-start xP floor):** **69 available players** with no FPL
+  history projected **0** at GW1 (preseason `points_per_game` 0 → rate 0). In `analytics/xp.py::player_xp`'s last
+  rate tier, **`rate = max(points_per_game, ep_next)`** with a new `rate_source="ep_next"` — floor with FPL's own
+  expected-points-next-GW (already on the row; honest, no new data); the `ep_next` floor isn't re-scaled by the
+  minutes weight (it already prices minutes). **Targeted** — the ≥900-min baseline + shrunk fallback tiers
+  (ADR-028/040) are unchanged (established players byte-identical); availability still gates. **Reframe on the
+  record:** we do *not* chase FFH — for a player *with* history our number is *above* FPL's own `ep_next`, so FFH is
+  the outlier; the genuine defect was only the 0s. A deliberate one-xP change (ADR-041) for the cohort → one
+  invariance test updated (+3 ADR-104 tests). +5 tests (959→964).
 - **Sprint 144 (2026-08-11)** — *Brand polish — tester feedback* (extends **ADR-103**/**ADR-084**, no new ADR;
   display-only). Three nits on the fresh rebrand. **US-355:** (#1) the My Squad card picker → **"View your player's
   card"** (it's your squad); (#2) fixed the player-card wordmark's **MAD/BOOTS gap** — a US-349 regression where the
