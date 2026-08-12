@@ -82,5 +82,5 @@ def test_auth_shows_the_sign_in_screen_when_not_signed_in(monkeypatch):
     monkeypatch.setattr("streamlit.login", lambda *a, **k: logins.append(a))
     at = AppTest.from_string(_SCRIPT).run()
     assert not at.exception
-    assert logins == [("google",)]                                  # the Sign-in-with-Google button rendered
+    assert logins == [()]                                           # st.login() (the single [auth] provider) rendered
     assert not any("APP-RENDERED" in m.value for m in at.markdown)  # stopped at the login screen

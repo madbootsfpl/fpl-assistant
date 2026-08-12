@@ -64,7 +64,7 @@ def gate() -> None:
         st.image(brand.badge_path(), width=68)
         st.title(f"🔒 {brand.NAME} — private beta")
         st.caption(f"**{brand.TAGLINE}** · sign in to get your squad synced across your devices.")
-        st.login("google")                         # "Sign in with Google" (Streamlit OIDC, ADR-106)
+        st.login()                                 # "Sign in with Google" — the single provider under [auth] (ADR-106)
         st.caption("We store your Google **email** to admit you + sync your squad — nothing else. "
                    "*Remove me* = we delete your rows.")
         st.caption(brand.DISCLAIMER)
