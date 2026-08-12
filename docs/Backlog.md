@@ -48,11 +48,15 @@ click-menu, the points-comparison mockups, the Sangare/Shaw/Haaland snaps; triag
   on iPhone) — a stable identity that anchors **auto-save/restore** and fixes the mobile wipe + cross-device captain
   at once. Couple these; keep the code gate as fallback. One ADR (the deferred hard-auth upgrade, ADR-098/099).
 - 🧩 **Per-player weekly xP** *(UX A5 / Obs B1)* — on the My Squad pitch, show the **per-GW** points for **GW1–3**
-  individually, then a **total** if >3 GW selected (the FFH per-GW breakdown the owner liked).
+  individually, then a **total** if >3 GW selected (the FFH per-GW breakdown the owner liked). **🔁 Re-confirmed by a
+  tester 2026-08-12 (wave 2)** with the exact "1–3 then total" spec — and the IA restructure it waited on is **done**
+  (S146), so this is **ripe**.
 - 🧭 **Consolidate player actions** *(UX A6)* — FFH: **click a player → a menu** (full card · substitute · make
   captain). ⚠ **Platform wall** (S139/142): a static `st.markdown` pitch **can't do a click-menu**; the achievable
   version is a unified **"player actions" panel** under the pitch (pick → card + Substitute + Make-captain in one
-  place). Sits best after the IA restructure.
+  place). Sits best after the IA restructure. **🔁 Re-confirmed 2026-08-12 (wave 2)** — tester showed the FFH
+  click-menu again; the real want is **open the full player card** (not cram detail into the truncated hover) + sub +
+  captain from one place. IA restructure is **done** → now unblocked.
 
 **P2 — branding / polish** *(governed by the design principle above)*
 - ✅ **MADBOOTS vocabulary** *(Branding E)* — **DONE (Sprint 148, ADR-107).** Adopted **Edge** (the `explain` "Why"
@@ -65,6 +69,34 @@ click-menu, the points-comparison mockups, the Sangare/Shaw/Haaland snaps; triag
 
 **Ongoing**
 - 🧩 **Docs refresh** *(D)* — a consolidation pass (PROJECT_STATUS/Roadmap/README) after the big changes land.
+
+## Tester feedback — 2026-08-12 intake (wave 2)
+
+A second same-day wave (the feedback keeps coming — people are using it). **Two items re-confirm existing P1s** —
+they're annotated inline above, not duplicated:
+- *"Show the weekly game points for GW1–3 then a total"* → **A5** (per-player weekly xP) — now **ripe** (the IA
+  restructure it waited on shipped in S146).
+- *"FFH pops a menu on **clicking** a player — full card · substitute · captain"* → **A6** (consolidate player
+  actions) — now **unblocked**. The real want: **open the full card**, not cram detail into the truncated hover. ⚠ The
+  platform wall stands — a static `st.markdown` pitch can't fire a click callback (S139/142), so the achievable
+  shape is **click-to-select → an actions panel/popover** (the picker *is* the menu), not a literal JS click-menu.
+
+**New:**
+- 🩹 **Homepage copy is stale — auth is live** *(Web F1)* — `madboots.com` still reads *"No login to look around ·
+  your squad saves across devices by a handle."*, untrue since **Google auth went live (2026-08-12)**. Update to:
+  **sign in with Google → the squad auto-saves to your account + syncs across devices** (drop "unique team name" — the
+  handle era; auth needs no handle), and **set the private-beta / waitlist expectation** (a non-invited sign-in lands
+  on the waitlist). Add a **hello@madboots.com** contact line. ⚠ *The homepage source isn't in the repo* (Cloudflare
+  Pages; was `~/Downloads/madboots-home.html`) — owner to point at the file or we rebuild it. **hello@madboots.com
+  must also exist as a real inbox/forward** (owner infra) to be useful. *(Draft copy agreed in-chat.)*
+- 🧩 **Squad Lab icon → a lab motif** *(Branding G)* — swap the **🥾 boot/mascot** on the **Squad Lab** page header
+  (US-360) for a **lab jar / test-tube / conical flask** icon — it fits *Lab* (build & experiment) better than the
+  boot, and distinguishes it from the boot-branded rest of the app. Asset/display-only; **needs the art** (like the
+  rebrand — a clean transparent PNG/emoji). Keep it clean per the design principle.
+- 🧭 **Player card — compare two players side by side** *(UX H)* — extend the player card (ADR-084) with a **2-up
+  comparison**: pick **A + B** → the two cards side by side, same stat grid (a tester showed a two-column compare
+  mockup). A real feature — a compare mode + a second picker + a responsive two-column layout that collapses on
+  mobile; **needs a small gate/ADR**. Pairs naturally with **A6** ("open card from the menu → compare with…").
 
 ## Branding — MADBOOTS rebrand ✅ shipped (Sprint 141) · infra changeover ✅ done (2026-08-12)
 
