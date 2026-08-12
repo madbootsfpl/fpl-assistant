@@ -65,6 +65,9 @@ with Google **`st.login()`** as the gate *when configured*, allow-listed by `bet
 | The account/logout UI differs in auth mode | auth uses `st.logout`, not the cookie clear | Auth mode owns its own `render_account` (top branch in `require_access`) |
 | Don't leak the mobile-wipe fix into every page | restore must run on admit, once | Do the link + restore in `auth.gate()` on admit (session-cached `_OK`) |
 | PII step-up (emails ↔ squads) | Google gives the email | Email-only + basic scopes; squad keyed by a hash; a privacy line on the gate |
+| **Go-live (2026-08-12): `StreamlitMissingAuthlibError`** | `st.login()` needs **Authlib** — Streamlit ships OIDC as an *optional* extra we'd never installed | Declared `Authlib>=1.3.2` in requirements + bumped the Cloud rebuild token (`ac4a605`) — the feature was untested on a *deploy* until enabled |
+| **Go-live: `[auth]` shape ↔ `st.login()` call** | Flat `[auth]` (one provider) pairs with `st.login()` **no-arg**; `st.login("google")` needs a *nested* `[auth.google]` section | Aligned the code to `st.login()` to match the runbook's flat block (`d462c3e`) — doc and code must agree on the single-provider form |
+| **Go-live: Google redirect URI rejected** | Pasted the path into *Authorised JavaScript origins* (origins forbid a path) | The `…/oauth2callback` path belongs only in *Authorised redirect URIs*; origins is domain-only |
 
 ---
 
