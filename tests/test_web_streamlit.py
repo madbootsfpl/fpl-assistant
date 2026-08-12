@@ -951,8 +951,9 @@ def test_my_squad_bench_reorder_persists_and_recommended_applies():
 
 
 def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
-    # US-351: the 🔁 Substitute control brings a starter OFF (to the bench) and a bench player ON (into the
-    # XI), offering only legal swaps (the bench GK isn't a legal bring-on for an outfield starter).
+    # US-351/366 (ADR-108): in the player-actions panel, selecting a STARTER shows a "take them off — bring on"
+    # picker offering only legal bench swaps (the bench GK isn't a legal bring-on for an outfield starter);
+    # confirming performs the swap.
     from src.storage import Storage
 
     store = Storage()
@@ -975,25 +976,25 @@ def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
 
-    off = next((s for s in at.selectbox if s.key == "sub_off"), None)
-    assert off is not None and next((s for s in at.selectbox if s.key == "sub_on"), None) is not None
-    assert next((b for b in at.button if b.key == "do_sub"), None) is not None
-
-    # Bring off the first-choice DEF (a starter), bring on the benched DEF — a legal same-count swap.
-    off.set_value(next(o for o in off.options if defs[0]["web_name"] in o)).run()
-    on = next(s for s in at.selectbox if s.key == "sub_on")
+    # Select the first-choice DEF (a starter) in the panel → the "bring on" picker appears (only legal swaps).
+    next(s for s in at.selectbox if s.label == "Select a player") \
+        .set_value(f"{defs[0]['web_name']} · {defs[0]['team']}").run()
+    on = next((s for s in at.selectbox if s.key == "pa_sub"), None)
+    assert on is not None and next((b for b in at.button if b.key == "pa_do_sub"), None) is not None
     assert not any(gks[1]["web_name"] in o for o in on.options)      # the bench GK isn't a legal outfield sub
+
+    # Bring on the benched DEF for that starter — a legal same-count swap.
     on.set_value(next(o for o in on.options if defs[4]["web_name"] in o)).run()
-    next(b for b in at.button if b.key == "do_sub").click().run()
+    next(b for b in at.button if b.key == "pa_do_sub").click().run()
     assert not at.exception
 
     new_bench = set(at.session_state["squad"]["bench_ids"])
     assert defs[4]["id"] not in new_bench and defs[0]["id"] in new_bench   # on → XI, off → bench
 
 
-def test_my_squad_card_picker_prefills_bring_off():
-    # US-352: picking a *starter* in the "👤 View your player's card" picker pre-fills the Substitute "Bring off";
-    # picking a *bench* player shows a hint (they're a bring-on, not a bring-off).
+def test_my_squad_panel_brings_a_bench_player_on():
+    # US-366 (ADR-108): selecting a BENCH player in the panel flips the substitute to "bring them ON" — pick the
+    # starter to drop, confirm, and the bench player enters the XI (the counterpart of the starter path above).
     from src.storage import Storage
 
     store = Storage()
@@ -1016,16 +1017,17 @@ def test_my_squad_card_picker_prefills_bring_off():
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
 
-    picker = next(s for s in at.selectbox if s.label == "Select a player")   # ADR-108 panel selector
-    starter = defs[0]                                          # a first-choice DEF (in the XI)
-    picker.set_value(f"{starter['web_name']} · {starter['team']}").run()
-    off = next(s for s in at.selectbox if s.key == "sub_off")
-    assert off.value == f"{starter['position']} {starter['web_name']}"    # Bring off pre-filled to the pick
-
-    benched = defs[4]                                          # a bench player → a hint, not a prefill
+    benched = defs[4]                                          # a benched DEF → a bring-*on*
     next(s for s in at.selectbox if s.label == "Select a player") \
         .set_value(f"{benched['web_name']} · {benched['team']}").run()
-    assert any(benched["web_name"] in c.value and "bring off" in c.value.lower() for c in at.caption)
+    off = next((s for s in at.selectbox if s.key == "pa_sub"), None)
+    assert off is not None and benched["web_name"] in (off.label or "")   # the picker names the bring-on player
+    off.set_value(next(o for o in off.options if defs[0]["web_name"] in o)).run()   # drop the first-choice DEF
+    next(b for b in at.button if b.key == "pa_do_sub").click().run()
+    assert not at.exception
+
+    new_bench = set(at.session_state["squad"]["bench_ids"])
+    assert benched["id"] not in new_bench and defs[0]["id"] in new_bench   # benched → XI, starter → bench
 
 
 def test_my_squad_flags_unavailable_players_by_name():

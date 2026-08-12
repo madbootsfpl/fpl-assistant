@@ -358,10 +358,11 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp,
                  team_names=team_names, bench_roles=bench_roles)
 
-    # ⚙ Player actions (ADR-108, US-365) — one selection drives the **full card** + **Make captain** (and
-    # Substitute, below — folded in by US-366) in one panel on the golden page. Native selectbox+button → it
-    # works on phone/tablet, and gives mobile the full card the desktop-only hover popover never could. Reuses
-    # the card renderer + `set_captain` — no analytics change.
+    # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +
+    # **Substitute**, together, in one panel on the golden page (consolidates the old card picker + Substitute
+    # expander + the stranded Captain-tab set control). Native selectbox+button → it works on phone/tablet, and
+    # gives mobile the full card the desktop-only hover popover never could. Reuses the card renderer +
+    # `set_captain` + `substitute` — no analytics change.
     from src.web_streamlit.player_card import render_player_card
     st.subheader("⚙ Player actions")
     st.caption("Pick a player → view their card, make them captain, or substitute. "
@@ -385,50 +386,46 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             st.success(f"Captain set: **{picked['web_name']} (C)** — they score ×2 next gameweek.")
             st.rerun()
 
-    # US-352: the card picker **seeds** the substitution — picking a *starter* pre-fills "Bring off" (edge-
-    # triggered on `_sub_prefill_for`, so it seeds once per pick and you can still change Bring off freely);
-    # picking a *bench* player shows a hint (they're a bring-*on*, not a bring-off).
-    picked_id = picked["id"] if picked else None
-    if picked_id != st.session_state.get("_sub_prefill_for"):
-        st.session_state["_sub_prefill_for"] = picked_id
-        if picked_id is not None and picked_id not in bench_ids:      # a starter → seed Bring off
-            st.session_state["sub_off"] = f"{picked['position']} {picked['web_name']}"
+        # 🔁 Substitute (US-366, ADR-108) — the selected player is one side of the swap; pick the other. Only
+        # legal swaps are offered (substitute() returns no issues: GK↔GK, a swap that keeps a legal formation).
+        # A benched pick brings them ON (choose the starter to drop); a starter takes them OFF (choose the bench
+        # player). Reuses substitute(); folds in the old standalone expander + the _sub_prefill_for seed. The
+        # static pitch card still can't hold a working button (S139), so this selection-driven panel is the path.
+        pid = picked["id"]
 
-    # US-351: a direct **substitution** near the pitch — bring a starter OFF (to the bench) and a bench player
-    # ON (into the XI). Reuses `substitute` (set_bench + legal_xi_issues); only legal swaps are offered (GK↔GK;
-    # a swap that keeps a legal formation). The static pitch card can't hold a working button (S139 — HTML in a
-    # markdown block can't call back to Python), so this is the widget equivalent. "Set the bench (pick 4)" (in
-    # Edit, below) stays as the bulk path.
-    if xi and bench:
-        with st.expander("🔁 Substitute — swap a starter with a bench player", expanded=True):
-            if picked and picked["id"] in bench_ids:                 # US-352: a benched pick is a bring-*on*
-                st.caption(f"👆 **{picked['web_name']}** is on your bench — pick a starter to **bring off**, "
-                           f"then choose **{picked['web_name']}** under *Bring on*.")
-            off_label = {f"{p['position']} {p['web_name']}": p["id"]
-                         for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))}
-            off_choice = st.selectbox("Bring off (from your XI)", list(off_label), key="sub_off",
-                                      help="The starter to move to the bench (the card picker above pre-fills this).")
-            off_id = off_label[off_choice]
-            # Only bench players whose swap-in keeps a legal XI (the helper returns no issues).
-            legal_ons = [p for p in bench if not substitute(squad, off_id, p["id"], by_id)[1]]
-            if legal_ons:
-                on_label = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
-                            for p in legal_ons}
-                on_choice = st.selectbox("Bring on (from your bench)", list(on_label), key="sub_on",
-                                         help="The bench player to bring into your XI — only legal swaps shown.")
-                if st.button("Substitute →", key="do_sub"):
-                    new, sub_issues = substitute(squad, off_id, on_label[on_choice], by_id)
-                    if sub_issues:      # belt-and-braces: the filter already excludes these
-                        st.error("Can't substitute — that leaves an illegal XI: " + "; ".join(sub_issues))
-                    else:
-                        set_active_squad(new)
-                        st.success(f"Subbed **{by_id[off_id]['web_name']} → "
-                                   f"{by_id[on_label[on_choice]]['web_name']}** — the bench updates too.")
-                        st.rerun()
+        def _do_sub(off_id, on_id):
+            new, issues = substitute(squad, off_id, on_id, by_id)
+            if issues:      # belt-and-braces: the option lists already exclude illegal swaps
+                st.error("Can't substitute — that leaves an illegal XI: " + "; ".join(issues))
             else:
-                why = ("the bench GK only covers your keeper" if by_id[off_id]["position"] == "GK"
+                set_active_squad(new)
+                st.success(f"Subbed **{by_id[off_id]['web_name']} → {by_id[on_id]['web_name']}** — "
+                           "the bench updates too.")
+                st.rerun()
+
+        if pid in bench_ids:                                     # a bench player → bring them ON for a starter
+            legal = {f"{p['position']} {p['web_name']}": p["id"]
+                     for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))
+                     if not substitute(squad, p["id"], pid, by_id)[1]}
+            if legal:
+                off = st.selectbox(f"🔁 Bring {picked['web_name']} on — take off", list(legal), key="pa_sub",
+                                   help="The starter to move to the bench — only legal swaps are shown.")
+                if st.button("Substitute →", key="pa_do_sub"):
+                    _do_sub(legal[off], pid)
+            else:
+                st.caption(f"No legal swap brings **{picked['web_name']}** on (no starter keeps a legal XI).")
+        elif bench:                                              # a starter → take them OFF for a bench player
+            legal = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
+                     for p in bench if not substitute(squad, pid, p["id"], by_id)[1]}
+            if legal:
+                on = st.selectbox(f"🔁 Take {picked['web_name']} off — bring on", list(legal), key="pa_sub",
+                                  help="The bench player to bring into your XI — only legal swaps are shown.")
+                if st.button("Substitute →", key="pa_do_sub"):
+                    _do_sub(pid, legal[on])
+            else:
+                why = ("the bench GK only covers your keeper" if picked["position"] == "GK"
                        else "no bench player keeps a legal formation")
-                st.caption(f"No legal swap for **{by_id[off_id]['web_name']}** — {why}.")
+                st.caption(f"No legal swap for **{picked['web_name']}** — {why}.")
 
     if bench_ordered:
         line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
