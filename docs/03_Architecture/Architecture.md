@@ -464,6 +464,20 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 148 (2026-08-12)** — *MADBOOTS vocabulary: Edge · Risk · Radar* (**ADR-107**, extends ADR-103). Turns
+  the last generic analytics labels into a small brand lexicon, governed by the owner's *clean, modern, **not
+  gimmicky*** principle (brand as a light signature; a rename must be **at least as clear** as the word it replaces).
+  **US-363:** the grounded-explanation block's reasons heading **"Why" → "Edge"** and the downside **"Risks" →
+  "Risk"** (reconciled to the singular used elsewhere), swept across **all four** renderers that emit it —
+  `ui/explain.py` (CLI/Ask/Squad Lab), web `captain_card.py`, `ui/captain.py` (CLI captain card), and `ui/gameweek.py`
+  (the inline per-recommendation label inside **AI Tips**, so a single output never reads both "Edge" and "Why"). The
+  planning Explore map found only two of the four; a `grep src/` for the heading strings caught the rest. **US-364:**
+  the Fixtures shortlist **"🎯 Target by fixtures" → "🎯 Radar"** (players to watch) + the Help mention; the caption
+  now names the radar. **Held (owner):** "AI Tips" + "Captain" unchanged, **"Pick" deferred** — its home would be
+  *AI Tips*, which renders a whole-week plan, so "Pick" mis-sizes it. **Display-only** — no analytics/`decision_xp`
+  change and **no code identifiers touched** (`render_ai_tips`, `analytics.target_by_fixtures`, the `target_*` session
+  keys, the `elif view==…` branch strings, and the `facts["why"]` **grounding key** — grounding matches fact
+  *values*, not keys). Tests + comments updated to the new wording; 972 stay green (display-only, no count change).
 - **Sprint 147 (2026-08-12)** — *Google auth + per-user squad persistence* (**ADR-106**). Fixes the tester
   *save/persist* cluster — iPhone session-wipe (C2) · cross-device (C3) · clunky code login (C4). **US-361:** a new
   `web_streamlit/auth.py` (`is_configured()` = `[auth]` in `st.secrets`; `current_email()` = guarded `st.user.email`;

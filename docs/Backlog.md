@@ -55,9 +55,11 @@ click-menu, the points-comparison mockups, the Sangare/Shaw/Haaland snaps; triag
   place). Sits best after the IA restructure.
 
 **P2 — branding / polish** *(governed by the design principle above)*
-- 🧩 **MADBOOTS vocabulary** *(Branding E)* — turn existing concepts into brand terms: **MadBoots Pick** (the rec),
-  **Edge** (advantage vs template — maps to differential/`explain` Why), **Risk** (`explain` Risk), **Captain**,
-  **Radar** (players to watch — maps to `targets`). Mostly display-label work; keep it clean, not gimmicky.
+- ✅ **MADBOOTS vocabulary** *(Branding E)* — **DONE (Sprint 148, ADR-107).** Adopted **Edge** (the `explain` "Why"
+  heading) + **Risk** (reconciled "Risks"→"Risk") across all four render surfaces, and **🎯 Radar** (was "Target by
+  fixtures"). **"Pick" deferred** — its home would be *"AI Tips"*, but that renders a whole-week plan, so "Pick"
+  mis-sizes it (owner's call); "AI Tips" + "Captain" left as-is. Governed by *clean, modern, not gimmicky* (brand as a
+  light signature). Owner flagged *"another pass to tweak later"* — revisit once seen in the browser.
 - 🧩 **Mascot/brand into the tools** *(UX A4)* — AI Tips · Health · Captain under My Squad (the captain card already
   has the mark, S144).
 

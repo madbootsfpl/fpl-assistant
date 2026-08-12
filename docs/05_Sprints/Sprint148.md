@@ -1,7 +1,7 @@
 # Sprint 148: MADBOOTS vocabulary — Edge · Risk · Radar (ADR-107)
 
 **Dates:** 2026-08-12
-**Status:** 🚧 Planned — US-363 + US-364 (ADR-107)
+**Status:** ✅ Complete — US-363 + US-364 (ADR-107). 972 tests (unchanged; display-only)
 **Capacity:** ~1 short session (display-label sweep + docs)
 **Carried Over:** none
 
@@ -70,7 +70,22 @@ open Fixtures → "🎯 Radar"); docs updated.
 ---
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — both stories, display-only, 972 tests green (unchanged; ruff clean).**
+
+- **US-363 (Edge · Risk)** — `Why`→`Edge` and `Risks`→`Risk` swept across **all four** surfaces that render the
+  explanation block: `ui/explain.py` (CLI/Ask/Squad Lab), `web/captain_card.py`, `ui/captain.py` (CLI captain card),
+  and `ui/gameweek.py` (the inline per-recommendation label in **AI Tips**). The planning map found only two of these
+  — a `grep src/` for the heading strings caught the other two. Tests + comments updated; the `facts["why"]`
+  **grounding key is unchanged** (it's a code identifier — grounding matches fact *values*, not keys).
+- **US-364 (Radar)** — `🎯 Target by fixtures` → `🎯 Radar` on the Fixtures page (caption now names the radar) + the
+  Help mention + the AppTest assertion. `analytics.target_by_fixtures` and the `target_*` session keys untouched.
+
+**Held per owner:** "AI Tips" and "Captain" unchanged; **"Pick" deferred** (AI Tips is a whole-week plan). Owner
+noted *"another pass to tweak later"* — revisit the lexicon once seen in the browser.
+
+**Definition of Done:** ✅ tests updated + green · ✅ manual smoke (rendered Edge/Risk on CLI + web; AppTest confirms
+the 🎯 Radar subheader) · ✅ docs (ADR-107 gate; PROJECT_STATUS; Architecture; Backlog; memory).
 
 ### 🧠 Lessons
-*(see `Sprint148_Lessons_Learnt.md` at retro)*
+*(see `Sprint148_Lessons_Learnt.md`)*
