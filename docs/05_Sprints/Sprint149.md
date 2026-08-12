@@ -1,7 +1,7 @@
 # Sprint 149: The My Squad player-actions panel (ADR-108)
 
 **Dates:** 2026-08-12
-**Status:** 🚧 Planned — US-365 + US-366 (ADR-108)
+**Status:** ✅ Complete — US-365 + US-366 (ADR-108). 972 → 973 tests
 **Capacity:** ~1 session (a `render_my_squad` re-layout + docs; helpers reused)
 **Carried Over:** none
 
@@ -82,7 +82,26 @@ player on desktop *and* a narrow viewport → card + both actions work) + docs.
 ---
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — both stories; the golden page's controls are now one panel. 972 → 973 tests; ruff clean.**
+
+- **US-365 (panel: selection + card + Make captain)** — a new **⚙ Player actions** panel: one **"Select a player"**
+  selector (replaces the card picker) → the full card + a **👑 Make captain** button (reuses `set_captain`; the
+  action moved onto the pitch — no more re-pick + tab-hop to the Captain sub-tab). Built alongside the old Substitute
+  expander (kept working, pre-filled off the new selector) so the commit stayed shippable.
+- **US-366 (fold in Substitute)** — the selected player is one side of the swap: a **starter** → *"take off — bring
+  on"* (legal bench players); a **bench** pick → *"bring on — take off"* (legal starters to drop) + **Substitute →**.
+  **Retired** the standalone Substitute expander, the `sub_off`/`sub_on` two-selectbox dance, and the
+  `_sub_prefill_for` seed — one selection *is* the pre-fill now. Reuses `substitute()` (still only legal swaps).
+
+**Reused, unchanged:** `substitute()` / `set_captain()` / the card renderer — no analytics/`decision_xp` change.
+**Native `selectbox`+`button` → taps on phone/tablet**, giving mobile the full card the desktop-only hover never
+could. **Transfer stays its own expander**; the **Captain sub-tab keeps its recommendation** (both call `set_captain`).
+
+**Definition of Done:** ✅ tests (panel render · Make-captain sets `captain_id` · both substitute directions apply) ·
+✅ manual smoke (rendered card + captain + substitute on the AppTest page) · ✅ docs (ADR-108 gate; Help step-2 rewrite;
+PROJECT_STATUS; Architecture; memory). **Deferred:** the custom JS **tap-the-pitch** component (its own spike + ADR,
+post-GW1, feedback-driven — Backlog).
 
 ### 🧠 Lessons
-*(see `Sprint149_Lessons_Learnt.md` at retro)*
+*(see `Sprint149_Lessons_Learnt.md`)*

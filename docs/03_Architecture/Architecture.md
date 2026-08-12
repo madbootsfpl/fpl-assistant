@@ -464,6 +464,22 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 149 (2026-08-12)** — *The My Squad player-actions panel* (**ADR-108**, extends ADR-055/084/105). My Squad
+  is the golden page, but picking a player was scattered across **three** places (the card picker, the 🔁 Substitute
+  expander, and Set-captain over in the Captain sub-tab) and captaining one meant a re-pick + a tab switch.
+  Consolidated into **one inline "⚙ Player actions" panel** on `render_my_squad`: a single **"Select a player"**
+  selector → the **full card** + **👑 Make captain** (one click, `set_captain`, moved onto the pitch) + **🔁
+  Substitute** (the selected player is one side of the swap — a *starter* → pick the legal bring-on, a *bench* pick →
+  pick the starter to drop). **US-365** added the panel + card + captain alongside the old expander (kept shippable);
+  **US-366** folded substitute in and **retired** the standalone expander, the `sub_off`/`sub_on` two-selectbox dance,
+  and the `_sub_prefill_for` seed (one selection *is* the pre-fill now — unifying the input **removed** state).
+  **Native `selectbox`+`button` → taps on phone/tablet**, giving mobile the full card the desktop-only CSS hover never
+  could (the pitch stays one static `st.markdown` block — no callback; the panel is the interaction). **Reuses**
+  `substitute()` / `set_captain()` / the card renderer — no analytics/`decision_xp` change. Transfer stays its own
+  expander; the Captain sub-tab keeps its recommendation (both call `set_captain`). Two Substitute tests rewritten to
+  the panel; +1 Make-captain test (972→973). **Deferred: the custom JS "tap-the-pitch" component** — a shirt-tap →
+  this same panel (~90% reused; only the *input* changes); its own spike (full React vs a lightweight click-detector
+  reusing the pitch HTML + a Cloud-deploy check) + ADR, **post-GW1**, feedback-driven.
 - **Sprint 148 (2026-08-12)** — *MADBOOTS vocabulary: Edge · Risk · Radar* (**ADR-107**, extends ADR-103). Turns
   the last generic analytics labels into a small brand lexicon, governed by the owner's *clean, modern, **not
   gimmicky*** principle (brand as a light signature; a rename must be **at least as clear** as the word it replaces).
