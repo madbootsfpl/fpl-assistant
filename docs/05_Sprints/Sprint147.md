@@ -84,7 +84,7 @@ Edits then auto-sync under the user-key; a reconnect (auth cookie intact) re-res
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-361 | **The Google auth gate** — `auth.py` + the `require_access` branch + allow-list (`beta_users`) + waitlist. | High | ✅ Done | ~½ session |
-| US-362 | **Per-user auto-save/restore** — link by email-hash + restore on load. | High | ⬜ To do | ~⅓ session |
+| US-362 | **Per-user auto-save/restore** — link by email-hash + restore on load. | High | ✅ Done | ~⅓ session |
 
 ---
 
@@ -113,6 +113,14 @@ Edits then auto-sync under the user-key; a reconnect (auth cookie intact) re-res
   hides the email + is a valid handle · admits an allow-listed email · waitlists a non-listed one (`"not_listed"`) ·
   shows the Sign-in screen) — the OAuth redirect itself is owner-smoke-verified (can't be AppTested; `st.login`/
   `current_email` mocked). ruff clean. **966 → 971.** (US-362 next: link + restore the per-user squad on admit.)
+- **US-362 (per-user auto-save/restore)** — a `squads.link_and_restore(handle)` (reuses the S145 `_CLOUD_LINKED` /
+  `_autosync`): sets the link so every edit **auto-syncs** to the cloud under the handle, and — when the session has
+  **no** active squad (a mobile reconnect wiped it) — **re-fetches** the user's squad so it **follows them across
+  devices/reconnects**; best-effort, and it never clobbers a squad already active this session (a fresh build stays).
+  `auth.gate()` calls it on admit with `user_key(email)` (the sha256 key). This is the **C2 mobile-wipe fix** (the
+  auth cookie keeps the user signed in → the squad restores) + **C3 cross-device**. **+1 test** (on admit: the squad
+  is restored from the cloud by the email-hash key + linked for auto-sync). ruff clean. **971 → 972.** Sprint 147
+  build complete — the BETA.md `[auth]` runbook lands at retro.
 
 ---
 

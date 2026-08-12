@@ -73,7 +73,9 @@ def gate() -> None:
     if user_store.is_registered(email):            # on the allow-list → admitted
         st.session_state[_OK] = True
         st.session_state[_EMAIL] = user_store.clean_email(email)
-        return                                     # US-362 links + restores the per-user squad here
+        from src.web_streamlit import squads
+        squads.link_and_restore(user_key(email))   # US-362: link + restore the per-user squad (cross-device/reconnect)
+        return
 
     waitlist.add(email, "not_listed")              # signed in but not invited → capture + hold (ADR-102)
     st.image(brand.badge_path(), width=68)

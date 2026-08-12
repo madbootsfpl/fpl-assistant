@@ -155,6 +155,25 @@ def substitute(squad: dict, off_id: int, on_id: int, by_id) -> tuple[dict, list]
     return new, legal_xi_issues(xi)
 
 
+def link_and_restore(handle: str) -> None:
+    """Link the session's squad to a cloud `handle` and **restore** it from the cloud if none is active yet
+    (US-362/ADR-106). Used on Google-auth admit with a per-user key (`auth.user_key`): sets `_CLOUD_LINKED` so every
+    future edit **auto-syncs** (S145), and — when the session has **no** active squad (e.g. a mobile reconnect wiped
+    it) — re-fetches the user's squad so it **follows them across devices/reconnects**. Best-effort + fail-silent;
+    never clobbers a squad already active this session (a fresh build stays)."""
+    st.session_state[_CLOUD_LINKED] = handle
+    if active_squad() is not None:
+        return
+    try:
+        from src.web_streamlit import cloud_store
+        if cloud_store.is_configured():
+            loaded = cloud_store.load_squad(handle)
+            if loaded:
+                set_active_squad(loaded)
+    except Exception:
+        return
+
+
 def apply_transfer(squad: dict, out_id: int, in_id: int, players,
                    budget: float = FPL_BUDGET) -> tuple[bool, list, str | None, dict | None]:
     """Swap `out_id`→`in_id` on a **copy** of `squad`, legality-checked (ADR-055).

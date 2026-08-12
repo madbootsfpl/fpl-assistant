@@ -48,6 +48,22 @@ def test_auth_admits_an_allow_listed_email(monkeypatch):
     assert any("APP-RENDERED" in m.value for m in at.markdown)       # …and the app rendered past the gate
 
 
+def test_admit_links_and_restores_the_per_user_squad(monkeypatch):
+    # US-362 (ADR-106): on admit the squad is linked (auto-sync) and, if none is active, restored from the cloud —
+    # so it follows the user across devices/reconnects (the mobile session-wipe fix).
+    _auth_on(monkeypatch, "tester@x.com", registered=True)
+    monkeypatch.setenv("FPL_STORE_URL", "https://p.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    key = auth.user_key("tester@x.com")
+    saved = {"name": "Mine", "player_ids": [1, 2, 3], "bench_ids": [3], "captain_id": 2}
+    monkeypatch.setattr("src.web_streamlit.cloud_store.load_squad", lambda h: saved if h == key else None)
+    monkeypatch.setattr("src.web_streamlit.cloud_store.save_squad", lambda h, s: None)   # the autosync write (no-op)
+    at = AppTest.from_string(_SCRIPT).run()
+    assert not at.exception
+    assert at.session_state["squad"] == saved                       # restored on load (across devices/reconnects)
+    assert at.session_state["_cloud_linked_handle"] == key          # linked → future edits auto-sync
+
+
 def test_auth_waitlists_a_non_listed_email(monkeypatch):
     _auth_on(monkeypatch, "stranger@x.com", registered=False)
     calls = []
