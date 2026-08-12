@@ -54,6 +54,18 @@ def require_access() -> None:
     value is written back. Any cookie failure degrades to today's per-session gate. A "Log out" control clears
     both (the cookie clear is deferred here too, so a `st.rerun()` can't drop it)."""
     _flush_clear()                 # render a pending logout cookie-clear on this clean run (before any stop/rerun)
+
+    # Google-auth mode (ADR-106) takes precedence **when `[auth]` is configured** — it owns the whole gate + the
+    # account/logout UI. Off by default: no `[auth]` → this branch is skipped and the cookie path below runs
+    # byte-identical (local, CI, and the open deploy unchanged).
+    from src.web_streamlit import auth
+    if auth.is_configured():
+        if st.session_state.get(_OK):
+            auth.render_account()  # "Signed in as … · Log out (Google)"
+            return
+        auth.gate()                # sign in → allow-list (beta_users) → admit or waitlist; stops unless admitted
+        return
+
     if st.session_state.get(_OK):
         _flush_remember()          # write the "remember me" cookie on this clean run (post-login/refresh)
         _render_account()          # sidebar: "Signed in … · Log out" (only when a gate is active)
