@@ -378,7 +378,7 @@ def test_help_page_renders_the_guide_without_data():
     # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps + an example
     at = _run(_PAGES / "8_Help.py")
     blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
-    assert "Squads" in blob and "My Squad" in blob             # the core steps (new nav)
+    assert "Squad Lab" in blob and "My Squad" in blob          # the core steps (ADR-105 nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
     assert "AI Tips" in blob                                   # US-226: the gameweek tab (renamed) is in the guide
     assert "this week for my-team" in blob                     # US-224: the gameweek Ask example
@@ -1052,9 +1052,22 @@ def test_my_squad_flags_unavailable_players_by_name():
 
 
 def test_my_squad_points_to_build():
-    # ADR-069: the My Squad view stays the tweaker + points to the Build view for a full rebuild
+    # ADR-105: the My Squad view points to Squad Lab for a full rebuild
     at = _squads_view("My Squad")
-    assert any("Build" in c.value for c in at.caption)
+    assert any("Squad Lab" in c.value for c in at.caption)
+
+
+def test_squad_lab_page_builds_and_has_a_mascot_header():
+    # US-360 (ADR-105): Squad Lab is the builder, with a mascot-themed header
+    at = _run(_PAGES / "4_Squad_Lab.py")
+    assert at.title and "Squad Lab" in at.title[0].value
+    assert any("Build your squad" in c.value for c in at.caption)   # the header copy
+
+
+def test_my_squad_empty_state_points_to_squad_lab():
+    # US-360 (ADR-105): with no team built/loaded, My Squad points new users at Squad Lab
+    at = _run(_PAGES / "3_My_Squad.py")                    # no injected squad → active_squad() is None
+    assert any("Squad Lab" in i.value for i in at.info)
 
 
 def test_build_page_returns_a_squad(monkeypatch):

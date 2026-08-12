@@ -18,17 +18,17 @@ st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *na
            "download it to keep it (nothing is saved on the server).")
 
 st.markdown(
-    "**Quick start:** open **Squads** → *Build* → **Use this squad** → tweak it in *My Squad* → get your "
-    "**AI Tips** for the week → check *Health*, *Transfer* and *Captain* → **Download** your `squad.json`. "
+    "**Quick start:** open **Squad Lab** → build → **Use this squad** → manage it in **My Squad** → get your "
+    "**AI Tips** for the week → check *Captain*, *Transfer* and *Health* → **Download** your `squad.json`. "
     "Prefer words? Do it all from **Ask**."
 )
 
-st.caption("Everything for your team lives on the **Squads** tab — switch **Build · My Squad · AI Tips · "
-           "Chips · Health · Transfer · Captain** with the buttons at the top. **Home** shows a ⏳ **live "
-           "deadline clock** that ticks down and turns 🟠 then 🔴 as it nears — with a nudge to set your "
+st.caption("Your team lives on the **My Squad** tab — switch **My Squad · AI Tips · Captain · Transfer · Chips · "
+           "Health** with the buttons at the top; **build a new one** in the **🥾 Squad Lab** tab. **Home** shows a "
+           "⏳ **live deadline clock** that ticks down and turns 🟠 then 🔴 as it nears — with a nudge to set your "
            "captain, transfers and chip before it locks.")
 
-with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=True):
+with st.expander("1 · Build your squad  →  **🥾 Squad Lab**", expanded=True):
     st.markdown(
         "Pick a **budget** and shape the 15 with the options: **archetypes** (cheap / premium / "
         "differential), **include / exclude** specific players, a **declared bench**, the **objective** "
@@ -38,7 +38,7 @@ with st.expander("1 · Build your squad  →  **Squads → Build**", expanded=Tr
         "squad →** to make it this session's active squad."
     )
 
-with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=True):
+with st.expander("2 · Make it yours  →  **My Squad**", expanded=True):
     st.markdown(
         "Your active squad as a **green formation pitch** — kits laid out GK→FWD with a bench strip, each with "
         "an xP chip, a **(C)** armband and sub-number badges. **Hover a shirt** (desktop) — or use **👤 View a "
@@ -54,17 +54,17 @@ with st.expander("2 · Make it yours  →  **Squads → My Squad**", expanded=Tr
         "**Include injured/suspended** to plan around a flagged player); or set the whole **bench** at once "
         "(pick 4). *(**Substitute** = a lineup change; **Transfer** = a new player — they're separate.)* If "
         "cross-device is enabled, **☁ Save/Load "
-        "across devices** by a handle is in the **sidebar** (under *Your squad*), on any Squads sub-view. Every "
-        "change updates your session and the **Download**. New team? Switch back to the **Build** view."
+        "across devices** by a handle is in the **sidebar** (under *Your squad*), on any My Squad sub-view. Every "
+        "change updates your session and the **Download**. New team? Build one in the **🥾 Squad Lab** tab."
     )
 
-with st.expander("3 · Check its health  →  **Squads → Health**"):
+with st.expander("3 · Check its health  →  **My Squad → Health**"):
     st.markdown(
         "See your squad's **projected xP over the next 5 gameweeks**, the per-GW breakdown, and the "
         "**weak links** worth upgrading. This is the same engine the CLI uses — one honest xP number."
     )
 
-with st.expander("4 · Plan your week & improve it  →  **Squads → AI Tips · Chips · Transfer · Captain**"):
+with st.expander("4 · Plan your week & improve it  →  **My Squad → AI Tips · Captain · Transfer · Chips**"):
     st.markdown(
         "**AI Tips** is the fastest answer — one grounded view of who to **captain**, any **lineup** "
         "change, one **transfer** to consider, and any **flagged** players (injuries / doubts), all checked "

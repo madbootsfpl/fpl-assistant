@@ -15,7 +15,7 @@ from src.ui.deadline import deadline_line
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
-from src.web_streamlit.squads import render_sidebar, squad_picker
+from src.web_streamlit.squads import active_squad, render_sidebar, squad_picker
 from src.web_streamlit.status import render_data_status
 from src.web_streamlit.views import squads as views
 
@@ -26,6 +26,10 @@ render_data_status()
 render_sidebar()
 st.title("🧩 My Squad")
 st.caption("Your team in one place — see it, tweak it, and get this week's plan. Build a fresh one in **Squad Lab**.")
+
+if active_squad() is None:   # US-360: no team built/loaded yet → point new users at the builder (the views use a demo)
+    st.info("🛠️ **No team yet?** The views below use a demo — build your own in the **🥾 Squad Lab** tab "
+            "(in the sidebar), then it lands here.")
 
 view = st.segmented_control(
     "Tool", ["My Squad", "AI Tips", "Captain", "Transfer", "Chips", "Health"], default="My Squad",

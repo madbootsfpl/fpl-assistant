@@ -75,7 +75,7 @@ player-actions consolidation (A6); persistence + Google auth (C-cluster).
 | ID | Title / Story | Priority | Status | Estimate |
 |---|---|---|---|---|
 | US-359 | **The page split + renumber + harness** — 3_Squads → My Squad + Squad Lab; renumber Ask–Admin. | High | ✅ Done | ~½ session |
-| US-360 | **Squad Lab mascot header + guided entry + Home/Help copy.** | Med | ⬜ To do | ~¼ session |
+| US-360 | **Squad Lab mascot header + guided entry + Home/Help copy.** | Med | ✅ Done | ~¼ session |
 
 ---
 
@@ -102,6 +102,16 @@ player-actions consolidation (A6); persistence + Google auth (C-cluster).
   `test_sidebar_pages` (added Squad Lab 🥾) + the perf/tooltip tests. **Pragmatic call** (prefer-simple): a **direct
   sed renumber**, not a page-path-constants refactor — same green result, less churn. **964 tests unchanged**
   (a restructure — tests repointed, not added). ruff clean. (US-360 next: the mascot header + guided entry + copy.)
+- **US-360 (mascot header + guided entry + copy)** — **Squad Lab** now leads with the **MB badge** (`st.image`) above
+  its **🥾 Squad Lab** title + a "**Build your squad**" caption. On **My Squad with no team built/loaded**
+  (`active_squad() is None`), an **info pointer** guides new users to the **🥾 Squad Lab** tab. Rebranded the **Home**
+  copy (My Squad = team + tools · Squad Lab = build) + the whole **Help** guide (quick-start, the step headers, the
+  "your team lives on My Squad / build in Squad Lab" caption) to the two-tab structure; the Home docstring's page
+  list too. **Gotcha:** `st.page_link` to a page path **raises in AppTest bare mode** (no page registry) — it broke
+  every no-squad My Squad test — so the pointer is a clean **info-text** to the sidebar tab, not a clickable
+  `page_link` (Home dodges this by guarding its own `page_link` behind the deadline urgency). **+2 tests** (Squad Lab
+  builds + has the mascot header · empty My Squad points to Squad Lab) + updated the Help-content + points-to-build
+  assertions. ruff clean. **964 → 966.** Sprint 146 complete — the Squads tab is now **My Squad** + **Squad Lab**.
 
 ---
 

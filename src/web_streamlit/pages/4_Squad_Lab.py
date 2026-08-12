@@ -24,8 +24,9 @@ require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Squad Lab")
 render_data_status()
 render_sidebar()
-st.title("🥾 Squad Lab")   # US-360 makes this a mascot-themed header
-st.caption("Build a fresh 15 — the full optimiser. New season, a wildcard, or a revamp. **Use this squad →** "
+st.image(brand.badge_path(), width=60)   # US-360: the MADBOOTS mascot on the builder
+st.title("🥾 Squad Lab")
+st.caption("**Build your squad** — the full optimiser. New season, a wildcard, or a revamp. **Use this squad →** "
            "sends it to **My Squad** to manage.")
 
 # The build optimises over this window (ADR-077) — longer for a wildcard / start of season.
