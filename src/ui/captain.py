@@ -1,7 +1,7 @@
 """Console rendering for captain suggestions (ADR-029, ADR-089).
 
 Pure formatting: takes the annotated picks (from `analytics.captain_picks`) + their grounded `Explanation`
-and shows the structured **Captain Pick** card — the medal pick, its Confidence · Why · Risks, the runner-up
+and shows the structured **Captain Pick** card — the medal pick, its Confidence · Edge · Risk, the runner-up
 Alternatives, and the shared Model note (US-277/278) — so the manager sees *why*.
 """
 
@@ -14,7 +14,7 @@ def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None
                         heading: str = "Captain Pick", nudge: str = "") -> str:
     """The structured **Captain Pick** card (ADR-089, US-277) — the mockup a tester asked for.
 
-    A medal pick (`Team · Pos` · `Projected: N pts`), a clean Confidence line, the grounded Why (✓) / Risks
+    A medal pick (`Team · Pos` · `Projected: N pts`), a clean Confidence line, the grounded Edge (✓) / Risk
     (⚠) from the `Explanation`, the runner-up **Alternatives** (🥈/🥉 + their xP), and the shared Model note.
     `ranked` is the `captain_picks` list already sliced so `[0]` is the chosen pick (its runner-ups are the
     alternatives); `team_names` maps a team short code → a friendly name ("MUN" → "Man Utd"). `heading`
@@ -37,9 +37,9 @@ def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None
     if explanation is not None:
         lines += ["", f"Confidence: {explanation.confidence}/100 ({explanation.band})"]
         if explanation.reasons:
-            lines += ["", "Why", *[f"✓ {r}" for r in explanation.reasons]]
+            lines += ["", "Edge", *[f"✓ {r}" for r in explanation.reasons]]   # MADBOOTS vocab (ADR-107)
         if explanation.risks:
-            lines += ["", "Risks", *[f"⚠ {r}" for r in explanation.risks]]
+            lines += ["", "Risk", *[f"⚠ {r}" for r in explanation.risks]]
     alternatives = ranked[1:]
     if alternatives:
         lines += ["", "Alternatives"]
@@ -57,7 +57,7 @@ def render_captain_picks(picks, squad_name: str | None = None, explanation=None,
     """The captain recommendation as the structured Captain Pick card (US-278) — used by the CLI `captain`
     command and the web Captain tab, so every surface reads the same as the Ask answer. `picks` is the ranked
     `captain_picks` list (its runner-ups become the Alternatives); `explanation` the grounded
-    Why/Risk/Confidence; `team_names` maps a team short code → a friendly name. Empty-safe, scope-aware."""
+    Edge/Risk/Confidence; `team_names` maps a team short code → a friendly name. Empty-safe, scope-aware."""
     if not picks:
         base = "No captain candidates"
         if squad_name:

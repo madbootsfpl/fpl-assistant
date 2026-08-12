@@ -1,4 +1,4 @@
-"""Render a grounded Why / Risk / Confidence block (Sprint 104, ADR-089).
+"""Render a grounded Edge / Risk / Confidence block (Sprint 104, ADR-089).
 
 A plain-text block from an `analytics.Explanation` — the ✓ reasons, the ⚠ risks, and the heuristic confidence
 (score + band). Shown above a decision's detail in `ask`/CLI/web, so a user sees *why* and can trust or
@@ -16,7 +16,7 @@ MODEL_NOTE = (
 
 
 def render_explanation(explanation) -> str:
-    """`explanation` is an `analytics.Explanation`. One block: a Confidence line + Why (✓) / Risk (⚠) lists."""
+    """`explanation` is an `analytics.Explanation`. One block: a Confidence line + Edge (✓) / Risk (⚠) lists."""
     if explanation is None:
         return ""
     # A clean confidence line (US-277/278) — the "heuristic, not a probability" caveat now lives once in the
@@ -24,7 +24,7 @@ def render_explanation(explanation) -> str:
     lines = [f"Confidence: {explanation.confidence}/100 ({explanation.band})"]
     if explanation.reasons:
         lines.append("")
-        lines.append("Why")
+        lines.append("Edge")                          # MADBOOTS vocab (ADR-107): the advantage / the "why"
         lines += [f"  ✓ {r}" for r in explanation.reasons]
     if explanation.risks:
         lines.append("")

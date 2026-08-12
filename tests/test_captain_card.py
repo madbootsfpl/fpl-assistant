@@ -21,7 +21,7 @@ def test_card_shows_pick_confidence_why_risks_and_alternatives():
     assert ".cap-card" in h and "🥇 Captain Pick" in h and "from squad &#x27;RoboTS&#x27;" in h
     assert "B.Fernandes" in h and "Man Utd · MID" in h and "5.9 pts" in h    # pick + projected chip
     assert "69/100 · Medium" in h and "cc-med" in h                          # confidence pill (Medium band)
-    assert "✓ Penalty taker" in h and "⚠ Away fixture" in h                  # Why / Risks
+    assert "✓ Penalty taker" in h and "⚠ Away fixture" in h                  # Edge / Risk
     assert "🥈 Haaland 5.7" in h and "🥉 Rice 4.5" in h                       # Alternatives
     assert 'class="cc-brand"' in h and 'aria-label="MADBOOTS"' in h          # US-355: the MADBOOTS mark
 

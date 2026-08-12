@@ -79,7 +79,7 @@ def test_limit_is_respected():
 
 def test_render_captain_pick_is_the_structured_card():
     # US-277 (ADR-089): the tester's "Captain Pick" mockup — medal · Team·Pos · Projected · Confidence ·
-    # Why · Risks · Alternatives 🥈🥉 · Model note. The friendly team name comes from the short-code map.
+    # Edge · Risk · Alternatives 🥈🥉 · Model note. The friendly team name comes from the short-code map.
     ranked = [
         {"web_name": "B.Fernandes", "team": "MUN", "position": "MID", "xp": 5.9},
         {"web_name": "Haaland", "team": "MCI", "position": "FWD", "xp": 5.7},
@@ -91,7 +91,7 @@ def test_render_captain_pick_is_the_structured_card():
     assert out.startswith("Captain Pick")
     assert "🥇 B.Fernandes" in out and "Man Utd · MID" in out and "Projected: 5.9 pts" in out
     assert "Confidence: 69/100 (Medium)" in out                 # clean line; the caveat is in the Model note
-    assert "Why\n✓ Highest projected points" in out and "Risks\n⚠ Away fixture" in out
+    assert "Edge\n✓ Highest projected points" in out and "Risk\n⚠ Away fixture" in out
     assert "Alternatives\n🥈 Haaland 5.7 pts\n🥉 Rice 4.5 pts" in out
     assert "Model note:" in out and out.count("🥇") == 1
 

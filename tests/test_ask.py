@@ -555,9 +555,9 @@ def test_decide_worth_good_value_with_rank_and_median():
     assert d["facts"]["value"] == "1.20 xP per £m"
     assert "0.83" in d["facts"]["position_median_value"]
     assert d["subjects"] == ["Aaa"]
-    # US-284: the answer now explains *why* — a grounded Confidence·Why·Risk block + the Model note, and the
-    # values are facts (so a narrated number verifies).
-    assert "Confidence:" in d["detail"] and "Why" in d["detail"] and "Model note:" in d["detail"]
+    # US-284: the answer now explains *why* — a grounded Confidence·Edge·Risk block + the Model note, and the
+    # values are facts (so a narrated number verifies). ("Edge" = the reasons heading, MADBOOTS vocab ADR-107.)
+    assert "Confidence:" in d["detail"] and "Edge" in d["detail"] and "Model note:" in d["detail"]
     assert "confidence" in d["facts"] and "why" in d["facts"]
 
 
@@ -738,8 +738,8 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     assert "This week — squad 'TST'" in decision["detail"]
     assert "Haaland" in decision["subjects"] and "Palmer" in decision["subjects"]   # owned + the buy
     assert "over 5 GW" in decision["detail"]                                        # default horizon
-    # US-273/274 (ADR-089): explainability — a plan-level Confidence + a per-recommendation Why
-    assert "Confidence:" in decision["detail"] and "Why:" in decision["detail"]
+    # US-273/274 (ADR-089): explainability — a plan-level Confidence + a per-recommendation Edge (ADR-107 vocab)
+    assert "Confidence:" in decision["detail"] and "Edge:" in decision["detail"]
     assert "confidence" in decision["facts"] and "why" in decision["facts"]         # in the facts → verifiable
 
     res = assemble("q", "gameweek", decision,
@@ -1152,7 +1152,7 @@ def test_ask_captain_explains_with_confidence_and_verifies():
     r = ask.answer("who should I captain from RoboTS?", narrator=lambda p: None)
     if r.intent != "captain" or r.detail is None:
         return                                                  # no such squad locally → nothing to assert
-    assert "Confidence:" in r.detail and "Why" in r.detail      # the grounded explanation block
+    assert "Confidence:" in r.detail and "Edge" in r.detail     # the grounded explanation block (ADR-107 vocab)
     assert "confidence" in r.facts and "why" in r.facts         # the values are facts (so narration verifies)
     rendered = render_ask(r)
     assert "✓" in rendered and "Captain Pick" in rendered       # US-277: the structured card

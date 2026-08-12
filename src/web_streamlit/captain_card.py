@@ -64,10 +64,10 @@ def captain_card_html(ranked, explanation, *, scope: str = "", team_names=None) 
         conf_html = f'<span class="cc-conf {band_cls}">{explanation.confidence}/100 · {e(explanation.band)}</span>'
         if explanation.reasons:
             lis = "".join(f"<li>✓ {e(r)}</li>" for r in explanation.reasons)
-            why_html = f'<div class="cc-col"><div class="cc-h">Why</div><ul>{lis}</ul></div>'
+            why_html = f'<div class="cc-col"><div class="cc-h">Edge</div><ul>{lis}</ul></div>'
         if explanation.risks:
             lis = "".join(f"<li>⚠ {e(r)}</li>" for r in explanation.risks)
-            risk_html = f'<div class="cc-col"><div class="cc-h">Risks</div><ul>{lis}</ul></div>'
+            risk_html = f'<div class="cc-col"><div class="cc-h">Risk</div><ul>{lis}</ul></div>'
 
     alts = ranked[1:3]
     alts_html = ""
