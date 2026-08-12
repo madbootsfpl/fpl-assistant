@@ -4,15 +4,73 @@ Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features li
 consolidated [Roadmap](04_Roadmap/Roadmap.md) — "Next / Then / Later"; this file holds the small
 nice-to-haves and tech-debt.)*
 
-## Branding — MAD BOOTS rebrand (⏸ parked pending art)
+> **Design principle (owner, 2026-08-12):** MADBOOTS' **branding and UX must stay clean, modern, and easy to
+> navigate.** Every UI/IA change below is measured against it — don't just move clutter around, and keep the brand
+> vocabulary/mascot tasteful, not gimmicky. *(Worth pinning as a design ADR.)*
 
-Rename the product **FPL Assistant → MAD BOOTS** (tagline **"Fantasy Football, Calculated."**), `madboots.com`
-secured. The **sprint plan is drafted** (`docs/05_Sprints/Sprint141.md`, uncommitted) — approach **B** (marks as
-accents on the current light/theme-aware app), keep the internal `fpl-assistant` package + `FPL_*` secrets. **Blocked
-on a mark that renders well:** the AI-generated badge doesn't survive tracing to a favicon (lost teeth, muddy
-colours). Owner is reviewing art options — the steer is **two marks**: a detailed **hero** illustration *and* a
-deliberately **simple small icon** (MB monogram / a clean boot) designed for 16–32px. **Resume at `start ADR-103`
-once the art is sorted.**
+## Sequencing (owner-agreed, 2026-08-12)
+
+**Infra changeover FIRST**, then the feature work — by technical risk (see `docs/MADBOOTS_CHANGEOVER.md`):
+1. **Infra changeover** — repo → `madbootsfpl` · reconnect Streamlit · rename subdomain → `madboots.streamlit.app`
+   · deploy the homepage (Cloudflare Pages) · wire `madboots.com`. *(Cheapest now — smallest beta, still preseason;
+   the rename resets per-domain cookies anyway, so do it before rebuilding persistence.)*
+2. **P0 quick-wins** (below) — transfer filters · captain-persist · the cold-start data floor.
+3. **IA restructure** (A1/A2) — discuss/gate, then build.
+4. **Persistence + Google auth** (C-cluster) — the strategic rework, on the final domain.
+5. Branding vocabulary (E) · per-GW display (A5) · A6 consolidation · docs refresh (D).
+
+## Tester feedback — 2026-08-12 intake
+
+Triaged with priority (P0 now · P1 gate/soon · P2 polish). *(Some referenced screenshots didn't arrive — the FFH
+click-menu, the points-comparison mockups, the Sangare/Shaw/Haaland snaps; triaged from the text.)*
+
+**P0 — do soon (before recruiting more testers)**
+- 🧭 **Data cold-start floor** *(Obs B1–B3)* — new/promoted players floored at **0/near-0** (Sangare 0 vs HUB 3.6;
+  O'Shea 1.6 vs 4.7) reads as "broken" and erodes trust. A **position-based, minutes-weighted baseline** so a
+  likely-starter never shows 0, even preseason. *(NOT chasing FFH parity — they have paid Opta + prior-season/
+  lineup data we don't buy, ADR-016; the broader gap closes via GW1 calibration, ADR-101. Needs an ADR.)*
+- 🧭 **Mobile data-loss** *(Save C2)* — on iPhone, app-switching + back to Safari **reruns Streamlit and wipes the
+  loaded team** (session_state lost on reconnect). Severe. Fixed properly by the persistence rework (C-cluster);
+  the rename resets cookies anyway, so do it **after** the changeover.
+- 🩹 **Captain doesn't persist on load** *(Save C1)* — a cloud-loaded squad should carry its `captain_id`. Verify the
+  save/load includes it; likely a quick fix.
+- 🩹/🧩 **Transfer — add filters** *(UX A3)* — the "bring in" list is very long; add **team** + **price/amount**
+  filters (extends the S143 Transfer, which already has position/affordable/injured).
+
+**P1 — structural (discuss/gate)**
+- 🧭 **IA restructure** *(UX A1+A2)* — the Squads tab is busy. Pull **Build** out to its **own top-level tab**
+  (rename — *Team Builder / Draft / Squad Lab?* — not to be confused with My Squad), and make **My Squad** its own
+  tab with the tools as **5 sub-tabs** (AI Tips · Chips · Health · Transfer · Captain). *Build is only for
+  season-start / wildcard / revamp — its prominence confuses "why is Build here after I built my team".* **Discuss
+  first** — it frames A5/A6/filters. One ADR.
+- 🧭 **Persistence + auth model** *(Save C2+C3+C4)* — review save/load/persist; keep a recommended team on-device,
+  cross-device. Owner's steer: **Google auth (`st.login`)** is more robust + friendlier than the code gate (clunky
+  on iPhone) — a stable identity that anchors **auto-save/restore** and fixes the mobile wipe + cross-device captain
+  at once. Couple these; keep the code gate as fallback. One ADR (the deferred hard-auth upgrade, ADR-098/099).
+- 🧩 **Per-player weekly xP** *(UX A5 / Obs B1)* — on the My Squad pitch, show the **per-GW** points for **GW1–3**
+  individually, then a **total** if >3 GW selected (the FFH per-GW breakdown the owner liked).
+- 🧭 **Consolidate player actions** *(UX A6)* — FFH: **click a player → a menu** (full card · substitute · make
+  captain). ⚠ **Platform wall** (S139/142): a static `st.markdown` pitch **can't do a click-menu**; the achievable
+  version is a unified **"player actions" panel** under the pitch (pick → card + Substitute + Make-captain in one
+  place). Sits best after the IA restructure.
+
+**P2 — branding / polish** *(governed by the design principle above)*
+- 🧩 **MADBOOTS vocabulary** *(Branding E)* — turn existing concepts into brand terms: **MadBoots Pick** (the rec),
+  **Edge** (advantage vs template — maps to differential/`explain` Why), **Risk** (`explain` Risk), **Captain**,
+  **Radar** (players to watch — maps to `targets`). Mostly display-label work; keep it clean, not gimmicky.
+- 🧩 **Mascot/brand into the tools** *(UX A4)* — AI Tips · Health · Captain under My Squad (the captain card already
+  has the mark, S144).
+
+**Ongoing**
+- 🧩 **Docs refresh** *(D)* — a consolidation pass (PROJECT_STATUS/Roadmap/README) after the big changes land.
+
+## Branding — MADBOOTS rebrand ✅ shipped (Sprint 141) · infra changeover to do
+
+The **rebrand shipped** (Sprint 141, ADR-103 + US-348/349/350; polished in Sprint 144): the visible product is
+**MADBOOTS** — the MB badge favicon, the two-tone wordmark, the tagline, the not-affiliated footer — with the
+internal `fpl-assistant` package + `FPL_*` secrets unchanged. **What remains is the infra changeover** (owner
+clicks + code/doc side), to be done **first** (see Sequencing above) via the step-by-step
+**`docs/MADBOOTS_CHANGEOVER.md`** runbook:
 
 - 🧭 **Brand infrastructure changeover** *(do it all together, in one coordinated session, alongside the rebrand —
   not piecemeal; the live beta can briefly blink offline)*. Owner secured **@madbootsfpl** across socials + GitHub.
@@ -21,6 +79,16 @@ once the art is sorted.**
     + re-grant Streamlit access to the new account (GitHub Actions secrets don't transfer; Streamlit secrets are
     safe). *(An Org `madboots` is the tidier long-term home but optional — a user/org can't share the `@madbootsfpl`
     name he grabbed.)* Code-side: update the git remote + the hardcoded repo URLs in `Home.py`/`8_Feedback.py` + docs.
+  - **The homepage (designed + owner-approved).** A free static **`madboots.com`** landing page — the hero boots
+    lockup + tagline + ethos (one honest xP · grounded ✓/⚠ · whole-week) + a **Launch-the-app** CTA + the
+    not-affiliated footer. Self-contained single HTML (hero embedded as a data URI) at
+    `~/Downloads/madboots-home.html` → rename `index.html`, host **free** on **Cloudflare Pages** (owner's pick — he's
+    already on **Cloudflare DNS**, so one dashboard for DNS + Pages + a `301` redirect + free SSL); point
+    `madboots.com` at it. **Access stays in the app** — a static
+    page can't gate a public Streamlit URL, so the landing page is **brand + CTA + (optional) signup**, not the gate;
+    don't double-gate. *(Real platform gating, if ever wanted, = Streamlit **private-app/allowed-viewers** or
+    **`st.login()`** — both free; a deferred upgrade, not needed now.)* Launch links target `madboots.streamlit.app`
+    (live after the subdomain rename). No signup form yet (a Tally/Google Form/Formspree button is a later add).
   - **Q2 — the domain.** (1) Rename the Streamlit subdomain → **`madboots.streamlit.app`** (free, one setting).
     (2) **301-forward `madboots.com` → the app** (registrar/Cloudflare — **no masking**). **Ceiling:** Streamlit
     *Community* Cloud has **no custom-domain** support (paid/Snowflake only), so the URL bar shows `…streamlit.app`
