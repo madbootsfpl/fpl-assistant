@@ -1,7 +1,7 @@
 # Sprint 146: Split the Squads tab — Squad Lab + My Squad (ADR-105)
 
 **Dates:** 2026-08-12
-**Status:** 📝 Planned — awaiting sign-off (ADR-105 Accepted)
+**Status:** ✅ Complete — US-359 + US-360 (ADR-105). 964 → 966 tests
 **Capacity:** ~¾–1 session (a page split + a nav renumber + a test-harness update, then a polish story)
 **Carried Over:** none
 
@@ -117,7 +117,27 @@ player-actions consolidation (A6); persistence + Google auth (C-cluster).
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — the busy 7-way **Squads** switch is now **two clear top-level tabs**: **My Squad** (the
+pitch/edit + the five tools as workflow-ordered sub-tabs) and **🥾 Squad Lab** (build a fresh 15, mascot-themed). IA
+only — the `views/squads.py` renderers are reused unchanged; no engine/analytics change.
+
+**Shipped**
+- **US-359** — `3_Squads.py` → `3_My_Squad.py` (6-way sub-tab, default My Squad; picker + horizon here) + new
+  `4_Squad_Lab.py` (`render_build`). Renumbered Ask→Admin (5–10); nav = `Home · Players · Fixtures · My Squad ·
+  Squad Lab · Ask · News · Trending · Help · Feedback (· Admin)`. Test harness: `_squads_view` routes *Build → Squad
+  Lab*; 13 Build tests repointed; ~39 paths renumbered; `_TAB_EMOJI`/`test_sidebar_pages`/perf/tooltip fixed.
+- **US-360** — the Squad Lab **mascot header** (badge + 🥾 + "Build your squad"); a no-squad My Squad **→ Squad Lab**
+  pointer; Home + Help copy rebranded to the two tabs. +2 tests.
+
+**Tests:** 964 → **966** (a restructure — repointed, not added; +2 for US-360). ruff clean; CI-parity green.
+
+**What went well:** mapped the test-surface cost up front; kept it to plumbing (renderers untouched); caught the
+`st.page_link`-in-AppTest limitation on the first run and swapped to a clean info pointer.
+
+**Owner follow-up (browser smoke):** the sidebar shows My Squad + 🥾 Squad Lab; the tools work under My Squad's
+sub-tabs; a fresh session shows the Squad-Lab pointer; Squad Lab builds + "Use this squad →" lands in My Squad.
+
+**Lessons:** `docs/05_Sprints/Sprint146_Lessons_Learnt.md`.
 
 ---
 

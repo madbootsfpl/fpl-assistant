@@ -464,6 +464,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 146 (2026-08-12)** — *Split the Squads tab → My Squad + Squad Lab* (**ADR-105**, revises ADR-069). The
+  single **Squads** page had grown to a **7-way "Tool" switch** (Build defaulting first among six manage-your-team
+  tools). **US-359:** split `pages/3_Squads.py` → **`3_My_Squad.py`** (the pitch/edit + a 6-way sub-tab in workflow
+  order `My Squad · AI Tips · Captain · Transfer · Chips · Health`, default My Squad; the squad picker + horizon
+  here) and a new **`4_Squad_Lab.py`** (the renamed *Build* — `render_build` + a horizon + "Use this squad →").
+  Renumbered Ask→Admin (5–10); nav = `Home · Players · Fixtures · My Squad · Squad Lab · Ask · News · Trending ·
+  Help · Feedback (· Admin)`. **Reuses `views/squads.py`'s renderers unchanged — IA only, no engine/analytics
+  change.** Test-harness: `_squads_view` routes *Build → Squad Lab* else *My Squad* (one helper; the 13 `test_build_*`
+  repointed); ~39 page paths renumbered (a direct sed, not a constants refactor); `_TAB_EMOJI`/`test_sidebar_pages`
+  + perf/tooltip fixed. **US-360:** the Squad Lab **mascot header** (badge + 🥾 + "Build your squad"), a no-squad My
+  Squad **→ Squad Lab** info pointer, and the Home + Help copy rebranded to the two tabs. *(Gotcha: `st.page_link`
+  to a page path raises in AppTest bare mode — the pointer is text, not a `page_link`.)* Functional nav labels +
+  brand on the page; full MADBOOTS vocabulary deferred (branding-E). +2 tests (964→966).
 - **Sprint 145 (2026-08-12)** — *P0 quick-wins (2026-08-12 tester feedback)* (**ADR-104** for the data floor; the
   two quick fixes no new ADR). **US-356:** the My Squad **Transfer** bring-in list gains a **Team** selectbox + a
   **Max-price** slider (alongside position/affordable/injured) so the long same-position list narrows. **US-357
