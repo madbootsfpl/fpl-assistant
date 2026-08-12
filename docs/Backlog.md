@@ -11,9 +11,9 @@ nice-to-haves and tech-debt.)*
 ## Sequencing (owner-agreed, 2026-08-12)
 
 **Infra changeover FIRST**, then the feature work — by technical risk (see `docs/MADBOOTS_CHANGEOVER.md`):
-1. **Infra changeover** — repo → `madbootsfpl` · reconnect Streamlit · rename subdomain → `madboots.streamlit.app`
-   · deploy the homepage (Cloudflare Pages) · wire `madboots.com`. *(Cheapest now — smallest beta, still preseason;
-   the rename resets per-domain cookies anyway, so do it before rebuilding persistence.)*
+1. ✅ **Infra changeover — DONE (2026-08-12).** Repo → **`madbootsfpl/fpl-assistant`** · Streamlit reconnected ·
+   subdomain → **`madboots.streamlit.app`** · in-app URLs updated · homepage **LIVE on Cloudflare Pages at
+   `madboots.com`**. Internal `fpl-assistant` package + `FPL_*` secrets unchanged.
 2. **P0 quick-wins** (below) — transfer filters · captain-persist · the cold-start data floor.
 3. **IA restructure** (A1/A2) — discuss/gate, then build.
 4. **Persistence + Google auth** (C-cluster) — the strategic rework, on the final domain.
@@ -64,13 +64,13 @@ click-menu, the points-comparison mockups, the Sangare/Shaw/Haaland snaps; triag
 **Ongoing**
 - 🧩 **Docs refresh** *(D)* — a consolidation pass (PROJECT_STATUS/Roadmap/README) after the big changes land.
 
-## Branding — MADBOOTS rebrand ✅ shipped (Sprint 141) · infra changeover to do
+## Branding — MADBOOTS rebrand ✅ shipped (Sprint 141) · infra changeover ✅ done (2026-08-12)
 
 The **rebrand shipped** (Sprint 141, ADR-103 + US-348/349/350; polished in Sprint 144): the visible product is
-**MADBOOTS** — the MB badge favicon, the two-tone wordmark, the tagline, the not-affiliated footer — with the
-internal `fpl-assistant` package + `FPL_*` secrets unchanged. **What remains is the infra changeover** (owner
-clicks + code/doc side), to be done **first** (see Sequencing above) via the step-by-step
-**`docs/MADBOOTS_CHANGEOVER.md`** runbook:
+**MADBOOTS** — the MB badge favicon, the two-tone wordmark, the tagline, the not-affiliated footer. The **infra
+changeover is done** (2026-08-12, `docs/MADBOOTS_CHANGEOVER.md`): app now at **`madboots.streamlit.app`** under
+**`madbootsfpl`**, front door **`madboots.com`** (Cloudflare Pages). Internal `fpl-assistant` package + `FPL_*`
+secrets unchanged. Original changeover plan (for the record):
 
 - 🧭 **Brand infrastructure changeover** *(do it all together, in one coordinated session, alongside the rebrand —
   not piecemeal; the live beta can briefly blink offline)*. Owner secured **@madbootsfpl** across socials + GitHub.

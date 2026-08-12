@@ -455,6 +455,15 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   show a **soft ✓/⚠ trust line** (US-106) with the facts/table always present — verification informs,
   never blocks. Makes *"grounded, not a black box"* provable, not just instructed. Pure string work;
   no new dependency; the analytics untouched.
+- **Infra changeover (2026-08-12)** — the MADBOOTS brand's own home (ADR-103 follow-through, `docs/MADBOOTS_CHANGEOVER.md`;
+  no code/analytics change). GitHub repo transferred `tesheridan/fpl-assistant` → **`madbootsfpl/fpl-assistant`**
+  (name kept; git remote updated); Streamlit reconnected + subdomain renamed → **`madboots.streamlit.app`** (a
+  per-domain cookie reset — everyone re-enters the code once; cloud squads survive, handle-keyed); the functional
+  URL refs updated (`_GITHUB_ISSUE`/`_DEFAULT_ORIGIN`, the README CI badge, tester/setup docs — historical records
+  keep the old names, and GitHub redirects the old repo URL); and the **homepage went live on Cloudflare Pages at
+  `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
+  secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
+  persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
 - **Sprint 144 (2026-08-11)** — *Brand polish — tester feedback* (extends **ADR-103**/**ADR-084**, no new ADR;
   display-only). Three nits on the fresh rebrand. **US-355:** (#1) the My Squad card picker → **"View your player's
   card"** (it's your squad); (#2) fixed the player-card wordmark's **MAD/BOOTS gap** — a US-349 regression where the
