@@ -464,6 +464,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 152 (2026-08-12)** — *Wave-3 polish: Boot Battle band + static GW1–3* (extends **ADR-110**/**ADR-109**, no
+  new ADR; display-only). Two tester tweaks on just-shipped features. **US-371:** `compare_card_html` gains the
+  MADBOOTS brand band (the shared `brand.mark_html()` + `.plc-band`, like the single card, ADR-355), titled **"Boot
+  Battle" · Last season**, between the two headers and the grid (the grid's redundant border-top dropped). **US-372:**
+  the per-GW card row (ADR-109) is now **horizon-independent** — it always shows **GW1–3**'s real xP regardless of the
+  "Gameweeks ahead" selector. Dropping the Total column (S150) had unmasked a case: at horizon 1 the row read
+  `by_gameweek` from a 1-GW compute, so GW2/GW3 showed 0.0. Fix: source the card's per-GW from a **fixed 3-GW** view —
+  reuse `ranked` when `horizon ≥ 3`, else one extra `decision_xp(horizon=3)` **only** for the card (no cost in the
+  common case). Both the hover popover + the ⚙ panel card feed off `fixtures_by_id`, so both benefit. No analytics
+  change (981→982). Owner-signed-off on a refreshed Artifact preview. Lesson: when you drop part of a feature,
+  re-check the edges it used to cover.
 - **Sprint 151 (2026-08-12)** — *Compare two players on the card* (**ADR-110**, extends ADR-084). Tester (UX H, with
   an image): a **side-by-side comparison** to decide between two players. **US-369:** refactored the card's per-stat
   catalog to **`_stat_catalog(player)` → `(key, label, raw, formatted)`** (compare on the **raw** numeric, display the
