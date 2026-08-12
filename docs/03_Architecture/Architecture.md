@@ -464,6 +464,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 150 (2026-08-12)** — *Per-gameweek xP in the player card* (**ADR-109**, extends ADR-084/032). Tester (A5,
+  with an image): under a shirt, show the **per-GW points** as columns — **xP on top** + **fixture below** (Haaland
+  `5.7` BOU(H) · `5.7` CRY(A) · `6.3` COV(H)). **The data was free** — `decision_xp` already returns `by_gameweek`
+  (`{event: xP}`) + `gameweeks`; `render_my_squad` already built `by_gameweek_by_id` (used only for the captain
+  bonus). **US-367:** `card_body` renders a **per-GW row** (xP over an FDR-tinted `OPP (H/A)`, up to 3 GWs) when
+  fixtures carry an `xp`; a shared **`fixtures_by_id`** (`team_schedule` next-3 + per-GW xP **aligned by `event`
+  number**) wires the ⚙ panel card (all devices). **US-368:** threaded `fixtures_by_id` through `render_pitch` →
+  `_kit_html` → `card_body` so the hover popover shows the same row (the exact image). Backward-compatible (no `xp` →
+  today's pills + Proj chip; the Players "Card" view unchanged). **No Total column** — the tester asked for one when
+  horizon >3, but on a **faithful Artifact preview** the owner **dropped it** (cleaner; the shirt's xP chip already
+  shows the horizon total) — `total_xp`/`show_total` removed from `card_body`/`render_my_squad`/`pitch.py`.
+  **Display-only — no `decision_xp`/analytics change** (973→976). DGW/BGW = graceful (align by event; a GW1-era
+  refinement). Lesson: assert on `card_body` (the body), not `player_card_html` (whose `CARD_CSS` *names* the class).
 - **Sprint 149 (2026-08-12)** — *The My Squad player-actions panel* (**ADR-108**, extends ADR-055/084/105). My Squad
   is the golden page, but picking a player was scattered across **three** places (the card picker, the 🔁 Substitute
   expander, and Set-captain over in the Captain sub-tab) and captaining one meant a re-pick + a tab switch.

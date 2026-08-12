@@ -1,7 +1,7 @@
 # Sprint 150: Per-gameweek xP in the player card (ADR-109)
 
 **Dates:** 2026-08-12
-**Status:** 🚧 Planned — US-367 + US-368 (ADR-109)
+**Status:** ✅ Complete — US-367 + US-368 (ADR-109). 973 → 976 tests
 **Capacity:** ~1 short session (card render + pitch threading; no xP math)
 **Carried Over:** none
 
@@ -71,7 +71,23 @@ card (hover popover + ⚙ panel):
 ---
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — the tester's per-GW card, in both surfaces; display-only, 976 tests, ruff clean.**
+
+- **US-367 (per-GW row + panel card)** — `card_body` renders a per-GW row (xP bold over an FDR-tinted `OPP (H/A)`, up
+  to 3 GWs) when fixtures carry an `xp`; the single Proj chip is suppressed then. Backward-compatible (no `xp` →
+  today's pills + chip). A shared `fixtures_by_id` (`team_schedule` next-3 + `by_gameweek` xP aligned by `event`)
+  wires the ⚙ panel card — all devices.
+- **US-368 (hover popover)** — threaded `fixtures_by_id` through `render_pitch` → `_kit_html` → `card_body`, so the
+  card under each shirt shows the same row — the exact image.
+- **Drop the Total (owner steer after preview)** — a faithful Artifact preview prompted the call to drop the Total
+  column for a cleaner read; removed `total_xp`/`show_total` from `card_body` + `render_my_squad` + `pitch.py` + the
+  dead CSS + the moot test. No info lost (the shirt's xP chip still shows the horizon total).
+
+**Reused, unchanged:** `by_gameweek` (already computed) — **no `decision_xp`/analytics change**. **DoD:** ✅ tests
+(deterministic `card_body` markup: the per-GW row + fallback; the popover markup) · ✅ manual smoke (real data —
+Haaland `5.7` BOU(H) · `5.7` CRY(A) · `6.3` COV(H)) + the Artifact preview · ✅ docs (Help note; PROJECT_STATUS;
+Architecture; memory). **DGW/BGW** = graceful (align by event; a GW1-era refinement).
 
 ### 🧠 Lessons
-*(see `Sprint150_Lessons_Learnt.md` at retro)*
+*(see `Sprint150_Lessons_Learnt.md`)*

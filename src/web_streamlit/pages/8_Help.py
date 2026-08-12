@@ -42,7 +42,8 @@ with st.expander("2 · Make it yours  →  **My Squad**", expanded=True):
     st.markdown(
         "Your active squad as a **green formation pitch** — kits laid out GK→FWD with a bench strip, each with "
         "an xP chip, a **(C)** armband and sub-number badges. Below it, the **⚙ Player actions** panel is your "
-        "one-stop control: **pick a player** → their **rich player card** (photo · fixtures · Projected xP · key "
+        "one-stop control: **pick a player** → their **rich player card** (photo · a **per-GW xP** row — each of the "
+        "next weeks' points over its fixture — · key "
         "stats · **Trends** · **set-piece duty** ⚽ penalties · 🚩 corners · 🎯 free-kicks) and, in the same "
         "place, **👑 make them captain** or **🔁 substitute** them (a *starter* → bring a bench player on; a "
         "*bench* pick → bring them on for a starter — only *legal* swaps offered). **Works on phone too** — "
