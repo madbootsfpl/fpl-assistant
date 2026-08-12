@@ -2,7 +2,7 @@
 
 **Fantasy Football, Calculated.**
 
-[![CI](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/tesheridan/fpl-assistant/actions/workflows/ci.yml)
+[![CI](https://github.com/madbootsfpl/fpl-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/madbootsfpl/fpl-assistant/actions/workflows/ci.yml)
 
 A personal Fantasy Premier League analytics assistant — a command-line tool you can also **talk to**.
 *(The internal package/repo stays `fpl-assistant`; MADBOOTS is the product brand — ADR-103. Not affiliated with
@@ -258,7 +258,7 @@ pip install -r requirements.txt      # includes streamlit (web-only)
 python -m src.web_streamlit          # serves http://localhost:8501  (Ctrl-C to stop)
 ```
 
-**Live app:** `https://<name>.streamlit.app` *(deploy in a few clicks on Streamlit Community Cloud — see
+**Live app:** `https://madboots.streamlit.app` *(deploy in a few clicks on Streamlit Community Cloud — see
 [docs/DEPLOY.md](docs/DEPLOY.md); ADR-053).* Public + read-only; in the cloud, **Ask** shows the decision +
 facts (no Ollama narration).
 

@@ -8,7 +8,7 @@
 
 GitHub is an online home for a Git repository — a copy of the project (and its full
 history) hosted off your machine. This project now lives at
-`github.com/tesheridan/fpl-assistant`.
+`github.com/madbootsfpl/fpl-assistant`.
 
 ---
 
@@ -47,7 +47,7 @@ Setting this project up on GitHub — create the empty repo on github.com, then 
 the project folder:
 
 ```bash
-git remote add origin https://github.com/tesheridan/fpl-assistant.git
+git remote add origin https://github.com/madbootsfpl/fpl-assistant.git
 git push -u origin master     # -u links master → origin/master (first push only)
 ```
 

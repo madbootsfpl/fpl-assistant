@@ -11,7 +11,7 @@ the few-clicks part, which **you run** (Claude can't create the account).
 
 ## Prerequisites
 
-- The repo is **public** on GitHub (`tesheridan/fpl-assistant`) ✅ and the **latest is pushed** (the
+- The repo is **public** on GitHub (`madbootsfpl/fpl-assistant`) ✅ and the **latest is pushed** (the
   deploy-ready commit — `pyproject.toml`, `-e .` in `requirements.txt`, `data/seed.db`).
 - A GitHub account (you have one) — Streamlit Community Cloud signs in with it.
 
@@ -22,7 +22,7 @@ the few-clicks part, which **you run** (Claude can't create the account).
 1. **Go to** [share.streamlit.io](https://share.streamlit.io) → **Sign in with GitHub** → authorize
    Streamlit (grant access to the `fpl-assistant` repo when asked).
 2. **Create the app** → **“Deploy a public app from GitHub”**, then set:
-   - **Repository:** `tesheridan/fpl-assistant`
+   - **Repository:** `madbootsfpl/fpl-assistant`
    - **Branch:** `master`
    - **Main file path:** `src/web_streamlit/Home.py`
    - *(Optional)* **Advanced settings → Python version:** `3.13` (the project needs ≥ 3.11).
@@ -32,7 +32,7 @@ the few-clicks part, which **you run** (Claude can't create the account).
    > unpinned auto-upgrade once changed hover-tooltip rendering (Sprint 116). Bump it **deliberately**: raise
    > the pin, run the suite + a local `python -m src.web_streamlit` smoke, then commit.
 4. **Live** → the app opens at `https://<auto-name>.streamlit.app`. *(Optional)* In the app’s **Settings →
-   General**, set a nicer **custom subdomain**, e.g. `fpl-assistant.streamlit.app`.
+   General**, set a nicer **custom subdomain**, e.g. `madboots.streamlit.app`.
 5. **Verify:** **Home** (all six pages in the sidebar) · **Players** (photos + the scatter) · **Fixtures**
    (team badges) · **Ask** (type a question → the decision + data + the ✓/⚠ trust line; **no written
    narration** — that’s expected, Ollama isn’t in the cloud).

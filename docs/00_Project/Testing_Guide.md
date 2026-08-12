@@ -4,7 +4,7 @@ Thanks for trying it out! This is a **read-only** Fantasy Premier League analyti
 build a squad, pick a captain, plan transfers, and analyse your team, all grounded in the FPL data. Nothing
 you do here affects your real FPL account; it's a sandbox for exploring the numbers.
 
-**Live app:** https://fantasypl.streamlit.app
+**Live app:** https://madboots.streamlit.app
 
 You don't need an account or a login. Use the **sidebar** to move between tabs.
 
@@ -56,7 +56,7 @@ downloaded earlier.
 
 Please tell us **anything** — a bug, something confusing, a wrong number, or just "this bit felt clunky."
 
-**Where:** open a GitHub issue → **https://github.com/tesheridan/fpl-assistant/issues/new**
+**Where:** open a GitHub issue → **https://github.com/madbootsfpl/fpl-assistant/issues/new**
 
 **What helps most:**
 - **Which tab** you were on (Build, Transfer, …).

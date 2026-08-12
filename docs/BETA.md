@@ -14,7 +14,7 @@ Set these in **Streamlit Community Cloud → Manage app → Settings → Secrets
 ```toml
 FPL_ACCESS_CODE      = "your-shared-beta-code"                     # gates entry; testers type it once per session
 FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/you@proton.me"  # in-app feedback POSTs here (§1: a Sheet OR a relay)
-FPL_FEEDBACK_ORIGIN  = "https://your-app.streamlit.app"           # the app URL FormSubmit sees (§1B) — anti-abuse
+FPL_FEEDBACK_ORIGIN  = "https://madboots.streamlit.app"           # the app URL FormSubmit sees (§1B) — anti-abuse
 FPL_FEEDBACK_KEY     = "your-web3forms-access-key"                 # only if you use Web3Forms as the relay (§1B)
 FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"                   # the mailto fallback address (default: this)
 FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form / waitlist
@@ -110,7 +110,7 @@ relay's message if not) — no more false "sent". An email should land in the in
 > hasn't been clicked, or the webhook address doesn't exactly match your mailbox. Test the endpoint directly:
 > ```bash
 > curl -s -X POST https://formsubmit.co/ajax/<your-addr> -H "Content-Type: application/json" \
->   -H "Origin: https://your-app.streamlit.app" -d '{"message":"test","_subject":"FPL test"}'
+>   -H "Origin: https://madboots.streamlit.app" -d '{"message":"test","_subject":"FPL test"}'
 > ```
 > `"needs Activation"` → click the email; the *"web server"* message → the Origin header is missing (the app
 > sends it, a bare curl needs `-H Origin: …`); an address error → fix the webhook.

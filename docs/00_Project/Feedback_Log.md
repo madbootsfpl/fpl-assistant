@@ -1,7 +1,7 @@
 # Tester Feedback Log
 
 A running log of tester feedback on the live app, triaged into the **Sprint 060** backlog. Raw reports
-come in via GitHub Issues (https://github.com/tesheridan/fpl-assistant/issues); this table is the
+come in via GitHub Issues (https://github.com/madbootsfpl/fpl-assistant/issues); this table is the
 **triaged** view — one row per distinct item, newest first.
 
 **Severity:** 🔴 broken/blocking · 🟠 confusing/wrong · 🟡 polish/nice-to-have · 💡 idea
