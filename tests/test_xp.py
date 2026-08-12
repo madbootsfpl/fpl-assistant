@@ -62,9 +62,24 @@ def test_xp_is_byte_identical_without_the_minutes_hook():
     assert result[0]["minutes_weight"] == 1.0
 
 
-def test_xp_is_zero_when_ppg_missing():
-    result = player_xp([player(ppg=None)], [upcoming(h_diff=2)])
+def test_cold_start_floors_a_no_history_player_with_ep_next():
+    # ADR-104: no history + no ppg → don't project 0; floor with FPL's ep_next (a plausible starter isn't 0).
+    result = player_xp([player(ppg=None, ep_next=4.0)], [upcoming(h_diff=2)])
+    assert result[0]["xp"] == 4.4                         # 4.0 (ep_next) × the h_diff=2 multiplier (1.1)
+    assert result[0]["rate_source"] == "ep_next"
+
+
+def test_xp_is_zero_when_no_ppg_and_no_ep_next():
+    # ADR-104: the floor only rescues when ep_next is present — no ppg AND no ep_next still → 0.
+    result = player_xp([player(ppg=None, ep_next=0)], [upcoming(h_diff=2)])
     assert result[0]["xp"] == 0.0
+
+
+def test_cold_start_floor_does_not_touch_a_player_with_a_baseline():
+    # ADR-104: the ep_next floor is the last tier only — a trusted historical baseline is unchanged.
+    result = player_xp([player(ppg=5.0, ep_next=99.0)], [upcoming(h_diff=2)],
+                       baseline_by_code={None: 5.0})     # a baseline keyed by the fixture's code (None here)
+    assert result[0]["rate_source"] == "hist" and result[0]["xp"] == 5.5   # ep_next 99 ignored
 
 
 def test_xp_uses_the_next_fixture_only():

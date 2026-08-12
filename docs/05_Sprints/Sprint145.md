@@ -48,7 +48,7 @@ tee up the cold-start data floor (B) as a gated ADR-104 story.
 | US-356 | **Transfer filters** — team + max-price on the bring-in list. | High | ✅ Done | ~¼ session |
 | US-357 | **Captain persists on load** — round-trip + close the set-after-save gap. | High | ✅ Done | ~¼ session |
 | ADR-104 | **The cold-start xP floor** — gate the `ep_next` floor for no-history players. | High | ✅ Done | gate |
-| US-358 | **Build the cold-start floor** — `max(ppg, ep_next)` in `player_xp` + `rate_source`. | High | ⬜ To do | ~¼ session |
+| US-358 | **Build the cold-start floor** — `max(ppg, ep_next)` in `player_xp` + `rate_source`. | High | ✅ Done | ~¼ session |
 
 ---
 
@@ -80,6 +80,17 @@ tee up the cold-start data floor (B) as a gated ADR-104 story.
   the opt-in server-write invariant holds, ADR-094/054); **Clear** unlinks; the sidebar shows a **🔄 Auto-syncing
   to `<handle>`** line. **+2 tests** (the store round-trips `captain_id`; an edit on a linked squad auto-syncs to
   the handle). ruff clean. **960 → 962.**
+- **ADR-104 + US-358 (cold-start xP floor)** — investigated on real data: **69 available players** projected **xP=0**
+  at GW1 (no FPL history → preseason `points_per_game` 0 → rate 0), *every one* with a non-zero FPL **`ep_next`** we
+  weren't using. Reframe recorded: players *with* history aren't a bug (**O'Shea ≈1.6 > FPL's own `ep_next` 1.0**, so
+  FFH's 4.7 is the outlier — we do **not** chase FFH). Gated as **ADR-104**; built US-358: in `player_xp`'s last rate
+  tier, **`rate = max(points_per_game, ep_next)`** with a new **`rate_source="ep_next"`**; the `ep_next` floor isn't
+  re-scaled by the minutes weight (it already prices minutes). **Targeted** — the ≥900-min baseline + shrunk fallback
+  tiers are untouched (Haaland/Shaw/Semenyo byte-identical); availability still gates (a flagged player stays 0).
+  **Verified on real data:** the 69 rise to sane values (≈ their `ep_next`, fixture-adjusted); established players
+  unchanged. Only **one** invariance test needed updating (ppg-missing no longer ⇒ 0 when `ep_next` rescues) —
+  replaced with 3 ADR-104 tests (floors a no-history player · still 0 with no ppg *and* no `ep_next` · a baseline is
+  untouched). ruff clean. **962 → 964.**
 
 ---
 

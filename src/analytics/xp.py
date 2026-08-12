@@ -165,7 +165,16 @@ def player_xp(
             rate, rate_source = baseline, "hist"
         else:
             fb = fallback_rate(history_by_code.get(code, []))
-            rate, rate_source = (fb, "fallback") if fb is not None else (ppg, "current")
+            if fb is not None:
+                rate, rate_source = fb, "fallback"
+            else:
+                # Cold-start (no history): the current `points_per_game` is 0 preseason → a plausible starter
+                # projects at 0. Floor with FPL's own **ep_next** (expected points next GW; already on the row)
+                # so it isn't 0 — honest, targeted, no new data (ADR-104). `max` lets real scoring take over once
+                # the player plays; `ep_next` already prices minutes (see the weight guard below).
+                ppg_f = float(ppg or 0)
+                ep_next = float(_get(p, "ep_next") or 0)
+                rate, rate_source = ((ep_next, "ep_next") if ep_next > ppg_f else (ppg_f, "current"))
         # In-season form blend (ADR-060) — DORMANT: form_weight 0 (default) or no per-GW form for
         # this player ⇒ rate unchanged, so xP is identical today (the ADR-041 invariant holds). At
         # GW1, form_by_code is populated and form_weight > 0 nudges the rate toward recent form.
@@ -185,6 +194,8 @@ def player_xp(
 
         # xMins v0 (ADR-038): scale by expected playing time; 1.0 (unchanged) without the hook.
         weight = minutes_weight(p) if minutes_weight is not None else 1.0
+        if rate_source == "ep_next":     # ep_next already prices minutes (ADR-104) — don't double-discount it
+            weight = 1.0
 
         if rate is None or not available:
             by_gameweek = {gw: 0.0 for gw in horizon_events}
