@@ -61,6 +61,16 @@ border-bottom:1px solid rgba(255,255,255,.08);}
 .pl-card.compact .plc-grid{padding:4px 14px 12px;gap:0 16px;}
 .pl-card.compact .plc-stat{padding:6px 2px;}
 .pl-card.compact .plc-stat .l{font-size:.8rem;} .pl-card.compact .plc-stat .v{font-size:1.02rem;}
+.pl-card .plc-gwrow{display:flex;gap:8px;margin-top:9px;}
+.pl-card .plc-gwcol{flex:1;min-width:0;text-align:center;}
+.pl-card .plc-gwxp{font-weight:800;font-size:1.08rem;font-variant-numeric:tabular-nums;color:#f2f6fb;line-height:1.1;}
+.pl-card .plc-gwfx{margin-top:3px;border-radius:8px;padding:2px 4px;font-size:.66rem;font-weight:700;color:#fff;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.3) inset;}
+.pl-card .plc-gwlbl{margin-top:3px;font-size:.64rem;font-weight:700;color:#7c8899;text-transform:uppercase;
+letter-spacing:.04em;}
+.pl-card .plc-gwcol.total .plc-gwxp{color:#5eead4;}
+.pl-card.compact .plc-gwrow{gap:6px;margin-top:7px;} .pl-card.compact .plc-gwxp{font-size:.94rem;}
+.pl-card.compact .plc-gwfx{font-size:.6rem;padding:2px 3px;}
 </style>
 """
 
@@ -114,10 +124,12 @@ def _stat_rows(player, *, compact=False):
 
 
 def card_body(player, *, team_name="", photo_url=None, badge_url=None,
-              fixtures=None, projected_xp=None, compact=False) -> str:
+              fixtures=None, projected_xp=None, total_xp=None, compact=False) -> str:
     """The player card's `<div>` **without** the `<style>` (pure; empty-safe). Use when the CSS is already on the
-    page (the pitch includes `CARD_CSS` once). `fixtures` is a list of `{"opp","home","fdr"}` (first 3 shown);
-    `projected_xp` a float (our `decision_xp`) → a chip, or None to hide."""
+    page (the pitch includes `CARD_CSS` once). `fixtures` is a list of `{"opp","home","fdr"}` (first 3 shown); when
+    each also carries an `"xp"` (ADR-109), the fixtures render as a **per-GW row** (xP over the fixture) instead of
+    plain pills, with a **Total** column when `total_xp` is given (horizon >3). `projected_xp` a float (our
+    `decision_xp`) → a chip when there's no per-GW row, or None to hide."""
     if not player:
         return ""
     e = html.escape
@@ -131,8 +143,20 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
     badge = f'<img src="{e(str(badge_url))}" alt="{e(team_name)}"> ' if badge_url else ""
 
     fx = list(fixtures or [])[:3]
+    show_gw = bool(fx) and any(f.get("xp") is not None for f in fx)
     fix_html = ""
-    if fx:
+    if show_gw:
+        # ADR-109: a per-GW row — xP (bold) over an FDR-tinted OPP (H/A) — the tester's card-under-the-shirt
+        # layout. A Total column appears only when `total_xp` is given (the caller passes it when horizon > 3).
+        cols = "".join(
+            f'<div class="plc-gwcol"><div class="plc-gwxp">{float(f.get("xp") or 0):.1f}</div>'
+            f'<div class="plc-gwfx" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
+            f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</div></div>'
+            for f in fx)
+        total_col = (f'<div class="plc-gwcol total"><div class="plc-gwxp">{total_xp:.1f}</div>'
+                     f'<div class="plc-gwlbl">Total</div></div>') if total_xp is not None else ""
+        fix_html = f'<div class="plc-gwrow">{cols}{total_col}</div>'
+    elif fx:
         pills = "".join(
             f'<span class="plc-pill" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
             f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</span>'
@@ -140,7 +164,7 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
         fix_html = f'<div class="plc-fix"><span class="plc-gw">Next {len(fx)}</span>{pills}</div>'
 
     flags = []
-    if projected_xp is not None:
+    if projected_xp is not None and not show_gw:      # the per-GW row already carries xP (ADR-109), so skip the chip
         flags.append(f'<span class="plc-flag proj">◆ Proj. {projected_xp:.1f} xP</span>')
     if tier := ownership_tier(p):
         flags.append(f'<span class="plc-flag">{e(tier)}</span>')          # tier carries its own emoji

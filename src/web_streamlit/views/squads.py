@@ -275,6 +275,17 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     team_names = {t["short_name"]: t["name"] for t in (teams or [])}   # short → friendly name (the card, US-344)
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}     # per-GW xP (ADR-032) for the captain
     next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
+    # Per-GW fixtures + xP for the player card (ADR-109): each owned player's next-≤3 fixtures with the xP for that
+    # gameweek (aligned by `event` number). Feeds the ⚙ panel card (US-367) + the pitch hover popover (US-368).
+    gameweeks = ranked[0]["gameweeks"] if ranked else []
+    show_total = len(gameweeks) > 3                       # the tester's "GW1–3 then a Total" rule (ADR-109)
+    fixtures_by_id = {}
+    for _p in owned:
+        _bg = by_gameweek_by_id.get(_p["id"], {})
+        fixtures_by_id[_p["id"]] = [
+            {"opp": s["opponent"], "home": s["venue"] == "H", "fdr": s.get("difficulty"),
+             "xp": _bg.get(s["event"])}
+            for s in team_schedule(upcoming, _p["team"])[:3]]
     bench_ids = set(squad.get("bench_ids") or [])
     captain_id = squad.get("captain_id")
 
@@ -372,12 +383,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                                              help="Or hover a shirt on the pitch (desktop only)."))
     if picked:
         short = picked["team"]
-        fx = [{"opp": (f["away"] if f["home"] == short else f["home"]),
-               "home": f["home"] == short,
-               "fdr": f["team_h_difficulty"] if f["home"] == short else f["team_a_difficulty"]}
-              for f in upcoming if short in (f["home"], f["away"])][:3]
         render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
-                           fixtures=fx, projected_xp=xp_by_id.get(picked["id"]))
+                           fixtures=fixtures_by_id.get(picked["id"]), projected_xp=xp_by_id.get(picked["id"]),
+                           total_xp=xp_by_id.get(picked["id"]) if show_total else None)   # ADR-109 per-GW row
         # 👑 Make captain — moved onto the pitch view (was stranded in the Captain sub-tab). One click; ×2 next GW.
         if picked["id"] == captain_id:
             st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")
