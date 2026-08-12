@@ -16,6 +16,9 @@ _DEF = {"web_name": "Gabriel", "position": "DEF", "team": "ARS", "price": 8.0, "
 _GK = {"web_name": "Raya", "position": "GK", "team": "ARS", "price": 6.0, "total_points": 162,
        "points_per_game": 4.4, "minutes": 3330, "xgc": 27.56, "cbi": 37, "recoveries": 304,
        "selected_by": 31.0, "status": "a"}
+_FWD2 = {"web_name": "Isak", "position": "FWD", "team": "NEW", "price": 10.5, "total_points": 204,
+         "points_per_game": 5.9, "minutes": 2600, "goals_scored": 21, "assists": 6, "xg": 19.5, "xa": 3.1,
+         "xgi": 22.6, "ict_index": 240.1, "selected_by": 31.0, "status": "a"}
 
 
 def _labels(player, **kw):
@@ -99,6 +102,43 @@ def test_fixtures_without_xp_fall_back_to_pills():
     fx = [{"opp": "BOU", "home": True, "fdr": 3}]
     h = player_card.card_body(_FWD, fixtures=fx, projected_xp=6.4)
     assert "plc-gwrow" not in h and "plc-fix" in h and "◆ Proj. 6.4 xP" in h
+
+
+def test_compare_rows_flags_the_better_value_per_stat():
+    # US-369 (ADR-110): same-position compare — higher-better by default; winner is "a"/"b"/None. Ownership neutral.
+    from src.web_streamlit.player_card import compare_rows
+    rows = {label: (fa, fb, win) for label, fa, fb, win in compare_rows(_FWD, _FWD2)}
+    assert rows["Goals"][2] == "a"                  # Haaland 27 > Isak 21
+    assert rows["xG Involvement"][2] == "a"         # 28.17 > 22.6
+    assert rows["Points / game"][2] == "a"          # 6.8 > 5.9
+    assert rows["Ownership"][2] is None             # ownership is neutral — never a winner
+
+
+def test_compare_rows_lower_is_better_for_expected_gc():
+    # US-369: Expected GC is lower-is-better (fewer goals conceded wins).
+    from src.web_streamlit.player_card import compare_rows
+    a = {**_DEF, "web_name": "A", "xgc": 20.0}
+    b = {**_DEF, "web_name": "B", "xgc": 30.0}
+    rows = {label: win for label, fa, fb, win in compare_rows(a, b)}
+    assert rows["Expected GC"] == "a"               # 20 < 30 → A wins
+
+
+def test_compare_rows_missing_value_shows_dash_no_winner():
+    # US-369: a stat one player lacks → "—" on that side and no winner (not a walkover).
+    from src.web_streamlit.player_card import compare_rows
+    rows = {label: (fa, fb, win) for label, fa, fb, win in compare_rows(_FWD, {**_FWD2, "goals_scored": None})}
+    assert rows["Goals"][1] == "—" and rows["Goals"][2] is None
+
+
+def test_compare_card_html_two_headers_xp_and_stat_winner():
+    # US-369: the compare card has two headers, tints the xP winner, and tints the better value per stat.
+    from src.web_streamlit.player_card import compare_card_html
+    h = compare_card_html(_FWD, _FWD2, a_team="Man City", b_team="Newcastle", a_xp=5.7, b_xp=4.9)
+    assert "cmp-card" in h and "cmp-heads" in h and "cmp-grid" in h
+    assert "Haaland" in h and "Isak" in h and h.count('class="cmp-hdr"') == 2
+    assert 'cmp-xp win">◆ 5.7 xP' in h and 'cmp-xp">◆ 4.9 xP' in h    # a's xP wins (5.7 > 4.9)
+    assert 'cmp-v win">27' in h                      # a wins Goals → tinted
+    assert compare_card_html(_FWD, None) == ""       # empty-safe
 
 
 def test_compact_drops_the_band_and_trims_stats():

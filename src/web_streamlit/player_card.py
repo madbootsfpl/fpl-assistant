@@ -68,6 +68,25 @@ border-bottom:1px solid rgba(255,255,255,.08);}
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.3) inset;}
 .pl-card.compact .plc-gwrow{gap:6px;margin-top:7px;} .pl-card.compact .plc-gwxp{font-size:.94rem;}
 .pl-card.compact .plc-gwfx{font-size:.6rem;padding:2px 3px;}
+.pl-card.cmp-card .cmp-body{padding:16px 18px 18px;}
+.pl-card .cmp-heads{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px;}
+.pl-card .cmp-hdr{text-align:center;min-width:0;}
+.pl-card .cmp-photo{width:64px;height:64px;border-radius:50%;margin:0 auto 6px;background:#1b2430;
+border:2px solid rgba(255,255,255,.16);overflow:hidden;}
+.pl-card .cmp-photo img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;}
+.pl-card .cmp-name{font-weight:800;font-size:1.14rem;line-height:1.1;letter-spacing:-.01em;}
+.pl-card .cmp-meta{color:#aab6c6;font-size:.82rem;font-weight:500;margin-top:2px;}
+.pl-card .cmp-xp{display:inline-block;margin-top:6px;font-size:.74rem;font-weight:700;color:#aab6c6;
+background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);padding:2px 8px;border-radius:999px;}
+.pl-card .cmp-xp.win{color:#5eead4;border-color:rgba(94,234,212,.4);}
+.pl-card .cmp-fix{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:7px;}
+.pl-card .cmp-grid{border-top:1px solid rgba(255,255,255,.09);margin-top:4px;}
+.pl-card .cmp-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:8px 2px;
+border-bottom:1px solid rgba(255,255,255,.07);}
+.pl-card .cmp-v{font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums;color:#e6edf5;}
+.pl-card .cmp-row .cmp-v:first-child{text-align:right;} .pl-card .cmp-row .cmp-v:last-child{text-align:left;}
+.pl-card .cmp-v.win{color:#5eead4;}
+.pl-card .cmp-l{color:#aab6c6;font-size:.8rem;text-align:center;white-space:nowrap;}
 </style>
 """
 
@@ -83,41 +102,90 @@ def _f(v, dp):
     return f"{v:.{dp}f}" if v is not None else None
 
 
-def _stat_rows(player, *, compact=False):
-    """(label, value) rows adapted to the player's **position** (ADR-084). Pure; skips missing values. Compact
-    keeps the header-relevant few for the pitch popover."""
+# The position-adaptive stat order (ADR-084); shared by the single card + the two-player compare (ADR-110).
+_ORDER = {
+    "FWD": ["pts", "ppg", "goals", "xgi", "xg", "own", "assists", "value", "xa", "ict", "mins", "def90"],
+    "MID": ["pts", "ppg", "goals", "xgi", "assists", "own", "xa", "value", "def90", "ict", "mins", "recov"],
+    "DEF": ["pts", "ppg", "xgc", "def90", "cbi", "own", "tackles", "value", "goals", "assists", "mins", "recov"],
+    "GK": ["pts", "ppg", "xgc", "def90", "cbi", "own", "recov", "value", "mins"],
+}
+_ORDER_FALLBACK = ["pts", "ppg", "goals", "assists", "xgi", "own", "value", "mins"]
+
+# Per-stat compare direction (ADR-110): "hi" = higher is better · "lo" = lower is better · None = neutral
+# (ownership — differential vs template is a preference, not "better"; so it's never highlighted a winner).
+_BETTER = {
+    "pts": "hi", "ppg": "hi", "mins": "hi", "value": "hi", "own": None, "goals": "hi", "assists": "hi",
+    "xg": "hi", "xa": "hi", "xgi": "hi", "xgc": "lo", "def90": "hi", "cbi": "hi", "tackles": "hi",
+    "recov": "hi", "ict": "hi",
+}
+
+
+def _stat_catalog(player):
+    """`{key: (label, raw, formatted)}` for every card stat — the **raw** numeric (for comparison) + the
+    **formatted** string (for display, None when missing). Position-agnostic; the caller picks the order (ADR-110)."""
     p = dict(player)
-    pos = (p.get("position") or "").upper()
     price = p.get("price") or 0
     pts = p.get("total_points")
     own = p.get("selected_by")
-    catalog = {
-        "pts": ("FPL Points", _i(pts)),
-        "ppg": ("Points / game", _f(p.get("points_per_game"), 1)),
-        "mins": ("Minutes", _i(p.get("minutes"))),
-        "value": ("Value", f"{pts / price:.1f} pts/£m" if pts is not None and price else None),
-        "own": ("Ownership", f"{own:.1f}%" if own is not None else None),
-        "goals": ("Goals", _i(p.get("goals_scored"))),
-        "assists": ("Assists", _i(p.get("assists"))),
-        "xg": ("Expected Goals", _f(p.get("xg"), 2)),
-        "xa": ("Expected Assists", _f(p.get("xa"), 2)),
-        "xgi": ("xG Involvement", _f(p.get("xgi"), 2)),
-        "xgc": ("Expected GC", _f(p.get("xgc"), 2)),
-        "def90": ("DefCon / 90", _f(p.get("defcon_per90"), 2)),
-        "cbi": ("Clr + Blk + Int", _i(p.get("cbi"))),
-        "tackles": ("Tackles", _i(p.get("tackles"))),
-        "recov": ("Recoveries", _i(p.get("recoveries"))),
-        "ict": ("ICT Index", _f(p.get("ict_index"), 1)),
+    value_raw = (pts / price) if (pts is not None and price) else None
+    return {
+        "pts": ("FPL Points", pts, _i(pts)),
+        "ppg": ("Points / game", p.get("points_per_game"), _f(p.get("points_per_game"), 1)),
+        "mins": ("Minutes", p.get("minutes"), _i(p.get("minutes"))),
+        "value": ("Value", value_raw, f"{value_raw:.1f} pts/£m" if value_raw is not None else None),
+        "own": ("Ownership", own, f"{own:.1f}%" if own is not None else None),
+        "goals": ("Goals", p.get("goals_scored"), _i(p.get("goals_scored"))),
+        "assists": ("Assists", p.get("assists"), _i(p.get("assists"))),
+        "xg": ("Expected Goals", p.get("xg"), _f(p.get("xg"), 2)),
+        "xa": ("Expected Assists", p.get("xa"), _f(p.get("xa"), 2)),
+        "xgi": ("xG Involvement", p.get("xgi"), _f(p.get("xgi"), 2)),
+        "xgc": ("Expected GC", p.get("xgc"), _f(p.get("xgc"), 2)),
+        "def90": ("DefCon / 90", p.get("defcon_per90"), _f(p.get("defcon_per90"), 2)),
+        "cbi": ("Clr + Blk + Int", p.get("cbi"), _i(p.get("cbi"))),
+        "tackles": ("Tackles", p.get("tackles"), _i(p.get("tackles"))),
+        "recov": ("Recoveries", p.get("recoveries"), _i(p.get("recoveries"))),
+        "ict": ("ICT Index", p.get("ict_index"), _f(p.get("ict_index"), 1)),
     }
-    order = {
-        "FWD": ["pts", "ppg", "goals", "xgi", "xg", "own", "assists", "value", "xa", "ict", "mins", "def90"],
-        "MID": ["pts", "ppg", "goals", "xgi", "assists", "own", "xa", "value", "def90", "ict", "mins", "recov"],
-        "DEF": ["pts", "ppg", "xgc", "def90", "cbi", "own", "tackles", "value", "goals", "assists", "mins", "recov"],
-        "GK": ["pts", "ppg", "xgc", "def90", "cbi", "own", "recov", "value", "mins"],
-    }.get(pos, ["pts", "ppg", "goals", "assists", "xgi", "own", "value", "mins"])
+
+
+def _order_for(pos):
+    return _ORDER.get((pos or "").upper(), _ORDER_FALLBACK)
+
+
+def _stat_rows(player, *, compact=False):
+    """(label, value) rows adapted to the player's **position** (ADR-084). Pure; skips missing values. Compact
+    keeps the header-relevant few for the pitch popover."""
+    cat = _stat_catalog(player)
+    order = _order_for(player.get("position"))
     if compact:
         order = order[:4]                                    # fewer stats so the hover popover fits (US-346)
-    return [(catalog[k][0], catalog[k][1]) for k in order if catalog[k][1] is not None]
+    return [(cat[k][0], cat[k][2]) for k in order if cat[k][2] is not None]
+
+
+def _winner(key, ra, rb):
+    """"a"/"b"/None — which raw value wins for stat `key` (ADR-110 `_BETTER` direction). None on tie/missing/neutral."""
+    d = _BETTER.get(key)
+    if d is None or ra is None or rb is None or ra == rb:
+        return None
+    if d == "hi":
+        return "a" if ra > rb else "b"
+    return "a" if ra < rb else "b"                           # "lo" — lower is better (e.g. Expected GC)
+
+
+def compare_rows(a, b):
+    """Aligned same-position comparison rows (ADR-110): `[(label, a_formatted, b_formatted, winner)]` per stat in the
+    shared position's order — `winner ∈ {"a","b",None}`; a missing side shows "—" with no winner. Assumes `a` and `b`
+    share a position (the picker is scoped same-position)."""
+    a, b = dict(a), dict(b)                                  # accept sqlite3.Row too (like card_body)
+    ca, cb = _stat_catalog(a), _stat_catalog(b)
+    rows = []
+    for k in _order_for(a.get("position")):
+        label, ra, fa = ca[k]
+        _, rb, fb = cb[k]
+        if fa is None and fb is None:
+            continue
+        rows.append((label, fa or "—", fb or "—", _winner(k, ra, rb)))
+    return rows
 
 
 def card_body(player, *, team_name="", photo_url=None, badge_url=None,
@@ -198,3 +266,49 @@ def render_player_card(player, **kwargs) -> None:
     markup = player_card_html(player, **kwargs)
     if markup:
         st.markdown(markup, unsafe_allow_html=True)
+
+
+def _cmp_header(p, *, team, photo, fixtures, xp, xp_win, e) -> str:
+    """One player's compare header (ADR-110): photo · name · Team·Pos·£ · projected-xP (tinted if it wins) · FDR
+    fixture pills."""
+    name = e(p.get("web_name") or "")
+    pos = e(p.get("position") or "")
+    price = p.get("price")
+    price_html = f"£{price:.1f}m" if price is not None else ""
+    pic = f'<img src="{e(str(photo))}" alt="{name}">' if photo else ""
+    xp_html = f'<span class="cmp-xp{" win" if xp_win else ""}">◆ {xp:.1f} xP</span>' if xp is not None else ""
+    pills = "".join(
+        f'<span class="plc-pill" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
+        f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</span>'
+        for f in list(fixtures or [])[:3])
+    return (f'<div class="cmp-hdr"><div class="cmp-photo">{pic}</div><div class="cmp-name">{name}</div>'
+            f'<div class="cmp-meta">{e(team)} · {pos} · {price_html}</div>{xp_html}'
+            f'<div class="cmp-fix">{pills}</div></div>')
+
+
+def compare_card_html(a, b, *, a_team="", b_team="", a_photo=None, b_photo=None,
+                      a_fixtures=None, b_fixtures=None, a_xp=None, b_xp=None) -> str:
+    """A same-position two-player comparison card (ADR-110) — two headers + an aligned **A · stat · B** grid with the
+    better value tinted. Pure/empty-safe; assumes `a` and `b` share a position. `CARD_CSS` must be on the page."""
+    if not a or not b:
+        return ""
+    a, b = dict(a), dict(b)                                  # accept sqlite3.Row too (like card_body)
+    e = html.escape
+    a_win = a_xp is not None and b_xp is not None and a_xp > b_xp
+    b_win = a_xp is not None and b_xp is not None and b_xp > a_xp
+    heads = (f'<div class="cmp-heads">'
+             f'{_cmp_header(a, team=a_team, photo=a_photo, fixtures=a_fixtures, xp=a_xp, xp_win=a_win, e=e)}'
+             f'{_cmp_header(b, team=b_team, photo=b_photo, fixtures=b_fixtures, xp=b_xp, xp_win=b_win, e=e)}</div>')
+    rows = "".join(
+        f'<div class="cmp-row"><span class="cmp-v{" win" if win == "a" else ""}">{e(fa)}</span>'
+        f'<span class="cmp-l">{e(label)}</span>'
+        f'<span class="cmp-v{" win" if win == "b" else ""}">{e(fb)}</span></div>'
+        for label, fa, fb, win in compare_rows(a, b))
+    return f'<div class="pl-card cmp-card"><div class="cmp-body">{heads}<div class="cmp-grid">{rows}</div></div></div>'
+
+
+def render_player_compare(a, b, **kwargs) -> None:
+    """Render the two-player comparison (ADR-110). Display-only; a no-op if either player is missing."""
+    body = compare_card_html(a, b, **kwargs)
+    if body:
+        st.markdown(f"{CARD_CSS}{body}", unsafe_allow_html=True)
