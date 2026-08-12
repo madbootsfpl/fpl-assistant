@@ -78,26 +78,20 @@ def test_fixtures_and_projected_xp_chip():
     assert "👑" in h and "⚽ pens" in h                        # ownership tier + set-piece flag chips
 
 
-def test_per_gameweek_row_shows_xp_over_fixture_with_total():
-    # US-367 (ADR-109): when fixtures carry an `xp`, the card renders a per-GW row (xP over the fixture) — the
-    # tester's card-under-the-shirt layout — plus a Total column when `total_xp` is given (horizon > 3).
+def test_per_gameweek_row_shows_xp_over_fixture():
+    # US-367 (ADR-109): when fixtures carry an `xp`, the card renders a per-GW row (xP over the fixture, up to 3
+    # gameweeks) — the tester's card-under-the-shirt layout. No Total column (owner steer — cleaner; the shirt chip
+    # already shows the horizon total).
     fx = [{"opp": "HUL", "home": False, "fdr": 2, "xp": 5.1},
           {"opp": "IPS", "home": True, "fdr": 3, "xp": 6.2},
           {"opp": "EVE", "home": False, "fdr": 3, "xp": 4.5}]
     # card_body = the body WITHOUT the <style> block (which itself names .plc-gwrow), so the class is meaningful.
-    h = player_card.card_body(_FWD, team_name="Man City", fixtures=fx, projected_xp=15.8, total_xp=15.8)
+    h = player_card.card_body(_FWD, team_name="Man City", fixtures=fx, projected_xp=15.8)
     assert "plc-gwrow" in h                                    # the per-GW row (not the plain pills)
     assert "5.1" in h and "6.2" in h and "4.5" in h            # per-GW xP on top
     assert "HUL (A)" in h and "IPS (H)" in h and "EVE (A)" in h   # the fixture under each
-    assert "plc-gwcol total" in h and "15.8" in h and "Total" in h   # the Total column (total_xp given)
+    assert "plc-gwcol total" not in h and "Total" not in h    # no Total column (dropped)
     assert "◆ Proj." not in h                                  # the single Proj chip is suppressed by the row
-
-
-def test_per_gameweek_row_hides_total_when_horizon_small():
-    # US-367: horizon ≤3 → no `total_xp` passed → the per-GW columns show, but no Total column.
-    fx = [{"opp": "HUL", "home": False, "fdr": 2, "xp": 5.1}, {"opp": "IPS", "home": True, "fdr": 3, "xp": 6.2}]
-    h = player_card.card_body(_FWD, fixtures=fx)              # no total_xp
-    assert "plc-gwrow" in h and "plc-gwcol total" not in h
 
 
 def test_fixtures_without_xp_fall_back_to_pills():

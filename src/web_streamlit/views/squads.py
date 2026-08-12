@@ -277,8 +277,6 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     # Per-GW fixtures + xP for the player card (ADR-109): each owned player's next-≤3 fixtures with the xP for that
     # gameweek (aligned by `event` number). Feeds the ⚙ panel card (US-367) + the pitch hover popover (US-368).
-    gameweeks = ranked[0]["gameweeks"] if ranked else []
-    show_total = len(gameweeks) > 3                       # the tester's "GW1–3 then a Total" rule (ADR-109)
     fixtures_by_id = {}
     for _p in owned:
         _bg = by_gameweek_by_id.get(_p["id"], {})
@@ -367,7 +365,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp,
-                 team_names=team_names, bench_roles=bench_roles)
+                 team_names=team_names, bench_roles=bench_roles,
+                 fixtures_by_id=fixtures_by_id)             # ADR-109: per-GW row in the hover popover
 
     # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +
     # **Substitute**, together, in one panel on the golden page (consolidates the old card picker + Substitute
@@ -384,8 +383,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     if picked:
         short = picked["team"]
         render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
-                           fixtures=fixtures_by_id.get(picked["id"]), projected_xp=xp_by_id.get(picked["id"]),
-                           total_xp=xp_by_id.get(picked["id"]) if show_total else None)   # ADR-109 per-GW row
+                           fixtures=fixtures_by_id.get(picked["id"]),       # ADR-109 per-GW row (no Total col)
+                           projected_xp=xp_by_id.get(picked["id"]))
         # 👑 Make captain — moved onto the pitch view (was stranded in the Captain sub-tab). One click; ×2 next GW.
         if picked["id"] == captain_id:
             st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")

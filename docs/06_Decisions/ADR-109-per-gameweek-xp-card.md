@@ -35,12 +35,15 @@ horizon-total chip; the per-GW split is buried in the Health tab's monospace tab
 
 **Turn the card's fixture row into a per-gameweek row** (in `card_body`, ADR-084): for the next **up-to-3**
 gameweeks, a column each showing **xP (bold, top)** + **opponent (venue)** (FDR-tinted, below) — matching the image.
-A **Total** column appears only when the horizon is **>3** (`len(gameweeks) > 3`) — the tester's "GW1–3 then a total"
-rule. Shows in **both** the hover popover **and** the ⚙ panel card (both call `card_body`).
+Shows in **both** the hover popover **and** the ⚙ panel card (both call `card_body`).
+
+**No Total column** — the tester's original ask included a Total when horizon >3, but on **previewing it the owner
+dropped it** (2026-08-12): the three individual weeks read cleaner and less cluttered, and the **shirt's xP chip
+already shows the horizon total**, so no information is lost. The card is always "up to 3 GW columns, no total".
 
 - **Data path:** a shared `fixtures_by_id` builder in `render_my_squad` — per owned player, `team_schedule()`'s
-  next-3 fixtures, each with `xp = by_gameweek_by_id[id].get(event)`; total = the existing horizon total. Passed into
-  `render_pitch` → `_kit_html` → `card_body` (the popover) **and** used for the selected player's panel card.
+  next-3 fixtures, each with `xp = by_gameweek_by_id[id].get(event)`. Passed into `render_pitch` → `_kit_html` →
+  `card_body` (the popover) **and** used for the selected player's panel card.
 - **Backward-compatible:** when fixtures carry no `xp` (e.g. the Players "Card" view), `card_body` falls back to
   today's fixture pills + the single Proj-xP chip — unchanged.
 - **Not on the kit chip:** the shirt chip stays the single total (the per-GW lives in the card, per the image).
