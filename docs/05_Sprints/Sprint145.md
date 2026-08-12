@@ -47,7 +47,8 @@ tee up the cold-start data floor (B) as a gated ADR-104 story.
 |---|---|---|---|---|
 | US-356 | **Transfer filters** — team + max-price on the bring-in list. | High | ✅ Done | ~¼ session |
 | US-357 | **Captain persists on load** — round-trip + close the set-after-save gap. | High | ✅ Done | ~¼ session |
-| — | **B: cold-start data floor** → its own **ADR-104** (changes `decision_xp`) — NOT built here. | High | 🔒 gate next | investigation |
+| ADR-104 | **The cold-start xP floor** — gate the `ep_next` floor for no-history players. | High | ✅ Done | gate |
+| US-358 | **Build the cold-start floor** — `max(ppg, ep_next)` in `player_xp` + `rate_source`. | High | ⬜ To do | ~¼ session |
 
 ---
 
