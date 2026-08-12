@@ -464,6 +464,21 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 151 (2026-08-12)** — *Compare two players on the card* (**ADR-110**, extends ADR-084). Tester (UX H, with
+  an image): a **side-by-side comparison** to decide between two players. **US-369:** refactored the card's per-stat
+  catalog to **`_stat_catalog(player)` → `(key, label, raw, formatted)`** (compare on the **raw** numeric, display the
+  **formatted** string; `_stat_rows` keeps its `(label, formatted)` shape, so the 12 existing card tests never moved).
+  **`compare_rows(a, b)`** aligns by **stat key** with a per-stat winner via a **`_BETTER`** direction map
+  (higher-better default; **`xgc` lower-better** — fewer conceded wins; **`own` neutral** — no winner; ties/missing →
+  `—`). **`compare_card_html`** / **`render_player_compare`** — two headers (photo · Team·Pos·£ · name · projected xP,
+  the xP winner tinted · FDR fixtures) + the winner-tinted **A · stat · B** grid; **dict-safe** (accepts `sqlite3.Row`
+  like `card_body`). **US-370:** wired the Players **Card view** — a **🔍 "Compare with (same position)"** searchable
+  selectbox (Streamlit filters as you type), scoped same-position across the whole pool; on a pick →
+  `render_player_compare` in place of the single card (`—` → the unchanged single card). Both xP from the already-
+  computed `xp` dict; the target's fixtures from one extra `_card_fixtures` read. **Reuses** the card values +
+  `decision_xp` — **display-only, no analytics change** (976→981). Owner-signed-off on an Artifact preview. Follow-on:
+  the ⚙ panel "compare with…" (My Squad, owned 15). Lesson: split **raw vs formatted** whenever a value is both
+  compared and shown; smoke with real `sqlite3.Row` data (it caught a `.get()` gap the dict-fixture tests couldn't).
 - **Sprint 150 (2026-08-12)** — *Per-gameweek xP in the player card* (**ADR-109**, extends ADR-084/032). Tester (A5,
   with an image): under a shirt, show the **per-GW points** as columns — **xP on top** + **fixture below** (Haaland
   `5.7` BOU(H) · `5.7` CRY(A) · `6.3` COV(H)). **The data was free** — `decision_xp` already returns `by_gameweek`

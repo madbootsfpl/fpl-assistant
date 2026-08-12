@@ -1,7 +1,7 @@
 # Sprint 151: Compare two players on the card (ADR-110)
 
 **Dates:** 2026-08-12
-**Status:** 🚧 Planned — US-369 + US-370 (ADR-110)
+**Status:** ✅ Complete — US-369 + US-370 (ADR-110). 976 → 981 tests
 **Capacity:** ~1 session (a compare renderer + the Players-view wiring; no new xP math)
 **Carried Over:** none
 
@@ -74,7 +74,24 @@ Card view) + a manual smoke / **preview** + docs.
 ---
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — same-position compare on the Players Card view; display-only, 981 tests, ruff clean.**
+
+- **US-369 (the compare renderer)** — refactored the card's stat catalog to `_stat_catalog(player)` → `(key, label,
+  raw, formatted)` (`_stat_rows` keeps its `(label, formatted)` shape — existing card tests unmoved). `compare_rows(a,
+  b)` aligns by key with a per-stat winner via `_BETTER` (higher-better default; `xgc` lower-better; `own` neutral;
+  ties/missing → `—`, no winner). `compare_card_html` / `render_player_compare` — two headers (photo·team·pos·£·name·
+  projected-xP-tinted-if-winning·FDR fixtures) + the winner-tinted grid. Dict-safe (accepts `sqlite3.Row`).
+- **US-370 (wire the Card view)** — a **🔍 "Compare with (same position)"** picker (searchable — type to filter),
+  scoped to same-position players across the whole pool; on a pick → `render_player_compare` in place of the single
+  card (`—` → the unchanged single card). Both xP from the existing `xp` dict; the target's fixtures from one extra
+  `_card_fixtures` read.
+
+**Reused, unchanged:** the card's stat values + `decision_xp` — **no analytics change**; the single-card path is
+byte-identical on "—". **DoD:** ✅ tests (deterministic `compare_rows` winners incl. lower-is-better xGC + neutral
+ownership + missing→`—`; the compare card structure; an AppTest on the Card view) · ✅ a manual smoke (real
+`sqlite3.Row` players — Haaland vs Thiago winners correct) + an **Artifact preview** (owner sign-off) · ✅ docs (Help;
+PROJECT_STATUS; Architecture; memory). **Follow-on:** the ⚙ panel "compare with…" (My Squad, owned 15).
 
 ### 🧠 Lessons
-*(see `Sprint151_Lessons_Learnt.md` at retro)*
+*(see `Sprint151_Lessons_Learnt.md`)*

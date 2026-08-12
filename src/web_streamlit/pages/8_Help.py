@@ -87,7 +87,8 @@ with st.expander("5 · Do your research  →  Players · Fixtures · Trending ·
     st.markdown(
         "- **Players** — the whole pool (filter by **team / position / player**, sort, page through all — "
         "the **table first**, a top-15 chart below); a **Card** view (pick a player → a **rich player card**: "
-        "photo · fixtures · **Projected xP** · position-adaptive stats) **plus** the stat views: "
+        "photo · fixtures · **Projected xP** · position-adaptive stats — and **🔍 Compare with** another "
+        "**same-position** player to see them **side by side**, the better stat highlighted) **plus** the stat views: "
         "over/under-performance · "
         "Defensive Contribution · clean sheets · xG (season-to-date). On **clean sheets / xG** a "
         "**🟢…🔴 quality rating** shows how a player stacks up *vs the players shown*. Switch views with the "
