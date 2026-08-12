@@ -92,12 +92,12 @@ else:
         column_config={"badge": st.column_config.ImageColumn("", width="small")},
     )
 
-    # 🎯 Target by fixtures (US-301) — turn "which teams have a good run" into "who to buy" for a new
+    # 🎯 Radar (US-301; renamed ADR-107) — turn "which teams have a good run" into "who to buy" for a new
     # squad / wildcard: the best available players from the easiest-run teams, ranked by the app's xP.
     st.divider()
-    st.subheader("🎯 Target by fixtures")
-    st.caption("The best available players from the easiest-run teams over your window — for planning a "
-               "new squad or a wildcard.")
+    st.subheader("🎯 Radar")                           # MADBOOTS vocab (ADR-107): players to watch
+    st.caption("Players on your radar — the best available from the easiest-run teams over your window, "
+               "for planning a new squad or a wildcard.")
     position = st.segmented_control(
         "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="target_pos",
         help="Filter the targets to one position (e.g. which defenders have the best runs).")

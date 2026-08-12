@@ -92,7 +92,7 @@ with st.expander("5 · Do your research  →  Players · Fixtures · Trending ·
         "**🟢…🔴 quality rating** shows how a player stacks up *vs the players shown*. Switch views with the "
         "buttons at the top.\n"
         "- **Fixtures** — a colour-coded **difficulty ticker** (pick 1–8 gameweeks; scope it to **your "
-        "squad**) + a **🎯 Target by fixtures** shortlist — who to buy from the easiest-run teams (for a new "
+        "squad**) + a **🎯 Radar** shortlist — who to buy from the easiest-run teams (for a new "
         "squad / wildcard); filter by **position**, cap the **max price**, and sort by **xP** or **Val/£m**.\n"
         "- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + "
         "**Community Signals** (what r/FantasyPL is talking about).\n"

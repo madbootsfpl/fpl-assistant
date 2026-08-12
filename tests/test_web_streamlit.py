@@ -170,12 +170,12 @@ def test_fixtures_ticker_grid_and_weeks_selector():
 
 
 def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
-    # US-301: a "Target by fixtures" section names the best available players from the easiest-run teams,
-    # scoped by a Position filter.
+    # US-301: a "🎯 Radar" section (renamed from "Target by fixtures", ADR-107) names the best available
+    # players from the easiest-run teams, scoped by a Position filter.
     at = _run(_PAGES / "2_Fixtures.py")
     if not at.dataframe:
         return                                             # no data → nothing to target
-    assert any(s.value == "🎯 Target by fixtures" for s in at.subheader)
+    assert any(s.value == "🎯 Radar" for s in at.subheader)
     targets = at.dataframe[-1].value                       # the targets table is last
     assert {"Team", "Player", "Pos", "xP", "Fit"} <= set(targets.columns)
     pos = next(s for s in at.segmented_control if s.label == "Position")
