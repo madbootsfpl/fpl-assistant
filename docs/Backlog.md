@@ -80,6 +80,15 @@ they're annotated inline above, not duplicated:
   actions) — now **unblocked**. The real want: **open the full card**, not cram detail into the truncated hover. ⚠ The
   platform wall stands — a static `st.markdown` pitch can't fire a click callback (S139/142), so the achievable
   shape is **click-to-select → an actions panel/popover** (the picker *is* the menu), not a literal JS click-menu.
+  → **A6 is being built now as the inline panel (ADR-108 / Sprint 149).**
+- 🧭 **My Squad v2: tap-the-pitch** *(deferred — committed next, NOT vague; ADR-108 follow-on)* — a custom **Streamlit
+  JS component** so **tapping a shirt** on the pitch returns the player id → opens the **same** ADR-108 panel (~90%
+  reused; only the selection *input* changes, dropdown → tap). **Deferred deliberately:** it introduces a **front-end
+  build toolchain** to a pure-Python project (can't be AppTested → the golden page loses coverage), and **GW1
+  (2026-08-21) is ~9 days out** (don't destabilise the golden page pre-kickoff). **Needs its own spike + ADR:** *full
+  custom React component* **vs** a *lightweight click-detector reusing `pitch.py`'s HTML with per-kit ids* + a
+  **Community-Cloud deploy check** (could more than halve the cost). **Sequenced post-GW1**, and **feedback-driven** —
+  ship the panel, watch the testers; if "I want to tap the shirt" stays the top ask, that's the green light.
 
 **New:**
 - 🩹 **Homepage copy is stale — auth is live** *(Web F1)* — `madboots.com` still reads *"No login to look around ·
