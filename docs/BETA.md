@@ -207,6 +207,41 @@ turned away. Turn on the **waitlist** to **record their email** so you can invit
 
 ---
 
+## 5. Google sign-in + cross-device squads (the robust upgrade, ~20 min) — ADR-106
+
+The **reliable, familiar** login: testers **Sign in with Google**, and their squad **auto-syncs across devices +
+survives a mobile refresh** (no more re-entering a code, no lost team). **Allow-listed by `beta_users`** — the same
+table as §4 — so *invite = add the email*; anyone else lands on the waitlist. **Off until `[auth]` is set** (the §3
+code / §4 registration gate stays the fallback). **Free** (`st.login`, Google OAuth, and Supabase all cost nothing).
+
+1. **A Google OAuth client** (Google Cloud Console → *APIs & Services*):
+   - **OAuth consent screen** → **External** → app name **MADBOOTS** + your email → **scopes: `openid`, `email`,
+     `profile`** (nothing "sensitive"/"restricted" → **no** paid verification) → **Publish to Production** *(this
+     removes the 100-test-user cap and the scary "Google hasn't verified this app" warning)*.
+   - **Credentials → Create → OAuth client ID → Web application** → **Authorised redirect URI:**
+     **`https://madboots.streamlit.app/oauth2callback`** → copy the **Client ID** + **Client secret**.
+2. **Turn it on** — add to Streamlit **Manage app → Settings → Secrets**:
+   ```toml
+   [auth]
+   redirect_uri = "https://madboots.streamlit.app/oauth2callback"
+   cookie_secret = "a-long-random-string"                 # any long random value (signs the auth cookie)
+   client_id = "…apps.googleusercontent.com"
+   client_secret = "…"
+   server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+   ```
+   With `[auth]` set, the app switches to **Sign in with Google**. **Unset it → back to the code/registration gate.**
+3. **Invite testers** — add their emails to **`beta_users`** (§4). A signed-in email **in** the table → admitted +
+   their squad syncs; **not** in it → the **waitlist** (`reason='not_listed'`) + a "not on the list yet" screen.
+4. **The squad follows them** — it's auto-saved to the same Supabase (keyed by a **hash** of the email, so the
+   squads table never stores a raw address) and restored on any device / after a mobile reconnect. No handle to type.
+
+> **Privacy (ADR-106).** With Google sign-in you now hold **emails ↔ squads** (PII). Minimal + honest: **email only**
+> (no other profile data), the squad keyed by a **hash**, and *"remove me" = delete their `beta_users` + squad rows*.
+> The app tells the tester this on the sign-in screen. If you ever rename the Streamlit subdomain, update the
+> **redirect URI** in both Google and the secret.
+
+---
+
 ## Recruiting (Reddit etc.)
 
 - Post in **r/FantasyPL** (and similar) with a short pitch, the **signup link**, and the **access code**.
@@ -230,6 +265,9 @@ Everything below is **£0** and opt-in. Tick them off, then post the invite.
       register with the code + an email, capped; raise the cap as perf holds; see who's in via the Supabase table.
 - [ ] **Waitlist** *(optional)* — create the `beta_waitlist` table (§4a) → an over-cap or wrong-code attempt records
       its email so you can invite them later. No new secret; off until the table exists.
+- [ ] **Google sign-in** *(optional, the robust upgrade)* — the `[auth]` secrets + a Google OAuth client (§5) →
+      testers Sign in with Google (allow-listed by `beta_users`), and their squad syncs across devices / survives a
+      mobile refresh. Off until `[auth]` is set; the code gate stays the fallback.
 - [ ] **Prod/staging split** — the app testers use runs off the **stable** branch (`main`); you iterate on
       **staging** (`master`) and promote by merge, so a mid-sprint push can't break the beta
       ([ADR-095](06_Decisions/ADR-095-running-a-wider-beta.md); see [DEPLOY.md](DEPLOY.md#prodstaging-adr-095)).

@@ -464,6 +464,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 147 (2026-08-12)** — *Google auth + per-user squad persistence* (**ADR-106**). Fixes the tester
+  *save/persist* cluster — iPhone session-wipe (C2) · cross-device (C3) · clunky code login (C4). **US-361:** a new
+  `web_streamlit/auth.py` (`is_configured()` = `[auth]` in `st.secrets`; `current_email()` = guarded `st.user.email`;
+  `user_key()` = `sha256(email)` — a valid `clean_handle`, no raw email stored; `render_account()`; `gate()`) wired
+  into **`require_access` as the top branch, gated on `auth.is_configured()`**: **Sign in with Google** (`st.login`)
+  → admit iff the email is in **`beta_users`** (ADR-098), else `waitlist.add(email, "not_listed")` (ADR-102) + Log
+  out; a privacy line on the gate. **US-362:** `squads.link_and_restore` (reuses the Sprint-145 `_CLOUD_LINKED`/
+  `_autosync`) — on admit, link the squad to the email-hash (edits auto-sync) + **restore** it from `cloud_store`
+  when the session has none, so it follows the user across devices / a mobile reconnect (the auth cookie keeps them
+  signed in). **Off by default** — no `[auth]` → the existing shared-code/registration/open gate + manual handle
+  save/load, byte-identical (local/CI/open deploy unchanged; a guardrail pins it). Cost: none. Privacy: email-only +
+  basic scopes; the squads table keyed by a hash. The OAuth redirect is owner-smoke-verified (can't be AppTested —
+  `st.login`/`current_email` mocked). Owner runbook: BETA.md §5. +6 tests (966→972).
 - **Sprint 146 (2026-08-12)** — *Split the Squads tab → My Squad + Squad Lab* (**ADR-105**, revises ADR-069). The
   single **Squads** page had grown to a **7-way "Tool" switch** (Build defaulting first among six manage-your-team
   tools). **US-359:** split `pages/3_Squads.py` → **`3_My_Squad.py`** (the pitch/edit + a 6-way sub-tab in workflow

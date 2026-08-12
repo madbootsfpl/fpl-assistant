@@ -1,7 +1,7 @@
 # Sprint 147: Google auth + per-user squad persistence (ADR-106)
 
 **Dates:** 2026-08-12
-**Status:** 📝 Planned — awaiting sign-off (ADR-106 Accepted)
+**Status:** ✅ Complete — US-361 + US-362 (ADR-106). 966 → 972 tests
 **Capacity:** ~1 session (an auth gate + the per-user persistence, then docs)
 **Carried Over:** none
 
@@ -126,7 +126,29 @@ Edits then auto-sync under the user-key; a reconnect (auth cookie intact) re-res
 
 ### 🏁 Sprint Review & Retrospective
 
-_(filled at retro)_
+**Outcome:** ✅ Complete — the tester *save/persist* cluster (C2 mobile session-wipe · C3 cross-device · C4 clunky
+code login) is fixed with **Google `st.login`** as the gate *when `[auth]` is configured*, allow-listed by
+`beta_users`, plus per-user auto-save/restore of the squad. **Off by default** — no `[auth]` → the existing gate,
+byte-identical (the 966 stayed green throughout).
+
+**Shipped**
+- **US-361** — `auth.py` (`is_configured`/`current_email`/`user_key`/`render_account`/`gate`) + a `require_access`
+  top branch: Sign in with Google → admit iff the email is in `beta_users`, else the waitlist (`"not_listed"`) +
+  Log out; a privacy line on the gate. +5 tests (decision logic mocked; the OAuth redirect is owner-smoke-verified).
+- **US-362** — `squads.link_and_restore` (reuses the S145 auto-sync): on admit, link the squad to `sha256(email)`
+  (edits auto-sync) + restore it from the cloud when the session has none — so it follows the user across devices /
+  a mobile reconnect. +1 test.
+
+**Tests:** 966 → **972** (+6). ruff clean; CI-parity green.
+
+**What went well:** off-by-default held perfectly (zero risk to the live app); almost all reuse (allow-list,
+waitlist, auto-sync); the mobile-wipe fix falls out of the auth cookie + restore-on-load.
+
+**Owner to switch it on (BETA.md §5):** create the Google OAuth client (redirect URI + basic scopes + publish the
+consent screen) + the `[auth]` secrets; invite testers by adding emails to `beta_users`. Then smoke: sign in →
+squad survives a mobile refresh + follows across devices; a non-invited email → the waitlist.
+
+**Lessons:** `docs/05_Sprints/Sprint147_Lessons_Learnt.md`.
 
 ---
 
