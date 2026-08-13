@@ -75,6 +75,29 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
   `session_started`/events; needs a time-series read + a chart). "For discussion."
 - 🧭 **Admin — logins over time** — a count/trend of logins (sessions); pairs with the graph above.
 
+## Continued testing — 2026-08-13 (PM)
+
+**New — P1 enhancement (a well-received feature):**
+- 🧩 **Boot Battle — a compare-pool selector** — when opening ⚔️ Boot Battle, a dropdown to choose the compare pool:
+  **My team** (same-position owned — the current behaviour) · **All players** (same-position, whole pool) · **By club**
+  (same-position, one chosen club). Applies to the My Squad ⚙ panel (today: My-team only); the Players Card view is
+  already "all same-position". Reuses `compare_card_html`; the work is the pool selector + a club sub-picker + sourcing
+  the target options (all `players` + a club filter are already in scope in both views). Tester: *"great feature."*
+
+**Verified non-bugs (2026-08-13 PM):**
+- **"Refreshed 581 … but the app shows 573 players."** ✅ **Not a bug — the freshness indicator working as designed
+  (US-219).** A CLI `refresh` writes the local cache (`fpl.db` = 581); the **cloud serves the committed `seed.db`
+  snapshot (573)** and a **reboot reloads that snapshot**, discarding the runtime refresh. The "N players" count exists
+  precisely to make a stale snapshot obvious. The 8-player gap = **preseason roster churn** (FPL adds/removes players
+  daily); the committed seed is a few days old. **To sync the cloud:** `reseed` (fpl→seed) → commit/push → **Reboot**
+  (the DEPLOY flow / runbook §A). *(Possible tiny UX: make the cloud snapshot caption clearer that it's the deployed
+  snapshot — low priority.)*
+- **Reboot warning: "More than one requirements file detected … used uv with requirements.txt."** ✅ **Benign.**
+  Streamlit Cloud sees both `requirements.txt` + `pyproject.toml` and correctly picks `requirements.txt` (our pinned
+  deps, which install the package via `-e .`). **We need both** — `pyproject.toml` for the package/editable install,
+  `requirements.txt` for the pinned deps + the rebuild-token. The warning just states which it chose (the right one);
+  deps installed fine. No action.
+
 **Not a bug / already built (verified 2026-08-13)**
 - **Manager-ID import is fully built** (`src/manager.py`, the Squads-sidebar control, Home copy) — **GW1-gated**: a
   team's picks aren't public until the **GW1 deadline (2026-08-21)**, so pre-GW1 it shows "isn't public yet"
