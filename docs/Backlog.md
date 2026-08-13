@@ -78,11 +78,11 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
 ## Continued testing — 2026-08-13 (PM)
 
 **New — P1 enhancement (a well-received feature):**
-- 🧩 **Boot Battle — a compare-pool selector** — when opening ⚔️ Boot Battle, a dropdown to choose the compare pool:
-  **My team** (same-position owned — the current behaviour) · **All players** (same-position, whole pool) · **By club**
-  (same-position, one chosen club). Applies to the My Squad ⚙ panel (today: My-team only); the Players Card view is
-  already "all same-position". Reuses `compare_card_html`; the work is the pool selector + a club sub-picker + sourcing
-  the target options (all `players` + a club filter are already in scope in both views). Tester: *"great feature."*
+- ✅ **Boot Battle — a compare-pool selector** — **SHIPPED (Sprint 155, US-380).** The My Squad ⚙ panel's ⚔️ Boot
+  Battle now has a **pool** selector: **My team** (owned, default) · **All** (same-position, whole pool) · **By club**
+  (a Club picker → same-position from that club). Reuses `compare_card_html`; a non-owned target's card row builds on
+  demand (`_pergw_fixtures`). *Optional follow-on:* the same selector on the Players Card view (already "all
+  same-position"; could add "By club").
 
 **Verified non-bugs (2026-08-13 PM):**
 - **"Refreshed 581 … but the app shows 573 players."** ✅ **Not a bug — the freshness indicator working as designed

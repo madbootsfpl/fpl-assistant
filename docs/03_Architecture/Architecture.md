@@ -464,6 +464,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 155 (2026-08-13)** — *Boot Battle compare-pool selector* (extends **ADR-110**/**ADR-111**; display-only).
+  From 2026-08-13 PM testing on the well-received Boot Battle: the My Squad ⚙ panel's ⚔️ Boot Battle gains a **"pool"**
+  segmented control — **My team** (owned, default) · **All** (same-position, whole pool) · **By club** (a Club picker
+  → same-position from that club). The candidate list is always same-position and excludes the picked player.
+  Comparing with a **non-owned** target works because `xp_by_id`/`card_bg_by_id` already span the whole pool;
+  refactored the per-GW fixtures into a **`_pergw_fixtures(p)`** helper so the target's card row builds on demand.
+  Reuses `compare_card_html` — no analytics change (985→986). *(Also this session, no code: the **GW1 runbook** was
+  dry-run-verified ~8 days out — `calibrate`/`history --backfill`/`reseed` all run + gate, the exact per-weight flip
+  tests recorded; **cloud-LLM narration decided → stay data-only**; two tester reports explained as non-bugs — the
+  573-vs-581 player count is the US-219 freshness indicator (cloud serves the committed `seed.db`; a refresh writes
+  the local cache; reboot reloads the snapshot), and the "multiple requirements files" reboot warning is benign.)*
 - **Sprint 154 (2026-08-13)** — *Help revamp + Boot Battle everywhere + the MadBoots Explainer* (**ADR-111**, revises
   ADR-068, extends ADR-110). **US-377:** rebrand the compare control **⚔️ Boot Battle** and add a **"compare with…"**
   picker to the My Squad **⚙ panel** (typeable; same-position **owned** players) → `render_player_compare` in place of
