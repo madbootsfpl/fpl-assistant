@@ -89,3 +89,13 @@ def test_is_registered_reflects_the_row(configured, monkeypatch):
     _fake_store(monkeypatch, ["a@b.com"])
     assert user_store.is_registered("A@b.com") is True            # cleaned + found
     assert user_store.is_registered("z@z.com") is False
+
+
+def test_is_registered_is_case_and_space_insensitive(configured, monkeypatch):
+    # The allow-list bug (2026-08-13): a hand-typed `beta_users` row with capitals / stray spaces must still admit
+    # the (lower-cased) Google email — the PostgREST `eq.` filter is case-sensitive, so we normalise both sides.
+    _fake_store(monkeypatch, ["Colinbermingham@Live.ie", "  spaced@x.com  "])
+    assert user_store.is_registered("colinbermingham@live.ie") is True   # capital C in the stored row
+    assert user_store.is_registered("COLINBERMINGHAM@LIVE.IE") is True   # capitals in the query too
+    assert user_store.is_registered("spaced@x.com") is True              # stored row had stray spaces
+    assert user_store.is_registered("someone@else.com") is False

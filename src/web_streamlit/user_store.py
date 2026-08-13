@@ -46,7 +46,10 @@ def _headers(key):
 
 
 def is_registered(email: str) -> bool:
-    """True if `email` is already in the beta. `False` when unconfigured or the email is malformed."""
+    """True if `email` is in the beta — matched **case-insensitively** (capitalisation and leading/trailing spaces are
+    normalised on **both** sides via `clean_email`), so a hand-typed `beta_users` entry like `Colin@x.ie` still admits
+    `colin@x.ie`. `False` when unconfigured or the email is malformed. A PostgREST `eq.` filter is case-*sensitive*, so
+    we fetch the list and compare normalised — cheap: the gate caches the admit, so this runs once per session."""
     url, key = _endpoint()
     if not (url and key):
         return False
@@ -55,12 +58,11 @@ def is_registered(email: str) -> bool:
         return False
 
     def _get():
-        r = requests.get(url, params={"email": f"eq.{e}", "select": "email"}, headers=_headers(key),
-                         timeout=_TIMEOUT)
+        r = requests.get(url, params={"select": "email"}, headers=_headers(key), timeout=_TIMEOUT)
         r.raise_for_status()
         return r
 
-    return bool(with_retry(_get, retries=1).json())
+    return any(clean_email(row.get("email", "")) == e for row in with_retry(_get, retries=1).json())
 
 
 def count() -> int:
