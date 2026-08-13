@@ -49,7 +49,7 @@ def ask_page(request: Request, q: str | None = None):
 
     Degrades exactly like the CLI — without Ollama, the answer is the decision + facts (no prose).
     """
-    answer = render_ask(ask.answer(q)) if q else None
+    answer = render_ask(ask.answer(q), ollama_hint=False) if q else None   # US-375: web edge = no Ollama hint
     return _TEMPLATES.TemplateResponse(
         request, "ask.html", {"title": "Ask", "q": q or "", "answer": answer},
     )
@@ -81,7 +81,7 @@ def squads_index(request: Request):
 @app.get("/squad/{name}", response_class=HTMLResponse)
 def squad_page(request: Request, name: str):
     """A saved squad's health — the same `analyse` decision, via `ask` (so it reads identically)."""
-    answer = render_ask(ask.answer(f"analyse {name}"))
+    answer = render_ask(ask.answer(f"analyse {name}"), ollama_hint=False)   # US-375: web edge = no Ollama hint
     return _TEMPLATES.TemplateResponse(
         request, "page.html", {"title": f"Squad · {name}", "body": answer},
     )

@@ -6,7 +6,10 @@ fallback. The point: `ask` is useful with or without the LLM, and the table is t
 """
 
 
-def render_ask(result) -> str:
+def render_ask(result, *, ollama_hint: bool = True) -> str:
+    """`ollama_hint` (US-375): the CLI (local) offers "Start Ollama for a written summary"; the **web** passes
+    False — a deployed user can't start Ollama (it's local-only), so the hint would only confuse. The full
+    plan/table/facts + ✓/⚠ always render regardless."""
     if result.headline is None and result.detail is None:
         # A free-form answer (ADR-085): prose but no grounded decision → show it with the ℹ label.
         if result.explanation:
@@ -22,13 +25,14 @@ def render_ask(result) -> str:
     if result.explanation:
         lines += ["", result.explanation, _trust_line(result.trust)]
     elif result.detail is None:
-        # Degraded and no table → show the grounded facts + how to enable prose.
+        # Degraded and no table → show the grounded facts (+ how to enable prose, CLI only).
         lines += ["", "Facts:"]
         lines += [f"  {k.replace('_', ' ')}: {v}" for k, v in (result.facts or {}).items()]
-        lines += ["", "(Start Ollama — `ollama serve` with the model pulled — for a written "
-                  "explanation.)"]
-    else:
-        # A table is present (it's the exact data) but no prose.
+        if ollama_hint:
+            lines += ["", "(Start Ollama — `ollama serve` with the model pulled — for a written "
+                      "explanation.)"]
+    elif ollama_hint:
+        # A table is present (it's the exact data) but no prose — the CLI can enable it.
         lines += ["", "(Start Ollama for a written summary.)"]
     return "\n".join(lines)
 

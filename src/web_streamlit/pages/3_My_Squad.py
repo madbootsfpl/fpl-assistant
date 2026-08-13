@@ -41,9 +41,9 @@ view = st.segmented_control(
 # useful windows — short for mid-season, up to 10 for a wildcard / start of season. Default 5 = today's
 # behaviour; deselecting the segmented control falls back to 5.
 horizon = st.segmented_control(
-    "Gameweeks ahead", [1, 2, 3, 4, 5, 10], default=5,
+    "Gameweeks ahead", [1, 2, 3, 4, 5, 10], default=1,   # US-374: My Squad defaults to the next GW (Squad Lab = 5)
     help="How many upcoming gameweeks the projections look over — short for mid-season, longer for a "
-         "wildcard / start of season. (Captaincy is always the next gameweek.)") or 5
+         "wildcard / start of season. (Captaincy is always the next gameweek.)") or 1
 
 store = Storage()
 try:

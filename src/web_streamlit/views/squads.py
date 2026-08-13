@@ -742,7 +742,7 @@ def render_ai_tips(squad_name, squad, *, horizon=5):
                "to consider, and any **flagged** players. The analytics decide; the answer is checked "
                "against the data (✓/⚠).")
     result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon)
-    st.code(render_ask(result), language=None)
+    st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users
 
 
 # ---- Chips (a grounded chip-strategy advisor; ADR-082) ----------------------------------------------
@@ -759,4 +759,4 @@ def render_chips(squad_name, squad, *, horizon=5):
                "checked against the data (✓/⚠). Double/blank gameweeks and mini-league position sharpen this "
                "in-season (live from GW1).")
     result = ask.answer(f"which chip should I use for {squad_name}?", active_squad=squad, horizon=horizon)
-    st.code(render_ask(result), language=None)
+    st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users

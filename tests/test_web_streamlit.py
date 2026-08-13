@@ -22,7 +22,12 @@ def _run(path):
 
 
 def test_home_renders():
-    _run(_APP)
+    at = _run(_APP)
+    caps = " ".join(c.value for c in at.caption)
+    blob = " ".join(m.value for m in at.markdown)
+    assert "The analytics decide; you stay in control." in caps    # US-373: the tidied tagline
+    assert "Explore the sidebar" in blob and "auto-synced across your devices" in blob   # US-373: sidebar + your-squad
+    assert "read-only view over the analytics" not in caps         # the internal ADR ref dropped from user copy
 
 
 def test_home_shows_the_deadline_countdown():
@@ -278,6 +283,7 @@ def test_squads_ai_tips_view_renders_a_gameweek_plan():
     at = _squads_view("AI Tips")
     assert len(at.code) == 1                               # the rendered gameweek plan
     assert "This week" in at.code[0].value                 # the plan block header (the plan is for this GW)
+    assert "Start Ollama" not in at.code[0].value          # US-375: no dev-only Ollama hint for web users
 
 
 def test_squads_chips_view_renders_chip_advice():
@@ -445,7 +451,7 @@ def test_set_pieces_board_renders_the_order_columns():
     assert not at.exception
     if at.dataframe:                                          # populated DB → a board with the order columns
         cols = at.dataframe[0].value.columns.tolist()
-        assert {"Pen", "Corners", "FK", "Own%", "Val/£m"} <= set(cols)
+        assert {"Pen order", "Corner order", "FK order", "Own%", "Val/£m"} <= set(cols)   # US-376: read as order
     else:
         assert len(at.info) >= 1                              # empty (unpopulated) → an honest note
 
@@ -773,11 +779,11 @@ def test_waitlist_captures_an_over_cap_email(monkeypatch):
 
 
 def test_squads_gameweeks_selector_drives_the_horizon():
-    # US-237/315 (ADR-077): a "Gameweeks ahead" box-select (default 5) flows into Health — set it to 2 and
-    # the analysis projects over 2 GW (a GW2 column, no GW5)
+    # US-237/315 (ADR-077): a "Gameweeks ahead" box-select (My Squad default 1, US-374) flows into Health — set it
+    # to 2 and the analysis projects over 2 GW (a GW2 column, no GW5)
     at = _run(_PAGES / "3_My_Squad.py")
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
-    assert gw and gw[0].value == 5 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-315
+    assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-374/315
     gw[0].set_value(2).run()
     at.segmented_control[0].set_value("Health").run()
     assert not at.exception
@@ -831,7 +837,7 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
         return
     by_id = {p["id"]: p for p in players}
     ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
-                         horizon=5, gw_history_by_code=store.get_gw_history_by_code())
+                         horizon=5, gw_history_by_code=store.get_gw_history_by_code())   # a multi-GW horizon (see below)
     store.close()
     xp = {r["id"]: r["xp"] for r in ranked}
     by_gw = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -845,6 +851,9 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     at.session_state["squad"] = {**sq, "captain_id": cap, "name": "RoboTS"}
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
+    # US-374: My Squad now defaults to 1 GW; this test is about the multi-GW captain double, so set it to 5 to
+    # match `expected` and to surface the "next gameweek only" caption (moot, so hidden, at horizon 1).
+    next(s for s in at.segmented_control if s.label == "Gameweeks ahead").set_value(5).run()
     assert not at.exception
     proj = next(m for m in at.metric if m.label.startswith("Projected XI"))
     assert proj.value == f"{expected:.1f} xP"              # XI + captain's next-GW double
@@ -1692,6 +1701,18 @@ def test_my_squad_per_gw_card_is_horizon_independent():
 
     v1, v5 = pergw(1), pergw(5)
     assert len(v1) == 3 and v1 == v5                 # 3 GWs, identical regardless of "Gameweeks ahead"
+
+
+def test_default_horizon_my_squad_1_squad_lab_5():
+    # US-374: My Squad defaults to the next GW (manage this week); Squad Lab stays 5 (build for the run).
+    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30).run()
+    hz = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
+    if hz is not None:
+        assert hz.value == 1
+    lab = AppTest.from_file(str(_PAGES / "4_Squad_Lab.py"), default_timeout=30).run()
+    hz2 = next((s for s in lab.segmented_control if s.label == "Gameweeks ahead"), None)
+    if hz2 is not None:
+        assert hz2.value == 5
 
 
 def test_my_squad_set_bench_picks_four():

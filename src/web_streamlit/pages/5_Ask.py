@@ -59,7 +59,7 @@ def _ask(question):
     finally:
         store.close()
     st.session_state.chat_context = ctx
-    st.session_state.history.append((question, render_ask(result)))
+    st.session_state.history.append((question, render_ask(result, ollama_hint=False)))   # US-375: web = no Ollama hint
     st.session_state["built_squad"] = result.squad
 
 

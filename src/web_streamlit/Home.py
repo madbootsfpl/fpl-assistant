@@ -24,7 +24,7 @@ render_data_status()
 _logo, _name = st.columns([1, 7], vertical_alignment="center")
 _logo.image(brand.badge_path(), width=78)
 _name.markdown(brand.wordmark_html(42), unsafe_allow_html=True)
-st.caption(f"**{brand.TAGLINE}** · a read-only view over the analytics (the CLI stays the engine, ADR-051/052).")
+st.caption(f"**{brand.TAGLINE}** The analytics decide; you stay in control.")
 
 # The next FPL deadline — a countdown that escalates in urgency (ADR-086/US-267), rolling forward each GW.
 _store = Storage()
@@ -41,29 +41,25 @@ if _line:
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
 st.markdown(
     """
-Use the **sidebar** to explore (each tab with a segmented control switches views inside it):
+**Explore the sidebar:**
 
-- **Players** — the whole pool (filter by team / position / player, sort, page through all) **plus** the
-  stat boards: over/under-performance · Defensive Contribution · clean sheets · xG (season-to-date)
-- **Fixtures** — a **fixture ticker**: teams × gameweeks, colour-coded by difficulty (pick 1–8 weeks)
-- **My Squad** — your team + its tools: the **pitch view & edit** (rename · substitute · transfer · bench ·
-  captain · download) plus **AI Tips** (a grounded gameweek plan) · **Captain** · **Transfer** (XI-aware swaps) ·
-  **Chips** · **Health** (5-GW analysis)
-- **Squad Lab** — 🧪 **build a fresh 15** (the full optimiser: budget · objective · archetypes · build modes) —
-  for the season start, a wildcard, or a revamp; **Use this squad →** sends it to My Squad
-- **Ask** — ask a question in plain English — a grounded **chat**; every answer is checked against the data
-- **News** — official FPL player news (injuries · doubts · returns), most serious first
-- **Trending** — what the crowd's doing: most-owned · transferred in/out · in form, + **Community Signals**
-  (💬 what r/FantasyPL is talking about — best-effort)
-- **Help** — a step-by-step guide to building your team with the assistant
+- **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
+- **Fixtures** — upcoming fixtures and difficulty (1–8 GWs), for all teams or just your squad.
+- **My Squad** — manage your XI, transfers, captain and chips, with **AI Tips** and **Health** analysis.
+- **Squad Lab** — 🧪 build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
+  it to My Squad.
+- **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
+- **News** — official FPL player news (injuries · doubts · returns), most serious first.
+- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
+- **Help** — a step-by-step guide to getting started with MADBOOTS.
 
-**Your squad:** in **Squad Lab**, build & name it, *Download* a `squad.json` (that file is your save) and *Use
-this squad*; or *Upload* one from the sidebar; or **import your real team by FPL manager-ID** (from GW1).
-**Manage** it in **My Squad** (substitute · transfer · captain · chips · analysis) — every change updates your
-session and the download. A **demo** squad populates the views on first visit. All per-user — no accounts,
-nothing saved server-side (ADR-054/055).
+**Your squad**
 
-The analytics decide; a local LLM (optional) only narrates. `python app.py refresh` updates the data.
+- **Build** it in **🧪 Squad Lab** — name it, then **Use this squad →**.
+- **Saved to your account** and **auto-synced across your devices** — or **Download** a `squad.json` backup.
+- **Upload** a saved squad, or **import your real FPL team** by Manager-ID (from GW1).
+- **Manage** transfers · captaincy · chips · analysis in **My Squad**.
+- A **demo** squad populates the views on first visit.
 """
 )
 st.info("🧭 **New here?** The **Help** tab (bottom of the sidebar) is a step-by-step guide to building "

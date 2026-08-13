@@ -135,14 +135,16 @@ def render_set_pieces(players, sel, badges):
         return
     # Default order: first-choice penalty takers first (order 1 → top), then most-owned within.
     rows = sorted(rows, key=lambda p: (p.get("penalties_order") or 99, -(p.get("selected_by") or 0)))
+    # US-376: headers read as **order** (a rank, 1 = first-choice), not counts — a tester read "Corners 4" as
+    # "4 corners". The values are the FPL priority ints.
     _board(rows, {
-        "Pen": lambda r: r.get("penalties_order"), "Corners": lambda r: r.get("corners_order"),
-        "FK": lambda r: r.get("freekicks_order"),
+        "Pen order": lambda r: r.get("penalties_order"), "Corner order": lambda r: r.get("corners_order"),
+        "FK order": lambda r: r.get("freekicks_order"),
         "Own%": lambda r: r.get("selected_by"), "Val/£m": lambda r: r.get("value")},
         badges, key="stats_setpiece",
-        col_help={"Pen": "Penalty order — 1 = first-choice taker (blank = not on penalties).",
-                  "Corners": "Corner / indirect free-kick order — 1 = first-choice.",
-                  "FK": "Direct (shooting) free-kick order — 1 = first-choice.",
+        col_help={"Pen order": "Penalty taking order — 1 = first-choice (2 = second, …); blank = not on pens.",
+                  "Corner order": "Corner / indirect free-kick order — 1 = first-choice. Not a count of corners.",
+                  "FK order": "Direct (shooting) free-kick order — 1 = first-choice. Not a count.",
                   "Own%": "% of managers who own this player. Low + set-piece duty = a differential.",
                   "Val/£m": "Points per £1m of price — season value."},
         flag=_fit_lookup(players))
