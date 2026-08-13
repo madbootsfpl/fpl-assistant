@@ -83,8 +83,38 @@ One feature/idea per short (30–45s for Reels/TikTok/Shorts); each ends on the 
 | B | **Master AI Tips & Transfers** | The whole gameweek plan in seconds + ranking transfers by XI improvement; Apply-this-plan. Edge/Risk/Confidence on show. | planned |
 | C | **Ask Anything** *(natural language)* | Type plain-English questions → routed + **data-verified** (vs clearly-labelled general guidance). Shows the ✓/⚠. | planned |
 | D | **Finding Differentials** 💎 | *Educational + trust.* Low-owned + set-piece/xGI → a differential edge; Radar + the ownership steer. (Searchable topic.) | planned |
-| E | **Understanding xP & Confidence** | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). | planned |
+| E | **Understanding xP & Confidence** | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). | **drafted (§4)** |
 | F | **Boot Battle** ⚔️ *(candidate — Claude's add)* | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | candidate |
 
 **Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C → D → E (the educational two anchor
 the brand and age well). Draft each here before producing.
+
+---
+
+## 4 · Understanding xP & Confidence — short (~55s)  *(status: drafted 2026-08-13 — the moat/educational piece)*
+
+> **[0:00 – Hook]** Fantasy Premier League comes down to points — but the points haven't happened yet. So how do you
+> choose between two players?
+>
+> **[0:09 – xP]** That's **Expected Points — xP**: MADBOOTS's honest projection of how many points a player is
+> *likely* to score, built from the real numbers — minutes, chances created, fixtures, form. One number, so you can
+> compare anyone at a glance. *(UI: the player card's xP chip + the per-GW row.)*
+>
+> **[0:26 – Confidence]** But a number alone can mislead. So every pick comes with a **Confidence** score — how
+> strongly the data actually backs it — plus the **Edge** for it, and the **Risk** against. *(UI: the
+> Confidence · Edge · Risk block.)*
+>
+> **[0:40 – The honesty]** And here's the difference: it's a heuristic, not a crystal ball. A "Medium" means a
+> *lean, not a lock* — and the ⚠ risk is right there. Every figure traces back to the data, with a ✓ when it's
+> verified. No paid black box. No guessing.
+>
+> **[0:53 – Close + CTA]** Expected Points you can actually trust. **The analytics decide. The AI explains. You make
+> the call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Accuracy anchors (all true to the app):** xP = one honest number from `decision_xp` (minutes-weighted · xGI ·
+fixtures · form), ADR-041's one-xP-metric. Confidence · Edge · Risk = the explainability block (ADR-089) — a
+**heuristic, not a probability** (the honest framing). "Traces to the data · ✓" = the grounding check (ADR-037). "No
+paid black box" = the real position (no bought Opta; analytics decide, not an LLM guessing).
+
+**Creative note:** the differentiator is **selling the uncertainty as a feature** — "a lean, not a lock, and here's
+the risk." Everyone else projects false certainty; the honest confidence score is the heart of the brand.
