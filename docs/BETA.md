@@ -186,7 +186,7 @@ turned away. Turn on the **waitlist** to **record their email** so you can invit
    ```sql
    create table if not exists beta_waitlist (
      email       text primary key,
-     reason      text,                                   -- 'full' (over the cap) | 'bad_code' (wrong invite code)
+     reason      text,               -- 'not_listed' (Google sign-in not on the allow-list) | 'full' (over the cap) | 'bad_code' (wrong invite code)
      created_at  timestamptz not null default now()
    );
    alter table beta_waitlist enable row level security;
@@ -194,9 +194,13 @@ turned away. Turn on the **waitlist** to **record their email** so you can invit
    create policy "anon waitlist write" on beta_waitlist for insert with check (true);
    ```
    *(Insert-only for the anon key — the app **writes** but never reads it back; you read it in the dashboard. Or
-   `alter table beta_waitlist disable row level security;` — the same anon-open write, one line.)*
-2. **It's automatic** once the table exists + `FPL_USER_CAP` is set: an over-cap or wrong-code attempt lands a row
-   (best-effort — a store hiccup never blocks the gate). **No table → no write** (the capture is simply skipped).
+   `alter table beta_waitlist disable row level security;` — the same anon-open write, one line. Insert-only is
+   enough: a new email always inserts; a same-email retry is harmlessly skipped since it's already captured.)*
+2. **It's automatic once the table exists.** With **Google auth** (`[auth]`, ADR-106), a signed-in email **not** on
+   `beta_users` lands a row with **`reason='not_listed'`** — the table existing is the only requirement (no
+   `FPL_USER_CAP` needed). With the older code-gate + `FPL_USER_CAP`, an over-cap or wrong-code attempt records
+   `'full'`/`'bad_code'`. Best-effort either way — a store hiccup never blocks the gate; **no table → no write** (the
+   capture is silently skipped, which is why an absent table means nothing is stored).
 3. **Invite from it:** Supabase → **Table editor → beta_waitlist**. `reason='full'` = wanted in but the cap was full;
    `reason='bad_code'` = mistyped the code (could be a typo or a random). Free a seat (delete a `beta_users` row or
    raise `FPL_USER_CAP`), send them the code, then **delete the waitlist row**.
