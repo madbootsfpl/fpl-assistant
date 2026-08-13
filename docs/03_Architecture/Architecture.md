@@ -464,6 +464,17 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 156 (2026-08-13)** — *Case-insensitive beta allow-list* (bugfix, US-381). A tester added to `beta_users`
+  as `Colinbermingham@live.ie` (capital C) was **waitlisted** when signing in as the lower-cased
+  `colinbermingham@live.ie`: `user_store.is_registered` filtered with a PostgREST **`eq.`** (case-*sensitive*) while
+  `clean_email` lower-cases the incoming email → a hand-typed uppercase entry never matched. Fix: `is_registered`
+  **fetches the list and compares normalised on both sides** (`clean_email` lower-cases + trims), so capitalisation
+  and stray spaces in a manual entry no longer matter. Cheap — the gate caches the admit (`_OK`), so it runs once per
+  session. `register()` already lower-cases on insert (app-added emails were fine; only manual entries hit this).
+  +1 test; BETA.md note (986→987). *(Also this session, no feature code: **waitlist capture fixed** — `beta_waitlist`
+  RLS with only an insert policy blocked the app's UPSERT (`42501`), so writes silently dropped; owner disabled RLS,
+  verified capturing; BETA.md §4a corrected. And a **store email/PII hardening** item filed — the publishable-key +
+  open-RLS model lets the client key read the store's emails; owner steer: review pre-public-launch.)*
 - **Sprint 155 (2026-08-13)** — *Boot Battle compare-pool selector* (extends **ADR-110**/**ADR-111**; display-only).
   From 2026-08-13 PM testing on the well-received Boot Battle: the My Squad ⚙ panel's ⚔️ Boot Battle gains a **"pool"**
   segmented control — **My team** (owned, default) · **All** (same-position, whole pool) · **By club** (a Club picker

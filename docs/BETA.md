@@ -171,6 +171,8 @@ the cross-device-squads Supabase (§ `docs/CLOUD_SQUADS.md`) — **no new store 
 3. **Run it:** raise the cap (`20`, `50`…) as performance holds — one edit. **See / manage testers** in Supabase
    → **Table editor → beta_users** (each row = a tester's email; **delete a row to free a seat**). At the cap,
    new visitors are pointed to `FPL_SIGNUP_URL` as the waitlist.
+   > **Capitalisation & spaces don't matter** (US-381): the allow-list is matched **case-insensitively** and
+   > space-trimmed, so `Colin@Live.ie` admits `colin@live.ie`. (You can still add emails lowercased for tidiness.)
 
 > **Soft, by design.** A determined person could type a fake or a second email; that's fine for a hobby beta
 > gating public FPL data — you're *counting + knowing*, not securing. Hard per-user identity (Google `st.login()`)
