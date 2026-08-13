@@ -378,18 +378,33 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # expander + the stranded Captain-tab set control). Native selectbox+button → it works on phone/tablet, and
     # gives mobile the full card the desktop-only hover popover never could. Reuses the card renderer +
     # `set_captain` + `substitute` — no analytics change.
-    from src.web_streamlit.player_card import render_player_card
+    from src.web_streamlit.player_card import render_player_card, render_player_compare
     st.subheader("⚙ Player actions")
-    st.caption("Pick a player → view their card, make them captain, or substitute. "
+    st.caption("Pick a player → view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
                "Works on phone too (the pitch hover is desktop-only).")
     owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
     picked = owned_by_label.get(st.selectbox("Select a player", ["—", *owned_by_label], key="pa_pick",
                                              help="Or hover a shirt on the pitch (desktop only)."))
     if picked:
         short = picked["team"]
-        render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
-                           fixtures=fixtures_by_id.get(picked["id"]),       # ADR-109 per-GW row (no Total col)
-                           projected_xp=xp_by_id.get(picked["id"]))
+        # ⚔️ Boot Battle (US-377, ADR-110/111) — compare the selected player with another **same-position** squad
+        # player, side by side (winner-tinted). Reuses `render_player_compare` + the panel's fixtures/xp.
+        bb_by_label = {f"{p['web_name']} · {p['team']}": p
+                       for p in sorted((q for q in owned if q["position"] == picked["position"]
+                                        and q["id"] != picked["id"]), key=lambda q: q["web_name"] or "")}
+        bb = bb_by_label.get(st.selectbox("⚔️ Boot Battle — compare with…", ["—", *bb_by_label], key="pa_boot",
+                                          help="Type to search a same-position squad player to compare side by side."))
+        if bb:
+            cshort = bb["team"]
+            render_player_compare(
+                picked, bb, a_team=team_names.get(short, short), b_team=team_names.get(cshort, cshort),
+                a_photo=photos.get(picked["id"]), b_photo=photos.get(bb["id"]),
+                a_fixtures=fixtures_by_id.get(picked["id"]), b_fixtures=fixtures_by_id.get(bb["id"]),
+                a_xp=xp_by_id.get(picked["id"]), b_xp=xp_by_id.get(bb["id"]))
+        else:
+            render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
+                               fixtures=fixtures_by_id.get(picked["id"]),       # ADR-109 per-GW row (no Total col)
+                               projected_xp=xp_by_id.get(picked["id"]))
         # 👑 Make captain — moved onto the pitch view (was stranded in the Captain sub-tab). One click; ×2 next GW.
         if picked["id"] == captain_id:
             st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")

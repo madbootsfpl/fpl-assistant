@@ -327,7 +327,7 @@ def render_card(rows, sel, teams, photos, badges):
     same_pos = sorted((p for p in rows if p["position"] == player["position"] and p["id"] != player["id"]),
                       key=lambda p: p["web_name"] or "")
     cmp_by_label = {f"{p['web_name']} · {p['team']}": p for p in same_pos}
-    cmp = cmp_by_label.get(st.selectbox("🔍 Compare with (same position)", ["—", *cmp_by_label],
+    cmp = cmp_by_label.get(st.selectbox("⚔️ Boot Battle — compare with (same position)", ["—", *cmp_by_label],
                                         help="Type to search a same-position player to compare side by side."))
 
     short = player["team"]

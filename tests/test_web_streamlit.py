@@ -91,13 +91,13 @@ def test_players_card_view_renders_a_player_card():
 
 
 def test_players_card_view_compares_two_players():
-    # US-370 (ADR-110): the Card view's 🔍 "Compare with (same position)" picker → the two-player comparison card.
+    # US-370 (ADR-110) / US-377 (ADR-111): the Card view's ⚔️ "Boot Battle — compare with" picker → the comparison.
     at = _run(_PAGES / "1_Players.py")
     if not at.dataframe:
         return                                                 # no data → nothing to compare
     at.segmented_control[0].set_value("Card").run()
     assert not at.exception
-    cmp = next((s for s in at.selectbox if s.label and "Compare with" in s.label), None)
+    cmp = next((s for s in at.selectbox if s.label and "Boot Battle" in s.label), None)
     assert cmp is not None                                     # the compare picker exists
     if len(cmp.options) <= 1:
         return                                                 # only "—" (no same-position peer) → nothing to compare
@@ -1701,6 +1701,39 @@ def test_my_squad_per_gw_card_is_horizon_independent():
 
     v1, v5 = pergw(1), pergw(5)
     assert len(v1) == 3 and v1 == v5                 # 3 GWs, identical regardless of "Gameweeks ahead"
+
+
+def test_my_squad_panel_boot_battle_compares_squad_players():
+    # US-377 (ADR-111): the ⚙ panel's ⚔️ Boot Battle picker compares the selected player with another same-position
+    # squad player → the compare card (in place of the single card).
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
+    squad = {"name": "BootTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    next(s for s in at.selectbox if s.label == "Select a player") \
+        .set_value(f"{mids[0]['web_name']} · {mids[0]['team']}").run()
+    bb = next((s for s in at.selectbox if s.label and "Boot Battle" in s.label), None)
+    assert bb is not None and len(bb.options) > 1              # the picker + same-position squad peers
+    bb.set_value(f"{mids[1]['web_name']} · {mids[1]['team']}").run()
+    assert not at.exception
+    blob = " ".join(m.value for m in at.markdown)
+    assert "cmp-card" in blob and "Boot Battle" in blob        # the compare card (with its brand band) rendered
 
 
 def test_default_horizon_my_squad_1_squad_lab_5():
