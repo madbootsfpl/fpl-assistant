@@ -83,6 +83,14 @@ def test_help_save_step_reflects_auth_live_persistence():
     assert "⚔️ Boot Battle" in blob                                          # US-378: the compare feature named
 
 
+def test_help_explainer_glossary_renders():
+    # US-379 (ADR-111): the MadBoots Explainer — one glossary expander with category subheaders + key terms.
+    at = _run(_PAGES / "8_Help.py")
+    blob = " ".join(m.value for m in at.markdown)
+    assert "FPL basics" in blob and "Squad decisions" in blob and "MadBoots tools" in blob   # category headers
+    assert "xP — Expected Points" in blob and "Boot Battle ⚔️" in blob and "Radar 🎯" in blob  # reconciled terms
+
+
 def test_players_card_view_renders_a_player_card():
     # US-343 (ADR-084): the "Card" view → a player selectbox → the self-contained player-card HTML block
     at = _run(_PAGES / "1_Players.py")

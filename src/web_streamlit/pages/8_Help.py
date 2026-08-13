@@ -159,6 +159,78 @@ with st.expander("8 · Tell us what you think  →  the **📣 Feedback** tab"):
         "- Prefer **🐙 GitHub**? You can still open an issue."
     )
 
+with st.expander("9 · MadBoots Explainer  →  a plain-English glossary"):
+    # ADR-111: one expander with category subheaders — everything visible so Ctrl-F finds any term (Streamlit
+    # expanders can't nest). The terms are reconciled to the app's real meanings.
+    st.caption("A plain-English guide to the terms, stats and tools in MADBOOTS. Use your browser's find (⌘/Ctrl-F) "
+               "to jump to a term.")
+    st.markdown(
+        "**⚽ FPL basics**\n"
+        "- **GW — Gameweek** — one round of Premier League fixtures.\n"
+        "- **Squad** — your 15 players: 2 GK · 5 DEF · 5 MID · 3 FWD.\n"
+        "- **XI** — the 11 who start your gameweek.\n"
+        "- **Bench** — your four substitutes.\n"
+        "- **Captain (C)** — scores double points.\n"
+        "- **Vice-Captain (VC)** — takes over if your captain doesn't play.\n"
+        "- **Ownership** — the % of FPL teams that own a player.\n"
+        "- **Differential 💎** — a relatively low-owned player.\n"
+        "- **Essential 👑** — a highly-owned or strongly-recommended player.\n"
+    )
+    st.markdown(
+        "**📊 Stats & analytics**\n"
+        "- **xP — Expected Points** — MADBOOTS' projection of a player's FPL points.\n"
+        "- **xG — Expected Goals** — the quality + quantity of a player's goal-scoring chances.\n"
+        "- **xA — Expected Assists** — the chances they create for teammates.\n"
+        "- **xGI — Expected Goal Involvement** — xG + xA.\n"
+        "- **Value/£m** — expected output relative to price.\n"
+        "- **Form** — recent FPL performance.\n"
+        "- **Defensive Contribution** — defensive actions that earn extra FPL points.\n"
+        "- **Clean Sheet** — the team concedes no goals while the player is on the pitch.\n"
+        "- **Projected xP** — expected points for a future gameweek (or group of gameweeks).\n"
+        "- **Over/Under-performance** — actual output vs what the underlying numbers suggest.\n"
+    )
+    st.markdown(
+        "**🎯 MadBoots tools & ratings**\n"
+        "- **Confidence** — how strongly the data supports a recommendation (a heuristic, not a probability).\n"
+        "- **Edge ✓** — the factors *supporting* a recommendation.\n"
+        "- **Risk ⚠** — the factors that could work *against* it.\n"
+        "- **Quality Rating 🟢🔴** — a *relative* ranking against the players currently shown; it changes as you "
+        "filter, the underlying number doesn't.\n"
+        "- **Fixture Difficulty** — how favourable a team's upcoming fixtures are.\n"
+        "- **Radar 🎯** — finds players from teams with favourable upcoming fixture runs.\n"
+        "- **Boot Battle ⚔️** — compares two same-position players side by side, the better stat highlighted "
+        "(from any Player Card, on Players and My Squad).\n"
+    )
+    st.markdown(
+        "**🔄 Squad decisions**\n"
+        "- **Transfer** — replaces a player in your squad with another.\n"
+        "- **Substitute** — changes your starting XI using a player already on your bench.\n"
+        "- **Bank** — money available to spend on transfers.\n"
+        "- **Legal XI** — a starting XI that satisfies the FPL formation rules.\n"
+        "- **Wildcard** — unlimited transfers for a gameweek with no hits.\n"
+        "- **Free Hit** — a one-gameweek squad change that reverts afterwards.\n"
+        "- **Bench Boost** — all 15 players score that gameweek.\n"
+        "- **Triple Captain** — your captain scores triple, not double.\n"
+    )
+    st.markdown(
+        "**🧪 Squad Lab**\n"
+        "- **Archetype** — a selection preference: Cheap · Premium · Differential.\n"
+        "- **Objective** — what the optimiser maximises: xP · Points · Value · xGI.\n"
+        "- **Build mode** — **Balanced** (a balanced squad) · **Weekly** (a cheaper playing bench) · **Bench "
+        "Boost** (maximise all 15).\n"
+        "- **Declared bench** — tells the optimiser which four players to put on the bench.\n"
+    )
+    st.markdown(
+        "**🤖 AI & trust**\n"
+        "- **Grounded** — the answer is based on MADBOOTS' data, not an AI guess.\n"
+        "- **✓ Checked** — checked against the relevant data.\n"
+        "- **⚠ Caution** — contains uncertainty or something not fully data-verified.\n"
+        "- **Local AI** — MADBOOTS can use a *local* Ollama model to narrate the analytics (available when you run "
+        "it yourself). The AI explains the numbers; it doesn't decide them or make them up. The hosted app runs "
+        "**data-only** — you get the full plan and numbers without the written narration.\n\n"
+        "**The analytics decide. The AI explains. You make the call.**"
+    )
+
 st.divider()
 st.markdown(
     "#### Good to know\n"
