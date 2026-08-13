@@ -79,12 +79,12 @@ One feature/idea per short (30–45s for Reels/TikTok/Shorts); each ends on the 
 
 | # | Title | Angle | Status |
 |---|-------|-------|--------|
-| A | **Build the Perfect Squad** *(Squad Lab)* | Budget · objective · archetypes · build modes → an optimised 15 in seconds; "Use this squad →". A wildcard/season-start hook. | planned |
-| B | **Master AI Tips & Transfers** | The whole gameweek plan in seconds + ranking transfers by XI improvement; Apply-this-plan. Edge/Risk/Confidence on show. | planned |
-| C | **Ask Anything** *(natural language)* | Type plain-English questions → routed + **data-verified** (vs clearly-labelled general guidance). Shows the ✓/⚠. | planned |
+| A | **Build the Perfect Squad** *(Squad Lab)* | Budget · objective · archetypes · build modes → an optimised 15 in seconds; "Use this squad →". A wildcard/season-start hook. | **drafted (§6)** |
+| B | **Master AI Tips & Transfers** | The whole gameweek plan in seconds + ranking transfers by XI improvement; Apply-this-plan. Edge/Risk/Confidence on show. | **drafted (§7)** |
+| C | **Ask Anything** *(natural language)* | Type plain-English questions → routed + **data-verified** (vs clearly-labelled general guidance). Shows the ✓/⚠. | **drafted (§8)** |
 | D | **Finding Differentials** 💎 | *Educational + trust.* Low-owned + set-piece/xGI → a differential edge; Radar + the ownership steer. (Searchable topic.) | **drafted (§5)** |
 | E | **Understanding xP & Confidence** | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). | **drafted (§4)** |
-| F | **Boot Battle** ⚔️ *(candidate — Claude's add)* | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | candidate |
+| F | **Boot Battle** ⚔️ *(candidate — Claude's add)* | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
 
 **Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C → D → E (the educational two anchor
 the brand and age well). Draft each here before producing.
@@ -147,3 +147,85 @@ examples. The honesty hook (*"low-owned **and** good"*) holds because crowd/owne
 `decision_xp` (the invariance rule) — a MADBOOTS differential is one the grounded xP supports.
 
 **Pairing:** §4 (xP & Confidence) teaches *"trust the number"*; §5 shows *"use it to win"* — a one-two.
+
+---
+
+## 6 · Build the Perfect Squad — short (~50s)  *(status: drafted 2026-08-13; Squad Lab)*
+
+> **[0:00 – Hook]** New season? Wildcard burning a hole? Fitting 15 players under budget is a puzzle — MADBOOTS solves
+> it in seconds.
+>
+> **[0:10 – Controls]** Open **Squad Lab**. Set your budget, pick what to optimise for — **expected points, value, or
+> goal threat** — add a strategy (cheap enablers, premium-heavy, or differentials), and lock in your must-haves.
+> *(UI: the Squad Lab controls.)*
+>
+> **[0:28 – Build]** Hit build, and MADBOOTS returns your **optimal 15** — the best squad your money can buy, every
+> position filled.
+>
+> **[0:38 – Use it]** Love it? **Use this squad →** and it's your active team. Or download it as a backup.
+>
+> **[0:48 – Close + CTA]** Your perfect squad, built on the data. **The analytics decide. The AI explains. You make
+> the call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Accuracy anchors:** the ILP optimiser (ADR-008); the **objective** toggle xP/Points/Value/xGI (ADR-011);
+**archetypes** cheap/premium/differential; include/exclude must-haves (ADR-009); **build modes**
+(Balanced/Weekly/Bench Boost); **Use this squad →** + Download.
+
+---
+
+## 7 · Master AI Tips & Transfers — short (~50s)  *(status: drafted 2026-08-13)*
+
+> **[0:00 – Hook]** Every gameweek, the same questions: who to captain, who to bring in, who to bench. **AI Tips**
+> answers all of them — in seconds.
+>
+> **[0:10 – The plan]** One tap gives your full gameweek plan: **who to captain**, any **lineup change**, the **one
+> transfer** worth making, and the **injuries** to watch — each with the **Edge** for it and the **Risk** against,
+> all checked against the data. *(UI: the AI-Tips plan block.)*
+>
+> **[0:30 – Transfers]** Going further? MADBOOTS ranks every transfer by how much it **improves your starting XI** —
+> set your bank, get a coordinated two- or three-move plan, and **apply it in one tap**.
+>
+> **[0:45 – Close + CTA]** Your sharpest gameweek, sorted. **The analytics decide. The AI explains. You make the
+> call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Accuracy anchors:** the gameweek plan (ADR-070); Edge · Risk · Confidence (ADR-089) + ✓/⚠ grounding (ADR-037);
+transfers ranked by **XI improvement**, the bank slider, a coordinated 2–3 plan + **Apply this plan →** (ADR-055/046).
+
+---
+
+## 8 · Ask Anything — short (~45s)  *(status: drafted 2026-08-13)*
+
+> **[0:00 – Hook]** Don't want to click through menus? Just **ask** — in plain English.
+>
+> **[0:10 – Examples]** *"Who should I captain?" … "Best differential midfielders under £8m." … "Build me a squad
+> with three differentials." … "How does Bench Boost work?"* MADBOOTS understands, and routes each question to the
+> right place. *(UI: the Ask box + a grounded answer.)*
+>
+> **[0:28 – The trust twist]** And here's what matters: it tells you when an answer is **data-verified** — checked
+> against the numbers — versus general football guidance. No pretending. You always know what to trust.
+>
+> **[0:42 – Close + CTA]** Just ask. **The analytics decide. The AI explains. You make the call.** Try MADBOOTS
+> **free** at **madboots.com**.
+
+**Accuracy anchors:** intent routing (ADR-034); grounded answers with the ✓/⚠ trust line (ADR-037); the honest third
+state — general tactics **clearly labelled "not checked against your data"** (ADR-085). All four example queries are
+real (from Help §6). Works **data-only** on the live app (routing + verification + facts, no prose needed).
+
+---
+
+## 9 · Boot Battle ⚔️ — short (~40s)  *(status: drafted 2026-08-13; the most visual/shareable)*
+
+> **[0:00 – Hook]** Two players, one spot — who gets in? Settle it with a **Boot Battle**.
+>
+> **[0:08 – What]** Pick any player, choose a rival in the same position, and MADBOOTS puts them **head-to-head** —
+> points, goals, expected points, form, fixtures — highlighting the winner, stat by stat. *(UI: the two-player
+> compare card, winners tinted teal.)*
+>
+> **[0:24 – Where]** Compare anyone — your own squad, the whole league, or a specific club — right from any player
+> card.
+>
+> **[0:32 – Close + CTA]** Stop guessing. Let the stats fight it out. **The analytics decide. The AI explains. You
+> make the call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Accuracy anchors:** the same-position compare card (ADR-110), winner-tinted per stat (`_BETTER` direction map),
+from any Player Card on **Players + My Squad**; the **pool selector** My team / All / By club (ADR-111, US-380).
