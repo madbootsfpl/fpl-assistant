@@ -464,6 +464,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 153 (2026-08-13)** — *P1 quick-wins (2026-08-13 intake)* (no ADR; display/config only). Four small fixes.
+  **US-373** Home tidy-up (owner copy): tagline → *"…The analytics decide; you stay in control."*; "Explore the
+  sidebar" short lines; "Your squad" bullets reflecting **auth/auto-sync (live)**; internal ADR refs + the dev
+  `refresh` line stripped from user copy. **US-374** default horizon — **My Squad 5 → 1 GW** (manage this week),
+  **Squad Lab stays 5** (build for the run); safe now the per-GW card is horizon-independent (S152). **US-375** the
+  dev-only *"Start Ollama…"* hint — `render_ask` gains **`ollama_hint`** (default True for the CLI); the web edges
+  (`render_ai_tips`/`render_chips`/Ask + the FastAPI reference) pass **False**, so deployed users aren't told to start
+  a **local-only** Ollama (no cloud LLM exists) — the full plan/facts/✓⚠ still render. **US-376** Set-pieces headers →
+  **"Pen order · Corner order · FK order"** (+ "1 = first-choice, not a count" tooltips) so a rank isn't misread as a
+  count. **Two tester "issues" were questions, not bugs** (Ollama local-only; set-piece numbers are *order*), each
+  closed with a UX-clarity fix. Community Signals: **keep r/FantasyPL** (owner steer — r/madbootsfpl has no volume
+  yet). No analytics change (982→983); a changed default surfaced two pre-existing tests hard-coding 5 (both fixed).
 - **Sprint 152 (2026-08-12)** — *Wave-3 polish: Boot Battle band + static GW1–3* (extends **ADR-110**/**ADR-109**, no
   new ADR; display-only). Two tester tweaks on just-shipped features. **US-371:** `compare_card_html` gains the
   MADBOOTS brand band (the shared `brand.mark_html()` + `.plc-band`, like the single card, ADR-355), titled **"Boot

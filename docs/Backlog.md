@@ -39,7 +39,8 @@ live app has **no cloud LLM**, so deployed users get the full data-driven plan +
 ORDER** (1 = first-choice), not counts — Szoboszlai "Corners 4" = *4th-choice* corner taker, not 4 corners; the data
 is correct (tooltips/caption already say so), the bare header can be misread (→ P1 clarity).
 
-**P1 — quick wins / clear fixes**
+**P1 — quick wins / clear fixes** — ✅ **ALL SHIPPED (Sprint 153, 2026-08-13):** Home tidy-up · default horizon
+(My Squad 1 GW / Squad Lab 5 GW) · Ollama prompt hidden for web users · Set-pieces headers read as *order*.
 - 🩹 **Home tidy-up** *(copy; owner supplied the rewrite)* — tagline → *"Fantasy Football, Calculated. The analytics
   decide; you stay in control."*; the sidebar list → shorter per-tab lines ("Explore the Sidebar"); the "Your squad"
   block → a bullet list reflecting **auth is live** (save to account · auto-sync across devices · upload/import ·
