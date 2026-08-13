@@ -19,6 +19,79 @@ nice-to-haves and tech-debt.)*
 4. **Persistence + Google auth** (C-cluster) — the strategic rework, on the final domain.
 5. Branding vocabulary (E) · per-GW display (A5) · A6 consolidation · docs refresh (D).
 
+## ✅ Shipped since 2026-08-12 (roll-up — owner asked to "update the backlog")
+
+The whole **2026-08-12 intake (both waves) + wave-3 polish** is shipped + deployed (Sprints 141–152 · 982 tests · 110
+ADRs):
+- Quick wins: homepage copy · Squad Lab **🧪** icon · Transfer team/price filters · captain-persist · cold-start xP
+  floor (ADR-104).
+- **Google auth LIVE** (ADR-106) — sign-in + per-user cross-device persistence.
+- **IA split** — My Squad / **🧪 Squad Lab** (ADR-105). **MADBOOTS vocabulary** — Edge · Risk · **🎯 Radar** (ADR-107).
+- **Player-actions panel** — one selection → card + 👑 captain + 🔁 substitute (ADR-108; tap-the-pitch JS deferred).
+- **Per-GW card** — xP over fixture, GW1–3, horizon-independent (ADR-109 / S152).
+- **Compare two players** — same-position, winner-tinted, "Boot Battle" band (ADR-110 / S151–152).
+
+## Tester feedback — 2026-08-13 intake
+
+Triaged (P0 · P1 · P2). **Two tester questions answered (not bugs):** (a) **Ollama** narration is *local-only* — the
+live app has **no cloud LLM**, so deployed users get the full data-driven plan + ✓/⚠ but no prose paragraph; the
+"Start Ollama…" prompt is a dev affordance that shouldn't show to users (→ P1). (b) **Set-piece numbers are the taking
+ORDER** (1 = first-choice), not counts — Szoboszlai "Corners 4" = *4th-choice* corner taker, not 4 corners; the data
+is correct (tooltips/caption already say so), the bare header can be misread (→ P1 clarity).
+
+**P1 — quick wins / clear fixes**
+- 🩹 **Home tidy-up** *(copy; owner supplied the rewrite)* — tagline → *"Fantasy Football, Calculated. The analytics
+  decide; you stay in control."*; the sidebar list → shorter per-tab lines ("Explore the Sidebar"); the "Your squad"
+  block → a bullet list reflecting **auth is live** (save to account · auto-sync across devices · upload/import ·
+  manager-ID from GW1). Drop internal ADR refs from user copy. *(Home.py.)*
+- 🩹 **Default horizon** — **My Squad → 1 GW**, **Squad Lab → 5 GW** (both default 5 today) — two
+  `st.segmented_control` defaults. *(Safe now the per-GW card is horizon-independent, S152.)*
+- 🩹 **Ollama prompt** — hide/reword *"(Start Ollama for a written summary.)"* (`src/ui/ask.py:32/28`) so a deployed
+  user isn't told to start something they can't; keep it only where a local Ollama is a real option. *(See the P2
+  cloud-LLM decision.)*
+- 🩹 **Set-piece label clarity** — `Pen · Corners · FK` are **order/priority** (1 = first). Make the header say so
+  (e.g. `Pen order` / a "(1 = first)" suffix) so "Corners 4" isn't misread as a count. *(views/players.py:138-145;
+  data is correct.)*
+
+**P1/P2 — needs a gate/decision**
+- ✅ **Community Signals source → r/madbootsfpl** — **DECIDED (owner, 2026-08-13): keep r/FantasyPL for now.**
+  r/madbootsfpl is new/near-empty, so switching `REDDIT_SUBREDDIT` (config.py:50) would make Community Signals show
+  ~nothing (it counts a *busy* sub's posts). Revisit / add r/madbootsfpl as a secondary once it has real volume (then
+  also update the hardcoded "r/FantasyPL" labels, community.py:71-72). **No change now.**
+- 🧭 **Boot Battle compare *from the card*** *(the deferred ⚙-panel follow-on, now requested)* — the Help draft assumes
+  you can **⚔️ Boot Battle** (compare) directly from a player's card on **My Squad**, not just the Players Card view.
+  Add "compare with…" to the ⚙ Player-actions panel (pool = owned 15) + a ⚔️ affordance on the card. Reuses
+  `compare_card_html` (ADR-110). Small feature.
+- 🧭 **Cloud AI narration** *(strategic)* — should the *live* app narrate (a cloud LLM, e.g. Anthropic API — a cost + a
+  small build), or stay **data-only** (free, honest) and just hide the Ollama prompt? Ties to the P1 Ollama fix.
+  **Owner decision.**
+
+**P2 — later / for discussion (admin, as users grow)**
+- 🧭 **Admin — usage-over-time graph** — a performance/usage history chart on the Admin page (analytics already log
+  `session_started`/events; needs a time-series read + a chart). "For discussion."
+- 🧭 **Admin — logins over time** — a count/trend of logins (sessions); pairs with the graph above.
+
+**Not a bug / already built (verified 2026-08-13)**
+- **Manager-ID import is fully built** (`src/manager.py`, the Squads-sidebar control, Home copy) — **GW1-gated**: a
+  team's picks aren't public until the **GW1 deadline (2026-08-21)**, so pre-GW1 it shows "isn't public yet"
+  (expected). The Help copy referencing it is accurate.
+
+## Help revamp — its own workstream (owner-supplied full rewrite, 2026-08-13)
+
+A comprehensive Help-page rewrite (owner drafted the copy). Scope + shape:
+- **Structure:** intro + trust line + **Quick start** (5 steps) + a "Your squad" block + a deadline note, then **8
+  expanders** (Build · My Squad · Health · Plan/AI-Tips · Research · Ask · Save/Import · Feedback) + a **new 9th —
+  "MadBoots Explainer"**: a plain-English glossary (FPL basics · stats · ratings · squad decisions · Squad Lab · AI &
+  trust). The glossary is long → owner suggests a nested/sub-expander structure.
+- **Owner guidance:** *keep the existing (standard-set) icons — they override any icons in the draft; open to pushback
+  on any change.*
+- **Reconcile against the live app while building:** the draft names features by their brand terms — **Boot Battle**
+  (compare — see the *from-the-card* item above), **🎯 Radar**, **Edge/Risk**, auth/auto-sync (live). Fix any drift
+  (must **not** re-introduce "nothing saved server-side" — auth persistence is live). Manager-ID import copy is
+  accurate.
+- **Approach:** a **focused sprint of its own**, gated with a light ADR (a big content + IA change to a key page) + a
+  preview for sign-off. The Explainer/glossary may warrant a small reusable structure.
+
 ## Tester feedback — 2026-08-12 intake
 
 Triaged with priority (P0 now · P1 gate/soon · P2 polish). *(Some referenced screenshots didn't arrive — the FFH
