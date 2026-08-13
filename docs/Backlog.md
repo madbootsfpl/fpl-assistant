@@ -103,6 +103,24 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
   team's picks aren't public until the **GW1 deadline (2026-08-21)**, so pre-GW1 it shows "isn't public yet"
   (expected). The Help copy referencing it is accurate.
 
+## Security & pre-launch hardening
+
+- 🧭 **Supabase store — email/PII exposure via the publishable key** *(pre-public-launch; NOT a beta blocker; owner
+  steer 2026-08-13: leave as-is, review later)*. The store runs on the **"publishable key + open access"** model, and
+  the publishable key (`sb_publishable_…`) is **embedded in the client app** — so with the current RLS posture the
+  store's **emails are readable by anyone who extracts that key**:
+  - **`beta_users`** — `select using (true)` → **allow-list emails readable**. The app checks the allow-list
+    **client-side** (`user_store.is_registered`, ADR-098), so it *needs* this read — closing it means moving the
+    allow-list check **server-side** (an RPC / edge function / a small server seam), a real re-architecture.
+  - **`beta_waitlist`** — **RLS disabled** (2026-08-13 — the app's upsert needed it) → readable/tamperable by the key.
+    *Cheap tightening available now (deferred by owner):* RLS **on, write-only** (insert + update, **no select**) — the
+    app only writes, so it loses nothing and closes the read. See `docs/BETA.md §4a` option (b).
+  - **`squads`** — handle-keyed, open by the key (low-sensitivity; no emails).
+  - **Impact:** low for a beta (tester emails, non-critical; the key is public *by design*, security is meant to be
+    RLS). **The proper pre-launch fix:** a **server-side seam** for the identity/allow-list writes+reads (so the
+    client key can't read PII), + write-only RLS everywhere the app only writes, + a review of `events`/`squads`.
+    Track alongside going-private / a paid host if a broad public launch happens.
+
 ## Help revamp — ✅ SHIPPED (Sprint 154, ADR-111, 2026-08-13)
 
 **Done:** the Help rewrite (8 sections + intro/quick-start/your-squad/deadline), reconciled against the live app (Save
