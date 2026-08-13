@@ -6,6 +6,10 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 
 - **Name:** always **MADBOOTS** (all-caps, one word). Never "MadBoots" / "Mad Boots".
 - **Throughline / sign-off:** *"The analytics decide. The AI explains. You make the call."*
+- **Presenter & voice** *(owner decision, 2026-08-13):* the **MADBOOTS avatar/mascot** (the badge/boots character —
+  *to be generated*), **not** an AI human — it stays on-brand and dodges the uncanny-valley that would undercut an
+  honesty brand. Voice: a **strong female** — calm, clear, authoritative (the *trusted analyst*, never FPL-bro hype).
+  Keep the **same avatar + voice + music across every video** — consistency is where the brand compounds.
 - **The moat is trust — lead with it.** Position *against* the "AI that guesses" / paid black-box crowd:
   **"Most FPL AI just guesses. MADBOOTS shows its working."** Every claim is checked against the data (✓/⚠).
 - **❌ Never mention Ollama / "run it locally".** The live app is **data-only**; naming a local dev tool confuses
