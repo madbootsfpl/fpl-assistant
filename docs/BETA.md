@@ -189,13 +189,21 @@ turned away. Turn on the **waitlist** to **record their email** so you can invit
      reason      text,               -- 'not_listed' (Google sign-in not on the allow-list) | 'full' (over the cap) | 'bad_code' (wrong invite code)
      created_at  timestamptz not null default now()
    );
-   alter table beta_waitlist enable row level security;
-   drop policy if exists "anon waitlist write" on beta_waitlist;
-   create policy "anon waitlist write" on beta_waitlist for insert with check (true);
+   alter table beta_waitlist disable row level security;   -- the app UPSERTS (merge-duplicates); simplest + reliable
    ```
-   *(Insert-only for the anon key — the app **writes** but never reads it back; you read it in the dashboard. Or
-   `alter table beta_waitlist disable row level security;` — the same anon-open write, one line. Insert-only is
-   enough: a new email always inserts; a same-email retry is harmlessly skipped since it's already captured.)*
+   ⚠️ **The app writes with an UPSERT** (`Prefer: resolution=merge-duplicates`, idempotent on retries) — so a plain
+   **insert-only** RLS policy is **not enough** (the upsert's conflict path needs an *update* policy too, else you get
+   `42501 "new row violates row-level security policy"` — a **silent** drop, since the write is fail-silent). Two
+   working options: **(a)** the one-liner above — **disable RLS** (consistent with the store: `beta_users` already has
+   an open read policy, so the publishable key can already read/write); or **(b)** keep RLS on with **both** policies:
+   ```sql
+   alter table beta_waitlist enable row level security;
+   drop policy if exists "anon waitlist write"  on beta_waitlist;
+   drop policy if exists "anon waitlist update" on beta_waitlist;
+   create policy "anon waitlist write"  on beta_waitlist for insert with check (true);
+   create policy "anon waitlist update" on beta_waitlist for update using (true) with check (true);
+   ```
+   *(The app **writes** but never reads the list back — you read it in the dashboard.)*
 2. **It's automatic once the table exists.** With **Google auth** (`[auth]`, ADR-106), a signed-in email **not** on
    `beta_users` lands a row with **`reason='not_listed'`** — the table existing is the only requirement (no
    `FPL_USER_CAP` needed). With the older code-gate + `FPL_USER_CAP`, an over-cap or wrong-code attempt records
