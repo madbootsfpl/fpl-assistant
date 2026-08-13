@@ -71,11 +71,16 @@ def test_trending_top_discussions_before_community_signals():
     assert top is not None and comm is not None and top < comm
 
 
-def test_help_save_step_mentions_cloud_save_load():
-    # US-345: the "Save your team" step points at ☁ Save/Load across devices (the sidebar option)
+def test_help_save_step_reflects_auth_live_persistence():
+    # US-378 (ADR-111): the Save section reflects auth-live persistence (account save + auto-sync + ☁ Save/Load),
+    # not the stale "per-session / no accounts / nothing saved on the server" copy.
     at = _run(_PAGES / "8_Help.py")
     blob = " ".join(m.value for m in at.markdown)
-    assert "☁ Save / Load across devices" in blob
+    caps = " ".join(c.value for c in at.caption)
+    assert "saved to your account" in blob and "Save / Load" in blob        # auth-live persistence
+    assert "nothing saved on the server" not in (blob + caps)               # the stale claim is gone
+    assert "no accounts" not in (blob + caps)
+    assert "⚔️ Boot Battle" in blob                                          # US-378: the compare feature named
 
 
 def test_players_card_view_renders_a_player_card():

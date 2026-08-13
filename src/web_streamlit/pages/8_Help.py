@@ -1,7 +1,7 @@
-"""Help — a step-by-step guide to building your team with the assistant (ADR-068).
+"""Help — a step-by-step guide to getting the most from MADBOOTS (ADR-068, revamped ADR-111).
 
 Static content only (markdown + expanders): no analytics/data dependency, so it renders even before a
-refresh, and no input controls. It complements Home (the short overview) with a deeper recipe.
+refresh, and no input controls. It complements Home (the short overview) with a deeper recipe + a glossary.
 """
 
 import streamlit as st
@@ -13,102 +13,113 @@ st.set_page_config(**brand.page_config("Help"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Help")
 st.title("🧭 Help")
-st.caption("A step-by-step recipe. The **analytics decide**; a local AI only *narrates* — and every "
-           "answer is checked against the data (a ✓/⚠ trust line). Your squad lives in **your session** — "
-           "download it to keep it (nothing is saved on the server).")
+st.caption("A step-by-step guide to getting the most from MADBOOTS. **The analytics decide; the AI only explains** — "
+           "and every answer is checked against the underlying data with a **✓/⚠** trust line.")
 
 st.markdown(
-    "**Quick start:** open **Squad Lab** → build → **Use this squad** → manage it in **My Squad** → get your "
-    "**AI Tips** for the week → check *Captain*, *Transfer* and *Health* → **Download** your `squad.json`. "
-    "Prefer words? Do it all from **Ask**."
+    "#### Quick start\n"
+    "1. **🧪 Squad Lab** → build your squad → **Use this squad**\n"
+    "2. **🧩 My Squad** → manage your team\n"
+    "3. **🤖 AI Tips** → get your gameweek plan\n"
+    "4. **👑 Captain · 🔄 Transfer · ❤️ Health** → review your decisions\n"
+    "5. **💾 Download** your `squad.json` backup\n\n"
+    "*Prefer words?* **💬 Ask** lets you do it all in plain English."
 )
 
-st.caption("Your team lives on the **My Squad** tab — switch **My Squad · AI Tips · Captain · Transfer · Chips · "
-           "Health** with the buttons at the top; **build a new one** in the **🧪 Squad Lab** tab. **Home** shows a "
-           "⏳ **live deadline clock** that ticks down and turns 🟠 then 🔴 as it nears — with a nudge to set your "
-           "captain, transfers and chip before it locks.")
+st.caption("Your team lives on the **🧩 My Squad** tab — switch **My Squad · AI Tips · Captain · Transfer · Chips · "
+           "Health** with the buttons at the top; build a new one anytime in **🧪 Squad Lab**. **🏠 Home** shows a "
+           "⏳ **live deadline clock** that turns 🟠 then 🔴 as it nears — a reminder to set your captain, transfers "
+           "and chips before the gameweek locks.")
 
 with st.expander("1 · Build your squad  →  **🧪 Squad Lab**", expanded=True):
     st.markdown(
-        "Pick a **budget** and shape the 15 with the options: **archetypes** (cheap / premium / "
-        "differential), **include / exclude** specific players, a **declared bench**, the **objective** "
-        "(xp / points / value / xgi), and a **build mode** (*Balanced*, *Weekly* = a cheap playing bench, "
-        "*Bench Boost* = maximise all 15). Every ⓘ explains a control.\n\n"
-        "When you like it: **Download** the `squad.json` (that file *is* your save) and/or **Use this "
-        "squad →** to make it this session's active squad."
+        "Build your 15 with:\n"
+        "- **Budget & shape** — spend to your budget across 2 GK · 5 DEF · 5 MID · 3 FWD.\n"
+        "- **Archetypes** — Cheap · Premium · Differential.\n"
+        "- **Players** — include or exclude specific players.\n"
+        "- **Bench** — declare your bench.\n"
+        "- **Objective** — xP · Points · Value · xGI.\n"
+        "- **Build mode** — Balanced · Weekly (a cheap playing bench) · Bench Boost (maximise all 15).\n"
+        "- **ⓘ** — every control has an explanation.\n\n"
+        "When you're happy: **Use this squad →** makes it your active squad, and/or **💾 Download** the `squad.json` "
+        "as a local backup."
     )
 
-with st.expander("2 · Make it yours  →  **My Squad**", expanded=True):
+with st.expander("2 · Make it yours  →  **🧩 My Squad**", expanded=True):
     st.markdown(
-        "Your active squad as a **green formation pitch** — kits laid out GK→FWD with a bench strip, each with "
-        "an xP chip, a **(C)** armband and sub-number badges. Below it, the **⚙ Player actions** panel is your "
-        "one-stop control: **pick a player** → their **rich player card** (photo · a **per-GW xP** row — each of the "
-        "next weeks' points over its fixture — · key "
-        "stats · **Trends** · **set-piece duty** ⚽ penalties · 🚩 corners · 🎯 free-kicks) and, in the same "
-        "place, **👑 make them captain** or **🔁 substitute** them (a *starter* → bring a bench player on; a "
-        "*bench* pick → bring them on for a starter — only *legal* swaps offered). **Works on phone too** — "
-        "hovering a shirt on the pitch is a desktop-only bonus; a player with no photo shows their **club "
-        "shirt**. The summary's **Projected XI** includes your **captain's ×2 — for the next gameweek only** "
-        "(captaincy is re-picked each week). Edit the squad too: "
-        "**rename**; **Transfer** in a new player (sell one, buy any same-position replacement — legality-checked, "
-        "filter by **position**, tick **Affordable only**, and it **flags an overspend live** as you pick; tick "
-        "**Include injured/suspended** to plan around a flagged player); or set the whole **bench** at once "
-        "(pick 4). *(**Substitute** = a lineup change; **Transfer** = a new player — they're separate.)* If "
-        "cross-device is enabled, **☁ Save/Load "
-        "across devices** by a handle is in the **sidebar** (under *Your squad*), on any My Squad sub-view. Every "
-        "change updates your session and the **Download**. New team? Build one in the **🧪 Squad Lab** tab."
+        "Your active squad on a **green formation pitch** — kits GK→FWD, a bench strip, xP chips, the **(C)** "
+        "armband and sub-number badges.\n\n"
+        "**Player actions** — the **⚙ panel** below the pitch (works on phone too):\n"
+        "- **🪪 Player Card** — select any player for their card: photo · a **per-GW xP** row (each of the next "
+        "weeks' points over its fixture) · key stats · **Trends** · **set-piece duties** (⚽ pens · 🚩 corners · "
+        "🎯 free-kicks).\n"
+        "- **⚔️ Boot Battle** — compare them side by side with another **same-position** squad player, the better "
+        "stat highlighted.\n"
+        "- **👑 Captain** — make them captain.\n"
+        "- **🔁 Substitute** — a legal lineup change (only valid swaps are offered).\n"
+        "- **Hover** a shirt on desktop for a quick preview; no photo → we show their **club shirt**.\n\n"
+        "**Edit your squad:**\n"
+        "- **✏️ Rename** your squad.\n"
+        "- **🔄 Transfer** — sell a player, buy a legal same-position replacement; filter by **position** or "
+        "**Affordable only**; an overspend is **flagged live**; tick **🚑 Include injured/suspended** to plan around "
+        "a flagged player.\n"
+        "- **🪑 Set bench** — choose all four bench players at once.\n\n"
+        "The summary's **Projected XI** includes your **captain's ×2 — for the next gameweek only** (captaincy is "
+        "re-picked each week). Your squad is **saved to your account and auto-synced across your devices** "
+        "(**☁ Save/Load** is also in the sidebar). *(**Substitute** = a lineup change; **Transfer** = a new player "
+        "— they're separate.)* Need a new squad? Head back to **🧪 Squad Lab**."
     )
 
-with st.expander("3 · Check its health  →  **My Squad → Health**"):
+with st.expander("3 · Check its health  →  **My Squad → ❤️ Health**"):
     st.markdown(
-        "See your squad's **projected xP over the next 5 gameweeks**, the per-GW breakdown, and the "
-        "**weak links** worth upgrading. This is the same engine the CLI uses — one honest xP number."
+        "How your squad is projected to perform over the next **1–10 gameweeks**:\n"
+        "- **📈 Projected xP** — your squad's expected points.\n"
+        "- **📅 GW breakdown** — the projection for each gameweek.\n"
+        "- **⚠️ Weak links** — players worth considering for an upgrade.\n"
+        "- **One xP number** — the same engine the CLI uses, so the projection stays consistent."
     )
 
-with st.expander("4 · Plan your week & improve it  →  **My Squad → AI Tips · Captain · Transfer · Chips**"):
+with st.expander("4 · Plan your week & improve it  →  **My Squad → 🤖 AI Tips · 👑 Captain · 🔄 Transfer · Chips**"):
     st.markdown(
-        "**AI Tips** is the fastest answer — one grounded view of who to **captain**, any **lineup** "
-        "change, one **transfer** to consider, and any **flagged** players (injuries / doubts), all checked "
-        "against the data (a ✓/⚠ line). *(The AI narrates it if a local Ollama is running; otherwise you "
-        "still get the full plan.)* Start there, then dig deeper:\n\n"
-        "**Transfer** ranks the best single swaps by **XI improvement** (how much a change lifts your best "
-        "legal XI) — set your **bank** with the slider, or ask for a **coordinated plan** of 2–3. "
-        "**Apply** a single swap — or **Apply this plan →** to accept the whole coordinated plan at once — "
-        "onto your session squad.\n\n"
-        "**Captain** ranks who to (vice-)captain this gameweek by expected points, with the opponent + "
-        "penalty duty, and an ownership steer (💎 differential → 👑 essential). **Set as captain** to keep it."
-        "\n\n"
-        "**Chips** tells you **when** to play each chip — **Triple Captain · Bench Boost · Free Hit · "
-        "Wildcard** — from your squad's projected points over the chosen horizon (also checked, ✓/⚠). "
-        "Fixture-run based for now; double/blank gameweeks and mini-league position sharpen it in-season."
+        "Start with **🤖 AI Tips** — your fastest gameweek plan:\n"
+        "- **👑** who to captain · **🔁** any lineup change · **🔄** one transfer to consider · **🚑** injuries & "
+        "doubts, all **✓/⚠** checked against the data.\n\n"
+        "*You always get the full data-driven plan; where a local AI is available it adds a written narration.*\n\n"
+        "Then dig deeper:\n"
+        "- **🔄 Transfer** — ranks the best single swaps by how much they improve your legal XI. Set your **bank** "
+        "with the slider, or ask for a coordinated **2–3 transfer plan**. **Apply** one swap, or **Apply this "
+        "plan →** for all at once.\n"
+        "- **👑 Captain** — ranks captain & vice-captain by expected points, with opponent · penalty duty · "
+        "ownership (💎 differential → 👑 essential). **Set as captain** to keep it.\n"
+        "- **Chips** — *when* to play **Triple Captain · Bench Boost · Free Hit · Wildcard**, from your projected "
+        "points over the chosen horizon (✓/⚠). Fixture-run based for now; double/blank gameweeks + mini-league "
+        "position sharpen it in-season."
     )
 
-with st.expander("5 · Do your research  →  Players · Fixtures · Trending · News"):
+with st.expander("5 · Do your research  →  **👟 Players · 📅 Fixtures · 📈 Trending · 📰 News**"):
     st.markdown(
-        "- **Players** — the whole pool (filter by **team / position / player**, sort, page through all — "
-        "the **table first**, a top-15 chart below); a **Card** view (pick a player → a **rich player card**: "
-        "photo · fixtures · **Projected xP** · position-adaptive stats — and **🔍 Compare with** another "
-        "**same-position** player to see them **side by side**, the better stat highlighted) **plus** the stat views: "
-        "over/under-performance · "
-        "Defensive Contribution · clean sheets · xG (season-to-date). On **clean sheets / xG** a "
-        "**🟢…🔴 quality rating** shows how a player stacks up *vs the players shown*. Switch views with the "
-        "buttons at the top.\n"
-        "- **Fixtures** — a colour-coded **difficulty ticker** (pick 1–8 gameweeks; scope it to **your "
-        "squad**) + a **🎯 Radar** shortlist — who to buy from the easiest-run teams (for a new "
-        "squad / wildcard); filter by **position**, cap the **max price**, and sort by **xP** or **Val/£m**.\n"
-        "- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + "
-        "**Community Signals** (what r/FantasyPL is talking about).\n"
-        "- **News** — official injury / doubt / return news, most serious first."
+        "- **👟 Players** — explore the full pool: **🔎 filter** by team / position / player, sort, browse; a "
+        "**table + top-15 chart**; a **🪪 Player Card** (photo · fixtures · Projected xP · position-adaptive stats) "
+        "with **⚔️ Boot Battle** to compare a same-position player side by side; and the stat views "
+        "**over/under-performance · Defensive Contribution · Clean Sheets · xG**. A **🟢…🔴 quality rating** shows "
+        "how a player compares with those shown. Switch views with the buttons at the top.\n"
+        "- **📅 Fixtures** — the next **1–8 GWs** on a colour-coded difficulty ticker; scope it to **your squad**, "
+        "or use **🎯 Radar** to find players from the easiest-run teams (filter by position, cap the price, sort by "
+        "xP or Val/£m).\n"
+        "- **📈 Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community "
+        "Signals** (what r/FantasyPL is talking about — a lens, not truth).\n"
+        "- **📰 News** — official FPL injuries, doubts and returns, most serious first."
     )
 
-with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)"):
+with st.expander("6 · Ask the assistant  →  the **💬 Ask** tab"):
     st.markdown(
-        "Type a question. **Squad & player** questions are answered by the analytics and the **✓/⚠** line "
-        "shows they were checked against the data. **Captain & transfer** answers also show **why** — a "
-        "**Confidence** (a heuristic, e.g. *72 / 100 · Medium*) with an **Edge** (✓ the signals for it) and a "
-        "**Risk** (⚠ against), all computed from the data so you can trust or challenge it. **FPL rules** are "
-        "answered from a curated knowledge base (also **✓**). Open **tactics** questions get a general answer "
-        "clearly labelled **ℹ not checked against your data**. Things to try (copy-paste):"
+        "Ask in plain English — MADBOOTS routes each question to the right source:\n"
+        "- **📊 Squad & player** — answered from the analytics, with a **✓/⚠** trust line.\n"
+        "- **👑 Captain & transfer** — includes **Confidence** (a heuristic, e.g. *72/100 · Medium*) plus "
+        "**Edge ✓** and **Risk ⚠**, all computed from the data.\n"
+        "- **📖 FPL rules** — from a curated knowledge base (also **✓**).\n"
+        "- **ℹ️ General tactics** — useful advice, clearly marked *not checked against your data*.\n\n"
+        "Things to try (copy-paste):"
     )
     st.code(
         'build me a squad for £100m with 3 differentials\n'
@@ -123,36 +134,41 @@ with st.expander("6 · Ask the assistant  →  the **Ask** tab (plain English)")
         language=None,
     )
     st.markdown(
-        "A **build** answer offers **Use this squad →** so it drops into *My Squad* to tweak. Follow-ups "
-        "work too: after a pick, ask *\"why?\"* or *\"and the second best?\"*."
+        "A **build** answer offers **Use this squad →** so it drops into *My Squad* to tweak. After any "
+        "recommendation, try *\"Why?\"*, *\"What's the risk?\"* or *\"Who's second best?\"*."
     )
 
-with st.expander("7 · Save your team  →  Download, upload, or import by manager-ID"):
+with st.expander("7 · Save your team  →  **☁ Account · 💾 Download · 🔢 Import**"):
     st.markdown(
-        "Your squad is per-session (no accounts). The easiest way to keep it: **☁ Save / Load across devices** "
-        "in the **sidebar** (under *Your squad*) — save under a handle, load it on any device (that's usually the "
-        "better option). Otherwise **Download** the `squad.json` to keep it — re-**upload** "
-        "it from the sidebar next time, or **import your real FPL team by manager-ID** (the sidebar; your "
-        "team's numeric id from its URL — picks are public from the GW1 deadline). The same `squad.json` "
-        "loads in the CLI too."
+        "Your squad is **saved to your account**, so it stays available across sessions and devices:\n"
+        "- **☁ Save / Load** — in the sidebar, to reach your squad on any device.\n"
+        "- **💾 Download** `squad.json` — a portable local backup.\n"
+        "- **📤 Upload** — restore a saved `squad.json` from the sidebar.\n"
+        "- **🔢 Import by Manager-ID** — load your real FPL team by its numeric ID (from your team's URL); "
+        "available after the **GW1 deadline (2026-08-21)**, when picks become public.\n"
+        "- **🔄** changes to your active squad are **auto-saved to your account**.\n\n"
+        "*Tip: account sync is the easiest option; `squad.json` is your portable backup and safety net.*"
     )
 
 with st.expander("8 · Tell us what you think  →  the **📣 Feedback** tab"):
     st.markdown(
-        "Testing the beta? The **📣 Feedback** tab (bottom of the sidebar) is a quick form — what worked, what "
-        "broke, what you'd add. Leave an email if you'd like a reply or to join the founding-tester list. "
-        "(You can still open a GitHub issue if you prefer.)"
+        "Testing the beta? We'd love to hear from you — the **📣 Feedback** tab (bottom of the sidebar) is a quick "
+        "form:\n"
+        "- **👍 What worked? · 🐛 What broke? · 💡 What should we add?**\n"
+        "- Leave your **email** for a reply or to join the founding-tester list.\n"
+        "- Prefer **🐙 GitHub**? You can still open an issue."
     )
 
 st.divider()
 st.markdown(
-    "**Good to know.** The *N players · data as of …* caption on each tab shows how fresh the data is (the "
-    "player count makes a stale snapshot obvious). This hosted app serves a **committed snapshot** — it "
-    "updates when the app is redeployed, not when you refresh your own CLI. Running it **locally**, the "
-    "sidebar **🔄 Refresh data** button pulls the latest FPL data on the spot. It's **preseason** now — "
-    "ownership works, but **transfer momentum, in-season form and live picks light up at GW1 "
-    "(2026-08-21)**. Crowd signals are a **lens, not truth**: the analytics decide, the crowd is context. "
-    "On **Players → Clean sheets / xG**, the **🟢…🔴 Rating** is *relative to the players shown* (best 20% "
-    "🟢 … worst 20% 🔴) with the percentile — so it re-scales as you filter; the raw number stays the truth. "
-    "New here? The **Home** tab has the one-screen overview."
+    "#### Good to know\n"
+    "- **🕐 Data freshness** — each tab shows *N players · data as of …*, so you can see how current the data is. "
+    "The hosted app serves a **committed snapshot** (it updates on redeploy); running **locally**, the sidebar "
+    "**🔄 Refresh data** button pulls the latest FPL data on the spot.\n"
+    "- **📅 Preseason** — ownership works now; **transfer momentum, in-season form and live picks light up at GW1 "
+    "(2026-08-21)**.\n"
+    "- **👥 Crowd signals** — useful context, not truth. The analytics decide; the crowd is context.\n"
+    "- **🟢🔴 Ratings** — on **Players → Clean sheets / xG**, the rating is *relative to the players shown* (best "
+    "20% 🟢 … worst 20% 🔴) and re-scales as you filter; the raw number is always the truth.\n"
+    "- **🏠 New here?** The **Home** tab has the one-screen overview."
 )
