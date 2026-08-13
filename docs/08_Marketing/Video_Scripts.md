@@ -233,3 +233,73 @@ real (from Help §6). Works **data-only** on the live app (routing + verificatio
 
 **Accuracy anchors:** the same-position compare card (ADR-110), winner-tinted per stat (`_BETTER` direction map),
 from any Player Card on **Players + My Squad**; the **pool selector** My team / All / By club (ADR-111, US-380).
+
+---
+
+## Presenter avatar — generation brief
+
+**Decision:** a **MADBOOTS mascot** presenter (not an AI human) + a **strong female voice**. For it to "present"
+(lip-sync in HeyGen Talking Photo) it needs a **face**; else use it as a brand element + VO over UI.
+
+**Image-gen prompt** (Midjourney / DALL·E / Ideogram):
+> *Mascot character for a football-analytics brand called MADBOOTS. A confident, friendly **female** character,
+> modern minimalist sporty-tech style — flat vector illustration, premium and trustworthy (not childish, not
+> photorealistic). Brand colours **deep purple #8B2FC9** and **vibrant orange #FF6A00** on a dark background.
+> Football-boots motif in her outfit; a small "MB" badge emblem. **Front-facing head-and-shoulders, clear expressive
+> face, mouth visible, neutral confident expression, even studio lighting** — suitable for animation and lip-sync.
+> Clean, high detail on the face.*
+
+Generate **three framings**, same character throughout: (a) head-and-shoulders, front-on, mouth-closed neutral →
+**HeyGen Talking Photo**; (b) full-body → intro; (c) badge/logo lockup → end-card. Reuse the existing MB badge as the
+secondary mark, not the presenter.
+
+---
+
+## Shot lists — record a clip **library** once, reuse across videos
+
+Same UI moments recur, so record ~15 clips **once** (5–8s each, the **live** app, slow deliberate actions, freshly
+reseeded data) and reuse. *(Manager-ID import only films properly post-GW1 — 21 Aug 2026.)*
+
+**Clip library:**
+1. **Trust line** — an Ask captain/transfer answer showing **✓/⚠**.
+2. **Squad Lab — build** — set budget/objective/archetypes → build → the 15.
+3. **Use this squad → / Download.**
+4. **Manager-ID import** — the Squads sidebar (post-GW1).
+5. **My Squad pitch** — the green formation, kits, xP chips, (C).
+6. **Player card** — the xP chip + the per-GW row + stats/trends.
+7. **Boot Battle** — pick a player → the winner-tinted compare card → the **pool selector** (My team/All/By club).
+8. **Make captain / Substitute** — the ⚙ panel controls.
+9. **AI Tips plan** — captain · lineup · transfer · injuries + **Edge/Risk/Confidence**.
+10. **Transfer** — rank by **XI improvement** + bank slider + coordinated plan + **Apply this plan →**.
+11. **Players sorted by Own%** — the 💎 differential surfacing + a stat board.
+12. **Fixtures** — the difficulty ticker + **🎯 Radar**.
+13. **Trending** — the crowd boards.
+14. **News** — the injury/doubt feed.
+15. **Ask** — the box + a grounded answer (✓/⚠ + the "not checked" label).
+
+**Per-video (which library clips):**
+- **2-min explainer:** 1 → 2,3,4 → 5,6,7 → 9 → 11,12,13,14 → 15.
+- **60-sec cut:** 1 → 2,4 → 9 → 7 → 15.
+- **§4 xP & Confidence:** 6 (xP chip + per-GW) → 9 (Confidence·Edge·Risk).
+- **§5 Finding Differentials:** 11 (Own% 💎) → 12 (Radar) → 15 (the "best differentials" Ask).
+- **§6 Build:** 2 (the controls + build) → 3.
+- **§7 AI Tips & Transfers:** 9 → 10.
+- **§8 Ask Anything:** 15 (a few queries + the ✓/⚠ + "not checked").
+- **§9 Boot Battle:** 7 (pick → compare card → pool selector).
+
+---
+
+## Production workflow (HeyGen — $2/7-day trial; any builder works)
+
+⚠️ **HeyGen is built for realistic human avatars, not a stylised mascot.** Its **Talking Photo** can lip-sync a
+mascot **only if it has a face** (use the head-and-shoulders render above). If it doesn't animate well, use HeyGen for
+the **voice + assembly** and keep the mascot as a brand element (intro/outro/corner) over **VO-on-UI**.
+
+1. **Create video → Landscape** (16:9; also export a 9:16 crop for Reels/TikTok/Shorts).
+2. **Uploads tab → drag in your screen-recording clips.**
+3. **Scene by scene:** *intro* = mascot Talking Photo (or logo) + hook; *body* = each `(UI:…)` beat as a scene with
+   the **uploaded UI clip full-screen** + the script line in the **script box** with your chosen **voice** (optional
+   avatar **PiP** in a corner); *outro* = mascot + CTA end-card (**madboots.com · free**).
+4. **Voice:** a strong female voice (HeyGen library, or its ElevenLabs integration).
+5. **Auto-captions on** (social is watched muted; the trust lines must land on screen).
+6. **Export**, then a **9:16** version for shorts. Keep a **consistent intro/outro + music** across all videos.
