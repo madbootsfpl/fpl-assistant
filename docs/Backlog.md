@@ -77,7 +77,12 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
   team's picks aren't public until the **GW1 deadline (2026-08-21)**, so pre-GW1 it shows "isn't public yet"
   (expected). The Help copy referencing it is accurate.
 
-## Help revamp — its own workstream (owner-supplied full rewrite, 2026-08-13)
+## Help revamp — ✅ SHIPPED (Sprint 154, ADR-111, 2026-08-13)
+
+**Done:** the Help rewrite (8 sections + intro/quick-start/your-squad/deadline), reconciled against the live app (Save
+section → auth-live; stale "no accounts" removed; honest AI-narration line); **⚔️ Boot Battle** made real (My Squad
+⚙-panel compare + rebrand); the **MadBoots Explainer** glossary (one expander, category subheaders). Owner-signed-off
+on a content preview. *Original scope below (for the record):*
 
 A comprehensive Help-page rewrite (owner drafted the copy). Scope + shape:
 - **Structure:** intro + trust line + **Quick start** (5 steps) + a "Your squad" block + a deadline note, then **8

@@ -464,6 +464,19 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   `madboots.com`** (the brand front door + a Launch-the-app CTA). The internal `fpl-assistant` package + the `FPL_*`
   secrets are unchanged. **Access stays in the app** — a static page can't gate a public Streamlit URL (the
   persistence/auth rework, incl. a possible `st.login()`, is the next structural thread).
+- **Sprint 154 (2026-08-13)** — *Help revamp + Boot Battle everywhere + the MadBoots Explainer* (**ADR-111**, revises
+  ADR-068, extends ADR-110). **US-377:** rebrand the compare control **⚔️ Boot Battle** and add a **"compare with…"**
+  picker to the My Squad **⚙ panel** (typeable; same-position **owned** players) → `render_player_compare` in place of
+  the single card (👑/🔁 still act on the primary); reuses `fixtures_by_id`/`xp_by_id` + `compare_card_html` — no
+  analytics change. **US-378:** rewrite `8_Help.py` to the owner's copy, **reconciled against the live app** — the
+  Save/Import section rewritten for **auth-live** persistence (account save · auto-sync · ☁ Save/Load · Download ·
+  Upload · Manager-ID from GW1), the **stale *"no accounts / nothing saved server-side"* removed** (it predated
+  ADR-106), the AI-narration line made **honest** for deployed users (no "start Ollama"), the app's icons kept over
+  the draft's. **US-379:** the **MadBoots Explainer** — a 9th expander, a glossary in **one expander with six category
+  subheaders** (all visible → Ctrl-F-able; Streamlit expanders can't nest), terms reconciled + Boot Battle, the "Local
+  AI" entry noting the hosted app is data-only. Content + one display-only feature add; owner-signed-off on a content
+  preview (984→985). Lesson: reconcile every user-facing claim against the app — a stale docs page erodes trust like a
+  bug (the Help had claimed "no accounts" long after auth went live).
 - **Sprint 153 (2026-08-13)** — *P1 quick-wins (2026-08-13 intake)* (no ADR; display/config only). Four small fixes.
   **US-373** Home tidy-up (owner copy): tagline → *"…The analytics decide; you stay in control."*; "Explore the
   sidebar" short lines; "Your squad" bullets reflecting **auth/auto-sync (live)**; internal ADR refs + the dev

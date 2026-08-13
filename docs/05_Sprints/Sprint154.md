@@ -1,7 +1,7 @@
 # Sprint 154: Help revamp + Boot Battle everywhere + the Explainer (ADR-111)
 
 **Dates:** 2026-08-13
-**Status:** 🚧 Planned — US-377…379 (ADR-111)
+**Status:** ✅ Complete — US-377…379 (ADR-111). 984 → 985 tests
 **Capacity:** ~1–2 sessions (a small feature + a big content rewrite + a glossary)
 **Carried Over:** none
 
@@ -67,7 +67,24 @@ card on **both** Players and My Squad; the Explainer glossary is one findable ex
 ---
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — the Help revamp + Boot Battle everywhere + the glossary; 985 tests, ruff clean.**
+
+- **US-377 Boot Battle everywhere** — rebranded the Players compare control **⚔️ Boot Battle**; added a **"⚔️ Boot
+  Battle — compare with…"** picker to the My Squad **⚙ panel** (same-position owned players) → the compare card in
+  place of the single card (👑/🔁 still act on the primary). Reuses `render_player_compare` + the panel's
+  `fixtures_by_id`/`xp_by_id` — no analytics change.
+- **US-378 Help rewrite (8 sections)** — the owner's copy (intro · Quick start · Your squad · deadline · 8 expanders),
+  **reconciled against the live app**: the Save section rewritten for **auth-live** (account save · auto-sync · ☁
+  Save/Load · Download · Upload · Manager-ID from GW1); the stale *"no accounts / nothing saved server-side"* removed;
+  the AI-narration line made honest (no "start Ollama"); app icons kept over the draft's.
+- **US-379 MadBoots Explainer** — a 9th expander: a glossary in **one expander with six category subheaders**
+  (everything visible → Ctrl-F-able; expanders can't nest). Terms reconciled + Boot Battle added; the "Local AI"
+  entry carries the honest hosted-app-is-data-only note.
+
+**Reused, unchanged:** the compare renderer; no analytics change. **DoD:** tests (Boot Battle in both places; the
+auth-live save copy + the stale line gone; the glossary) + a **content preview** for owner sign-off + docs.
+**Held (ADR-111):** cloud-LLM narration (P2 strategic); admin usage/logins graphs (P2).
 
 ### 🧠 Lessons
-*(see `Sprint154_Lessons_Learnt.md` at retro)*
+*(see `Sprint154_Lessons_Learnt.md`)*
