@@ -7,6 +7,14 @@ to verify the GW1-gated features. Nothing here changes a weight until the backte
 
 > Prep done (Sprint 138): the backfill (`history --backfill`), the form/set-piece/DefCon terms (dormant), the
 > calibration harness (`analytics/backtest.py`), and the `calibrate` CLI all exist. GW1 is a **switch-flip**.
+>
+> **Dry-run verified 2026-08-13 (~8 days out):** ✅ `calibrate --weight form|set_piece|defcon` all run and gate
+> correctly (*"Not enough gameweeks yet — have 0, need ≥4"*); ✅ `history --backfill [--limit N]` wired; ✅ `reseed`
+> present; ✅ `config.FORM_WEIGHT`/`SET_PIECE_WEIGHT`/`DEFCON_MAGNIFIER_WEIGHT` all `0.0`; ✅ invariance + activation
+> tests green (32). **What can only be checked once GW1 posts:** the gated features *lighting up* (a real manager-ID
+> squad loads · momentum/price/community-signals show live movement) and a real `--backfill` fetch. **Timing:** the
+> 21st is **§A** (backfill · reseed · verify features); the **weight flip is §B (~GW4–6)** once ≥4 GWs of returns
+> exist — not the 21st.
 
 ---
 
@@ -37,8 +45,16 @@ Run the backtest, read the table, and **only if it clearly helps**, commit the v
    ```
    - Below ~4 GWs it says *"not enough gameweeks yet"* — wait and re-run.
    - If it recommends a value **and** the rank correlation (ρ) improves without worsening MAE / hit-rate:
-     set `config.FORM_WEIGHT` to the recommended value, **update the invariance test** (the "xP byte-identical at
-     weight 0" test now reflects the new weight — see `tests/`), run the full suite + a real-DB smoke, and commit.
+     set `config.FORM_WEIGHT` to the recommended value, **update the one invariance test that relies on the config
+     default being 0**, run the full suite + a real-DB smoke, and commit.
+   - **The exact test to update at flip (verified 2026-08-13 dry-run)** — one per weight, all the same fix. It
+     currently proves "config default ⇒ no change"; once the default *is* the new weight, add a
+     `monkeypatch.setattr(config, "<WEIGHT>", 0.0)` so it still tests the **dormancy property**, not the default:
+     - form → `tests/test_form.py::test_decision_xp_invariant_while_dormant`
+     - set-piece → `tests/test_setpieces.py::test_decision_xp_invariant_while_set_piece_dormant`
+     - defcon → `tests/test_defcon_xp.py::test_decision_xp_invariant_while_defcon_dormant`
+     The `*_unchanged_when_*_weight_zero` tests (explicit weight 0) and the `*_activates_*` tests (they monkeypatch a
+     weight > 0) **stay green as-is** — only the "default = dormant" test changes.
    - If the curve is flat / no clear signal → **leave it at 0** and re-run later.
 2. **Then set-piece:** `python app.py calibrate --weight set_piece` → same decision → set `config.SET_PIECE_WEIGHT`.
 3. **Then DefCon:** `python app.py calibrate --weight defcon` → set `config.DEFCON_MAGNIFIER_WEIGHT`.
