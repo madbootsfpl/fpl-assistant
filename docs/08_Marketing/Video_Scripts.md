@@ -303,3 +303,16 @@ the **voice + assembly** and keep the mascot as a brand element (intro/outro/cor
 4. **Voice:** a strong female voice (HeyGen library, or its ElevenLabs integration).
 5. **Auto-captions on** (social is watched muted; the trust lines must land on screen).
 6. **Export**, then a **9:16** version for shorts. Keep a **consistent intro/outro + music** across all videos.
+
+---
+
+## Video assets (rendered)
+
+- **Presenter avatar:** ✅ generated (owner, 2026-08-13) — a female MADBOOTS mascot in the brand tracksuit (MB badge +
+  boot motif, analytics-ring background), front-facing/clear face → suitable for HeyGen Talking Photo. *To-do:* a
+  tighter face crop + a **transparent-background cut-out** for corner-PiP compositing.
+- **Hero-shots page** (video-ready cards, real data — screenshot/screen-record each): Boot Battle · Player Card ·
+  Captain trust block (Confidence·Edge·Risk) · Differentials board. Rendered from the app's own renderers.
+  *(Private Claude artifact; regenerate any time from the app renderers + live DB.)*
+- **Photos:** the card renders use silhouette stand-ins (real player photos are CDN-blocked in the render) — capture
+  photo-heavy shots (the big player-card headshot, the pitch kits) from the **live app**.
