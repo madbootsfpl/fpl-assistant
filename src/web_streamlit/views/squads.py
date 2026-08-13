@@ -282,13 +282,15 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     card_bg_by_id = by_gameweek_by_id if horizon >= 3 else {
         r["id"]: r["by_gameweek"]
         for r in decision_xp(players, upcoming, history, horizon=3, gw_history_by_code=gw_history)}
-    fixtures_by_id = {}
-    for _p in owned:
-        _bg = card_bg_by_id.get(_p["id"], {})
-        fixtures_by_id[_p["id"]] = [
-            {"opp": s["opponent"], "home": s["venue"] == "H", "fdr": s.get("difficulty"),
-             "xp": _bg.get(s["event"])}
-            for s in team_schedule(upcoming, _p["team"])[:3]]
+
+    def _pergw_fixtures(p):
+        """A player's next-≤3 fixtures with the per-GW xP (ADR-109). Works for **any** player (`card_bg_by_id`
+        covers the whole pool) — so a Boot Battle target from All/By-club has its card row too (US-380)."""
+        _bg = card_bg_by_id.get(p["id"], {})
+        return [{"opp": s["opponent"], "home": s["venue"] == "H", "fdr": s.get("difficulty"), "xp": _bg.get(s["event"])}
+                for s in team_schedule(upcoming, p["team"])[:3]]
+
+    fixtures_by_id = {p["id"]: _pergw_fixtures(p) for p in owned}   # for the pitch popover + the panel card
     bench_ids = set(squad.get("bench_ids") or [])
     captain_id = squad.get("captain_id")
 
@@ -387,19 +389,31 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                                              help="Or hover a shirt on the pitch (desktop only)."))
     if picked:
         short = picked["team"]
-        # ⚔️ Boot Battle (US-377, ADR-110/111) — compare the selected player with another **same-position** squad
-        # player, side by side (winner-tinted). Reuses `render_player_compare` + the panel's fixtures/xp.
-        bb_by_label = {f"{p['web_name']} · {p['team']}": p
-                       for p in sorted((q for q in owned if q["position"] == picked["position"]
-                                        and q["id"] != picked["id"]), key=lambda q: q["web_name"] or "")}
+        # ⚔️ Boot Battle (US-377/380, ADR-110/111) — compare the selected player with another **same-position** player,
+        # side by side (winner-tinted). A **pool** selector (US-380): My team (owned) · All players · By club. Reuses
+        # `render_player_compare`; the target's per-GW fixtures build on demand (`xp_by_id`/`card_bg_by_id` cover all).
+        bb_pool = st.segmented_control("⚔️ Boot Battle — pool", ["My team", "All", "By club"],
+                                       default="My team", key="pa_boot_pool") or "My team"
+        if bb_pool == "By club":
+            club_labels = {team_names.get(t, t): t
+                           for t in sorted({q["team"] for q in players if q["position"] == picked["position"]})}
+            club = club_labels.get(st.selectbox("Club", list(club_labels), key="pa_boot_club"))
+            base = [q for q in players if q["team"] == club]
+        elif bb_pool == "All":
+            base = players
+        else:                                                    # My team (same-position squad players)
+            base = owned
+        cands = sorted((q for q in base if q["position"] == picked["position"] and q["id"] != picked["id"]),
+                       key=lambda q: q["web_name"] or "")
+        bb_by_label = {f"{q['web_name']} · {q['team']}": q for q in cands}
         bb = bb_by_label.get(st.selectbox("⚔️ Boot Battle — compare with…", ["—", *bb_by_label], key="pa_boot",
-                                          help="Type to search a same-position squad player to compare side by side."))
+                                          help="Type to search a same-position player to compare side by side."))
         if bb:
             cshort = bb["team"]
             render_player_compare(
                 picked, bb, a_team=team_names.get(short, short), b_team=team_names.get(cshort, cshort),
                 a_photo=photos.get(picked["id"]), b_photo=photos.get(bb["id"]),
-                a_fixtures=fixtures_by_id.get(picked["id"]), b_fixtures=fixtures_by_id.get(bb["id"]),
+                a_fixtures=_pergw_fixtures(picked), b_fixtures=_pergw_fixtures(bb),
                 a_xp=xp_by_id.get(picked["id"]), b_xp=xp_by_id.get(bb["id"]))
         else:
             render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),

@@ -1749,6 +1749,45 @@ def test_my_squad_panel_boot_battle_compares_squad_players():
     assert "cmp-card" in blob and "Boot Battle" in blob        # the compare card (with its brand band) rendered
 
 
+def test_my_squad_panel_boot_battle_pool_selector():
+    # US-380: the ⚔️ Boot Battle "pool" selector — "All" offers same-position players beyond your squad (and compares
+    # with a non-owned one, building its fixtures on demand); "By club" reveals a Club picker.
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+
+    def take(pos, n):
+        return [p for p in rows if p["position"] == pos][:n]
+
+    gks, defs, mids, fwds = take("GK", 2), take("DEF", 5), take("MID", 5), take("FWD", 3)
+    if not (len(gks) == 2 and len(defs) == 5 and len(mids) == 5 and len(fwds) == 3):
+        return
+    ids = [p["id"] for p in gks + defs + mids + fwds]
+    bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
+    squad = {"name": "PoolTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
+
+    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    next(s for s in at.selectbox if s.label == "Select a player") \
+        .set_value(f"{mids[0]['web_name']} · {mids[0]['team']}").run()
+
+    pool = next(s for s in at.segmented_control if s.label and "Boot Battle — pool" in s.label)
+    pool.set_value("All").run()                               # expand the pool to all same-position players
+    bb = next(s for s in at.selectbox if s.label and "compare with" in s.label)
+    assert len(bb.options) > 6                                # far more than the 4 same-position squad peers + "—"
+    bb.set_value(bb.options[1]).run()                        # a same-position player (likely non-owned)
+    assert not at.exception
+    assert "cmp-card" in " ".join(m.value for m in at.markdown)   # compares, with the target's fixtures built on demand
+
+    next(s for s in at.segmented_control if s.label and "Boot Battle — pool" in s.label).set_value("By club").run()
+    assert any(s.label == "Club" for s in at.selectbox)      # By club reveals a Club picker
+    assert not at.exception
+
+
 def test_default_horizon_my_squad_1_squad_lab_5():
     # US-374: My Squad defaults to the next GW (manage this week); Squad Lab stays 5 (build for the run).
     at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30).run()
