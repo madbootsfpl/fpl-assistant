@@ -311,8 +311,11 @@ the **voice + assembly** and keep the mascot as a brand element (intro/outro/cor
 - **Presenter avatar:** ✅ generated (owner, 2026-08-13) — a female MADBOOTS mascot in the brand tracksuit (MB badge +
   boot motif, analytics-ring background), front-facing/clear face → suitable for HeyGen Talking Photo. *To-do:* a
   tighter face crop + a **transparent-background cut-out** for corner-PiP compositing.
-- **Hero-shots page** (video-ready cards, real data — screenshot/screen-record each): Boot Battle · Player Card ·
-  Captain trust block (Confidence·Edge·Risk) · Differentials board. Rendered from the app's own renderers.
+- **Hero-shots page** → <https://claude.ai/code/artifact/308e74eb-40bf-43e7-bff6-52eaf6d97ca2>
+  (video-ready cards, real data — screenshot/screen-record each): Boot Battle (two forwards **&** two midfielders) ·
+  Player Card (a forward **&** a defender, position-adaptive stats) · Captain trust block (Confidence·Edge·Risk) ·
+  **AI-Tips gameweek plan** (§7 still) · Differentials board (§5). Rendered from the app's own renderers.
+  *Toggle your device light/dark theme for a light-background variant.*
   *(Private Claude artifact; regenerate any time from the app renderers + live DB.)*
 - **Photos:** the card renders use silhouette stand-ins (real player photos are CDN-blocked in the render) — capture
   photo-heavy shots (the big player-card headshot, the pitch kits) from the **live app**.
