@@ -63,9 +63,12 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
   you can **⚔️ Boot Battle** (compare) directly from a player's card on **My Squad**, not just the Players Card view.
   Add "compare with…" to the ⚙ Player-actions panel (pool = owned 15) + a ⚔️ affordance on the card. Reuses
   `compare_card_html` (ADR-110). Small feature.
-- 🧭 **Cloud AI narration** *(strategic)* — should the *live* app narrate (a cloud LLM, e.g. Anthropic API — a cost + a
-  small build), or stay **data-only** (free, honest) and just hide the Ollama prompt? Ties to the P1 Ollama fix.
-  **Owner decision.**
+- ✅ **Cloud AI narration** *(strategic)* — **DECIDED (owner, 2026-08-13): stay DATA-ONLY.** No cloud LLM on the live
+  app. Positioning: *serious, honest analytics — the analytics decide, the AI (local only) explains, it doesn't
+  guess.* Data-only is the **differentiator**, not a gap; it's free, has no key/cost/abuse surface, and reinforces the
+  ✓/⚠ trust story. The Ollama-prompt hiding (US-375) + the honest Help copy (US-378) already align with this. **Door
+  left open:** a grounded, auth-gated, **on-demand** "explain in words" button (Anthropic Haiku, off-by-default,
+  verified by ADR-037) is the shape to revisit *if* a broad consumer launch wants more warmth — not now.
 
 **P2 — later / for discussion (admin, as users grow)**
 - 🧭 **Admin — usage-over-time graph** — a performance/usage history chart on the Admin page (analytics already log
