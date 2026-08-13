@@ -82,7 +82,7 @@ One feature/idea per short (30–45s for Reels/TikTok/Shorts); each ends on the 
 | A | **Build the Perfect Squad** *(Squad Lab)* | Budget · objective · archetypes · build modes → an optimised 15 in seconds; "Use this squad →". A wildcard/season-start hook. | planned |
 | B | **Master AI Tips & Transfers** | The whole gameweek plan in seconds + ranking transfers by XI improvement; Apply-this-plan. Edge/Risk/Confidence on show. | planned |
 | C | **Ask Anything** *(natural language)* | Type plain-English questions → routed + **data-verified** (vs clearly-labelled general guidance). Shows the ✓/⚠. | planned |
-| D | **Finding Differentials** 💎 | *Educational + trust.* Low-owned + set-piece/xGI → a differential edge; Radar + the ownership steer. (Searchable topic.) | planned |
+| D | **Finding Differentials** 💎 | *Educational + trust.* Low-owned + set-piece/xGI → a differential edge; Radar + the ownership steer. (Searchable topic.) | **drafted (§5)** |
 | E | **Understanding xP & Confidence** | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). | **drafted (§4)** |
 | F | **Boot Battle** ⚔️ *(candidate — Claude's add)* | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | candidate |
 
@@ -118,3 +118,32 @@ paid black box" = the real position (no bought Opta; analytics decide, not an LL
 
 **Creative note:** the differentiator is **selling the uncertainty as a feature** — "a lean, not a lock, and here's
 the risk." Everyone else projects false certainty; the honest confidence score is the heart of the brand.
+
+---
+
+## 5 · Finding Differentials — short (~50s)  *(status: drafted 2026-08-13 — educational/searchable; pairs with §4)*
+
+> **[0:00 – Hook]** Everyone owns the same big names. To climb your mini-league, you need the players your rivals
+> *don't* have — **differentials**.
+>
+> **[0:10 – What]** A differential is a low-owned player — often under a few percent. When they haul, you gain rank on
+> everyone who missed them. But most low-owned players are low-owned for a reason — the trick is finding the *good*
+> ones. *(UI: the 💎 ownership tier.)*
+>
+> **[0:24 – How]** MADBOOTS crosses ownership with the underlying data. Sort the player pool by ownership to surface
+> under-owned takers and in-form picks. Use **Radar** to find hidden value from the easiest fixtures. Or just ask:
+> *"Best differential midfielders under £8m"* — or *"Build me a squad with three differentials."* *(UI: Players sorted
+> by Own%; Radar; the Ask query.)*
+>
+> **[0:42 – The edge]** Because a differential's only an edge if the numbers back it. MADBOOTS shows you the ones that
+> are low-owned *and* genuinely good — a real edge, not a punt.
+>
+> **[0:52 – Close + CTA]** Find your edge. **The analytics decide. The AI explains. You make the call.** Try MADBOOTS
+> **free** at **madboots.com**.
+
+**Accuracy anchors:** 💎 = low ownership (`ownership_tier`); "sort by Own% to surface under-owned takers" = the
+Set-pieces view; **Radar** = best value from the easiest-run teams (`targets.py`); both Ask lines are real Help
+examples. The honesty hook (*"low-owned **and** good"*) holds because crowd/ownership is only ever a **lens**, never
+`decision_xp` (the invariance rule) — a MADBOOTS differential is one the grounded xP supports.
+
+**Pairing:** §4 (xP & Confidence) teaches *"trust the number"*; §5 shows *"use it to win"* — a one-two.
