@@ -2145,3 +2145,10 @@ def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
     assert any("Picking your captain" in s.value for s in at.subheader)      # the published topic renders
     assert any("Coming soon" in i.value for i in at.info)                    # the URL-less row degrades
 
+
+def test_home_teaser_links_to_ask_maddie():
+    # US-383: Home carries a "Meet Maddie" teaser that links to the hub page.
+    at = _run(_APP)
+    assert any("Ask_Maddie" in getattr(pl, "page", "") for pl in at.get("page_link")), \
+        "Home should link to the Ask Maddie hub"
+

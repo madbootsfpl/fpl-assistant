@@ -52,6 +52,7 @@ st.markdown(
 - **News** — official FPL player news (injuries · doubts · returns), most serious first.
 - **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
 - **Help** — a step-by-step guide to getting started with MADBOOTS.
+- **🎥 Ask Maddie** — quick 60-second video explainers, from **Maddie**, your MADBOOTS guide.
 
 **Your squad**
 
@@ -64,6 +65,8 @@ st.markdown(
 )
 st.info("🧭 **New here?** The **Help** tab (bottom of the sidebar) is a step-by-step guide to building "
         "your team with the assistant.")
+st.page_link("pages/9_Ask_Maddie.py",
+             label="🎥 **Meet Maddie** — quick 60-second video explainers of each feature →")
 st.info("🧪 **Testing this?** Tell us what breaks or feels off on the **📣 Feedback** tab (bottom of the "
         "sidebar) — or [open a GitHub issue](https://github.com/madbootsfpl/fpl-assistant/issues/new).")
 
