@@ -256,6 +256,48 @@ code / §4 registration gate stays the fallback). **Free** (`st.login`, Google O
 
 ---
 
+## 6. Ask Maddie videos (optional) — ADR-112
+
+The **🎥 Ask Maddie** page is a video hub — short explainers fronted by the mascot (Maddie). The clips live
+**unlisted on YouTube**; their rows live in a **`maddie_videos`** table in the *same* Supabase project (endpoint
+derived from `FPL_STORE_URL`, **no new secret**). You curate videos from the **dashboard** — add / hide / reorder /
+swap — **with no redeploy**. The app only **reads** the table, so — unlike the waitlist — **RLS stays on** with a
+simple public-**read** policy (no write path = none of the `42501` upsert pain).
+
+1. **Create the table** (SQL Editor, idempotent):
+   ```sql
+   create table if not exists public.maddie_videos (
+     id          bigint generated always as identity primary key,
+     topic       text    not null,
+     blurb       text,
+     youtube_url text,
+     sort_order  int     not null default 0,
+     published   boolean not null default false,
+     created_at  timestamptz not null default now()
+   );
+
+   alter table public.maddie_videos enable row level security;
+
+   create policy "maddie_videos public read"
+     on public.maddie_videos for select using (true);
+   ```
+2. **Add a video** — upload the clip **unlisted** to YouTube, then insert a row (or use the Table editor):
+   ```sql
+   insert into public.maddie_videos (topic, blurb, youtube_url, sort_order, published) values
+     ('Meet Maddie — what is MADBOOTS?',
+      'The 60-second intro: the analytics decide, the AI explains, you make the call.',
+      'https://youtu.be/REPLACE_ME', 10, true);
+   ```
+   - `published=false` hides a row without deleting it; `sort_order` sets the order; a **blank `youtube_url`**
+     renders a *"🎬 Coming soon"* placeholder instead of a broken player.
+3. **Refresh** — edits appear within the page's **~10-minute cache**, or **instantly** via **Reboot app** (the same
+   trick as the DB snapshot). Never a redeploy.
+
+> **No table (or an unreachable store) → the hub shows a built-in "Meet Maddie — coming soon" welcome** and never
+> errors (best-effort, ADR-112). So the page is safe to ship before any video exists.
+
+---
+
 ## Recruiting (Reddit etc.)
 
 - Post in **r/FantasyPL** (and similar) with a short pitch, the **signup link**, and the **access code**.

@@ -1,7 +1,7 @@
 # Sprint 157: Ask Maddie — a Supabase-backed video hub (US-382 / US-383)
 
-**Dates:** 2026-08-15 →
-**Status:** 🚧 Planned — gated by **ADR-112**. Owner action (create the table) runs in parallel with the build.
+**Dates:** 2026-08-15
+**Status:** ✅ Complete — US-382 + US-383 (ADR-112). 991 → 992 tests. *(Live-video smoke deferred — see below.)*
 **Capacity:** ~½ session (one page · one teaser · one reader module · ~3–4 tests · no new dependency)
 **Carried Over:** none
 
@@ -92,8 +92,41 @@ insert into public.maddie_videos (topic, blurb, youtube_url, sort_order, publish
 
 ### 📋 Sprint Review
 
-*(filled at retro)*
+**Delivered — a grounded, dashboard-managed video hub, code- and test-complete.**
+
+- **US-382 — the reader + hub page.** `src/web_streamlit/maddie.py` mirrors `user_store`/`waitlist`: the
+  `maddie_videos` endpoint is derived from `FPL_STORE_URL`'s base, reusing `FPL_STORE_KEY` (**no new secret**),
+  via `with_retry`. `videos()` is **read-only + fail-soft** — it fetches `published=true` rows ordered by
+  `sort_order`, cleans them (trimmed; a blank URL → `None`), and falls back to a built-in **"Meet Maddie —
+  coming soon"** welcome when the store is unconfigured / unreachable / has no published rows, so the hub is
+  **never blank and never raises**. `pages/9_Ask_Maddie.py` renders 🎥 title + the MADBOOTS mark + one
+  `st.video` block per clip (a URL-less row degrades to **"🎬 Coming soon"**); cached ~10 min.
+- **US-383 — the Home teaser.** A 🎥 *"Meet Maddie"* `st.page_link` by the existing "New here?" nudge + a
+  sidebar-list bullet under Help.
+- **IA renumber** — the hub slots into the learn cluster: `8 Help · 9 Ask Maddie · 10 Feedback · 11 Admin`
+  (`git mv` on Feedback/Admin; nothing `page_link`ed them; ~11 test references updated + 2 stale doc refs fixed).
+- **Tests:** +5 → **992**, ruff clean. `videos()` published-ordered-cleaned · fallback-when-unconfigured ·
+  fallback-on-error (never raises) · the page embeds a clip & degrades a URL-less row · Home links to the hub.
+- **Owner setup:** the `create table maddie_videos` + public-**read** policy ran clean (RLS stays on — the app
+  only reads, so none of the waitlist's RLS-upsert pain). SQL also captured in **BETA.md §6**.
+
+**⏳ Live-video smoke deferred (owner):** the current HeyGen plan is **free**, which **can't download** the
+rendered video — so there's no shareable/YouTube-hostable file yet. The owner will **build the series first**,
+then move to a **paid plan**, download the clips, upload them **unlisted to YouTube**, add rows to
+`maddie_videos` (`published=true`), and verify the hub shows them. Until then the page shows the built-in
+"coming soon" fallback — **expected, not a bug**. The code path is fully covered by tests with a faked store.
 
 ### 🧠 Lessons
 
-*(filled at retro)*
+- **Match the store pattern to the access shape.** The waitlist needed RLS *disabled* only because the app
+  **upserts** it; a **read-only** table (the app never writes — the owner curates in the dashboard) keeps RLS
+  **on** with a simple `select using(true)` policy. Deciding "who writes" up front removed a whole class of the
+  `42501` pain we hit before.
+- **Config-in-a-table beats config-in-code when the owner must self-serve.** A `VIDEOS = [...]` list would have
+  been simpler to build but chained every content edit to a redeploy. One Supabase table + a cached read turned
+  "refresh the videos" into a dashboard task — the requirement ("no rebuild") drove the design, not the other way.
+- **A fail-soft fallback makes an external dependency safe to ship early.** Because `videos()` degrades to a
+  built-in welcome, the feature ships and renders sensibly **before** a single real video exists — decoupling the
+  build from the owner's content pipeline (and, as it turned out, from a paid-plan blocker).
+- **Renumbering pages is cheap *if* nothing links by filename.** One `grep` confirmed only `3_My_Squad.py` was
+  `page_link`ed; the rest was mechanical `git mv` + find/replace in tests. Verify the blast radius, then it's safe.

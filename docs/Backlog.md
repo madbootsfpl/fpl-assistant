@@ -31,11 +31,13 @@ ADRs):
 - **Per-GW card** — xP over fixture, GW1–3, horizon-independent (ADR-109 / S152).
 - **Compare two players** — same-position, winner-tinted, "Boot Battle" band (ADR-110 / S151–152).
 
-## Ask Maddie — video hub (spec, gated ADR-112, 2026-08-15) → **Sprint 157**
+## Ask Maddie — video hub ✅ SHIPPED (Sprint 157, ADR-112, 2026-08-15)
 
-Owner named the mascot **Maddie** and is producing a series of **60-sec explainer videos** (one per topic). Build an
+Owner named the mascot **Maddie** and is producing a series of **60-sec explainer videos** (one per topic). Built an
 **"Ask Maddie"** home for them in the app — a **grounded, scripted FAQ-by-video** (NOT a live chatbot; the cloud app
-is data-only and a chat persona fights the "shows its working" brand). Gated by **ADR-112**.
+is data-only and a chat persona fights the "shows its working" brand). Gated by **ADR-112**. **US-382** (reader +
+`pages/9_Ask_Maddie.py`) + **US-383** (Home teaser) shipped; 992 tests. **⏳ Owner smoke pending** a paid HeyGen plan
+(free can't download clips) → upload unlisted to YouTube → add `maddie_videos` rows → verify. Setup SQL: **BETA.md §6**.
 
 - **Content = a Supabase table `maddie_videos`** (`topic`, `blurb`, `youtube_url`, `sort_order`, `published`),
   managed from the **Supabase dashboard** — so the owner can **add / remove / hide / reorder / swap videos without a
