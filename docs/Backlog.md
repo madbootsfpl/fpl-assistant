@@ -31,6 +31,26 @@ ADRs):
 - **Per-GW card** — xP over fixture, GW1–3, horizon-independent (ADR-109 / S152).
 - **Compare two players** — same-position, winner-tinted, "Boot Battle" band (ADR-110 / S151–152).
 
+## Ask Maddie — video hub (spec, gated ADR-112, 2026-08-15) → **Sprint 157**
+
+Owner named the mascot **Maddie** and is producing a series of **60-sec explainer videos** (one per topic). Build an
+**"Ask Maddie"** home for them in the app — a **grounded, scripted FAQ-by-video** (NOT a live chatbot; the cloud app
+is data-only and a chat persona fights the "shows its working" brand). Gated by **ADR-112**.
+
+- **Content = a Supabase table `maddie_videos`** (`topic`, `blurb`, `youtube_url`, `sort_order`, `published`),
+  managed from the **Supabase dashboard** — so the owner can **add / remove / hide / reorder / swap videos without a
+  redeploy**. Videos hosted **unlisted on YouTube**, embedded via `st.video` (HeyGen's player isn't embeddable; keeps
+  mp4s out of the repo). **Read-only from the app** (public-read policy → no RLS-write headache like the waitlist).
+- **US-382** — `maddie.py` reader (Supabase read, `@st.cache_data` ~10-min TTL, **best-effort + built-in fallback**
+  list so the page never breaks) + a new **`pages/…_Ask_Maddie.py`** hub (Meet-Maddie intro + one entry per published
+  video; "coming soon" for entries without a URL yet).
+- **US-383** — a compact **"🎥 New here? Ask Maddie"** teaser on **Home**, cross-linked with the text Help tab.
+- **DoD:** pytest (page renders · only published rows show · fallback on fetch error · Home teaser links) · manual
+  smoke · docs (ADR-112 + Journal + Roadmap + the `create table` / public-read SQL in the runbook). No new dependency.
+- **Refresh = within the ~10-min cache TTL, or instantly via "Reboot app"** (the same trick as the DB snapshot).
+- **Follow-ups (not this sprint):** an in-app **Admin** editor (write path, via `pages/10_Admin.py`); per-video view
+  analytics; a live "Ask Maddie" assistant only if a *grounded* cloud LLM path ever lands.
+
 ## Tester feedback — 2026-08-13 intake
 
 Triaged (P0 · P1 · P2). **Two tester questions answered (not bugs):** (a) **Ollama** narration is *local-only* — the
