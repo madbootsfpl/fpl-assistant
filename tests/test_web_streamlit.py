@@ -8,6 +8,7 @@ needn't run — `ask` degrades to the decision + facts.
 
 import pathlib
 
+import requests
 from streamlit.testing.v1 import AppTest
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -427,7 +428,8 @@ def test_sidebar_pages():
     # ADR-100 gated Admin. (ADR-069 had consolidated the old 12 tabs into the single Squads page first.)
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["1_Players.py", "2_Fixtures.py", "3_My_Squad.py", "4_Squad_Lab.py", "5_Ask.py",
-                              "6_News.py", "7_Trending.py", "8_Help.py", "9_Feedback.py", "10_Admin.py"])
+                              "6_News.py", "7_Trending.py", "8_Help.py", "9_Ask_Maddie.py", "10_Feedback.py",
+                              "11_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
         assert not (_PAGES / gone).exists()
@@ -618,7 +620,7 @@ def test_xg_board_rates_only_meaningful_players():
 
 _TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_My_Squad.py": "🧩", "4_Squad_Lab.py": "🧪",
               "5_Ask.py": "💬", "6_News.py": "📰", "7_Trending.py": "📈", "8_Help.py": "🧭",
-              "9_Feedback.py": "📣", "10_Admin.py": "📊"}
+              "9_Ask_Maddie.py": "🎥", "10_Feedback.py": "📣", "11_Admin.py": "📊"}
 
 
 def test_every_tab_has_an_emoji_led_header():
@@ -632,7 +634,7 @@ def test_every_tab_has_an_emoji_led_header():
 def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
     # US-307: with no FPL_FEEDBACK_WEBHOOK a submit offers a pre-filled mailto to the inbox (no network),
     # and the "Join the beta" link is hidden until FPL_SIGNUP_URL is set.
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     assert not at.exception
     assert at.text_area and any(b.label == "Send feedback" for b in at.button)   # the form is there
     assert not any("Join the beta" in b.label for b in at.get("link_button"))     # no signup URL configured
@@ -648,7 +650,7 @@ def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
 def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
     # US-264: the "Join the beta" link appears once FPL_SIGNUP_URL is set
     monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/signup")
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     assert any("Join the beta" in b.label for b in at.get("link_button"))
 
 
@@ -665,7 +667,7 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
         return type("R", (), {})()
 
     monkeypatch.setattr("requests.post", fake_post)
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     assert any(s.label == "Which page?" for s in at.selectbox)          # the page picker exists
     at.text_area[0].set_value("Fixtures target list is great").run()
     next(s for s in at.selectbox if s.label == "Which page?").set_value("Fixtures").run()
@@ -690,7 +692,7 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None:
                         captured.update(json=json) or type("R", (), {})())
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     at.text_area[0].set_value("Nice work").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert captured["json"]["access_key"] == "test-access-key"
@@ -724,7 +726,7 @@ def _registration_env(monkeypatch, cap="2"):
 
 def test_gate_is_off_by_default():
     # US-324: no cap / no code → the app is open (no gate), byte-identical to today
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     assert not at.exception
     assert not any("private beta" in (t.value or "") for t in at.title)   # no gate title
     assert any(b.label == "Send feedback" for b in at.button)              # the real page rendered
@@ -734,7 +736,7 @@ def test_registration_gate_admits_with_code_and_email(monkeypatch):
     _registration_env(monkeypatch)
     rows = []
     _fake_user_store(monkeypatch, rows)
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     assert any(t.label == "Invite code" for t in at.text_input)           # registration mode shows both fields
     assert any(t.label == "Your email" for t in at.text_input)
     next(t for t in at.text_input if t.label == "Invite code").set_value("nope").run()
@@ -751,7 +753,7 @@ def test_registration_gate_full_shows_the_waitlist(monkeypatch):
     _registration_env(monkeypatch, cap="0")                               # already full
     monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/waitlist")
     _fake_user_store(monkeypatch, [])
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -772,7 +774,7 @@ def test_waitlist_captures_a_wrong_code_email(monkeypatch):
     _registration_env(monkeypatch)
     _fake_user_store(monkeypatch, [])
     calls = _capture_waitlist(monkeypatch)
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("wrong").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("hopeful@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -784,7 +786,7 @@ def test_waitlist_captures_an_over_cap_email(monkeypatch):
     _registration_env(monkeypatch, cap="0")
     _fake_user_store(monkeypatch, [])
     calls = _capture_waitlist(monkeypatch)
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -1550,7 +1552,7 @@ def test_feedback_submitted_event(monkeypatch):
     monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None: type("R", (), {})())
-    at = _run(_PAGES / "9_Feedback.py")
+    at = _run(_PAGES / "10_Feedback.py")
     at.text_area[0].set_value("Love the fixture ticker").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert any(e == "feedback_submitted" for e, kw in events)
@@ -2082,3 +2084,64 @@ def test_is_local_requires_flag_and_a_non_seed_db(monkeypatch):
     assert is_local()
     monkeypatch.delenv("FPL_LOCAL", raising=False)
     assert not is_local()                                            # no flag (cloud) → never local
+
+
+# --- Ask Maddie video hub (US-382, ADR-112) --------------------------------------------------------------------
+
+def _maddie_env(monkeypatch):
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+
+
+def test_maddie_videos_published_are_cleaned_and_ordered(monkeypatch):
+    # videos() returns display-ready rows, ordered by sort_order; a blank URL becomes None (→ "coming soon").
+    from src.web_streamlit import maddie
+    _maddie_env(monkeypatch)
+    rows = [
+        {"topic": "Second", "blurb": "b2", "youtube_url": "https://youtu.be/2", "sort_order": 20},
+        {"topic": "First", "blurb": "b1", "youtube_url": " https://youtu.be/1 ", "sort_order": 10},
+        {"topic": "No clip yet", "blurb": "", "youtube_url": "", "sort_order": 30},
+    ]
+    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(rows))
+    out = maddie.videos()
+    assert [v["topic"] for v in out] == ["First", "Second", "No clip yet"]   # ordered by sort_order
+    assert out[0]["youtube_url"] == "https://youtu.be/1"                     # trimmed
+    assert out[2]["youtube_url"] is None                                     # blank -> None
+
+
+def test_maddie_videos_fall_back_when_unconfigured(monkeypatch):
+    # No store configured → the built-in welcome, never an empty list (so the hub always renders).
+    from src.web_streamlit import maddie
+    monkeypatch.delenv("FPL_STORE_URL", raising=False)
+    monkeypatch.delenv("FPL_STORE_KEY", raising=False)
+    assert maddie.videos() == maddie._FALLBACK
+
+
+def test_maddie_videos_fall_back_on_store_error(monkeypatch):
+    # A configured-but-unreachable store must not raise — it falls back to the welcome.
+    from src.web_streamlit import maddie
+    _maddie_env(monkeypatch)
+
+    def boom(url, params=None, headers=None, timeout=None):
+        raise requests.ConnectionError("store down")
+
+    monkeypatch.setattr("requests.get", boom)
+    out = maddie.videos()
+    assert out and out[0]["topic"] == "Meet Maddie"
+
+
+def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
+    # The hub embeds a clip for a published video and shows "coming soon" for a URL-less row (no crash).
+    import streamlit as st
+
+    from src.web_streamlit import maddie
+    st.cache_data.clear()                              # the page caches videos() — start clean per test
+    monkeypatch.setattr(maddie, "videos", lambda: [
+        {"topic": "Picking your captain", "blurb": "how MADBOOTS ranks captains", "youtube_url": "https://youtu.be/x"},
+        {"topic": "More explainers soon", "blurb": "", "youtube_url": None},
+    ])
+    at = _run(_PAGES / "9_Ask_Maddie.py")
+    assert any("Ask Maddie" in t.value for t in at.title)
+    assert any("Picking your captain" in s.value for s in at.subheader)      # the published topic renders
+    assert any("Coming soon" in i.value for i in at.info)                    # the URL-less row degrades
+

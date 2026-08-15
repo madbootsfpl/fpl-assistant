@@ -48,7 +48,7 @@ is data-only and a chat persona fights the "shows its working" brand). Gated by 
 - **DoD:** pytest (page renders · only published rows show · fallback on fetch error · Home teaser links) · manual
   smoke · docs (ADR-112 + Journal + Roadmap + the `create table` / public-read SQL in the runbook). No new dependency.
 - **Refresh = within the ~10-min cache TTL, or instantly via "Reboot app"** (the same trick as the DB snapshot).
-- **Follow-ups (not this sprint):** an in-app **Admin** editor (write path, via `pages/10_Admin.py`); per-video view
+- **Follow-ups (not this sprint):** an in-app **Admin** editor (write path, via `pages/11_Admin.py`); per-video view
   analytics; a live "Ask Maddie" assistant only if a *grounded* cloud LLM path ever lands.
 
 ## Tester feedback — 2026-08-13 intake

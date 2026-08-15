@@ -79,7 +79,7 @@ in-app Admin editor (below) is explicitly **out of scope** for this sprint.
   cloud answer path (with visible ✓/⚠ working) ever lands.
 - **Commit mp4s to `assets/`.** Rejected — repo bloat + Streamlit Cloud size limits; unlisted YouTube is free,
   reliable, embeddable, and also the marketing channel.
-- **In-app Admin editor now** (`pages/10_Admin.py` writes the table). Deferred — the Supabase dashboard already
+- **In-app Admin editor now** (`pages/11_Admin.py` writes the table). Deferred — the Supabase dashboard already
   meets the requirement; an app-side write path reintroduces the RLS-write complexity. A clean **follow-up**.
 
 ---
