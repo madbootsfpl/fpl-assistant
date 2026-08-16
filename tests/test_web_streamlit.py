@@ -73,12 +73,12 @@ def test_trending_top_discussions_before_community_signals():
 
 
 def test_help_save_step_reflects_auth_live_persistence():
-    # US-378 (ADR-111): the Save section reflects auth-live persistence (account save + auto-sync + ☁ Save/Load),
-    # not the stale "per-session / no accounts / nothing saved on the server" copy.
+    # US-378 (ADR-111) + US-385 (ADR-113): the Save section reflects auth-live persistence via the unified
+    # "Your team" panel (account sync + import + download), not the stale "per-session / no accounts" copy.
     at = _run(_PAGES / "8_Help.py")
     blob = " ".join(m.value for m in at.markdown)
     caps = " ".join(c.value for c in at.caption)
-    assert "saved to your account" in blob and "Save / Load" in blob        # auth-live persistence
+    assert "saved to your account" in blob and "Your team" in blob          # auth-live persistence, unified panel
     assert "nothing saved on the server" not in (blob + caps)               # the stale claim is gone
     assert "no accounts" not in (blob + caps)
     assert "⚔️ Boot Battle" in blob                                          # US-378: the compare feature named
@@ -318,11 +318,15 @@ def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     assert not at.exception
 
 
-def test_sidebar_offers_the_import_team_control():
-    # US-191 / ADR-058: the sidebar (on the Squads page) has a manager-ID input + an Import team button
+def test_your_team_panel_consolidates_import_upload_download():
+    # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
+    # backup in one place (was scattered across the sidebar).
     at = _run(_PAGES / "3_My_Squad.py")
-    assert any(t.label == "FPL manager-ID" for t in at.text_input)
+    assert any(e.label == "⚙ Your team — import, back up & sync" for e in at.get("expander"))
+    assert any(t.label == "FPL manager-ID" for t in at.text_input)                    # import by Manager-ID
     assert any(b.label == "Import team" for b in at.button)
+    assert any(u.label.endswith("upload a squad.json backup") for u in at.get("file_uploader"))
+    assert any(d.label.endswith("Download squad.json") for d in at.get("download_button"))   # backup in the panel
 
 
 def test_transfer_page_apply_mutates_the_session_squad():

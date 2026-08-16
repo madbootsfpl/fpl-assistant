@@ -6,6 +6,7 @@ Squads on the deployed app are **per-user, no server**: a session **active squad
 committed `seed_squads.json`). The web **never writes** — the DB/squads stay read-only.
 """
 
+import datetime
 import json
 
 import streamlit as st
@@ -264,27 +265,46 @@ def parse_uploaded(uploaded) -> tuple[dict | None, str | None]:
 
 
 def render_sidebar() -> None:
-    """The sidebar squad controls (ADR-054), shown on every squad page: the active-squad name + an
-    uploader. The upload is applied once (keyed by the file id), so it won't clobber a built squad."""
+    """A **slim** sidebar squad status (ADR-113/US-385), shown on every squad page: the active-team name + a pointer
+    to the one **Your team** panel on My Squad, where import · backup · sync now live together (they used to be
+    scattered across the sidebar). The ☁ handle Save/Load stays only as the **no-login fallback** (US-384)."""
     with st.sidebar:
         st.subheader("Your squad")
         act = active_squad()
-        st.caption(f"Active: **{act.get('name', 'unnamed')}**"
-                   if act else "Active: **none** — build one or upload a `squad.json`.")
-        uploaded = st.file_uploader("Upload a squad.json", type="json", key="squad_uploader",
-                                    help="Load a squad.json you downloaded earlier (from Build Squad).")
-        if uploaded is not None and st.session_state.get(_UPLOAD_APPLIED) != uploaded.file_id:
-            squad, err = parse_uploaded(uploaded)
-            if err:
-                st.error(err)
-            else:
-                set_active_squad(squad)
-                st.session_state[_UPLOAD_APPLIED] = uploaded.file_id
-                st.success(f"Loaded **{squad['name']}** ({len(squad['player_ids'])} players).")
+        st.caption(f"Active: **{act.get('name', 'unnamed')}**" if act
+                   else "Active: **none** yet.")
+        st.caption("⚙ Import · back up · sync your team in the **Your team** panel on **My Squad**.")
+    render_cloud_sync()          # ☁ handle Save/Load — no-login fallback only (hidden when signed in, US-384)
 
-        # Import your real FPL team by manager-ID (ADR-058) — sets the session active squad (no server
-        # write). Picks are public only after the GW1 deadline; degrades with a clear message until then.
-        st.caption("— or import your FPL team —")
+
+def _download_payload(squad: dict) -> str:
+    """`squad` as a downloadable `squad.json` in the SquadStore `{name: {…}}` format — round-trips through
+    `parse_uploaded`. Stamps `saved_at`; the squad name is the outer key (ADR-054)."""
+    save = {k: v for k, v in squad.items() if k != "name"}
+    save.setdefault("saved_at", datetime.date.today().isoformat())
+    return json.dumps({squad.get("name", "My squad"): save}, indent=2)
+
+
+def render_your_team(squad: dict | None) -> None:
+    """The unified **Your team** panel (ADR-113/US-385) — one inline place to *get*, *back up* and (signed in)
+    *sync* your team, replacing the scattered sidebar Upload / Manager-ID / handle controls. Three zones:
+    **sync status** · **get your team** (Import by Manager-ID · Upload a backup · Build in Squad Lab) · **backup**
+    (Download). `squad` is the squad currently shown (for the download); import/upload set the session's active
+    squad (a rerun then reflects it). No server write beyond the account auto-sync wired in `set_active_squad`."""
+    from src.web_streamlit import auth
+    with st.expander("⚙ Your team — import, back up & sync", expanded=squad is None):
+        # 1) Sync status — signed in: the account is the store (ADR-113); else session-only + the Download backup.
+        if auth.is_configured():
+            from src.web_streamlit.access import _EMAIL
+            who = st.session_state.get(_EMAIL)
+            st.success(f"🔄 **Synced to your account**{f' — {who}' if who else ''}. Your team follows you across "
+                       "your devices; every edit saves automatically — no manual save.")
+        else:
+            st.caption("Your team lives in this browser session — **Download** a backup to keep it. "
+                       "(A ☁ **Save / Load** panel in the sidebar syncs across devices without a login.)")
+
+        # 2) Get your team — Import by Manager-ID (ADR-058) · Upload a backup (ADR-054) · Build in Squad Lab.
+        st.markdown("**Get your team**")
         manager_id = st.text_input(
             "FPL manager-ID", key="manager_id", placeholder="e.g. 1234567",
             help="Your FPL team's numeric id (in your team's URL on fantasy.premierleague.com). "
@@ -299,14 +319,35 @@ def render_sidebar() -> None:
                     players = store.get_players()
                 finally:
                     store.close()
-                squad, message = fetch_manager_team(int(manager_id.strip()), players)
-                if squad:
-                    set_active_squad(squad)
+                imported, message = fetch_manager_team(int(manager_id.strip()), players)
+                if imported:
+                    set_active_squad(imported)
                     st.success(message)
                 else:
                     st.info(message)
 
-    render_cloud_sync()          # ☁ cross-device Save/Load in the sidebar (US-331) — below the squad controls
+        uploaded = st.file_uploader("…or upload a squad.json backup", type="json", key="squad_uploader",
+                                    help="Load a squad.json you downloaded earlier (a backup, or from Squad Lab).")
+        if uploaded is not None and st.session_state.get(_UPLOAD_APPLIED) != uploaded.file_id:
+            parsed, err = parse_uploaded(uploaded)
+            if err:
+                st.error(err)
+            else:
+                set_active_squad(parsed)
+                st.session_state[_UPLOAD_APPLIED] = uploaded.file_id
+                st.success(f"Loaded **{parsed['name']}** ({len(parsed['player_ids'])} players).")
+
+        st.caption("🧪 …or **build a fresh squad** in the **Squad Lab** tab (sidebar) — *Use this squad →* "
+                   "sends it here.")
+
+        # 3) Backup — download the shown squad (round-trippable via Upload).
+        st.markdown("**Backup**")
+        if squad:
+            st.download_button("⬇︎ Download squad.json", _download_payload(squad),
+                               file_name="squad.json", mime="application/json",
+                               help="Save a copy to this device — re-upload it any time, or on another device.")
+        else:
+            st.caption("Import or build a team first, then download a backup.")
 
 
 def render_cloud_sync() -> None:

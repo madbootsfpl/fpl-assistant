@@ -65,9 +65,9 @@ with st.expander("2 · Make it yours  →  **🧩 My Squad**", expanded=True):
         "a flagged player.\n"
         "- **🪑 Set bench** — choose all four bench players at once.\n\n"
         "The summary's **Projected XI** includes your **captain's ×2 — for the next gameweek only** (captaincy is "
-        "re-picked each week). Your squad is **saved to your account and auto-synced across your devices** "
-        "(**☁ Save/Load** is also in the sidebar). *(**Substitute** = a lineup change; **Transfer** = a new player "
-        "— they're separate.)* Need a new squad? Head back to **🧪 Squad Lab**."
+        "re-picked each week). Your squad is **saved to your account and auto-synced across your devices** — no "
+        "manual save (manage it in the **⚙ Your team** panel on My Squad). *(**Substitute** = a lineup change; "
+        "**Transfer** = a new player — they're separate.)* Need a new squad? Head back to **🧪 Squad Lab**."
     )
 
 with st.expander("3 · Check its health  →  **My Squad → ❤️ Health**"):
@@ -138,16 +138,17 @@ with st.expander("6 · Ask the assistant  →  the **💬 Ask** tab"):
         "recommendation, try *\"Why?\"*, *\"What's the risk?\"* or *\"Who's second best?\"*."
     )
 
-with st.expander("7 · Save your team  →  **☁ Account · 💾 Download · 🔢 Import**"):
+with st.expander("7 · Your team  →  **🔄 Synced · 💾 Backup · 🔢 Import**"):
     st.markdown(
-        "Your squad is **saved to your account**, so it stays available across sessions and devices:\n"
-        "- **☁ Save / Load** — in the sidebar, to reach your squad on any device.\n"
-        "- **💾 Download** `squad.json` — a portable local backup.\n"
-        "- **📤 Upload** — restore a saved `squad.json` from the sidebar.\n"
+        "Everything to do with your team lives in **one place** — the **⚙ Your team** panel on **My Squad**:\n"
+        "- **🔄 Synced to your account** — when you're signed in, your team **follows you across devices** and "
+        "**every edit saves automatically** — no manual save, nothing to remember.\n"
         "- **🔢 Import by Manager-ID** — load your real FPL team by its numeric ID (from your team's URL); "
         "available after the **GW1 deadline (2026-08-21)**, when picks become public.\n"
-        "- **🔄** changes to your active squad are **auto-saved to your account**.\n\n"
-        "*Tip: account sync is the easiest option; `squad.json` is your portable backup and safety net.*"
+        "- **📤 Upload** — restore a saved `squad.json`.\n"
+        "- **💾 Download** `squad.json` — a portable local backup (re-upload it any time, or on another device).\n\n"
+        "*Whatever you import, upload or build **becomes your team** and syncs to your account. `squad.json` is your "
+        "portable backup and safety net.*"
     )
 
 with st.expander("8 · Tell us what you think  →  the **📣 Feedback** tab"):

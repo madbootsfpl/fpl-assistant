@@ -54,6 +54,7 @@ from src.web_streamlit.squads import (
     captain_bonus,
     move_bench_sub,
     rename,
+    render_your_team,
     set_active_squad,
     set_bench,
     set_captain,
@@ -266,8 +267,9 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
 # ---- My Squad (view & edit the active squad; ADR-055) ----------------------------------------------
 
 def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
-    st.caption("Tweak your squad here — rename · swap · bench · download. 🔧 To **build a fresh one** with "
-               "the full option set, switch to **Build**.")
+    st.caption("Tweak your squad here — rename · swap · bench. 🔧 To **build a fresh one** with the full "
+               "option set, switch to **Squad Lab**.")
+    render_your_team(squad)          # US-385: the one Your-team panel — import · back up · sync (ADR-113)
     by_id = {p["id"]: p for p in players}
     owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
     ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
@@ -608,12 +610,6 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             else:
                 st.success("Bench set.")
             st.rerun()
-
-    st.divider()
-    save = {k: v for k, v in squad.items() if k != "name"}
-    save.setdefault("saved_at", datetime.date.today().isoformat())
-    payload = json.dumps({squad.get("name", "My squad"): save}, indent=2)
-    st.download_button("⬇︎ Download squad.json", payload, file_name="squad.json", mime="application/json")
 
 
 # ---- Health (analyse the squad over the next 5 GW; ADR-031) ----------------------------------------
