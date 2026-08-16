@@ -310,11 +310,16 @@ def render_sidebar() -> None:
 
 
 def render_cloud_sync() -> None:
-    """The ☁ cross-device **Save / Load** (US-310/331, ADR-094), shown in the **Squads sidebar** so it's visible on
-    every sub-view — not buried under My Squad. **Secret-gated:** hidden unless the store is configured (the app
-    otherwise stays download/upload-only, ADR-054). **Save** needs an active squad (disabled + a hint otherwise);
-    **Load**/**Clear** work by handle and set the session's active squad. A handle is the key — no login."""
-    from src.web_streamlit import analytics, cloud_store
+    """The ☁ cross-device **Save / Load** (US-310/331, ADR-094) — the **no-login fallback** only.
+
+    **Retired in signed-in mode (ADR-113/US-384).** When Google auth is configured, the **account is the store**:
+    your team auto-syncs to your account (`user_key`, ADR-106), so a hand-typed handle is redundant — and its
+    divergent write (saving under the *handle*, while a refresh restores the *account*) was the **refresh-revert
+    bug** the tester hit. So this renders **only when auth is *not* configured** (local/dev/open deploy), where it
+    stays the sole cross-device option. Also **secret-gated** on the store (else download/upload-only, ADR-054)."""
+    from src.web_streamlit import analytics, auth, cloud_store
+    if auth.is_configured():          # ADR-113: signed-in → the account is the store; retire the handle tool
+        return
     if not cloud_store.is_configured():
         return
     squad = active_squad()

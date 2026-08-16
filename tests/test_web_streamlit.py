@@ -1469,6 +1469,38 @@ def _squads_with_active(monkeypatch):
     return at
 
 
+def _signed_in_squads(monkeypatch, stored=None):
+    """Run My Squad as an **admitted, signed-in** user (ADR-106 auth mode) with the store configured. `stored` is
+    the squad saved under the user's account (`user_key`) — the store's GET returns it, so a fresh run (≈ a page
+    **refresh**, session wiped) restores it via `gate → link_and_restore`. Patches the auth seam so no real
+    `st.user`/network is needed."""
+    from src.web_streamlit import auth, user_store
+    monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    monkeypatch.setattr(auth, "is_configured", lambda: True)              # signed-in mode on
+    monkeypatch.setattr(auth, "current_email", lambda: "tony@example.com")
+    monkeypatch.setattr(user_store, "is_registered", lambda email: True)  # on the allow-list → admitted
+    rows = [{"data": stored}] if stored else []
+    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(rows))
+    monkeypatch.setattr("requests.post", lambda url, json=None, headers=None, timeout=None: _StoreResp())
+    return _run(_PAGES / "3_My_Squad.py")
+
+
+def test_cloud_handle_tool_hidden_when_signed_in(monkeypatch):
+    # ADR-113/US-384: in signed-in mode the account is the store — the manual ☁ handle tool is retired (it was the
+    # refresh-revert bug), even with the store configured.
+    at = _signed_in_squads(monkeypatch)
+    assert not any(t.label == "Your handle" for t in at.text_input)       # no handle Save/Load UI when signed in
+
+
+def test_signed_in_team_persists_across_a_refresh(monkeypatch):
+    # ADR-113/US-384: the revert bug's fix — a team saved under the account is restored on a fresh run (≈ refresh),
+    # so it no longer reverts to a previous squad.
+    stored = {"name": "My Account XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
+    at = _signed_in_squads(monkeypatch, stored=stored)
+    assert at.session_state["squad"]["name"] == "My Account XI"           # restored from the account, not reverted
+
+
 def test_cloud_save_load_hidden_in_sidebar_without_secrets(monkeypatch):
     # US-310/331 (ADR-094): the ☁ cross-device store is secret-gated — with no FPL_STORE_URL/KEY it's invisible.
     monkeypatch.delenv("FPL_STORE_URL", raising=False)
