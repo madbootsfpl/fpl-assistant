@@ -1,7 +1,7 @@
 # Sprint 158: One account-backed team — unified "Your Team" persistence (US-384 / US-385)
 
-**Dates:** 2026-08-16 →
-**Status:** 🚧 Planned — gated by **ADR-113**. Fix-first (US-384), then the unified panel (US-385).
+**Dates:** 2026-08-16
+**Status:** ✅ Complete — US-384 + US-385 (ADR-113). 992 → 994 tests.
 **Capacity:** ~1 session
 **Carried Over:** none
 
@@ -50,8 +50,38 @@
 
 ### 📋 Sprint Review
 
-*(filled at retro)*
+**Delivered — one account-backed team; the refresh-revert bug is gone and the four tools are one panel.**
+
+- **US-384 — correctness (the bug).** Root cause: two cloud stores fought over one squad — the **account**
+  (`user_key`, restored on every load) vs the manual **handle** (ADR-094). ☁ Load wrote the *handle* while a
+  refresh restored the *account* → the team reverted. Fix: `render_cloud_sync` returns early when
+  `auth.is_configured()` — in signed-in mode the **account is the store**; the handle tool stays only as the
+  no-login fallback. Every other load path (upload/import/edit) already persists to the account, so a **loaded
+  team now survives a refresh**. +2 tests (signed-in load→refresh persists; handle tool hidden when signed in).
+- **US-385 — the unified panel.** A new `render_your_team(squad)` inline expander on My Squad with three zones —
+  **sync status** (account-synced when signed in) · **get your team** (Manager-ID import · Upload backup · Squad
+  Lab pointer) · **backup** (Download). The sidebar slims to the active-team status + a pointer; the duplicate
+  bottom-of-page Download is removed; **Help §7** rewritten to the one-place model. Owner-approved via an Artifact
+  mock. The old sidebar-import test became a panel-consolidation test; the Help test updated.
+- **Maps to the tester's three asks:** Upload/Download backup ✓ · see/manage on other devices with the same login,
+  save config or local ✓ (account sync + Download) · Manager-ID import that persists across devices / saves local ✓.
+
+**Owner smoke (post-deploy):** sign in → Import by Manager-ID → **refresh** → team stays; edit captain → refresh →
+stays; open on a second device → same team; Download → Upload restores. The ☁ handle expander is gone when
+signed in — intended.
 
 ### 🧠 Lessons
 
-*(filled at retro)*
+- **A UX-consistency complaint can be a bug in disguise.** "The four tools feel separate" and "it reverts on
+  refresh" were the *same* root cause — two persistence systems layered over time (ADR-094 pre-login, ADR-106
+  post-login). Reading the whole flow before touching code found the real fault instead of patching a symptom.
+- **Retire the old layer when the new one subsumes it.** With login live, the handle store wasn't just redundant —
+  it was *actively harmful* (the divergent write). Removing it (in signed-in mode) fixed the bug *and* the
+  confusion; a patch that kept both would have done neither.
+- **Fix-first sequencing pays off.** Shipping US-384 as its own small, safe change ends the frustrating data loss
+  immediately; the larger consolidation (US-385) then rides on a correct base.
+- **`st.page_link` raises in AppTest bare mode** (`KeyError: 'url_pathname'`) when a page runs standalone — works
+  at runtime, breaks the harness. Use a text caption for in-view page pointers (re-confirming the Sprint-146
+  lesson); `page_link` is fine at the top of the *main* script (Home).
+- **Match the store's RLS posture to who writes** (carried from ADR-113 design): the account model is read-on-load
+  + write-through-edit under one key, which is exactly what makes "survives refresh" hold.
