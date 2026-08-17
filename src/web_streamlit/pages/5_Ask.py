@@ -36,11 +36,11 @@ if "chat_context" not in st.session_state:
     st.session_state.chat_context = None   # the last conversational turn (ADR-047), threaded to converse
 
 _EXAMPLES = [
-    "what should I do this week for my-team?",
-    "who should I captain from my-team?",
+    "what should I do this week for my squad?",
+    "who should I captain from my squad?",
     "best differential midfielders under £8m",
     "is Haaland worth the money?",
-    "what transfer should I make for my-team?",
+    "what transfer should I make for my squad?",
     "how does bench boost work?",              # a rules question — answered from the curated KB, verified ✓
     "how do transfers and hits work?",         # ↑ (US-259/260, ADR-085)
     "when does Arsenal play next?",
@@ -59,15 +59,16 @@ def _ask(question):
     finally:
         store.close()
     st.session_state.chat_context = ctx
-    st.session_state.history.append((question, render_ask(result, ollama_hint=False)))   # US-375: web = no Ollama hint
+    # US-375: web = no Ollama hint; US-399: markdown so answers read as chat (the aligned table stays fenced).
+    st.session_state.history.append((question, render_ask(result, ollama_hint=False, markdown=True)))
     st.session_state["built_squad"] = result.squad
 
 
 # A few starter prompts — click one to ask it (US-234). Expanded until the first turn, then it folds away.
-# When a squad is loaded, the examples name it (US-280) so "my-team" → your real squad and the click scopes.
+# When a squad is loaded, the examples name it (US-280) so "my squad" → your real squad and the click scopes.
 with st.expander("💡 Example questions — click one to ask it", expanded=not st.session_state.history):
     for i, example in enumerate(_EXAMPLES):
-        label = example.replace("my-team", _active["name"]) if _active else example
+        label = example.replace("my squad", _active["name"]) if _active else example
         if st.button(label, key=f"example_{i}", use_container_width=True):
             _ask(label)
             st.rerun()
@@ -76,7 +77,7 @@ with st.expander("💡 Example questions — click one to ask it", expanded=not 
 # readable (US-275).
 for question, answer in st.session_state.history:
     st.chat_message("user").write(question)
-    st.chat_message("assistant").code(answer, language=None, wrap_lines=True)
+    st.chat_message("assistant").markdown(answer)      # US-399: prose reads as chat; the plan table stays fenced
 
 # Nudge the newest answer into view — the app runs in an iframe with same-origin access, so scroll the parent
 # to the bottom after the history renders (US-275). The `/*turn N*/` token makes the script **unique per turn**

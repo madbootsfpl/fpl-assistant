@@ -39,6 +39,10 @@ if _line:
     if _urgency != "calm":     # a nudge to the pre-deadline actions when it's close
         st.page_link("pages/3_My_Squad.py",
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
+
+# US-398: one clear primary action up top (the value path), above the "explore" list — not buried in bullets.
+st.page_link("pages/4_Squad_Lab.py", label="🧪 **Build your first squad** → Squad Lab")
+
 st.markdown(
     """
 **Explore the sidebar:**
@@ -73,10 +77,6 @@ st.markdown(_NOTE_CSS + '<div class="mb-note"><span class="i">🧭</span><span><
             unsafe_allow_html=True)
 st.page_link("pages/9_Maddie_Explains.py",
              label="🎥 **Maddie Explains** — quick 60-second video guides of each feature →")
-st.markdown('<div class="mb-note"><span class="i">🧪</span><span><b>Testing this?</b> Tell us what breaks or feels '
-            'off on the <b>📣 Feedback</b> tab (bottom of the sidebar) — or '
-            '<a href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.</span></div>',
-            unsafe_allow_html=True)
 
 _signup = secret("FPL_SIGNUP_URL")          # a founding-tester signup link, only when configured (ADR-087)
 if _signup:
@@ -84,4 +84,7 @@ if _signup:
                    help="Sign up with your email — founding testers get free access as the app grows.")
 
 st.divider()
+# US-398: the beta/Testing nudge moved to a lighter footer (was a mid-page callout → banner-blindness).
+st.caption("🧪 **Testing this?** Tell us what breaks or feels off on the **📣 Feedback** tab — or "
+           "[open a GitHub issue](https://github.com/madbootsfpl/fpl-assistant/issues/new).")
 st.caption(brand.DISCLAIMER)                 # US-350 (ADR-103): the not-affiliated line

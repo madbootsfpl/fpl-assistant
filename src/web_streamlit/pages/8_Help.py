@@ -126,8 +126,8 @@ with st.expander("💬 6 · Ask the assistant  →  the **Ask** tab"):
         'best differential midfielders under £8m\n'
         'is Haaland worth the money?\n'
         "Haaland's history                   # a player's season record (past seasons + per-GW from GW1)\n"
-        'what should I do this week for my-team?\n'
-        'who should I captain from my-team?\n'
+        'what should I do this week for my squad?\n'
+        'who should I captain from my squad?\n'
         'how does bench boost work?          # a rules question → ✓ from the knowledge base\n'
         'how do transfers and hits work?     # a rules question → ✓\n'
         'when does Arsenal play next?',

@@ -422,7 +422,7 @@ def test_help_page_renders_the_guide_without_data():
     assert "Squad Lab" in blob and "My Squad" in blob          # the core steps (ADR-105 nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
     assert "AI Tips" in blob                                   # US-226: the gameweek tab (renamed) is in the guide
-    assert "this week for my-team" in blob                     # US-224: the gameweek Ask example
+    assert "this week for my squad" in blob                     # US-224: the gameweek Ask example
     assert "quality rating" in blob                            # US-224: the stat-board rating is explained
     assert not at.get("dataframe")                             # static content — no data widgets
 
@@ -1964,12 +1964,12 @@ def test_ask_page_example_prompts_are_clickable():
     assert not at.exception
     labels = [b.label for b in at.button if b.key and b.key.startswith("example_")]
     assert any("best differential midfielders" in lbl for lbl in labels)
-    assert any("this week for my-team" in lbl for lbl in labels)
+    assert any("this week for my squad" in lbl for lbl in labels)
 
     btn = next(b for b in at.button if b.key == "example_0")
     btn.click().run()                                       # clicking runs the grounded pipeline
     assert not at.exception and len(at.session_state["history"]) == 1
-    assert at.get("code")[0].wrap_lines is True             # US-275: the answer wraps (readable sentences)
+    assert any("Q:" in m.value for m in at.markdown)        # US-399: the answer renders as chat markdown
 
 
 def test_ask_scroll_nudge_is_unique_per_turn_and_multi_tick():
@@ -1994,7 +1994,7 @@ def test_ask_page_example_prompts_name_the_loaded_squad():
     at.run()
     assert not at.exception
     labels = [b.label for b in at.button if b.key and b.key.startswith("example_")]
-    assert any("RoboTS" in lbl for lbl in labels) and not any("my-team" in lbl for lbl in labels)
+    assert any("RoboTS" in lbl for lbl in labels) and not any("my squad" in lbl for lbl in labels)
 
 
 def test_ask_page_is_conversational_pronouns_and_followups():
@@ -2014,7 +2014,7 @@ def test_ask_chat_answers_a_grounded_question():
     assert not at.exception
     at.chat_input[0].set_value("who has the best fixtures over the next 5?").run()
     assert not at.exception
-    assert any("Avg FDR" in c.value for c in at.code)      # the grounded FDR answer in the chat
+    assert any("Avg FDR" in m.value for m in at.markdown)      # the grounded FDR answer in the chat
     assert len(at.session_state["history"]) == 1           # the turn was kept in history
 
 
@@ -2237,6 +2237,20 @@ def test_home_callouts_are_branded_and_bullets_iconed():
     blob = " ".join(m.value for m in at.markdown)
     assert "mb-note" in blob                                   # the purple callout box
     assert "👟 **Players**" in blob and "📅 **Fixtures**" in blob and "🎥 **Maddie Explains**" in blob
+
+
+def test_home_has_a_primary_build_cta():
+    # US-398: Home surfaces one clear primary action — a link to build a squad in Squad Lab.
+    at = _run(_APP)
+    assert any("Squad_Lab" in getattr(pl, "page", "") for pl in at.get("page_link")), \
+        "Home should carry a 'Build your first squad → Squad Lab' CTA"
+
+
+def test_news_shows_the_shared_fit_flag():
+    # US-400: News uses the same availability emoji (the Fit column) as every other surface.
+    at = _run(_PAGES / "6_News.py")
+    dfs = at.get("dataframe")
+    assert not dfs or "Fit" in list(dfs[0].value.columns)   # when there's news, the Fit column is present
 
 
 def test_feedback_page_picker_matches_the_current_nav():

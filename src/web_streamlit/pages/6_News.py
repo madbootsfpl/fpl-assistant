@@ -6,6 +6,7 @@ Degrades to "no current news" when everyone's fit. No external calls, no xP — 
 
 import streamlit as st
 
+from src.analytics.crowd import fit_flag
 from src.storage import Storage
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
@@ -51,6 +52,7 @@ else:
         st.dataframe(
             [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"],
+              "Fit": fit_flag(p),   # US-400: the shared availability emoji (⛔🚑❓), used on every surface
               "Status": _STATUS.get(p["status"], p["status"]),
               "Chance": (f"{p['chance']}%" if p["chance"] is not None else "—"),
               "News": p["news"], "Source": p["scout_news_link"] or None}
