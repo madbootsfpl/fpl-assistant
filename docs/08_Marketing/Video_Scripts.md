@@ -322,11 +322,15 @@ the **voice + assembly** and keep the mascot as a brand element (intro/outro/cor
 - **Photos:** the card renders use silhouette stand-ins (real player photos are CDN-blocked in the render) — capture
   photo-heavy shots (the big player-card headshot, the pitch kits) from the **live app**.
 
-## Landing-page "See how it works" → the 60-sec explainer (idea, owner 2026-08-15)
+## Landing-page "See how it works" → the Maddie intro — ✅ WIRED (2026-08-18)
 
-On **madboots.com** (the Cloudflare Pages site, repo `madboots-site`), make the hero **"See how it works"** button
-play the **60-sec Maddie explainer** instead of just scrolling down the page — a short video on a landing hero is a
-proven conversion beat.
+**Done:** on **madboots.com** (`~/madboots-site/index.html`, not a git repo — deploy via Cloudflare Pages), the hero
+**"See how it works"** button now opens a **self-contained lightbox** that plays the **Maddie intro**
+(`https://youtu.be/a7WG0MBDLFg`, autoplay, closes on outside-click / ✕ / Esc; `href="#why"` kept as a no-JS
+fallback). Same clip can seed the in-app **Maddie Explains** (`maddie_videos`, BETA.md §6). *Owner: preview by
+opening `index.html` locally, then deploy.* — The 90-sec-or-less explainer series (owner marketing goal).
+
+*(Original idea, 2026-08-15 — a short video on a landing hero is a proven conversion beat:)*
 - **Recommended:** a **lightbox/modal** that plays the unlisted-YouTube embed on click (keeps the visitor *on* the
   landing page — no navigation away, plays immediately). Prefer this over a raw link-out to YouTube (which loses them)
   or an inline scroll-to-embed (fine, but a modal reads as more deliberate for a hero CTA).
