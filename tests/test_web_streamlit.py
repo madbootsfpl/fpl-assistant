@@ -247,22 +247,35 @@ def test_fixtures_target_value_column_and_sort_toggle():
     assert block == sorted(block, reverse=True)
 
 
+def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
+    # US-407b: the "My squad only" scope is on the Players pool filter too (when a squad is active).
+    from src.web_streamlit.squads import demo_squads
+    squads = demo_squads()
+    if not squads:
+        return
+    at = AppTest.from_file(str(_PAGES / "1_Players.py"), default_timeout=30)
+    at.session_state["squad"] = next(iter(squads.values()))
+    at.run()
+    assert not at.exception
+    assert any(c.label == "My squad only" for c in at.checkbox)   # the shared scope, on Players
+
+
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
-    # US-302 (ADR-049): a "My squad" scope restricts the ticker to your teams + a Players count column.
+    # US-302 (ADR-049) + US-407b: a "My squad only" checkbox restricts the ticker to your teams + a Players count.
     from src.web_streamlit.squads import demo_squads
     at = _run(_PAGES / "2_Fixtures.py")
     if not at.dataframe:
         return
     all_teams = at.dataframe[0].value
-    assert "Players" not in all_teams.columns               # default = All teams, no count column
-    scope = next(s for s in at.segmented_control if s.label == "Show")
+    assert "Players" not in all_teams.columns               # default = all teams, no count column
+    chk = next(c for c in at.checkbox if c.label == "My squad only")
     squads = demo_squads()
     if not squads:
-        scope.set_value("My squad").run()                   # no squad → a note + fall back to all teams
+        chk.set_value(True).run()                           # no squad → a note + fall back to all teams
         assert any("No squad loaded" in c.value for c in at.caption)
         return
     at.session_state["squad"] = next(iter(squads.values()))
-    scope.set_value("My squad").run()
+    chk.set_value(True).run()
     assert not at.exception
     scoped = at.dataframe[0].value
     assert "Players" in scoped.columns and len(scoped) <= len(all_teams)   # scoped to owned teams

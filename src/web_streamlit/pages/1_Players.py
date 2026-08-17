@@ -12,6 +12,7 @@ from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import filter_controls
+from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 from src.web_streamlit.views import players as views
 
@@ -40,7 +41,9 @@ if not rows:
     st.info("No data yet — it's refreshing; check back shortly.")
 else:
     # One shared filter (ADR-064) — applies to the pool and every stat board (price no-op on stat rows).
-    sel = filter_controls(rows, key="players", with_price=True)
+    _sq = active_squad()                                    # US-407b: a "My squad only" scope on the pool filter
+    sel = filter_controls(rows, key="players", with_price=True,
+                          my_squad_ids=set(_sq["player_ids"]) if _sq else None)
     view = st.segmented_control(
         "View", ["Pool", "Card", "Set pieces", "Over / under-perf", "Defensive Contribution", "Clean sheets",
                  "xG / xA / xGI", "History"],

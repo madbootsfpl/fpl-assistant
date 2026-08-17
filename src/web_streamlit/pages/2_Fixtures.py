@@ -45,13 +45,14 @@ else:
     weeks = st.slider("Weeks to show", 1, 8, 6,
                       help="How many upcoming gameweeks to show in the difficulty ticker.")
     # US-302 (ADR-049): focus the ticker on your own teams — which of *your* teams face a hard run.
-    scope = st.segmented_control("Show", ["All teams", "My squad"], default="All teams", key="ticker_scope",
-                                 help="Focus the ticker on the teams in your active squad.")
+    # US-407b: a "My squad only" checkbox — consistent with Players/News/Trending/Radar (was a segmented control).
+    my_only = st.checkbox("My squad only", key="ticker_myteam",
+                          help="Focus the ticker on the teams in your active squad.")
     my_counts: dict = {}
-    if scope == "My squad":
+    if my_only:
         squad = active_squad()
         if not squad:
-            st.caption("No squad loaded — build or upload one on the **Squads** tab, then come back.")
+            st.caption("No squad loaded — build or import one on **My Squad**, then come back.")
         else:
             by_id = {p["id"]: p for p in players}
             my_counts = Counter(by_id[i]["team"] for i in squad["player_ids"] if i in by_id)
@@ -110,12 +111,20 @@ else:
     # US-304: rank each team's picks by xP (default) or Val/£m (points per £m, ADR-042 — bang-for-buck).
     sort_label = st.segmented_control("Sort", ["xP", "Val/£m"], default="xP", key="target_sort",
                                       help="Rank each team's targets by expected points, or by value per £m.")
+    # US-407b: a "My squad only" scope — which of *your* players sit on the radar (good runs to hold), consistent
+    # with Players/News/Trending/Fixtures.
+    radar_mine = st.checkbox("My squad only", key="radar_myteam",
+                             help="Show only players from your active squad on the Radar.")
     ranked = decision_xp(players, upcoming, history, horizon=weeks, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     value_by_id = {p["id"]: points_per_million(p["total_points"], p["price"]) for p in players}
     targets = target_by_fixtures(
         team_fdr(upcoming, next_n=weeks), players, xp_by_id, position=position, max_price=max_price,
         sort_by="value" if sort_label == "Val/£m" else "xp", value_by_id=value_by_id)
+    if radar_mine:
+        _sq = active_squad()
+        _owned = set(_sq["player_ids"]) if _sq else set()
+        targets = [t for t in targets if t["id"] in _owned]
     if targets:
         target_rows = [{
             "Team": t["team"],
