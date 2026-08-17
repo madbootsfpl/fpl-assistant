@@ -123,7 +123,14 @@ Codifying these first makes most of Themes 4–5 mechanical and stops future dri
 3. **Sprint C — ✅ DONE (Sprint 162):** Home primary CTA; Ask → fenced markdown + "my squad"; News availability
    vocab (Fit). *(rename → "Maddie Explains" + empty-state copy done S160.)* **Dropped per owner:** *sidebar icon
    labels* ("leave the sidebar as is").
-4. **Sprint D — My Squad density / progressive disclosure** *(largest; needs its own design pass + mock):*
-   consolidate the lineup/transfer/captain controls, the metric row and the caption walls.
+4. **Sprint D — ✅ DONE (Sprint 163, ADR-115):** My Squad decluttered — 5 metrics → a 3-number strip; 4 captions →
+   one line; pitch-led; ⚙ Players & lineup primary; Rename + Set-bench → a flat ⚙ Manage; the in-page transfer
+   (the *manual* picker, not a duplicate) **moved** to the Transfer tab. ~350-line function ≈ halved, no feature loss.
+
+---
+
+**✅ Audit complete (A·B·C·D).** Still open (small carry-overs, not part of the 4-sprint plan): the
+header-sort-vs-pagination honesty fix; the incremental token retro-fit (the remaining ~50 hexes / 5 cards →
+`brand.py`, a shared `card_css()`).
 
 Threaded throughout: accessibility (contrast, alt) rides on Sprint B's tokens; mobile checks each sprint.

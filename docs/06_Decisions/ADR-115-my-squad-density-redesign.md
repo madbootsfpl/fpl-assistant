@@ -43,9 +43,13 @@ the legal/cost becomes the strip's leading pill. The captain "×2 is a one-week 
 **⚙ Players & lineup** (the selection-driven card · ⚔️ Boot Battle · 👑 captain · 🔁 substitute) with the **bench
 order + Reorder folded in** (a lineup action). This is the single visible primary block.
 
-**3. Remove the duplicate Transfer.** The in-page **Transfer expander is deleted**; in its place a one-line pointer
-to the **🔄 Transfer tab** (which already holds the full, identical transfer UI — ADR-055/046). One place to
-transfer.
+**3. Consolidate transfers on the Transfer tab.** The in-page **Transfer expander leaves the edit view**; in its
+place a one-line pointer to the **🔄 Transfer tab**. One place to transfer.
+> **Correction (build-time, verified):** the in-page transfer was **not** a duplicate of the tab — the tab is the
+> **suggested** transfer tool (`suggest_transfers` / coordinated plans), while the in-page one is the **manual**
+> out→in picker. So it was **moved** to the Transfer tab (now: suggested transfers **+** a "✋ Manual transfer"
+> expander), **not deleted** — no capability lost. (Another "verify before you build" catch — the audit called it a
+> duplicate; it wasn't.)
 
 **4. Fold the rest into one "⚙ Manage".** **Rename** + **Set the whole bench** move into a single collapsed **⚙
 Manage** expander as **flat** subsections (no nested expanders). The **⚙ Your team** panel (import/backup, US-386)

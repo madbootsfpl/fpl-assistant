@@ -1,7 +1,8 @@
 # Sprint 163: UX Sprint D — My Squad density redesign (US-404–406)
 
-**Dates:** 2026-08-17 →
-**Status:** 🚧 Planned — gated by **ADR-115** (owner-approved wireframe). Display/IA only. The audit's last slice.
+**Dates:** 2026-08-17
+**Status:** ✅ Complete — US-404–406 (ADR-115), display/IA only. 1005 → 1007 tests. **Completes the UX audit
+(A·B·C·D).**
 **Capacity:** ~1 session
 
 > **Why:** My Squad (the golden page) is the app's densest — 14 stacked blocks, a 5-metric wall, 4 caption lines,
@@ -38,7 +39,32 @@ folded in**) → Transfer pointer → **⚙ Manage** expander (**flat** Rename +
 3. **Docs:** this plan + retro; ADR-115; PROJECT_STATUS; the audit's Sprint-D row ticked (**audit complete**); memory.
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — the golden page, decluttered. ~350-line function roughly halved, no feature loss.**
+- **US-404 compact status:** 5-across metrics → a **3-number strip** (Projected XI · Captain · Bench); the 4 stacked
+  captions → **one availability + price line** (Unavailable/Doubtful folded into the flagged line).
+- **US-406 progressive disclosure:** pitch-led; the primary block renamed **⚙ Players & lineup** (card · Boot
+  Battle · captain · substitute · bench reorder); **Rename + Set-whole-bench** fold into one **flat ⚙ Manage**
+  expander (expanders can't nest).
+- **US-405 transfers consolidated on the Transfer tab.** The edit view loses its in-page transfer → a pointer.
+  **Correction:** verification showed the in-page transfer was the **manual** out→in picker, **not** a duplicate of
+  the tab's **suggested** transfers — so it was **moved** to the Transfer tab (now: suggested **+** a "✋ Manual
+  transfer" expander), not deleted. The 5 manual-transfer tests repointed to the tab.
+- **Tests:** +2 (pointer-not-picker · ⚙ Manage) and updated the metric/transfer tests. **1007 total.** **The UX
+  audit (A·B·C·D) is complete.**
+
+**Owner smoke (post-deploy):** My Squad is visibly shorter + pitch-led; the 3-number strip + one status line;
+transfers (suggested *and* manual) on the Transfer tab; Rename/Set-bench under ⚙ Manage; mobile no longer cramps.
 
 ### 🧠 Lessons
-*(filled at retro)*
+
+- **"Duplicate" was wrong — verify before you delete.** The audit (and my plan) called the in-page transfer a
+  duplicate; reading `render_transfer` showed it's the **suggested** tool while the in-page one is the **manual**
+  picker. Deleting it would have removed real capability — the fix was to **move** it. Twice this audit (Ask
+  markdown, this) the naive reading was wrong; reading the code first saved a regression.
+- **Progressive disclosure ≠ hiding features.** Everything the page did, it still does — grouped and collapsed.
+  The win is *legibility*, not fewer capabilities.
+- **Streamlit can't nest expanders** — ⚙ Manage holds Rename + Set-bench as **flat** subsections; the Your-team
+  panel (which owns an expander) stays top-level under the banner. Design around the constraint.
+- **A big single-function diff rides on its tests.** ~350 lines reorganised; the ~20 My-Squad tests caught every
+  moved/removed control — repoint them to where the feature went, don't just delete.
