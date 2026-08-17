@@ -322,11 +322,11 @@ def test_your_team_panel_consolidates_import_upload_download():
     # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
     # backup in one place (was scattered across the sidebar).
     at = _run(_PAGES / "3_My_Squad.py")
-    assert any(e.label == "⚙ Your team — import & back up" for e in at.get("expander"))
+    assert any(e.label == "⚙ Import or restore your team" for e in at.get("expander"))
     assert any(t.label == "FPL manager-ID" for t in at.text_input)                    # import by Manager-ID
     assert any(b.label == "Import team" for b in at.button)
     assert any(u.label.endswith("restore your team from a backup file") for u in at.get("file_uploader"))
-    assert any(d.label.endswith("Download squad.json") for d in at.get("download_button"))   # backup in the panel
+    assert any(d.label == "⬇︎ Download a backup" for d in at.get("download_button"))   # a real, working backup button
 
 
 def test_transfer_page_apply_mutates_the_session_squad():
