@@ -580,7 +580,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     # ⭐ Watchlist (ADR-117) — your kept shortlist (⭐ them on the Players tab); the manual transfer below brings
     # one in. Shows each watched player's next fixture · xP · form.
     from src.web_streamlit import watchlist
-    _all_by_id = {p["id"]: p for p in players}
+    _all_by_id = {p["id"]: dict(p) for p in players}       # dict() — `players` are sqlite3.Row (no .get())
     watched = [_all_by_id[i] for i in watchlist.ids() if i in _all_by_id]
     with st.expander(f"⭐ Your watchlist ({len(watched)})", expanded=bool(watched)):
         if not watched:

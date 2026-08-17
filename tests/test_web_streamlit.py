@@ -206,9 +206,20 @@ def test_players_card_can_star_a_player_to_the_watchlist():
 
 
 def test_transfer_tab_shows_the_watchlist_section():
-    # ADR-117: the watchlist is viewed (and acted on) on My Squad → Transfer.
-    at = _squads_view("Transfer")
+    # ADR-117: the ⭐ Watchlist is on My Squad → Transfer — with a NON-EMPTY list too (regression: the players are
+    # sqlite3.Row, which have no .get() — the watched table crashed on p.get("form")).
+    from src.storage import Storage
+    store = Storage()
+    ids = [r["id"] for r in store.get_players()[:3]]
+    store.close()
+    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at.session_state["_watchlist"] = ids                    # a non-empty watchlist
+    at.run()
+    at.segmented_control[0].set_value("Transfer").run()
+    assert not at.exception
     assert any("Your watchlist" in (e.label or "") for e in at.get("expander"))
+    if ids:                                                 # the watched players render as a table (the crash site)
+        assert any("Player" in list(d.value.columns) for d in at.get("dataframe"))
 
 
 def test_players_pool_shows_the_full_sorted_list():
