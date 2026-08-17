@@ -111,9 +111,11 @@ Codifying these first makes most of Themes 4–5 mechanical and stops future dri
 
 ## Recommended action sequence (each behind the usual gate)
 
-1. **Sprint A — Honesty & correctness** *(mostly small, highest trust payoff):* fix header-sort-vs-pagination;
-   FDR digit-in-cell; the dead Save/Load caption; the "run refresh" web copy; the stale Feedback picker; the
-   registration dead-end fallback.
+1. **Sprint A — ✅ DONE (Sprint 160):** the owner's smoke-test batch (Home purple callouts + icon bullets +
+   de-jargon; "Ask Maddie" → "Maddie Explains"; vibrant Fixtures colours + FDR digit; Help icons) **plus** the
+   bundled audit-honesty fixes (dead Save/Load caption, "run refresh" copy, stale Feedback picker). **Still open
+   from this theme:** header-sort-vs-pagination (M) and the registration dead-end fallback (S) — carry to a later
+   pass.
 2. **Sprint B — Brand-token foundation:** codify tokens + card recipe in `brand.py`; set `primaryColor`; fix the
    AA contrast chips (falls out of the tokens); add the brand mark to page headers; unify the mantra. *This is the
    backbone the rest aligns to.*
