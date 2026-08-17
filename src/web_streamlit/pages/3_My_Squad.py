@@ -63,7 +63,7 @@ if _line:
     st.caption(_line[2])                                       # the text; the emoji conveys urgency
 
 if not players:
-    st.info("No players — run `python app.py refresh` first.")
+    st.info("No players — it's refreshing; check back shortly.")
 else:
     squad_name, squad = squad_picker()      # one picker feeds the manage views
     analytics.track("analysis_run", view=view)   # usage: which manage view was run (no squad contents)

@@ -1,4 +1,5 @@
-"""Ask Maddie — the video hub (ADR-112).
+"""Maddie Explains — the video hub (ADR-112; renamed from "Ask Maddie" in Sprint 160/US-390 — the "Ask" verb
+implied a chatbot, but this is a passive video list; the mascot name Maddie stays).
 
 A grounded, scripted **FAQ-by-video** fronted by the mascot (Maddie) — *not* a live chatbot (the deployed app is
 data-only; a chat persona would fight the "shows its working" brand). The clips live **unlisted on YouTube** and
@@ -17,11 +18,11 @@ def _cached_videos():
     return maddie.videos()
 
 
-st.set_page_config(**brand.page_config("Ask Maddie"))
+st.set_page_config(**brand.page_config("Maddie Explains"))
 require_access()          # opt-in beta gate (ADR-087)
-analytics.boot("Ask Maddie")
+analytics.boot("Maddie Explains")
 
-st.title("🎥 Ask Maddie")
+st.title("🎥 Maddie Explains")
 st.markdown(brand.mark_html(badge_px=18, font_px=15), unsafe_allow_html=True)
 st.caption("Short explainers from **Maddie**, your MADBOOTS guide — the analytics decide, the AI explains, you "
            "make the call. New clips land here as they're made.")

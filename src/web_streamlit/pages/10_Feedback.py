@@ -23,7 +23,8 @@ _GITHUB_ISSUE = "https://github.com/madbootsfpl/fpl-assistant/issues/new"
 # error. Any https origin passes a non-domain-locked form; override via FPL_FEEDBACK_ORIGIN for your app URL.
 _DEFAULT_ORIGIN = "https://madboots.streamlit.app"
 # The pages a tester might be reporting about (US-306) — so feedback carries where it happened.
-_PAGES = ("(not sure)", "Home", "Players", "Fixtures", "Squads", "Ask", "News", "Trending", "Help")
+_PAGES = ("(not sure)", "Home", "Players", "Fixtures", "My Squad", "Squad Lab", "Ask", "News", "Trending",
+          "Help", "Maddie Explains", "Feedback")
 
 
 def _app_version() -> str:

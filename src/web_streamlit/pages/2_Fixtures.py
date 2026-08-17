@@ -18,8 +18,15 @@ from src.web_streamlit.badges import badge_url_by_short_name
 from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 
-# FPL difficulty 1–5 → a green→red band (mirrors the fixture-ticker palette).
-_DIFF_COLOR = {1: "#166534", 2: "#22c55e", 3: "#b7791f", 4: "#ef4444", 5: "#991b1b"}
+# FPL difficulty 1–5 → a vibrant green→red band (US-391: was a brownish amber; each band carries a text colour
+# that clears contrast — dark ink on the light greens/gold, white on the dark green/orange/red).
+_DIFF_STYLE = {
+    1: ("#1a9850", "#ffffff"),   # easiest — vivid green
+    2: ("#66bd63", "#0b3d1a"),   # easy — bright green, dark ink
+    3: ("#f9a825", "#3d2c00"),   # medium — gold (not the old brownish amber), dark ink
+    4: ("#f46d43", "#ffffff"),   # hard — vivid orange-red
+    5: ("#d73027", "#ffffff"),   # hardest — strong red
+}
 
 st.set_page_config(**brand.page_config("Fixtures"))
 require_access()          # opt-in beta gate (ADR-087)
@@ -39,7 +46,7 @@ finally:
     store.close()
 
 if not upcoming:
-    st.info("No fixtures yet — run `python app.py refresh` first.")
+    st.info("No fixtures yet — it's refreshing; check back shortly.")
 else:
     weeks = st.slider("Weeks to show", 1, 8, 6,
                       help="How many upcoming gameweeks to show in the difficulty ticker.")
@@ -69,7 +76,8 @@ else:
         diff = {}
         for gw, col in zip(gws, gw_cols):
             cell = r["cells"].get(gw)
-            disp[col] = f"{cell['opponent']} ({cell['venue']})" if cell else "—"
+            # Include the difficulty digit so the run isn't colour-only (colour-blind-safe; US-391/audit).
+            disp[col] = f"{cell['opponent']} ({cell['venue']}) · {cell['difficulty']}" if cell else "—"
             diff[col] = cell["difficulty"] if cell else None
         display_rows.append(disp)
         diff_rows.append(diff)
@@ -81,11 +89,12 @@ else:
         # A same-shaped CSS frame: colour the GW cells by their difficulty; leave badge/Team blank.
         css = pd.DataFrame("", index=disp_df.index, columns=disp_df.columns)
         for col in gw_cols:
-            css[col] = [f"background-color: {_DIFF_COLOR[d]}; color: white" if d in _DIFF_COLOR else ""
-                        for d in diff_df[col]]
+            css[col] = [f"background-color: {_DIFF_STYLE[d][0]}; color: {_DIFF_STYLE[d][1]}"
+                        if d in _DIFF_STYLE else "" for d in diff_df[col]]
         return css
 
-    st.caption("Easiest run first · green = easy, red = hard · (H)ome / (A)way.")
+    st.caption("Easiest run first · green = easy, red = hard · the **· N** in each cell is the difficulty "
+               "(1 easy – 5 hard) · (H)ome / (A)way.")
     st.dataframe(
         disp_df.style.apply(_shade, axis=None),
         hide_index=True, width="stretch",

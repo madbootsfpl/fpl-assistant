@@ -51,6 +51,6 @@ if _line:
     st.caption(_line[2])
 
 if not players:
-    st.info("No players — run `python app.py refresh` first.")
+    st.info("No players — it's refreshing; check back shortly.")
 else:
     views.render_build(players, upcoming, history, gw_history, photos, badges, horizon=horizon)

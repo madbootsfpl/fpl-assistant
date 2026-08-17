@@ -256,9 +256,9 @@ code / §4 registration gate stays the fallback). **Free** (`st.login`, Google O
 
 ---
 
-## 6. Ask Maddie videos (optional) — ADR-112
+## 6. Maddie Explains videos (optional) — ADR-112
 
-The **🎥 Ask Maddie** page is a video hub — short explainers fronted by the mascot (Maddie). The clips live
+The **🎥 Maddie Explains** page is a video hub — short explainers fronted by the mascot (Maddie). The clips live
 **unlisted on YouTube**; their rows live in a **`maddie_videos`** table in the *same* Supabase project (endpoint
 derived from `FPL_STORE_URL`, **no new secret**). You curate videos from the **dashboard** — add / hide / reorder /
 swap — **with no redeploy**. The app only **reads** the table, so — unlike the waitlist — **RLS stays on** with a

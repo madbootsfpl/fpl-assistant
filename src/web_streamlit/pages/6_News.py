@@ -39,7 +39,7 @@ finally:
     store.close()
 
 if not players:
-    st.info("No data yet — run `python app.py refresh` first.")
+    st.info("No data yet — it's refreshing; check back shortly.")
 else:
     flagged = [p for p in players if p["news"]]        # a player carries `news` only when there's an issue
     if not flagged:

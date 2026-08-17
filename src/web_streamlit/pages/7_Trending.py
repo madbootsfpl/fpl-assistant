@@ -63,7 +63,7 @@ finally:
     store.close()
 
 if not players:
-    st.info("No data yet — run `python app.py refresh` first.")
+    st.info("No data yet — it's refreshing; check back shortly.")
 else:
     def _value(by, v):
         return f"{int(v):+,}" if by in ("in", "out") else f"{v:.1f}"     # signed transfers; %/form to 1dp

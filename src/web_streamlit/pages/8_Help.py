@@ -31,7 +31,7 @@ st.caption("Your team lives on the **🧩 My Squad** tab — switch **My Squad �
            "⏳ **live deadline clock** that turns 🟠 then 🔴 as it nears — a reminder to set your captain, transfers "
            "and chips before the gameweek locks.")
 
-with st.expander("1 · Build your squad  →  **🧪 Squad Lab**", expanded=True):
+with st.expander("🧪 1 · Build your squad  →  **Squad Lab**", expanded=True):
     st.markdown(
         "Build your 15 with:\n"
         "- **Budget & shape** — spend to your budget across 2 GK · 5 DEF · 5 MID · 3 FWD.\n"
@@ -45,7 +45,7 @@ with st.expander("1 · Build your squad  →  **🧪 Squad Lab**", expanded=True
         "as a local backup."
     )
 
-with st.expander("2 · Make it yours  →  **🧩 My Squad**", expanded=True):
+with st.expander("✏️ 2 · Make it yours  →  **My Squad**", expanded=True):
     st.markdown(
         "Your active squad on a **green formation pitch** — kits GK→FWD, a bench strip, xP chips, the **(C)** "
         "armband and sub-number badges.\n\n"
@@ -70,7 +70,7 @@ with st.expander("2 · Make it yours  →  **🧩 My Squad**", expanded=True):
         "**Transfer** = a new player — they're separate.)* Need a new squad? Head back to **🧪 Squad Lab**."
     )
 
-with st.expander("3 · Check its health  →  **My Squad → ❤️ Health**"):
+with st.expander("❤️ 3 · Check its health  →  **My Squad → Health**"):
     st.markdown(
         "How your squad is projected to perform over the next **1–10 gameweeks**:\n"
         "- **📈 Projected xP** — your squad's expected points.\n"
@@ -79,7 +79,7 @@ with st.expander("3 · Check its health  →  **My Squad → ❤️ Health**"):
         "- **One xP number** — the same engine the CLI uses, so the projection stays consistent."
     )
 
-with st.expander("4 · Plan your week & improve it  →  **My Squad → 🤖 AI Tips · 👑 Captain · 🔄 Transfer · Chips**"):
+with st.expander("🗓️ 4 · Plan your week & improve it  →  **My Squad → 🤖 AI Tips · 👑 Captain · 🔄 Transfer · Chips**"):
     st.markdown(
         "Start with **🤖 AI Tips** — your fastest gameweek plan:\n"
         "- **👑** who to captain · **🔁** any lineup change · **🔄** one transfer to consider · **🚑** injuries & "
@@ -96,7 +96,7 @@ with st.expander("4 · Plan your week & improve it  →  **My Squad → 🤖 AI 
         "position sharpen it in-season."
     )
 
-with st.expander("5 · Do your research  →  **👟 Players · 📅 Fixtures · 📈 Trending · 📰 News**"):
+with st.expander("🔎 5 · Do your research  →  **👟 Players · 📅 Fixtures · 📈 Trending · 📰 News**"):
     st.markdown(
         "- **👟 Players** — explore the full pool: **🔎 filter** by team / position / player, sort, browse; a "
         "**table + top-15 chart**; a **🪪 Player Card** (photo · fixtures · Projected xP · position-adaptive stats) "
@@ -111,7 +111,7 @@ with st.expander("5 · Do your research  →  **👟 Players · 📅 Fixtures ·
         "- **📰 News** — official FPL injuries, doubts and returns, most serious first."
     )
 
-with st.expander("6 · Ask the assistant  →  the **💬 Ask** tab"):
+with st.expander("💬 6 · Ask the assistant  →  the **Ask** tab"):
     st.markdown(
         "Ask in plain English — MADBOOTS routes each question to the right source:\n"
         "- **📊 Squad & player** — answered from the analytics, with a **✓/⚠** trust line.\n"
@@ -138,7 +138,7 @@ with st.expander("6 · Ask the assistant  →  the **💬 Ask** tab"):
         "recommendation, try *\"Why?\"*, *\"What's the risk?\"* or *\"Who's second best?\"*."
     )
 
-with st.expander("7 · Your team  →  **🔄 Synced · 💾 Backup · 🔢 Import**"):
+with st.expander("☁ 7 · Your team  →  **🔄 Synced · 💾 Backup · 🔢 Import**"):
     st.markdown(
         "Everything to do with your team lives in **one place** — the **⚙ Your team** panel on **My Squad**:\n"
         "- **🔄 Synced to your account** — when you're signed in, your team **follows you across devices** and "
@@ -151,7 +151,7 @@ with st.expander("7 · Your team  →  **🔄 Synced · 💾 Backup · 🔢 Impo
         "portable backup and safety net.*"
     )
 
-with st.expander("8 · Tell us what you think  →  the **📣 Feedback** tab"):
+with st.expander("📣 8 · Tell us what you think  →  the **Feedback** tab"):
     st.markdown(
         "Testing the beta? We'd love to hear from you — the **📣 Feedback** tab (bottom of the sidebar) is a quick "
         "form:\n"
@@ -160,7 +160,7 @@ with st.expander("8 · Tell us what you think  →  the **📣 Feedback** tab"):
         "- Prefer **🐙 GitHub**? You can still open an issue."
     )
 
-with st.expander("9 · MadBoots Explainer  →  a plain-English glossary"):
+with st.expander("📖 9 · MADBOOTS Explainer  →  a plain-English glossary"):
     # ADR-111: one expander with category subheaders — everything visible so Ctrl-F finds any term (Streamlit
     # expanders can't nest). The terms are reconciled to the app's real meanings.
     st.caption("A plain-English guide to the terms, stats and tools in MADBOOTS. Use your browser's find (⌘/Ctrl-F) "

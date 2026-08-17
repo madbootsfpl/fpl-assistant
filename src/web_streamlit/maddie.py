@@ -1,4 +1,5 @@
-"""Ask Maddie video store (ADR-112) — the explainer clips fronted by the mascot (Maddie).
+"""Maddie Explains video store (ADR-112; page renamed from "Ask Maddie" in S160) — the explainer clips fronted
+by the mascot (Maddie).
 
 A `maddie_videos(topic, blurb, youtube_url, sort_order, published, …)` table in the **same Supabase project** as
 the squads / `beta_users` — endpoint derived from `FPL_STORE_URL`'s base, reusing `FPL_STORE_KEY` (**no new

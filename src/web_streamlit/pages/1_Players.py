@@ -21,6 +21,8 @@ analytics.boot("Players")
 render_data_status()
 st.title("👟 Players")
 st.caption("The whole player pool + the stat boards — filter, sort, and see who's over/under-performing.")
+st.caption("🎯 Looking for **who to buy**? The **Radar** (on the **Fixtures** tab) shortlists the best players "
+           "from the easiest-run teams.")
 
 store = Storage()
 try:
@@ -33,7 +35,7 @@ finally:
     store.close()
 
 if not rows:
-    st.info("No data yet — run `python app.py refresh` first.")
+    st.info("No data yet — it's refreshing; check back shortly.")
 else:
     # One shared filter (ADR-064) — applies to the pool and every stat board (price no-op on stat rows).
     sel = filter_controls(rows, key="players", with_price=True)

@@ -432,7 +432,7 @@ def test_sidebar_pages():
     # ADR-100 gated Admin. (ADR-069 had consolidated the old 12 tabs into the single Squads page first.)
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["1_Players.py", "2_Fixtures.py", "3_My_Squad.py", "4_Squad_Lab.py", "5_Ask.py",
-                              "6_News.py", "7_Trending.py", "8_Help.py", "9_Ask_Maddie.py", "10_Feedback.py",
+                              "6_News.py", "7_Trending.py", "8_Help.py", "9_Maddie_Explains.py", "10_Feedback.py",
                               "11_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
@@ -624,7 +624,7 @@ def test_xg_board_rates_only_meaningful_players():
 
 _TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_My_Squad.py": "🧩", "4_Squad_Lab.py": "🧪",
               "5_Ask.py": "💬", "6_News.py": "📰", "7_Trending.py": "📈", "8_Help.py": "🧭",
-              "9_Ask_Maddie.py": "🎥", "10_Feedback.py": "📣", "11_Admin.py": "📊"}
+              "9_Maddie_Explains.py": "🎥", "10_Feedback.py": "📣", "11_Admin.py": "📊"}
 
 
 def test_every_tab_has_an_emoji_led_header():
@@ -2206,15 +2206,39 @@ def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
         {"topic": "Picking your captain", "blurb": "how MADBOOTS ranks captains", "youtube_url": "https://youtu.be/x"},
         {"topic": "More explainers soon", "blurb": "", "youtube_url": None},
     ])
-    at = _run(_PAGES / "9_Ask_Maddie.py")
-    assert any("Ask Maddie" in t.value for t in at.title)
+    at = _run(_PAGES / "9_Maddie_Explains.py")
+    assert any("Maddie Explains" in t.value for t in at.title)
     assert any("Picking your captain" in s.value for s in at.subheader)      # the published topic renders
     assert any("Coming soon" in i.value for i in at.info)                    # the URL-less row degrades
+
+
+def test_home_callouts_are_branded_and_bullets_iconed():
+    # US-389: the New-here/Testing callouts use the brand-purple HTML box (not default-blue st.info), and every
+    # "Explore the sidebar" bullet carries its icon (was only Squad Lab + Maddie).
+    at = _run(_APP)
+    blob = " ".join(m.value for m in at.markdown)
+    assert "mb-note" in blob                                   # the purple callout box
+    assert "👟 **Players**" in blob and "📅 **Fixtures**" in blob and "🎥 **Maddie Explains**" in blob
+
+
+def test_feedback_page_picker_matches_the_current_nav():
+    # US-393: the "which page?" picker is synced to the live nav (no stale "Squads"; has My Squad/Squad Lab/Maddie).
+    at = _run(_PAGES / "10_Feedback.py")
+    opts = [o for sb in at.selectbox for o in sb.options]
+    assert "My Squad" in opts and "Squad Lab" in opts and "Maddie Explains" in opts
+    assert "Squads" not in opts                                # the pre-ADR-105 label is gone
+
+
+def test_fixtures_ticker_shows_the_difficulty_number():
+    # US-391: the difficulty run isn't colour-only — each cell carries the FDR digit (colour-blind-safe).
+    at = _run(_PAGES / "2_Fixtures.py")
+    caps = " ".join(c.value for c in at.caption)
+    assert "is the difficulty" in caps                         # the legend explains the per-cell number
 
 
 def test_home_teaser_links_to_ask_maddie():
     # US-383: Home carries a "Meet Maddie" teaser that links to the hub page.
     at = _run(_APP)
-    assert any("Ask_Maddie" in getattr(pl, "page", "") for pl in at.get("page_link")), \
+    assert any("Maddie_Explains" in getattr(pl, "page", "") for pl in at.get("page_link")), \
         "Home should link to the Ask Maddie hub"
 

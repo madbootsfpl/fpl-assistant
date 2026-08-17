@@ -44,7 +44,7 @@ from src.ui.ask import render_ask
 from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
-from src.web_streamlit import analytics, cloud_store
+from src.web_streamlit import analytics
 from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
@@ -514,11 +514,6 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         if st.button("Rename"):
             set_active_squad(rename(squad, new_name))
             st.rerun()
-
-    # ☁ Cross-device Save/Load moved to the Squads **sidebar** (US-331) so it's visible on every sub-view — a
-    # pointer here for anyone who used to find it under My Squad (only when the store is configured, ADR-094/054).
-    if cloud_store.is_configured():
-        st.caption("☁ **Save / Load across devices** is now in the **sidebar** (under *Your squad*).")
 
     with st.expander("Transfer", expanded=True):
         st.caption("🔁 **Substitute** (above) swaps your **lineup** (XI↔bench); a **Transfer** brings in a "

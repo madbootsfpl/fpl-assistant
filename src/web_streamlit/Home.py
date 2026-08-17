@@ -43,32 +43,40 @@ st.markdown(
     """
 **Explore the sidebar:**
 
-- **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
-- **Fixtures** — upcoming fixtures and difficulty (1–8 GWs), for all teams or just your squad.
-- **My Squad** — manage your XI, transfers, captain and chips, with **AI Tips** and **Health** analysis.
-- **Squad Lab** — 🧪 build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
+- 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
+- 📅 **Fixtures** — upcoming fixtures and difficulty (1–8 GWs), for all teams or just your squad.
+- 🧩 **My Squad** — manage your XI, transfers, captain and chips, with **AI Tips** and **Health** analysis.
+- 🧪 **Squad Lab** — build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
   it to My Squad.
-- **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
-- **News** — official FPL player news (injuries · doubts · returns), most serious first.
-- **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
-- **Help** — a step-by-step guide to getting started with MADBOOTS.
-- **🎥 Ask Maddie** — quick 60-second video explainers, from **Maddie**, your MADBOOTS guide.
+- 💬 **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
+- 📰 **News** — official FPL player news (injuries · doubts · returns), most serious first.
+- 📈 **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
+- 🧭 **Help** — a step-by-step guide to getting started with MADBOOTS.
+- 🎥 **Maddie Explains** — quick 60-second video guides, from **Maddie**, your MADBOOTS guide.
 
 **Your squad**
 
-- **Build** it in **🧪 Squad Lab** — name it, then **Use this squad →**.
-- **Saved to your account** and **auto-synced across your devices** — or **Download** a `squad.json` backup.
-- **Upload** a saved squad, or **import your real FPL team** by Manager-ID (from GW1).
-- **Manage** transfers · captaincy · chips · analysis in **My Squad**.
+- 🧪 **Build** it in **Squad Lab** — name it, then **Use this squad →**.
+- ☁ **Saved to your account** and **auto-synced across your devices** — or **Download** a backup to your device.
+- 📤 **Upload** a saved backup, or **import your real FPL team** by Manager-ID (from GW1).
+- 🧩 **Manage** transfers · captaincy · chips · analysis in **My Squad**.
 - A **demo** squad populates the views on first visit.
 """
 )
-st.info("🧭 **New here?** The **Help** tab (bottom of the sidebar) is a step-by-step guide to building "
-        "your team with the assistant.")
-st.page_link("pages/9_Ask_Maddie.py",
-             label="🎥 **Meet Maddie** — quick 60-second video explainers of each feature →")
-st.info("🧪 **Testing this?** Tell us what breaks or feels off on the **📣 Feedback** tab (bottom of the "
-        "sidebar) — or [open a GitHub issue](https://github.com/madbootsfpl/fpl-assistant/issues/new).")
+# Brand-purple callouts (US-389) — replacing Streamlit's default-blue st.info so the nudges read as MADBOOTS.
+_NOTE_CSS = ("<style>.mb-note{display:flex;gap:10px;align-items:flex-start;border:1px solid #cfa4f0;"
+             "border-radius:10px;background:linear-gradient(135deg,#f3e9fd,#efe0fc);color:#2a2140;"
+             "padding:11px 14px;margin:0 0 10px;font-size:.92rem;line-height:1.5;}"
+             ".mb-note .i{font-size:1.05rem;}.mb-note a{color:#7a1fb8;font-weight:700;}</style>")
+st.markdown(_NOTE_CSS + '<div class="mb-note"><span class="i">🧭</span><span><b>New here?</b> The <b>Help</b> tab '
+            "(bottom of the sidebar) is a step-by-step guide to building your team with the assistant.</span></div>",
+            unsafe_allow_html=True)
+st.page_link("pages/9_Maddie_Explains.py",
+             label="🎥 **Maddie Explains** — quick 60-second video guides of each feature →")
+st.markdown('<div class="mb-note"><span class="i">🧪</span><span><b>Testing this?</b> Tell us what breaks or feels '
+            'off on the <b>📣 Feedback</b> tab (bottom of the sidebar) — or '
+            '<a href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.</span></div>',
+            unsafe_allow_html=True)
 
 _signup = secret("FPL_SIGNUP_URL")          # a founding-tester signup link, only when configured (ADR-087)
 if _signup:
