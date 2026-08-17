@@ -41,13 +41,13 @@ def test_home_shows_the_deadline_countdown():
 
 
 def test_players_page_shows_a_table():
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     assert len(at.dataframe) == 1 or len(at.info) == 1     # a table, or the "run refresh" note
 
 
 def test_players_page_has_a_top15_bar_when_data_present():
     # ADR-064: the scatter is gone; a filter-responsive top-15 bar (a vega/altair chart) takes its place
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if at.dataframe:
         assert at.get("arrow_vega_lite_chart") or at.get("vega_lite_chart")
 
@@ -55,7 +55,7 @@ def test_players_page_has_a_top15_bar_when_data_present():
 def test_players_price_filter_includes_the_priciest_player():
     # US-345: the Max-price cap follows the highest player price, so the £15.5m player isn't filtered out
     import pandas as pd
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -94,7 +94,7 @@ def test_help_explainer_glossary_renders():
 
 def test_players_card_view_renders_a_player_card():
     # US-343 (ADR-084): the "Card" view → a player selectbox → the self-contained player-card HTML block
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return                                                 # no data → nothing to card
     at.segmented_control[0].set_value("Card").run()
@@ -106,7 +106,7 @@ def test_players_card_view_renders_a_player_card():
 
 def test_players_card_view_compares_two_players():
     # US-370 (ADR-110) / US-377 (ADR-111): the Card view's ⚔️ "Boot Battle — compare with" picker → the comparison.
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return                                                 # no data → nothing to compare
     at.segmented_control[0].set_value("Card").run()
@@ -123,7 +123,7 @@ def test_players_card_view_compares_two_players():
 
 def test_players_page_shows_the_crowd_lens_columns():
     # US-183 / ADR-057: the Players table gains Form · ICT · Trends (crowd flags), display-only
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     cols = at.dataframe[0].value.columns.tolist()
@@ -131,7 +131,7 @@ def test_players_page_shows_the_crowd_lens_columns():
 
 
 def test_players_page_has_photo_and_badge_columns_when_data_present():
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if at.dataframe:
         df = at.dataframe[0].value
         assert "photos/players" in str(df["photo"].iloc[0])   # the player photo URL
@@ -141,7 +141,7 @@ def test_players_page_has_photo_and_badge_columns_when_data_present():
 
 def test_players_filters_narrow_the_table(monkeypatch):
     # ADR-064 filter: multiselects are [0] Team · [1] Position · [2] Player; slider[0] is max-price
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.multiselect:                                  # no data locally → the info branch
         return
     at.multiselect[1].set_value(["GK"]).run()               # Position → keepers only
@@ -152,7 +152,7 @@ def test_players_filters_narrow_the_table(monkeypatch):
 
 def test_players_filter_by_team_narrows_the_table():
     # ADR-064: filter by team (multiselect[0]) restricts the table to that team
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     at.multiselect[0].set_value(["ARS"]).run()              # Team = ARS
@@ -162,7 +162,7 @@ def test_players_filter_by_team_narrows_the_table():
 
 def test_player_multiselect_is_team_scoped():
     # US-213: choosing a team scopes the Player multiselect's options to that team's players
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.multiselect:
         return
     all_players = len(at.multiselect[2].options)            # [0] Team · [1] Position · [2] Player
@@ -183,7 +183,7 @@ def test_watchlist_cap_is_thirty():
 
 def test_players_pool_has_the_add_to_watchlist_control():
     # ADR-117: the pool offers ⭐ Add (select rows → add) + a "N/30 watched" count.
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     assert any("Add selected" in b.label and "watchlist" in b.label for b in at.button)
@@ -192,7 +192,7 @@ def test_players_pool_has_the_add_to_watchlist_control():
 
 def test_players_card_can_star_a_player_to_the_watchlist():
     # ADR-117: ⭐ on the player card adds them to the (session) watchlist.
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     view = next((s for s in at.segmented_control if s.label == "View"), None)
     if view is None:
         return
@@ -212,7 +212,7 @@ def test_transfer_tab_shows_the_watchlist_section():
     store = Storage()
     ids = [r["id"] for r in store.get_players()[:3]]
     store.close()
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["_watchlist"] = ids                    # a non-empty watchlist
     at.run()
     at.segmented_control[0].set_value("Transfer").run()
@@ -225,7 +225,7 @@ def test_transfer_tab_shows_the_watchlist_section():
 def test_players_pool_shows_the_full_sorted_list():
     # ADR-116: the pool is ONE scrollable table (no paging) ordered by "Sort by", so the whole set is shown and
     # the native column-header sort is honest (it orders everything, not just a page).
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     next(s for s in at.selectbox if s.label == "Sort by").set_value("team").run()
@@ -237,7 +237,7 @@ def test_players_pool_shows_the_full_sorted_list():
 
 def test_fixtures_ticker_grid_and_weeks_selector():
     # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
-    at = _run(_PAGES / "2_Fixtures.py")
+    at = _run(_PAGES / "3_Fixtures.py")
     assert len(at.dataframe) >= 1 or len(at.info) == 1     # US-301 added a second (targets) table
     if not at.dataframe:
         return
@@ -251,7 +251,7 @@ def test_fixtures_ticker_grid_and_weeks_selector():
 def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
     # US-301: a "🎯 Radar" section (renamed from "Target by fixtures", ADR-107) names the best available
     # players from the easiest-run teams, scoped by a Position filter.
-    at = _run(_PAGES / "2_Fixtures.py")
+    at = _run(_PAGES / "3_Fixtures.py")
     if not at.dataframe:
         return                                             # no data → nothing to target
     assert any(s.value == "🎯 Radar" for s in at.subheader)
@@ -266,7 +266,7 @@ def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
 
 def test_fixtures_target_max_price_cap_drops_dearer_targets():
     # US-303: the Max price slider caps the target list to affordable players.
-    at = _run(_PAGES / "2_Fixtures.py")
+    at = _run(_PAGES / "3_Fixtures.py")
     if not at.dataframe:
         return
     cap = next(s for s in at.slider if s.label == "Max price")
@@ -278,7 +278,7 @@ def test_fixtures_target_max_price_cap_drops_dearer_targets():
 
 def test_fixtures_target_value_column_and_sort_toggle():
     # US-304: a Val/£m column + a Sort toggle that reorders each team's picks by value.
-    at = _run(_PAGES / "2_Fixtures.py")
+    at = _run(_PAGES / "3_Fixtures.py")
     if not at.dataframe:
         return
     by_xp = at.dataframe[-1].value
@@ -300,7 +300,7 @@ def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
     squads = demo_squads()
     if not squads:
         return
-    at = AppTest.from_file(str(_PAGES / "1_Players.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "2_Players.py"), default_timeout=30)
     at.session_state["squad"] = next(iter(squads.values()))
     at.run()
     assert not at.exception
@@ -310,7 +310,7 @@ def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     # US-302 (ADR-049) + US-407b: a "My squad only" checkbox restricts the ticker to your teams + a Players count.
     from src.web_streamlit.squads import demo_squads
-    at = _run(_PAGES / "2_Fixtures.py")
+    at = _run(_PAGES / "3_Fixtures.py")
     if not at.dataframe:
         return
     all_teams = at.dataframe[0].value
@@ -332,9 +332,9 @@ def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
 def _squads_view(view):
     # ADR-105: Build is now its own Squad Lab tab; the rest are sub-tabs of My Squad
     if view == "Build":
-        at = _run(_PAGES / "4_Squad_Lab.py")
+        at = _run(_PAGES / "1_Squad_Lab.py")
     else:
-        at = _run(_PAGES / "3_My_Squad.py")
+        at = _run(_PAGES / "4_My_Squad.py")
         at.segmented_control[0].set_value(view).run()
     assert not at.exception, f"Squads[{view}] raised: {at.exception}"
     return at
@@ -377,7 +377,7 @@ def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
 def test_your_team_panel_consolidates_import_upload_download():
     # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
     # backup in one place (was scattered across the sidebar).
-    at = _run(_PAGES / "3_My_Squad.py")
+    at = _run(_PAGES / "4_My_Squad.py")
     assert any(e.label == "⚙ Import or restore your team" for e in at.get("expander"))
     assert any(t.label == "FPL manager-ID" for t in at.text_input)                    # import by Manager-ID
     assert any(b.label == "Import team" for b in at.button)
@@ -462,7 +462,7 @@ def test_consumer_views_use_a_session_active_squad():
     # build sets session_state["squad"]; the Squads manage views must offer it in the picker (ADR-054/055)
     squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
     for view in ("Health", "Transfer", "Captain", "My Squad"):
-        at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+        at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
         at.segmented_control[0].set_value(view).run()
@@ -487,7 +487,7 @@ def test_sidebar_pages():
     # ADR-105: the Squads page split into My Squad (manage + tools) + Squad Lab (build); ADR-087 Feedback,
     # ADR-100 gated Admin. (ADR-069 had consolidated the old 12 tabs into the single Squads page first.)
     present = sorted(p.name for p in _PAGES.glob("*.py"))
-    assert present == sorted(["1_Players.py", "2_Fixtures.py", "3_My_Squad.py", "4_Squad_Lab.py", "5_Ask.py",
+    assert present == sorted(["2_Players.py", "3_Fixtures.py", "4_My_Squad.py", "1_Squad_Lab.py", "5_Ask.py",
                               "6_News.py", "7_Trending.py", "8_Help.py", "9_Maddie_Explains.py", "10_Feedback.py",
                               "11_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
@@ -497,7 +497,7 @@ def test_sidebar_pages():
 
 def test_player_stats_board_renders_via_the_segmented_control():
     # ADR-069: Player Stats merged into Players — a stat board renders when its segmented-control view is picked
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Over / under-perf").run()
@@ -507,7 +507,7 @@ def test_player_stats_board_renders_via_the_segmented_control():
 
 def test_player_stats_filter_narrows_a_board():
     # ADR-064/069: the shared filter narrows a stat board on the merged Players page
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     at.segmented_control[0].set_value("Defensive Contribution").run()
@@ -519,7 +519,7 @@ def test_player_stats_filter_narrows_a_board():
 
 def test_set_pieces_board_renders_the_order_columns():
     # ADR-081 / US-250: the "Set pieces" view shows Pen/Corners/FK order + Own%/Val/£m through the filter
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Set pieces").run()
@@ -533,7 +533,7 @@ def test_set_pieces_board_renders_the_order_columns():
 
 def test_pool_shows_a_set_piece_column():
     # ADR-081 / US-250: the Pool gains a compact "Set" column (⚽/🚩/🎯 for first-choice takers)
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -542,7 +542,7 @@ def test_pool_shows_a_set_piece_column():
 
 def test_pool_shows_an_availability_fit_column():
     # ADR-074 + US-276: the Pool's Fit column shows ✅ for fit players (not blank) and 🚑/🚫/⛔/❓ for concerns
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -555,7 +555,7 @@ def test_pool_shows_an_availability_fit_column():
 
 def test_pool_shows_the_price_prediction_column():
     # US-286 (ADR-092): a forward-looking Price column (🔺/🔻/—, all — preseason) + the honest live-GW1 caption.
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -566,7 +566,7 @@ def test_pool_shows_the_price_prediction_column():
 
 def test_players_history_view_shows_a_season_table_for_a_known_player():
     # US-298: the Players "History" view — pick a player → a season table (+ the GW1 note preseason).
-    at = AppTest.from_file(str(_PAGES / "1_Players.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "2_Players.py"), default_timeout=30).run()
     if at.exception or not at.segmented_control:
         return
     at.segmented_control[0].set_value("History").run()
@@ -601,7 +601,7 @@ def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):
     # US-286: My Squad names owned players under price pressure (forced here — net transfers are flat preseason).
     import src.web_streamlit.views.squads as sq
     monkeypatch.setattr(sq, "price_prediction", lambda p: "fall")
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
     for control in at.segmented_control:
         try:
             control.set_value("My Squad").run()
@@ -619,7 +619,7 @@ def test_pool_number_columns_stay_numeric_formatting_is_display_only():
     # raw numbers (not pre-rounded strings), so they stay sortable and truthful.
     import pandas as pd
 
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -630,7 +630,7 @@ def test_pool_number_columns_stay_numeric_formatting_is_display_only():
 
 def test_clean_sheets_board_shows_a_quality_rating_and_legend():
     # ADR-071: xGC/90 board gains a relative Rating column (🟢…🔴) + a "vs the players shown" legend
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Clean sheets").run()
@@ -645,7 +645,7 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
 def test_stat_boards_show_the_availability_fit_column():
     # ADR-074 / US-229: every stat board gains the Fit column (raw rows on xG; a lookup on the trimmed ones)
     for view in ("Over / under-perf", "Defensive Contribution", "Clean sheets", "xG / xA / xGI"):
-        at = _run(_PAGES / "1_Players.py")
+        at = _run(_PAGES / "2_Players.py")
         if not at.segmented_control:
             return
         at.segmented_control[0].set_value(view).run()
@@ -660,7 +660,7 @@ def test_stat_boards_show_the_availability_fit_column():
 def test_xg_board_rates_only_meaningful_players():
     # ADR-071/073: the xG board rates xGI, but only for outfield players with minutes — the column is
     # named "xGI rating" and sits before xGC; goalkeepers (xGI ≈ noise) are left unrated (—).
-    at = _run(_PAGES / "1_Players.py")
+    at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("xG / xA / xGI").run()
@@ -678,7 +678,7 @@ def test_xg_board_rates_only_meaningful_players():
         assert ratings <= {"—"}, f"goalkeepers should not be rated on xGI, got {ratings}"
 
 
-_TAB_EMOJI = {"1_Players.py": "👟", "2_Fixtures.py": "📅", "3_My_Squad.py": "🧩", "4_Squad_Lab.py": "🧪",
+_TAB_EMOJI = {"2_Players.py": "👟", "3_Fixtures.py": "📅", "4_My_Squad.py": "🧩", "1_Squad_Lab.py": "🧪",
               "5_Ask.py": "💬", "6_News.py": "📰", "7_Trending.py": "📈", "8_Help.py": "🧭",
               "9_Maddie_Explains.py": "🎥", "10_Feedback.py": "📣", "11_Admin.py": "📊"}
 
@@ -856,7 +856,7 @@ def test_waitlist_captures_an_over_cap_email(monkeypatch):
 def test_squads_gameweeks_selector_drives_the_horizon():
     # US-237/315 (ADR-077): a "Gameweeks ahead" box-select (My Squad default 1, US-374) flows into Health — set it
     # to 2 and the analysis projects over 2 GW (a GW2 column, no GW5)
-    at = _run(_PAGES / "3_My_Squad.py")
+    at = _run(_PAGES / "4_My_Squad.py")
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
     assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-374/315
     gw[0].set_value(2).run()
@@ -938,7 +938,7 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     cap = max(xi, key=lambda i: xp[i])                     # captain = the best XI player
     expected = round(sum(xp[i] for i in xi) + by_gw[cap][g1], 1)
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = {**sq, "captain_id": cap, "name": "RoboTS"}
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -992,7 +992,7 @@ def test_my_squad_shows_the_bench_order():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # a GK + 3 outfield
     squad = {"name": "BenchTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1021,7 +1021,7 @@ def test_my_squad_pitch_labels_the_bench_subs():
     squad = {"name": "BenchLabels", "player_ids": ids, "bench_ids": bench, "cost": 100.0,
              "captain_id": mids[0]["id"]}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1051,7 +1051,7 @@ def test_my_squad_bench_reorder_persists_and_recommended_applies():
     bench = [defs[4]["id"], mids[4]["id"], fwds[2]["id"], gks[1]["id"]]   # a deliberately non-xP order
     squad = {"name": "BenchOrder", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1087,7 +1087,7 @@ def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # GK + 3 outfield → XI is a legal 4-4-2
     squad = {"name": "SubTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1128,7 +1128,7 @@ def test_my_squad_panel_brings_a_bench_player_on():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # GK + 3 outfield
     squad = {"name": "PrefillTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1161,7 +1161,7 @@ def test_my_squad_flags_unavailable_players_by_name():
     squad = {"name": "Test XI", "player_ids": [injured["id"]] + [p["id"] for p in others],
              "bench_ids": [], "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1178,19 +1178,19 @@ def test_my_squad_points_to_build():
 
 def test_squad_lab_page_builds_and_has_a_mascot_header():
     # US-360 (ADR-105): Squad Lab is the builder, with a mascot-themed header
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     assert at.title and "Squad Lab" in at.title[0].value
     assert any("Build your squad" in c.value for c in at.caption)   # the header copy
 
 
 def test_my_squad_empty_state_points_to_squad_lab():
     # US-360 (ADR-105): with no team built/loaded, My Squad points new users at Squad Lab
-    at = _run(_PAGES / "3_My_Squad.py")                    # no injected squad → active_squad() is None
+    at = _run(_PAGES / "4_My_Squad.py")                    # no injected squad → active_squad() is None
     assert any("Squad Lab" in i.value for i in at.info)
 
 
 def test_build_page_returns_a_squad(monkeypatch):
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     # a squad is rendered (the explanation block + the squad table) — or the "no data" note; no crash
     assert len(at.code) >= 1 or len(at.info) >= 1
     # move an archetype control → rebuild, still no crash
@@ -1200,7 +1200,7 @@ def test_build_page_returns_a_squad(monkeypatch):
 
 def test_build_shows_the_squad_on_the_pitch():
     # US-261 (ADR-084 reuse): the built 15 render on the green pitch (a full 15 kit cards) + the table below
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:                                        # no data locally → the info branch
         return
     blob = " ".join(m.value for m in at.markdown)
@@ -1211,7 +1211,7 @@ def test_build_shows_the_squad_on_the_pitch():
 
 def test_build_formation_preview_shows_the_xi_score():
     # US-230 (ADR-075): the "Preview the best XI in a shape" expander shows a Projected XI xP total
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     mets = [(m.label, str(m.value)) for m in at.metric]
@@ -1223,7 +1223,7 @@ def test_build_formation_preview_shows_the_xi_score():
 def test_build_compare_all_formations_is_gated():
     # US-231 (ADR-075): the "Compare all formations" table is absent by default and appears only on tick,
     # ranking all 7 shapes by XI xP (desc) with a Δ-vs-best column.
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     assert not any("Formation" in df.value.columns for df in at.dataframe)   # off by default → no table
@@ -1242,7 +1242,7 @@ def test_build_compare_all_formations_is_gated():
 
 
 def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     assert at.get("download_button"), "an Optimal build must offer a squad.json download"
@@ -1258,7 +1258,7 @@ def test_build_starts_the_bench_in_recommended_order():
     from src.analytics import decision_xp
     from src.storage import Storage
 
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     next(b for b in at.button if b.label.startswith("Use this squad")).click().run()
@@ -1278,7 +1278,7 @@ def test_build_starts_the_bench_in_recommended_order():
 
 def test_build_page_renders_non_zero_xp(monkeypatch):
     # regression (US-172): Build must attach xp/minutes_weight so the table + projected total aren't zeros
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     out = next((c.value for c in at.code if "Total:" in c.value), "")   # the squad table (not the explanation)
@@ -1289,7 +1289,7 @@ def test_build_page_renders_non_zero_xp(monkeypatch):
 
 def test_build_page_names_the_squad(monkeypatch):
     # US-172: the squad-name input flows into the active squad (and the download key)
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     at.text_input[0].set_value("Tony's XI").run()
@@ -1299,7 +1299,7 @@ def test_build_page_names_the_squad(monkeypatch):
 
 def test_build_page_objective_switch_rebuilds(monkeypatch):
     # ADR-062: switching the objective (xp→xgi) rebuilds on the same engine, no crash, still a squad
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     next(s for s in at.selectbox if s.label == "Objective").set_value("xgi").run()
@@ -1308,7 +1308,7 @@ def test_build_page_objective_switch_rebuilds(monkeypatch):
 
 def test_build_page_weekly_and_include_unavailable(monkeypatch):
     # ADR-062: the new build-mode radio + include-unavailable checkbox drive the same select_squad
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     at.radio[0].set_value("Weekly (playing bench)").run()
@@ -1318,7 +1318,7 @@ def test_build_page_weekly_and_include_unavailable(monkeypatch):
 
 def test_build_page_formation_preview_is_display_only(monkeypatch):
     # ADR-062: the formation preview is XI-only and never adds a second (save) download
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     next(s for s in at.selectbox if s.label == "Formation").set_value("4-3-3").run()
@@ -1328,7 +1328,7 @@ def test_build_page_formation_preview_is_display_only(monkeypatch):
 
 def test_build_page_exclude_removes_the_player_from_the_save(monkeypatch):
     # ADR-062: the "Must exclude" control wires through to the saved 15 (the tester's key ask)
-    at = _run(_PAGES / "4_Squad_Lab.py")
+    at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
     opts = at.multiselect[1].options                       # [0] include, [1] exclude, [2] bench
@@ -1461,7 +1461,7 @@ def test_my_squad_transfer_include_injured_surfaces_a_flagged_player():
         return
     squad = {"name": "FlagTest", "player_ids": ids, "bench_ids": ids[11:], "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("Transfer").run()      # ADR-115: manual transfer moved to the Transfer tab
@@ -1507,7 +1507,7 @@ def test_cloud_linked_squad_autosyncs_edits(monkeypatch):
         return
     squad = {"name": "Sync", "player_ids": ids, "bench_ids": ids[11:], "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.session_state["_cloud_linked_handle"] = "myhandle"      # linked (as if Saved/Loaded under this handle)
     at.run()
@@ -1539,7 +1539,7 @@ def _squads_with_active(monkeypatch):
     is now in the sidebar and Saves the session's active squad)."""
     monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
     monkeypatch.setenv("FPL_STORE_KEY", "k")
-    at = _run(_PAGES / "3_My_Squad.py")
+    at = _run(_PAGES / "4_My_Squad.py")
     at.session_state["squad"] = {"name": "My XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
     at.run()                                                                # the sidebar now sees the active squad
     return at
@@ -1559,7 +1559,7 @@ def _signed_in_squads(monkeypatch, stored=None):
     rows = [{"data": stored}] if stored else []
     monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(rows))
     monkeypatch.setattr("requests.post", lambda url, json=None, headers=None, timeout=None: _StoreResp())
-    return _run(_PAGES / "3_My_Squad.py")
+    return _run(_PAGES / "4_My_Squad.py")
 
 
 def test_team_banner_highlights_your_team(monkeypatch):
@@ -1571,7 +1571,7 @@ def test_team_banner_highlights_your_team(monkeypatch):
 
 def test_team_banner_shows_demo_prompt_without_your_team():
     # US-386: viewing the demo → the card prompts to make it yours (the default never looks like your team).
-    at = _run(_PAGES / "3_My_Squad.py")
+    at = _run(_PAGES / "4_My_Squad.py")
     blob = " ".join(m.value for m in at.markdown)
     assert "demo squad" in blob
 
@@ -1611,7 +1611,7 @@ def test_cloud_save_load_hidden_in_sidebar_without_secrets(monkeypatch):
     # US-310/331 (ADR-094): the ☁ cross-device store is secret-gated — with no FPL_STORE_URL/KEY it's invisible.
     monkeypatch.delenv("FPL_STORE_URL", raising=False)
     monkeypatch.delenv("FPL_STORE_KEY", raising=False)
-    at = _run(_PAGES / "3_My_Squad.py")
+    at = _run(_PAGES / "4_My_Squad.py")
     assert not any(t.label == "Your handle" for t in at.text_input)          # no cloud UI when unconfigured
 
 
@@ -1660,7 +1660,7 @@ def test_analysis_run_event_on_a_manage_view(monkeypatch):
 
 def test_squad_created_event_on_use_this_squad(monkeypatch):
     events = _capture_events(monkeypatch)
-    at = _run(_PAGES / "4_Squad_Lab.py")                    # Build view (default)
+    at = _run(_PAGES / "1_Squad_Lab.py")                    # Build view (default)
     use = [b for b in at.button if b.label.startswith("Use this squad")]
     if not use:
         return                                           # no build (empty pool) → nothing to create
@@ -1702,7 +1702,7 @@ def test_feedback_submitted_event(monkeypatch):
 
 def test_squads_page_emits_data_load_and_analysis_perf(monkeypatch):
     events = _capture_events(monkeypatch)
-    _run(_PAGES / "4_Squad_Lab.py")                        # the builder: loads data + runs the optimiser (ADR-105)
+    _run(_PAGES / "1_Squad_Lab.py")                        # the builder: loads data + runs the optimiser (ADR-105)
     perf = [(kw.get("op"), kw.get("page"), kw.get("ok")) for e, kw in events if e == "perf"]
     assert ("data_load", "Squad Lab", True) in perf      # FPL data loading timed
     assert any(op == "analysis" and ok for op, _p, ok in perf)   # the squad-optimiser calculation timed
@@ -1729,7 +1729,7 @@ def test_cloud_save_disabled_without_an_active_squad(monkeypatch):
     # US-331: the sidebar renders on any sub-view; Save needs an active squad (Load works any time).
     monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
     monkeypatch.setenv("FPL_STORE_KEY", "k")
-    at = _run(_PAGES / "3_My_Squad.py")                                       # Build view, no active squad in session
+    at = _run(_PAGES / "4_My_Squad.py")                                       # Build view, no active squad in session
     assert any(t.label == "Your handle" for t in at.text_input)             # the cloud UI is present (sidebar)…
     save = next(b for b in at.button if b.label == "Save")
     assert save.disabled                                                     # …but Save is disabled until you have one
@@ -1773,7 +1773,7 @@ def test_my_squad_panel_make_captain_sets_the_captain():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "CaptainTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1807,7 +1807,7 @@ def test_my_squad_pitch_popover_shows_per_gameweek_xp():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "GWPitchTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1842,7 +1842,7 @@ def test_my_squad_per_gw_card_is_horizon_independent():
     target = mids[0]
 
     def pergw(hz):
-        at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+        at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
         at.segmented_control[0].set_value("My Squad").run()
@@ -1875,7 +1875,7 @@ def test_my_squad_panel_boot_battle_compares_squad_players():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "BootTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1908,7 +1908,7 @@ def test_my_squad_panel_boot_battle_pool_selector():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "PoolTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1930,11 +1930,11 @@ def test_my_squad_panel_boot_battle_pool_selector():
 
 def test_default_horizon_my_squad_1_squad_lab_5():
     # US-374: My Squad defaults to the next GW (manage this week); Squad Lab stays 5 (build for the run).
-    at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
     hz = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
     if hz is not None:
         assert hz.value == 1
-    lab = AppTest.from_file(str(_PAGES / "4_Squad_Lab.py"), default_timeout=30).run()
+    lab = AppTest.from_file(str(_PAGES / "1_Squad_Lab.py"), default_timeout=30).run()
     hz2 = next((s for s in lab.segmented_control if s.label == "Gameweeks ahead"), None)
     if hz2 is not None:
         assert hz2.value == 5
@@ -2174,7 +2174,7 @@ def test_data_freshness_caption_on_every_tab(monkeypatch):
     # US-180/ADR-056: the "… data as of <date>" caption renders in both modes, on every page.
     # US-219: it now leads with the player count so a stale snapshot is obvious.
     monkeypatch.delenv("FPL_LOCAL", raising=False)
-    for page in (_APP, _PAGES / "1_Players.py", _PAGES / "3_My_Squad.py"):
+    for page in (_APP, _PAGES / "2_Players.py", _PAGES / "4_My_Squad.py"):
         at = _run(page)
         assert any("data as of" in c.value for c in at.caption), f"{page} should show a freshness caption"
         assert any("players · data as of" in c.value for c in at.caption), \
@@ -2304,7 +2304,7 @@ def test_my_squad_banner_renders_the_styled_card():
 
 def test_data_pages_carry_the_brand_mark():
     # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
-    for page in ("1_Players.py", "2_Fixtures.py", "6_News.py", "7_Trending.py"):
+    for page in ("2_Players.py", "3_Fixtures.py", "6_News.py", "7_Trending.py"):
         at = _run(_PAGES / page)
         blob = " ".join(m.value for m in at.markdown)
         assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
@@ -2338,7 +2338,7 @@ def test_feedback_page_picker_matches_the_current_nav():
 
 def test_fixtures_ticker_shows_the_difficulty_number():
     # US-391: the difficulty run isn't colour-only — each cell carries the FDR digit (colour-blind-safe).
-    at = _run(_PAGES / "2_Fixtures.py")
+    at = _run(_PAGES / "3_Fixtures.py")
     caps = " ".join(c.value for c in at.caption)
     assert "is the difficulty" in caps                         # the legend explains the per-cell number
 

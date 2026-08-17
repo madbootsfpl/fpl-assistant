@@ -37,7 +37,7 @@ if _line:
     render_countdown(_gw, _deadline, datetime.now(timezone.utc), _urgency)   # the live clock (ADR-088)
     st.caption(_text)          # the accessible, no-JS text line (context + date) beneath the clock
     if _urgency != "calm":     # a nudge to the pre-deadline actions when it's close
-        st.page_link("pages/3_My_Squad.py",
+        st.page_link("pages/4_My_Squad.py",
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
 
 # US-398 (rev, owner 2026-08-17): ONE highlighted "get started" box — a purple CTA button (links to Squad Lab via
@@ -64,11 +64,11 @@ st.markdown(
     """
 **Explore the sidebar:**
 
+- 🧪 **Squad Lab** — build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
+  it to My Squad.
 - 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
 - 📅 **Fixtures** — upcoming fixtures and difficulty (1–8 GWs), for all teams or just your squad.
 - 🧩 **My Squad** — manage your XI, transfers, captain and chips, with **AI Tips** and **Health** analysis.
-- 🧪 **Squad Lab** — build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
-  it to My Squad.
 - 💬 **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
 - 📰 **News** — official FPL player news (injuries · doubts · returns), most serious first.
 - 📈 **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
