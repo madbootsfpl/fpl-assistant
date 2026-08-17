@@ -829,13 +829,29 @@ def test_captain_view_notes_it_is_next_gameweek():
     assert any("next gameweek" in c.value.lower() for c in at.caption)
 
 
+def test_my_squad_transfer_moved_to_the_tab_with_a_pointer():
+    # ADR-115/US-405: the My Squad edit view has NO in-page transfer picker — just a pointer to the Transfer tab.
+    at = _squads_view("My Squad")
+    caps = " ".join(c.value for c in at.caption)
+    assert "Transfer" in caps and "Substitute" in caps               # the pointer distinguishes the two
+    assert not any(s.label == "Transfer out" for s in at.selectbox)  # the manual picker is gone from here
+
+
+def test_my_squad_manage_expander_holds_rename_and_set_bench():
+    # ADR-115/US-406: Rename + Set-whole-bench fold into one ⚙ Manage expander (flat — expanders can't nest).
+    at = _squads_view("My Squad")
+    assert any("Manage" in (e.label or "") for e in at.get("expander"))
+    assert any(b.label == "Rename" for b in at.button) and any(b.label == "Set bench" for b in at.button)
+
+
 def test_my_squad_shows_a_quick_stats_summary():
-    # US-239: My Squad shows a summary metrics row (Projected XI over the horizon · Captain · Bench ·
-    # Unavailable · Doubtful), and the Projected-XI label tracks the Gameweeks-ahead selector
+    # US-239 + US-404 (ADR-115): the summary is a compact 3-number strip (Projected XI · Captain · Bench) — the
+    # old Unavailable/Doubtful metrics folded into the availability line; the Projected-XI label tracks the horizon.
     at = _squads_view("My Squad")
     labels = [m.label for m in at.metric]
     assert any("Projected XI" in lbl for lbl in labels)
-    assert {"Bench", "Unavailable", "Doubtful"} <= set(labels) and any("Captain" in lbl for lbl in labels)
+    assert "Bench" in labels and any("Captain" in lbl for lbl in labels)
+    assert not any(lbl in ("Unavailable", "Doubtful") for lbl in labels)   # folded into the availability line
 
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"][0]
     gw.set_value(2).run()
@@ -1302,7 +1318,7 @@ def test_my_squad_swap_adopts_and_mutates_the_session_squad():
 
 def test_my_squad_swap_position_filter_scopes_the_replace_list():
     # US-299/353: a Position filter on the Transfer expander scopes "Transfer out" to owned players of that position.
-    at = _squads_view("My Squad")
+    at = _squads_view("Transfer")
     pos = next((s for s in at.segmented_control if s.label == "Position"), None)
     if pos is None:                                        # no owned squad / no transfer UI → nothing to filter
         return
@@ -1315,7 +1331,7 @@ def test_my_squad_swap_position_filter_scopes_the_replace_list():
 
 def test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank():
     # US-300: an "Affordable only" checkbox hides too-dear replacements; a bank caption shows.
-    at = _squads_view("My Squad")
+    at = _squads_view("Transfer")
     chk = next((c for c in at.checkbox if c.label == "Affordable only"), None)
     if chk is None:                                        # no owned squad / no swap UI → nothing to filter
         return
@@ -1332,7 +1348,7 @@ def test_my_squad_swap_affordable_only_scopes_candidates_and_shows_bank():
 
 def test_my_squad_transfer_team_and_price_filters_narrow_the_list():
     # US-356: the bring-in list gains Team + Max-price filters that narrow the (long) same-position list.
-    at = _squads_view("My Squad")
+    at = _squads_view("Transfer")
     team = next((s for s in at.selectbox if s.label == "Team"), None)
     price = next((s for s in at.slider if s.label == "Max price (£m)"), None)
     if team is None or price is None:
@@ -1352,10 +1368,10 @@ def test_my_squad_transfer_team_and_price_filters_narrow_the_list():
 
 
 def test_my_squad_transfer_control_labels_and_live_projection():
-    # US-353: the control reads as a "Transfer" (distinct from 🔁 Substitute) with a Substitute-vs-Transfer
-    # caption, and shows a LIVE projected-cost/bank line before you apply.
-    at = _squads_view("My Squad")
-    assert any("Substitute" in c.value and "Transfer" in c.value and "new" in c.value for c in at.caption)
+    # US-353 + ADR-115: the manual transfer (moved to the Transfer tab) shows a LIVE projected-cost/bank line
+    # before you apply.
+    at = _squads_view("Transfer")
+    assert any(s.label == "Transfer out" for s in at.selectbox)   # the manual out→in picker (ADR-115)
     if not any(b.label == "Transfer →" for b in at.button):
         return                                             # no pickable replacement in this env → nothing to flag
     proj = [c.value for c in at.caption] + [w.value for w in at.warning]
@@ -1392,7 +1408,7 @@ def test_my_squad_transfer_include_injured_surfaces_a_flagged_player():
     at = AppTest.from_file(str(_PAGES / "3_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
-    at.segmented_control[0].set_value("My Squad").run()
+    at.segmented_control[0].set_value("Transfer").run()      # ADR-115: manual transfer moved to the Transfer tab
     assert not at.exception
 
     out = next((s for s in at.selectbox if s.label == "Transfer out"), None)

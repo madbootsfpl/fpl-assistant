@@ -269,8 +269,8 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
 # ---- My Squad (view & edit the active squad; ADR-055) ----------------------------------------------
 
 def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
-    st.caption("Tweak your squad here — rename · swap · bench. 🔧 To **build a fresh one** with the full "
-               "option set, switch to **Squad Lab**.")
+    st.caption("Your team on the pitch — pick a player to view their card · captain · substitute. "
+               "🔧 Build a fresh one anytime in **Squad Lab**.")
     # US-386: a brand status card so your team stands out + Save/backup is signposted. "Yours" = the shown squad is
     # your session's active squad (not a demo); "synced" = signed-in mode (the account is the store, ADR-113).
     from src.web_streamlit import auth
@@ -327,9 +327,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     cap_next = captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw)
     projected_xi = xi_xp + cap_next
     captain_benched = captain_id is not None and captain_id not in xi_ids
-    unavailable = sum(1 for p in owned if is_unavailable(p))
-    doubtful = sum(1 for p in owned if p["status"] == "d")
-    m1, m2, m3, m4, m5 = st.columns(5)
+    # US-404: a compact 3-number strip (was a 5-across metric wall that slivered on mobile — Unavailable/Doubtful
+    # were their own metrics, but the flagged line below already names them).
+    m1, m2, m3 = st.columns(3)
     m1.metric(f"Projected XI ({gw_label})", f"{projected_xi:.1f} xP",
               help="Your starting XI's projected points over the selected horizon, plus your captain's "
                    "double for the next gameweek (the ×2 is a one-week thing).")
@@ -337,9 +337,6 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
               help="Your captain's next-gameweek points, doubled. Captaincy is re-chosen each week, so the "
                    "bonus counts for the next GW only. Set/change one on the Captain tab.")
     m3.metric("Bench", f"{bench_xp:.1f} xP", help="Your bench's projected points (bench strength).")
-    m4.metric("Unavailable", unavailable,
-              help="Owned players injured / suspended / unavailable (🚑 / 🚫 / ⛔).")
-    m5.metric("Doubtful", doubtful, help="Owned players flagged doubtful (❓).")
     # Be explicit that the ×2 is a one-week thing when a longer horizon is selected (owner steer, ADR-083).
     cap_name = by_id[captain_id]["web_name"] if captain_id in by_id else None
     if cap_next and horizon > 1:
@@ -349,26 +346,20 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         st.caption("⚡ Your captain is on the **bench** — not doubled in the projected XI (FPL would auto-sub "
                    "to your vice).")
 
-    # Who's flagged (US-240) — name them with their flag (❓ carries the chance%), else all-clear.
+    # US-404: availability + price folded into ONE line (was two caption walls). ❓ carries the chance%; price is
+    # directional pressure from net transfers (US-286/ADR-092), not exact timing.
     flagged = [(p, availability_flag(p)) for p in owned if availability_flag(p)]
-    if flagged:
-        st.caption("⚠ Flagged: " + " · ".join(f"{p['web_name']} {flag}" for p, flag in flagged)
-                   + " — see the **News** tab for detail.")
-    else:
-        st.caption("✓ All 15 available.")
-
-    # Price timing (US-286, ADR-092) — flag owned players under buying/selling pressure, to time transfers.
+    avail = ("⚠ **Flagged:** " + " · ".join(f"{p['web_name']} {flag}" for p, flag in flagged) + " — see **News**"
+             if flagged else "✓ All 15 available")
     falling = [p["web_name"] for p in owned if price_prediction(p) == "fall"]
     rising = [p["web_name"] for p in owned if price_prediction(p) == "rise"]
-    if falling or rising:
-        bits = []
-        if falling:
-            bits.append("🔻 may **drop** (sell before the change to keep value): " + ", ".join(falling))
-        if rising:
-            bits.append("🔺 **rising** (hold, or buy now): " + ", ".join(rising))
-        st.caption(" · ".join(bits) + " — directional pressure from net transfers, not exact timing.")
-    else:
-        st.caption("💷 No price moves flagged (net transfers are flat preseason — live from GW1).")
+    pbits = []
+    if falling:
+        pbits.append("🔻 " + ", ".join(falling) + " may drop")
+    if rising:
+        pbits.append("🔺 " + ", ".join(rising) + " rising")
+    price = " · ".join(pbits) if pbits else "💷 no price moves (flat preseason)"
+    st.caption(f"{avail}  ·  {price}")
 
     # Bench order (US-242/244/246) — the auto-sub priority (the stored order, ADR-079), reorderable (⬆/⬇).
     bench_ordered = [by_id[i] for i in (squad.get("bench_ids") or []) if i in by_id]
@@ -391,7 +382,7 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # gives mobile the full card the desktop-only hover popover never could. Reuses the card renderer +
     # `set_captain` + `substitute` — no analytics change.
     from src.web_streamlit.player_card import render_player_card, render_player_compare
-    st.subheader("⚙ Player actions")
+    st.subheader("⚙ Players & lineup")
     st.caption("Pick a player → view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
                "Works on phone too (the pitch hover is desktop-only).")
     owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
@@ -506,105 +497,29 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 st.rerun()
 
     st.divider()
-    st.subheader("Edit")
+    # US-405 (ADR-115): transfers live on the **Transfer tab** — the in-page expander that duplicated it is gone.
+    st.caption("🔄 **Make a transfer** — bring in a **new** player — on the **Transfer** tab above (it sells one "
+               "of your 15 for a same-position replacement). *(🔁 **Substitute**, above, just swaps your XI ↔ bench.)*")
 
-    with st.expander("Rename"):
-        new_name = st.text_input("Squad name", value=squad.get("name", "My squad"), max_chars=40,
+    # US-406 (ADR-115): the secondary edits fold into one collapsed **⚙ Manage** — flat subsections, because
+    # Streamlit expanders can't nest.
+    with st.expander("⚙ Manage — rename · set the whole bench"):
+        st.markdown("**✏️ Rename**")
+        new_name = st.text_input("Squad name", value=squad.get("name", "My squad"), max_chars=40, key="mng_rename",
                                  help="Rename this squad (shown in the download and as the active label).")
-        if st.button("Rename"):
+        if st.button("Rename", key="mng_rename_btn"):
             set_active_squad(rename(squad, new_name))
             st.rerun()
 
-    with st.expander("Transfer", expanded=True):
-        st.caption("🔁 **Substitute** (above) swaps your **lineup** (XI↔bench); a **Transfer** brings in a "
-                   "**new** player — it sells one of your 15. Same-position only (the squad is a fixed 2/5/5/3).")
-        if owned:
-            # Filter which of your players to swap out by position (US-299) — a swap is same-position, so this
-            # scopes the whole edit ("change my forwards" → FWD).
-            pos_filter = st.segmented_control(
-                "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="swap_pos",
-                help="Filter which of your players to swap out by position.")
-            # Your bank drives affordability (US-300): a swap out → in fits when in.price ≤ out.price + bank.
-            bank = round(FPL_BUDGET - sum(p["price"] for p in owned), 1)
-            st.caption(f"Bank: £{bank:.1f}m")
-            c_aff, c_flag = st.columns(2)
-            affordable_only = c_aff.checkbox(
-                "Affordable only", value=False, key="swap_affordable",
-                help="Hide replacements that would push you over budget (the transfer still checks on apply).")
-            # US-353: opt-in — also list flagged (🚑/🚫/⛔) replacements (off by default) so you can plan around
-            # or toward a returning player.
-            include_flagged = c_flag.checkbox(
-                "Include injured/suspended", value=False, key="swap_flagged",
-                help="Also list flagged (injured/suspended/unavailable) replacements — off by default.")
-            out_pool = [p for p in owned if pos_filter in (None, "All") or p["position"] == pos_filter]
-            if not out_pool:
-                st.caption(f"No {pos_filter} players in your squad.")
-            else:
-                out_label = {f"{p['position']} {p['web_name']} (£{p['price']:.1f}m)": p["id"] for p in
-                             sorted(out_pool, key=lambda x: (_ORDER.get(x["position"], 9), x["web_name"]))}
-                out_choice = st.selectbox("Transfer out", list(out_label), key="swap_out",
-                                          help="The player to sell.")
-                out_id = out_label[out_choice]
-                out = by_id[out_id]
-                owned_ids = {p["id"] for p in owned}
-                cands = sorted((p for p in players if p["position"] == out["position"]
-                                and p["id"] not in owned_ids
-                                and (include_flagged or not is_unavailable(p))),
-                               key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
-                # US-356: the same-position list is long — let the tester narrow it by team + a max price.
-                c_team, c_price = st.columns(2)
-                team_filter = c_team.selectbox(
-                    "Team", ["All", *sorted({p["team"] for p in cands})], key="swap_team",
-                    help="Filter the bring-in list to one club.")
-                cand_hi = max([p["price"] for p in cands], default=15.0)
-                price_cap = c_price.slider(
-                    "Max price (£m)", 0.0, cand_hi, cand_hi, step=0.5, key="swap_maxprice",
-                    help="Only show replacements at or below this price.")
-                cands = [p for p in cands
-                         if (team_filter in (None, "All") or p["team"] == team_filter)
-                         and p["price"] <= price_cap]
-                budget_in = out["price"] + bank                # the most a replacement can cost and still fit
-                affordable = [p for p in cands if p["price"] <= budget_in]
-                shown = affordable if affordable_only else cands
-                in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
-                            f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in shown}
-                if in_label:
-                    in_choice = st.selectbox("Bring in", list(in_label), key="swap_in",
-                                             help="The same-position player to bring in (ranked by xP).")
-                    in_id = in_label[in_choice]
-                    # US-353: flag the overspend **live** — the projected 15-cost after this transfer, before apply.
-                    proj = round(cost - out["price"] + by_id[in_id]["price"], 1)
-                    if proj > FPL_BUDGET:
-                        st.warning(f"⚠ After this transfer: £{proj:.1f}m — **£{proj - FPL_BUDGET:.1f}m over** the "
-                                   f"£{FPL_BUDGET:.0f}m budget (allowed — prices drift — but flagged).")
-                    else:
-                        st.caption(f"After this transfer: £{proj:.1f}m · bank £{FPL_BUDGET - proj:.1f}m.")
-                    if st.button("Transfer →"):
-                        ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_id, players)
-                        if not ok:
-                            st.error("Can't transfer — that would leave an illegal squad: "
-                                     + "; ".join(swap_issues))
-                        else:
-                            set_active_squad(new)
-                            msg = f"Transferred **{out['web_name']} → {by_id[in_id]['web_name']}**."
-                            st.warning(f"{msg}  ⚠ {warning}") if warning else st.success(msg)
-                            st.rerun()
-                elif affordable_only and cands:
-                    st.caption(f"No affordable replacement (≤ £{budget_in:.1f}m) — untick to see all.")
-                else:
-                    st.caption("No replacements match — try a different **Team** / a higher **Max price** "
-                               "(or untick *Affordable only*).")
-
-    with st.expander("Set the whole bench at once (pick 4)"):
-        st.caption("Bulk edit — re-pick all four bench players. For a single swap, use **🔁 Substitute** "
-                   "(above the Edit section).")
-        labels = {f"{p['position']} {p['web_name']}": p["id"] for p in
-                  sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
-        default = [lab for lab, i in labels.items() if i in bench_ids]
-        picked = st.multiselect("Bench", list(labels), default=default, max_selections=4,
-                                help="Pick your 4 bench players; the other 11 are your starting XI.")
-        if st.button("Set bench"):
-            new = set_bench(squad, [labels[lab] for lab in picked])
+        st.markdown("**🪑 Set the whole bench (pick 4)**")
+        st.caption("Bulk edit — re-pick all four bench players. For a single swap, use **🔁 Substitute** above.")
+        bench_labels = {f"{p['position']} {p['web_name']}": p["id"] for p in
+                        sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
+        bench_default = [lab for lab, i in bench_labels.items() if i in bench_ids]
+        bench_pick = st.multiselect("Bench", list(bench_labels), default=bench_default, max_selections=4,
+                                    key="mng_setbench", help="Pick your 4 bench players; the other 11 are your XI.")
+        if st.button("Set bench", key="mng_setbench_btn"):
+            new = set_bench(squad, [bench_labels[lab] for lab in bench_pick])
             new_xi = [by_id[i] for i in new["player_ids"] if i not in set(new["bench_ids"]) and i in by_id]
             xi_problem = legal_xi_issues(new_xi) if len(new_xi) == 11 else ["the XI isn't 11 players"]
             set_active_squad(new)
@@ -714,6 +629,78 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
                             f"new cost £{new['cost']:.1f}m.")
                     st.warning(f"{done}  ⚠ {warning}") if warning else st.success(done)
                     st.rerun()
+
+    # ✋ Manual transfer (moved here from the My Squad edit view — ADR-115). The block above **suggests** the best
+    # swaps; this lets you pick the **exact** out→in yourself (a punt, or a specific target the ranker didn't top).
+    # Same-position only (a fixed 2/5/5/3); team/price/affordable filters; a live overspend flag. Reuses
+    # `apply_transfer` — no analytics change.
+    st.divider()
+    with st.expander("✋ Manual transfer — pick the exact swap"):
+        by_id = {p["id"]: p for p in players}
+        cost = round(sum(p["price"] for p in owned), 1)
+        # Filter which of your players to swap out by position (US-299) — a swap is same-position.
+        pos_filter = st.segmented_control(
+            "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="swap_pos",
+            help="Filter which of your players to swap out by position.")
+        real_bank = round(FPL_BUDGET - cost, 1)            # a swap fits when in.price ≤ out.price + bank (US-300)
+        st.caption(f"Bank: £{real_bank:.1f}m")
+        c_aff, c_flag = st.columns(2)
+        affordable_only = c_aff.checkbox(
+            "Affordable only", value=False, key="swap_affordable",
+            help="Hide replacements that would push you over budget (the transfer still checks on apply).")
+        include_flagged = c_flag.checkbox(
+            "Include injured/suspended", value=False, key="swap_flagged",
+            help="Also list flagged (injured/suspended/unavailable) replacements — off by default.")
+        out_pool = [p for p in owned if pos_filter in (None, "All") or p["position"] == pos_filter]
+        if not out_pool:
+            st.caption(f"No {pos_filter} players in your squad.")
+        else:
+            out_label = {f"{p['position']} {p['web_name']} (£{p['price']:.1f}m)": p["id"] for p in
+                         sorted(out_pool, key=lambda x: (_ORDER.get(x["position"], 9), x["web_name"]))}
+            out_choice = st.selectbox("Transfer out", list(out_label), key="swap_out", help="The player to sell.")
+            out_id = out_label[out_choice]
+            out = by_id[out_id]
+            owned_ids = {p["id"] for p in owned}
+            cands = sorted((p for p in players if p["position"] == out["position"] and p["id"] not in owned_ids
+                            and (include_flagged or not is_unavailable(p))),
+                           key=lambda x: xp_by_id.get(x["id"], 0), reverse=True)
+            # US-356: the same-position list is long — narrow it by team + a max price.
+            c_team, c_price = st.columns(2)
+            team_filter = c_team.selectbox("Team", ["All", *sorted({p["team"] for p in cands})], key="swap_team",
+                                           help="Filter the bring-in list to one club.")
+            cand_hi = max([p["price"] for p in cands], default=15.0)
+            price_cap = c_price.slider("Max price (£m)", 0.0, cand_hi, cand_hi, step=0.5, key="swap_maxprice",
+                                       help="Only show replacements at or below this price.")
+            cands = [p for p in cands if (team_filter in (None, "All") or p["team"] == team_filter)
+                     and p["price"] <= price_cap]
+            budget_in = out["price"] + real_bank           # the most a replacement can cost and still fit
+            shown = [p for p in cands if p["price"] <= budget_in] if affordable_only else cands
+            in_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m · "
+                        f"{round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"] for p in shown}
+            if in_label:
+                in_choice = st.selectbox("Bring in", list(in_label), key="swap_in",
+                                         help="The same-position player to bring in (ranked by xP).")
+                in_id = in_label[in_choice]
+                proj = round(cost - out["price"] + by_id[in_id]["price"], 1)   # US-353: live overspend flag
+                if proj > FPL_BUDGET:
+                    st.warning(f"⚠ After this transfer: £{proj:.1f}m — **£{proj - FPL_BUDGET:.1f}m over** the "
+                               f"£{FPL_BUDGET:.0f}m budget (allowed — prices drift — but flagged).")
+                else:
+                    st.caption(f"After this transfer: £{proj:.1f}m · bank £{FPL_BUDGET - proj:.1f}m.")
+                if st.button("Transfer →", key="swap_apply"):
+                    ok, swap_issues, warning, new = apply_transfer(squad, out_id, in_id, players)
+                    if not ok:
+                        st.error("Can't transfer — that would leave an illegal squad: " + "; ".join(swap_issues))
+                    else:
+                        set_active_squad(new)
+                        msg = f"Transferred **{out['web_name']} → {by_id[in_id]['web_name']}**."
+                        st.warning(f"{msg}  ⚠ {warning}") if warning else st.success(msg)
+                        st.rerun()
+            elif affordable_only and cands:
+                st.caption(f"No affordable replacement (≤ £{budget_in:.1f}m) — untick to see all.")
+            else:
+                st.caption("No replacements match — try a different **Team** / a higher **Max price** "
+                           "(or untick *Affordable only*).")
 
 
 # ---- Captain (who to (vice-)captain; ADR-029) ------------------------------------------------------
