@@ -120,9 +120,9 @@ Codifying these first makes most of Themes 4–5 mechanical and stops future dri
    scales, `MANTRA`); the purple `primaryColor`; the AA-contrast chips fixed; the mark on the 4 data-page headers;
    the mantra unified. **Deferred (incremental retro-fit):** the remaining ~50 hexes + all 5 cards → tokens; a
    shared `card_css()`. *(This was the backbone the rest aligns to.)*
-3. **Sprint C — Naming & onboarding:** *(rename "Ask Maddie" → "Maddie Explains" ✅ done S160; empty-state copy ✅
-   done S160)* — remaining: a single primary Home CTA; sidebar icon labels; Ask → markdown + "my squad";
-   availability-vocab.
+3. **Sprint C — ✅ DONE (Sprint 162):** Home primary CTA; Ask → fenced markdown + "my squad"; News availability
+   vocab (Fit). *(rename → "Maddie Explains" + empty-state copy done S160.)* **Dropped per owner:** *sidebar icon
+   labels* ("leave the sidebar as is").
 4. **Sprint D — My Squad density / progressive disclosure** *(largest; needs its own design pass + mock):*
    consolidate the lineup/transfer/captain controls, the metric row and the caption walls.
 
