@@ -5,7 +5,7 @@ headless = true          # no auto-open a browser (also the Community Cloud defa
 [browser]
 gatherUsageStats = false  # don't phone home
 
-# Brand theme (ADR-114) — MADBOOTS purple as the app-wide accent, replacing Streamlit's default red (#FF4B4B) on
-# primary buttons, sliders, checkboxes and selected controls. Display-only; the app stays light (ADR-103, Approach B).
-[theme]
-primaryColor = "#8B2FC9"
+# NOTE (ADR-114 reverted, 2026-08-17): a `[theme]` block was tried (primaryColor = MADBOOTS purple) but **any**
+# `[theme]` in config.toml *pins* the theme — `base` defaults to light, so it forced **light-only** and removed the
+# user's Light/Dark/System toggle. Theme-following matters more than a purple accent, so it's removed. The brand
+# purple stays where we control it directly (the cards/banners via `brand.token_css_vars()`), not the widget theme.
