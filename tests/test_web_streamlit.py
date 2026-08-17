@@ -2232,17 +2232,14 @@ def test_brand_tokens_and_mantra_are_defined():
     assert all(len(pair) == 2 for pair in brand.FDR_STYLE.values())        # every band is a (bg, fg) pair
 
 
-def test_brand_hexes_are_token_sourced_in_the_cards():
-    # ADR-114/116 close-out: the shared brand colours in the self-contained card CSS reference brand.token_css_vars()
-    # (var(--mb-*)) instead of re-typing the hex — so changing brand.py propagates. (Object surfaces stay fixed.)
-    from src.web_streamlit import brand, player_card
+def test_my_squad_banner_renders_the_styled_card():
+    # Regression (S165): a 2nd <style> block (token_css_vars) broke the banner rendering — the purple card came out
+    # unstyled. The banner CSS + card must render as ONE <style> block + the div, with the brand purple inline.
     from src.web_streamlit.squads import team_banner_html
-    css = brand.token_css_vars()
-    assert ":root" in css and brand.ACCENT_TEAL in css and brand.PURPLE in css
-    assert "var(--mb-teal)" in player_card.CARD_CSS              # the rules reference the token…
-    assert player_card.CARD_CSS.count("#5eead4") == 1           # …and the hex appears only in the :root definition
-    banner = team_banner_html({"name": "X", "player_ids": []}, is_yours=True, synced=True)
-    assert "var(--mb-purple)" in banner and ":root" in banner    # the banner is token-sourced + carries the vars
+    banner = team_banner_html({"name": "TS", "player_ids": list(range(1, 16))}, is_yours=True, synced=True)
+    assert banner.count("<style>") == 1                          # one style block (a 2nd one broke rendering)
+    assert 'class="ytb-card"' in banner and "#8B2FC9" in banner  # the styled card + the brand-purple accent bar
+    assert "Your team" in banner and "Synced across your devices" in banner
 
 
 def test_data_pages_carry_the_brand_mark():

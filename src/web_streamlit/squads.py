@@ -285,7 +285,7 @@ _YTB_CSS = """<style>
   box-shadow:0 1px 2px rgba(16,24,40,.06),0 8px 22px -10px rgba(139,47,201,.42);
   padding:14px 18px 13px 22px;overflow:hidden;margin:2px 0 10px;}
 .ytb-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;
-  background:linear-gradient(180deg,var(--mb-purple),var(--mb-orange));}
+  background:linear-gradient(180deg,#8B2FC9,#FF6A00);}
 .ytb-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .ytb-team{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
 .ytb-ey{font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#7a1fb8;}
@@ -311,7 +311,7 @@ def team_banner_html(squad: dict, *, is_yours: bool, synced: bool) -> str:
     from src.web_streamlit import brand
     mark = f'<span class="ytb-mark">{brand.mark_html(badge_px=14, font_px=12)}</span>'
     if not is_yours:
-        return (brand.token_css_vars() + _YTB_CSS + '<div class="ytb-demo"><div class="ytb-top"><div>'
+        return (_YTB_CSS + '<div class="ytb-demo"><div class="ytb-top"><div>'
                 '<div class="ytb-h">👀 You’re viewing the <b>demo squad</b></div>'
                 '<div class="ytb-s">Make it yours — <b>import your FPL team</b>, upload a backup, or build one in '
                 'Squad Lab (all just below). It’ll then sync to your account across your devices.</div></div>'
@@ -324,7 +324,7 @@ def team_banner_html(squad: dict, *, is_yours: bool, synced: bool) -> str:
     else:
         pill = '<span class="ytb-pill sess">💾 This session</span>'
         sub = "Saved in this browser session — <b>download a backup</b> to keep it (sign in to sync across devices)."
-    return (brand.token_css_vars() + _YTB_CSS + '<div class="ytb-card"><div class="ytb-top">'
+    return (_YTB_CSS + '<div class="ytb-card"><div class="ytb-top">'
             f'<div class="ytb-team"><span class="ytb-ey">🔄 Your team</span><span class="ytb-nm">{name}</span></div>'
             f'{pill}</div><p class="ytb-sub">{sub}</p>'
             f'<div class="ytb-foot">{mark}</div></div>')

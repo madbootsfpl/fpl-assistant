@@ -22,7 +22,7 @@ from src.web_streamlit import brand
 # Scoped to `.pl-card`; a fixed dark surface (its own colours, like the pitch) that reads on both themes. Lines
 # unindented so `st.markdown` doesn't treat the CSS as a code block. Public so the pitch can include it **once**
 # and drop a CSS-less `card_body(...)` per kit (US-344, avoids 15× the stylesheet).
-CARD_CSS = brand.token_css_vars() + """
+CARD_CSS = """
 <style>
 .pl-card{background:linear-gradient(180deg,#111821,#0c121a);border:1px solid rgba(255,255,255,.09);
 border-radius:18px;overflow:hidden;color:#f2f6fb;margin:.5rem 0;box-shadow:0 18px 40px -22px rgba(0,0,0,.7);
@@ -43,11 +43,11 @@ white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.3) inset;}
 .pl-card .plc-flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .pl-card .plc-flag{font-size:.72rem;font-weight:700;background:rgba(255,255,255,.06);
 border:1px solid rgba(255,255,255,.09);padding:3px 8px;border-radius:999px;color:#e6edf5;}
-.pl-card .plc-flag.proj{color:var(--mb-teal);}
+.pl-card .plc-flag.proj{color:#5eead4;}
 .pl-card .plc-band{display:flex;justify-content:space-between;align-items:center;margin:2px 14px 0;padding:9px 14px;
 border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);}
 .pl-card .plc-brand{font-weight:800;font-size:.72rem;letter-spacing:.08em;color:#aab6c6;text-transform:uppercase;}
-.pl-card .plc-title{font-weight:800;color:var(--mb-teal);}
+.pl-card .plc-title{font-weight:800;color:#5eead4;}
 .pl-card .plc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:10px 22px 20px;}
 .pl-card .plc-stat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 2px;
 border-bottom:1px solid rgba(255,255,255,.08);}
@@ -78,14 +78,14 @@ border:2px solid rgba(255,255,255,.16);overflow:hidden;}
 .pl-card .cmp-meta{color:#aab6c6;font-size:.82rem;font-weight:500;margin-top:2px;}
 .pl-card .cmp-xp{display:inline-block;margin-top:6px;font-size:.74rem;font-weight:700;color:#aab6c6;
 background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);padding:2px 8px;border-radius:999px;}
-.pl-card .cmp-xp.win{color:var(--mb-teal);border-color:rgba(94,234,212,.4);}
+.pl-card .cmp-xp.win{color:#5eead4;border-color:rgba(94,234,212,.4);}
 .pl-card .cmp-fix{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:7px;}
 .pl-card .cmp-grid{margin-top:8px;}
 .pl-card .cmp-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:8px 2px;
 border-bottom:1px solid rgba(255,255,255,.07);}
 .pl-card .cmp-v{font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums;color:#e6edf5;}
 .pl-card .cmp-row .cmp-v:first-child{text-align:right;} .pl-card .cmp-row .cmp-v:last-child{text-align:left;}
-.pl-card .cmp-v.win{color:var(--mb-teal);}
+.pl-card .cmp-v.win{color:#5eead4;}
 .pl-card .cmp-l{color:#aab6c6;font-size:.8rem;text-align:center;white-space:nowrap;}
 </style>
 """
