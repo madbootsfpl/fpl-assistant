@@ -116,11 +116,13 @@ Codifying these first makes most of Themes 4–5 mechanical and stops future dri
    bundled audit-honesty fixes (dead Save/Load caption, "run refresh" copy, stale Feedback picker). **Still open
    from this theme:** header-sort-vs-pagination (M) and the registration dead-end fallback (S) — carry to a later
    pass.
-2. **Sprint B — Brand-token foundation:** codify tokens + card recipe in `brand.py`; set `primaryColor`; fix the
-   AA contrast chips (falls out of the tokens); add the brand mark to page headers; unify the mantra. *This is the
-   backbone the rest aligns to.*
-3. **Sprint C — Naming & onboarding:** rename "Ask Maddie" (keep Maddie, drop "Ask"); a single primary Home CTA;
-   sidebar icon labels; Ask → markdown + "my squad"; availability-vocab + empty-state copy.
+2. **Sprint B — ✅ DONE (Sprint 161, ADR-114):** tokens in `brand.py` (semantic pairs, FDR scale, neutrals,
+   scales, `MANTRA`); the purple `primaryColor`; the AA-contrast chips fixed; the mark on the 4 data-page headers;
+   the mantra unified. **Deferred (incremental retro-fit):** the remaining ~50 hexes + all 5 cards → tokens; a
+   shared `card_css()`. *(This was the backbone the rest aligns to.)*
+3. **Sprint C — Naming & onboarding:** *(rename "Ask Maddie" → "Maddie Explains" ✅ done S160; empty-state copy ✅
+   done S160)* — remaining: a single primary Home CTA; sidebar icon labels; Ask → markdown + "my squad";
+   availability-vocab.
 4. **Sprint D — My Squad density / progressive disclosure** *(largest; needs its own design pass + mock):*
    consolidate the lineup/transfer/captain controls, the metric row and the caption walls.
 

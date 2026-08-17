@@ -1,7 +1,7 @@
 # Sprint 161: UX Sprint B — the brand-token foundation (US-394–397)
 
-**Dates:** 2026-08-17 →
-**Status:** 🚧 Planned — gated by **ADR-114**. Display-only; the foundation the rest of the audit aligns to.
+**Dates:** 2026-08-17
+**Status:** ✅ Complete — US-394–397 (ADR-114), display-only. Owner-approved via a token preview. 1001 → 1003 tests.
 **Capacity:** ~1 session
 **Carried Over:** none
 
@@ -48,7 +48,36 @@ audit themes C (naming/onboarding) + D (My Squad density).
 3. **Docs:** this plan + retro; ADR-114; PROJECT_STATUS; the audit's Sprint-B row ticked; memory.
 
 ### 📋 Sprint Review
-*(filled at retro)*
+
+**Delivered — the design-token foundation + the fixes it pays for immediately.**
+- **US-394 tokens in `brand.py`:** semantic `GOOD/WARN/BAD` as **(solid, TINT, FG)** trios, `FDR_STYLE` (1–5 →
+  (bg, fg)), a neutral ramp, `SPACE`/radius scales, and the canonical `MANTRA`. Additive, Streamlit-free.
+- **US-395 the theme:** `[theme] primaryColor = #8B2FC9` in `.streamlit/config.toml` — every accent + primary
+  button is **brand purple, not Streamlit red**.
+- **US-396 contrast:** the Fixtures ticker, the player-card FDR pills and the captain-confidence bands now source
+  `brand.FDR_STYLE` / the semantic pairs, so each chip carries a **text colour per band** and clears WCAG AA (was
+  ~2.6–2.7:1). Dropped the ad-hoc hexes + the `cc-high/med/low` classes.
+- **US-397 brand + mantra:** the MADBOOTS mark on the four data-page headers (Players/Fixtures/News/Trending); the
+  ~4 "analytics decide…" wordings unified to `brand.MANTRA` (Home/Help/Maddie).
+- **Tests:** +2 (token/mantra unit test · mark-on-headers) and re-pointed the captain/player-card/home tests off
+  the old hexes/classes/wording onto the tokens. **1003 total.**
+
+**Deliberately partial (the ADR's stance):** not every one of the ~50 hexes / all 5 cards is on tokens yet — the
+retro-fit is incremental as each component is touched. player_card/pitch/countdown "objects" + `ratings.py` + a
+shared `card_css()` are the tracked follow-on.
+
+**Owner smoke (post-deploy):** primary buttons/sliders/accents are **purple**; the FDR + captain chips are legible;
+every data page carries the mark; the mantra reads identically everywhere.
 
 ### 🧠 Lessons
-*(filled at retro)*
+
+- **A chip is a colour *pair*, not a colour.** Encoding `GOOD/WARN/BAD` as (tint, fg) — and FDR as (bg, fg) — is
+  what makes "vibrant" and "accessible" the same change instead of opposing ones. The token *shape* carries the
+  accessibility guarantee.
+- **One config line moves the whole app on-brand.** `primaryColor` recolours every accent — the highest
+  brand-per-effort change in the sprint, and zero code.
+- **Define centrally, adopt incrementally.** Trying to route all ~50 hexes at once would have been a huge, risky
+  diff; defining the tokens + fixing the *defects* (contrast) + the *most-visible* gaps (mark, mantra) delivers the
+  value now and lets the rest ride on components we already revisit.
+- **A token change ripples into pinned tests.** Cards/pages that asserted the old hex/class/wording had to move onto
+  the tokens (`brand.WARN_TINT`, `brand.MANTRA`) — the right anchor, and now drift-proof.
