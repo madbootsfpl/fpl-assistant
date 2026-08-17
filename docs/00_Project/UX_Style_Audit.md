@@ -129,8 +129,8 @@ Codifying these first makes most of Themes 4–5 mechanical and stops future dri
 
 ---
 
-**✅ Audit complete (A·B·C·D).** Still open (small carry-overs, not part of the 4-sprint plan): the
-header-sort-vs-pagination honesty fix; the incremental token retro-fit (the remaining ~50 hexes / 5 cards →
-`brand.py`, a shared `card_css()`).
+**✅ Audit complete (A·B·C·D).** Carry-overs: **header-sort-vs-pagination — ✅ DONE (Sprint 164, ADR-116):**
+scrollable tables replace paging so the native column-sort is honest. Still open: the incremental token retro-fit
+(the remaining ~50 hexes / 5 cards → `brand.py`, a shared `card_css()`).
 
 Threaded throughout: accessibility (contrast, alt) rides on Sprint B's tokens; mobile checks each sprint.

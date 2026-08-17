@@ -27,7 +27,7 @@ from src.analytics import (
 from src.storage import Storage
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.formats import column_config
-from src.web_streamlit.paginate import paginate
+from src.web_streamlit.paginate import show_count
 from src.web_streamlit.ratings import LEGEND, rating_cell
 
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
@@ -46,16 +46,18 @@ def _sorted(players, sort_by):
 
 
 def render_pool(rows, sel, photos, badges):
-    """The player pool: sort + a filter-responsive top-15 bar + the paginated table (ADR-057/063/064)."""
+    """The player pool: sort + a filter-responsive top-15 bar + one scrollable table (ADR-057/064/116)."""
     filtered = apply_filter(rows, sel)
     if not filtered:
         st.info("No players match those filters — clear a filter or raise the price.")
         return
     sort = st.selectbox("Sort by", ["points", "value", "team", "position"],
-                        help="Order the table: total points · value (points per £m) · team · position.")
+                        help="Order the table: total points · value (points per £m) · team · position. "
+                             "(Clicking a column header re-sorts the whole table too.)")
     ranked = _sorted(filtered, sort)
-    # The table first (it's what matters most) — page through all matches; the top-15 bar sits below.
-    page = paginate(ranked, key="players", per_page=50)
+    # ADR-116: one scrollable, fully-sorted grid (was paged) — so the native column-header sort is honest (it
+    # orders the whole set, not just a page). The top-15 bar sits below.
+    page = show_count(ranked)
     table = [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
               "Fit": fit_flag(p),
@@ -63,7 +65,7 @@ def render_pool(rows, sel, photos, badges):
               "Own%": p["selected_by"], "Price": price_flag(p), "Form": p.get("form"),
               "ICT": p.get("ict_index"), "Set": " ".join(set_piece_flags(p)),
               "Trends": " ".join(crowd_flags(p))} for p in page]
-    st.dataframe(table, width="stretch", hide_index=True,
+    st.dataframe(table, width="stretch", hide_index=True, height=560,
                  column_config=column_config(table[0] if table else [],
                                              help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND,
                                                    "Price": PRICE_LEGEND, "Trends": CROWD_LEGEND}))
@@ -93,12 +95,13 @@ def _fit_lookup(players):
 
 
 def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
-    """A paginated stat table: a team badge + the given {column: value_of} spec (season-to-date).
+    """A scrollable stat table (ADR-116): a team badge + the given {column: value_of} spec (season-to-date).
 
     `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071). When `flag` is given
     (a row → availability emoji, ADR-074), a compact **Fit** column + a legend caption are added. Column
-    formatting + alignment come from the shared convention (ADR-072) via `column_config`."""
-    page = paginate(stat_rows, key=key, per_page=50)
+    formatting + alignment come from the shared convention (ADR-072) via `column_config`. `key` is retained for
+    call-site compatibility (paging is retired — the grid scrolls, so the header-sort orders the whole set)."""
+    page = show_count(stat_rows)
 
     def _row(r):
         base = {"badge": badges.get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
@@ -113,7 +116,8 @@ def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
     help_ = dict(col_help or {})
     if flag is not None:
         help_["Fit"] = AVAILABILITY_LEGEND
-    st.dataframe(table, hide_index=True, width="stretch", column_config=column_config(labels, help=help_))
+    st.dataframe(table, hide_index=True, width="stretch", height=520,
+                 column_config=column_config(labels, help=help_))
     if flag is not None:
         st.caption(AVAILABILITY_LEGEND)
 

@@ -17,7 +17,7 @@ from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.filters import filter_controls
-from src.web_streamlit.paginate import paginate
+from src.web_streamlit.paginate import show_count
 from src.web_streamlit.status import render_data_status
 
 
@@ -75,6 +75,7 @@ else:
               "Player": r["web_name"], "Team": r["team"], "Pos": r["position"],
               header: value_of(r), "Trends": " ".join(crowd_flags(r))} for r in rows],
             hide_index=True, width="stretch",
+            height=480,
             column_config={"photo": st.column_config.ImageColumn("", width="small"),
                            "badge": st.column_config.ImageColumn("", width="small")},
         )
@@ -89,7 +90,7 @@ else:
             if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
                 st.info("No transfer / form data yet — this board lights up at **GW1 (2026-08-21)**.")
             else:
-                page = paginate(rows, key=f"trend_{by}", per_page=30)
+                page = show_count(rows)
                 _board(page, header, lambda r, by=by: _value(by, r["trend"]))
 
     # Community Signals (ADR-059) — Reddit RSS buzz. Button-gated (no fetch on load) + cached; degrades.
@@ -128,7 +129,7 @@ else:
                     st.caption(f"{len(buzz)} players mentioned across the latest ~100 posts — expand a name "
                                "to read them. (Surnames can collide — the photo/badge shows who matched.)")
                     # A 100-post sample mentions many players → page like the other Trending boards (ADR-076).
-                    for r in paginate(buzz, key="buzz", per_page=30):
+                    for r in show_count(buzz):
                         c_photo, c_badge, c_body = st.columns([1, 1, 12], vertical_alignment="center")
                         if photos.get(r["id"]):
                             c_photo.image(photos[r["id"]], width=44)

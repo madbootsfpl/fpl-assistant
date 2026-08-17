@@ -175,21 +175,17 @@ def test_player_multiselect_is_team_scoped():
     assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
-def test_players_page_sorts_by_team_and_paginates():
-    # ADR-063: page through all players (no 50-cap) + sort by team
+def test_players_pool_shows_the_full_sorted_list():
+    # ADR-116: the pool is ONE scrollable table (no paging) ordered by "Sort by", so the whole set is shown and
+    # the native column-header sort is honest (it orders everything, not just a page).
     at = _run(_PAGES / "1_Players.py")
     if not at.dataframe:
         return
-    at.selectbox[0].set_value("team").run()                 # Sort by → team
+    next(s for s in at.selectbox if s.label == "Sort by").set_value("team").run()
     assert not at.exception
     teams = at.dataframe[0].value["Team"].tolist()
-    assert teams == sorted(teams)                           # first page ordered by team
-    # >50 players → a page control (selectbox[1]); moving to the next page doesn't crash
-    page_sb = at.selectbox[1]
-    assert any(o.startswith("1–") for o in page_sb.options)
-    if len(page_sb.options) > 1:
-        page_sb.set_value(page_sb.options[1]).run()          # 51–100
-        assert not at.exception
+    assert teams == sorted(teams)                           # the WHOLE list is ordered by team
+    assert not any(sb.label == "Page" for sb in at.selectbox)   # no page control (ADR-116 supersedes ADR-063)
 
 
 def test_fixtures_ticker_grid_and_weeks_selector():
@@ -1908,8 +1904,8 @@ def test_trending_page_shows_a_leaderboard():
     assert any("Top discussions this week" in c.value for c in at.caption)
 
 
-def test_talked_about_board_paginates(monkeypatch):
-    # US-233 (ADR-076): a big buzz list (a 100-post sample mentions many players) pages at 30
+def test_talked_about_board_shows_all_mentions(monkeypatch):
+    # US-233 + ADR-116: a big buzz list (a 100-post sample mentions many players) is shown in full (no paging).
     import streamlit as st
 
     from src.api import reddit
@@ -1932,8 +1928,8 @@ def test_talked_about_board_paginates(monkeypatch):
     assert btn, "the Talked about button should exist"
     btn[0].click().run()
     assert not at.exception
-    assert any(sb.label == "Page" for sb in at.selectbox), "the buzz board should paginate (>30 mentioned)"
-    assert any("Showing 1–30 of" in c.value for c in at.caption)
+    assert not any(sb.label == "Page" for sb in at.selectbox)         # ADR-116: no paging
+    assert any("players mentioned" in c.value for c in at.caption)    # the full mention count is shown
 
 
 def test_trending_filter_narrows_the_owned_board():
@@ -1946,14 +1942,12 @@ def test_trending_filter_narrows_the_owned_board():
     assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
-def test_trending_owned_board_paginates():
-    # ADR-063: the always-populated owned board pages past 30 (no 30-cap)
-    from src.web_streamlit.paginate import page_labels
+def test_trending_owned_board_shows_the_full_list():
+    # ADR-116: the always-populated owned board is one scrollable table (no 30-row page control)
     at = _run(_PAGES / "7_Trending.py")
     if not at.dataframe:
         return
-    first = page_labels(31, 30)[0]                          # "1–30" (avoids hard-coding the en-dash)
-    assert any(first in sb.options for sb in at.selectbox)  # a 30-row page control is present
+    assert not any(sb.label == "Page" for sb in at.selectbox)   # no page control (ADR-116)
 
 
 def test_news_page_lists_flagged_players_or_all_clear():
