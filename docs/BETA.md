@@ -298,6 +298,29 @@ simple public-**read** policy (no write path = none of the `42501` upsert pain).
 
 ---
 
+## 7. The ⭐ Watchlist (optional) — ADR-117
+
+Each signed-in user can ⭐ a shortlist of players (on **Players**) and view them on **My Squad → Transfer**. It
+persists per user in the *same* Supabase project (endpoint derived from `FPL_STORE_URL`, **no new secret**), like
+the saved squad. **Off until the table exists** (session-only fallback otherwise).
+
+1. **Create the table** (SQL Editor, idempotent). The app **upserts** it per user (like the squads table), so —
+   as with the squad store — either **disable RLS** (simplest, consistent with the store) or add insert+update
+   policies:
+   ```sql
+   create table if not exists public.player_watchlist (
+     user_key    text primary key,          -- a hash of the user's email (ADR-106), not the email itself
+     player_ids  jsonb not null default '[]'::jsonb,
+     updated_at  timestamptz not null default now()
+   );
+   alter table public.player_watchlist disable row level security;   -- the app upserts; simplest + reliable
+   ```
+2. **That's it** — signed-in users' watchlists now save/restore across devices; capped at **30** players.
+
+> No table (or not signed in) → the watchlist works **in-session only** (best-effort, ADR-117) and never errors.
+
+---
+
 ## Recruiting (Reddit etc.)
 
 - Post in **r/FantasyPL** (and similar) with a short pitch, the **signup link**, and the **access code**.

@@ -175,6 +175,42 @@ def test_player_multiselect_is_team_scoped():
     assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
+def test_watchlist_cap_is_thirty():
+    # ADR-117: a shortlist, not a second squad.
+    from src.web_streamlit import watchlist
+    assert watchlist.MAX == 30
+
+
+def test_players_pool_has_the_add_to_watchlist_control():
+    # ADR-117: the pool offers ⭐ Add (select rows → add) + a "N/30 watched" count.
+    at = _run(_PAGES / "1_Players.py")
+    if not at.dataframe:
+        return
+    assert any("Add selected" in b.label and "watchlist" in b.label for b in at.button)
+    assert any("watched" in c.value for c in at.caption)
+
+
+def test_players_card_can_star_a_player_to_the_watchlist():
+    # ADR-117: ⭐ on the player card adds them to the (session) watchlist.
+    at = _run(_PAGES / "1_Players.py")
+    view = next((s for s in at.segmented_control if s.label == "View"), None)
+    if view is None:
+        return
+    view.set_value("Card").run()
+    add = next((b for b in at.button if "Add to watchlist" in b.label), None)
+    if at.exception or add is None:
+        return                                          # no player/data locally → nothing to star
+    add.click().run()
+    assert not at.exception
+    assert any("Watching" in b.label for b in at.button)    # the ⭐ toggled to "★ Watching — remove"
+
+
+def test_transfer_tab_shows_the_watchlist_section():
+    # ADR-117: the watchlist is viewed (and acted on) on My Squad → Transfer.
+    at = _squads_view("Transfer")
+    assert any("Your watchlist" in (e.label or "") for e in at.get("expander"))
+
+
 def test_players_pool_shows_the_full_sorted_list():
     # ADR-116: the pool is ONE scrollable table (no paging) ordered by "Sort by", so the whole set is shown and
     # the native column-header sort is honest (it orders everything, not just a page).

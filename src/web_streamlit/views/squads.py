@@ -576,6 +576,35 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     bench_ids = squad.get("bench_ids", [])
+
+    # ⭐ Watchlist (ADR-117) — your kept shortlist (⭐ them on the Players tab); the manual transfer below brings
+    # one in. Shows each watched player's next fixture · xP · form.
+    from src.web_streamlit import watchlist
+    _all_by_id = {p["id"]: p for p in players}
+    watched = [_all_by_id[i] for i in watchlist.ids() if i in _all_by_id]
+    with st.expander(f"⭐ Your watchlist ({len(watched)})", expanded=bool(watched)):
+        if not watched:
+            st.caption("No players watched yet — ⭐ star them on the **Players** tab (the pool or a player card), "
+                       "then bring one in here.")
+        else:
+            st.dataframe(
+                [{"photo": photos.get(p["id"], ""), "Player": p["web_name"], "Team": p["team"],
+                  "Pos": p["position"],
+                  "Next": (f"{_n['opponent']} ({_n['venue']})"
+                           if (_n := (team_schedule(upcoming, p["team"]) or [None])[0]) else "—"),
+                  "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1), "Form": p.get("form")}
+                 for p in watched],
+                hide_index=True, width="stretch",
+                column_config={"photo": st.column_config.ImageColumn("", width="small"),
+                               "£m": st.column_config.NumberColumn("£m", format="£%.1fm"),
+                               "xP": st.column_config.NumberColumn("xP", format="%.1f")})
+            _rlabels = {f"{p['web_name']} · {p['team']}": p["id"] for p in watched}
+            _r = st.selectbox("★ Remove from watchlist", ["—", *_rlabels], key="watch_remove")
+            if _r != "—" and st.button("★ Remove", key="watch_remove_btn"):
+                watchlist.remove(_rlabels[_r])
+                st.rerun()
+            st.caption("Bring one in with **✋ Manual transfer** below (a same-position swap).")
+
     if count > 1:
         plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=count)
         st.code(render_transfer_plan(

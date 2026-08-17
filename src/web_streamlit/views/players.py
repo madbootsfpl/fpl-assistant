@@ -65,10 +65,25 @@ def render_pool(rows, sel, photos, badges):
               "Own%": p["selected_by"], "Price": price_flag(p), "Form": p.get("form"),
               "ICT": p.get("ict_index"), "Set": " ".join(set_piece_flags(p)),
               "Trends": " ".join(crowd_flags(p))} for p in page]
-    st.dataframe(table, width="stretch", hide_index=True, height=560,
-                 column_config=column_config(table[0] if table else [],
-                                             help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND,
-                                                   "Price": PRICE_LEGEND, "Trends": CROWD_LEGEND}))
+    event = st.dataframe(table, width="stretch", hide_index=True, height=560, key="players_pool",
+                         selection_mode="multi-row", on_select="rerun",
+                         column_config=column_config(table[0] if table else [],
+                                                     help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND,
+                                                           "Price": PRICE_LEGEND, "Trends": CROWD_LEGEND}))
+    # ⭐ Add the selected rows to your watchlist (ADR-117). Row-select → the reliable per-row ⭐ (st.dataframe
+    # can't hold per-row buttons). View the watchlist on My Squad → Transfer.
+    from src.web_streamlit import watchlist
+    try:
+        picked_ids = [page[i]["id"] for i in event.selection.rows]
+    except Exception:
+        picked_ids = []
+    wc1, wc2 = st.columns([1, 3], vertical_alignment="center")
+    if wc1.button(f"⭐ Add selected ({len(picked_ids)}) to watchlist", key="pool_watch_add", disabled=not picked_ids):
+        added = sum(1 for pid in picked_ids if watchlist.add(pid))
+        st.toast(f"Added {added} — ⭐ {len(watchlist.ids())}/{watchlist.MAX} watched.")
+        st.rerun()
+    wc2.caption(f"⭐ **{len(watchlist.ids())}/{watchlist.MAX} watched** — tick rows above then **Add**; view them on "
+                "**My Squad → Transfer**.")
     st.caption(AVAILABILITY_LEGEND)
     st.caption(PRICE_LEGEND)
     st.caption(CROWD_LEGEND)
@@ -324,6 +339,21 @@ def render_card(rows, sel, teams, photos, badges):
     player = by_label.get(st.selectbox("Player", list(by_label), help="Pick a player to see their card."))
     if not player:
         return
+
+    # ⭐ Watchlist (ADR-117) — star this player; view them on My Squad → Transfer.
+    from src.web_streamlit import watchlist
+    _wc1, _wc2 = st.columns([1, 3], vertical_alignment="center")
+    if watchlist.contains(player["id"]):
+        if _wc1.button("★ Watching — remove", key="card_watch"):
+            watchlist.remove(player["id"])
+            st.rerun()
+    elif watchlist.is_full():
+        _wc1.button("⭐ Add to watchlist", key="card_watch", disabled=True,
+                    help=f"Watchlist is full ({watchlist.MAX}) — remove one first.")
+    elif _wc1.button("⭐ Add to watchlist", key="card_watch"):
+        watchlist.add(player["id"])
+        st.rerun()
+    _wc2.caption(f"⭐ {len(watchlist.ids())}/{watchlist.MAX} on your watchlist — view them on **My Squad → Transfer**.")
 
     # US-370 (ADR-110): compare with another **same-position** player, side by side. A searchable picker (Streamlit
     # selectboxes filter as you type) scoped to the same position (across all players, not just the filter) so the
