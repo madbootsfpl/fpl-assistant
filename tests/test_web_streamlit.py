@@ -322,10 +322,10 @@ def test_your_team_panel_consolidates_import_upload_download():
     # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
     # backup in one place (was scattered across the sidebar).
     at = _run(_PAGES / "3_My_Squad.py")
-    assert any(e.label == "⚙ Your team — import, back up & sync" for e in at.get("expander"))
+    assert any(e.label == "⚙ Your team — import & back up" for e in at.get("expander"))
     assert any(t.label == "FPL manager-ID" for t in at.text_input)                    # import by Manager-ID
     assert any(b.label == "Import team" for b in at.button)
-    assert any(u.label.endswith("upload a squad.json backup") for u in at.get("file_uploader"))
+    assert any(u.label.endswith("restore your team from a backup file") for u in at.get("file_uploader"))
     assert any(d.label.endswith("Download squad.json") for d in at.get("download_button"))   # backup in the panel
 
 
@@ -1488,6 +1488,36 @@ def _signed_in_squads(monkeypatch, stored=None):
     monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(rows))
     monkeypatch.setattr("requests.post", lambda url, json=None, headers=None, timeout=None: _StoreResp())
     return _run(_PAGES / "3_My_Squad.py")
+
+
+def test_team_banner_highlights_your_team(monkeypatch):
+    # US-386: a brand status card names your team + marks it as yours, so it stands out from the demo.
+    at = _squads_with_active(monkeypatch)                     # active "My XI" in session
+    blob = " ".join(m.value for m in at.markdown)
+    assert "Your team" in blob and "My XI" in blob
+
+
+def test_team_banner_shows_demo_prompt_without_your_team():
+    # US-386: viewing the demo → the card prompts to make it yours (the default never looks like your team).
+    at = _run(_PAGES / "3_My_Squad.py")
+    blob = " ".join(m.value for m in at.markdown)
+    assert "demo squad" in blob
+
+
+def test_team_banner_shows_synced_state_when_signed_in(monkeypatch):
+    # US-386: signed in → the card shows the cross-device synced state + the account team's name.
+    stored = {"name": "My Account XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
+    at = _signed_in_squads(monkeypatch, stored=stored)
+    blob = " ".join(m.value for m in at.markdown)
+    assert "Synced across your devices" in blob and "My Account XI" in blob
+
+
+def test_download_filename_is_named_after_the_team():
+    # US-387: the backup is named after the team (not a generic squad.json the browser de-dupes to squad-13.json).
+    from src.web_streamlit.squads import _safe_filename
+    assert _safe_filename("TS") == "TS"
+    assert _safe_filename("My Team!") == "My-Team"
+    assert _safe_filename("   ") == "squad"                   # empty/odd → a safe fallback
 
 
 def test_cloud_handle_tool_hidden_when_signed_in(monkeypatch):

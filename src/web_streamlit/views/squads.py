@@ -49,6 +49,7 @@ from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
     FPL_BUDGET,
+    active_squad,
     apply_transfer,
     apply_transfer_plan,
     captain_bonus,
@@ -59,6 +60,7 @@ from src.web_streamlit.squads import (
     set_bench,
     set_captain,
     substitute,
+    team_banner_html,
 )
 from src.web_streamlit.tables import render_player_table
 
@@ -269,7 +271,13 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
 def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
     st.caption("Tweak your squad here — rename · swap · bench. 🔧 To **build a fresh one** with the full "
                "option set, switch to **Squad Lab**.")
-    render_your_team(squad)          # US-385: the one Your-team panel — import · back up · sync (ADR-113)
+    # US-386: a brand status card so your team stands out + Save/backup is signposted. "Yours" = the shown squad is
+    # your session's active squad (not a demo); "synced" = signed-in mode (the account is the store, ADR-113).
+    from src.web_streamlit import auth
+    _mine = active_squad()
+    _is_yours = _mine is not None and (squad is _mine or squad.get("player_ids") == _mine.get("player_ids"))
+    st.markdown(team_banner_html(squad, is_yours=_is_yours, synced=auth.is_configured()), unsafe_allow_html=True)
+    render_your_team(squad, is_yours=_is_yours)   # US-385/386: the one Your-team panel — import · back up (ADR-113)
     by_id = {p["id"]: p for p in players}
     owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
     ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)

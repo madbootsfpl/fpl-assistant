@@ -7,7 +7,9 @@ committed `seed_squads.json`). The web **never writes** — the DB/squads stay r
 """
 
 import datetime
+import html
 import json
+import re
 
 import streamlit as st
 
@@ -277,6 +279,69 @@ def render_sidebar() -> None:
     render_cloud_sync()          # ☁ handle Save/Load — no-login fallback only (hidden when signed in, US-384)
 
 
+_YTB_CSS = """<style>
+.ytb-card{position:relative;border:1.5px solid #e4cffa;border-radius:14px;background:#f7f0fd;
+  box-shadow:0 1px 2px rgba(16,24,40,.06),0 6px 18px -10px rgba(139,47,201,.25);
+  padding:15px 18px 14px 20px;overflow:hidden;margin:2px 0 8px;}
+.ytb-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;
+  background:linear-gradient(180deg,#8B2FC9,#FF6A00);}
+.ytb-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.ytb-team{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+.ytb-ey{font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8B2FC9;}
+.ytb-nm{font-size:1.3rem;font-weight:800;letter-spacing:-.01em;color:#1c1830;line-height:1.1;}
+.ytb-pill{display:inline-flex;align-items:center;gap:6px;background:#e7f6ec;color:#0b6b34;border:1px solid #a6dcb8;
+  border-radius:99px;padding:4px 11px;font-size:.78rem;font-weight:700;white-space:nowrap;}
+.ytb-pill.sess{background:#f3eefe;color:#6b2fae;border-color:#e4cffa;}
+.ytb-sub{color:#5f6472;font-size:.88rem;margin:9px 0 0;}
+.ytb-sub b{color:#1c1830;font-weight:600;}
+.ytb-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center;}
+.ytb-chip{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:#8B2FC9;
+  border:1px solid #e4cffa;border-radius:8px;padding:5px 11px;}
+.ytb-chip.solid{background:#8B2FC9;color:#fff;border-color:#8B2FC9;}
+.ytb-mark{margin-left:auto;}
+.ytb-demo{border:1.5px dashed #dcdce4;border-radius:14px;background:#f4f4f7;padding:14px 18px;margin:2px 0 8px;}
+.ytb-h{font-size:1.02rem;font-weight:700;color:#1c1830;}
+.ytb-s{color:#5f6472;font-size:.88rem;margin-top:4px;}
+</style>"""
+
+
+def team_banner_html(squad: dict, *, is_yours: bool, synced: bool) -> str:
+    """A prominent, brand-boxed **Your team** status card for the top of My Squad (US-386) — so your team stands
+    out on a busy page and Save/backup is signposted (was a tester's biggest ask). Two states: **your team** (a
+    MADBOOTS-tinted card with the team name + a synced/session pill) and **the demo** (a muted, dashed prompt to
+    make it yours). The chips are visual signposts to the ⚙ Your team panel just below; `synced` toggles the pill
+    (signed-in cross-device vs this-session-only)."""
+    from src.web_streamlit import brand
+    mark = f'<span class="ytb-mark">{brand.mark_html(badge_px=14, font_px=12)}</span>'
+    if not is_yours:
+        return (_YTB_CSS + '<div class="ytb-demo"><div class="ytb-top"><div>'
+                '<div class="ytb-h">👀 You’re viewing the <b>demo squad</b></div>'
+                '<div class="ytb-s">Make it yours — <b>import your FPL team</b>, upload a backup, or build one in '
+                'Squad Lab. It’ll then sync to your account across your devices.</div></div>'
+                f'{mark}</div></div>')
+    name = html.escape(str(squad.get("name", "My team")))
+    if synced:
+        pill = '<span class="ytb-pill">🔄 Synced across your devices</span>'
+        sub = ("Saved to your account — <b>every edit saves automatically</b>, no manual save. "
+               "Pick it up on any device you sign in on.")
+    else:
+        pill = '<span class="ytb-pill sess">💾 This session</span>'
+        sub = "Saved in this browser session — <b>download a backup</b> to keep it (sign in to sync across devices)."
+    return (_YTB_CSS + '<div class="ytb-card"><div class="ytb-top">'
+            f'<div class="ytb-team"><span class="ytb-ey">🔄 Your team</span><span class="ytb-nm">{name}</span></div>'
+            f'{pill}</div><p class="ytb-sub">{sub}</p>'
+            '<div class="ytb-actions"><span class="ytb-chip solid">⚙ Manage &amp; back up</span>'
+            f'<span class="ytb-chip">⬇︎ Download</span>{mark}</div></div>')
+
+
+def _safe_filename(name: str) -> str:
+    """A safe download filename stem from a squad name (e.g. `'My Team!'` → `'My-Team'`), so a backup is named
+    after the team, not a generic `squad.json` that the browser then de-dupes to `squad-13.json` (US-387).
+    Falls back to `'squad'` for an empty/odd name."""
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", (name or "").strip()).strip("-.")
+    return stem or "squad"
+
+
 def _download_payload(squad: dict) -> str:
     """`squad` as a downloadable `squad.json` in the SquadStore `{name: {…}}` format — round-trips through
     `parse_uploaded`. Stamps `saved_at`; the squad name is the outer key (ADR-054)."""
@@ -285,25 +350,16 @@ def _download_payload(squad: dict) -> str:
     return json.dumps({squad.get("name", "My squad"): save}, indent=2)
 
 
-def render_your_team(squad: dict | None) -> None:
-    """The unified **Your team** panel (ADR-113/US-385) — one inline place to *get*, *back up* and (signed in)
-    *sync* your team, replacing the scattered sidebar Upload / Manager-ID / handle controls. Three zones:
-    **sync status** · **get your team** (Import by Manager-ID · Upload a backup · Build in Squad Lab) · **backup**
-    (Download). `squad` is the squad currently shown (for the download); import/upload set the session's active
-    squad (a rerun then reflects it). No server write beyond the account auto-sync wired in `set_active_squad`."""
-    from src.web_streamlit import auth
-    with st.expander("⚙ Your team — import, back up & sync", expanded=squad is None):
-        # 1) Sync status — signed in: the account is the store (ADR-113); else session-only + the Download backup.
-        if auth.is_configured():
-            from src.web_streamlit.access import _EMAIL
-            who = st.session_state.get(_EMAIL)
-            st.success(f"🔄 **Synced to your account**{f' — {who}' if who else ''}. Your team follows you across "
-                       "your devices; every edit saves automatically — no manual save.")
-        else:
-            st.caption("Your team lives in this browser session — **Download** a backup to keep it. "
-                       "(A ☁ **Save / Load** panel in the sidebar syncs across devices without a login.)")
-
-        # 2) Get your team — Import by Manager-ID (ADR-058) · Upload a backup (ADR-054) · Build in Squad Lab.
+def render_your_team(squad: dict | None, *, is_yours: bool = True) -> None:
+    """The unified **Your team** panel (ADR-113/US-385) — one inline place to *get* and *back up* your team,
+    replacing the scattered sidebar Upload / Manager-ID / handle controls. Two zones: **get your team** (Import by
+    Manager-ID · restore from a backup · Build in Squad Lab) · **backup** (Download). The sync *status* now lives in
+    the brand banner above (US-386), so it isn't repeated here. Expands by default when the shown squad **isn't
+    yours** (demo / none) so import is immediate; collapses once you have a synced team. `squad` is the squad shown
+    (for the download); import/upload set the session's active squad (a rerun reflects it). No server write beyond
+    the account auto-sync wired in `set_active_squad`."""
+    with st.expander("⚙ Your team — import & back up", expanded=(squad is None or not is_yours)):
+        # Get your team — Import by Manager-ID (ADR-058) · restore from a backup (ADR-054) · Build in Squad Lab.
         st.markdown("**Get your team**")
         manager_id = st.text_input(
             "FPL manager-ID", key="manager_id", placeholder="e.g. 1234567",
@@ -326,8 +382,8 @@ def render_your_team(squad: dict | None) -> None:
                 else:
                     st.info(message)
 
-        uploaded = st.file_uploader("…or upload a squad.json backup", type="json", key="squad_uploader",
-                                    help="Load a squad.json you downloaded earlier (a backup, or from Squad Lab).")
+        uploaded = st.file_uploader("…or restore your team from a backup file", type="json", key="squad_uploader",
+                                    help="Upload a squad.json you downloaded earlier (a backup, or from Squad Lab).")
         if uploaded is not None and st.session_state.get(_UPLOAD_APPLIED) != uploaded.file_id:
             parsed, err = parse_uploaded(uploaded)
             if err:
@@ -344,8 +400,10 @@ def render_your_team(squad: dict | None) -> None:
         st.markdown("**Backup**")
         if squad:
             st.download_button("⬇︎ Download squad.json", _download_payload(squad),
-                               file_name="squad.json", mime="application/json",
-                               help="Save a copy to this device — re-upload it any time, or on another device.")
+                               file_name=f"{_safe_filename(squad.get('name', 'squad'))}.json",
+                               mime="application/json",
+                               help="Save a copy to this device (named after your team) — re-upload it any time, "
+                                    "or on another device.")
         else:
             st.caption("Import or build a team first, then download a backup.")
 
