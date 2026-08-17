@@ -57,6 +57,11 @@ Sprint A (Sprint 160) fixed the cheap honesty/copy items. **This ADR sets the fo
 brand purple), so sliders/checkboxes/selected controls and `type="primary"` buttons are **brand-purple, not red**.
 Adopt the convention **one primary action per view** (`type="primary"`); everything else default/secondary;
 `st.link_button` for outbound, `st.download_button` for downloads.
+> **⛔ REVERTED (2026-08-17):** decision 2 was **backed out**. **Any** `[theme]` block in `config.toml` *pins* the
+> theme — `base` defaults to **light** — so `primaryColor` forced the app to **light-only** and **removed the user's
+> Light/Dark/System toggle** (a regression reported on desktop). Theme-following > a purple widget accent, so the
+> `[theme]` block is removed. The brand purple stays where we control it directly (cards/banners via
+> `brand.token_css_vars()`), not the Streamlit widget theme. Decisions 1, 3, 4 stand.
 
 **3. Adopt where it fixes a real issue (this sprint), not everywhere at once:**
 - **Contrast:** re-point the **FDR pills / captain bands / Fixtures ramp** at `FDR_STYLE`/the semantic pairs → all
