@@ -40,8 +40,25 @@ if _line:
         st.page_link("pages/3_My_Squad.py",
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
 
-# US-398: one clear primary action up top (the value path), above the "explore" list — not buried in bullets.
-st.page_link("pages/4_Squad_Lab.py", label="🧪 **Build your first squad** → Squad Lab")
+# US-398 (rev, owner 2026-08-17): ONE highlighted "get started" box — a purple CTA button (links to Squad Lab via
+# its page slug, same tab) with the New-here / Maddie / Testing nudges consolidated (were three separate callouts).
+_HERO_CSS = (
+    "<style>.mb-hero{border:1px solid #cfa4f0;border-radius:12px;"
+    "background:linear-gradient(135deg,#f3e9fd,#efe0fc);padding:16px 18px;margin:2px 0 16px;}"
+    ".mb-hero .cta{display:inline-block;background:#8B2FC9;color:#fff !important;font-weight:800;border-radius:9px;"
+    "padding:10px 18px;text-decoration:none;font-size:1rem;}"
+    ".mb-hero .cta:hover{background:#7a1fb8;}"
+    ".mb-hero .nudges{color:#2a2140;font-size:.9rem;line-height:1.7;margin-top:12px;}"
+    ".mb-hero a.ext{color:#7a1fb8;font-weight:700;}</style>")
+st.markdown(
+    _HERO_CSS + '<div class="mb-hero">'
+    '<a class="cta" href="Squad_Lab" target="_self">🧪 Build your first squad → Squad Lab</a>'
+    '<div class="nudges">'
+    '🧭 <b>New here?</b> The <b>Help</b> tab is a step-by-step guide.&nbsp;&nbsp;'
+    '🎥 <b>Maddie Explains</b> has quick 60-second video guides.<br>'
+    '🧪 <b>Testing this?</b> Tell us what breaks on the <b>Feedback</b> tab — or '
+    '<a class="ext" href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.'
+    '</div></div>', unsafe_allow_html=True)
 
 st.markdown(
     """
@@ -64,19 +81,9 @@ st.markdown(
 - ☁ **Saved to your account** and **auto-synced across your devices** — or **Download** a backup to your device.
 - 📤 **Upload** a saved backup, or **import your real FPL team** by Manager-ID (from GW1).
 - 🧩 **Manage** transfers · captaincy · chips · analysis in **My Squad**.
-- A **demo** squad populates the views on first visit.
+- 👀 A **demo** squad populates the views on first visit.
 """
 )
-# Brand-purple callouts (US-389) — replacing Streamlit's default-blue st.info so the nudges read as MADBOOTS.
-_NOTE_CSS = ("<style>.mb-note{display:flex;gap:10px;align-items:flex-start;border:1px solid #cfa4f0;"
-             "border-radius:10px;background:linear-gradient(135deg,#f3e9fd,#efe0fc);color:#2a2140;"
-             "padding:11px 14px;margin:0 0 10px;font-size:.92rem;line-height:1.5;}"
-             ".mb-note .i{font-size:1.05rem;}.mb-note a{color:#7a1fb8;font-weight:700;}</style>")
-st.markdown(_NOTE_CSS + '<div class="mb-note"><span class="i">🧭</span><span><b>New here?</b> The <b>Help</b> tab '
-            "(bottom of the sidebar) is a step-by-step guide to building your team with the assistant.</span></div>",
-            unsafe_allow_html=True)
-st.page_link("pages/9_Maddie_Explains.py",
-             label="🎥 **Maddie Explains** — quick 60-second video guides of each feature →")
 
 _signup = secret("FPL_SIGNUP_URL")          # a founding-tester signup link, only when configured (ADR-087)
 if _signup:
@@ -84,7 +91,4 @@ if _signup:
                    help="Sign up with your email — founding testers get free access as the app grows.")
 
 st.divider()
-# US-398: the beta/Testing nudge moved to a lighter footer (was a mid-page callout → banner-blindness).
-st.caption("🧪 **Testing this?** Tell us what breaks or feels off on the **📣 Feedback** tab — or "
-           "[open a GitHub issue](https://github.com/madbootsfpl/fpl-assistant/issues/new).")
 st.caption(brand.DISCLAIMER)                 # US-350 (ADR-103): the not-affiliated line

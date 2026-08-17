@@ -22,12 +22,18 @@ def _get(row, field):
         return None
 
 
-def filter_controls(players, *, key: str, with_price: bool = False) -> dict:
+def filter_controls(players, *, key: str, with_price: bool = False, my_squad_ids=None) -> dict:
     """Render the filter multiselects and return the selection (ADR-064).
 
     Options come from `players` (distinct teams, `web_name`s); positions are the fixed four. `with_price`
-    adds a Max-price slider (Players only — stat rows have no price). Keys are namespaced by `key`.
+    adds a Max-price slider (Players only — stat rows have no price). `my_squad_ids` (a set of the active
+    squad's player ids, when one is loaded) adds a **My squad only** checkbox that scopes to your team
+    (News/Trending, US-407b). Keys are namespaced by `key`.
     """
+    my_squad = False
+    if my_squad_ids:
+        my_squad = st.checkbox("My squad only", key=f"{key}_mysquad",
+                               help="Show only players in your active squad.")
     teams = sorted({_get(p, "team") for p in players if _get(p, "team")})
     cols = st.columns(4 if with_price else 3)
     team_sel = cols[0].multiselect("Team", teams, key=f"{key}_team",
@@ -54,7 +60,8 @@ def filter_controls(players, *, key: str, with_price: bool = False) -> dict:
                                 help="Hide players priced above this.")
                  if with_price else None)
     return {"teams": set(team_sel), "positions": set(pos_sel),
-            "players": set(player_sel), "max_price": max_price}
+            "players": set(player_sel), "max_price": max_price,
+            "my_squad": set(my_squad_ids) if (my_squad and my_squad_ids) else None}
 
 
 def apply(rows, sel: dict) -> list:
@@ -62,8 +69,11 @@ def apply(rows, sel: dict) -> list:
     and the row carries a price."""
     teams, positions, players = sel["teams"], sel["positions"], sel["players"]
     max_price = sel.get("max_price")
+    my_squad = sel.get("my_squad")
 
     def ok(r):
+        if my_squad is not None and _get(r, "id") not in my_squad:
+            return False
         if teams and _get(r, "team") not in teams:
             return False
         if positions and _get(r, "position") not in positions:

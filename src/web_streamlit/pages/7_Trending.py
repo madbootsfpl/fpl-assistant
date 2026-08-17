@@ -18,6 +18,7 @@ from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.filters import filter_controls
 from src.web_streamlit.paginate import show_count
+from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 
 
@@ -81,7 +82,9 @@ else:
         )
 
     # A shared filter (ADR-064): Team / Position / Player, AND-combinable — applied to every board.
-    sel = filter_controls(players, key="trending")
+    _sq = active_squad()                                    # US-407b: add a "My squad only" scope to the filter
+    sel = filter_controls(players, key="trending",
+                          my_squad_ids=set(_sq["player_ids"]) if _sq else None)
     st.caption(CROWD_LEGEND)                           # explain the Trends flags (e.g. what "template" means)
     tabs = st.tabs([b[1] for b in _BOARDS] + ["💬 Talked about"])
     for tab, (by, label, header) in zip(tabs, _BOARDS):

@@ -2250,20 +2250,15 @@ def test_data_pages_carry_the_brand_mark():
         assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
 
 
-def test_home_callouts_are_branded_and_bullets_iconed():
-    # US-389: the New-here/Testing callouts use the brand-purple HTML box (not default-blue st.info), and every
-    # "Explore the sidebar" bullet carries its icon (was only Squad Lab + Maddie).
+def test_home_hero_box_consolidates_cta_and_nudges():
+    # US-398 (rev): one purple "get started" box — the Build CTA + New-here/Maddie/Testing nudges consolidated;
+    # every "Explore the sidebar" bullet carries its icon.
     at = _run(_APP)
     blob = " ".join(m.value for m in at.markdown)
-    assert "mb-note" in blob                                   # the purple callout box
-    assert "👟 **Players**" in blob and "📅 **Fixtures**" in blob and "🎥 **Maddie Explains**" in blob
-
-
-def test_home_has_a_primary_build_cta():
-    # US-398: Home surfaces one clear primary action — a link to build a squad in Squad Lab.
-    at = _run(_APP)
-    assert any("Squad_Lab" in getattr(pl, "page", "") for pl in at.get("page_link")), \
-        "Home should carry a 'Build your first squad → Squad Lab' CTA"
+    assert "mb-hero" in blob                                    # the one highlighted box
+    assert 'href="Squad_Lab"' in blob and "Build your first squad" in blob   # the highlighted CTA button-link
+    assert "New here?" in blob and "Maddie Explains" in blob and "Testing this?" in blob   # nudges consolidated
+    assert "👟 **Players**" in blob and "📅 **Fixtures**" in blob   # the icon-led bullets
 
 
 def test_news_shows_the_shared_fit_flag():
@@ -2288,9 +2283,9 @@ def test_fixtures_ticker_shows_the_difficulty_number():
     assert "is the difficulty" in caps                         # the legend explains the per-cell number
 
 
-def test_home_teaser_links_to_ask_maddie():
-    # US-383: Home carries a "Meet Maddie" teaser that links to the hub page.
+def test_home_mentions_maddie_explains_in_the_hero():
+    # US-383 (rev US-398): the Maddie nudge is now text in the consolidated hero box (not a separate page_link).
     at = _run(_APP)
-    assert any("Maddie_Explains" in getattr(pl, "page", "") for pl in at.get("page_link")), \
-        "Home should link to the Ask Maddie hub"
+    blob = " ".join(m.value for m in at.markdown)
+    assert "Maddie Explains" in blob
 

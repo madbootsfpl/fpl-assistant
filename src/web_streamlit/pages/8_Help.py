@@ -35,13 +35,13 @@ st.caption("Your team lives on the **🧩 My Squad** tab — switch **My Squad �
 with st.expander("🧪 1 · Build your squad  →  **Squad Lab**", expanded=True):
     st.markdown(
         "Build your 15 with:\n"
-        "- **Budget & shape** — spend to your budget across 2 GK · 5 DEF · 5 MID · 3 FWD.\n"
-        "- **Archetypes** — Cheap · Premium · Differential.\n"
-        "- **Players** — include or exclude specific players.\n"
-        "- **Bench** — declare your bench.\n"
-        "- **Objective** — xP · Points · Value · xGI.\n"
-        "- **Build mode** — Balanced · Weekly (a cheap playing bench) · Bench Boost (maximise all 15).\n"
-        "- **ⓘ** — every control has an explanation.\n\n"
+        "- 💷 **Budget & shape** — spend to your budget across 2 GK · 5 DEF · 5 MID · 3 FWD.\n"
+        "- 🏷️ **Archetypes** — Cheap · Premium · Differential.\n"
+        "- 👥 **Players** — include or exclude specific players.\n"
+        "- 🪑 **Bench** — declare your bench.\n"
+        "- 🎯 **Objective** — xP · Points · Value · xGI.\n"
+        "- ⚙ **Build mode** — Balanced · Weekly (a cheap playing bench) · Bench Boost (maximise all 15).\n"
+        "- ℹ️ **Every control** has an explanation (the ⓘ tooltips).\n\n"
         "When you're happy: **Use this squad →** makes it your active squad, and/or **💾 Download** the `squad.json` "
         "as a local backup."
     )

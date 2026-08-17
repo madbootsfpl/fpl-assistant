@@ -11,7 +11,10 @@ from src.storage import Storage
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
+from src.web_streamlit.filters import apply as apply_filter
+from src.web_streamlit.filters import filter_controls
 from src.web_streamlit.media import media_headlines
+from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 
 
@@ -47,23 +50,31 @@ else:
     if not flagged:
         st.success("No current news — everyone's available. 🎉")
     else:
+        # US-407b: filter the news to your squad / a team / position / player (the shared filter, ADR-064).
+        _sq = active_squad()
+        sel = filter_controls(players, key="news",
+                              my_squad_ids=set(_sq["player_ids"]) if _sq else None)
+        flagged = apply_filter(flagged, sel)
         flagged.sort(key=lambda p: (_SEVERITY.get(p["status"], 9), p["web_name"]))
-        st.caption(f"{len(flagged)} players with news — injuries, doubts and returns (most serious first).")
-        st.dataframe(
-            [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
-              "Player": p["web_name"], "Team": p["team"],
-              "Fit": fit_flag(p),   # US-400: the shared availability emoji (⛔🚑❓), used on every surface
-              "Status": _STATUS.get(p["status"], p["status"]),
-              "Chance": (f"{p['chance']}%" if p["chance"] is not None else "—"),
-              "News": p["news"], "Source": p["scout_news_link"] or None}
-             for p in flagged],
-            width="stretch", hide_index=True,
-            column_config={
-                "photo": st.column_config.ImageColumn("", width="small"),
-                "badge": st.column_config.ImageColumn("", width="small"),
-                "Source": st.column_config.LinkColumn("Source", display_text="read more"),
-            },
-        )
+        if not flagged:
+            st.info("No news for that filter — clear a filter to see everyone with news.")
+        else:
+            st.caption(f"{len(flagged)} players with news — injuries, doubts and returns (most serious first).")
+            st.dataframe(
+                [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
+                  "Player": p["web_name"], "Team": p["team"],
+                  "Fit": fit_flag(p),   # US-400: the shared availability emoji (⛔🚑❓), used on every surface
+                  "Status": _STATUS.get(p["status"], p["status"]),
+                  "Chance": (f"{p['chance']}%" if p["chance"] is not None else "—"),
+                  "News": p["news"], "Source": p["scout_news_link"] or None}
+                 for p in flagged],
+                width="stretch", hide_index=True,
+                column_config={
+                    "photo": st.column_config.ImageColumn("", width="small"),
+                    "badge": st.column_config.ImageColumn("", width="small"),
+                    "Source": st.column_config.LinkColumn("Source", display_text="read more"),
+                },
+            )
 
 # --- Headlines lens (Sprint 115, ADR-093) — public RSS/Atom, opt-in, cached, degrade-gracefully -------------
 st.divider()
