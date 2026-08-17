@@ -21,7 +21,8 @@ analytics.boot("Players")
 render_data_status()
 st.title("👟 Players")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
-st.caption("The whole player pool + the stat boards — filter, sort, and see who's over/under-performing.")
+st.caption("Explore the full player pool and stats — filter, sort and see who's over- or under-performing, "
+           "with form, clean sheets, xG, xA, xGI, set pieces and history.")
 st.caption("🎯 Looking for **who to buy**? The **Radar** (on the **Fixtures** tab) shortlists the best players "
            "from the easiest-run teams.")
 

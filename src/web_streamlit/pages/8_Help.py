@@ -13,6 +13,7 @@ st.set_page_config(**brand.page_config("Help"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Help")
 st.title("🧭 Help")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption(f"A step-by-step guide to getting the most from MADBOOTS. **{brand.MANTRA}** Every answer is checked "
            "against the underlying data with a **✓/⚠** trust line.")
 

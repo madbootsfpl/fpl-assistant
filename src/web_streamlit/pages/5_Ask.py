@@ -21,6 +21,7 @@ require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Ask")
 render_data_status()
 st.title("💬 Ask")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Captaincy · transfers · your squad · comparisons · build a squad · best players · fixtures — the "
            "analytics decide and the answer is **checked** against the data (✓). It also explains **FPL "
            "rules** from a curated knowledge base (✓), and answers open **tactics** questions labelled "

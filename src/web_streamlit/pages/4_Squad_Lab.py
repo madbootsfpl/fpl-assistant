@@ -25,8 +25,9 @@ analytics.boot("Squad Lab")
 render_data_status()
 render_sidebar()
 st.title("🧪 Squad Lab")   # wave-2 feedback: a lab motif (was the boot emoji + the MADBOOTS mascot image)
-st.caption("**Build your squad** — the full optimiser. New season, a wildcard, or a revamp. **Use this squad →** "
-           "sends it to **My Squad** to manage.")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
+st.caption("**Build your squad** — the full optimiser. New season, a wildcard, a free hit or a total revamp. "
+           "**Use this squad →** sends it to **My Squad** to manage.")
 
 # The build optimises over this window (ADR-077) — longer for a wildcard / start of season.
 horizon = st.segmented_control(

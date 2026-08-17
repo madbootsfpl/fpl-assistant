@@ -38,6 +38,7 @@ st.set_page_config(**brand.page_config("Feedback"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Feedback")
 st.title("📣 Feedback")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Testing the beta? Tell us what worked, what broke, or what you'd love next — it goes straight to "
            "the team. Thank you 🙏")
 

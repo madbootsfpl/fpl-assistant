@@ -32,10 +32,14 @@ WARN, WARN_TINT, WARN_FG = "#d98c00", "#fdf1d6", "#8a5a00"
 BAD, BAD_TINT, BAD_FG = "#c62828", "#fce8e8", "#a51d1d"
 ACCENT_TEAL = "#5eead4"                         # the single "projected / winner" highlight
 
-# FDR 1–5 → (background, text) pairs, vibrant green→red — one home for the fixture ticker + the card FDR pills.
+# FDR 1–5 → (background, text) pairs — **mirrors the official FPL app** so it reads familiarly (owner, 2026-08-17):
+# deep-green → bright-green → **grey (the neutral break)** → red → maroon. One home for the ticker + the card pills.
 FDR_STYLE = {
-    1: ("#1a9850", "#ffffff"), 2: ("#66bd63", "#0b3d1a"), 3: ("#f9a825", "#3d2c00"),
-    4: ("#f46d43", "#ffffff"), 5: ("#d73027", "#ffffff"),
+    1: ("#257d5a", "#ffffff"),   # very easy — FPL deep green
+    2: ("#01fc7a", "#0a3d2a"),   # easy — FPL bright green (dark ink for contrast)
+    3: ("#e7e7e7", "#3a3a3a"),   # medium — FPL grey, a calm break from the greens/reds
+    4: ("#ff1751", "#ffffff"),   # hard — FPL red
+    5: ("#80072d", "#ffffff"),   # very hard — FPL maroon
 }
 
 # Neutrals (on the light app) — text · muted · hairline · surfaces.

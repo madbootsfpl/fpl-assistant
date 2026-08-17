@@ -25,7 +25,9 @@ analytics.boot("My Squad")
 render_data_status()
 render_sidebar()
 st.title("🧩 My Squad")
-st.caption("Your team in one place — see it, tweak it, and get this week's plan. Build a fresh one in **Squad Lab**.")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
+st.caption("Your team, all in one place — tweak your squad, check its health, get AI tips, plan your captain and "
+           "transfers for the next 1–5 GWs, and stay on top of your chips.")
 
 if active_squad() is None:   # US-360: no team built/loaded yet → point new users at the builder (the views use a demo)
     st.info("🛠️ **No team yet?** The views below use a demo — build your own in the **🧪 Squad Lab** tab "

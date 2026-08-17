@@ -16,6 +16,7 @@ st.set_page_config(**brand.page_config("Admin"))
 require_access()          # testers still pass the beta gate first (ADR-087)
 analytics.boot("Admin")
 st.title("📊 Admin — beta analytics")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 
 _KEY = secret("FPL_ADMIN_KEY")
 if not _KEY:
