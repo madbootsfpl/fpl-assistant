@@ -2232,6 +2232,19 @@ def test_brand_tokens_and_mantra_are_defined():
     assert all(len(pair) == 2 for pair in brand.FDR_STYLE.values())        # every band is a (bg, fg) pair
 
 
+def test_brand_hexes_are_token_sourced_in_the_cards():
+    # ADR-114/116 close-out: the shared brand colours in the self-contained card CSS reference brand.token_css_vars()
+    # (var(--mb-*)) instead of re-typing the hex — so changing brand.py propagates. (Object surfaces stay fixed.)
+    from src.web_streamlit import brand, player_card
+    from src.web_streamlit.squads import team_banner_html
+    css = brand.token_css_vars()
+    assert ":root" in css and brand.ACCENT_TEAL in css and brand.PURPLE in css
+    assert "var(--mb-teal)" in player_card.CARD_CSS              # the rules reference the token…
+    assert player_card.CARD_CSS.count("#5eead4") == 1           # …and the hex appears only in the :root definition
+    banner = team_banner_html({"name": "X", "player_ids": []}, is_yours=True, synced=True)
+    assert "var(--mb-purple)" in banner and ":root" in banner    # the banner is token-sourced + carries the vars
+
+
 def test_data_pages_carry_the_brand_mark():
     # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
     for page in ("1_Players.py", "2_Fixtures.py", "6_News.py", "7_Trending.py"):

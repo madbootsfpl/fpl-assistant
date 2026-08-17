@@ -129,8 +129,10 @@ Codifying these first makes most of Themes 4–5 mechanical and stops future dri
 
 ---
 
-**✅ Audit complete (A·B·C·D).** Carry-overs: **header-sort-vs-pagination — ✅ DONE (Sprint 164, ADR-116):**
-scrollable tables replace paging so the native column-sort is honest. Still open: the incremental token retro-fit
-(the remaining ~50 hexes / 5 cards → `brand.py`, a shared `card_css()`).
+**✅ Audit fully closed (A·B·C·D + both carry-overs).** Carry-overs: **header-sort-vs-pagination — ✅ DONE (Sprint
+164, ADR-116).** **Token retro-fit — ✅ DONE (Sprint 165):** verified the real brand-palette drift was ~6 spots (not
+~50); added `brand.token_css_vars()` + re-pointed the player-card teal + team-banner accent bar at `var(--mb-*)`.
+The remaining hexes are intentional component/object colours (ADR-114); a full `card_css()` recipe across all 5
+cards is deliberately deferred (high risk, no user-visible change). **Nothing left open from the audit.**
 
 Threaded throughout: accessibility (contrast, alt) rides on Sprint B's tokens; mobile checks each sprint.

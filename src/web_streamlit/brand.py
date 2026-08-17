@@ -48,6 +48,18 @@ RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_PILL = 10, 14, 18, 999
 # The canonical throughline — one wording, referenced everywhere (was ~4 variants).
 MANTRA = "The analytics decide. The AI explains. You make the call."
 
+
+def token_css_vars() -> str:
+    """The brand palette as CSS custom properties (`:root{--mb-*}`) — so the self-contained HTML cards can
+    reference `var(--mb-teal)` / `var(--mb-purple)` and stay in sync with `brand.py` instead of re-typing the hex
+    (ADR-114/116). Prepended to each card's CSS block so the vars are defined wherever a card renders (redundant
+    `:root` blocks are harmless — identical values). Only the genuinely *shared* brand colours are exposed;
+    component/object surfaces (the dark card, the pitch turf, the countdown slate) stay component-specific."""
+    return ("<style>:root{"
+            f"--mb-purple:{PURPLE};--mb-purple-lt:{PURPLE_LT};--mb-orange:{ORANGE};--mb-ink:{INK};"
+            f"--mb-teal:{ACCENT_TEAL};--mb-good:{GOOD};--mb-warn:{WARN};--mb-bad:{BAD};"
+            "}</style>")
+
 _ASSETS = Path(__file__).with_name("assets")
 _BADGE = _ASSETS / "madboots-badge.png"        # 298² transparent — the favicon + the Home/gate mark (via st.image)
 _BADGE_SMALL = _ASSETS / "madboots-badge-64.png"   # 64² — inlined as a data URI where the badge is small (the band)

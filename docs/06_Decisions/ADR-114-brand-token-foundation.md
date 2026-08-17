@@ -109,3 +109,12 @@ the wordmark/badge/tagline.
   brand mark on the data-page headers + unify the `MANTRA`. Owner sign-off via a swatch/accent preview before build.
 - **Not this ADR / follow-ups:** the full token retro-fit of player_card/pitch/countdown/ratings; a shared `card_css`
   adoption across all 5 cards; the remaining audit themes (C naming/onboarding, D My Squad density).
+
+**Token retro-fit — ✅ closed out (Sprint 165, 2026-08-17).** Verified the actual brand-palette drift was small
+(~6 spots, not the audit's "~50"): the team-banner accent bar + 4× the accent teal in the player card. Added
+**`brand.token_css_vars()`** (the palette as `:root{--mb-*}` CSS custom properties, prepended to the card CSS) and
+re-pointed those spots at `var(--mb-teal)` / `var(--mb-purple)` / `var(--mb-orange)` — so the shared brand colours
+now single-source from `brand.py`. The remaining hexes are **intentionally component/object-specific** (the dark
+card surface, the pitch turf, the countdown slate, context-specific dark-mode greys) per this ADR — *not* drift, so
+left as-is. A full `card_css()` recipe adopted across all 5 cards is **deliberately deferred** — high regression
+risk, no user-visible change; not worth it (especially pre-GW1). The audit's colour-drift item is closed.
