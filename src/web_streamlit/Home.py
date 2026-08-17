@@ -55,7 +55,7 @@ st.markdown(
     '<a class="cta" href="Squad_Lab" target="_self">🧪 Build your first squad → Squad Lab</a>'
     '<div class="nudges">'
     '🧭 <b>New here?</b> The <b>Help</b> tab is a step-by-step guide.&nbsp;&nbsp;'
-    '🎥 <b>Maddie Explains</b> has quick 60-second video guides.<br>'
+    '🎥 <b>Maddie Explains</b> has quick video guides — 90 seconds or less.<br>'
     '🧪 <b>Testing this?</b> Tell us what breaks on the <b>Feedback</b> tab — or '
     '<a class="ext" href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.'
     '</div></div>', unsafe_allow_html=True)
@@ -73,7 +73,7 @@ st.markdown(
 - 📰 **News** — official FPL player news (injuries · doubts · returns), most serious first.
 - 📈 **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
 - 🧭 **Help** — a step-by-step guide to getting started with MADBOOTS.
-- 🎥 **Maddie Explains** — quick 60-second video guides, from **Maddie**, your MADBOOTS guide.
+- 🎥 **Maddie Explains** — quick video guides (90 seconds or less), from **Maddie**, your MADBOOTS guide.
 
 **Your squad**
 
