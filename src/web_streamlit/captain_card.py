@@ -26,10 +26,7 @@ background:rgba(128,128,128,.06);}
 .cap-card .cc-team{opacity:.75;}
 .cap-card .cc-proj{background:#1f6feb;color:#fff;border-radius:999px;padding:.12rem .6rem;font-weight:700;
 font-size:.85rem;}
-.cap-card .cc-conf{border-radius:999px;padding:.12rem .6rem;font-weight:700;font-size:.85rem;color:#1a1a1a;}
-.cap-card .cc-high{background:#7ee2a8;}
-.cap-card .cc-med{background:#ffd23f;}
-.cap-card .cc-low{background:#f2a0a0;}
+.cap-card .cc-conf{border-radius:999px;padding:.12rem .6rem;font-weight:700;font-size:.85rem;}
 .cap-card .cc-cols{display:flex;flex-wrap:wrap;gap:1.2rem;margin:.1rem 0 .5rem;}
 .cap-card .cc-col{flex:1 1 220px;}
 .cap-card .cc-h{text-transform:uppercase;letter-spacing:.04em;font-size:.72rem;opacity:.65;margin-bottom:.15rem;}
@@ -43,7 +40,10 @@ display:flex;align-items:center;justify-content:space-between;}
 """
 
 _MEDALS = ("🥇", "🥈", "🥉")
-_BAND_CLASS = {"High": "cc-high", "Medium": "cc-med", "Low": "cc-low"}
+# Confidence bands → the shared semantic tokens (ADR-114): a (tint, fg) pair so the chip is always legible.
+_BAND_STYLE = {"High": (brand.GOOD_TINT, brand.GOOD_FG),
+               "Medium": (brand.WARN_TINT, brand.WARN_FG),
+               "Low": (brand.BAD_TINT, brand.BAD_FG)}
 
 
 def captain_card_html(ranked, explanation, *, scope: str = "", team_names=None) -> str:
@@ -60,8 +60,9 @@ def captain_card_html(ranked, explanation, *, scope: str = "", team_names=None) 
     conf_html = ""
     why_html = risk_html = ""
     if explanation is not None:
-        band_cls = _BAND_CLASS.get(explanation.band, "cc-low")
-        conf_html = f'<span class="cc-conf {band_cls}">{explanation.confidence}/100 · {e(explanation.band)}</span>'
+        _bg, _fg = _BAND_STYLE.get(explanation.band, _BAND_STYLE["Low"])
+        conf_html = (f'<span class="cc-conf" style="background:{_bg};color:{_fg}">'
+                     f'{explanation.confidence}/100 · {e(explanation.band)}</span>')
         if explanation.reasons:
             lis = "".join(f"<li>✓ {e(r)}</li>" for r in explanation.reasons)
             why_html = f'<div class="cc-col"><div class="cc-h">Edge</div><ul>{lis}</ul></div>'

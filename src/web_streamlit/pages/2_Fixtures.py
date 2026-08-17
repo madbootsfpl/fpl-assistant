@@ -18,21 +18,15 @@ from src.web_streamlit.badges import badge_url_by_short_name
 from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 
-# FPL difficulty 1–5 → a vibrant green→red band (US-391: was a brownish amber; each band carries a text colour
-# that clears contrast — dark ink on the light greens/gold, white on the dark green/orange/red).
-_DIFF_STYLE = {
-    1: ("#1a9850", "#ffffff"),   # easiest — vivid green
-    2: ("#66bd63", "#0b3d1a"),   # easy — bright green, dark ink
-    3: ("#f9a825", "#3d2c00"),   # medium — gold (not the old brownish amber), dark ink
-    4: ("#f46d43", "#ffffff"),   # hard — vivid orange-red
-    5: ("#d73027", "#ffffff"),   # hardest — strong red
-}
+# FPL difficulty 1–5 → the shared brand FDR scale (ADR-114): (bg, text) pairs, vibrant green→red, each with a text
+# colour that clears contrast. One home for the palette (brand.FDR_STYLE) — the ticker + the card FDR pills share it.
 
 st.set_page_config(**brand.page_config("Fixtures"))
 require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Fixtures")
 render_data_status()
 st.title("📅 Fixtures")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("The difficulty ticker — teams × gameweeks, colour-coded by how hard each run is.")
 
 store = Storage()
@@ -89,8 +83,8 @@ else:
         # A same-shaped CSS frame: colour the GW cells by their difficulty; leave badge/Team blank.
         css = pd.DataFrame("", index=disp_df.index, columns=disp_df.columns)
         for col in gw_cols:
-            css[col] = [f"background-color: {_DIFF_STYLE[d][0]}; color: {_DIFF_STYLE[d][1]}"
-                        if d in _DIFF_STYLE else "" for d in diff_df[col]]
+            css[col] = [f"background-color: {brand.FDR_STYLE[d][0]}; color: {brand.FDR_STYLE[d][1]}"
+                        if d in brand.FDR_STYLE else "" for d in diff_df[col]]
         return css
 
     st.caption("Easiest run first · green = easy, red = hard · the **· N** in each cell is the difficulty "

@@ -51,6 +51,7 @@ require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Trending")
 render_data_status()
 st.title("📈 Trending")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction.")
 
 store = Storage()

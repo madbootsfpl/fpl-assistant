@@ -5,6 +5,7 @@ Display-only; no Streamlit context needed here.
 """
 
 from src.analytics.explain import Explanation
+from src.web_streamlit import brand
 from src.web_streamlit.captain_card import captain_card_html
 
 _RANKED = [
@@ -20,18 +21,18 @@ def test_card_shows_pick_confidence_why_risks_and_alternatives():
     h = captain_card_html(_RANKED, _EX, scope="from squad 'RoboTS'", team_names={"MUN": "Man Utd"})
     assert ".cap-card" in h and "🥇 Captain Pick" in h and "from squad &#x27;RoboTS&#x27;" in h
     assert "B.Fernandes" in h and "Man Utd · MID" in h and "5.9 pts" in h    # pick + projected chip
-    assert "69/100 · Medium" in h and "cc-med" in h                          # confidence pill (Medium band)
+    assert "69/100 · Medium" in h and brand.WARN_TINT in h                   # confidence pill (Medium → WARN token)
     assert "✓ Penalty taker" in h and "⚠ Away fixture" in h                  # Edge / Risk
     assert "🥈 Haaland 5.7" in h and "🥉 Rice 4.5" in h                       # Alternatives
     assert 'class="cc-brand"' in h and 'aria-label="MADBOOTS"' in h          # US-355: the MADBOOTS mark
 
 
-def test_card_band_drives_the_pill_class():
-    # anchor on the applied class attribute (the CSS block defines all three classes)
+def test_card_band_drives_the_confidence_colour():
+    # ADR-114: the band drives the confidence chip's semantic token colour (High→GOOD, Low→BAD), inline.
     high = captain_card_html(_RANKED, Explanation([], [], 90, "High"))
     low = captain_card_html(_RANKED, Explanation([], [], 30, "Low"))
-    assert 'cc-conf cc-high' in high and 'cc-conf cc-med' not in high
-    assert 'cc-conf cc-low' in low
+    assert brand.GOOD_TINT in high and brand.WARN_TINT not in high
+    assert brand.BAD_TINT in low
 
 
 def test_card_escapes_every_value():

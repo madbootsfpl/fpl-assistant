@@ -27,6 +27,7 @@ require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("News")
 render_data_status()
 st.title("📰 News")
+st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Official FPL player news — injuries, doubts and returns, most serious first.")
 
 store = Storage()

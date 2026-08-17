@@ -23,6 +23,31 @@ PURPLE_LT = "#B45CF0"                          # a lighter purple, legible on th
 ORANGE = "#FF6A00"
 INK = "#17131F"
 
+# --- Design tokens (ADR-114) — the single source of truth for colour/scale; consume these, don't re-type hexes. ---
+
+# Semantic state — each is a **pair**: a solid, a light TINT (chip background), and an FG (text-on-tint), so a state
+# chip is always a colour pair and never white-on-mid-tint (which failed WCAG AA). The solids clear ~4.5:1 on white.
+GOOD, GOOD_TINT, GOOD_FG = "#1e8047", "#e6f4ec", "#0b5e30"
+WARN, WARN_TINT, WARN_FG = "#d98c00", "#fdf1d6", "#8a5a00"
+BAD, BAD_TINT, BAD_FG = "#c62828", "#fce8e8", "#a51d1d"
+ACCENT_TEAL = "#5eead4"                         # the single "projected / winner" highlight
+
+# FDR 1–5 → (background, text) pairs, vibrant green→red — one home for the fixture ticker + the card FDR pills.
+FDR_STYLE = {
+    1: ("#1a9850", "#ffffff"), 2: ("#66bd63", "#0b3d1a"), 3: ("#f9a825", "#3d2c00"),
+    4: ("#f46d43", "#ffffff"), 5: ("#d73027", "#ffffff"),
+}
+
+# Neutrals (on the light app) — text · muted · hairline · surfaces.
+TEXT, MUTED, LINE, SURFACE, SURFACE_2 = "#1c1830", "#5f6472", "#e6e6ea", "#ffffff", "#f4f2f8"
+
+# Scales — collapse the ad-hoc paddings/radii onto rungs.
+SPACE = (4, 8, 12, 16, 20, 24)
+RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_PILL = 10, 14, 18, 999
+
+# The canonical throughline — one wording, referenced everywhere (was ~4 variants).
+MANTRA = "The analytics decide. The AI explains. You make the call."
+
 _ASSETS = Path(__file__).with_name("assets")
 _BADGE = _ASSETS / "madboots-badge.png"        # 298² transparent — the favicon + the Home/gate mark (via st.image)
 _BADGE_SMALL = _ASSETS / "madboots-badge-64.png"   # 64² — inlined as a data URI where the badge is small (the band)

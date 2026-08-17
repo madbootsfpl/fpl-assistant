@@ -4,3 +4,8 @@ headless = true          # no auto-open a browser (also the Community Cloud defa
 
 [browser]
 gatherUsageStats = false  # don't phone home
+
+# Brand theme (ADR-114) — MADBOOTS purple as the app-wide accent, replacing Streamlit's default red (#FF4B4B) on
+# primary buttons, sliders, checkboxes and selected controls. Display-only; the app stays light (ADR-103, Approach B).
+[theme]
+primaryColor = "#8B2FC9"

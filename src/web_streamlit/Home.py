@@ -24,7 +24,7 @@ render_data_status()
 _logo, _name = st.columns([1, 7], vertical_alignment="center")
 _logo.image(brand.badge_path(), width=78)
 _name.markdown(brand.wordmark_html(42), unsafe_allow_html=True)
-st.caption(f"**{brand.TAGLINE}** The analytics decide; you stay in control.")
+st.caption(f"**{brand.TAGLINE}** {brand.MANTRA}")
 
 # The next FPL deadline — a countdown that escalates in urgency (ADR-086/US-267), rolling forward each GW.
 _store = Storage()

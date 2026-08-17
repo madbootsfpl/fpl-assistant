@@ -90,8 +90,12 @@ border-bottom:1px solid rgba(255,255,255,.07);}
 </style>
 """
 
-# FDR → colour (green easy · amber neutral · red hard), matching the Fixtures ticker feel.
-_FDR = {1: "#22a559", 2: "#22a559", 3: "#c98a1a", 4: "#d64545", 5: "#7f1d1d"}
+# FDR → the shared brand scale (ADR-114): a (bg, fg) pair per band, so the pill text always clears contrast
+# (the old white-on-mid-tint amber/green failed WCAG AA). Same palette as the Fixtures ticker.
+def _fdr_css(fdr) -> str:
+    """`background:…;color:…` for an FDR band (defaults to medium) — from `brand.FDR_STYLE`."""
+    bg, fg = brand.FDR_STYLE.get(int(fdr or 3), brand.FDR_STYLE[3])
+    return f"background:{bg};color:{fg}"
 
 
 def _i(v):
@@ -216,13 +220,13 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
         # shirt's xP chip already shows the horizon total.
         cols = "".join(
             f'<div class="plc-gwcol"><div class="plc-gwxp">{float(f.get("xp") or 0):.1f}</div>'
-            f'<div class="plc-gwfx" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
+            f'<div class="plc-gwfx" style="{_fdr_css(f.get("fdr"))}">'
             f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</div></div>'
             for f in fx)
         fix_html = f'<div class="plc-gwrow">{cols}</div>'
     elif fx:
         pills = "".join(
-            f'<span class="plc-pill" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
+            f'<span class="plc-pill" style="{_fdr_css(f.get("fdr"))}">'
             f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</span>'
             for f in fx)
         fix_html = f'<div class="plc-fix"><span class="plc-gw">Next {len(fx)}</span>{pills}</div>'
@@ -278,7 +282,7 @@ def _cmp_header(p, *, team, photo, fixtures, xp, xp_win, e) -> str:
     pic = f'<img src="{e(str(photo))}" alt="{name}">' if photo else ""
     xp_html = f'<span class="cmp-xp{" win" if xp_win else ""}">◆ {xp:.1f} xP</span>' if xp is not None else ""
     pills = "".join(
-        f'<span class="plc-pill" style="background:{_FDR.get(int(f.get("fdr") or 3), "#c98a1a")}">'
+        f'<span class="plc-pill" style="{_fdr_css(f.get("fdr"))}">'
         f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</span>'
         for f in list(fixtures or [])[:3])
     return (f'<div class="cmp-hdr"><div class="cmp-photo">{pic}</div><div class="cmp-name">{name}</div>'

@@ -24,8 +24,8 @@ analytics.boot("Maddie Explains")
 
 st.title("🎥 Maddie Explains")
 st.markdown(brand.mark_html(badge_px=18, font_px=15), unsafe_allow_html=True)
-st.caption("Short explainers from **Maddie**, your MADBOOTS guide — the analytics decide, the AI explains, you "
-           "make the call. New clips land here as they're made.")
+st.caption(f"Short explainers from **Maddie**, your MADBOOTS guide. {brand.MANTRA} "
+           "New clips land here as they're made.")
 st.divider()
 
 videos = _cached_videos()

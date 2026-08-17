@@ -26,7 +26,7 @@ def test_home_renders():
     at = _run(_APP)
     caps = " ".join(c.value for c in at.caption)
     blob = " ".join(m.value for m in at.markdown)
-    assert "The analytics decide; you stay in control." in caps    # US-373: the tidied tagline
+    assert "The analytics decide. The AI explains. You make the call." in caps    # brand.MANTRA (ADR-114)
     assert "Explore the sidebar" in blob and "auto-synced across your devices" in blob   # US-373: sidebar + your-squad
     assert "read-only view over the analytics" not in caps         # the internal ADR ref dropped from user copy
 
@@ -2210,6 +2210,24 @@ def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
     assert any("Maddie Explains" in t.value for t in at.title)
     assert any("Picking your captain" in s.value for s in at.subheader)      # the published topic renders
     assert any("Coming soon" in i.value for i in at.info)                    # the URL-less row degrades
+
+
+def test_brand_tokens_and_mantra_are_defined():
+    # ADR-114: brand.py is the token source of truth — semantic pairs, the FDR scale, and one canonical mantra.
+    from src.web_streamlit import brand
+    assert brand.MANTRA == "The analytics decide. The AI explains. You make the call."
+    for name in ("GOOD", "GOOD_TINT", "GOOD_FG", "WARN", "WARN_TINT", "BAD", "BAD_TINT", "ACCENT_TEAL"):
+        assert getattr(brand, name).startswith("#")
+    assert set(brand.FDR_STYLE) == {1, 2, 3, 4, 5}
+    assert all(len(pair) == 2 for pair in brand.FDR_STYLE.values())        # every band is a (bg, fg) pair
+
+
+def test_data_pages_carry_the_brand_mark():
+    # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
+    for page in ("1_Players.py", "2_Fixtures.py", "6_News.py", "7_Trending.py"):
+        at = _run(_PAGES / page)
+        blob = " ".join(m.value for m in at.markdown)
+        assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
 
 
 def test_home_callouts_are_branded_and_bullets_iconed():

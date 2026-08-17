@@ -76,7 +76,7 @@ def test_fixtures_and_projected_xp_chip():
           {"opp": "COV", "home": True, "fdr": 2}]
     h = player_card.player_card_html(_FWD, team_name="Man City", fixtures=fx, projected_xp=6.4)
     assert "BOU (H)" in h and "CRY (A)" in h and "COV (H)" in h
-    assert "#22a559" in h                                     # the FDR-2 (green) pill colour
+    assert "#66bd63" in h                                     # the FDR-2 (green) pill colour (brand.FDR_STYLE, ADR-114)
     assert "◆ Proj. 6.4 xP" in h
     assert "👑" in h and "⚽ pens" in h                        # ownership tier + set-piece flag chips
 
