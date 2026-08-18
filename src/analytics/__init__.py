@@ -94,6 +94,7 @@ from src.analytics.price import (
 )
 from src.analytics.setpieces import set_piece_bonus
 from src.analytics.targets import target_by_fixtures
+from src.analytics.team_dna import TeamDNA, team_dna, team_dna_all, team_insights
 from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import baseline_rate, decision_xp, fallback_rate, player_xp
@@ -179,6 +180,10 @@ __all__ = [
     "Insight",
     "MIN_MINUTES",
     "set_piece_bonus",
+    "team_dna",
+    "team_dna_all",
+    "team_insights",
+    "TeamDNA",
     "baseline_rate",
     "player_xp",
     "points_per_million",
