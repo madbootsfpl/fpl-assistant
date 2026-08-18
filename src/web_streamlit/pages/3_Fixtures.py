@@ -32,7 +32,8 @@ st.caption("The difficulty ticker — teams × gameweeks, colour-coded by how ha
 store = Storage()
 try:
     upcoming = store.get_upcoming_fixtures()
-    badges = badge_url_by_short_name(store.get_teams())
+    teams = store.get_teams()
+    badges = badge_url_by_short_name(teams)
     players = store.get_players()
     history = store.get_history_by_code()
     gw_history = store.get_gw_history_by_code()
@@ -150,3 +151,23 @@ else:
         )
     else:
         st.caption("No available targets for that position in the top-run teams.")
+
+    # 🧬 Team DNA (ADR-119) — a team's percentile-vs-league fingerprint + grade + insights + fixtures + the
+    # players to target. Reuses the loaded players + fixtures (no new store read, no decision_xp/FDR change).
+    from src.analytics import team_dna_all, team_schedule
+    from src.web_streamlit.team_dna_card import render_team_dna, team_key_players
+    st.divider()
+    st.subheader("🧬 Team DNA")
+    st.caption("How strong is a team, both ends — a percentile-vs-league fingerprint, its grade, fixtures and the "
+               "players to target. Attack/creation/output from our aggregates; the defensive axes are proxies "
+               "(labelled) that sharpen once the season runs.")
+    _names = {t["short_name"]: t["name"] for t in teams}
+    _all_dna = team_dna_all(players, upcoming, team_names=_names)
+    if _all_dna:
+        _labels = {_names.get(t, t): t for t in sorted(_all_dna, key=lambda t: _names.get(t, t))}
+        _picked = _labels.get(st.selectbox("Team", list(_labels), key="team_dna_pick",
+                                           help="Pick a team to see its DNA fingerprint."))
+        if _picked:
+            _sched = team_schedule(upcoming, _picked)[:6]
+            _fx = [(s["event"], s["opponent"], s["venue"], s["difficulty"]) for s in _sched]
+            render_team_dna(_all_dna[_picked], fixtures=_fx, key_players=team_key_players(players, _picked))

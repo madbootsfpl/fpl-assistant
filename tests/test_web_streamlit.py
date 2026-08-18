@@ -248,6 +248,21 @@ def test_fixtures_ticker_grid_and_weeks_selector():
     assert sum(c.startswith("GW") for c in at.dataframe[0].value.columns) == 3
 
 
+def test_fixtures_team_dna_section_renders_a_team_card():
+    # US-419 (ADR-119): a 🧬 Team DNA section on Fixtures — pick a team → grade + radar + key-players.
+    at = _run(_PAGES / "3_Fixtures.py")
+    if at.exception or not at.dataframe:
+        return                                          # no fixtures/data in this environment
+    assert any(s.value == "🧬 Team DNA" for s in at.subheader)
+    pick = next((s for s in at.selectbox if s.label == "Team"), None)
+    if pick is None or not pick.options:
+        return
+    pick.set_value(pick.options[0]).run()
+    assert not at.exception
+    md = " ".join(m.value or "" for m in at.markdown)
+    assert "Team DNA" in md and "Key players to target" in md
+
+
 def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
     # US-301: a "🎯 Radar" section (renamed from "Target by fixtures", ADR-107) names the best available
     # players from the easiest-run teams, scoped by a Position filter.

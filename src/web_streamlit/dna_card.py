@@ -62,16 +62,16 @@ def _pt(cx, cy, r, theta):
     return cx + math.cos(theta) * r, cy + math.sin(theta) * r
 
 
-def radar_svg(dna, *, size: int = 360) -> str:
-    """A standalone `<svg>` radar for a `PlayerDNA` — octagon rings, spokes, labelled axes, the percentile
-    polygon (brand purple→teal), and a band-coloured dot at each vertex. Pure geometry; no script."""
-    axes = dna.axes
+def radar_svg(axes, *, label: str = "", size: int = 360) -> str:
+    """A standalone `<svg>` radar for a list of `Axis`es (Player **or** Team DNA — same builder) — octagon rings,
+    spokes, labelled axes, the percentile polygon (brand purple→teal), and a band-coloured dot at each vertex.
+    Pure geometry; no script."""
     n = len(axes)
     cx = cy = size / 2
     R = size / 2 - 74                      # leave a margin for the axis labels
     parts = [
         f'<svg class="dna-svg" viewBox="0 0 {size} {size}" role="img" '
-        f'aria-label="Player DNA percentile radar for {_esc(dna.name)}">',
+        f'aria-label="percentile radar for {_esc(label)}">',
         '<defs><linearGradient id="dnaFill" x1="0" y1="0" x2="1" y2="1">'
         f'<stop offset="0" stop-color="{brand.PURPLE}" stop-opacity="0.55"/>'
         f'<stop offset="1" stop-color="{brand.ACCENT_TEAL}" stop-opacity="0.38"/></linearGradient></defs>',
@@ -143,7 +143,7 @@ def dna_card_html(dna) -> str:
     return (DNA_CSS + '<div class="dna-card">'
             '<div class="dna-band"><span class="dna-ttl">🧬 Player DNA</span>'
             f'<span class="dna-cap">{_esc(cap)}</span></div>'
-            f'{radar_svg(dna)}{note}<div class="dna-chips">{chips}</div></div>')
+            f'{radar_svg(dna.axes, label=dna.name)}{note}<div class="dna-chips">{chips}</div></div>')
 
 
 def render_dna_card(dna) -> None:

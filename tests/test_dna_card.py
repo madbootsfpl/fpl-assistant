@@ -30,7 +30,7 @@ def test_band_thresholds():
 
 
 def test_radar_svg_has_eight_axes_and_vertices():
-    svg = radar_svg(_dna())
+    svg = radar_svg(_dna().axes, label="Elite")
     assert svg.startswith("<svg") and svg.endswith("</svg>")
     assert "dnaFill" in svg                      # the purple→teal gradient
     for label in ("Goal Threat", "Creativity", "Set Pieces", "FPL Output",
@@ -62,7 +62,8 @@ def test_low_minutes_adds_a_caution_note():
 def test_name_is_escaped():
     pool = [_p(1, "MID", xg=5, minutes=2700, web_name="A & <b>B</b>"),
             _p(2, "MID", xg=1, minutes=2700)]
-    svg = radar_svg(player_dna(pool[0], pool))
+    dna = player_dna(pool[0], pool)
+    svg = radar_svg(dna.axes, label=dna.name)
     assert "&amp;" in svg and "<b>B</b>" not in svg   # raw markup neutralised
 
 
