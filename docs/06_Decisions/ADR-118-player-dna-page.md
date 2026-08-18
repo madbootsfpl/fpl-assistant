@@ -102,3 +102,12 @@ low-minute players (*mitigation:* a minutes floor, as in the preview).
 - **Not this ADR / follow-ups:** the Shot Map + Shots/90 + Touches-in-Box (its own `soccerdata` ADR); a
   Compare-on-DNA view (extends ADR-110); a custom component/frontend if pixel-parity ever matters; revisiting the
   radar axes after real GW data.
+
+**Build progress (the ADR-118 arc):**
+- ✅ **Sprint 168 — the percentile radar (US-410/411).** `src/analytics/player_dna.py` (the pure
+  percentile-within-position engine, 8 axes, dict/`Row`-safe) + `src/web_streamlit/dna_card.py` (a **server-built
+  SVG** radar — `st.markdown` can't run `<script>`, so not the preview's canvas) wired into **Players ▸ Card**.
+  +18 tests; no `decision_xp` change; live-render verified on real data (Haaland/Gabriel/B.Fernandes).
+- ◻ **Sprint 169 — the AI Verdict** (Buy/Hold/Sell + a 0–100 gauge + a grounded line, reusing `explain_worth`).
+- ◻ **Sprint 170 — key-rate cards + AI Insights** (reuse the engine's percentiles).
+- ◻ **Sprint 171 — the full-page reflow + the My Squad ▸ Players & lineup entry + 🟡 GW1 placeholders.**

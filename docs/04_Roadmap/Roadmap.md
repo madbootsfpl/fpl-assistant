@@ -90,7 +90,8 @@ stays the engine**). Two steps taken:
 - ✅ **A redesigned My Squad pitch** (Sprint 099, ADR-084) — a green FFH-style CSS pitch (kits in formation,
   xP chips, (C) armband + sub badges), now reused on **Build** too (Sprint 101, US-261); and a **⏳ next-
   deadline countdown** banner on Home + Squads, derived from fixtures (Sprint 101, ADR-086).
-- ◑ **Player DNA — a rich single-player analysis page** (ADR-118, **owner-approved, build post-GW1**) — evolve
+- ◑ **Player DNA — a rich single-player analysis page** (ADR-118, **owner-approved, BUILDING now**; ✅ **S168 =
+  the percentile radar** shipped — `analytics/player_dna.py` + the SVG `dna_card.py` on Players ▸ Card) — evolve
   the player card into a full page: an **8-axis percentile-within-position radar** + an **AI Verdict**
   (Buy/Hold/Sell + score, from existing signals) + key-rate cards + Fixture Run + AI Insights, all **live on
   data we already hold**. The **performance-trend line, sparklines and W-D-L form** auto-populate **from GW1**
