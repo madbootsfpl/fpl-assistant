@@ -108,6 +108,10 @@ low-minute players (*mitigation:* a minutes floor, as in the preview).
   percentile-within-position engine, 8 axes, dict/`Row`-safe) + `src/web_streamlit/dna_card.py` (a **server-built
   SVG** radar — `st.markdown` can't run `<script>`, so not the preview's canvas) wired into **Players ▸ Card**.
   +18 tests; no `decision_xp` change; live-render verified on real data (Haaland/Gabriel/B.Fernandes).
-- ◻ **Sprint 169 — the AI Verdict** (Buy/Hold/Sell + a 0–100 gauge + a grounded line, reusing `explain_worth`).
+- ✅ **Sprint 169 — the AI Verdict (US-412/413).** `analytics/explain.py` `Verdict`/`verdict_score`/
+  `verdict_label`/`player_verdict` (a transparent display heuristic + Edge/Risk reused from `explain_worth`) +
+  `web_streamlit/verdict_card.py` (an SVG gauge card) above the radar. +16 tests; no `decision_xp` change.
+  **Vocabulary owner-confirmed:** ownership-neutral (Strong pick/Solid/Risky/Avoid) on the browse card; the
+  **Buy/Hold/Sell** framing is deferred to the My Squad entry (S171), where ownership is known.
 - ◻ **Sprint 170 — key-rate cards + AI Insights** (reuse the engine's percentiles).
 - ◻ **Sprint 171 — the full-page reflow + the My Squad ▸ Players & lineup entry + 🟡 GW1 placeholders.**
