@@ -1,0 +1,98 @@
+# Architectural Decision Record: Admin — tester activity + load/concurrency views
+
+**Decision ID:** ADR-120
+**Date:** 2026-08-18
+**Status:** Accepted — owner-approved (spec now, **build post-GW1**). Answers two owner questions: *"which testers are
+actually testing?"* and *"am I hitting performance/capacity limits, and can I add more testers?"*
+**Superseded By / Replaces:** Extends the anonymous analytics (ADR-100, Sprints 136–137) + the per-user account
+store (ADR-106) + the `beta_users` allow-list (ADR-098). **Adds no new table, no new secret, no analytics-payload
+change** (the anonymity invariant is untouched) and no `decision_xp` change — it's owner-only **reads**.
+**Deciders / Participants:** Tony Sheridan (Owner), ChatGPT (Technical Lead), Claude Code (Implementation)
+
+---
+
+### 📌 Context & Problem Statement
+
+The owner wants to (a) know **which beta testers are actually using it** — to gauge whether feedback will be
+enough — and (b) understand whether **more testers** risks **degrading/crashing** the platform (Streamlit
+Community Cloud + Supabase free tier).
+
+Key constraint (verified): **the analytics are anonymous by design** (random session id + a random `fpl_anon`
+returning-device id — *no emails/user_keys/IPs*, ADR-100). So the Admin page today can say *"12 returning devices
+this week"* but **cannot name a tester**. The privacy-respecting way to answer *"who?"* is a separate owner-only
+join of data we already hold — **not** by de-anonymising analytics.
+
+Reframe on capacity: **registered ≠ concurrent.** Total registered testers is cheap (Supabase rows; bounded only
+by `FPL_USER_CAP`); the real limit is **concurrent** active users on one small Community-Cloud container running a
+`decision_xp` compute per interaction. The failure mode is **sluggishness / cold starts**, not a crash — most
+likely at a **deadline spike**.
+
+#### Decision Drivers
+- **Answer "who's testing" without breaking anonymity** — join the allow-list × the account store, owner-only.
+- **Make capacity observable** — surface a live concurrency proxy + latency so the owner sees the edge coming.
+- **Cheap + safe** — reads only; reuse the `events` table + the account store + `beta_users`; no new writes/secrets.
+- **Don't distract before GW1** — build post-GW1; manual methods bridge Friday (see below).
+
+---
+
+### ✅ Decision *(owner-approved: gate now, build post-GW1)*
+
+**1. A "Tester activity" roster (who's actually testing).** On the gated **Admin** page (`FPL_ADMIN_KEY`), a
+table joining the **`beta_users`** allow-list (the emails the owner owns) to the **account store**: for each
+allow-listed email, hash it to its **`user_key`** (`auth.user_key`, sha256) and look up that account's
+**`updated_at`** → columns: **email · last active · status** (🟢 active this week · 🟡 dormant · ⚪ never signed
+in). This is **owner-only** (the owner already owns the allow-list) and keeps analytics anonymous — the roster is a
+*separate* join, not an analytics field.
+- **Honest caveat (surface it):** this measures **signed-in + squad-persisted** activity (the account store records
+  squad save/sync). A tester who only *browses* signed-out won't appear here — so pair the roster with the
+  **anonymous totals** already shown (sessions / returning devices) for the full picture: *named* engaged users +
+  *anonymous* overall usage (incl. browse-only).
+
+**2. A "Load & concurrency" health panel (am I hitting limits).** From the existing `events` table:
+- **Active now (proxy):** distinct sessions with an event in the **last ~10 min** — a live concurrency read.
+- **Peak concurrent:** the max of that over the period (the number to watch at a deadline).
+- **Latency:** the **P95** of the `analysis` (decision_xp) + `data_load` perf timers, prominent — the contention
+  signal (P95 climbing = the container is stretched).
+- A simple **🟢/🟡/🔴 health read** from thresholds (e.g. P95 under/over a budget · peak concurrent under/over a
+  soft cap), so "are we near the edge?" is answerable at a glance.
+
+**What this is *not*.** Not a change to the analytics payload (stays anonymous). Not a new table/secret. Not a
+`decision_xp` change. Not real-time infra monitoring (that's Streamlit Cloud's "Manage app" + logs — see the
+bridge below).
+
+---
+
+### 🔀 Alternatives Considered
+
+- **Put emails/user_keys into analytics events.** Rejected — breaks the anonymity invariant (ADR-100). The roster
+  join gets the same answer without it.
+- **A third-party APM / uptime tool.** Overkill for a hobby beta; the events table + Cloud logs suffice.
+- **Build before GW1.** Rejected — a deploy right before the deadline is the wrong risk; the manual bridge covers
+  Friday. *(The owner may pull the concurrency panel forward if they want a polished gauge for the GW1 spike — a
+  conscious call, not the default.)*
+
+---
+
+### 🧭 Consequences
+
+**Positive** — answers both owner questions from data already held; keeps analytics anonymous; makes the
+"registered vs concurrent" distinction visible so the owner can **add testers confidently and watch the real
+limit**; near-free (reads, no new infra).
+**Negative / risks (mitigations)** — the roster only sees signed-in/persisted activity (*mitigation:* pair with
+anonymous totals + label it); "active in last 10 min" is a proxy, not a true concurrent-connection count
+(*mitigation:* it's directional — trend + P95 together are the signal); thresholds for the health read are
+heuristic (*mitigation:* calibrate against real GW1 load, like the weight-calibration ethos).
+
+---
+
+### 🧾 Status & follow-ups
+
+- **Accepted — build post-GW1** (a small Admin sprint): the tester-activity roster (allow-list × account-store
+  `updated_at`) + the load/concurrency panel (active-now proxy · peak · P95 · a health read), both owner-only reads
+  on the gated Admin page; 3-part DoD (tests + smoke + docs). Verify the account store exposes a per-`user_key`
+  `updated_at` at build (add if missing).
+- **Bridge until then (manual, no build) — how to watch concurrency at the GW1 deadline:** see the runbook note in
+  `GW1_RUNBOOK.md` / the owner brief — Streamlit Cloud **Manage app → Logs** (+ watch for "over resources"
+  reboots) · the Admin page's **P95 latency** + session counts · tester reports of slowness.
+- **Not this ADR:** raising `FPL_USER_CAP` (an owner config change, do anytime) and any paid-host upgrade (a
+  separate call if concurrency actually bites).
