@@ -389,3 +389,9 @@ def render_card(rows, sel, teams, photos, badges):
         render_player_card(player, team_name=team_names.get(short, short),
                            photo_url=photos.get(player["id"]), badge_url=badges.get(short),
                            fixtures=fixtures, projected_xp=xp.get(player["id"]))
+
+        # 🧬 Player DNA (ADR-118) — the player's percentile-within-position fingerprint as a radar. Ranks
+        # on the full pool; display-only (no new store read, no decision_xp change).
+        from src.analytics import player_dna
+        from src.web_streamlit.dna_card import render_dna_card
+        render_dna_card(player_dna(player, rows))
