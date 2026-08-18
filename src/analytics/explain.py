@@ -267,6 +267,79 @@ def explain_worth(row, *, value, median, rank, n_peers, xp, horizon: int = 5) ->
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
 
 
+# ── Player verdict (Sprint 169, ADR-118) ──────────────────────────────────────
+# A headline "AI Verdict" for one player: a one-word call + a 0–99 score + grounded Edge/Risk. The score is a
+# TRANSPARENT DISPLAY heuristic (ADR-089), a composite of existing signals (projected-points standing, value,
+# minutes reliability, availability). It is NOT a probability and is NEVER fed into a decision — `decision_xp` is
+# the one metric (ADR-041); the verdict only summarises the DNA the card already shows.
+
+@dataclass
+class Verdict:
+    """A single-player headline verdict: a one-word call + a 0–99 strength score + its band + grounded lines."""
+    label: str          # "Strong pick" · "Solid pick" · "Risky" · "Avoid"
+    score: int          # 0–99 overall pick-strength (a display heuristic)
+    band: str           # High / Medium / Low (confidence_band)
+    edge: list = field(default_factory=list)   # grounded ✓ reasons (top 1–2)
+    risk: list = field(default_factory=list)   # grounded ⚠ risks (top 1–2)
+
+
+def _pc(pct) -> float:
+    """A 0–100 percentile → a 0..1 fraction (None → 0.5, the neutral middle)."""
+    if pct is None:
+        return 0.5
+    return min(1.0, max(0.0, pct / 100.0))
+
+
+def verdict_score(xp_percentile, value_percentile, consistency_percentile, *,
+                  available: bool = True, doubtful: bool = False, chance=None) -> int:
+    """Overall pick-strength, 1–99 — a transparent display heuristic (ADR-089/118), NOT a probability and never
+    fed into a decision. Mostly **projected-points standing** in the position, plus **value** and **minutes
+    reliability**; an **unavailable** player is capped low, a **doubtful** one capped by their chance of playing."""
+    base = 100 * (0.55 * _pc(xp_percentile) + 0.25 * _pc(value_percentile) + 0.20 * _pc(consistency_percentile))
+    if not available:
+        base = min(base, 20)
+    elif doubtful:
+        base = min(base, chance if chance is not None else 50)
+    return max(1, min(99, round(base)))
+
+
+def verdict_label(score: int, *, available: bool = True) -> str:
+    """The one-word call for a verdict score (ownership-neutral; Buy/Hold/Sell framing waits for squad context)."""
+    if not available:
+        return "Avoid"
+    if score >= 78:
+        return "Strong pick"
+    if score >= 60:
+        return "Solid pick"
+    if score >= 42:
+        return "Risky"
+    return "Avoid"
+
+
+def player_verdict(row, *, xp, xp_percentile, value, median, rank, n_peers,
+                   value_percentile=None, consistency_percentile=None,
+                   available: bool = True, doubtful: bool = False, chance=None,
+                   horizon: int = 5) -> Verdict | None:
+    """A single player's headline verdict (ADR-118): a score/label from `verdict_score`/`verdict_label` + grounded
+    **Edge**/**Risk** lines **reused from `explain_worth`** (so the words match the value view). Availability is
+    surfaced first when the player is flagged. None if there's no row."""
+    if row is None:
+        return None
+    score = verdict_score(xp_percentile, value_percentile, consistency_percentile,
+                          available=available, doubtful=doubtful, chance=chance)
+    label = verdict_label(score, available=available)
+    worth = explain_worth(row, value=value, median=median, rank=rank, n_peers=n_peers, xp=xp, horizon=horizon)
+    edge = list(worth.reasons[:2]) if worth else []
+    risk: list = []
+    if not available:
+        risk.append("Unavailable — injured or suspended")
+    elif doubtful:
+        risk.append(f"Doubtful — {chance}% chance of playing" if chance is not None else "Doubtful to start")
+    if worth:
+        risk += worth.risks
+    return Verdict(label=label, score=score, band=confidence_band(score), edge=edge, risk=risk[:2])
+
+
 # ── Squad build (US-271, extends ADR-089) ─────────────────────────────────────
 
 def squad_confidence(xi_reliability, spent_fraction) -> int:

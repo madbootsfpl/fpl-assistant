@@ -29,6 +29,7 @@ from src.analytics.defcon import defcon_reliability
 from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.explain import (
     Explanation,
+    Verdict,
     captain_confidence,
     chip_confidence,
     confidence_band,
@@ -39,8 +40,11 @@ from src.analytics.explain import (
     explain_transfer,
     explain_worth,
     gameweek_confidence,
+    player_verdict,
     squad_confidence,
     transfer_confidence,
+    verdict_label,
+    verdict_score,
     worth_confidence,
 )
 from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, team_schedule
@@ -112,6 +116,10 @@ __all__ = [
     "explain_gameweek",
     "explain_worth",
     "worth_confidence",
+    "player_verdict",
+    "verdict_score",
+    "verdict_label",
+    "Verdict",
     "gameweek_confidence",
     "captain_confidence",
     "transfer_confidence",
