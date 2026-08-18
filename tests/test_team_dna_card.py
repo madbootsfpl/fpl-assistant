@@ -1,11 +1,13 @@
 """Tests for the Team DNA browse card (Sprint 172, US-419, ADR-119)."""
 
-from src.analytics.team_dna import team_dna
+from src.analytics.team_dna import team_dna, team_dna_all
 from src.web_streamlit.team_dna_card import (
     fixtures_html,
     head_html,
     key_players_html,
     team_key_players,
+    your_teams_rows,
+    your_teams_strip_html,
 )
 
 
@@ -64,3 +66,34 @@ def test_key_players_skips_low_minute_players():
                _p("CITY", "MID", total_points=90, minutes=200, name="Fringe")]
     names = [p["name"] for p in team_key_players(players, "CITY")]
     assert "Reg" in names and "Fringe" not in names    # < 900 mins dropped
+
+
+# ---- the "Your teams" strip (US-420) -----------------------------------------
+
+def _squad_pool():
+    players = [
+        _p("CITY", "FWD", xg=25, total_points=200, name="Haaland"), _p("CITY", "GK", xgc=25, total_points=120),
+        _p("TOWN", "FWD", xg=3, total_points=60, name="Weak"), _p("TOWN", "GK", xgc=55, total_points=80),
+    ]
+    fixtures = [_fx("CITY", "TOWN", 2, 5)]
+    return players, fixtures
+
+
+def test_your_teams_rows_best_grade_first_with_your_players():
+    players, fixtures = _squad_pool()
+    all_dna = team_dna_all(players, fixtures)
+    owned = [players[0], players[2]]                    # Haaland (CITY) + Weak (TOWN)
+    rows = your_teams_rows(owned, all_dna)
+    assert [r["team"] for r in rows] == ["CITY", "TOWN"]   # CITY grades higher → first
+    assert rows[0]["players"] == "Haaland"
+    assert rows[0]["grade"] in ("A+", "A") and rows[0]["att"] == 100
+
+
+def test_your_teams_strip_html_has_a_row_per_club_with_dots():
+    players, fixtures = _squad_pool()
+    rows = your_teams_rows([players[0], players[2]], team_dna_all(players, fixtures))
+    html = your_teams_strip_html(rows)
+    assert "Your teams" in html
+    assert html.count('class="yt-row"') == 2
+    assert html.count('class="yt-dot"') == 6           # ATT/DEF/FIX × 2 clubs
+    assert your_teams_strip_html([]) == ""

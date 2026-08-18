@@ -6,9 +6,11 @@ fixtures row and a key-players-to-target table. Display-only; reuses the caller'
 store read, no `decision_xp`/FDR change.
 """
 
+from collections import defaultdict
+
 import streamlit as st
 
-from src.analytics import team_insights
+from src.analytics import team_dna_all, team_insights, team_schedule
 from src.analytics.player_dna import _f, _get
 from src.web_streamlit import brand
 from src.web_streamlit.dna_card import _band, radar_svg
@@ -133,3 +135,82 @@ def render_team_dna(dna, *, fixtures=None, key_players=None) -> None:
         st.markdown(fixtures_html(fixtures), unsafe_allow_html=True)
     if key_players:
         st.markdown(key_players_html(key_players), unsafe_allow_html=True)
+
+
+# ── My Squad ▸ Health: the "Your teams" strip (US-420) ────────────────────────
+
+YT_CSS = """
+<style>
+.yt-strip{background:linear-gradient(180deg,#141b28,#0e141f);border:1px solid rgba(139,47,201,.45);
+border-radius:16px;padding:14px 16px;margin:.5rem 0;
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
+.yt-ttl{font-weight:800;font-size:.7rem;letter-spacing:.08em;color:#aab6c6;text-transform:uppercase;margin-bottom:8px;}
+.yt-row{display:grid;grid-template-columns:44px 34px 1.1fr 1.4fr;gap:10px;align-items:center;padding:8px 0;
+border-bottom:1px solid rgba(255,255,255,.06);font-size:.84rem;color:#f2f6fb;}
+.yt-row:last-child{border-bottom:none;}
+.yt-badge{width:36px;height:24px;border-radius:6px;background:#241b3a;display:grid;place-items:center;
+font-weight:800;font-size:.64rem;color:#cdd6e2;}
+.yt-grade{font-weight:900;font-size:1.15rem;}
+.yt-axes{color:#aab6c6;font-size:.74rem;white-space:nowrap;}
+.yt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 1px;}
+.yt-mine{color:#9aa3b2;font-size:.74rem;overflow:hidden;text-overflow:ellipsis;}
+</style>
+"""
+
+
+def your_teams_rows(owned, all_dna) -> list[dict]:
+    """One row per club the squad owns players in — grade + key percentiles + the owned players there, best grade
+    first. `owned` = the squad's player rows; `all_dna` = `team_dna_all(...)`."""
+    by_team: dict = defaultdict(list)
+    for p in owned:
+        by_team[_get(p, "team")].append(_get(p, "web_name"))
+    rows = []
+    for t in sorted(by_team, key=lambda t: all_dna[t].grade_score if t in all_dna else -1, reverse=True):
+        d = all_dna.get(t)
+        if not d:
+            continue
+        by = {a.label: a.percentile for a in d.axes}
+        rows.append({"team": t, "name": d.name, "grade": d.grade, "score": d.grade_score,
+                     "att": by.get("Attacking Threat"), "dfc": by.get("Defensive Strength"),
+                     "fix": by.get("Fixture Strength"), "players": ", ".join(by_team[t])})
+    return rows
+
+
+def your_teams_strip_html(rows) -> str:
+    """The compact "Your teams" strip HTML (a row per club: badge · grade · ATT/DEF/FIX dots · your players)."""
+    if not rows:
+        return ""
+    def dot(v):
+        return f'<span class="yt-dot" style="background:{_band(v)[0]}"></span>'
+    body = "".join(
+        f'<div class="yt-row"><div class="yt-badge">{_esc(r["team"])}</div>'
+        f'<div class="yt-grade" style="color:{_tone(r["grade"])}">{_esc(r["grade"])}</div>'
+        f'<div class="yt-axes">ATT {dot(r["att"])} · DEF {dot(r["dfc"])} · FIX {dot(r["fix"])}</div>'
+        f'<div class="yt-mine">{_esc(r["players"])}</div></div>' for r in rows)
+    return (YT_CSS + '<div class="yt-strip"><div class="yt-ttl">🧬 Your teams — strength behind your squad'
+            f'</div>{body}</div>')
+
+
+def render_your_teams(squad, players, fixtures, *, team_names=None) -> None:
+    """The My Squad ▸ Health "Your teams" strip (ADR-119): each of your clubs' grade + key axes + your players,
+    then a drill-in into the full Team DNA card. No-op without a squad. Reuses the caller's `players`/`fixtures`."""
+    if not squad or not squad.get("player_ids"):
+        return
+    owned_ids = set(squad["player_ids"])
+    owned = [p for p in players if _get(p, "id") in owned_ids]
+    if not owned:
+        return
+    all_dna = team_dna_all(players, fixtures, team_names=team_names)
+    rows = your_teams_rows(owned, all_dna)
+    if not rows:
+        return
+    st.markdown(your_teams_strip_html(rows), unsafe_allow_html=True)
+    st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Your investments, both ends — a hard "
+               "**FIX** run is a transfer signal. Pick a club below for its full Team DNA.")
+    labels = {f'{r["name"]} ({r["grade"]})': r["team"] for r in rows}
+    picked = labels.get(st.selectbox("View a team's DNA", ["—", *labels], key="health_team_dna",
+                                     help="Drill into any of your clubs' full Team DNA."))
+    if picked:
+        sched = team_schedule(fixtures, picked)[:6]
+        fx = [(s["event"], s["opponent"], s["venue"], s["difficulty"]) for s in sched]
+        render_team_dna(all_dna[picked], fixtures=fx, key_players=team_key_players(players, picked))

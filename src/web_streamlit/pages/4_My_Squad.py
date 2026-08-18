@@ -83,5 +83,6 @@ else:
     elif view == "Chips":
         views.render_chips(squad_name, squad, horizon=horizon)
     elif view == "Health":
+        team_names = {t["short_name"]: t["name"] for t in teams}
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
-                            horizon=horizon)
+                            team_names=team_names, horizon=horizon)

@@ -538,7 +538,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
 # ---- Health (analyse the squad over the next 5 GW; ADR-031) ----------------------------------------
 
-def render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *, horizon=5):
+def render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *,
+                  team_names=None, horizon=5):
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to analyse.")
@@ -564,6 +565,12 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))],
         help={"Set": SET_PIECE_LEGEND})
     st.code(render_squad_analysis(analysis, squad_name, show_xmins=True, captain_id=captain_id), language=None)
+
+    # 🧬 Your teams (ADR-119, US-420) — the team-strength health check behind your squad: each of your clubs'
+    # grade + attack/defence/fixture read + your players, drilling into the full Team DNA. Reuses players/upcoming.
+    st.divider()
+    from src.web_streamlit.team_dna_card import render_your_teams
+    render_your_teams(squad, players, upcoming, team_names=team_names)
 
 
 # ---- Transfer (best XI-aware swaps; ADR-046) -------------------------------------------------------

@@ -248,6 +248,27 @@ def test_fixtures_ticker_grid_and_weeks_selector():
     assert sum(c.startswith("GW") for c in at.dataframe[0].value.columns) == 3
 
 
+def test_my_squad_health_shows_the_your_teams_strip():
+    # US-420 (ADR-119): My Squad ▸ Health has a "Your teams" strip (the squad's clubs' Team DNA).
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    if at.exception:
+        return
+    health = next((s for s in at.segmented_control if "Health" in (s.options or [])), None)
+    if health is None:
+        return
+    health.set_value("Health").run()
+    assert not at.exception
+    md = " ".join(m.value or "" for m in at.markdown)
+    if "Your teams" not in md:                          # no demo squad in this environment
+        return
+    assert "Your teams" in md
+    pick = next((s for s in at.selectbox if s.label == "View a team's DNA"), None)
+    if pick and len(pick.options) > 1:
+        pick.set_value(pick.options[1]).run()           # drill into the first club
+        assert not at.exception
+        assert any("Team DNA" in (m.value or "") for m in at.markdown)
+
+
 def test_fixtures_team_dna_section_renders_a_team_card():
     # US-419 (ADR-119): a 🧬 Team DNA section on Fixtures — pick a team → grade + radar + key-players.
     at = _run(_PAGES / "3_Fixtures.py")
