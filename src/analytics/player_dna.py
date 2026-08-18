@@ -18,6 +18,9 @@ The eight axes (owner-approved, ADR-118):
 
 from dataclasses import dataclass
 
+from src.analytics.crowd import ownership_tier
+from src.analytics.optimizer import is_unavailable
+
 MIN_MINUTES = 450   # a peer must have played at least this to enter the ranking pool (denoise fringe players)
 
 
@@ -145,3 +148,102 @@ def player_dna(target, players, *, min_minutes: int = MIN_MINUTES) -> PlayerDNA 
     return PlayerDNA(player_id=_get(target, "id"), name=_get(target, "web_name") or "",
                      position=pos, pool_size=len(peers), low_minutes=low_minutes,
                      min_minutes=min_minutes, axes=axes)
+
+
+# ── AI Insights (Sprint 170, ADR-118) ─────────────────────────────────────────
+# Plain-English, GROUNDED observations synthesised from the DNA percentiles + the player row + crowd tier — the
+# "the AI explains" panel. Every bullet traces to a value (a percentile, a set-piece order, an ownership tier, a
+# price); nothing is invented. Display-only; no `decision_xp`.
+
+_POS_WORD = {"GK": "goalkeepers", "DEF": "defenders", "MID": "midfielders", "FWD": "forwards"}
+# Skill axes for the "top strengths" lines — Set Pieces is excluded on purpose: it gets its own dedicated ⚡ line
+# (penalty taker / on set pieces), so listing it here too would double up.
+_SKILL_AXES = ("Goal Threat", "Creativity", "FPL Output", "Value", "Bonus Potl")
+_PREMIUM_PRICE = 9.0
+
+
+@dataclass(frozen=True)
+class Insight:
+    """One grounded observation: a `kind` (good ✓ · sp ⚡ · info ℹ · warn ⚠) + its text."""
+    kind: str
+    text: str
+
+
+def _num(v) -> str:
+    v = _f(v)
+    if abs(v) >= 100:
+        return f"{v:,.0f}"
+    return f"{int(v)}" if v == int(v) else f"{v:g}"
+
+
+def _ord(n) -> str:
+    n = int(n)
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def player_insights(player, dna, *, max_items: int = 5) -> list[Insight]:
+    """A prioritised list of grounded insights for `player` given its `dna` (from `player_dna`). Availability leads
+    when flagged, then top skill strengths, team context, set-piece floor, ownership, then price/minutes cautions.
+    Pure, dict + `sqlite3.Row` safe, empty-safe (fewer bullets for a blank player, never raises). Capped at
+    `max_items`."""
+    if player is None or dna is None:
+        return []
+    pos = _POS_WORD.get(dna.position, "players")
+    by = {a.label: a for a in dna.axes}
+    out: list[Insight] = []
+
+    # 1. availability first when flagged
+    if is_unavailable(player):
+        out.append(Insight("warn", "Unavailable — injured or suspended"))
+    elif _get(player, "status") == "d":
+        chance = _get(player, "chance")
+        out.append(Insight("warn", f"Doubtful — {int(chance)}% chance to play" if chance is not None
+                                   else "Doubtful to start"))
+
+    # 2. top 1–2 skill strengths
+    skills = sorted((a for a in dna.axes if a.label in _SKILL_AXES and a.percentile is not None),
+                    key=lambda a: a.percentile, reverse=True)
+    elite = [a for a in skills if a.percentile >= 85][:2]
+    if elite:
+        for a in elite:
+            out.append(Insight("good", f"Elite {a.label.lower()}: top {max(1, 100 - a.percentile)}% of {pos} "
+                                       f"({a.sublabel} {_num(a.value)})"))
+    elif skills and skills[0].percentile >= 65:
+        a = skills[0]
+        out.append(Insight("good", f"Strong {a.label.lower()}: {a.sublabel} {_num(a.value)} "
+                                   f"({_ord(a.percentile)} percentile)"))
+
+    # 3. team context
+    ta = by.get("Team Attack")
+    if ta and ta.percentile is not None and ta.percentile >= 80:
+        out.append(Insight("info", f"Plays in a top-{max(1, 100 - ta.percentile)}% attack"))
+
+    # 4. set-piece floor
+    if _get(player, "penalties_order") == 1:
+        out.append(Insight("sp", "First-choice penalty taker — a steady points floor"))
+    elif _get(player, "corners_order") == 1 or _get(player, "freekicks_order") == 1:
+        out.append(Insight("sp", "On set pieces (corners / free kicks)"))
+
+    # 5. ownership context
+    tier = ownership_tier(player)
+    own = _get(player, "selected_by")
+    if tier and own is not None:
+        if "differential" in tier:
+            out.append(Insight("info", f"Differential — only {own:.1f}% owned"))
+        elif "essential" in tier or "template" in tier:
+            out.append(Insight("info", f"Owned by {own:.1f}% — {tier}"))
+
+    # 6. cautions
+    val = by.get("Value")
+    price = _get(player, "price")
+    if (val and val.percentile is not None and val.percentile <= 35
+            and price is not None and price >= _PREMIUM_PRICE):
+        out.append(Insight("warn", f"Premium at £{_num(price)}m — value only mid-pack "
+                                   "(the case is ceiling, not £-efficiency)"))
+    con = by.get("Consistency")
+    if not is_unavailable(player) and ((con and con.percentile is not None and con.percentile <= 30)
+                                       or dna.low_minutes):
+        out.append(Insight("warn", "Limited minutes so far — rotation or fitness risk"))
+
+    return out[:max_items]
