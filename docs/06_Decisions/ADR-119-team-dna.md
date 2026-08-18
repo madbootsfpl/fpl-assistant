@@ -100,8 +100,11 @@ grounded-only, no event-data fakes).
 
 ### 🧾 Status & follow-ups
 
-- **Accepted.** Build (a lean sprint — plan next): `analytics/team_dna.py` (the pure engine + grade + insights);
-  a `team_dna_card` renderer (reusing the DNA radar/verdict/insights); the **Fixtures ▸ Team DNA** browse view; the
-  **My Squad ▸ Health "Your teams" strip** drilling into it; the 3-part DoD (tests + smoke + docs).
-- **Not this ADR / follow-ups:** 🟡 real clean-sheet rate + team form at GW1; the 🔴 event-data viz (metric bars /
-  zones / shot map) → a future gated `soccerdata` ADR; possibly tinting the radar by team colour.
+- **✅ BUILT — Sprint 172 (US-418/419/420, 2026-08-18).** `analytics/team_dna.py` (`team_dna_all` → the 8-axis
+  percentile-vs-league fingerprint + grade + `team_insights`); `web_streamlit/team_dna_card.py` (the Fixtures
+  browse card, reusing the generalised `radar_svg` + verdict `gauge_svg` + `insights_card`); the **Fixtures ▸ 🧬
+  Team DNA** view; the **My Squad ▸ Health "Your teams" strip** drilling into it. +18 tests; 1087 green; no
+  `decision_xp`/FDR change. Live-verified (ARS/LIV cards; a demo squad's 11 clubs graded A–D).
+- **Not this ADR / follow-ups:** 🟡 real clean-sheet rate + team form at GW1 (build + verify on real data); the 🔴
+  event-data viz (metric bars / zones / shot map) → a future gated `soccerdata` ADR; possibly tinting the radar by
+  team colour.

@@ -90,13 +90,13 @@ stays the engine**). Two steps taken:
 - ✅ **A redesigned My Squad pitch** (Sprint 099, ADR-084) — a green FFH-style CSS pitch (kits in formation,
   xP chips, (C) armband + sub badges), now reused on **Build** too (Sprint 101, US-261); and a **⏳ next-
   deadline countdown** banner on Home + Squads, derived from fixtures (Sprint 101, ADR-086).
-- ◑ **Team DNA — a team-level analysis companion** (ADR-119, **owner-approved, GATED**; build = a lean sprint) —
-  the same fingerprint for a *club*, reusing the Player-DNA engine. **Two doorways:** **Fixtures ▸ 🧬 Team DNA**
-  (browse any team: an 8-axis radar [attack · creation · defence · clean-sheet · fixtures · set-pieces · output ·
-  depth, percentile-vs-league] + grade + insights + fixtures + key-players) and **My Squad ▸ Health "Your teams"
-  strip** (scoped to your clubs, drills into the card — the lead). Defence-led (fills the underserved gap); works
-  preseason on last-season aggregates. 🟡 GW1: real clean-sheet rate + team form. 🔴 deferred: event-data bars /
-  zones / shot map (future `soccerdata` ADR). No new tab; no `decision_xp`/FDR change.
+- ✅ **Team DNA — a team-level analysis companion** (ADR-119, **DONE S172**, US-418/419/420) — the same fingerprint
+  for a *club*, reusing the Player-DNA engine. **Two doorways:** **Fixtures ▸ 🧬 Team DNA** (browse any team: an
+  8-axis radar [attack · creation · defence · clean-sheet · fixtures · set-pieces · output · depth,
+  percentile-vs-league] + grade + insights + fixtures + key-players) and **My Squad ▸ Health "Your teams" strip**
+  (your clubs graded, drills into the card — the lead). `analytics/team_dna.py` + `web_streamlit/team_dna_card.py`;
+  labelled proxies; works preseason; no new tab; no `decision_xp`/FDR change. **🟡 GW1 follow-ups:** real
+  clean-sheet rate + team form. **🔴 deferred:** event-data bars / zones / shot map (future `soccerdata` ADR).
 - ✅ **Player DNA — a rich single-player analysis page** (ADR-118, **DONE S168–S171**) — the player card evolved
   into a full section (**AI Verdict → 8-axis percentile radar → AI Insights → performance trend**), on **Players ▸
   Card** + reused on **My Squad ▸ Players & lineup** (owned-aware Hold/Sell). `analytics/player_dna.py` [percentiles

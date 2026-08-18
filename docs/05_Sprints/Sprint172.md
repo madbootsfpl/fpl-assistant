@@ -1,8 +1,8 @@
 # Sprint 172: Team DNA — engine, Fixtures browse card & the My Squad "Your teams" strip (US-418/419/420, ADR-119)
 
-**Dates:** 2026-08-18 (plan; build timed around Player-DNA tester feedback + GW1)
-**Status:** 📋 Planned — gate before build (ADR-119 accepted). A lean, reuse-heavy sprint: the team-level DNA, on
-data we hold, defence-led. Real-data design already verified (`scratchpad/team_dna_gen.py` → approved preview).
+**Dates:** 2026-08-18
+**Status:** ✅ Complete — ADR-119 + US-418/419/420. A lean, reuse-heavy sprint: the team-level DNA, on data we
+hold, defence-led. 1069 → 1087 tests. Real-data design verified up front; live cards + strip verified after.
 
 > **Owner:** approved ADR-119 ("good call" · "excellent"); "plan Sprint 172".
 
@@ -54,3 +54,36 @@ band-dots + **your players** there — then a **"View a team's DNA"** selectbox 
 - **Don't duplicate Fixtures/Radar** — lead with the strip + the defensive angle; the card **links** to the Radar.
 - **One radar builder** — refactor `radar_svg` to take `axes` so player & team can't drift (repoint the S168 test).
 - **No engine change** — `decision_xp` + the FDR model untouched; Team DNA is a display lens.
+
+---
+
+### 🎯 Delivered
+
+- **`analytics/team_dna.py` (US-418)** — `team_dna_all(players, fixtures)` → `{team: TeamDNA}`, an 8-axis
+  percentile-across-the-league fingerprint + an A+…D **grade** + grounded `team_insights`. Reuses `player_dna`'s
+  `Axis`/`Insight`/`_set_piece_score` + `team_fdr`; labelled proxies (xGA ← keeper xGC, clean-sheet = defence +
+  fixture blend, depth = regulars). dict/`Row`/empty/preseason safe; **no `decision_xp`/FDR change**.
+- **`web_streamlit/team_dna_card.py` (US-419)** — the Fixtures browse card: grade header (reusing the verdict
+  `gauge_svg`) + radar + chips + `team_key_players` table, composed with the **reused `insights_card`** + an
+  FDR-tinted fixtures row. **Generalised `dna_card.radar_svg` to take `axes`** so Player & Team DNA share one SVG
+  builder. Wired into **Fixtures ▸ 🧬 Team DNA** (team picker).
+- **The "Your teams" strip (US-420)** — `your_teams_rows`/`your_teams_strip_html`/`render_your_teams`: one row per
+  owned club (grade + Attack/Defence/Fixture dots + your players, best grade first) → drills into the full card.
+  Wired into **My Squad ▸ Health** (`team_names` threaded from the page).
+- **Tests: +18** (9 engine · 6 card+strip · 3 AppTest incl. Fixtures + Health e2e). **1087 green**; ruff clean.
+  Live-verified (Fixtures cards ARS/LIV; the strip on a demo squad, 11 clubs graded A–D).
+
+**Tracked GW1 follow-ups:** real clean-sheet rate (vs the fixture blend) + team form. **Deferred:** the event-data
+viz (metric bars / zones / shot map) → a future `soccerdata` ADR.
+
+### 🧠 Lessons
+
+- **The DNA engine generalised almost for free.** Team DNA reused `Axis`/`Insight`/`_set_piece_score`/`radar_svg`/
+  `gauge_svg`/`insights_card` — the marginal cost was the aggregation + the strip, exactly the "cheap because the
+  infra exists" bet from ADR-119.
+- **Generalise the shared bit once.** Making `radar_svg` take `axes` (not a `PlayerDNA`) stopped player & team
+  radars from drifting — one builder, repointed the S168 test.
+- **Lead with the actionable surface.** The "Your teams" strip (your clubs graded, fixture dots = transfer signal)
+  is the value; the browse card is the drill-down — building both from one component kept them consistent.
+- **Honest proxies, labelled.** xGA-via-keeper / clean-sheet-blend / depth-count are captioned as proxies; the
+  real defensive metrics wait for GW1 data (build + verify then), not faked now.
