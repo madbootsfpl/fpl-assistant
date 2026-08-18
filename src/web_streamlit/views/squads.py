@@ -469,6 +469,12 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                        else "no bench player keeps a legal formation")
                 st.caption(f"No legal swap for **{picked['web_name']}** — {why}.")
 
+        if not bb:      # 🧬 Player DNA (ADR-118, US-417) — the same section as Players ▸ Card, owned-aware
+            # (Hold/Sell), below the actions. Skipped while Boot-Battle comparing. Reuses the panel's xp_by_id +
+            # gw_history; display-only, no decision_xp change.
+            from src.web_streamlit.player_dna_view import render_player_dna
+            render_player_dna(picked, players, xp_by_id, gw_history=gw_history, owned=True)
+
     if bench_ordered:
         line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
                           for i, p in enumerate(outfield_subs))

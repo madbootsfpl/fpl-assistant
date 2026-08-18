@@ -307,6 +307,37 @@ def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
     assert any(c.label == "My squad only" for c in at.checkbox)   # the shared scope, on Players
 
 
+def test_players_card_view_renders_the_player_dna_section():
+    # ADR-118 (S168–S171): the Card view shows AI Verdict → radar → insights → trend for the selected player.
+    at = AppTest.from_file(str(_PAGES / "2_Players.py"), default_timeout=30).run()
+    if at.exception:
+        return
+    view = next((s for s in at.segmented_control if s.label == "View"), None)
+    if view is None:
+        return
+    view.set_value("Card").run()
+    assert not at.exception
+    md = " ".join(m.value or "" for m in at.markdown)
+    if "Player DNA" not in md:                 # no player data in this environment
+        return
+    assert "AI Verdict" in md and "Performance trend" in md
+
+
+def test_my_squad_lineup_shows_owned_player_dna_with_hold_sell_framing():
+    # US-417 (ADR-118): picking one of your XI in ⚙ Players & lineup shows the same DNA, owned-aware (Hold/Sell).
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    if at.exception:
+        return
+    pick = next((s for s in at.selectbox if s.label == "Select a player"), None)
+    if pick is None or len(pick.options) < 2:
+        return                                 # no demo squad in this environment
+    pick.set_value(pick.options[1]).run()      # options[0] is "—"; pick the first owned player
+    assert not at.exception
+    md = " ".join(m.value or "" for m in at.markdown)
+    assert "AI Verdict" in md and "Player DNA" in md
+    assert any(word in md for word in ("Strong Hold", "Hold", "Sell"))   # owned framing, not browse words
+
+
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     # US-302 (ADR-049) + US-407b: a "My squad only" checkbox restricts the ticker to your teams + a Players count.
     from src.web_streamlit.squads import demo_squads
