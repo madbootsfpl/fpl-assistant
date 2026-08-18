@@ -73,6 +73,7 @@ from src.analytics.optimizer import (
     squad_15_issues,
 )
 from src.analytics.overperf import over_under
+from src.analytics.player_dna import MIN_MINUTES, Axis, PlayerDNA, player_dna
 from src.analytics.price import (
     PRICE_LEGEND,
     price_flag,
@@ -154,6 +155,10 @@ __all__ = [
     "squad_15_issues",
     "objective_scores",
     "over_under",
+    "player_dna",
+    "PlayerDNA",
+    "Axis",
+    "MIN_MINUTES",
     "set_piece_bonus",
     "baseline_rate",
     "player_xp",
