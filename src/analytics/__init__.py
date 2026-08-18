@@ -83,6 +83,7 @@ from src.analytics.player_dna import (
     Insight,
     PlayerDNA,
     player_dna,
+    player_gw_points,
     player_insights,
 )
 from src.analytics.price import (
@@ -172,6 +173,7 @@ __all__ = [
     "over_under",
     "player_dna",
     "player_insights",
+    "player_gw_points",
     "PlayerDNA",
     "Axis",
     "Insight",

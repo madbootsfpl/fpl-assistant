@@ -8,6 +8,7 @@ from src.analytics.player_dna import (
     _percentile,
     _set_piece_score,
     player_dna,
+    player_gw_points,
 )
 
 
@@ -137,3 +138,18 @@ def test_accepts_sqlite3_row_not_just_dict():
 
 def test_min_minutes_default_is_the_documented_floor():
     assert MIN_MINUTES == 450
+
+
+# ---- player_gw_points (the trend series, Sprint 171) -------------------------
+
+def test_gw_points_is_empty_preseason():
+    assert player_gw_points({}, 100) == []
+    assert player_gw_points(None, 100) == []
+
+
+def test_gw_points_orders_by_round_skips_nulls_and_limits():
+    hist = {7: [{"round": 3, "total_points": 5}, {"round": 1, "total_points": 2},
+                {"round": 2, "total_points": None}, {"round": 4, "total_points": 9}]}
+    assert player_gw_points(hist, 7) == [(1, 2), (3, 5), (4, 9)]     # sorted, null round skipped
+    assert player_gw_points(hist, 7, last=2) == [(3, 5), (4, 9)]     # most-recent N
+    assert player_gw_points(hist, 999) == []                        # unknown code

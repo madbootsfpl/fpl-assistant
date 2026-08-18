@@ -15,8 +15,21 @@ from src.analytics import player_verdict
 from src.analytics.optimizer import is_unavailable
 from src.web_streamlit import brand
 
-# Verdict word → a tone colour (on-dark, legible), reinforcing the call on the gauge + label.
-_TONE = {"Strong pick": "#01fc7a", "Solid pick": brand.ACCENT_TEAL, "Risky": "#ffb020", "Avoid": "#ff6b7d"}
+# Verdict word → a tone colour (on-dark, legible), reinforcing the call on the gauge + label. Grouped by strength
+# so the owned-aware words (Hold/Sell · Buy/Consider/Pass) share the browse tones.
+_TONE_GOOD = {"Strong pick", "Strong Hold", "Buy"}
+_TONE_OK = {"Solid pick", "Hold", "Consider"}
+_TONE_MEH = {"Risky", "Sell", "Pass"}
+
+
+def _tone(label: str) -> str:
+    if label in _TONE_GOOD:
+        return "#01fc7a"
+    if label in _TONE_OK:
+        return brand.ACCENT_TEAL
+    if label in _TONE_MEH:
+        return "#ffb020"
+    return "#ff6b7d"      # Avoid
 
 VD_CSS = """
 <style>
@@ -63,7 +76,7 @@ def gauge_svg(score, tone, *, size: int = 92) -> str:
 
 def verdict_card_html(verdict) -> str:
     """The full verdict card: the gauge + the one-word call + grounded Edge (✓) / Risk (⚠) lines."""
-    tone = _TONE.get(verdict.label, brand.ACCENT_TEAL)
+    tone = _tone(verdict.label)
     lines = ""
     if verdict.edge:
         lines += f'<div class="vd-line"><span class="vd-k edge">Edge</span> {_esc(" · ".join(verdict.edge))}</div>'
@@ -79,12 +92,13 @@ def verdict_card_html(verdict) -> str:
             f'{lines}</div></div>')
 
 
-def build_verdict(player, players, xp_by_id, dna, *, horizon: int = 1):
+def build_verdict(player, players, xp_by_id, dna, *, owned=None, horizon: int = 1):
     """Assemble a `Verdict` for `player`, reusing the `xp_by_id` map and the `PlayerDNA` the Card view already has.
 
     Computes the value verdict's inputs (xP/£m value + the position median + the value rank among **available**
     same-position players) and the xP percentile-in-position, then calls `analytics.player_verdict`. `dna` (from
-    `player_dna`) supplies the Value + Consistency percentiles. Returns None if `dna`/`player` is missing."""
+    `player_dna`) supplies the Value + Consistency percentiles. `owned` frames the label (browse → Strong pick/…;
+    True → Hold/Sell; False → Buy/…). Returns None if `dna`/`player` is missing."""
     if not player or dna is None:
         return None
     pos = player["position"]
@@ -110,7 +124,7 @@ def build_verdict(player, players, xp_by_id, dna, *, horizon: int = 1):
         player, xp=xp, xp_percentile=xp_pct, value=value, median=median, rank=rank, n_peers=n_peers,
         value_percentile=by_axis.get("Value"), consistency_percentile=by_axis.get("Consistency"),
         available=not is_unavailable(player), doubtful=(player["status"] == "d"),
-        chance=player["chance"], horizon=horizon)
+        chance=player["chance"], owned=owned, horizon=horizon)
 
 
 def render_verdict_card(verdict) -> None:

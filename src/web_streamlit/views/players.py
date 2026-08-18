@@ -369,8 +369,9 @@ def render_card(rows, sel, teams, photos, badges):
     store = Storage()                                        # short-lived: fixtures + our projected xP
     try:
         with analytics.timed("analysis", page="Players"):    # perf: the decision_xp compute (ADR-100)
+            gwh = store.get_gw_history_by_code()              # {code: [rows]} — empty preseason; drives the trend
             ranked = decision_xp(rows, store.get_upcoming_fixtures(), store.get_history_by_code(),
-                                 horizon=1, gw_history_by_code=store.get_gw_history_by_code())
+                                 horizon=1, gw_history_by_code=gwh)
         xp = {r["id"]: r["xp"] for r in ranked}
         fixtures = _card_fixtures(store, short)
         cmp_fixtures = _card_fixtures(store, cmp["team"]) if cmp else None
@@ -390,13 +391,7 @@ def render_card(rows, sel, teams, photos, badges):
                            photo_url=photos.get(player["id"]), badge_url=badges.get(short),
                            fixtures=fixtures, projected_xp=xp.get(player["id"]))
 
-        # 🧬 Player DNA (ADR-118) — a headline AI Verdict + the percentile-within-position radar. Both reuse the
-        # decision_xp already computed above; display-only (no new store read, no decision_xp change).
-        from src.analytics import player_dna, player_insights
-        from src.web_streamlit.dna_card import render_dna_card
-        from src.web_streamlit.insights_card import render_insights_card
-        from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
-        dna = player_dna(player, rows)
-        render_verdict_card(build_verdict(player, rows, xp, dna, horizon=1))
-        render_dna_card(dna)
-        render_insights_card(player_insights(player, dna))
+        # 🧬 Player DNA (ADR-118) — the reusable section: AI Verdict → radar → insights → trend. Reuses the
+        # decision_xp + gw_history already loaded; display-only (no new store read, no decision_xp change).
+        from src.web_streamlit.player_dna_view import render_player_dna
+        render_player_dna(player, rows, xp, gw_history=gwh)

@@ -74,6 +74,32 @@ def test_none_row_returns_none():
     assert player_verdict(None, xp=1, xp_percentile=1, value=1, median=1, rank=1, n_peers=1) is None
 
 
+# ---- owned-aware framing (Sprint 171) ----------------------------------------
+
+def test_owned_framing_reads_hold_sell():
+    assert verdict_label(85, owned=True) == "Strong Hold"
+    assert verdict_label(60, owned=True) == "Hold"
+    assert verdict_label(40, owned=True) == "Sell"
+    assert verdict_label(99, available=False, owned=True) == "Sell"   # flagged + owned → Sell
+
+
+def test_not_owned_in_context_reads_buy():
+    assert verdict_label(85, owned=False) == "Buy"
+    assert verdict_label(60, owned=False) == "Consider"
+    assert verdict_label(40, owned=False) == "Pass"
+
+
+def test_browse_labels_unchanged_when_owned_none():
+    assert verdict_label(85) == "Strong pick"
+    assert verdict_label(20, available=False) == "Avoid"
+
+
+def test_player_verdict_passes_owned_through():
+    v = player_verdict(_row(), xp=30, xp_percentile=92, value=1.4, median=1.0, rank=2, n_peers=30,
+                       value_percentile=80, consistency_percentile=95, owned=True)
+    assert v.label == "Strong Hold"
+
+
 def test_accepts_sqlite3_row():
     con = sqlite3.connect(":memory:")
     con.row_factory = sqlite3.Row

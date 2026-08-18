@@ -247,3 +247,16 @@ def player_insights(player, dna, *, max_items: int = 5) -> list[Insight]:
         out.append(Insight("warn", "Limited minutes so far — rotation or fitness risk"))
 
     return out[:max_items]
+
+
+# ── Per-gameweek trend (Sprint 171, ADR-118) — lights up at GW1 ───────────────
+
+def player_gw_points(gw_history, code, *, last: int = 8) -> list[tuple]:
+    """The player's **points-per-gameweek** series `[(round, total_points), …]`, most recent `last` rounds, in
+    round order. `gw_history` is `{element_code: [rows by round]}` (Storage.get_gw_history_by_code) — **empty
+    preseason**, so this returns `[]` until GW1 results land. Skips rounds with no `total_points`. Row/dict safe."""
+    rows = (gw_history or {}).get(code) or []
+    series = [(_get(r, "round"), _get(r, "total_points")) for r in rows
+              if _get(r, "round") is not None and _get(r, "total_points") is not None]
+    series.sort(key=lambda t: t[0])
+    return series[-last:]

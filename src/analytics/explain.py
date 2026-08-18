@@ -303,31 +303,32 @@ def verdict_score(xp_percentile, value_percentile, consistency_percentile, *,
     return max(1, min(99, round(base)))
 
 
-def verdict_label(score: int, *, available: bool = True) -> str:
-    """The one-word call for a verdict score (ownership-neutral; Buy/Hold/Sell framing waits for squad context)."""
+def verdict_label(score: int, *, available: bool = True, owned=None) -> str:
+    """The one-word call for a verdict score. `owned` tunes the framing to what the surface knows:
+    **None** (browse — ownership unknown) → *Strong pick / Solid pick / Risky / Avoid*; **True** (in your squad) →
+    *Strong Hold / Hold / Sell*; **False** (viewed with squad context, not owned) → *Buy / Consider / Pass*."""
     if not available:
-        return "Avoid"
-    if score >= 78:
-        return "Strong pick"
-    if score >= 60:
-        return "Solid pick"
-    if score >= 42:
-        return "Risky"
-    return "Avoid"
+        return "Sell" if owned else "Avoid"
+    if owned is True:
+        return "Strong Hold" if score >= 78 else "Hold" if score >= 55 else "Sell"
+    if owned is False:
+        return "Buy" if score >= 78 else "Consider" if score >= 55 else "Pass"
+    return "Strong pick" if score >= 78 else "Solid pick" if score >= 60 else "Risky" if score >= 42 else "Avoid"
 
 
 def player_verdict(row, *, xp, xp_percentile, value, median, rank, n_peers,
                    value_percentile=None, consistency_percentile=None,
                    available: bool = True, doubtful: bool = False, chance=None,
-                   horizon: int = 5) -> Verdict | None:
+                   owned=None, horizon: int = 5) -> Verdict | None:
     """A single player's headline verdict (ADR-118): a score/label from `verdict_score`/`verdict_label` + grounded
-    **Edge**/**Risk** lines **reused from `explain_worth`** (so the words match the value view). Availability is
+    **Edge**/**Risk** lines **reused from `explain_worth`** (so the words match the value view). `owned` tunes the
+    label framing (browse → Strong pick/…; owned → Hold/Sell; not-owned-in-context → Buy/…). Availability is
     surfaced first when the player is flagged. None if there's no row."""
     if row is None:
         return None
     score = verdict_score(xp_percentile, value_percentile, consistency_percentile,
                           available=available, doubtful=doubtful, chance=chance)
-    label = verdict_label(score, available=available)
+    label = verdict_label(score, available=available, owned=owned)
     worth = explain_worth(row, value=value, median=median, rank=rank, n_peers=n_peers, xp=xp, horizon=horizon)
     edge = list(worth.reasons[:2]) if worth else []
     risk: list = []

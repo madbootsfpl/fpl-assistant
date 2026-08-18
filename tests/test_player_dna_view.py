@@ -1,0 +1,63 @@
+"""Tests for the reusable Player DNA section + the performance trend (Sprint 171, US-416, ADR-118)."""
+
+from src.analytics.explain import Verdict
+from src.web_streamlit.player_dna_view import perf_trend_svg, render_player_dna, trend_panel_html
+from src.web_streamlit.verdict_card import verdict_card_html
+
+
+def _p(pid, position="FWD", *, code=None, xg=0.0, total_points=0, price=6.0, penalties_order=None,
+       selected_by=5.0):
+    return {"id": pid, "web_name": f"p{pid}", "position": position, "team": "AAA", "minutes": 2700,
+            "xg": xg, "xa": 0.0, "ict_index": 0.0, "total_points": total_points, "price": price,
+            "status": "a", "chance": None, "selected_by": selected_by, "penalties_order": penalties_order,
+            "corners_order": None, "freekicks_order": None, "code": code if code is not None else pid}
+
+
+# ---- the trend ---------------------------------------------------------------
+
+def test_trend_svg_draws_a_polyline_with_a_dot_per_point():
+    svg = perf_trend_svg([(1, 2), (2, 6), (3, 4)])
+    assert svg.startswith("<svg") and "<polyline" in svg
+    assert svg.count("<circle") == 3
+
+
+def test_trend_panel_is_the_placeholder_when_empty():
+    html = trend_panel_html([])
+    assert "Fills in from Gameweek 1" in html and "<polyline" not in html
+
+
+def test_trend_panel_draws_a_line_when_there_is_data():
+    html = trend_panel_html([(1, 2), (2, 5)])
+    assert "<polyline" in html and "GW1" in html and "GW2" in html
+
+
+# ---- verdict tone now covers the owned-aware words ---------------------------
+
+def test_verdict_tone_covers_owned_labels():
+    assert "#01fc7a" in verdict_card_html(Verdict("Strong Hold", 90, "High"))   # good tone
+    assert "#01fc7a" in verdict_card_html(Verdict("Buy", 90, "High"))
+    assert "#ffb020" in verdict_card_html(Verdict("Sell", 40, "Low"))            # meh tone
+    assert "#ff6b7d" in verdict_card_html(Verdict("Avoid", 12, "Low"))           # bad tone
+
+
+# ---- the composed section ----------------------------------------------------
+
+def test_render_player_dna_composes_in_order(monkeypatch):
+    called = []
+    monkeypatch.setattr("src.web_streamlit.player_dna_view.render_verdict_card",
+                        lambda v: called.append("verdict"))
+    monkeypatch.setattr("src.web_streamlit.player_dna_view.render_dna_card",
+                        lambda d: called.append("radar"))
+    monkeypatch.setattr("src.web_streamlit.player_dna_view.render_insights_card",
+                        lambda i: called.append("insights"))
+    monkeypatch.setattr("src.web_streamlit.player_dna_view.st.markdown",
+                        lambda *a, **k: called.append("trend"))
+
+    pool = [_p(1, xg=25.0, total_points=200, price=10.0, penalties_order=1, selected_by=30.0),
+            _p(2, xg=5.0, total_points=80)]
+    render_player_dna(pool[0], pool, {1: 6.0, 2: 3.0}, gw_history={}, owned=True)
+    assert called == ["verdict", "radar", "insights", "trend"]
+
+    called.clear()
+    render_player_dna(None, pool, {}, gw_history={})
+    assert called == []                     # no-op on a falsy player
