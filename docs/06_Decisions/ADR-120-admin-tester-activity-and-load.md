@@ -96,3 +96,11 @@ heuristic (*mitigation:* calibrate against real GW1 load, like the weight-calibr
   reboots) · the Admin page's **P95 latency** + session counts · tester reports of slowness.
 - **Not this ADR:** raising `FPL_USER_CAP` (an owner config change, do anytime) and any paid-host upgrade (a
   separate call if concurrency actually bites).
+
+**Retention signal — the roster supersedes the anonymous metric (added 2026-08-18).** The Admin's anonymous
+**"Returning"** count (devices seen on 2+ days, via the `fpl_anon` cookie) is showing **0 with Sessions==Devices**,
+i.e. the cookie isn't persisting across visits in prod (a browser cookie-jar issue, same class as Sprint 132/134;
+verify with a real browser — logged in `Feedback_Log.md`). **Don't rely on it for retention.** The **tester-activity
+roster in this ADR** (signed-in `user_key` + `updated_at`) is the **trustworthy** "who's returning / who's actually
+testing" signal — server-side, named, cookie-independent. The anonymous panel stays useful for *usage volume +
+error rate* only.
