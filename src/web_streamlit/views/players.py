@@ -390,8 +390,11 @@ def render_card(rows, sel, teams, photos, badges):
                            photo_url=photos.get(player["id"]), badge_url=badges.get(short),
                            fixtures=fixtures, projected_xp=xp.get(player["id"]))
 
-        # 🧬 Player DNA (ADR-118) — the player's percentile-within-position fingerprint as a radar. Ranks
-        # on the full pool; display-only (no new store read, no decision_xp change).
+        # 🧬 Player DNA (ADR-118) — a headline AI Verdict + the percentile-within-position radar. Both reuse the
+        # decision_xp already computed above; display-only (no new store read, no decision_xp change).
         from src.analytics import player_dna
         from src.web_streamlit.dna_card import render_dna_card
-        render_dna_card(player_dna(player, rows))
+        from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
+        dna = player_dna(player, rows)
+        render_verdict_card(build_verdict(player, rows, xp, dna, horizon=1))
+        render_dna_card(dna)
