@@ -117,6 +117,14 @@ low-minute players (*mitigation:* a minutes floor, as in the preview).
   + `web_streamlit/insights_card.py` below the radar. +13 tests. **Standalone rate cards dropped** — they'd
   duplicate the card's stat grid + the radar chips; the distinct **sparkline** version (per-GW = 🟡 GW1) moves to
   S171. *The whole 🟢 live-now core is now built.*
-- ◻ **Sprint 171 — the full-page reflow + the My Squad ▸ Players & lineup entry + 🟡 GW1 placeholders** (perf-trend
-  line · sparkline rate-cards · form dots as honest empty-states) + the **Buy/Hold/Sell** verdict framing when
-  opened from My Squad (ownership known).
+- ✅ **Sprint 171 — the page, the My Squad doorway & the GW1 trend (US-416/417).** One reusable
+  `web_streamlit/player_dna_view.py` `render_player_dna` (verdict → radar → insights → trend), on **Players ▸ Card**
+  + reused on **My Squad ▸ Players & lineup**; **owned-aware verdict** (browse *Strong pick/…* · owned
+  *Strong Hold/Hold/Sell* · not-owned *Buy/Consider/Pass*); a per-GW **points trend** (`player_gw_points` +
+  `perf_trend_svg`) with an honest "fills in from GW1" placeholder that auto-draws a line at kickoff. +15 tests
+  (incl. 2 AppTest e2e); no `decision_xp` change.
+
+**Status: ✅ ARC COMPLETE (S168–S171, 2026-08-18).** Player DNA is live on Players ▸ Card + My Squad ▸ Players &
+lineup, entirely on data we hold today. **Tracked GW1 follow-ups** (data-gated, build + verify when the data lands):
+the real per-stat **sparklines** + **W-D-L form dots**. **Deliberately deferred:** the **shot map** + Shots/90 +
+Touches-in-Box → a future gated `soccerdata` ADR (event data, ADR-016).

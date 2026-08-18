@@ -90,11 +90,16 @@ stays the engine**). Two steps taken:
 - ✅ **A redesigned My Squad pitch** (Sprint 099, ADR-084) — a green FFH-style CSS pitch (kits in formation,
   xP chips, (C) armband + sub badges), now reused on **Build** too (Sprint 101, US-261); and a **⏳ next-
   deadline countdown** banner on Home + Squads, derived from fixtures (Sprint 101, ADR-086).
-- ◑ **Player DNA — a rich single-player analysis page** (ADR-118, **owner-approved, BUILDING now**; ✅ **S168
-  radar** + ✅ **S169 AI Verdict** + ✅ **S170 AI Insights** shipped on Players ▸ Card — the whole 🟢 live-now core;
-  `analytics/player_dna.py` [percentiles + insights] + `explain.py` verdict + the SVG `dna_card.py` /
-  `verdict_card.py` / `insights_card.py`; **S171** = full-page reflow + My Squad entry + 🟡 GW1 placeholders) —
-  evolve the player card into a full page: an **8-axis percentile-within-position radar** + an **AI Verdict**
+- ✅ **Player DNA — a rich single-player analysis page** (ADR-118, **DONE S168–S171**) — the player card evolved
+  into a full section (**AI Verdict → 8-axis percentile radar → AI Insights → performance trend**), on **Players ▸
+  Card** + reused on **My Squad ▸ Players & lineup** (owned-aware Hold/Sell). `analytics/player_dna.py` [percentiles
+  · insights · gw-trend] + `explain.py` verdict + `web_streamlit/{dna,verdict,insights}_card.py` +
+  `player_dna_view.py`; all on data we hold today, **no `decision_xp` change**. **GW1 follow-ups:** the per-GW trend
+  auto-populates at kickoff; real per-stat **sparklines** + **W-D-L form dots** are tracked (need per-GW columns /
+  results). **Out of scope:** the **shot map** (Opta/Understat event data → a future gated `soccerdata` ADR). *(The
+  original full-page sketch below is now delivered:)*
+- ◑ ~~Player DNA page~~ — evolve the player card into a full page: an **8-axis percentile-within-position radar** +
+  an **AI Verdict**
   (Buy/Hold/Sell + score, from existing signals) + key-rate cards + Fixture Run + AI Insights, all **live on
   data we already hold**. The **performance-trend line, sparklines and W-D-L form** auto-populate **from GW1**
   (per-GW history). The **shot map** is **out of v1** (Opta/Understat event data — a future `soccerdata` ADR,
