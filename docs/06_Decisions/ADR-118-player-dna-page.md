@@ -113,5 +113,10 @@ low-minute players (*mitigation:* a minutes floor, as in the preview).
   `web_streamlit/verdict_card.py` (an SVG gauge card) above the radar. +16 tests; no `decision_xp` change.
   **Vocabulary owner-confirmed:** ownership-neutral (Strong pick/Solid/Risky/Avoid) on the browse card; the
   **Buy/Hold/Sell** framing is deferred to the My Squad entry (S171), where ownership is known.
-- ◻ **Sprint 170 — key-rate cards + AI Insights** (reuse the engine's percentiles).
-- ◻ **Sprint 171 — the full-page reflow + the My Squad ▸ Players & lineup entry + 🟡 GW1 placeholders.**
+- ✅ **Sprint 170 — AI Insights (US-414/415).** `analytics/player_dna.py` `player_insights` (grounded, prioritised)
+  + `web_streamlit/insights_card.py` below the radar. +13 tests. **Standalone rate cards dropped** — they'd
+  duplicate the card's stat grid + the radar chips; the distinct **sparkline** version (per-GW = 🟡 GW1) moves to
+  S171. *The whole 🟢 live-now core is now built.*
+- ◻ **Sprint 171 — the full-page reflow + the My Squad ▸ Players & lineup entry + 🟡 GW1 placeholders** (perf-trend
+  line · sparkline rate-cards · form dots as honest empty-states) + the **Buy/Hold/Sell** verdict framing when
+  opened from My Squad (ownership known).

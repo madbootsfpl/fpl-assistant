@@ -1,8 +1,10 @@
 # Sprint 170: Player DNA — AI Insights (US-414/415, ADR-118)
 
 **Dates:** 2026-08-18
-**Status:** 📋 Planned — step 3 of the arc (S168 radar ✅ · S169 verdict ✅). A grounded **AI Insights** panel below
-the radar: 3–5 plain-English observations synthesised from the data (*the AI explains*).
+**Status:** ✅ Complete — ADR-118 + US-414/415. Step 3 of the arc (S168 radar ✅ · S169 verdict ✅). A grounded **AI
+Insights** panel below the radar: 3–5 plain-English observations synthesised from the data (*the AI explains*).
+1043 → 1056 tests. **Rate cards dropped** (would duplicate the card grid + radar chips) → the sparkline version
+moves to S171.
 
 > **Owner:** "start Sprint 170".
 
@@ -57,3 +59,33 @@ no new store read, no `decision_xp` change.
   context, ownership); some overlap with Edge/Risk is fine, wholesale repetition isn't.
 - **Grounded only** — every bullet must trace to a value (percentile, order, tier, price); no invented prose.
 - **Reuse the `dna`** already computed for the radar (one `player_dna` per selection).
+
+---
+
+### 🎯 Delivered
+
+- **`analytics/player_dna.py` (US-414) — the insights engine.** An `Insight(kind, text)` + `player_insights(player,
+  dna, *, max_items=5)`: availability first when flagged → top 1–2 **skill** strengths ("Elite {axis}: top {N}% of
+  {pos}…") → team context (top-attack) → set-piece floor (⚡ penalty/set-pieces) → ownership tier → premium-mid-value
+  / limited-minutes cautions. Reuses `crowd.ownership_tier` + `is_unavailable`; **Set Pieces excluded from the
+  strengths** (it gets its own ⚡ line, so no double-up); dict + `sqlite3.Row` safe, empty-safe. Exported from
+  `src.analytics`.
+- **`web_streamlit/insights_card.py` (US-415) — the card.** A dark card of grounded bullets, an icon per kind
+  (✓ good · ⚡ set-piece · ℹ info · ⚠ warn), rendered **below the radar** in `render_card`, reusing the `dna`
+  already computed — no new store read.
+- **Tests: +13** (9 engine · 4 renderer). Full suite **1056 green**; ruff clean. Live-render verified on real data.
+
+**Deferred to S171:** the sparkline **rate trend-cards** (per-GW history = 🟡 GW1) — the non-sparkline rates are
+already on the card grid + radar chips.
+
+### 🧠 Lessons
+
+- **Check for duplication before adding a panel.** The card's stat grid + the radar chips already show every raw
+  rate + percentile — so "rate cards" would have been redundant; the honest add was Insights (and the sparkline
+  version waits for the data that actually makes it distinct).
+- **Grounded synthesis, not new prose.** Every bullet traces to a value (percentile, order, tier, price) — the same
+  "analytics decide, the AI explains" contract, now as a scannable list.
+- **De-dup within the feature too.** Set Pieces earns one line (the ⚡ floor note), not two — a small exclusion
+  keeps the list clean.
+- **Compose on the DNA.** Insights ride on the `player_dna` already built for the radar — one compute feeds radar,
+  verdict *and* insights.
