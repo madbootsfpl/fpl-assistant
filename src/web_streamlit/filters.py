@@ -30,35 +30,41 @@ def filter_controls(players, *, key: str, with_price: bool = False, my_squad_ids
     squad's player ids, when one is loaded) adds a **My squad only** checkbox that scopes to your team
     (News/Trending, US-407b). Keys are namespaced by `key`.
     """
-    my_squad = False
-    if my_squad_ids:
-        my_squad = st.checkbox("My squad only", key=f"{key}_mysquad",
-                               help="Show only players in your active squad.")
     teams = sorted({_get(p, "team") for p in players if _get(p, "team")})
-    cols = st.columns(4 if with_price else 3)
-    team_sel = cols[0].multiselect("Team", teams, key=f"{key}_team",
-                                   help="Show only players from these teams (leave empty for all).")
-    pos_sel = cols[1].multiselect("Position", _POSITIONS, key=f"{key}_pos",
-                                  help="Show only these positions — GK / DEF / MID / FWD (empty = all).")
-    # Scope the Player options by the current Team ∧ Position selection (ADR-064; empty dims = all), so
-    # the dropdown is a short, relevant list rather than ~570 names.
-    team_set, pos_set = set(team_sel), set(pos_sel)
-    names = sorted({_get(p, "web_name") for p in players
-                    if (not team_set or _get(p, "team") in team_set)
-                    and (not pos_set or _get(p, "position") in pos_set)
-                    and _get(p, "web_name")})
-    pkey = f"{key}_player"
-    if pkey in st.session_state:   # prune a now-out-of-scope pick so it can't linger or resurrect
-        st.session_state[pkey] = [n for n in st.session_state[pkey] if n in names]
-    player_sel = cols[2].multiselect("Player", names, key=pkey,
-                                     help="Pick specific players (scoped to the team/position above; "
-                                          "empty = all).")
     # The cap is the highest player price rounded up to £0.5 (never below £15) — so the priciest player (e.g.
     # Haaland £15.5m) is never filtered out by a stale fixed max (US-345).
     price_hi = max(15.0, math.ceil(max((_get(p, "price") or 0.0) for p in players) * 2) / 2) if players else 15.0
-    max_price = (cols[3].slider("Max price (£m)", 0.0, price_hi, price_hi, step=0.5, key=f"{key}_price",
-                                help="Hide players priced above this.")
-                 if with_price else None)
+
+    # US-424: the filter collapses into a single **🔽 Filter** popover (was an always-visible widget row) to save
+    # real estate — most on mobile — across every caller (Players/Player Stats/News/Trending). The button label
+    # carries an active-filter count (read from last run's state) so you know it's on while collapsed. The return
+    # dict + `apply` are unchanged.
+    ss = st.session_state
+    active = (len(ss.get(f"{key}_team", [])) + len(ss.get(f"{key}_pos", []))
+              + len(ss.get(f"{key}_player", []))
+              + (1 if (my_squad_ids and ss.get(f"{key}_mysquad")) else 0)
+              + (1 if (with_price and ss.get(f"{key}_price", price_hi) < price_hi) else 0))
+    with st.popover(f"🔽 Filter · {active} on" if active else "🔽 Filter", use_container_width=False):
+        my_squad = (st.checkbox("My squad only", key=f"{key}_mysquad",
+                                help="Show only players in your active squad.") if my_squad_ids else False)
+        team_sel = st.multiselect("Team", teams, key=f"{key}_team",
+                                  help="Show only players from these teams (leave empty for all).")
+        pos_sel = st.multiselect("Position", _POSITIONS, key=f"{key}_pos",
+                                 help="Show only these positions — GK / DEF / MID / FWD (empty = all).")
+        # Scope the Player options by the current Team ∧ Position selection (ADR-064; empty dims = all), so
+        # the dropdown is a short, relevant list rather than ~570 names.
+        team_set, pos_set = set(team_sel), set(pos_sel)
+        names = sorted({_get(p, "web_name") for p in players
+                        if (not team_set or _get(p, "team") in team_set)
+                        and (not pos_set or _get(p, "position") in pos_set)
+                        and _get(p, "web_name")})
+        pkey = f"{key}_player"
+        if pkey in ss:   # prune a now-out-of-scope pick so it can't linger or resurrect
+            ss[pkey] = [n for n in ss[pkey] if n in names]
+        player_sel = st.multiselect("Player", names, key=pkey,
+                                    help="Pick specific players (scoped to the team/position above; empty = all).")
+        max_price = (st.slider("Max price (£m)", 0.0, price_hi, price_hi, step=0.5, key=f"{key}_price",
+                               help="Hide players priced above this.") if with_price else None)
     return {"teams": set(team_sel), "positions": set(pos_sel),
             "players": set(player_sel), "max_price": max_price,
             "my_squad": set(my_squad_ids) if (my_squad and my_squad_ids) else None}
