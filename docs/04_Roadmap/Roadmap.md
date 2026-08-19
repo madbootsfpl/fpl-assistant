@@ -177,15 +177,28 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 
 ## Later — advanced optimisation & evaluation
 
+> **Competitive note (2026-08-19):** a look at **fplapex.com** (a mature LP-solver FPL tool, same core approach)
+> confirms the solver core is **table-stakes**. The two features worth borrowing — **both already listed below** —
+> are the **multi-GW transfer-path planner** and the **full chip-sequence scan**, done the MadBoots way: with a
+> **grounded "why" per move/chip** (the explanation layer a pure solver lacks). Its **competitive layer**
+> (mini-league H2H · win-probability sim · differentials) reinforces the Crowd/Signals track (Phase 6, GW1-gated).
+> **Strategy: own the *explain + DNA + honesty* lane; don't try to out-solver a solver.** Both below → **post-GW1**
+> candidates.
+
 - ◑ **Chip optimisers** — ✅ a v0 **chip-timing advisor** (`chip_advisor`, a grounded `ask` intent + a Squads
   "Chips" view): when to play Wildcard / Free Hit / Bench Boost / Triple Captain, from the squad's per-GW xP +
   fixture run (Sprint 096, US-251/252, ADR-082). Deferred: **DGW/BGW** detection (in-season) + **mini-league
-  position** (leagues API, GW1) to sharpen it; a season-long (38-GW) scan; a standalone CLI `chips` command.
+  position** (leagues API, GW1) to sharpen it; a **full chip-*sequence* scan** (rank *every* valid
+  Wildcard/Free Hit/Bench Boost/Triple Captain **sequence** across the season by projected xPts — fplapex.com does
+  this; a **post-GW1** candidate, with a grounded per-chip "why"); a standalone CLI `chips` command.
 - ⬜ **Probabilistic xMins (the full ML model)** — per-fixture expected-minutes *probabilities* from
   schedule density, European congestion, rotation profiles. Needs in-season per-GW minutes to train
   (post-GW1) + external European-fixture data + a real ML effort — a later, data-gated phase. The rigorous
   successor to xMins v0.
-- ⬜ Multi-week horizon **decay weights**; transfer-path simulation (a −4 now vs rolling).
+- ⬜ **Multi-GW transfer-path planner** + horizon **decay weights** — plan transfers several GWs ahead as a
+  path/tree, pricing in **hits (−4 now vs rolling)** + total xPts. **Market-validated** (fplapex.com) → a strong
+  **post-GW1** candidate. **MadBoots spin:** not just the path but a **grounded "why" per move** (Edge/Risk each
+  step) — reuses `suggest_transfers` + `decision_xp` `by_gameweek`. Pairs with the per-GW xP toggle (US-422).
 - ⬜ **Evaluation & feedback loops** — did the suggested captain beat the template? Golden-gameweek
   regression; success metrics (xP calibration, captain hit-rate, net season points). *Critical before
   fully trusting recommendations.*
