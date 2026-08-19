@@ -163,6 +163,7 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
         return
 
     selected = result["selected"]
+    _flag_unavailable(selected)                      # ⛔ US-421: a forced-in player who can't play (Must include)
     if declared_bench:
         xi_ids = [p["id"] for p in selected if not p.get("bench")]
     else:
@@ -268,6 +269,18 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
 
 # ---- My Squad (view & edit the active squad; ADR-055) ----------------------------------------------
 
+def _flag_unavailable(members) -> None:
+    """⛔ Warn if a squad contains players who can't play — injured / suspended / left the club (US-421). FPL hides
+    these (status not 'a') from its picker, but MadBoots ingests the full pool, so one can slip into a squad via
+    Squad Lab's **Must include**, a Manager-ID import, or an old save. Display-only; catches every entry path."""
+    gone = [p for p in members if is_unavailable(p)]
+    if not gone:
+        return
+    names = ", ".join(f"**{p['web_name']}**" for p in gone)
+    st.warning(f"⛔ **Can't play — will score 0:** {names}. Injured, suspended, or left the club (FPL hides these "
+               "from selection). Swap them out on the **Transfer** tab.")
+
+
 def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
     st.caption("Your team on the pitch — pick a player to view their card · captain · substitute. "
                "🔧 Build a fresh one anytime in **Squad Lab**.")
@@ -280,6 +293,7 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     render_your_team(squad, is_yours=_is_yours)   # US-385/386: the one Your-team panel — import · back up (ADR-113)
     by_id = {p["id"]: p for p in players}
     owned = [by_id[i] for i in squad["player_ids"] if i in by_id]
+    _flag_unavailable(owned)                         # ⛔ US-421: a member who can't play (injured/suspended/left)
     ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     team_names = {t["short_name"]: t["name"] for t in (teams or [])}   # short → friendly name (the card, US-344)

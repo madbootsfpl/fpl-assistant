@@ -269,6 +269,20 @@ def test_my_squad_health_shows_the_your_teams_strip():
         assert any("Team DNA" in (m.value or "") for m in at.markdown)
 
 
+def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
+    # US-421: a squad containing an injured/suspended/departed player (status not 'a') gets a ⛔ warning.
+    from src.web_streamlit.views import squads
+    warned = []
+    monkeypatch.setattr(squads.st, "warning", lambda msg, **k: warned.append(msg))
+    squads._flag_unavailable([{"web_name": "Fit", "status": "a"},
+                              {"web_name": "Destan", "status": "u"}])   # 'u' = left/unavailable
+    assert warned and "Destan" in warned[0] and "score 0" in warned[0]
+    assert "Fit" not in warned[0]
+    warned.clear()
+    squads._flag_unavailable([{"web_name": "Fit", "status": "a"}])      # all available
+    assert warned == []
+
+
 def test_fixtures_team_dna_section_renders_a_team_card():
     # US-419 (ADR-119): a 🧬 Team DNA section on Fixtures — pick a team → grade + radar + key-players.
     at = _run(_PAGES / "3_Fixtures.py")
