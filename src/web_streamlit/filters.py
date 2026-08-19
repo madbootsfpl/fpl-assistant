@@ -40,7 +40,7 @@ def filter_controls(players, *, key: str, with_price: bool = False, my_squad_ids
     # carries an active-filter count (read from last run's state) so you know it's on while collapsed. The return
     # dict + `apply` are unchanged.
     ss = st.session_state
-    active = (len(ss.get(f"{key}_team", [])) + len(ss.get(f"{key}_pos", []))
+    active = (len(ss.get(f"{key}_team", [])) + len(ss.get(f"{key}_pos") or [])
               + len(ss.get(f"{key}_player", []))
               + (1 if (my_squad_ids and ss.get(f"{key}_mysquad")) else 0)
               + (1 if (with_price and ss.get(f"{key}_price", price_hi) < price_hi) else 0))
@@ -49,8 +49,9 @@ def filter_controls(players, *, key: str, with_price: bool = False, my_squad_ids
                                 help="Show only players in your active squad.") if my_squad_ids else False)
         team_sel = st.multiselect("Team", teams, key=f"{key}_team",
                                   help="Show only players from these teams (leave empty for all).")
-        pos_sel = st.multiselect("Position", _POSITIONS, key=f"{key}_pos",
-                                 help="Show only these positions — GK / DEF / MID / FWD (empty = all).")
+        # US-424: Position as toggle **pills** (was a multiselect) — matches the reference filter + is more compact.
+        pos_sel = st.pills("Position", _POSITIONS, selection_mode="multi", key=f"{key}_pos",
+                           help="Show only these positions — GK / DEF / MID / FWD (empty = all).") or []
         # Scope the Player options by the current Team ∧ Position selection (ADR-064; empty dims = all), so
         # the dropdown is a short, relevant list rather than ~570 names.
         team_set, pos_set = set(team_sel), set(pos_sel)

@@ -140,11 +140,11 @@ def test_players_page_has_photo_and_badge_columns_when_data_present():
 
 
 def test_players_filters_narrow_the_table(monkeypatch):
-    # ADR-064 filter: multiselects are [0] Team · [1] Position · [2] Player; slider[0] is max-price
+    # ADR-064 filter (US-424 popover): multiselects are [0] Team · [1] Player; Position is a pills widget
     at = _run(_PAGES / "2_Players.py")
     if not at.multiselect:                                  # no data locally → the info branch
         return
-    at.multiselect[1].set_value(["GK"]).run()               # Position → keepers only
+    next(p for p in at.pills if p.label == "Position").set_value(["GK"]).run()   # Position → keepers only
     assert not at.exception
     at.slider[0].set_value(5.0).run()                       # …and ≤ £5.0m
     assert not at.exception                                  # narrowing never crashes (table or a note)
@@ -165,13 +165,13 @@ def test_player_multiselect_is_team_scoped():
     at = _run(_PAGES / "2_Players.py")
     if not at.multiselect:
         return
-    all_players = len(at.multiselect[2].options)            # [0] Team · [1] Position · [2] Player
+    all_players = len(at.multiselect[1].options)            # [0] Team · [1] Player (Position is a pills widget)
     at.multiselect[0].set_value(["ARS"]).run()              # Team = ARS
     assert not at.exception
-    scoped = at.multiselect[2].options
+    scoped = at.multiselect[1].options
     assert 0 < len(scoped) < all_players                    # a short, team-scoped list
     # every scoped player really is an Arsenal player
-    at.multiselect[2].set_value(list(scoped)).run()
+    at.multiselect[1].set_value(list(scoped)).run()
     assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
@@ -773,7 +773,7 @@ def test_xg_board_rates_only_meaningful_players():
     assert "xGI rating" in cols and "Rating" not in cols            # renamed
     assert cols.index("xGI rating") < cols.index("xGC")             # sits before xGC (away from it)
 
-    pos = [m for m in at.multiselect if m.label == "Position"]      # filter to GK → all unrated
+    pos = [p for p in at.pills if p.label == "Position"]            # filter to GK → all unrated (Position = pills)
     if pos:
         pos[0].set_value(["GK"]).run()
         ratings = set(at.dataframe[0].value["xGI rating"].astype(str))
