@@ -333,13 +333,30 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
     # A quick-view team summary (US-239) — reuses the horizon-aware xP + availability; display-only.
     # The projected XI is the declared XI (if a bench is set) else the best legal XI — same as Health.
-    gw_label = "next GW" if horizon == 1 else f"{horizon} GW"
     xi_ids = ({p["id"] for p in owned} - bench_ids) if bench_ids else best_legal_xi(owned, xp_by_id)
-    xi_xp = sum(xp_by_id.get(i, 0) for i in xi_ids)
-    bench_xp = sum(xp_by_id.get(p["id"], 0) for p in owned if p["id"] not in xi_ids)
-    # Captaincy is a next-GW decision → the projected XI adds the captain's double for the next GW only,
+
+    # US-422 (ADR-121): a per-GW xP toggle — show the cumulative horizon (as today) OR just the horizon's last
+    # gameweek, from the already-computed by_gameweek (ADR-032). Display-only: the XI/captain SELECTION above stays
+    # cumulative; only the shown numbers + the pitch chips switch. Offered only when the horizon spans >1 GW.
+    gws = ranked[0]["gameweeks"] if ranked and ranked[0]["gameweeks"] else []
+    target_gw = gws[-1] if gws else None
+    per_gw = False
+    if horizon > 1 and target_gw is not None:
+        _opts = [f"GW{gws[0]}–{target_gw} (cumulative)", f"GW{target_gw} only"]
+        per_gw = st.segmented_control(
+            "Projected xP", _opts, default=_opts[0], key="myteam_xp_view",
+            help="Cumulative = total xP over the horizon; 'GW only' = just that gameweek — for last-minute, "
+                 "GW-by-GW planning as transfers roll in.") == _opts[1]
+    display_xp = ({p["id"]: by_gameweek_by_id.get(p["id"], {}).get(target_gw, 0.0) for p in owned}
+                  if per_gw else xp_by_id)
+    cap_gw = target_gw if per_gw else next_gw
+    gw_label = f"GW{target_gw}" if per_gw else ("next GW" if horizon == 1 else f"{horizon} GW")
+
+    xi_xp = sum(display_xp.get(i, 0) for i in xi_ids)
+    bench_xp = sum(display_xp.get(p["id"], 0) for p in owned if p["id"] not in xi_ids)
+    # Captaincy is a next-GW decision → the projected XI adds the captain's double for the shown gameweek,
     # and only when the captain is in the XI (a benched captain isn't doubled). ADR-083.
-    cap_next = captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw)
+    cap_next = captain_bonus(captain_id, xi_ids, by_gameweek_by_id, cap_gw)
     projected_xi = xi_xp + cap_next
     captain_benched = captain_id is not None and captain_id not in xi_ids
     # US-404: a compact 3-number strip (was a 5-across metric wall that slivered on mobile — Unavailable/Doubtful
@@ -354,7 +371,10 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     m3.metric("Bench", f"{bench_xp:.1f} xP", help="Your bench's projected points (bench strength).")
     # Be explicit that the ×2 is a one-week thing when a longer horizon is selected (owner steer, ADR-083).
     cap_name = by_id[captain_id]["web_name"] if captain_id in by_id else None
-    if cap_next and horizon > 1:
+    if cap_next and per_gw:
+        st.caption(f"⚡ Showing **GW{target_gw}** only — captain **{cap_name}**'s double is applied to that "
+                   "gameweek (captaincy is re-picked weekly).")
+    elif cap_next and horizon > 1:
         st.caption(f"⚡ Captain **{cap_name}** is doubled for the **next gameweek only** (+{cap_next:.1f} xP); "
                    f"the other {horizon - 1} GW count once — captaincy is re-picked each week.")
     elif captain_benched:
@@ -387,7 +407,7 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         bench_roles[gk_sub["id"]] = "GK"
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
-    render_pitch(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp,
+    render_pitch(xi, bench, captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
                  team_names=team_names, bench_roles=bench_roles,
                  fixtures_by_id=fixtures_by_id)             # ADR-109: per-GW row in the hover popover
 

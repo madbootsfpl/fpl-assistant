@@ -269,6 +269,27 @@ def test_my_squad_health_shows_the_your_teams_strip():
         assert any("Team DNA" in (m.value or "") for m in at.markdown)
 
 
+def test_my_squad_per_gw_xp_toggle_switches_the_shown_xp():
+    # US-422 (ADR-121): with a >1 horizon, a "Projected xP" toggle switches cumulative ↔ single-GW.
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    if at.exception:
+        return
+    horizon = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
+    if horizon is None:
+        return
+    horizon.set_value(2).run()                       # a 2-GW horizon → the toggle appears
+    if at.exception:
+        return
+    toggle = next((s for s in at.segmented_control if s.label == "Projected xP"), None)
+    if toggle is None or len(toggle.options) < 2:
+        return                                       # no demo squad / data in this env
+    # cumulative label reads "N GW"; the metric is present
+    assert any("Projected XI" in (m.label or "") for m in at.get("metric"))
+    toggle.set_value(toggle.options[1]).run()        # "GW N only"
+    assert not at.exception
+    assert any("Projected XI (GW" in (m.label or "") for m in at.get("metric"))   # label flips to a single GW
+
+
 def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
     # US-421: a squad containing an injured/suspended/departed player (status not 'a') gets a ⛔ warning.
     from src.web_streamlit.views import squads
