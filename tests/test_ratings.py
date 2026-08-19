@@ -20,7 +20,7 @@ def test_lower_is_better_puts_the_smallest_in_the_top_band():
     assert (best["emoji"], best["label"]) == ("🟢", "excellent")
     assert (worst["emoji"], worst["label"]) == ("🔴", "very poor")
     assert best["percentile"] == "top 1%"       # 0 beat it → clamped to 1%
-    assert worst["percentile"] == "top 80%"     # 4 of 5 are better
+    assert worst["percentile"] == "bottom 20%"  # US-426: worse half reads "bottom N%", not "top 80%"
 
 
 def test_higher_is_better_flips_the_direction():

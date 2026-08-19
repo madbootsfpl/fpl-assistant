@@ -244,13 +244,19 @@ def _delta_cell(change) -> str:
     return "0.0"
 
 
-def render_history(rows, photos, badges):
+def render_history(rows, sel, photos, badges):
     """A player's season history on the web (US-298, ADR-027/060) — pick a player → a season table + a per-GW
     trend + the price move. Reuses `analytics.player_history`; the per-GW half is empty preseason (fills at
     GW1). Display-only; an on-demand `Storage` read per selection (no server writes)."""
     st.caption("A player's season-by-season record (points · minutes · **Pts/90** · xGI/xGC · price). "
                "The per-gameweek trend fills once the season starts (GW1).")
-    by_label = {f"{p['web_name']} · {p['team']}": p for p in sorted(rows, key=lambda p: p["web_name"] or "")}
+    # US-427: the History player picker respects the shared filter (was ignoring it — render_history never took
+    # `sel`) — scope the list by team/position/etc. so it's short and relevant.
+    pool = apply_filter(rows, sel)
+    if not pool:
+        st.info("No players match the filter.")
+        return
+    by_label = {f"{p['web_name']} · {p['team']}": p for p in sorted(pool, key=lambda p: p["web_name"] or "")}
     label = st.selectbox("Player", list(by_label), help="Pick a player to see their history.")
     player = by_label.get(label)
     if not player:

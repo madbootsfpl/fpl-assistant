@@ -199,6 +199,27 @@ def test_stat_boards_carry_id_so_my_squad_filter_keeps_rows():
         assert kept and all(r["id"] in mine for r in kept)   # not empty; only the "squad" rows survive
 
 
+def test_history_view_respects_the_shared_filter():
+    # US-427: the History player picker was ignoring the shared filter — a team filter must narrow its options.
+    at = _run(_PAGES / "2_Players.py")
+    if at.exception:
+        return
+    view = next((s for s in at.segmented_control if s.label == "View"), None)
+    if view is None:
+        return
+    view.set_value("History").run()
+    picker = next((s for s in at.selectbox if s.label == "Player"), None)
+    if picker is None or len(picker.options) < 2 or not at.multiselect:
+        return
+    all_opts = len(picker.options)
+    at.multiselect[0].set_value(["ARS"]).run()               # Team = ARS (the filter's [0])
+    assert not at.exception
+    picker = next((s for s in at.selectbox if s.label == "Player"), None)
+    if picker is not None:
+        assert len(picker.options) < all_opts                # narrowed to ARS players
+        assert all("ARS" in o for o in picker.options)
+
+
 def test_watchlist_cap_is_thirty():
     # ADR-117: a shortlist, not a second squad.
     from src.web_streamlit import watchlist

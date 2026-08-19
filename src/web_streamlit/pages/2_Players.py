@@ -63,6 +63,6 @@ else:
     elif view == "xG / xA / xGI":
         views.render_xg(rows, sel, badges)
     elif view == "History":                                 # a per-player season history (US-298)
-        views.render_history(rows, photos, badges)
+        views.render_history(rows, sel, photos, badges)
     else:                                                   # "Pool" (default; also if the control resets)
         views.render_pool(rows, sel, photos, badges)

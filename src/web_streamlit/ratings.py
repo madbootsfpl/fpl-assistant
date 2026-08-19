@@ -20,9 +20,10 @@ LEGEND = "Rating is **relative to the players shown** — 🟢 best 20% · 🟡 
 def quality_band(value, pool, *, higher_is_better: bool) -> dict:
     """Rate `value` within `pool` (the metric's values currently shown).
 
-    Returns ``{emoji, label, percentile}``. `percentile` reads "top N%" — the share of the field this
-    value beats *is not* the point; N is the share that beats it (so the best reads "top 1%"). Ties share
-    a band (equal 'strictly better' counts). An empty pool yields blanks.
+    Returns ``{emoji, label, percentile}``. `percentile` reads **"top N%"** for the better half and **"bottom
+    N%"** for the worse half — so the best reads "top 1%" and the worst "bottom 1%" (US-426: a plain "top 91%" for
+    a poor player read backwards). N is the share that beats it. Ties share a band (equal 'strictly better'
+    counts). An empty pool yields blanks.
     """
     n = len(pool)
     if n == 0:
@@ -37,7 +38,11 @@ def quality_band(value, pool, *, higher_is_better: bool) -> dict:
         if frac < edge:
             emoji, label = e, lab
             break
-    return {"emoji": emoji, "label": label, "percentile": f"top {max(1, round(frac * 100))}%"}
+    # US-426: "top N%" for the better half, but flip to "bottom N%" for the worse half — "top 91%" for a poor
+    # player reads backwards (top sounds good). Best → "top 1%", worst → "bottom 1%".
+    pct = max(1, round(frac * 100))
+    percentile = f"top {pct}%" if pct <= 50 else f"bottom {max(1, 100 - pct)}%"
+    return {"emoji": emoji, "label": label, "percentile": percentile}
 
 
 def rating_cell(value, pool, *, higher_is_better: bool) -> str:
