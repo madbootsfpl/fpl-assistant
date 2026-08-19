@@ -192,7 +192,25 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 > candidates. Also reviewed **aceanalyst.app** (a *viz* tool — scatter plots · efficiency frontier · archetypes;
 > closer to the DNA/stat-boards half): the lens worth borrowing is a **pool-wide value-frontier scatter** (see the
 > web track) that complements the per-player DNA radar. Together the two rivals map the field (**solvers vs viz
-> tools**); **MadBoots straddles both *and* explains** — a strong, defensible middle.
+> tools**); **MadBoots straddles both *and* explains** — a strong, defensible middle. **fplanalyser.co.uk**
+> (reviewed 2026-08-19, via screenshots) is the **closest to our *philosophy*** — grounded + narrative (squad
+> grades, plain-English verdicts, "a plan not a panic"). ⚠ **Recalibration:** "we explain, they don't" is *weaker*
+> vs this one — they explain well too; the edge vs FPLAnalyser is **execution + the DNA *visuals* + free/honest
+> positioning + the full workflow.** Its best features (candidates below).
+
+**Competitive-inspired candidates (post-GW1; ⭐ = data already exists, near-term-feasible):**
+- ⭐ ⬜ **Squad Risk Monitor** (fplanalyser) — one row per owned player, **sorted by how much attention he needs /
+  how likely you are to regret holding him** (not how good he is): a **driver** (Minutes / Fixtures) + "% chance he
+  doesn't reach 60" + an attention rating. **We have the data** (xMins → chance-under-60; fixture difficulty) — a
+  sharp triage the Health tab lacks. Do it *our* way: grounded drivers, on-brand.
+- ⭐ ⬜ **Squad-grade DNA** (fplanalyser + our DNA engine) — aggregate the owned 15 into **one graded picture**:
+  overall grade + **Attack / Defence / DefCon / Fixtures** bars + a verdict headline + a grounded edge line
+  ("3 penalty takers = a deliberate edge"). A squad-level sibling of **Team DNA (ADR-119)** — reuses the engine.
+- ⬜ **Forward GW planner ("plan not panic")** (fplanalyser) — per-GW **projected-points-vs-your-average** bars +
+  "your problem week is GW6, 5 weeks out" narrative + N-hard-fixtures per GW + which players face the hard games.
+  Extends the **per-GW xP toggle (US-422)** into a multi-GW forward view. Bigger build; needs in-season data.
+- ⬜ **Two small ones** — **player clashes** (your own players meeting = point cannibalisation) · **captain
+  margin** ("by a whisker — 0.3 over #2", a small explanatory polish on the existing captain confidence).
 
 - ◑ **Chip optimisers** — ✅ a v0 **chip-timing advisor** (`chip_advisor`, a grounded `ask` intent + a Squads
   "Chips" view): when to play Wildcard / Free Hit / Bench Boost / Triple Captain, from the squad's per-GW xP +
