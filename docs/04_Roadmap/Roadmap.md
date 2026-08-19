@@ -105,6 +105,12 @@ stays the engine**). Two steps taken:
   auto-populates at kickoff; real per-stat **sparklines** + **W-D-L form dots** are tracked (need per-GW columns /
   results). **Out of scope:** the **shot map** (Opta/Understat event data → a future gated `soccerdata` ADR). *(The
   original full-page sketch below is now delivered:)*
+- ⬜ **Pool-wide value-frontier scatter** (post-GW1 candidate; competitive look at aceanalyst.app, 2026-08-19) — a
+  **2-axis scatter of the whole player pool** (e.g. price × xP with a value frontier, or xGI × points, DEFCON ×
+  points) with median baselines + position/price filters. **Complements** the per-player DNA radar: the radar shows
+  *one* player's shape, the scatter positions *everyone* at once (spot value/outliers/over-performers). Data's all
+  there (xg/xa/xgi/points/price/defcon); an Altair/Plotly plot on the Players tab. **MadBoots spin:** a grounded
+  hover/verdict on each point, not just a dot to interpret.
 - ◑ ~~Player DNA page~~ — evolve the player card into a full page: an **8-axis percentile-within-position radar** +
   an **AI Verdict**
   (Buy/Hold/Sell + score, from existing signals) + key-rate cards + Fixture Run + AI Insights, all **live on
@@ -183,7 +189,10 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 > **grounded "why" per move/chip** (the explanation layer a pure solver lacks). Its **competitive layer**
 > (mini-league H2H · win-probability sim · differentials) reinforces the Crowd/Signals track (Phase 6, GW1-gated).
 > **Strategy: own the *explain + DNA + honesty* lane; don't try to out-solver a solver.** Both below → **post-GW1**
-> candidates.
+> candidates. Also reviewed **aceanalyst.app** (a *viz* tool — scatter plots · efficiency frontier · archetypes;
+> closer to the DNA/stat-boards half): the lens worth borrowing is a **pool-wide value-frontier scatter** (see the
+> web track) that complements the per-player DNA radar. Together the two rivals map the field (**solvers vs viz
+> tools**); **MadBoots straddles both *and* explains** — a strong, defensible middle.
 
 - ◑ **Chip optimisers** — ✅ a v0 **chip-timing advisor** (`chip_advisor`, a grounded `ask` intent + a Squads
   "Chips" view): when to play Wildcard / Free Hit / Bench Boost / Triple Captain, from the squad's per-GW xP +
