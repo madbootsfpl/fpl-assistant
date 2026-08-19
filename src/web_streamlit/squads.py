@@ -316,18 +316,15 @@ def team_banner_html(squad: dict, *, is_yours: bool, synced: bool) -> str:
                 '<div class="ytb-s">Make it yours — <b>import your FPL team</b>, upload a backup, or build one in '
                 'Squad Lab (all just below). It’ll then sync to your account across your devices.</div></div>'
                 f'{mark}</div></div>')
+    # US-423 (density): a compact single-line status card — the pill conveys the sync state; the reassurance
+    # paragraph + foot mark are dropped so the pitch sits higher on mobile (the save details live on Help + the
+    # ⚙ Backup / import panel below).
     name = html.escape(str(squad.get("name", "My team")))
-    if synced:
-        pill = '<span class="ytb-pill">🔄 Synced across your devices</span>'
-        sub = ("Saved to your account — <b>every edit saves automatically</b>, no manual save. "
-               "Pick it up on any device you sign in on.")
-    else:
-        pill = '<span class="ytb-pill sess">💾 This session</span>'
-        sub = "Saved in this browser session — <b>download a backup</b> to keep it (sign in to sync across devices)."
+    pill = ('<span class="ytb-pill">🔄 Synced across your devices</span>' if synced
+            else '<span class="ytb-pill sess">💾 This session</span>')
     return (_YTB_CSS + '<div class="ytb-card"><div class="ytb-top">'
             f'<div class="ytb-team"><span class="ytb-ey">🔄 Your team</span><span class="ytb-nm">{name}</span></div>'
-            f'{pill}</div><p class="ytb-sub">{sub}</p>'
-            f'<div class="ytb-foot">{mark}</div></div>')
+            f'{pill}</div></div>')
 
 
 def _safe_filename(name: str) -> str:
@@ -354,14 +351,15 @@ def render_your_team(squad: dict | None, *, is_yours: bool = True) -> None:
     immediate, and collapses once you have a synced team. `squad` is the squad shown (for the download); import/upload
     set the session's active squad (a rerun reflects it). No server write beyond the account auto-sync in
     `set_active_squad`."""
-    # Backup — a real, always-visible Download (the card above signposts it; this is the working button).
-    if squad:
-        st.download_button("⬇︎ Download a backup", _download_payload(squad),
-                           file_name=f"{_safe_filename(squad.get('name', 'squad'))}.json",
-                           mime="application/json",
-                           help="Save a copy to this device (named after your team) — re-upload it any time, "
-                                "or on another device.")
-    with st.expander("⚙ Import or restore your team", expanded=(squad is None or not is_yours)):
+    # US-423 (density): Backup + Import folded into ONE collapsed panel (was an always-visible Download + a
+    # separate expander) so the pitch sits higher on mobile. Auto-expands when the squad isn't yours (import
+    # immediate); collapses once you have a synced team.
+    with st.expander("⚙ Backup / import your team", expanded=(squad is None or not is_yours)):
+        if squad:
+            st.download_button("⬇︎ Download a backup", _download_payload(squad),
+                               file_name=f"{_safe_filename(squad.get('name', 'squad'))}.json",
+                               mime="application/json",
+                               help="Save a copy to this device (named after your team) — re-upload it any time.")
         # Get your team — Import by Manager-ID (ADR-058) · restore from a backup (ADR-054) · Build in Squad Lab.
         st.markdown("**Get your team**")
         manager_id = st.text_input(

@@ -480,7 +480,7 @@ def test_your_team_panel_consolidates_import_upload_download():
     # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
     # backup in one place (was scattered across the sidebar).
     at = _run(_PAGES / "4_My_Squad.py")
-    assert any(e.label == "⚙ Import or restore your team" for e in at.get("expander"))
+    assert any(e.label == "⚙ Backup / import your team" for e in at.get("expander"))
     assert any(t.label == "FPL manager-ID" for t in at.text_input)                    # import by Manager-ID
     assert any(b.label == "Import team" for b in at.button)
     assert any(u.label.endswith("restore your team from a backup file") for u in at.get("file_uploader"))
@@ -1447,10 +1447,11 @@ def test_build_page_exclude_removes_the_player_from_the_save(monkeypatch):
 
 def test_my_squad_page_renders_with_a_legality_banner_and_download():
     at = _squads_view("My Squad")
-    # a download (an editable squad view) or the no-data info; a legality banner (success/error) if data
+    # a download (an editable squad view) or the no-data info; a legality read (compact caption / error) if data
     assert at.get("download_button") or at.info
     if at.get("download_button"):
-        assert at.success or at.error                      # the ✓ legal / ⚠ / illegal banner
+        legal = any("legal 15" in (c.value or "") for c in at.caption)   # US-423: legal = a compact caption now
+        assert legal or at.error                           # ✓ legal 15 caption / ⚠ illegal error
 
 
 def test_my_squad_pitch_view_lays_out_the_squad():

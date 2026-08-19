@@ -283,8 +283,8 @@ def _flag_unavailable(members) -> None:
 
 
 def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
-    st.caption("Your team on the pitch — pick a player to view their card · captain · substitute. "
-               "🔧 Build a fresh one anytime in **Squad Lab**.")
+    # US-423 (density): the "on the pitch — pick a player…" caption dropped (the pitch + ⚙ panel are discoverable)
+    # so the pitch sits higher on mobile.
     # US-386: a brand status card so your team stands out + Save/backup is signposted. "Yours" = the shown squad is
     # your session's active squad (not a demo); "synced" = signed-in mode (the account is the store, ADR-113).
     from src.web_streamlit import auth
@@ -328,8 +328,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         st.error("Not a legal 15: " + "; ".join(issues))
     else:
         over = round(cost - FPL_BUDGET, 1)
-        st.success(f"£{cost:.1f}m — ✓ a legal 15" if over <= 0
-                   else f"£{cost:.1f}m — ✓ legal, ⚠ £{over:.1f}m over the £{FPL_BUDGET:.0f}m budget")
+        # US-423 (density): a compact caption, not a full green success box, so the pitch sits higher.
+        st.caption(f"£{cost:.1f}m · ✓ a legal 15" if over <= 0
+                   else f"£{cost:.1f}m · ✓ legal · ⚠ £{over:.1f}m over the £{FPL_BUDGET:.0f}m budget")
 
     # A quick-view team summary (US-239) — reuses the horizon-aware xP + availability; display-only.
     # The projected XI is the declared XI (if a bench is set) else the best legal XI — same as Health.
