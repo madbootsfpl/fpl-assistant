@@ -175,6 +175,30 @@ def test_player_multiselect_is_team_scoped():
     assert set(at.dataframe[0].value["Team"].tolist()) <= {"ARS"}
 
 
+def test_stat_boards_carry_id_so_my_squad_filter_keeps_rows():
+    # US-425 regression: over_under/defensive_solidity/defcon_reliability build rows for the Players boards; they
+    # MUST carry `id` or the "My squad only" filter (matches on id) drops every row → an empty board (the bug).
+    from src.analytics import defcon_reliability, defensive_solidity, over_under
+    from src.storage import Storage
+    from src.web_streamlit.filters import apply as apply_filter
+    store = Storage()
+    try:
+        players = [dict(p) for p in store.get_players()]
+    finally:
+        store.close()
+    if not players:
+        return
+    for fn in (over_under, defensive_solidity, defcon_reliability):
+        rows = fn(players)
+        if not rows:
+            continue
+        assert all("id" in r for r in rows), f"{fn.__name__} rows must carry id"
+        mine = {rows[0]["id"], rows[-1]["id"]}
+        kept = apply_filter(rows, {"teams": set(), "positions": set(), "players": set(),
+                                   "max_price": None, "my_squad": mine})
+        assert kept and all(r["id"] in mine for r in kept)   # not empty; only the "squad" rows survive
+
+
 def test_watchlist_cap_is_thirty():
     # ADR-117: a shortlist, not a second squad.
     from src.web_streamlit import watchlist

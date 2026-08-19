@@ -5,7 +5,7 @@ from src.ui.cleansheet import render_cleansheet
 
 
 def player(name, pos, xgc, minutes):
-    return {"web_name": name, "team": "ARS", "position": pos,
+    return {"id": abs(hash(name)) % 100000, "web_name": name, "team": "ARS", "position": pos,
             "xgc": xgc, "minutes": minutes}
 
 

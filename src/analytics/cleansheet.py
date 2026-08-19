@@ -28,6 +28,7 @@ def defensive_solidity(players, min_minutes: int = MIN_MINUTES) -> list[dict]:
         if p["xgc"] is None:            # missing → not rankable (don't coerce to 0)
             continue
         rows.append({
+            "id": p["id"],          # US-425: carry the id so the web "My squad only" filter can match
             "web_name": p["web_name"],
             "team": p["team"],
             "position": p["position"],

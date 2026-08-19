@@ -35,6 +35,7 @@ def defcon_reliability(players, min_minutes: int = MIN_MINUTES) -> list[dict]:
             continue
         per90 = _num(p["defcon_per90"])
         rows.append({
+            "id": p["id"],          # US-425: carry the id so the web "My squad only" filter can match
             "web_name": p["web_name"],
             "team": p["team"],
             "position": p["position"],

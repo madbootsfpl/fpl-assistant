@@ -32,6 +32,7 @@ def over_under(players, min_minutes: int = MIN_MINUTES) -> list[dict]:
         expected = _num(p["xg"]) * goal_pts + _num(p["xa"]) * ASSIST_POINTS
         actual = _num(p["goals_scored"]) * goal_pts + _num(p["assists"]) * ASSIST_POINTS
         rows.append({
+            "id": p["id"],          # US-425: carry the id so the web "My squad only" filter can match
             "web_name": p["web_name"],
             "team": p["team"],
             "position": p["position"],

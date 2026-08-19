@@ -5,7 +5,7 @@ from src.ui.defcon import render_defcon
 
 
 def player(name, pos, per90, minutes):
-    return {"web_name": name, "team": "ARS", "position": pos,
+    return {"id": abs(hash(name)) % 100000, "web_name": name, "team": "ARS", "position": pos,
             "defcon_per90": per90, "minutes": minutes}
 
 

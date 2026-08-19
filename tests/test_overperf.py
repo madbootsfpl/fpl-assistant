@@ -5,7 +5,7 @@ from src.ui.overperf import render_overperf
 
 
 def player(name, pos, xg, xa, goals, assists, minutes):
-    return {"web_name": name, "team": "ARS", "position": pos,
+    return {"id": abs(hash(name)) % 100000, "web_name": name, "team": "ARS", "position": pos,
             "xg": xg, "xa": xa, "goals_scored": goals, "assists": assists,
             "minutes": minutes}
 
