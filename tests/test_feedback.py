@@ -38,8 +38,8 @@ def _parts(href):
 
 
 def test_mailto_targets_the_inbox_with_a_template_when_empty():
-    href = feedback_mailto("fpl.assistant@proton.me")
-    assert href.startswith("mailto:fpl.assistant@proton.me?")
+    href = feedback_mailto("hello@madboots.com")
+    assert href.startswith("mailto:hello@madboots.com?")
     q = parse_qs(href.split("?", 1)[1])
     assert q["subject"] == ["MADBOOTS beta feedback"]          # no page → plain subject
     assert "What worked" in q["body"][0]                             # a template body to fill in

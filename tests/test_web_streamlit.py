@@ -771,7 +771,7 @@ def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert not at.exception
     mailtos = [b.url for b in at.get("link_button") if str(b.url).startswith("mailto:")]
-    assert any("fpl.assistant@proton.me" in u and "typo" in u for u in mailtos)   # pre-filled email to the inbox
+    assert any("hello@madboots.com" in u and "typo" in u for u in mailtos)   # pre-filled email to the inbox
 
 
 def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):

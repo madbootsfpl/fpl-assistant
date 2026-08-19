@@ -42,7 +42,7 @@ st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Testing the beta? Tell us what worked, what broke, or what you'd love next — it goes straight to "
            "the team. Thank you 🙏")
 
-feedback_email = secret("FPL_FEEDBACK_EMAIL", "fpl.assistant@proton.me")
+feedback_email = secret("FPL_FEEDBACK_EMAIL", "hello@madboots.com")
 
 signup = secret("FPL_SIGNUP_URL")
 if signup:

@@ -16,7 +16,7 @@ FPL_ACCESS_CODE      = "your-shared-beta-code"                     # gates entry
 FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/you@proton.me"  # in-app feedback POSTs here (§1: a Sheet OR a relay)
 FPL_FEEDBACK_ORIGIN  = "https://madboots.streamlit.app"           # the app URL FormSubmit sees (§1B) — anti-abuse
 FPL_FEEDBACK_KEY     = "your-web3forms-access-key"                 # only if you use Web3Forms as the relay (§1B)
-FPL_FEEDBACK_EMAIL   = "fpl.assistant@proton.me"                   # the mailto fallback address (default: this)
+FPL_FEEDBACK_EMAIL   = "hello@madboots.com"                   # the mailto fallback address (default: this)
 FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form / waitlist
 FPL_USER_CAP         = "10"                                        # cap registered testers (§4); unset = shared code only
 FPL_ANALYTICS        = "1"                                         # anonymous usage/perf analytics (ADR-100); unset = off
@@ -39,7 +39,7 @@ FPL_ADMIN_KEY        = "a-long-password"                           # unlocks the
 - **`FPL_FEEDBACK_KEY`** — only for the **Web3Forms** relay (§1B); it's sent as `access_key`. Leave unset for a
   Sheet or for FormSubmit.
 - **`FPL_FEEDBACK_EMAIL`** — the address the in-app **"✉ Email your feedback"** / fallback links open (a
-  `mailto:`). Defaults to `fpl.assistant@proton.me`; set it to change the inbox.
+  `mailto:`). Defaults to `hello@madboots.com`; set it to change the inbox.
 - **`FPL_SIGNUP_URL`** — a link shown on **Home** + **Feedback** ("✋ Join the beta"). Unset → hidden.
 - **`FPL_ANALYTICS`** — turns on **anonymous usage & experience analytics** (ADR-100): what testers use, whether
   they return, and how fast/reliable it feels — written to a Supabase `events` table (reuses the store secrets, no
@@ -80,7 +80,7 @@ A Google Apps Script bound to a Sheet:
    that's `FPL_FEEDBACK_WEBHOOK`.
 4. Test: submit the in-app form; a row should appear in the Sheet.
 
-### 1B. An email relay (~5 min) — straight to fpl.assistant@proton.me
+### 1B. An email relay (~5 min) — straight to hello@madboots.com
 
 Free form-to-email services forward a POST to your inbox — the app's payload already carries `_subject`, the
 message, the page, and the version.
@@ -88,7 +88,7 @@ message, the page, and the version.
 **FormSubmit** (no signup) — two gotchas that will bite if you skip them:
 
 1. **Use the `/ajax/` endpoint** — the app POSTs **JSON**, so:
-   `FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/fpl.assistant@proton.me"` (or `…/ajax/<random-token>` from
+   `FPL_FEEDBACK_WEBHOOK = "https://formsubmit.co/ajax/hello@madboots.com"` (or `…/ajax/<random-token>` from
    formsubmit.co to hide the address). The plain `formsubmit.co/<addr>` endpoint expects an HTML form and won't
    work here.
 2. **Activate the form (one-time).** The first submit makes FormSubmit email an **"Activate Form"** link to the
