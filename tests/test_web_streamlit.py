@@ -1392,7 +1392,7 @@ def test_build_page_weekly_and_include_unavailable(monkeypatch):
     at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
-    at.radio[0].set_value("Weekly (playing bench)").run()
+    at.radio[0].set_value("Strong XI (weaker bench)").run()
     at.checkbox[-1].set_value(True).run()                  # include injured/suspended
     assert not at.exception and at.code                    # still a valid 15 renders
 

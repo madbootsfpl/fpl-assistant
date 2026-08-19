@@ -40,7 +40,7 @@ with st.expander("🧪 1 · Build your squad  →  **Squad Lab**", expanded=True
         "- 👥 **Players** — include or exclude specific players.\n"
         "- 🪑 **Bench** — declare your bench.\n"
         "- 🎯 **Objective** — xP · Points · Value · xGI.\n"
-        "- ⚙ **Build mode** — Balanced · Weekly (a cheap playing bench) · Bench Boost (maximise all 15).\n"
+        "- ⚙ **Build mode** — Balanced · Strong XI (weaker, cheap playing bench) · Bench Boost (maximise all 15).\n"
         "- ℹ️ **Every control** has an explanation (the ⓘ tooltips).\n\n"
         "When you're happy: **Use this squad →** makes it your active squad, and/or **💾 Download** the `squad.json` "
         "as a local backup."
@@ -218,7 +218,7 @@ with st.expander("📖 9 · MADBOOTS Explainer  →  a plain-English glossary"):
         "**🧪 Squad Lab**\n"
         "- **Archetype** — a selection preference: Cheap · Premium · Differential.\n"
         "- **Objective** — what the optimiser maximises: xP · Points · Value · xGI.\n"
-        "- **Build mode** — **Balanced** (a balanced squad) · **Weekly** (a cheaper playing bench) · **Bench "
+        "- **Build mode** — **Balanced** (a balanced squad) · **Strong XI** (a weaker, cheaper bench) · **Bench "
         "Boost** (maximise all 15).\n"
         "- **Declared bench** — tells the optimiser which four players to put on the bench.\n"
     )

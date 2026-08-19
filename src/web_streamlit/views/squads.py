@@ -103,8 +103,9 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
                              help="xp = expected points (xMins-weighted); the CLI default.")
     no_xmins = c2.checkbox("Ignore expected minutes (--no-xmins)", value=False,
                            disabled=objective != "xp", help="xp objective only.")
-    mode = c3.radio("Build mode", ["Balanced", "Weekly (playing bench)", "Bench Boost"],
-                    help="Weekly maximises the XI + a cheap playing bench; Bench Boost maximises all 15.")
+    mode = c3.radio("Build mode", ["Balanced", "Strong XI (weaker bench)", "Bench Boost"],
+                    help="Strong XI puts your budget into the starting XI with a cheap, still-playing bench "
+                         "for cover (the normal week); Bench Boost maximises all 15 (for the chip).")
     include_unavailable = c3.checkbox("Include injured/suspended", value=False,
                                       help="Also consider flagged players (off by default).")
 
@@ -121,7 +122,7 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
     declared_bench = _ids(st.multiselect("Declare bench (up to 4)", labels,
                                          help="Pins these to the bench; leave empty to auto-derive the XI."))
 
-    weekly = mode == "Weekly (playing bench)"
+    weekly = mode == "Strong XI (weaker bench)"
     bench_boost = mode == "Bench Boost"
     warnings = []
     if set(include) & set(exclude):
@@ -131,7 +132,7 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
     if set(declared_bench) & set(include):
         warnings.append("A player can't be both included and benched.")
     if declared_bench and (weekly or bench_boost):
-        warnings.append("Weekly / Bench Boost designate the bench themselves — clear the declared bench.")
+        warnings.append("Strong XI / Bench Boost designate the bench themselves — clear the declared bench.")
     for w in warnings:
         st.warning(w)
 
