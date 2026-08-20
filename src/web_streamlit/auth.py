@@ -44,12 +44,14 @@ def user_key(email: str) -> str:
 def render_account() -> None:
     """The sidebar account line + a **Log out** (Google) for an admitted, signed-in user — auth mode's counterpart
     to the cookie-gate's `_render_account`."""
+    from src.web_streamlit import access
     from src.web_streamlit.access import _EMAIL
     with st.sidebar:
         email = st.session_state.get(_EMAIL)
         st.caption(f"🔓 Signed in as {email}" if email else "🔓 Signed in")
         if st.button("Log out", key="_auth_logout", use_container_width=True):
             st.logout()
+    access.render_leave_beta()                     # a self-service "Remove me" / unsubscribe (ADR-122)
 
 
 def gate() -> None:
@@ -85,6 +87,10 @@ def gate() -> None:
     if signup := secret("FPL_SIGNUP_URL"):
         st.link_button("✋ Join the waitlist", signup)
     if st.button("Log out", key="_auth_logout_denied"):
+        st.logout()
+    if st.button("Remove me from the waitlist", key="_auth_unsub_denied"):   # the promised "remove me" (ADR-122)
+        from src.web_streamlit import unsubscribe
+        unsubscribe.remove_me(email)               # no user_key — not admitted, so no saved squad/watchlist
         st.logout()
     st.caption(brand.DISCLAIMER)
     st.stop()

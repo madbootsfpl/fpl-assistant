@@ -145,6 +145,12 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
 
 ## Security & pre-launch hardening
 
+- ✅ **Self-service "Remove me" / unsubscribe — SHIPPED (ADR-122, US-428, 2026-08-20).** The *"remove me = we delete
+  your rows"* promise is now in-app: a **"Leave the beta"** confirm (both gate modes) + a **"Remove me from the
+  waitlist"** on the not-invited screen → `unsubscribe.remove_me` deletes their `beta_users`/`beta_waitlist`/`squads`/
+  `player_watchlist` rows (best-effort, no new secret). **Owner setup:** add the `beta_users` **delete** policy
+  (BETA.md §4) — without it the seat-removal silently no-ops (the other 3 tables are RLS-off). *(A tokenised
+  email-unsubscribe link is deferred — no bulk email is sent.)* Reduces the manual-PII-handling burden below.
 - 🧭 **Supabase store — email/PII exposure via the publishable key** *(pre-public-launch; NOT a beta blocker; owner
   steer 2026-08-13: leave as-is, review later)*. The store runs on the **"publishable key + open access"** model, and
   the publishable key (`sb_publishable_…`) is **embedded in the client app** — so with the current RLS posture the

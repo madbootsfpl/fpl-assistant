@@ -161,11 +161,17 @@ the cross-device-squads Supabase (§ `docs/CLOUD_SQUADS.md`) — **no new store 
    alter table beta_users enable row level security;
    drop policy if exists "anon users read"   on beta_users;
    drop policy if exists "anon users write"  on beta_users;
-   create policy "anon users read"  on beta_users for select using (true);
-   create policy "anon users write" on beta_users for insert with check (true);
+   drop policy if exists "anon users delete" on beta_users;
+   create policy "anon users read"   on beta_users for select using (true);
+   create policy "anon users write"  on beta_users for insert with check (true);
+   create policy "anon users delete" on beta_users for delete using (true);   -- self-service "Remove me" (ADR-122)
    ```
    *(Or `alter table beta_users disable row level security;` — same anon-open access, one line. This is the #1
    gotcha, exactly like the squads table.)*
+   > **The `delete` policy matters (ADR-122):** without it, a tester's in-app **"Remove me"** silently can't drop
+   > their `beta_users` seat (`select`+`insert` only), so they'd stay allow-listed. `beta_waitlist` / `squads` /
+   > `player_watchlist` are RLS-off, so their deletes already work; this line completes the picture. (If you
+   > `disable row level security` above, delete works too — no separate policy needed.)
 2. **Turn it on:** set **`FPL_USER_CAP = 10`** in Streamlit secrets (keep `FPL_ACCESS_CODE` — it's the invite).
    The gate switches from the plain code prompt to **code + email**. Unset it → back to the code-only gate.
 3. **Run it:** raise the cap (`20`, `50`…) as performance holds — one edit. **See / manage testers** in Supabase
@@ -253,6 +259,24 @@ code / §4 registration gate stays the fallback). **Free** (`st.login`, Google O
 > (no other profile data), the squad keyed by a **hash**, and *"remove me" = delete their `beta_users` + squad rows*.
 > The app tells the tester this on the sign-in screen. If you ever rename the Streamlit subdomain, update the
 > **redirect URI** in both Google and the secret.
+
+### 5a. Self-service "Remove me" / unsubscribe — ADR-122
+
+The *"remove me = we delete your rows"* promise (above) is now **self-service** — testers remove themselves in-app,
+so you don't have to hand-delete rows. **No new secret, no new table** (it reuses the store); **best-effort +
+fail-silent** (a lost delete never crashes the app). It appears **only when the store is configured**.
+
+- **A signed-in tester** → a **"Leave the beta → Remove me"** control under the sidebar account line (behind a
+  confirm). It deletes their **`beta_users`** seat, **`beta_waitlist`** entry, saved **squad** (`squads`, keyed by
+  the email hash) and **`player_watchlist`**, then signs them out.
+- **A not-invited visitor** (signed in, on the waitlist screen) → a **"Remove me from the waitlist"** button →
+  deletes their `beta_waitlist` (+ `beta_users`) row and logs out.
+
+**Setup:** just the **`beta_users` delete policy** in §4 (or RLS disabled) — `beta_waitlist` / `squads` /
+`player_watchlist` are already RLS-off, so those deletes work as-is. Without the delete policy the seat-removal
+silently no-ops (the tester is still signed out; you can delete the seat by hand). **Soft control** (ADR-094/098):
+there's no token, so someone could submit an email they don't own — low harm for a hobby beta (they'd just re-join).
+A **tokenised email-unsubscribe link** is deferred until/unless bulk email is ever sent (there is none today).
 
 ---
 

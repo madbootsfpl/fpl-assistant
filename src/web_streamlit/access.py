@@ -20,6 +20,7 @@ _CLEAR = "_beta_clear"    # session: a pending cookie *clear* to render on the n
 _FORGOTTEN = "_beta_forgotten"  # session: logged out — ignore the cookie for the rest of this session (ADR-099)
 _LOADING = "_beta_cookie_checked"  # session: we've given the cookie component one run to deliver (ADR-099/Sprint 134)
 _CONFIRMING = "_beta_confirming"   # session: the "Log out?" confirm modal is open (US-329)
+_LEAVING = "_beta_leaving"         # session: the "Remove me?" (unsubscribe) confirm modal is open (ADR-122)
 
 
 def secret(key: str, default: str | None = None) -> str | None:
@@ -177,6 +178,55 @@ def _render_account() -> None:
             st.session_state[_CONFIRMING] = True
     if st.session_state.get(_CONFIRMING):      # keep the modal open across reruns until a choice is made
         _confirm_logout()
+    render_leave_beta()                        # a self-service "Remove me" / unsubscribe (ADR-122)
+
+
+def render_leave_beta() -> None:
+    """A self-service **"Leave the beta"** control under the account line (ADR-122): delete my rows + sign out.
+    Shared by both gate modes (`_render_account` here + `auth.render_account`). Shown only when the store is
+    configured (else there's nothing to delete). Behind a **confirm dialog**, like Log out (US-329) — the delete
+    is irreversible."""
+    from src.web_streamlit import unsubscribe
+    if not unsubscribe.is_configured():
+        return
+    with st.sidebar:
+        with st.expander("Leave the beta"):
+            st.caption("Remove your email from the beta and delete your saved squad + watchlist. "
+                       "This can't be undone.")
+            if st.button("Remove me", key="_beta_leave", use_container_width=True):
+                st.session_state[_LEAVING] = True
+    if st.session_state.get(_LEAVING):         # keep the modal open across reruns until a choice is made
+        _confirm_leave()
+
+
+@st.dialog("Remove yourself from the beta?")
+def _confirm_leave() -> None:
+    """Confirm the irreversible remove-me (ADR-122). Confirm → delete rows + sign out; Cancel → dismiss. Kept open
+    across reruns by `_LEAVING` (like `_confirm_logout`)."""
+    st.write("This **deletes** your beta access, your saved squad and your watchlist, and signs you out on this "
+             "device. You can re-join later with an invite.")
+    c1, c2 = st.columns(2)
+    if c1.button("Remove me", type="primary", key="_beta_leave_yes", use_container_width=True):
+        st.session_state.pop(_LEAVING, None)
+        _do_leave()
+    if c2.button("Cancel", key="_beta_leave_no", use_container_width=True):
+        st.session_state.pop(_LEAVING, None)
+        st.rerun()
+
+
+def _do_leave() -> None:
+    """Delete the signed-in person's rows (best-effort, ADR-122) then sign out — mode-aware: Google `st.logout()`
+    in auth mode, else the cookie-gate `logout()`. `remove_me` never raises, so sign-out always follows."""
+    from src.web_streamlit import auth, unsubscribe
+    email = st.session_state.get(_EMAIL) or auth.current_email()
+    uk = auth.user_key(email) if email else None
+    unsubscribe.remove_me(email, uk)           # best-effort; email tables + (keyed) squad/watchlist
+    if auth.is_configured():
+        for key in (_OK, _EMAIL):
+            st.session_state.pop(key, None)
+        st.logout()                            # Google sign-out → reruns to the login gate
+    else:
+        logout()                               # cookie-mode: clears the cookie + session, reruns to the gate
 
 
 def _remembered_code(code: str) -> bool:
