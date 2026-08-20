@@ -368,6 +368,8 @@ Everything below is **£0** and opt-in. Tick them off, then post the invite.
       register with the code + an email, capped; raise the cap as perf holds; see who's in via the Supabase table.
 - [ ] **Waitlist** *(optional)* — create the `beta_waitlist` table (§4a) → an over-cap or wrong-code attempt records
       its email so you can invite them later. No new secret; off until the table exists.
+- [x] **Self-service "Remove me" / unsubscribe** — the `beta_users` **delete** policy is set (§4/§5a), so a tester can
+      **Leave the beta** in-app and delete their own rows. *(Added + smoke-verified in prod 2026-08-20 — ADR-122.)*
 - [ ] **Google sign-in** *(optional, the robust upgrade)* — the `[auth]` secrets + a Google OAuth client (§5) →
       testers Sign in with Google (allow-listed by `beta_users`), and their squad syncs across devices / survives a
       mobile refresh. Off until `[auth]` is set; the code gate stays the fallback.
