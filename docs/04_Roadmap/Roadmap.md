@@ -1,6 +1,6 @@
 # MADBOOTS Roadmap
 
-*Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page; kept current through Sprint 068.
+*Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page; kept current through Sprint 172 + the post-S172 feedback batch (2026-08-20).
 Phase 1 was delivered as a **CLI** (ADR-002/003), not the original web-first plan; that original 5-phase
 plan and its bullet-by-bullet reconciliation live in git history and the per-sprint docs — this page looks
 **forward**.*
@@ -14,10 +14,12 @@ ADR-071/073; consistently formatted numbers — ADR-072; **🚑 availability fla
 ADR-074, incl. the CLI ranking tables + a chance% on ❓; a **projected-XI score + formation comparison** on
 Build — ADR-075; a **configurable prediction horizon** across the Squads tab — ADR-077; a **My Squad quick-stats summary** +
 a **bench order** you can see, **set**, and that starts sensibly — ADR-078/079; a **pronoun-aware**,
-follow-up-capable chat in the browser — ADR-080). **80 ADRs · 640 tests · CI green.** Preseason (0
-gameweeks; **GW1 deadline 2026-08-21**), so
-form/per-GW insight — and the momentum boards — are still ahead, but the **Data Hardening plumbing is now
-wired dormant** (Sprint 069): GW1 is a switch-flip.
+follow-up-capable chat in the browser — ADR-080). Since then the app matured into **MADBOOTS** (ADR-103):
+Google auth + per-user cross-device persistence (ADR-106), the **My Squad / 🧪 Squad Lab** IA split (ADR-105),
+a ⭐ **Watchlist** (ADR-117), and the differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
+**121 ADRs · 1091 tests · CI green.** **🚨 GW1 deadline is 2026-08-21 (tomorrow).** Form/per-GW insight and the
+momentum boards are gated on live results; the **Data Hardening plumbing is wired dormant** (Sprint 069) and the
+calibration harness is built (Sprint 138, ADR-101) — GW1 is a switch-flip, run per the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**.
 
 **Status legend:** ✅ Done · ◑ Partial · ⬜ Not started
 
@@ -67,7 +69,7 @@ wired dormant** (Sprint 069): GW1 is a switch-flip.
 
 ### Engineering
 - **CI (GitHub Actions):** ruff + pytest on push (Py 3.13/3.14). Layered one-way architecture
-  (`api → ingest → storage → analytics → ui → cli`); 49 ADRs; 421 offline tests; shared table renderer.
+  (`api → ingest → storage → analytics → ui → cli`); 121 ADRs; 1091 offline tests; shared table renderer.
 
 ---
 

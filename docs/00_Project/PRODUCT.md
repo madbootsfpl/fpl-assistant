@@ -6,7 +6,7 @@ and how that sits on the roadmap. For the live engineering status see
 plan see [../04_Roadmap/Roadmap.md](../04_Roadmap/Roadmap.md); for direction/strategy (multi-user, mobile,
 wider testing) see [DIRECTION.md](DIRECTION.md).
 
-**Status:** active build, sprint-by-sprint · **86 ADRs · 680 tests · CI green** · Season **GW1 = 2026-08-21**.
+**Status:** active build, sprint-by-sprint · **121 ADRs · 1091 tests · CI green** · **🚨 GW1 = 2026-08-21 (tomorrow)**.
 Two ways in: a **CLI** (the engine) and a **read-only Streamlit web app** (deployed, public). One principle
 throughout: **the analytics decide, the LLM only narrates, and every answer is checked against the data
 (✓/⚠).**
@@ -22,19 +22,28 @@ throughout: **the analytics decide, the LLM only narrates, and every answer is c
   **differentials**).
 - **Stat boards** — over/under-performance · Defensive Contribution · clean sheets · xG, with a relative
   🟢…🔴 quality rating and a 🚑/🚫/⛔/❓ availability flag on every table.
-- **Fixtures** — a colour-coded fixture ticker (teams × gameweeks, 1–8 weeks) + FDR.
+- **🧬 Player DNA** — a rich single-player analysis (on Players ▸ Card, reused on My Squad): an **AI Verdict**
+  (Buy/Hold/Sell + score) → an **8-axis percentile-within-position radar** → **AI Insights** → a fixture run.
+  ⚔️ **Boot Battle** compares two same-position players side by side.
+- **⭐ Watchlist** — a personal shortlist of players to keep an eye on (add from Players; view + act on it from
+  My Squad ▸ Transfer). Follows you across devices when signed in.
+- **Fixtures** — a colour-coded fixture ticker (teams × gameweeks, 1–8 weeks) + FDR, plus **🧬 Team DNA** (a
+  club's 8-axis fingerprint + grade + insights) and a **🎯 Radar** shortlist of players to buy from easy-run teams.
 - **News** — official player news (injuries / doubts / returns), most serious first.
 - **Trending** — most-owned · transferred in/out · in-form boards, with a **legend explaining the flags**
   (🟦 template = ≥20% owned · 💎 differential = ≤5% owned · …), plus **Community Signals** (what r/FantasyPL
   is talking about — best-effort).
 
 ### Your squad
-- **Build** — the optimal 15 from the full option set (budget · include/exclude · bench · objective ·
-  archetypes · weekly / bench-boost), shown on a **green pitch** *and* a sortable table; a formation preview
-  with each shape's projected XI xP.
+*(Signed in, your squad and watchlist **save to your account and sync across devices** — ADR-106; otherwise a
+downloadable `squad.json` / manager-ID import is your save.)*
+- **🧪 Squad Lab** (the build bench) — the optimal 15 from the full option set (budget · include/exclude · bench ·
+  objective · archetypes · weekly / bench-boost), shown on a **green pitch** *and* a sortable table; a formation
+  preview with each shape's projected XI xP. "Use this squad →" hands off to My Squad.
 - **My Squad** — a green **FFH-style pitch** (kits in formation, xP chips, a (C) armband + sub badges, Trends
-  + set-piece flags); edit it — rename · swap · set bench + reorder · set captain · **download**. A quick-stats
-  summary (Projected XI incl. the **captain ×2 for next GW only**, bench xP, who's injured/doubtful).
+  + set-piece flags); a **⚙ Players & lineup** panel (pick one → the DNA card · 👑 captain · 🔁 substitute) and
+  a quick-stats summary (Projected XI incl. the **captain ×2 for next GW only** + a **per-GW xP toggle**, bench xP,
+  who's injured/doubtful, ⛔ unavailable flags). **Health** carries a **🧬 "Your teams"** Team-DNA strip.
 - **AI Tips** — a grounded "this week" plan: captain · lineup · a transfer · flags.
 - **Chips** — when to play **Triple Captain · Bench Boost · Free Hit · Wildcard**, from your squad's projected
   points.

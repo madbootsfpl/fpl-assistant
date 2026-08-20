@@ -8,6 +8,24 @@ nice-to-haves and tech-debt.)*
 > navigate.** Every UI/IA change below is measured against it — don't just move clutter around, and keep the brand
 > vocabulary/mascot tasteful, not gimmicky. *(Worth pinning as a design ADR.)*
 
+## 🚨 GW1 imminent — 2026-08-21 (tomorrow)
+
+The season starts tomorrow. The one time-sensitive thing is the **Data-Hardening flip**, fully scripted in
+**[GW1_RUNBOOK](GW1_RUNBOOK.md)**: **§A** on the first results (`history --backfill` → `reseed` → commit `seed.db` →
+Reboot → verify the gated features light up), then **§B** weight calibration at ~GW4–6 (harness recommends, owner
+commits — weights stay 0 until a reviewed flip). Player/Team **DNA GW1 follow-ups** (real per-stat sparklines · W-D-L
+form dots · clean-sheet rate · team form) auto-populate as per-GW results accrue.
+
+**Shipped since the 2026-08-13 roll-up below** (now **1091 tests · 121 ADRs**): ⭐ **Watchlist** (S167, ADR-117) ·
+**Player DNA** arc (S168–171, ADR-118) · **Team DNA** (S172, ADR-119) · a post-S172 tester-fix batch (US-421→427 —
+⛔ unavailable warning · per-GW xP toggle [ADR-121] · My Squad density · filter → 🔽 popover + Position pills ·
+"My squad only" now filters the stat boards · rating reads "bottom N%" · History respects the filter) ·
+**ADR-120 Admin tester-activity — GATED (build post-GW1)**.
+
+**Parked for a morning sprint:** the **Fixtures IA restructure** (Team DNA-led — rename the tab "🧬 Team DNA & FDR",
+Team DNA first / FDR second, move the 🎯 Radar to a Players sub-tab). Gate as an ADR + plan before building. *(Logged
+in Feedback_Log.md.)*
+
 ## Sequencing (owner-agreed, 2026-08-12)
 
 **Infra changeover FIRST**, then the feature work — by technical risk (see `docs/MADBOOTS_CHANGEOVER.md`):

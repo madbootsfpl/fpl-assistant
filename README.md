@@ -13,7 +13,11 @@ and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **comp
 (Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
 (ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
 delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**89 ADRs · 707 tests · CI green.** New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
+**121 ADRs · 1091 tests · CI green.** The app has since matured into **MADBOOTS**: **🧬 Player DNA** & **Team DNA**
+analysis, a ⭐ **Watchlist**, **Google sign-in** with cross-device squads (ADR-106), and a **My Squad / 🧪 Squad Lab**
+split (ADR-105). **🚨 GW1 = 2026-08-21 (tomorrow)** — the season lights up the gated features (momentum · price ·
+manager-ID import); the Data-Hardening flip is documented in **[GW1_RUNBOOK](docs/GW1_RUNBOOK.md)**.
+New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
 (features · what's gated until GW1 · backlog · roadmap) and **[Direction & options](docs/00_Project/DIRECTION.md)**
 (hobby vs multi-user/paid · mobile · wider testing). Running a beta? **[BETA.md](docs/BETA.md)**. Also the
 [Roadmap](docs/04_Roadmap/Roadmap.md).
@@ -212,11 +216,14 @@ A thin, **read-only, local** web view over the same analytics — the CLI stays 
 just another way to look at it. Two edges, both reusing the exact same engine:
 
 **Streamlit** — the interactive UI (ADR-051/052/069). A **Home** landing (with a ⏳ **live deadline clock** that
-ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs** (incl. a beta 📣 Feedback tab); the two consolidated tabs switch views with a lazy segmented control:
+ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + a set of **sidebar tabs** — Home · 🧪 Squad Lab · Players ·
+Fixtures · My Squad · News · Trending · Ask · 🎥 Maddie Explains · Help · 📣 Feedback (the old *Squads* tab is now
+split into **My Squad** + **🧪 Squad Lab** — ADR-105); the data-heavy tabs switch views with a lazy segmented control:
 - **Players** — a **Team · Position · Player** filter over the **Pool** (photos, falling back to the **club
   shirt** when a player has none; the **table first**, a
   top-15 bar below; page through all, sort; a **⚽/🚩/🎯 Set** set-piece flag; a **🔺/🔻 Price** change predictor
-  — directional pressure from net transfers, live from GW1) plus stat views: **Set pieces**
+  — directional pressure from net transfers, live from GW1) plus a **Card** view (🧬 **Player DNA** — an AI Verdict ·
+  an 8-axis percentile radar · AI Insights; ⚔️ **Boot Battle** compares two same-position players) and stat views: **Set pieces**
   (who takes **penalties · corners · free-kicks** + Own%/Val/£m — a low-ownership **differential** lens) ·
   **over/under-perf · Defensive Contribution · clean sheets · xG** (season-to-date; clean sheets & xG carry a
   relative **🟢…🔴 quality rating** vs the players shown; every table has a **Fit** availability column —
@@ -225,14 +232,18 @@ ticks + escalates ⏳→🟠→🔴 as it nears, ADR-086/088) + **8 sidebar tabs
   runs), plus a **🎯 Target by fixtures** shortlist: the best players to buy from the easiest-run teams — for
   planning a new squad or a wildcard, filterable by **position**, capped by a **max price**, and sortable by
   **xP** or **Val/£m** (bang-for-buck)
-- **Squads** — a **Gameweeks-ahead** box-select (1 · 2 · 3 · 4 · 5 · 10) sets the prediction horizon for the whole tab · **Build**
+- **🧪 Squad Lab** + **My Squad** (split from the old *Squads* tab — ADR-105; each has a **Gameweeks-ahead**
+  horizon select, My Squad defaulting to 1 GW and Squad Lab to 5) — **Squad Lab** builds
   (the full `squad` options → the optimal 15, shown on the **green pitch** + a sortable table; a **formation
   preview** with each shape's **projected XI xP** + a compare-all-formations table) · **My Squad** (a **green
   FFH-style pitch** — kits in formation + a bench
   strip, xP chips, a (C) armband + sub badges; each card shows Trends + **set-piece duty** ⚽/🚩/🎯;
   edit: rename/swap (with a **position filter** + an **"Affordable only"** check + your **bank**)/bench/captain/download (+ optional **☁ Save/Load across devices** by a handle when the cloud store is configured — ADR-094); a **quick-stats summary** — Projected XI (incl. the **captain ×2
   for next GW only**) / Captain / Bench xP + who's injured/doubtful — and a **bench order** you can see and
-  **reorder** (auto-sub priority)) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
+  **reorder** (auto-sub priority); a **⚙ Players & lineup** panel — pick a player → the 🧬 **Player DNA** card ·
+  👑 make captain · 🔁 substitute; a per-GW **xP toggle**; ⛔ flags for unavailable members; **Health** carries a
+  🧬 **Team DNA** "Your teams" strip; signed in, your squad **saves to your account + syncs across devices** —
+  ADR-106) · **AI Tips** (a grounded gameweek plan — captain · lineup · a transfer · flags) ·
   **Chips** (a grounded chip-strategy advisor — when to play **Triple Captain · Bench Boost · Free Hit ·
   Wildcard**) · **Health** (5-GW analysis) · **Transfer** (XI-aware swaps, **Apply**) · **Captain**
   (and **set** yours) — the manage views share one squad picker

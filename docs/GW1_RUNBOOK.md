@@ -5,6 +5,10 @@ preseason xP is unchanged. This is the ordered checklist to turn it on **calibra
 to verify the GW1-gated features. Nothing here changes a weight until the backtest says so — the harness
 **recommends**, you **commit**.
 
+> **🚨 T-1 (2026-08-20):** the **GW1 deadline is tomorrow, 2026-08-21**. Picks / manager-ID import unlock **at the
+> deadline**; the backfill + returns in **§A need matches *played***, so §A runs **once the first results post**
+> (not at the whistle). Nothing to flip today — this is the on-the-day checklist.
+>
 > Prep done (Sprint 138): the backfill (`history --backfill`), the form/set-piece/DefCon terms (dormant), the
 > calibration harness (`analytics/backtest.py`), and the `calibrate` CLI all exist. GW1 is a **switch-flip**.
 >
