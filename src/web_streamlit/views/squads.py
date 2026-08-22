@@ -45,6 +45,7 @@ from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
 from src.web_streamlit import analytics
+from src.web_streamlit.badges import shirt_url_by_id
 from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
 from src.web_streamlit.squads import (
@@ -85,7 +86,7 @@ def _formation_xi_scores(pool, budget, include, exclude, scores, display_xp):
 
 # ---- Build (the full CLI `squad` options → a saveable 15; ADR-062) ---------------------------------
 
-def render_build(players, upcoming, history, gw_history, photos, badges, *, horizon=5):
+def render_build(players, upcoming, history, gw_history, photos, badges, *, teams=None, horizon=5):
     by_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m": p["id"]
                 for p in sorted(players, key=lambda p: (p["web_name"] or "").lower())}
     labels = list(by_label)
@@ -189,8 +190,9 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, hori
     bench_players = [p for p in selected if p["id"] not in xi]
     bench_roles = {p["id"]: role for role, p in bench_order(bench_players, display_xp)}
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in selected}}
+    kits = shirt_url_by_id(selected, teams)     # the pitch shows the live club kit (ADR-084 rev), not the mugshot
     render_pitch(xi_players, bench_players, captain_id=None, xp_by_id=display_xp, photos=photos,
-                 next_opp=next_opp, bench_roles=bench_roles)
+                 next_opp=next_opp, bench_roles=bench_roles, kits=kits)
 
     render_player_table([{
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
@@ -408,8 +410,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         bench_roles[gk_sub["id"]] = "GK"
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
+    kits = shirt_url_by_id(owned, teams)        # the pitch shows the live club kit (ADR-084 rev), not the mugshot
     render_pitch(xi, bench, captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
-                 team_names=team_names, bench_roles=bench_roles,
+                 team_names=team_names, bench_roles=bench_roles, kits=kits,
                  fixtures_by_id=fixtures_by_id)             # ADR-109: per-GW row in the hover popover
 
     # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +

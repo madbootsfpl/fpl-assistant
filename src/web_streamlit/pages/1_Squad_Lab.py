@@ -54,4 +54,4 @@ if _line:
 if not players:
     st.info("No players — it's refreshing; check back shortly.")
 else:
-    views.render_build(players, upcoming, history, gw_history, photos, badges, horizon=horizon)
+    views.render_build(players, upcoming, history, gw_history, photos, badges, teams=teams, horizon=horizon)

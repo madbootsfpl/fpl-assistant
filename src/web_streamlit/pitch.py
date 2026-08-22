@@ -67,14 +67,19 @@ _SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
 
 
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
-              fixtures_by_id=None) -> str:
+              fixtures_by_id=None, kits=None) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
-    Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup."""
+    Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup.
+
+    The **pitch image is the live club kit** (`kits`, ADR-084 rev 2026-08-22) — transfer-proof, like FPL's own
+    pitch — while the **hover card keeps the mugshot** (`photos`), which self-heals when FPL refreshes it. Falls
+    back to `photos` for the kit when no `kits` map is passed (older callers/tests)."""
     e = html.escape
-    img = photos.get(player["id"], "")
-    # The image (photo/shirt via US-255); a neutral 👕 placeholder if even the shirt is missing (no crash).
-    pic = f'<img src="{e(img)}" alt="">' if img else '<div class="noimg">👕</div>'
+    photo = photos.get(player["id"], "")                       # the mugshot — for the hover card (US-255)
+    kit = (kits if kits is not None else photos).get(player["id"], "")   # the pitch kit — the live club shirt
+    # A neutral 👕 placeholder if even the kit is missing (no team code) — never a crash.
+    pic = f'<img src="{e(kit)}" alt="">' if kit else '<div class="noimg">👕</div>'
     if player["id"] == captain_id:
         pic += '<span class="c-badge" title="Captain">C</span>'
     if sub_role:
@@ -91,7 +96,7 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     # the tester's card-under-the-shirt. `card_body` html-escapes its own values.
     pid = player["id"]
     pop = card_body(player, team_name=(team_names or {}).get(player["team"], player["team"]),
-                    photo_url=img or None, fixtures=(fixtures_by_id or {}).get(pid),
+                    photo_url=photo or None, fixtures=(fixtures_by_id or {}).get(pid),
                     projected_xp=xp_by_id.get(pid), compact=True)
     pop_html = f'<div class="kit-pop">{pop}</div>' if pop else ""
     return (f'<div class="kit"><div class="pic">{pic}</div>'
@@ -101,16 +106,17 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
 
 
 def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
-                 fixtures_by_id=None) -> None:
+                 fixtures_by_id=None, kits=None) -> None:
     """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
 
     `xi` / `bench` are player rows; `next_opp` maps a team short_name → its next fixture cell
     (`{opponent, venue, ...}`) or None. `bench_roles` (US-246) maps id → sub role ("1st"/"2nd"/"3rd"/"GK");
-    when given, the bench is ordered by that priority. Emits one self-contained HTML/CSS block (no JS) —
-    display-only; the edit controls live on the page.
+    when given, the bench is ordered by that priority. `kits` (id → club-shirt URL, `shirt_url_by_id`) draws the
+    **live club kit** on the pitch (transfer-proof); the hover card keeps the mugshot (`photos`). Emits one
+    self-contained HTML/CSS block (no JS) — display-only; the edit controls live on the page.
     """
     kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
-              fixtures_by_id=fixtures_by_id)
+              fixtures_by_id=fixtures_by_id, kits=kits)
     parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
 
     for pos in _ROWS:

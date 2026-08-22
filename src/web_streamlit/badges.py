@@ -99,3 +99,13 @@ def photo_url_by_id(players, teams=None) -> dict:
         else:                                          # no code, or the photo 403s → the club shirt
             out[p["id"]] = shirt_url(team_code.get(_get(p, "team")), _get(p, "position"))
     return out
+
+
+def shirt_url_by_id(players, teams=None) -> dict:
+    """`{player id -> club-shirt kit URL}` by each player's **current** team — the pitch kit (ADR-084 revision,
+    2026-08-22). Unlike `photo_url_by_id` (a mugshot, else the shirt), this is **always** the shirt, derived from
+    the live club — so a just-transferred player is never stuck in a **stale mugshot** (FPL's photo CDN lags a
+    transfer by weeks; the kit graphic updates instantly, like FPL's own pitch). GK (`_1`) variant for keepers.
+    Empty-safe; an empty string when the team code is missing (→ a 👕 placeholder on the pitch, no crash)."""
+    team_code = {t["short_name"]: t["code"] for t in teams} if teams else {}
+    return {p["id"]: shirt_url(team_code.get(_get(p, "team")), _get(p, "position")) for p in players}
