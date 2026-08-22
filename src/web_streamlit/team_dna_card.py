@@ -97,9 +97,12 @@ def fixtures_html(fixtures) -> str:
 
 
 def key_players_html(rows) -> str:
-    """A key-players-to-target table. `rows` = list of dicts (name, pos, xgi90, pts90, minpct, own)."""
+    """A key-players-to-target table. `rows` = list of dicts (name, pos, xgi90, pts90, minpct, own). Empty early
+    in the season (nobody has the ~900 minutes to rank yet) → the heading + a "fills in" note, not a blank."""
     if not rows:
-        return ""
+        return (TD_CSS + '<div class="td-card"><div class="td-ttl">🎯 Key players to target (FPL impact)</div>'
+                '<div class="td-sub">🌱 Fills in as the season plays — a player needs ~900+ minutes to rank here.'
+                '</div></div>')
     body = "".join(
         f'<tr><td>{_esc(p["name"])}<span class="td-pos">{_esc(p["pos"])}</span></td>'
         f'<td>{p["xgi90"]:.2f}</td><td>{p["pts90"]:.1f}</td><td>{p["minpct"]}%</td>'
@@ -133,8 +136,7 @@ def render_team_dna(dna, *, fixtures=None, key_players=None) -> None:
     render_insights_card(team_insights(dna))
     if fixtures:
         st.markdown(fixtures_html(fixtures), unsafe_allow_html=True)
-    if key_players:
-        st.markdown(key_players_html(key_players), unsafe_allow_html=True)
+    st.markdown(key_players_html(key_players or []), unsafe_allow_html=True)   # renders a "fills in" note when empty
 
 
 # ── My Squad ▸ Health: the "Your teams" strip (US-420) ────────────────────────

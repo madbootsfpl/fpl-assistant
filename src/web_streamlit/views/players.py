@@ -116,6 +116,10 @@ def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
     (a row → availability emoji, ADR-074), a compact **Fit** column + a legend caption are added. Column
     formatting + alignment come from the shared convention (ADR-072) via `column_config`. `key` is retained for
     call-site compatibility (paging is retired — the grid scrolls, so the header-sort orders the whole set)."""
+    if not stat_rows:                                   # early season: season-to-date stats reset at GW1 (2026-08-22)
+        st.info("🌱 Early season — these season-to-date stats fill in as games are played. "
+                "(If you've set a filter, try clearing it.)")
+        return
     page = show_count(stat_rows)
 
     def _row(r):

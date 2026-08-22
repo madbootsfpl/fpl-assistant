@@ -58,7 +58,9 @@ def test_key_players_helper_and_table():
     assert kp[0]["xgi90"] > 0
     html = key_players_html(kp)
     assert "Star" in html and "xGI/90" in html
-    assert key_players_html([]) == ""
+    # empty (early season — nobody has ~900 mins yet) → the heading + a "fills in" note, not a blank (2026-08-22)
+    empty = key_players_html([])
+    assert "Key players to target" in empty and "Fills in as the season plays" in empty
 
 
 def test_key_players_skips_low_minute_players():
