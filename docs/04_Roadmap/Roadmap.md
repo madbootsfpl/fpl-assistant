@@ -1,265 +1,293 @@
 # MADBOOTS Roadmap
 
-*Consolidated 2026-08-05 (Sprint 050) into a single forward-looking page; kept current through Sprint 172 + the post-S172 feedback batch (2026-08-20).
-Phase 1 was delivered as a **CLI** (ADR-002/003), not the original web-first plan; that original 5-phase
-plan and its bullet-by-bullet reconciliation live in git history and the per-sprint docs — this page looks
-**forward**.*
+*Re-cut 2026-08-24 (post-GW1) into a single forward-looking page with an explicit **end-state vision**.
+Everything known is pulled in — including things we may well decide **not** to build; a parked idea with a
+recorded reason is worth more than a forgotten one. Phase 1 shipped as a **CLI** (ADR-002/003), not the
+original web-first plan; that plan and its reconciliation live in git history and the per-sprint docs.
+Previous consolidations: 2026-08-05 (Sprint 050), kept current through Sprint 172.*
 
-**Where we are:** a mature CLI FPL assistant — an analytics + optimisation core, a decision-support suite,
-and a grounded natural-language layer (`ask` + `chat`) — now with a **deployed read-only Streamlit web UI**
-and a **Crowd & Community Signals** layer (trends · flags · an FPL news lens · manager-ID import · Reddit
-buzz), plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags —
-ADR-070; the **AI Tips** tab) and **casual-readable stat boards** (a relative 🟢…🔴 quality rating —
-ADR-071/073; consistently formatted numbers — ADR-072; **🚑 availability flags** in every player table —
-ADR-074, incl. the CLI ranking tables + a chance% on ❓; a **projected-XI score + formation comparison** on
-Build — ADR-075; a **configurable prediction horizon** across the Squads tab — ADR-077; a **My Squad quick-stats summary** +
-a **bench order** you can see, **set**, and that starts sensibly — ADR-078/079; a **pronoun-aware**,
-follow-up-capable chat in the browser — ADR-080). Since then the app matured into **MADBOOTS** (ADR-103):
-Google auth + per-user cross-device persistence (ADR-106), the **My Squad / 🧪 Squad Lab** IA split (ADR-105),
-a ⭐ **Watchlist** (ADR-117), and the differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
-**121 ADRs · 1091 tests · CI green.** **🚨 GW1 deadline is 2026-08-21 (tomorrow).** Form/per-GW insight and the
-momentum boards are gated on live results; the **Data Hardening plumbing is wired dormant** (Sprint 069) and the
-calibration harness is built (Sprint 138, ADR-101) — GW1 is a switch-flip, run per the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**.
-
-**Status legend:** ✅ Done · ◑ Partial · ⬜ Not started
+**Status legend:** ✅ Done · ◑ Partial · ⬜ Not started · ⏳ Gated (waiting on data or a decision) · 🅾️ Declined
 
 ---
 
-## ✅ Delivered
+## Where we are — 2026-08-24, GW1 played
 
-### Analytics & optimisation core (the CLI engine)
-- **Data:** FPL API client (`bootstrap-static`, `fixtures`, `element-summary`) + SQLite cache (upsert,
-  generic migrations). FPL is the source of truth; ClubElo is a best-effort second source that degrades
-  gracefully (retry-then-degrade, importance-scaled). Past-season history backfill.
-- **Analytics:** custom FDR (overall + ClubElo Elo), Points-per-£m value, **Expected Points (xP)** over a
-  multi-week horizon, xG/xA/xGI/xGC, over/under-performance, Defensive Contribution, clean-sheet solidity.
-- **One xP metric (ADR-041):** the optimiser and the decision layer share a single `decision_xp` recipe
-  (baseline + a sane low-evidence fallback + xMins) — so a squad built on xP has no phantom free transfers.
-- **Expected minutes (xMins) v0 (ADR-038):** `chance%` × a recency-weighted historical minutes share
-  weights xP **default-on** at every decision edge; shown as expected minutes; `--no-xmins` opts out.
-- **Optimisation:** an ILP squad selector (PuLP) — best XI or full 15, flexible formations, declared
-  bench, include/exclude, pluggable objective; **archetypes** (`--cheap`/`--premium`/`--differential`,
-  ADR-043/044) and **bench-aware** builds (`--weekly`/`--bench-boost`, ADR-045).
-- **User state:** saved / reloadable squads (re-priced, with current injuries + departures).
+A mature FPL assistant: an analytics + optimisation core, a decision-support suite, a grounded
+natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
+differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-### Decision support
-- **`captain`** (ADR-029) — top picks by next-GW xP; opponent, venue, penalty duty.
-- **`transfer`** (ADR-030) — best single legal upgrades, **ranked by XI improvement** (XI-gain via
-  `best_xi_points`, ADR-046; `--raw` for the old ranking); a coordinated multi-move **plan** (`--count`,
-  ADR-035).
-- **`analyse`** (ADR-031) — projected XI xP over N GW (per-GW breakdown, ADR-032), weak links, injuries.
-- **gameweek plan** (ADR-070) — a grounded **"this week"** recommendation for a squad: who to **captain**,
-  any **lineup** change, one **transfer** to consider, and **flagged** players — an *assembler* over the
-  above primitives (no new analytics), narrated + verified; an `ask`/`chat` intent + a **Squads → This
-  week** web view.
+**1155 tests · 126 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
-### Natural-language layer (grounded)
-- **`ask`** — eight intents (captain · transfer · analyse · start/bench · compare · build-a-squad ·
-  best-players · **fixtures**), all **analytics-decide, LLM-narrates**, every answer **verified** against
-  the data (✓/⚠ trust line, ADR-037). The LLM (local Ollama) is optional — degrades to decision + facts.
-- **`chat`** (ADR-047) — a conversational mode where follow-ups build on the last turn (why / next /
-  what-about), still analytics-decided each turn.
-- ✅ **AI Chat Assistant** (Sprint 100, ADR-085) — the Ask tab also answers **FPL rules** from a curated
-  knowledge base (`src/fpl_rules.py`, **verified ✓**) and open **tactics** questions free-form, clearly
-  labelled **ℹ not verified** (never a specific pick). Grounded squad/player questions unchanged — three
-  honest states: ✓ grounded · ✓ rules · ℹ tactics.
-- **`fixtures`** (ADR-048/049/067) — a league FDR ranking, a single team's schedule, a **squad's players by
-  their fixture run**, or a **squad's teams** ranked by their run (with player-counts, via a "teams" cue);
-  team names resolve or ask, never guess.
+**GW1 (2026-08-21) has been played and the season is live.** The data-hardening flip is done: per-GW history is
+backfilled (604 players), and the season-to-date surfaces that reset at rollover now fall back to last season
+until they can answer for themselves (ADR-126). What remains gated is **calibration** — the weights stay 0 until
+`calibrate` clears its ≥4-gameweek guard at ~GW4-6.
 
-### Engineering
-- **CI (GitHub Actions):** ruff + pytest on push (Py 3.13/3.14). Layered one-way architecture
-  (`api → ingest → storage → analytics → ui → cli`); 121 ADRs; 1091 offline tests; shared table renderer.
+GW1 also cost us six bugs of one species: code that had shipped correct-looking and had **never executed under
+real data** — a flag that only lies mid-gameweek, a `max()` that only misbehaves once `points_per_game` is
+non-zero, `.get()` on a `sqlite3.Row` in a loop that had always been empty, and three separate cases of a
+missing value rendering as a confident zero. Preseason green tests proved less than they appeared to. Expect
+more as the first blank and double gameweeks run their own branches for the first time.
 
 ---
 
-## ▶ The web track — Streamlit (ADR-051)
+## ✅ Delivered — the condensed trail
 
-A read-only, local web view over the analytics — the web as a new *edge* over the same core (**the CLI
-stays the engine**). Two steps taken:
-- ✅ **A thin FastAPI slice** (Sprint 051, ADR-050) — `src/web/`, server-rendered, reusing the CLI text
-  renderers in `<pre>`. Now **frozen** as the lean "also-serves-HTTP" reference.
-- ✅ **A Streamlit spike + decision** (Sprint 052, ADR-051) — measured head-to-head (58 vs ~130+ LOC;
-  interactive vs static; +21 vs lean deps). Verdict: **adopt Streamlit** as the UI we grow (pure-Python,
-  interactive; fits "architecture over frontend syntax") — the heavier deps kept optional/web-only.
-- ✅ **The Streamlit edge, graduated + grown** (`src/web_streamlit/`, ADR-052; tests + `requirements.txt`)
-  — a multipage app: Home · Players · Fixtures (ticker) · Analyse · Transfer · Build · Captain · My Squad
-  (formation pitch) · News · Trending (+ Community Signals) · Ask (chat). Session **squads** (build / upload
-  / manager-ID import; edit — all in `session_state`, no server writes), photos + badges, charts.
-- ✅ **Deployed** to Streamlit Community Cloud (Sprint 053, ADR-053; runbook: `docs/DEPLOY.md`) — public,
-  read-only; a committed `data/seed.db` + `seed_squads.json` seed it. The core stays the one engine; the
-  guardrail test (core imports no web) carries over.
-- ✅ **A redesigned My Squad pitch** (Sprint 099, ADR-084) — a green FFH-style CSS pitch (kits in formation,
-  xP chips, (C) armband + sub badges), now reused on **Build** too (Sprint 101, US-261); and a **⏳ next-
-  deadline countdown** banner on Home + Squads, derived from fixtures (Sprint 101, ADR-086).
-- ✅ **Team DNA — a team-level analysis companion** (ADR-119, **DONE S172**, US-418/419/420) — the same fingerprint
-  for a *club*, reusing the Player-DNA engine. **Two doorways:** **Fixtures ▸ 🧬 Team DNA** (browse any team: an
-  8-axis radar [attack · creation · defence · clean-sheet · fixtures · set-pieces · output · depth,
-  percentile-vs-league] + grade + insights + fixtures + key-players) and **My Squad ▸ Health "Your teams" strip**
-  (your clubs graded, drills into the card — the lead). `analytics/team_dna.py` + `web_streamlit/team_dna_card.py`;
-  labelled proxies; works preseason; no new tab; no `decision_xp`/FDR change. **🟡 GW1 follow-ups:** real
-  clean-sheet rate + team form. **🔴 deferred:** event-data bars / zones / shot map (future `soccerdata` ADR).
-- ✅ **Player DNA — a rich single-player analysis page** (ADR-118, **DONE S168–S171**) — the player card evolved
-  into a full section (**AI Verdict → 8-axis percentile radar → AI Insights → performance trend**), on **Players ▸
-  Card** + reused on **My Squad ▸ Players & lineup** (owned-aware Hold/Sell). `analytics/player_dna.py` [percentiles
-  · insights · gw-trend] + `explain.py` verdict + `web_streamlit/{dna,verdict,insights}_card.py` +
-  `player_dna_view.py`; all on data we hold today, **no `decision_xp` change**. **GW1 follow-ups:** the per-GW trend
-  auto-populates at kickoff; real per-stat **sparklines** + **W-D-L form dots** are tracked (need per-GW columns /
-  results). **Out of scope:** the **shot map** (Opta/Understat event data → a future gated `soccerdata` ADR). *(The
-  original full-page sketch below is now delivered:)*
-- ⬜ **Pool-wide value-frontier scatter** (post-GW1 candidate; competitive look at aceanalyst.app, 2026-08-19) — a
-  **2-axis scatter of the whole player pool** (e.g. price × xP with a value frontier, or xGI × points, DEFCON ×
-  points) with median baselines + position/price filters. **Complements** the per-player DNA radar: the radar shows
-  *one* player's shape, the scatter positions *everyone* at once (spot value/outliers/over-performers). Data's all
-  there (xg/xa/xgi/points/price/defcon); an Altair/Plotly plot on the Players tab. **MadBoots spin:** a grounded
-  hover/verdict on each point, not just a dot to interpret.
-- ◑ ~~Player DNA page~~ — evolve the player card into a full page: an **8-axis percentile-within-position radar** +
-  an **AI Verdict**
-  (Buy/Hold/Sell + score, from existing signals) + key-rate cards + Fixture Run + AI Insights, all **live on
-  data we already hold**. The **performance-trend line, sparklines and W-D-L form** auto-populate **from GW1**
-  (per-GW history). The **shot map** is **out of v1** (Opta/Understat event data — a future `soccerdata` ADR,
-  ADR-016). **One component**, home on **Players**, reused from **My Squad ▸ Players & lineup** (no new tab).
-  Real-data preview approved (`scratchpad/player_dna_preview.html`).
+*Kept compact on purpose; the full record is in `docs/05_Sprints/` and the [ADR index](../06_Decisions/ADR-000-index.md).*
+
+**Core engine (CLI).** FPL API client + SQLite cache (upsert, generic migrations); ClubElo as a best-effort
+second source. Custom FDR (overall + Elo), pts/£m value, **xP over a multi-week horizon**, xG/xA/xGI/xGC,
+over/under-performance, DefCon, clean-sheet solidity. **One xP recipe** (`decision_xp`, ADR-041) shared by the
+optimiser and the decision layer — so a squad built on xP has no phantom free transfers. **xMins v0** (ADR-038)
+weights xP default-on at every decision edge. An **ILP squad selector** (PuLP) — best XI or full 15, formations,
+declared bench, include/exclude, archetypes (ADR-043/044), bench-aware builds (ADR-045).
+
+**Decision support.** `captain` (ADR-029) · `transfer` ranked by XI-gain (ADR-046) + a coordinated plan
+(ADR-035) · `analyse` with a per-GW breakdown (ADR-032) · a grounded **gameweek plan** (ADR-070) · a v0
+**chip-timing advisor** (ADR-082) · a **price-change predictor** (ADR-092) · **set-piece takers** (ADR-081).
+
+**Grounded language layer.** `ask` — eight intents, all *analytics-decide, LLM-narrates*, every answer
+**verified** against the data (✓/⚠, ADR-037); `chat` (ADR-047) with follow-ups; an FPL **rules** assistant over a
+curated KB (ADR-085). The LLM is optional — absent, it degrades to decision + facts.
+
+**The web edge.** A thin FastAPI slice (ADR-050, now **frozen** as the lean "also-serves-HTTP" reference) → a
+measured **Streamlit spike + decision** (ADR-051) → the app we grow (ADR-052), **deployed** to Community Cloud
+(ADR-053). A CSS **pitch view** (ADR-084), a **countdown** banner (ADR-086/088), the **My Squad / 🧪 Squad Lab**
+IA split (ADR-105), a **player-actions panel** (ADR-108), a **per-GW xP toggle** (ADR-121), **scrollable stat
+boards** with honest sort (ADR-116), a ⭐ **Watchlist** (ADR-117), **compare two players** (ADR-110).
+
+**The differentiators.** **Player DNA** (ADR-118, S168-171) — AI Verdict → 8-axis percentile radar → AI Insights
+→ performance trend, on Players ▸ Card and My Squad. **Team DNA** (ADR-119, S172) — the same fingerprint for a
+club, via Fixtures ▸ 🧬 Team DNA and the My Squad ▸ Health "Your teams" strip.
+
+**Crowd & signals (Phase 6, Tiers 1-2).** Crowd/momentum ingestion + `crowd_flags` (ADR-057), a Trending page,
+an FPL **news lens**, **manager-ID import** (ADR-058), Reddit **RSS buzz** (ADR-076), **media headlines**
+(ADR-093) — all degrade-gracefully, display-only.
+
+**Product & ops.** MADBOOTS rebrand (ADR-103) · Google auth + per-user persistence (ADR-106) · cross-device
+squads (ADR-094) · beta gate, waitlist and self-service unsubscribe (ADR-087/102/122) · anonymous usage
+analytics (ADR-100) · the calibration harness (ADR-101).
+
+**Post-GW1 (2026-08-24).** "Upcoming" fixtures cut by **gameweek deadline**, not FPL's `finished` flag
+(ADR-123) · the cold-start xP rate shrinks by **evidence, not value** (ADR-124) · the full **per-GW history
+backfill** · the gated boards, Team DNA key-players and Player DNA all **fall back to last season** rather than
+showing nothing (ADR-126) · in-season xMins **deferred** with its trap recorded (ADR-125).
 
 ---
 
-## Then — Data Hardening (post-GW1)
+## 🎯 The end state — what MadBoots is trying to be
 
-The substance that comes alive once the season runs (GW1 = 2026-08-21). **Prep done, dormant** (Sprint 069,
-ADR-060) — GW1 is a flip (`history --backfill` + calibrate the weights). **The calibration tooling is now built**
-(Sprint 138, ADR-101): a walk-forward backtest (`analytics/backtest.py`) + `python app.py calibrate` + the
-**[GW1_RUNBOOK](../GW1_RUNBOOK.md)** — the flip is documented and measurable, no longer a guess. Real calibration
-runs at ~GW4–6 (no per-GW data preseason); the harness **recommends**, the owner **commits** (weights stay 0).
-- ◑ **Per-GW `history` ingestion** — a `player_history` table filled by the *existing* `element-summary`
-  walk (empty preseason → live GW1). *(Full 567-player backfill can ride sooner.)* (Sprint 069, US-196.)
-- ◑ **In-season form blend into xP** — a dormant rolling-**pp90** form term in the one `decision_xp` recipe
-  behind `FORM_WEIGHT = 0` (Sprint 069, US-197). Still ahead: **calibration** at GW1 + rolling 3-GW/6-GW
-  *trend views* over the new per-GW data.
-- ◑ Attack/Defence FDR split + recent-form weighting (preseason strengths are 0 — ADR-005).
-- ⬜ Price-change predictor (directional flags from net-transfer deltas — flags, not truth).
+**A tool that tells you what to do and shows its working — and admits what it doesn't know.**
 
----
+The market splits into **solvers** (fplapex — optimise hard, explain nothing) and **viz tools** (aceanalyst —
+show everything, decide nothing). MadBoots straddles both *and* narrates. The nearest neighbour in philosophy is
+**fplanalyser** — grounded and narrative, squad grades, plain-English verdicts, "a plan not a panic".
 
-## New — Crowd & Sentiment Signals (Phase 6)
+⚠ **Recalibration (2026-08-19):** *"we explain, they don't"* is a weak claim against fplanalyser — they explain
+well too. The real edge is **execution + the DNA visuals + free/honest positioning + the full workflow in one
+place.** Own the *explain + DNA + honesty* lane; don't try to out-solver a solver.
 
-Fold *"what managers are doing"* + expert/pundit signals into the tools — as a **complementary lens, not a
-rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** it and never overrides it
-(owner's calls: *lens + flags*; *free FPL signals first*). Investigation confirmed most of this is already
-**free & structured in the FPL API** — no scraping needed to start.
+The honesty half is not a slogan — it is a feature the rivals don't ship. When a board can't answer, it says so
+and names the season it's showing instead. When a player can't be ranked, it says that rather than drawing a
+shape. That behaviour is now enforced by tests, not just intent.
 
-**Tier 1 — free & structured (already in the API; start here).** Season-time (0 preseason → live at GW1):
-- ✅ Ingest crowd/momentum fields: `transfers_in/out_event`, `cost_change_event`/`_start`, `form`,
-  `ict_index` (+ Influence / Creativity / Threat), `value_form` (Sprint 060, US-182). (`selected_by`
-  already stored, ADR-044.)
-- ✅ A **lens + flags** — `crowd_flags` (🔥 trending · 💰 price · 📈 form · template/differential), on
-  **Players · Build · Analyse · My Squad** (Sprint 060, US-183) + **Captain · Transfer** (Sprint 061,
-  US-184).
-- ✅ A **template-risk** captaincy lens — the ownership flags + a "safe template vs differential swing"
-  caption on Captain (Sprint 061, US-184). *(A full captaincy-% EO model is later.)*
-- ✅ A **"trends"** `ask`/`chat` intent + a **Trending page** — most-owned / transferred in-out / in-form
-  boards over a pure `trending` helper (Sprint 067, US-193/194). Ownership works now; momentum/form light up
-  at GW1.
-- ✅ **Set-piece takers + a differential lens** — ingest the corner/FK order fields + `set_piece_flags`; a
-  Players **"Set pieces"** view (pen/corner/FK takers + Own%/Val/£m, filterable) + a Pool flag; find
-  low-ownership set-piece takers (Sprint 095, US-249/250, ADR-081). Display-only; a gated set-piece xP boost
-  is a possible later modelling step.
-
-**Tier 2 — external / extended signals (started Sprint 064, ADR-058; degrade gracefully like ClubElo).**
-- ✅ **Community Signals** — a Reddit **RSS** buzz counter (`r/FantasyPL/.rss?limit=100`, **no auth/secret**
-  — the `.json` API 403s), surfaced as a paginated Trending "💬 Talked about" board that counts mentions
-  across the latest ~100 posts (Sprint 087, ADR-076); degrade-gracefully + cached + button-gated (Sprint
-  068, US-195, ADR-059). *Cloud-IP may block → degrades. Buzz, not sentiment.*
-- ✅ FPL official **news lens** — the stored `player.news` + `scout_news_link` on a **News** page
-  (Sprint 064, US-190).
-- ✅ **Import your team by manager-ID** — the public FPL entry API → the session active squad (Sprint 064,
-  US-191; picks GW1-gated → live 2026-08-21).
-- ⬜ Reddit **r/FPL** aggregate sentiment (Reddit API + a Cloud secret). X/Twitter (paid/restricted — skip).
-- ⬜ Pundit / video NLP — LLM-summarise FPL YouTube / articles into structured signals (research-heavy).
-
-**Tier 3 — evaluation (before trusting any of it).**
-- ⬜ Backtest: does **following vs fading the crowd** beat xP-only? (ties to *Evaluation & feedback loops*).
-
-**Principle:** analytics decide; the crowd is a **lens**. *Flags, not truth* (echoes the price-change note).
+**In full, the end state is:**
+1. **A decision engine** — one xP recipe, calibrated on real returns, with a multi-gameweek transfer path and a
+   full chip-sequence plan.
+2. **An explanation layer** — every recommendation carries a grounded *why* (Edge / Risk), verified against the
+   data, never the model's imagination.
+3. **A DNA layer** — player, team and squad fingerprints that make a shape legible at a glance.
+4. **A triage layer** — what needs your attention this week, and how much you'd regret ignoring it.
+5. **An honest layer** — degrade visibly, label the source, never render a guess as a measurement.
+6. **An interaction layer** — tap a shirt, not a dropdown (see *Interaction*, below).
 
 ---
 
-## Later — advanced optimisation & evaluation
+## 🥇 Next up (agreed 2026-08-24)
 
-> **Competitive note (2026-08-19):** a look at **fplapex.com** (a mature LP-solver FPL tool, same core approach)
-> confirms the solver core is **table-stakes**. The two features worth borrowing — **both already listed below** —
-> are the **multi-GW transfer-path planner** and the **full chip-sequence scan**, done the MadBoots way: with a
-> **grounded "why" per move/chip** (the explanation layer a pure solver lacks). Its **competitive layer**
-> (mini-league H2H · win-probability sim · differentials) reinforces the Crowd/Signals track (Phase 6, GW1-gated).
-> **Strategy: own the *explain + DNA + honesty* lane; don't try to out-solver a solver.** Both below → **post-GW1**
-> candidates. Also reviewed **aceanalyst.app** (a *viz* tool — scatter plots · efficiency frontier · archetypes;
-> closer to the DNA/stat-boards half): the lens worth borrowing is a **pool-wide value-frontier scatter** (see the
-> web track) that complements the per-player DNA radar. Together the two rivals map the field (**solvers vs viz
-> tools**); **MadBoots straddles both *and* explains** — a strong, defensible middle. **fplanalyser.co.uk**
-> (reviewed 2026-08-19, via screenshots) is the **closest to our *philosophy*** — grounded + narrative (squad
-> grades, plain-English verdicts, "a plan not a panic"). ⚠ **Recalibration:** "we explain, they don't" is *weaker*
-> vs this one — they explain well too; the edge vs FPLAnalyser is **execution + the DNA *visuals* + free/honest
-> positioning + the full workflow.** Its best features (candidates below).
+1. ⬜ **Player DNA — real sparklines + W-D-L form dots.** ADR-118's tracked GW1 follow-up; the per-GW data now
+   exists. Meaningful from GW2 onward.
+2. ⬜ **Team DNA — real clean-sheet rate + team form.** ADR-119's follow-up; replaces the labelled proxies.
+3. ⬜ **`_percentile` midrank fix.** It counts peers "at or below", so in an all-tied pool a zero lands in the
+   90s — **A.Becker, a goalkeeper, reads Goal Threat 96th percentile on a raw 0.00**. Pre-existing (ADR-118),
+   exposed when the DNA fallback made percentiles visible again. Fix = `(below + 0.5 × equal) / n`, which puts
+   an all-tied pool at 50. **Shifts every percentile in Player and Team DNA → needs its own ADR.**
 
-**Competitive-inspired candidates (post-GW1; ⭐ = data already exists, near-term-feasible):**
-- ⭐ ⬜ **Squad Risk Monitor** (fplanalyser) — one row per owned player, **sorted by how much attention he needs /
-  how likely you are to regret holding him** (not how good he is): a **driver** (Minutes / Fixtures) + "% chance he
-  doesn't reach 60" + an attention rating. **We have the data** (xMins → chance-under-60; fixture difficulty) — a
-  sharp triage the Health tab lacks. Do it *our* way: grounded drivers, on-brand.
-- ⭐ ⬜ **Squad-grade DNA** (fplanalyser + our DNA engine) — aggregate the owned 15 into **one graded picture**:
-  overall grade + **Attack / Defence / DefCon / Fixtures** bars + a verdict headline + a grounded edge line
-  ("3 penalty takers = a deliberate edge"). A squad-level sibling of **Team DNA (ADR-119)** — reuses the engine.
-- ⬜ **Forward GW planner ("plan not panic")** (fplanalyser) — per-GW **projected-points-vs-your-average** bars +
-  "your problem week is GW6, 5 weeks out" narrative + N-hard-fixtures per GW + which players face the hard games.
-  Extends the **per-GW xP toggle (US-422)** into a multi-GW forward view. Bigger build; needs in-season data.
+---
+
+## ⏳ Data Hardening — gated on ~GW4-6
+
+Prep is done and dormant (Sprint 069, ADR-060); the harness is built (Sprint 138, ADR-101) and the flip is
+scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own countdown — currently
+*"have 1, need ≥4"*. **The harness recommends; the owner commits.** One weight at a time (ADR-101).
+
+- ✅ **Per-GW history ingestion** — done 2026-08-24 (604 players, 2045 season rows + 604 per-GW rows).
+- ⏳ **`FORM_WEIGHT` calibration** — the main season signal; first of the three.
+- ⏳ **`SET_PIECE_WEIGHT` calibration** (ADR-096) — then revisit the tier guard against observed returns.
+- ⏳ **`DEFCON_MAGNIFIER_WEIGHT` calibration** (ADR-097).
+- ⏳ **In-season minutes in the xMins share** (ADR-125) — deliberately paired to the same sitting: same
+   threshold, same data. ⚠ Whoever builds it must not infer "played" from a per-GW row's presence — **FPL
+   writes the row when the fixture is scheduled, not played**, so a naive minutes share zeroes two whole clubs
+   for the two days their gameweek is in flight.
+- ⬜ **Rolling 3-/6-GW form windows + trend views** — builds on the same backfilled data.
+- ⬜ **Price-change predictor** — ✅ **shipped** (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
+   *(This page listed it as not-started for months; corrected here.)*
+- 🅾️ **Attack/Defence FDR split** (ADR-005) — **blocked at source, not by timing.** Checked the live API on
+   2026-08-24: `strength_attack_home` and friends are **still 0 after GW1**, and the `teams` table doesn't even
+   carry the columns. FPL is not populating them. This dies unless we **derive our own attack/defence strength
+   from results** — a different and much bigger piece of work. **Needs a decision, not a wait.**
+
+---
+
+## 🖱 Interaction — the FFH-style click layer
+
+**The thread the owner explicitly did not want lost.** Testers keep describing Fantasy Football Hub's
+interaction: *"FFH pops a menu on **clicking** a player — full card · substitute · captain."*
+
+- ✅ **The panel** (ADR-108, Sprint 149) — one selection → card + 👑 captain + 🔁 substitute. Shipped as the
+  achievable shape: **click-to-select → an actions panel**, because a static `st.markdown` pitch cannot fire a
+  click callback (established the hard way in S139/142). Explicitly built as **a foundation, not a stopgap**.
+- ⬜ **My Squad v2 — tap-the-pitch** *(deferred, and recorded as a **committed** next, not a vague one)*. A
+  custom **Streamlit JS component** so **tapping a shirt** returns the player id → opens the *same* ADR-108
+  panel. **~90% is already built** — only the selection *input* changes, dropdown → tap.
+  - **Why it was deferred:** it introduces a **front-end build toolchain** to a pure-Python project, and the
+    component can't be AppTested — so the golden page loses its coverage. It was also nine days from GW1.
+  - **Needs its own spike + ADR**, comparing: a **full custom React component** vs a **lightweight
+    click-detector reusing `pitch.py`'s existing HTML with per-kit ids** — plus a **Community Cloud deploy
+    check**. The lightweight path could more than halve the cost.
+  - **Trigger:** feedback-driven. Ship the panel, watch the testers; if *"I want to tap the shirt"* stays the
+    top ask, that's the green light.
+- ⬜ **Clickable tabs / navigation polish toward the FFH feel** — the same component question one level up.
+  Folded into the same spike: if a click-detector works for shirts, it works for cards and rows too.
+- 🅾️ **Drag-and-drop to reorder the bench** (ADR-084) — rejected; the ⬆/⬇ controls do the job without JS.
+
+---
+
+## 🧭 Interface & information architecture
+
+- ⬜ **Fixtures IA restructure** *(parked for a morning sprint; gate as an ADR first)* — Team DNA-led: rename
+  the tab **"🧬 Team DNA & FDR"**, Team DNA first / FDR second, move the 🎯 Radar to a Players sub-tab.
+- ⬜ **Squad Lab icon → a lab motif** — swap the 🥾 boot on the Squad Lab header for a flask/test-tube; it fits
+  *Lab* and distinguishes it from the boot-branded rest. **Needs the art** (clean transparent PNG).
+- ⬜ **Homepage copy is stale** — `madboots.com` still says *"No login to look around · your squad saves across
+  devices by a handle"*, untrue since Google auth went live (2026-08-12). ⚠ **The homepage source isn't in this
+  repo** (Cloudflare Pages) — owner to point at the file or we rebuild it. Also needs **hello@madboots.com** to
+  exist as a real inbox.
+
+---
+
+## 📊 Analysis & decision features
+
+**Competitive-inspired (⭐ = the data already exists, near-term feasible):**
+
+- ⭐ ⬜ **Squad Risk Monitor** *(fplanalyser)* — one row per owned player, sorted by **how much attention he
+  needs / how likely you are to regret holding him** — not how good he is. A **driver** (Minutes / Fixtures),
+  "% chance he doesn't reach 60", an attention rating. We hold everything needed (xMins → chance-under-60;
+  fixture difficulty). A sharp triage the Health tab lacks.
+- ⭐ ⬜ **Squad-grade DNA** *(fplanalyser + our engine)* — aggregate the owned 15 into **one graded picture**:
+  overall grade + Attack / Defence / DefCon / Fixtures bars + a verdict headline + a grounded edge line
+  ("3 penalty takers = a deliberate edge"). A squad-level sibling of Team DNA; reuses the engine.
+  **Pairs with Squad Risk Monitor — both aggregate the owned 15 and would share plumbing.**
+- ⭐ ⬜ **Pool-wide value-frontier scatter** *(aceanalyst)* — a 2-axis scatter of the whole pool (price × xP with
+  a value frontier; xGI × points; DefCon × points) + median baselines + filters. **Complements** the DNA radar:
+  the radar shows *one* player's shape, the scatter positions *everyone*. **MadBoots spin:** a grounded verdict
+  on hover, not a dot to interpret.
+- ⬜ **Multi-GW transfer-path planner** + horizon decay weights *(fplapex — market-validated)* — plan several
+  gameweeks ahead as a path/tree, pricing **hits (−4 now vs rolling)** against total xPts. **MadBoots spin:** a
+  grounded *why* per move (Edge/Risk each step). Reuses `suggest_transfers` + `by_gameweek`. Pairs with the
+  per-GW xP toggle (US-422). *(A coordinated greedy plan already shipped, Sprint 033 — this is the real one.)*
+- ⬜ **Full chip-sequence scan** *(fplapex)* — rank **every valid** Wildcard/Free Hit/Bench Boost/Triple Captain
+  **sequence** across the season by projected xPts, with a grounded per-chip why. *(A v0 chip-timing advisor
+  shipped — Sprint 096, ADR-082.)*
+- ⬜ **Forward GW planner — "a plan, not a panic"** *(fplanalyser)* — per-GW projected-points-vs-your-average
+  bars + *"your problem week is GW6, five weeks out"* + N-hard-fixtures per GW + which players face them.
+  Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
 - ⬜ **Two small ones** — **player clashes** (your own players meeting = point cannibalisation) · **captain
-  margin** ("by a whisker — 0.3 over #2", a small explanatory polish on the existing captain confidence).
-
-- ◑ **Chip optimisers** — ✅ a v0 **chip-timing advisor** (`chip_advisor`, a grounded `ask` intent + a Squads
-  "Chips" view): when to play Wildcard / Free Hit / Bench Boost / Triple Captain, from the squad's per-GW xP +
-  fixture run (Sprint 096, US-251/252, ADR-082). Deferred: **DGW/BGW** detection (in-season) + **mini-league
-  position** (leagues API, GW1) to sharpen it; a **full chip-*sequence* scan** (rank *every* valid
-  Wildcard/Free Hit/Bench Boost/Triple Captain **sequence** across the season by projected xPts — fplapex.com does
-  this; a **post-GW1** candidate, with a grounded per-chip "why"); a standalone CLI `chips` command.
-- ⬜ **Probabilistic xMins (the full ML model)** — per-fixture expected-minutes *probabilities* from
-  schedule density, European congestion, rotation profiles. Needs in-season per-GW minutes to train
-  (post-GW1) + external European-fixture data + a real ML effort — a later, data-gated phase. The rigorous
-  successor to xMins v0.
-- ⬜ **Multi-GW transfer-path planner** + horizon **decay weights** — plan transfers several GWs ahead as a
-  path/tree, pricing in **hits (−4 now vs rolling)** + total xPts. **Market-validated** (fplapex.com) → a strong
-  **post-GW1** candidate. **MadBoots spin:** not just the path but a **grounded "why" per move** (Edge/Risk each
-  step) — reuses `suggest_transfers` + `decision_xp` `by_gameweek`. Pairs with the per-GW xP toggle (US-422).
-- ⬜ **Evaluation & feedback loops** — did the suggested captain beat the template? Golden-gameweek
-  regression; success metrics (xP calibration, captain hit-rate, net season points). *Critical before
-  fully trusting recommendations.*
+  margin** ("by a whisker — 0.3 over #2", a small polish on the existing captain confidence).
+- ⬜ **Elite Manager Comparison** — how your squad compares to top-ranked managers; what the **Top 1,000** are
+  doing (captain trends, transfer flow). Needs the **FPL leagues API** + per-manager picks — public only from
+  the GW1 deadline, so this is **now unblocked**.
+- ⬜ **Ceiling / "differential" captaincy** — `captain` ranks by *mean* xP; add a variance/ceiling lens for when
+  you need a differential rather than the safe pick.
+- ⬜ **The competitive layer** *(fplapex)* — **mini-league H2H** · a **win-probability sim** · **differentials
+  vs your rivals**. Needs the **leagues API**; picks are public from the GW1 deadline, so this is **now
+  unblocked**. Reinforces the Crowd/Signals track rather than the solver one — it answers *"what do I need to do
+  to catch him?"*, which is a different question from *"what's the best squad?"*. **Mini-league position also
+  sharpens the chip advisor** (ADR-082): when to burn a Wildcard depends on whether you're chasing or defending.
+- ⬜ **DGW/BGW detection** — sharpens the chip advisor; in-season data.
+- ⬜ **Probabilistic xMins (the full ML model)** — per-fixture expected-minutes *probabilities* from schedule
+  density, European congestion, rotation profiles. Needs in-season per-GW minutes to train, external
+  European-fixture data, and a real ML effort. The rigorous successor to xMins v0 — **Phase 5, genuinely far off.**
+- ⬜ **Evaluation & feedback loops** — did the suggested captain beat the template? Golden-gameweek regression;
+  xP calibration; captain hit-rate; net season points. *Critical before fully trusting recommendations* — and
+  the only item that tells us whether any of the above actually helped.
 
 ---
 
-## Infrastructure (carried)
+## 🗣 Crowd, signals & the language layer
 
-- ✅ **Cross-device squad persistence** — **DONE (Sprint 124, ADR-094).** A handle-keyed free store
-  (`cloud_store`, Supabase, no login) so a squad follows you between devices — the first opt-in, secret-gated
-  server write (the read-only invariant revised + tested); off by default. Owner setup: `docs/CLOUD_SQUADS.md`.
-  Native `st.login()` = the deferred "product" upgrade (the adapter interface fits it). **Beta ops** also decided
-  (ADR-095): a prod/staging split, public + PolyForm-NC LICENSE, a mirror backup, an uptime monitor.
-- ✅ **"Remember me" across a refresh** — **DONE + owner-verified on Safari + Chrome (Sprint 132 built, ADR-099;
-  read-path fixed Sprint 134, US-330).** A refresh keeps a tester in; the value is re-validated on load (pruned
-  tester / rotated code locked out); off by default. Sprint 132's native read didn't persist (a cookie-jar mismatch
-  — component-iframe write vs top-level read); now read + write both go through the component. `st.login()` (native
-  persistence + verified identity) stays a *future option*, no longer a needed escalation.
-- ✅ **Beta usage & experience analytics** — **DONE (Sprint 136 foundation + Sprint 137 coverage, ADR-100).**
-  Anonymous, opt-in (`FPL_ANALYTICS`), fail-silent: `session_started`/`page_viewed` + the feature events
-  (`analysis_run`/`squad_*`/`feedback_submitted`) + `error` + `perf` timers → a Supabase `events` table (reuses the
-  store, no new secret); a gated **📊 Admin** view (`FPL_ADMIN_KEY`) reads + summarises (sessions/returning/top
-  pages/success/median-P95). Foundation write **owner-verified** (rows landing); **⏳ admin-read owner smoke** (add
-  the anon SELECT policy + set the key). Deferred: batching, a BI dashboard, cohorts.
-- ✅ **"Log out" link** — **DONE (Sprint 133, extends ADR-099).** A sidebar "Log out" clears the cookie + session
-  and re-shows the gate (reset a shared device); deferred clear + a `_beta_forgotten` re-admit guard; off on the
-  open deploy. Deferred: a confirm dialog, a **signed token**; native `st.login()` (hard identity) is still the
-  product-path upgrade above.
-- ⬜ Session/cookie **auth** for user-specific data (`/my-team/{id}/`) — unlocks a manager-ID fetch in
-  `analyse`/`transfer`.
+Tiers 1 and 2 shipped (ADR-057/058/059/093) — crowd flags, a Trending page, an FPL news lens, manager-ID
+import, Reddit RSS buzz, media headlines. Momentum boards are live now that GW1 has run.
+
+- ⬜ **Tier 3 — the crowd backtest**: does following vs fading the crowd beat xP-only? Ties into *Evaluation*.
+- ⬜ **Reddit r/FPL aggregate sentiment** — needs the Reddit API + a Cloud secret (RSS buzz is a *count*, not
+  sentiment).
+- ⬜ **Pundit / video NLP** — LLM-summarise FPL YouTube / articles into structured signals. Research-heavy.
+- ⬜ **More `ask` intents** — differentials; a persisted chat; an LLM intent classifier.
+- 🅾️ **X/Twitter signals** — paid/restricted. Skipped.
+- 🅾️ **Betting/odds as a lens** (ADR-093) — declined *as a lens*; a possible **Tier-3 modelling input** later,
+  never a display.
+
+---
+
+## 🔬 Data sources we've evaluated and declined
+
+Kept so the reasoning isn't re-litigated:
+
+- 🅾️ **soccerdata / npXG** (ADR-016, Sprint 015) — matching works (~95% FPL↔Understat) and npXG is real, **but**
+  the value is narrow (penalties score points in FPL, so penalty-inclusive xG is the relevant signal) and the
+  cost is high: 14 → 72 packages including a selenium/pandas stack, scraping fragility, a season-alignment trap.
+  **Revisit only if a decision-driving need appears that FPL can't meet** — and prefer a *lightweight direct
+  Understat fetch* over the full library. Evidence: `spikes/015-soccerdata/`.
+- ⬜ **Player-card "advanced" stats — Key Passes + Shots in the Box** — FFH shows them; they're not in the FPL
+  API but *are* reachable from a free Understat/FBref fetch (per-shot coords → "in box"; KP direct). Same
+  decision as above — **its own sprint and data-source ADR** if the card wants them.
+- ⬜ **Shot map / zones / event-data bars** (Player + Team DNA 🔴 deferred) — same dependency, same gate.
+- 🅾️ **Big Chances / Big Chances Created** — Opta-proprietary and paid. Not planned.
+
+---
+
+## 🛠 Infrastructure, ops & tech debt
+
+- ✅ Cross-device persistence (ADR-094) · Google auth (ADR-106) · "remember me" (ADR-099) · Log out ·
+  anonymous usage analytics (ADR-100) · beta gate + waitlist (ADR-087/102) · self-service unsubscribe (ADR-122).
+- ⬜ **ADR-120 — Admin tester-activity roster + load watch.** Spec'd, owner-approved, "build post-GW1". **Not
+  data-gated — it was only ever waiting on the calendar.**
+- ⚠️ **OWNER ACTION — ADR-122's unsubscribe silently no-ops** until a `beta_users` **DELETE policy** is added in
+  Supabase (BETA.md §4). The *"remove me = we delete your rows"* promise isn't kept without it. Console work,
+  not code.
+- ⚠️ **OWNER ACTION — admin-read smoke** (ADR-100): add the anon SELECT policy + set `FPL_ADMIN_KEY`.
+- ⬜ **Session/cookie auth for user-specific data** (`/my-team/{id}/`) — unlocks a manager-ID fetch inside
+  `analyse`/`transfer`. Native `st.login()` is the product-path upgrade above the current gate.
 - ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.
-- ⬜ Cache TTLs + a gameweek countdown.
+- ⬜ **Cache TTLs.**
+- ⬜ **Deferred auth polish** — a confirm dialog on Log out; a signed/opaque "remember me" token instead of the
+  raw value (deferred as over-engineering for a hobby beta; revisit only if the raw cookie value becomes a
+  concern).
+- ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
+  external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
+
+---
+
+## 🧯 Standing risks
+
+- **Season-rollover and first-occurrence bugs.** Six in two days at GW1. The first **blank** and **double**
+  gameweek will each run branches that have never executed. Treat DGW/BGW week as a testing event, not just a
+  feature.
+- **`ep_next` is load-bearing early.** The cold-start rate leans on it (ADR-104/124) until real evidence
+  accrues; an FPL quirk in it propagates.
+- **Streamlit Cloud can serve a stale build** after a push — Reboot from the ⋮ menu.
+- **ClubElo is intermittent** — best-effort by design (ADR-010), degrades to last-known.
 
 ---
 
@@ -270,3 +298,5 @@ rewrite of xP**. xP stays grounded & verified; sentiment is shown **alongside** 
 - **Analytics decide; the LLM only narrates** — grounded, verified, optional.
 - **FPL is the source of truth**; external sources degrade gracefully.
 - **Learn by building, sprint by sprint** — a gate (ADR) per feature; simple over clever.
+- **Degrade visibly.** An empty board beats a wrong one; a labelled fallback beats both. Never render a missing
+  value as a confident zero — that lesson cost six bugs in two days.

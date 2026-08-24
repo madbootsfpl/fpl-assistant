@@ -1,5 +1,11 @@
 # Backlog
 
+> **2026-08-24 — the [Roadmap](04_Roadmap/Roadmap.md) was re-cut post-GW1** and now carries the **end-state
+> vision** plus every open item pulled together in one place: the competitive analysis (fplapex · aceanalyst ·
+> fplanalyser · FFH), the **FFH-style click layer** (ADR-108's deferred tap-the-pitch component), the parked IA
+> restructure, the declined data sources and the owner actions. **Read the Roadmap for *what's next and why*;
+> this page stays the detailed intake log** (tester feedback, per-item history, the shipped trail).
+
 Captured ideas not yet scheduled into a sprint. *(The larger unbuilt features live in the
 consolidated [Roadmap](04_Roadmap/Roadmap.md) — "Next / Then / Later"; this file holds the small
 nice-to-haves and tech-debt.)*
