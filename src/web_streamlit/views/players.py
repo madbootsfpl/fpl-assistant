@@ -126,13 +126,13 @@ def _board(stat_rows, columns, badges, key, col_help=None, flag=None, season=Non
                 "(If you've set a filter, try clearing it.)")
         return
     if season:
-        # Clubs come from the *current* row while the numbers come from last season, so a summer signing sits
-        # under a badge he wasn't playing for. Say it once here for every board — for the player-level boards
-        # the number is still truly his, but read next to the wrong badge it invites the wrong conclusion.
-        st.info(f"📅 **Showing {season}** — this season's numbers need about 10 matches before a per-90 rate "
-                f"means anything, so these are last season's until then. The board switches over on its own as "
-                f"players reach that mark. **Clubs shown are current; the numbers are last season's**, so a "
-                f"summer signing earned his at his old club.{caveat}")
+        # Kept short deliberately: this sits above the table, and on a 390px phone every line of banner pushes
+        # the first row of data toward the fold (the first draft ran ~290px tall on its own — most of what's
+        # left after Streamlit's own chrome). Three claims earn their place: which season, why this one can't
+        # answer yet, and that clubs are current while the numbers aren't — a summer signing sits under a badge
+        # he didn't earn them at. "Fills from about GW10" carries the switch-over without a sentence for it.
+        st.info(f"📅 **Showing {season}** — a per-90 rate needs ~10 matches, so this season's board fills "
+                f"from about GW10. Clubs are current; the numbers aren't.{caveat}")
     page = show_count(stat_rows)
 
     def _row(r):
@@ -241,8 +241,7 @@ def render_cleansheet(players, sel, badges, last_rows=None, season_name=None):
         flag=_fit_lookup(players), season=season,
         # xGC is a *team* stat, and FPL's history records what a player did without recording who for — so a
         # summer signing brings his old side's defensive record under his new side's badge. Say so (ADR-126).
-        caveat=" ⚠️ xGC is a **team** stat, so a player who changed clubs over the summer is showing his "
-               "**old** team's defence here.")
+        caveat=" ⚠️ xGC is a **team** stat — a summer signing shows his old club's defence.")
 
 
 def render_xg(players, sel, badges):

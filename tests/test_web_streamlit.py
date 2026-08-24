@@ -805,7 +805,9 @@ def test_gated_boards_fall_back_to_last_season_and_say_so():
         assert "20" in blob, f"{view} banner names no season"      # e.g. "Showing 2025/26"
         assert at.dataframe, f"{view} announced last season but rendered no table"
         # Clubs are current, the numbers are not — a summer signing sits under a badge he didn't earn them at.
-        assert "Clubs shown are current" in blob, f"{view} doesn't say the club and the number disagree"
+        assert "Clubs are current" in blob, f"{view} doesn't say the club and the number disagree"
+        # It sits above the table on a phone, so length is a feature of the copy, not an accident.
+        assert len(blob) < 320, f"{view} banner is {len(blob)} chars — too tall on a 390px screen"
 
 
 def test_clean_sheet_fallback_warns_that_xgc_crosses_a_transfer():
@@ -819,7 +821,7 @@ def test_clean_sheet_fallback_warns_that_xgc_crosses_a_transfer():
     assert not at.exception
     blob = " ".join(str(i.value) for i in at.info)
     if "Showing" in blob:
-        assert "changed clubs" in blob and "team" in blob
+        assert "team" in blob and "old club" in blob
 
 
 def test_stat_boards_show_the_availability_fit_column():
