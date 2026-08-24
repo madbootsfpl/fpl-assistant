@@ -116,3 +116,47 @@ def test_accepts_sqlite3_rows():
     con.close()
     dna = team_dna("CITY", rows, [_fx("CITY", "TOWN", 2, 4)])    # Row has no .get() — must not raise
     assert dna is not None and _axis(dna, "Attacking Threat").percentile == 100
+
+
+# ---- the real clean-sheet rate + team form (ADR-128; ADR-119's tracked GW1 follow-up) ----
+
+def _gk(code, team):
+    return {"code": code, "team": team, "position": "GK", "web_name": f"gk{code}", "minutes": 2700,
+            "xg": 0.0, "xa": 0.0, "xgc": 30.0, "total_points": 100, "selected_by": 5.0,
+            "penalties_order": None, "corners_order": None, "freekicks_order": None}
+
+
+def _played(rnd, cs, *, home=True, hs=2, as_=0):
+    return {"round": rnd, "was_home": 1 if home else 0, "team_h_score": hs, "team_a_score": as_,
+            "minutes": 90, "clean_sheets": cs, "total_points": 5}
+
+
+def test_clean_sheet_axis_switches_from_the_proxy_to_what_actually_happened():
+    players = [_gk(1, "AAA"), _gk(2, "BBB")]
+    fixtures = [{"event": 2, "home": "AAA", "away": "BBB", "team_h_difficulty": 3, "team_a_difficulty": 3}]
+    gw = {1: [_played(1, 1)], 2: [_played(1, 0, home=False)]}
+
+    proxy = team_dna_all(players, fixtures)["AAA"]
+    real = team_dna_all(players, fixtures, gw_history=gw)["AAA"]
+
+    assert next(a for a in proxy.axes if a.label == "Clean-Sheet Potl").sublabel == "def + fix"
+    axis = next(a for a in real.axes if a.label == "Clean-Sheet Potl")
+    assert axis.sublabel == "actual" and axis.value == 100      # kept its one clean sheet
+
+
+def test_a_team_that_has_not_played_keeps_the_proxy():
+    """A club whose opener hasn't kicked off must not read 0% — it has conceded nothing and kept nothing."""
+    players = [_gk(1, "AAA"), _gk(2, "BBB")]
+    fixtures = [{"event": 2, "home": "AAA", "away": "BBB", "team_h_difficulty": 3, "team_a_difficulty": 3}]
+    gw = {1: [_played(1, 1)]}                                    # only AAA has played
+
+    dna = team_dna_all(players, fixtures, gw_history=gw)
+    assert next(a for a in dna["BBB"].axes if a.label == "Clean-Sheet Potl").sublabel == "def + fix"
+
+
+def test_no_gw_history_leaves_every_team_on_the_proxy():
+    players = [_gk(1, "AAA"), _gk(2, "BBB")]
+    fixtures = [{"event": 2, "home": "AAA", "away": "BBB", "team_h_difficulty": 3, "team_a_difficulty": 3}]
+    dna = team_dna_all(players, fixtures, gw_history={})
+    assert all(next(a for a in d.axes if a.label == "Clean-Sheet Potl").sublabel == "def + fix"
+               for d in dna.values())

@@ -3,7 +3,14 @@
 import re
 
 from src.analytics.explain import Verdict
-from src.web_streamlit.player_dna_view import perf_trend_svg, render_player_dna, trend_panel_html
+from src.web_streamlit.player_dna_view import (
+    form_dots_html,
+    perf_trend_svg,
+    render_player_dna,
+    sparkline_svg,
+    sparklines_html,
+    trend_panel_html,
+)
 from src.web_streamlit.verdict_card import verdict_card_html
 
 
@@ -87,3 +94,41 @@ def test_render_player_dna_composes_in_order(monkeypatch):
     called.clear()
     render_player_dna(None, pool, {}, gw_history={})
     assert called == []                     # no-op on a falsy player
+
+
+# ---- W-D-L dots + per-stat sparklines (ADR-128; ADR-118's tracked GW1 follow-up) ----
+
+def test_form_dots_render_a_pill_per_result():
+    html = form_dots_html([(1, "W"), (2, "D"), (3, "L")])
+    assert html.count('class="tr-dot ') == 3        # the wrapper is `tr-dots`, so match the pill exactly
+    assert 'class="tr-dot w"' in html and 'class="tr-dot d"' in html and 'class="tr-dot l"' in html
+
+
+def test_form_dots_render_nothing_before_a_team_has_played():
+    """Additive by design — with no results the card is exactly what it was, not a row of empty circles."""
+    assert form_dots_html([]) == "" and form_dots_html(None) == ""
+
+
+def test_sparklines_need_two_gameweeks_to_draw():
+    """A line through one point is not a trend. Inviting a reader to see a direction that isn't there is the
+    bug this project has now fixed three times over."""
+    assert sparklines_html({"BPS": [(1, 20)]}) == ""
+    assert "<svg" in sparklines_html({"BPS": [(1, 20), (2, 35)]})
+
+
+def test_sparklines_skip_only_the_stats_without_enough_data():
+    html = sparklines_html({"BPS": [(1, 20), (2, 35)], "xG": [(1, 0.3)]})
+    assert "BPS" in html and "xG" not in html
+
+
+def test_sparkline_centres_a_flat_run_rather_than_flooring_it():
+    import re
+    ys = re.findall(r"\d+\.\d+,(\d+\.\d+)", sparkline_svg([(1, 6), (2, 6), (3, 6)], h=30))
+    assert ys == ["15.0", "15.0", "15.0"]        # h/2, not h-pad
+
+
+def test_trend_panel_stays_intact_when_the_extras_are_absent():
+    html = trend_panel_html([(1, 14)])
+    # `tr-dot` also appears in the stylesheet, so assert on the rendered elements, not the substring.
+    assert "14" in html
+    assert '<span class="tr-dot' not in html and '<div class="tr-sp"' not in html

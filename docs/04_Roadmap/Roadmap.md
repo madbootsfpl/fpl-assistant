@@ -105,10 +105,11 @@ shape. That behaviour is now enforced by tests, not just intent.
 
 ## 🥇 Next up (agreed 2026-08-24)
 
-1. ⬜ **Player DNA — real sparklines + W-D-L form dots.** ADR-118's tracked GW1 follow-up; the per-GW data now
-   exists. Meaningful from GW2 onward.
-2. ⬜ **Team DNA — real clean-sheet rate + team form.** ADR-119's follow-up; replaces the labelled proxies.
-3. ⬜ **`_percentile` midrank fix.** It counts peers "at or below", so in an all-tied pool a zero lands in the
+1. ✅ **Player DNA — real sparklines + W-D-L form dots.** Done (ADR-128, Sprint 179). Dots live now; the
+   sparklines draw from GW2, by design — a line through one point is not a trend.
+2. ✅ **Team DNA — real clean-sheet rate + team form.** Done (ADR-128, Sprint 179). Falls back to the labelled
+   proxy per team, so a club yet to kick off keeps the estimate instead of reading 0%.
+3. ✅ **`_percentile` midrank fix.** Done (ADR-127, Sprint 178) — shipped as the classic percentile rank. It counts peers "at or below", so in an all-tied pool a zero lands in the
    90s — **A.Becker, a goalkeeper, reads Goal Threat 96th percentile on a raw 0.00**. Pre-existing (ADR-118),
    exposed when the DNA fallback made percentiles visible again. Fix = `(below + 0.5 × equal) / n`, which puts
    an all-tied pool at 50. **Shifts every percentile in Player and Team DNA → needs its own ADR.**
@@ -129,7 +130,8 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
    threshold, same data. ⚠ Whoever builds it must not infer "played" from a per-GW row's presence — **FPL
    writes the row when the fixture is scheduled, not played**, so a naive minutes share zeroes two whole clubs
    for the two days their gameweek is in flight.
-- ⬜ **Rolling 3-/6-GW form windows + trend views** — builds on the same backfilled data.
+- ⬜ **Rolling 3-/6-GW form windows + trend views** — now unblocked by the widened per-GW table (ADR-128).
+- ⬜ **Per-season price sparkline** — long open in the backlog; the per-GW `value` column now exists (ADR-128).
 - ⬜ **Price-change predictor** — ✅ **shipped** (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
    *(This page listed it as not-started for months; corrected here.)*
 - 🅾️ **Attack/Defence FDR split** (ADR-005) — **blocked at source, not by timing.** Checked the live API on

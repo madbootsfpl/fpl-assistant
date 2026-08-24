@@ -15,6 +15,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from src.analytics.fdr import team_fdr
+from src.analytics.gw_form import team_clean_sheet_rate
 from src.analytics.player_dna import Axis, Insight, _f, _get, _set_piece_score
 from src.analytics.ranking import percentile_rank
 
@@ -79,7 +80,7 @@ def _grade(axes) -> tuple[str, int]:
     return (letter, avg)
 
 
-def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None) -> dict:
+def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None) -> dict:
     """`{team_short: TeamDNA}` for every team in the pool — each ranked across the league on the eight axes, with a
     grade. Compute-once (efficient for the "Your teams" strip). Never raises on zeros / blanks / preseason."""
     metrics = _team_metrics(players, fixtures, next_n=next_n)
@@ -90,15 +91,26 @@ def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None) -> dict
             ("attack", "create", "xga", "fixt", "setp", "output", "depth")}
 
     out = {}
+    # ADR-128: the real clean-sheet rate, once gameweeks have been played. Falls back to the labelled
+    # defence+fixtures proxy per team, so a club whose opener hasn't kicked off yet keeps the old estimate
+    # rather than reading 0%.
+    cs_rates = {t: team_clean_sheet_rate(gw_history, players, t) for t in metrics} if gw_history else {}
+    rated = [v for v in cs_rates.values() if v is not None]
+
     for t, m in metrics.items():
         d_pct = _rank(m["xga"], cols["xga"], invert=True)
         f_pct = _rank(m["fixt"], cols["fixt"], invert=True)
-        cs_pct = round(((d_pct or 0) + (f_pct or 0)) / 2)            # defence AND opponent difficulty
+        rate = cs_rates.get(t)
+        if rate is not None and len(rated) > 1:
+            cs_label, cs_value, cs_pct = "actual", round(rate * 100), _rank(rate, rated)
+        else:
+            cs_label, cs_value = "def + fix", round(m["xga"], 1)
+            cs_pct = round(((d_pct or 0) + (f_pct or 0)) / 2)        # defence AND opponent difficulty
         axes = [
             Axis("Attacking Threat", "team xG", round(m["attack"], 1), _rank(m["attack"], cols["attack"])),
             Axis("Chance Creation", "team xA", round(m["create"], 1), _rank(m["create"], cols["create"])),
             Axis("Defensive Strength", "team xGA", round(m["xga"], 1), d_pct),
-            Axis("Clean-Sheet Potl", "def + fix", round(m["xga"], 1), cs_pct),
+            Axis("Clean-Sheet Potl", cs_label, cs_value, cs_pct),
             Axis("Fixture Strength", "next-5 FDR", round(m["fixt"], 2), f_pct),
             Axis("Set-Piece Threat", "SP takers", round(m["setp"], 1), _rank(m["setp"], cols["setp"])),
             Axis("FPL Output", "team pts", round(m["output"]), _rank(m["output"], cols["output"])),
@@ -109,9 +121,10 @@ def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None) -> dict
     return out
 
 
-def team_dna(team, players, fixtures, *, next_n: int = 5, team_names=None) -> TeamDNA | None:
+def team_dna(team, players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None) -> TeamDNA | None:
     """One team's `TeamDNA` (the single-team convenience over `team_dna_all`). None if the team isn't in the pool."""
-    return team_dna_all(players, fixtures, next_n=next_n, team_names=team_names).get(team)
+    return team_dna_all(players, fixtures, next_n=next_n, team_names=team_names,
+                        gw_history=gw_history).get(team)
 
 
 def team_insights(dna) -> list[Insight]:

@@ -11,6 +11,7 @@ from collections import defaultdict
 import streamlit as st
 
 from src.analytics import team_dna_all, team_insights, team_schedule
+from src.analytics.gw_form import team_form
 from src.analytics.player_dna import _f, _get
 from src.web_streamlit import brand
 from src.web_streamlit.dna_card import _band, radar_svg
@@ -37,6 +38,11 @@ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,s
 .td-cl{font-size:.68rem;color:#aab6c6;line-height:1.15;} .td-cs{color:#7c8899;font-size:.6rem;}
 .td-pct{font-size:.72rem;font-weight:900;border-radius:6px;padding:1px 6px;margin-top:4px;display:inline-block;}
 .td-ttl{font-weight:800;font-size:.7rem;letter-spacing:.08em;color:#aab6c6;text-transform:uppercase;margin-bottom:8px;}
+.td-form{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.td-fl{color:#7c8899;font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+.td-dot{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+font-size:.66rem;font-weight:800;color:#0c121a;}
+.td-dot.w{background:#5eead4;} .td-dot.d{background:#a8b3c4;} .td-dot.l{background:#f98a8a;}
 .td-fxrow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
 .td-fx{border-radius:9px;padding:7px 4px;text-align:center;} .td-fx .g{font-size:.62rem;opacity:.85;font-weight:700;}
 .td-fx .o{font-size:.9rem;font-weight:900;margin:1px 0;} .td-fx .h{font-size:.6rem;opacity:.9;font-weight:700;}
@@ -83,17 +89,30 @@ def head_html(dna) -> str:
             f'{radar_svg(dna.axes, label=dna.name)}<div class="td-chips">{chips}</div></div>')
 
 
-def fixtures_html(fixtures) -> str:
-    """An FDR-tinted next-N fixtures row. `fixtures` = list of `(gw, opponent, "H"/"A", fdr)`."""
+def _form_row(form) -> str:
+    """The team's recent results as W/D/L pills. Empty when the team hasn't played — never a row of blanks."""
+    if not form:
+        return ""
+    pills = "".join(f'<span class="td-dot {r.lower()}" title="GW{rnd}">{r}</span>' for rnd, r in form)
+    return f'<div class="td-form"><span class="td-fl">Form</span>{pills}</div>'
+
+
+def fixtures_html(fixtures, form=None) -> str:
+    """An FDR-tinted next-N fixtures row, with the team's recent W-D-L run beneath it when there is one.
+
+    `fixtures` = list of `(gw, opponent, "H"/"A", fdr)`; `form` = `[(round, "W"|"D"|"L"), …]` (ADR-128, the
+    ADR-119 follow-up). What's coming reads better next to what just happened, so they share a card. The form
+    row renders nothing at all before a team has played."""
     if not fixtures:
         return ""
+    form = _form_row(form)
     cells = ""
     for gw, opp, ha, d in fixtures:
         bg, fg = FDR_STYLE.get(int(d or 3), FDR_STYLE[3])
         cells += (f'<div class="td-fx" style="background:{bg};color:{fg}"><div class="g">GW{gw}</div>'
                   f'<div class="o">{_esc(opp)}</div><div class="h">({_esc(ha)})</div></div>')
     return (TD_CSS + '<div class="td-card"><div class="td-ttl">📅 Fixtures — next '
-            f'{len(fixtures)}</div><div class="td-fxrow">{cells}</div></div>')
+            f'{len(fixtures)}</div><div class="td-fxrow">{cells}</div>{form}</div>')
 
 
 def key_players_html(rows, season=None) -> str:
@@ -147,7 +166,7 @@ def key_players_this_or_last(players, team, last_rows=None, season_name=None, **
     return team_key_players(last_rows or [], team, **kw), (season_name if last_rows else None)
 
 
-def render_team_dna(dna, *, fixtures=None, key_players=None, key_players_season=None) -> None:
+def render_team_dna(dna, *, fixtures=None, key_players=None, key_players_season=None, form=None) -> None:
     """Render the full Team DNA section: grade header + radar → insights → fixtures → key players. No-op if
     `dna` is None. `key_players_season` names the season behind the table when it isn't this one (ADR-126)."""
     if dna is None:
@@ -155,7 +174,7 @@ def render_team_dna(dna, *, fixtures=None, key_players=None, key_players_season=
     st.markdown(head_html(dna), unsafe_allow_html=True)
     render_insights_card(team_insights(dna))
     if fixtures:
-        st.markdown(fixtures_html(fixtures), unsafe_allow_html=True)
+        st.markdown(fixtures_html(fixtures, form), unsafe_allow_html=True)
     # renders a "fills in" note when there's nothing for either season
     st.markdown(key_players_html(key_players or [], key_players_season), unsafe_allow_html=True)
 
@@ -214,7 +233,8 @@ def your_teams_strip_html(rows) -> str:
             f'</div>{body}</div>')
 
 
-def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=None, season_name=None) -> None:
+def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=None, season_name=None,
+                      gw_history=None) -> None:
     """The My Squad ▸ Health "Your teams" strip (ADR-119): each of your clubs' grade + key axes + your players,
     then a drill-in into the full Team DNA card. No-op without a squad. Reuses the caller's `players`/`fixtures`."""
     if not squad or not squad.get("player_ids"):
@@ -223,7 +243,7 @@ def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=No
     owned = [p for p in players if _get(p, "id") in owned_ids]
     if not owned:
         return
-    all_dna = team_dna_all(players, fixtures, team_names=team_names)
+    all_dna = team_dna_all(players, fixtures, team_names=team_names, gw_history=gw_history)
     rows = your_teams_rows(owned, all_dna)
     if not rows:
         return
@@ -237,4 +257,5 @@ def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=No
         sched = team_schedule(fixtures, picked)[:6]
         fx = [(s["event"], s["opponent"], s["venue"], s["difficulty"]) for s in sched]
         _kp, _season = key_players_this_or_last(players, picked, last_rows, season_name)
-        render_team_dna(all_dna[picked], fixtures=fx, key_players=_kp, key_players_season=_season)
+        render_team_dna(all_dna[picked], fixtures=fx, key_players=_kp, key_players_season=_season,
+                        form=team_form(gw_history or {}, players, picked))

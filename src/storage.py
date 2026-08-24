@@ -36,6 +36,29 @@ _MIGRATIONS = {
         "elo": "REAL",
         "code": "INTEGER",              # the FPL asset code, for the badge URL (Sprint 055)
     },
+    # Per-GW columns added in Sprint 179 (ADR-128): the season aggregates on `players` are a running total,
+    # so a trend line and a W-D-L dot need the *week itself*. Existing databases gain them without a reseed.
+    "player_history": {
+        "team_h_score": "INTEGER",
+        "team_a_score": "INTEGER",
+        "goals_scored": "INTEGER",
+        "assists": "INTEGER",
+        "clean_sheets": "INTEGER",
+        "goals_conceded": "INTEGER",
+        "saves": "INTEGER",
+        "bonus": "INTEGER",
+        "bps": "INTEGER",
+        "xg": "REAL",
+        "xa": "REAL",
+        "xgi": "REAL",
+        "xgc": "REAL",
+        "ict_index": "REAL",
+        "influence": "REAL",
+        "creativity": "REAL",
+        "threat": "REAL",
+        "defcon": "INTEGER",
+        "value": "INTEGER",
+    },
     "players": {
         "points_per_game": "REAL",
         "status": "TEXT",
@@ -159,6 +182,25 @@ CREATE TABLE IF NOT EXISTS player_history (
     opponent_team  INTEGER,
     fixture        INTEGER,
     kickoff_time   TEXT,
+    team_h_score   INTEGER,
+    team_a_score   INTEGER,
+    goals_scored   INTEGER,
+    assists        INTEGER,
+    clean_sheets   INTEGER,
+    goals_conceded INTEGER,
+    saves          INTEGER,
+    bonus          INTEGER,
+    bps            INTEGER,
+    xg             REAL,
+    xa             REAL,
+    xgi            REAL,
+    xgc            REAL,
+    ict_index      REAL,
+    influence      REAL,
+    creativity     REAL,
+    threat         REAL,
+    defcon         INTEGER,
+    value          INTEGER,
     PRIMARY KEY (element_code, round)
 )
 """
@@ -268,15 +310,36 @@ ON CONFLICT(element_code, season_name) DO UPDATE SET
 
 UPSERT_HISTORY = """
 INSERT INTO player_history
-    (element_code, round, minutes, total_points, was_home, opponent_team, fixture, kickoff_time)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    (element_code, round, minutes, total_points, was_home, opponent_team, fixture, kickoff_time, team_h_score,
+     team_a_score, goals_scored, assists, clean_sheets, goals_conceded, saves, bonus, bps, xg, xa, xgi, xgc,
+     ict_index, influence, creativity, threat, defcon, value)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(element_code, round) DO UPDATE SET
-    minutes       = excluded.minutes,
-    total_points  = excluded.total_points,
-    was_home      = excluded.was_home,
-    opponent_team = excluded.opponent_team,
-    fixture       = excluded.fixture,
-    kickoff_time  = excluded.kickoff_time
+    minutes        = excluded.minutes,
+    total_points   = excluded.total_points,
+    was_home       = excluded.was_home,
+    opponent_team  = excluded.opponent_team,
+    fixture        = excluded.fixture,
+    kickoff_time   = excluded.kickoff_time,
+    team_h_score   = excluded.team_h_score,
+    team_a_score   = excluded.team_a_score,
+    goals_scored   = excluded.goals_scored,
+    assists        = excluded.assists,
+    clean_sheets   = excluded.clean_sheets,
+    goals_conceded = excluded.goals_conceded,
+    saves          = excluded.saves,
+    bonus          = excluded.bonus,
+    bps            = excluded.bps,
+    xg             = excluded.xg,
+    xa             = excluded.xa,
+    xgi            = excluded.xgi,
+    xgc            = excluded.xgc,
+    ict_index      = excluded.ict_index,
+    influence      = excluded.influence,
+    creativity     = excluded.creativity,
+    threat         = excluded.threat,
+    defcon         = excluded.defcon,
+    value          = excluded.value
 """
 
 UPSERT_FIXTURE = """
@@ -378,8 +441,10 @@ class Storage:
     def save_history(self, rows: list[PlayerGameweek]) -> None:
         """Upsert per-GW history rows (ADR-060). Idempotent on (element_code, round)."""
         values = [
-            (r.element_code, r.round, r.minutes, r.total_points, r.was_home,
-             r.opponent_team, r.fixture, r.kickoff_time)
+            (r.element_code, r.round, r.minutes, r.total_points, r.was_home, r.opponent_team, r.fixture,
+             r.kickoff_time, r.team_h_score, r.team_a_score, r.goals_scored, r.assists, r.clean_sheets,
+             r.goals_conceded, r.saves, r.bonus, r.bps, r.xg, r.xa, r.xgi, r.xgc, r.ict_index,
+             r.influence, r.creativity, r.threat, r.defcon, r.value)
             for r in rows
         ]
         with self.conn:
