@@ -73,7 +73,12 @@ else:
         for gw, col in zip(gws, gw_cols):
             cell = r["cells"].get(gw)
             # Include the difficulty digit so the run isn't colour-only (colour-blind-safe; US-391/audit).
-            disp[col] = f"{cell['opponent']} ({cell['venue']}) · {cell['difficulty']}" if cell else "—"
+            # A double gameweek lists both matches — the ticker is where you go to find them (ADR-129 audit).
+            if cell:
+                fx = cell.get("fixtures") or [cell]
+                disp[col] = " + ".join(f"{f['opponent']} ({f['venue']})" for f in fx) + f" · {cell['difficulty']}"
+            else:
+                disp[col] = "—"
             diff[col] = cell["difficulty"] if cell else None
         display_rows.append(disp)
         diff_rows.append(diff)

@@ -54,7 +54,9 @@ def test_fixture_ticker_grid_shape_and_ordering():
     assert t["gameweeks"] == [1, 2]
     assert t["rows"][0]["team"] == "EASY"                     # easiest run first
     easy = t["rows"][0]["cells"]
-    assert easy[1] == {"event": 1, "opponent": "HARD", "venue": "H", "difficulty": 1}
+    # `fixtures` (the full list for the gameweek) was added by ADR-129 so a double shows both matches.
+    assert {k: easy[1][k] for k in ("event", "opponent", "venue", "difficulty")} == \
+        {"event": 1, "opponent": "HARD", "venue": "H", "difficulty": 1}
     assert easy[2]["opponent"] == "MID" and easy[2]["venue"] == "A"
 
 
@@ -161,3 +163,41 @@ def test_team_schedule_custom_source_uses_strength():
     # ARS faces BUR playing away → custom difficulty = BUR's away strength = 2.
     assert sched[0]["difficulty"] == 2
     assert sched[0]["opponent"] == "BUR"
+
+
+# ---- doubles in the ticker (ADR-129 audit) ----------------------------------------
+
+def _tick_fx(event, home, away, hd=3, ad=3, i=0):
+    ids = {"AAA": 1, "BBB": 2, "CCC": 3, "DDD": 4}
+    return {"event": event, "team_h": ids[home], "team_a": ids[away], "home": home, "away": away,
+            "team_h_difficulty": hd, "team_a_difficulty": ad,
+            "kickoff_time": f"2026-09-0{event}T12:0{i}:00Z"}
+
+
+def test_ticker_shows_both_fixtures_of_a_double_gameweek():
+    """It used to keep only the first, so the one view built for spotting doubles was the one place a double
+    was invisible — a blank showed as an empty cell while a double looked like an ordinary week."""
+    up = [_tick_fx(2, "AAA", "BBB"), _tick_fx(3, "AAA", "CCC", i=1), _tick_fx(3, "DDD", "AAA", i=2)]
+    row = next(r for r in fixture_ticker(up, next_n=2)["rows"] if r["team"] == "AAA")
+    cell = row["cells"][3]
+    assert [f["opponent"] for f in cell["fixtures"]] == ["CCC", "DDD"]
+
+
+def test_a_double_is_shaded_by_its_harder_half():
+    """The cell carries one colour, and a double is only as easy as its harder match."""
+    up = [_tick_fx(3, "AAA", "CCC", hd=2, i=1), _tick_fx(3, "DDD", "AAA", ad=5, i=2)]
+    row = next(r for r in fixture_ticker(up, next_n=1)["rows"] if r["team"] == "AAA")
+    assert row["cells"][3]["difficulty"] == 5
+
+
+def test_a_single_fixture_gameweek_still_reads_as_before():
+    up = [_tick_fx(2, "AAA", "BBB", hd=4)]
+    cell = next(r for r in fixture_ticker(up, next_n=1)["rows"] if r["team"] == "AAA")["cells"][2]
+    assert cell["opponent"] == "BBB" and cell["venue"] == "H" and cell["difficulty"] == 4
+    assert len(cell["fixtures"]) == 1
+
+
+def test_a_blank_gameweek_is_still_none():
+    up = [_tick_fx(2, "AAA", "BBB"), _tick_fx(3, "BBB", "CCC")]
+    row = next(r for r in fixture_ticker(up, next_n=2)["rows"] if r["team"] == "AAA")
+    assert row["cells"][3] is None

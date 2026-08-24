@@ -102,8 +102,15 @@ def fixture_ticker(fixtures, next_n: int = 6, source: str = "fpl") -> dict:
     """A teams × gameweeks difficulty grid (Sprint 062) — reuses `team_fdr` + `team_schedule`.
 
     Returns `{"gameweeks": [event, ...], "rows": [{"team", "avg_difficulty", "cells": {event: cell}}]}`
-    where `cell` is `{opponent, venue, difficulty}` or None (a blank gameweek). Teams are ordered
-    easiest-run-first over the window; `gameweeks` are the next `next_n` upcoming gameweeks.
+    where `cell` is `{opponent, venue, difficulty, fixtures}` or None (a **blank** gameweek).
+
+    `fixtures` is the full list for that gameweek, so a **double** shows both matches (ADR-129 audit). It used
+    to keep only the first, which hid the second half of a double in the one view built for spotting them —
+    a blank gameweek was visible as an empty cell while a double was invisible. `opponent` / `venue` /
+    `difficulty` stay as the *first* match so existing readers keep working, and `difficulty` is the run's
+    hardest of the two, since the cell is shaded by it and a double is only as easy as its harder half.
+
+    Teams are ordered easiest-run-first over the window; `gameweeks` are the next `next_n` upcoming gameweeks.
     """
     events = sorted({f["event"] for f in fixtures if f["event"]})[:next_n]
     ranked = team_fdr(fixtures, next_n=next_n, source=source)     # already easiest-first
@@ -112,7 +119,11 @@ def fixture_ticker(fixtures, next_n: int = 6, source: str = "fpl") -> dict:
         by_event: dict = {}
         for s in team_schedule(fixtures, r["team"], source=source):
             if s["event"] in events:
-                by_event.setdefault(s["event"], s)                # a double GW: keep the first fixture
+                by_event.setdefault(s["event"], []).append(s)
+        by_event = {ev: {**fx[0], "fixtures": fx,
+                         "difficulty": max((f["difficulty"] for f in fx if f["difficulty"] is not None),
+                                           default=fx[0]["difficulty"])}
+                    for ev, fx in by_event.items()}
         rows.append({
             "team": r["team"],
             "avg_difficulty": r["avg_difficulty"],

@@ -211,6 +211,14 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
     photo = f'<img src="{e(str(photo_url))}" alt="{name}">' if photo_url else ""
     badge = f'<img src="{e(str(badge_url))}" alt="{e(team_name)}"> ' if badge_url else ""
 
+    def _opp_label(f):
+        """The opponent cell: `CHE (H)`, or `CHE (H) + AVL (A)` for a double gameweek (ADR-129 audit).
+        A cell is one *gameweek*, so a team playing twice names both — otherwise the second match vanishes."""
+        opps = f.get("opps")
+        if opps:
+            return " + ".join(f'{e(str(o or "?"))} ({"H" if h else "A"})' for o, h in opps)
+        return f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})'
+
     fx = list(fixtures or [])[:3]
     show_gw = bool(fx) and any(f.get("xp") is not None for f in fx)
     fix_html = ""
@@ -221,13 +229,12 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
         cols = "".join(
             f'<div class="plc-gwcol"><div class="plc-gwxp">{float(f.get("xp") or 0):.1f}</div>'
             f'<div class="plc-gwfx" style="{_fdr_css(f.get("fdr"))}">'
-            f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</div></div>'
+            f'{_opp_label(f)}</div></div>'
             for f in fx)
         fix_html = f'<div class="plc-gwrow">{cols}</div>'
     elif fx:
         pills = "".join(
-            f'<span class="plc-pill" style="{_fdr_css(f.get("fdr"))}">'
-            f'{e(str(f.get("opp") or "?"))} ({"H" if f.get("home") else "A"})</span>'
+            f'<span class="plc-pill" style="{_fdr_css(f.get("fdr"))}">{_opp_label(f)}</span>'
             for f in fx)
         fix_html = f'<div class="plc-fix"><span class="plc-gw">Next {len(fx)}</span>{pills}</div>'
 

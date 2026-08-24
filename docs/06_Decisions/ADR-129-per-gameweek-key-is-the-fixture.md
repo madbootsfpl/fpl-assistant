@@ -129,8 +129,14 @@ so, and the ordering makes the sequence meaningful).
   **snapshots**: adding a player's price to itself because he played twice would read as a £6m rise. `value`
   is the column that matters and the price sparkline the widened table unblocked would have hit it. `agg="last"`
   covers it, with a test.
-- **Not this ADR — the other two findings from the same audit:** the **fixture ticker** shows only one fixture
-  of a double (its cells hold one per team-gameweek), and the **player card's per-GW row** double-counts a
-  double, showing the already-doubled `by_gameweek` value once per fixture (25 xP against a real 15). Both are
-  display-only and cheaper; they are the natural next change.
+- **The other two findings — done the same day (Sprint 181).** Both display-only, both from the same audit.
+  * The **fixture ticker** kept only the first fixture of a double (a comment said so outright), so the one
+    view built for spotting doubles was the one place a double was invisible — a blank showed as an empty cell
+    while a double looked like an ordinary week. Cells now carry the full `fixtures` list and render
+    `CCC (H) + DDD (A)`, shaded by the **harder** of the two, since a double is only as easy as its harder half.
+    `opponent`/`venue` stay as the first match so existing readers keep working.
+  * The **player card's per-GW row** listed the next three *fixtures*, so a double took two of the three slots
+    and each was filled with the same already-doubled `by_gameweek` value — 25 xP against a real 15, and a week
+    of forward view lost. It now groups by gameweek: one cell per week, both opponents named in it, the doubled
+    xP counted once.
 - **Known gap, not a bug:** the chip advisor still has no DGW/BGW detection (roadmap, ADR-082).

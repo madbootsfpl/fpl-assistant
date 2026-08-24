@@ -153,3 +153,24 @@ def test_compact_drops_the_band_and_trims_stats():
 def test_empty_safe():
     assert player_card.player_card_html(None) == ""
     assert player_card.player_card_html({}) == ""                      # no player fields → nothing
+
+
+# ---- a double gameweek in the per-GW row (ADR-129 audit) --------------------------
+
+def test_a_double_gameweek_names_both_opponents_in_one_cell():
+    """A cell is one gameweek. Listing the next three *fixtures* gave a double two of the three slots and
+    filled each with the same already-doubled xP — the card read 25 where the real three-week total was 15."""
+    import re
+    cells = [{"opp": "BBB", "home": True, "fdr": 3, "xp": 5.0, "opps": [("BBB", True)]},
+             {"opp": "CCC", "home": True, "fdr": 5, "xp": 10.0, "opps": [("CCC", True), ("DDD", False)]},
+             {"opp": "EEE", "home": False, "fdr": 2, "xp": 5.0, "opps": [("EEE", False)]}]
+    html = player_card.player_card_html({"web_name": "P", "position": "MID", "price": 7.0}, fixtures=cells)
+    assert re.findall(r'plc-gwxp">([\d.]+)<', html) == ["5.0", "10.0", "5.0"]     # three gameweeks, not four
+    assert "CCC (H) + DDD (A)" in html
+
+
+def test_a_single_fixture_cell_is_unchanged_without_the_opps_key():
+    """Cells built before this change (no `opps`) must still render — the card is reused from several views."""
+    html = player_card.player_card_html({"web_name": "P", "position": "MID", "price": 7.0},
+                                        fixtures=[{"opp": "BBB", "home": False, "fdr": 3, "xp": 4.0}])
+    assert "BBB (A)" in html

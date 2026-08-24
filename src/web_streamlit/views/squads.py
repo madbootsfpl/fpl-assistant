@@ -341,11 +341,28 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         for r in decision_xp(players, upcoming, history, horizon=card_horizon, gw_history_by_code=gw_history)}
 
     def _pergw_fixtures(p):
-        """A player's next-≤3 fixtures with the per-GW xP (ADR-109). Works for **any** player (`card_bg_by_id`
-        covers the whole pool) — so a Boot Battle target from All/By-club has its card row too (US-380)."""
+        """A player's next-≤3 **gameweeks** with the per-GW xP (ADR-109). Works for **any** player
+        (`card_bg_by_id` covers the whole pool) — so a Boot Battle target from All/By-club has its card row too
+        (US-380).
+
+        Grouped by gameweek, not by fixture (ADR-129 audit). Taking the next three *fixtures* gave a double
+        gameweek two of the three slots and filled each with the same already-doubled `by_gameweek` value — the
+        card read 25 xP where the player's real three-week total was 15, and lost a week of forward view. One
+        cell per gameweek, both opponents named in it, the doubled xP counted once."""
         _bg = card_bg_by_id.get(p["id"], {})
-        return [{"opp": s["opponent"], "home": s["venue"] == "H", "fdr": s.get("difficulty"), "xp": _bg.get(s["event"])}
-                for s in team_schedule(upcoming, p["team"])[:3]]
+        by_event: dict = {}
+        for s in team_schedule(upcoming, p["team"]):
+            by_event.setdefault(s["event"], []).append(s)
+        cells = []
+        for event in sorted(by_event)[:3]:
+            fx = by_event[event]
+            cells.append({"opp": fx[0]["opponent"], "home": fx[0]["venue"] == "H",
+                          # A double is only as easy as its harder half — the cell is FDR-tinted by it.
+                          "fdr": max((f.get("difficulty") for f in fx if f.get("difficulty") is not None),
+                                     default=fx[0].get("difficulty")),
+                          "xp": _bg.get(event),
+                          "opps": [(f["opponent"], f["venue"] == "H") for f in fx]})
+        return cells
 
     fixtures_by_id = {p["id"]: _pergw_fixtures(p) for p in owned}   # for the pitch popover + the panel card
     bench_ids = set(squad.get("bench_ids") or [])
