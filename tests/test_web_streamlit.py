@@ -789,6 +789,39 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
         assert df["Rating"].astype(str).str.contains("🟢|🟡|🟠|🔴", regex=True).any()
 
 
+def test_gated_boards_fall_back_to_last_season_and_say_so():
+    """ADR-126: the three 900-minute boards can't answer until ~GW10. Rather than the ten-week blank they used
+    to show, they render last season's numbers behind a banner naming the season. The banner is the point — an
+    unlabelled number from a different season is worse than an empty board."""
+    for view in ("Over / under-perf", "Defensive Contribution", "Clean sheets"):
+        at = _run(_PAGES / "2_Players.py")
+        if not at.segmented_control:
+            return
+        at.segmented_control[0].set_value(view).run()
+        assert not at.exception, f"{view} raised: {at.exception}"
+        blob = " ".join(str(i.value) for i in at.info)
+        if "Showing" not in blob:
+            continue                       # this season has data — the fallback has retired, as designed
+        assert "20" in blob, f"{view} banner names no season"      # e.g. "Showing 2025/26"
+        assert at.dataframe, f"{view} announced last season but rendered no table"
+        # Clubs are current, the numbers are not — a summer signing sits under a badge he didn't earn them at.
+        assert "Clubs shown are current" in blob, f"{view} doesn't say the club and the number disagree"
+
+
+def test_clean_sheet_fallback_warns_that_xgc_crosses_a_transfer():
+    """xGC is a *team* stat and FPL's history records what a player did without recording who for — so a summer
+    signing brings his old side's defence under his new side's badge. The other two boards are player-level and
+    need no such warning."""
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Clean sheets").run()
+    assert not at.exception
+    blob = " ".join(str(i.value) for i in at.info)
+    if "Showing" in blob:
+        assert "changed clubs" in blob and "team" in blob
+
+
 def test_stat_boards_show_the_availability_fit_column():
     # ADR-074 / US-229: every stat board gains the Fit column (raw rows on xG; a lookup on the trimmed ones)
     for view in ("Over / under-perf", "Defensive Contribution", "Clean sheets", "xG / xA / xGI"):

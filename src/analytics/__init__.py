@@ -51,6 +51,7 @@ from src.analytics.fdr import elo_difficulty_bands, fixture_ticker, team_fdr, te
 from src.analytics.form import blend_form, form_rate
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.history import align_seasons, player_history
+from src.analytics.last_season import last_season_name, last_season_rows
 from src.analytics.minutes import (
     availability_weight,
     chance_factor,
@@ -160,6 +161,8 @@ __all__ = [
     "form_rate",
     "expected_minutes",
     "fallback_rate",
+    "last_season_name",
+    "last_season_rows",
     "minutes_share",
     "minutes_weight_from_history",
     "is_unavailable",

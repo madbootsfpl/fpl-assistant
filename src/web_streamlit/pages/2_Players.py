@@ -7,6 +7,7 @@ xG, ADR-063). Only the selected view computes (lazy). Reuses the CLI analytics; 
 
 import streamlit as st
 
+from src.analytics import last_season_name, last_season_rows
 from src.storage import Storage
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
@@ -32,6 +33,8 @@ try:
     with analytics.timed("data_load", page="Players"):     # perf: FPL data loading (ADR-100, US-336)
         rows = store.get_players()
         teams = store.get_teams()
+        # ADR-126: last season, for the three boards that need ~10 matches before they can answer.
+        history = store.get_history_by_code()
     badges = badge_url_by_short_name(teams)                 # {short_name: badge URL}
     photos = photo_url_by_id(rows, teams)                   # {player id: photo, else the club shirt}
 finally:
@@ -44,6 +47,10 @@ else:
     _sq = active_squad()                                    # US-407b: a "My squad only" scope on the pool filter
     sel = filter_controls(rows, key="players", with_price=True,
                           my_squad_ids=set(_sq["player_ids"]) if _sq else None)
+    # ADR-126: last season's numbers in player shape, so a board that can't answer from this season yet shows
+    # last season rather than nothing. Computed once and shared — only the three gated boards read it.
+    _last_rows = last_season_rows(rows, history)
+    _last_name = last_season_name(history)
     view = st.segmented_control(
         "View", ["Pool", "Card", "Set pieces", "Over / under-perf", "Defensive Contribution", "Clean sheets",
                  "xG / xA / xGI", "History"],
@@ -55,11 +62,11 @@ else:
     elif view == "Set pieces":
         views.render_set_pieces(rows, sel, badges)
     elif view == "Over / under-perf":
-        views.render_over_under(rows, sel, badges)
+        views.render_over_under(rows, sel, badges, _last_rows, _last_name)
     elif view == "Defensive Contribution":
-        views.render_defcon(rows, sel, badges)
+        views.render_defcon(rows, sel, badges, _last_rows, _last_name)
     elif view == "Clean sheets":
-        views.render_cleansheet(rows, sel, badges)
+        views.render_cleansheet(rows, sel, badges, _last_rows, _last_name)
     elif view == "xG / xA / xGI":
         views.render_xg(rows, sel, badges)
     elif view == "History":                                 # a per-player season history (US-298)

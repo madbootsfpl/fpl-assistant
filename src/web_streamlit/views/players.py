@@ -109,17 +109,30 @@ def _fit_lookup(players):
     return lambda r: flag.get((r["web_name"], r["team"]), "")
 
 
-def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
-    """A scrollable stat table (ADR-116): a team badge + the given {column: value_of} spec (season-to-date).
+def _board(stat_rows, columns, badges, key, col_help=None, flag=None, season=None, caveat=""):
+    """A scrollable stat table (ADR-116): a team badge + the given {column: value_of} spec.
 
     `col_help` (optional) maps a column head → a plain-English tooltip (ADR-071). When `flag` is given
     (a row → availability emoji, ADR-074), a compact **Fit** column + a legend caption are added. Column
     formatting + alignment come from the shared convention (ADR-072) via `column_config`. `key` is retained for
-    call-site compatibility (paging is retired — the grid scrolls, so the header-sort orders the whole set)."""
-    if not stat_rows:                                   # early season: season-to-date stats reset at GW1 (2026-08-22)
+    call-site compatibility (paging is retired — the grid scrolls, so the header-sort orders the whole set).
+
+    `season` names the season the rows come from when it isn't this one (ADR-126). These boards need ~10
+    matches before a per-90 rate means anything, so until then they show last season rather than nothing — and
+    a banner says so, because an unlabelled number from a different season is worse than a blank board.
+    `caveat` appends a board-specific warning to that banner."""
+    if not stat_rows:                                   # nothing this season *and* no stored history to fall back on
         st.info("🌱 Early season — these season-to-date stats fill in as games are played. "
                 "(If you've set a filter, try clearing it.)")
         return
+    if season:
+        # Clubs come from the *current* row while the numbers come from last season, so a summer signing sits
+        # under a badge he wasn't playing for. Say it once here for every board — for the player-level boards
+        # the number is still truly his, but read next to the wrong badge it invites the wrong conclusion.
+        st.info(f"📅 **Showing {season}** — this season's numbers need about 10 matches before a per-90 rate "
+                f"means anything, so these are last season's until then. The board switches over on its own as "
+                f"players reach that mark. **Clubs shown are current; the numbers are last season's**, so a "
+                f"summer signing earned his at his old club.{caveat}")
     page = show_count(stat_rows)
 
     def _row(r):
@@ -139,6 +152,18 @@ def _board(stat_rows, columns, badges, key, col_help=None, flag=None):
                  column_config=column_config(labels, help=help_))
     if flag is not None:
         st.caption(AVAILABILITY_LEGEND)
+
+
+def _this_or_last(analyse, players, last_rows, sel, season_name):
+    """The board's rows for this season, or last season's if this season can't answer yet (ADR-126).
+
+    `analyse` is the board's pure function — it runs **unchanged** on last season, because `last_season_rows`
+    hands it the same mapping shape `get_players()` does. Returns `(rows, season_label)`, where the label is
+    None when the rows are this season's (nothing to announce) and the season name when they are not."""
+    rows = apply_filter(analyse(players), sel)
+    if rows:
+        return rows, None
+    return apply_filter(analyse(last_rows or []), sel), (season_name if last_rows else None)
 
 
 def render_set_pieces(players, sel, badges):
@@ -173,45 +198,51 @@ def render_set_pieces(players, sel, badges):
         flag=_fit_lookup(players))
 
 
-def render_over_under(players, sel, badges):
-    st.caption("**Actual** attacking points vs **expected** (xGI-based) this season — **+** = running hot "
+def render_over_under(players, sel, badges, last_rows=None, season_name=None):
+    st.caption("**Actual** attacking points vs **expected** (xGI-based) — **+** = running hot "
                "(regression risk), **−** = due a bounce. Season totals, ≥900 mins.")
-    _board(apply_filter(over_under(players), sel), {
+    rows, season = _this_or_last(over_under, players, last_rows, sel, season_name)
+    _board(rows, {
         "Mins": lambda r: r["minutes"], "Actual": lambda r: r["actual"],
         "Exp": lambda r: r["expected"], "Diff": lambda r: r["diff"]}, badges, key="stats_over",
-        col_help={"Mins": "Minutes played this season.",
+        col_help={"Mins": "Minutes played in the season shown.",
                   "Actual": "Actual attacking points scored (season total).",
                   "Exp": "Expected attacking points from xGI (season total).",
                   "Diff": "Actual − Expected. + = over-performing (may regress), − = under (may bounce)."},
-        flag=_fit_lookup(players))
+        flag=_fit_lookup(players), season=season)
 
 
-def render_defcon(players, sel, badges):
+def render_defcon(players, sel, badges, last_rows=None, season_name=None):
     st.caption("**Defensive Contribution per 90** vs the position threshold — **+ margin** = a reliable "
                "DefCon points source. Per-90 rate, ≥900 mins.")
-    _board(apply_filter(defcon_reliability(players), sel), {
+    rows, season = _this_or_last(defcon_reliability, players, last_rows, sel, season_name)
+    _board(rows, {
         "Mins": lambda r: r["minutes"], "DC/90": lambda r: r["per90"],
         "Thr": lambda r: r["threshold"], "Margin": lambda r: r["margin"]}, badges, key="stats_defcon",
-        col_help={"Mins": "Minutes played this season.",
+        col_help={"Mins": "Minutes played in the season shown.",
                   "DC/90": "Defensive Contribution actions per 90 minutes (a rate, not a total).",
                   "Thr": "The position's DefCon points threshold.",
                   "Margin": "DC/90 − threshold. + = clears the bar reliably; higher is better."},
-        flag=_fit_lookup(players))
+        flag=_fit_lookup(players), season=season)
 
 
-def render_cleansheet(players, sel, badges):
+def render_cleansheet(players, sel, badges, last_rows=None, season_name=None):
     st.caption("**Expected goals conceded per 90** (xGC/90) — **lower = better** clean-sheet prospects. A "
                "team stat while the player is on the pitch, per-90. DEF/GK, ≥900 mins. " + LEGEND)
-    rows = apply_filter(defensive_solidity(players), sel)
+    rows, season = _this_or_last(defensive_solidity, players, last_rows, sel, season_name)
     pool = [r["xgc90"] for r in rows]
     _board(rows, {
         "Mins": lambda r: r["minutes"], "xGC/90": lambda r: r["xgc90"],
         "Rating": lambda r: rating_cell(r["xgc90"], pool, higher_is_better=False)},
         badges, key="stats_clean",
-        col_help={"Mins": "Minutes played this season.",
+        col_help={"Mins": "Minutes played in the season shown.",
                   "xGC/90": "Expected goals the team conceded per 90 while this player was on. Lower = better.",
                   "Rating": "Quality vs the players shown (best 20% 🟢 … worst 20% 🔴), with the percentile."},
-        flag=_fit_lookup(players))
+        flag=_fit_lookup(players), season=season,
+        # xGC is a *team* stat, and FPL's history records what a player did without recording who for — so a
+        # summer signing brings his old side's defensive record under his new side's badge. Say so (ADR-126).
+        caveat=" ⚠️ xGC is a **team** stat, so a player who changed clubs over the summer is showing his "
+               "**old** team's defence here.")
 
 
 def render_xg(players, sel, badges):
