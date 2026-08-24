@@ -236,6 +236,69 @@ def summarise(rows):
     }
 
 
+# --- Load & concurrency (ADR-120) ------------------------------------------------------
+#
+# Registered ≠ concurrent. Total testers is cheap (Supabase rows); the real limit is how many people are active
+# *at once* on one small Community-Cloud container running a decision_xp compute per interaction. The failure
+# mode is sluggishness and cold starts, not a crash — most likely at a deadline spike.
+#
+# These thresholds are HEURISTIC and deliberately uncalibrated: ADR-120 says to tune them against real load,
+# the same ethos as the weight calibration. They exist so "are we near the edge?" has an answer at a glance,
+# not because the numbers are known to be right.
+ACTIVE_WINDOW_MIN = 10       # a session with an event this recently counts as "active now"
+CONCURRENT_AMBER, CONCURRENT_RED = 5, 10
+P95_AMBER_MS, P95_RED_MS = 2500, 5000
+
+
+def load_summary(rows, now=None, *, window_min: int = ACTIVE_WINDOW_MIN) -> dict:
+    """Concurrency and latency from the same anonymous events — **pure**, so it's unit-tested directly.
+
+    `active_now` counts distinct sessions seen in the last `window_min`; `peak_concurrent` is the busiest such
+    window over the data. Both are **proxies**: an event is a click, not a held connection, so a reader who has
+    the page open but idle is invisible. Directional, and the trend beside P95 is the signal — a P95 climbing
+    while concurrency climbs is contention, which is the thing worth catching before testers report it.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    def _ts(r):
+        raw = r.get("ts")
+        if not raw:
+            return None
+        try:
+            dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    stamped = [(t, r.get("session_id")) for r in (rows or []) if (t := _ts(r)) and r.get("session_id")]
+    now = now or (max(t for t, _ in stamped) if stamped else datetime.now(timezone.utc))
+    window = timedelta(minutes=window_min)
+
+    active_now = len({sid for t, sid in stamped if now - t <= window})
+    # Peak: for each event's timestamp, how many distinct sessions were live in the window ending there.
+    span = window.total_seconds()
+    peak = 0
+    for anchor_t, _ in stamped:
+        live = {sid for t, sid in stamped if 0 <= (anchor_t - t).total_seconds() <= span}
+        peak = max(peak, len(live))
+
+    p95 = None
+    for op in ("analysis", "data_load"):
+        ds = sorted(r["duration_ms"] for r in (rows or [])
+                    if r.get("event") == "perf" and (r.get("meta") or {}).get("op") == op
+                    and isinstance(r.get("duration_ms"), (int, float)))
+        if ds:
+            p95 = max(p95 or 0, _percentile(ds, 95))
+
+    health = "green"
+    if peak >= CONCURRENT_RED or (p95 or 0) >= P95_RED_MS:
+        health = "red"
+    elif peak >= CONCURRENT_AMBER or (p95 or 0) >= P95_AMBER_MS:
+        health = "amber"
+    return {"active_now": active_now, "peak_concurrent": peak, "p95_ms": p95,
+            "health": health, "window_min": window_min}
+
+
 class timed:
     """Time a user-visible operation and emit a `perf` event (duration + ok) — best-effort (ADR-100).
 

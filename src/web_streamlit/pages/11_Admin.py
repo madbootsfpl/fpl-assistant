@@ -9,7 +9,7 @@ a crash. The heavy lifting is `analytics.summarise` (pure); this page just rende
 
 import streamlit as st
 
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, auth, brand, cloud_store, roster, user_store
 from src.web_streamlit.access import require_access, secret
 
 st.set_page_config(**brand.page_config("Admin"))
@@ -58,6 +58,50 @@ st.caption(f"Last {len(rows)} events{span}{pct}. Anonymous — no personal data 
 if not rows:
     st.info("No events yet. Once `FPL_ANALYTICS=1` and testers use the app, they'll appear here.")
     st.stop()
+
+# --- Load & concurrency (ADR-120) ------------------------------------------------------
+# Registered testers is cheap; the real limit is how many are active *at once* on one small container. The
+# failure mode is sluggishness, not a crash — most likely at a deadline spike.
+_load = analytics.load_summary(rows)
+_icon = {"green": "🟢", "amber": "🟡", "red": "🔴"}[_load["health"]]
+st.subheader(f"{_icon} Load & concurrency")
+l1, l2, l3 = st.columns(3)
+l1.metric("Active now", _load["active_now"], help=f"Distinct sessions with an event in the last "
+                                                  f"{_load['window_min']} minutes.")
+l2.metric("Peak concurrent", _load["peak_concurrent"], help="The busiest such window in this data — the number "
+                                                            "to watch at a deadline.")
+l3.metric("P95 latency", f"{_load['p95_ms']} ms" if _load["p95_ms"] else "—",
+          help="Slowest 5% of analysis / data-load timings. Climbing P95 alongside concurrency means the "
+               "container is stretched.")
+st.caption("Both counts are **proxies** — an event is a click, not a held connection, so an idle open tab is "
+           "invisible. Directional: watch the trend beside P95. Thresholds are uncalibrated heuristics "
+           "(ADR-120) — tune them against real load.")
+
+# --- Tester activity (ADR-120) ---------------------------------------------------------
+# The analytics above are anonymous by design and cannot name anyone. This is a *separate* join over the
+# owner's own allow-list — never a de-anonymisation of an event.
+st.subheader("👥 Tester activity")
+_emails = user_store.all_emails()
+if not _emails:
+    st.caption("No allow-list to read (store unconfigured, or `beta_users` is empty).")
+else:
+    _keys = {e: auth.user_key(e) for e in _emails}
+    _seen = cloud_store.updated_at_by_handle(_keys.values())
+    _rows = roster.build(_emails, _seen, key_for=_keys.get)
+    _t = roster.totals(_rows)
+    r1, r2, r3, r4 = st.columns(4)
+    r1.metric("Registered", _t["registered"])
+    r2.metric("🟢 Active", _t["active"], help="Persisted a squad in the last 7 days.")
+    r3.metric("🟡 Dormant", _t["dormant"], help="Last seen 7–30 days ago.")
+    r4.metric("⚪ Never", _t["never"], help="On the allow-list but has never signed in and saved.")
+    _badge = {"active": "🟢 active", "dormant": "🟡 dormant", "lapsed": "🔴 lapsed", "never": "⚪ never"}
+    st.dataframe([{"Tester": r["email"], "Status": _badge[r["status"]],
+                   "Last active": r["last_active"][:10] if r["last_active"] else "—",
+                   "Days ago": r["days"] if r["days"] is not None else "—"} for r in _rows],
+                 hide_index=True, use_container_width=True)
+    st.caption("⚠️ This sees **signed-in + squad-persisted** activity only — a tester who browses signed-out "
+               "won't appear. Read it beside the anonymous totals above: named engaged users next to overall "
+               "usage. Owner-only; the analytics themselves stay anonymous (ADR-100).")
 
 left, right = st.columns(2)
 with left:

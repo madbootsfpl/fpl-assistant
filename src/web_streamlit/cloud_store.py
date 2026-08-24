@@ -123,6 +123,31 @@ def exists(handle: str) -> bool:
         return False        # best-effort hint — never block the Save (which will surface the real error)
 
 
+def updated_at_by_handle(handles) -> dict:
+    """`{handle: updated_at}` for the handles given — one batched read (ADR-120).
+
+    The account store already stamps `updated_at` on every save, so "when did this tester last persist a squad?"
+    is answerable without storing anything new. One request rather than one per tester: a beta in the tens
+    would otherwise mean tens of round-trips on an Admin page render.
+
+    Empty when unconfigured or on any failure — the Admin page must degrade to "unknown", never error.
+    """
+    handles = [h for h in {clean_handle(h) for h in (handles or [])} if h]
+    if not handles:
+        return {}
+    url, key = _config()
+    if not (url and key):
+        return {}
+    try:
+        resp = requests.get(url, params={"select": "handle,updated_at",
+                                         "handle": f"in.({','.join(handles)})"},
+                            headers=_headers(key), timeout=8)
+        resp.raise_for_status()
+        return {r["handle"]: r.get("updated_at") for r in resp.json() if r.get("handle")}
+    except Exception:                                    # noqa: BLE001 — best-effort, as everywhere in this module
+        return {}
+
+
 def delete_squad(handle: str) -> None:
     """Remove the squad saved under `handle` (a "clear my saved squad", ADR-094). No-op if unconfigured."""
     url, key = _config()

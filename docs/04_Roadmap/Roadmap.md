@@ -278,8 +278,8 @@ Kept so the reasoning isn't re-litigated:
 
 - ✅ Cross-device persistence (ADR-094) · Google auth (ADR-106) · "remember me" (ADR-099) · Log out ·
   anonymous usage analytics (ADR-100) · beta gate + waitlist (ADR-087/102) · self-service unsubscribe (ADR-122).
-- ⬜ **ADR-120 — Admin tester-activity roster + load watch.** Spec'd, owner-approved, "build post-GW1". **Not
-  data-gated — it was only ever waiting on the calendar.**
+- ✅ **ADR-120 — Admin tester-activity roster + load watch** — built (Sprint 186). ⏳ Owner smoke outstanding
+  (`FPL_ADMIN_KEY` + the anon SELECT policy) before the numbers have been seen.
 - ⚠️ **OWNER ACTION — ADR-122's unsubscribe silently no-ops** until a `beta_users` **DELETE policy** is added in
   Supabase (BETA.md §4). The *"remove me = we delete your rows"* promise isn't kept without it. Console work,
   not code.

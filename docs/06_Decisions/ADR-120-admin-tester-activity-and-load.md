@@ -2,7 +2,9 @@
 
 **Decision ID:** ADR-120
 **Date:** 2026-08-18
-**Status:** Accepted — owner-approved (spec now, **build post-GW1**). Answers two owner questions: *"which testers are
+**Status:** ✅ **Accepted — built** (Sprint 186, 2026-08-24). Spec'd 2026-08-18 and gated then; built
+post-GW1 as planned. ⏳ Needs the owner's Admin smoke to see real numbers (`FPL_ADMIN_KEY` + the anon SELECT
+policy) — the same step ADR-100 already had outstanding. Answers two owner questions: *"which testers are
 actually testing?"* and *"am I hitting performance/capacity limits, and can I add more testers?"*
 **Superseded By / Replaces:** Extends the anonymous analytics (ADR-100, Sprints 136–137) + the per-user account
 store (ADR-106) + the `beta_users` allow-list (ADR-098). **Adds no new table, no new secret, no analytics-payload
@@ -87,10 +89,22 @@ heuristic (*mitigation:* calibrate against real GW1 load, like the weight-calibr
 
 ### 🧾 Status & follow-ups
 
-- **Accepted — build post-GW1** (a small Admin sprint): the tester-activity roster (allow-list × account-store
-  `updated_at`) + the load/concurrency panel (active-now proxy · peak · P95 · a health read), both owner-only reads
-  on the gated Admin page; 3-part DoD (tests + smoke + docs). Verify the account store exposes a per-`user_key`
-  `updated_at` at build (add if missing).
+- **✅ Built (Sprint 186).** The roster (`web_streamlit/roster.py`, pure) + the load panel
+  (`analytics.load_summary`, pure), both rendered on the gated Admin page. Two small readers were needed and
+  added: `user_store.all_emails()` and `cloud_store.updated_at_by_handle()` — the latter **batched**, because a
+  beta in the tens would otherwise mean tens of round-trips per Admin render. 13 tests. 1265 → **1278**.
+- **The `updated_at` check the ADR asked for: it was already there.** The account store is
+  `squads(handle, data, updated_at)` and stamps every save, so "when did this tester last persist?" needed no
+  new column and no new write.
+- **The anonymity boundary is now structural, not a comment.** The roster lives in its own module rather than in
+  `analytics.py`, so the anonymous-events code has no idea emails exist. That was the ADR's central constraint
+  and it is worth being able to see it in the file layout.
+- **Four states, not three.** The spec listed active / dormant / never; the build adds **lapsed** (over 30
+  days). A tester who signed in and drifted away is a different problem from one who never arrived, and
+  collapsing them hides which of the two you have.
+- ⏳ **Owner smoke outstanding:** set `FPL_ADMIN_KEY` and the anon SELECT policy on `events`, then read the two
+  new panels against real data. Everything here is verified pure-function and page-renders; the numbers
+  themselves have never been seen.
 - **Bridge until then (manual, no build) — how to watch concurrency at the GW1 deadline:** see the runbook note in
   `GW1_RUNBOOK.md` / the owner brief — Streamlit Cloud **Manage app → Logs** (+ watch for "over resources"
   reboots) · the Admin page's **P95 latency** + session counts · tester reports of slowness.

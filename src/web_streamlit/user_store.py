@@ -65,6 +65,29 @@ def is_registered(email: str) -> bool:
     return any(clean_email(row.get("email", "")) == e for row in with_retry(_get, retries=1).json())
 
 
+def all_emails() -> list[str]:
+    """Every allow-listed email, normalised (ADR-120). **Owner-only** — the Admin page is gated by
+    `FPL_ADMIN_KEY`, and this is the same list the owner already holds in Supabase.
+
+    Deliberately *not* an analytics field: the anonymity invariant (ADR-100) stays intact because the roster is
+    a **separate join** the owner performs over their own allow-list, never a de-anonymisation of an event.
+    Empty when unconfigured, like every other read here."""
+    url, key = _endpoint()
+    if not (url and key):
+        return []
+
+    def _get():
+        r = requests.get(url, params={"select": "email"}, headers=_headers(key), timeout=_TIMEOUT)
+        r.raise_for_status()
+        return r
+
+    try:
+        rows = with_retry(_get, retries=1).json()
+    except Exception:                                    # noqa: BLE001 — best-effort, like the rest of this module
+        return []
+    return sorted({e for row in rows if (e := clean_email(row.get("email", "")))})
+
+
 def count() -> int:
     """How many testers are registered (0 when unconfigured). A small select — fine for a cap in the tens."""
     url, key = _endpoint()
