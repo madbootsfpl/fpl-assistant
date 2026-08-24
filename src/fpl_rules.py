@@ -8,6 +8,8 @@ Facts are phrased for the **2025/26** season. If the FPL rules change, update th
 short, self-describing, and numeric where the number is the answer (so the verifier can trace it).
 """
 
+from datetime import timedelta
+
 # Each entry: a `topic` (a stable id), the `cues` that a question about it contains, and the authoritative
 # `fact` string. `match_rules` returns every entry whose cue appears in the question, in list order.
 RULES = [
@@ -186,6 +188,13 @@ TOPIC_LABELS = ("scoring", "clean sheets & saves", "bonus points", "defensive co
                 "deadlines", "double/blank gameweeks", "player flags & availability", "pre-season transfers",
                 "one chip per gameweek", "bench points", "wildcard timing", "mini-leagues",
                 "overall vs gameweek rank", "team value & selling price")
+
+
+# The one FPL rule the *code* has to act on, not just narrate: a gameweek locks 90 minutes before its first
+# kickoff. Both the countdown (`analytics.deadline`, ADR-086) and the "which fixtures can I still act on?" filter
+# (`Storage.get_upcoming_fixtures`, ADR-123) measure from it, so it lives here — in the rules module both can
+# depend on — rather than being written down twice and drifting apart.
+DEADLINE_LEAD = timedelta(minutes=90)
 
 
 def match_rules(question: str, limit: int = 4) -> list:

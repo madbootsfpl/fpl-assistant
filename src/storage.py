@@ -7,9 +7,11 @@ creating duplicates.
 """
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src import config
+from src.fpl_rules import DEADLINE_LEAD
 from src.models import Fixture, Player, PlayerGameweek, PlayerSeason, Team
 
 CREATE_TEAMS = """
@@ -498,16 +500,53 @@ class Storage:
         )
         return self.conn.execute(sql, params).fetchall()
 
-    def get_upcoming_fixtures(self, team: str | None = None) -> list[sqlite3.Row]:
-        """Unfinished fixtures with both team short-names, ordered by gameweek.
+    def get_upcoming_fixtures(self, team: str | None = None,
+                              now: datetime | None = None) -> list[sqlite3.Row]:
+        """Fixtures in gameweeks you can still act on, with both team short-names, ordered by gameweek.
 
         Answers "which fixtures are upcoming?" (a stored-column filter). With a
         `team` short-name, only that team's fixtures are returned; without one,
         all upcoming fixtures. The per-team aggregation and the home/away
         perspective live in the analytics layer, not here.
+
+        "Upcoming" means **the gameweek's deadline has not passed** — not FPL's `finished`
+        flag, and not the individual fixture's kickoff (ADR-123).
+
+        Not `finished`, because FPL holds that flag back until a gameweek's bonus points are
+        confirmed — it sets `finished_provisional` at full-time instead. So for the couple of
+        days a gameweek is in flight, every played match still reads as unfinished, and a
+        "next 3 gameweeks" projection quietly spends one of them on football already played.
+
+        Not per-fixture kickoff either, because a gameweek is played over several days. Cutting
+        fixture by fixture leaves a *stub* gameweek at the head of the horizon — GW1 with one
+        match left, belonging to two teams — and every caller that reasonably assumes "the next
+        gameweek" means "every team's next fixture" then quietly disagrees with itself: the
+        player card's per-team next-3 outruns a global 3-gameweek horizon, and the captain
+        double lands on a gameweek whose deadline has gone (a 0.0 double for anyone who has
+        already played). The deadline is the honest line because it is the one that matters:
+        once it passes you cannot transfer, captain or bench for that gameweek, so it is no
+        longer a gameweek you are deciding about. Whole gameweeks in or out keeps every team on
+        the same one.
+
+        A gameweek's deadline is its earliest kickoff minus `DEADLINE_LEAD` — the same rule the
+        countdown uses (`analytics.deadline`, ADR-086), shared from `fpl_rules` so the two
+        cannot drift. `now` is injected (defaulting to the current UTC time) so the boundary is
+        testable, the same convention `next_deadline` uses. Fixtures with no `event` or no
+        `kickoff_time` are unscheduled, not played, so they stay upcoming.
+
+        The cutoff is compared as a string, deliberately: kickoffs are stored exactly as the API
+        sends them (`YYYY-MM-DDTHH:MM:SSZ`, all UTC), and for a fixed-width UTC format
+        lexicographic order is chronological order — so SQLite can compare in-query with no date
+        parsing. Rather than subtract the lead from each kickoff (which a string cannot do), we
+        add it to `now`: a deadline has passed exactly when the earliest kickoff is at or before
+        `now + DEADLINE_LEAD`.
         """
-        clauses = ["f.finished = 0"]
-        params: list = []
+        cutoff = (now or datetime.now(timezone.utc)).astimezone(timezone.utc) + DEADLINE_LEAD
+        clauses = ["f.finished = 0", """(f.event IS NULL OR f.event NOT IN (
+                       SELECT event FROM fixtures
+                       WHERE event IS NOT NULL AND kickoff_time IS NOT NULL
+                       GROUP BY event HAVING MIN(kickoff_time) <= ?))"""]
+        params: list = [cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")]
         if team:
             clauses.append("(th.short_name = ? OR ta.short_name = ?)")
             params.extend([team, team])

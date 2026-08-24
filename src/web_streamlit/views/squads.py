@@ -284,6 +284,29 @@ def _flag_unavailable(members) -> None:
                "from selection). Swap them out on the **Transfer** tab.")
 
 
+_CARD_GWS = 3   # the player card's per-GW row shows a team's next 3 fixtures (ADR-109)
+
+
+def _card_horizon(upcoming, card_gws: int = _CARD_GWS) -> int:
+    """How many **global** gameweeks the card's per-team next-`card_gws` fixtures actually span.
+
+    A horizon counts gameweeks from the front of `upcoming`; the card counts fixtures per team. Those agree only
+    while every team has a fixture in every gameweek — so they part company at a **blank gameweek**, where a team
+    with no match has its next three fixtures spread over four. Asking for a flat 3-gameweek horizon then leaves
+    the card's third cell at 0.0, because the xP was never computed for the gameweek the card is showing.
+
+    Returns the 1-based position of the furthest gameweek any team's next-`card_gws` reaches, so an xP computed to
+    that horizon fills every cell. Pure; `card_gws` at minimum when there's nothing to measure."""
+    events = sorted({f["event"] for f in upcoming if f["event"] is not None})
+    if not events:
+        return card_gws
+    rank = {e: i + 1 for i, e in enumerate(events)}     # gameweek → how deep a horizon must reach to include it
+    teams_ = {t for f in upcoming for t in (f["home"], f["away"])}
+    reach = [rank[s["event"]] for t in teams_ for s in team_schedule(upcoming, t)[:card_gws]
+             if s["event"] in rank]
+    return max([card_gws, *reach])
+
+
 def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
     # US-423 (density): the "on the pitch — pick a player…" caption dropped (the pitch + ⚙ panel are discoverable)
     # so the pitch sits higher on mobile.
@@ -304,11 +327,18 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     # Per-GW fixtures + xP for the player card (ADR-109): each owned player's next-≤3 fixtures with the xP for that
     # gameweek (aligned by `event` number). Feeds the ⚙ panel card (US-367) + the pitch hover popover (US-368).
-    # The card row **always shows GW1–3, independent of the page horizon** (wave-3 feedback: a horizon of 1 used to
-    # leave GW2/GW3 at 0). Reuse `ranked` when it already spans ≥3 GWs; else compute a fixed-3 view just for the card.
-    card_bg_by_id = by_gameweek_by_id if horizon >= 3 else {
+    # The card row **always shows 3 gameweeks, independent of the page horizon** (wave-3 feedback: a horizon of 1
+    # used to leave GW2/GW3 at 0). Reuse `ranked` when it already spans far enough; else compute a wider view just
+    # for the card.
+    #
+    # "Far enough" is not a flat 3. The card's 3 gameweeks are counted **per team**, but a horizon is counted
+    # **globally**, and a blank gameweek pulls the two apart: a team sitting one out has its next 3 fixtures spread
+    # over 4 gameweeks, so a flat-3 horizon never computes the xP its third cell needs. Sizing the horizon by the
+    # furthest gameweek any team's next-3 actually reaches keeps every cell populated.
+    card_horizon = _card_horizon(upcoming)
+    card_bg_by_id = by_gameweek_by_id if horizon >= card_horizon else {
         r["id"]: r["by_gameweek"]
-        for r in decision_xp(players, upcoming, history, horizon=3, gw_history_by_code=gw_history)}
+        for r in decision_xp(players, upcoming, history, horizon=card_horizon, gw_history_by_code=gw_history)}
 
     def _pergw_fixtures(p):
         """A player's next-≤3 fixtures with the per-GW xP (ADR-109). Works for **any** player (`card_bg_by_id`

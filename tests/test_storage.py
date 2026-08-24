@@ -5,6 +5,7 @@ never touched.
 """
 
 import sqlite3
+from datetime import datetime, timezone
 
 import pytest
 
@@ -122,6 +123,7 @@ def make_fixture(
     team_a: int = 2,
     event: int = 1,
     finished: bool = False,
+    kickoff_time: str | None = None,
 ) -> Fixture:
     return Fixture(
         id=id,
@@ -131,7 +133,7 @@ def make_fixture(
         team_h_difficulty=2,
         team_a_difficulty=4,
         finished=finished,
-        kickoff_time=None,
+        kickoff_time=kickoff_time,
     )
 
 
@@ -460,6 +462,123 @@ def test_get_upcoming_fixtures_excludes_finished_and_joins_team_names(tmp_path):
     assert len(upcoming) == 1
     assert upcoming[0]["home"] == "ARS"   # team_h=1
     assert upcoming[0]["away"] == "AVL"   # team_a=2
+    store.close()
+
+
+def test_get_upcoming_fixtures_drops_a_gameweek_fpl_has_not_marked_finished(tmp_path):
+    """The GW1 bug (ADR-123): FPL leaves `finished` false until the gameweek's bonus is
+    confirmed, so a played match still reads as unfinished for a couple of days. The passed
+    deadline — not the flag — has to be what drops it out of "upcoming"."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([
+        # Both are finished=False, exactly as the live API reported them mid-GW1.
+        make_fixture(id=1, event=1, kickoff_time="2026-08-21T19:00:00Z"),   # played
+        make_fixture(id=2, event=2, kickoff_time="2026-08-29T19:00:00Z"),   # still to come
+    ])
+
+    now = datetime(2026, 8, 23, 18, 46, tzinfo=timezone.utc)
+    upcoming = store.get_upcoming_fixtures(now=now)
+
+    assert [r["event"] for r in upcoming] == [2]
+    store.close()
+
+
+def test_get_upcoming_fixtures_drops_a_whole_gameweek_not_just_its_played_matches(tmp_path):
+    """A gameweek is played over several days, and the deadline covers all of it. Once GW1's
+    deadline has gone, its Monday-night straggler goes too — you can no longer transfer,
+    captain or bench for it, so it is not a gameweek you are deciding about. Cutting fixture
+    by fixture instead would leave a stub GW1 at the head of the horizon, belonging to the two
+    teams yet to play, and every "the next gameweek" assumption downstream would disagree."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([
+        make_fixture(id=1, event=1, kickoff_time="2026-08-21T19:00:00Z"),   # played Friday
+        make_fixture(id=2, event=1, kickoff_time="2026-08-24T19:00:00Z"),   # GW1's Monday straggler
+        make_fixture(id=3, event=2, kickoff_time="2026-08-29T19:00:00Z"),
+    ])
+
+    now = datetime(2026, 8, 23, 18, 46, tzinfo=timezone.utc)   # after GW1's deadline, before its last match
+
+    assert [r["event"] for r in store.get_upcoming_fixtures(now=now)] == [2]
+    store.close()
+
+
+def test_get_upcoming_fixtures_boundary_is_the_deadline_not_the_kickoff(tmp_path):
+    """A gameweek is upcoming right up to its deadline — 90 minutes before its *earliest*
+    kickoff (the same rule as `next_deadline`, ADR-086) — and not a second after."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([make_fixture(id=1, event=1, kickoff_time="2026-08-21T19:00:00Z")])
+
+    # Deadline = 17:30. A minute either side of it.
+    assert len(store.get_upcoming_fixtures(now=datetime(2026, 8, 21, 17, 29, tzinfo=timezone.utc))) == 1
+    assert store.get_upcoming_fixtures(now=datetime(2026, 8, 21, 17, 31, tzinfo=timezone.utc)) == []
+    store.close()
+
+
+def test_get_upcoming_fixtures_deadline_comes_from_the_gameweeks_earliest_kickoff(tmp_path):
+    """The deadline is set by the *first* match of the gameweek, so a later kickoff in the same
+    gameweek cannot keep it open — and an earlier one in a *different* gameweek cannot close it."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([
+        make_fixture(id=1, event=1, kickoff_time="2026-08-22T14:00:00Z"),   # not the earliest
+        make_fixture(id=2, event=1, kickoff_time="2026-08-21T19:00:00Z"),   # sets GW1's deadline (17:30 Fri)
+    ])
+
+    # Saturday morning: GW1's deadline went on Friday, though a GW1 match is hours away.
+    at_saturday = datetime(2026, 8, 22, 9, 0, tzinfo=timezone.utc)
+    assert store.get_upcoming_fixtures(now=at_saturday) == []
+
+    # Friday lunchtime: the deadline is still ahead, so the whole gameweek is upcoming.
+    at_friday = datetime(2026, 8, 21, 12, 0, tzinfo=timezone.utc)
+    assert len(store.get_upcoming_fixtures(now=at_friday)) == 2
+    store.close()
+
+
+def test_get_upcoming_fixtures_keeps_unscheduled_fixtures(tmp_path):
+    """FPL leaves `event` and `kickoff_time` null until a match is dated. Undated is not
+    played, so it stays upcoming — otherwise we'd drop real future football."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([make_fixture(id=1, event=None, kickoff_time=None)])
+
+    upcoming = store.get_upcoming_fixtures(now=datetime(2026, 8, 23, tzinfo=timezone.utc))
+
+    assert len(upcoming) == 1
+    store.close()
+
+
+def test_get_upcoming_fixtures_still_honours_the_finished_flag(tmp_path):
+    """The deadline cutoff is added to the flag, not swapped for it: once FPL does set
+    `finished`, it stays authoritative even for a fixture with no kickoff time to judge."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams(two_teams())
+    store.save_fixtures([make_fixture(id=1, event=1, finished=True, kickoff_time=None)])
+
+    assert store.get_upcoming_fixtures(now=datetime(2026, 8, 23, tzinfo=timezone.utc)) == []
+    store.close()
+
+
+def test_get_upcoming_fixtures_team_filter_survives_the_cutoff(tmp_path):
+    """The cutoff and the team filter both bind — a regression guard on the SQL, since the
+    cutoff adds a subquery and a placeholder ahead of the team's two."""
+    store = Storage(db_path=str(tmp_path / "test.db"))
+    store.save_teams([
+        Team(id=1, name="Arsenal", short_name="ARS"),
+        Team(id=2, name="Aston Villa", short_name="AVL"),
+        Team(id=3, name="Chelsea", short_name="CHE"),
+    ])
+    store.save_fixtures([
+        make_fixture(id=1, team_h=1, team_a=2, event=1, kickoff_time="2026-08-21T19:00:00Z"),
+        make_fixture(id=2, team_h=1, team_a=3, event=2, kickoff_time="2026-08-29T19:00:00Z"),
+        make_fixture(id=3, team_h=2, team_a=3, event=2, kickoff_time="2026-08-29T19:00:00Z"),
+    ])
+
+    ars = store.get_upcoming_fixtures(team="ARS", now=datetime(2026, 8, 23, tzinfo=timezone.utc))
+
+    assert [(r["home"], r["away"]) for r in ars] == [("ARS", "CHE")]
     store.close()
 
 

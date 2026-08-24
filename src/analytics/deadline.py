@@ -7,7 +7,7 @@ minutes. Pure and `now`-injected (so it's unit-tested), timezone-aware, empty-sa
 
 from datetime import datetime, timedelta
 
-_LEAD = timedelta(minutes=90)   # a gameweek locks 90 minutes before its first kickoff
+from src.fpl_rules import DEADLINE_LEAD as _LEAD  # a gameweek locks 90 minutes before its first kickoff
 
 # Urgency thresholds for the countdown (US-267) — how close the deadline is.
 _IMMINENT = timedelta(hours=2)

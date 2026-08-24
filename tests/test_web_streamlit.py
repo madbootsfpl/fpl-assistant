@@ -1967,6 +1967,40 @@ def test_my_squad_pitch_popover_shows_per_gameweek_xp():
     assert 'class="plc-gwcol total"' not in blob             # no Total column (dropped — owner steer)
 
 
+def test_card_horizon_stretches_past_a_blank_gameweek():
+    """The player card shows a team's next 3 *fixtures*, but a horizon counts *gameweeks* — and a blank gameweek
+    separates the two. A team with no GW3 match has its next 3 fixtures in GW2, GW4 and GW5, so a flat 3-gameweek
+    horizon would never compute the xP for GW5 and the card's last cell would read 0.0."""
+    from src.web_streamlit.views.squads import _card_horizon
+
+    # ARS blanks GW3; AVL plays every week.
+    upcoming = [
+        {"event": 2, "home": "ARS", "away": "AVL", "team_h_difficulty": 3, "team_a_difficulty": 3},
+        {"event": 3, "home": "AVL", "away": "CHE", "team_h_difficulty": 3, "team_a_difficulty": 3},
+        {"event": 4, "home": "ARS", "away": "CHE", "team_h_difficulty": 3, "team_a_difficulty": 3},
+        {"event": 5, "home": "AVL", "away": "ARS", "team_h_difficulty": 3, "team_a_difficulty": 3},
+    ]
+
+    assert _card_horizon(upcoming) == 4          # GW5 is the 4th gameweek in the window — ARS's 3rd fixture
+
+
+def test_card_horizon_is_a_plain_three_when_every_team_plays_every_week():
+    from src.web_streamlit.views.squads import _card_horizon
+
+    upcoming = [
+        {"event": gw, "home": h, "away": a, "team_h_difficulty": 3, "team_a_difficulty": 3}
+        for gw in (2, 3, 4, 5) for h, a in (("ARS", "AVL"), ("CHE", "EVE"))
+    ]
+
+    assert _card_horizon(upcoming) == 3
+
+
+def test_card_horizon_survives_an_empty_fixture_list():
+    from src.web_streamlit.views.squads import _card_horizon
+
+    assert _card_horizon([]) == 3
+
+
 def test_my_squad_per_gw_card_is_horizon_independent():
     # Wave-3 feedback (ADR-109): the per-GW card row always shows GW1–3, even when "Gameweeks ahead" = 1 (it used to
     # leave GW2/GW3 at 0.0). The selected player's panel-card per-GW cells match between horizon 1 and horizon 5.
