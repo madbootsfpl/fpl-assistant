@@ -201,7 +201,10 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 - ⬜ **Full chip-sequence scan** *(fplapex)* — rank **every valid** Wildcard/Free Hit/Bench Boost/Triple Captain
   **sequence** across the season by projected xPts, with a grounded per-chip why. *(A v0 chip-timing advisor
   shipped — Sprint 096, ADR-082.)*
-- ⬜ **Forward GW planner — "a plan, not a panic"** *(fplanalyser)* — per-GW projected-points-vs-your-average
+- ✅ **Forward GW planner — "a plan, not a panic"** — done (ADR-131, Sprint 183), but **built differently
+  from this line**: measured on our own data, the per-GW xP spread is ±3% while fixture exposure swings 2→7, so
+  it leads with exposure and states the xP range instead of naming a "problem week" out of noise. *(original
+  line, for the trail)* — per-GW projected-points-vs-your-average
   bars + *"your problem week is GW6, five weeks out"* + N-hard-fixtures per GW + which players face them.
   Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
 - ⬜ **Two small ones** — **player clashes** (your own players meeting = point cannibalisation) · **captain

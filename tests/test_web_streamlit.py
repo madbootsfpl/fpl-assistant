@@ -2598,3 +2598,15 @@ def test_health_shows_the_risk_monitor_and_squad_dna():
     triage = next((c for c in cols if "Attention" in c), None)
     assert triage is not None, "no triage table rendered"
     assert "Under 60" in triage and "Driver" in triage
+
+
+def test_health_shows_the_forward_planner():
+    """ADR-131 — the card leads with fixture exposure and states the xP range rather than implying a forecast."""
+    at = _squads_view("Health")
+    if at.exception:
+        raise AssertionError(at.exception)
+    blob = " ".join(m.value for m in at.markdown)
+    if "The weeks ahead" not in blob:
+        return                                     # no squad loaded in this environment
+    assert 'class="fp-wk"' in blob                 # a bar per gameweek
+    assert "xP per gameweek" in blob               # the projection stated, not charted as the headline

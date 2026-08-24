@@ -660,10 +660,15 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     # grade + attack/defence/fixture read + your players, drilling into the full Team DNA. Reuses players/upcoming.
     st.divider()
     from src.analytics import last_season_name, last_season_rows
+    from src.analytics.forward_plan import forward_plan
     from src.analytics.player_dna import player_dna_this_or_last
     from src.analytics.squad_risk import squad_dna, squad_risk_rows
     from src.analytics.team_dna import team_dna_all
-    from src.web_streamlit.squad_risk_card import render_risk_monitor, render_squad_dna
+    from src.web_streamlit.squad_risk_card import (
+        render_forward_plan,
+        render_risk_monitor,
+        render_squad_dna,
+    )
     from src.web_streamlit.team_dna_card import render_your_teams
 
     # ADR-130 — the two questions Health couldn't answer: what needs attention this week, and how the 15 look
@@ -675,6 +680,10 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     _dna_by_id = {p["id"]: player_dna_this_or_last(p, players, _last, _name)[0] for p in owned}
     _tdna = team_dna_all(players, upcoming, gw_history=gw_history, last_rows=_last)
     render_squad_dna(squad_dna(owned, _dna_by_id, _tdna))
+    # ADR-131 — what's coming, led by fixture exposure (which varies) rather than xP (which barely does).
+    _ranked = decision_xp(players, upcoming, history, horizon=6, gw_history_by_code=gw_history)
+    render_forward_plan(
+        forward_plan(owned, upcoming, {r["id"]: r["by_gameweek"] for r in _ranked}, horizon=6), len(owned))
     st.divider()
     # ADR-126: the key-players table needs ~900 minutes to rank anyone, so hand it last season to fall back on.
     render_your_teams(squad, players, upcoming, team_names=team_names,

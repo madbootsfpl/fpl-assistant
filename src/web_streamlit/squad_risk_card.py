@@ -88,3 +88,75 @@ def render_risk_monitor(rows, badges=None) -> None:
     if unassessed:
         st.caption(f"🌱 {unassessed} player(s) show **—**: new to the league, so there's no minutes record to "
                    "judge them on yet. Unknown, not risky — their attention comes from fixtures alone.")
+
+
+FP_CSS = """
+<style>
+.fp-wk{display:grid;grid-template-columns:46px 1fr auto;align-items:center;gap:10px;margin:6px 0;}
+.fp-gw{color:#aab6c6;font-size:.76rem;font-weight:800;font-variant-numeric:tabular-nums;}
+.fp-bt{background:rgba(255,255,255,.06);border-radius:999px;height:9px;overflow:hidden;display:flex;}
+.fp-bh{background:linear-gradient(90deg,#f0b429,#f98a8a);height:100%;}
+.fp-bb{background:#f98a8a;height:100%;}
+.fp-bd{background:#5eead4;height:100%;}
+.fp-tag{font-size:.68rem;font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:999px;
+white-space:nowrap;}
+.fp-tag.hard{background:rgba(240,180,41,.16);color:#f0b429;}
+.fp-tag.blank{background:rgba(249,138,138,.16);color:#f98a8a;}
+.fp-tag.double{background:rgba(94,234,212,.14);color:#5eead4;}
+.fp-tag.ok{background:rgba(255,255,255,.05);color:#7c8899;}
+.fp-hl{color:#cdd6e2;font-size:.84rem;line-height:1.5;margin-bottom:12px;}
+.fp-hl strong{color:#f2f6fb;}
+.fp-ft{color:#7c8899;font-size:.74rem;margin-top:12px;padding-top:10px;
+border-top:1px solid rgba(255,255,255,.07);}
+</style>
+"""
+
+
+def _md_bold(text):
+    import re
+    return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+
+
+def forward_plan_html(plan, squad_size: int = 15) -> str:
+    """The weeks ahead: one bar per gameweek showing how much of your squad is exposed, and a headline.
+
+    The bar is **fixture exposure**, not projected points — six weeks of a real squad sat inside ±3% on xP
+    while hard-fixture counts swung 2→7, so exposure is the signal worth the width (ADR-131). The xP range is
+    stated in the footnote, and says so when it's flat rather than letting a 3% wobble look like a forecast.
+    """
+    weeks = plan.get("weeks") or []
+    if not weeks:
+        return ""
+    rows = ""
+    for w in weeks:
+        n = max(1, squad_size)
+        seg = ""
+        for cls, names in (("bb", w["blank"]), ("bh", w["hard"]), ("bd", w["double"])):
+            if names:
+                seg += f'<div class="fp-{cls}" style="width:{min(100, 100 * len(names) / n):.0f}%"></div>'
+        tag_cls, tag = ("ok", "even")
+        if w["flag"] == "blank":
+            tag_cls, tag = "blank", f"{len(w['blank'])} blank"
+        elif w["flag"] == "double":
+            tag_cls, tag = "double", f"{len(w['double'])} double"
+        elif w["flag"] == "hard":
+            tag_cls, tag = "hard", f"{len(w['hard'])} hard"
+        elif w["hard"]:
+            tag = f"{len(w['hard'])} hard"
+        rows += (f'<div class="fp-wk"><div class="fp-gw">GW{w["event"]}</div>'
+                 f'<div class="fp-bt">{seg}</div>'
+                 f'<div class="fp-tag {tag_cls}">{tag}</div></div>')
+    xp = plan.get("xp") or {}
+    foot = ""
+    if xp:
+        flat = (" — barely moves across these weeks, which is normal: fixture difficulty shifts a squad's "
+                "projection by a few percent, not a few players." if xp.get("flat") else "")
+        foot = (f'<div class="fp-ft">Projected {xp["min"]}–{xp["max"]} xP per gameweek '
+                f'(average {xp["avg"]}){flat}</div>')
+    return (SR_CSS + FP_CSS + '<div class="sq-card"><div class="sq-ti">📅 The weeks ahead</div>'
+            f'<div class="fp-hl" style="margin-top:10px">{_md_bold(plan.get("headline", ""))}</div>'
+            f'{rows}{foot}</div>')
+
+
+def render_forward_plan(plan, squad_size: int = 15) -> None:
+    st.markdown(forward_plan_html(plan, squad_size), unsafe_allow_html=True)
