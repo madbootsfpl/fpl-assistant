@@ -8,6 +8,7 @@ from src.analytics.player_dna import (
     _percentile,
     _set_piece_score,
     player_dna,
+    player_dna_this_or_last,
     player_gw_points,
 )
 
@@ -153,3 +154,60 @@ def test_gw_points_orders_by_round_skips_nulls_and_limits():
     assert player_gw_points(hist, 7) == [(1, 2), (3, 5), (4, 9)]     # sorted, null round skipped
     assert player_gw_points(hist, 7, last=2) == [(3, 5), (4, 9)]     # most-recent N
     assert player_gw_points(hist, 999) == []                        # unknown code
+
+
+# ---- last-season fallback for the peer pool (ADR-126, reported live 2026-08-24) ----
+#
+# The peer pool gates at 450 minutes, so for the first weeks of a season it is EMPTY — every per-player
+# percentile came back None while Team Attack (ranked across team xG totals, no minutes gate) kept its own.
+# The radar plotted `(percentile or 0)`, i.e. the centre, so seven vertices collapsed and the fingerprint
+# became a single spike through Team Attack. That is what a user saw on the live app.
+
+def _lp(pid, name, team="ARS", pos="MID", mins=2700, xg=8.0, xa=6.0, pts=180, price=9.0, ict=300.0):
+    return {"id": pid, "web_name": name, "team": team, "position": pos, "minutes": mins,
+            "xg": xg, "xa": xa, "total_points": pts, "price": price, "ict_index": ict,
+            "penalties_order": None, "corners_order": None, "freekicks_order": None}
+
+
+def test_this_season_cannot_rank_anyone_after_one_gameweek():
+    """The precondition for the bug: one gameweek of minutes leaves the pool empty and every axis unranked."""
+    pool = [_lp(i, f"P{i}", mins=90) for i in range(1, 12)]
+    dna = player_dna(pool[0], pool)
+    assert dna.pool_size == 0
+    assert all(a.percentile is None for a in dna.axes if a.label != "Team Attack")
+
+
+def test_falls_back_to_ranking_against_last_season():
+    this = [_lp(i, f"P{i}", mins=90) for i in range(1, 12)]
+    last = [_lp(i, f"P{i}", mins=2700, xg=float(i)) for i in range(1, 12)]
+    dna, season = player_dna_this_or_last(this[9], this, last, "2025/26")
+    assert season == "2025/26"
+    assert dna.pool_size == 11
+    assert all(a.percentile is not None for a in dna.axes)
+
+
+def test_fallback_drops_the_axis_with_no_last_season_source():
+    """FPL does not keep ICT in a player's season history, so Bonus Potential cannot be ranked from it. An axis
+    every player scores 0 on would rank them all identically and read as real — dropping it is the honest move."""
+    this = [_lp(i, f"P{i}", mins=90) for i in range(1, 12)]
+    last = [{**_lp(i, f"P{i}", mins=2700), "ict_index": None} for i in range(1, 12)]
+    dna, _ = player_dna_this_or_last(this[0], this, last, "2025/26")
+    assert "Bonus Potl" not in [a.label for a in dna.axes]
+    assert "Goal Threat" in [a.label for a in dna.axes]
+
+
+def test_this_season_wins_once_it_can_rank():
+    """The fallback retires itself — no flag to remember to turn off."""
+    this = [_lp(i, f"P{i}", mins=900) for i in range(1, 12)]
+    last = [_lp(i, f"P{i}", mins=2700) for i in range(1, 12)]
+    dna, season = player_dna_this_or_last(this[0], this, last, "2025/26")
+    assert season is None and dna.pool_size == 11
+
+
+def test_no_last_season_row_leaves_the_player_honestly_unranked():
+    """A player new to the league has nothing to fall back on. The card must say it cannot rank him, not
+    invent a fingerprint — so no season is announced and the percentiles stay None."""
+    this = [_lp(i, f"P{i}", mins=90) for i in range(1, 12)]
+    dna, season = player_dna_this_or_last(this[0], this, [_lp(99, "Someone else")], "2025/26")
+    assert season is None
+    assert all(a.percentile is None for a in dna.axes if a.label != "Team Attack")

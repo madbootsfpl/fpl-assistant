@@ -8,7 +8,8 @@ Display-only: everything reuses the `decision_xp` the caller already computed; n
 
 import streamlit as st
 
-from src.analytics import player_dna, player_gw_points, player_insights
+from src.analytics import player_gw_points, player_insights
+from src.analytics.player_dna import player_dna_this_or_last
 from src.web_streamlit.dna_card import render_dna_card
 from src.web_streamlit.insights_card import render_insights_card
 from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
@@ -98,13 +99,21 @@ def _code(player):
         return None
 
 
-def render_player_dna(player, players, xp_by_id, *, gw_history=None, owned=None) -> None:
+def render_player_dna(player, players, xp_by_id, *, gw_history=None, owned=None,
+                      last_rows=None, season_name=None) -> None:
     """Render the full Player DNA section for `player`: verdict (owned-aware) → radar → insights → trend.
-    No-op if `player` is falsy. Reuses `xp_by_id`; computes one `player_dna`."""
+    No-op if `player` is falsy. Reuses `xp_by_id`; computes one `player_dna`.
+
+    The peer pool needs 450 minutes, so early in a season nobody qualifies and every percentile is None —
+    the radar had nothing to draw. `last_rows`/`season_name` (ADR-126) let it rank against last season
+    instead, captioned so nobody reads a full-season fingerprint as this week's form."""
     if not player:
         return
-    dna = player_dna(player, players)
+    dna, season = player_dna_this_or_last(player, players, last_rows, season_name)
     render_verdict_card(build_verdict(player, players, xp_by_id, dna, owned=owned, horizon=1))
+    if season:
+        st.caption(f"🧬 DNA percentiles are **{season}** — ranking needs ~5 matches, so this season's "
+                   "fingerprint draws from about GW5. Price, ownership and set-piece duty are current.")
     render_dna_card(dna)
     render_insights_card(player_insights(player, dna))
     st.markdown(trend_panel_html(player_gw_points(gw_history or {}, _code(player))),

@@ -35,6 +35,8 @@ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,s
 .dna-card .dna-svg{display:block;width:100%;max-width:420px;height:auto;margin:2px auto 4px;}
 .dna-card .dna-note{color:#f6a13a;font-size:.74rem;font-weight:600;margin:2px 2px 8px;}
 .dna-card .dna-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px;}
+.dna-unranked{border:1px dashed rgba(255,255,255,.16);border-radius:12px;padding:20px 16px;text-align:center;
+color:#8c93a3;font-size:.85rem;line-height:1.5;}
 .dna-card .dna-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
 border-radius:10px;padding:7px 9px;min-width:0;}
 .dna-card .dna-cl{font-size:.7rem;color:#aab6c6;line-height:1.15;}
@@ -66,6 +68,12 @@ def radar_svg(axes, *, label: str = "", size: int = 360) -> str:
     """A standalone `<svg>` radar for a list of `Axis`es (Player **or** Team DNA — same builder) — octagon rings,
     spokes, labelled axes, the percentile polygon (brand purple→teal), and a band-coloured dot at each vertex.
     Pure geometry; no script."""
+    # An unranked axis (percentile None) used to plot at `(ax.percentile or 0)` — the centre — so a pool too
+    # small to rank anyone drew a fingerprint collapsed to a spike through whichever axis *could* be ranked.
+    # A shape built mostly from missing data is a lie; say there is nothing to draw instead (ADR-118/126).
+    if sum(1 for a in axes if a.percentile is not None) < 3:
+        return ('<div class="dna-unranked">Not enough games played to rank this player yet — the fingerprint '
+                'needs a pool of peers to compare against.</div>')
     n = len(axes)
     cx = cy = size / 2
     R = size / 2 - 74                      # leave a margin for the axis labels
@@ -104,12 +112,18 @@ def radar_svg(axes, *, label: str = "", size: int = 360) -> str:
     poly = []
     for i, ax in enumerate(axes):
         theta = -math.pi / 2 + i * 2 * math.pi / n
-        frac = (ax.percentile or 0) / 100.0
+        # A still-unranked axis sits on the ring rather than at the centre: absent evidence is not a zero
+        # score. The vertex dot below renders it hollow so it reads as "unknown", not "average".
+        frac = 0.5 if ax.percentile is None else ax.percentile / 100.0
         poly.append(_pt(cx, cy, R * frac, theta))
     pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in poly)
     parts.append(f'<polygon points="{pts}" fill="url(#dnaFill)" '
                  f'stroke="{brand.PURPLE_LT}" stroke-width="2" stroke-linejoin="round"/>')
     for (x, y), ax in zip(poly, axes):
+        if ax.percentile is None:                     # hollow = unranked, distinct from a genuine low score
+            parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.6" fill="none" '
+                         'stroke="#7c8899" stroke-width="1.5" stroke-dasharray="2 2"/>')
+            continue
         bg, _fg = _band(ax.percentile)
         parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.6" fill="{bg}" '
                      'stroke="#0c121a" stroke-width="1.5"/>')

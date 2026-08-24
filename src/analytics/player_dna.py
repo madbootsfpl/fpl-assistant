@@ -116,7 +116,7 @@ def _team_xg(players) -> dict:
     return totals
 
 
-def player_dna(target, players, *, min_minutes: int = MIN_MINUTES) -> PlayerDNA | None:
+def player_dna(target, players, *, min_minutes: int = MIN_MINUTES, skip_axes=()) -> PlayerDNA | None:
     """The target's percentile-within-position fingerprint across the eight DNA axes.
 
     `target` is a player row (dict or `sqlite3.Row`); `players` is the full pool (all positions — the
@@ -134,6 +134,8 @@ def player_dna(target, players, *, min_minutes: int = MIN_MINUTES) -> PlayerDNA 
 
     axes: list[Axis] = []
     for label, sublabel, extract in _AXES:
+        if label in skip_axes:      # no honest source for this axis in this pool (ADR-126 fallback)
+            continue
         value = extract(target)
         pool = [extract(p) for p in peers]
         axes.append(Axis(label, sublabel, round(value, 2), _percentile(value, pool)))
@@ -151,6 +153,33 @@ def player_dna(target, players, *, min_minutes: int = MIN_MINUTES) -> PlayerDNA 
 
 
 # ── AI Insights (Sprint 170, ADR-118) ─────────────────────────────────────────
+# ICT index is the one DNA input FPL does not keep in a player's season history, so a last-season pool has no
+# honest way to rank Bonus Potential. Dropping the axis is the honest answer — an axis every player scores 0 on
+# would rank them all identically and read as real.
+_NO_LAST_SEASON_SOURCE = ("Bonus Potl",)
+
+
+def player_dna_this_or_last(target, players, last_rows=None, season_name=None, **kw):
+    """A player's DNA from this season, or from last season's pool if this season cannot rank anyone (ADR-126).
+
+    The peer pool needs `min_minutes` (450 — five matches), so for the first weeks of a season it is empty and
+    *every* percentile comes back None. That is not a small degradation: percentiles are the whole point of the
+    radar, so the card renders a fingerprint with nothing in it.
+
+    Falls back to ranking the player among last season's pool — the target too, so a full-season value is
+    compared against full-season peers rather than one gameweek against thirty-eight. Returns
+    `(dna, season_label)`; the label is None when the DNA is this season's, or when the player has no
+    last-season row at all (new to the league — then the card should say it cannot rank them, not invent it)."""
+    dna = player_dna(target, players, **kw)
+    if dna is None or dna.pool_size:
+        return dna, None
+    tid = _get(target, "id")
+    last_target = next((r for r in (last_rows or []) if _get(r, "id") == tid), None)
+    if last_target is None:
+        return dna, None
+    return player_dna(last_target, last_rows, skip_axes=_NO_LAST_SEASON_SOURCE, **kw), season_name
+
+
 # Plain-English, GROUNDED observations synthesised from the DNA percentiles + the player row + crowd tier — the
 # "the AI explains" panel. Every bullet traces to a value (a percentile, a set-piece order, an ownership tier, a
 # price); nothing is invented. Display-only; no `decision_xp`.

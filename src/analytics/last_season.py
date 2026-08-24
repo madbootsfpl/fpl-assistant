@@ -91,10 +91,16 @@ def last_season_rows(players, history_by_code) -> list[dict]:
             # Defensive: xGC is a season total (the board divides by minutes); DefCon is a rate we derive.
             "xgc": _get(season, "expected_goals_conceded"),
             "defcon_per90": (defcon * 90.0 / minutes) if minutes else 0.0,
-            # Team DNA's key-players table (ADR-126 follow-up) reads these three. `selected_by` is the one
-            # field taken live rather than from the season — see the note above on why ownership is a now-fact.
+            # Team DNA's key-players table (ADR-126 follow-up) reads these three.
             "total_points": _get(season, "total_points"),
             "xgi": _get(season, "expected_goal_involvements"),
+            # Now-facts, taken live rather than from the season — see the note above. Ownership, price and
+            # set-piece duty describe the player as he is *today*: you pay today's price, and it is today's
+            # penalty taker you want, not whoever took them last April. Player DNA (ADR-118) reads these.
             "selected_by": _get(p, "selected_by"),
+            "price": _get(p, "price"),
+            "penalties_order": _get(p, "penalties_order"),
+            "corners_order": _get(p, "corners_order"),
+            "freekicks_order": _get(p, "freekicks_order"),
         })
     return out

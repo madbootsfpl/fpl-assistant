@@ -84,6 +84,7 @@ from src.analytics.player_dna import (
     Insight,
     PlayerDNA,
     player_dna,
+    player_dna_this_or_last,
     player_gw_points,
     player_insights,
 )
@@ -161,6 +162,7 @@ __all__ = [
     "form_rate",
     "expected_minutes",
     "fallback_rate",
+    "player_dna_this_or_last",
     "last_season_name",
     "last_season_rows",
     "minutes_share",

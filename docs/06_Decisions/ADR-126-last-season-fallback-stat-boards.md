@@ -160,4 +160,10 @@ covers).
   deliberately *not* last season's: `selected_by` comes from the live row, because ownership is only ever a
   statement about the present — last season's closing ownership would say nothing about who is differential
   this week, and FPL does not store it. The table's note says "Ownership is current" for that reason.
+- **Second follow-up, same day (owner-reported live):** **Player DNA** had the same failure one level down —
+  its peer pool gates at 450 minutes, so the pool was empty, every percentile was `None`, and the radar plotted
+  `(percentile or 0)` = the centre, leaving one spike through Team Attack (the only axis with no minutes gate).
+  `player_dna_this_or_last` applies this ADR's pattern to the pool; Bonus Potential is dropped when falling back
+  because FPL keeps no ICT index in season history. The renderer was also fixed to refuse to draw a fingerprint
+  from mostly-absent data. See Sprint 177.
 - **Still not this ADR:** the xG board needs no fallback (no minutes gate, already shows data).
