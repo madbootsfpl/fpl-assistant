@@ -400,6 +400,17 @@ class Storage:
 
         One query for the whole season — the in-season form term (ADR-060) needs every player's
         gameweeks, keyed by the same `code` the xP baseline (ADR-028) uses. Empty preseason.
+
+        ⚠️ **A row exists once its fixture is scheduled, not once it is played** (ADR-125). FPL creates the
+        gameweek's rows up front with `minutes = 0`, so a player whose match kicks off tonight is, by minutes
+        alone, indistinguishable from one who sat on the bench through a match that finished. On 2026-08-24 that
+        was every Chelsea and Fulham player — 61 rows reading 0 minutes for a fixture yet to start.
+
+        So **never infer "played" from a row's presence, or "didn't play" from its 0 minutes.** Anything counting
+        appearances or averaging over gameweeks must first check that the row's `kickoff_time` has passed;
+        otherwise it reads two whole clubs as never playing for the two days their gameweek is in flight.
+        `form_rate` (ADR-060) is safe because it filters on `minutes > 0` — a not-yet-played row and a benched
+        one both correctly carry no rate — but that safety is incidental, not a pattern to copy.
         """
         grouped: dict[int, list[sqlite3.Row]] = {}
         for row in self.conn.execute(
