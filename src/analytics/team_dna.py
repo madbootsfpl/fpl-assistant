@@ -80,7 +80,8 @@ def _grade(axes) -> tuple[str, int]:
     return (letter, avg)
 
 
-def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None) -> dict:
+def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None,
+                 last_rows=None) -> dict:
     """`{team_short: TeamDNA}` for every team in the pool — each ranked across the league on the eight axes, with a
     grade. Compute-once (efficient for the "Your teams" strip). Never raises on zeros / blanks / preseason."""
     metrics = _team_metrics(players, fixtures, next_n=next_n)
@@ -96,6 +97,23 @@ def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None, gw_hist
     # rather than reading 0%.
     cs_rates = {t: team_clean_sheet_rate(gw_history, players, t) for t in metrics} if gw_history else {}
     rated = [v for v in cs_rates.values() if v is not None]
+
+    # ADR-128 follow-up: "regulars" means ≥1500 minutes — about 17 matches — so for most of a season this
+    # season cannot tell any two clubs apart, and every team reads the same number. Fall back to last season's
+    # squad while that is true (the ADR-126 pattern), and hand the ranking back the moment this season can
+    # separate anyone. Scaling the threshold to games played was measured and rejected: after one gameweek it
+    # sorts 20 clubs into 5 buckets and still reads 0 for a club yet to kick off — a weak signal that *looks*
+    # like a real one, which is the failure mode this project keeps choosing against.
+    depth_label, depths = "regulars", {t: m["depth"] for t, m in metrics.items()}
+    if len(set(depths.values())) <= 1 and last_rows:
+        by_team: dict = {}
+        for r in last_rows:
+            team = _get(r, "team")
+            if team in metrics:
+                by_team[team] = by_team.get(team, 0) + (1 if _f(_get(r, "minutes")) >= REGULAR_MINUTES else 0)
+        if len(set(by_team.values())) > 1:
+            depth_label, depths = "last season", by_team
+    depth_col = list(depths.values())
 
     for t, m in metrics.items():
         d_pct = _rank(m["xga"], cols["xga"], invert=True)
@@ -114,17 +132,19 @@ def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None, gw_hist
             Axis("Fixture Strength", "next-5 FDR", round(m["fixt"], 2), f_pct),
             Axis("Set-Piece Threat", "SP takers", round(m["setp"], 1), _rank(m["setp"], cols["setp"])),
             Axis("FPL Output", "team pts", round(m["output"]), _rank(m["output"], cols["output"])),
-            Axis("Squad Depth", "regulars", m["depth"], _rank(m["depth"], cols["depth"])),
+            Axis("Squad Depth", depth_label, depths.get(t, m["depth"]),
+                 _rank(depths.get(t, m["depth"]), depth_col)),
         ]
         grade, score = _grade(axes)
         out[t] = TeamDNA(team=t, name=names.get(t, t), axes=axes, grade=grade, grade_score=score)
     return out
 
 
-def team_dna(team, players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None) -> TeamDNA | None:
+def team_dna(team, players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None,
+             last_rows=None) -> TeamDNA | None:
     """One team's `TeamDNA` (the single-team convenience over `team_dna_all`). None if the team isn't in the pool."""
     return team_dna_all(players, fixtures, next_n=next_n, team_names=team_names,
-                        gw_history=gw_history).get(team)
+                        gw_history=gw_history, last_rows=last_rows).get(team)
 
 
 def team_insights(dna) -> list[Insight]:

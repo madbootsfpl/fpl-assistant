@@ -163,7 +163,9 @@ else:
                "players to target. Attack/creation/output from our aggregates; the defensive axes are proxies "
                "(labelled) that sharpen once the season runs.")
     _names = {t["short_name"]: t["name"] for t in teams}
-    _all_dna = team_dna_all(players, upcoming, team_names=_names, gw_history=gw_history)
+    _last_rows = last_season_rows(players, history)
+    _all_dna = team_dna_all(players, upcoming, team_names=_names, gw_history=gw_history,
+                            last_rows=_last_rows)
     if _all_dna:
         _labels = {_names.get(t, t): t for t in sorted(_all_dna, key=lambda t: _names.get(t, t))}
         _picked = _labels.get(st.selectbox("Team", list(_labels), key="team_dna_pick",
@@ -173,6 +175,6 @@ else:
             _fx = [(s["event"], s["opponent"], s["venue"], s["difficulty"]) for s in _sched]
             # ADR-126: ranking needs ~900 minutes, so fall back to last season until this one can answer.
             _kp, _kp_season = key_players_this_or_last(
-                players, _picked, last_season_rows(players, history), last_season_name(history))
+                players, _picked, _last_rows, last_season_name(history))
             render_team_dna(_all_dna[_picked], fixtures=_fx, key_players=_kp, key_players_season=_kp_season,
                             form=team_form(gw_history, players, _picked))

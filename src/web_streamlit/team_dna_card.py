@@ -243,7 +243,8 @@ def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=No
     owned = [p for p in players if _get(p, "id") in owned_ids]
     if not owned:
         return
-    all_dna = team_dna_all(players, fixtures, team_names=team_names, gw_history=gw_history)
+    all_dna = team_dna_all(players, fixtures, team_names=team_names, gw_history=gw_history,
+                           last_rows=last_rows)
     rows = your_teams_rows(owned, all_dna)
     if not rows:
         return

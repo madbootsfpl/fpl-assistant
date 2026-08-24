@@ -109,5 +109,13 @@ both covered by tests).
   rate. 1170 → **1188 tests**.
 - **Follow-ups this now unblocks:** the per-season **price sparkline** (backlog, long open); rolling 3-/6-GW
   form windows; the Tier-3 crowd backtest.
-- **Not this ADR:** `Squad Depth` still counts players with ≥1500 minutes, which is 0 for every club — a flat
-  50 across the league. An ADR-126-shaped problem in its own right.
+- **Follow-up done (same day): `Squad Depth`.** It counts players with ≥1500 minutes — about 17 matches — so
+  for most of a season *every* club reads the same number and the axis carries no information (a flat 50 across
+  the league once ADR-127 stopped ties reading as 100). It now falls back to last season's squad while this
+  season cannot separate anyone, and hands the ranking back the moment it can. Restores real spread: MCI 15
+  (100th) · CHE 14 (92nd) · ARS 13 (76th) · SUN 11 (53rd) · LIV 10 (37th).
+
+  **Scaling the threshold to games played was measured and rejected.** After one gameweek it sorts 20 clubs
+  into 5 buckets and still reads 0 for a club yet to kick off — a weak signal that *looks* like a real one,
+  which is the failure mode this project keeps choosing against. Last season gives 10 distinct values and
+  covers every club with history.

@@ -160,3 +160,39 @@ def test_no_gw_history_leaves_every_team_on_the_proxy():
     dna = team_dna_all(players, fixtures, gw_history={})
     assert all(next(a for a in d.axes if a.label == "Clean-Sheet Potl").sublabel == "def + fix"
                for d in dna.values())
+
+
+def test_squad_depth_falls_back_when_this_season_cannot_separate_anyone():
+    """"Regulars" means ≥1500 minutes — about 17 matches — so for most of a season every club reads the same
+    number and the axis carries no information. Fall back to last season while that's true."""
+    players = [_gk(1, "AAA"), _gk(2, "BBB")]
+    fixtures = [{"event": 2, "home": "AAA", "away": "BBB", "team_h_difficulty": 3, "team_a_difficulty": 3}]
+    last = [{"team": "AAA", "minutes": 2700}, {"team": "AAA", "minutes": 2000},
+            {"team": "BBB", "minutes": 400}]
+
+    flat = team_dna_all(players, fixtures)["AAA"]
+    fell_back = team_dna_all(players, fixtures, last_rows=last)["AAA"]
+
+    assert next(a for a in flat.axes if a.label == "Squad Depth").sublabel == "regulars"
+    axis = next(a for a in fell_back.axes if a.label == "Squad Depth")
+    assert axis.sublabel == "last season" and axis.value == 2       # two AAA players cleared 1500
+
+
+def test_squad_depth_keeps_this_season_once_it_can_separate_clubs():
+    """The fallback retires itself — no flag to remember to switch off."""
+    players = [_gk(1, "AAA"), _gk(2, "BBB")]
+    players[0]["minutes"] = 2700          # a regular this season
+    players[1]["minutes"] = 100           # not one
+    fixtures = [{"event": 2, "home": "AAA", "away": "BBB", "team_h_difficulty": 3, "team_a_difficulty": 3}]
+    last = [{"team": "AAA", "minutes": 2700}, {"team": "BBB", "minutes": 2700}]
+
+    dna = team_dna_all(players, fixtures, last_rows=last)["AAA"]
+    assert next(a for a in dna.axes if a.label == "Squad Depth").sublabel == "regulars"
+
+
+def test_squad_depth_stays_on_this_season_when_last_season_cannot_separate_either():
+    players = [_gk(1, "AAA"), _gk(2, "BBB")]
+    fixtures = [{"event": 2, "home": "AAA", "away": "BBB", "team_h_difficulty": 3, "team_a_difficulty": 3}]
+    last = [{"team": "AAA", "minutes": 2700}, {"team": "BBB", "minutes": 2700}]   # both 1 regular
+    dna = team_dna_all(players, fixtures, last_rows=last)["AAA"]
+    assert next(a for a in dna.axes if a.label == "Squad Depth").sublabel == "regulars"

@@ -86,5 +86,11 @@ never render a missing value as a confident zero.
 
 - **Unblocked by the widened table:** the per-season price sparkline (long open in the backlog), rolling
   3-/6-GW form windows, the Tier-3 crowd backtest.
-- **`Squad Depth`** still counts players with ≥1500 minutes — 0 for every club, so a flat 50 across the league.
-  An ADR-126-shaped problem of its own.
+- **`Squad Depth` — done the same day.** ≥1500 minutes is about 17 matches, so for most of a season every club
+  reads the same number and the axis says nothing (a flat 50 once ADR-127 stopped ties reading as 100). It now
+  falls back to last season's squad while this season cannot separate anyone: MCI 15 (100th) · CHE 14 (92nd) ·
+  ARS 13 (76th) · SUN 11 (53rd) · LIV 10 (37th).
+
+  **Scaling the threshold to games played was measured and rejected** — after one gameweek it sorts 20 clubs
+  into 5 buckets and still reads 0 for a club yet to kick off. A weak signal that looks like a real one is
+  worse than an honest fallback, which is the same call as the boards, the trend card and the radar.
