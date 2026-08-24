@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 from src.analytics.crowd import ownership_tier
 from src.analytics.optimizer import is_unavailable
+from src.analytics.ranking import percentile_rank
 
 MIN_MINUTES = 450   # a peer must have played at least this to enter the ranking pool (denoise fringe players)
 
@@ -65,12 +66,10 @@ def _set_piece_score(row) -> float:
 
 
 def _percentile(value, values) -> int | None:
-    """Percentile of `value` within `values` = the share of peers **at or below** it (0–100).
-    None when there are no peers to rank against (an empty pool)."""
-    vals = [v for v in values if v is not None]
-    if not vals:
-        return None
-    return round(100 * sum(1 for v in vals if v <= value) / len(vals))
+    """Percentile of `value` within `values` (0–100), ties sharing their average rank — see
+    `analytics.ranking.percentile_rank` (ADR-127). Kept as a thin alias because it is used throughout this
+    module and named for what it means here."""
+    return percentile_rank(value, values)
 
 
 @dataclass(frozen=True)

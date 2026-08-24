@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 from src.analytics.fdr import team_fdr
 from src.analytics.player_dna import Axis, Insight, _f, _get, _set_piece_score
+from src.analytics.ranking import percentile_rank
 
 REGULAR_MINUTES = 1500     # a player at/above this counts toward "squad depth" (a regular)
 
@@ -37,13 +38,10 @@ class TeamDNA:
 
 
 def _rank(value, values, *, invert: bool = False) -> int | None:
-    """Percentile of `value` within `values` (0–100). `invert=True` for lower-is-better axes (xGA, FDR) so the
-    best team still scores highest. None when there's nothing to rank against."""
-    vals = [v for v in values if v is not None]
-    if not vals:
-        return None
-    hits = sum(1 for v in vals if (v >= value if invert else v <= value))
-    return round(100 * hits / len(vals))
+    """Percentile of `value` across the league (0–100), ties sharing their average rank — see
+    `analytics.ranking.percentile_rank` (ADR-127). `invert=True` for lower-is-better axes (xGA, FDR) so the
+    best team still scores highest."""
+    return percentile_rank(value, values, invert=invert)
 
 
 def _team_metrics(players, fixtures, *, next_n: int) -> dict:

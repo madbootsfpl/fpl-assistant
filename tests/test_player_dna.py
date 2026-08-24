@@ -28,9 +28,11 @@ def _axis(dna, label):
 
 # ---- the small helpers -------------------------------------------------------
 
-def test_percentile_is_share_at_or_below():
-    assert _percentile(10, [1, 2, 10]) == 100      # the top value → 100
-    assert _percentile(1, [1, 2, 10]) == 33        # 1 of 3 at-or-below
+def test_percentile_spans_the_full_range_with_ties_sharing_a_rank():
+    # ADR-127: the classic percentile rank — best 100, worst 0, ties at their average position.
+    assert _percentile(10, [1, 2, 10]) == 100      # the top value
+    assert _percentile(1, [1, 2, 10]) == 0         # the bottom value — it beats nobody
+    assert _percentile(2, [1, 2, 10]) == 50        # the middle of three
     assert _percentile(5, []) is None              # no peers → unranked
 
 
@@ -79,7 +81,7 @@ def test_per90_beats_raw_volume():
     other = _p(2, "MID", xg=6.0, minutes=1800)
     dna = player_dna(target, [target, other])
     assert _axis(dna, "Goal Threat").percentile == 100
-    assert player_dna(other, [target, other]).axes[0].percentile == 50
+    assert player_dna(other, [target, other]).axes[0].percentile == 0   # of two, the lower is bottom
 
 
 def test_team_attack_ranks_across_teams():
@@ -91,7 +93,7 @@ def test_team_attack_ranks_across_teams():
     city = _axis(player_dna(players[0], players), "Team Attack")
     town = _axis(player_dna(players[2], players), "Team Attack")
     assert city.value == 30.0 and town.value == 4.0
-    assert city.percentile == 100 and town.percentile == 50
+    assert city.percentile == 100 and town.percentile == 0   # of two teams, one is top and one bottom
 
 
 def test_low_minute_target_is_flagged_but_still_ranked():
@@ -113,7 +115,8 @@ def test_empty_pool_is_safe_and_unranked():
     dna = player_dna(lonely, [lonely])
     assert dna is not None and dna.pool_size == 0
     assert _axis(dna, "Goal Threat").percentile is None
-    assert _axis(dna, "Team Attack").percentile == 100   # its own team is the only team → top
+    # ADR-127: a pool of one is a fully-tied pool — you cannot meaningfully be "best of one", so it reads 50.
+    assert _axis(dna, "Team Attack").percentile == 50
 
 
 def test_accepts_sqlite3_row_not_just_dict():
