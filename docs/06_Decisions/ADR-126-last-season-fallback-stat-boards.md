@@ -153,5 +153,11 @@ covers).
   the single thing this ADR set out to avoid. `last_season_rows` now resolves the most recent season **across
   the pool** and returns only rows from it, so label and data agree by construction rather than by the caller
   being careful. Those 47 players are omitted, which is the honest answer for them.
-- **Not this ADR / follow-ups:** the Team DNA card's "key players to target" table has the same 900-minute gate
-  and the same fix available; the xG board needs no fallback (it has no minutes gate and already shows data).
+- **Follow-up done (same day):** the Team DNA card's "key players to target" table had the same 900-minute
+  gate, and `team_key_players` is pure over the same shape, so it took the same fallback — a
+  `key_players_this_or_last` helper and three more projected fields (`total_points`, `xgi`, `selected_by`).
+  Wired into both call sites: Fixtures ▸ 🧬 Team DNA and My Squad ▸ Health ▸ "Your teams". One field is
+  deliberately *not* last season's: `selected_by` comes from the live row, because ownership is only ever a
+  statement about the present — last season's closing ownership would say nothing about who is differential
+  this week, and FPL does not store it. The table's note says "Ownership is current" for that reason.
+- **Still not this ADR:** the xG board needs no fallback (no minutes gate, already shows data).

@@ -122,6 +122,14 @@ happened to make an unrelated feature nearly free.
 
 ### 🔭 Follow-ups
 
-- The **Team DNA card's "key players to target"** table has the same 900-minute gate and the same fix available.
+- **Team DNA's "key players to target" — done the same day.** Same 900-minute gate, same fix: `team_key_players`
+  is pure over the same shape, so it needed a `key_players_this_or_last` helper and three more projected fields
+  (`total_points`, `xgi`, `selected_by`), wired into both call sites — Fixtures ▸ 🧬 Team DNA and
+  My Squad ▸ Health ▸ "Your teams". Arsenal goes from 0 rows to 7. **+7 tests → 1147.**
+
+  One field is deliberately not last season's. `selected_by` comes from the live row, because ownership is only
+  ever a statement about the present — last season's closing ownership says nothing about who is differential
+  this week, and FPL does not store it anyway. So the table shows last season's *performance* with today's
+  ownership, and the note says "Ownership is current" rather than leaving a reader to guess which it is.
 - The **xG board** needs no fallback — no minutes gate, and it already shows data.
 - The fallback retires itself board by board as players clear 900; nothing to remember to switch off.

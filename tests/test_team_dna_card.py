@@ -5,6 +5,7 @@ from src.web_streamlit.team_dna_card import (
     fixtures_html,
     head_html,
     key_players_html,
+    key_players_this_or_last,
     team_key_players,
     your_teams_rows,
     your_teams_strip_html,
@@ -99,3 +100,56 @@ def test_your_teams_strip_html_has_a_row_per_club_with_dots():
     assert html.count('class="yt-row"') == 2
     assert html.count('class="yt-dot"') == 6           # ATT/DEF/FIX × 2 clubs
     assert your_teams_strip_html([]) == ""
+
+
+# ---- last-season fallback on the key-players table (ADR-126) -----------------------
+#
+# Ranking here needs ~900 minutes, so the table sat empty until about gameweek 10 — the same gate, and the same
+# fix, as the three stat boards. `team_key_players` runs unchanged on the projection.
+
+def _lp(name, team, pos="MID", pts=150, mins=2700, xgi=9.0, own=12.5):
+    """A last-season row in `last_season_rows` shape."""
+    return {"id": abs(hash(name)) % 9999, "web_name": name, "team": team, "position": pos,
+            "minutes": mins, "total_points": pts, "xgi": xgi, "selected_by": own}
+
+
+def test_key_players_falls_back_to_last_season_and_names_it():
+    rows, season = key_players_this_or_last([], "ARS", [_lp("Saka", "ARS")], "2025/26")
+    assert [r["name"] for r in rows] == ["Saka"]
+    assert season == "2025/26"
+
+
+def test_key_players_prefers_this_season_and_announces_nothing():
+    this = [{"web_name": "Ødegaard", "team": "ARS", "position": "MID", "minutes": 1000,
+             "total_points": 60, "xgi": 4.0, "selected_by": 8.0}]
+    rows, season = key_players_this_or_last(this, "ARS", [_lp("Saka", "ARS")], "2025/26")
+    assert [r["name"] for r in rows] == ["Ødegaard"] and season is None
+
+
+def test_key_players_announces_nothing_when_there_is_no_last_season_either():
+    """A promoted side whose players are new to the league — the 🌱 "fills in" note stands, and there is no
+    season to name, so the caller must not print an empty label."""
+    rows, season = key_players_this_or_last([], "SUN", [], "2025/26")
+    assert rows == [] and season is None
+
+
+def test_key_players_ranks_a_summer_signing_with_his_current_club():
+    """The projection carries the *current* club, so a player who moved is ranked for the side he plays for
+    now — which is the side a manager is deciding about."""
+    rows, _ = key_players_this_or_last([], "BUR", [_lp("Mover", "BUR"), _lp("Stayer", "ARS")], "2025/26")
+    assert [r["name"] for r in rows] == ["Mover"]
+
+
+def test_key_players_html_shows_the_season_note_only_when_falling_back():
+    with_note = key_players_html([{"name": "Saka", "pos": "MID", "xgi90": 0.6, "pts90": 6.4,
+                                   "minpct": 65, "own": 10.1}], season="2025/26")
+    without = key_players_html([{"name": "Saka", "pos": "MID", "xgi90": 0.6, "pts90": 6.4,
+                                 "minpct": 65, "own": 10.1}])
+    assert "2025/26" in with_note and "Ownership is current" in with_note
+    assert "2025/26" not in without and "Ownership is current" not in without
+    assert "Saka" in with_note and "Saka" in without
+
+
+def test_key_players_html_keeps_the_empty_note_when_neither_season_has_rows():
+    html = key_players_html([], season="2025/26")
+    assert "Fills in as the season plays" in html and "<table" not in html

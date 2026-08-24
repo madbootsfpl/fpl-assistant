@@ -789,6 +789,23 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
         assert df["Rating"].astype(str).str.contains("🟢|🟡|🟠|🔴", regex=True).any()
 
 
+def test_team_dna_key_players_falls_back_to_last_season():
+    """ADR-126 follow-up: the Team DNA card's key-players table has the same 900-minute gate as the three stat
+    boards, so it gets the same fallback — through the real page, not just the pure function."""
+    at = _run(_PAGES / "3_Fixtures.py")
+    sel = next((s for s in at.selectbox if s.label == "Team"), None)
+    if sel is None:
+        return                                  # gated or no data
+    sel.set_value("Arsenal").run()
+    assert not at.exception
+    blob = " ".join(m.value for m in at.markdown)
+    assert "Key players to target" in blob
+    if "Fills in as the season plays" in blob:
+        return                                  # no last-season rows for this side either — the 🌱 note stands
+    assert "Ownership is current" in blob, "the table showed last season without saying so"
+    assert 'class="td-tbl"' in blob, "announced last season but rendered no table"
+
+
 def test_gated_boards_fall_back_to_last_season_and_say_so():
     """ADR-126: the three 900-minute boards can't answer until ~GW10. Rather than the ten-week blank they used
     to show, they render last season's numbers behind a banner naming the season. The banner is the point — an

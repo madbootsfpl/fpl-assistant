@@ -638,8 +638,11 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     # 🧬 Your teams (ADR-119, US-420) — the team-strength health check behind your squad: each of your clubs'
     # grade + attack/defence/fixture read + your players, drilling into the full Team DNA. Reuses players/upcoming.
     st.divider()
+    from src.analytics import last_season_name, last_season_rows
     from src.web_streamlit.team_dna_card import render_your_teams
-    render_your_teams(squad, players, upcoming, team_names=team_names)
+    # ADR-126: the key-players table needs ~900 minutes to rank anyone, so hand it last season to fall back on.
+    render_your_teams(squad, players, upcoming, team_names=team_names,
+                      last_rows=last_season_rows(players, history), season_name=last_season_name(history))
 
 
 # ---- Transfer (best XI-aware swaps; ADR-046) -------------------------------------------------------

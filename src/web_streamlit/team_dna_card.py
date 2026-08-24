@@ -96,19 +96,26 @@ def fixtures_html(fixtures) -> str:
             f'{len(fixtures)}</div><div class="td-fxrow">{cells}</div></div>')
 
 
-def key_players_html(rows) -> str:
-    """A key-players-to-target table. `rows` = list of dicts (name, pos, xgi90, pts90, minpct, own). Empty early
-    in the season (nobody has the ~900 minutes to rank yet) → the heading + a "fills in" note, not a blank."""
+def key_players_html(rows, season=None) -> str:
+    """A key-players-to-target table. `rows` = list of dicts (name, pos, xgi90, pts90, minpct, own).
+
+    `season` names the season the rows come from when it isn't this one (ADR-126). Ranking here needs ~900
+    minutes, so until about gameweek 10 this season cannot answer and last season's numbers are shown instead —
+    behind a line saying so, because an unlabelled number from another season is worse than an empty table.
+    With no last-season rows either (a promoted side, or players new to the league) the "fills in" note stands.
+    """
     if not rows:
         return (TD_CSS + '<div class="td-card"><div class="td-ttl">🎯 Key players to target (FPL impact)</div>'
                 '<div class="td-sub">🌱 Fills in as the season plays — a player needs ~900+ minutes to rank here.'
                 '</div></div>')
+    note = ('<div class="td-sub">📅 <b>' + _esc(str(season)) + '</b> — ranking needs ~900 minutes, so this '
+            'season\'s table fills from about GW10. Ownership is current.</div>') if season else ""
     body = "".join(
         f'<tr><td>{_esc(p["name"])}<span class="td-pos">{_esc(p["pos"])}</span></td>'
         f'<td>{p["xgi90"]:.2f}</td><td>{p["pts90"]:.1f}</td><td>{p["minpct"]}%</td>'
         f'<td>{p["own"]:.1f}%</td></tr>' for p in rows)
     return (TD_CSS + '<div class="td-card"><div class="td-ttl">🎯 Key players to target (FPL impact)</div>'
-            '<table class="td-tbl"><thead><tr><th>Player</th><th>xGI/90</th><th>Pts/90</th>'
+            f'{note}<table class="td-tbl"><thead><tr><th>Player</th><th>xGI/90</th><th>Pts/90</th>'
             f'<th>Mins</th><th>Own</th></tr></thead><tbody>{body}</tbody></table></div>')
 
 
@@ -127,16 +134,30 @@ def team_key_players(players, team, *, n: int = 7, min_minutes: int = 900) -> li
     return out
 
 
-def render_team_dna(dna, *, fixtures=None, key_players=None) -> None:
+def key_players_this_or_last(players, team, last_rows=None, season_name=None, **kw):
+    """A team's key players from this season, or last season's if this season can't rank anyone yet (ADR-126).
+
+    `team_key_players` runs **unchanged** on last season, because `last_season_rows` hands it the same mapping
+    shape `get_players()` does — and it filters on the *current* club, which the projection carries, so a
+    summer signing is ranked with the side he plays for now. Returns `(rows, season_label)`; the label is None
+    when the rows are this season's, so the caller has nothing to announce."""
+    rows = team_key_players(players, team, **kw)
+    if rows:
+        return rows, None
+    return team_key_players(last_rows or [], team, **kw), (season_name if last_rows else None)
+
+
+def render_team_dna(dna, *, fixtures=None, key_players=None, key_players_season=None) -> None:
     """Render the full Team DNA section: grade header + radar → insights → fixtures → key players. No-op if
-    `dna` is None."""
+    `dna` is None. `key_players_season` names the season behind the table when it isn't this one (ADR-126)."""
     if dna is None:
         return
     st.markdown(head_html(dna), unsafe_allow_html=True)
     render_insights_card(team_insights(dna))
     if fixtures:
         st.markdown(fixtures_html(fixtures), unsafe_allow_html=True)
-    st.markdown(key_players_html(key_players or []), unsafe_allow_html=True)   # renders a "fills in" note when empty
+    # renders a "fills in" note when there's nothing for either season
+    st.markdown(key_players_html(key_players or [], key_players_season), unsafe_allow_html=True)
 
 
 # ── My Squad ▸ Health: the "Your teams" strip (US-420) ────────────────────────
@@ -193,7 +214,7 @@ def your_teams_strip_html(rows) -> str:
             f'</div>{body}</div>')
 
 
-def render_your_teams(squad, players, fixtures, *, team_names=None) -> None:
+def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=None, season_name=None) -> None:
     """The My Squad ▸ Health "Your teams" strip (ADR-119): each of your clubs' grade + key axes + your players,
     then a drill-in into the full Team DNA card. No-op without a squad. Reuses the caller's `players`/`fixtures`."""
     if not squad or not squad.get("player_ids"):
@@ -215,4 +236,5 @@ def render_your_teams(squad, players, fixtures, *, team_names=None) -> None:
     if picked:
         sched = team_schedule(fixtures, picked)[:6]
         fx = [(s["event"], s["opponent"], s["venue"], s["difficulty"]) for s in sched]
-        render_team_dna(all_dna[picked], fixtures=fx, key_players=team_key_players(players, picked))
+        _kp, _season = key_players_this_or_last(players, picked, last_rows, season_name)
+        render_team_dna(all_dna[picked], fixtures=fx, key_players=_kp, key_players_season=_season)

@@ -154,8 +154,8 @@ else:
 
     # 🧬 Team DNA (ADR-119) — a team's percentile-vs-league fingerprint + grade + insights + fixtures + the
     # players to target. Reuses the loaded players + fixtures (no new store read, no decision_xp/FDR change).
-    from src.analytics import team_dna_all, team_schedule
-    from src.web_streamlit.team_dna_card import render_team_dna, team_key_players
+    from src.analytics import last_season_name, last_season_rows, team_dna_all, team_schedule
+    from src.web_streamlit.team_dna_card import key_players_this_or_last, render_team_dna
     st.divider()
     st.subheader("🧬 Team DNA")
     st.caption("How strong is a team, both ends — a percentile-vs-league fingerprint, its grade, fixtures and the "
@@ -170,4 +170,7 @@ else:
         if _picked:
             _sched = team_schedule(upcoming, _picked)[:6]
             _fx = [(s["event"], s["opponent"], s["venue"], s["difficulty"]) for s in _sched]
-            render_team_dna(_all_dna[_picked], fixtures=_fx, key_players=team_key_players(players, _picked))
+            # ADR-126: ranking needs ~900 minutes, so fall back to last season until this one can answer.
+            _kp, _kp_season = key_players_this_or_last(
+                players, _picked, last_season_rows(players, history), last_season_name(history))
+            render_team_dna(_all_dna[_picked], fixtures=_fx, key_players=_kp, key_players_season=_kp_season)

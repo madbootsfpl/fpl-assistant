@@ -52,11 +52,16 @@ def last_season_rows(players, history_by_code) -> list[dict]:
     the only caller. `defcon_per90` is derived here because the live player row carries it precomputed while the
     history row carries the season total.
 
-    **Identity comes from the current row** (`id`, `web_name`, `team`, `position`), so a player shows under the
-    club they play for *now* — that is the club a manager is deciding about. The consequence is that a *team*
-    stat carries across a transfer: a defender who moved in the summer brings his old side's `xgc` under his new
-    side's badge. That is real and the caller must label it; it is not fixable here, because FPL's history
-    records what a player did without recording who for.
+    **Performance comes from last season; identity and market facts come from the current row.** `id`,
+    `web_name`, `team` and `position` are what they are *now* — a player shows under the club they play for
+    today, which is the club a manager is deciding about — and so is `selected_by`, because ownership is only
+    ever a statement about the present (last season's closing ownership would tell a manager nothing about who
+    is differential this week, and FPL does not store it anyway).
+
+    The consequence of taking the club from the current row is that a *team* stat carries across a transfer: a
+    defender who moved in the summer brings his old side's `xgc` under his new side's badge. That is real and
+    the caller must label it; it is not fixable here, because FPL's history records what a player did without
+    recording who for.
 
     Only rows from **the single most recent stored season** are returned, so every row on screen belongs to the
     season the caller names. Players with nothing for that season — new to the league, or away from it last
@@ -86,5 +91,10 @@ def last_season_rows(players, history_by_code) -> list[dict]:
             # Defensive: xGC is a season total (the board divides by minutes); DefCon is a rate we derive.
             "xgc": _get(season, "expected_goals_conceded"),
             "defcon_per90": (defcon * 90.0 / minutes) if minutes else 0.0,
+            # Team DNA's key-players table (ADR-126 follow-up) reads these three. `selected_by` is the one
+            # field taken live rather than from the season — see the note above on why ownership is a now-fact.
+            "total_points": _get(season, "total_points"),
+            "xgi": _get(season, "expected_goal_involvements"),
+            "selected_by": _get(p, "selected_by"),
         })
     return out
