@@ -194,7 +194,10 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   a value frontier; xGI × points; DefCon × points) + median baselines + filters. **Complements** the DNA radar:
   the radar shows *one* player's shape, the scatter positions *everyone*. **MadBoots spin:** a grounded verdict
   on hover, not a dot to interpret.
-- ⬜ **Multi-GW transfer-path planner** + horizon decay weights *(fplapex — market-validated)* — plan several
+- ◑ **Multi-GW transfer-path planner** — the **timing arithmetic** shipped (ADR-132, Sprint 184: use it /
+  bank it / take the hit); the **path search itself is declined on evidence** — the best sell was the same
+  player in all six gameweeks and the market yielded one positive-gain move, so the tree had one branch. A
+  checkable trigger to revisit is recorded in the ADR. *(original line, for the trail)* — plan several
   gameweeks ahead as a path/tree, pricing **hits (−4 now vs rolling)** against total xPts. **MadBoots spin:** a
   grounded *why* per move (Edge/Risk each step). Reuses `suggest_transfers` + `by_gameweek`. Pairs with the
   per-GW xP toggle (US-422). *(A coordinated greedy plan already shipped, Sprint 033 — this is the real one.)*

@@ -707,6 +707,22 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     bench_ids = squad.get("bench_ids", [])
 
+    # ADR-132 — the timing question, above the moves themselves: use the free transfer, bank it, or take the
+    # hit. Arithmetic over FPL's own rules, not a search — the roadmap's path/tree was scoped out on evidence.
+    from src.analytics.transfer_timing import transfer_timing
+    _plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=2)
+    _next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
+    _bg = {r["id"]: r["by_gameweek"] for r in ranked}
+    _delay = None
+    if _plan and _next_gw is not None:
+        _delay = round(_bg.get(_plan[0]["in"]["id"], {}).get(_next_gw, 0.0)
+                       - _bg.get(_plan[0]["out"]["id"], {}).get(_next_gw, 0.0), 2)
+    _free = st.number_input("Free transfers you hold", 0, 5, 1,
+                            help="FPL gives one a week and rolls unused ones up to five.")
+    _timing = transfer_timing(_plan, free=_free, next_gw_gain=_delay, horizon=horizon)
+    st.info(_timing["headline"])
+    st.caption(_timing["hit_verdict"])
+
     # ⭐ Watchlist (ADR-117) — your kept shortlist (⭐ them on the Players tab); the manual transfer below brings
     # one in. Shows each watched player's next fixture · xP · form.
     from src.web_streamlit import watchlist
