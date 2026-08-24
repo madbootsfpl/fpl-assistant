@@ -283,9 +283,11 @@ Kept so the reasoning isn't re-litigated:
 
 ## 🧯 Standing risks
 
-- **Season-rollover and first-occurrence bugs.** Six in two days at GW1. The first **blank** and **double**
-  gameweek will each run branches that have never executed. Treat DGW/BGW week as a testing event, not just a
-  feature.
+- **Season-rollover and first-occurrence bugs.** Six in two days at GW1. A deliberate **DGW/BGW audit**
+  (2026-08-24) then found three more *before* the event: a primary-key collision that silently halved a double
+  gameweek (fixed, ADR-129), the fixture ticker hiding a double's second fixture, and the player card
+  double-counting one (both open). Auditing ahead of a first occurrence works — worth repeating before the
+  first blank gameweek and the first chip deadline.
 - **`ep_next` is load-bearing early.** The cold-start rate leans on it (ADR-104/124) until real evidence
   accrues; an FPL quirk in it propagates.
 - **Streamlit Cloud can serve a stale build** after a push — Reboot from the ⋮ menu.

@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS player_history (
     total_points   INTEGER,
     was_home       INTEGER,
     opponent_team  INTEGER,
-    fixture        INTEGER,
+    fixture        INTEGER NOT NULL,
     kickoff_time   TEXT,
     team_h_score   INTEGER,
     team_a_score   INTEGER,
@@ -201,7 +201,11 @@ CREATE TABLE IF NOT EXISTS player_history (
     threat         REAL,
     defcon         INTEGER,
     value          INTEGER,
-    PRIMARY KEY (element_code, round)
+    -- Keyed by the FIXTURE, not the gameweek (ADR-129). FPL's `element-summary` sends one entry per match, so
+    -- in a double gameweek a player has two rows sharing a `round` — keying on the round made the second
+    -- silently overwrite the first, turning a 20-point double into a 12-point single. `round` stays a column
+    -- because grouping by gameweek is what the analytics want; it just isn't an identity.
+    PRIMARY KEY (element_code, fixture)
 )
 """
 
@@ -314,7 +318,7 @@ INSERT INTO player_history
      team_a_score, goals_scored, assists, clean_sheets, goals_conceded, saves, bonus, bps, xg, xa, xgi, xgc,
      ict_index, influence, creativity, threat, defcon, value)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(element_code, round) DO UPDATE SET
+ON CONFLICT(element_code, fixture) DO UPDATE SET
     minutes        = excluded.minutes,
     total_points   = excluded.total_points,
     was_home       = excluded.was_home,
@@ -381,6 +385,7 @@ class Storage:
             self.conn.execute(CREATE_HISTORY_PAST)
             self.conn.execute(CREATE_HISTORY)
             self._migrate()
+            self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
 
     def _migrate(self) -> None:
         """Add any columns missing from an older database, table by table.
@@ -397,6 +402,32 @@ class Storage:
                     self.conn.execute(
                         f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
                     )
+
+    def _rekey_history(self) -> None:
+        """Rebuild `player_history` on `(element_code, fixture)` if it still carries the old gameweek key.
+
+        SQLite cannot alter a primary key, so this is the standard four-step rebuild: create, copy, drop,
+        rename. **Self-detecting and idempotent** — it inspects the current key and does nothing once the table
+        is already right, so opening a database of any age converges on the current schema with no flag to set
+        and no script to remember (ADR-129).
+
+        Runs *after* `_migrate`, so the old table has already gained every column and the copy is complete.
+        Rows with no `fixture` cannot be keyed and are not copied; FPL always sends one, so this is theoretical
+        (verified: 0 such rows across the live database).
+        """
+        pk = [row[1] for row in self.conn.execute("PRAGMA table_info(player_history)") if row[5]]
+        if pk == ["element_code", "fixture"]:
+            return
+        cols = [row[1] for row in self.conn.execute("PRAGMA table_info(player_history)")]
+        names = ", ".join(cols)
+        self.conn.execute(CREATE_HISTORY.replace("player_history", "player_history_rekeyed"))
+        self.conn.execute(
+            f"INSERT OR REPLACE INTO player_history_rekeyed ({names}) "
+            f"SELECT {names} FROM player_history WHERE fixture IS NOT NULL"
+        )
+        self.conn.execute("DROP TABLE player_history")
+        self.conn.execute("ALTER TABLE player_history_rekeyed RENAME TO player_history")
+
 
     def save_teams(self, teams: list[Team]) -> None:
         rows = [
@@ -453,7 +484,7 @@ class Storage:
     def get_history(self, element_code: int) -> list[sqlite3.Row]:
         """A player's per-GW rows this season (earliest round first), by stable element_code."""
         return self.conn.execute(
-            "SELECT * FROM player_history WHERE element_code = ? ORDER BY round",
+            "SELECT * FROM player_history WHERE element_code = ? ORDER BY round, kickoff_time",
             (element_code,),
         ).fetchall()
 
@@ -479,7 +510,7 @@ class Storage:
         """
         grouped: dict[int, list[sqlite3.Row]] = {}
         for row in self.conn.execute(
-            "SELECT * FROM player_history ORDER BY element_code, round"
+            "SELECT * FROM player_history ORDER BY element_code, round, kickoff_time"
         ):
             grouped.setdefault(row["element_code"], []).append(row)
         return grouped

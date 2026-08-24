@@ -58,31 +58,45 @@ def form_dots(gw_history, code, *, last: int = 5) -> list[tuple]:
     return out[-last:]
 
 
-def stat_series(gw_history, code, stat, *, last: int = 8, per90: bool = False) -> list[tuple]:
+def stat_series(gw_history, code, stat, *, last: int = 8, per90: bool = False,
+                agg: str = "sum") -> list[tuple]:
     """One stat's per-gameweek series as `[(round, value), …]`, oldest first, most recent `last` rounds.
 
     `stat` is a `player_history` column (`xg`, `bps`, `ict_index`, `goals_scored`, …). With `per90=True` the
     value is scaled to a 90-minute rate, and gameweeks with no minutes are dropped — a per-90 off zero minutes
     is not a small number, it is undefined.
 
+    **A row is a fixture, not a gameweek** (ADR-129), so a double gameweek contributes two rows to one round.
+    They are combined here rather than plotted as two points at the same x. `agg` says how:
+
+    * `"sum"` (default) — for **counting** stats: points, goals, bps, minutes, xG. A double gameweek's return
+      *is* the sum of its two matches, and a per-90 divides by the summed minutes.
+    * `"last"` — for **snapshot** stats, `value` (price) being the one that matters. Adding a player's price to
+      itself because he played twice would read as a £10m rise.
+
     Only gameweeks that have actually been played are included, so a scheduled-but-unplayed row cannot enter a
     trend as a zero.
     """
     rows = (gw_history or {}).get(code) or []
-    out = []
+    by_round: dict = {}
     for r in rows:
         if not _played(r):
             continue
         rnd, value = _get(r, "round"), _get(r, stat)
         if rnd is None or value is None:
             continue
+        total, mins = by_round.get(rnd, (0, 0))
+        total = value if agg == "last" else total + value
+        by_round[rnd] = (total, mins + (_get(r, "minutes") or 0))
+
+    out = []
+    for rnd in sorted(by_round):
+        total, mins = by_round[rnd]
         if per90:
-            mins = _get(r, "minutes") or 0
             if mins <= 0:
                 continue
-            value = value * 90.0 / mins
-        out.append((rnd, value))
-    out.sort(key=lambda t: t[0])
+            total = total * 90.0 / mins
+        out.append((rnd, total))
     return out[-last:]
 
 
