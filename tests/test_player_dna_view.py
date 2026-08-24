@@ -1,5 +1,7 @@
 """Tests for the reusable Player DNA section + the performance trend (Sprint 171, US-416, ADR-118)."""
 
+import re
+
 from src.analytics.explain import Verdict
 from src.web_streamlit.player_dna_view import perf_trend_svg, render_player_dna, trend_panel_html
 from src.web_streamlit.verdict_card import verdict_card_html
@@ -29,6 +31,30 @@ def test_trend_panel_is_the_placeholder_when_empty():
 def test_trend_panel_draws_a_line_when_there_is_data():
     html = trend_panel_html([(1, 2), (2, 5)])
     assert "<polyline" in html and "GW1" in html and "GW2" in html
+
+
+def test_trend_panel_states_the_score_after_one_gameweek_instead_of_drawing_a_line():
+    """After GW1 every player has exactly one result. The line is normalised to a player's own min..max, so a
+    single point had no range to sit in and pinned to the chart floor — a 14-point haul drew identically to a
+    2-point one, both reading as a flatline at zero. One gameweek is a result, not a trend: say the number."""
+    haul, blank = trend_panel_html([(1, 14)]), trend_panel_html([(1, 2)])
+    assert "14" in haul and "2" in blank
+    assert haul != blank                        # the thing that was broken: they used to render the same
+    assert "<svg" not in haul                   # no chart, so no direction to misread
+    assert "GW1" in haul and "draws from GW2" in haul
+
+
+def test_trend_svg_centres_a_flat_run_instead_of_flooring_it():
+    """A steady 6-a-week return has no range either. Pinned to the floor it reads as "scored nothing" — the
+    opposite of the truth. Flat is flat, so it sits in the middle."""
+    ys = re.findall(r'cy="([\d.]+)"', perf_trend_svg([(1, 6), (2, 6), (3, 6)], h=90))
+    assert ys == ["45.0", "45.0", "45.0"]       # h/2, not h-pad
+
+
+def test_trend_svg_still_scales_a_varied_run_to_its_own_range():
+    """The fix must not flatten a real trend: min still floors, max still tops."""
+    ys = [float(y) for y in re.findall(r'cy="([\d.]+)"', perf_trend_svg([(1, 2), (2, 9), (3, 5)], h=90))]
+    assert ys[0] == 82.0 and ys[1] == 8.0 and 8.0 < ys[2] < 82.0
 
 
 # ---- verdict tone now covers the owned-aware words ---------------------------

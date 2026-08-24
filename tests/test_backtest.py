@@ -4,6 +4,8 @@ All synthetic — real returns don't exist until the season runs (GW4–6+). The
 the no-leakage walk-forward, and the sweep's best-value selection (incl. the smaller-weight-on-a-flat-curve guard).
 """
 
+import sqlite3
+
 import pytest
 
 from src.analytics import backtest
@@ -108,3 +110,43 @@ def test_sweep_prefers_the_smaller_weight_on_a_flat_curve():
         return lambda before, n: {c: _ACTUALS[c][n] for c in _ACTUALS}
     out = backtest.sweep(_HIST, flat, [0.0, 0.1, 0.2, 0.3])
     assert out["best"] == 0.0
+
+
+# --- sqlite3.Row inputs (the shape the CLI actually passes) -------------------------
+#
+# Every test above hands the harness plain dicts. The CLI hands it `sqlite3.Row`s, which index but have no
+# `.get` — so `rounds_with_actuals` raised AttributeError on the first real per-GW history that reached it.
+# It stayed hidden all preseason because `gw_history_by_code` was empty and the loop body never ran; the GW1
+# backfill is what executed it for the first time. These pin the real row type, not a stand-in for it.
+
+def _rows(triples):
+    """Real `sqlite3.Row` objects — a stand-in dict would not reproduce the bug these tests exist for."""
+    con = sqlite3.connect(":memory:")
+    con.row_factory = sqlite3.Row
+    con.execute("CREATE TABLE h (code INTEGER, round INTEGER, total_points INTEGER)")
+    con.executemany("INSERT INTO h VALUES (?, ?, ?)", triples)
+    return con.execute("SELECT * FROM h ORDER BY code, round").fetchall()
+
+
+def test_rounds_with_actuals_accepts_sqlite_rows():
+    rows = _rows([(7, 1, 14), (7, 2, 3), (9, 1, 2)])
+    by_code = {7: [r for r in rows if r["code"] == 7], 9: [r for r in rows if r["code"] == 9]}
+    assert backtest.rounds_with_actuals(by_code) == [1, 2]
+
+
+def test_rounds_with_actuals_skips_rows_without_points_on_sqlite_rows():
+    rows = _rows([(7, 1, 5), (7, 2, None)])       # GW2 fixture played but not yet scored
+    assert backtest.rounds_with_actuals({7: rows}) == [1]
+
+
+def test_pairs_walks_forward_over_sqlite_rows():
+    rows = _rows([(7, 1, 10), (7, 2, 4)])
+    seen = {}
+
+    def predict(before, n):
+        seen[n] = sum(len(v) for v in before.values())   # how many rounds the predictor was shown
+        return {7: 5.0}
+
+    out = backtest.pairs({7: rows}, predict)
+    assert out == [(5.0, 10, 1), (5.0, 4, 2)]
+    assert seen == {1: 0, 2: 1}                          # no leakage: round N sees only rounds < N

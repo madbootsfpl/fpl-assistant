@@ -26,6 +26,11 @@ text-transform:uppercase;margin-bottom:8px;}
 .tr-card .tr-ph{border:1px dashed rgba(255,255,255,.16);border-radius:12px;padding:18px 14px;text-align:center;
 color:#8c93a3;font-size:.84rem;line-height:1.5;}
 .tr-card .tr-ph b{color:#cdd6e2;}
+.tr-card .tr-one{text-align:center;padding:10px 6px 4px;}
+.tr-card .tr-one-n{font-weight:800;font-size:2.1rem;line-height:1;color:#5eead4;
+font-variant-numeric:tabular-nums;}
+.tr-card .tr-one-l{color:#cdd6e2;font-size:.82rem;font-weight:700;margin-top:4px;}
+.tr-card .tr-one-s{color:#7c8899;font-size:.74rem;font-weight:600;margin-top:8px;}
 </style>
 """
 
@@ -35,12 +40,15 @@ def perf_trend_svg(series, *, w: int = 460, h: int = 90) -> str:
     pad = 8
     ys = [max(0, t[1]) for t in series]
     lo, hi = min(ys), max(ys)
-    span = (hi - lo) or 1
     n = len(series)
+    flat = hi == lo          # every gameweek scored the same — there is no range to plot against
     def px(i):
         return pad + (i * (w - 2 * pad) / (n - 1)) if n > 1 else w / 2
     def py(v):
-        return h - pad - (v - lo) * (h - 2 * pad) / span
+        # The line is normalised to the player's own min..max, so a flat run has no meaningful range. Drawing it
+        # against a span of 1 pinned every point to the *floor* — which reads as "scored nothing", the opposite
+        # of what a steady 6-a-week return means. Centre it instead: flat is flat, not zero.
+        return h / 2 if flat else h - pad - (v - lo) * (h - 2 * pad) / (hi - lo)
     pts = [(px(i), py(y)) for i, y in enumerate(ys)]
     line = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
     area = f"{pad:.1f},{h - pad:.1f} " + line + f" {px(n - 1):.1f},{h - pad:.1f}"
@@ -59,11 +67,21 @@ def perf_trend_svg(series, *, w: int = 460, h: int = 90) -> str:
 
 
 def trend_panel_html(series) -> str:
-    """The performance-trend card: a real per-GW line when there's data, else the honest GW1 placeholder."""
+    """The performance-trend card: a real per-GW line once there are two gameweeks to join, the single score
+    on its own after one, else the honest pre-season placeholder."""
     if not series:
         body = ('<div class="tr-ph">📈 <b>Fills in from Gameweek 1.</b><br>'
                 'Points per gameweek, recent form and rate sparklines draw themselves once real results land '
                 '(GW1 · 21 Aug 2026).</div>')
+        cap = ""
+    elif len(series) == 1:
+        # A line through one point is not a trend, and drawing one invites the reader to see a direction that
+        # isn't there. State the result instead; the chart earns its place at GW2.
+        (gw, pts), = series
+        body = (f'<div class="tr-one"><div class="tr-one-n">{int(pts)}</div>'
+                f'<div class="tr-one-l">points in GW{gw}</div>'
+                '<div class="tr-one-s">One gameweek is a result, not a trend — the line draws from GW2.</div>'
+                '</div>')
         cap = ""
     else:
         gws = ", ".join(f"GW{r}" for r, _ in series)

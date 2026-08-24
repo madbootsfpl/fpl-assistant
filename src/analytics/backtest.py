@@ -14,10 +14,24 @@ MIN_GWS = 4        # don't trust a recommendation below this many gameweeks of r
 _FLAT_EPS = 0.005  # "near-flat": within this of the best ρ, prefer the smaller weight (less overfit)
 
 
+def _get(row, key):
+    """One field from a `sqlite3.Row` **or** a dict, or None if absent.
+
+    The CLI hands this module real `sqlite3.Row`s while the tests hand it plain dicts, and a Row indexes but has
+    no `.get`. That difference stayed invisible while `gw_history_by_code` was empty preseason — the loops below
+    never ran a body — and surfaced the moment GW1 per-GW history was backfilled. Same guard the other analytics
+    modules keep for the same reason.
+    """
+    try:
+        return row[key]
+    except (KeyError, IndexError):
+        return None
+
+
 def rounds_with_actuals(gw_history_by_code) -> list[int]:
     """The gameweek rounds that have any actual `total_points` (sorted). Empty preseason."""
     rounds = {r["round"] for rows in gw_history_by_code.values() for r in rows
-              if r.get("total_points") is not None}
+              if _get(r, "total_points") is not None}
     return sorted(rounds)
 
 
@@ -31,7 +45,7 @@ def pairs(gw_history_by_code, predict) -> list[tuple]:
         preds = predict(before, n) or {}
         for code, rows in gw_history_by_code.items():
             actual = next((r["total_points"] for r in rows
-                           if r["round"] == n and r.get("total_points") is not None), None)
+                           if r["round"] == n and _get(r, "total_points") is not None), None)
             if actual is not None and code in preds:
                 out.append((preds[code], actual, n))
     return out
