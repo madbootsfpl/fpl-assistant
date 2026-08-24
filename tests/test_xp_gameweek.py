@@ -7,10 +7,11 @@ The breakdown must decompose the horizon total exactly, and handle a double game
 from src.analytics import player_xp
 
 
-def _player(pid=1, ppg=4.0, team_id=1, status="a"):
+def _player(pid=1, ppg=4.0, team_id=1, status="a", minutes=900):
+    # `minutes` at the 900-min evidence bar → a no-history player's rate is their ppg (ADR-124's full-evidence end).
     return {"id": pid, "code": None, "web_name": f"P{pid}", "team": "AAA",
             "position": "MID", "team_id": team_id, "points_per_game": ppg,
-            "status": status, "ep_next": 1.0}
+            "status": status, "ep_next": 1.0, "minutes": minutes}
 
 
 def _fx(event, home_id, away_id=99, home="AAA", away="OPP", diff=3):

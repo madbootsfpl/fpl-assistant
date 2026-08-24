@@ -10,8 +10,9 @@ from src.analytics.setpieces import PENALTY_BONUS, SET_PLAY_BONUS, set_piece_bon
 from src.analytics.xp import decision_xp, player_xp
 
 
-def _player(code=100, ppg=5.0, **extra):
-    p = {"id": 1, "code": code, "team_id": 1, "points_per_game": ppg,
+def _player(code=100, ppg=5.0, minutes=900, **extra):
+    # `minutes` at the 900-min evidence bar → a no-history player's rate is their ppg (ADR-124's full-evidence end).
+    p = {"id": 1, "code": code, "team_id": 1, "points_per_game": ppg, "minutes": minutes,
          "status": "a", "ep_next": 4.0, "web_name": "P", "position": "MID", "team": "ARS",
          "penalties_order": None, "corners_order": None, "freekicks_order": None}
     p.update(extra)

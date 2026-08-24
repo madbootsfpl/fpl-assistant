@@ -253,7 +253,7 @@ def test_objective_scores_xgi_reads_xgi_and_coerces_none():
 
 def test_objective_scores_xp_reuses_player_xp():
     players = [{
-        "id": 1, "team_id": 1, "points_per_game": 5.0, "status": "a",
+        "id": 1, "team_id": 1, "points_per_game": 5.0, "status": "a", "minutes": 900,
         "ep_next": 4.0, "web_name": "P", "position": "MID", "team": "ARS",
     }]
     upcoming = [{

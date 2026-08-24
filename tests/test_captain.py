@@ -10,10 +10,13 @@ from src.analytics.explain import Explanation
 from src.ui.captain import render_captain_pick, render_captain_picks
 
 
-def _player(pid, pos, ppg, team_id=1, status="a", pens=None, chance=None, code=None):
+def _player(pid, pos, ppg, team_id=1, status="a", pens=None, chance=None, code=None, minutes=900):
+    # `minutes` at the 900-min evidence bar → a no-history player's rate is their ppg (ADR-124's
+    # full-evidence end). Below it the rate leans on `ep_next`, which already prices minutes, so the
+    # xMins weight deliberately has less to bite on.
     return {"id": pid, "code": code, "web_name": f"P{pid}", "team": "ARS",
             "position": pos, "team_id": team_id, "points_per_game": ppg, "status": status,
-            "ep_next": 1.0, "penalties_order": pens, "chance": chance}
+            "ep_next": 1.0, "penalties_order": pens, "chance": chance, "minutes": minutes}
 
 
 def _fixture(event=1, home_id=1, away_id=2, home="ARS", away="CHE"):

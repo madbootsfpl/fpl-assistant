@@ -6,6 +6,7 @@ and the rate_source flag. Offline, plain dicts.
 """
 
 from src.analytics import baseline_rate, fallback_rate, player_xp
+from src.analytics.xp import cold_start_rate
 
 
 def _season(pts, mins):
@@ -78,10 +79,11 @@ def test_fallback_is_none_without_any_history():
 
 # ---- player_xp uses the baseline -------------------------------------------
 
-def _player(pid, code, ppg, team_id=1):
+def _player(pid, code, ppg, team_id=1, minutes=900):
+    # `minutes` at the 900-min bar → a no-history player's rate is their ppg (ADR-124's full-evidence end).
     return {"id": pid, "code": code, "web_name": f"P{pid}", "team": "ARS",
             "position": "MID", "team_id": team_id, "points_per_game": ppg, "status": "a",
-            "ep_next": 1.0}
+            "ep_next": 1.0, "minutes": minutes}
 
 
 def _fixture(event=1, home_id=1):
@@ -98,17 +100,18 @@ def test_player_xp_prefers_baseline_over_ppg():
 
 
 def test_player_xp_falls_back_to_ppg_without_history():
-    players = [_player(1, code=999, ppg=4.0)]
+    # A full season's worth of minutes backs the ppg, so the cold-start blend is all ppg (ADR-124).
+    players = [_player(1, code=999, ppg=4.0, minutes=900)]
     out = player_xp(players, [_fixture()], baseline_by_code={})   # no baseline
-    assert out[0]["rate"] == 4.0 and out[0]["rate_source"] == "current"
+    assert out[0]["rate"] == 4.0 and out[0]["rate_source"] == "cold_start"
 
 
 def test_player_xp_works_when_row_has_no_code_key():
     # lightweight rows without a `code` key must not raise (the _get guard)
     p = {"id": 1, "web_name": "P1", "team": "ARS", "position": "MID", "team_id": 1,
-         "points_per_game": 3.0, "status": "a", "ep_next": 1.0}
+         "points_per_game": 3.0, "status": "a", "ep_next": 1.0, "minutes": 900}
     out = player_xp([p], [_fixture()], baseline_by_code={999: 9.9})
-    assert out[0]["rate_source"] == "current" and out[0]["rate"] == 3.0
+    assert out[0]["rate_source"] == "cold_start" and out[0]["rate"] == 3.0
 
 
 def test_player_xp_uses_the_shrunk_fallback_when_no_baseline():
@@ -125,3 +128,67 @@ def test_player_xp_baseline_still_wins_over_the_fallback():
     out = player_xp(players, [_fixture()], baseline_by_code={999: 6.5},
                     history_by_code={999: [_season(7, 90)]})
     assert out[0]["rate"] == 6.5 and out[0]["rate_source"] == "hist"
+
+
+# ---- the cold-start blend (ADR-124) ----------------------------------------
+#
+# The safety case for ADR-124 is that it *interpolates between two behaviours that already existed*: at zero
+# evidence it is ADR-104's ep_next floor, at full evidence it is the old raw-ppg tier. Those two endpoints are
+# what the following tests pin — if either drifts, the change stopped being an interpolation.
+
+def test_cold_start_at_zero_evidence_is_exactly_ep_next():
+    # ADR-104 unchanged. FPL derives points-per-game from games played, so 0 minutes means 0 ppg — the old
+    # `ep_next` tier *was* this case, which is why the blend can subsume it rather than replace it.
+    assert cold_start_rate(points_per_game=0, ep_next=2.5, minutes=0) == 2.5
+
+
+def test_cold_start_at_full_evidence_is_exactly_the_weighted_ppg():
+    # The old `current` tier unchanged: ~10 full games is the bar `baseline_rate` already trusts.
+    assert cold_start_rate(points_per_game=6.0, ep_next=2.0, minutes=900, weight=0.5) == 3.0
+    assert cold_start_rate(points_per_game=6.0, ep_next=2.0, minutes=5000) == 6.0   # clamped past the bar
+
+
+def test_cold_start_damps_a_one_game_haul():
+    # The bug this ADR exists for: one 14-point game used to project 14 a week and top the whole board.
+    assert round(cold_start_rate(points_per_game=14.0, ep_next=2.0, minutes=75), 2) == 3.0
+
+
+def test_cold_start_converges_on_the_truth_as_minutes_accrue():
+    # A genuine 6.0-ppg signing is under-rated at first (honest — there's one game of evidence) and reaches
+    # their real rate by the 900-minute bar. Monotonic the whole way, no cliff.
+    rates = [cold_start_rate(6.0, 2.0, games * 90) for games in (1, 3, 5, 10)]
+    assert rates == sorted(rates)
+    assert round(rates[0], 2) == 2.40 and rates[-1] == 6.0
+
+
+def test_cold_start_keeps_ep_next_as_the_signal_that_separates_equal_scorers():
+    # Two players with the same one-game ppg but different ep_next must not collapse to the same rate —
+    # shrinking toward a flat prior instead of ep_next would lose exactly this (the rejected alternative).
+    high = cold_start_rate(6.0, 2.2, 90)
+    low = cold_start_rate(6.0, 1.0, 90)
+    assert high > low
+
+
+def test_cold_start_weight_applies_to_the_ppg_term_only():
+    # ep_next already prices minutes (ADR-104), so the xMins weight must not discount it a second time.
+    # At zero evidence the rate is ep_next whatever the weight is.
+    assert cold_start_rate(10.0, 3.0, 0, weight=0.5) == 3.0
+    # Half-evidence: only the ppg half is discounted → 0.5×10×0.5 + 3.0×0.5 = 4.0
+    assert cold_start_rate(10.0, 3.0, 450, weight=0.5) == 4.0
+
+
+def test_cold_start_is_empty_safe():
+    assert cold_start_rate(None, None, None) == 0.0
+    assert cold_start_rate(None, 2.0, None) == 2.0
+
+
+def test_player_xp_reports_the_weight_that_actually_landed():
+    # `minutes_weight` is surfaced (it drives the expected-minutes display), so it has to report the effective
+    # discount, not the outer multiplier — which the blend deliberately leaves at 1.0.
+    half = {"minutes_weight": lambda p: 0.5}
+    at_zero = player_xp([_player(1, code=999, ppg=0.0, minutes=0)], [_fixture()],
+                        baseline_by_code={}, **half)
+    at_full = player_xp([_player(1, code=999, ppg=4.0, minutes=900)], [_fixture()],
+                        baseline_by_code={}, **half)
+    assert at_zero[0]["minutes_weight"] == 1.0     # nothing was discounted (ADR-104's end)
+    assert at_full[0]["minutes_weight"] == 0.5     # the ppg term took the full weight

@@ -87,6 +87,38 @@ def fallback_rate(history, prior: float = _FALLBACK_PRIOR):
     return career_pp90 * c + prior * (1.0 - c)
 
 
+def cold_start_rate(points_per_game, ep_next, minutes, weight: float = 1.0,
+                    min_minutes: int = _MIN_SEASON_MINUTES) -> float:
+    """A scoring rate for a player with **no history at all**, shrunk toward `ep_next` by evidence (ADR-124).
+
+        rate = (weight × points_per_game) × c + ep_next × (1 − c),   c = min(1, minutes / min_minutes)
+
+    Same shape as `fallback_rate`, for the one tier ADR-040 could not reach: with no past seasons there was no
+    career rate to shrink, so this branch used to take `max(ep_next, points_per_game)` (ADR-104). That is a switch
+    on the *value*, and after one game `points_per_game` **is** that game's score — so a 14-point opener projected
+    at 14 a week and out-ranked every established player in the game. Preseason it could not misbehave
+    (`points_per_game` was 0, so `ep_next` always won); real data is what activated it.
+
+    Switching on the *evidence* instead makes the two old tiers the two ends of one curve, and both ends keep
+    their old behaviour exactly:
+
+      * `minutes = 0` → `c = 0` → `rate = ep_next`. FPL derives `points_per_game` from games played, so no
+        minutes means no points-per-game: the old `ep_next` tier *was* the zero-evidence case, not merely similar
+        to it. This is ADR-104, unchanged.
+      * `minutes ≥ min_minutes` (~10 full games — the bar `baseline_rate` already trusts) → `c = 1` →
+        `rate = weight × points_per_game`. The old `current` tier, unchanged.
+
+    Only the middle is new, and it converges: a genuine 6.0-ppg signing reaches their real rate by ~game 10,
+    while a one-game fluke that reverts is damped the whole way.
+
+    `weight` (the xMins minutes weight) scales the `points_per_game` term **only** — `ep_next` is FPL's own
+    expected points for the next gameweek and already prices minutes, so discounting it again would double-count
+    (ADR-104). The caller therefore passes 1.0 as the outer weight; see `player_xp`.
+    """
+    c = min(1.0, max(0.0, (minutes or 0) / min_minutes))
+    return weight * float(points_per_game or 0) * c + float(ep_next or 0) * (1.0 - c)
+
+
 def _multiplier(difficulty) -> float:
     """Turn a 1-5 difficulty into a scoring multiplier (neutral at 3, or if unknown)."""
     if difficulty is None:
@@ -158,8 +190,12 @@ def player_xp(
     for p in players:
         ppg = p["points_per_game"]
         code = _get(p, "code")
-        # Rate tiers (ADR-028/040): a trusted ≥900-min baseline, else a low-evidence shrunk
-        # fallback (so a cameo can't project like a star), else the current points-per-game.
+        # xMins v0 (ADR-038): scale by expected playing time; 1.0 (unchanged) without the hook. Computed up here
+        # because the cold-start blend needs it for one of its two terms (ADR-124).
+        weight = minutes_weight(p) if minutes_weight is not None else 1.0
+        applied_weight = weight          # what actually landed on the rate, for display (see the blend below)
+        # Rate tiers (ADR-028/040/124): a trusted ≥900-min baseline, else a low-evidence shrunk
+        # fallback (so a cameo can't project like a star), else the cold-start blend.
         baseline = baseline_by_code.get(code)
         if baseline is not None:
             rate, rate_source = baseline, "hist"
@@ -168,13 +204,19 @@ def player_xp(
             if fb is not None:
                 rate, rate_source = fb, "fallback"
             else:
-                # Cold-start (no history): the current `points_per_game` is 0 preseason → a plausible starter
-                # projects at 0. Floor with FPL's own **ep_next** (expected points next GW; already on the row)
-                # so it isn't 0 — honest, targeted, no new data (ADR-104). `max` lets real scoring take over once
-                # the player plays; `ep_next` already prices minutes (see the weight guard below).
-                ppg_f = float(ppg or 0)
-                ep_next = float(_get(p, "ep_next") or 0)
-                rate, rate_source = ((ep_next, "ep_next") if ep_next > ppg_f else (ppg_f, "current"))
+                # No history at all: shrink this season's points-per-game toward FPL's `ep_next` by how many
+                # minutes back it (ADR-124). The blend carries the minutes weight on its `ppg` term, so the
+                # outer weight below must not apply it a second time — same guard ADR-104 already used for the
+                # zero-evidence end of this curve, which this branch subsumes.
+                _mins, _ep = _get(p, "minutes"), _get(p, "ep_next")
+                rate = cold_start_rate(ppg, _ep, _mins, weight)
+                rate_source = "cold_start"
+                # Report the weight that actually landed: the blend discounts its `ppg` term only, so the
+                # effective discount is weighted ÷ unweighted (1.0 when there is nothing to discount). Both
+                # ends still read as they did before — 1.0 at zero evidence (ADR-104), `weight` at full.
+                _unweighted = cold_start_rate(ppg, _ep, _mins, 1.0)
+                applied_weight = (rate / _unweighted) if _unweighted else 1.0
+                weight = 1.0                 # the weight is inside `rate` now — don't apply it twice
         # In-season form blend (ADR-060) — DORMANT: form_weight 0 (default) or no per-GW form for
         # this player ⇒ rate unchanged, so xP is identical today (the ADR-041 invariant holds). At
         # GW1, form_by_code is populated and form_weight > 0 nudges the rate toward recent form.
@@ -191,11 +233,6 @@ def player_xp(
         gw_map = diff_by_team_gw.get(p["team_id"], {})
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
         flat = [d for gw in horizon_events for d in gw_map.get(gw, [])]
-
-        # xMins v0 (ADR-038): scale by expected playing time; 1.0 (unchanged) without the hook.
-        weight = minutes_weight(p) if minutes_weight is not None else 1.0
-        if rate_source == "ep_next":     # ep_next already prices minutes (ADR-104) — don't double-discount it
-            weight = 1.0
 
         if rate is None or not available:
             by_gameweek = {gw: 0.0 for gw in horizon_events}
@@ -240,7 +277,7 @@ def player_xp(
             "rate_source": rate_source,
             "by_gameweek": by_gameweek,               # ADR-032: {gw → xP}, sums to `xp`
             "gameweeks": list(horizon_events),
-            "minutes_weight": round(weight, 2),       # xMins v0 weight applied (1.0 without the hook)
+            "minutes_weight": round(applied_weight, 2),   # xMins v0 weight applied (1.0 without the hook)
             "set_piece_xp": set_piece_xp,             # ADR-096: the set-piece term's share of xp (0 dormant)
             "defcon_xp": defcon_xp,                   # ADR-097: the DefCon magnifier's net delta (0 dormant)
         })

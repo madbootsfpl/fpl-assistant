@@ -5,7 +5,9 @@ from src.ui.xp import render_xp_table
 
 
 def player(team_id=1, ppg=5.0, status="a", ep_next=4.0, web_name="P",
-           position="MID", team="ARS", id=1):
+           position="MID", team="ARS", id=1, minutes=900):
+    # `minutes` defaults to the 900-minute evidence bar so a no-history player's rate *is* their ppg
+    # (ADR-124's full-evidence end). Cold-start tests below pass fewer minutes on purpose.
     return {
         "id": id,
         "team_id": team_id,
@@ -15,6 +17,7 @@ def player(team_id=1, ppg=5.0, status="a", ep_next=4.0, web_name="P",
         "web_name": web_name,
         "position": position,
         "team": team,
+        "minutes": minutes,
     }
 
 
@@ -63,15 +66,16 @@ def test_xp_is_byte_identical_without_the_minutes_hook():
 
 
 def test_cold_start_floors_a_no_history_player_with_ep_next():
-    # ADR-104: no history + no ppg → don't project 0; floor with FPL's ep_next (a plausible starter isn't 0).
-    result = player_xp([player(ppg=None, ep_next=4.0)], [upcoming(h_diff=2)])
+    # ADR-104, now the zero-evidence end of the ADR-124 blend: a player who hasn't kicked a ball has no
+    # points-per-game to average, so the rate is FPL's ep_next outright — don't project 0.
+    result = player_xp([player(ppg=None, ep_next=4.0, minutes=0)], [upcoming(h_diff=2)])
     assert result[0]["xp"] == 4.4                         # 4.0 (ep_next) × the h_diff=2 multiplier (1.1)
-    assert result[0]["rate_source"] == "ep_next"
+    assert result[0]["rate_source"] == "cold_start"
 
 
 def test_xp_is_zero_when_no_ppg_and_no_ep_next():
     # ADR-104: the floor only rescues when ep_next is present — no ppg AND no ep_next still → 0.
-    result = player_xp([player(ppg=None, ep_next=0)], [upcoming(h_diff=2)])
+    result = player_xp([player(ppg=None, ep_next=0, minutes=0)], [upcoming(h_diff=2)])
     assert result[0]["xp"] == 0.0
 
 
