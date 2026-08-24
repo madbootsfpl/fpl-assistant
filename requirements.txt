@@ -29,3 +29,4 @@ pytest
 httpx         # FastAPI TestClient (web-edge tests; ADR-050)
 ruff          # linter (CI + pre-commit; config in ruff.toml) — ADR none, US-079
 pre-commit    # optional local hooks (.pre-commit-config.yaml); run `pre-commit install`
+st-click-detector==0.1.3   # ADR-133 — tap a shirt on the pitch to select a player (pre-built frontend, no npm)

@@ -156,7 +156,9 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 - ✅ **The panel** (ADR-108, Sprint 149) — one selection → card + 👑 captain + 🔁 substitute. Shipped as the
   achievable shape: **click-to-select → an actions panel**, because a static `st.markdown` pitch cannot fire a
   click callback (established the hard way in S139/142). Explicitly built as **a foundation, not a stopgap**.
-- ⬜ **My Squad v2 — tap-the-pitch** *(deferred, and recorded as a **committed** next, not a vague one)*. A
+- ✅ **My Squad v2 — tap-the-pitch** — **shipped** (ADR-133, Sprint 185). Both of the deferral's grounds were
+  tested by spike 185 and neither held: a pre-built PyPI component means no build toolchain, and keeping the
+  dropdown means the selection path keeps its coverage. ⏳ Cloud deploy check outstanding. *(original entry:)* A
   custom **Streamlit JS component** so **tapping a shirt** returns the player id → opens the *same* ADR-108
   panel. **~90% is already built** — only the selection *input* changes, dropdown → tap.
   - **Why it was deferred:** it introduces a **front-end build toolchain** to a pure-Python project, and the

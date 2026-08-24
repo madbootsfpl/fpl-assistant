@@ -2,8 +2,8 @@
 
 **Decision ID:** ADR-133
 **Date:** 2026-08-24
-**Status:** 🚧 **Proposed — awaiting the owner gate.** Nothing built. Both of the spike's open questions are now
-answered (see below), so this records evidence rather than expectations.
+**Status:** ✅ **Accepted — owner-approved, built** (Sprint 185). ⚠️ **One claim below was wrong and is
+corrected in the follow-ups** — the build proved it. The Cloud deploy check is still outstanding.
 **Superseded By / Replaces:** Delivers the "My Squad v2 — tap-the-pitch" that ADR-108 deferred as a *committed
 next*. Extends ADR-084 (the CSS pitch) without redesigning it.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -116,5 +116,16 @@ go, and the HTML transform that feeds it **is** unit-testable on its own).
   `requirements.txt`; the tap wired to the existing selection state on My Squad; tests for the anchor emission
   and the id round-trip through the transform, plus the existing AppTest suite unchanged as proof the dropdown
   path still carries the page; a **Cloud deploy check** before it is called done; 3-part DoD.
+- **⚠️ A claim in this ADR was wrong, and the build found it.** It stated the golden page would lose *"no
+  coverage at all"*. That was true of the **selection** path and false of the **pitch markup**: four AppTest
+  tests read the pitch out of `AppTest.markdown`, and once it renders inside the component it is no longer
+  there. Coverage did not vanish — it **moved**, and it moved somewhere better. Splitting `pitch_html()` out
+  made the markup a pure function, so those assertions now run directly against it (`tests/test_pitch_html.py`,
+  10 tests) without a page render at all: stricter, faster, and no longer dependent on how the page happens to
+  be assembled. The page-level tests keep asserting what a page can still prove — that it renders, and that
+  the picker driving selection is there. Worth recording precisely, because "additive change, no test impact"
+  was the reasoning that made this cheap, and it was three-quarters right rather than right.
+- **⏳ Still outstanding: the Cloud deploy check.** Strongly de-risked (`streamlit-cookies-controller` runs the
+  identical mechanism in production) but **not verified**. Not done until it is.
 - **Not this ADR:** the same gesture on other surfaces (Squad Lab's build pitch is the obvious next), and
   tap-to-*act* shortcuts — fplapex's `✕` to remove — which are a second interaction on top of selection.

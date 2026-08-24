@@ -458,9 +458,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     kits = shirt_url_by_id(owned, teams)        # the pitch shows the live club kit (ADR-084 rev), not the mugshot
-    render_pitch(xi, bench, captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
-                 team_names=team_names, bench_roles=bench_roles, kits=kits,
-                 fixtures_by_id=fixtures_by_id)             # ADR-109: per-GW row in the hover popover
+    # ADR-133 — tapping a shirt selects that player, writing the same state the picker below uses. Must come
+    # before the selectbox is created. Degrades to the ordinary pitch if the component isn't available.
+    from src.web_streamlit.tap import render_tappable_pitch
+    render_tappable_pitch(
+        xi, bench, select_key="pa_pick", label_for=lambda p: f"{p['web_name']} · {p['team']}",
+        captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
+        team_names=team_names, bench_roles=bench_roles, kits=kits,
+        fixtures_by_id=fixtures_by_id)                      # ADR-109: per-GW row in the hover popover
 
     # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +
     # **Substitute**, together, in one panel on the golden page (consolidates the old card picker + Substitute

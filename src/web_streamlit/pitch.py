@@ -67,7 +67,7 @@ _SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
 
 
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
-              fixtures_by_id=None, kits=None) -> str:
+              fixtures_by_id=None, kits=None, clickable=False) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
     Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup.
@@ -99,24 +99,25 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
                     photo_url=photo or None, fixtures=(fixtures_by_id or {}).get(pid),
                     projected_xp=xp_by_id.get(pid), compact=True)
     pop_html = f'<div class="kit-pop">{pop}</div>' if pop else ""
-    return (f'<div class="kit"><div class="pic">{pic}</div>'
+    card = (f'<div class="kit"><div class="pic">{pic}</div>'
             f'<div class="name">{e(player["web_name"])}</div>'
             f'<div class="xp">{xp}</div>'
             f'<div class="meta">{meta}</div>{flags_html}{pop_html}</div>')
+    # ADR-133: when the pitch is tappable, each card is wrapped in an anchor whose id is the player id — that
+    # id is what the click component hands back. Off by default, so every other caller emits exactly as before.
+    return f'<a href="#" id="{pid}" class="kit-a">{card}</a>' if clickable else card
 
 
-def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
-                 fixtures_by_id=None, kits=None) -> None:
-    """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
+def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
+               fixtures_by_id=None, kits=None, clickable=False) -> str:
+    """Build the pitch markup (ADR-084) — see `render_pitch` for the arguments.
 
-    `xi` / `bench` are player rows; `next_opp` maps a team short_name → its next fixture cell
-    (`{opponent, venue, ...}`) or None. `bench_roles` (US-246) maps id → sub role ("1st"/"2nd"/"3rd"/"GK");
-    when given, the bench is ordered by that priority. `kits` (id → club-shirt URL, `shirt_url_by_id`) draws the
-    **live club kit** on the pitch (transfer-proof); the hover card keeps the mugshot (`photos`). Emits one
-    self-contained HTML/CSS block (no JS) — display-only; the edit controls live on the page.
+    Split out from the renderer (ADR-133) because a tappable pitch has to *hand the HTML to a component* rather
+    than write it to the page, and there was previously no way to get at it. `clickable` wraps each kit card in
+    an anchor carrying the player id.
     """
     kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
-              fixtures_by_id=fixtures_by_id, kits=kits)
+              fixtures_by_id=fixtures_by_id, kits=kits, clickable=clickable)
     parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
 
     for pos in _ROWS:
@@ -135,4 +136,21 @@ def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_name
         parts.append(f'<div class="bench-label">Bench</div><div class="row bench">{cells}</div>')
 
     parts.append("</div>")
-    st.markdown("".join(parts), unsafe_allow_html=True)
+    if clickable:                       # the anchor must not look like a link over the kit card
+        parts.insert(0, "<style>.kit-a{text-decoration:none;color:inherit;display:block;}</style>")
+    return "".join(parts)
+
+
+def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
+                 fixtures_by_id=None, kits=None) -> None:
+    """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
+
+    `xi` / `bench` are player rows; `next_opp` maps a team short_name → its next fixture cell
+    (`{opponent, venue, ...}`) or None. `bench_roles` (US-246) maps id → sub role ("1st"/"2nd"/"3rd"/"GK");
+    when given, the bench is ordered by that priority. `kits` (id → club-shirt URL, `shirt_url_by_id`) draws the
+    **live club kit** on the pitch (transfer-proof); the hover card keeps the mugshot (`photos`). Emits one
+    self-contained HTML/CSS block (no JS) — display-only; the edit controls live on the page.
+    """
+    st.markdown(pitch_html(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos,
+                           next_opp=next_opp, team_names=team_names, bench_roles=bench_roles,
+                           fixtures_by_id=fixtures_by_id, kits=kits), unsafe_allow_html=True)
