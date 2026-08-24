@@ -182,11 +182,11 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 
 **Competitive-inspired (⭐ = the data already exists, near-term feasible):**
 
-- ⭐ ⬜ **Squad Risk Monitor** *(fplanalyser)* — one row per owned player, sorted by **how much attention he
+- ⭐ ✅ **Squad Risk Monitor** — done (ADR-130, Sprint 182). *(fplanalyser)* — one row per owned player, sorted by **how much attention he
   needs / how likely you are to regret holding him** — not how good he is. A **driver** (Minutes / Fixtures),
   "% chance he doesn't reach 60", an attention rating. We hold everything needed (xMins → chance-under-60;
   fixture difficulty). A sharp triage the Health tab lacks.
-- ⭐ ⬜ **Squad-grade DNA** *(fplanalyser + our engine)* — aggregate the owned 15 into **one graded picture**:
+- ⭐ ✅ **Squad-grade DNA** — done (ADR-130, Sprint 182). *(fplanalyser + our engine)* — aggregate the owned 15 into **one graded picture**:
   overall grade + Attack / Defence / DefCon / Fixtures bars + a verdict headline + a grounded edge line
   ("3 penalty takers = a deliberate edge"). A squad-level sibling of Team DNA; reuses the engine.
   **Pairs with Squad Risk Monitor — both aggregate the owned 15 and would share plumbing.**

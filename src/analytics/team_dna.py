@@ -71,13 +71,18 @@ def _team_metrics(players, fixtures, *, next_n: int) -> dict:
     return metrics
 
 
+def grade_letter(avg: int) -> str:
+    """A 0-100 score as a letter. Shared so a **squad** grade and a **team** grade mean the same thing on the
+    same scale (ADR-130) — two copies of a banding is how the last shared rule drifted (ADR-123/127)."""
+    return "A+" if avg >= 85 else "A" if avg >= 72 else "B" if avg >= 58 else "C" if avg >= 42 else "D"
+
+
 def _grade(axes) -> tuple[str, int]:
     key = [a.percentile for a in axes if a.label in _GRADE_AXES and a.percentile is not None]
     if not key:
         return ("—", 0)
     avg = round(sum(key) / len(key))
-    letter = ("A+" if avg >= 85 else "A" if avg >= 72 else "B" if avg >= 58 else "C" if avg >= 42 else "D")
-    return (letter, avg)
+    return (grade_letter(avg), avg)
 
 
 def team_dna_all(players, fixtures, *, next_n: int = 5, team_names=None, gw_history=None,

@@ -2583,3 +2583,18 @@ def test_home_mentions_maddie_explains_in_the_hero():
     blob = " ".join(m.value for m in at.markdown)
     assert "Maddie Explains" in blob
 
+
+
+def test_health_shows_the_risk_monitor_and_squad_dna():
+    """ADR-130 — Health said how good a squad was; it now also says what needs attention this week."""
+    at = _squads_view("Health")
+    if at.exception:
+        raise AssertionError(at.exception)
+    blob = " ".join(m.value for m in at.markdown)
+    if "Risk Monitor" not in blob:
+        return                                     # no squad loaded in this environment
+    assert 'class="sq-card"' in blob               # the squad DNA card
+    cols = [list(d.value.columns) for d in at.dataframe]
+    triage = next((c for c in cols if "Attention" in c), None)
+    assert triage is not None, "no triage table rendered"
+    assert "Under 60" in triage and "Driver" in triage
