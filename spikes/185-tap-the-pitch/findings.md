@@ -59,7 +59,19 @@ should not.
 
 ---
 
-## What is NOT answered
+## Answered since (2026-08-24, owner)
+
+**1. ✅ The click works.** Owner tapped Virgil on the spike app and it returned him. The round-trip is real.
+
+**2. ✅ Cloud is de-risked by precedent.** `streamlit-cookies-controller` — already live in production for
+"remember me", owner-verified on Safari and Chrome — uses the **identical mechanism**: `declare_component`
+with a static frontend build directory. The component-serving path is therefore already proven on this Cloud
+deploy. Residual risk is a package-specific install or CSP failure, not the mechanism, and the build should
+still confirm it on the real deploy.
+
+---
+
+## (original, at spike time) What was NOT answered
 
 **1. The click itself.** No browser tooling was available in this session, so the round-trip was never
 exercised — everything above is static verification of the payload. **The spike app is the way to check it:**
