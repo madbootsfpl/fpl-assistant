@@ -126,6 +126,13 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
 - ⏳ **`FORM_WEIGHT` calibration** — the main season signal; first of the three.
 - ⏳ **`SET_PIECE_WEIGHT` calibration** (ADR-096) — then revisit the tier guard against observed returns.
 - ⏳ **`DEFCON_MAGNIFIER_WEIGHT` calibration** (ADR-097).
+- ⏳ **PARKED QUESTION — should `decision_xp` be more fixture-sensitive?** Two features came back smaller than
+  the roadmap described for the same underlying reason: the fixture multiplier is ±20% at its extremes
+  (ADR-006), so a squad's per-gameweek projection varies by **±3%** (ADR-131) and one player's best transfer is
+  **the same in every gameweek** (ADR-132). That is a deliberate property of a smooth metric, not a bug — but
+  it is worth *measuring* rather than assuming. Belongs in this sitting because `calibrate` can answer it:
+  sweep the multiplier as a weight and see whether a sharper one improves rank correlation. **Do not change it
+  to make a chart look better** — that is the one thing both ADRs refused.
 - ⏳ **In-season minutes in the xMins share** (ADR-125) — deliberately paired to the same sitting: same
    threshold, same data. ⚠ Whoever builds it must not infer "played" from a per-GW row's presence — **FPL
    writes the row when the fixture is scheduled, not played**, so a naive minutes share zeroes two whole clubs
