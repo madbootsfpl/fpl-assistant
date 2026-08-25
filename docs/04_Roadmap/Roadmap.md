@@ -10,24 +10,29 @@ Previous consolidations: 2026-08-05 (Sprint 050), kept current through Sprint 17
 
 ---
 
-## Where we are — 2026-08-24, GW1 played
+## Where we are — 2026-08-25, GW1 played
 
 A mature FPL assistant: an analytics + optimisation core, a decision-support suite, a grounded
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**1155 tests · 126 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**1285 tests · 134 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
 **GW1 (2026-08-21) has been played and the season is live.** The data-hardening flip is done: per-GW history is
-backfilled (604 players), and the season-to-date surfaces that reset at rollover now fall back to last season
+backfilled (609 players), and the season-to-date surfaces that reset at rollover now fall back to last season
 until they can answer for themselves (ADR-126). What remains gated is **calibration** — the weights stay 0 until
 `calibrate` clears its ≥4-gameweek guard at ~GW4-6.
 
-GW1 also cost us six bugs of one species: code that had shipped correct-looking and had **never executed under
-real data** — a flag that only lies mid-gameweek, a `max()` that only misbehaves once `points_per_game` is
-non-zero, `.get()` on a `sqlite3.Row` in a loop that had always been empty, and three separate cases of a
-missing value rendering as a confident zero. Preseason green tests proved less than they appeared to. Expect
-more as the first blank and double gameweeks run their own branches for the first time.
+GW1 cost us **nine-plus bugs of one species**: code that had shipped correct-looking and had **never executed
+under real data** — a flag that only lies mid-gameweek, a `max()` that only misbehaves once `points_per_game`
+is non-zero, `.get()` on a `sqlite3.Row` in a loop that had always been empty, a primary key that held until a
+double gameweek, and *three separate cases* of a missing value rendering as a confident zero. Preseason green
+tests proved much less than they appeared to.
+
+Two habits came out of it and are now standing practice: **audit before a first occurrence** (a deliberate
+DGW/BGW pass found three more bugs *ahead* of the event — repeat it before the first blank and the first chip
+deadline), and **prototype before building** (it changed or shrank four features — ADR-125, 130, 131, 132 —
+each time because a measurement contradicted a plausible assumption).
 
 ---
 
@@ -122,7 +127,8 @@ Prep is done and dormant (Sprint 069, ADR-060); the harness is built (Sprint 138
 scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own countdown — currently
 *"have 1, need ≥4"*. **The harness recommends; the owner commits.** One weight at a time (ADR-101).
 
-- ✅ **Per-GW history ingestion** — done 2026-08-24 (604 players, 2045 season rows + 604 per-GW rows).
+- ✅ **Per-GW history ingestion** — done 2026-08-24; re-run after ADR-128 widened the table (609 players,
+  2051 season rows + 609 per-GW rows, now 27 columns).
 - ⏳ **`FORM_WEIGHT` calibration** — the main season signal; first of the three.
 - ⏳ **`SET_PIECE_WEIGHT` calibration** (ADR-096) — then revisit the tier guard against observed returns.
 - ⏳ **`DEFCON_MAGNIFIER_WEIGHT` calibration** (ADR-097).
@@ -139,7 +145,7 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
    for the two days their gameweek is in flight.
 - ⬜ **Rolling 3-/6-GW form windows + trend views** — now unblocked by the widened per-GW table (ADR-128).
 - ⬜ **Per-season price sparkline** — long open in the backlog; the per-GW `value` column now exists (ADR-128).
-- ⬜ **Price-change predictor** — ✅ **shipped** (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
+- ✅ **Price-change predictor** — shipped (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
    *(This page listed it as not-started for months; corrected here.)*
 - 🅾️ **Attack/Defence FDR split** (ADR-005) — **blocked at source, not by timing.** Checked the live API on
    2026-08-24: `strength_attack_home` and friends are **still 0 after GW1**, and the `teams` table doesn't even

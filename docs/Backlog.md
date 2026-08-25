@@ -14,23 +14,26 @@ nice-to-haves and tech-debt.)*
 > navigate.** Every UI/IA change below is measured against it — don't just move clutter around, and keep the brand
 > vocabulary/mascot tasteful, not gimmicky. *(Worth pinning as a design ADR.)*
 
-## 🚨 GW1 imminent — 2026-08-21 (tomorrow)
+## ✅ GW1 — done (2026-08-21 played; the flip ran 2026-08-24)
 
-The season starts tomorrow. The one time-sensitive thing is the **Data-Hardening flip**, fully scripted in
-**[GW1_RUNBOOK](GW1_RUNBOOK.md)**: **§A** on the first results (`history --backfill` → `reseed` → commit `seed.db` →
-Reboot → verify the gated features light up), then **§B** weight calibration at ~GW4–6 (harness recommends, owner
-commits — weights stay 0 until a reviewed flip). Player/Team **DNA GW1 follow-ups** (real per-stat sparklines · W-D-L
-form dots · clean-sheet rate · team form) auto-populate as per-GW results accrue.
+The Data-Hardening flip is **complete**: `history --backfill` (609 players, now **27 per-GW columns** after
+ADR-128), reseeded, committed, and the GW1-gated features verified live. What remains is **calibration**, which
+`calibrate` gates itself on (~GW4-6, it prints its own countdown).
 
-**Shipped since the 2026-08-13 roll-up below** (now **1091 tests · 121 ADRs**): ⭐ **Watchlist** (S167, ADR-117) ·
-**Player DNA** arc (S168–171, ADR-118) · **Team DNA** (S172, ADR-119) · a post-S172 tester-fix batch (US-421→427 —
-⛔ unavailable warning · per-GW xP toggle [ADR-121] · My Squad density · filter → 🔽 popover + Position pills ·
-"My squad only" now filters the stat boards · rating reads "bottom N%" · History respects the filter) ·
-**ADR-120 Admin tester-activity — GATED (build post-GW1)**.
+The GW1 rollover also produced **nine-plus bugs of one species** — code that had never executed under real
+data. See the Roadmap's *Where we are* and *Standing risks* for the pattern and the two habits that came out of
+it (audit before a first occurrence; prototype before building).
 
-**Parked for a morning sprint:** the **Fixtures IA restructure** (Team DNA-led — rename the tab "🧬 Team DNA & FDR",
-Team DNA first / FDR second, move the 🎯 Radar to a Players sub-tab). Gate as an ADR + plan before building. *(Logged
-in Feedback_Log.md.)*
+**Player/Team DNA GW1 follow-ups: ✅ all shipped** — real per-stat sparklines · W-D-L form dots · real
+clean-sheet rate · team form (ADR-128), plus the percentile tie fix (ADR-127) they exposed.
+
+**The two items parked here pre-GW1 are both built:**
+- ✅ **Fixtures IA restructure** (ADR-134, Sprint 187) — Team DNA leads, opening on a **league-wide scan** of all
+  20 clubs (grade · ATT/DEF/FIX · next 3, sortable by grade or fixtures), which resolved the scan-vs-drill
+  tension rather than trading it off; ticker second; 🎯 Radar moved to a **Players** view. ⚠️ Owner: *"Team DNA &
+  FDR"* reads clunky — **left as-is pending tester feedback**; the bind is that "FDR" is the discoverable half
+  and "Team DNA" the valuable one.
+- ✅ **Tap-the-pitch** (ADR-133) — see the entry further down; shipped and Cloud-verified.
 
 ## Sequencing (owner-agreed, 2026-08-12)
 
@@ -39,7 +42,7 @@ in Feedback_Log.md.)*
    subdomain → **`madboots.streamlit.app`** · in-app URLs updated · homepage **LIVE on Cloudflare Pages at
    `madboots.com`**. Internal `fpl-assistant` package + `FPL_*` secrets unchanged.
 2. **P0 quick-wins** (below) — transfer filters · captain-persist · the cold-start data floor.
-3. **IA restructure** (A1/A2) — discuss/gate, then build.
+3. ~~**IA restructure** (A1/A2)~~ — ✅ done (the Squads split shipped S146; the Fixtures/Team DNA split ADR-134).
 4. **Persistence + Google auth** (C-cluster) — the strategic rework, on the final domain.
 5. Branding vocabulary (E) · per-GW display (A5) · A6 consolidation · docs refresh (D).
 
@@ -256,7 +259,11 @@ they're annotated inline above, not duplicated:
   platform wall stands — a static `st.markdown` pitch can't fire a click callback (S139/142), so the achievable
   shape is **click-to-select → an actions panel/popover** (the picker *is* the menu), not a literal JS click-menu.
   → **A6 is being built now as the inline panel (ADR-108 / Sprint 149).**
-- 🧭 **My Squad v2: tap-the-pitch** *(deferred — committed next, NOT vague; ADR-108 follow-on)* — a custom **Streamlit
+- ✅ **My Squad v2: tap-the-pitch** — **SHIPPED and Cloud-verified** (ADR-133, Sprint 185; spike 185 first).
+  Both deferral grounds fell: `st-click-detector` ships a **pre-built** frontend (no npm, 1 package, 0 new
+  transitive deps, MIT), and **keeping the dropdown** meant the selection path kept its AppTest coverage. The
+  caption says *"Tap a shirt"* only when the component is live — the user hint **and** the deploy check.
+  *(original entry:)* 🧭 a custom **Streamlit
   JS component** so **tapping a shirt** on the pitch returns the player id → opens the **same** ADR-108 panel (~90%
   reused; only the selection *input* changes, dropdown → tap). **Deferred deliberately:** it introduces a **front-end
   build toolchain** to a pure-Python project (can't be AppTested → the golden page loses coverage), and **GW1
