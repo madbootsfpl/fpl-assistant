@@ -4,7 +4,8 @@
 **Date:** 2026-08-25
 **Status:** ↩️ **REVERTED (2026-08-25, same day) — the target was met and the experience still got worse.**
 Built and shipped in Sprint 189; **hit its number exactly (6-7 widgets → 3)**; reverted on owner review after
-use on desktop and iPhone. **ADR-133's tap-to-select survives** — the revert removes the action *menu* only.
+use on desktop and iPhone. **Revert Cloud-verified by the owner (2026-08-25):** *"looks much better on
+cloud, tap works and no mess. tap has teal outline and populates the panel below with 👑 / 🔁 / ⚔️."* **ADR-133's tap-to-select survives** — the revert removes the action *menu* only.
 See §"Outcome" for what was learned; do not re-open this without reading it. Mechanism and measurement from
 `spikes/188-actions-on-the-shirt`.
 **Superseded By / Replaces:** Completes the arc ADR-108 opened (the player-actions panel) and ADR-133 delivered
