@@ -24,6 +24,7 @@ from src.analytics.crowd import (
     set_piece_flags,
     trending,
 )
+from src.analytics.dead_slot import dead_slots
 from src.analytics.deadline import deadline_urgency, gameweek_context, next_deadline
 from src.analytics.defcon import defcon_reliability
 from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
@@ -97,7 +98,11 @@ from src.analytics.price import (
 from src.analytics.setpieces import set_piece_bonus
 from src.analytics.targets import target_by_fixtures
 from src.analytics.team_dna import TeamDNA, team_dna, team_dna_all, team_insights
-from src.analytics.transfer import suggest_transfer_plan, suggest_transfers
+from src.analytics.transfer import (
+    replace_dead,
+    suggest_transfer_plan,
+    suggest_transfers,
+)
 from src.analytics.value import points_per_million, rank_players
 from src.analytics.xp import baseline_rate, decision_xp, fallback_rate, player_xp
 
@@ -196,6 +201,8 @@ __all__ = [
     "resolve_players",
     "select_squad",
     "suggest_transfer_plan",
+    "dead_slots",
+    "replace_dead",
     "suggest_transfers",
     "team_fdr",
     "team_schedule",

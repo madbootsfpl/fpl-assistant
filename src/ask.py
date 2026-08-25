@@ -576,6 +576,16 @@ def _gameweek_facts(plan: dict) -> dict:
                 f"sell {tr['out']['web_name']} (xP {tr['out']['xp']}), "
                 f"buy {tr['in']['web_name']} (xP {tr['in']['xp']}), +{tr['gain']} starting-XI xP")
 
+    # ADR-136 — a dead slot is stated as its own fact, never merged into the line above. The two answer
+    # different questions, and the whole reason this exists is that "none — no positive-gain upgrade" was
+    # being said over a squad with a player who had left the league.
+    reps = plan.get("replacements") or []
+    dead = ("none — every player in your 15 can play" if not reps else
+            f"{len(reps)}: " + "; ".join(
+                f"{r['out']['web_name']} cannot play ({r['reason']}) — replace with "
+                f"{r['in']['web_name']} (£{r['in']['price']}, xP {r['in']['xp']} over the horizon)"
+                for r in reps))
+
     flags = ("none" if not plan["flags"] else
              f"{len(plan['flags'])}: " + ", ".join(
                  f"{f['web_name']} ({f['reason']}"
@@ -585,6 +595,7 @@ def _gameweek_facts(plan: dict) -> dict:
     return {
         "captain": captain,
         "lineup_change": lineup,
+        "dead_slots_to_replace": dead,
         "transfer_to_consider": transfer,
         "flagged_players": flags,
     }
@@ -624,9 +635,13 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         facts["confidence"] = f"{overall.confidence}/100 ({overall.band})"
         facts["why"] = "; ".join(overall.reasons)
         facts["risk"] = "; ".join(overall.risks)
-    # subjects = every owned player (the prose may name any starter) + the transfer buy (not owned),
-    # so verify_grounding (ADR-037) doesn't flag a legitimately-named player.
-    subjects = [p["web_name"] for p in owned] + ([tr["in"]["web_name"]] if tr else [])
+    # subjects = every owned player (the prose may name any starter) + the transfer buy (not owned) + any
+    # dead-slot replacement (ADR-136, also not owned), so verify_grounding (ADR-037) doesn't flag a
+    # legitimately-named player. Miss one and the answer carries a false "⚠ Unverified" against a name the
+    # analytics themselves chose — which undermines the verifier exactly where it should be trusted.
+    subjects = ([p["web_name"] for p in owned]
+                + ([tr["in"]["web_name"]] if tr else [])
+                + [r["in"]["web_name"] for r in (plan.get("replacements") or [])])
     return {
         "detail": render_gameweek_plan(plan, squad_name, horizon=horizon, explanation=explanation),
         "headline": f"This week (squad '{squad_name}'): captain "

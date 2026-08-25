@@ -6,10 +6,13 @@ edge case). Plus xP-gain ranking, positive-gains-only, the bench flag, and no-up
 Offline, plain dicts.
 """
 
+from datetime import date as _date
+
 from src.analytics import (
     SQUAD_15,
     best_legal_xi,
     best_xi_points,
+    replace_dead,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
@@ -250,3 +253,112 @@ def test_xi_gain_ranks_an_xi_upgrade_over_a_bench_only_swap():
 
     raw = suggest_transfers(squad, market, xp, xi_aware=False)   # --raw still surfaces it
     assert 101 in [s["in"]["id"] for s in raw]
+
+
+# ---- replace_dead (ADR-136) ----------------------------------------------------------
+
+def _dp(pid, name, pos, team, price, status="a", news=""):
+    return {"id": pid, "web_name": name, "position": pos, "team": team, "price": price,
+            "status": status, "news": news, "chance": None}
+
+
+_DEAD_FIXTURES = [{"event": gw, "home": "HUL", "away": "COV",
+                   "kickoff_time": f"2026-09-{gw:02d}T14:00:00Z"} for gw in (2, 3, 4, 5, 6)]
+_TODAY = _date(2026, 8, 25)
+
+
+# Clubs spread so the squad is legal under ≤3/club — otherwise every replacement is correctly refused and
+# the test would "pass" for the wrong reason.
+_CLUBS = ("ARS", "AVL", "BHA", "CRY", "EVE", "IPS")
+
+
+def _dead_squad():
+    """A legal squad whose only problem is a departed forward sitting on the bench."""
+    return ([_dp(1, "GK1", "GK", "ARS", 4.5), _dp(2, "GK2", "GK", "AVL", 4.0)]
+            + [_dp(10 + i, f"D{i}", "DEF", _CLUBS[i], 5.0) for i in range(5)]
+            + [_dp(20 + i, f"M{i}", "MID", _CLUBS[i], 6.0) for i in range(5)]
+            + [_dp(30, "F0", "FWD", "BHA", 7.0), _dp(31, "F1", "FWD", "CRY", 6.5),
+               _dp(32, "Destan", "FWD", "HUL", 4.5, status="u", news="Has joined Konyaspor permanently")])
+
+
+def test_a_dead_player_on_the_bench_is_invisible_to_the_xi_ranking_but_not_to_replace_dead():
+    """The bug as reported, as a test. `suggest_transfers` is right about what it measures — replacing a
+    benched dead player lifts the best legal XI by exactly zero, so `if gain > 0` drops it and the advice
+    reads "hold". The slot is still a permanent zero with no auto-sub cover."""
+    owned = _dead_squad()
+    market = owned + [_dp(99, "Sub", "FWD", "NEW", 4.5)]
+    xp = {p["id"]: 5.0 for p in market}
+    xp[32] = 0.0                                            # the dead man scores nothing, by construction
+    xp[99] = 4.0    # worse than any starter, so there is genuinely no XI upgrade — but far better than zero
+
+    assert suggest_transfers(owned, market, xp, bench_ids=[32], bank=0.0) == [], "the reported 'hold'"
+
+    (move,) = replace_dead(owned, market, xp, _DEAD_FIXTURES, today=_TODAY, bench_ids=[32])
+    assert move["out"]["web_name"] == "Destan" and move["in"]["web_name"] == "Sub"
+    assert move["gain"] == 4.0, "the gain is what the slot throws away, not what the XI gains"
+    assert move["reason"] == "gone" and move["out_on_bench"] is True
+
+
+def test_it_names_the_best_replacement_not_the_cheapest_body():
+    """"Any playing £4.5m body is pure upside" describes the floor, not the target. If the best affordable
+    replacement is worth 16.9 xP, that is the one worth naming."""
+    owned = _dead_squad()
+    market = owned + [_dp(98, "Cheap", "FWD", "NEW", 4.0), _dp(99, "Better", "FWD", "TOT", 4.5)]
+    xp = {p["id"]: 5.0 for p in market} | {32: 0.0, 98: 3.0, 99: 9.0}
+    (move,) = replace_dead(owned, market, xp, _DEAD_FIXTURES, today=_TODAY, bench_ids=[32])
+    assert move["in"]["web_name"] == "Better"
+
+
+def test_the_replacement_must_be_a_legal_affordable_available_move():
+    """Same rules as any transfer — this is advice you can act on, not a wish."""
+    owned = _dead_squad()
+    market = owned + [
+        _dp(97, "TooDear", "FWD", "NEW", 9.9),                                    # unaffordable
+        _dp(96, "AlsoHurt", "FWD", "NEW", 4.5, status="i", news="Unknown return date"),   # unavailable
+        _dp(95, "WrongPos", "MID", "NEW", 4.5),                                   # wrong position
+        _dp(94, "Fine", "FWD", "IPS", 4.5),
+    ]
+    xp = {p["id"]: 1.0 for p in market} | {32: 0.0, 97: 50.0, 96: 40.0, 95: 30.0, 94: 4.0}
+    (move,) = replace_dead(owned, market, xp, _DEAD_FIXTURES, today=_TODAY, bench_ids=[32], bank=0.0)
+    assert move["in"]["web_name"] == "Fine"
+
+
+def test_two_dead_slots_get_different_replacements():
+    """Offering the same player twice would be advice you cannot follow."""
+    owned = [p for p in _dead_squad() if p["id"] != 31]
+    owned.append(_dp(33, "Uche", "FWD", "HUL", 4.5, status="u", news="has returned to Getafe CF"))
+    market = owned + [_dp(99, "A", "FWD", "NEW", 4.5), _dp(98, "B", "FWD", "TOT", 4.5)]
+    xp = {p["id"]: 1.0 for p in market} | {32: 0.0, 33: 0.0, 99: 9.0, 98: 8.0}
+    moves = replace_dead(owned, market, xp, _DEAD_FIXTURES, today=_TODAY, bench_ids=[32])
+    assert len(moves) == 2
+    assert {m["in"]["web_name"] for m in moves} == {"A", "B"}, "no incoming player suggested twice"
+    assert [m["in"]["web_name"] for m in moves] == ["A", "B"], "biggest recovery first"
+
+
+def test_a_healthy_squad_produces_nothing_at_all():
+    """It must cost nothing — no line, no space — for the managers it doesn't apply to."""
+    owned = [p for p in _dead_squad() if p["id"] != 32] + [_dp(32, "Fit", "FWD", "HUL", 4.5)]
+    xp = {p["id"]: 5.0 for p in owned}
+    assert replace_dead(owned, owned, xp, _DEAD_FIXTURES, today=_TODAY) == []
+
+
+def test_the_banner_states_its_reasoning_and_disappears_when_the_squad_is_whole():
+    """A dead slot needs a *reason*, not a number: "has joined Inter" is what makes a manager act. And the
+    banner must cost nothing — no line at all — for the squads it doesn't apply to (ADR-136)."""
+    from src.ui.transfer import render_dead_slots
+
+    assert render_dead_slots([]) == ""
+    text = render_dead_slots([{"out": {"web_name": "Destan", "team": "HUL", "price": 4.5},
+                               "in": {"web_name": "Thomas-Asante", "team": "COV", "price": 5.0},
+                               "gain": 7.4, "reason": "gone", "out_on_bench": True}], horizon=5)
+    assert "Destan" in text and "gone" in text and "on your bench" in text
+    assert "7.4" in text and "auto-sub cover" in text, "it must say WHY a zero-XI-gain move is worth making"
+
+
+def test_the_no_upgrade_line_stops_contradicting_the_banner_above_it():
+    """"The squad may already be strong" printed directly beneath a dead-slot warning is the reported bug
+    wearing different words."""
+    whole = render_transfers([], "S", bank=0.5, horizon=5)
+    with_dead = render_transfers([], "S", bank=0.5, horizon=5, has_dead=True)
+    assert "may already be strong" in whole
+    assert "may already be strong" not in with_dead and "dead slot" in with_dead

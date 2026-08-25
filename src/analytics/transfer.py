@@ -1,5 +1,10 @@
 """Transfer suggestions (ADR-030) — best single legal upgrades for a squad.
 
+Two different questions live here. `suggest_transfers` answers *"what would improve my starting XI?"*.
+`replace_dead` answers *"what in my 15 cannot play at all?"* — a question an XI-gain ranking cannot see, because
+a dead player on the bench moves the XI by zero (ADR-136). They are kept apart on purpose: their `gain` fields
+mean different things, and merging them would quietly make one of the numbers lie.
+
 Pure: given a squad, the transfer market, and each player's xP over a horizon, it
 returns the best legal, affordable, available same-position replacement per owned
 player, ranked by xP gain. No I/O — the caller loads the squad, computes xP, and
@@ -7,6 +12,7 @@ formats the result. It respects FPL's rules (same position, ≤3/club, budget) s
 suggestion is always a move you could actually make.
 """
 
+from src.analytics.dead_slot import dead_slots
 from src.analytics.optimizer import MAX_PER_CLUB, best_xi_points, is_unavailable
 
 
@@ -143,3 +149,71 @@ def suggest_transfer_plan(
         plan.append({**move, "bank_after": running_bank})
 
     return plan
+
+
+def replace_dead(
+    owned, players, xp_by_id, upcoming, *,
+    today, bench_ids=(), bank: float = 0.0, horizon: int = 5, max_per_club: int = MAX_PER_CLUB,
+) -> list[dict]:
+    """One replacement for each **dead slot** in the squad — a place that cannot score (ADR-136).
+
+    A dead slot is a permanent zero with no auto-sub cover, so this is not an upgrade ranking and does not
+    pretend to be one: `gain` here is `in.xp − out.xp` (the out is 0.00 by construction), which is what the
+    slot is throwing away, **not** what the swap adds to your XI. `suggest_transfers` answers that other
+    question and is left exactly as it is.
+
+    The replacement chosen is the **highest-xP** legal, affordable, available, same-position player — not the
+    cheapest body that can kick a ball. *"Any playing £4.5m body is pure upside"* describes the floor; if the
+    best affordable replacement is worth 16.9 xP over the horizon, that is the one worth naming.
+
+    Legality is the same as a normal transfer (same position, not owned, available, affordable, ≤3/club) and
+    reuses the same helpers, so a suggestion here is always a move you could actually make. Multiple dead slots
+    get disjoint incoming players, biggest recovery first.
+
+    Each entry carries `reason` (*"gone"*, *"no return date"*, *"out until 28 Nov"*) and `missed`/`total`, so a
+    surface can state its evidence rather than asserting a verdict.
+    """
+    slots = dead_slots(owned, upcoming, today=today, horizon=horizon)
+    if not slots:
+        return []
+
+    owned_ids = {p["id"] for p in owned}
+    bench = set(bench_ids)
+    club_counts: dict = {}
+    for p in owned:
+        club_counts[p["team"]] = club_counts.get(p["team"], 0) + 1
+
+    # Best-first across all dead slots, so two dead players can't be offered the same replacement.
+    ranked = []
+    for slot in slots:
+        out = slot["player"]
+        budget = out["price"] + bank
+        cands = [c for c in players
+                 if c["position"] == out["position"]
+                 and c["id"] not in owned_ids
+                 and not is_unavailable(c)
+                 and c["price"] <= budget
+                 and _club_ok(out, c, club_counts, max_per_club)]
+        cands.sort(key=lambda c: xp_by_id.get(c["id"], 0), reverse=True)
+        ranked.append((slot, cands))
+    ranked.sort(key=lambda t: xp_by_id.get(t[1][0]["id"], 0) if t[1] else 0, reverse=True)
+
+    used_in: set = set()
+    out_rows = []
+    for slot, cands in ranked:
+        c = next((c for c in cands if c["id"] not in used_in), None)
+        if c is None:                                    # nothing legal and affordable — say nothing
+            continue
+        used_in.add(c["id"])
+        out, out_sum, in_sum = slot["player"], _summary(slot["player"], xp_by_id), _summary(c, xp_by_id)
+        out_rows.append({
+            "position": out["position"],
+            "out": out_sum,
+            "in": in_sum,
+            "gain": round(in_sum["xp"] - out_sum["xp"], 1),
+            "out_on_bench": out["id"] in bench,
+            "reason": slot["reason"],
+            "missed": slot["missed"],
+            "total": slot["total"],
+        })
+    return out_rows

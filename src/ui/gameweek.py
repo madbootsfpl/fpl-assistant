@@ -30,13 +30,36 @@ def _lineup_line(lineup) -> str:
     return f"start {starts} — bench {benched}"
 
 
-def _transfer_line(transfer, horizon: int = 5) -> str:
+def _transfer_line(transfer, horizon: int = 5, *, has_dead: bool = False) -> str:
     if not transfer:
-        return "no positive-gain upgrade — hold your transfer"
+        # ADR-136: "hold" is only honest when there is nothing wrong with the 15. With a dead slot above,
+        # saying "hold your transfer" in the next breath is the exact bug this was reported as.
+        return ("no further upgrade — but fill the dead slot above first" if has_dead else
+                "no positive-gain upgrade — hold your transfer")
     out, inc = transfer["out"], transfer["in"]
     window = f"over {horizon} GW" if horizon != 1 else "next GW"
     return (f"{out['web_name']} ({out['team']}) → {inc['web_name']} ({inc['team']})  "
             f"(+{transfer['gain']} XI xP {window})")
+
+
+def _replace_lines(replacements, horizon: int = 5) -> list[str]:
+    """The dead-slot moves (ADR-136), one line each — or nothing at all when the squad has none.
+
+    Printed **above** Transfer, because a slot that cannot score is a bigger problem than a marginal upgrade,
+    and stated as its own thing: the number is what the slot is throwing away, not what the swap adds to the
+    XI. When there are no dead slots this renders no line, so the plan is unchanged for the squads it does not
+    apply to.
+    """
+    if not replacements:
+        return []
+    window = f"over {horizon} GW" if horizon != 1 else "next GW"
+    out = []
+    for i, r in enumerate(replacements):
+        label = "Replace:" if i == 0 else "        "
+        out.append(f"  {label}  ⛔ {r['out']['web_name']} ({r['out']['team']}) can't play — {r['reason']}. "
+                   f"→ {r['in']['web_name']} ({r['in']['team']}, £{r['in']['price']}) "
+                   f"recovers {r['gain']} xP {window}")
+    return out
 
 
 def _flags_line(flags) -> str:
@@ -71,7 +94,11 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
     lines.append(f"  Lineup:   {_lineup_line(plan['lineup'])}")
     lines += [f"            {r}" for r in (ex.get("lineup") or [])]
 
-    lines.append(f"  Transfer: {_transfer_line(plan['transfer'], horizon)}{_conf(tr_ex)}")
+    lines += _replace_lines(plan.get("replacements"), horizon)
+
+    lines.append(f"  Transfer: "
+                 f"{_transfer_line(plan['transfer'], horizon, has_dead=bool(plan.get('replacements')))}"
+                 f"{_conf(tr_ex)}")
     if tr_ex and tr_ex.reasons:
         lines.append("            Edge: " + " · ".join(tr_ex.reasons[:2]))
 

@@ -10,6 +10,7 @@ See ADR-003 for why this is argparse + subcommands.
 
 import argparse
 import shutil
+from datetime import UTC, datetime
 
 from src import ask, chat_context, config, ingest
 from src.analytics import (
@@ -38,6 +39,7 @@ from src.analytics import (
     player_history,
     player_xp,
     rank_players,
+    replace_dead,
     resolve_players,
     select_squad,
     suggest_transfer_plan,
@@ -60,7 +62,7 @@ from src.ui.history import render_player_history
 from src.ui.overperf import render_overperf
 from src.ui.squad import render_loaded_squad, render_squad
 from src.ui.table import render_player_table
-from src.ui.transfer import render_transfer_plan, render_transfers
+from src.ui.transfer import render_dead_slots, render_transfer_plan, render_transfers
 from src.ui.xg import render_xg_table
 from src.ui.xp import render_xp_table
 
@@ -712,6 +714,17 @@ def cmd_transfer(args) -> None:
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
         bench_ids = squad.get("bench_ids", [])
         xi_aware = not args.raw   # XI-gain ranking by default; --raw for the old raw-player-gain (ADR-046)
+
+        # ADR-136 — a slot that cannot score is invisible to an XI-gain ranking, so it is asked for
+        # separately and printed first. Silent (empty string) when the 15 are all able to play.
+        banner = render_dead_slots(
+            replace_dead(owned, players, xp_by_id, upcoming, bench_ids=bench_ids, bank=args.bank,
+                         horizon=args.next, today=datetime.now(UTC).date()),
+            horizon=args.next,
+        )
+        if banner:
+            print(banner)
+
         if args.count:
             # Plan mode: a coordinated set of `count` transfers (ADR-035), with the incoming
             # players' per-gameweek xP shown (ADR-036).
@@ -723,7 +736,7 @@ def cmd_transfer(args) -> None:
                 plan, args.squad, bank=args.bank, horizon=args.next,
                 by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
                 gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=show_xmins,
-                xi_aware=xi_aware,
+                xi_aware=xi_aware, has_dead=bool(banner),
             ))
         else:
             suggestions = suggest_transfers(
@@ -732,7 +745,7 @@ def cmd_transfer(args) -> None:
             )
             print(render_transfers(
                 suggestions, args.squad, bank=args.bank, horizon=args.next, show_xmins=show_xmins,
-                xi_aware=xi_aware,
+                xi_aware=xi_aware, has_dead=bool(banner),
             ))
     finally:
         store.close()

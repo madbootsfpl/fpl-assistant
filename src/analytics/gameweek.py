@@ -7,9 +7,11 @@ horizon 1); the lineup and the transfer use the caller's multi-GW `xp_by_id` (`b
 it's unit-tested with a fake squad offline. The `ask` layer humanises + verifies it (ADR-034/037).
 """
 
+from datetime import UTC, datetime
+
 from src.analytics.captain import captain_picks
 from src.analytics.optimizer import best_legal_xi, is_unavailable
-from src.analytics.transfer import suggest_transfers
+from src.analytics.transfer import replace_dead, suggest_transfers
 
 # FPL status codes → a human word for a flag (mirrors the CLI's availability messages, ADR-023).
 # "d" (doubtful) is handled separately — it's a warning, not an unavailability.
@@ -18,7 +20,7 @@ _STATUS_WORD = {"i": "injured", "s": "suspended", "u": "unavailable", "n": "unav
 
 def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                   baseline_by_code=None, minutes_weight=None, history_by_code=None,
-                  bench_ids=(), bank: float = 0.0) -> dict:
+                  bench_ids=(), bank: float = 0.0, horizon: int = 5, today=None) -> dict:
     """Assemble this gameweek's plan for a squad from the existing primitives.
 
     `owned` are the squad's player rows; `market` is the whole player pool (for the transfer);
@@ -32,6 +34,10 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     - **lineup** — ``{start, bench, bring_in, drop, has_declared_bench}``: the best legal XI (rows)
       and its bench, plus who to bring in / drop vs the declared XI (empty when already optimal).
     - **transfer** — the single best positive-gain upgrade (a `suggest_transfers` dict), or None.
+    - **replacements** — one move per **dead slot**: a squad place that cannot score for the whole horizon
+      (ADR-136). Deliberately a separate key rather than folded into `transfer`, because its `gain` answers a
+      different question — what the slot is throwing away, not what the swap adds to your XI — and a
+      differently-meaning number in an existing field is how consumers start lying. Surfaces that care opt in.
     - **flags** — owned players who can't (or might not) play: ``{web_name, team, reason, chance}``.
     """
     # Captain — the next-GW pick from the owned, XI-eligible players (ADR-029). `limit=3` so the runner-up is
@@ -58,6 +64,12 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     moves = suggest_transfers(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank, limit=1)
     transfer = moves[0] if moves else None
 
+    # Replacements — the slots that cannot score at all (ADR-136). A dead player on the bench is invisible to
+    # the XI-gain ranking above (it moves the XI by zero), so "hold" was the advice on a squad with a hole in
+    # it. This asks the other question. `today` is injected so the horizon arithmetic is testable.
+    replacements = replace_dead(owned, market, xp_by_id, upcoming, bench_ids=bench_ids, bank=bank,
+                                horizon=horizon, today=today or datetime.now(UTC).date())
+
     # Flags — owned players who are unavailable, or doubtful (a warning, kept in the XI). ADR-023.
     flags = []
     for p in owned:
@@ -71,4 +83,4 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                       "reason": reason, "chance": p["chance"]})
 
     return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
-            "transfer": transfer, "flags": flags}
+            "transfer": transfer, "replacements": replacements, "flags": flags}

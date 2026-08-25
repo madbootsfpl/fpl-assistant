@@ -532,6 +532,45 @@ def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     assert not at.exception
 
 
+def test_the_transfer_page_warns_about_a_dead_slot_and_offers_the_fix():
+    """ADR-136 on the web surface, driven through a real squad rather than a canned plan.
+
+    A departed player is dropped into the session squad; the Transfer tab must say he can't play, say *why*,
+    and offer the replacement as a button — because the ranking that fills the rest of the page cannot see him
+    (swapping a benched dead player lifts the best XI by exactly zero).
+    """
+    from src.analytics.optimizer import is_unavailable
+    from src.storage import Storage
+
+    store = Storage()
+    rows = store.get_players()
+    store.close()
+    gone = next((p for p in rows if is_unavailable(p) and (p["news"] or "").startswith("Has joined")), None)
+    if gone is None:
+        return                                             # no departed player in this dataset — nothing to pin
+
+    need = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
+    picked = {pos: [p for p in rows if p["position"] == pos and p["status"] == "a"][:n]
+              for pos, n in need.items()}
+    if any(len(v) < need[k] for k, v in picked.items()):
+        return                                             # not enough fit players in this dataset
+    picked[gone["position"]][-1] = gone                    # …and one of them has left the league
+    squad = [p for v in picked.values() for p in v]
+
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=60)
+    at.session_state["squad"] = {"name": "DeadSlot", "player_ids": [p["id"] for p in squad],
+                                 "bench_ids": [squad[-1]["id"]], "cost": 100.0}
+    at.run()
+    at.segmented_control[0].set_value("Transfer").run()
+    assert not at.exception
+
+    warnings = " ".join(e.value for e in at.error)
+    assert gone["web_name"] in warnings and "can't play" in warnings, \
+        "a squad slot that cannot score must be named, not left to the rankings that cannot see it"
+    assert any(b.label.startswith(f"Replace {gone['web_name']}") for b in at.button), \
+        "naming the problem without offering the fix is half the job"
+
+
 def test_your_team_panel_consolidates_import_upload_download():
     # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
     # backup in one place (was scattered across the sidebar).

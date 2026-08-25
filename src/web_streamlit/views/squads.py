@@ -726,6 +726,32 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     bench_ids = squad.get("bench_ids", [])
 
+    # ⛔ Dead slots (ADR-136) — FIRST, above even the timing question. A slot that cannot score is not a
+    # matter of when; it is a hole in the 15 with no auto-sub cover, and it is invisible to every ranking on
+    # this page because replacing a benched dead player lifts the best XI by exactly zero. Renders nothing at
+    # all when the squad is whole, so this costs no space for the managers it doesn't apply to.
+    from datetime import UTC, datetime
+
+    from src.analytics.transfer import replace_dead
+    dead = replace_dead(owned, players, xp_by_id, upcoming, bench_ids=bench_ids, bank=bank,
+                        horizon=horizon, today=datetime.now(UTC).date())
+    for i, d in enumerate(dead):
+        st.error(f"⛔ **{d['out']['web_name']} ({d['out']['team']}) can't play — {d['reason']}.** "
+                 f"That's a squad slot scoring nothing for the next {horizon} gameweeks, with no bench cover. "
+                 f"→ **{d['in']['web_name']}** ({d['in']['team']}, £{d['in']['price']:.1f}) "
+                 f"recovers **{d['gain']:.1f} xP**.")
+        if st.button(f"Replace {d['out']['web_name']} →", key=f"dead_apply_{i}",
+                     help="Make this swap on your session squad."):
+            ok, issues, warning, new = apply_transfer(squad, d["out"]["id"], d["in"]["id"], players)
+            if not ok:
+                st.error("Can't apply — that would leave an illegal squad: " + "; ".join(issues))
+            else:
+                set_active_squad(new)
+                done = (f"Applied **{d['out']['web_name']} → {d['in']['web_name']}** — "
+                        f"new cost £{new['cost']:.1f}m.")
+                st.warning(f"{done}  ⚠ {warning}") if warning else st.success(done)
+                st.rerun()
+
     # ADR-132 — the timing question, above the moves themselves: use the free transfer, bank it, or take the
     # hit. Arithmetic over FPL's own rules, not a search — the roadmap's path/tree was scoped out on evidence.
     from src.analytics.transfer_timing import transfer_timing
@@ -775,7 +801,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
         st.code(render_transfer_plan(
             plan, squad_name, bank=bank, horizon=horizon,
             by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
-            gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=True,
+            gameweeks=ranked[0]["gameweeks"] if ranked else [], show_xmins=True, has_dead=bool(dead),
         ), language=None)
         # US-354: accept the whole coordinated plan (not just a single swap) — all transfers at once, legality +
         # a soft over-budget flag, then set it as the session squad. Mirrors the single-swap apply below.
@@ -804,8 +830,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
             "In trends": " ".join(crowd_flags(by_id.get(s["in"]["id"], {}))),
             "In set": " ".join(set_piece_flags(by_id.get(s["in"]["id"], {}))),
         } for s in swaps], help={"In set": SET_PIECE_LEGEND})
-        st.code(render_transfers(swaps, squad_name, bank=bank, horizon=horizon, show_xmins=True),
-                language=None)
+        st.code(render_transfers(swaps, squad_name, bank=bank, horizon=horizon, show_xmins=True,
+                                 has_dead=bool(dead)), language=None)
 
         if swaps:
             labels = [f"{s['out']['web_name']} → {s['in']['web_name']}  (+{s['gain']} xP)" for s in swaps]

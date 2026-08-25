@@ -52,14 +52,42 @@ def _plan_columns(gameweeks, by_gameweek_by_id, xi_aware: bool):
     return cols
 
 
+def render_dead_slots(replacements, horizon: int = 5) -> str:
+    """The dead-slot banner (ADR-136) — printed **above** the suggestions, or "" when there are none.
+
+    Deliberately not a row in the same table. The gain here is what the slot is throwing away (the outgoing
+    player scores 0 by construction), not how much the swap lifts your XI, and putting two different
+    measurements under one ΔXI heading is how a table starts lying. A short block that names the reason does
+    the job: *"has joined Inter"* is what makes someone act, not a number.
+    """
+    if not replacements:
+        return ""
+    window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
+    lines = [f"⛔ {len(replacements)} dead slot(s) — {'these players' if len(replacements) > 1 else 'this player'}"
+             f" cannot score for the whole {window}:", ""]
+    for r in replacements:
+        bench = " (on your bench)" if r.get("out_on_bench") else ""
+        lines.append(f"   {r['out']['web_name']} ({r['out']['team']}, £{r['out']['price']:.1f}){bench} "
+                     f"— {r['reason']}")
+        lines.append(f"      → {r['in']['web_name']} ({r['in']['team']}, £{r['in']['price']:.1f}) "
+                     f"recovers {r['gain']:.1f} xP over {window}")
+    lines += ["", "A dead slot is worth a transfer even with no XI gain: it's a permanent zero with no "
+              "auto-sub cover, so it costs you nothing on paper and everything the week a starter is knocked.",
+              ""]
+    return "\n".join(lines)
+
+
 def render_transfer_plan(
     plan, squad_name: str, bank: float = 0.0, horizon: int = 5,
     by_gameweek_by_id=None, gameweeks=(), show_xmins: bool = False, xi_aware: bool = True,
+    has_dead: bool = False,
 ) -> str:
     window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
     metric = "XI improvement" if xi_aware else "raw xP gain"
     if not plan:
         return (
+            f"No further positive-gain plan for '{squad_name}' over the next {window} — "
+            f"but fill the dead slot above first." if has_dead else
             f"No positive-gain transfer plan for '{squad_name}' over the next {window} "
             f"(bank £{bank:.1f}m). Try a larger --bank, or the squad may already be strong."
         )
@@ -93,12 +121,16 @@ def render_transfer_plan(
 
 def render_transfers(
     suggestions, squad_name: str, bank: float = 0.0, horizon: int = 5, show_xmins: bool = False,
-    xi_aware: bool = True,
+    xi_aware: bool = True, has_dead: bool = False,
 ) -> str:
     window = f"{horizon} gameweek{'s' if horizon != 1 else ''}"
     metric = "XI improvement" if xi_aware else "raw xP gain"
     if not suggestions:
+        # ADR-136: "the squad may already be strong" is a lie directly beneath a dead-slot banner, and it is
+        # the exact sentence this was reported as. `has_dead` is what stops the two lines contradicting.
         return (
+            f"No *further* positive-gain transfers for '{squad_name}' over the next {window} — "
+            f"the dead slot above is the move." if has_dead else
             f"No positive-gain transfers for '{squad_name}' over the next {window} "
             f"(bank £{bank:.1f}m). The squad may already be strong — or try a larger --bank."
         )

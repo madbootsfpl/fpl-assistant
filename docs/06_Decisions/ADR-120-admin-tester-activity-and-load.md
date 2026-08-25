@@ -3,8 +3,9 @@
 **Decision ID:** ADR-120
 **Date:** 2026-08-18
 **Status:** ✅ **Accepted — built** (Sprint 186, 2026-08-24). Spec'd 2026-08-18 and gated then; built
-post-GW1 as planned. ⏳ Needs the owner's Admin smoke to see real numbers (`FPL_ADMIN_KEY` + the anon SELECT
-policy) — the same step ADR-100 already had outstanding. Answers two owner questions: *"which testers are
+post-GW1 as planned. ✅ **Owner smoke DONE and good (2026-08-25)** — `FPL_ADMIN_KEY` set, the anon SELECT
+policy on `events` in place, and both panels read correctly against real data. This also closes the same step
+ADR-100 had outstanding. Answers two owner questions: *"which testers are
 actually testing?"* and *"am I hitting performance/capacity limits, and can I add more testers?"*
 **Superseded By / Replaces:** Extends the anonymous analytics (ADR-100, Sprints 136–137) + the per-user account
 store (ADR-106) + the `beta_users` allow-list (ADR-098). **Adds no new table, no new secret, no analytics-payload
@@ -102,9 +103,12 @@ heuristic (*mitigation:* calibrate against real GW1 load, like the weight-calibr
 - **Four states, not three.** The spec listed active / dormant / never; the build adds **lapsed** (over 30
   days). A tester who signed in and drifted away is a different problem from one who never arrived, and
   collapsing them hides which of the two you have.
-- ⏳ **Owner smoke outstanding:** set `FPL_ADMIN_KEY` and the anon SELECT policy on `events`, then read the two
-  new panels against real data. Everything here is verified pure-function and page-renders; the numbers
-  themselves have never been seen.
+- ✅ **Owner smoke DONE (2026-08-25) — all good.** `FPL_ADMIN_KEY` set, anon SELECT policy on `events` applied,
+  both panels read against real data. Until this point everything here was verified pure-function and
+  page-renders only; the numbers had never been seen, and now they have. **This also closes ADR-100's
+  long-outstanding verification** — the analytics path is confirmed end-to-end in production, not just at the
+  write end. The thing to keep half an eye on: if *every* tester ever reads ⚪ never, that is the `user_key`
+  hash failing to match the account-store handles rather than a quiet beta.
 - **Bridge until then (manual, no build) — how to watch concurrency at the GW1 deadline:** see the runbook note in
   `GW1_RUNBOOK.md` / the owner brief — Streamlit Cloud **Manage app → Logs** (+ watch for "over resources"
   reboots) · the Admin page's **P95 latency** + session counts · tester reports of slowness.

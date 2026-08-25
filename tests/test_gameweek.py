@@ -90,3 +90,55 @@ def test_render_gameweek_plan_degraded_branches():
     assert "no saved bench" in out
     assert "no positive-gain upgrade" in out
     assert "all your players are available" in out
+
+
+# ---- dead slots in the plan (ADR-136) ------------------------------------------------
+
+def _dead_plan(replacements):
+    """A canned plan whose only interesting part is its dead slots."""
+    return {"captain": None, "captain_ranked": [], "transfer": None, "flags": [],
+            "replacements": replacements,
+            "lineup": {"start": [], "bench": [], "bring_in": [], "drop": [], "has_declared_bench": False}}
+
+
+def test_the_plan_keeps_dead_slots_in_their_own_key(monkeypatch):
+    """`replacements` is deliberately NOT folded into `transfer`. Its `gain` answers a different question —
+    what the slot throws away, not what the swap adds to the XI — and a differently-meaning number in an
+    existing field is how consumers start lying (ADR-136)."""
+    owned = [_p(1, "A", "AAA"), _p(2, "Destan", "HUL", status="u", chance=0)]
+    monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1})
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [{"out": {"web_name": "Destan"}}])
+
+    plan = gw.gameweek_plan(owned, owned, [], {1: 5.0, 2: 0.0})
+    assert plan["transfer"] is None, "the XI-gain answer is unchanged and still says 'nothing to upgrade'"
+    assert plan["replacements"][0]["out"]["web_name"] == "Destan", "…and the hole is reported separately"
+
+
+def test_the_renderer_names_the_dead_slot_and_stops_saying_hold():
+    """The reported bug, at the surface: "no positive-gain upgrade — hold your transfer" printed over a squad
+    containing a player who had left the league. Both halves are pinned — the new line appears, and the old
+    line stops contradicting it."""
+    plan = _dead_plan([{"out": {"web_name": "Destan", "team": "HUL", "price": 4.5},
+                        "in": {"web_name": "Thomas-Asante", "team": "COV", "price": 5.0},
+                        "gain": 7.4, "reason": "gone", "out_on_bench": True}])
+    text = render_gameweek_plan(plan, "RoboTS", horizon=5)
+    assert "Destan" in text and "gone" in text and "Thomas-Asante" in text
+    assert "hold your transfer" not in text, "the exact sentence this was reported as"
+    assert text.index("Replace:") < text.index("Transfer:"), "a dead slot outranks a marginal upgrade"
+
+
+def test_a_healthy_squad_renders_no_dead_slot_line_at_all():
+    """It must cost nothing for the managers it doesn't apply to — and 'hold' is honest again when the 15 are
+    whole, so that wording comes back."""
+    text = render_gameweek_plan(_dead_plan([]), "RoboTS", horizon=5)
+    assert "Replace:" not in text
+    assert "hold your transfer" in text
+
+
+def test_a_plan_without_the_key_at_all_still_renders():
+    """Older callers (and any canned plan in a test) must not crash on a key added later."""
+    plan = _dead_plan([])
+    del plan["replacements"]
+    assert "Transfer:" in render_gameweek_plan(plan, "RoboTS")

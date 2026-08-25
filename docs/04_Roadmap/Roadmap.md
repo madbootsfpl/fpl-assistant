@@ -258,13 +258,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 - ⬜ **Elite Manager Comparison** — how your squad compares to top-ranked managers; what the **Top 1,000** are
   doing (captain trends, transfer flow). Needs the **FPL leagues API** + per-manager picks — public only from
   the GW1 deadline, so this is **now unblocked**.
-- ⬜ **Transfer advice should say "swap out the dead player"** *(owner, 2026-08-19 — promoted from the Backlog
-  2026-08-25)*. `suggest_transfers` optimises **starting-XI xP gain**, so a departed or long-term-injured player
-  sitting on the bench doesn't move that number and the advice reads *"no positive-gain upgrade — hold"*. But a
-  dead slot is a permanent zero with no bench cover: swapping him for any playing ~£4.5m body is pure upside.
-  The ⛔ flag already exists (US-421) and the Risk Monitor now surfaces him too (ADR-130) — this makes the
-  **action** explicit rather than leaving the manager to join the dots. Advice-layer only, no `decision_xp`
-  change.
+- ✅ **Transfer advice names the dead slot** (ADR-136, Sprint 190, 2026-08-25) — *owner, 2026-08-19.*
+  `suggest_transfers` ranks by starting-XI gain (ADR-046), so a departed player on the bench moved that number
+  by zero and the advice read *"hold"*. Now asked as a separate question: a slot that cannot score for the
+  whole horizon is named, with the **reason** (*"gone"* · *"out until 28 Nov"* · *"no return date"*) and the
+  best legal replacement. The design turns on telling a **permanent exit from a two-week injury** — 94 players
+  are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
+  into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
+  Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
 - ⬜ **Squad Lab's three build modes are really two** *(owner, 2026-08-19 — promoted 2026-08-25)*. **Balanced**
   and **Bench Boost** both pass `bench_weight=None` and produce the **same squad**; `bench_boost` is only a
   display flag. And "Balanced" maps to the max-15 build — a *strong* bench — so the labels imply the opposite of
