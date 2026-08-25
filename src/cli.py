@@ -329,8 +329,9 @@ def cmd_squad(args) -> None:
     # A declared bench, --weekly or --bench-boost all imply the full squad (ADR-013/045).
     full = args.full or bool(args.bench) or args.weekly or args.bench_boost
     budget = resolve_squad_budget(args.budget, full)
-    # Bench-aware objective (ADR-045): --weekly maximises the XI (cheap playing bench). --bench-boost
-    # is just the default max-15 build (all 15 score under the chip) with an "all 15 score" note.
+    # Bench-aware objective (ADR-045): --weekly maximises the XI (cheap playing bench). --bench-boost is the
+    # default max-15 build with an "all 15 score" note — it cannot be a distinct build, because maximising the
+    # XI plus a full-weight bench IS maximising all 15 (measured; ADR-137).
     # Both imply --full and are incompatible with a declared bench (which pins the split itself).
     bench_weight = WEEKLY_BENCH_WEIGHT if args.weekly else None
     if (args.weekly or args.bench_boost) and args.bench:
@@ -1158,8 +1159,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Bench-aware build: maximise the starting XI with a cheap, still-playing bench (ADR-045)",
     )
     p_bench_mode.add_argument(
+        # ADR-137: this does NOT change the build and never did — the default already maximises all 15, and
+        # "maximise Σ score·start + 1·score·bench" is the same objective. The flag adds the chip note.
         "--bench-boost", action="store_true", dest="bench_boost",
-        help="Bench-aware build: maximise all 15 (the Bench Boost chip week)",
+        help="Add the 'all 15 score this week' note for a Bench Boost week (the default build already "
+             "maximises all 15 — this changes the wording, not the squad)",
     )
     p_squad.add_argument(
         "--include-unavailable", action="store_true", dest="include_unavailable",

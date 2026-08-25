@@ -207,7 +207,10 @@ def render_squad(
     if legend:
         lines.append(" · ".join(legend))
 
-    if full:
+    # ADR-137: under the chip the bench DOES score, so every "the bench won't score" note below would
+    # contradict the Bench Boost line printed above. One output must not argue with itself — the same species
+    # of bug ADR-136 found when a "hold your transfer" line printed under a dead-slot warning.
+    if full and not bench_boost:
         if any_bench:
             # ADR-013: the starters' subtotal is a true XI only at a full 4-man bench.
             if len(starters) == 11:

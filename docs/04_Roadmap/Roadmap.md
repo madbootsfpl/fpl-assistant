@@ -266,12 +266,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
-- ⬜ **Squad Lab's three build modes are really two** *(owner, 2026-08-19 — promoted 2026-08-25)*. **Balanced**
-  and **Bench Boost** both pass `bench_weight=None` and produce the **same squad**; `bench_boost` is only a
-  display flag. And "Balanced" maps to the max-15 build — a *strong* bench — so the labels imply the opposite of
-  what they do ("Balanced = strong bench · Strong XI = weak bench"). Rename **Balanced → "All-round (strong
-  bench)"** so it reads true, and either merge Bench Boost or keep it as the chip-framing of the same build with
-  a note. Display/copy, but it is a **correctness-of-labelling** issue, not a polish one.
+- ✅ **Squad Lab's three build modes are really two** (ADR-137, Sprint 191, 2026-08-25) — *owner,
+  2026-08-19.* Measured before building, and it was worse than reported: "Bench Boost" produced the same
+  fifteen as "Balanced" **even when run with `bench_weight=1.0`**, because maximising the XI plus a
+  full-weight bench *is* maximising all 15 — it could never have been a distinct build. The two that exist
+  were also named backwards ("Balanced" was the max-15, £23.5m, strong-bench build). Now **All-round (strong
+  bench)** and **Strong XI (cheap bench)**, with Bench Boost answered as a caption where the question is
+  asked. Default unchanged, deliberately: the XI-first build is +7.2 XI xP but buys a bench with a 4.9-xP
+  near-dead slot — a real trade, now honestly labelled. No optimiser change.
 - ⬜ **Ceiling / "differential" captaincy** — `captain` ranks by *mean* xP; add a variance/ceiling lens for when
   you need a differential rather than the safe pick.
 - ⬜ **The competitive layer** *(fplapex)* — **mini-league H2H** · a **win-probability sim** · **differentials

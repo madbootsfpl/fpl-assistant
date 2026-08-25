@@ -1557,13 +1557,34 @@ def test_build_page_objective_switch_rebuilds(monkeypatch):
 
 
 def test_build_page_weekly_and_include_unavailable(monkeypatch):
-    # ADR-062: the new build-mode radio + include-unavailable checkbox drive the same select_squad
+    # ADR-062: the build-mode radio + include-unavailable checkbox drive the same select_squad
+    # ADR-137: the mode is now named for what it builds — a *cheap* bench, bought so the money goes into the XI
     at = _run(_PAGES / "1_Squad_Lab.py")
     if not at.code:
         return
-    at.radio[0].set_value("Strong XI (weaker bench)").run()
+    at.radio[0].set_value("Strong XI (cheap bench)").run()
     at.checkbox[-1].set_value(True).run()                  # include injured/suspended
     assert not at.exception and at.code                    # still a valid 15 renders
+
+
+def test_the_build_modes_are_the_two_that_actually_exist(monkeypatch):
+    """ADR-137. Squad Lab offered three build modes and two of them were the same squad.
+
+    "Bench Boost" passed `bench_weight=None`, exactly like "Balanced" — and it could not have been otherwise:
+    maximising `Σ score·start + 1·score·bench` **is** maximising `Σ score` over the 15. So the third option
+    promised a build the optimiser has no way to produce, however it is wired.
+
+    This pins both halves — that the radio offers two, and that the Bench Boost question is still answered
+    where it is asked, rather than silently dropped.
+    """
+    at = _run(_PAGES / "1_Squad_Lab.py")
+    if not at.code:
+        return
+    mode = at.radio[0]
+    assert mode.label == "Build mode"
+    assert list(mode.options) == ["All-round (strong bench)", "Strong XI (cheap bench)"]
+    captions = " ".join(c.value for c in at.caption)
+    assert "Bench Boost" in captions, "the chip question must still be answered, just not as a third build"
 
 
 def test_build_page_formation_preview_is_display_only(monkeypatch):

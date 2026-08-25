@@ -800,3 +800,74 @@ def test_bench_weight_none_designates_no_bench():
     scores = {p["id"]: p["total_points"] for p in pool}
     result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores)
     assert not any(p["bench"] for p in result["selected"])
+
+
+def _tiered_pool():
+    """A pool where the budget actually binds, so the bench weight can change the answer.
+
+    `squad_pool()` gives every player the same price and the same score, so every legal 15 ties on 150 and no
+    objective can be told from any other — fine for the shape tests above, useless for this one. Here the
+    expensive players are worth more per pound spent nowhere else, so "spend on the XI" and "spend on all 15"
+    genuinely diverge.
+    """
+    players, i = [], 1
+    for pos, n in (("GK", 3), ("DEF", 6), ("MID", 6), ("FWD", 4)):
+        for k in range(n):
+            # a couple of stars, the rest cheap filler — the classic squad-building trade
+            players.append(p(i, pos, 10.0 if k < 2 else 4.0, 100 if k < 2 else 20))
+            i += 1
+    return players
+
+
+def test_a_full_weight_bench_cannot_build_a_different_squad_than_no_bench_weight():
+    """Why Squad Lab has two build modes and not three (ADR-137).
+
+    "Bench Boost" sat on the radio as a third option promising to *maximise all 15*. It passed
+    `bench_weight=None`, so it produced the same squad as "Balanced" — and this pins that passing 1.0 instead
+    would not have fixed it, because maximising
+
+        Σ score·start + 1·score·(pick − start)
+
+    **is** maximising `Σ score·pick`. The `start` terms cancel exactly, so the two objectives have the same
+    optimal value and the same optimal set. A third mode was never a wiring bug; it was a build the optimiser
+    has no way to produce, and re-adding one would be re-adding the same lie.
+
+    Asserted on the **objective value**, not the id list: where several squads tie, which one the solver hands
+    back is arbitrary, and pinning an arbitrary choice would make this test fail for a reason it isn't about.
+
+    (Kept at the optimiser level on purpose — a UI test can be edited away without anyone noticing this.)
+    """
+    pool = _tiered_pool()
+    scores = {x["id"]: x["total_points"] for x in pool}
+    total = lambda r: sum(scores[x["id"]] for x in r["selected"])    # noqa: E731
+
+    plain = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores)
+    full_bench = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, bench_weight=1.0)
+    assert plain["status"] == full_bench["status"] == "Optimal"
+    assert total(plain) == total(full_bench), "a full-weight bench is the max-15 build, by algebra"
+
+    # …and the mode that *does* differ, differs in kind rather than by a tuned constant: a low bench weight
+    # makes the solver designate an XI and protect it, which the max-15 objective has no concept of. (How much
+    # it costs you in 15-man xP is a live-data question — measured at +7.2 XI xP / −14.5 squad xP in ADR-137 —
+    # and not something a synthetic pool should pretend to pin.)
+    weekly = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores, bench_weight=0.1)
+    assert sum(1 for x in weekly["selected"] if x["bench"]) == 4
+    assert not any(x["bench"] for x in plain["selected"]), "the max-15 build has no XI/bench split to make"
+
+
+def test_the_bench_boost_note_does_not_argue_with_the_bench_wont_score_note():
+    """ADR-137. `--bench-boost` printed "all 15 score this week" and then, three lines later, "the bench won't
+    score". Both cannot be true, and a manager reading it has no way to know which to believe.
+
+    The same species as ADR-136's "hold your transfer" printing under a dead-slot warning: a new line added
+    correctly, while an older line that assumed it didn't exist kept printing beside it.
+    """
+    pool = squad_pool()
+    scores = {x["id"]: x["total_points"] for x in pool}
+    result = select_squad(pool, budget=100.0, formation=SQUAD_15, scores=scores)
+
+    plain = render_squad(result, budget=100.0, objective="xp", full=True)
+    boosted = render_squad(result, budget=100.0, objective="xp", full=True, bench_boost=True)
+
+    assert "won't score" in plain, "the ordinary week still needs the warning"
+    assert "all 15 score this week" in boosted and "won't score" not in boosted

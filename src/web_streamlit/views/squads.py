@@ -104,9 +104,16 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
                              help="xp = expected points (xMins-weighted); the CLI default.")
     no_xmins = c2.checkbox("Ignore expected minutes (--no-xmins)", value=False,
                            disabled=objective != "xp", help="xp objective only.")
-    mode = c3.radio("Build mode", ["Balanced", "Strong XI (weaker bench)", "Bench Boost"],
-                    help="Strong XI puts your budget into the starting XI with a cheap, still-playing bench "
-                         "for cover (the normal week); Bench Boost maximises all 15 (for the chip).")
+    # ADR-137 — TWO modes, not three, and named for what they build. "Bench Boost" used to sit here as a third
+    # option and produced the *same fifteen* as "Balanced": maximising `Σ score·start + 1·score·bench` is
+    # maximising `Σ score` over the 15, so it could never have been a distinct build however it was wired.
+    # The old labels were also backwards — "Balanced" was the max-15 (strong-bench) build.
+    mode = c3.radio("Build mode", ["All-round (strong bench)", "Strong XI (cheap bench)"],
+                    help="All-round maximises all 15 — a bench that can actually play. Strong XI moves that "
+                         "money into the starting XI and buys a deliberately cheap bench for cover.")
+    c3.caption("Playing **Bench Boost**? Use **All-round** — under the chip all 15 score, so "
+               "\"maximise the XI\" and \"maximise all 15\" become the same question." if mode.startswith("All-round")
+               else "Playing **Bench Boost** this week? Switch to **All-round** — under the chip all 15 score.")
     include_unavailable = c3.checkbox("Include injured/suspended", value=False,
                                       help="Also consider flagged players (off by default).")
 
@@ -123,8 +130,7 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
     declared_bench = _ids(st.multiselect("Declare bench (up to 4)", labels,
                                          help="Pins these to the bench; leave empty to auto-derive the XI."))
 
-    weekly = mode == "Strong XI (weaker bench)"
-    bench_boost = mode == "Bench Boost"
+    weekly = mode == "Strong XI (cheap bench)"
     warnings = []
     if set(include) & set(exclude):
         warnings.append("A player can't be both included and excluded.")
@@ -132,8 +138,8 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
         warnings.append(f"You can declare at most {_BENCH_MAX} bench players.")
     if set(declared_bench) & set(include):
         warnings.append("A player can't be both included and benched.")
-    if declared_bench and (weekly or bench_boost):
-        warnings.append("Strong XI / Bench Boost designate the bench themselves — clear the declared bench.")
+    if declared_bench and weekly:
+        warnings.append("Strong XI designates the bench itself — clear the declared bench.")
     for w in warnings:
         st.warning(w)
 
@@ -203,7 +209,7 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
     } for p in sorted(selected, key=lambda x: (x["id"] not in xi, _ORDER.get(x["position"], 9)))],
         help={"Set": SET_PIECE_LEGEND})
     st.code(render_squad(result, budget=budget, objective=objective, full=True,
-                         xi_ids=xi_ids, bench_boost=bench_boost), language=None)
+                         xi_ids=xi_ids), language=None)
 
     # Start the bench in the recommended (xP) sub order (ADR-078/079) — outfield by xP, then the GK;
     # still user-reorderable in My Squad.
