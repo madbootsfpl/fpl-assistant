@@ -64,12 +64,38 @@ def test_a_plain_pitch_has_no_anchors():
     assert "kit-a" not in _html()
 
 
-def test_a_clickable_pitch_wraps_every_kit_in_an_anchor_carrying_the_player_id():
+def test_a_clickable_pitch_gives_every_kit_a_select_anchor():
+    """ADR-135 changed the id from a bare number to `sel:<id>`, because a tap now has to say *what* as well as
+    *who*. Every card still gets exactly one."""
     html = _html(clickable=True)
     import re
-    ids = re.findall(r'<a href="#" id="(\d+)" class="kit-a">', html)
+    ids = re.findall(r'<a href="#" id="sel:(\d+)" class="kit-a">', html)
     assert ids == [str(i) for i in list(range(1, 12)) + [12, 13, 14, 15]]
-    assert html.count('class="kit"') == 15          # one anchor per card, none lost
+    # `class="kit` also matches kit-a / kit-pop / kit-acts, so count the card container exactly.
+    assert len(re.findall(r'<div class="kit[" ]', html)) == 15
+
+
+def test_actions_appear_on_the_selected_card_only():
+    """The decision that keeps this a *density* change: three icons on fifteen cards would trade page height
+    for pitch noise. Only the card you're acting on carries them."""
+    import re
+    assert 'class="kit-acts"' not in _html(clickable=True)
+    one = _html(clickable=True, selected_id=4)
+    assert one.count('class="kit-acts"') == 1
+    assert set(re.findall(r'id="(\w+):4"', one)) == {"sel", "cap", "sub", "cmp"}
+
+
+def test_an_armed_action_is_visibly_armed():
+    """A two-tap flow you can't see you're in is worse than the picker it replaced."""
+    assert "kit-act armed" in _html(clickable=True, selected_id=4, armed="sub")
+    assert "kit-act armed" not in _html(clickable=True, selected_id=4)
+
+
+def test_the_action_anchors_are_siblings_never_nested():
+    """HTML forbids <a> inside <a> — a browser silently closes the outer one, which would break selection."""
+    import re
+    html = _html(clickable=True, selected_id=4)
+    assert not re.search(r'<a [^>]*>(?:(?!</a>).)*<a ', html, re.S)
 
 
 def test_the_anchor_does_not_look_like_a_link():
@@ -77,12 +103,11 @@ def test_the_anchor_does_not_look_like_a_link():
     assert "text-decoration:none" in _html(clickable=True)
 
 
-def test_clickable_changes_nothing_else_about_the_markup():
-    plain, tappable = _html(), _html(clickable=True)
-    import re
-    stripped = re.sub(r'<a href="#" id="\d+" class="kit-a">', "", tappable).replace("</a>", "")
-    stripped = stripped.replace("<style>.kit-a{text-decoration:none;color:inherit;display:block;}</style>", "")
-    assert stripped == plain
+def test_a_plain_pitch_is_unchanged_by_all_of_this():
+    """Every non-tapping caller — Squad Lab's build pitch, older tests — must emit exactly what it always did."""
+    plain = _html()
+    assert "kit-a" not in plain and "kit-acts" not in plain and "<a " not in plain
+    assert plain.count('class="kit"') == 15
 
 
 # ---- ported from the AppTest suite (ADR-133 moved them here) ------------------------

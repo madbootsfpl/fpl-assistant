@@ -67,7 +67,7 @@ _SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
 
 
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
-              fixtures_by_id=None, kits=None, clickable=False) -> str:
+              fixtures_by_id=None, kits=None, clickable=False, selected=False, armed=None) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
     Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup.
@@ -99,32 +99,62 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
                     photo_url=photo or None, fixtures=(fixtures_by_id or {}).get(pid),
                     projected_xp=xp_by_id.get(pid), compact=True)
     pop_html = f'<div class="kit-pop">{pop}</div>' if pop else ""
-    card = (f'<div class="kit"><div class="pic">{pic}</div>'
+    body = (f'<div class="pic">{pic}</div>'
             f'<div class="name">{e(player["web_name"])}</div>'
             f'<div class="xp">{xp}</div>'
-            f'<div class="meta">{meta}</div>{flags_html}{pop_html}</div>')
-    # ADR-133: when the pitch is tappable, each card is wrapped in an anchor whose id is the player id — that
-    # id is what the click component hands back. Off by default, so every other caller emits exactly as before.
-    return f'<a href="#" id="{pid}" class="kit-a">{card}</a>' if clickable else card
+            f'<div class="meta">{meta}</div>{flags_html}{pop_html}')
+    if not clickable:
+        return f'<div class="kit">{body}</div>'
+
+    # ADR-133/135: a tappable card is an anchor over the body (`sel:`), and — only when this card is the
+    # **selected** one — a row of action anchors beside it. They must be SIBLINGS: HTML forbids <a> inside <a>,
+    # so wrapping the whole card and nesting the actions would silently break the outer anchor.
+    #
+    # Actions appear on the selected card alone. Putting them on all fifteen would trade page height for pitch
+    # noise, which is the opposite of the point (ADR-135).
+    acts = ""
+    if selected:
+        armed_cls = {"sub": "sub", "cmp": "cmp"}.get(armed or "", "")
+        def _a(kind, glyph, title):
+            on = " armed" if armed == kind else ""
+            return f'<a href="#" id="{kind}:{pid}" class="kit-act{on}" title="{title}">{glyph}</a>'
+        acts = ('<div class="kit-acts">'
+                + _a("cap", "©", "Make captain")
+                + _a("sub", "🔁", "Substitute — then tap who swaps")
+                + _a("cmp", "⚔️", "Compare — then tap who to compare with")
+                + "</div>")
+        armed_cls = f" armed-{armed}" if armed else ""
+    else:
+        armed_cls = ""
+    sel_cls = " selected" if selected else ""
+    return (f'<div class="kit{sel_cls}{armed_cls}">'
+            f'<a href="#" id="sel:{pid}" class="kit-a">{body}</a>{acts}</div>')
 
 
 def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
-               fixtures_by_id=None, kits=None, clickable=False) -> str:
+               fixtures_by_id=None, kits=None, clickable=False, selected_id=None, armed=None) -> str:
     """Build the pitch markup (ADR-084) — see `render_pitch` for the arguments.
 
     Split out from the renderer (ADR-133) because a tappable pitch has to *hand the HTML to a component* rather
     than write it to the page, and there was previously no way to get at it. `clickable` wraps each kit card in
     an anchor carrying the player id.
+
+    `selected_id` marks one card as selected — that card, and only that card, grows a row of action anchors
+    (`cap:` · `sub:` · `cmp:`). `armed` highlights an action awaiting its second tap (ADR-135).
     """
     kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
               fixtures_by_id=fixtures_by_id, kits=kits, clickable=clickable)
+
+    def _kit(p, **extra):
+        return _kit_html(p, selected=(selected_id is not None and p["id"] == selected_id),
+                         armed=armed, **kw, **extra)
     parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
 
     for pos in _ROWS:
         line = [p for p in xi if p["position"] == pos]
         if not line:
             continue
-        cells = "".join(_kit_html(p, **kw) for p in line)
+        cells = "".join(_kit(p) for p in line)
         parts.append(f'<div class="row">{cells}</div>')
 
     if bench:
@@ -132,12 +162,24 @@ def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=
             ordered = sorted(bench, key=lambda p: _ROLE_ORDER.get(bench_roles.get(p["id"]), 9))
         else:
             ordered = sorted(bench, key=lambda p: _ORDER.get(p["position"], 9))
-        cells = "".join(_kit_html(p, sub_role=(bench_roles or {}).get(p["id"]), **kw) for p in ordered)
+        cells = "".join(_kit(p, sub_role=(bench_roles or {}).get(p["id"])) for p in ordered)
         parts.append(f'<div class="bench-label">Bench</div><div class="row bench">{cells}</div>')
 
     parts.append("</div>")
-    if clickable:                       # the anchor must not look like a link over the kit card
-        parts.insert(0, "<style>.kit-a{text-decoration:none;color:inherit;display:block;}</style>")
+    if clickable:
+        # The anchor must not read as a link over the card; the action row appears only on the selected card
+        # and is sized for a thumb (ADR-135).
+        parts.insert(0, "<style>"
+                        ".kit-a{text-decoration:none;color:inherit;display:block;}"
+                        ".kit.selected{outline:2px solid #5eead4;outline-offset:1px;}"
+                        ".kit-acts{display:flex;gap:4px;justify-content:center;margin-top:5px;padding-top:5px;"
+                        "border-top:1px solid rgba(0,0,0,.10);}"
+                        ".kit-act{text-decoration:none;font-size:.86rem;line-height:1;padding:4px 7px;"
+                        "border-radius:7px;background:rgba(0,0,0,.06);color:#243040;min-width:28px;"
+                        "text-align:center;}"
+                        ".kit-act:hover{background:rgba(0,0,0,.13);}"
+                        ".kit-act.armed{background:#5eead4;color:#0c121a;font-weight:800;}"
+                        "</style>")
     return "".join(parts)
 
 

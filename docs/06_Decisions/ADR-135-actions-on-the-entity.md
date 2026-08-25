@@ -2,8 +2,9 @@
 
 **Decision ID:** ADR-135
 **Date:** 2026-08-25
-**Status:** 🚧 **Proposed — awaiting the owner gate.** Nothing built beyond `spikes/188-actions-on-the-shirt`,
-which proved the mechanism and measured what it buys.
+**Status:** ✅ **Accepted — owner-approved, built** (Sprint 189). **Target met exactly: 6-7 widgets → 3**, and
+the three that remain are the discovery pickers this ADR said would stay. Mechanism and measurement from
+`spikes/188-actions-on-the-shirt`.
 **Superseded By / Replaces:** Completes the arc ADR-108 opened (the player-actions panel) and ADR-133 delivered
 the input for (tap-the-pitch). Applies the same idiom to the ADR-134 league scan.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -126,9 +127,29 @@ already unit-tested directly since ADR-133); Boot Battle stays a picker, so the 
 
 ### 🧾 Status & follow-ups
 
-- **Proposed — needs the owner gate.** Two answers wanted: **(1)** the division of labour in §1 as the
-  governing rule, and **(2)** actions-on-selected-card-only rather than always-visible or hover.
-- **If accepted:** the sibling-anchor restructure in `_kit_html`; `sel:`/`cap:`/`sub:`/`cmp:` dispatch in
-  `tap.py`; the armed-state caption; the same on the league-scan rows; removal of the widgets §📏 names; a
-  widget-count test pinning the target; before/after measured and recorded; 3-part DoD.
+- **✅ Built (Sprint 189). Measured after:**
+
+  ```
+  widgets below the pitch serving one selected player: 3
+     selectbox:Select a player
+     selectbox:⚔️ Boot Battle — compare with…
+     segmented_control:⚔️ Boot Battle — pool
+  ```
+
+  Exactly the three §1 predicted: the picker (kept as ADR-133's fallback) and the two that reach players **not
+  on your pitch**. The captain button and the substitute picker+confirm are gone from the resting page.
+- **A test pins it** (`test_the_pitch_carries_its_own_actions_so_the_page_below_stays_thin`) and fails if a
+  per-player widget creeps back. A target nobody checks is a target that erodes.
+- **Where ADR-133 and this ADR actually collided, and how it resolved.** ADR-133 says *always keep a non-tap
+  fallback*; this ADR says *take widgets off the page*. For the substitute picker those are the same widget.
+  The resolution is **time, not existence**: it renders while the 🔁 flow is armed (or when the component is
+  absent entirely) and not at rest. Present when needed, absent otherwise — which satisfies both rules rather
+  than trading one off.
+- **Test coverage moved rather than shrank, again.** The captain AppTest drove a button that no longer exists;
+  the work moved into `_handle_shirt_action`, which is directly testable, and the AppTest now asserts the
+  button is *gone* — a stricter check than clicking it was. The two substitute AppTests arm the flow first,
+  keeping every assertion they had about legal swaps.
+- **Still to do:** the same idiom on the ADR-134 league-scan rows (`sel:ARS` replacing the drill-down
+  selectbox). Same mechanism, one more surface — deliberately a separate change so this one could be measured
+  cleanly.
 - **Not this ADR:** reaching off-pitch players from a shirt — it cannot be done, and the design says so.

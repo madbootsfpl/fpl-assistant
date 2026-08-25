@@ -194,7 +194,8 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
     check**. The lightweight path could more than halve the cost.
   - **Trigger:** feedback-driven. Ship the panel, watch the testers; if *"I want to tap the shirt"* stays the
     top ask, that's the green light.
-- 🚧 **Actions on the entity — a density change** (ADR-135, proposed). Not "a popup because we can": six or
+- ✅ **Actions on the entity — a density change** (ADR-135, Sprint 189) — **6-7 widgets → 3**, target
+  met exactly. ⬜ Remaining: the same idiom on the league-scan rows. Not "a popup because we can": six or
   seven widgets sit below the pitch purely to act on **one** selected player, and moving them onto the selected
   card takes **3-4 widgets and ~250-350px** off a phone screen. Spike 188 proved a tap can carry *both* the
   action and the player (`cap:123`). The governing rule it proposes: **the entity owns actions on things you

@@ -23,7 +23,7 @@ def test_a_missing_component_falls_back_to_the_ordinary_pitch(monkeypatch):
     monkeypatch.setattr(tap, "render_pitch", lambda xi, bench, **kw: rendered.update(ok=True))
     out = tap.render_tappable_pitch([_p(1, "A")], [], select_key="k", label_for=_label,
                                     captain_id=None, xp_by_id={}, photos={}, next_opp={})
-    assert out is None and rendered == {"ok": True}
+    assert out == (None, None) and rendered == {"ok": True}
 
 
 def test_a_tap_writes_the_same_state_the_dropdown_writes(monkeypatch):
@@ -33,7 +33,7 @@ def test_a_tap_writes_the_same_state_the_dropdown_writes(monkeypatch):
     st.session_state.clear()
     out = tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick",
                                     label_for=_label, captain_id=None, xp_by_id={}, photos={}, next_opp={})
-    assert out == 7 and st.session_state["pa_pick"] == "Virgil · LIV"
+    assert out == ("sel", 7) and st.session_state["pa_pick"] == "Virgil · LIV"
 
 
 def test_no_tap_leaves_the_selection_alone(monkeypatch):
@@ -43,7 +43,7 @@ def test_no_tap_leaves_the_selection_alone(monkeypatch):
     st.session_state.clear()
     out = tap.render_tappable_pitch([_p(7, "Virgil")], [], select_key="pa_pick", label_for=_label,
                                     captain_id=None, xp_by_id={}, photos={}, next_opp={})
-    assert out is None and "pa_pick" not in st.session_state
+    assert out == (None, None) and "pa_pick" not in st.session_state
 
 
 def test_a_stale_id_is_ignored_rather_than_crashing(monkeypatch):
@@ -53,7 +53,7 @@ def test_a_stale_id_is_ignored_rather_than_crashing(monkeypatch):
     st.session_state.clear()
     out = tap.render_tappable_pitch([_p(7, "Virgil")], [], select_key="pa_pick", label_for=_label,
                                     captain_id=None, xp_by_id={}, photos={}, next_opp={})
-    assert out is None and "pa_pick" not in st.session_state
+    assert out == (None, None) and "pa_pick" not in st.session_state
 
 
 def test_an_import_failure_is_treated_as_no_component(monkeypatch):
@@ -78,3 +78,32 @@ def test_the_caption_names_the_tap_only_when_the_tap_works(monkeypatch):
     assert tap.available() is True
     monkeypatch.setattr(tap, "_detector", lambda: None)
     assert tap.available() is False
+
+
+# ---- the action ids (ADR-135) --------------------------------------------------------
+
+def test_an_id_carries_both_the_action_and_the_player():
+    """A tap has to say *what* as well as *who*, and the component hands back a single id."""
+    assert tap.parse("cap:12") == ("cap", 12)
+    assert tap.parse("sub:3") == ("sub", 3)
+    assert tap.parse("cmp:9") == ("cmp", 9)
+
+
+def test_a_bare_id_still_reads_as_a_selection():
+    """The pre-ADR-135 form. A component holding a stale value must not crash a render."""
+    assert tap.parse("12") == ("sel", 12)
+
+
+def test_an_unrecognised_id_is_ignored():
+    for bad in ("", None, "bogus:1", "cap:x", "cap"):
+        assert tap.parse(bad) == (None, None)
+
+
+def test_a_tap_on_an_action_does_not_move_the_selection(monkeypatch):
+    """© acts on the already-selected player; it must not re-select or the armed flows would reset."""
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "cap:7"))
+    st.session_state.clear()
+    out = tap.render_tappable_pitch([_p(7, "Virgil")], [], select_key="pa_pick", label_for=_label,
+                                    captain_id=None, xp_by_id={}, photos={}, next_opp={})
+    assert out == ("cap", 7) and "pa_pick" not in st.session_state

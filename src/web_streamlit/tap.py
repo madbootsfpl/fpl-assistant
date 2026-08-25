@@ -41,6 +41,24 @@ def available() -> bool:
     return _detector() is not None
 
 
+def parse(clicked):
+    """A clicked anchor id → `(action, player_id)`, or `(None, None)` if it isn't one of ours.
+
+    Ids are `sel:123` / `cap:123` / `sub:123` / `cmp:123` (ADR-135) — the action and the player in one string,
+    because the component hands back a single id and a tap has to say *what* as well as *who*. Bare numeric ids
+    from before ADR-135 still read as a selection, so a stale component value can't crash a render.
+    """
+    if not clicked:
+        return None, None
+    text = str(clicked)
+    action, _, raw = text.partition(":")
+    if not raw:                                    # a bare id — the pre-ADR-135 form
+        action, raw = "sel", text
+    if action not in ("sel", "cap", "sub", "cmp") or not raw.isdigit():
+        return None, None
+    return action, int(raw)
+
+
 def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", **kw):
     """Draw the pitch so tapping a shirt selects that player. Returns the tapped id, or None.
 
@@ -48,22 +66,29 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
     selectbox's label — the tap writes the same state the dropdown does, so the ADR-108 panel downstream is
     reused **entirely unchanged**. Only the input is new.
 
+    Returns `(action, player_id)` — `sel` also writes the selection, the rest are for the caller to act on
+    (ADR-135). `(None, None)` when nothing was tapped.
+
     Must be called **before** the selectbox is created: Streamlit forbids writing a widget's state once that
     widget exists in the run, and the pitch already renders above the picker.
     """
     detector = _detector()
     if detector is None:
-        render_pitch(xi, bench, **kw)
-        return None
+        # The component isn't here — draw the ordinary pitch and report no action, so every caller has one
+        # shape to handle rather than two.
+        render_pitch(xi, bench, **{k: v for k, v in kw.items() if k not in ("selected_id", "armed")})
+        return None, None
 
     html = pitch_html(xi, bench, clickable=True, **kw)
     clicked = detector(html, key=key)
-    if not clicked:
-        return None
+    action, pid = parse(clicked)
+    if action is None:
+        return None, None
 
-    by_id = {str(p["id"]): p for p in list(xi) + list(bench)}
-    player = by_id.get(str(clicked))
+    by_id = {p["id"]: p for p in list(xi) + list(bench)}
+    player = by_id.get(pid)
     if player is None:                                   # a stale id after a transfer — ignore, don't crash
-        return None
-    st.session_state[select_key] = label_for(player)
-    return player["id"]
+        return None, None
+    if action == "sel":
+        st.session_state[select_key] = label_for(player)
+    return action, player["id"]
