@@ -68,3 +68,13 @@ def test_an_import_failure_is_treated_as_no_component(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", boom)
     assert tap._detector() is None
+
+
+def test_the_caption_names_the_tap_only_when_the_tap_works(monkeypatch):
+    """The fallback is invisible to users by design, which left no way to tell a working deploy from a broken
+    one without tapping and inferring. The caption is now both the hint that the gesture exists and the signal
+    that the component loaded."""
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: ""))
+    assert tap.available() is True
+    monkeypatch.setattr(tap, "_detector", lambda: None)
+    assert tap.available() is False

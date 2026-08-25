@@ -125,6 +125,12 @@ go, and the HTML transform that feeds it **is** unit-testable on its own).
   be assembled. The page-level tests keep asserting what a page can still prove — that it renders, and that
   the picker driving selection is there. Worth recording precisely, because "additive change, no test impact"
   was the reasoning that made this cheap, and it was three-quarters right rather than right.
+- **The invisible fallback needed a visible signal (added during the owner's Cloud test).** Degrading silently
+  is right for users and was wrong for diagnosis: with the pitch rendering identically either way, there was no
+  way to tell a working deploy from a broken one except by tapping a shirt and inferring from the picker — which
+  is exactly where the owner got stuck. `tap.available()` now drives the caption, which reads **"Tap a shirt on
+  the pitch, or pick below →"** when the component is live and **"Pick a player →"** when it is not. One line,
+  and it does two jobs: it is the only thing telling users the gesture exists, and it is the deploy check.
 - **⏳ Still outstanding: the Cloud deploy check.** Strongly de-risked (`streamlit-cookies-controller` runs the
   identical mechanism in production) but **not verified**. Not done until it is.
 - **Not this ADR:** the same gesture on other surfaces (Squad Lab's build pitch is the obvious next), and

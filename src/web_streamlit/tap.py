@@ -30,6 +30,17 @@ def _detector():
     return click_detector
 
 
+def available() -> bool:
+    """Is the tap actually live in this deployment?
+
+    Exposed so the page can **say so**. The fallback is deliberately invisible to users — a pitch that quietly
+    behaves as it always did — but that left no way to tell a working deploy from a broken one without tapping
+    a shirt and inferring from the picker. A caption that mentions tapping only when tapping works is both the
+    diagnostic and the only thing telling users the gesture exists at all.
+    """
+    return _detector() is not None
+
+
 def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", **kw):
     """Draw the pitch so tapping a shirt selects that player. Returns the tapped id, or None.
 

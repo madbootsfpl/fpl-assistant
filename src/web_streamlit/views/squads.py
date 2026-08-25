@@ -474,8 +474,12 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # `set_captain` + `substitute` — no analytics change.
     from src.web_streamlit.player_card import render_player_card, render_player_compare
     st.subheader("⚙ Players & lineup")
-    st.caption("Pick a player → view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
-               "Works on phone too (the pitch hover is desktop-only).")
+    # ADR-133: name the tap only when it's actually live. The fallback is invisible by design, so this caption
+    # is both the user-facing hint that the gesture exists and the signal that the component loaded.
+    from src.web_streamlit.tap import available as _tap_available
+    st.caption(("**Tap a shirt** on the pitch, or pick below → " if _tap_available() else "Pick a player → ")
+               + "view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
+                 "Works on phone too (the pitch hover is desktop-only).")
     owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
     picked = owned_by_label.get(st.selectbox("Select a player", ["—", *owned_by_label], key="pa_pick",
                                              help="Or hover a shirt on the pitch (desktop only)."))
