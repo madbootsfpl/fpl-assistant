@@ -2,8 +2,9 @@
 
 **Decision ID:** ADR-133
 **Date:** 2026-08-24
-**Status:** ✅ **Accepted — owner-approved, built** (Sprint 185). ⚠️ **One claim below was wrong and is
-corrected in the follow-ups** — the build proved it. The Cloud deploy check is still outstanding.
+**Status:** ✅ **Accepted — built and verified on Streamlit Community Cloud** (Sprint 185; Cloud confirmed
+2026-08-25 by the owner: the caption reads *"Tap a shirt"* and tapping selects the player). ⚠️ One claim below
+was wrong and is corrected in the follow-ups — the build proved it.
 **Superseded By / Replaces:** Delivers the "My Squad v2 — tap-the-pitch" that ADR-108 deferred as a *committed
 next*. Extends ADR-084 (the CSS pitch) without redesigning it.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -131,7 +132,9 @@ go, and the HTML transform that feeds it **is** unit-testable on its own).
   is exactly where the owner got stuck. `tap.available()` now drives the caption, which reads **"Tap a shirt on
   the pitch, or pick below →"** when the component is live and **"Pick a player →"** when it is not. One line,
   and it does two jobs: it is the only thing telling users the gesture exists, and it is the deploy check.
-- **⏳ Still outstanding: the Cloud deploy check.** Strongly de-risked (`streamlit-cookies-controller` runs the
-  identical mechanism in production) but **not verified**. Not done until it is.
+- **✅ Cloud verified (2026-08-25).** The last unverified thing, and the one most likely to have killed the
+  approach. It works: the caption reads *"Tap a shirt on the pitch"* and tapping selects the player. The
+  precedent argument (`streamlit-cookies-controller` running the identical `declare_component`-with-a-static-
+  build mechanism in production) held — but it was an argument, and this is the evidence.
 - **Not this ADR:** the same gesture on other surfaces (Squad Lab's build pitch is the obvious next), and
   tap-to-*act* shortcuts — fplapex's `✕` to remove — which are a second interaction on top of selection.
