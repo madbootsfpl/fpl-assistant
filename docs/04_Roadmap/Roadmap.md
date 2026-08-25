@@ -203,6 +203,19 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   ⬜ The league-scan rows should inherit **selection**, not a menu — a row tap that selects is ADR-133's shape
   and is still wanted; a row tap that opens a menu is this ADR again. The density goal stands; the mechanism
   for reaching it does not.
+- ⭐ ⬜ **The player card should open on a TAP, not a hover** *(owner, 2026-08-25)* — *"the current hover on a
+  player is too much; better if it appeared on a click, with the teal highlight."*
+  **This is the last loose end from the ADR-135 mess, and it is the opposite of re-opening it.** The hover
+  popover is what the owner actually saw misbehaving: it followed the cursor across *other* shirts while one
+  card was selected, so you read one player's stats beside another player's selection. ADR-135's revert removed
+  the menu but left hover as the reveal mechanism.
+  **Why this is safe where the menu was not:** a tap that *reveals* is **one** round-trip and ADR-133's exact
+  shape — it is the two-tap flows (🔁 / ⚔️) that cost two reruns and felt broken. Selection state, the teal
+  outline and the click ids **already exist**; this changes *what a selection shows*, not how selection works.
+  Hover would be suppressed entirely, which also removes the desktop-idiom-on-a-mobile-surface problem.
+  **Open questions for its ADR:** where the card renders (in place vs a fixed panel under the pitch — the
+  in-place popover is what runs out of room on a phone); whether it replaces the ADR-108 panel's card or
+  duplicates it; and keeping a keyboard/screen-reader path now that hover is gone.
 - 🅾️ **Drag-and-drop to reorder the bench** (ADR-084) — rejected; the ⬆/⬇ controls do the job without JS.
 
 ---
@@ -260,9 +273,22 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
 - ⬜ **Two small ones** — **player clashes** (your own players meeting = point cannibalisation) · **captain
   margin** ("by a whisker — 0.3 over #2", a small polish on the existing captain confidence).
-- ⬜ **Elite Manager Comparison** — how your squad compares to top-ranked managers; what the **Top 1,000** are
-  doing (captain trends, transfer flow). Needs the **FPL leagues API** + per-manager picks — public only from
-  the GW1 deadline, so this is **now unblocked**.
+- ⭐ ⬜ **Import a league — and compare against it** *(owner, 2026-08-25; merges the old "Elite Manager
+  Comparison" line)* — *"can we import leagues? like fplstats.live — and do the elite manager comparison."*
+  **Two halves that share all their plumbing**, which is why they are now one item:
+  - **Import a mini-league by id** (the same shape as the existing Manager-ID import, ADR-113, so the entry
+    point and the storage pattern already exist). `leagues-classic/{id}/standings` gives the table; each
+    manager's `entry/{id}/event/{gw}/picks` gives their XI, captain and chips.
+  - **Compare against it** — effective ownership in *your* league (the number that decides whether a captain
+    is a risk or a hedge), captain split, transfer flow, and who is climbing. The **Top-10k/elite** version is
+    the same code pointed at a public league instead of yours; that is the whole reason to build them together.
+  ✅ **Unblocked since the GW1 deadline** — picks are public only from then.
+  ⚠️ **This is the first feature that needs MANY API calls per view** (one per manager per gameweek), which no
+  existing surface does. Its ADR has to answer caching/rate-limit before design: a 20-manager league over 5
+  gameweeks is 100 calls, and the app is a read-only snapshot deployment (ADR-056). Likely shape: fetch on
+  demand, store, refresh per gameweek — closer to `refresh` than to a live call.
+  *(fplstats.live was checked as a reference and is fully client-side — nothing readable server-side, so the
+  design above is drawn from the FPL API, not from copying theirs.)*
 - ✅ **Transfer advice names the dead slot** (ADR-136, Sprint 190, 2026-08-25) — *owner, 2026-08-19.*
   `suggest_transfers` ranks by starting-XI gain (ADR-046), so a departed player on the bench moved that number
   by zero and the advice read *"hold"*. Now asked as a separate question: a slot that cannot score for the
@@ -312,6 +338,17 @@ import, Reddit RSS buzz, media headlines. Momentum boards are live now that GW1 
 
 ---
 
+- ⭐ ⬜ **Price arrows should use the colour channel: green up, red down** *(owner, 2026-08-25)* —
+  **verified: they currently do not.** `price_flag` returns 🔺 / 🔻 (`analytics/price.py`), and both of those
+  are *red* in Unicode — U+1F53A is literally "red triangle pointed up". So direction is carried twice (by
+  shape and by position) and colour, the fastest channel to read, carries **nothing**. Same for the
+  retrospective 💰↑ / 💸↓ crowd pair.
+  ⚠️ **The catch worth knowing before this is scheduled:** there is no green triangle in the emoji set, so this
+  is not a one-character swap. Options to weigh in the ADR: Streamlit's `:green[▲]` / `:red[▼]` colour markdown
+  (works in captions and `st.markdown`, **not** inside `st.dataframe` cells, which is where most of these
+  live); a pandas `Styler` on the dataframes (a real change to how tables are built, which is currently plain
+  lists of dicts); or small inline SVG/data-URI glyphs via `ImageColumn`. **Pick the mechanism first** — the
+  colour is the easy part.
 ## 🔬 Data sources we've evaluated and declined
 
 Kept so the reasoning isn't re-litigated:
