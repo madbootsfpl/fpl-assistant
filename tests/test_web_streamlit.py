@@ -1300,9 +1300,6 @@ def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
 
     at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
-    # ADR-135: the substitute picker exists only while the 🔁 flow is armed — at rest
-    # the shirt carries the action instead, which is the point of the change.
-    at.session_state["pa_armed"] = "sub"
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
@@ -1344,9 +1341,6 @@ def test_my_squad_panel_brings_a_bench_player_on():
 
     at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
-    # ADR-135: the substitute picker exists only while the 🔁 flow is armed — at rest
-    # the shirt carries the action instead, which is the point of the change.
-    at.session_state["pa_armed"] = "sub"
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
@@ -1998,15 +1992,16 @@ def test_my_squad_panel_make_captain_sets_the_captain():
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
 
-    # ADR-135: the "👑 Make X captain" button is gone — © on the selected shirt does it, and the work moved
-    # into `_handle_shirt_action`. AppTest can't tap a component, so the handler is exercised directly (which
-    # is a stricter test than clicking a button) and the page is asserted to still render without it.
+    # Select a player in the panel, then press 👑. (ADR-135 briefly moved this onto the shirt as a © anchor;
+    # that is reverted, so the button is back and is again the only way to set a captain from this page.)
     target = mids[0]
     next(s for s in at.selectbox if s.label == "Select a player") \
         .set_value(f"{target['web_name']} · {target['team']}").run()
     assert not at.exception
-    assert not [b for b in at.button if "captain" in (b.label or "").lower()], \
-        "the captain button should be gone — © on the shirt replaced it (ADR-135)"
+    btn = next(b for b in at.button if b.label == f"👑 Make {target['web_name']} captain")
+    btn.click().run()
+    assert not at.exception
+    assert at.session_state["squad"]["captain_id"] == target["id"]
 
 
 def test_my_squad_pitch_popover_shows_per_gameweek_xp():
@@ -2633,15 +2628,16 @@ def test_health_shows_the_forward_planner():
     assert "xP per gameweek" in blob               # the projection stated, not charted as the headline
 
 
-def test_the_pitch_carries_its_own_actions_so_the_page_below_stays_thin():
-    """ADR-135's acceptance criterion, as a number rather than an impression.
+def test_the_actions_are_back_below_the_pitch_after_the_adr_135_revert():
+    """The other half of ADR-135's story, kept as a number so nobody has to trust a memory.
 
-    Six or seven widgets used to sit below the pitch purely to act on one selected player. The shirt now
-    carries ©/🔁/⚔️, so only the **discovery** pickers remain — the ones that reach players who aren't on your
-    pitch, which no amount of tapping can do.
+    ADR-135 moved Captain / Substitute / Compare onto the shirt, and this test asserted `<= 3` per-player
+    widgets below the pitch. It **hit** that target — and the experience got worse anyway (a two-tap flow cost
+    two Streamlit round-trips, and the menu opened alongside neighbouring cards' hover popovers), so it was
+    reverted. The count being back up is the accepted cost of that call, not a regression to fix.
 
-    This fails if a per-player widget creeps back below the pitch. That's deliberate: the density was the whole
-    point, and a target nobody checks is a target that erodes.
+    What this still guards is the shape of the page: the actions live in **one** panel below the pitch rather
+    than scattered, and tapping a shirt is an input to that panel, not a second place to act.
     """
     at = _squads_view("My Squad")
     if at.exception:
@@ -2652,13 +2648,8 @@ def test_the_pitch_carries_its_own_actions_so_the_page_below_stays_thin():
     pick.set_value(next(o for o in pick.options if o != "—")).run()
     assert not at.exception
 
-    per_player = [
-        f"{kind}:{lab}"
-        for kind in ("selectbox", "segmented_control", "button", "checkbox")
-        for w in getattr(at, kind, [])
-        for lab in [(getattr(w, "label", "") or "").strip()]
-        if any(k in lab for k in ("Select a player", "Boot Battle", "Club", "captain", "🔁", "Substitute"))
-    ]
-    assert len(per_player) <= 3, f"per-player widgets crept back below the pitch: {per_player}"
-    # And the ones that remain are the discovery pickers, not the actions that moved onto the shirt.
-    assert not [w for w in per_player if "captain" in w.lower() or "🔁" in w or "Substitute" in w]
+    labels = [(getattr(w, "label", "") or "").strip()
+              for kind in ("selectbox", "segmented_control", "button", "checkbox")
+              for w in getattr(at, kind, [])]
+    assert any("captain" in lab.lower() for lab in labels), "the captain action must be reachable again"
+    assert any("Boot Battle" in lab for lab in labels), "compare must be reachable again"

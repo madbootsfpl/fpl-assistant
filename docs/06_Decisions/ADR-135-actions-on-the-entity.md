@@ -2,8 +2,10 @@
 
 **Decision ID:** ADR-135
 **Date:** 2026-08-25
-**Status:** ✅ **Accepted — owner-approved, built** (Sprint 189). **Target met exactly: 6-7 widgets → 3**, and
-the three that remain are the discovery pickers this ADR said would stay. Mechanism and measurement from
+**Status:** ↩️ **REVERTED (2026-08-25, same day) — the target was met and the experience still got worse.**
+Built and shipped in Sprint 189; **hit its number exactly (6-7 widgets → 3)**; reverted on owner review after
+use on desktop and iPhone. **ADR-133's tap-to-select survives** — the revert removes the action *menu* only.
+See §"Outcome" for what was learned; do not re-open this without reading it. Mechanism and measurement from
 `spikes/188-actions-on-the-shirt`.
 **Superseded By / Replaces:** Completes the arc ADR-108 opened (the player-actions panel) and ADR-133 delivered
 the input for (tap-the-pitch). Applies the same idiom to the ADR-134 league scan.
@@ -171,3 +173,56 @@ already unit-tested directly since ADR-133); Boot Battle stays a picker, so the 
   selectbox). Same mechanism, one more surface — deliberately a separate change so this one could be measured
   cleanly.
 - **Not this ADR:** reaching off-pitch players from a shirt — it cannot be done, and the design says so.
+
+---
+
+### ↩️ Outcome — met the target, reverted anyway (2026-08-25)
+
+The number was right and the answer was still wrong. That is the whole value of this record.
+
+**What the owner saw, in their words:** *"I think we are making the user experience worse… the hover is
+following the players around, so now I can see one player whom I am going to captain, and stats on another. It
+is slow, takes too much time to process a double click and have moved on — then the mess. Boot Battle is still
+not called. Substitute works but overall experience is not good."*
+
+**Three causes, and only two of them were fixable:**
+
+1. **The hover suppression was one selector too narrow** (mine). `.kit.selected .kit-pop{display:none}` hid the
+   popover on the *selected* card — every **other** shirt still popped on hover, right beside the open menu.
+   The screenshot shows one player's menu next to another player's stats. Fixable.
+2. **Boot Battle's state wiring didn't take** (mine). Fixable.
+3. **The latency is architectural, and is not fixable at this layer.** Every tap is a full Streamlit rerun, and
+   the rerun recomputes `decision_xp` for the squad (`views/squads.py`). A menu that opens on one round-trip
+   and completes on a second costs *two*. FFH's equivalent menu is instant because their app is client-side;
+   ours cannot be, and no amount of CSS closes that gap. A floating menu **advertises** the responsiveness of a
+   client-side app and then does not deliver it — which is exactly why it read as "slow… then the mess" while
+   the plain picker below the pitch, doing the same work at the same speed, never did.
+
+**The lesson, stated so it survives the next time someone counts widgets:** *widget count was a proxy for
+clutter, and it turned out to be a bad one.* Three fast, legible controls beat one control that opens a menu
+you wait for and that collides with the surface next to it. Density is worth having, but not at the cost of
+the responsiveness a gesture implicitly promises. **A measured target that hits and still makes the thing worse
+means the metric was wrong, not the measurement.**
+
+**What was reverted** — the menu (`kit-menu`, the `cap:`/`sub:`/`cmp:` anchors, `armed`, the popover
+suppression, `_handle_shirt_action`), the hidden-at-rest substitute picker, and the removed captain button.
+Captain / Substitute / Boot Battle are back in the one panel below the pitch.
+
+**What survives, deliberately:**
+- **ADR-133's tap-to-select.** One tap → one round-trip → a selection. It genuinely replaces a dropdown and
+  never promises more than it delivers. The owner verified it works on Cloud before this ADR was written.
+- **The selected-card outline.** Purely visual; tells you which player the panel is about; nothing went wrong
+  with it.
+- **Both bug fixes** — the pinned link states (a real bug in its own right: bootstrap's `a:visited` inside the
+  iframe) and the replayed-click guard (without it, every later rerun re-wrote the selection back to the
+  last-tapped shirt, so the dropdown could never override a tap). Both kept, with tests.
+
+**Consequences for what was queued behind this:** the ADR-134 league-scan row taps should **not** now inherit
+this idiom uncritically — a row tap that *selects* is fine (that is ADR-133's shape); a row tap that opens a
+menu is this ADR again. The density goal itself is not withdrawn; the mechanism for reaching it is.
+
+**Test record:** `test_the_pitch_carries_its_own_actions_so_the_page_below_stays_thin` (the `<= 3` assertion)
+became `test_the_actions_are_back_below_the_pitch_after_the_adr_135_revert`, which records that the count is
+back up *by decision*, and guards the shape that was actually worth keeping — actions in one panel, tap as an
+input to it. `test_the_selected_card_carries_no_actions_only_an_outline` and
+`test_the_hover_popover_survives_on_every_card` pin the revert itself. Suite: **1294 green**, ruff clean.

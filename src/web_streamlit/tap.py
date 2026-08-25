@@ -42,21 +42,21 @@ def available() -> bool:
 
 
 def parse(clicked):
-    """A clicked anchor id → `(action, player_id)`, or `(None, None)` if it isn't one of ours.
+    """A clicked anchor id → a player id, or None if it isn't one of ours.
 
-    Ids are `sel:123` / `cap:123` / `sub:123` / `cmp:123` (ADR-135) — the action and the player in one string,
-    because the component hands back a single id and a tap has to say *what* as well as *who*. Bare numeric ids
-    from before ADR-135 still read as a selection, so a stale component value can't crash a render.
+    Ids are `sel:123`. The prefix is vestigial — ADR-135 briefly put `cap:` / `sub:` / `cmp:` action anchors on
+    the shirt too and that is reverted — but it is kept because ids of *both* shapes may be sitting in a live
+    session's component state, and neither must crash a render. A bare `123` reads as a selection as well.
     """
     if not clicked:
-        return None, None
+        return None
     text = str(clicked)
     action, _, raw = text.partition(":")
-    if not raw:                                    # a bare id — the pre-ADR-135 form
+    if not raw:                                          # a bare id
         action, raw = "sel", text
-    if action not in ("sel", "cap", "sub", "cmp") or not raw.isdigit():
-        return None, None
-    return action, int(raw)
+    if action != "sel" or not raw.isdigit():
+        return None
+    return int(raw)
 
 
 def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", **kw):
@@ -66,8 +66,9 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
     selectbox's label — the tap writes the same state the dropdown does, so the ADR-108 panel downstream is
     reused **entirely unchanged**. Only the input is new.
 
-    Returns `(action, player_id)` — `sel` also writes the selection, the rest are for the caller to act on
-    (ADR-135). `(None, None)` when nothing was tapped.
+    Selecting is *all* it does. ADR-135 tried carrying actions on the shirt as well and was reverted: a tap
+    costs a full rerun (with a `decision_xp` recompute), so a two-tap flow cost two, and the menu collided
+    with the hover card. One tap → one selection is the whole gesture.
 
     Must be called **before** the selectbox is created: Streamlit forbids writing a widget's state once that
     widget exists in the run, and the pitch already renders above the picker.
@@ -76,29 +77,25 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
     if detector is None:
         # The component isn't here — draw the ordinary pitch and report no action, so every caller has one
         # shape to handle rather than two.
-        render_pitch(xi, bench, **{k: v for k, v in kw.items() if k not in ("selected_id", "armed")})
-        return None, None
+        render_pitch(xi, bench, **{k: v for k, v in kw.items() if k != "selected_id"})
+        return None
 
     html = pitch_html(xi, bench, clickable=True, **kw)
     clicked = detector(html, key=key)
 
-    # The component keeps handing back its **last** click on every rerun, so an action must fire once, on the
-    # run where it actually happened. Without this guard a toggle (🔁 / ⚔️) armed itself, rerendered, saw the
-    # same id, disarmed, rerendered — and nothing ever appeared to happen. Captain only *looked* fine because
-    # setting it twice is idempotent.
+    # The component keeps handing back its **last** click on every rerun, so a tap must act once — on the run
+    # where it happened. Without this, every later rerun re-wrote the selection back to the last-tapped shirt,
+    # so the dropdown beside the pitch could never override a tap. (Found while debugging ADR-135; kept,
+    # because it is a real bug in its own right.)
     seen_key = f"{key}__seen"
     if not clicked or st.session_state.get(seen_key) == clicked:
-        return None, None
+        return None
     st.session_state[seen_key] = clicked
 
-    action, pid = parse(clicked)
-    if action is None:
-        return None, None
-
+    pid = parse(clicked)
     by_id = {p["id"]: p for p in list(xi) + list(bench)}
     player = by_id.get(pid)
-    if player is None:                                   # a stale id after a transfer — ignore, don't crash
-        return None, None
-    if action == "sel":
-        st.session_state[select_key] = label_for(player)
-    return action, player["id"]
+    if player is None:                                   # not ours, or a stale id after a transfer — ignore
+        return None
+    st.session_state[select_key] = label_for(player)
+    return player["id"]

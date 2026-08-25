@@ -460,20 +460,19 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     kits = shirt_url_by_id(owned, teams)        # the pitch shows the live club kit (ADR-084 rev), not the mugshot
     # ADR-133 — tapping a shirt selects that player, writing the same state the picker below uses. Must come
     # before the selectbox is created. Degrades to the ordinary pitch if the component isn't available.
-    # ADR-135 — the actions live ON the selected shirt, so the widgets that used to do this below the pitch
-    # aren't on the page. `armed` is a two-tap flow waiting for its second player (🔁 / ⚔️).
+    # ADR-133 — tapping a shirt selects that player, writing the same state the picker below uses. The action
+    # **menu** that briefly lived here (ADR-135) is reverted: every tap costs a full rerun plus a decision_xp
+    # recompute, so a floating menu — and especially a two-tap flow costing two round-trips — felt slower and
+    # messier than the widgets it replaced. Selection is one round-trip and genuinely replaces a dropdown.
     from src.web_streamlit.tap import render_tappable_pitch
     _label = lambda p: f"{p['web_name']} · {p['team']}"      # noqa: E731 — matches the picker's option text
     _sel_now = st.session_state.get("pa_pick")
     _sel_id = next((p["id"] for p in owned if _label(p) == _sel_now), None)
-    _armed = st.session_state.get("pa_armed")
-    _act, _who = render_tappable_pitch(
+    render_tappable_pitch(
         xi, bench, select_key="pa_pick", label_for=_label,
         captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
-        team_names=team_names, bench_roles=bench_roles, kits=kits,
-        selected_id=_sel_id, armed=_armed,
+        team_names=team_names, bench_roles=bench_roles, kits=kits, selected_id=_sel_id,
         fixtures_by_id=fixtures_by_id)                      # ADR-109: per-GW row in the hover popover
-    _handle_shirt_action(_act, _who, squad, owned, armed=_armed, label_for=_label)
 
     # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +
     # **Substitute**, together, in one panel on the golden page (consolidates the old card picker + Substitute
@@ -523,10 +522,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
                                fixtures=fixtures_by_id.get(picked["id"]),       # ADR-109 per-GW row (no Total col)
                                projected_xp=xp_by_id.get(picked["id"]))
-        # 👑 Captain is now the © on the selected shirt (ADR-135) — the button that used to live here was one of
-        # the six-or-seven per-player widgets this page was carrying. Only the status line remains.
+        # 👑 Make captain — one click; ×2 next GW. (Briefly moved onto the shirt by ADR-135 and moved back:
+        # a button here costs the same rerun without a floating menu or a hover collision.)
         if picked["id"] == captain_id:
             st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")
+        elif st.button(f"👑 Make {picked['web_name']} captain", key="pa_captain"):
+            set_active_squad(set_captain(squad, picked["id"]))
+            st.success(f"Captain set: **{picked['web_name']} (C)** — they score ×2 next gameweek.")
+            st.rerun()
 
         # 🔁 Substitute (US-366, ADR-108) — the selected player is one side of the swap; pick the other. Only
         # legal swaps are offered (substitute() returns no issues: GK↔GK, a swap that keeps a legal formation).
@@ -545,41 +548,31 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                            "the bench updates too.")
                 st.rerun()
 
-        # ADR-135: a second tap completes the swap the 🔁 armed — no widget involved.
-        _target = st.session_state.pop("pa_sub_target", None)
-        if _target is not None and _target != pid:
-            _do_sub(*( (pid, _target) if pid not in bench_ids else (_target, pid) ))
-
-        # The picker below is the **non-tap path**, and it only exists while the flow is live (armed) or when
-        # the component isn't available at all. That's the resolution of ADR-133's "always keep a fallback"
-        # against ADR-135's "take widgets off the page": it's present when it's needed, absent at rest.
-        from src.web_streamlit.tap import available as _tap_ok
-        # Present while the flow is live, absent at rest — the resolution of ADR-133's "always keep a
-        # fallback" against ADR-135's "take widgets off the page".
-        if st.session_state.get("pa_armed") == "sub" or not _tap_ok():
-            if pid in bench_ids:                                   # a bench player → bring them ON for a starter
-                legal = {f"{p['position']} {p['web_name']}": p["id"]
-                         for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))
-                         if not substitute(squad, p["id"], pid, by_id)[1]}
-                if legal:
-                    off = st.selectbox(f"🔁 Bring {picked['web_name']} on — take off", list(legal), key="pa_sub",
-                                       help="The starter to move to the bench — only legal swaps are shown.")
-                    if st.button("Substitute →", key="pa_do_sub"):
-                        _do_sub(legal[off], pid)
-                else:
-                    st.caption(f"No legal swap brings **{picked['web_name']}** on (no starter keeps a legal XI).")
-            elif bench:                                              # a starter → take them OFF for a bench player
-                legal = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
-                         for p in bench if not substitute(squad, pid, p["id"], by_id)[1]}
-                if legal:
-                    on = st.selectbox(f"🔁 Take {picked['web_name']} off — bring on", list(legal), key="pa_sub",
-                                      help="The bench player to bring into your XI — only legal swaps are shown.")
-                    if st.button("Substitute →", key="pa_do_sub"):
-                        _do_sub(pid, legal[on])
-                else:
-                    why = ("the bench GK only covers your keeper" if picked["position"] == "GK"
-                           else "no bench player keeps a legal formation")
-                    st.caption(f"No legal swap for **{picked['web_name']}** — {why}.")
+        # The picker is unconditional again. ADR-135 hid it at rest (the shirt's 🔁 armed the flow); that menu is
+        # reverted, so this is the only path to a substitution and must always be on the page.
+        if pid in bench_ids:                                   # a bench player → bring them ON for a starter
+            legal = {f"{p['position']} {p['web_name']}": p["id"]
+                     for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))
+                     if not substitute(squad, p["id"], pid, by_id)[1]}
+            if legal:
+                off = st.selectbox(f"🔁 Bring {picked['web_name']} on — take off", list(legal), key="pa_sub",
+                                   help="The starter to move to the bench — only legal swaps are shown.")
+                if st.button("Substitute →", key="pa_do_sub"):
+                    _do_sub(legal[off], pid)
+            else:
+                st.caption(f"No legal swap brings **{picked['web_name']}** on (no starter keeps a legal XI).")
+        elif bench:                                              # a starter → take them OFF for a bench player
+            legal = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
+                     for p in bench if not substitute(squad, pid, p["id"], by_id)[1]}
+            if legal:
+                on = st.selectbox(f"🔁 Take {picked['web_name']} off — bring on", list(legal), key="pa_sub",
+                                  help="The bench player to bring into your XI — only legal swaps are shown.")
+                if st.button("Substitute →", key="pa_do_sub"):
+                    _do_sub(pid, legal[on])
+            else:
+                why = ("the bench GK only covers your keeper" if picked["position"] == "GK"
+                       else "no bench player keeps a legal formation")
+                st.caption(f"No legal swap for **{picked['web_name']}** — {why}.")
 
         if not bb:      # 🧬 Player DNA (ADR-118, US-417) — the same section as Players ▸ Card, owned-aware
             # (Hold/Sell), below the actions. Skipped while Boot-Battle comparing. Reuses the panel's xp_by_id +
@@ -653,37 +646,6 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
 
 # ---- Health (analyse the squad over the next 5 GW; ADR-031) ----------------------------------------
-
-def _handle_shirt_action(action, pid, squad, owned, *, armed=None, label_for=None) -> None:
-    """Act on a tap of one of the shirt's own controls (ADR-135).
-
-    `cap` is immediate. `sub` and `cmp` **arm** — they need a second player, so they store the intent and the
-    next `sel` tap completes it. Tapping an armed action again cancels it: a flow you can enter and not leave
-    is worse than the picker it replaced, so cancelling is a tap on the thing you just tapped.
-    """
-    if action is None:
-        return
-    by_id = {p["id"]: p for p in owned}
-
-    if action == "cap":
-        st.session_state.pop("pa_armed", None)
-        set_active_squad(set_captain(squad, pid))
-        st.success(f"Captain set: **{by_id[pid]['web_name']} (C)** — they score ×2 next gameweek.")
-        st.rerun()
-
-    if action in ("sub", "cmp"):
-        st.session_state["pa_armed"] = None if armed == action else action
-        st.rerun()
-
-    if action == "sel" and armed:                    # the second tap of a two-tap flow
-        st.session_state.pop("pa_armed", None)
-        if armed == "cmp":
-            st.session_state["pa_boot_pool"] = "My team"
-            st.session_state["pa_boot"] = label_for(by_id[pid]) if label_for else None
-        else:
-            st.session_state["pa_sub_target"] = pid
-        st.rerun()
-
 
 def render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *,
                   team_names=None, horizon=5):

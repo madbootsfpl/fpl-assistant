@@ -194,13 +194,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
     check**. The lightweight path could more than halve the cost.
   - **Trigger:** feedback-driven. Ship the panel, watch the testers; if *"I want to tap the shirt"* stays the
     top ask, that's the green light.
-- ✅ **Actions on the entity — a density change** (ADR-135, Sprint 189) — **6-7 widgets → 3**, target
-  met exactly. ⬜ Remaining: the same idiom on the league-scan rows. Not "a popup because we can": six or
-  seven widgets sit below the pitch purely to act on **one** selected player, and moving them onto the selected
-  card takes **3-4 widgets and ~250-350px** off a phone screen. Spike 188 proved a tap can carry *both* the
-  action and the player (`cap:123`). The governing rule it proposes: **the entity owns actions on things you
-  have; the pickers own finding things you don't** — you can only tap what is on the pitch, so Boot Battle's
-  All/By-club stays. Generalises to the league-scan rows, which is the "player / team / entity" ask.
+- ↩️ **Actions on the entity — a density change** (ADR-135, Sprint 189) — **built, hit its number
+  (6-7 widgets → 3), REVERTED the same day.** The tap-to-select half (ADR-133) stays and works; the action
+  **menu** on the shirt is gone. Cause: every tap is a full Streamlit rerun with a `decision_xp` recompute, so
+  a two-tap flow cost two round-trips — a floating menu advertises client-side responsiveness we cannot
+  deliver, and it collided with the neighbouring cards' hover popovers. **Widget count was a bad proxy for
+  clutter**; three fast controls beat one slow menu. Read ADR-135 §Outcome before re-opening this.
+  ⬜ The league-scan rows should inherit **selection**, not a menu — a row tap that selects is ADR-133's shape
+  and is still wanted; a row tap that opens a menu is this ADR again. The density goal stands; the mechanism
+  for reaching it does not.
 - 🅾️ **Drag-and-drop to reorder the bench** (ADR-084) — rejected; the ⬆/⬇ controls do the job without JS.
 
 ---

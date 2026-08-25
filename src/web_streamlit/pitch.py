@@ -66,38 +66,24 @@ width:250px;max-width:76vw;display:none;z-index:40;text-align:left;cursor:defaul
 _SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
 
 
-# ADR-135 rev (2026-08-25) — the tap styling, learned from a screenshot of the real thing.
+# The tap styling (ADR-133; link states learned the hard way 2026-08-25).
 #
-# **Every link state must be pinned.** The click component renders inside an iframe that ships `bootstrap.min.css`,
-# which styles `a:visited` blue-and-underlined — so the card you had just clicked turned into a visible hyperlink
-# while every other card looked fine. Styling only the base `a` state is not enough inside someone else's CSS.
-#
-# **The actions are a menu, not a row of icons on the card.** The first cut put three glyphs along the bottom of a
-# 104px card: too small to hit, no labels, no contrast, and fighting the hover popover for the same space. A
-# floating panel is what FFH does and it is right — one surface, labelled, with room to be legible.
+# **Every link state must be pinned.** The click component renders inside an iframe that ships
+# `bootstrap.min.css`, which styles `a:visited` blue-and-underlined — so the card you had just clicked turned
+# into a visible hyperlink while every other card looked fine. Styling only the base `a` state is not enough
+# inside someone else's CSS. This survived the ADR-135 revert because it is a genuine bug fix, not part of the
+# menu that was reverted.
 _TAP_CSS = """
 <style>
 .kit-a,.kit-a:link,.kit-a:visited,.kit-a:hover,.kit-a:active,.kit-a:focus{
 text-decoration:none!important;color:inherit!important;display:block;}
 .kit.selected{outline:2px solid #5eead4;outline-offset:2px;border-radius:10px;}
-.kit.selected .kit-pop{display:none!important;}   /* one surface at a time: the menu replaces the hover card */
-.kit-menu{position:absolute;z-index:60;left:50%;transform:translateX(-50%);margin-top:6px;
-background:#0f1620;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:6px;min-width:186px;
-box-shadow:0 22px 44px -18px rgba(0,0,0,.85);}
-.kit-menu a,.kit-menu a:link,.kit-menu a:visited,.kit-menu a:hover,.kit-menu a:active,.kit-menu a:focus{
-display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;text-decoration:none!important;
-color:#e8eef6!important;font-size:.82rem;font-weight:600;white-space:nowrap;}
-.kit-menu a:hover{background:rgba(255,255,255,.09);}
-.kit-menu a .g{width:18px;text-align:center;opacity:.9;}
-.kit-menu a.armed{background:#5eead4;color:#0c121a!important;font-weight:800;}
-.kit-menu .hint{color:#8c98a8;font-size:.7rem;padding:6px 11px 2px;}
-.kit{position:relative;}
 </style>
 """
 
 
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
-              fixtures_by_id=None, kits=None, clickable=False, selected=False, armed=None) -> str:
+              fixtures_by_id=None, kits=None, clickable=False, selected=False) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
     Every text value is HTML-escaped so a name with `&`/`<`/`'` can't break the markup.
@@ -142,41 +128,29 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     #
     # Actions appear on the selected card alone. Putting them on all fifteen would trade page height for pitch
     # noise, which is the opposite of the point (ADR-135).
-    acts = ""
-    if selected:
-        def _item(kind, glyph, label):
-            on = " armed" if armed == kind else ""
-            return (f'<a href="#" id="{kind}:{pid}" class="{on.strip()}">'
-                    f'<span class="g">{glyph}</span>{label}</a>')
-        hint = ('<div class="hint">now tap who swaps in</div>' if armed == "sub" else
-                '<div class="hint">now tap who to compare with</div>' if armed == "cmp" else "")
-        acts = ('<div class="kit-menu">'
-                + _item("cap", "©", "Make captain")
-                + _item("sub", "⇄", "Substitute")
-                + _item("cmp", "⚔️", "Compare")
-                + hint + "</div>")
+    # ADR-135 REVERTED (2026-08-25): the action menu is gone. Tapping selects (ADR-133) and the actions live in
+    # the panel below, where a click costs the same round-trip without a floating menu, hover collisions, or a
+    # two-tap flow costing two of them. The selected **outline** stays — it is purely visual, tells you which
+    # card the picker refers to, and was the one part of ADR-135 nothing went wrong with.
     sel_cls = " selected" if selected else ""
-    return (f'<div class="kit{sel_cls}">'
-            f'<a href="#" id="sel:{pid}" class="kit-a">{body}</a>{acts}</div>')
+    return f'<div class="kit{sel_cls}"><a href="#" id="sel:{pid}" class="kit-a">{body}</a></div>'
 
 
 def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
-               fixtures_by_id=None, kits=None, clickable=False, selected_id=None, armed=None) -> str:
+               fixtures_by_id=None, kits=None, clickable=False, selected_id=None) -> str:
     """Build the pitch markup (ADR-084) — see `render_pitch` for the arguments.
 
     Split out from the renderer (ADR-133) because a tappable pitch has to *hand the HTML to a component* rather
     than write it to the page, and there was previously no way to get at it. `clickable` wraps each kit card in
     an anchor carrying the player id.
 
-    `selected_id` marks one card as selected — that card, and only that card, grows a row of action anchors
-    (`cap:` · `sub:` · `cmp:`). `armed` highlights an action awaiting its second tap (ADR-135).
+    `selected_id` outlines one card, so it is visible which player the picker below refers to.
     """
     kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
               fixtures_by_id=fixtures_by_id, kits=kits, clickable=clickable)
 
     def _kit(p, **extra):
-        return _kit_html(p, selected=(selected_id is not None and p["id"] == selected_id),
-                         armed=armed, **kw, **extra)
+        return _kit_html(p, selected=(selected_id is not None and p["id"] == selected_id), **kw, **extra)
     parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
 
     for pos in _ROWS:

@@ -75,32 +75,29 @@ def test_a_clickable_pitch_gives_every_kit_a_select_anchor():
     assert len(re.findall(r'<div class="kit[" ]', html)) == 15
 
 
-def test_actions_appear_on_the_selected_card_only():
-    """The decision that keeps this a *density* change: three icons on fifteen cards would trade page height
-    for pitch noise. Only the card you're acting on carries them."""
+def test_the_selected_card_carries_no_actions_only_an_outline():
+    """ADR-135 put a Captain / Substitute / Compare menu on the selected shirt and it was **reverted**. It hit
+    its density target (six-or-seven widgets below the pitch became three) and the experience still got worse:
+    every tap is a full Streamlit rerun with a `decision_xp` recompute, so a two-tap flow cost two round-trips
+    and felt slow, while the menu opened alongside the neighbouring cards' hover popovers (owner screenshots,
+    2026-08-25). What survives is selection — one tap, one round-trip, genuinely replacing a dropdown.
+
+    The **outline** stays: it is purely visual, and it is what tells you which player the panel below is about.
+    """
     import re
-    # ADR-135 rev: a labelled **menu**, not a row of icons on the card — a 104px card had no room for three
-    # actions, so they came out tiny, unlabelled and fighting the hover popover (owner screenshot, 2026-08-25).
-    assert 'class="kit-menu"' not in _html(clickable=True)
     one = _html(clickable=True, selected_id=4)
-    assert one.count('class="kit-menu"') == 1
-    for label in ("Make captain", "Substitute", "Compare"):
-        assert label in one, f"the menu should name its actions, not just glyph them: {label}"
-    assert set(re.findall(r'id="(\w+):4"', one)) == {"sel", "cap", "sub", "cmp"}
+    assert "kit-menu" not in one and "Make captain" not in one
+    assert set(re.findall(r'id="(\w+):4"', one)) == {"sel"}, "the shirt selects and does nothing else"
+    assert one.count("kit selected") == 1 and "kit selected" not in _html(clickable=True)
 
 
-def test_an_armed_action_is_visibly_armed():
-    """A two-tap flow you can't see you're in is worse than the picker it replaced."""
-    armed = _html(clickable=True, selected_id=4, armed="sub")
-    assert 'class="armed"' in armed and "now tap who swaps in" in armed
-    assert 'class="armed"' not in _html(clickable=True, selected_id=4)
-
-
-def test_the_action_anchors_are_siblings_never_nested():
-    """HTML forbids <a> inside <a> — a browser silently closes the outer one, which would break selection."""
-    import re
+def test_the_hover_popover_survives_on_every_card():
+    """The reverted menu needed the hover card suppressed to stop the two fighting for space — and the rule
+    only covered the *selected* card, so every other shirt still popped beside the open menu. With the menu
+    gone the hover card is the only surface again, and must work on all fifteen, selected or not."""
     html = _html(clickable=True, selected_id=4)
-    assert not re.search(r'<a [^>]*>(?:(?!</a>).)*<a ', html, re.S)
+    assert "display:none" not in html.split("</style>")[0]
+    assert html.count('class="kit-pop"') == 15
 
 
 def test_the_anchor_does_not_look_like_a_link():
@@ -142,9 +139,3 @@ def test_every_link_state_is_pinned_because_the_iframe_ships_bootstrap():
     html = _html(clickable=True, selected_id=4)
     for state in (":link", ":visited", ":hover", ":active", ":focus"):
         assert f".kit-a{state}" in html, f"unpinned link state on the card: {state}"
-        assert f".kit-menu a{state}" in html, f"unpinned link state in the menu: {state}"
-
-
-def test_the_hover_popover_is_suppressed_while_a_card_is_selected():
-    """One surface at a time. The menu and the hover card were opening together and fighting for the space."""
-    assert ".kit.selected .kit-pop{display:none" in _html(clickable=True, selected_id=4)
