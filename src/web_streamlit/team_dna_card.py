@@ -218,8 +218,37 @@ def your_teams_rows(owned, all_dna) -> list[dict]:
     return rows
 
 
-def your_teams_strip_html(rows) -> str:
-    """The compact "Your teams" strip HTML (a row per club: badge · grade · ATT/DEF/FIX dots · your players)."""
+def league_rows(all_dna, next_opp=None, *, sort_by: str = "grade") -> list[dict]:
+    """Every club as a strip row — grade + ATT/DEF/FIX + its next opponent (ADR-134).
+
+    The league-wide sibling of `your_teams_rows`, and the thing that lets the Team DNA section **lead with a
+    scan** rather than a one-team selectbox. It answers the ticker's question — *"who has a good run?"* — while
+    also saying **how good those teams are**, which a difficulty grid cannot: a 100th-percentile run belonging
+    to a C-grade side reads very differently from one belonging to an A.
+
+    `sort_by` is `"grade"` (best team first) or `"fixtures"` (easiest run first) — the two jobs this strip
+    serves. The trailing column is the next opponent, so a row still says something concrete.
+    """
+    rows = []
+    for t, d in (all_dna or {}).items():
+        by = {a.label: a.percentile for a in d.axes}
+        opp = (next_opp or {}).get(t)
+        rows.append({"team": t, "name": d.name, "grade": d.grade, "score": d.grade_score,
+                     "att": by.get("Attacking Threat"), "dfc": by.get("Defensive Strength"),
+                     "fix": by.get("Fixture Strength"),
+                     "players": f'{opp["opponent"]} ({opp["venue"]})' if opp else "—"})
+    key = (lambda r: -(r["fix"] or 0)) if sort_by == "fixtures" else (lambda r: -(r["score"] or 0))
+    rows.sort(key=key)
+    return rows
+
+
+def your_teams_strip_html(rows, *, title: str = "🧬 Your teams — strength behind your squad") -> str:
+    """The compact strip HTML (a row per club: badge · grade · ATT/DEF/FIX dots · a trailing column).
+
+    Shared by the My Squad "Your teams" strip and the league-wide scan on the Team DNA tab (ADR-134) — the
+    trailing column is *your players* in one and *the next opponent* in the other, which is the only difference
+    between them and not worth a second renderer.
+    """
     if not rows:
         return ""
     def dot(v):
@@ -229,7 +258,7 @@ def your_teams_strip_html(rows) -> str:
         f'<div class="yt-grade" style="color:{_tone(r["grade"])}">{_esc(r["grade"])}</div>'
         f'<div class="yt-axes">ATT {dot(r["att"])} · DEF {dot(r["dfc"])} · FIX {dot(r["fix"])}</div>'
         f'<div class="yt-mine">{_esc(r["players"])}</div></div>' for r in rows)
-    return (YT_CSS + '<div class="yt-strip"><div class="yt-ttl">🧬 Your teams — strength behind your squad'
+    return (YT_CSS + f'<div class="yt-strip"><div class="yt-ttl">{_esc(title)}'
             f'</div>{body}</div>')
 
 

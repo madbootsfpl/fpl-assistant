@@ -176,8 +176,9 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 
 ## 🧭 Interface & information architecture
 
-- ⬜ **Fixtures IA restructure** *(parked for a morning sprint; gate as an ADR first)* — Team DNA-led: rename
-  the tab **"🧬 Team DNA & FDR"**, Team DNA first / FDR second, move the 🎯 Radar to a Players sub-tab.
+- ✅ **Fixtures IA restructure** — built (ADR-134, Sprint 187). Team DNA leads, opening on a **league-wide
+  scan** of all 20 clubs (which resolved the scan-vs-drill tension rather than trading it off); ticker second;
+  🎯 Radar moved to a Players view.
 - ⬜ **Squad Lab icon → a lab motif** — swap the 🥾 boot on the Squad Lab header for a flask/test-tube; it fits
   *Lab* and distinguishes it from the boot-branded rest. **Needs the art** (clean transparent PNG).
 - ⬜ **Homepage copy is stale** — `madboots.com` still says *"No login to look around · your squad saves across

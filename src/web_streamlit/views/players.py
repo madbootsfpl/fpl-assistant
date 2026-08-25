@@ -439,3 +439,60 @@ def render_card(rows, sel, teams, photos, badges):
         # ADR-126: the DNA peer pool needs 450 mins, so hand it last season to rank against until ~GW5.
         render_player_dna(player, rows, xp, gw_history=gwh,
                           last_rows=last_season_rows(rows, past), season_name=last_season_name(past))
+
+
+def render_radar(rows, sel, badges, upcoming, history, gw_history):
+    """🎯 Radar — the best available players from the easiest-run teams (US-301, renamed ADR-107).
+
+    Moved here from the Fixtures tab by **ADR-134**: it is *fixture-derived* but it returns a list of **players
+    to buy**, and someone looking for players looks under Players. Organising by what a thing *is* rather than
+    what it is computed from is the whole point of that restructure.
+
+    It brings its own window slider — on the old tab it borrowed the ticker's, which doesn't exist here.
+    """
+    from src.analytics import decision_xp, points_per_million, target_by_fixtures, team_fdr
+    from src.web_streamlit.squads import active_squad
+
+    st.caption("Players on your radar — the best available from the easiest-run teams over your window, "
+               "for planning a new squad or a wildcard. Team-level runs live on **🧬 Team DNA & FDR**.")
+    c1, c2 = st.columns(2)
+    weeks = c1.slider("Weeks to look ahead", 1, 8, 6, key="radar_weeks",
+                      help="How far ahead to judge each team's run.")
+    max_price = c2.slider("Max price", 4.0, 15.5, 15.5, step=0.5, key="target_max_price",
+                          help="Show only targets at or below this price (£m). Full range = show all.")
+    position = st.segmented_control(
+        "Position", ["All", "GK", "DEF", "MID", "FWD"], default="All", key="target_pos",
+        help="Filter the targets to one position (e.g. which defenders have the best runs).")
+    sort_label = st.segmented_control("Sort", ["xP", "Val/£m"], default="xP", key="target_sort",
+                                      help="Rank each team's targets by expected points, or by value per £m.")
+    radar_mine = st.checkbox("My squad only", key="radar_myteam",
+                             help="Show only players from your active squad on the Radar.")
+
+    ranked = decision_xp(rows, upcoming, history, horizon=weeks, gw_history_by_code=gw_history)
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    value_by_id = {p["id"]: points_per_million(p["total_points"], p["price"]) for p in rows}
+    targets = target_by_fixtures(
+        team_fdr(upcoming, next_n=weeks), rows, xp_by_id, position=position, max_price=max_price,
+        sort_by="value" if sort_label == "Val/£m" else "xp", value_by_id=value_by_id)
+    if radar_mine:
+        _sq = active_squad()
+        _owned = set(_sq["player_ids"]) if _sq else set()
+        targets = [t for t in targets if t["id"] in _owned]
+    # The shared filter (ADR-064) applies here as it does to every other Players view.
+    targets = apply_filter(targets, sel)
+
+    if not targets:
+        st.caption("No available targets for that position in the top-run teams.")
+        return
+    st.dataframe(
+        [{"badge": badges.get(t["team"], ""), "Team": t["team"], "FDR": t["avg_difficulty"],
+          "Next": ", ".join(t["opponents"]), "Player": t["web_name"], "Pos": t["position"],
+          "£m": t["price"], "Own%": t["selected_by"], "Fit": t["fit"],
+          "xP": t["xp"], "Val/£m": t["value"]} for t in targets],
+        hide_index=True, width="stretch",
+        column_config=column_config(
+            ["badge", "Team", "FDR", "Next", "Player", "Pos", "£m", "Own%", "Fit", "xP", "Val/£m"],
+            help={"FDR": "Average fixture difficulty over the window — lower is easier.",
+                  "xP": "Expected points (the app's one metric).",
+                  "Val/£m": "Points per £m — bang for buck.",
+                  "Fit": AVAILABILITY_LEGEND}))

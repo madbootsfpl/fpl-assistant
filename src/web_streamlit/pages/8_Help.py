@@ -97,15 +97,17 @@ with st.expander("🗓️ 4 · Plan your week & improve it  →  **My Squad → 
         "position sharpen it in-season."
     )
 
-with st.expander("🔎 5 · Do your research  →  **👟 Players · 📅 Fixtures · 📈 Trending · 📰 News**"):
+with st.expander("🔎 5 · Do your research  →  **👟 Players · 🧬 Team DNA & FDR · 📈 Trending · 📰 News**"):
     st.markdown(
         "- **👟 Players** — explore the full pool: **🔎 filter** by team / position / player, sort, browse; a "
         "**table + top-15 chart**; a **🪪 Player Card** (photo · fixtures · Projected xP · position-adaptive stats) "
         "with **⚔️ Boot Battle** to compare a same-position player side by side; and the stat views "
         "**over/under-performance · Defensive Contribution · Clean Sheets · xG**. A **🟢…🔴 quality rating** shows "
         "how a player compares with those shown. Switch views with the buttons at the top.\n"
-        "- **📅 Fixtures** — the next **1–8 GWs** on a colour-coded difficulty ticker; scope it to **your squad**, "
-        "or use **🎯 Radar** to find players from the easiest-run teams (filter by position, cap the price, sort by "
+        "- **🧬 Team DNA & FDR** — every club graded at a glance, then the next **1–8 GWs** on a "
+        "colour-coded difficulty ticker; scope it to **your squad**, "
+        "the **🎯 Radar** (now a **Players** view) finds players from the easiest-run teams "
+        "(filter by position, cap the price, sort by "
         "xP or Val/£m).\n"
         "- **📈 Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community "
         "Signals** (what r/FantasyPL is talking about — a lens, not truth).\n"

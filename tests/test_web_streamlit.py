@@ -282,7 +282,7 @@ def test_players_pool_shows_the_full_sorted_list():
 
 def test_fixtures_ticker_grid_and_weeks_selector():
     # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
-    at = _run(_PAGES / "3_Fixtures.py")
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
     assert len(at.dataframe) >= 1 or len(at.info) == 1     # US-301 added a second (targets) table
     if not at.dataframe:
         return
@@ -351,7 +351,7 @@ def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
 
 def test_fixtures_team_dna_section_renders_a_team_card():
     # US-419 (ADR-119): a 🧬 Team DNA section on Fixtures — pick a team → grade + radar + key-players.
-    at = _run(_PAGES / "3_Fixtures.py")
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
     if at.exception or not at.dataframe:
         return                                          # no fixtures/data in this environment
     assert any(s.value == "🧬 Team DNA" for s in at.subheader)
@@ -367,11 +367,14 @@ def test_fixtures_team_dna_section_renders_a_team_card():
 def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
     # US-301: a "🎯 Radar" section (renamed from "Target by fixtures", ADR-107) names the best available
     # players from the easiest-run teams, scoped by a Position filter.
-    at = _run(_PAGES / "3_Fixtures.py")
+    # ADR-134: the Radar moved to a **Players** view — player-discovery belongs where players live.
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Radar").run()
     if not at.dataframe:
         return                                             # no data → nothing to target
-    assert any(s.value == "🎯 Radar" for s in at.subheader)
-    targets = at.dataframe[-1].value                       # the targets table is last
+    targets = at.dataframe[-1].value
     assert {"Team", "Player", "Pos", "xP", "Fit"} <= set(targets.columns)
     pos = next(s for s in at.segmented_control if s.label == "Position")
     pos.set_value("DEF").run()
@@ -382,7 +385,11 @@ def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
 
 def test_fixtures_target_max_price_cap_drops_dearer_targets():
     # US-303: the Max price slider caps the target list to affordable players.
-    at = _run(_PAGES / "3_Fixtures.py")
+    # ADR-134: the Radar is a **Players** view now.
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Radar").run()
     if not at.dataframe:
         return
     cap = next(s for s in at.slider if s.label == "Max price")
@@ -394,7 +401,11 @@ def test_fixtures_target_max_price_cap_drops_dearer_targets():
 
 def test_fixtures_target_value_column_and_sort_toggle():
     # US-304: a Val/£m column + a Sort toggle that reorders each team's picks by value.
-    at = _run(_PAGES / "3_Fixtures.py")
+    # ADR-134: the Radar is a **Players** view now.
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Radar").run()
     if not at.dataframe:
         return
     by_xp = at.dataframe[-1].value
@@ -457,7 +468,7 @@ def test_my_squad_lineup_shows_owned_player_dna_with_hold_sell_framing():
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     # US-302 (ADR-049) + US-407b: a "My squad only" checkbox restricts the ticker to your teams + a Players count.
     from src.web_streamlit.squads import demo_squads
-    at = _run(_PAGES / "3_Fixtures.py")
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
     if not at.dataframe:
         return
     all_teams = at.dataframe[0].value
@@ -634,7 +645,7 @@ def test_sidebar_pages():
     # ADR-105: the Squads page split into My Squad (manage + tools) + Squad Lab (build); ADR-087 Feedback,
     # ADR-100 gated Admin. (ADR-069 had consolidated the old 12 tabs into the single Squads page first.)
     present = sorted(p.name for p in _PAGES.glob("*.py"))
-    assert present == sorted(["2_Players.py", "3_Fixtures.py", "4_My_Squad.py", "1_Squad_Lab.py", "5_Ask.py",
+    assert present == sorted(["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py", "1_Squad_Lab.py", "5_Ask.py",
                               "6_News.py", "7_Trending.py", "8_Help.py", "9_Maddie_Explains.py", "10_Feedback.py",
                               "11_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
@@ -647,7 +658,7 @@ def test_player_stats_board_renders_via_the_segmented_control():
     at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
         return
-    at.segmented_control[0].set_value("Over / under-perf").run()
+    at.segmented_control[0].set_value("Over/under").run()
     assert not at.exception
     assert len(at.dataframe) >= 1 or len(at.info) >= 1     # the board rendered
 
@@ -657,7 +668,7 @@ def test_player_stats_filter_narrows_a_board():
     at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
-    at.segmented_control[0].set_value("Defensive Contribution").run()
+    at.segmented_control[0].set_value("DefCon").run()
     at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
     assert not at.exception
     for df in at.dataframe:                                 # the board is now ARS-only
@@ -792,7 +803,7 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
 def test_team_dna_key_players_falls_back_to_last_season():
     """ADR-126 follow-up: the Team DNA card's key-players table has the same 900-minute gate as the three stat
     boards, so it gets the same fallback — through the real page, not just the pure function."""
-    at = _run(_PAGES / "3_Fixtures.py")
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
     sel = next((s for s in at.selectbox if s.label == "Team"), None)
     if sel is None:
         return                                  # gated or no data
@@ -810,7 +821,7 @@ def test_gated_boards_fall_back_to_last_season_and_say_so():
     """ADR-126: the three 900-minute boards can't answer until ~GW10. Rather than the ten-week blank they used
     to show, they render last season's numbers behind a banner naming the season. The banner is the point — an
     unlabelled number from a different season is worse than an empty board."""
-    for view in ("Over / under-perf", "Defensive Contribution", "Clean sheets"):
+    for view in ("Over/under", "DefCon", "Clean sheets"):
         at = _run(_PAGES / "2_Players.py")
         if not at.segmented_control:
             return
@@ -843,7 +854,7 @@ def test_clean_sheet_fallback_warns_that_xgc_crosses_a_transfer():
 
 def test_stat_boards_show_the_availability_fit_column():
     # ADR-074 / US-229: every stat board gains the Fit column (raw rows on xG; a lookup on the trimmed ones)
-    for view in ("Over / under-perf", "Defensive Contribution", "Clean sheets", "xG / xA / xGI"):
+    for view in ("Over/under", "DefCon", "Clean sheets", "xG · xA"):
         at = _run(_PAGES / "2_Players.py")
         if not at.segmented_control:
             return
@@ -862,7 +873,7 @@ def test_xg_board_rates_only_meaningful_players():
     at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
         return
-    at.segmented_control[0].set_value("xG / xA / xGI").run()
+    at.segmented_control[0].set_value("xG · xA").run()
     assert not at.exception
     if not at.dataframe:
         return
@@ -877,7 +888,7 @@ def test_xg_board_rates_only_meaningful_players():
         assert ratings <= {"—"}, f"goalkeepers should not be rated on xGI, got {ratings}"
 
 
-_TAB_EMOJI = {"2_Players.py": "👟", "3_Fixtures.py": "📅", "4_My_Squad.py": "🧩", "1_Squad_Lab.py": "🧪",
+_TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩", "1_Squad_Lab.py": "🧪",
               "5_Ask.py": "💬", "6_News.py": "📰", "7_Trending.py": "📈", "8_Help.py": "🧭",
               "9_Maddie_Explains.py": "🎥", "10_Feedback.py": "📣", "11_Admin.py": "📊"}
 
@@ -2540,7 +2551,7 @@ def test_my_squad_banner_renders_the_styled_card():
 
 def test_data_pages_carry_the_brand_mark():
     # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
-    for page in ("2_Players.py", "3_Fixtures.py", "6_News.py", "7_Trending.py"):
+    for page in ("2_Players.py", "3_Team_DNA_and_FDR.py", "6_News.py", "7_Trending.py"):
         at = _run(_PAGES / page)
         blob = " ".join(m.value for m in at.markdown)
         assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
@@ -2574,7 +2585,7 @@ def test_feedback_page_picker_matches_the_current_nav():
 
 def test_fixtures_ticker_shows_the_difficulty_number():
     # US-391: the difficulty run isn't colour-only — each cell carries the FDR digit (colour-blind-safe).
-    at = _run(_PAGES / "3_Fixtures.py")
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
     caps = " ".join(c.value for c in at.caption)
     assert "is the difficulty" in caps                         # the legend explains the per-cell number
 
