@@ -276,7 +276,7 @@ def test_decide_price_is_a_preseason_message_when_flat():
 
 
 def test_decide_price_names_risers_and_fallers():
-    # US-317: a big +net/own → 🔺 rise; a big −net/own → 🔻 fall; the movers are named + grounded
+    # US-317: a big +net/own → ▲ rise; a big −net/own → ▼ fall; the movers are named + grounded (ADR-140)
     store = types.SimpleNamespace(get_players=lambda: [
         _pp(1, "Riser", 120_000, 0, 5),        # pressure +24,000 ≥ threshold → rise
         _pp(2, "Faller", 0, 120_000, 5),       # pressure −24,000 → fall
@@ -286,7 +286,7 @@ def test_decide_price_names_risers_and_fallers():
     assert "Riser" in d["subjects"] and "Faller" in d["subjects"] and "Stable" not in d["subjects"]
     assert any("Riser" in r for r in d["facts"]["likely_risers"])
     assert any("Faller" in r for r in d["facts"]["likely_fallers"])
-    assert "🔺" in d["detail"] and "🔻" in d["detail"]
+    assert "▲" in d["detail"] and "▼" in d["detail"]
 
 
 def test_match_players_is_bounded_to_whole_names():

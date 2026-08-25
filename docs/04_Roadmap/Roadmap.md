@@ -334,16 +334,14 @@ import, Reddit RSS buzz, media headlines. Momentum boards are live now that GW1 
 
 ---
 
-- ⭐ ⬜ **Price arrows should use the colour channel: green up, red down** *(owner, 2026-08-25)* —
-  **verified: they currently do not.** `price_flag` returns 🔺 / 🔻 (`analytics/price.py`), and both of those
-  are *red* in Unicode — U+1F53A is literally "red triangle pointed up". So direction is carried twice (by
-  shape and by position) and colour, the fastest channel to read, carries **nothing**. Same for the
-  retrospective 💰↑ / 💸↓ crowd pair.
-  ⚠️ **The catch worth knowing before this is scheduled:** there is no green triangle in the emoji set, so this
-  is not a one-character swap. Options to weigh in the ADR: Streamlit's `:green[▲]` / `:red[▼]` colour markdown
-  (works in captions and `st.markdown`, **not** inside `st.dataframe` cells, which is where most of these
-  live); a pandas `Styler` on the dataframes (a real change to how tables are built, which is currently plain
-  lists of dicts); or small inline SVG/data-URI glyphs via `ImageColumn`. **Pick the mechanism first** — the
+- ✅ **Price arrows use the colour channel: green up, red down** (ADR-140, Sprint 194, 2026-08-25) —
+  *owner, 2026-08-25.* Confirmed the bug: 🔺/🔻 are **both red** (U+1F53A is literally "red triangle pointed
+  up"), so direction was carried twice and colour carried nothing. Not a one-character swap — no green
+  triangle exists in emoji, and an emoji's colour cannot be overridden. Shipped **one plain pair `▲`/`▼`**
+  (`PRICE_UP`/`PRICE_DOWN`, imported by the CLI too) that inherits colour, plus a **pandas Styler** for the
+  dataframe column and `:green[…]`/`:red[…]` markdown for captions. Dead ends recorded: `TextColumn` has no
+  colour, and `MarkdownColumn` renders only in a click-through overlay. The retrospective 💰↑/💸↓ pair stays
+  uncoloured on purpose — a Styler paints whole cells, and those share one with four other flags.
   colour is the easy part.
 ## 🔬 Data sources we've evaluated and declined
 

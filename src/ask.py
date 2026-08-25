@@ -18,6 +18,8 @@ from src import llm
 from src.analytics import (
     DIFFERENTIAL_OWN,
     FULL_BUDGET,
+    PRICE_DOWN,
+    PRICE_UP,
     SQUAD_15,
     TREND_BYS,
     WEEKLY_BENCH_WEIGHT,
@@ -1220,7 +1222,8 @@ def _decide_price(store: Storage, question: str) -> dict | None:
                      key=lambda p: price_pressure(p) or 0)[:_PRICE_N]
     if not risers and not fallers:
         return {"message": "No price movement predicted yet — net transfers are flat preseason. The price "
-                           "predictor lights up at GW1 (2026-08-21), then flags likely risers 🔺 / fallers 🔻."}
+                           f"predictor lights up at GW1 (2026-08-21), then flags likely risers {PRICE_UP} "
+                           f"/ fallers {PRICE_DOWN}."}
 
     def _disp(p):
         return {"web_name": p["web_name"], "team": p["team"], "position": p["position"],

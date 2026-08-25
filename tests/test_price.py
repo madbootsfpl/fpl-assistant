@@ -5,7 +5,7 @@ A directional, ownership-normalised transfer-pressure **lens** — never `decisi
 """
 
 from src.analytics import decision_xp, price_flag, price_prediction, price_pressure
-from src.analytics.price import PRICE_FALL_PRESSURE, PRICE_RISE_PRESSURE
+from src.analytics.price import PRICE_DOWN, PRICE_FALL_PRESSURE, PRICE_RISE_PRESSURE, PRICE_UP
 from src.storage import Storage
 
 
@@ -36,8 +36,13 @@ def test_price_prediction_thresholds():
 
 
 def test_price_flag_maps_direction_to_a_distinct_marker():
-    assert price_flag(_p(net_in=int(PRICE_RISE_PRESSURE * 10) + 10, own=10.0)) == "🔺"
-    assert price_flag(_p(net_out=int(PRICE_FALL_PRESSURE * 10) + 10, own=10.0)) == "🔻"
+    # ADR-140: plain text triangles, NOT 🔺/🔻. U+1F53A is literally "red triangle pointed up", so the old
+    # pair was red-up and red-down — direction carried twice while colour carried nothing. Plain glyphs
+    # inherit the surrounding colour, which is what lets each surface paint them green-up / red-down.
+    assert price_flag(_p(net_in=int(PRICE_RISE_PRESSURE * 10) + 10, own=10.0)) == PRICE_UP == "▲"
+    assert price_flag(_p(net_out=int(PRICE_FALL_PRESSURE * 10) + 10, own=10.0)) == PRICE_DOWN == "▼"
+    assert PRICE_UP not in "🔺🔻" and PRICE_DOWN not in "🔺🔻", \
+        "an emoji brings its own colour, and both of the obvious ones are red — that is the bug"
     assert price_flag(_p(net_in=0, net_out=0, own=10.0)) == ""          # stable → no flag
     # distinct from the retrospective crowd 💰/💸 (this is forward-looking)
     assert price_flag(_p(net_in=999_999_999, own=10.0)) not in ("💰↑", "💸↓")
@@ -60,3 +65,30 @@ def test_price_is_a_lens_and_never_changes_decision_xp():
     assert any(price_prediction(p) == "rise" for p in players)         # the lens now fires…
     after = {r["id"]: r["xp"] for r in decision_xp(players, upcoming, history)}
     assert base == after                                              # …but xP is identical
+
+
+def test_the_arrows_are_plain_text_so_a_surface_can_colour_them():
+    """ADR-140 — the whole reason the glyphs changed.
+
+    An emoji brings its own colour, and both of the obvious triangles are red (U+1F53A is *"red triangle
+    pointed up"*), so the old pair spent the fastest channel a reader has on nothing. Plain text triangles
+    inherit the surrounding colour, which is what lets the web tables paint them green-up / red-down.
+
+    If someone swaps these back to emoji, the colouring silently stops working — the Styler matches on the
+    exact glyph — so this asserts the property rather than the characters.
+    """
+    assert PRICE_UP.isprintable() and PRICE_DOWN.isprintable()
+    assert all(ord(c) < 0x1F000 for c in PRICE_UP + PRICE_DOWN), \
+        "an emoji-plane glyph carries its own colour and cannot be recoloured by CSS"
+    assert PRICE_UP != PRICE_DOWN
+
+
+def test_both_legends_say_the_same_thing_in_two_dialects():
+    """One rule written twice always drifts, so they are pinned to agree. The Streamlit legend carries colour
+    markdown; the plain one is for anywhere that renders literally."""
+    from src.analytics.price import PRICE_LEGEND, PRICE_LEGEND_PLAIN
+
+    assert f":green[{PRICE_UP}]" in PRICE_LEGEND and f":red[{PRICE_DOWN}]" in PRICE_LEGEND
+    assert ":green[" not in PRICE_LEGEND_PLAIN and ":red[" not in PRICE_LEGEND_PLAIN
+    strip = PRICE_LEGEND.replace(f":green[{PRICE_UP}]", PRICE_UP).replace(f":red[{PRICE_DOWN}]", PRICE_DOWN)
+    assert strip == PRICE_LEGEND_PLAIN, "the two legends have drifted apart"

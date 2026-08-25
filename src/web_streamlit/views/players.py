@@ -28,7 +28,7 @@ from src.analytics import (
 )
 from src.storage import Storage
 from src.web_streamlit.filters import apply as apply_filter
-from src.web_streamlit.formats import column_config
+from src.web_streamlit.formats import colour_price, column_config
 from src.web_streamlit.paginate import show_count
 from src.web_streamlit.ratings import LEGEND, rating_cell
 
@@ -67,7 +67,11 @@ def render_pool(rows, sel, photos, badges):
               "Own%": p["selected_by"], "Price": price_flag(p), "Form": p.get("form"),
               "ICT": p.get("ict_index"), "Set": " ".join(set_piece_flags(p)),
               "Trends": " ".join(crowd_flags(p))} for p in page]
-    event = st.dataframe(table, width="stretch", hide_index=True, height=560, key="players_pool",
+    # ADR-140: the Price arrows are painted green-up / red-down via a Styler — the cell is the only unit
+    # `st.dataframe` can colour, and Price is a column of its own, which is exactly why it is the one that can
+    # carry colour (the retrospective 💰↑/💸↓ shares its cell with the other Trends flags).
+    # Row selection still indexes `page` positionally, which a Styler does not disturb.
+    event = st.dataframe(colour_price(table), width="stretch", hide_index=True, height=560, key="players_pool",
                          selection_mode="multi-row", on_select="rerun",
                          column_config=column_config(table[0] if table else [],
                                                      help={"Fit": AVAILABILITY_LEGEND, "Set": SET_PIECE_LEGEND,

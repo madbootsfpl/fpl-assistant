@@ -751,14 +751,22 @@ def test_pool_shows_an_availability_fit_column():
 
 
 def test_pool_shows_the_price_prediction_column():
-    # US-286 (ADR-092): a forward-looking Price column (🔺/🔻/—, all — preseason) + the honest live-GW1 caption.
+    """US-286 (ADR-092): a forward-looking Price column + the honest live-GW1 caption.
+
+    ADR-140 changed the glyphs to plain ▲/▼ so a Styler can paint them green-up / red-down. This also pins
+    that the Styler does not break the frame the page reads back — the column must still be a real column of
+    plain values, because row selection and the ⭐ watchlist index into it.
+    """
+    from src.analytics import PRICE_DOWN, PRICE_UP
+
     at = _run(_PAGES / "2_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
     assert "Price" in df.columns
-    assert set(df["Price"].astype(str)) <= {"", "🔺", "🔻"}          # only the predictor's markers
-    assert any("live from GW1" in c.value for c in at.caption)      # honest dormant-now note
+    assert set(df["Price"].astype(str)) <= {"", PRICE_UP, PRICE_DOWN}   # only the predictor's markers
+    assert not (set(df["Price"].astype(str)) & {"🔺", "🔻"}), "the two-reds pair must be gone"
+    assert any("live from GW1" in c.value for c in at.caption)          # honest dormant-now note
 
 
 def test_players_history_view_shows_a_season_table_for_a_known_player():
@@ -808,7 +816,9 @@ def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):
     if at.exception:
         return
     caps = " ".join(c.value for c in at.caption)
-    assert "🔻" in caps and "drop" in caps                          # the sell-timing nudge fired
+    # ADR-140: the caption is markdown, so it carries the colour natively — red for a fall.
+    from src.analytics import PRICE_DOWN
+    assert f":red[{PRICE_DOWN}]" in caps and "drop" in caps         # the sell-timing nudge fired, in red
 
 
 def test_pool_number_columns_stay_numeric_formatting_is_display_only():
@@ -2796,3 +2806,39 @@ def test_the_actions_are_back_below_the_pitch_after_the_adr_135_revert():
               for w in getattr(at, kind, [])]
     assert any("captain" in lab.lower() for lab in labels), "the captain action must be reachable again"
     assert any("Boot Battle" in lab for lab in labels), "compare must be reachable again"
+
+
+def test_the_price_column_is_painted_green_up_red_down():
+    """ADR-140. `st.dataframe` renders plain text in cells — `TextColumn` has no colour, and `MarkdownColumn`
+    only renders its markdown in a click-through overlay — so `:green[▲]` cannot work there. A pandas Styler
+    can, and this pins that the styling actually attaches rather than silently doing nothing.
+
+    It also pins the pairing: green must go to the *up* glyph. A green down-arrow is worse than no colour.
+    """
+    from src.analytics import PRICE_DOWN, PRICE_UP
+    from src.web_streamlit.formats import colour_price
+
+    rows = [{"Player": "A", "Price": PRICE_UP}, {"Player": "B", "Price": PRICE_DOWN},
+            {"Player": "C", "Price": ""}]
+    import re
+
+    styled = colour_price(rows)
+    assert hasattr(styled, "to_html"), "a Styler, not the plain rows"
+    # Styler emits one CSS rule per styled cell, keyed `row{n}_col{n}`. Reading the rules back by row index is
+    # what lets this assert the *pairing* rather than merely that two colours appear somewhere.
+    css = {int(m.group(1)): m.group(2) for m in
+           re.finditer(r"row(\d)_col1 \{([^}]*)\}", styled.to_html())}
+    assert "#16a34a" in css.get(0, ""), "the UP row must be green"
+    assert "#dc2626" in css.get(1, ""), "the DOWN row must be red"
+    assert 2 not in css, "a stable player has no arrow and must not be painted"
+
+
+def test_colouring_degrades_to_a_plain_table_rather_than_failing():
+    """Returning the input untouched when there is nothing to paint means a caller can hand the result
+    straight to `st.dataframe` without asking which it got. An uncoloured table is the right failure — the
+    glyphs still carry direction by shape."""
+    from src.web_streamlit.formats import colour_price
+
+    assert colour_price([]) == []
+    rows = [{"Player": "A"}]                      # no Price column at all
+    assert colour_price(rows) is rows

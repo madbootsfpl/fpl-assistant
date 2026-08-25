@@ -15,8 +15,26 @@ from src.analytics.crowd import _get, net_transfers
 PRICE_RISE_PRESSURE = 20_000.0
 PRICE_FALL_PRESSURE = 20_000.0
 
-PRICE_LEGEND = ("Price: 🔺 likely to rise · 🔻 likely to fall (— = stable) — directional pressure from net "
-                "transfers this gameweek, a flag not the exact price/timing; live from GW1.")
+# The glyphs, defined once and used by every surface (ADR-140). They are **plain text triangles**, not the
+# 🔺/🔻 emoji they replace — and that is the whole change: U+1F53A is literally "red triangle pointed up", so
+# the old pair was red-up and red-down. Direction was carried twice (shape and position) while colour, the
+# fastest channel a reader has, carried nothing at all.
+#
+# Plain glyphs inherit the surrounding colour, so each surface can paint them: green up / red down in the web
+# tables (a pandas Styler) and in Streamlit captions (`:green[…]` markdown). The terminal renders them
+# uncoloured, which is no worse than two identical reds and keeps ONE pair across the whole app — a rule
+# written twice always drifts.
+PRICE_UP, PRICE_DOWN = "▲", "▼"
+
+PRICE_LEGEND = (f"Price: :green[{PRICE_UP}] likely to rise · :red[{PRICE_DOWN}] likely to fall (— = stable) — "
+                "directional pressure from net transfers this gameweek, a flag not the exact price/timing; "
+                "live from GW1.")
+
+# The same legend without Streamlit's colour markdown, for anywhere that renders literally (the CLI, and any
+# plain-text context). Kept beside its twin so they cannot drift apart unnoticed.
+PRICE_LEGEND_PLAIN = (f"Price: {PRICE_UP} likely to rise · {PRICE_DOWN} likely to fall (— = stable) — "
+                      "directional pressure from net transfers this gameweek, a flag not the exact "
+                      "price/timing; live from GW1.")
 
 
 def price_pressure(player):
@@ -42,6 +60,10 @@ def price_prediction(player) -> str:
 
 
 def price_flag(player) -> str:
-    """A compact Price-column flag — 🔺 rising · 🔻 falling · `""` stable. Distinct from the **retrospective**
-    crowd 💰↑/💸↓ (`cost_change_event`, a change that already happened); this is **forward-looking**."""
-    return {"rise": "🔺", "fall": "🔻"}.get(price_prediction(player), "")
+    """A compact Price-column flag — ▲ rising · ▼ falling · `""` stable. Distinct from the **retrospective**
+    crowd 💰↑/💸↓ (`cost_change_event`, a change that already happened); this is **forward-looking**.
+
+    The glyph is deliberately plain text rather than an emoji so the caller can colour it (ADR-140) — green
+    up, red down. An emoji brings its own colour and both of the obvious ones are red.
+    """
+    return {"rise": PRICE_UP, "fall": PRICE_DOWN}.get(price_prediction(player), "")

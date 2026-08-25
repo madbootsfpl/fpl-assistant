@@ -12,6 +12,8 @@ import streamlit as st
 
 from src import ask
 from src.analytics import (
+    PRICE_DOWN,
+    PRICE_UP,
     SET_PIECE_LEGEND,
     SQUAD_15,
     WEEKLY_BENCH_WEIGHT,
@@ -446,9 +448,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     rising = [p["web_name"] for p in owned if price_prediction(p) == "rise"]
     pbits = []
     if falling:
-        pbits.append("🔻 " + ", ".join(falling) + " may drop")
+        pbits.append(f":red[{PRICE_DOWN}] " + ", ".join(falling) + " may drop")
     if rising:
-        pbits.append("🔺 " + ", ".join(rising) + " rising")
+        pbits.append(f":green[{PRICE_UP}] " + ", ".join(rising) + " rising")
     price = " · ".join(pbits) if pbits else "💷 no price moves (flat preseason)"
     st.caption(f"{avail}  ·  {price}")
 

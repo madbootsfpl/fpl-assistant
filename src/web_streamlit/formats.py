@@ -12,6 +12,8 @@ with the ADR-071 tooltips (same `NumberColumn`, with `help=`).
 
 import streamlit as st
 
+from src.analytics.price import PRICE_DOWN, PRICE_UP
+
 # column label → printf format. 1dp for money/%/rates · integer for counts · 2dp for the expected-goals
 # family (FPL-native precision; 1dp blurs small ratios) · %+.1f for signed differences.
 FORMATS = {
@@ -46,3 +48,28 @@ def column_config(labels, *, help=None, images=IMAGE_COLS) -> dict:
         elif label in help:
             config[label] = st.column_config.Column(label, help=help[label])
     return config
+
+
+# Green up, red down (ADR-140). `st.dataframe` renders **plain text** in cells — `st.column_config.TextColumn`
+# has no colour, and `MarkdownColumn` only renders its markdown in a click-through overlay, not in the cell —
+# so `:green[▲]` is not an option here. A pandas **Styler** is: Streamlit applies its `color` CSS per cell,
+# and it composes with `column_config` (ImageColumn thumbnails and NumberColumn formats both survive).
+#
+# Only the *cell* can be coloured, not part of a string. That is why this colours the forward-looking **Price**
+# column and not the retrospective 💰↑/💸↓, which shares a cell with the other Trends flags.
+_PRICE_CSS = {PRICE_UP: "color:#16a34a;font-weight:700", PRICE_DOWN: "color:#dc2626;font-weight:700"}
+
+
+def colour_price(rows, column: str = "Price"):
+    """`rows` as a Styler that paints the price arrows green-up / red-down — or `rows` unchanged.
+
+    Returns the input untouched when there is nothing to paint (no rows, or no such column), so a caller can
+    hand the result straight to `st.dataframe` without asking which it got. Degrading to an uncoloured table
+    is the right failure: the glyphs still carry direction by shape.
+    """
+    if not rows or column not in rows[0]:
+        return rows
+    import pandas as pd
+
+    frame = pd.DataFrame(rows)
+    return frame.style.map(lambda v: _PRICE_CSS.get(v, ""), subset=[column])
