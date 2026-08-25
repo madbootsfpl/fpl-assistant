@@ -114,7 +114,17 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     pop = card_body(player, team_name=(team_names or {}).get(player["team"], player["team"]),
                     photo_url=photo or None, fixtures=(fixtures_by_id or {}).get(pid),
                     projected_xp=xp_by_id.get(pid), compact=True)
-    pop_html = f'<div class="kit-pop">{pop}</div>' if pop else ""
+    # ADR-139 — the hover popover exists only where tapping does NOT. On a tappable pitch a tap already
+    # selects, outlines the shirt in teal, and renders the **full** card in the panel below; this floating,
+    # desktop-only, *compact* copy of that same card was a duplicate — and the harmful kind, because it fires
+    # on whatever the cursor is over rather than on what is selected. That is how a screenshot ends up showing
+    # one player's stats beside a different player's selection (owner, 2026-08-25).
+    #
+    # Keying it off `clickable` rather than a new flag means the ADR-133 fallback gets hover back for free:
+    # when the click component fails to load, `render_tappable_pitch` draws a plain pitch, and the page
+    # degrades to exactly its old behaviour. The failure mode stays "the tap stops working", never "there is
+    # no way to see a card".
+    pop_html = f'<div class="kit-pop">{pop}</div>' if pop and not clickable else ""
     body = (f'<div class="pic">{pic}</div>'
             f'<div class="name">{e(player["web_name"])}</div>'
             f'<div class="xp">{xp}</div>'

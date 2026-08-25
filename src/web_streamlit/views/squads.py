@@ -498,6 +498,21 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                                              help="Or hover a shirt on the pitch (desktop only)."))
     if picked:
         short = picked["team"]
+        # ADR-139 — the CARD FIRST. It used to render below three Boot Battle widgets, so a tap put the teal
+        # outline on the shirt and the card a scroll away, behind controls for a different question. Tap → card
+        # only feels like one action if the card is where the eye lands. This is the half of ADR-139 that
+        # *delivers* the request; removing the hover popover alone would have taken something away without
+        # putting anything in its place.
+        # Read *last* run's Boot Battle pick to decide whether the card or the comparison goes here. It has
+        # to be read before the widget is created, because the card renders above it — that is the whole point
+        # of the reorder. Streamlit has already applied any interaction to session_state by now, so this is the
+        # current choice, not a stale one.
+        _comparing = st.session_state.get("pa_boot", "—") != "—"
+        if not _comparing:
+            render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
+                               fixtures=fixtures_by_id.get(picked["id"]),   # ADR-109 per-GW row (no Total col)
+                               projected_xp=xp_by_id.get(picked["id"]))
+
         # ⚔️ Boot Battle (US-377/380, ADR-110/111) — compare the selected player with another **same-position** player,
         # side by side (winner-tinted). A **pool** selector (US-380): My team (owned) · All players · By club. Reuses
         # `render_player_compare`; the target's per-GW fixtures build on demand (`xp_by_id`/`card_bg_by_id` cover all).
@@ -524,10 +539,14 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                 a_photo=photos.get(picked["id"]), b_photo=photos.get(bb["id"]),
                 a_fixtures=_pergw_fixtures(picked), b_fixtures=_pergw_fixtures(bb),
                 a_xp=xp_by_id.get(picked["id"]), b_xp=xp_by_id.get(bb["id"]))
-        else:
+        elif _comparing:
+            # The stored comparison no longer resolves — usually because the selection moved to another
+            # position, so the remembered opponent isn't in this pool. Without this the card was skipped above
+            # *and* no comparison renders, and the panel silently shows nothing about the player you tapped.
             render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
-                               fixtures=fixtures_by_id.get(picked["id"]),       # ADR-109 per-GW row (no Total col)
+                               fixtures=fixtures_by_id.get(picked["id"]),
                                projected_xp=xp_by_id.get(picked["id"]))
+
         # 👑 Make captain — one click; ×2 next GW. (Briefly moved onto the shirt by ADR-135 and moved back:
         # a button here costs the same rerun without a floating menu or a hover collision.)
         if picked["id"] == captain_id:

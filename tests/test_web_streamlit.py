@@ -2098,9 +2098,53 @@ def test_my_squad_panel_make_captain_sets_the_captain():
     assert at.session_state["squad"]["captain_id"] == target["id"]
 
 
-def test_my_squad_pitch_popover_shows_per_gameweek_xp():
-    # US-368 (ADR-109): the hover popover under each shirt carries the per-GW row (xP over fixture) — the tester's
-    # card-under-the-shirt. Threaded via fixtures_by_id → render_pitch → _kit_html → card_body.
+def test_the_card_lands_above_the_boot_battle_controls(monkeypatch):
+    """ADR-139. The half that *delivers* the request rather than the half that removes something.
+
+    The player card used to render below three Boot Battle widgets (pool · club · compare-with), so tapping a
+    shirt put the teal outline on the pitch and the card a scroll away, behind controls for a different
+    question. "Tap → card" only feels like one action if the card is where the eye lands.
+    """
+    at = _squads_view("My Squad")
+    if at.exception:
+        raise AssertionError(at.exception)
+    pick = next((s for s in at.selectbox if s.label == "Select a player"), None)
+    if pick is None:
+        return                                          # no squad in this environment
+    pick.set_value(next(o for o in pick.options if o != "—")).run()
+    assert not at.exception
+
+    body = "\n".join(m.value for m in at.markdown)
+    assert "pl-card" in body, "the selected player's card must render in the panel"
+    boot = next((s for s in at.selectbox if "Boot Battle" in (s.label or "")), None)
+    if boot is None:
+        return
+    # The card is markdown; the Boot Battle pool is a segmented_control. Compare their positions in the
+    # rendered element order rather than trusting the source.
+    order = [type(e).__name__ for e in at.main]
+    els = list(at.main)
+    card_at = next((i for i, e in enumerate(els)
+                    if "pl-card" in str(getattr(e, "value", "") or "")), None)
+    boot_at = next((i for i, e in enumerate(els)
+                    if "Boot Battle" in str(getattr(e, "label", "") or "")), None)
+    assert card_at is not None and boot_at is not None and card_at < boot_at, \
+        f"the card must come before the Boot Battle controls (card {card_at}, boot {boot_at}) — {order[:3]}"
+
+
+def test_my_squad_panel_card_shows_per_gameweek_xp():
+    """US-368 (ADR-109): the per-GW row (xP over fixture) — the tester's card-under-the-shirt.
+
+    **Retargeted by ADR-139**, and worth saying why rather than quietly editing it. This asserted the row was
+    inside the *hover popover* by reading `AppTest.markdown` — but since ADR-133 put the pitch inside a click
+    component, the pitch stopped appearing in `at.markdown` at all, so the test hit its `if "fpl-pitch" not in
+    blob: return` guard on every run and **asserted nothing for two sprints**. ADR-139 then removed that
+    popover from the tappable pitch outright, which would have left the test named for a feature that no
+    longer exists while still passing.
+
+    So it now asserts the row where My Squad actually shows it: the **panel card**, after a selection. The
+    popover's own copy — still live on the two non-tappable pitches — is covered directly in
+    `tests/test_pitch_html.py`, against the markup rather than through a page.
+    """
     from src.storage import Storage
 
     store = Storage()
@@ -2122,10 +2166,15 @@ def test_my_squad_pitch_popover_shows_per_gameweek_xp():
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
     assert not at.exception
+    pick = next((s for s in at.selectbox if s.label == "Select a player"), None)
+    if pick is None:
+        return                                               # no squad in this environment
+    pick.set_value(next(o for o in pick.options if o != "—")).run()
+    assert not at.exception
+
     blob = " ".join(m.value for m in at.markdown)
-    if "fpl-pitch" not in blob:
-        return                                               # no pitch (no data) → nothing to assert
-    assert 'class="plc-gwrow"' in blob                       # the per-GW row is inside the hover popover
+    assert 'class="pl-card"' in blob, "selecting a player must render their card in the panel"
+    assert 'class="plc-gwrow"' in blob                       # the per-GW row, on the card the tap reveals
     assert 'class="plc-gwcol total"' not in blob             # no Total column (dropped — owner steer)
 
 

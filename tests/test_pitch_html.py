@@ -91,13 +91,22 @@ def test_the_selected_card_carries_no_actions_only_an_outline():
     assert one.count("kit selected") == 1 and "kit selected" not in _html(clickable=True)
 
 
-def test_the_hover_popover_survives_on_every_card():
-    """The reverted menu needed the hover card suppressed to stop the two fighting for space — and the rule
-    only covered the *selected* card, so every other shirt still popped beside the open menu. With the menu
-    gone the hover card is the only surface again, and must work on all fifteen, selected or not."""
-    html = _html(clickable=True, selected_id=4)
-    assert "display:none" not in html.split("</style>")[0]
-    assert html.count('class="kit-pop"') == 15
+def test_hover_exists_only_where_tapping_does_not():
+    """ADR-139. The rule, in one assertion pair.
+
+    On a **tappable** pitch a tap already selects, outlines the shirt teal, and renders the *full* card in the
+    panel below — so the floating, desktop-only, *compact* popover was a duplicate. The harmful kind: it fires
+    on whatever the cursor is over rather than on what is selected, which is how a screenshot ends up showing
+    one player's stats beside a different player's selection (owner, 2026-08-25).
+
+    On a **non-tappable** pitch (Squad Lab's build preview, and the ADR-133 fallback when the click component
+    fails to load) there is no selection to drive a panel, so hover is the only reveal and must stay. Keying
+    this off `clickable` rather than a new flag is what makes the fallback correct for free.
+    """
+    assert 'class="kit-pop"' not in _html(clickable=True, selected_id=4), \
+        "a tappable pitch reveals through the panel; a second floating copy fights it"
+    assert _html(clickable=False).count('class="kit-pop"') == 15, \
+        "without a tap there is nothing else to reveal the card — hover must survive"
 
 
 def test_the_anchor_does_not_look_like_a_link():
@@ -139,3 +148,18 @@ def test_every_link_state_is_pinned_because_the_iframe_ships_bootstrap():
     html = _html(clickable=True, selected_id=4)
     for state in (":link", ":visited", ":hover", ":active", ":focus"):
         assert f".kit-a{state}" in html, f"unpinned link state on the card: {state}"
+
+
+def test_the_hover_card_still_carries_the_per_gameweek_row():
+    """ADR-109's per-GW row (xP over fixture), on the pitches that still hover.
+
+    This assertion used to live in an AppTest reading `AppTest.markdown`. ADR-133 moved the pitch inside a
+    click component, so that test silently stopped seeing the pitch and asserted nothing for two sprints;
+    ADR-139 then removed the popover from the tappable pitch entirely. It belongs here, against the markup,
+    where neither change can hide it.
+    """
+    fixtures = {1: [{"event": 2, "opponent": "CHE", "venue": "H", "difficulty": 3, "xp": 4.2},
+                    {"event": 3, "opponent": "LIV", "venue": "A", "difficulty": 5, "xp": 2.1}]}
+    html = _html(clickable=False, fixtures_by_id=fixtures)
+    assert 'class="plc-gwrow"' in html
+    assert 'class="plc-gwcol total"' not in html, "no Total column — owner steer on ADR-109"

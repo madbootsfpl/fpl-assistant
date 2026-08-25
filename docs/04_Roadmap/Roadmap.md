@@ -203,19 +203,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   ⬜ The league-scan rows should inherit **selection**, not a menu — a row tap that selects is ADR-133's shape
   and is still wanted; a row tap that opens a menu is this ADR again. The density goal stands; the mechanism
   for reaching it does not.
-- ⭐ ⬜ **The player card should open on a TAP, not a hover** *(owner, 2026-08-25)* — *"the current hover on a
-  player is too much; better if it appeared on a click, with the teal highlight."*
-  **This is the last loose end from the ADR-135 mess, and it is the opposite of re-opening it.** The hover
-  popover is what the owner actually saw misbehaving: it followed the cursor across *other* shirts while one
-  card was selected, so you read one player's stats beside another player's selection. ADR-135's revert removed
-  the menu but left hover as the reveal mechanism.
-  **Why this is safe where the menu was not:** a tap that *reveals* is **one** round-trip and ADR-133's exact
-  shape — it is the two-tap flows (🔁 / ⚔️) that cost two reruns and felt broken. Selection state, the teal
-  outline and the click ids **already exist**; this changes *what a selection shows*, not how selection works.
-  Hover would be suppressed entirely, which also removes the desktop-idiom-on-a-mobile-surface problem.
-  **Open questions for its ADR:** where the card renders (in place vs a fixed panel under the pitch — the
-  in-place popover is what runs out of room on a phone); whether it replaces the ADR-108 panel's card or
-  duplicates it; and keeping a keyboard/screen-reader path now that hover is gone.
+- ✅ **The player card opens on a TAP, not a hover** (ADR-139, Sprint 193, 2026-08-25) — *owner,
+  2026-08-25.* Reading the code changed the fix: the panel **already** rendered the full card for whoever is
+  selected, and ADR-133's tap already drove that with the teal outline — so the behaviour existed and the
+  hover popover was a second, compact, floating copy on a worse trigger (it fires on whatever the cursor is
+  over, not on what is selected, which is how one player's stats appeared beside another's selection). The
+  rule shipped is **hover exists only where tapping doesn't**: suppressed when `clickable=True`, kept on Squad
+  Lab's build preview and on the ADR-133 fallback, which gets it back for free. The card also moved **above**
+  the Boot Battle controls — the half that actually delivers the ask. Exposed a test that had asserted nothing
+  since ADR-133; see the ADR.
 - 🅾️ **Drag-and-drop to reorder the bench** (ADR-084) — rejected; the ⬆/⬇ controls do the job without JS.
 
 ---

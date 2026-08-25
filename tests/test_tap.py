@@ -125,3 +125,19 @@ def test_a_genuinely_new_click_still_fires(monkeypatch):
     assert tap.render_tappable_pitch(xi, [], **kw) == 7
     assert tap.render_tappable_pitch(xi, [], **kw) is None
     assert tap.render_tappable_pitch(xi, [], **kw) == 9
+
+
+def test_the_fallback_pitch_keeps_its_hover(monkeypatch):
+    """ADR-139 leans on ADR-133's fallback being a *plain* pitch, so this pins the join between them.
+
+    Hover is suppressed only on a tappable pitch, where a tap reveals the card in the panel instead. When the
+    click component fails to load there is no tap — so the fallback must draw the ordinary pitch, hover and
+    all, and the page degrades to exactly its old behaviour. The failure mode stays "the tap stops working",
+    never "there is no way to see a card".
+    """
+    seen = {}
+    monkeypatch.setattr(tap, "_detector", lambda: None)
+    monkeypatch.setattr(tap, "render_pitch", lambda xi, bench, **kw: seen.update(kw))
+    tap.render_tappable_pitch([_p(1, "A")], [], select_key="k", label_for=_label,
+                              captain_id=None, xp_by_id={}, photos={}, next_opp={})
+    assert seen.get("clickable") is not True, "the fallback must not claim to be tappable — hover depends on it"
