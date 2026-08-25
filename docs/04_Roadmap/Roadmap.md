@@ -92,9 +92,29 @@ show everything, decide nothing). MadBoots straddles both *and* narrates. The ne
 well too. The real edge is **execution + the DNA visuals + free/honest positioning + the full workflow in one
 place.** Own the *explain + DNA + honesty* lane; don't try to out-solver a solver.
 
-The honesty half is not a slogan — it is a feature the rivals don't ship. When a board can't answer, it says so
-and names the season it's showing instead. When a player can't be ranked, it says that rather than drawing a
-shape. That behaviour is now enforced by tests, not just intent.
+### Where we actually stand (2026-08-25)
+
+This stopped being a list of things to borrow. We have now shipped against three of the four, and **twice
+declined to copy a rival's feature because our own measurements said it wouldn't work here**:
+
+| rival | their signature | where we are |
+|---|---|---|
+| **fplanalyser** | Squad Risk Monitor · Squad-grade DNA · forward planner | **all three shipped** (ADR-130/131). The planner is **deliberately different**: their projected-points-vs-average framing is *noise* on our numbers (a squad's per-GW xP varies ±3%), so ours leads with fixture **exposure**, which swings 2→7. |
+| **fplapex** | multi-GW transfer path · chip-sequence scan · competitive layer | Path search **declined on evidence** (ADR-132): the best sell was the same player in all six gameweeks and the market yielded *one* beneficial move — a tree with one branch. Shipped the **timing arithmetic** instead. Chip scan + competitive layer still open. |
+| **FFH** | the rich player card · click-a-player menu | Card beaten on our own metrics (xP · value · ownership tier · DefCon · set-pieces — none of which they show). **Tap-the-pitch live and Cloud-verified** (ADR-133). |
+| **aceanalyst** | pool-wide value-frontier scatter | **The one clear remaining gap.** Data all exists. |
+
+**The divergences are the position, not a shortfall.** Anyone can copy a screenshot; what is hard to copy is
+having measured *whether the thing behind the screenshot works on your own data* — and having written down the
+answer. Both declines are recorded with the numbers that produced them, and both carry a **checkable trigger**
+for revisiting (ADR-132's is explicit: if the best move ever differs by gameweek, or three-plus beneficial moves
+co-exist, the tree becomes well-posed).
+
+**The honesty half is no longer a slogan.** When a board can't answer it says so and names the season it is
+showing instead (ADR-126). When a pool can't rank a player it says that rather than drawing a shape (ADR-133's
+radar guard). When a tester can't be assessed the roster shows "—" rather than 100% risk (ADR-130). When a
+projection barely moves, the card says so rather than letting a 3% wobble read as a forecast (ADR-131). That is
+**six or so places enforced by tests**, and it is the one lane none of the four compete in.
 
 **In full, the end state is:**
 1. **A decision engine** — one xP recipe, calibrated on real returns, with a multi-gameweek transfer path and a
@@ -231,6 +251,19 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 - ⬜ **Elite Manager Comparison** — how your squad compares to top-ranked managers; what the **Top 1,000** are
   doing (captain trends, transfer flow). Needs the **FPL leagues API** + per-manager picks — public only from
   the GW1 deadline, so this is **now unblocked**.
+- ⬜ **Transfer advice should say "swap out the dead player"** *(owner, 2026-08-19 — promoted from the Backlog
+  2026-08-25)*. `suggest_transfers` optimises **starting-XI xP gain**, so a departed or long-term-injured player
+  sitting on the bench doesn't move that number and the advice reads *"no positive-gain upgrade — hold"*. But a
+  dead slot is a permanent zero with no bench cover: swapping him for any playing ~£4.5m body is pure upside.
+  The ⛔ flag already exists (US-421) and the Risk Monitor now surfaces him too (ADR-130) — this makes the
+  **action** explicit rather than leaving the manager to join the dots. Advice-layer only, no `decision_xp`
+  change.
+- ⬜ **Squad Lab's three build modes are really two** *(owner, 2026-08-19 — promoted 2026-08-25)*. **Balanced**
+  and **Bench Boost** both pass `bench_weight=None` and produce the **same squad**; `bench_boost` is only a
+  display flag. And "Balanced" maps to the max-15 build — a *strong* bench — so the labels imply the opposite of
+  what they do ("Balanced = strong bench · Strong XI = weak bench"). Rename **Balanced → "All-round (strong
+  bench)"** so it reads true, and either merge Bench Boost or keep it as the chip-framing of the same build with
+  a note. Display/copy, but it is a **correctness-of-labelling** issue, not a polish one.
 - ⬜ **Ceiling / "differential" captaincy** — `captain` ranks by *mean* xP; add a variance/ceiling lens for when
   you need a differential rather than the safe pick.
 - ⬜ **The competitive layer** *(fplapex)* — **mini-league H2H** · a **win-probability sim** · **differentials
