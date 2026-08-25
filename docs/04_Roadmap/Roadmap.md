@@ -194,8 +194,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
     check**. The lightweight path could more than halve the cost.
   - **Trigger:** feedback-driven. Ship the panel, watch the testers; if *"I want to tap the shirt"* stays the
     top ask, that's the green light.
-- ⬜ **Clickable tabs / navigation polish toward the FFH feel** — the same component question one level up.
-  Folded into the same spike: if a click-detector works for shirts, it works for cards and rows too.
+- 🚧 **Actions on the entity — a density change** (ADR-135, proposed). Not "a popup because we can": six or
+  seven widgets sit below the pitch purely to act on **one** selected player, and moving them onto the selected
+  card takes **3-4 widgets and ~250-350px** off a phone screen. Spike 188 proved a tap can carry *both* the
+  action and the player (`cap:123`). The governing rule it proposes: **the entity owns actions on things you
+  have; the pickers own finding things you don't** — you can only tap what is on the pitch, so Boot Battle's
+  All/By-club stays. Generalises to the league-scan rows, which is the "player / team / entity" ask.
 - 🅾️ **Drag-and-drop to reorder the bench** (ADR-084) — rejected; the ⬆/⬇ controls do the job without JS.
 
 ---
