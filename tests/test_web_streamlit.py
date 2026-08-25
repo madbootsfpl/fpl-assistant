@@ -1556,6 +1556,40 @@ def test_build_page_objective_switch_rebuilds(monkeypatch):
     assert not at.exception and at.code
 
 
+def test_the_value_view_measures_the_whole_pool_but_plots_the_decisions(monkeypatch):
+    """ADR-138. The frontier chart, driven through the real page on real data.
+
+    Two separate things, and keeping them separate is the design:
+
+    * **Measured** over every available player — medians, edges and the frontier all come from the full pool,
+      so the numbers do not move when the display filter does.
+    * **Plotted**: by default only players who have featured and are projected above a point a week. 94% of
+      players sit in 24% of the price axis, so plotting all of them turned the cheap end into a smear — the
+      owner called it twice before the cause (the axis, not the dot size) was measured.
+
+    Injured and departed players are excluded from *both*: they all score 0, and counting them as price peers
+    inflated every verdict on the chart (Rice read +7.0 with them in, +3.1 with them out).
+    """
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    at.segmented_control[0].set_value("Value").run()
+    assert not at.exception
+
+    measured = next((c.value for c in at.caption if "Measured over" in c.value), "")
+    assert "on the frontier" in measured and "available players" in measured
+    assert "plotted" in measured, "the page must say how many it is holding back, and why"
+    assert "Injured and departed players are excluded" in measured
+
+    assert at.dataframe, "the frontier players must be listed, not only drawn"
+    assert len(at.dataframe[0].value) >= 1
+
+    # …and nothing is hidden irreversibly.
+    next(c for c in at.checkbox if c.label == "Plot everyone").set_value(True).run()
+    assert not at.exception
+    assert "plotted" not in next(c.value for c in at.caption if "Measured over" in c.value)
+
+
 def test_build_page_weekly_and_include_unavailable(monkeypatch):
     # ADR-062: the build-mode radio + include-unavailable checkbox drive the same select_squad
     # ADR-137: the mode is now named for what it builds — a *cheap* bench, bought so the money goes into the XI

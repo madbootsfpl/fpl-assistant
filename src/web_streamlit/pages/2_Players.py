@@ -57,12 +57,17 @@ else:
     view = st.segmented_control(
         # ADR-134: the Radar moved here from the fixtures tab, taking the list to nine. Labels shortened in the
         # same change so nine still fit the three rows that eight occupied — the move is what made it necessary.
-        "View", ["Pool", "Card", "Radar", "Set pieces", "Over/under", "DefCon", "Clean sheets",
+        # ADR-138 adds "Value" — the tenth. ⚠️ TEN IS THE CEILING: ADR-134 already noted nine labels stretch
+        # three rows. The next view this page gains needs a **merge** first, not another label.
+        "View", ["Pool", "Value", "Card", "Radar", "Set pieces", "Over/under", "DefCon", "Clean sheets",
                  "xG · xA", "History"],
-        default="Pool", help="The player pool, a rich **player card**, the 🎯 **Radar** (best players from the "
+        default="Pool", help="The player pool, 📈 **Value** (price vs expected points, with the value "
+                             "frontier), a rich **player card**, the 🎯 **Radar** (best players from the "
                              "easiest-run teams), the stat boards, and a player's season history.")
 
-    if view == "Card":                                     # a rich, position-adaptive player card (US-343)
+    if view == "Value":                                    # the pool-wide value frontier (ADR-138)
+        views.render_value(rows, sel, badges, upcoming, history, gw_history)
+    elif view == "Card":                                   # a rich, position-adaptive player card (US-343)
         views.render_card(rows, sel, teams, photos, badges)
     elif view == "Set pieces":
         views.render_set_pieces(rows, sel, badges)

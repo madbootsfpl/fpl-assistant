@@ -12,6 +12,7 @@ from src.analytics.minutes import (
     expected_minutes,
     minutes_share,
     minutes_weight_from_history,
+    yet_to_play,
 )
 
 
@@ -133,3 +134,40 @@ def test_closure_falls_back_to_nailed_on_when_the_player_has_no_history():
     weight = minutes_weight_from_history({})              # nobody backfilled
     p = {"code": 999, "status": "a", "chance": None}
     assert weight(p) == 1.0                               # no history → weight = chance factor
+
+
+# ---- has he actually played? (ADR-138) -----------------------------------------------
+
+def _mp(code=1):
+    return {"code": code, "web_name": "X", "status": "a"}
+
+
+def _gw(rnd, minutes, *, played=True):
+    """A per-gameweek row. `played` controls whether it has a SCORELINE, which is the only honest signal —
+    FPL writes the row when the fixture is *scheduled*, so `minutes == 0` alone means nothing."""
+    return {"round": rnd, "minutes": minutes,
+            "team_h_score": 1 if played else None, "team_a_score": 0 if played else None}
+
+
+def test_a_player_whose_team_played_without_him_is_flagged():
+    """The state the xMins weight is blind to: his team has played, he did not feature. That is evidence — of
+    a bench role, a rotation, or a manager's opinion — and the in-season minutes share is deferred until there
+    are enough gameweeks to act on it (ADR-125), so a surface has to say it rather than model it."""
+    assert yet_to_play(_mp(), {1: [_gw(1, 0)]}) is True
+
+
+def test_a_player_who_featured_is_not_flagged():
+    assert yet_to_play(_mp(), {1: [_gw(1, 90)]}) is False
+    assert yet_to_play(_mp(), {1: [_gw(1, 0), _gw(2, 12)]}) is False, "twelve minutes is still featuring"
+
+
+def test_a_fixture_that_has_not_kicked_off_proves_nothing():
+    """The trap this project has hit before (ADR-125/129): FPL writes a 0-minute row for a **scheduled**
+    fixture. Reading that as "didn't play" would libel every player at every club whose gameweek is in flight
+    — on the live data, Leno shows 0 minutes only because Fulham have not played yet."""
+    assert yet_to_play(_mp(), {1: [_gw(1, 0, played=False)]}) is False
+
+
+def test_no_history_at_all_is_not_an_accusation():
+    for history in ({}, {1: []}, None):
+        assert yet_to_play(_mp(), history) is False

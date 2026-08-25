@@ -87,3 +87,30 @@ def minutes_weight_from_history(history_by_code):
 def expected_minutes(weight) -> int:
     """A [0, 1] weight as whole expected minutes next GW (e.g. 0.62 → 56) — for display."""
     return round((weight or 0.0) * 90)
+
+
+def yet_to_play(player, gw_history_by_code) -> bool:
+    """Has this player's team completed a gameweek that he played **no part in**? (ADR-138)
+
+    Three states, and telling them apart is the whole function:
+
+    * **He played** → `False`. There is evidence, and it is good.
+    * **His team played and he did not** → `True`. That *is* evidence — of a bench role, a rotation, or a
+      manager's opinion — and it is the state the xMins weight is currently blind to, because the in-season
+      minutes share is deferred until there are enough gameweeks to trust (ADR-125).
+    * **His team has not played yet** → `False`. We know nothing, and saying nothing is correct.
+
+    A gameweek counts as completed only when it has a **scoreline** — never on row presence, and never on
+    `minutes == 0` alone. FPL writes a player's per-gameweek row when the fixture is *scheduled*, so a 0 there
+    can mean "has not kicked off yet" (ADR-125/129). Reading that as "didn't play" would libel every player at
+    every club whose gameweek is still in flight.
+
+    This is a **flag, not a correction**: it does not touch xP. It exists so a surface can say what the number
+    is standing on — a strong last-season record and no minutes since — and let the manager judge.
+    """
+    code = _field(player, "code")
+    rows = [r for r in ((gw_history_by_code or {}).get(code) or [])
+            if _field(r, "team_h_score") is not None and _field(r, "team_a_score") is not None]
+    if not rows:
+        return False                                     # his team has not played — no basis for an opinion
+    return sum(_field(r, "minutes") or 0 for r in rows) == 0

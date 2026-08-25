@@ -5,6 +5,8 @@ Players page shows only the segmented-control view that's selected (lazy). All r
 display-only, no server writes.
 """
 
+from statistics import median
+
 import altair as alt
 import streamlit as st
 
@@ -496,3 +498,132 @@ def render_radar(rows, sel, badges, upcoming, history, gw_history):
                   "xP": "Expected points (the app's one metric).",
                   "Val/£m": "Points per £m — bang for buck.",
                   "Fit": AVAILABILITY_LEGEND}))
+
+
+def render_value(rows, sel, badges, upcoming, history, gw_history):
+    """📈 Value — position the whole pool against price, and draw the efficient frontier (ADR-138).
+
+    The complement to the DNA radar: the radar shows *one* player's shape, this positions *everyone*. It exists
+    because of a measurement, not because a rival has one — on live data the best £4.5 player is **11.9 xP**
+    clear of the median £4.5 player over five gameweeks, which is nearly what upgrading £4.5 → £8.0 buys you
+    for £3.5m. Those are the same decision seen two ways and no ranked list in the app shows them together.
+
+    The hover is the point. A dot at (4.5, 16.9) is a coordinate; *"11.9 xP more than the median £4.5 player,
+    and nobody cheaper scores more"* is a finding. That sentence is built in `analytics.value` so it can be
+    tested like any other claim the app makes.
+    """
+    from src.analytics import decision_xp
+    from src.analytics.minutes import yet_to_play
+    from src.analytics.optimizer import is_unavailable
+    from src.analytics.value import frontier_verdict, value_frontier
+
+    # Injured and departed players are excluded, and this is a **correctness** decision rather than tidiness.
+    # They all score 0 xP (ADR-136), and 94 of 610 are currently in that state — leaving them in makes them
+    # count as "the median player at your price" and inflates every verdict on the chart. Measured before
+    # fixing: Rice's edge over his price peers read +7.0 with them in and +3.1 with them out, more than double.
+    # A verdict that overstates its case is worse than no verdict, so the peer group is players you could
+    # actually buy. There is deliberately no toggle: no reading of "the median £4.5 player" wants someone who
+    # cannot play.
+    filtered = [p for p in apply_filter(rows, sel) if not is_unavailable(p)]
+    if not filtered:
+        st.info("No available players match those filters — clear a filter or raise the price.")
+        return
+
+    c1, c2 = st.columns([3, 2], vertical_alignment="center")
+    horizon = c1.slider("Weeks to look ahead", 1, 8, 5, key="value_weeks",
+                        help="The window each player's expected points is summed over.")
+    show_all = c2.checkbox("Plot everyone", key="value_show_all",
+                           help="Also plot players who haven't featured yet and those projected under a "
+                                "point a week. Off by default — they crowd the chart without being decisions.")
+    st.caption("Every filtered player placed by **price** against **expected points**. The line is the "
+               "**value frontier** — at each price, nobody cheaper scores more. The dashed rules are the "
+               "pool's medians, so the **top-left** box is *cheaper than average, better than average*. "
+               "Players who have **not featured** in a completed gameweek cannot hold the frontier — their "
+               "expected points rests entirely on last season, which is where this model is weakest. Hover "
+               "any dot for the verdict.")
+
+    xp_by_id = {r["id"]: r["xp"] for r in decision_xp(rows, upcoming, history, horizon=horizon,
+                                                      gw_history_by_code=gw_history)}
+    # ⚠ Players with no minutes behind their xP this season. The frontier's cheap end is where the minutes
+    # model is weakest — a backup keeper with a strong last-season record is the ideal false positive — so they
+    # are **marked, not hidden and not adjusted**: hollow rings on the chart, a caveat in the verdict.
+    unproven = {p["id"] for p in filtered if yet_to_play(p, gw_history)}
+    entries = value_frontier(filtered, xp_by_id, unproven=unproven)
+    if not entries:
+        st.info("No priced players to plot.")
+        return
+
+    # What gets PLOTTED, which is a different question from what gets measured. Everything above is computed
+    # over the whole available pool — medians, edges, the frontier — so the numbers do not move with this.
+    #
+    # The default hides two groups that are not decisions: players who have not featured in a completed
+    # gameweek, and players projected under a point a week. That is ~half the pool, and it is why the chart
+    # was unreadable: 94% of players sit in 24% of the price axis, so the left of the chart was a smear.
+    # Frontier players are ALWAYS plotted, whatever the filter — a frontier line with a missing vertex is
+    # worse than a crowded one.
+    floor = 1.0 * horizon              # a point a week; scales with the window rather than hard-coding "5"
+    def _plot(e):
+        return show_all or e["frontier"] or (not e["unproven"] and e["xp"] >= floor)
+
+    plotted = [e for e in entries if _plot(e)]
+    data = [{"Price": e["price"], "xP": e["xp"], "Pos": e["player"]["position"],
+             "Player": e["player"]["web_name"], "verdict": frontier_verdict(e, horizon=horizon),
+             "proof": "unproven" if e["unproven"] else "played",
+             "on": "frontier" if e["frontier"] else "pool"} for e in plotted]
+    med_price = median(e["price"] for e in entries)
+    med_xp = median(e["xp"] for e in entries)
+    front = sorted((e for e in entries if e["frontier"]), key=lambda e: e["price"])
+
+    base = alt.Chart(alt.Data(values=data))
+    tooltip = [alt.Tooltip("verdict:N", title="")]
+    # Small, stroked, mostly-opaque dots rather than large translucent ones. 417 of ~516 players sit between
+    # £4.0 and £5.5, so the left of this chart is genuinely crowded — big soft circles stack into a smear
+    # there. A thin background-coloured stroke keeps every dot an edge, so a dense cluster still reads as
+    # points rather than a cloud.
+    _xy = dict(x=alt.X("Price:Q", title="Price (£m)", scale=alt.Scale(zero=False)),
+               y=alt.Y("xP:Q", title=f"Expected points over {horizon} GW"))
+    dots = base.transform_filter(
+        (alt.datum.on == "pool") & (alt.datum.proof == "played")
+    ).mark_point(size=26, filled=True, opacity=0.75, stroke="white", strokeWidth=0.6, strokeOpacity=0.5).encode(
+        color=alt.Color("Pos:N", title="Position"), tooltip=tooltip, **_xy)
+    # ⚠ unproven: hollow, so the eye can discount them without them vanishing
+    unsure = base.transform_filter(
+        (alt.datum.on == "pool") & (alt.datum.proof == "unproven")
+    ).mark_point(size=26, filled=False, opacity=0.55, strokeWidth=1.1).encode(
+        color=alt.Color("Pos:N", title="Position"), tooltip=tooltip, **_xy)
+    # The frontier drawn twice — a line so the shape survives a phone screen, and solid points so the players
+    # on it are hoverable and obviously different from the cloud behind them.
+    line = alt.Chart(alt.Data(values=[{"Price": e["price"], "xP": e["xp"]} for e in front])).mark_line(
+        color="#5eead4", strokeWidth=2, point=False).encode(x="Price:Q", y="xP:Q")
+    tips = base.transform_filter(alt.datum.on == "frontier").mark_point(
+        size=140, filled=True, opacity=1.0, stroke="#0f172a", strokeWidth=1).encode(
+        x="Price:Q", y="xP:Q", color=alt.Color("Pos:N", title="Position"), tooltip=tooltip)
+    rules = (alt.Chart(alt.Data(values=[{"v": med_price}])).mark_rule(strokeDash=[4, 4], opacity=0.5)
+             .encode(x="v:Q")
+             + alt.Chart(alt.Data(values=[{"v": med_xp}])).mark_rule(strokeDash=[4, 4], opacity=0.5)
+             .encode(y="v:Q"))
+    st.altair_chart((dots + unsure + rules + line + tips).properties(height=460).interactive(),
+                    width="stretch")
+
+    hidden = len(entries) - len(plotted)
+    st.caption(f"Measured over **{len(entries)} available players** · median £{med_price:.1f} · "
+               f"median {med_xp:.1f} xP · **{len(front)} on the frontier**"
+               + (f" · **{len(plotted)} plotted** ({hidden} not shown: yet to feature, or under a point a "
+                  "week — tick **Plot everyone** to include them). " if hidden else ". ")
+               + "Injured and departed players are excluded entirely — they all score 0, so counting them "
+                 "as price peers would flatter every player on the chart. "
+               # ADR-126 idiom: say what the number is standing on rather than presenting it flat.
+               "One gameweek in, expected points still leans on last season plus fixtures (ADR-124) — the "
+               "frontier sharpens as this season's form comes in.")
+    st.dataframe(
+        [{"badge": badges.get(e["player"]["team"], ""), "Player": e["player"]["web_name"],
+          "Team": e["player"]["team"], "Pos": e["player"]["position"], "£m": e["price"],
+          "xP": e["xp"], "vs price peers": e["edge"],
+          "Proof": "⚠ not played yet" if e["unproven"] else "✓ playing"} for e in front],
+        hide_index=True, width="stretch",
+        column_config={"badge": st.column_config.ImageColumn("", width="small"),
+                       "£m": st.column_config.NumberColumn("£m", format="£%.1fm"),
+                       "xP": st.column_config.NumberColumn("xP", format="%.1f"),
+                       "vs price peers": st.column_config.NumberColumn(
+                           "vs price peers", format="%+.1f",
+                           help="How far above the median player at the same price.")})

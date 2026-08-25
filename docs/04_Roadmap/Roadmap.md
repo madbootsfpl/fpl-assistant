@@ -102,7 +102,7 @@ declined to copy a rival's feature because our own measurements said it wouldn't
 | **fplanalyser** | Squad Risk Monitor · Squad-grade DNA · forward planner | **all three shipped** (ADR-130/131). The planner is **deliberately different**: their projected-points-vs-average framing is *noise* on our numbers (a squad's per-GW xP varies ±3%), so ours leads with fixture **exposure**, which swings 2→7. |
 | **fplapex** | multi-GW transfer path · chip-sequence scan · competitive layer | Path search **declined on evidence** (ADR-132): the best sell was the same player in all six gameweeks and the market yielded *one* beneficial move — a tree with one branch. Shipped the **timing arithmetic** instead. Chip scan + competitive layer still open. |
 | **FFH** | the rich player card · click-a-player menu | Card beaten on our own metrics (xP · value · ownership tier · DefCon · set-pieces — none of which they show). **Tap-the-pitch live and Cloud-verified** (ADR-133). |
-| **aceanalyst** | pool-wide value-frontier scatter | **The one clear remaining gap.** Data all exists. |
+| **aceanalyst** | pool-wide value-frontier scatter | **Shipped** (ADR-138) — and made ours: the hover carries a tested *verdict*, not a coordinate. Building it also exposed an xMins blind spot no ranked surface had surfaced, because a frontier promotes cheap-and-high numbers rather than burying them. |
 
 **The divergences are the position, not a shortfall.** Anyone can copy a screenshot; what is hard to copy is
 having measured *whether the thing behind the screenshot works on your own data* — and having written down the
@@ -233,10 +233,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   overall grade + Attack / Defence / DefCon / Fixtures bars + a verdict headline + a grounded edge line
   ("3 penalty takers = a deliberate edge"). A squad-level sibling of Team DNA; reuses the engine.
   **Pairs with Squad Risk Monitor — both aggregate the owned 15 and would share plumbing.**
-- ⭐ ⬜ **Pool-wide value-frontier scatter** *(aceanalyst)* — a 2-axis scatter of the whole pool (price × xP with
-  a value frontier; xGI × points; DefCon × points) + median baselines + filters. **Complements** the DNA radar:
-  the radar shows *one* player's shape, the scatter positions *everyone*. **MadBoots spin:** a grounded verdict
-  on hover, not a dot to interpret.
+- ✅ **Pool-wide value-frontier scatter** *(aceanalyst)* — **BUILT** (ADR-138, Sprint 192, 2026-08-25) as
+  **Players ▸ Value**. Justified by measurement, not by the rival: only **4 of 8** frontier players are also
+  top-8 by raw xP, and the best £4.5 player is **+11.9 xP** clear of the median £4.5 player — nearly what
+  £4.5 → £8.0 buys for £3.5m, and no ranked list showed those together. **MadBoots spin delivered:** a hover
+  verdict computed in `analytics.value` and unit-tested, not a dot to interpret. Two owner review rounds
+  changed it materially — the crowding was the **axis** (94% of players in 24% of the width), fixed by
+  plotting only decisions; and **a player who has not featured can no longer hold the frontier** (`yet_to_play`),
+  which swapped a backup keeper off it. ⬜ *Not built, deliberately:* the xGI × points and DefCon × points
+  axis pairs — different questions the stat boards already rank. A metric selector is the follow-on if asked.
 - ◑ **Multi-GW transfer-path planner** — the **timing arithmetic** shipped (ADR-132, Sprint 184: use it /
   bank it / take the hit); the **path search itself is declined on evidence** — the best sell was the same
   player in all six gameweeks and the market yielded one positive-gain move, so the tree had one branch. A
