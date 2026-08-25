@@ -67,11 +67,14 @@ else:
         _sort = st.segmented_control("Sort the league by", ["Grade", "Fixtures"], default="Grade",
                                      key="dna_league_sort",
                                      help="Best teams first, or easiest run first.") or "Grade"
-        _nxt = {t: (team_schedule(upcoming, t) or [None])[0] for t in _all_dna}
+        # Three fixtures, not one: one opponent says who's next, three say whether the run the FIX percentile
+        # claims actually looks like one. Tinted chips make three fit the width one text pair used.
+        _nxt = {t: team_schedule(upcoming, t)[:3] for t in _all_dna}
         st.markdown(your_teams_strip_html(
             league_rows(_all_dna, _nxt, sort_by="fixtures" if _sort == "Fixtures" else "grade"),
-            title="🧬 The league at a glance — grade · ATT/DEF/FIX · next up"), unsafe_allow_html=True)
-        st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Pick a club below for its full DNA.")
+            title="🧬 The league at a glance — grade · ATT/DEF/FIX · next 3"), unsafe_allow_html=True)
+        st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Fixture chips are tinted by "
+                   "difficulty; **h**/**a** = home or away. Pick a club below for its full DNA.")
     if _all_dna:
         _labels = {_names.get(t, t): t for t in sorted(_all_dna, key=lambda t: _names.get(t, t))}
         _picked = _labels.get(st.selectbox("Team", list(_labels), key="team_dna_pick",

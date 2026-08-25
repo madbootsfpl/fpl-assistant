@@ -136,4 +136,12 @@ name precisely for that, and it is a beta).
   `Defensive Contribution → DefCon`, `xG / xA / xGI → xG · xA`.
 - **Signposts repointed** — the Players page caption that read *"the Radar (on the Fixtures tab)"* and two Help
   entries. That stale-signpost risk was called out above and it was real.
+- **Follow-up (owner, same day): the scan shows the next THREE fixtures, not one.** One opponent says who is
+  next; three say whether the run the FIX percentile is claiming actually looks like one. It cost nothing,
+  because the format changed with it: `CHE (A) · LEE (H) · ARS (A)` would be ~162px and ellipsised on a phone,
+  while **FDR-tinted chips** (`CHE`ᵃ `LEE`ʰ `ARS`ᵃ, reusing the card's own fixture idiom at strip scale) are
+  ~102px — *shorter than one text pair and carrying difficulty as well*. Three gameweeks therefore fit the
+  column one opponent used, and the row gained information rather than losing width.
+- **Naming: `Team DNA & FDR` reads clunky (owner) — left as-is pending more tester feedback.** No better
+  candidate yet that keeps "FDR" discoverable, which was the reason for including it.
 - **Not this ADR:** the league-wide grade strip sketched above, and a grouped/dropdown sub-nav for Players.

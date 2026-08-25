@@ -6,6 +6,7 @@ from src.web_streamlit.team_dna_card import (
     head_html,
     key_players_html,
     key_players_this_or_last,
+    league_rows,
     team_key_players,
     your_teams_rows,
     your_teams_strip_html,
@@ -153,3 +154,61 @@ def test_key_players_html_shows_the_season_note_only_when_falling_back():
 def test_key_players_html_keeps_the_empty_note_when_neither_season_has_rows():
     html = key_players_html([], season="2025/26")
     assert "Fills in as the season plays" in html and "<table" not in html
+
+
+# ---- the league scan's fixture chips (ADR-134) --------------------------------------
+
+class _Ax:
+    def __init__(self, label, pct):
+        self.label, self.percentile = label, pct
+
+
+class _D:
+    def __init__(self, team, grade="B", score=60, fix=50):
+        self.team, self.name, self.grade, self.grade_score = team, team, grade, score
+        self.axes = [_Ax("Attacking Threat", 70), _Ax("Defensive Strength", 60), _Ax("Fixture Strength", fix)]
+
+
+def _cell(opp, venue="H", difficulty=3):
+    return {"opponent": opp, "venue": venue, "difficulty": difficulty}
+
+
+def test_the_scan_shows_the_next_three_fixtures_not_just_the_next_one():
+    """One opponent says who's next; three say whether the run the FIX percentile claims looks like one."""
+    rows = league_rows({"AAA": _D("AAA")}, {"AAA": [_cell("BBB"), _cell("CCC", "A"), _cell("DDD")]})
+    html = your_teams_strip_html(rows)
+    assert html.count('class="yt-fx"') == 3
+    assert ">BBB<" in html and ">CCC<" in html and ">DDD<" in html
+
+
+def test_the_chips_carry_venue_and_are_tinted_by_difficulty():
+    """Tinting says more than the plain `CHE (A)` it replaced, and takes less width — which is what let three
+    fixtures fit the column one text pair filled."""
+    html = your_teams_strip_html(league_rows({"AAA": _D("AAA")},
+                                             {"AAA": [_cell("BBB", "H", 2), _cell("CCC", "A", 5)]}))
+    assert "<i>h</i>" in html and "<i>a</i>" in html
+    assert html.count("background:") >= 2                  # each chip carries its own FDR colour
+
+
+def test_a_single_fixture_cell_still_works():
+    """Callers may pass one cell rather than a slice — the squad strip does."""
+    rows = league_rows({"AAA": _D("AAA")}, {"AAA": _cell("BBB")})
+    assert your_teams_strip_html(rows).count('class="yt-fx"') == 1
+
+
+def test_a_club_with_no_fixtures_reads_as_a_dash():
+    assert "—" in your_teams_strip_html(league_rows({"AAA": _D("AAA")}, {}))
+
+
+def test_the_squad_strip_still_escapes_its_plain_text_column():
+    """The league scan's trailing column is pre-rendered HTML; the squad strip's is player names, and a name
+    with an ampersand must not be able to inject markup."""
+    html = your_teams_strip_html([{"team": "AAA", "grade": "A", "att": 50, "dfc": 50, "fix": 50,
+                                   "players": "A & <b>B</b>"}])
+    assert "&amp;" in html and "<b>B</b>" not in html
+
+
+def test_sorting_by_fixtures_puts_the_easiest_run_first():
+    dna = {"AAA": _D("AAA", fix=20), "BBB": _D("BBB", fix=90)}
+    assert [r["team"] for r in league_rows(dna, {}, sort_by="fixtures")] == ["BBB", "AAA"]
+    assert [r["team"] for r in league_rows(dna, {}, sort_by="grade")][0] in ("AAA", "BBB")

@@ -195,7 +195,10 @@ font-weight:800;font-size:.64rem;color:#cdd6e2;}
 .yt-grade{font-weight:900;font-size:1.15rem;}
 .yt-axes{color:#aab6c6;font-size:.74rem;white-space:nowrap;}
 .yt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 1px;}
-.yt-mine{color:#9aa3b2;font-size:.74rem;overflow:hidden;text-overflow:ellipsis;}
+.yt-mine{color:#9aa3b2;font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.yt-fx{display:inline-block;border-radius:5px;padding:1px 5px;margin-right:4px;font-size:.66rem;
+font-weight:800;letter-spacing:.02em;}
+.yt-fx i{font-style:normal;opacity:.72;font-weight:700;margin-left:2px;}
 </style>
 """
 
@@ -218,7 +221,25 @@ def your_teams_rows(owned, all_dna) -> list[dict]:
     return rows
 
 
-def league_rows(all_dna, next_opp=None, *, sort_by: str = "grade") -> list[dict]:
+def _fx_chips(fixtures) -> str:
+    """The next few fixtures as tiny FDR-tinted chips — `CHE a  LEE h  ARS a` (ADR-134).
+
+    Reuses the card's fixture idiom at strip scale. Tinting by difficulty carries *more* than the plain
+    `CHE (A)` it replaces while taking **less** width — three fixtures fit the column that one text pair filled,
+    which is why three gameweeks don't cost the layout anything.
+    """
+    if not fixtures:
+        return "—"
+    out = ""
+    for f in fixtures:
+        bg, fg = FDR_STYLE.get(int(f.get("difficulty") or 3), FDR_STYLE[3])
+        venue = "h" if (f.get("venue") or "").upper().startswith("H") else "a"
+        out += (f'<span class="yt-fx" style="background:{bg};color:{fg}">{_esc(f.get("opponent") or "?")}'
+                f'<i>{venue}</i></span>')
+    return out
+
+
+def league_rows(all_dna, next_opp=None, *, sort_by: str = "grade", next_n: int = 3) -> list[dict]:
     """Every club as a strip row — grade + ATT/DEF/FIX + its next opponent (ADR-134).
 
     The league-wide sibling of `your_teams_rows`, and the thing that lets the Team DNA section **lead with a
@@ -227,16 +248,20 @@ def league_rows(all_dna, next_opp=None, *, sort_by: str = "grade") -> list[dict]
     to a C-grade side reads very differently from one belonging to an A.
 
     `sort_by` is `"grade"` (best team first) or `"fixtures"` (easiest run first) — the two jobs this strip
-    serves. The trailing column is the next opponent, so a row still says something concrete.
+    serves. The trailing column shows the **next `next_n` fixtures** as FDR-tinted chips: one opponent tells
+    you who is next, three tell you whether the run the FIX percentile is claiming actually looks like one.
+
+    `next_opp` maps a team to either a single fixture cell or a list of them (`team_schedule(...)[:n]`).
     """
     rows = []
     for t, d in (all_dna or {}).items():
         by = {a.label: a.percentile for a in d.axes}
-        opp = (next_opp or {}).get(t)
+        fx = (next_opp or {}).get(t) or []
+        fx = [fx] if isinstance(fx, dict) else list(fx)          # a single cell or a schedule slice
         rows.append({"team": t, "name": d.name, "grade": d.grade, "score": d.grade_score,
                      "att": by.get("Attacking Threat"), "dfc": by.get("Defensive Strength"),
-                     "fix": by.get("Fixture Strength"),
-                     "players": f'{opp["opponent"]} ({opp["venue"]})' if opp else "—"})
+                     "fix": by.get("Fixture Strength"), "fixtures": fx[:next_n],
+                     "players": _fx_chips(fx[:next_n])})
     key = (lambda r: -(r["fix"] or 0)) if sort_by == "fixtures" else (lambda r: -(r["score"] or 0))
     rows.sort(key=key)
     return rows
@@ -257,7 +282,10 @@ def your_teams_strip_html(rows, *, title: str = "🧬 Your teams — strength be
         f'<div class="yt-row"><div class="yt-badge">{_esc(r["team"])}</div>'
         f'<div class="yt-grade" style="color:{_tone(r["grade"])}">{_esc(r["grade"])}</div>'
         f'<div class="yt-axes">ATT {dot(r["att"])} · DEF {dot(r["dfc"])} · FIX {dot(r["fix"])}</div>'
-        f'<div class="yt-mine">{_esc(r["players"])}</div></div>' for r in rows)
+        # `players` is pre-rendered HTML for the league scan (tinted chips) and plain text for the squad
+        # strip — escape only the latter, or the chips would print as markup.
+        f'<div class="yt-mine">{r["players"] if r.get("fixtures") else _esc(r["players"])}</div></div>'
+        for r in rows)
     return (YT_CSS + f'<div class="yt-strip"><div class="yt-ttl">{_esc(title)}'
             f'</div>{body}</div>')
 
