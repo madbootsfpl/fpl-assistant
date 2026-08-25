@@ -57,6 +57,14 @@ design that tries to move everything onto the shirt will re-add a picker somewhe
 
 **2. Actions appear on the *selected* card only — not on all fifteen.**
 
+> ⚠️ **Revised 2026-08-25, from a screenshot of the shipped thing.** The *"selected card only"* half held. The
+> *form* did not: I argued a menu was "a third surface to lay out" and inline icons were cheaper. A 104px card
+> has no room for three actions — they came out tiny, unlabelled, contrast-free, and fighting the hover
+> popover for the same space. **It is now a labelled floating menu** (© Make captain · ⇄ Substitute · ⚔️
+> Compare), and the hover popover is suppressed while it is open. That is FFH's form, and it is right for the
+> reason this ADR claimed to care about — **one surface at a time**. Reasoning about a 104px card lost to
+> looking at one.
+
 This is the decision that keeps it a *density* change. Always-visible actions would take widgets off the page
 by putting three icons on every one of fifteen cards, trading page height for pitch noise and netting little.
 Hover-only would be cleaner at rest but is a **desktop idiom on a surface whose complaints are mobile**, and a
@@ -149,6 +157,16 @@ already unit-tested directly since ADR-133); Boot Battle stays a picker, so the 
   the work moved into `_handle_shirt_action`, which is directly testable, and the AppTest now asserts the
   button is *gone* — a stricter check than clicking it was. The two substitute AppTests arm the flow first,
   keeping every assertion they had about legal swaps.
+- **Three bugs the owner's screenshot exposed, all fixed (2026-08-25):**
+  1. **Every link state must be pinned.** The component renders inside an iframe shipping `bootstrap.min.css`,
+     which styles `a:visited` blue-and-underlined — so the card you had just clicked turned into a visible
+     hyperlink while the rest looked fine. Styling the base `a` state is not enough inside someone else's CSS.
+  2. **A replayed click fired forever.** `click_detector` hands back its *last* click on every rerun, so a
+     toggle armed itself → rerendered → saw the same id → disarmed → rerendered. Substitute and Compare
+     therefore did nothing at all, and Captain only *looked* fine because setting it twice is idempotent. Fixed
+     with a last-handled guard, with tests for both "fires once" and "the next real tap still fires".
+  3. **Two surfaces opened together** — the actions and the hover popover. The popover is now suppressed on the
+     selected card.
 - **Still to do:** the same idiom on the ADR-134 league-scan rows (`sel:ARS` replacing the drill-down
   selectbox). Same mechanism, one more surface — deliberately a separate change so this one could be measured
   cleanly.

@@ -66,6 +66,36 @@ width:250px;max-width:76vw;display:none;z-index:40;text-align:left;cursor:defaul
 _SUB_BADGE = {"1st": "1", "2nd": "2", "3rd": "3", "4th": "4", "GK": "GK"}
 
 
+# ADR-135 rev (2026-08-25) — the tap styling, learned from a screenshot of the real thing.
+#
+# **Every link state must be pinned.** The click component renders inside an iframe that ships `bootstrap.min.css`,
+# which styles `a:visited` blue-and-underlined — so the card you had just clicked turned into a visible hyperlink
+# while every other card looked fine. Styling only the base `a` state is not enough inside someone else's CSS.
+#
+# **The actions are a menu, not a row of icons on the card.** The first cut put three glyphs along the bottom of a
+# 104px card: too small to hit, no labels, no contrast, and fighting the hover popover for the same space. A
+# floating panel is what FFH does and it is right — one surface, labelled, with room to be legible.
+_TAP_CSS = """
+<style>
+.kit-a,.kit-a:link,.kit-a:visited,.kit-a:hover,.kit-a:active,.kit-a:focus{
+text-decoration:none!important;color:inherit!important;display:block;}
+.kit.selected{outline:2px solid #5eead4;outline-offset:2px;border-radius:10px;}
+.kit.selected .kit-pop{display:none!important;}   /* one surface at a time: the menu replaces the hover card */
+.kit-menu{position:absolute;z-index:60;left:50%;transform:translateX(-50%);margin-top:6px;
+background:#0f1620;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:6px;min-width:186px;
+box-shadow:0 22px 44px -18px rgba(0,0,0,.85);}
+.kit-menu a,.kit-menu a:link,.kit-menu a:visited,.kit-menu a:hover,.kit-menu a:active,.kit-menu a:focus{
+display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;text-decoration:none!important;
+color:#e8eef6!important;font-size:.82rem;font-weight:600;white-space:nowrap;}
+.kit-menu a:hover{background:rgba(255,255,255,.09);}
+.kit-menu a .g{width:18px;text-align:center;opacity:.9;}
+.kit-menu a.armed{background:#5eead4;color:#0c121a!important;font-weight:800;}
+.kit-menu .hint{color:#8c98a8;font-size:.7rem;padding:6px 11px 2px;}
+.kit{position:relative;}
+</style>
+"""
+
+
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
               fixtures_by_id=None, kits=None, clickable=False, selected=False, armed=None) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
@@ -114,20 +144,19 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     # noise, which is the opposite of the point (ADR-135).
     acts = ""
     if selected:
-        armed_cls = {"sub": "sub", "cmp": "cmp"}.get(armed or "", "")
-        def _a(kind, glyph, title):
+        def _item(kind, glyph, label):
             on = " armed" if armed == kind else ""
-            return f'<a href="#" id="{kind}:{pid}" class="kit-act{on}" title="{title}">{glyph}</a>'
-        acts = ('<div class="kit-acts">'
-                + _a("cap", "©", "Make captain")
-                + _a("sub", "🔁", "Substitute — then tap who swaps")
-                + _a("cmp", "⚔️", "Compare — then tap who to compare with")
-                + "</div>")
-        armed_cls = f" armed-{armed}" if armed else ""
-    else:
-        armed_cls = ""
+            return (f'<a href="#" id="{kind}:{pid}" class="{on.strip()}">'
+                    f'<span class="g">{glyph}</span>{label}</a>')
+        hint = ('<div class="hint">now tap who swaps in</div>' if armed == "sub" else
+                '<div class="hint">now tap who to compare with</div>' if armed == "cmp" else "")
+        acts = ('<div class="kit-menu">'
+                + _item("cap", "©", "Make captain")
+                + _item("sub", "⇄", "Substitute")
+                + _item("cmp", "⚔️", "Compare")
+                + hint + "</div>")
     sel_cls = " selected" if selected else ""
-    return (f'<div class="kit{sel_cls}{armed_cls}">'
+    return (f'<div class="kit{sel_cls}">'
             f'<a href="#" id="sel:{pid}" class="kit-a">{body}</a>{acts}</div>')
 
 
@@ -167,19 +196,7 @@ def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=
 
     parts.append("</div>")
     if clickable:
-        # The anchor must not read as a link over the card; the action row appears only on the selected card
-        # and is sized for a thumb (ADR-135).
-        parts.insert(0, "<style>"
-                        ".kit-a{text-decoration:none;color:inherit;display:block;}"
-                        ".kit.selected{outline:2px solid #5eead4;outline-offset:1px;}"
-                        ".kit-acts{display:flex;gap:4px;justify-content:center;margin-top:5px;padding-top:5px;"
-                        "border-top:1px solid rgba(0,0,0,.10);}"
-                        ".kit-act{text-decoration:none;font-size:.86rem;line-height:1;padding:4px 7px;"
-                        "border-radius:7px;background:rgba(0,0,0,.06);color:#243040;min-width:28px;"
-                        "text-align:center;}"
-                        ".kit-act:hover{background:rgba(0,0,0,.13);}"
-                        ".kit-act.armed{background:#5eead4;color:#0c121a;font-weight:800;}"
-                        "</style>")
+        parts.insert(0, _TAP_CSS)
     return "".join(parts)
 
 

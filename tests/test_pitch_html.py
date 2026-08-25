@@ -79,16 +79,21 @@ def test_actions_appear_on_the_selected_card_only():
     """The decision that keeps this a *density* change: three icons on fifteen cards would trade page height
     for pitch noise. Only the card you're acting on carries them."""
     import re
-    assert 'class="kit-acts"' not in _html(clickable=True)
+    # ADR-135 rev: a labelled **menu**, not a row of icons on the card — a 104px card had no room for three
+    # actions, so they came out tiny, unlabelled and fighting the hover popover (owner screenshot, 2026-08-25).
+    assert 'class="kit-menu"' not in _html(clickable=True)
     one = _html(clickable=True, selected_id=4)
-    assert one.count('class="kit-acts"') == 1
+    assert one.count('class="kit-menu"') == 1
+    for label in ("Make captain", "Substitute", "Compare"):
+        assert label in one, f"the menu should name its actions, not just glyph them: {label}"
     assert set(re.findall(r'id="(\w+):4"', one)) == {"sel", "cap", "sub", "cmp"}
 
 
 def test_an_armed_action_is_visibly_armed():
     """A two-tap flow you can't see you're in is worse than the picker it replaced."""
-    assert "kit-act armed" in _html(clickable=True, selected_id=4, armed="sub")
-    assert "kit-act armed" not in _html(clickable=True, selected_id=4)
+    armed = _html(clickable=True, selected_id=4, armed="sub")
+    assert 'class="armed"' in armed and "now tap who swaps in" in armed
+    assert 'class="armed"' not in _html(clickable=True, selected_id=4)
 
 
 def test_the_action_anchors_are_siblings_never_nested():
@@ -128,3 +133,18 @@ def test_set_piece_duty_shows_on_the_kit_card():
     xi[5] = _p(6, "MID", penalties_order=1, corners_order=1, freekicks_order=1)
     html = pitch_html(xi, bench, captain_id=1, xp_by_id={}, photos={}, next_opp={})
     assert sum(html.count(e) for e in ("⚽", "🚩", "🎯")) >= 3
+
+
+def test_every_link_state_is_pinned_because_the_iframe_ships_bootstrap():
+    """The component renders inside an iframe carrying `bootstrap.min.css`, which styles `a:visited` blue and
+    underlined — so the card you had just clicked turned into a visible hyperlink while the others looked fine
+    (owner screenshot, 2026-08-25). Styling only the base `a` state is not enough inside someone else's CSS."""
+    html = _html(clickable=True, selected_id=4)
+    for state in (":link", ":visited", ":hover", ":active", ":focus"):
+        assert f".kit-a{state}" in html, f"unpinned link state on the card: {state}"
+        assert f".kit-menu a{state}" in html, f"unpinned link state in the menu: {state}"
+
+
+def test_the_hover_popover_is_suppressed_while_a_card_is_selected():
+    """One surface at a time. The menu and the hover card were opening together and fighting for the space."""
+    assert ".kit.selected .kit-pop{display:none" in _html(clickable=True, selected_id=4)

@@ -81,6 +81,16 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
 
     html = pitch_html(xi, bench, clickable=True, **kw)
     clicked = detector(html, key=key)
+
+    # The component keeps handing back its **last** click on every rerun, so an action must fire once, on the
+    # run where it actually happened. Without this guard a toggle (🔁 / ⚔️) armed itself, rerendered, saw the
+    # same id, disarmed, rerendered — and nothing ever appeared to happen. Captain only *looked* fine because
+    # setting it twice is idempotent.
+    seen_key = f"{key}__seen"
+    if not clicked or st.session_state.get(seen_key) == clicked:
+        return None, None
+    st.session_state[seen_key] = clicked
+
     action, pid = parse(clicked)
     if action is None:
         return None, None

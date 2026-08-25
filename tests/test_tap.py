@@ -107,3 +107,29 @@ def test_a_tap_on_an_action_does_not_move_the_selection(monkeypatch):
     out = tap.render_tappable_pitch([_p(7, "Virgil")], [], select_key="pa_pick", label_for=_label,
                                     captain_id=None, xp_by_id={}, photos={}, next_opp={})
     assert out == ("cap", 7) and "pa_pick" not in st.session_state
+
+
+def test_a_replayed_click_fires_once(monkeypatch):
+    """The bug the owner hit: `click_detector` hands back its **last** click on every rerun. An action that
+    toggles (🔁 / ⚔️) therefore armed itself, rerendered, saw the same id, disarmed, rerendered — and nothing
+    ever appeared to happen. Captain only *looked* fine because setting it twice is idempotent."""
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "sub:7"))
+    st.session_state.clear()
+    fires = [tap.render_tappable_pitch([_p(7, "Virgil")], [], select_key="k", label_for=_label,
+                                       captain_id=None, xp_by_id={}, photos={}, next_opp={})
+             for _ in range(4)]
+    assert fires[0] == ("sub", 7)
+    assert all(f == (None, None) for f in fires[1:]), "a replayed click must not fire again"
+
+
+def test_a_genuinely_new_click_still_fires(monkeypatch):
+    """The guard must not swallow the next real tap."""
+    import streamlit as st
+    seq = iter(["sub:7", "sub:7", "cap:7"])
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: next(seq)))
+    st.session_state.clear()
+    kw = dict(select_key="k", label_for=_label, captain_id=None, xp_by_id={}, photos={}, next_opp={})
+    assert tap.render_tappable_pitch([_p(7, "Virgil")], [], **kw) == ("sub", 7)
+    assert tap.render_tappable_pitch([_p(7, "Virgil")], [], **kw) == (None, None)
+    assert tap.render_tappable_pitch([_p(7, "Virgil")], [], **kw) == ("cap", 7)
