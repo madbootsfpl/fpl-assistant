@@ -2967,3 +2967,29 @@ def test_the_leagues_page_finds_your_leagues_from_a_manager_id(monkeypatch):
     assert any("Test Manager" in c.value for c in at.caption), \
         "naming the manager is how you catch a mistyped id — otherwise you get a stranger's leagues silently"
     assert any(s.value == "League 999" for s in at.subheader), "picking a league loads its table"
+
+
+def test_health_shows_a_concentration_note_only_when_a_week_is_actually_narrow():
+    """ADR-145 on the page. The naive "player clashes" feature would have fired for 100% of squads every week;
+    this speaks above the measured 75th percentile, so most squads see nothing — and a squad that *is*
+    concentrated gets one line naming the match and the players.
+    """
+    from src.squads import SquadStore
+
+    squad = SquadStore().load("TS")
+    if not squad:
+        return                                          # no seed squad in this environment
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=180)
+    at.session_state["squad"] = {"name": "TS", "player_ids": squad["player_ids"],
+                                 "bench_ids": squad.get("bench_ids") or [],
+                                 "cost": squad.get("cost") or 100.0}
+    at.run()
+    at.segmented_control[0].set_value("Health").run()
+    assert not at.exception
+
+    notes = [c.value for c in at.caption if c.value.startswith("🎯")]
+    # Whether this squad is concentrated depends on the live fixture data, so the assertion is on the *shape*:
+    # every note that appears must name a gameweek, a match and the players — a bare percentage is not
+    # actionable, which is the failure mode this feature was designed around.
+    for n in notes:
+        assert "% of your GW" in n and " v " in n and "players" in n

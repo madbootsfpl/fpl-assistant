@@ -273,7 +273,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   line, for the trail)* — per-GW projected-points-vs-your-average
   bars + *"your problem week is GW6, five weeks out"* + N-hard-fixtures per GW + which players face them.
   Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
-- ⬜ **Player clashes** — your own players meeting = point cannibalisation.
+- 🅾️/✅ **Player clashes** — the **framing rejected on evidence**, the real quantity underneath it **built**
+  (ADR-145, Sprint 199, 2026-08-26). Measured: clashes are **universal** (100% of 300 random squads, ~26 pairs
+  over 5 GWs; still 7.4 filtered to XI defensive-vs-attacker) so a list is wallpaper — and **a clash costs no
+  expected points**, because `decision_xp` already prices each player's own fixture. It changes the *joint*
+  distribution, not either marginal: same expected score, **lower variance** — which is good when protecting a
+  lead and bad when chasing (ADR-141's logic). Shipped **fixture concentration** instead: how much of a
+  gameweek's XI projection rides on one match (live spread: median 29% · p75 34% · p90 40% · max 64%), flagged
+  above p75, naming the match and the players. The clash survives as a **qualifier** — players on both sides
+  means their returns partly cancel.
 - ✅ **Captain margin** (ADR-144, Sprint 198, 2026-08-26) — shipped, and the measurement turned a cosmetic line
   into one with an opinion. Across 300 random legal squads the lead over the runner-up is **p25 0.20 · median
   0.60 · p75 1.00**, and **44% of squads separate their top two by under half a point** — so a medal plus

@@ -728,8 +728,19 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     render_squad_dna(squad_dna(owned, _dna_by_id, _tdna))
     # ADR-131 — what's coming, led by fixture exposure (which varies) rather than xP (which barely does).
     _ranked = decision_xp(players, upcoming, history, horizon=6, gw_history_by_code=gw_history)
-    render_forward_plan(
-        forward_plan(owned, upcoming, {r["id"]: r["by_gameweek"] for r in _ranked}, horizon=6), len(owned))
+    _bg = {r["id"]: r["by_gameweek"] for r in _ranked}
+    render_forward_plan(forward_plan(owned, upcoming, _bg, horizon=6), len(owned))
+    # ADR-145 — how much of a gameweek rides on ONE match. Sits under the forward plan because it answers the
+    # same "what's coming" question one level down: the plan says which weeks are hard, this says which weeks
+    # are *narrow*. Measured on the starting XI, not the 15 — a benched player scores nothing, so counting
+    # them would dilute the share with points that were never at risk. Speaks only above the measured 75th
+    # percentile, so most squads see nothing here most weeks, which is the point.
+    from src.analytics.concentration import concentration_note, match_concentration
+    _xi_ids = set(best_legal_xi(owned, {r["id"]: r["xp"] for r in _ranked}))
+    _notes = [n for r in match_concentration([p for p in owned if p["id"] in _xi_ids], upcoming, _bg, horizon=6)
+              if (n := concentration_note(r))]
+    for _n in _notes:
+        st.caption(f"🎯 {_n}")
     st.divider()
     # ADR-126: the key-players table needs ~900 minutes to rank anyone, so hand it last season to fall back on.
     render_your_teams(squad, players, upcoming, team_names=team_names,
