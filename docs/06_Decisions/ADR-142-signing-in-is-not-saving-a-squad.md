@@ -3,8 +3,8 @@
 **Decision ID:** ADR-142
 **Date:** 2026-08-26
 **Status:** ✅ **Accepted — built** (Sprint 196, 2026-08-26). **1377 → 1384 tests, ruff clean.**
-⏳ **Owner action:** add the `last_seen` column (SQL below) **and check `beta_users` has an UPDATE policy** —
-see the revision at the end. Until then the panel degrades to its old behaviour and *says so*.
+✅ **Owner action DONE and verified (2026-08-26)** — column added, column-restricted UPDATE policy applied,
+`touch_last_seen` returns `ok` against the live store. Sign-in times now record.
 **Superseded By / Replaces:** Corrects the tester-activity half of ADR-120. **Does not touch ADR-100** — the
 anonymous event stream stays anonymous and is never joined to a name.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -228,3 +228,20 @@ and the Admin panel prints the exact SQL beneath it.
 blanket one. Every store call in this module is best-effort and silent, and this is the third layer at which
 that turned out to hide something: the write failed politely, then reported a 200, and Postgres declined to
 mention that it had updated nothing.
+
+**✅ Verified end to end (2026-08-26).** Owner ran the narrow SQL; the Admin diagnostic went from
+*"the row exists but the update reached no rows"* to **`ok`**, against the real store, through the same
+function the sign-in calls.
+
+⏳ **The numbers will lag for a few days and that is expected, not a third bug.** Nothing can be back-dated, so
+every tester reads ⚪ never until they next sign in. Judge the panel at the end of the week, not tonight.
+
+### 📌 What this one cost, and what it bought
+
+Three attempts to fix one wrong number: the definition (measuring squad-saves), the filter (`eq.` is
+case-sensitive — documented forty lines above the code I wrote), and the store (RLS silently updating nothing).
+**Every layer failed quietly, and none of them failed the way the layer above had predicted.**
+
+The durable output is not the fix. It is that `touch_last_seen` now returns a reason, and the Admin panel runs
+**the real function** and prints it — so the next time this class of thing breaks, the first question is
+answered in one click instead of three round-trips through a live deployment.
