@@ -130,8 +130,11 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
         risks.append(f"Rotation risk (~{round(mins * 90)} mins)")
     if difficulty is not None and difficulty >= 4:
         risks.append(f"Tough fixture vs {top.get('opponent') or 'TBC'}")
-    if runner is not None and gap is not None and gap < 0.5:
-        risks.append(f"Only +{gap} pts ahead of {runner['web_name']}")
+    # ADR-144 removed the "Only +0.3 ahead of X" risk that used to live here. The margin is now stated on
+    # every card, always, and characterised against the measured spread — so this line was the same fact told
+    # a second time, in a second place, with a different threshold (0.5) than the one the card calibrates on.
+    # One rule written twice always drifts. The `gap` still feeds `captain_confidence` below, which is where
+    # it belongs: a narrow lead should lower the confidence, not add a bullet.
     if own_risk:
         risks.append(own_risk)
 

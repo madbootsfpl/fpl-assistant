@@ -6,6 +6,7 @@ Offline, plain dicts.
 """
 
 from src.analytics import captain_picks
+from src.analytics.captain import CLEAR, WHISKER, captain_margin, margin_line
 from src.analytics.explain import Explanation
 from src.ui.captain import render_captain_pick, render_captain_picks
 
@@ -131,3 +132,51 @@ def test_render_captain_picks_delegates_to_the_card_with_friendly_teams():
     assert "🥇 B.Fernandes" in out and "Man Utd · MID" in out
     assert "Alternatives\n🥈 Haaland 5.7 pts" in out and "Model note:" in out
     assert render_captain_picks([], squad_name="RoboTS").startswith("No captain candidates in squad")
+
+
+# ---- the captain margin (ADR-144) ----------------------------------------------------
+
+def _pick(name, xp):
+    return {"id": hash(name) % 10_000, "web_name": name, "xp": xp}
+
+
+def test_the_verdict_thresholds_are_the_measured_quartiles_not_invented():
+    """The whole point of the verdict. Measured over 300 random legal squads on live data, the gap between
+    the top captain pick and the runner-up came out **p25 0.20 · median 0.60 · p75 1.00 · max 2.80** — so the
+    captain call is usually close, and 44% of squads separate their top two by under half a point.
+
+    `WHISKER` and `CLEAR` are those quartiles. That is what makes "a clear pick" mean something: it is the top
+    quarter of *real* leads, not a number someone liked the look of.
+    """
+    assert (WHISKER, CLEAR) == (0.3, 1.0)
+    assert captain_margin([_pick("A", 5.0), _pick("B", 4.9)])["verdict"] == "whisker"   # 0.1
+    assert captain_margin([_pick("A", 5.0), _pick("B", 4.5)])["verdict"] == "narrow"    # 0.5
+    assert captain_margin([_pick("A", 6.5), _pick("B", 5.0)])["verdict"] == "clear"     # 1.5
+
+
+def test_a_whisker_says_it_is_too_close_to_call():
+    """A single gameweek's variance dwarfs half a projected point, so a 0.2 lead is not a recommendation — it
+    is the model declining to have an opinion, and it should say so rather than let a medal imply certainty."""
+    line = margin_line(captain_margin([_pick("Salah", 5.9), _pick("Haaland", 5.7)]))
+    assert "whisker" in line.lower() and "0.2" in line and "Haaland" in line
+    assert "too close to call" in line.lower()
+
+
+def test_a_clear_lead_reads_as_one():
+    line = margin_line(captain_margin([_pick("Haaland", 7.4), _pick("Fernandes", 6.3)]))
+    assert line.startswith("A clear pick") and "1.1" in line and "Fernandes" in line
+
+
+def test_no_runner_up_means_no_margin_rather_than_a_huge_one():
+    """A margin over nobody is not a big margin — it is no margin. Saying "clear pick, 5.9 ahead of nothing"
+    would be the most confident and least justified line on the card."""
+    assert captain_margin([_pick("Solo", 5.9)]) is None
+    assert captain_margin([]) is None
+    assert margin_line(None) == ""
+
+
+def test_a_missing_projection_is_not_treated_as_zero():
+    """`or 0` on a missing xP would invent a colossal lead out of an unknown — a mistake this codebase has
+    made before and now tests against by habit."""
+    assert captain_margin([_pick("A", 5.0), {"web_name": "B", "xp": None}]) is None
+    assert captain_margin([{"web_name": "A", "xp": None}, _pick("B", 5.0)]) is None

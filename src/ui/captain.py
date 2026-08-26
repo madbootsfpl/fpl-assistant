@@ -40,6 +40,14 @@ def render_captain_pick(ranked, explanation, *, scope: str = "", team_names=None
             lines += ["", "Edge", *[f"✓ {r}" for r in explanation.reasons]]   # MADBOOTS vocab (ADR-107)
         if explanation.risks:
             lines += ["", "Risk", *[f"⚠ {r}" for r in explanation.risks]]
+    # ADR-144 — the margin, always, not only when it is narrow. The alternatives below already carry their
+    # xP, so a manager *could* subtract; what they could not do is tell whether the answer is a lot. Against
+    # the measured spread (p25 0.20 · median 0.60 · p75 1.00) most captain calls are close, and a medal
+    # implies a confidence the gap often does not support.
+    from src.analytics.captain import captain_margin, margin_line
+    _margin = margin_line(captain_margin(ranked))
+    if _margin:
+        lines += ["", _margin]
     alternatives = ranked[1:]
     if alternatives:
         lines += ["", "Alternatives"]

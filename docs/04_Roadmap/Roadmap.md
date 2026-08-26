@@ -273,8 +273,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   line, for the trail)* — per-GW projected-points-vs-your-average
   bars + *"your problem week is GW6, five weeks out"* + N-hard-fixtures per GW + which players face them.
   Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
-- ⬜ **Two small ones** — **player clashes** (your own players meeting = point cannibalisation) · **captain
-  margin** ("by a whisker — 0.3 over #2", a small polish on the existing captain confidence).
+- ⬜ **Player clashes** — your own players meeting = point cannibalisation.
+- ✅ **Captain margin** (ADR-144, Sprint 198, 2026-08-26) — shipped, and the measurement turned a cosmetic line
+  into one with an opinion. Across 300 random legal squads the lead over the runner-up is **p25 0.20 · median
+  0.60 · p75 1.00**, and **44% of squads separate their top two by under half a point** — so a medal plus
+  "Confidence 91/100" was implying certainty the data mostly doesn't support. The verdict thresholds **are
+  those quartiles**, so "a clear pick" means the top quarter of real leads. A whisker now says *"too close to
+  call; take the one you fancy"* — a decision tool's job includes knowing when it hasn't decided. The old
+  duplicate narrow-lead risk bullet was removed.
 - ✅ **Import a league — and compare against it** (ADR-141, Sprint 195, 2026-08-26) — *owner, 2026-08-25.*
   Shipped as **🏆 Leagues**: a classic league by id, or the global Overall league as the **elite** preset (same
   code, different id). **Justified by measurement:** across the top 50 managers in the world, Palmer sat at

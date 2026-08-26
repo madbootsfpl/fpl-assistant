@@ -107,7 +107,11 @@ def test_explain_captain_lists_grounded_reasons_and_risks():
 
     risk = " | ".join(ex.risks)
     assert "Away fixture" in risk
-    assert "Only +0.1 pts ahead of Runner" in risk
+    # ADR-144: the "Only +0.1 ahead of Runner" risk was removed. The margin is now stated on **every** card
+    # and characterised against the measured spread, so this bullet was the same fact told a second time, in a
+    # second place, with a different threshold (0.5) than the card calibrates on. The gap still feeds
+    # `captain_confidence` — a narrow lead should lower the confidence, not add a bullet.
+    assert "ahead of Runner" not in risk, "the margin belongs on the card, said once"
     assert ex.band == confidence_band(ex.confidence)
 
 

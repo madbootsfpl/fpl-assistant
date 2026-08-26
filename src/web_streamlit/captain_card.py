@@ -32,6 +32,11 @@ font-size:.85rem;}
 .cap-card .cc-h{text-transform:uppercase;letter-spacing:.04em;font-size:.72rem;opacity:.65;margin-bottom:.15rem;}
 .cap-card ul{margin:0;padding-left:1.15rem;}
 .cap-card li{margin:.12rem 0;}
+.cap-card .cc-margin{font-size:.92rem;margin-top:.5rem;padding:.35rem .6rem;border-radius:8px;
+border-left:3px solid rgba(128,128,128,.5);}
+.cap-card .cc-whisker{border-left-color:#f59e0b;background:rgba(245,158,11,.10);}
+.cap-card .cc-narrow{border-left-color:#94a3b8;background:rgba(148,163,184,.10);}
+.cap-card .cc-clear{border-left-color:#10b981;background:rgba(16,185,129,.10);}
 .cap-card .cc-alts{opacity:.92;font-size:.92rem;border-top:1px solid rgba(128,128,128,.25);padding-top:.5rem;}
 .cap-card .cc-brand{margin-top:.55rem;padding-top:.5rem;border-top:1px solid rgba(128,128,128,.25);
 display:flex;align-items:center;justify-content:space-between;}
@@ -70,6 +75,14 @@ def captain_card_html(ranked, explanation, *, scope: str = "", team_names=None) 
             lis = "".join(f"<li>⚠ {e(r)}</li>" for r in explanation.risks)
             risk_html = f'<div class="cc-col"><div class="cc-h">Risk</div><ul>{lis}</ul></div>'
 
+    # ADR-144 — the margin, stated and characterised, above the alternatives. Measured across 300 squads on
+    # live data the lead is p25 0.20 · median 0.60 · p75 1.00, so most captain calls are close and a medal
+    # implies a certainty the gap frequently does not support.
+    from src.analytics.captain import captain_margin, margin_line
+    _m = captain_margin(ranked)
+    margin_html = ""
+    if _m:
+        margin_html = (f'<div class="cc-margin cc-{_m["verdict"]}">{e(margin_line(_m))}</div>')
     alts = ranked[1:3]
     alts_html = ""
     if alts:
@@ -82,6 +95,7 @@ def captain_card_html(ranked, explanation, *, scope: str = "", team_names=None) 
         f'<div class="cc-pick"><span class="cc-name">{e(top["web_name"])}</span>'
         f'<span class="cc-team">{e(team)} · {e(top.get("position") or "")}</span>{proj}{conf_html}</div>'
         f'<div class="cc-cols">{why_html}{risk_html}</div>'
+        f'{margin_html}'
         f'{alts_html}'
         # US-355: the MADBOOTS mark — the captain card joins the player card's brand family (ADR-103/084).
         f'<div class="cc-brand">{brand.mark_html(badge_px=15, font_px=12)}'

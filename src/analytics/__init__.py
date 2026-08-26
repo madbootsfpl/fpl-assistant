@@ -6,7 +6,7 @@ up to the display. It never touches the API or the screen.
 """
 
 from src.analytics.analyse import analyse_squad
-from src.analytics.captain import captain_picks
+from src.analytics.captain import captain_margin, captain_picks, margin_line
 from src.analytics.chips import CHIP_NAMES, chip_advisor
 from src.analytics.cleansheet import defensive_solidity
 from src.analytics.crowd import (
@@ -122,7 +122,9 @@ __all__ = [
     "bench_order",
     "best_legal_xi",
     "best_xi_points",
+    "captain_margin",
     "captain_picks",
+    "margin_line",
     "chip_advisor",
     "CHIP_NAMES",
     "next_deadline",
