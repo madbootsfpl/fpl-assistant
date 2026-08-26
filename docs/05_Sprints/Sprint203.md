@@ -64,3 +64,28 @@ an empty report rather than a false success.
 
 The existing fixture had to start returning a response object — it previously returned `None`, which is
 precisely why none of this was checkable before.
+
+---
+
+### 🔁 And the corrected SQL failed too, for a third reason
+
+The owner ran the fixed block and got:
+
+```
+ERROR: 42710: policy "prefs read" for table "user_prefs" already exists
+```
+
+**The block was not re-runnable, and its own first line promised it was.** `create table if not exists` says
+*safe to run again*; the four `create policy` lines under it were not. So the re-run needed to pick up the
+missing `delete` policy failed on line three — and because Postgres rolls the statement back, **applied
+nothing at all**.
+
+> **An idempotent first line in a block that is not idempotent is worse than neither.** It invites exactly the
+> re-run that then fails, and it fails *after* the reader has been told the block is safe.
+
+Postgres has no `create policy if not exists`, so drop-then-create is the idiom. The block in ADR-147 and in
+the Admin panel is now safe to run any number of times.
+
+Three attempts at one small piece of setup — a missing policy, a missing DELETE policy, and a block that could
+not be re-run to fix either. Each failure was in the *instructions*, not the code, and each surfaced only when
+a human tried to follow them. **Setup SQL is a user interface, and it had never been used until today.**

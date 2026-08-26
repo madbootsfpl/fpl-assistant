@@ -56,17 +56,30 @@ create table if not exists public.user_prefs (
 );
 alter table public.user_prefs enable row level security;
 
--- the anon key ships to the browser, so scope every policy to this table only
+-- Postgres has no "create policy if not exists", so drop-then-create keeps the whole block re-runnable.
+-- The anon key ships to the browser, so every policy is scoped to this table alone.
+drop policy if exists "prefs read"   on public.user_prefs;
+drop policy if exists "prefs insert" on public.user_prefs;
+drop policy if exists "prefs update" on public.user_prefs;
+drop policy if exists "prefs delete" on public.user_prefs;
+
 create policy "prefs read"   on public.user_prefs for select to anon using (true);
 create policy "prefs insert" on public.user_prefs for insert to anon with check (true);
 create policy "prefs update" on public.user_prefs for update to anon using (true) with check (true);
 create policy "prefs delete" on public.user_prefs for delete to anon using (true);
 ```
 
-⚠️ **The `delete` policy was missing from the first version of this SQL and was added by ADR-148.** Without it
-`unsubscribe.remove_me` would have silently failed to delete a preference row — PostgREST answers
-`200 OK, zero rows` for an RLS-blocked delete — while telling the person their data was gone. If you already
-ran the earlier block, run just that one line.
+⚠️ **Two corrections to the first version of this SQL, both found by running it.**
+
+1. **The `delete` policy was missing** (added by ADR-148). Without it `unsubscribe.remove_me` would have
+   silently failed to delete a preference row — PostgREST answers `200 OK, zero rows` for an RLS-blocked
+   delete — while telling the person their data was gone.
+2. **The block was not re-runnable.** `create table if not exists` says "safe to run again"; the four
+   `create policy` lines that followed it were not, so re-running to pick up the fix failed with
+   `42710: policy "prefs read" already exists` and — because Postgres rolls the statement back — applied
+   *nothing*. **An idempotent first line in a block that is not idempotent is worse than neither**, since it
+   invites the re-run that then fails. Postgres has no `create policy if not exists`, so drop-then-create is
+   the idiom; the block above is now safe to run any number of times.
 
 `remember()` returns a **status string** the page ignores and **Admin ▸ 🔧 Are cross-device preferences
 storing?** prints — running the same function the page does, because a probe down a parallel path proves only
