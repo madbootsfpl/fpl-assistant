@@ -47,7 +47,8 @@ def test_the_roster_sorts_the_quiet_ones_into_view():
 def test_the_roster_never_needs_supabase_or_streamlit():
     """`key_for` is injected, so identity derivation stays in auth and this stays a pure function."""
     rows = roster.build(["only@x.ie"], {}, key_for=lambda e: "unused", now=NOW)
-    assert rows == [{"email": "only@x.ie", "last_active": None, "status": "never", "days": None}]
+    assert rows == [{"email": "only@x.ie", "last_active": None, "last_seen": None, "last_saved": None,
+                     "status": "never", "days": None}]
 
 
 def test_totals_count_every_state():
@@ -99,3 +100,99 @@ def test_no_events_is_green_and_empty_rather_than_an_error():
 
 def test_rows_without_timestamps_are_ignored():
     assert load_summary([{"session_id": "a"}, {"ts": "2026-08-24T18:00:00Z"}], NOW)["active_now"] == 0
+
+
+# ---- signing in is not the same as saving a squad (ADR-142) --------------------------
+
+def test_status_follows_the_SIGN_IN_not_the_squad_save():
+    """The reported bug. "Active" used to mean *saved a squad in the last 7 days* — which is not "used the
+    app", and read as if it were. Most people sign in and browse; they never press save. On the live beta that
+    reported **18 of 25 testers as ⚪ never** while at least two were using it daily.
+    """
+    rows = roster.build(["tony@x.ie"], {}, key_for=lambda e: "k",
+                        seen_by_email={"tony@x.ie": _ago(days=1)}, now=NOW)
+    assert rows[0]["status"] == "active", "signed in yesterday — active, with no squad ever saved"
+    assert rows[0]["last_saved"] is None
+
+
+def test_the_two_signals_are_kept_apart_rather_than_merged():
+    """"Last used" and "last saved" answer different questions — who is *visiting* versus who is actively
+    managing a team. Collapsing them is what caused the bug, so both stay on the row."""
+    rows = roster.build(["a@x.ie"], {"k": _ago(days=20)}, key_for=lambda e: "k",
+                        seen_by_email={"a@x.ie": _ago(days=2)}, now=NOW)
+    assert rows[0]["last_seen"] == _ago(days=2)
+    assert rows[0]["last_saved"] == _ago(days=20)
+    assert rows[0]["status"] == "active", "judged on the visit, not the stale save"
+
+
+def test_without_sign_in_data_it_degrades_to_the_old_behaviour():
+    """`last_seen` needs a column added by hand, so until that happens the map is empty. The panel must fall
+    back to what it did before — not report every tester as never-seen, which would be a worse lie than the
+    one being fixed."""
+    rows = roster.build(["a@x.ie"], {"k": _ago(days=1)}, key_for=lambda e: "k",
+                        seen_by_email={}, now=NOW)
+    assert rows[0]["status"] == "active" and rows[0]["last_saved"] == _ago(days=1)
+    assert rows[0]["last_seen"] is None
+
+
+def test_a_tester_who_only_ever_saved_still_counts():
+    """A save is evidence of a visit even when the sign-in stamp predates the column existing."""
+    rows = roster.build(["a@x.ie"], {"k": _ago(days=3)}, key_for=lambda e: "k",
+                        seen_by_email={"b@x.ie": _ago(days=1)}, now=NOW)
+    assert rows[0]["status"] == "active"
+
+
+# ---- the store side: best-effort, and silent when the column isn't there yet ----------
+
+def test_a_missing_last_seen_column_is_silent_not_an_error(monkeypatch):
+    """`last_seen` has to be added by hand, so until it exists every read and write 400s. A tester must never
+    see an error because an admin panel wants a nicer number — and the reader must return `{}` so the panel
+    can say "this isn't on yet" rather than reporting everyone as never-seen."""
+    import requests
+
+    from src.web_streamlit import user_store
+
+    def boom(*a, **kw):
+        raise requests.HTTPError("column beta_users.last_seen does not exist")
+
+    monkeypatch.setattr(user_store, "_endpoint", lambda: ("https://x/beta_users", "k"))
+    monkeypatch.setattr(requests, "get", boom)
+    monkeypatch.setattr(requests, "patch", boom)
+
+    assert user_store.last_seen_by_email(["a@x.ie"]) == {}
+    user_store.touch_last_seen("a@x.ie")            # must not raise
+
+
+def test_the_sign_in_stamp_patches_the_allow_list_row(monkeypatch):
+    """One write, on the tester's own allow-list row, keyed by their email — not a touch of the anonymous
+    event stream, which stays anonymous (ADR-100)."""
+    import requests
+
+    from src.web_streamlit import user_store
+
+    seen = {}
+
+    def fake_patch(url, params=None, json=None, headers=None, timeout=None):
+        seen.update(url=url, params=params, json=json)
+
+        class R:
+            pass
+        return R()
+
+    monkeypatch.setattr(user_store, "_endpoint", lambda: ("https://x/beta_users", "k"))
+    monkeypatch.setattr(requests, "patch", fake_patch)
+    user_store.touch_last_seen("Tony@X.ie ")
+
+    assert seen["params"] == {"email": "eq.tony@x.ie"}, "cleaned email, so it matches the stored row"
+    assert "last_seen" in seen["json"]
+
+
+def test_nothing_is_written_when_the_store_is_unconfigured(monkeypatch):
+    import requests
+
+    from src.web_streamlit import user_store
+
+    monkeypatch.setattr(user_store, "_endpoint", lambda: (None, None))
+    monkeypatch.setattr(requests, "patch", lambda *a, **kw: (_ for _ in ()).throw(AssertionError("must not call out")))
+    user_store.touch_last_seen("a@x.ie")
+    assert user_store.last_seen_by_email(["a@x.ie"]) == {}

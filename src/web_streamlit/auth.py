@@ -75,6 +75,10 @@ def gate() -> None:
     if user_store.is_registered(email):            # on the allow-list → admitted
         st.session_state[_OK] = True
         st.session_state[_EMAIL] = user_store.clean_email(email)
+        # ADR-142: stamp the sign-in. Once per session, here, because this is the one place we know someone
+        # has *arrived* — the Admin roster previously inferred activity from whether a squad had been saved,
+        # which most people never do, so daily users read as "never". Best-effort and silent.
+        user_store.touch_last_seen(email)
         from src.web_streamlit import squads
         squads.link_and_restore(user_key(email))   # US-362: link + restore the per-user squad (cross-device/reconnect)
         return

@@ -50,11 +50,23 @@ def days_since(last_active, now):
     return None if dt is None else max(0, (now - dt).days)
 
 
-def build(emails, updated_by_handle, key_for, now=None) -> list[dict]:
+def build(emails, updated_by_handle, key_for, now=None, seen_by_email=None) -> list[dict]:
     """The roster: one row per allow-listed email, most recently active first.
 
     `key_for` hashes an email to its account handle (`auth.user_key`) — passed in so this module never needs to
     know how identity is derived, and so the whole thing is testable without Supabase or Streamlit.
+
+    **Two different signals, and telling them apart is the point (ADR-142).**
+
+    * `seen_by_email` — when they last **signed in**. This is "used the app", and it is what status is judged
+      on whenever it is available.
+    * `updated_by_handle` — when they last **saved a squad**. Kept as its own column because it is genuinely
+      interesting (who is actively managing a team, not just visiting), but it is a terrible proxy for use:
+      most people browse and never press save. Judging activity on it reported 18 of 25 testers as "never"
+      while at least two were using the app daily.
+
+    With no sign-in data (the column not yet added), status falls back to the save time — the old behaviour,
+    so the panel degrades to what it did before rather than showing everyone as never-seen.
 
     Never-signed-in testers sort last: the list is for spotting who has gone quiet, and a column of blanks at
     the top would bury that.
@@ -62,9 +74,11 @@ def build(emails, updated_by_handle, key_for, now=None) -> list[dict]:
     now = now or datetime.now(timezone.utc)
     rows = []
     for email in emails or []:
-        last = (updated_by_handle or {}).get(key_for(email))
-        rows.append({"email": email, "last_active": last, "status": classify(last, now),
-                     "days": days_since(last, now)})
+        saved = (updated_by_handle or {}).get(key_for(email))
+        seen = (seen_by_email or {}).get(email)
+        basis = seen or saved
+        rows.append({"email": email, "last_active": basis, "last_seen": seen, "last_saved": saved,
+                     "status": classify(basis, now), "days": days_since(basis, now)})
     order = {"active": 0, "dormant": 1, "lapsed": 2, "never": 3}
     rows.sort(key=lambda r: (order[r["status"]], r["days"] if r["days"] is not None else 10**6, r["email"]))
     return rows

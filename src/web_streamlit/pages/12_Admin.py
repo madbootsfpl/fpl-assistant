@@ -85,23 +85,35 @@ _emails = user_store.all_emails()
 if not _emails:
     st.caption("No allow-list to read (store unconfigured, or `beta_users` is empty).")
 else:
+    # ADR-142 — TWO signals, kept apart. "Signed in" is *used the app*; "saved a squad" is a much rarer,
+    # much stronger act. The panel used to judge activity on the save alone, which reported 18 of 25 testers
+    # as ⚪ never while at least two were using it daily.
     _keys = {e: auth.user_key(e) for e in _emails}
-    _seen = cloud_store.updated_at_by_handle(_keys.values())
-    _rows = roster.build(_emails, _seen, key_for=_keys.get)
+    _saved = cloud_store.updated_at_by_handle(_keys.values())
+    _seen = user_store.last_seen_by_email(_emails)
+    _rows = roster.build(_emails, _saved, key_for=_keys.get, seen_by_email=_seen)
     _t = roster.totals(_rows)
     r1, r2, r3, r4 = st.columns(4)
     r1.metric("Registered", _t["registered"])
-    r2.metric("🟢 Active", _t["active"], help="Persisted a squad in the last 7 days.")
-    r3.metric("🟡 Dormant", _t["dormant"], help="Last seen 7–30 days ago.")
-    r4.metric("⚪ Never", _t["never"], help="On the allow-list but has never signed in and saved.")
+    r2.metric("🟢 Active", _t["active"], help="Signed in within the last 7 days.")
+    r3.metric("🟡 Dormant", _t["dormant"], help="Last signed in 7–30 days ago.")
+    r4.metric("⚪ Never", _t["never"], help="On the allow-list but has never signed in.")
     _badge = {"active": "🟢 active", "dormant": "🟡 dormant", "lapsed": "🔴 lapsed", "never": "⚪ never"}
     st.dataframe([{"Tester": r["email"], "Status": _badge[r["status"]],
-                   "Last active": r["last_active"][:10] if r["last_active"] else "—",
+                   "Last used": r["last_seen"][:10] if r["last_seen"] else "—",
+                   "Last saved a squad": r["last_saved"][:10] if r["last_saved"] else "—",
                    "Days ago": r["days"] if r["days"] is not None else "—"} for r in _rows],
                  hide_index=True, use_container_width=True)
-    st.caption("⚠️ This sees **signed-in + squad-persisted** activity only — a tester who browses signed-out "
-               "won't appear. Read it beside the anonymous totals above: named engaged users next to overall "
-               "usage. Owner-only; the analytics themselves stay anonymous (ADR-100).")
+    if not _seen:
+        # Say it plainly rather than showing a column of dashes and letting it read as "nobody has been here".
+        st.warning("**Sign-in times aren't being recorded yet**, so status below falls back to *when a squad "
+                   "was last saved* — which most testers never do, and is why this panel under-reported "
+                   "activity. Add the column once and it starts working:  "
+                   "`alter table beta_users add column if not exists last_seen timestamptz;`")
+    st.caption("**Last used** = signed in. **Last saved a squad** = pressed save, which is rarer and a "
+               "stronger signal — someone actively managing a team rather than visiting. A tester browsing "
+               "**signed-out** appears in neither. Read it beside the anonymous totals above; those stay "
+               "anonymous and are never joined to this (ADR-100).")
 
 left, right = st.columns(2)
 with left:

@@ -8,6 +8,7 @@ failures raise so the gate can surface the real cause via `cloud_store.store_err
 """
 
 import re
+from datetime import datetime, timezone
 
 import requests
 
@@ -129,3 +130,52 @@ def register(email: str, cap: int) -> str:
 
     with_retry(_post, retries=1)
     return "in"
+
+
+# --- last seen (ADR-142) --------------------------------------------------------------
+# The Admin roster used to call a tester "active" when their **squad row** had been saved recently — which is
+# not "used the app", and read as if it were. Most people sign in and browse; they never press save. So 18 of
+# 25 testers showed ⚪ never while at least two were using it daily.
+#
+# This stamps a real sign-in time on the owner's own allow-list row. It is **not** a de-anonymisation of the
+# ADR-100 event stream: that stays anonymous and untouched. This is the allow-list, which already holds the
+# email, learning when that person last arrived.
+#
+# Both functions are best-effort and silent, and that matters more than usual here: the `last_seen` column has
+# to be added by hand (see the ADR), so until it exists every call 400s. A tester must never see an error
+# because an admin panel wants a nicer number.
+
+def touch_last_seen(email: str) -> None:
+    """Stamp `beta_users.last_seen = now` for this email. Silent on any failure, including a missing column.
+
+    Called once per session at admit, not per page view — a page-view stamp would be a write on every
+    navigation for no extra signal, since the roster only asks *which day* someone was last here.
+    """
+    url, key = _endpoint()
+    e = clean_email(email or "")
+    if not (url and key and e):
+        return
+    try:
+        requests.patch(url, params={"email": f"eq.{e}"},
+                       json={"last_seen": datetime.now(timezone.utc).isoformat()},
+                       headers=_headers(key), timeout=_TIMEOUT)
+    except Exception:                                    # noqa: BLE001 — best-effort, like everything here
+        pass
+
+
+def last_seen_by_email(emails=None) -> dict:
+    """`{email: last_seen}` for allow-listed testers — one batched read, `{}` if unavailable.
+
+    An empty dict is also what you get before the column exists, which is exactly what the Admin page needs to
+    say "this signal isn't on yet" rather than quietly showing everyone as never-seen.
+    """
+    url, key = _endpoint()
+    if not (url and key):
+        return {}
+    try:
+        r = requests.get(url, params={"select": "email,last_seen"}, headers=_headers(key), timeout=_TIMEOUT)
+        r.raise_for_status()
+        return {clean_email(row["email"]): row.get("last_seen")
+                for row in r.json() if row.get("email") and row.get("last_seen")}
+    except Exception:                                    # noqa: BLE001 — including "column does not exist"
+        return {}
