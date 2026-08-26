@@ -139,6 +139,33 @@ else:
                "**signed-out** appears in neither. Read it beside the anonymous totals above; those stay "
                "anonymous and are never joined to this (ADR-100).")
 
+# ADR-147 — the same one-click diagnostic ADR-142 needed, added *before* it is needed rather than after a day
+# of NULLs. `user_prefs` is a new table; until it exists (or if its policies are wrong) preferences silently
+# stay session-only, which looks exactly like the feature not working.
+with st.expander("🔧 Are cross-device preferences storing?"):
+    st.caption("Writes a harmless value to `user_prefs` as you, and reports what the store said. **200 OK with "
+               "zero rows** means row-level security with no INSERT/UPDATE policy — Postgres does not raise "
+               "for that, it narrows the write to nothing (the failure that cost a day in ADR-142).")
+    if st.button("Test the preference store", key="admin_prefs_go"):
+        from src.web_streamlit import prefs as _prefs
+        _r = _prefs.remember(manager_id=str(st.session_state.get("manager_id") or "1"))
+        (st.success if _r in ("ok", "unchanged") else st.error)(f"`prefs.remember(…)` → **{_r}**")
+        if _r not in ("ok", "unchanged", "session only (not signed in)"):
+            st.code("create table if not exists public.user_prefs (\n"
+                    "  user_key   text primary key,\n"
+                    "  manager_id text,\n"
+                    "  league_id  bigint,\n"
+                    "  updated_at timestamptz default now()\n"
+                    ");\n"
+                    "alter table public.user_prefs enable row level security;\n\n"
+                    "-- the anon key ships to the browser, so scope every policy to this table only\n"
+                    'create policy "prefs read"   on public.user_prefs for select to anon using (true);\n'
+                    'create policy "prefs insert" on public.user_prefs for insert to anon with check (true);\n'
+                    'create policy "prefs update" on public.user_prefs for update to anon '
+                    "using (true) with check (true);", language="sql")
+            st.caption("Rows are keyed by a **hash** of the email (`auth.user_key`), never the address itself "
+                       "— the same handle the squads table uses (ADR-106).")
+
 left, right = st.columns(2)
 with left:
     st.subheader("Most-viewed pages")

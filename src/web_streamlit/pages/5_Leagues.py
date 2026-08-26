@@ -32,7 +32,7 @@ from src.analytics.league import (
 )
 from src.api.client import FplApiError, FplClient
 from src.storage import Storage
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, prefs
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import photo_url_by_id
 from src.web_streamlit.status import render_data_status
@@ -106,16 +106,18 @@ elif scope == "By league id":
         st.stop()
     league_id = int(raw.strip())
 else:
-    # Prefilled from the Manager-ID import on My Squad (ADR-113) when it has been used this session — the id
-    # is already in `session_state` under that widget's key, and asking twice for a number you have just
-    # typed is the kind of small friction that stops people using a page at all.
-    prefill = str(st.session_state.get("manager_id") or "").strip()
+    # ADR-147 — remembered across sessions **and devices**, because a manager id you have to re-type every
+    # visit undercuts the feature it belongs to. Three sources, best first: what you stored (per-user, follows
+    # you anywhere), then the Manager-ID import on My Squad (ADR-113) if it was used this session, then empty.
+    _remembered = prefs.recall()
+    prefill = str(_remembered.get("manager_id") or st.session_state.get("manager_id") or "").strip()
     raw = st.text_input("Your FPL manager id", value=prefill, key="lg_manager", placeholder="e.g. 1234567",
                         help="The number in your FPL team URL. The same id the My Squad import uses.")
     if not raw.strip().isdigit():
         st.info("Enter your **manager id** and every league you're in appears below — no league ids needed. "
                 "It's the number in your FPL team URL, the same one the My Squad import takes.")
         st.stop()
+    prefs.remember(manager_id=raw.strip())      # only writes when it actually changed
     try:
         entry = _entry(int(raw.strip()))
     except FplApiError:
@@ -130,7 +132,12 @@ else:
               for lg in leagues}
     st.caption(f"**{manager_name(entry)}** — 👥 your own leagues first, then 🌍 the ones FPL puts everyone in "
                "(your club, region, Overall).")
-    league_id = labels[st.selectbox("Your leagues", list(labels), key="lg_pick")]
+    # Open on the league you looked at last, if it is still one of yours.
+    _last = _remembered.get("league_id")
+    _names = list(labels)
+    _index = next((i for i, lbl in enumerate(_names) if str(labels[lbl]) == str(_last)), 0)
+    league_id = labels[st.selectbox("Your leagues", _names, index=_index, key="lg_pick")]
+    prefs.remember(league_id=league_id)
 
 try:
     payload = _standings(league_id)

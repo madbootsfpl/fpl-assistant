@@ -316,13 +316,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   bench)** and **Strong XI (cheap bench)**, with Bench Boost answered as a caption where the question is
   asked. Default unchanged, deliberately: the XI-first build is +7.2 XI xP but buys a bench with a 4.9-xP
   near-dead slot — a real trade, now honestly labelled. No optimiser change.
-- ⭐ ⬜ **A loaded league must persist between sessions and across devices** *(owner, 2026-08-26)* — re-typing
-  a manager id every visit defeats the point of importing one. The pattern is proven twice already: squads
-  (ADR-106) and the ⭐ watchlist (ADR-117) persist per-user keyed by `auth.user_key(email)` in the same
-  Supabase project — no new secret, no new table shape. ⚠️ Its ADR must settle what happens **signed-out**
-  (the page works without an account today; a session-only fallback keeps that true) and whether it remembers
-  the **manager id**, the **league**, or both — remembering the manager id is the bigger win, since it
-  re-populates every league at once.
+- ✅ **A loaded league persists between sessions and across devices** (ADR-147, Sprint 202, 2026-08-26) —
+  *owner, 2026-08-26.* New `prefs.py` on the proven per-user pattern (ADR-106/117): keyed by
+  `auth.user_key(email)`, **no new secret**, restored once per session, written only when a value changed.
+  **Remembers the manager id, not just the league** — a stored league restores one league, a stored manager id
+  restores the *list*. Signed out → session-only, i.e. today's behaviour. ⏳ Owner: create `user_prefs` (SQL
+  in the ADR, with all three RLS policies) — until then it degrades silently and **Admin ▸ 🔧 says so**, the
+  diagnostic shipping *with* the feature rather than after a day of NULLs (the ADR-142 lesson).
+  ⬜ Follow-up: `unsubscribe.remove_me` should delete `user_prefs` too — ADR-122 promises "we delete your
+  rows" and this adds one that promise doesn't yet cover.
 - ⭐ ⬜ **"My squad only" on the Trending boards** *(owner, 2026-08-26)* — wiring, not new logic: the shared
   filter already carries a `my_squad` dimension that `filters.apply` honours and Players/Radar both use;
   Trending just doesn't pass through it. Worth more than its size — the boards answer *"what is the crowd
