@@ -190,6 +190,16 @@ def fit_flag(player) -> str:
 # p10 −7,996 · median −969 · p90 +11,104. This is p10 — the worst tenth.
 EXODUS_PRESSURE = -8_000
 
+# …and only for players enough people own to have an opinion about (ADR-150). `EXODUS_PRESSURE` is net
+# transfers **per 1% owned**, which is the right scale for comparing a template player with a niche one — but
+# it divides by a small number for a 0.1%-owned player, so a few thousand sales read as a stampede. On a
+# per-squad warning that never mattered: you only ever see your own players, and you own them. On a *browse*
+# list it does, and it filled the page with names nobody holds.
+#
+# 1% is not a taste: it is the population the p10 threshold was measured on. Applying a threshold to a
+# different distribution than the one it was calibrated against is how a good number turns into noise.
+EXODUS_OWNERSHIP_FLOOR = 1.0
+
 
 def crowd_exodus(player) -> dict | None:
     """The crowd is dumping this player **and our own data cannot say why** — or `None` (ADR-146).

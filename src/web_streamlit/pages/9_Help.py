@@ -97,7 +97,7 @@ with st.expander("🗓️ 4 · Plan your week & improve it  →  **My Squad → 
         "position sharpen it in-season."
     )
 
-with st.expander("🔎 5 · Do your research  →  **👟 Players · 🧬 Team DNA & FDR · 📈 Trending · 📰 News**"):
+with st.expander("🔎 5 · Do your research  →  **👟 Players · 🧬 Team DNA & FDR · 📈 Trending · 📡 Signals**"):
     st.markdown(
         "- **👟 Players** — explore the full pool: **🔎 filter** by team / position / player, sort, browse; a "
         "**table + top-15 chart**; a **🪪 Player Card** (photo · fixtures · Projected xP · position-adaptive stats) "
@@ -109,9 +109,10 @@ with st.expander("🔎 5 · Do your research  →  **👟 Players · 🧬 Team D
         "the **🎯 Radar** (now a **Players** view) finds players from the easiest-run teams "
         "(filter by position, cap the price, sort by "
         "xP or Val/£m).\n"
-        "- **📈 Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community "
-        "Signals** (what r/FantasyPL is talking about — a lens, not truth).\n"
-        "- **📰 News** — official FPL injuries, doubts and returns, most serious first."
+        "- **📈 Trending** — what the crowd is **doing**, in numbers: most-owned · transferred in/out · "
+        "in-form.\n"
+        "- **📡 Signals** — what is being **said**, most reliable first: official FPL injuries and returns · "
+        "a sell-off we can't explain · media headlines · r/FantasyPL chatter (a mention count, not truth)."
     )
 
 with st.expander("💬 6 · Ask the assistant  →  the **Ask** tab"):

@@ -334,13 +334,16 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   count stays visible (*"6 of 47 players mentioned match your filter"* — six alone says nothing), with an
   empty result telling you how to get back out. *Lesson recorded: a triage note written from memory is a guess
   wearing the clothes of a decision.*
-- ⬜ **Consolidate the "signals" surfaces?** *(owner question, 2026-08-26)* — *Talked about* (Reddit mention
-  counts, a Trending tab) and *News* (FPL's **official** `news` — injuries, doubts, return dates) are
-  different in kind, and merging them naively risks showing a rumour beside an official flag with equal
-  weight. **But ADR-146 strengthened the case**: the app now has *three* answers to *"what should I know that
-  the table doesn't say?"* — official news, community chatter, and an **unexplained transfer exodus**. Those
-  belong together far more than chatter belongs beside ownership leaderboards. Likely shape: one **Signals**
-  page, leaving Trending as pure leaderboards. Needs an ADR — it is a page merge.
+- ✅ **One 📡 Signals page** (ADR-150, Sprint 205, 2026-08-26) — *owner question, 2026-08-26.* Counting them
+  properly changed the answer: there were **four** lenses across two pages, not two — News already held
+  official news *and* media headlines, while Reddit's discussions and mention counts sat on Trending beside
+  ownership percentages. ADR-146's exodus was a fifth with **no browse surface at all**. The axis was never
+  *official vs unofficial* but **doing vs saying**: Trending = what the crowd is doing, in numbers; Signals =
+  what is being said, in words. Signals descends by **evidentiary strength** (official fact → our exodus
+  inference → named outlets → a mention count), each labelled — *a merged page must label its sources or the
+  merge becomes the misinformation*. 🐛 Gave the exodus a browse list and found ADR-146's threshold needed an
+  **ownership floor**: per-1%-owned divides by a small number, so 0.1%-owned players read as stampedes (17
+  players → 8). The floor is the population the p10 was measured on. ⚠️ `/News` → `/Signals` breaks bookmarks.
 - ⬜ **Ceiling / "differential" captaincy** — `captain` ranks by *mean* xP; add a variance/ceiling lens for when
   you need a differential rather than the safe pick.
 - ◑ **The competitive layer** *(fplapex)* — **partly shipped.** ✅ *Differentials vs your rivals* is live as

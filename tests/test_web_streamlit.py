@@ -65,7 +65,7 @@ def test_players_price_filter_includes_the_priciest_player():
 
 def test_trending_top_discussions_before_community_signals():
     # US-345: surface 🔥 Top discussions first; the long Community Signals list sits below
-    at = _run(_PAGES / "8_Trending.py")
+    at = _run(_PAGES / "7_Signals.py")
     caps = [c.value for c in at.caption]
     top = next((i for i, c in enumerate(caps) if "Top discussions this week" in c), None)
     comm = next((i for i, c in enumerate(caps) if "Community Signals" in c), None)
@@ -687,7 +687,7 @@ def test_sidebar_pages():
     # filename *without* its numeric prefix, so renumbering moves nav order without breaking any link.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["1_Squad_Lab.py", "2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
-                              "5_Leagues.py", "6_Ask.py", "7_News.py", "8_Trending.py", "9_Help.py",
+                              "5_Leagues.py", "6_Ask.py", "7_Signals.py", "8_Trending.py", "9_Help.py",
                               "10_Maddie_Explains.py", "11_Feedback.py", "12_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
@@ -940,7 +940,7 @@ def test_xg_board_rates_only_meaningful_players():
 
 
 _TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩", "1_Squad_Lab.py": "🧪",
-              "6_Ask.py": "💬", "7_News.py": "📰", "8_Trending.py": "📈", "9_Help.py": "🧭",
+              "6_Ask.py": "💬", "7_Signals.py": "📡", "8_Trending.py": "📈", "9_Help.py": "🧭",
               "10_Maddie_Explains.py": "🎥", "11_Feedback.py": "📣", "12_Admin.py": "📊"}
 
 
@@ -2363,14 +2363,19 @@ def test_trending_page_shows_a_leaderboard():
         cols = list(at.dataframe[0].value.columns)
         assert "Player" in cols and "Trends" in cols        # a crowd leaderboard with flags
     # Community Signals (ADR-059): a button-gated "Talked about" board — present, no fetch on load
-    assert any(b.label.startswith("Show what") for b in at.button)
+    # ADR-150: the Reddit buzz moved to 📡 Signals — Trending is now leaderboards only, so no fetch button.
+    assert not any(b.label.startswith("Show what") for b in at.button), \
+        "chatter belongs on Signals; Trending answers what the crowd is *doing*, in numbers"
     # US-292: the week's top-discussions list — also button-gated (no fetch on load, no live network)
-    assert any(b.label == "Show this week's top discussions" for b in at.button)
-    assert any("Top discussions this week" in c.value for c in at.caption)
+    # ADR-150: this button moved to 📡 Signals along with the rest of the chatter.
+    assert not any(b.label == "Show this week's top discussions" for b in at.button)
+    assert not any("Top discussions this week" in c.value for c in at.caption), \
+        "Trending is leaderboards only — the discussion lens is on Signals"
 
 
 def test_talked_about_board_shows_all_mentions(monkeypatch):
     # US-233 + ADR-116: a big buzz list (a 100-post sample mentions many players) is shown in full (no paging).
+    # ADR-150: it lives on 📡 Signals now — Trending is leaderboards only.
     import streamlit as st
 
     from src.api import reddit
@@ -2388,7 +2393,7 @@ def test_talked_about_board_shows_all_mentions(monkeypatch):
     st.cache_data.clear()                                     # don't inherit another test's cached fetch
     monkeypatch.setattr(reddit.RedditRssClient, "get_subreddit_rss", lambda self, *a, **k: rss)
 
-    at = _run(_PAGES / "8_Trending.py")
+    at = _run(_PAGES / "7_Signals.py")          # ADR-150: chatter lives on Signals now
     btn = [b for b in at.button if b.label.startswith("Show what")]
     assert btn, "the Talked about button should exist"
     btn[0].click().run()
@@ -2417,7 +2422,7 @@ def test_trending_owned_board_shows_the_full_list():
 
 def test_news_page_lists_flagged_players_or_all_clear():
     # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
-    at = _run(_PAGES / "7_News.py")
+    at = _run(_PAGES / "7_Signals.py")
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
         assert "News" in cols and "Source" in cols
@@ -2427,7 +2432,7 @@ def test_news_page_lists_flagged_players_or_all_clear():
 
 def test_news_page_has_the_headlines_lens_gated_no_network():
     # US-291 (ADR-093): a Headlines section + a button, rendered WITHOUT fetching (no click → no live network).
-    at = _run(_PAGES / "7_News.py")
+    at = _run(_PAGES / "7_Signals.py")
     assert not at.exception
     assert any("Headlines" in s.value for s in at.subheader)
     assert any(b.label == "Load headlines" for b in at.button)   # opt-in — the feeds fetch only on click
@@ -2709,7 +2714,7 @@ def test_my_squad_banner_renders_the_styled_card():
 
 def test_data_pages_carry_the_brand_mark():
     # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
-    for page in ("2_Players.py", "3_Team_DNA_and_FDR.py", "7_News.py", "8_Trending.py"):
+    for page in ("2_Players.py", "3_Team_DNA_and_FDR.py", "7_Signals.py", "8_Trending.py"):
         at = _run(_PAGES / page)
         blob = " ".join(m.value for m in at.markdown)
         assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
@@ -2728,7 +2733,7 @@ def test_home_hero_box_consolidates_cta_and_nudges():
 
 def test_news_shows_the_shared_fit_flag():
     # US-400: News uses the same availability emoji (the Fit column) as every other surface.
-    at = _run(_PAGES / "7_News.py")
+    at = _run(_PAGES / "7_Signals.py")
     dfs = at.get("dataframe")
     assert not dfs or "Fit" in list(dfs[0].value.columns)   # when there's news, the Fit column is present
 
@@ -3032,7 +3037,73 @@ def test_the_buzz_tab_states_the_full_count_beside_the_filtered_one():
     number mean anything ("6 of 47" says the crowd is busy and mostly not about you; "6" alone says nothing).
     The scan is cached for 30 minutes, so keeping it costs nothing.
     """
-    source = (_PAGES / "8_Trending.py").read_text()
+    source = (_PAGES / "7_Signals.py").read_text()
     assert "apply_filter(buzz, sel)" in source, "filtered after the scan, not before"
     assert "of {len(buzz)} players mentioned match your filter" in source
     assert "untick **My squad only**" in source, "an empty result must say how to get back out of it"
+
+
+def test_signals_orders_its_sources_by_how_much_they_actually_know():
+    """ADR-150's central decision, pinned as an order rather than a vibe.
+
+    Four lenses used to be split across two pages with no relationship to each other. Merging them raises one
+    real risk — presenting a Reddit rumour beside an injury FPL has confirmed, as though they were comparable.
+    The answer is that the page **descends by evidentiary strength**, and each section says what it is:
+
+    1. official FPL news — a fact, and the only source here that moves xP
+    2. an unexplained exodus — our inference about *other managers*, not about the player
+    3. media headlines — reported by named outlets
+    4. community chatter — a mention count, never sentiment
+    """
+    at = _run(_PAGES / "7_Signals.py")
+    if at.exception:
+        raise AssertionError(at.exception)
+    heads = [h.value for h in at.subheader]
+    assert heads == ["1 · Official FPL news", "2 · An exodus we can't explain",
+                     "3 · Headlines — FPL analysis & football news", "4 · Community chatter"]
+
+
+def test_signals_says_what_each_source_is_worth():
+    """A merged page has to label its sources or the merge itself is the misinformation."""
+    at = _run(_PAGES / "7_Signals.py")
+    if at.exception:
+        raise AssertionError(at.exception)
+    caps = " ".join(c.value for c in at.caption)
+    assert "only source here that is a **fact**" in caps          # official news
+    assert "Not a fact about the player" in caps                  # the exodus, carefully worded
+    assert "mention count, not sentiment" in caps                 # chatter, least reliable, last
+
+
+def test_trending_is_leaderboards_only_now():
+    """The other half of the split: Trending answers *what the crowd is doing*, in numbers. Mixing chatter in
+    put a mention count beside an ownership percentage as though they were the same kind of thing."""
+    at = _run(_PAGES / "8_Trending.py")
+    if at.exception:
+        raise AssertionError(at.exception)
+    labels = [b.label for b in at.button]
+    assert not any("talked about" in lab.lower() or "discussions" in lab.lower() for lab in labels)
+    assert any("Signals" in c.value for c in at.caption), "and it should point at where the chatter went"
+
+
+def test_the_exodus_list_is_scoped_to_players_people_actually_own():
+    """ADR-150 found a real flaw in reusing ADR-146's threshold on a *browse* list.
+
+    `EXODUS_PRESSURE` is net transfers **per 1% owned** — the right scale for comparing a template player with
+    a niche one, but it divides by a small number, so a 0.1%-owned player shedding a few thousand reads as a
+    stampede. On a per-squad warning that never mattered (you only see players you own). On a browse list it
+    filled the page with names nobody holds: 17 players, of which 9 were under 1% owned.
+
+    The floor is not a taste — it is the population the p10 threshold was measured on.
+    """
+    from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, crowd_exodus
+    from src.storage import Storage
+
+    assert EXODUS_OWNERSHIP_FLOOR == 1.0
+    store = Storage()
+    players = store.get_players()
+    store.close()
+    listed = [p for p in players
+              if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and crowd_exodus(p)]
+    assert all((p["selected_by"] or 0) >= 1.0 for p in listed)
+    unfiltered = [p for p in players if crowd_exodus(p)]
+    assert len(listed) <= len(unfiltered), "the floor may only ever narrow the list"

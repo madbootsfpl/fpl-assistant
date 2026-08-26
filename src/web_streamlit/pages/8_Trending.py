@@ -8,9 +8,6 @@ A display lens, never xP. Ownership works now; the momentum/form boards light up
 import streamlit as st
 
 from src.analytics import CROWD_LEGEND, crowd_flags, trending
-from src.api.feeds import parse_feed
-from src.api.reddit import RedditError, RedditRssClient
-from src.community import community_buzz
 from src.storage import Storage
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
@@ -20,24 +17,6 @@ from src.web_streamlit.filters import filter_controls
 from src.web_streamlit.paginate import show_count
 from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
-
-
-@st.cache_data(ttl=1800, show_spinner=False)      # cache the RSS ~30 min — respect Reddit's rate limits
-def _cached_reddit_rss():
-    """The r/FantasyPL RSS text, or None on any failure (ADR-059 — best-effort, degrade gracefully)."""
-    try:
-        return RedditRssClient().get_subreddit_rss()
-    except RedditError:
-        return None
-
-
-@st.cache_data(ttl=1800, show_spinner=False)      # the week's top posts (US-292), cached like the buzz feed
-def _cached_reddit_top():
-    """The week's top r/FantasyPL posts as RSS text, or None on any failure (best-effort, degrade)."""
-    try:
-        return RedditRssClient().get_top_weekly()
-    except RedditError:
-        return None
 
 # (by, tab label, value-column header)
 _BOARDS = [
@@ -53,7 +32,8 @@ analytics.boot("Trending")
 render_data_status()
 st.title("📈 Trending")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
-st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction.")
+st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction. "
+           "For what people are *saying* — official news, headlines and Reddit chatter — see 📡 **Signals**.")
 
 store = Storage()
 try:
@@ -86,7 +66,10 @@ else:
     sel = filter_controls(players, key="trending",
                           my_squad_ids=set(_sq["player_ids"]) if _sq else None)
     st.caption(CROWD_LEGEND)                           # explain the Trends flags (e.g. what "template" means)
-    tabs = st.tabs([b[1] for b in _BOARDS] + ["💬 Talked about"])
+    # ADR-150 — the Reddit tabs moved to 📡 **Signals**. Trending is now *only* leaderboards: what the crowd
+    # is **doing**, in numbers. What is being **said** is a different question with different reliability, and
+    # mixing the two put a mention count beside an ownership percentage as though they were comparable.
+    tabs = st.tabs([b[1] for b in _BOARDS])
     for tab, (by, label, header) in zip(tabs, _BOARDS):
         with tab:
             rows = apply_filter(trending(players, by=by, limit=len(players)), sel)   # all, filtered, paged
@@ -95,63 +78,3 @@ else:
             else:
                 page = show_count(rows)
                 _board(page, header, lambda r, by=by: _value(by, r["trend"]))
-
-    # Community Signals (ADR-059) — Reddit RSS buzz. Button-gated (no fetch on load) + cached; degrades.
-    with tabs[-1]:
-        # The week's top discussions first (US-292 / US-345) — the sharper lens; the long mention board sits below.
-        st.caption("**🔥 Top discussions this week** — the highest-voted r/FantasyPL posts (a buzz lens, not a "
-                   "prediction; best-effort, cached ~30 min).")
-        if st.button("Show this week's top discussions",
-                     help="Fetch r/FantasyPL's top posts this week (best-effort; cached ~30 min)."):
-            top_rss = _cached_reddit_top()
-            if top_rss is None:
-                st.info("Top discussions are unavailable right now (Reddit didn't respond).")
-            else:
-                posts = parse_feed(top_rss, limit=10)
-                if not posts:
-                    st.info("No top posts found this week.")
-                else:
-                    for post in posts:
-                        st.markdown(f"- [{post['title']}]({post['link']})")
-
-        st.divider()
-        st.caption("**Community Signals** — who r/FantasyPL is talking about across the latest **~100 posts** "
-                   "(post mentions, a buzz lens — not sentiment or a prediction). Best-effort: cached, may "
-                   "be unavailable on the live app.")
-        if st.button("Show what's being talked about",
-                     help="Fetch r/FantasyPL (the latest ~100 posts) and count player mentions "
-                          "(best-effort; cached ~30 min)."):
-            rss = _cached_reddit_rss()
-            if rss is None:
-                st.info("Community buzz is unavailable right now (Reddit didn't respond).")
-            else:
-                buzz = community_buzz(rss, players, limit=len(players))   # all mentioned, ranked
-                # US-4xx / ADR-149 — the shared filter reaches this tab too, **"My squad only" included**.
-                # The four boards above have honoured it since US-407b; this one never did, so the one
-                # question a manager actually has here — *"is the crowd talking about MY players?"* — was the
-                # one it could not answer. Filtered **after** the scan, not before: the full count is what
-                # makes the filtered count mean something ("6 of 47"), and the scan is cached for 30 minutes
-                # anyway, so it costs nothing to keep.
-                shown = apply_filter(buzz, sel)
-                if not buzz:
-                    st.info("No current-player mentions in the latest r/FantasyPL posts.")
-                elif not shown:
-                    st.info(f"None of the **{len(buzz)}** players mentioned match your filter — "
-                            "clear it, or untick **My squad only**, to see the rest.")
-                else:
-                    scope = (f"**{len(shown)}** of {len(buzz)} players mentioned match your filter"
-                             if len(shown) != len(buzz) else f"{len(buzz)} players mentioned")
-                    st.caption(f"{scope} across the latest ~100 posts — expand a name to read them. "
-                               "(Surnames can collide — the photo/badge shows who matched.)")
-                    # A 100-post sample mentions many players → page like the other Trending boards (ADR-076).
-                    for r in show_count(shown):
-                        c_photo, c_badge, c_body = st.columns([1, 1, 12], vertical_alignment="center")
-                        if photos.get(r["id"]):
-                            c_photo.image(photos[r["id"]], width=44)
-                        if badges.get(r["team"]):
-                            c_badge.image(badges[r["team"]], width=28)
-                        with c_body.expander(f"{r['web_name']} — {r['team']} · {r['mentions']} mentions"):
-                            for post in r["posts"]:
-                                title = post["title"] or "(untitled post)"
-                                st.markdown(f"- [{title}]({post['link']})" if post["link"]
-                                            else f"- {title}")
