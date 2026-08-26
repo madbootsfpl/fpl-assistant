@@ -30,6 +30,20 @@ def _wc_line(wc) -> str:
     return f"{span} — your weakest stretch (avg XI {wc['avg_xi']} xP); reset before it"
 
 
+def _moved(chip) -> str:
+    """' (moved off GW3 — one chip per gameweek; costs 0.2 xP)' when this chip was relocated (ADR-143).
+
+    Shown rather than silently corrected, for two reasons. A manager who reasoned their way to GW3 deserves to
+    know the app agreed and then had to move it. And the **cost is the honest part**: on live data it is 0.0
+    xP at the median, so this is the app declining to advise something illegal, not the app finding points.
+    """
+    if "moved_from" not in chip:
+        return ""
+    cost = chip.get("cost", 0.0)
+    price = "no projected cost" if cost <= 0.05 else f"costs {cost} xP"
+    return f"  ↪ moved off GW{chip['moved_from']} — one chip per gameweek ({price})"
+
+
 def _conf(confidences, chip) -> str:
     """' · Confidence 43/100 · Low' from an `explain_chips` dict, or '' when none given (US-272)."""
     c = (confidences or {}).get(chip)
@@ -48,8 +62,11 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
         f"Chip strategy — squad '{squad_name}' ({window})",
         "",
         f"  Triple Captain: {_tc_line(advice['triple_captain'])}{_conf(confidences, 'triple_captain')}",
+        *([f"                  {_moved(advice['triple_captain'])}"] if _moved(advice["triple_captain"]) else []),
         f"  Bench Boost:    {_bb_line(advice['bench_boost'])}{_conf(confidences, 'bench_boost')}",
+        *([f"                  {_moved(advice['bench_boost'])}"] if _moved(advice["bench_boost"]) else []),
         f"  Free Hit:       {_fh_line(advice['free_hit'])}{_conf(confidences, 'free_hit')}",
+        *([f"                  {_moved(advice['free_hit'])}"] if _moved(advice["free_hit"]) else []),
         f"  Wildcard:       {_wc_line(advice['wildcard'])}{_conf(confidences, 'wildcard')}",
         "",
         "  Confidence = how clearly that gameweek beats the alternatives (a heuristic; low when the weeks are",

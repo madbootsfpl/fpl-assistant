@@ -30,6 +30,63 @@ def _gap(values, *, largest) -> float:
     return round(abs(ordered[0] - ordered[1]), 1)
 
 
+def _rank(gameweeks, values, *, largest):
+    """Gameweeks ordered best-first for one chip, as `[(gameweek, value)]` — the fallbacks if its first
+    choice is taken by another chip."""
+    return sorted(zip(gameweeks, values), key=lambda t: t[1], reverse=largest)
+
+
+def _relative_gap(options) -> float:
+    """How much a chip loses by dropping to its second choice, **as a share of its own best value**.
+
+    Dimensionless on purpose. The absolute margins are not comparable between chips: Triple Captain's is a
+    single player's ceiling, Bench Boost's is a whole-squad total, Free Hit's is a bad week's XI. Comparing
+    those raw picks the chip with the biggest *numbers*, not the chip with the most at stake — and Bench Boost
+    always has the biggest numbers, because its total includes the very spike that made Triple Captain want
+    that week in the first place. (Measured: a squad where TC's margin read 24.1 and BB's 29.4 off the *same*
+    player, so the raw comparison moved the wrong chip.)
+
+    A share of its own scale is comparable: *"this chip gives up 80% of what it came for"* means the same
+    thing for all three.
+    """
+    if len(options) < 2:
+        return 0.0
+    best, second = options[0][1], options[1][1]
+    return abs(best - second) / max(abs(best), 1e-9)
+
+
+def _one_per_gameweek(*chips, ranks) -> None:
+    """Force the chips onto **distinct** gameweeks, in place. FPL allows one chip per gameweek.
+
+    **Which chip moves: the one with the least at stake**, measured by `_relative_gap` — the share of its own
+    value it gives up by dropping to its next choice. Deliberately *not* "maximise total xP across the chips":
+    Triple Captain's value is extra captain points, Bench Boost's is bench points and Free Hit's is a bad week
+    avoided. Those are three different currencies, and adding them would look rigorous while meaning nothing.
+
+    Each moved chip records `moved_from` and `cost` — what the move actually gives up, in that chip's own
+    units. On live data that cost is **0.0 xP at the median and 0.6 at the worst** over eight gameweeks, which
+    is why the surfaces state it: the point is that the app stops advising something illegal, not that it
+    found you points.
+    """
+    keys = {id(c): k for k, c in zip(("triple_captain", "bench_boost", "free_hit"), chips)}
+    taken = set()
+    # Most at stake first — that chip keeps the week it wants, and the others work around it.
+    for chip in sorted(chips, key=lambda c: -_relative_gap(ranks[keys[id(c)]])):
+        options = ranks[keys[id(chip)]]
+        first = chip["gameweek"]
+        if first not in taken:
+            taken.add(first)
+            continue
+        alternative = next(((gw, val) for gw, val in options if gw not in taken), None)
+        if alternative is None:                          # fewer gameweeks than chips — leave it where it is
+            continue
+        original = next((val for gw, val in options if gw == first), None)
+        chip["moved_from"] = first
+        chip["gameweek"] = alternative[0]
+        chip["cost"] = abs(round(original - alternative[1], 1)) if original is not None else 0.0
+        taken.add(alternative[0])
+
+
 def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
     """Recommend the best gameweek (or window) for each chip, from the squad's per-GW xP.
 
@@ -109,6 +166,15 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
         "avg_xi": win_avgs[best_start],
         "margin": _gap(win_avgs, largest=False),
     }
+
+    # **One chip per gameweek** (ADR-143). Each chip above was chosen independently, so nothing stopped two of
+    # them naming the same week — measured at **28% of squads** over an 8-GW horizon, and the app was then
+    # advising a move FPL forbids, contradicting its own rules base ("You can play only one chip per
+    # gameweek", `fpl_rules`). Resolved here rather than at a surface, so every caller inherits legal advice.
+    _one_per_gameweek(triple_captain, bench_boost, free_hit,
+                      ranks={"triple_captain": _rank(gameweeks, tc_ceilings, largest=True),
+                             "bench_boost": _rank(gameweeks, bb_totals, largest=True),
+                             "free_hit": _rank(gameweeks, xi_totals, largest=False)})
 
     return {
         "triple_captain": triple_captain,

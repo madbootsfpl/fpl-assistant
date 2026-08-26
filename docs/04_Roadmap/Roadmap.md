@@ -100,7 +100,7 @@ declined to copy a rival's feature because our own measurements said it wouldn't
 | rival | their signature | where we are |
 |---|---|---|
 | **fplanalyser** | Squad Risk Monitor · Squad-grade DNA · forward planner | **all three shipped** (ADR-130/131). The planner is **deliberately different**: their projected-points-vs-average framing is *noise* on our numbers (a squad's per-GW xP varies ±3%), so ours leads with fixture **exposure**, which swings 2→7. |
-| **fplapex** | multi-GW transfer path · chip-sequence scan · competitive layer | Path search **declined on evidence** (ADR-132): the best sell was the same player in all six gameweeks and the market yielded *one* beneficial move — a tree with one branch. Shipped the **timing arithmetic** instead. Chip scan + competitive layer still open. |
+| **fplapex** | multi-GW transfer path · chip-sequence scan · competitive layer | Path search **declined on evidence** (ADR-132): the best sell was the same player in all six gameweeks and the market yielded *one* beneficial move — a tree with one branch. Shipped the **timing arithmetic** instead. **Chip scan resolved** (ADR-143): the ranking declined on evidence (worth 0.3 xP), the legality defect it hid — two chips advised for one gameweek, 28% of squads — fixed. Competitive layer shipped as 🏆 Leagues (ADR-141). |
 | **FFH** | the rich player card · click-a-player menu | Card beaten on our own metrics (xP · value · ownership tier · DefCon · set-pieces — none of which they show). **Tap-the-pitch live and Cloud-verified** (ADR-133). |
 | **aceanalyst** | pool-wide value-frontier scatter | **Shipped** (ADR-138) — and made ours: the hover carries a tested *verdict*, not a coordinate. Building it also exposed an xMins blind spot no ranked surface had surfaced, because a frontier promotes cheap-and-high numbers rather than burying them. |
 
@@ -258,9 +258,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   gameweeks ahead as a path/tree, pricing **hits (−4 now vs rolling)** against total xPts. **MadBoots spin:** a
   grounded *why* per move (Edge/Risk each step). Reuses `suggest_transfers` + `by_gameweek`. Pairs with the
   per-GW xP toggle (US-422). *(A coordinated greedy plan already shipped, Sprint 033 — this is the real one.)*
-- ⬜ **Full chip-sequence scan** *(fplapex)* — rank **every valid** Wildcard/Free Hit/Bench Boost/Triple Captain
-  **sequence** across the season by projected xPts, with a grounded per-chip why. *(A v0 chip-timing advisor
-  shipped — Sprint 096, ADR-082.)*
+- ◑ **Full chip-sequence scan** *(fplapex)* — the **ranking is declined on evidence** (ADR-143, Sprint 197);
+  the **legality defect** it would have hidden is fixed. Measured over 200 random legal squads on live data:
+  two chips want the same gameweek **28% of the time** (so not a one-branch tree), but resolving it optimally
+  is worth **0.3 xP median / 1.5 worst** — the same order as ADR-131's ±3% noise. A precise ordering on
+  numbers that cannot carry one. **What was real:** the app was advising two chips in one gameweek, which FPL
+  forbids and `fpl_rules` explicitly states — contradicting its own knowledge base. Chips now take distinct
+  gameweeks, the one with the least at stake moves, and it says what that cost (0.0 xP median). *Third
+  sequence/tree feature killed by a measurement here — our projections are smooth, and smooth projections make
+  optimal ordering worthless.* *(A v0 chip-timing advisor shipped — Sprint 096, ADR-082.)*
 - ✅ **Forward GW planner — "a plan, not a panic"** — done (ADR-131, Sprint 183), but **built differently
   from this line**: measured on our own data, the per-GW xP spread is ±3% while fixture exposure swings 2→7, so
   it leads with exposure and states the xP range instead of naming a "problem week" out of noise. *(original
