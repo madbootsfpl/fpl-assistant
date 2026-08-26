@@ -4,7 +4,7 @@ Pure parsing + per-feed degrade — **no live network** (fixtures + a fake clien
 """
 
 from src.api.feeds import FeedError, parse_feed
-from src.web_streamlit.media import media_headlines
+from src.api.media import media_headlines
 
 _RSS = """<?xml version="1.0"?>
 <rss version="2.0"><channel>

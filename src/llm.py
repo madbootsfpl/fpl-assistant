@@ -13,6 +13,29 @@ import urllib.request
 from src import config
 
 
+def extract(prompt: str, *, model: str | None = None, url: str | None = None,
+            timeout: int | None = None) -> str | None:
+    """Ask the model for **structured** output — temperature 0, thinking off; None if unavailable.
+
+    Separate from `narrate` because the two want opposite things (ADR-151). Narration wants a little warmth
+    and prose; extraction wants the same answer every time and nothing but JSON. Sharing one function would
+    mean one of them silently getting the wrong settings.
+
+    The LLM is still never load-bearing: this returns None on any failure and the caller extracts nothing.
+    """
+    body = json.dumps({
+        "model": model or config.OLLAMA_MODEL, "prompt": prompt, "stream": False,
+        "think": False, "options": {"temperature": 0},
+    }).encode()
+    req = urllib.request.Request(url or config.OLLAMA_URL, data=body,
+                                 headers={"Content-Type": "application/json"})
+    try:
+        resp = json.load(urllib.request.urlopen(req, timeout=timeout or config.OLLAMA_TIMEOUT))
+        return (resp.get("response") or "").strip() or None
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+        return None
+
+
 def narrate(prompt: str, *, model: str | None = None, url: str | None = None,
             timeout: int | None = None) -> str | None:
     """Ask the local model to generate text for `prompt`; None if it's unavailable.

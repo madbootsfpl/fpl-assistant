@@ -22,7 +22,9 @@ Trending keeps the leaderboards: **it answers what the crowd is doing, this answ
 import streamlit as st
 
 from src.analytics.crowd import fit_flag
+from src.analytics.headlines import event_phrase
 from src.api.feeds import parse_feed
+from src.api.media import media_headlines
 from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
 from src.storage import Storage
@@ -31,7 +33,6 @@ from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
 from src.web_streamlit.filters import filter_controls
-from src.web_streamlit.media import media_headlines
 from src.web_streamlit.paginate import show_count
 from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
@@ -132,6 +133,17 @@ if players:
     from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, crowd_exodus
     _ex = [(p, e) for p in players
            if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and (e := crowd_exodus(p))]
+    # ADR-151 — a sell-off with a headline behind it is no longer "unexplained"; it is *explained by the
+    # press*. Shown first, because a sourced cause is the most useful thing on this page.
+    _store2 = Storage()
+    _ev = {}
+    for _row in _store2.get_headline_events():
+        _ev.setdefault(_row["element_id"], []).append(dict(_row))
+    _store2.close()
+    _explained = [(p, e, _ev[p["id"]]) for p, e in _ex if p["id"] in _ev]
+    for p, e, evs in _explained:
+        st.info(f"📰 **{p['web_name']}** — {abs(e['net']):,} sold this gameweek, and "
+                f"{event_phrase(evs[0])}")
     if not _ex:
         st.success("Nothing unexplained — every heavy sell-off right now has an injury or a status behind it.")
     else:

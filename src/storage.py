@@ -209,6 +209,30 @@ CREATE TABLE IF NOT EXISTS player_history (
 )
 """
 
+# Resolved news events (ADR-151), written at refresh time and read by the app. Keyed by (element_id, title)
+# so re-running an enrichment is idempotent: the same headline about the same player updates rather than
+# duplicating. `title` is stored so a claim can always be checked against its source — a flag that says
+# "Romano reports a move" must be able to show the sentence it came from.
+CREATE_HEADLINE_EVENTS = """
+CREATE TABLE IF NOT EXISTS headline_events (
+    element_id  INTEGER NOT NULL,
+    title       TEXT    NOT NULL,
+    kind        TEXT    NOT NULL,
+    source      TEXT,
+    seen_at     TEXT,
+    PRIMARY KEY (element_id, title)
+)
+"""
+
+UPSERT_HEADLINE_EVENT = """
+INSERT INTO headline_events (element_id, title, kind, source, seen_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(element_id, title) DO UPDATE SET
+    kind    = excluded.kind,
+    source  = excluded.source,
+    seen_at = excluded.seen_at
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -384,6 +408,7 @@ class Storage:
             self.conn.execute(CREATE_FIXTURES)
             self.conn.execute(CREATE_HISTORY_PAST)
             self.conn.execute(CREATE_HISTORY)
+            self.conn.execute(CREATE_HEADLINE_EVENTS)
             self._migrate()
             self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
 
@@ -704,6 +729,36 @@ class Storage:
 
     def count_fixtures(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM fixtures").fetchone()[0]
+
+    def upsert_headline_events(self, events) -> int:
+        """Store resolved news events (ADR-151). Idempotent on `(element_id, title)`; returns the row count.
+
+        Called at **refresh** time, not per page view: extraction needs a language model, Streamlit Cloud has
+        none, and the read-only snapshot (ADR-056) is how everything else gets there.
+        """
+        rows = [(e["element_id"], e["title"], e["kind"], e.get("source"), e.get("seen_at"))
+                for e in events or []]
+        if rows:
+            self.conn.executemany(UPSERT_HEADLINE_EVENT, rows)
+            self.conn.commit()
+        return len(rows)
+
+    def get_headline_events(self, element_id=None) -> list:
+        """Stored news events, newest first — all of them, or one player's. `[]` when there are none.
+
+        Empty is the normal state, not a failure: extraction only runs where a model is available, so a
+        snapshot built without one simply carries no events and every surface degrades to what it said before.
+        """
+        sql = "SELECT element_id, title, kind, source, seen_at FROM headline_events"
+        args = ()
+        if element_id is not None:
+            sql += " WHERE element_id = ?"
+            args = (element_id,)
+        sql += " ORDER BY seen_at DESC"
+        try:
+            return list(self.conn.execute(sql, args).fetchall())
+        except sqlite3.OperationalError:      # a snapshot older than this table — degrade, never raise
+            return []
 
     def close(self) -> None:
         self.conn.close()

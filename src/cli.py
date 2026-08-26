@@ -88,6 +88,11 @@ def cmd_refresh(args) -> None:
             f"Refreshed {n_players} players, {n_teams} teams, {n_fixtures} fixtures "
             f"and {n_elo} Elo ratings into {config.DB_PATH}."
         )
+        # ADR-151 — read the headlines while a model is to hand. Optional and best-effort: the player data is
+        # what `refresh` is for, and a missing Ollama must never fail it.
+        if not getattr(args, "no_headlines", False):
+            count, message = ingest.enrich_headlines(store)
+            print(f"Headlines: {message}." if count else f"Headlines: {message}.")
     except FplApiError as exc:
         print(f"Could not refresh FPL data: {exc}")
     finally:
@@ -895,6 +900,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_refresh = sub.add_parser(
         "refresh",
         help="Fetch the latest FPL data (players, teams, fixtures) and store it locally",
+    )
+    p_refresh.add_argument(
+        "--no-headlines", action="store_true", dest="no_headlines",
+        help="Skip reading news headlines into events (ADR-151) — faster, and needs no local model",
     )
     p_refresh.set_defaults(handler=cmd_refresh)
 

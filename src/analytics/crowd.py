@@ -234,15 +234,24 @@ def crowd_exodus(player) -> dict | None:
     return {"net": net, "pressure": round(pressure)}
 
 
-def exodus_note(player, exodus) -> str | None:
-    """One sentence for an unexplained sell-off, or `None`.
+def exodus_note(player, exodus, events=None) -> str | None:
+    """One sentence for a heavy sell-off, or `None` — with a **cause** when the headlines carry one.
 
-    Careful about what it claims. It does **not** say the player is injured or leaving — we do not know that.
-    It says the crowd is acting on something we cannot see, which is the honest reading and leaves the
-    manager to go and look.
+    Two versions of the same flag, and which one you get is the whole point of ADR-151:
+
+    * **With a resolved event**, it names what the press reported and quotes the headline. *"96,095 sold him
+      — Romano reports a move"* is checkable; the reader can weigh the source and disagree.
+    * **Without one**, it says only that the crowd is acting on something we cannot see. It still does **not**
+      claim the player is injured or leaving, because we do not know that.
+
+    The second is what shipped in ADR-146, and it stays byte-identical when no event resolves — so a snapshot
+    built without a language model behaves exactly as it did before.
     """
     if not exodus:
         return None
-    return (f"{abs(exodus['net']):,} managers sold {_get(player, 'web_name')} this gameweek and nothing in "
-            "the data explains it — no injury, no suspension, no news. The crowd may be reacting to "
-            "something we can't see; worth a look before you keep him.")
+    sold = f"{abs(exodus['net']):,} managers sold {_get(player, 'web_name')} this gameweek"
+    if events:
+        from src.analytics.headlines import event_phrase
+        return f"{sold} — and {event_phrase(events[0])}"
+    return (f"{sold} and nothing in the data explains it — no injury, no suspension, no news. The crowd may "
+            "be reacting to something we can't see; worth a look before you keep him.")

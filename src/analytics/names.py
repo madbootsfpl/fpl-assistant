@@ -59,6 +59,31 @@ def _favourite(candidates):
     return ranked[0]
 
 
+def _alias(player) -> str | None:
+    """`"Bruno Fernandes"` for a player FPL stores as `B.Fernandes` / *Bruno Borges Fernandes* — or `None`.
+
+    Measured need: **82 of 614** players carry a middle name, and the model (and the press) use the short form.
+    "Bruno Fernandes" matched neither the full name *"Bruno Borges Fernandes"* nor the web_name *"B.Fernandes"*,
+    so it fell through to the bare `Fernandes` pattern and landed on **Mateus Fernandes of Spurs (1.7% owned)**
+    instead of a 49%-owned Manchester United midfielder.
+
+    **The `web_name` is the authority on which part of a name people use**, so the alias is built from it
+    rather than by guessing a token. Taking the last word of the surname would produce *"Virgil Dijk"*,
+    *"David Martín"* and *"Ezri Ngoyo"* — all wrong, and all well-owned players.
+    """
+    first = str(_get(player, "first_name", "") or "").strip()
+    # "B.Fernandes" → "Fernandes": FPL abbreviates the first name when a surname is shared.
+    core = re.sub(r"^[A-Za-z]\.\s*", "", str(_get(player, "web_name", "") or "")).strip()
+    if not first or not core:
+        return None
+    if core.lower() == first.lower() or core.lower().startswith(first.lower()):
+        return None                     # the web_name already *is* the first name ("Virgil", "Pedro Porro")
+    if core.lower() not in _full_name(player).lower():
+        return None                     # a nickname unrelated to the stored name — do not invent a spelling
+    alias = f"{first} {core}"
+    return alias if alias.lower() != _full_name(player).lower() else None
+
+
 def build_index(players) -> list:
     """`[(pattern, player, exact)]`, **longest first** — the order is the whole mechanism.
 
@@ -76,6 +101,9 @@ def build_index(players) -> list:
         full = _full_name(p)
         if len(full) >= MIN_NAME and " " in full:
             index.append((full.lower(), p, True))
+        alias = _alias(p)               # the short form the press actually uses (ADR-151 rev)
+        if alias and len(alias) >= MIN_NAME:
+            index.append((alias.lower(), p, True))
     for web, group in by_web.items():
         owner = group[0] if len(group) == 1 else _favourite(group)
         if owner is not None:

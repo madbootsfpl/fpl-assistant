@@ -127,3 +127,61 @@ def _refresh_elo(store: Storage, raw_teams, elo_client: EloClient | None) -> int
 
     store.save_team_elo(elo_by_team)
     return len(elo_by_team)
+
+
+def enrich_headlines(store, players=None, *, ask=None, feeds=None,
+                     budget_seconds: float = 180.0) -> tuple[int, str]:
+    """Read events out of the current headlines and store them (ADR-151). `(count, message)`.
+
+    **Runs at refresh, not per page view**, and that is a deployment fact rather than a preference: extraction
+    needs a language model, Streamlit Cloud has none, and the committed snapshot (ADR-056) is how every other
+    number reaches the app. A snapshot built without a model simply carries no events, and every surface
+    degrades to exactly what it said before.
+
+    Never raises. A missing Ollama, an unreachable feed or a rate-limited Reddit each cost the enrichment,
+    not the refresh — the player data is the point of `refresh`, and this is a bonus on top.
+    """
+    from datetime import UTC, datetime
+
+    from src.analytics.headlines import extract as extract_events
+    from src.llm import extract as ask_model
+
+    ask = ask or ask_model
+    players = players if players is not None else store.get_players()
+    if not players:
+        return 0, "no players to resolve against"
+
+    titles = []
+    try:
+        titles += [t for t in (feeds() if feeds else _headline_titles())]
+    except Exception as exc:                             # noqa: BLE001 — feeds are best-effort everywhere
+        return 0, f"couldn't read the feeds: {exc}"
+    if not titles:
+        return 0, "no headlines available"
+
+    if ask("ping") is None:                              # no model → no events, and say so plainly
+        return 0, "no language model available (Ollama not running?) — headlines left unread"
+
+    events = extract_events(titles, players, ask, seen_at=datetime.now(UTC).isoformat(),
+                            budget_seconds=budget_seconds)
+    stored = store.upsert_headline_events(events)
+    return stored, f"read {len(titles)} headlines → {stored} events"
+
+
+def _headline_titles() -> list:
+    """Titles from the same feeds the app shows — media headlines plus r/FantasyPL, each best-effort."""
+    from src.api.feeds import parse_feed
+    from src.api.media import media_headlines
+    from src.api.reddit import RedditError, RedditRssClient
+
+    titles = []
+    try:
+        for items in (media_headlines() or {}).values():
+            titles += [i["title"] for i in items if i.get("title")]
+    except Exception:                                    # noqa: BLE001
+        pass
+    try:
+        titles += [p.get("title") or "" for p in parse_feed(RedditRssClient().get_subreddit_rss(), limit=100)]
+    except (RedditError, Exception):                     # noqa: BLE001 — Reddit rate-limits; not fatal
+        pass
+    return [t for t in titles if t]

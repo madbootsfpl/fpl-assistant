@@ -66,9 +66,21 @@ def render_risk_monitor(rows, badges=None) -> None:
     # ADR-146 — the crowd knows things the feed doesn't. Shown ABOVE the table, because it is the only signal
     # here the app cannot derive for itself, and a percentile column is the wrong place to put news.
     from src.analytics.crowd import exodus_note
+
+    # ADR-151 — the headlines read at refresh time. Empty on a snapshot built without a language model, in
+    # which case every note below reads exactly as it did before (ADR-146).
+    _events = {}
+    try:
+        from src.storage import Storage
+        _store = Storage()
+        for _row in _store.get_headline_events():
+            _events.setdefault(_row["element_id"], []).append(dict(_row))
+        _store.close()
+    except Exception:                                    # noqa: BLE001 — a bonus, never load-bearing
+        _events = {}
     for r in rows:
         if r.get("exodus"):
-            note = exodus_note({"web_name": r["web_name"]}, r["exodus"])
+            note = exodus_note({"web_name": r["web_name"]}, r["exodus"], _events.get(r["id"]))
             if note:
                 st.warning(f"📉 {note}")
     st.caption("**Attention** blends the chance a player misses the 60-minute appearance points with how hard "

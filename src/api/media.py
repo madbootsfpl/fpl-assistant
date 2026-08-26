@@ -1,4 +1,9 @@
-"""Media-headlines helper for the web (Sprint 115, ADR-093).
+"""Media headlines from public RSS/Atom feeds (Sprint 115, ADR-093; moved to core by ADR-151).
+
+**Why it moved.** This lived in `web_streamlit/` and had nothing web-specific in it — `config` plus
+`api.feeds`, no Streamlit anywhere. That was invisible until refresh-time headline extraction needed the same
+feeds and `test_core_never_imports_a_web_edge` failed: the core cannot import an edge (ADR-050/052), and the
+guard was right — the function was misfiled, not the import.
 
 Aggregates the configured public RSS/Atom feeds into `{source: [headlines]}`, **per-feed best-effort**: one
 feed failing (403 / timeout / junk) is skipped, the rest still show. Display-only (never xP); the page caches
