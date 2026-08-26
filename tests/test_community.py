@@ -126,3 +126,34 @@ def test_community_signals_degrades_on_failure():
 def test_community_signals_returns_the_buzz_on_success():
     rows, msg = community_signals(_PLAYERS, client=_Ok())
     assert rows[0]["web_name"] == "Haaland" and "talked about" in msg
+
+
+def test_the_buzz_board_no_longer_lists_a_shared_surname_twice():
+    """ADR-152, at the surface that showed the bug. The board listed **"Palmer" twice at 30 mentions each**,
+    because two players share that `web_name` and each was regexed independently. It also credited Reece
+    James for *"James Maddison out for two weeks"*.
+    """
+    players = [
+        {"id": 154, "web_name": "Palmer", "first_name": "Cole", "second_name": "Palmer",
+         "team": "CHE", "selected_by": 14.2},
+        {"id": 301, "web_name": "Palmer", "first_name": "Alex", "second_name": "Palmer",
+         "team": "IPS", "selected_by": 4.5},
+        {"id": 142, "web_name": "James", "first_name": "Reece", "second_name": "James",
+         "team": "CHE", "selected_by": 10.1},
+        {"id": 999, "web_name": "Maddison", "first_name": "James", "second_name": "Maddison",
+         "team": "TOT", "selected_by": 8.0},
+    ]
+    feed = ("<feed xmlns='http://www.w3.org/2005/Atom'>"
+            "<entry><title>Cole Palmer is Player of the Matchweek</title><link href='http://x/1'/></entry>"
+            "<entry><title>Palmer in training - not injured</title><link href='http://x/2'/></entry>"
+            "<entry><title>James Maddison out for up to two weeks</title><link href='http://x/3'/></entry>"
+            "</feed>")
+
+    buzz = community_buzz(feed, players, limit=10)
+    ids = [b["id"] for b in buzz]
+    assert len(ids) == len(set(ids)), "no player may appear twice on the board"
+    by_id = {b["id"]: b for b in buzz}
+    assert by_id[154]["mentions"] == 2, "both Palmer headlines belong to Cole"
+    assert 301 not in by_id, "the backup keeper was never mentioned"
+    assert by_id[999]["mentions"] == 1
+    assert 142 not in by_id, "'James Maddison' is not a mention of Reece James"

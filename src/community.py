@@ -6,9 +6,10 @@ Reddit client and **degrades gracefully** (any 403 / 429 / timeout / parse error
 never a raise). This is **mention frequency (buzz)**, not sentiment; a display lens, never xP.
 """
 
-import re
+
 import xml.etree.ElementTree as ET
 
+from src.analytics.names import build_index, find_mentions
 from src.api.reddit import RedditError, RedditRssClient
 
 _ATOM = {"a": "http://www.w3.org/2005/Atom"}
@@ -32,6 +33,13 @@ def _entries(rss_text: str) -> list:
     return out
 
 
+def _id(row):
+    try:
+        return row["id"]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 def community_buzz(rss_text: str, players, limit: int = 10) -> list:
     """Rank current players by how often they're mentioned in the RSS feed (ADR-059). Pure + empty-safe:
     a bad/empty feed → `[]`. Returns `[{**player, "mentions": n, "posts": [{title, link}]}]`,
@@ -39,21 +47,19 @@ def community_buzz(rss_text: str, players, limit: int = 10) -> list:
     entries = _entries(rss_text)
     if not entries:
         return []
-    scored = []
-    for p in players:
-        row = dict(p)        # players may be sqlite3.Row (no .get) — normalise once
-        name = str(row.get("web_name") or "")
-        if len(name) < _MIN_NAME:
-            continue
-        pattern = rf"\b{re.escape(name.lower())}\b"
-        hits, posts = 0, []
-        for e in entries:
-            n = len(re.findall(pattern, e["text"]))
-            if n:
-                hits += n
-                posts.append({"title": e["title"], "link": e["link"]})
-        if hits:
-            scored.append({**row, "mentions": hits, "posts": posts})
+    # ADR-152 — resolve names properly rather than regexing each `web_name` independently. Doing it the naive
+    # way was wrong three ways on live data: 14 web_names are shared (a bare "Palmer" credited BOTH Cole
+    # Palmer and a backup keeper, which is why the board listed Palmer twice at 30 mentions), 90 web_names sit
+    # inside a *different* player's full name ("James Maddison out for two weeks" credited Reece James), and
+    # ambiguity was silently resolved rather than dropped.
+    index = build_index(players)
+    by_id = {_id(p): dict(p) for p in players}
+    hits, posts = {}, {}
+    for e in entries:
+        for pid, n in find_mentions(e["text"], index).items():
+            hits[pid] = hits.get(pid, 0) + n
+            posts.setdefault(pid, []).append({"title": e["title"], "link": e["link"]})
+    scored = [{**by_id[pid], "mentions": n, "posts": posts[pid]} for pid, n in hits.items() if pid in by_id]
     scored.sort(key=lambda r: r["mentions"], reverse=True)
     return scored[:limit]
 
