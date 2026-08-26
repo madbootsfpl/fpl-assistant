@@ -145,22 +145,57 @@ def register(email: str, cap: int) -> str:
 # to be added by hand (see the ADR), so until it exists every call 400s. A tester must never see an error
 # because an admin panel wants a nicer number.
 
-def touch_last_seen(email: str) -> None:
-    """Stamp `beta_users.last_seen = now` for this email. Silent on any failure, including a missing column.
+def touch_last_seen(email: str) -> str:
+    """Stamp `beta_users.last_seen = now` for this email. Returns a short **status string**, never raises.
 
     Called once per session at admit, not per page view — a page-view stamp would be a write on every
     navigation for no extra signal, since the roster only asks *which day* someone was last here.
+
+    **It returns a status because the first version did not, and that made it undiagnosable.** Silent
+    best-effort is right for a tester's page — nobody should see an error because an admin panel wants a nicer
+    number — but it left the owner staring at a column of NULLs with no way to learn whether the write was
+    never attempted, never matched, or refused by a row-level-security policy. The caller at admit ignores this
+    return; the Admin page shows it. **Same code path either way**: a diagnostic that exercises a *different*
+    path proves nothing.
+
+    **The lookup is case-insensitive, the hard way.** A PostgREST `eq.` filter is case-*sensitive*, and the
+    allow-list is hand-maintained — it currently holds both `markcondron88@gmail.com` and
+    `Markcondron88@gmail.com`. `eq.<cleaned>` silently matches **no row** for the capitalised one, which is the
+    exact trap `is_registered` above documents. So we read the stored spelling first and patch *that*. One
+    extra read per session, at the one moment we already do several.
     """
     url, key = _endpoint()
     e = clean_email(email or "")
-    if not (url and key and e):
-        return
+    if not (url and key):
+        return "store not configured"
+    if not e:
+        return "no email"
     try:
-        requests.patch(url, params={"email": f"eq.{e}"},
-                       json={"last_seen": datetime.now(timezone.utc).isoformat()},
-                       headers=_headers(key), timeout=_TIMEOUT)
-    except Exception:                                    # noqa: BLE001 — best-effort, like everything here
+        got = requests.get(url, params={"select": "email"}, headers=_headers(key), timeout=_TIMEOUT)
+        got.raise_for_status()
+        stored = next((row["email"] for row in got.json()
+                       if clean_email(row.get("email", "")) == e), None)
+    except Exception as exc:                             # noqa: BLE001
+        return f"couldn't read the allow-list: {exc}"
+    if stored is None:
+        return f"{e} isn't on the allow-list"
+
+    try:
+        r = requests.patch(url, params={"email": f"eq.{stored}"},
+                           json={"last_seen": datetime.now(timezone.utc).isoformat()},
+                           headers={**_headers(key), "Prefer": "return=representation"}, timeout=_TIMEOUT)
+    except Exception as exc:                             # noqa: BLE001
+        return f"write failed: {exc}"
+    if r.status_code >= 400:
+        # Named on purpose. A 401/403 here almost always means the table has SELECT and INSERT policies (the
+        # gate needs both) but no UPDATE policy — invisible until something tries to write.
+        return f"refused by the store (HTTP {r.status_code}): {r.text[:160]}"
+    try:
+        if not r.json():
+            return "wrote nothing — no row matched (is the `last_seen` column present?)"
+    except Exception:                                    # noqa: BLE001 — a 204 with no body is a fine success
         pass
+    return "ok"
 
 
 def last_seen_by_email(emails=None) -> dict:

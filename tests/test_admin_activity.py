@@ -160,31 +160,100 @@ def test_a_missing_last_seen_column_is_silent_not_an_error(monkeypatch):
     monkeypatch.setattr(requests, "patch", boom)
 
     assert user_store.last_seen_by_email(["a@x.ie"]) == {}
-    user_store.touch_last_seen("a@x.ie")            # must not raise
+    assert user_store.touch_last_seen("a@x.ie")     # must not raise — and must say what went wrong
 
 
-def test_the_sign_in_stamp_patches_the_allow_list_row(monkeypatch):
-    """One write, on the tester's own allow-list row, keyed by their email — not a touch of the anonymous
-    event stream, which stays anonymous (ADR-100)."""
+def test_the_stamp_patches_the_row_as_it_is_actually_spelled(monkeypatch):
+    """A PostgREST `eq.` filter is case-**sensitive**, and the allow-list is hand-maintained — it currently
+    holds both `markcondron88@gmail.com` and `Markcondron88@gmail.com`. `eq.<cleaned>` silently matches **no
+    row** for the capitalised one, which is exactly the trap `is_registered` documents and exactly what the
+    first version of this walked into. So the stored spelling is read first and *that* is patched.
+    """
     import requests
 
     from src.web_streamlit import user_store
 
     seen = {}
 
-    def fake_patch(url, params=None, json=None, headers=None, timeout=None):
-        seen.update(url=url, params=params, json=json)
+    class R:
+        status_code = 200
 
-        class R:
+        def raise_for_status(self):
             pass
-        return R()
+
+        def json(self):
+            return [{"email": "Markcondron88@gmail.com"}]
+
+    def fake_patch(url, params=None, json=None, headers=None, timeout=None):
+        seen.update(params=params, json=json)
+
+        class P:
+            status_code = 200
+
+            def json(self_inner):
+                return [{"email": "Markcondron88@gmail.com"}]
+        return P()
 
     monkeypatch.setattr(user_store, "_endpoint", lambda: ("https://x/beta_users", "k"))
+    monkeypatch.setattr(requests, "get", lambda *a, **kw: R())
     monkeypatch.setattr(requests, "patch", fake_patch)
-    user_store.touch_last_seen("Tony@X.ie ")
 
-    assert seen["params"] == {"email": "eq.tony@x.ie"}, "cleaned email, so it matches the stored row"
+    assert user_store.touch_last_seen(" MARKCONDRON88@gmail.com ") == "ok"
+    assert seen["params"] == {"email": "eq.Markcondron88@gmail.com"}, \
+        "must patch the row as stored, not as cleaned — otherwise it matches nothing"
     assert "last_seen" in seen["json"]
+
+
+def test_a_refused_write_is_NAMED_rather_than_swallowed(monkeypatch):
+    """The reason this returns a status at all. The first version was silent best-effort, so when every
+    `last_seen` came back NULL there was no way to tell whether the write was never attempted, never matched,
+    or **refused by a row-level-security policy** — which is the usual cause, because a table needs SELECT and
+    INSERT policies for the gate to work and can easily have no UPDATE policy at all.
+    """
+    import requests
+
+    from src.web_streamlit import user_store
+
+    class R:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [{"email": "a@x.ie"}]
+
+    class Denied:
+        status_code = 401
+        text = '{"message":"permission denied for table beta_users"}'
+
+    monkeypatch.setattr(user_store, "_endpoint", lambda: ("https://x/beta_users", "k"))
+    monkeypatch.setattr(requests, "get", lambda *a, **kw: R())
+    monkeypatch.setattr(requests, "patch", lambda *a, **kw: Denied())
+
+    out = user_store.touch_last_seen("a@x.ie")
+    assert "401" in out and "permission denied" in out
+
+
+def test_a_tester_not_on_the_allow_list_says_so_instead_of_pretending(monkeypatch):
+    import requests
+
+    from src.web_streamlit import user_store
+
+    class R:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [{"email": "someone@else.ie"}]
+
+    monkeypatch.setattr(user_store, "_endpoint", lambda: ("https://x/beta_users", "k"))
+    monkeypatch.setattr(requests, "get", lambda *a, **kw: R())
+    monkeypatch.setattr(requests, "patch",
+                        lambda *a, **kw: (_ for _ in ()).throw(AssertionError("must not write")))
+    assert "isn't on the allow-list" in user_store.touch_last_seen("a@x.ie")
 
 
 def test_nothing_is_written_when_the_store_is_unconfigured(monkeypatch):
@@ -193,6 +262,6 @@ def test_nothing_is_written_when_the_store_is_unconfigured(monkeypatch):
     from src.web_streamlit import user_store
 
     monkeypatch.setattr(user_store, "_endpoint", lambda: (None, None))
-    monkeypatch.setattr(requests, "patch", lambda *a, **kw: (_ for _ in ()).throw(AssertionError("must not call out")))
-    user_store.touch_last_seen("a@x.ie")
+    monkeypatch.setattr(requests, "patch", lambda *a, **kw: (_ for _ in ()).throw(AssertionError("no call")))
+    assert user_store.touch_last_seen("a@x.ie") == "store not configured"
     assert user_store.last_seen_by_email(["a@x.ie"]) == {}

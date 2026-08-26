@@ -106,10 +106,24 @@ else:
                  hide_index=True, use_container_width=True)
     if not _seen:
         # Say it plainly rather than showing a column of dashes and letting it read as "nobody has been here".
-        st.warning("**Sign-in times aren't being recorded yet**, so status below falls back to *when a squad "
-                   "was last saved* — which most testers never do, and is why this panel under-reported "
-                   "activity. Add the column once and it starts working:  "
+        st.warning("**No sign-in times recorded yet**, so status below falls back to *when a squad was last "
+                   "saved* — which most testers never do, and is why this panel under-reported activity. "
+                   "The column has to exist:  "
                    "`alter table beta_users add column if not exists last_seen timestamptz;`")
+    # ADR-142 rev — a diagnostic, because the write is deliberately silent for testers and that made an
+    # all-NULL column impossible to explain: never attempted? no row matched? refused by a policy? This runs
+    # the **same** `touch_last_seen` the sign-in does — a probe down a different path would prove nothing —
+    # and prints what it actually got back. Owner-only page, so the raw store error is safe to show.
+    with st.expander("🔧 Why isn't `last_seen` filling in?"):
+        st.caption("Runs the real sign-in stamp for one tester and reports exactly what the store said. "
+                   "A **401/403** almost always means `beta_users` has SELECT and INSERT policies (the gate "
+                   "needs both) but **no UPDATE policy** — invisible until something tries to write.")
+        _who = st.selectbox("Stamp this tester", _emails, key="admin_touch_who")
+        if st.button("Run the stamp now", key="admin_touch_go"):
+            _result = user_store.touch_last_seen(_who)
+            (st.success if _result == "ok" else st.error)(f"`touch_last_seen({_who})` → **{_result}**")
+            st.caption("Re-run the page to see it land. If this says **ok** but the column is still NULL, the "
+                       "write is being accepted and discarded — check the column name and any triggers.")
     st.caption("**Last used** = signed in. **Last saved a squad** = pressed save, which is rarer and a "
                "stronger signal — someone actively managing a team rather than visiting. A tester browsing "
                "**signed-out** appears in neither. Read it beside the anonymous totals above; those stay "

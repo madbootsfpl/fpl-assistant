@@ -77,3 +77,40 @@ in the docstring so it explains itself); both signals stay on the row; the fallb
 absent, so the panel degrades rather than reporting everyone as never-seen; the PATCH targets the *cleaned*
 email so it matches the stored row; a missing column is silent on read **and** write; nothing is called when
 the store is unconfigured.
+
+---
+
+### 🔁 Revised — the column existed and every value was still NULL
+
+**Owner, having run the SQL:** *"not updating as I have logged in and out and back in again."* Supabase showed
+`last_seen` present on all 28 rows and NULL on every one.
+
+**Two faults.** The first is mine and embarrassing: `touch_last_seen` filtered with `email=eq.<cleaned>`, but
+**PostgREST's `eq.` is case-sensitive** and the hand-maintained allow-list holds both `markcondron88@gmail.com`
+and `Markcondron88@gmail.com`. For the capitalised row the filter matches nothing, and PostgREST reports
+success — updating zero rows is not an error.
+
+`is_registered`, **forty lines above the code I wrote**, says so in its docstring: *"A PostgREST `eq.` filter
+is case-sensitive, so we fetch the list and compare normalised."* The warning was already written, by this
+project, in the file I was editing.
+
+The second is probably a **missing UPDATE policy** on `beta_users` — it needs SELECT and INSERT for the gate to
+work at all, and can easily have those and nothing else. It cannot be confirmed from here, which is the whole
+problem.
+
+### 💡 The lesson: silent was undiagnosable
+
+Every store call here is best-effort and silent, and that is right for a tester — nobody should see an error
+because an admin panel wants a nicer number. But it left an all-NULL column that could equally mean *never
+attempted*, *matched nothing*, or *refused by a policy*: **three different problems with three different
+fixes and one identical symptom.**
+
+`touch_last_seen` now returns a status string; the sign-in still ignores it, and Admin runs **the same
+function** on demand and prints what the store actually said. That last point matters — a probe down a
+parallel path proves only that a second implementation works.
+
+> **Best-effort is a promise to the user, not a licence to be unexplainable to the operator.** Swallow the
+> error at the edge; keep the reason.
+
+Three sprints in a row have now turned on the same shape: something failing quietly where nothing was watching
+— ADR-139's test that returned early, ADR-140's probe that misled me, and now a write that failed politely.

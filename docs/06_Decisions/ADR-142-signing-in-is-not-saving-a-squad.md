@@ -3,8 +3,8 @@
 **Decision ID:** ADR-142
 **Date:** 2026-08-26
 **Status:** ✅ **Accepted — built** (Sprint 196, 2026-08-26). **1377 → 1384 tests, ruff clean.**
-⏳ **One owner action:** add the `last_seen` column (one line of SQL, below). Until then the panel degrades to
-its old behaviour and *says so*.
+⏳ **Owner action:** add the `last_seen` column (SQL below) **and check `beta_users` has an UPDATE policy** —
+see the revision at the end. Until then the panel degrades to its old behaviour and *says so*.
 **Superseded By / Replaces:** Corrects the tester-activity half of ADR-120. **Does not touch ADR-100** — the
 anonymous event stream stays anonymous and is never joined to a name.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -106,3 +106,56 @@ The related one: **ADR-120 predicted this symptom and mis-attributed the cause.*
 reading ⚪ never" as the thing to watch, and guessed a `user_key` hashing mismatch. The hash was fine — the
 *definition* was wrong. Predicting a symptom is much easier than predicting its cause, and a watch-item that
 names one cause can quietly stop you looking for others.
+
+---
+
+### 🔁 Revision — the column existed, and every value was still NULL
+
+**Owner, having run the SQL:** *"ran the SQL, checking admin now, it's not updating as I have logged in and
+out and back in again."* The Supabase screenshot showed `last_seen` present on all 28 rows and **NULL on every
+one**.
+
+**Two faults, and only one of them is the likely cause.**
+
+**1. `eq.` is case-sensitive — a trap this codebase already documents.** `touch_last_seen` filtered with
+`email=eq.<cleaned>`, but the allow-list is hand-maintained and holds **both** `markcondron88@gmail.com` and
+`Markcondron88@gmail.com`. For the capitalised row that filter matches **no row at all** and PostgREST cheerfully
+reports success — it updated zero rows, which is not an error.
+
+The infuriating part: `is_registered`, forty lines above the code I wrote, carries this in its docstring —
+*"A PostgREST `eq.` filter is case-sensitive, so we fetch the list and compare normalised."* **The warning was
+already written, by this project, in the file being edited.** Now fixed the same way: read the stored spelling,
+patch *that*.
+
+**2. The likely cause is a missing UPDATE policy** — and the honest position is that it cannot be confirmed
+from here. `beta_users` needs SELECT and INSERT policies for the gate to work at all (they demonstrably do),
+and a table can easily have those and **no UPDATE policy**. PostgREST then refuses the PATCH with a 401/403 —
+which the first version swallowed, by design.
+
+### 🔎 The design flaw underneath both: silent was undiagnosable
+
+Every store call here is best-effort and silent, and that is *right* for a tester: nobody should see an error
+because an admin panel wants a nicer number. But it left the owner looking at a column of NULLs with no way to
+distinguish **never attempted** from **matched nothing** from **refused by a policy** — three different
+problems with three different fixes and one identical symptom.
+
+So `touch_last_seen` now **returns a status string** and the Admin page runs it on demand and prints it. Two
+things about that:
+
+- **The caller at admit still ignores the return**, so a tester's experience is unchanged.
+- **The diagnostic runs the same function the sign-in does.** A probe down a parallel path would prove nothing
+  about the real one — it would only prove that a second implementation works.
+
+**The rule: best-effort is a promise to the user, not a licence to be unexplainable to the operator.** Swallow
+the error at the edge; keep the reason.
+
+**Owner action, revised — check the policy as well as the column:**
+
+```sql
+alter table beta_users add column if not exists last_seen timestamptz;
+
+-- and, if Admin ▸ "Why isn't last_seen filling in?" reports a 401/403:
+create policy "beta_users update last_seen" on beta_users for update using (true) with check (true);
+```
+
+Then open **Admin ▸ 🔧 Why isn't `last_seen` filling in?**, stamp yourself, and read what it says.
