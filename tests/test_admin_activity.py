@@ -265,3 +265,44 @@ def test_nothing_is_written_when_the_store_is_unconfigured(monkeypatch):
     monkeypatch.setattr(requests, "patch", lambda *a, **kw: (_ for _ in ()).throw(AssertionError("no call")))
     assert user_store.touch_last_seen("a@x.ie") == "store not configured"
     assert user_store.last_seen_by_email(["a@x.ie"]) == {}
+
+
+def test_zero_rows_updated_is_reported_as_RLS_not_as_a_missing_column(monkeypatch):
+    """The live diagnosis (2026-08-26). The stamp came back *"wrote nothing — no row matched"*, and the first
+    message guessed at a missing column. Wrong, and misleadingly so: the GET immediately above had just found
+    that exact row, so the filter matches for SELECT and not for UPDATE — which is the signature of
+    **row-level security with no UPDATE policy**.
+
+    The two failures need different fixes and look nothing alike:
+
+    * missing `GRANT` → PostgREST rejects outright, 401/403
+    * RLS with no UPDATE policy → **HTTP 200, zero rows, no error anywhere**
+
+    The second is the quiet one, and quiet is what made the original bug take three attempts to pin down.
+    """
+    import requests
+
+    from src.web_streamlit import user_store
+
+    class Found:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [{"email": "a@x.ie"}]
+
+    class UpdatedNothing:
+        status_code = 200
+
+        def json(self):
+            return []                                # 200 OK, and not one row touched
+
+    monkeypatch.setattr(user_store, "_endpoint", lambda: ("https://x/beta_users", "k"))
+    monkeypatch.setattr(requests, "get", lambda *a, **kw: Found())
+    monkeypatch.setattr(requests, "patch", lambda *a, **kw: UpdatedNothing())
+
+    out = user_store.touch_last_seen("a@x.ie")
+    assert "row-level security" in out and "UPDATE policy" in out
+    assert "column" not in out, "the column exists — saying otherwise sent the operator hunting the wrong thing"

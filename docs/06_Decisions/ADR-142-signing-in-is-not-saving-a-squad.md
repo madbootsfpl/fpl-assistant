@@ -127,8 +127,8 @@ The infuriating part: `is_registered`, forty lines above the code I wrote, carri
 already written, by this project, in the file being edited.** Now fixed the same way: read the stored spelling,
 patch *that*.
 
-**2. The likely cause is a missing UPDATE policy** — and the honest position is that it cannot be confirmed
-from here. `beta_users` needs SELECT and INSERT policies for the gate to work at all (they demonstrably do),
+**2. A missing UPDATE policy — since confirmed by the diagnostic (below).** At the time of writing this was a
+suspicion that could not be checked from here. `beta_users` needs SELECT and INSERT policies for the gate to work at all (they demonstrably do),
 and a table can easily have those and **no UPDATE policy**. PostgREST then refuses the PATCH with a 401/403 —
 which the first version swallowed, by design.
 
@@ -195,3 +195,36 @@ pointless.
 **The lesson, and it is a general one:** *"it didn't work, add a permission"* is how over-broad access gets
 written, and the widest thing that makes the error go away is almost never the right thing. Ask what the code
 actually writes — here, one column, provably — and grant that.
+
+---
+
+### 🔬 Confirmed by the diagnostic — and it did not fail the way this ADR predicted
+
+The owner ran **Admin ▸ 🔧** and got:
+
+```
+touch_last_seen(tony.e.sheridan@gmail.com) → wrote nothing — no row matched
+```
+
+**Not a 401/403.** This ADR said twice that a missing UPDATE policy shows up as a hard refusal. It does not.
+The two failures are genuinely different, and the distinction is the useful thing to come out of this:
+
+| cause | what PostgREST returns |
+|---|---|
+| the role lacks the table privilege (a missing `GRANT`) | **401 / 403** — rejected outright |
+| **RLS enabled with no UPDATE policy** | **HTTP 200, zero rows** — no error anywhere |
+
+Postgres does not raise when RLS excludes rows from an `UPDATE`; it simply narrows the statement to nothing.
+So the *quieter* of the two failures is the one that was actually happening — which is the same theme as the
+rest of this ADR, one layer further down.
+
+**And the reading is unambiguous**, because of the order the function does things: the `GET` immediately above
+had just found that exact row. **A filter that matches for SELECT and not for UPDATE can only be RLS.** The
+first version of the message guessed *"is the column present?"*, which was wrong and would have sent the
+operator hunting the wrong thing — the column was visibly there in the screenshot. The message now names RLS,
+and the Admin panel prints the exact SQL beneath it.
+
+**So the policy IS needed here** — the narrow, column-restricted version in the correction above, not the
+blanket one. Every store call in this module is best-effort and silent, and this is the third layer at which
+that turned out to hide something: the write failed politely, then reported a 200, and Postgres declined to
+mention that it had updated nothing.

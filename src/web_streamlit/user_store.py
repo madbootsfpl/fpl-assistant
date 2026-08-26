@@ -187,12 +187,20 @@ def touch_last_seen(email: str) -> str:
     except Exception as exc:                             # noqa: BLE001
         return f"write failed: {exc}"
     if r.status_code >= 400:
-        # Named on purpose. A 401/403 here almost always means the table has SELECT and INSERT policies (the
-        # gate needs both) but no UPDATE policy — invisible until something tries to write.
+        # A hard refusal means the *role* lacks the table privilege — a GRANT problem.
         return f"refused by the store (HTTP {r.status_code}): {r.text[:160]}"
     try:
         if not r.json():
-            return "wrote nothing — no row matched (is the `last_seen` column present?)"
+            # HTTP 200 and **zero rows** — and we only got here because the GET above found this exact row a
+            # moment ago. A filter that matches for SELECT and not for UPDATE is the signature of **RLS with
+            # no UPDATE policy**: Postgres does not raise for that, it just narrows the update to nothing.
+            #
+            # Worth being exact, because the two failures look nothing alike and have different fixes:
+            #   missing GRANT        -> PostgREST rejects outright, 401/403
+            #   RLS, no UPDATE policy -> 200 OK, zero rows, no error anywhere
+            # The second is the quieter and therefore the more dangerous one to guess at.
+            return ("the row exists but the update reached no rows — `beta_users` has row-level security with "
+                    "no UPDATE policy (a SELECT policy alone lets it be read, never written)")
     except Exception:                                    # noqa: BLE001 — a 204 with no body is a fine success
         pass
     return "ok"

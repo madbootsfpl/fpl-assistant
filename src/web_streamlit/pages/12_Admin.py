@@ -116,14 +116,24 @@ else:
     # and prints what it actually got back. Owner-only page, so the raw store error is safe to show.
     with st.expander("🔧 Why isn't `last_seen` filling in?"):
         st.caption("Runs the real sign-in stamp for one tester and reports exactly what the store said. "
-                   "A **401/403** almost always means `beta_users` has SELECT and INSERT policies (the gate "
-                   "needs both) but **no UPDATE policy** — invisible until something tries to write.")
+                   "Two failures look nothing alike and need different fixes: a **401/403** is a missing "
+                   "`GRANT` (the role can't touch the table); **\"reached no rows\"** is row-level security "
+                   "with no UPDATE policy — Postgres doesn't raise for that, it just narrows the update to "
+                   "nothing, so it fails in total silence.")
         _who = st.selectbox("Stamp this tester", _emails, key="admin_touch_who")
         if st.button("Run the stamp now", key="admin_touch_go"):
             _result = user_store.touch_last_seen(_who)
             (st.success if _result == "ok" else st.error)(f"`touch_last_seen({_who})` → **{_result}**")
-            st.caption("Re-run the page to see it land. If this says **ok** but the column is still NULL, the "
-                       "write is being accepted and discarded — check the column name and any triggers.")
+            if _result != "ok":
+                st.code("revoke update on public.beta_users from anon;\n"
+                        "grant  update (last_seen) on public.beta_users to anon;\n\n"
+                        'create policy "anon stamps last_seen" on public.beta_users\n'
+                        "  for update to anon using (true) with check (true);", language="sql")
+                st.caption("Grants **one column**, not the table — the anon key ships to the browser, so a "
+                           "blanket update policy would let anyone rewrite an allow-listed `email` to their "
+                           "own and admit themselves. The app only ever writes `last_seen` here, so nothing "
+                           "else needs the privilege.")
+            st.caption("Then sign out and back in — or press this again — and re-run the page to see it land.")
     st.caption("**Last used** = signed in. **Last saved a squad** = pressed save, which is rarer and a "
                "stronger signal — someone actively managing a team rather than visiting. A tester browsing "
                "**signed-out** appears in neither. Read it beside the anonymous totals above; those stay "
