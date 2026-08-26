@@ -11,6 +11,8 @@ from src.analytics.league import (
     effective_ownership,
     last_completed_gameweek,
     league_name,
+    manager_name,
+    my_leagues,
     ownership_gaps,
     standings_rows,
 )
@@ -138,3 +140,54 @@ def test_before_any_gameweek_has_been_played_there_is_nothing_to_read():
     assert last_completed_gameweek([]) is None
     assert last_completed_gameweek(None) is None
     assert last_completed_gameweek([{"event": None}]) is None
+
+
+# ---- finding a league without knowing its id (ADR-141 rev) ---------------------------
+
+def _entry(*leagues, name="My Team"):
+    return {"name": name, "leagues": {"classic": list(leagues), "h2h": []}}
+
+
+def _lg(lid, nm, size, *, private, rank=1):
+    return {"id": lid, "name": nm, "rank_count": size, "entry_rank": rank,
+            "league_type": "x" if private else "s"}
+
+
+def test_your_own_leagues_come_before_the_ones_fpl_put_you_in():
+    """The fix for the thing that made the first cut unusable: **nobody knows their league id.**
+
+    FPL mixes the mini-league you joined with your friends in among automatic ones — your club, your region,
+    "Gameweek 1", Overall — and by size the automatic ones are always vastly bigger. Sorting by size would
+    bury the only leagues anyone means. `league_type` separates them: `x` was created by a person, `s` was
+    created by FPL.
+    """
+    entry = _entry(_lg(314, "Overall", 8_903_396, private=False),
+                   _lg(9, "Everton", 80_321, private=False),
+                   _lg(621744, "GD Gala", 4_174, private=True),
+                   _lg(504367, "Work league", 11, private=True))
+    assert [lg["name"] for lg in my_leagues(entry)] == ["Work league", "GD Gala", "Everton", "Overall"]
+
+
+def test_within_each_group_the_smaller_league_leads():
+    """A small league is a more personal one — eleven colleagues beats a four-thousand-strong public league,
+    and the same logic orders the automatic ones (your club before Overall)."""
+    entry = _entry(_lg(1, "Big", 900, private=True), _lg(2, "Small", 9, private=True))
+    assert [lg["name"] for lg in my_leagues(entry)] == ["Small", "Big"]
+
+
+def test_each_league_carries_what_the_picker_needs_to_label_it():
+    (lg,) = my_leagues(_entry(_lg(504367, "Work league", 11, private=True, rank=3)))
+    assert lg == {"id": 504367, "name": "Work league", "size": 11, "rank": 3, "private": True}
+
+
+def test_a_manager_with_no_leagues_or_a_broken_payload_is_handled_not_crashed():
+    for payload in ({}, {"leagues": {}}, {"leagues": {"classic": []}}, _entry()):
+        assert my_leagues(payload) == []
+    assert my_leagues(_entry({"name": "no id"})) == [], "a league without an id can't be opened, so drop it"
+
+
+def test_the_manager_name_comes_back_so_you_can_confirm_the_id_resolved():
+    """Typing a manager id is error-prone and the failure is silent — you'd get somebody else's leagues and
+    no way to tell. Showing whose team it is closes that."""
+    assert manager_name(_entry(name="LOCKER DOOR")) == "LOCKER DOOR"
+    assert manager_name({}) == ""

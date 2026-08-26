@@ -276,7 +276,7 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   the people winning it is template, and global ownership cannot tell them apart. Also the captain split
   (21/8/7) and that **47 of 50 played Bench Boost**. **The cost came in 5× below the estimate** that nearly
   deferred it — the table is ONE call, and the insight layer needs the current gameweek only, not a history.
-  Affordable because a completed gameweek's picks are **immutable**: cached with no expiry (17.5s first load,
+  **Find a league by your MANAGER id** — nobody knows their league id, and `/entry/{id}/` already lists them (private leagues first; FPL's automatic club/region/Overall ones are 100,000× bigger and would bury them). Affordable because a completed gameweek's picks are **immutable**: cached with no expiry (17.5s first load,
   0.0s after). Insight sits behind a button — *nothing that costs N calls happens because someone opened a
   tab*. ⬜ Not in v1, deliberately: **transfer flow** (one more call per manager) and **H2H leagues** (a
   different endpoint).

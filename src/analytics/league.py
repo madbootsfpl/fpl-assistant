@@ -138,3 +138,40 @@ def last_completed_gameweek(upcoming) -> int | None:
     if not events or events[0] <= 1:
         return None
     return events[0] - 1
+
+
+def my_leagues(entry_payload) -> list[dict]:
+    """The classic leagues a manager is in, from their `/entry/{id}/` payload (ADR-141 rev).
+
+    **Nobody knows their league id.** It appears in a URL you have to go and find, which made the first cut of
+    this page unusable for the thing it was built for — the owner had the page open, his own manager id to
+    hand, and no way in. The manager id is the handle people actually have, and this payload already carries
+    every league behind it, so the lookup costs one call that the app was making anyway.
+
+    **Private leagues lead.** FPL mixes the mini-league you joined with your friends in among automatic ones —
+    your club, your region, "Gameweek 1", Overall — and by `rank_count` the automatic ones are always bigger.
+    Sorting by size would bury the only leagues anyone means. `league_type` separates them: `x` is a league
+    somebody created, `s` is one FPL put you in. Private first, each group smallest-first, because a small
+    league is a more personal one.
+
+    Returns `{id, name, size, rank, private}` per league; empty for a manager with none, or a bad payload.
+    """
+    classic = _get(_get(entry_payload, "leagues", {}), "classic", []) or []
+    out = []
+    for lg in classic:
+        lid = _get(lg, "id")
+        if lid is None:
+            continue
+        out.append({
+            "id": lid,
+            "name": _get(lg, "name", "") or f"League #{lid}",
+            "size": _get(lg, "rank_count", 0) or 0,
+            "rank": _get(lg, "entry_rank"),
+            "private": _get(lg, "league_type") == "x",
+        })
+    return sorted(out, key=lambda r: (not r["private"], r["size"]))
+
+
+def manager_name(entry_payload) -> str:
+    """A manager's team name, for confirming the id resolved to who they expected."""
+    return _get(entry_payload, "name", "") or ""

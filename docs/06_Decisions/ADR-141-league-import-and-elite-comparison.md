@@ -2,8 +2,8 @@
 
 **Decision ID:** ADR-141
 **Date:** 2026-08-26
-**Status:** ✅ **Accepted — owner-gated ("go as planned"), built** (Sprint 195, 2026-08-26). **1354 → 1371
-tests, ruff clean.** Owner-requested 2026-08-25 (*"can we import leagues? like fplstats.live — and do the
+**Status:** ✅ **Accepted — owner-gated ("go as planned"), built** (Sprint 195, 2026-08-26). **1354 → 1377 tests, ruff clean** (incl. the same-day
+revision below). Owner-requested 2026-08-25 (*"can we import leagues? like fplstats.live — and do the
 elite manager comparison"*), logged to the Roadmap the same day with the condition that **caching and
 rate-limiting be settled before design**. This ADR settled them with measurements, then built to them.
 **Superseded By / Replaces:** Merges the Roadmap's old "Elite Manager Comparison" line — the two share all
@@ -165,3 +165,49 @@ in v1**, so EO and the captain split get a chance to prove themselves first.
 2. **Manual smoke:** league 314 end to end, both loads timed, cache verified.
 3. **Docs:** this ADR, the Architecture changelog (incl. the renumber note), the Roadmap, PROJECT_STATUS, the
    Feedback_Log row, `docs/05_Sprints/Sprint195.md`.
+
+---
+
+### 🔁 Revision, same day — the manager id is the handle people actually have
+
+**Owner, on Cloud, within minutes of it shipping:** *"can't import my leagues using my manager ID, don't know
+the league ID. Elite looks good."*
+
+A complete miss, and an instructive one. The page asked for a **league id** — a number that appears only in a
+URL you have to go and find. The owner had the page open, his own manager id to hand, and **no way in**. The
+elite preset worked precisely because it is the one league whose id the app fills in for you.
+
+**Nobody knows their league id.** The manager id is the number people have — it is in their team's URL, this
+app already imports a squad with it (ADR-113), and it was already sitting in `session_state`.
+
+**And the fix was almost free**, because `/entry/{id}/` — a call the client already makes — carries
+`leagues.classic`: every league behind that id, with names, sizes and ranks. No new endpoint, no new cost.
+
+**The one real design decision was ordering.** FPL mixes the league you set up with friends in among automatic
+ones: your club, your region, "Gameweek 1", Overall. Measured on a live entry, the automatic ones are
+*hundreds of thousands* of managers against eleven — so sorting by size, the obvious choice, buries the only
+league anyone means. `league_type` separates them (`x` = a person made it, `s` = FPL did), so **private
+leagues lead**, each group smallest-first because a smaller league is a more personal one:
+
+```
+👥 GENGFIGHTEROVERALL   ·        11 managers
+👥 🚘MFF FULL SEASON     ·     3,077 managers
+🌍 Everton              ·    80,321 managers
+🌍 Overall              ·  8,903,396 managers
+```
+
+The manager's team name is shown alongside, because a mistyped id fails *silently* — you would get a
+stranger's leagues with nothing to tell you.
+
+"By league id" stays for anyone who does have one, and the manager-id path is now the default.
+
+### 💡 The lesson
+
+**A feature can be complete, tested, measured — and still have no door.** Every number on this page was
+verified against the live API, the economics were measured before a line was written, and the first person to
+open it could not get past the first field. Nothing in the test suite could have caught that, because the
+tests supplied a league id: *they knew the answer to the question real users can't answer.*
+
+The tell was there in the ADR and I walked past it. The elite preset exists because *"the id is hard to come
+by"* — and that reasoning stops exactly one field short of the obvious conclusion, that the same is true of
+every other league too.

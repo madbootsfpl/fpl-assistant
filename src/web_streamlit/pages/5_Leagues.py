@@ -25,6 +25,8 @@ from src.analytics.league import (
     effective_ownership,
     last_completed_gameweek,
     league_name,
+    manager_name,
+    my_leagues,
     ownership_gaps,
     standings_rows,
 )
@@ -53,6 +55,12 @@ def _standings(league_id: int):
     return FplClient().get_league_standings(league_id)
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def _entry(manager_id: int):
+    """A manager's public entry — used only for the league list it carries (ADR-141 rev)."""
+    return FplClient().get_entry(manager_id)
+
+
 @st.cache_data(show_spinner=False)                    # NO ttl — see below
 def _picks(entries: tuple, gameweek: int):
     """Fetch each manager's picks, throttled. Cached **forever** for a completed gameweek.
@@ -78,19 +86,52 @@ def _picks(entries: tuple, gameweek: int):
     return out
 
 
-c1, c2 = st.columns([2, 1], vertical_alignment="bottom")
-scope = c2.segmented_control("Scan", ["My league", "Elite"], default="Elite", key="lg_scope",
-                             help="Elite = the global Overall league, whose first page is the top 50 in the "
-                                  "world. It is the same code, pointed at a different id.")
-default_id = str(config.ELITE_LEAGUE_ID) if scope == "Elite" else ""
-raw = c1.text_input("League id", value=default_id, key="lg_id",
-                    help="A classic league's id — the number in its FPL URL. H2H leagues aren't supported.")
+# ADR-141 rev — **the manager id is the handle people actually have.** The first cut asked for a league id,
+# which appears only in a URL you have to go and find: the owner opened the page with his own manager id to
+# hand and could not get in. `/entry/{id}/` already lists every league behind that id, so this costs one call
+# the app was making anyway. "By league id" stays for anyone who does have one.
+scope = st.segmented_control(
+    "Find a league", ["My leagues", "By league id", "Elite"], default="My leagues", key="lg_scope",
+    help="Your leagues, looked up from your FPL manager id · a league id directly · or the global Overall "
+         "league, whose first page is the top 50 in the world.")
 
-if not raw.strip().isdigit():
-    st.info("Enter a classic league id to load its table. (Elite fills in the global Overall league for you.)")
-    st.stop()
+league_id = None
+if scope == "Elite":
+    league_id = config.ELITE_LEAGUE_ID
+elif scope == "By league id":
+    raw = st.text_input("League id", key="lg_id",
+                        help="The number in a classic league's FPL URL. H2H leagues aren't supported.")
+    if not raw.strip().isdigit():
+        st.info("Enter a classic league id — or switch to **My leagues** and use your manager id instead.")
+        st.stop()
+    league_id = int(raw.strip())
+else:
+    # Prefilled from the Manager-ID import on My Squad (ADR-113) when it has been used this session — the id
+    # is already in `session_state` under that widget's key, and asking twice for a number you have just
+    # typed is the kind of small friction that stops people using a page at all.
+    prefill = str(st.session_state.get("manager_id") or "").strip()
+    raw = st.text_input("Your FPL manager id", value=prefill, key="lg_manager", placeholder="e.g. 1234567",
+                        help="The number in your FPL team URL. The same id the My Squad import uses.")
+    if not raw.strip().isdigit():
+        st.info("Enter your **manager id** and every league you're in appears below — no league ids needed. "
+                "It's the number in your FPL team URL, the same one the My Squad import takes.")
+        st.stop()
+    try:
+        entry = _entry(int(raw.strip()))
+    except FplApiError:
+        st.error(f"Couldn't find manager #{raw.strip()} — check the id, or try again in a moment.")
+        st.stop()
 
-league_id = int(raw.strip())
+    leagues = my_leagues(entry)
+    if not leagues:
+        st.warning(f"**{manager_name(entry) or 'That manager'}** isn't in any classic leagues yet.")
+        st.stop()
+    labels = {f"{'👥' if lg['private'] else '🌍'} {lg['name']}  ·  {lg['size']:,} managers": lg["id"]
+              for lg in leagues}
+    st.caption(f"**{manager_name(entry)}** — 👥 your own leagues first, then 🌍 the ones FPL puts everyone in "
+               "(your club, region, Overall).")
+    league_id = labels[st.selectbox("Your leagues", list(labels), key="lg_pick")]
+
 try:
     payload = _standings(league_id)
 except FplApiError:

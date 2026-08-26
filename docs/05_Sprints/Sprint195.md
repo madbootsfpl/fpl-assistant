@@ -100,3 +100,34 @@ including the `last_rank == 0` "new entry" case, and `last_completed_gameweek` a
 rule. Client tests pin the paginated URL and that failures raise `FplApiError`. Page tests assert **no
 per-manager fetch happens on load** and that a truncated league says so — all through a fake client, so no
 test touches the live API.
+
+---
+
+### 🔁 Revised the same day — the feature had no door
+
+**Owner, on Cloud, minutes after it shipped:** *"can't import my leagues using my manager ID, don't know the
+league ID. Elite looks good."*
+
+The page asked for a **league id** — a number that appears only in a URL you have to go and find. He had the
+page open, his own manager id to hand, and **no way in**. Elite worked precisely because it is the one league
+whose id the app fills in for you.
+
+**Nobody knows their league id.** The manager id is the number people actually have: it is in their team URL,
+this app already imports a squad with it (ADR-113), and it was already sitting in `session_state` one page
+over.
+
+The fix was almost free — `/entry/{id}/`, a call the client already makes, carries `leagues.classic`. The one
+real decision was **ordering**: FPL mixes the league you made with friends in among automatic ones (club,
+region, Overall) that are *hundreds of thousands* of managers against eleven, so sorting by size — the obvious
+choice — buries the only league anyone means. `league_type` separates them, private first.
+
+> **A feature can be complete, tested, measured — and still have no door.**
+
+Every number on this page was verified against the live API and the economics were measured before a line was
+written. The first person to open it could not get past the first field. **Nothing in the test suite could
+have caught it, because the tests supplied a league id — they knew the answer to the question real users
+cannot answer.**
+
+The tell was in the ADR and I walked past it: the elite preset exists because *"the id is hard to come by"*.
+That reasoning stops exactly one field short of the obvious conclusion — that the same is true of every other
+league too.

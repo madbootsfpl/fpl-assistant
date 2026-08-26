@@ -2880,6 +2880,7 @@ def test_the_leagues_page_shows_a_table_but_never_fetches_squads_on_load(monkeyp
 
     monkeypatch.setattr(client_mod, "FplClient", FakeClient)
     at = _run(_PAGES / "5_Leagues.py")
+    at.segmented_control[0].set_value("Elite").run()       # a scope that needs no id typed
     if at.exception:
         raise AssertionError(at.exception)
 
@@ -2914,9 +2915,55 @@ def test_the_leagues_page_states_its_cap_rather_than_truncating_silently(monkeyp
 
     monkeypatch.setattr(client_mod, "FplClient", FakeClient)
     at = _run(_PAGES / "5_Leagues.py")
+    at.segmented_control[0].set_value("Elite").run()
     if at.exception:
         raise AssertionError(at.exception)
 
     caption = " ".join(c.value for c in at.caption)
     assert "top 50" in caption, "a truncated league must say it was truncated"
     assert len(at.dataframe[0].value) == 50, "and must actually stop at the cap"
+
+
+def test_the_leagues_page_finds_your_leagues_from_a_manager_id(monkeypatch):
+    """ADR-141 rev. The gap the owner hit on Cloud: he had the page open, his own manager id to hand, and no
+    way in — because the page asked for a **league** id, which only appears in a URL you have to go and find.
+
+    `/entry/{id}/` already lists every league behind a manager id, so the lookup costs one call. This drives
+    the whole path: id in → your leagues listed, your own ahead of FPL's automatic ones → a table.
+    """
+    import streamlit as st
+
+    from src.api import client as client_mod
+    st.cache_data.clear()
+
+    class FakeClient:
+        def get_entry(self, entry_id):
+            return {"name": "Test Manager", "leagues": {"classic": [
+                {"id": 314, "name": "Overall", "rank_count": 8_903_396, "entry_rank": 1, "league_type": "s"},
+                {"id": 999, "name": "Work League", "rank_count": 11, "entry_rank": 3, "league_type": "x"}]}}
+
+        def get_league_standings(self, league_id, page=1):
+            return {"league": {"name": f"League {league_id}"},
+                    "standings": {"has_next": False, "results": [
+                        {"entry": 1, "player_name": "A", "entry_name": "TA", "rank": 1, "last_rank": 1,
+                         "event_total": 50, "total": 100}]}}
+
+        def get_entry_picks(self, entry_id, gameweek):
+            raise AssertionError("must not be called on load")
+
+    monkeypatch.setattr(client_mod, "FplClient", FakeClient)
+    at = _run(_PAGES / "5_Leagues.py")
+    assert at.segmented_control[0].value == "My leagues", "the id people actually have is the default path"
+
+    at.text_input[0].set_value("1234567").run()
+    if at.exception:
+        raise AssertionError(at.exception)
+
+    picker = next(s for s in at.selectbox if s.label == "Your leagues")
+    assert len(picker.options) == 2
+    assert picker.options[0].startswith("👥 Work League"), \
+        "your own league must lead — sorted by size, FPL's automatic ones bury it"
+    assert "🌍 Overall" in picker.options[1]
+    assert any("Test Manager" in c.value for c in at.caption), \
+        "naming the manager is how you catch a mistyped id — otherwise you get a stranger's leagues silently"
+    assert any(s.value == "League 999" for s in at.subheader), "picking a league loads its table"
