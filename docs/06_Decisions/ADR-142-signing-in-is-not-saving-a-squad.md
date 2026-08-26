@@ -149,13 +149,49 @@ things about that:
 **The rule: best-effort is a promise to the user, not a licence to be unexplainable to the operator.** Swallow
 the error at the edge; keep the reason.
 
-**Owner action, revised — check the policy as well as the column:**
+### ⚠️ Correction — the first policy suggested here was too permissive
+
+An earlier draft of this ADR suggested:
 
 ```sql
-alter table beta_users add column if not exists last_seen timestamptz;
-
--- and, if Admin ▸ "Why isn't last_seen filling in?" reports a 401/403:
 create policy "beta_users update last_seen" on beta_users for update using (true) with check (true);
 ```
 
-Then open **Admin ▸ 🔧 Why isn't `last_seen` filling in?**, stamp yourself, and read what it says.
+**Do not run that.** A policy alone is *row*-level: it would let the `anon` role update **any column** of any
+row — including `email`. The Supabase anon key ships to the browser, so anyone who lifted it could rewrite an
+allow-listed address to their own and **admit themselves to the beta**. That is a privilege escalation, not a
+cosmetic over-grant.
+
+Column restriction in Postgres comes from a `GRANT`, not from the policy. And it is safe to restrict here
+because **the app never updates any other column of this table**: the only writes are `INSERT` (register),
+`DELETE` (unsubscribe) and this one `last_seen` stamp.
+
+**Owner action, in order:**
+
+```sql
+-- 1. the column (already done)
+alter table public.beta_users add column if not exists last_seen timestamptz;
+```
+
+Then open **Admin ▸ 🔧 Why isn't `last_seen` filling in?**, stamp yourself, and read the result.
+**Only if it reports 401/403** is anything else needed — and then:
+
+```sql
+-- 2. Supabase often grants UPDATE broadly by default; take it back first
+revoke update on public.beta_users from anon;
+
+-- 3. hand back exactly one column
+grant update (last_seen) on public.beta_users to anon;
+
+-- 4. and a row policy to permit the update at all
+create policy "anon stamps last_seen" on public.beta_users
+  for update to anon using (true) with check (true);
+```
+
+With step 3 in place, `using (true)` is no longer dangerous: the role can reach every row but only one
+harmless column. `REVOKE` first, because a pre-existing broad grant would otherwise make the narrow one
+pointless.
+
+**The lesson, and it is a general one:** *"it didn't work, add a permission"* is how over-broad access gets
+written, and the widest thing that makes the error go away is almost never the right thing. Ask what the code
+actually writes — here, one column, provably — and grant that.
