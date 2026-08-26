@@ -162,7 +162,11 @@ with st.expander("🔧 Are cross-device preferences storing?"):
                     'create policy "prefs read"   on public.user_prefs for select to anon using (true);\n'
                     'create policy "prefs insert" on public.user_prefs for insert to anon with check (true);\n'
                     'create policy "prefs update" on public.user_prefs for update to anon '
-                    "using (true) with check (true);", language="sql")
+                    "using (true) with check (true);\n"
+                    # ADR-148: without this, "Remove me" silently fails to delete the row while telling the
+                    # person their data is gone. RLS-blocked deletes return 200 OK with zero rows.
+                    'create policy "prefs delete" on public.user_prefs for delete to anon using (true);',
+                    language="sql")
             st.caption("Rows are keyed by a **hash** of the email (`auth.user_key`), never the address itself "
                        "— the same handle the squads table uses (ADR-106).")
 

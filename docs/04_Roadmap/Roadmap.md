@@ -323,8 +323,10 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   restores the *list*. Signed out → session-only, i.e. today's behaviour. ⏳ Owner: create `user_prefs` (SQL
   in the ADR, with all three RLS policies) — until then it degrades silently and **Admin ▸ 🔧 says so**, the
   diagnostic shipping *with* the feature rather than after a day of NULLs (the ADR-142 lesson).
-  ⬜ Follow-up: `unsubscribe.remove_me` should delete `user_prefs` too — ADR-122 promises "we delete your
-  rows" and this adds one that promise doesn't yet cover.
+  ✅ Follow-up **done same day** (ADR-148): `remove_me` now deletes `user_prefs`, and checking it found that
+  ADR-147's own SQL had **no `delete` policy** — so the delete would have been refused *silently*, telling
+  someone their data was gone while it was still there. SQL corrected in three places; `remove_me` now returns
+  a per-table status so the promise is checkable.
 - ⭐ ⬜ **"My squad only" on the Trending boards** *(owner, 2026-08-26)* — wiring, not new logic: the shared
   filter already carries a `my_squad` dimension that `filters.apply` honours and Players/Radar both use;
   Trending just doesn't pass through it. Worth more than its size — the boards answer *"what is the crowd

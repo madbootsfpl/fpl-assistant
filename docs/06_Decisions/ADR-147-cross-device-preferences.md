@@ -60,7 +60,13 @@ alter table public.user_prefs enable row level security;
 create policy "prefs read"   on public.user_prefs for select to anon using (true);
 create policy "prefs insert" on public.user_prefs for insert to anon with check (true);
 create policy "prefs update" on public.user_prefs for update to anon using (true) with check (true);
+create policy "prefs delete" on public.user_prefs for delete to anon using (true);
 ```
+
+⚠️ **The `delete` policy was missing from the first version of this SQL and was added by ADR-148.** Without it
+`unsubscribe.remove_me` would have silently failed to delete a preference row — PostgREST answers
+`200 OK, zero rows` for an RLS-blocked delete — while telling the person their data was gone. If you already
+ran the earlier block, run just that one line.
 
 `remember()` returns a **status string** the page ignores and **Admin ▸ 🔧 Are cross-device preferences
 storing?** prints — running the same function the page does, because a probe down a parallel path proves only

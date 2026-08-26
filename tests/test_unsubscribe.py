@@ -27,12 +27,26 @@ def configured(monkeypatch):
     monkeypatch.setenv("FPL_STORE_KEY", "anon-key")
 
 
+class _Deleted:
+    """A PostgREST delete that removed a row. ADR-148 reads the returned rows to tell a real delete from one
+    that silently matched nothing — so the fake has to answer like the real thing."""
+
+    status_code = 200
+
+    def json(self):
+        return [{"ok": 1}]
+
+
 @pytest.fixture
 def capture_deletes(monkeypatch):
     """Record every `requests.delete(url, params=…)` call as `(url, params)`."""
     calls = []
-    monkeypatch.setattr("requests.delete",
-                        lambda url, params=None, headers=None, timeout=None: calls.append((url, params)))
+
+    def fake(url, params=None, headers=None, timeout=None):
+        calls.append((url, params))
+        return _Deleted()
+
+    monkeypatch.setattr("requests.delete", fake)
     return calls
 
 
@@ -59,6 +73,9 @@ def test_remove_me_with_user_key_also_deletes_squad_and_watchlist(configured, ca
     assert ("beta_users", (("email", "eq.me@x.com"),)) in targets
     assert ("squads", (("handle", "eq.abc123"),)) in targets               # per-user squad (handle = user_key hash)
     assert ("player_watchlist", (("user_key", "eq.abc123"),)) in targets
+    # ADR-148: cross-device preferences (ADR-147) are a row we create, so the promise has to cover them. A new
+    # table is precisely the thing an old promise silently stops covering.
+    assert ("user_prefs", (("user_key", "eq.abc123"),)) in targets
 
 
 def test_user_key_only_when_email_is_missing_or_malformed(configured, capture_deletes):
@@ -66,7 +83,7 @@ def test_user_key_only_when_email_is_missing_or_malformed(configured, capture_de
     unsubscribe.remove_me("not-an-email", user_key="uk9")
     urls = [u.rsplit("/", 1)[1] for u, _ in capture_deletes]
     assert "beta_users" not in urls and "beta_waitlist" not in urls        # bad email → skip the email tables
-    assert set(urls) == {"squads", "player_watchlist"}                     # but the keyed data still goes
+    assert set(urls) == {"squads", "player_watchlist", "user_prefs"}       # but the keyed data still goes
 
 
 def test_remove_me_is_a_noop_without_the_store(monkeypatch):
@@ -106,3 +123,57 @@ def test_leave_control_is_hidden_without_the_store():
         at = AppTest.from_string(_LEAVE_APP, default_timeout=30).run()
     assert not at.exception
     assert not at.button and not at.get("expander")                        # nothing to delete → the control is off
+
+
+# ---- the promise has to be checkable (ADR-148) ---------------------------------------
+
+def test_a_delete_that_matched_nothing_is_reported_not_swallowed(configured, monkeypatch):
+    """The failure this exists to catch, and the one that would matter most.
+
+    ADR-142 and ADR-147 both hit it on *writes*: a table with row-level security and no matching policy makes
+    PostgREST answer **`200 OK, zero rows`** — Postgres does not raise, it narrows the statement to nothing.
+    On a delete that means **telling someone their data is gone while it is still there**, which is the worst
+    version of a silent failure in this codebase.
+
+    The UI still swallows it; the status comes back so a caller or a test can check.
+    """
+    class _NothingMatched:
+        status_code = 200
+
+        def json(self):
+            return []
+
+    monkeypatch.setattr("requests.delete", lambda *a, **k: _NothingMatched())
+    out = unsubscribe.remove_me("me@x.com", user_key="uk")
+    assert out["user_prefs"] == "nothing matched (no row, or no DELETE policy)"
+    assert all("nothing matched" in v for v in out.values())
+
+
+def test_every_table_reports_and_a_refusal_is_named(configured, monkeypatch):
+    class _Refused:
+        status_code = 401
+
+        def json(self):
+            return []
+
+    monkeypatch.setattr("requests.delete", lambda *a, **k: _Refused())
+    out = unsubscribe.remove_me("me@x.com", user_key="uk")
+    assert set(out) == {"beta_waitlist", "beta_users", "squads", "player_watchlist", "user_prefs"}
+    assert all(v == "refused (HTTP 401)" for v in out.values())
+
+
+def test_a_network_failure_still_never_raises(configured, monkeypatch):
+    """Fail-silent at the edge is correct — a crash mid-unsubscribe is worse than a retry, and nobody leaving
+    should be shown a stack trace. The status is how it stays *diagnosable* without becoming loud."""
+    import requests as _rq
+
+    monkeypatch.setattr("requests.delete",
+                        lambda *a, **k: (_ for _ in ()).throw(_rq.ConnectionError("down")))
+    out = unsubscribe.remove_me("me@x.com", user_key="uk")
+    assert all(v.startswith("failed:") for v in out.values())
+
+
+def test_no_store_returns_an_empty_report_rather_than_a_false_success(configured, monkeypatch):
+    monkeypatch.delenv("FPL_STORE_URL", raising=False)
+    monkeypatch.delenv("FPL_STORE_KEY", raising=False)
+    assert unsubscribe.remove_me("x@y.com", user_key="uk") == {}
