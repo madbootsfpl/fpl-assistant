@@ -327,11 +327,13 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   ADR-147's own SQL had **no `delete` policy** — so the delete would have been refused *silently*, telling
   someone their data was gone while it was still there. SQL corrected in three places; `remove_me` now returns
   a per-table status so the promise is checkable.
-- ⭐ ⬜ **"My squad only" on the Trending boards** *(owner, 2026-08-26)* — wiring, not new logic: the shared
-  filter already carries a `my_squad` dimension that `filters.apply` honours and Players/Radar both use;
-  Trending just doesn't pass through it. Worth more than its size — the boards answer *"what is the crowd
-  doing?"*, and the only version a manager can act on is *"…to MY players"*, which is ADR-146's crowd-exodus
-  insight one surface over.
+- ✅ **"My squad only" reaches Community Signals** (ADR-149, Sprint 204, 2026-08-26) — *owner,
+  2026-08-26.* ⚠️ **My triage of this was wrong in both directions:** the four Trending *boards* have honoured
+  the shared filter since US-407b; the one surface that did **not** is the 💬 **Community Signals** tab — which
+  is exactly what the owner named, by its on-screen heading. Now filtered too, **after** the scan so the full
+  count stays visible (*"6 of 47 players mentioned match your filter"* — six alone says nothing), with an
+  empty result telling you how to get back out. *Lesson recorded: a triage note written from memory is a guess
+  wearing the clothes of a decision.*
 - ⬜ **Consolidate the "signals" surfaces?** *(owner question, 2026-08-26)* — *Talked about* (Reddit mention
   counts, a Trending tab) and *News* (FPL's **official** `news` — injuries, doubts, return dates) are
   different in kind, and merging them naively risks showing a rumour beside an official flag with equal

@@ -126,13 +126,25 @@ else:
                 st.info("Community buzz is unavailable right now (Reddit didn't respond).")
             else:
                 buzz = community_buzz(rss, players, limit=len(players))   # all mentioned, ranked
+                # US-4xx / ADR-149 — the shared filter reaches this tab too, **"My squad only" included**.
+                # The four boards above have honoured it since US-407b; this one never did, so the one
+                # question a manager actually has here — *"is the crowd talking about MY players?"* — was the
+                # one it could not answer. Filtered **after** the scan, not before: the full count is what
+                # makes the filtered count mean something ("6 of 47"), and the scan is cached for 30 minutes
+                # anyway, so it costs nothing to keep.
+                shown = apply_filter(buzz, sel)
                 if not buzz:
                     st.info("No current-player mentions in the latest r/FantasyPL posts.")
+                elif not shown:
+                    st.info(f"None of the **{len(buzz)}** players mentioned match your filter — "
+                            "clear it, or untick **My squad only**, to see the rest.")
                 else:
-                    st.caption(f"{len(buzz)} players mentioned across the latest ~100 posts — expand a name "
-                               "to read them. (Surnames can collide — the photo/badge shows who matched.)")
+                    scope = (f"**{len(shown)}** of {len(buzz)} players mentioned match your filter"
+                             if len(shown) != len(buzz) else f"{len(buzz)} players mentioned")
+                    st.caption(f"{scope} across the latest ~100 posts — expand a name to read them. "
+                               "(Surnames can collide — the photo/badge shows who matched.)")
                     # A 100-post sample mentions many players → page like the other Trending boards (ADR-076).
-                    for r in show_count(buzz):
+                    for r in show_count(shown):
                         c_photo, c_badge, c_body = st.columns([1, 1, 12], vertical_alignment="center")
                         if photos.get(r["id"]):
                             c_photo.image(photos[r["id"]], width=44)

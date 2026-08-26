@@ -2993,3 +2993,46 @@ def test_health_shows_a_concentration_note_only_when_a_week_is_actually_narrow()
     # actionable, which is the failure mode this feature was designed around.
     for n in notes:
         assert "% of your GW" in n and " v " in n and "players" in n
+
+
+def test_the_community_buzz_tab_honours_the_shared_filter(monkeypatch):
+    """ADR-149. The four Trending boards have honoured the shared filter — **"My squad only" included** —
+    since US-407b. The Community Signals tab never did, so the one question a manager actually brings to it
+    (*"is the crowd talking about MY players?"*) was the one it could not answer.
+
+    Driven with a fake RSS feed, so no test touches Reddit.
+    """
+    from src.community import community_buzz
+    from src.storage import Storage
+    from src.web_streamlit.filters import apply as apply_filter
+
+    store = Storage()
+    players = store.get_players()
+    store.close()
+    if len(players) < 4:
+        return
+
+    named = players[:4]
+    feed = "<feed xmlns='http://www.w3.org/2005/Atom'>" + "".join(
+        f"<entry><title>On {p['web_name']}</title><link href='http://x/{i}'/>"
+        f"<content>{p['web_name']} looks good</content></entry>"
+        for i, p in enumerate(named)) + "</feed>"
+
+    buzz = community_buzz(feed, players, limit=len(players))
+    assert len(buzz) >= 2, "the fake feed must mention several players for the filter to bite"
+
+    mine = {named[0]["id"]}
+    shown = apply_filter(buzz, {"teams": [], "positions": [], "players": [], "my_squad": mine})
+    assert [r["id"] for r in shown] == [named[0]["id"]], "'My squad only' must reach the buzz list"
+    assert len(shown) < len(buzz), "…and must actually narrow it"
+
+
+def test_the_buzz_tab_states_the_full_count_beside_the_filtered_one():
+    """The filter is applied **after** the scan on purpose: the unfiltered total is what makes the filtered
+    number mean anything ("6 of 47" says the crowd is busy and mostly not about you; "6" alone says nothing).
+    The scan is cached for 30 minutes, so keeping it costs nothing.
+    """
+    source = (_PAGES / "8_Trending.py").read_text()
+    assert "apply_filter(buzz, sel)" in source, "filtered after the scan, not before"
+    assert "of {len(buzz)} players mentioned match your filter" in source
+    assert "untick **My squad only**" in source, "an empty result must say how to get back out of it"
