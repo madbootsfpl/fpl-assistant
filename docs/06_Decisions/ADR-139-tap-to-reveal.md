@@ -2,8 +2,8 @@
 
 **Decision ID:** ADR-139
 **Date:** 2026-08-25
-**Status:** ✅ **Accepted — built** (Sprint 193, 2026-08-25), **revised 2026-08-26** — the compact card is
-back, bound to the selection instead of the cursor. **1415 → 1416 tests, ruff clean.** Owner-reported 2026-08-25, logged to the Roadmap the same
+**Status:** ✅ **Accepted — built** (Sprint 193, 2026-08-25), **revised 2026-08-26 and Cloud-verified** — the compact card is
+back, bound to the selection instead of the cursor. Owner: *"perfect!"* **1415 → 1416 tests, ruff clean.** Owner-reported 2026-08-25, logged to the Roadmap the same
 day, built the same day.
 **Superseded By / Replaces:** Removes the hover reveal added by US-344 / ADR-109 from the **tappable** pitch
 only. Completes ADR-135's revert by dealing with the surface that was actually misbehaving. Keeps ADR-133's
