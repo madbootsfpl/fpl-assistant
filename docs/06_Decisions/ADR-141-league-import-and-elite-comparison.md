@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-141
 **Date:** 2026-08-26
-**Status:** ✅ **Accepted — owner-gated ("go as planned"), built** (Sprint 195, 2026-08-26). **1354 → 1377 tests, ruff clean** (incl. the same-day
+**Status:** ✅ **Accepted — owner-gated ("go as planned"), built, and Cloud-verified** (Sprint 195,
+2026-08-26). Owner on Cloud after the revision: *"works great!"* **1354 → 1377 tests, ruff clean** (incl. the same-day
 revision below). Owner-requested 2026-08-25 (*"can we import leagues? like fplstats.live — and do the
 elite manager comparison"*), logged to the Roadmap the same day with the condition that **caching and
 rate-limiting be settled before design**. This ADR settled them with measurements, then built to them.
@@ -211,3 +212,14 @@ tests supplied a league id: *they knew the answer to the question real users can
 The tell was there in the ADR and I walked past it. The elite preset exists because *"the id is hard to come
 by"* — and that reasoning stops exactly one field short of the obvious conclusion, that the same is true of
 every other league too.
+
+**✅ Cloud-verified (2026-08-26)** — the manager-id path confirmed working on the live deployment by the owner,
+on his own leagues. Elite was verified before the revision.
+
+**Worth watching, because this is a first for the app.** Every other surface reads a **committed snapshot**
+(ADR-056) and therefore cannot fail at request time. This page calls a **third-party API while a user waits**,
+so it owns a class of failure nothing else here has: FPL being slow, rate-limiting, or down mid-fetch. The
+degradations are built (a failed manager lookup says "check the id"; a partial squad read says *"read 34 of
+50"* and computes over what it has) but they have only been exercised against a healthy API. **The first real
+signal will be a tester reporting a slow or empty Leagues page during a deadline-day spike** — which is
+exactly when FPL is busiest and when someone is most likely to look.
