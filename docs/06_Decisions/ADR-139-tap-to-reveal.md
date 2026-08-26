@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-139
 **Date:** 2026-08-25
-**Status:** ✅ **Accepted — built** (Sprint 193, 2026-08-25). **1347 → 1350 tests, ruff clean.** Owner-reported 2026-08-25, logged to the Roadmap the same
+**Status:** ✅ **Accepted — built** (Sprint 193, 2026-08-25), **revised 2026-08-26** — the compact card is
+back, bound to the selection instead of the cursor. **1415 → 1416 tests, ruff clean.** Owner-reported 2026-08-25, logged to the Roadmap the same
 day, built the same day.
 **Superseded By / Replaces:** Removes the hover reveal added by US-344 / ADR-109 from the **tappable** pitch
 only. Completes ADR-135's revert by dealing with the surface that was actually misbehaving. Keeps ADR-133's
@@ -141,3 +142,45 @@ not the failure.** A test that fails loudly gets fixed the same hour.
 2. **Manual smoke** — ⏳ owner, on Cloud: tap a shirt on My Squad (desktop and iPhone), confirm the outline
    plus the card in the panel, and no floating card anywhere on that pitch. Squad Lab ▸ Build keeps its hover.
 3. **Docs** — this ADR, the Roadmap entry, PROJECT_STATUS, the Feedback_Log row, `docs/05_Sprints/Sprint193.md`.
+
+---
+
+### 🔁 Revision (2026-08-26) — the trigger was broken, not the card
+
+**Owner, after living with it:** *"Previously we had a hover that showed a smaller, condensed version on the
+pitch under the player — this has disappeared. I'd like it back when you click, as well as the more detailed
+version in the panel below."*
+
+**This ADR removed too much.** It correctly identified that the hover popover was misbehaving, and then threw
+away the card along with the trigger. Re-reading the original complaint makes the distinction obvious:
+
+> *"the hover is following the players around, so now I can see one player whom I am going to captain, and
+> stats on another"*
+
+Every word of that is about **when** the card appeared, not **what** it contained. A compact card under the
+shirt is genuinely useful — it is the thing you glance at while looking at the pitch, without leaving the
+pitch. The panel card below is a different job: fuller, further away, for when you have already chosen.
+
+**Bound to the selection, the original failure cannot recur.** On a clickable pitch only the *selected* kit
+carries a `kit-pop` at all, so:
+
+| state | result |
+|---|---|
+| clickable + selected | one card, in place, under the player you chose |
+| clickable + nothing selected | **no card exists**, so nothing can collide |
+| not clickable | hover, unchanged — Squad Lab's preview and the ADR-133 fallback |
+
+There is no extra round-trip: the selection has already happened, and this only changes what that selection
+*renders*. And there is exactly one card on screen at any time — which is precisely what hover could not
+guarantee.
+
+### 💡 The lesson
+
+**When something misbehaves, separate the thing from its trigger before removing either.** The hover card had
+two properties — *a compact card under the shirt* (wanted) and *fires on whatever the cursor touches*
+(broken). ADR-139 treated them as one feature and deleted both, then had to be asked for half of it back a day
+later.
+
+The tell was in the original complaint and I walked past it: **every clause described the timing, none
+described the content.** Feedback usually names the symptom precisely; it is worth reading which noun the
+complaint actually attaches to.

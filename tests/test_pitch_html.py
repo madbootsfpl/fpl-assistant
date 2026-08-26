@@ -91,22 +91,28 @@ def test_the_selected_card_carries_no_actions_only_an_outline():
     assert one.count("kit selected") == 1 and "kit selected" not in _html(clickable=True)
 
 
-def test_hover_exists_only_where_tapping_does_not():
-    """ADR-139. The rule, in one assertion pair.
+def test_the_compact_card_follows_the_SELECTION_not_the_cursor():
+    """ADR-139 and its revision, in one test — because the pair is the whole lesson.
 
-    On a **tappable** pitch a tap already selects, outlines the shirt teal, and renders the *full* card in the
-    panel below — so the floating, desktop-only, *compact* popover was a duplicate. The harmful kind: it fires
-    on whatever the cursor is over rather than on what is selected, which is how a screenshot ends up showing
-    one player's stats beside a different player's selection (owner, 2026-08-25).
+    **What was broken was the trigger, not the card.** On *hover* the popover followed the cursor across every
+    shirt independently of what was selected, so a screenshot showed one player's stats beside a *different*
+    player's selection (owner, 2026-08-25). ADR-139 removed it outright; the owner then asked for it back
+    (2026-08-26: *"previously we had a hover that showed a smaller, condensed version on the pitch under the
+    player — I'd like it back when you click"*), which was the right call: the card was never the problem.
 
-    On a **non-tappable** pitch (Squad Lab's build preview, and the ADR-133 fallback when the click component
-    fails to load) there is no selection to drive a panel, so hover is the only reveal and must stay. Keying
-    this off `clickable` rather than a new flag is what makes the fallback correct for free.
+    Bound to the selection, **exactly one is ever open** and it is always the player you chose.
     """
-    assert 'class="kit-pop"' not in _html(clickable=True, selected_id=4), \
-        "a tappable pitch reveals through the panel; a second floating copy fights it"
-    assert _html(clickable=False).count('class="kit-pop"') == 15, \
-        "without a tap there is nothing else to reveal the card — hover must survive"
+    assert _html(clickable=True, selected_id=4).count('class="kit-pop"') == 1, "one card, on the chosen player"
+    assert 'class="kit-pop"' not in _html(clickable=True), "nothing selected → nothing to collide"
+    assert ".kit.selected .kit-pop{display:block;}" in _html(clickable=True, selected_id=4), \
+        "shown by selection — a hover rule would bring the original bug straight back"
+
+
+def test_a_pitch_you_cannot_tap_keeps_its_hover():
+    """Squad Lab's build preview, and the ADR-133 fallback when the click component fails to load: there is no
+    selection to bind to, so hover is the only way to see a card and must survive. Keying the whole thing off
+    `clickable` is what makes the fallback correct for free."""
+    assert _html(clickable=False).count('class="kit-pop"') == 15
 
 
 def test_the_anchor_does_not_look_like_a_link():

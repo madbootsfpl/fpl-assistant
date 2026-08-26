@@ -77,7 +77,10 @@ _TAP_CSS = """
 <style>
 .kit-a,.kit-a:link,.kit-a:visited,.kit-a:hover,.kit-a:active,.kit-a:focus{
 text-decoration:none!important;color:inherit!important;display:block;}
-.kit.selected{outline:2px solid #5eead4;outline-offset:2px;border-radius:10px;}
+.kit.selected{outline:2px solid #5eead4;outline-offset:2px;border-radius:10px;z-index:41;}
+/* The selected player's compact card, in place under his shirt (ADR-139 rev). Only the selected kit carries
+   a .kit-pop at all on a clickable pitch, so this can never open two at once — which is what the hover did. */
+.kit.selected .kit-pop{display:block;}
 </style>
 """
 
@@ -114,17 +117,21 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     pop = card_body(player, team_name=(team_names or {}).get(player["team"], player["team"]),
                     photo_url=photo or None, fixtures=(fixtures_by_id or {}).get(pid),
                     projected_xp=xp_by_id.get(pid), compact=True)
-    # ADR-139 — the hover popover exists only where tapping does NOT. On a tappable pitch a tap already
-    # selects, outlines the shirt in teal, and renders the **full** card in the panel below; this floating,
-    # desktop-only, *compact* copy of that same card was a duplicate — and the harmful kind, because it fires
-    # on whatever the cursor is over rather than on what is selected. That is how a screenshot ends up showing
-    # one player's stats beside a different player's selection (owner, 2026-08-25).
+    # ADR-139 rev — the compact card is back on a tappable pitch, shown for the **selected** player (owner,
+    # 2026-08-26: *"previously we had a hover that showed a smaller, condensed version on the pitch under the
+    # player — I would like it back when you click, as well as the detailed version in the panel below"*).
     #
-    # Keying it off `clickable` rather than a new flag means the ADR-133 fallback gets hover back for free:
-    # when the click component fails to load, `render_tappable_pitch` draws a plain pitch, and the page
-    # degrades to exactly its old behaviour. The failure mode stays "the tap stops working", never "there is
-    # no way to see a card".
-    pop_html = f'<div class="kit-pop">{pop}</div>' if pop and not clickable else ""
+    # The distinction that makes this safe, and that ADR-139 got wrong by removing it outright: **what was
+    # broken was the trigger, not the card.** On *hover* the popover followed the cursor across every shirt
+    # independently of the selection, so one player's stats appeared beside another player's selection. Bound
+    # to the selection instead, **exactly one is ever open**, it is always the player you chose, and it costs
+    # no extra round-trip because the selection already happened.
+    #
+    # Three states, one condition:
+    #   not clickable            → hover, unchanged (Squad Lab's preview, and the ADR-133 fallback)
+    #   clickable + selected     → shown in place, under that shirt
+    #   clickable + not selected → nothing, so neighbours cannot collide with it
+    pop_html = f'<div class="kit-pop">{pop}</div>' if pop and (not clickable or selected) else ""
     body = (f'<div class="pic">{pic}</div>'
             f'<div class="name">{e(player["web_name"])}</div>'
             f'<div class="xp">{xp}</div>'
