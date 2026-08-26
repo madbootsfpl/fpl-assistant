@@ -3,8 +3,8 @@
 **Decision ID:** ADR-147
 **Date:** 2026-08-26
 **Status:** ✅ **Accepted — built** (Sprint 202, 2026-08-26). **1416 → 1425 tests, ruff clean.**
-⏳ **One owner action:** create the `user_prefs` table (SQL below, complete with policies). Until then the
-feature degrades to session-only — which is exactly today's behaviour — and Admin ▸ 🔧 says so.
+✅ **Owner action DONE and verified (2026-08-26)** — `user_prefs` created with all four policies; Admin ▸ 🔧
+reports `ok`. Cross-device preferences are live.
 **Superseded By / Replaces:** Reuses the per-user store pattern of ADR-106 (squads) and ADR-117 (watchlist).
 Makes 🏆 Leagues (ADR-141) usable on a second visit.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -108,3 +108,7 @@ which was the whole point of scoping it.
    before it can happen again.
 2. **Manual smoke** — the Leagues page: manager id remembered, league picker reopening on the last choice.
 3. **Docs** — this ADR, the Roadmap entry, PROJECT_STATUS, the Feedback_Log row, a sprint retro.
+
+**✅ Verified end to end (2026-08-26).** Owner ran the SQL (after two corrections — see ADR-148 and the
+re-runnability fix) and the Admin diagnostic reports `ok`. The manager id now follows a signed-in user across
+devices, and ADR-148's delete policy means "Remove me" genuinely removes it.
