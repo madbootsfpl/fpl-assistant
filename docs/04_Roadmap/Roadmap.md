@@ -372,6 +372,17 @@ import, Reddit RSS buzz, media headlines. Momentum boards are live now that GW1 
 - ⬜ **Tier 3 — the crowd backtest**: does following vs fading the crowd beat xP-only? Ties into *Evaluation*.
 - ⬜ **Reddit r/FPL aggregate sentiment** — needs the Reddit API + a Cloud secret (RSS buzz is a *count*, not
   sentiment).
+- ⭐ 🚧 **Read the headlines we already fetch** (ADR-151, proposed; spike 206) — *owner question, 2026-08-26:
+  could ML give Signals a sentiment score?* **Measured and declined as framed:** 112 headlines, **6,227 chars**,
+  titles only, no labels — and the text is *reported fact with named journalists*, not opinion, so there is no
+  sentiment to score. **But the Watkins → Al-Hilal story was already in the feed**, reduced to "13 mentions" —
+  the exact story behind ADR-146's unexplained exodus. So: **extraction, not classification.** Rules scored
+  **58% precision** with dangerous errors (two negations read as injuries; *Enzo Maresca*, a manager, matched
+  as a player); local `qwen3:8b` zero-shot fixed 4 of 5 and **failed silent every time**. Design: the model
+  **proposes**, the app **verifies** (closed `kind` set + resolve to exactly one `web_name`, drop otherwise) —
+  the same shape as ADR-037's grounding check, so the "analytics decide" rule holds. ⬜ Prereq: fix
+  `community_buzz`'s surname collision ("Palmer" listed twice). ❌ Not building: a sentiment score, a trained
+  model, or a Signals+Trending blend — **blending needs weights, weights need the evaluation loop**.
 - ⬜ **Pundit / video NLP** — LLM-summarise FPL YouTube / articles into structured signals. Research-heavy.
 - ⬜ **More `ask` intents** — differentials; a persisted chat; an LLM intent classifier.
 - 🅾️ **X/Twitter signals** — paid/restricted. Skipped.
