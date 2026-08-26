@@ -10,6 +10,7 @@ it's unit-tested with a fake squad offline. The `ask` layer humanises + verifies
 from datetime import UTC, datetime
 
 from src.analytics.captain import captain_picks
+from src.analytics.crowd import crowd_exodus
 from src.analytics.optimizer import best_legal_xi, is_unavailable
 from src.analytics.transfer import replace_dead, suggest_transfers
 
@@ -71,12 +72,22 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                                 horizon=horizon, today=today or datetime.now(UTC).date())
 
     # Flags — owned players who are unavailable, or doubtful (a warning, kept in the XI). ADR-023.
+    # ADR-146 adds a third: a heavy sell-off our own data cannot explain. The first two are facts FPL told us;
+    # this one is an inference from behaviour, and it is the app's only route to news the feed does not carry
+    # (a transfer abroad, a row, a press conference). Ordered last in the `elif` so a real status always wins —
+    # if FPL says he is injured, say *that*, not "the crowd is nervous".
     flags = []
     for p in owned:
+        exodus = crowd_exodus(p)
         if is_unavailable(p):
             reason = _STATUS_WORD.get(p["status"], "unavailable")
         elif p["status"] == "d":
             reason = "doubtful"
+        elif exodus:
+            flags.append({"web_name": p["web_name"], "team": p["team"],
+                          "reason": f"{abs(exodus['net']):,} sold him this week — nothing in the data says why",
+                          "chance": None})
+            continue
         else:
             continue
         flags.append({"web_name": p["web_name"], "team": p["team"],

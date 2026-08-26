@@ -142,3 +142,36 @@ def test_a_plan_without_the_key_at_all_still_renders():
     plan = _dead_plan([])
     del plan["replacements"]
     assert "Transfer:" in render_gameweek_plan(plan, "RoboTS")
+
+
+def test_an_unexplained_exodus_reaches_the_gameweek_flags(monkeypatch):
+    """ADR-146. The reported gap: Watkins had 96,095 net sales while `status` was `a` and `news` empty, and
+    neither AI tips nor Health said a word. Flags previously came only from `status`, so a player FPL calls
+    fit was invisible no matter how hard the crowd was selling him.
+    """
+    owned = [_p(1, "Fine", "AAA"),
+             {"id": 2, "web_name": "Watkins", "team": "AVL", "status": "a", "chance": None, "news": "",
+              "selected_by": 9.5, "transfers_in_event": 7_583, "transfers_out_event": 103_678}]
+    monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1})
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
+
+    flags = gw.gameweek_plan(owned, owned, [], {1: 5.0, 2: 4.0})["flags"]
+    assert [f["web_name"] for f in flags] == ["Watkins"]
+    assert "96,095 sold him" in flags[0]["reason"] and "nothing in the data says why" in flags[0]["reason"]
+
+
+def test_a_real_status_always_wins_over_the_crowd(monkeypatch):
+    """If FPL says he is injured, say *that* — not "the crowd is nervous". The inference is the fallback for
+    when the feed is silent, never a replacement for what it does tell us."""
+    injured = {"id": 2, "web_name": "Porro", "team": "TOT", "status": "d", "chance": 75,
+               "news": "Lack of match fitness", "selected_by": 14.3,
+               "transfers_in_event": 2_229, "transfers_out_event": 230_000}
+    monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: set())
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
+
+    (flag,) = gw.gameweek_plan([injured], [injured], [], {2: 4.0})["flags"]
+    assert flag["reason"] == "doubtful" and "sold him" not in flag["reason"]

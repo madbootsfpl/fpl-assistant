@@ -163,7 +163,11 @@ The first response was a warning label. The owner's point argues for more than t
   calibration has not earned. **179 of 516** are in this state one gameweek in.
 
 **A note on the second one that is worth keeping.** The owner also flagged that Watkins looks bound for a Saudi
-club. Nothing in the FPL data says so — his status is `a` with empty news — and nothing was built for it. But
+club. Nothing in the FPL data says so — his status is `a` with empty news — and nothing was built for it.
+🔁 **That conclusion was wrong, and ADR-146 corrects it (2026-08-26).** It treated the *news feed* as the
+boundary of what the app knows. The app was already computing `net_transfers` = **−96,095** for that player and
+already returning a ❄️ out flag — a hundred thousand managers' reading of the same event, rendered three clicks
+away from where it mattered. "We don't have that data" is a claim worth checking as hard as any other. But
 both flagged frontier players turned out to be genuinely un-buyable, for reasons the flag cannot see and
 reliably points at. **That is the argument for marking rather than modelling**: the app supplied the
 suspicion, a human supplied the reason.

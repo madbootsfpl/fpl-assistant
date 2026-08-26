@@ -11,7 +11,11 @@ TEMPLATE_OWN = 20.0        # ≥ this % owned → a "template" pick (≈ the top
 DIFFERENTIAL_OWN = 5.0     # ≤ this % owned → a "differential" (matches the differential filter, ADR-061)
 ESSENTIAL_OWN = 60.0       # > this % owned → "essential" (a must-own; tunable, GW1-calibrated, US-289)
 FORM_MIN = 6.0             # ≥ this recent avg pts/GW → "in form" (calibrate at GW1)
-TRENDING_NET = 50_000      # |net transfers this GW| ≥ this → trending in/out (calibrate at GW1)
+# |net transfers this GW| ≥ this → trending in/out. **Calibrated at GW1 (ADR-146):** across the 199 players
+# owned by ≥1% of managers, net transfers run p10 −35,221 · median −2,946 · p90 +46,808, so 50k sits just
+# outside each tail and fires for well under a tenth of players in either direction. Kept as it was — the
+# placeholder turned out to be about right, which is worth recording so nobody re-derives it.
+TRENDING_NET = 50_000
 
 
 def _get(player, key):
@@ -179,3 +183,56 @@ def fit_flag(player) -> str:
     which must keep returning `""` for a fit player — that `""` is the truthiness test the "who's flagged"
     logic relies on (the My Squad caption, the gameweek-plan flags)."""
     return availability_flag(player) or "✅"
+
+
+# An exodus this severe, measured **per 1% of ownership** so a 50%-owned player isn't flagged just for being
+# popular. Calibrated on live GW1 data (ADR-146): across players owned by ≥1%, `price_pressure` runs
+# p10 −7,996 · median −969 · p90 +11,104. This is p10 — the worst tenth.
+EXODUS_PRESSURE = -8_000
+
+
+def crowd_exodus(player) -> dict | None:
+    """The crowd is dumping this player **and our own data cannot say why** — or `None` (ADR-146).
+
+    This is the app's only route to news it cannot read. FPL's feed carries injuries and suspensions, and
+    those already drive `status` and `news`. It carries **nothing** about a transfer to Saudi Arabia, a
+    training-ground row, or a manager's press conference — but a hundred thousand managers reading the same
+    headline show up in `transfers_out_event` within hours.
+
+    So the signal is not the exodus, it is the **discrepancy**: a heavy sell-off that our own fields leave
+    unexplained. Measured on live GW1 data, the eight largest exoduses split five to three — five explained by
+    a `status`/`news` we already surface, three (Gyökeres, Konsa, Watkins) with nothing at all behind them.
+    Those three are exactly the ones a manager would want to be told about, and the only ones the app was
+    silent on.
+
+    Returns ``{net, pressure}`` when it fires. Deliberately says nothing about *what* the news is — it reports
+    that the crowd knows something and we do not, which is true, checkable, and the most the data supports.
+
+    Scale is `price_pressure` (net transfers per 1% owned, ADR-092), so a template player is not flagged
+    merely for having big absolute numbers.
+    """
+    from src.analytics.price import price_pressure
+
+    if _get(player, "status") != "a" or (_get(player, "news") or "").strip():
+        return None                      # our own data *does* explain it — the flag would be noise
+    pressure = price_pressure(player)
+    if pressure is None or pressure > EXODUS_PRESSURE:
+        return None
+    net = net_transfers(player)
+    if net is None or net >= 0:
+        return None
+    return {"net": net, "pressure": round(pressure)}
+
+
+def exodus_note(player, exodus) -> str | None:
+    """One sentence for an unexplained sell-off, or `None`.
+
+    Careful about what it claims. It does **not** say the player is injured or leaving — we do not know that.
+    It says the crowd is acting on something we cannot see, which is the honest reading and leaves the
+    manager to go and look.
+    """
+    if not exodus:
+        return None
+    return (f"{abs(exodus['net']):,} managers sold {_get(player, 'web_name')} this gameweek and nothing in "
+            "the data explains it — no injury, no suspension, no news. The crowd may be reacting to "
+            "something we can't see; worth a look before you keep him.")

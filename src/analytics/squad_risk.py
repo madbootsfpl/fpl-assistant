@@ -13,6 +13,7 @@ enough of one, otherwise from how often he *started* last season. Where there is
 do not know, and saying so is the whole point.
 """
 
+from src.analytics.crowd import crowd_exodus
 from src.analytics.fdr import team_fdr
 from src.analytics.minutes import chance_factor
 from src.analytics.ranking import percentile_rank
@@ -112,14 +113,23 @@ def squad_risk_rows(owned, upcoming, *, gw_history=None, history=None, next_n: i
         # scores nothing at all, while a hard fixture only shortens the odds on a return.
         m_part = _MINUTES_WEIGHT * mins if mins is not None else 0.0
         f_part = _FIXTURE_WEIGHT * f
+        # ADR-146 — a third reason to worry, and the only one that comes from **outside** our data: the crowd
+        # dumping a player our own fields say is fine. FPL's feed carries injuries and suspensions; it carries
+        # nothing about a Saudi transfer or a training-ground row, but a hundred thousand sales show up within
+        # hours. It does not enter `attention` — it is not a probability and averaging it with one would be the
+        # units mistake ADR-143 made — but it *promotes* the row, because a manager should see it first.
+        exodus = crowd_exodus(p)
         rows.append({
             "id": _get(p, "id"), "web_name": _get(p, "web_name"), "team": _get(p, "team"),
             "position": _get(p, "position"),
             "minutes_risk": mins, "minutes_basis": basis, "fixture_risk": f,
-            "driver": "Minutes" if m_part > f_part else "Fixtures",
+            "driver": "Crowd" if exodus else ("Minutes" if m_part > f_part else "Fixtures"),
+            "exodus": exodus,
             "attention": round(m_part + f_part, 3),
         })
-    rows.sort(key=lambda r: -r["attention"])
+    # An unexplained exodus sorts above everything: it is the one signal the app cannot derive for itself, so
+    # burying it under a fixture percentile would waste the only news we have.
+    rows.sort(key=lambda r: (r["exodus"] is None, -r["attention"]))
     return rows
 
 

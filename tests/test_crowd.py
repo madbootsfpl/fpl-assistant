@@ -14,7 +14,16 @@ from src.analytics import (
     set_piece_flags,
     trending,
 )
-from src.analytics.crowd import DIFFERENTIAL_OWN, ESSENTIAL_OWN, FORM_MIN, TEMPLATE_OWN, TRENDING_NET
+from src.analytics.crowd import (
+    DIFFERENTIAL_OWN,
+    ESSENTIAL_OWN,
+    EXODUS_PRESSURE,
+    FORM_MIN,
+    TEMPLATE_OWN,
+    TRENDING_NET,
+    crowd_exodus,
+    exodus_note,
+)
 from src.storage import Storage
 
 
@@ -163,3 +172,68 @@ def test_trending_ranks_by_each_metric():
 def test_trending_is_empty_safe():
     assert trending([], "owned") == []
     assert trending([{"id": 1}], "owned")[0]["trend"] == 0                # missing metric → 0, no crash
+
+
+# ---- an exodus our own data can't explain (ADR-146) -----------------------------------
+
+def _pl(**kw):
+    base = {"web_name": "X", "status": "a", "news": "", "selected_by": 10.0,
+            "transfers_in_event": 0, "transfers_out_event": 0}
+    return {**base, **kw}
+
+
+def test_a_heavy_unexplained_sell_off_is_flagged():
+    """The reported gap. Watkins: **103,678 out vs 7,583 in — net −96,095** — while `status` was `a`, `news`
+    empty and `chance` None. FPL's feed carries injuries and suspensions; it carries nothing about a transfer
+    to Saudi Arabia. But a hundred thousand managers reading the same headline show up in the transfer
+    numbers within hours, and the app had that data and used it nowhere.
+    """
+    watkins = _pl(web_name="Watkins", selected_by=9.5, transfers_in_event=7_583, transfers_out_event=103_678)
+    ex = crowd_exodus(watkins)
+    assert ex is not None and ex["net"] == -96_095
+    note = exodus_note(watkins, ex)
+    assert "96,095" in note and "Watkins" in note and "nothing in the data explains it" in note
+
+
+def test_an_exodus_our_data_DOES_explain_is_not_flagged():
+    """The signal is the **discrepancy**, not the exodus. Pedro Porro had the largest sell-off of all
+    (−227,771) and it is fully explained by a fitness flag we already surface — flagging him too would bury
+    the three players nobody could account for."""
+    porro = _pl(web_name="Pedro Porro", status="d", news="Lack of match fitness - 75% chance of playing",
+                selected_by=14.3, transfers_out_event=230_000, transfers_in_event=2_229)
+    assert crowd_exodus(porro) is None
+    assert crowd_exodus(_pl(status="i", transfers_out_event=200_000)) is None
+
+
+def test_it_is_measured_per_one_percent_owned_so_template_players_are_not_flagged_for_being_popular():
+    """A 50%-owned player churns big absolute numbers every week. `price_pressure` normalises by ownership,
+    which is why the threshold is a pressure and not a raw count."""
+    template = _pl(selected_by=50.0, transfers_out_event=90_000, transfers_in_event=0)   # −1,800 per 1%
+    niche = _pl(selected_by=2.0, transfers_out_event=40_000, transfers_in_event=0)       # −20,000 per 1%
+    assert crowd_exodus(template) is None
+    assert crowd_exodus(niche) is not None
+
+
+def test_players_being_bought_are_not_an_exodus():
+    assert crowd_exodus(_pl(transfers_in_event=200_000, transfers_out_event=0)) is None
+    assert crowd_exodus(_pl(transfers_in_event=0, transfers_out_event=0)) is None
+
+
+def test_the_note_does_not_claim_to_know_WHAT_the_news_is():
+    """Careful about what it asserts. We do not know he is injured or leaving — we know the crowd is acting on
+    something we cannot see. Saying more than that would be inventing a reason to sound confident."""
+    note = exodus_note(_pl(web_name="Watkins", transfers_out_event=100_000),
+                       {"net": -100_000, "pressure": -10_000})
+    # It *rules things out* — "no injury, no suspension, no news" — which is the honest part: it says what was
+    # checked. What it must never do is assert a cause it cannot know.
+    assert "no injury, no suspension, no news" in note
+    for invented in ("transfer to", "Saudi", "is leaving", "is injured", "is suspended", "will move"):
+        assert invented.lower() not in note.lower(), f"the note must not invent a cause: {invented}"
+    assert "can't see" in note or "cannot see" in note
+
+
+def test_the_threshold_is_the_measured_tenth_percentile():
+    """Calibrated on live GW1 data: across the 199 players owned by ≥1%, `price_pressure` runs
+    p10 −7,996 · median −969 · p90 +11,104. `EXODUS_PRESSURE` is that p10 — the worst tenth — so this speaks
+    about as often as it should rather than whenever someone is unpopular."""
+    assert EXODUS_PRESSURE == -8_000

@@ -63,10 +63,19 @@ def render_risk_monitor(rows, badges=None) -> None:
         st.info("No players to assess yet.")
         return
     unassessed = sum(1 for r in rows if r["minutes_basis"] is None)
+    # ADR-146 — the crowd knows things the feed doesn't. Shown ABOVE the table, because it is the only signal
+    # here the app cannot derive for itself, and a percentile column is the wrong place to put news.
+    from src.analytics.crowd import exodus_note
+    for r in rows:
+        if r.get("exodus"):
+            note = exodus_note({"web_name": r["web_name"]}, r["exodus"])
+            if note:
+                st.warning(f"📉 {note}")
     st.caption("**Attention** blends the chance a player misses the 60-minute appearance points with how hard "
                "his run is *relative to the league* — minutes weigh more, because a player who doesn't play "
                "scores nothing while a hard fixture only shortens the odds. **Driver** names whichever "
-               "contributes more.")
+               "contributes more — or **Crowd**, when a player our data says is fine is being sold heavily "
+               "anyway, which is the one thing here we can only learn from other managers.")
     table = [{
         "badge": (badges or {}).get(r["team"], ""), "Player": r["web_name"], "Team": r["team"],
         "Pos": r["position"], "Attention": round(r["attention"] * 100),
@@ -83,7 +92,8 @@ def render_risk_monitor(rows, badges=None) -> None:
                      "From": "What that chance is based on: his own per-gameweek record, or how often he "
                              "started last season.",
                      "Fixtures": "How hard his club's next 5 are, as a percentile across the league.",
-                     "Driver": "Which of the two is the bigger contributor.",
+                     "Driver": "Which signal is the bigger contributor — or **Crowd** when managers are "
+                               "selling him and nothing in the data explains why.",
                  }))
     if unassessed:
         st.caption(f"🌱 {unassessed} player(s) show **—**: new to the league, so there's no minutes record to "
