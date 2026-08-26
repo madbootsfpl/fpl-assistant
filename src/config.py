@@ -29,6 +29,15 @@ ELEMENT_SUMMARY_PATH = "/element-summary/{}/"
 ENTRY_PATH = "/entry/{}/"
 ENTRY_PICKS_PATH = "/entry/{}/event/{}/picks/"
 
+# A classic league's standings (ADR-141). Public for classic leagues; H2H is a different endpoint and is not
+# used. One page is 50 rows and carries `rank`, `last_rank`, `total` and `event_total` — so the league table
+# *and* who is climbing cost a single call.
+LEAGUE_STANDINGS_PATH = "/leagues-classic/{}/standings/"
+
+# The global "Overall" league. Every FPL manager is in it, so its first page IS the top 50 in the world —
+# which makes the "elite manager comparison" the same code as any other league, pointed at this id (ADR-141).
+ELITE_LEAGUE_ID = 314
+
 # Seconds to wait between element-summary calls during a history backfill (ADR-027).
 # A full backfill is one call per player (~567), so we throttle to respect rate limits
 # (~0.3s ≈ a few minutes). It's a fetch-once-per-season job, kept out of `refresh`.

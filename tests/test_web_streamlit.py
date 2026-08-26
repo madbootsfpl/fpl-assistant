@@ -65,7 +65,7 @@ def test_players_price_filter_includes_the_priciest_player():
 
 def test_trending_top_discussions_before_community_signals():
     # US-345: surface 🔥 Top discussions first; the long Community Signals list sits below
-    at = _run(_PAGES / "7_Trending.py")
+    at = _run(_PAGES / "8_Trending.py")
     caps = [c.value for c in at.caption]
     top = next((i for i, c in enumerate(caps) if "Top discussions this week" in c), None)
     comm = next((i for i, c in enumerate(caps) if "Community Signals" in c), None)
@@ -75,7 +75,7 @@ def test_trending_top_discussions_before_community_signals():
 def test_help_save_step_reflects_auth_live_persistence():
     # US-378 (ADR-111) + US-385 (ADR-113): the Save section reflects auth-live persistence via the unified
     # "Your team" panel (account sync + import + download), not the stale "per-session / no accounts" copy.
-    at = _run(_PAGES / "8_Help.py")
+    at = _run(_PAGES / "9_Help.py")
     blob = " ".join(m.value for m in at.markdown)
     caps = " ".join(c.value for c in at.caption)
     assert "saved to your account" in blob and "Your team" in blob          # auth-live persistence, unified panel
@@ -86,7 +86,7 @@ def test_help_save_step_reflects_auth_live_persistence():
 
 def test_help_explainer_glossary_renders():
     # US-379 (ADR-111): the MadBoots Explainer — one glossary expander with category subheaders + key terms.
-    at = _run(_PAGES / "8_Help.py")
+    at = _run(_PAGES / "9_Help.py")
     blob = " ".join(m.value for m in at.markdown)
     assert "FPL basics" in blob and "Squad decisions" in blob and "MadBoots tools" in blob   # category headers
     assert "xP — Expected Points" in blob and "Boot Battle ⚔️" in blob and "Radar 🎯" in blob  # reconciled terms
@@ -670,7 +670,7 @@ def test_consumer_views_use_a_session_active_squad():
 
 def test_help_page_renders_the_guide_without_data():
     # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps + an example
-    at = _run(_PAGES / "8_Help.py")
+    at = _run(_PAGES / "9_Help.py")
     blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
     assert "Squad Lab" in blob and "My Squad" in blob          # the core steps (ADR-105 nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
@@ -683,10 +683,12 @@ def test_help_page_renders_the_guide_without_data():
 def test_sidebar_pages():
     # ADR-105: the Squads page split into My Squad (manage + tools) + Squad Lab (build); ADR-087 Feedback,
     # ADR-100 gated Admin. (ADR-069 had consolidated the old 12 tabs into the single Squads page first.)
+    # ADR-141 inserted Leagues at 5 and shifted Ask→12 up by one. Streamlit derives a page's URL from the
+    # filename *without* its numeric prefix, so renumbering moves nav order without breaking any link.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
-    assert present == sorted(["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py", "1_Squad_Lab.py", "5_Ask.py",
-                              "6_News.py", "7_Trending.py", "8_Help.py", "9_Maddie_Explains.py", "10_Feedback.py",
-                              "11_Admin.py"])
+    assert present == sorted(["1_Squad_Lab.py", "2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
+                              "5_Leagues.py", "6_Ask.py", "7_News.py", "8_Trending.py", "9_Help.py",
+                              "10_Maddie_Explains.py", "11_Feedback.py", "12_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
         assert not (_PAGES / gone).exists()
@@ -938,8 +940,8 @@ def test_xg_board_rates_only_meaningful_players():
 
 
 _TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩", "1_Squad_Lab.py": "🧪",
-              "5_Ask.py": "💬", "6_News.py": "📰", "7_Trending.py": "📈", "8_Help.py": "🧭",
-              "9_Maddie_Explains.py": "🎥", "10_Feedback.py": "📣", "11_Admin.py": "📊"}
+              "6_Ask.py": "💬", "7_News.py": "📰", "8_Trending.py": "📈", "9_Help.py": "🧭",
+              "10_Maddie_Explains.py": "🎥", "11_Feedback.py": "📣", "12_Admin.py": "📊"}
 
 
 def test_every_tab_has_an_emoji_led_header():
@@ -953,7 +955,7 @@ def test_every_tab_has_an_emoji_led_header():
 def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
     # US-307: with no FPL_FEEDBACK_WEBHOOK a submit offers a pre-filled mailto to the inbox (no network),
     # and the "Join the beta" link is hidden until FPL_SIGNUP_URL is set.
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     assert not at.exception
     assert at.text_area and any(b.label == "Send feedback" for b in at.button)   # the form is there
     assert not any("Join the beta" in b.label for b in at.get("link_button"))     # no signup URL configured
@@ -969,7 +971,7 @@ def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
 def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
     # US-264: the "Join the beta" link appears once FPL_SIGNUP_URL is set
     monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/signup")
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     assert any("Join the beta" in b.label for b in at.get("link_button"))
 
 
@@ -986,7 +988,7 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
         return type("R", (), {})()
 
     monkeypatch.setattr("requests.post", fake_post)
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     assert any(s.label == "Which page?" for s in at.selectbox)          # the page picker exists
     at.text_area[0].set_value("Fixtures target list is great").run()
     next(s for s in at.selectbox if s.label == "Which page?").set_value("Fixtures").run()
@@ -1011,7 +1013,7 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None:
                         captured.update(json=json) or type("R", (), {})())
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     at.text_area[0].set_value("Nice work").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert captured["json"]["access_key"] == "test-access-key"
@@ -1045,7 +1047,7 @@ def _registration_env(monkeypatch, cap="2"):
 
 def test_gate_is_off_by_default():
     # US-324: no cap / no code → the app is open (no gate), byte-identical to today
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     assert not at.exception
     assert not any("private beta" in (t.value or "") for t in at.title)   # no gate title
     assert any(b.label == "Send feedback" for b in at.button)              # the real page rendered
@@ -1055,7 +1057,7 @@ def test_registration_gate_admits_with_code_and_email(monkeypatch):
     _registration_env(monkeypatch)
     rows = []
     _fake_user_store(monkeypatch, rows)
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     assert any(t.label == "Invite code" for t in at.text_input)           # registration mode shows both fields
     assert any(t.label == "Your email" for t in at.text_input)
     next(t for t in at.text_input if t.label == "Invite code").set_value("nope").run()
@@ -1072,7 +1074,7 @@ def test_registration_gate_full_shows_the_waitlist(monkeypatch):
     _registration_env(monkeypatch, cap="0")                               # already full
     monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/waitlist")
     _fake_user_store(monkeypatch, [])
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -1093,7 +1095,7 @@ def test_waitlist_captures_a_wrong_code_email(monkeypatch):
     _registration_env(monkeypatch)
     _fake_user_store(monkeypatch, [])
     calls = _capture_waitlist(monkeypatch)
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("wrong").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("hopeful@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -1105,7 +1107,7 @@ def test_waitlist_captures_an_over_cap_email(monkeypatch):
     _registration_env(monkeypatch, cap="0")
     _fake_user_store(monkeypatch, [])
     calls = _capture_waitlist(monkeypatch)
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -2007,7 +2009,7 @@ def test_feedback_submitted_event(monkeypatch):
     monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None: type("R", (), {})())
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     at.text_area[0].set_value("Love the fixture ticker").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert any(e == "feedback_submitted" for e, kw in events)
@@ -2355,7 +2357,7 @@ def test_my_squad_set_bench_picks_four():
 
 def test_trending_page_shows_a_leaderboard():
     # US-194: a community leaderboard (owned board renders now; momentum boards note "live at GW1")
-    at = _run(_PAGES / "7_Trending.py")
+    at = _run(_PAGES / "8_Trending.py")
     assert at.dataframe or at.info                          # a board, or the no-data note
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
@@ -2386,7 +2388,7 @@ def test_talked_about_board_shows_all_mentions(monkeypatch):
     st.cache_data.clear()                                     # don't inherit another test's cached fetch
     monkeypatch.setattr(reddit.RedditRssClient, "get_subreddit_rss", lambda self, *a, **k: rss)
 
-    at = _run(_PAGES / "7_Trending.py")
+    at = _run(_PAGES / "8_Trending.py")
     btn = [b for b in at.button if b.label.startswith("Show what")]
     assert btn, "the Talked about button should exist"
     btn[0].click().run()
@@ -2397,7 +2399,7 @@ def test_talked_about_board_shows_all_mentions(monkeypatch):
 
 def test_trending_filter_narrows_the_owned_board():
     # ADR-064 reuse: the shared Team/Position/Player filter narrows Trending (the owned board is populated)
-    at = _run(_PAGES / "7_Trending.py")
+    at = _run(_PAGES / "8_Trending.py")
     if not at.dataframe:
         return
     at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
@@ -2407,7 +2409,7 @@ def test_trending_filter_narrows_the_owned_board():
 
 def test_trending_owned_board_shows_the_full_list():
     # ADR-116: the always-populated owned board is one scrollable table (no 30-row page control)
-    at = _run(_PAGES / "7_Trending.py")
+    at = _run(_PAGES / "8_Trending.py")
     if not at.dataframe:
         return
     assert not any(sb.label == "Page" for sb in at.selectbox)   # no page control (ADR-116)
@@ -2415,7 +2417,7 @@ def test_trending_owned_board_shows_the_full_list():
 
 def test_news_page_lists_flagged_players_or_all_clear():
     # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
-    at = _run(_PAGES / "6_News.py")
+    at = _run(_PAGES / "7_News.py")
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
         assert "News" in cols and "Source" in cols
@@ -2425,7 +2427,7 @@ def test_news_page_lists_flagged_players_or_all_clear():
 
 def test_news_page_has_the_headlines_lens_gated_no_network():
     # US-291 (ADR-093): a Headlines section + a button, rendered WITHOUT fetching (no click → no live network).
-    at = _run(_PAGES / "6_News.py")
+    at = _run(_PAGES / "7_News.py")
     assert not at.exception
     assert any("Headlines" in s.value for s in at.subheader)
     assert any(b.label == "Load headlines" for b in at.button)   # opt-in — the feeds fetch only on click
@@ -2433,7 +2435,7 @@ def test_news_page_has_the_headlines_lens_gated_no_network():
 
 def test_ask_page_example_prompts_are_clickable():
     # US-227/US-234: the Ask page lists example questions as buttons; clicking one runs it
-    at = AppTest.from_file(str(_PAGES / "5_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
     assert not at.exception
     labels = [b.label for b in at.button if b.key and b.key.startswith("example_")]
     assert any("best differential midfielders" in lbl for lbl in labels)
@@ -2448,7 +2450,7 @@ def test_ask_page_example_prompts_are_clickable():
 def test_ask_scroll_nudge_is_unique_per_turn_and_multi_tick():
     # US-283/US-287: the scroll nudge re-fires each answer (unique per turn) and scrolls to the bottom several
     # times (instant) so it lands reliably after layout settles — not one smooth attempt that lands sometimes.
-    at = AppTest.from_file(str(_PAGES / "5_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
     at.chat_input[0].set_value("how does bench boost work?").run()
     first = at.get("iframe")[-1].proto.srcdoc
     at.chat_input[0].set_value("how do transfers work?").run()
@@ -2461,7 +2463,7 @@ def test_ask_scroll_nudge_is_unique_per_turn_and_multi_tick():
 def test_ask_page_example_prompts_name_the_loaded_squad():
     # US-280: with a squad loaded, the example buttons read its real name (so "my-team" → your squad and the
     # click scopes correctly), instead of the literal "my-team".
-    at = AppTest.from_file(str(_PAGES / "5_Ask.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30)
     at.session_state["squad"] = {"name": "RoboTS", "player_ids": list(range(1, 16)),
                                  "player_names": [f"P{i}" for i in range(1, 16)], "bench_ids": [], "cost": 100.0}
     at.run()
@@ -2473,7 +2475,7 @@ def test_ask_page_example_prompts_name_the_loaded_squad():
 def test_ask_page_is_conversational_pronouns_and_followups():
     # US-248 (ADR-047/080): the web Ask threads Context, so a pronoun resolves to the last player and a
     # follow-up builds on the last turn
-    at = AppTest.from_file(str(_PAGES / "5_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
     at.chat_input[0].set_value("is Haaland worth the money?").run()
     assert not at.exception and at.session_state["chat_context"] is not None   # context threaded
     at.chat_input[0].set_value("compare him to Isak").run()                    # 'him' → Haaland
@@ -2483,7 +2485,7 @@ def test_ask_page_is_conversational_pronouns_and_followups():
 
 
 def test_ask_chat_answers_a_grounded_question():
-    at = AppTest.from_file(str(_PAGES / "5_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
     assert not at.exception
     at.chat_input[0].set_value("who has the best fixtures over the next 5?").run()
     assert not at.exception
@@ -2493,7 +2495,7 @@ def test_ask_chat_answers_a_grounded_question():
 
 def test_ask_build_offers_use_this_squad(monkeypatch):
     # ADR-062: a "build me a squad" answer offers "Use this squad →" → adopts the session squad
-    at = AppTest.from_file(str(_PAGES / "5_Ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
     assert not at.exception
     at.chat_input[0].set_value("build me a squad for £100m").run()
     assert not at.exception
@@ -2679,7 +2681,7 @@ def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
         {"topic": "Picking your captain", "blurb": "how MADBOOTS ranks captains", "youtube_url": "https://youtu.be/x"},
         {"topic": "More explainers soon", "blurb": "", "youtube_url": None},
     ])
-    at = _run(_PAGES / "9_Maddie_Explains.py")
+    at = _run(_PAGES / "10_Maddie_Explains.py")
     assert any("Maddie Explains" in t.value for t in at.title)
     assert any("Picking your captain" in s.value for s in at.subheader)      # the published topic renders
     assert any("Coming soon" in i.value for i in at.info)                    # the URL-less row degrades
@@ -2707,7 +2709,7 @@ def test_my_squad_banner_renders_the_styled_card():
 
 def test_data_pages_carry_the_brand_mark():
     # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
-    for page in ("2_Players.py", "3_Team_DNA_and_FDR.py", "6_News.py", "7_Trending.py"):
+    for page in ("2_Players.py", "3_Team_DNA_and_FDR.py", "7_News.py", "8_Trending.py"):
         at = _run(_PAGES / page)
         blob = " ".join(m.value for m in at.markdown)
         assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
@@ -2726,14 +2728,14 @@ def test_home_hero_box_consolidates_cta_and_nudges():
 
 def test_news_shows_the_shared_fit_flag():
     # US-400: News uses the same availability emoji (the Fit column) as every other surface.
-    at = _run(_PAGES / "6_News.py")
+    at = _run(_PAGES / "7_News.py")
     dfs = at.get("dataframe")
     assert not dfs or "Fit" in list(dfs[0].value.columns)   # when there's news, the Fit column is present
 
 
 def test_feedback_page_picker_matches_the_current_nav():
     # US-393: the "which page?" picker is synced to the live nav (no stale "Squads"; has My Squad/Squad Lab/Maddie).
-    at = _run(_PAGES / "10_Feedback.py")
+    at = _run(_PAGES / "11_Feedback.py")
     opts = [o for sb in at.selectbox for o in sb.options]
     assert "My Squad" in opts and "Squad Lab" in opts and "Maddie Explains" in opts
     assert "Squads" not in opts                                # the pre-ADR-105 label is gone
@@ -2842,3 +2844,79 @@ def test_colouring_degrades_to_a_plain_table_rather_than_failing():
     assert colour_price([]) == []
     rows = [{"Player": "A"}]                      # no Price column at all
     assert colour_price(rows) is rows
+
+
+def test_the_leagues_page_shows_a_table_but_never_fetches_squads_on_load(monkeypatch):
+    """ADR-141's central rule, as a test: **nothing that costs N network calls happens because someone opened
+    a tab.**
+
+    The league table is one call and renders immediately. The insight layer is one call *per manager*, so it
+    sits behind an explicit button — and this asserts the page reaches its rendered state without `picks` ever
+    being called. Both the standings and the picks fetches are faked, so no test touches the live API.
+    """
+    # `st.cache_data` is process-wide and `_standings` is keyed on the league id alone — which is right in
+    # production and makes these two tests order-dependent, since both use the Elite preset (314). Clearing
+    # is what stops the second test silently reading the first one's fake league.
+    import streamlit as st
+    st.cache_data.clear()
+
+    from src.api import client as client_mod
+
+    standings = {"league": {"name": "Test League"},
+                 "standings": {"has_next": False, "results": [
+                     {"entry": 1, "player_name": "A", "entry_name": "Team A", "rank": 1, "last_rank": 2,
+                      "event_total": 70, "total": 200},
+                     {"entry": 2, "player_name": "B", "entry_name": "Team B", "rank": 2, "last_rank": 1,
+                      "event_total": 60, "total": 190}]}}
+    picks_calls = []
+
+    class FakeClient:
+        def get_league_standings(self, league_id, page=1):
+            return standings
+
+        def get_entry_picks(self, entry_id, gameweek):
+            picks_calls.append((entry_id, gameweek))
+            return {"picks": [], "active_chip": None}
+
+    monkeypatch.setattr(client_mod, "FplClient", FakeClient)
+    at = _run(_PAGES / "5_Leagues.py")
+    if at.exception:
+        raise AssertionError(at.exception)
+
+    assert any(s.value == "Test League" for s in at.subheader), "the table renders on load"
+    assert picks_calls == [], "no per-manager fetch may happen just because the page opened"
+    assert any(b.label.startswith("Read ") for b in at.button), "the expensive layer needs an explicit action"
+
+
+def test_the_leagues_page_states_its_cap_rather_than_truncating_silently(monkeypatch):
+    """A 500-manager league is ~3 minutes of fetching, so the page reads one standings page.
+
+    Silent truncation reads as "we covered everything" when we did not — so this drives a league that *does*
+    have more pages and asserts the page says so, rather than checking the source for a string.
+    """
+    # `st.cache_data` is process-wide and `_standings` is keyed on the league id alone — which is right in
+    # production and makes these two tests order-dependent, since both use the Elite preset (314). Clearing
+    # is what stops the second test silently reading the first one's fake league.
+    import streamlit as st
+    st.cache_data.clear()
+
+    from src.api import client as client_mod
+
+    rows = [{"entry": i, "player_name": f"P{i}", "entry_name": f"T{i}", "rank": i, "last_rank": i,
+             "event_total": 50, "total": 100} for i in range(1, 61)]      # 60 rows, more than the cap
+
+    class FakeClient:
+        def get_league_standings(self, league_id, page=1):
+            return {"league": {"name": "Big League"}, "standings": {"has_next": True, "results": rows}}
+
+        def get_entry_picks(self, entry_id, gameweek):
+            raise AssertionError("must not be called on load")
+
+    monkeypatch.setattr(client_mod, "FplClient", FakeClient)
+    at = _run(_PAGES / "5_Leagues.py")
+    if at.exception:
+        raise AssertionError(at.exception)
+
+    caption = " ".join(c.value for c in at.caption)
+    assert "top 50" in caption, "a truncated league must say it was truncated"
+    assert len(at.dataframe[0].value) == 50, "and must actually stop at the cap"

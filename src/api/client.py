@@ -86,6 +86,15 @@ class FplClient:
         """A manager's squad picks for `gameweek` (public **after** that GW's deadline; 404 before)."""
         return self._get_json(config.ENTRY_PICKS_PATH.format(entry_id, gameweek))
 
+    def get_league_standings(self, league_id: int, page: int = 1) -> dict:
+        """A classic league's standings page (ADR-141) — 50 rows, newest ranks.
+
+        One call gives the whole table *and* the movement: each row carries `rank`, `last_rank`, `total` and
+        `event_total`, so "who is climbing" needs no second request. `standings.has_next` says whether more
+        pages exist; this app deliberately reads only the first (see the cap in ADR-141).
+        """
+        return self._get_json(config.LEAGUE_STANDINGS_PATH.format(league_id) + f"?page_standings={page}")
+
     def get_element_summary(self, element_id: int) -> dict:
         """Fetch one player's element-summary (ADR-027).
 

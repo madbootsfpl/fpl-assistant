@@ -123,3 +123,32 @@ def test_get_json_exhausts_retries_then_raises(monkeypatch):
 
     assert "after 3 attempt" in str(exc.value)   # required source → still fatal
     assert sleeps == [0.5, 1.0]
+
+
+def test_get_league_standings_asks_for_the_first_page(monkeypatch):
+    """ADR-141. Pins the URL, because this endpoint is paginated and the page number is *not* optional in
+    practice — FPL returns page 1 by default today, but the app depends on knowing which 50 it got, and a
+    silently different page would change every number on the view.
+    """
+    seen = {}
+
+    def fake_get(url, timeout, headers):
+        seen["url"] = url
+        return FakeResponse({"league": {"name": "Overall"}, "standings": {"results": [], "has_next": True}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    out = FplClient().get_league_standings(314)
+
+    assert seen["url"].endswith("/leagues-classic/314/standings/?page_standings=1")
+    assert out["league"]["name"] == "Overall"
+
+
+def test_a_league_fetch_failure_raises_the_client_error_like_any_other(monkeypatch):
+    """The page catches `FplApiError` to show "check the id" — so it has to actually be raised, not leak a
+    `requests` exception."""
+    def boom(url, timeout, headers):
+        raise requests.ConnectionError("down")
+
+    monkeypatch.setattr(requests, "get", boom)
+    with pytest.raises(FplApiError):
+        FplClient(retries=0, sleep=lambda _s: None).get_league_standings(1)

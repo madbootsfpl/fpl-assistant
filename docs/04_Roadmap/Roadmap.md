@@ -269,22 +269,17 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
 - ⬜ **Two small ones** — **player clashes** (your own players meeting = point cannibalisation) · **captain
   margin** ("by a whisker — 0.3 over #2", a small polish on the existing captain confidence).
-- ⭐ ⬜ **Import a league — and compare against it** *(owner, 2026-08-25; merges the old "Elite Manager
-  Comparison" line)* — *"can we import leagues? like fplstats.live — and do the elite manager comparison."*
-  **Two halves that share all their plumbing**, which is why they are now one item:
-  - **Import a mini-league by id** (the same shape as the existing Manager-ID import, ADR-113, so the entry
-    point and the storage pattern already exist). `leagues-classic/{id}/standings` gives the table; each
-    manager's `entry/{id}/event/{gw}/picks` gives their XI, captain and chips.
-  - **Compare against it** — effective ownership in *your* league (the number that decides whether a captain
-    is a risk or a hedge), captain split, transfer flow, and who is climbing. The **Top-10k/elite** version is
-    the same code pointed at a public league instead of yours; that is the whole reason to build them together.
-  ✅ **Unblocked since the GW1 deadline** — picks are public only from then.
-  ⚠️ **This is the first feature that needs MANY API calls per view** (one per manager per gameweek), which no
-  existing surface does. Its ADR has to answer caching/rate-limit before design: a 20-manager league over 5
-  gameweeks is 100 calls, and the app is a read-only snapshot deployment (ADR-056). Likely shape: fetch on
-  demand, store, refresh per gameweek — closer to `refresh` than to a live call.
-  *(fplstats.live was checked as a reference and is fully client-side — nothing readable server-side, so the
-  design above is drawn from the FPL API, not from copying theirs.)*
+- ✅ **Import a league — and compare against it** (ADR-141, Sprint 195, 2026-08-26) — *owner, 2026-08-25.*
+  Shipped as **🏆 Leagues**: a classic league by id, or the global Overall league as the **elite** preset (same
+  code, different id). **Justified by measurement:** across the top 50 managers in the world, Palmer sat at
+  **62% effective ownership against 11.9% global** — every other surface here calls that a differential; among
+  the people winning it is template, and global ownership cannot tell them apart. Also the captain split
+  (21/8/7) and that **47 of 50 played Bench Boost**. **The cost came in 5× below the estimate** that nearly
+  deferred it — the table is ONE call, and the insight layer needs the current gameweek only, not a history.
+  Affordable because a completed gameweek's picks are **immutable**: cached with no expiry (17.5s first load,
+  0.0s after). Insight sits behind a button — *nothing that costs N calls happens because someone opened a
+  tab*. ⬜ Not in v1, deliberately: **transfer flow** (one more call per manager) and **H2H leagues** (a
+  different endpoint).
 - ✅ **Transfer advice names the dead slot** (ADR-136, Sprint 190, 2026-08-25) — *owner, 2026-08-19.*
   `suggest_transfers` ranks by starting-XI gain (ADR-046), so a departed player on the bench moved that number
   by zero and the advice read *"hold"*. Now asked as a separate question: a slot that cannot score for the

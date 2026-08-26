@@ -1783,3 +1783,18 @@ backfill, scheduled refresh, the AI/RAG layer, and optimisation.
   and became a declarative list of columns. (Raw line total is ~flat: the well-documented shared
   module offsets the per-view savings; the win is maintainability — a new view or column is a
   one-line change.) No behaviour change, no dependency.
+- **Sprint 195 (2026-08-26)** — a **Leagues** page (ADR-141): import a classic league by id, or scan the
+  global Overall league as the "elite" preset — the same code, a different id. Two layers priced apart,
+  which is the design rather than a detail: the **table is one call** (`leagues-classic/{id}/standings/`
+  already carries `rank`, `last_rank`, `total` and `event_total`, so movement is free), while the **insight
+  layer costs one call per manager** and therefore sits behind an explicit button — *nothing that costs N
+  network calls happens because someone opened a tab*. New `FplClient.get_league_standings`, a pure
+  `analytics/league.py` (effective ownership, captain split, chip usage, movers), and no `decision_xp` change.
+  Affordable because **a completed gameweek's picks are immutable**: cached with no expiry, so a re-visit is
+  free (measured: 17.5 s first load for 50 managers, 0.0 s after). Throttled at the existing
+  `config.HISTORY_THROTTLE`; capped at one standings page (50) and it **says so**.
+  ⚠️ **Page files renumbered** — Leagues inserted at 5, so Ask→Admin each shifted up one (`5_Ask.py` is now
+  `6_Ask.py`, … `11_Admin.py` is now `12_Admin.py`). Streamlit derives a page's URL from the filename
+  **without** its numeric prefix, so `/Ask` and `/Admin` are unchanged and no link breaks. **Entries above
+  this line keep the filenames they were written with** — they are a record of what was true then, not a
+  pointer to today's tree.
