@@ -100,7 +100,7 @@ declined to copy a rival's feature because our own measurements said it wouldn't
 | rival | their signature | where we are |
 |---|---|---|
 | **fplanalyser** | Squad Risk Monitor · Squad-grade DNA · forward planner | **all three shipped** (ADR-130/131). The planner is **deliberately different**: their projected-points-vs-average framing is *noise* on our numbers (a squad's per-GW xP varies ±3%), so ours leads with fixture **exposure**, which swings 2→7. |
-| **fplapex** | multi-GW transfer path · chip-sequence scan · competitive layer | Path search **declined on evidence** (ADR-132): the best sell was the same player in all six gameweeks and the market yielded *one* beneficial move — a tree with one branch. Shipped the **timing arithmetic** instead. **Chip scan resolved** (ADR-143): the ranking declined on evidence (worth 0.3 xP), the legality defect it hid — two chips advised for one gameweek, 28% of squads — fixed. Competitive layer shipped as 🏆 Leagues (ADR-141). |
+| **fplapex** | multi-GW transfer path · chip-sequence scan · competitive layer | Path search **declined on evidence** (ADR-132): the best sell was the same player in all six gameweeks and the market yielded *one* beneficial move — a tree with one branch. Shipped the **timing arithmetic** instead. **Chip scan resolved** (ADR-143): the ranking declined on evidence (worth 0.3 xP), the legality defect it hid — two chips advised for one gameweek, 28% of squads — fixed. Competitive layer **partly** shipped as 🏆 Leagues (ADR-141): the *differentials* half is live (effective ownership vs global, captain split, chips, movers). **H2H and the win-probability sim are still open** — see the detailed item. |
 | **FFH** | the rich player card · click-a-player menu | Card beaten on our own metrics (xP · value · ownership tier · DefCon · set-pieces — none of which they show). **Tap-the-pitch live and Cloud-verified** (ADR-133). |
 | **aceanalyst** | pool-wide value-frontier scatter | **Shipped** (ADR-138) — and made ours: the hover carries a tested *verdict*, not a coordinate. Building it also exposed an xMins blind spot no ranked surface had surfaced, because a frontier promotes cheap-and-high numbers rather than burying them. |
 
@@ -316,11 +316,33 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   bench)** and **Strong XI (cheap bench)**, with Bench Boost answered as a caption where the question is
   asked. Default unchanged, deliberately: the XI-first build is +7.2 XI xP but buys a bench with a 4.9-xP
   near-dead slot — a real trade, now honestly labelled. No optimiser change.
+- ⭐ ⬜ **A loaded league must persist between sessions and across devices** *(owner, 2026-08-26)* — re-typing
+  a manager id every visit defeats the point of importing one. The pattern is proven twice already: squads
+  (ADR-106) and the ⭐ watchlist (ADR-117) persist per-user keyed by `auth.user_key(email)` in the same
+  Supabase project — no new secret, no new table shape. ⚠️ Its ADR must settle what happens **signed-out**
+  (the page works without an account today; a session-only fallback keeps that true) and whether it remembers
+  the **manager id**, the **league**, or both — remembering the manager id is the bigger win, since it
+  re-populates every league at once.
+- ⭐ ⬜ **"My squad only" on the Trending boards** *(owner, 2026-08-26)* — wiring, not new logic: the shared
+  filter already carries a `my_squad` dimension that `filters.apply` honours and Players/Radar both use;
+  Trending just doesn't pass through it. Worth more than its size — the boards answer *"what is the crowd
+  doing?"*, and the only version a manager can act on is *"…to MY players"*, which is ADR-146's crowd-exodus
+  insight one surface over.
+- ⬜ **Consolidate the "signals" surfaces?** *(owner question, 2026-08-26)* — *Talked about* (Reddit mention
+  counts, a Trending tab) and *News* (FPL's **official** `news` — injuries, doubts, return dates) are
+  different in kind, and merging them naively risks showing a rumour beside an official flag with equal
+  weight. **But ADR-146 strengthened the case**: the app now has *three* answers to *"what should I know that
+  the table doesn't say?"* — official news, community chatter, and an **unexplained transfer exodus**. Those
+  belong together far more than chatter belongs beside ownership leaderboards. Likely shape: one **Signals**
+  page, leaving Trending as pure leaderboards. Needs an ADR — it is a page merge.
 - ⬜ **Ceiling / "differential" captaincy** — `captain` ranks by *mean* xP; add a variance/ceiling lens for when
   you need a differential rather than the safe pick.
-- ⬜ **The competitive layer** *(fplapex)* — **mini-league H2H** · a **win-probability sim** · **differentials
-  vs your rivals**. Needs the **leagues API**; picks are public from the GW1 deadline, so this is **now
-  unblocked**. Reinforces the Crowd/Signals track rather than the solver one — it answers *"what do I need to do
+- ◑ **The competitive layer** *(fplapex)* — **partly shipped.** ✅ *Differentials vs your rivals* is live as
+  🏆 **Leagues** (ADR-141): league import by manager id, standings + movement, **effective ownership vs
+  global** (the number that decides differential-or-template), captain split and chip usage.
+  ⬜ **Still open: mini-league H2H** and a **win-probability sim** — *"what do I need to do to catch him?"*,
+  which needs per-manager projections rather than per-player ones. Needs the **leagues API**; picks are public
+  from the GW1 deadline, so this is **unblocked**. Reinforces the Crowd/Signals track rather than the solver one — it answers *"what do I need to do
   to catch him?"*, which is a different question from *"what's the best squad?"*. **Mini-league position also
   sharpens the chip advisor** (ADR-082): when to burn a Wildcard depends on whether you're chasing or defending.
 - ⬜ **DGW/BGW detection** — sharpens the chip advisor; in-season data.
