@@ -3156,3 +3156,24 @@ def test_transfer_view_puts_a_reported_departure_ahead_of_an_upgrade(monkeypatch
     said = " ".join([*(e.value for e in at.error), *(i.value for i in at.info)])
     assert seen["name"] in said, "the departing player must be named on the page"
     assert "per Romano" in said, "…and the outlet with him, so the claim is checkable"
+
+
+def test_the_league_scan_offers_the_tap_when_the_component_is_live(monkeypatch):
+    """ADR-158 — the roadmap asked for the league-scan rows to inherit ADR-133's selection.
+
+    Both halves matter, so both are asserted: with the component live the rows are anchors and the caption
+    says tapping works (ADR-133's diagnostic — an invisible fallback left no way to tell a working deploy
+    from a broken one); without it, the page is exactly what it was.
+    """
+    from src.web_streamlit import tap
+
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: ""))
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    assert not at.exception
+    assert any("Tap a row" in c.value for c in at.caption), "the caption must say the gesture exists"
+
+    monkeypatch.setattr(tap, "_detector", lambda: None)
+    plain = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    assert not plain.exception, "a missing component must never take the page down"
+    assert not any("Tap a row" in c.value for c in plain.caption)
+    assert any(s.label == "Team" for s in plain.selectbox), "the picker stays either way"

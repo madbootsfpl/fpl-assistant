@@ -200,9 +200,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   a two-tap flow cost two round-trips — a floating menu advertises client-side responsiveness we cannot
   deliver, and it collided with the neighbouring cards' hover popovers. **Widget count was a bad proxy for
   clutter**; three fast controls beat one slow menu. Read ADR-135 §Outcome before re-opening this.
-  ⬜ The league-scan rows should inherit **selection**, not a menu — a row tap that selects is ADR-133's shape
-  and is still wanted; a row tap that opens a menu is this ADR again. The density goal stands; the mechanism
-  for reaching it does not.
+  ✅ The league-scan rows inherit **selection** — built (ADR-158, Sprint 213, 2026-08-27). A row tap selects
+  that club and writes the same state the dropdown writes, so the DNA card below is reused unchanged; the
+  picker stays permanently, and the caption offers the gesture only when the component is live. **No menu** —
+  that half stayed reverted. The identical Health strip taps too (same renderer). This item's guard rail was
+  written *by* ADR-135's reversal, which is the whole lesson: a reverted sprint is only wasted if it leaves no
+  rule behind.
 - ✅ **The player card opens on a TAP, not a hover** (ADR-139, Sprint 193, 2026-08-25) — *owner,
   2026-08-25.* Reading the code changed the fix: the panel **already** rendered the full card for whoever is
   selected, and ADR-133's tap already drove that with the teal outline — so the behaviour existed and the

@@ -70,11 +70,31 @@ else:
         # Three fixtures, not one: one opponent says who's next, three say whether the run the FIX percentile
         # claims actually looks like one. Tinted chips make three fit the width one text pair used.
         _nxt = {t: team_schedule(upcoming, t)[:3] for t in _all_dna}
-        st.markdown(your_teams_strip_html(
-            league_rows(_all_dna, _nxt, sort_by="fixtures" if _sort == "Fixtures" else "grade"),
-            title="🧬 The league at a glance — grade · ATT/DEF/FIX · next 3"), unsafe_allow_html=True)
+        _scan_rows = league_rows(_all_dna, _nxt, sort_by="fixtures" if _sort == "Fixtures" else "grade")
+        # ADR-158 — tap a row to select that club. ADR-133's gesture, on the surface the roadmap asked for it:
+        # a tap that SELECTS, never one that opens a menu (that was ADR-135, and it was reverted). The picker
+        # below stays, so AppTest keeps driving this page and a missing component degrades to what it was.
+        from src.web_streamlit import tap
+        _team_labels = {t: _names.get(t, t) for t in _all_dna}
+        _tappable = tap.available()
+        # Fall back to the label the selectbox will *itself* default to on a first load, or the outline and
+        # the picker would disagree until the first interaction.
+        _sorted_teams = sorted(_all_dna, key=lambda t: _names.get(t, t))
+        _first = _names.get(_sorted_teams[0], _sorted_teams[0]) if _sorted_teams else None
+        _picked_now = st.session_state.get("team_dna_pick") or _first
+        _sel = next((t for t, lab in _team_labels.items() if lab == _picked_now), None)
+        _scan_html = your_teams_strip_html(
+            _scan_rows, title="🧬 The league at a glance — grade · ATT/DEF/FIX · next 3",
+            clickable=_tappable, selected=_sel)
+        if _tappable:
+            tap.select_from_html(_scan_html, select_key="team_dna_pick", label_by_id=_team_labels,
+                                 key="dna_scan_tap")
+        else:
+            st.markdown(_scan_html, unsafe_allow_html=True)
         st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Fixture chips are tinted by "
-                   "difficulty; **h**/**a** = home or away. Pick a club below for its full DNA.")
+                   "difficulty; **h**/**a** = home or away. "
+                   + ("**Tap a row** for that club's full DNA, or pick one below."
+                      if _tappable else "Pick a club below for its full DNA."))
     if _all_dna:
         _labels = {_names.get(t, t): t for t in sorted(_all_dna, key=lambda t: _names.get(t, t))}
         _picked = _labels.get(st.selectbox("Team", list(_labels), key="team_dna_pick",

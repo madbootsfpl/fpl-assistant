@@ -212,3 +212,35 @@ def test_sorting_by_fixtures_puts_the_easiest_run_first():
     dna = {"AAA": _D("AAA", fix=20), "BBB": _D("BBB", fix=90)}
     assert [r["team"] for r in league_rows(dna, {}, sort_by="fixtures")] == ["BBB", "AAA"]
     assert [r["team"] for r in league_rows(dna, {}, sort_by="grade")][0] in ("AAA", "BBB")
+
+
+# ---- Tappable rows (ADR-158) ----------------------------------------------------------------------
+
+def test_a_clickable_row_is_the_anchor_itself_not_a_wrapper_around_one():
+    """`.yt-row` is a four-column grid. An <a> *inside* it would become the single grid item and collapse the
+    layout, so the row element has to BE the anchor."""
+    players, fixtures = _squad_pool()
+    rows = your_teams_rows([players[0], players[2]], team_dna_all(players, fixtures))
+    html = your_teams_strip_html(rows, clickable=True)
+    assert html.count("<a class=\"yt-row") == 2
+    assert '<div class="yt-row"><a' not in html
+    for r in rows:
+        assert f'id="team:{r["team"]}"' in html
+
+
+def test_the_plain_strip_has_no_anchors_at_all():
+    """The fallback path must render exactly what it rendered before ADR-158 — anchors that go nowhere would
+    still underline and recolour every row."""
+    players, fixtures = _squad_pool()
+    rows = your_teams_rows([players[0], players[2]], team_dna_all(players, fixtures))
+    html = your_teams_strip_html(rows)
+    assert "<a " not in html and "id=\"team:" not in html
+    assert html.count('class="yt-row"') == 2
+
+
+def test_the_selected_row_is_outlined_and_only_that_one():
+    players, fixtures = _squad_pool()
+    rows = your_teams_rows([players[0], players[2]], team_dna_all(players, fixtures))
+    html = your_teams_strip_html(rows, clickable=True, selected=rows[0]["team"])
+    assert html.count("selected") == 2                 # the row's class + the CSS rule that styles it
+    assert f'yt-row selected yt-a" href="#" id="team:{rows[0]["team"]}"' in html

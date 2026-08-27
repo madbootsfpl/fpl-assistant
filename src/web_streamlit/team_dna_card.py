@@ -199,6 +199,13 @@ font-weight:800;font-size:.64rem;color:#cdd6e2;}
 .yt-fx{display:inline-block;border-radius:5px;padding:1px 5px;margin-right:4px;font-size:.66rem;
 font-weight:800;letter-spacing:.02em;}
 .yt-fx i{font-style:normal;opacity:.72;font-weight:700;margin-left:2px;}
+/* ADR-158 — a tappable row IS the anchor, not a wrapper around one: `.yt-row` is a grid, and putting an <a>
+   inside it would collapse four columns into a single grid item. The link reset and the teal outline are
+   ADR-133's, deliberately unchanged — the same gesture should look the same wherever it is offered. */
+.yt-a,.yt-a:link,.yt-a:visited,.yt-a:hover,.yt-a:active,.yt-a:focus{text-decoration:none!important;
+color:inherit!important;}
+.yt-a:hover{background:rgba(94,234,212,.06);}
+.yt-row.selected{outline:2px solid #5eead4;outline-offset:-2px;border-radius:8px;}
 </style>
 """
 
@@ -267,27 +274,38 @@ def league_rows(all_dna, next_opp=None, *, sort_by: str = "grade", next_n: int =
     return rows
 
 
-def your_teams_strip_html(rows, *, title: str = "🧬 Your teams — strength behind your squad") -> str:
+def your_teams_strip_html(rows, *, title: str = "🧬 Your teams — strength behind your squad",
+                          clickable: bool = False, selected=None) -> str:
     """The compact strip HTML (a row per club: badge · grade · ATT/DEF/FIX dots · a trailing column).
 
     Shared by the My Squad "Your teams" strip and the league-wide scan on the Team DNA tab (ADR-134) — the
     trailing column is *your players* in one and *the next opponent* in the other, which is the only difference
     between them and not worth a second renderer.
+
+    `clickable` makes each row an anchor (`team:<short name>`) so a tap selects that club (ADR-158, reusing
+    ADR-133's gesture). `selected` outlines one row, so it is visible which club the picker below refers to.
     """
     if not rows:
         return ""
     def dot(v):
         return f'<span class="yt-dot" style="background:{_band(v)[0]}"></span>'
-    body = "".join(
-        f'<div class="yt-row"><div class="yt-badge">{_esc(r["team"])}</div>'
-        f'<div class="yt-grade" style="color:{_tone(r["grade"])}">{_esc(r["grade"])}</div>'
-        f'<div class="yt-axes">ATT {dot(r["att"])} · DEF {dot(r["dfc"])} · FIX {dot(r["fix"])}</div>'
-        # `players` is pre-rendered HTML for the league scan (tinted chips) and plain text for the squad
-        # strip — escape only the latter, or the chips would print as markup.
-        f'<div class="yt-mine">{r["players"] if r.get("fixtures") else _esc(r["players"])}</div></div>'
-        for r in rows)
+    def open_tag(team):
+        cls = "yt-row" + (" selected" if selected is not None and team == selected else "")
+        if not clickable:
+            return f'<div class="{cls}">', "</div>"
+        return f'<a class="{cls} yt-a" href="#" id="team:{_esc(team)}">', "</a>"
+    parts = []
+    for r in rows:
+        head, tail = open_tag(r["team"])
+        parts.append(
+            f'{head}<div class="yt-badge">{_esc(r["team"])}</div>'
+            f'<div class="yt-grade" style="color:{_tone(r["grade"])}">{_esc(r["grade"])}</div>'
+            f'<div class="yt-axes">ATT {dot(r["att"])} · DEF {dot(r["dfc"])} · FIX {dot(r["fix"])}</div>'
+            # `players` is pre-rendered HTML for the league scan (tinted chips) and plain text for the squad
+            # strip — escape only the latter, or the chips would print as markup.
+            f'<div class="yt-mine">{r["players"] if r.get("fixtures") else _esc(r["players"])}</div>{tail}')
     return (YT_CSS + f'<div class="yt-strip"><div class="yt-ttl">{_esc(title)}'
-            f'</div>{body}</div>')
+            f'</div>{"".join(parts)}</div>')
 
 
 def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=None, season_name=None,
@@ -305,9 +323,21 @@ def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=No
     rows = your_teams_rows(owned, all_dna)
     if not rows:
         return
-    st.markdown(your_teams_strip_html(rows), unsafe_allow_html=True)
+    # ADR-158 — the same tap as the league scan. This strip is rendered by the same function and looks
+    # identical, so a gesture that worked on one and not the other would read as a bug, not a boundary.
+    from src.web_streamlit import tap
+    by_team = {r["team"]: f'{r["name"]} ({r["grade"]})' for r in rows}
+    tappable = tap.available()
+    sel = next((t for t, lab in by_team.items() if lab == st.session_state.get("health_team_dna")), None)
+    html = your_teams_strip_html(rows, clickable=tappable, selected=sel)
+    if tappable:
+        tap.select_from_html(html, select_key="health_team_dna", label_by_id=by_team, key="health_dna_tap")
+    else:
+        st.markdown(html, unsafe_allow_html=True)
     st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Your investments, both ends — a hard "
-               "**FIX** run is a transfer signal. Pick a club below for its full Team DNA.")
+               "**FIX** run is a transfer signal. "
+               + ("**Tap a row** for that club's full Team DNA, or pick one below."
+                  if tappable else "Pick a club below for its full Team DNA."))
     labels = {f'{r["name"]} ({r["grade"]})': r["team"] for r in rows}
     picked = labels.get(st.selectbox("View a team's DNA", ["—", *labels], key="health_team_dna",
                                      help="Drill into any of your clubs' full Team DNA."))

@@ -59,6 +59,47 @@ def parse(clicked):
     return int(raw)
 
 
+def _fresh(clicked, key):
+    """A click the current run hasn't acted on yet, else None.
+
+    The component keeps handing back its **last** click on every rerun, so a tap must act once — on the run
+    where it happened. Without this, every later rerun re-writes the selection back to the last tap, and the
+    picker beside it can never override one. (Found while debugging ADR-135; it is a real bug in its own
+    right, and it is shared by every tappable surface, which is why it lives here.)
+    """
+    seen_key = f"{key}__seen"
+    if not clicked or st.session_state.get(seen_key) == clicked:
+        return None
+    st.session_state[seen_key] = clicked
+    return clicked
+
+
+def select_from_html(html, *, select_key, label_by_id, key, prefix="team"):
+    """Render clickable `html` and turn a tap on one of its anchors into a selection (ADR-158).
+
+    The generalisation of ADR-133's gesture beyond the pitch: anchors carry `id="{prefix}:{something}"`, and
+    `label_by_id` maps that something to the label of the **selectbox** named by `select_key` — so the tap
+    writes exactly the state the dropdown writes, and everything downstream is reused unchanged.
+
+    Returns the tapped id, or None. The caller renders its own non-clickable HTML when `available()` is
+    False; this never draws a fallback, because a strip and a pitch do not degrade to the same thing.
+
+    Must be called **before** the selectbox exists in the run — Streamlit forbids writing a widget's state
+    once that widget has been created.
+    """
+    detector = _detector()
+    if detector is None:
+        return None
+    clicked = _fresh(detector(html, key=key), key)
+    if not clicked:
+        return None
+    action, _, raw = str(clicked).partition(":")
+    if action != prefix or raw not in label_by_id:        # not ours, or stale after a data refresh
+        return None
+    st.session_state[select_key] = label_by_id[raw]
+    return raw
+
+
 def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", **kw):
     """Draw the pitch so tapping a shirt selects that player. Returns the tapped id, or None.
 
@@ -81,16 +122,9 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
         return None
 
     html = pitch_html(xi, bench, clickable=True, **kw)
-    clicked = detector(html, key=key)
-
-    # The component keeps handing back its **last** click on every rerun, so a tap must act once — on the run
-    # where it happened. Without this, every later rerun re-wrote the selection back to the last-tapped shirt,
-    # so the dropdown beside the pitch could never override a tap. (Found while debugging ADR-135; kept,
-    # because it is a real bug in its own right.)
-    seen_key = f"{key}__seen"
-    if not clicked or st.session_state.get(seen_key) == clicked:
+    clicked = _fresh(detector(html, key=key), key)
+    if not clicked:
         return None
-    st.session_state[seen_key] = clicked
 
     pid = parse(clicked)
     by_id = {p["id"]: p for p in list(xi) + list(bench)}

@@ -141,3 +141,52 @@ def test_the_fallback_pitch_keeps_its_hover(monkeypatch):
     tap.render_tappable_pitch([_p(1, "A")], [], select_key="k", label_for=_label,
                               captain_id=None, xp_by_id={}, photos={}, next_opp={})
     assert seen.get("clickable") is not True, "the fallback must not claim to be tappable — hover depends on it"
+
+
+# ---- The same gesture beyond the pitch (ADR-158) --------------------------------------------------
+# The roadmap asked for the league-scan rows to inherit SELECTION — "a row tap that selects is ADR-133's shape
+# and is still wanted; a row tap that opens a menu is ADR-135 again." These pin that it is the same gesture,
+# with the same safety properties, rather than a second implementation of it.
+
+_TEAMS = {"ARS": "Arsenal", "LIV": "Liverpool"}
+
+
+def test_a_row_tap_selects_that_club(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "team:LIV"))
+    st.session_state.clear()
+    out = tap.select_from_html("<a id='team:LIV'>", select_key="team_dna_pick",
+                               label_by_id=_TEAMS, key="scan")
+    assert out == "LIV" and st.session_state["team_dna_pick"] == "Liverpool"
+
+
+def test_a_replayed_click_does_not_reselect_on_every_rerun(monkeypatch):
+    """The component hands back its LAST click forever, so without the guard the picker could never override
+    a tap — the bug found while debugging ADR-135, now shared by both surfaces because it is shared code."""
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "team:LIV"))
+    st.session_state.clear()
+    assert tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan") == "LIV"
+
+    st.session_state["k"] = "Arsenal"                    # …the user then picks another club from the dropdown
+    assert tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan") is None
+    assert st.session_state["k"] == "Arsenal", "the replayed click must not overwrite the picker"
+
+
+def test_an_unknown_or_stale_id_is_ignored(monkeypatch):
+    import streamlit as st
+    for clicked in ("team:XXX", "sel:7", "", "nonsense"):
+        monkeypatch.setattr(tap, "_detector", lambda c=clicked: (lambda html, key=None: c))
+        st.session_state.clear()
+        assert tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan") is None
+        assert "k" not in st.session_state
+
+
+def test_a_missing_component_selects_nothing_and_draws_nothing(monkeypatch):
+    """Unlike the pitch, this draws no fallback — a strip and a pitch don't degrade to the same thing, so the
+    caller renders its own plain HTML. What must hold is that it is silent, not that it is invisible."""
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: None)
+    st.session_state.clear()
+    assert tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan") is None
+    assert "k" not in st.session_state
