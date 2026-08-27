@@ -175,3 +175,68 @@ def test_a_real_status_always_wins_over_the_crowd(monkeypatch):
 
     (flag,) = gw.gameweek_plan([injured], [injured], [], {2: 4.0})["flags"]
     assert flag["reason"] == "doubtful" and "sold him" not in flag["reason"]
+
+
+def test_a_reported_leaver_is_benched_and_never_captained_while_the_window_is_open(monkeypatch):
+    """ADR-154. `decision_xp` still rates a departing player highly — FPL calls him available — so the plan
+    flagged him, recommended replacing him, **and put him in the XI anyway**.
+
+    His xP is zeroed **for selection only**: a local copy of the map that goes no further than this call. The
+    stored `decision_xp` is untouched and every other surface still shows it.
+    """
+    leaver = {"id": 2, "web_name": "Watkins", "team": "AVL", "status": "a", "chance": None, "news": "",
+              "selected_by": 9.5, "transfers_in_event": 0, "transfers_out_event": 200_000}
+    owned = [_p(1, "Keeper", "AAA"), leaver, _p(3, "Other", "BBB")]
+    events = {2: [{"kind": "transfer", "source": "Romano", "title": "…deal to sign Ollie Watkins"}]}
+
+    seen = {}
+
+    def fake_captain(pool, *a, **k):
+        seen["pool"] = [p["id"] for p in pool]
+        return []
+
+    def fake_xi(_owned, scores):
+        seen["scores"] = dict(scores)
+        return {1}
+
+    monkeypatch.setattr(gw, "captain_picks", fake_captain)
+    monkeypatch.setattr(gw, "best_legal_xi", fake_xi)
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
+
+    from datetime import date
+    gw.gameweek_plan(owned, owned, [], {1: 3.0, 2: 9.0, 3: 4.0}, events_by_id=events, today=date(2026, 8, 27))
+
+    assert seen["scores"][2] == 0.0, "ranked as if he scores nothing — because he will"
+    assert seen["scores"][1] == 3.0 and seen["scores"][3] == 4.0, "nobody else is touched"
+    assert 2 not in seen["pool"], "and he must never be captained"
+
+
+def test_outside_a_transfer_window_he_is_treated_completely_normally(monkeypatch):
+    """The owner's caveat: *"we could get a reported to be leaving outside the window and we should not react
+    in that case."* In October he plays on until January, so nothing changes at all."""
+    leaver = {"id": 2, "web_name": "Watkins", "team": "AVL", "status": "a", "chance": None, "news": "",
+              "selected_by": 9.5, "transfers_in_event": 0, "transfers_out_event": 200_000}
+    owned = [_p(1, "Keeper", "AAA"), leaver]
+    events = {2: [{"kind": "transfer", "source": "Romano", "title": "…deal to sign Ollie Watkins"}]}
+
+    seen = {}
+
+    def fake_captain(pool, *a, **k):
+        seen["pool"] = [p["id"] for p in pool]
+        return []
+
+    def fake_xi(_owned, scores):
+        seen["scores"] = dict(scores)
+        return {1}
+
+    monkeypatch.setattr(gw, "captain_picks", fake_captain)
+    monkeypatch.setattr(gw, "best_legal_xi", fake_xi)
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
+
+    from datetime import date
+    gw.gameweek_plan(owned, owned, [], {1: 3.0, 2: 9.0}, events_by_id=events, today=date(2026, 10, 15))
+
+    assert seen["scores"][2] == 9.0, "his xP stands — he is not going anywhere until January"
+    assert 2 in seen["pool"], "and he is a perfectly good captain"

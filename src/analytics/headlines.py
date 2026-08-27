@@ -191,7 +191,7 @@ def event_phrase(event) -> str:
     return f"{who}{kind} — “{title[:150]}”"
 
 
-def reported_leaving(events, exodus) -> dict | None:
+def reported_leaving(events, exodus, *, today=None) -> dict | None:
     """The event proving a player is on his way **out of the league**, or `None` (ADR-153).
 
     Requires **two independent signals to agree**: a transfer headline *and* a heavy sell-off our own data
@@ -209,8 +209,17 @@ def reported_leaving(events, exodus) -> dict | None:
     leaving football we can see" from "he changed shirts".** Asking a model for the direction of a transfer
     would be a second thing to get wrong; the crowd already answers it for free.
 
+    **And only while a transfer window is open** (ADR-154). Outside one he cannot go anywhere: a September
+    story about a January move changes nothing about this gameweek, and acting on it would cost a real
+    transfer for something that cannot happen yet. `today=None` skips the check, for callers that have already
+    made it.
+
     Deliberately conservative, because being wrong costs a real transfer: no exodus, no claim.
     """
     if not exodus or not events:
         return None
+    if today is not None:
+        from src.fpl_rules import transfer_window_open
+        if not transfer_window_open(today):
+            return None
     return next((e for e in events if e.get("kind") == "transfer"), None)

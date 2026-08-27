@@ -42,14 +42,35 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
       differently-meaning number in an existing field is how consumers start lying. Surfaces that care opt in.
     - **flags** — owned players who can't (or might not) play: ``{web_name, team, reason, chance}``.
     """
+    # ADR-153/154 — work out who is on his way out of the league **first**, because it changes three of the
+    # answers below: the captain, the lineup, and the transfer. A transfer headline plus a heavy unexplained
+    # sell-off, and only while a window is open — outside one he cannot go anywhere, so a story about a
+    # January move must change nothing about this gameweek.
+    events_by_id = events_by_id or {}
+    as_of = today or datetime.now(UTC).date()
+    reported_out = {}
+    for p in owned:
+        found = reported_leaving(events_by_id.get(p["id"]), crowd_exodus(p), today=as_of)
+        if found is not None:
+            reported_out[p["id"]] = found
+
     # Captain — the next-GW pick from the owned, XI-eligible players (ADR-029). `limit=3` so the runner-up is
     # available for the captain explanation's lead-margin (ADR-089); the pick is still picks[0].
-    picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code, limit=3,
+    # A leaving player must not be captained either — the same reasoning, and a worse outcome if it happened.
+    captain_pool = [p for p in owned if p["id"] not in reported_out] or owned
+    picks = captain_picks(captain_pool, upcoming, baseline_by_code=baseline_by_code, limit=3,
                           minutes_weight=minutes_weight, history_by_code=history_by_code)
     captain = picks[0] if picks else None
 
     # Lineup — the best legal XI on the horizon xP vs the declared bench (ADR-039/040).
-    optimal = best_legal_xi(owned, xp_by_id)
+    # ADR-154: a player who is leaving is ranked as if he scores nothing, **for selection only**. His
+    # `decision_xp` is untouched and every other surface still shows it; this is the one place where letting
+    # a fiction win would put him in your XI. Scoped as tightly as it can be — reported-leaving players, an
+    # open window, and a local copy of the map that goes no further than this call.
+    lineup_xp = dict(xp_by_id)
+    for pid in reported_out:
+        lineup_xp[pid] = 0.0
+    optimal = best_legal_xi(owned, lineup_xp)
     declared_bench = set(bench_ids)
     declared_xi = ({p["id"] for p in owned if p["id"] not in declared_bench}
                    if declared_bench else optimal)
@@ -72,15 +93,8 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # ADR-153 — a player the press says is leaving, whom the crowd is dumping, is a dead slot FPL has not
     # caught up with yet. `reported_out` is how that reaches ADR-136's machinery, so the recommendation
     # ("replace him") arrives through the path that already exists rather than a new one.
-    events_by_id = events_by_id or {}
-    reported_out = {}
-    for p in owned:
-        found = reported_leaving(events_by_id.get(p["id"]), crowd_exodus(p))
-        if found is not None:
-            reported_out[p["id"]] = found
     replacements = replace_dead(owned, market, xp_by_id, upcoming, bench_ids=bench_ids, bank=bank,
-                                horizon=horizon, today=today or datetime.now(UTC).date(),
-                                reported_out=reported_out)
+                                horizon=horizon, today=as_of, reported_out=reported_out)
 
     # Flags — owned players who are unavailable, or doubtful (a warning, kept in the XI). ADR-023.
     # ADR-146 adds a third: a heavy sell-off our own data cannot explain. The first two are facts FPL told us;

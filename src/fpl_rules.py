@@ -203,3 +203,34 @@ def match_rules(question: str, limit: int = 4) -> list:
     q = (question or "").lower()
     hits = [(e["topic"], e["fact"]) for e in RULES if any(cue in q for cue in e["cues"])]
     return hits[:limit]
+
+
+# --- transfer windows (ADR-154) ----------------------------------------------------------------------------
+# A club can only sell a player while a window is open, so a "he is leaving" report outside one changes
+# **nothing about this gameweek** — he plays on until January. Reacting to it would cost a real transfer for a
+# move that cannot happen yet.
+#
+# Dates are the English windows and shift by a day or two each year, so they live here as data rather than
+# buried in a condition. **Deliberately conservative at the edges:** the cost of the gate being a day early is
+# that we stay quiet about a true story; the cost of it being a day late is advising a transfer nobody can
+# make.
+#
+# ⚠️ Known incompleteness, worth stating rather than discovering: **other countries' windows do not match
+# England's.** The Saudi Pro League has repeatedly stayed open for weeks after the Premier League shut — which
+# is exactly the Watkins → Al-Hilal case this was built for. So this gate can suppress a *true* signal in
+# early September. That is the right direction to be wrong in, and it is the reason this is a list of ranges
+# that can gain a row rather than a single hard-coded pair.
+TRANSFER_WINDOWS = (
+    ("06-10", "09-01"),      # summer
+    ("01-01", "02-02"),      # winter
+)
+
+
+def transfer_window_open(today) -> bool:
+    """Is an English transfer window open on `today`? (ADR-154)
+
+    Compared on month-day so the same table holds every season. A window that wraps the new year would need
+    care; neither of these does.
+    """
+    stamp = f"{today.month:02d}-{today.day:02d}"
+    return any(start <= stamp <= end for start, end in TRANSFER_WINDOWS)
