@@ -7,7 +7,7 @@
 """
 
 from src import config
-from src.analytics.form import blend_form, form_rate
+from src.analytics.form import blend_form, form_rate, form_windows
 from src.analytics.xp import decision_xp, player_xp
 
 
@@ -106,3 +106,63 @@ def test_decision_xp_activates_form_when_weight_set(monkeypatch):
     ranked = decision_xp([_player(ppg=5.0)], [_fixture()], {}, horizon=1,
                          gw_history_by_code={100: [_gw(1, 9, 90), _gw(2, 9, 90), _gw(3, 9, 90)]})
     assert ranked[0]["xp"] == 7.0
+
+
+# ---- Two windows, and the refusal to invent a direction (ADR-159) ----------------------------------
+# One number says how a player is scoring; two say which way he is going. The hard part is not the second
+# rate — it is knowing when the two windows are the *same rows* and there is no direction to report.
+
+def _wk(minutes, points):
+    return {"minutes": minutes, "total_points": points}
+
+
+def test_a_rising_player_reads_sharper_over_the_short_window():
+    rows = [_wk(90, 2), _wk(90, 2), _wk(90, 3), _wk(90, 9), _wk(90, 8), _wk(90, 10)]
+    w = form_windows(rows)
+    assert w["direction"] == "up" and w["delta"] > 0
+    assert w["short"]["pp90"] > w["long"]["pp90"]
+    assert (w["short"]["gws"], w["long"]["gws"]) == (3, 6)
+
+
+def test_a_fading_player_reads_cooler():
+    rows = [_wk(90, 10), _wk(90, 8), _wk(90, 9), _wk(90, 3), _wk(90, 2), _wk(90, 2)]
+    w = form_windows(rows)
+    assert w["direction"] == "down" and w["delta"] < 0
+
+
+def test_one_gameweek_refuses_a_direction_rather_than_reporting_a_flat_one():
+    """Today's real state: one gameweek played, so a 3-GW and a 6-GW window are the same single row. Their
+    difference is exactly 0.0 — which drawn as "level" would read as *steady form* rather than *no evidence*.
+    """
+    w = form_windows([_wk(90, 6)])
+    assert w["short"]["pp90"] == w["long"]["pp90"] == 6.0
+    assert w["direction"] is None and w["delta"] is None
+
+
+def test_windows_covering_the_same_matches_refuse_a_direction_even_late_in_a_season():
+    """Six gameweeks on the books but only the last three played — an injury return. The long window holds no
+    match the short one doesn't, so there is still nothing to compare."""
+    rows = [_wk(0, 0), _wk(0, 0), _wk(0, 0), _wk(90, 5), _wk(90, 6), _wk(90, 7)]
+    w = form_windows(rows)
+    assert (w["short"]["gws"], w["long"]["gws"]) == (3, 3)
+    assert w["direction"] is None
+
+
+def test_a_player_with_no_minutes_has_no_windows_at_all():
+    w = form_windows([_wk(0, 0), _wk(0, 0)])
+    assert w["short"]["pp90"] is None and w["long"]["pp90"] is None and w["direction"] is None
+    assert form_windows([])["direction"] is None
+
+
+def test_both_windows_use_the_same_rate_so_they_stay_comparable():
+    """They are one function called twice on purpose. A second rate written alongside `form_rate` would drift
+    from it — different recency weighting on the two halves of a comparison is a subtracted apples and pears."""
+    rows = [_wk(90, 4), _wk(60, 8), _wk(90, 2), _wk(30, 9), _wk(90, 6), _wk(90, 1)]
+    w = form_windows(rows, short=6, long=6)
+    assert w["short"] == w["long"]                    # identical windows → identical numbers, exactly
+    assert w["direction"] is None                     # …and no direction, since neither covers more than the other
+
+
+def test_the_window_sizes_are_arguments_not_hard_coded():
+    rows = [_wk(90, 1)] * 4 + [_wk(90, 9)] * 4
+    assert form_windows(rows, short=4, long=8)["direction"] == "up"

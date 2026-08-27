@@ -163,7 +163,14 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
    threshold, same data. ⚠ Whoever builds it must not infer "played" from a per-GW row's presence — **FPL
    writes the row when the fixture is scheduled, not played**, so a naive minutes share zeroes two whole clubs
    for the two days their gameweek is in flight.
-- ⬜ **Rolling 3-/6-GW form windows + trend views** — now unblocked by the widened per-GW table (ADR-128).
+- ✅ **Rolling 3-/6-GW form windows + trend views** — built (ADR-159, Sprint 214, 2026-08-27). `form_windows`
+   runs `form_rate` twice (last 3 vs last 6) and reports both rates, the signed gap and a direction, on the
+   Performance trend card. **`direction` is None unless the long window covers strictly more PLAYED gameweeks
+   than the short one** — at GW1 the two windows are the same match for all 548 players, and a 0.0 gap drawn
+   as "level" is a confident arrow on no evidence. Same rule catches injury returns after GW4. **No
+   significant-change threshold** (no distribution to set one on — a GW4-6 calibration job if wanted), and the
+   caption says **"not in xP"** while `FORM_WEIGHT` is 0. ⚠️ Verified against synthetic gameweeks only; the
+   populated state appears ~GW4.
 - ⬜ **Per-season price sparkline** — long open in the backlog; the per-GW `value` column now exists (ADR-128).
 - ✅ **Price-change predictor** — shipped (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
    *(This page listed it as not-started for months; corrected here.)*

@@ -132,3 +132,45 @@ def test_trend_panel_stays_intact_when_the_extras_are_absent():
     # `tr-dot` also appears in the stylesheet, so assert on the rendered elements, not the substring.
     assert "14" in html
     assert '<span class="tr-dot' not in html and '<div class="tr-sp"' not in html
+
+
+# ---- Rolling form windows on the trend card (ADR-159) ---------------------------------------------
+
+def _windows(rows):
+    from src.analytics.form import form_windows
+    return form_windows(rows)
+
+
+def _wk(minutes, points):
+    return {"minutes": minutes, "total_points": points}
+
+
+def test_the_card_shows_both_windows_and_the_gap_when_it_has_one():
+    from src.web_streamlit.player_dna_view import form_windows_html
+    html = form_windows_html(_windows([_wk(90, 2), _wk(90, 2), _wk(90, 3),
+                                       _wk(90, 9), _wk(90, 8), _wk(90, 10)]))
+    assert "Last 3" in html and "Last 6" in html
+    assert "▲ +2.0" in html and "sharper lately" in html
+    assert "not in xP" in html, "the reader must not think this moves the projection"
+
+
+def test_the_card_refuses_to_draw_a_direction_it_cannot_measure():
+    """The state the app is actually in today: one gameweek played. A 0.0 gap rendered as a level arrow would
+    read as *steady form* rather than *no evidence yet* — the same mistake as a line through one point."""
+    from src.web_streamlit.player_dna_view import form_windows_html
+    html = form_windows_html(_windows([_wk(90, 6)]))
+    assert "Not enough gameweeks yet" in html
+    assert "▲" not in html and "▼" not in html and "▬" not in html
+    assert "Last 6" not in html, "a second window covering the same match is not a second window"
+
+
+def test_the_card_renders_nothing_at_all_without_minutes():
+    from src.web_streamlit.player_dna_view import form_windows_html
+    assert form_windows_html(_windows([])) == ""
+    assert form_windows_html(_windows([_wk(0, 0)])) == ""
+    assert form_windows_html(None) == ""
+
+
+def test_the_trend_panel_degrades_to_exactly_what_it_was_without_windows():
+    """`windows` is additive, like the dots and the sparklines before it."""
+    assert trend_panel_html([(1, 2), (2, 5)]) == trend_panel_html([(1, 2), (2, 5)], windows=None)

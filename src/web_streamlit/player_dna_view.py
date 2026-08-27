@@ -9,6 +9,7 @@ Display-only: everything reuses the `decision_xp` the caller already computed; n
 import streamlit as st
 
 from src.analytics import player_gw_points, player_insights
+from src.analytics.form import form_windows
 from src.analytics.gw_form import form_dots, stat_series
 from src.analytics.player_dna import player_dna_this_or_last
 from src.web_streamlit.dna_card import render_dna_card
@@ -44,6 +45,18 @@ justify-content:center;font-size:.7rem;font-weight:800;color:#0c121a;}
 padding:8px 10px;}
 .tr-card .tr-sp-l{color:#7c8899;font-size:.66rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;}
 .tr-card .tr-sp svg{width:100%;height:30px;display:block;margin-top:4px;}
+/* Rolling form windows (ADR-159) — two rates side by side and the gap between them. */
+.tr-card .tr-fw{display:flex;align-items:center;gap:14px;margin-top:13px;flex-wrap:wrap;
+border-top:1px solid rgba(255,255,255,.07);padding-top:12px;}
+.tr-card .tr-fw-w{display:flex;flex-direction:column;gap:1px;}
+.tr-card .tr-fw-n{font-weight:800;font-size:1.05rem;color:#f2f6fb;font-variant-numeric:tabular-nums;}
+.tr-card .tr-fw-l{color:#7c8899;font-size:.66rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;}
+.tr-card .tr-fw-d{font-weight:800;font-size:.82rem;padding:3px 9px;border-radius:999px;
+font-variant-numeric:tabular-nums;}
+.tr-card .tr-fw-d.up{background:rgba(94,234,212,.14);color:#5eead4;}
+.tr-card .tr-fw-d.down{background:rgba(249,138,138,.14);color:#f98a8a;}
+.tr-card .tr-fw-d.level{background:rgba(168,179,196,.14);color:#a8b3c4;}
+.tr-card .tr-fw-s{color:#7c8899;font-size:.72rem;font-weight:600;flex:1 1 190px;min-width:0;}
 </style>
 """
 
@@ -90,6 +103,39 @@ def form_dots_html(dots) -> str:
     return f'<div class="tr-dots"><span class="tr-dl">Team form</span>{pills}</div>'
 
 
+def form_windows_html(windows) -> str:
+    """The 3-GW and 6-GW points-per-90, and which way the player is going (ADR-159).
+
+    Three states, and the middle one is the point of the whole card. With no minutes there is nothing to show.
+    With minutes but **not enough gameweeks for the two windows to differ**, the rate is shown and the
+    direction is refused in words — a 0.0 gap drawn as "level" would be the same mistake a line through one
+    point would be: a shape that looks measured on data that cannot support it.
+    """
+    if not windows:
+        return ""
+    short, long = windows["short"], windows["long"]
+    if short["pp90"] is None:
+        return ""
+
+    def cell(win, label):
+        return (f'<div class="tr-fw-w"><span class="tr-fw-n">{win["pp90"]:.1f}</span>'
+                f'<span class="tr-fw-l">{label} \u00b7 {win["gws"]} GW</span></div>')
+
+    if windows["direction"] is None:
+        note = ("Not enough gameweeks yet to say which way he's going — the two windows still cover the "
+                "same matches.")
+        return (f'<div class="tr-fw">{cell(short, "Points / 90")}'
+                f'<span class="tr-fw-s">{note}</span></div>')
+
+    delta, direction = windows["delta"], windows["direction"]
+    arrow = {"up": "\u25b2", "down": "\u25bc", "level": "\u25ac"}[direction]
+    word = {"up": "sharper lately", "down": "cooler lately", "level": "unchanged"}[direction]
+    return (f'<div class="tr-fw">{cell(short, "Last 3")}{cell(long, "Last 6")}'
+            f'<span class="tr-fw-d {direction}">{arrow} {delta:+.1f}</span>'
+            f'<span class="tr-fw-s">Points per 90 — his last 3 gameweeks against his last 6. '
+            f'<b>{word}</b>. Not a forecast, and not in xP.</span></div>')
+
+
 def sparkline_svg(series, *, w: int = 120, h: int = 30) -> str:
     """A bare line for a `[(round, value), …]` series — no axes, no labels; the number lives beside it."""
     ys = [v for _r, v in series]
@@ -125,7 +171,7 @@ def sparklines_html(by_stat) -> str:
     return f'<div class="tr-spk">{"".join(cards)}</div>' if cards else ""
 
 
-def trend_panel_html(series, dots=None, by_stat=None) -> str:
+def trend_panel_html(series, dots=None, by_stat=None, windows=None) -> str:
     """The performance-trend card: a real per-GW line once there are two gameweeks to join, the single score
     on its own after one, else the honest pre-season placeholder.
 
@@ -151,7 +197,7 @@ def trend_panel_html(series, dots=None, by_stat=None) -> str:
         body = perf_trend_svg(series)
         cap = f'<div class="tr-cap">Points per gameweek · {gws}</div>'
     return (_TREND_CSS + '<div class="tr-card"><div class="tr-ttl">📈 Performance trend</div>'
-            f'{body}{cap}{form_dots_html(dots)}{sparklines_html(by_stat)}</div>')
+            f'{body}{cap}{form_dots_html(dots)}{form_windows_html(windows)}{sparklines_html(by_stat)}</div>')
 
 
 def _code(player):
@@ -188,5 +234,9 @@ def render_player_dna(player, players, xp_by_id, *, gw_history=None, owned=None,
                "xA": stat_series(gwh, code, "xa"),
                "ICT": stat_series(gwh, code, "ict_index"),
                "Minutes": stat_series(gwh, code, "minutes")}
-    st.markdown(trend_panel_html(player_gw_points(gwh, code), form_dots(gwh, code), by_stat),
+    # ADR-159 — one number says how he is scoring; two say which way he is going. Rendered here and nowhere
+    # else: it answers the same question the rest of this card answers, and the standing constraint is to cut
+    # clutter, not to repeat a fact on every surface that could hold it.
+    st.markdown(trend_panel_html(player_gw_points(gwh, code), form_dots(gwh, code), by_stat,
+                                 windows=form_windows((gwh or {}).get(code) or [])),
                 unsafe_allow_html=True)
