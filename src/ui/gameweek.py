@@ -56,9 +56,11 @@ def _replace_lines(replacements, horizon: int = 5) -> list[str]:
     out = []
     for i, r in enumerate(replacements):
         label = "Replace:" if i == 0 else "        "
-        out.append(f"  {label}  ⛔ {r['out']['web_name']} ({r['out']['team']}) can't play — {r['reason']}. "
+        # A *reported* departure is not the same claim as FPL saying he is gone, and the wording says so.
+        verb = "is reported to be leaving" if r.get("reported") else "can't play"
+        out.append(f"  {label}  ⛔ {r['out']['web_name']} ({r['out']['team']}) {verb} — {r['reason']}. "
                    f"→ {r['in']['web_name']} ({r['in']['team']}, £{r['in']['price']}) "
-                   f"recovers {r['gain']} xP {window}")
+                   f"is worth {r['gain']} xP {window}")
     return out
 
 

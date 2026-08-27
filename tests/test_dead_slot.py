@@ -147,3 +147,27 @@ def test_an_unparseable_date_leaves_the_advice_exactly_as_it_was():
 def test_no_fixtures_means_no_verdict_rather_than_a_guess():
     """Out of season, or a team with nothing scheduled: we cannot say he misses anything, so we don't."""
     assert dead_slots([_p(9, "X", news="Has joined Konyaspor permanently")], [], today=TODAY) == []
+
+
+def test_a_reported_departure_is_a_dead_slot_before_FPL_says_so():
+    """ADR-153. FPL's `status` lags the news by days: Watkins read **`a` — fully available** — while Romano
+    reported an agreed move to Al-Hilal and 167,825 managers sold him.
+
+    A confirmed departure is the same dead slot ADR-136 already handles; we simply know first.
+    """
+    watkins = _p(1, "Watkins", team="AVL", status="a", news="")
+    event = {"kind": "transfer", "source": "Romano", "title": "…deal to sign Ollie Watkins"}
+
+    assert dead_slots([watkins], FIXTURES, today=TODAY) == [], "on FPL's data alone he looks fine"
+    (slot,) = dead_slots([watkins], FIXTURES, today=TODAY, reported_out={1: event})
+    assert slot["reason"] == "per Romano", "name the source — it is what makes the claim checkable"
+    assert slot["event"] is event
+
+
+def test_fpls_own_status_still_wins_when_it_has_something_to_say():
+    """The report is a *fallback* for when the feed is silent, never a replacement for it. If FPL says he is
+    injured, that is the reason shown — the same ordering ADR-146 applies to the crowd signal."""
+    injured = _p(1, "X", status="i", news="Knee injury - Unknown return date")
+    (slot,) = dead_slots([injured], FIXTURES, today=TODAY,
+                         reported_out={1: {"kind": "transfer", "title": "t"}})
+    assert slot["reason"] == "no return date"

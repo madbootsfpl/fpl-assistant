@@ -362,3 +362,26 @@ def test_the_no_upgrade_line_stops_contradicting_the_banner_above_it():
     with_dead = render_transfers([], "S", bank=0.5, horizon=5, has_dead=True)
     assert "may already be strong" in whole
     assert "may already be strong" not in with_dead and "dead slot" in with_dead
+
+
+def test_a_reported_leaver_is_measured_against_zero_not_his_paper_xp():
+    """ADR-153. For a player the press and the crowd both say is leaving, his projected xP is **fiction**:
+    FPL still calls him available, so `decision_xp` credits him a full horizon of points he will not be here
+    to score.
+
+    Comparing a replacement against that produced *"recovers **−8.6** xP"* on the live squad — a negative
+    recovery, which is not a sentence about anything. The baseline is 0, exactly as it already is for a player
+    FPL has marked `u`. No analytics change: `decision_xp` is untouched, and only this slot's arithmetic uses
+    the number that will actually happen.
+    """
+    owned = _dead_squad()
+    leaver = owned[-1]
+    leaver.update(status="a", news="")                     # FPL has not caught up
+    market = owned + [_dp(99, "Replacement", "FWD", "NEW", 4.5)]
+    xp = {p["id"]: 1.0 for p in market} | {leaver["id"]: 9.0, 99: 6.0}
+
+    (move,) = replace_dead(owned, market, xp, _DEAD_FIXTURES, today=_TODAY,
+                           reported_out={leaver["id"]: {"kind": "transfer", "source": "Romano", "title": "t"}})
+    assert move["gain"] == 6.0, "the replacement is worth what he scores, not the difference from a fiction"
+    assert move["gain"] > 0, "a recovery must never read as negative"
+    assert move["out"]["xp"] == 0.0 and move["reported"] is True

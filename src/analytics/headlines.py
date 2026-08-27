@@ -189,3 +189,28 @@ def event_phrase(event) -> str:
     who = f"{event['source']} reports " if event.get("source") else "reported: "
     title = re.sub(r"\s+", " ", str(event.get("title") or "")).strip()
     return f"{who}{kind} — “{title[:150]}”"
+
+
+def reported_leaving(events, exodus) -> dict | None:
+    """The event proving a player is on his way **out of the league**, or `None` (ADR-153).
+
+    Requires **two independent signals to agree**: a transfer headline *and* a heavy sell-off our own data
+    cannot explain (ADR-146). Neither alone is enough, and the measurement says why.
+
+    On the live seed, five transfer headlines resolved. Only **one** also carried an exodus:
+
+    | player | headline | exodus |
+    |---|---|---|
+    | **Watkins** → Al-Hilal | ✓ | **−167,825** |
+    | Pinnock → Coventry · Disasi → Palace · Baleba → Man Utd · Hadjam → Brighton | ✓ | none |
+
+    The four without one are moves **within or into** the league — the player is still perfectly playable, and
+    the crowd knows it, which is exactly why they are not selling. **The exodus is what distinguishes "he is
+    leaving football we can see" from "he changed shirts".** Asking a model for the direction of a transfer
+    would be a second thing to get wrong; the crowd already answers it for free.
+
+    Deliberately conservative, because being wrong costs a real transfer: no exodus, no claim.
+    """
+    if not exodus or not events:
+        return None
+    return next((e for e in events if e.get("kind") == "transfer"), None)

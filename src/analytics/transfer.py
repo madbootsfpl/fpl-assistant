@@ -154,6 +154,7 @@ def suggest_transfer_plan(
 def replace_dead(
     owned, players, xp_by_id, upcoming, *,
     today, bench_ids=(), bank: float = 0.0, horizon: int = 5, max_per_club: int = MAX_PER_CLUB,
+    reported_out=None,
 ) -> list[dict]:
     """One replacement for each **dead slot** in the squad — a place that cannot score (ADR-136).
 
@@ -173,7 +174,7 @@ def replace_dead(
     Each entry carries `reason` (*"gone"*, *"no return date"*, *"out until 28 Nov"*) and `missed`/`total`, so a
     surface can state its evidence rather than asserting a verdict.
     """
-    slots = dead_slots(owned, upcoming, today=today, horizon=horizon)
+    slots = dead_slots(owned, upcoming, today=today, horizon=horizon, reported_out=reported_out)
     if not slots:
         return []
 
@@ -206,14 +207,25 @@ def replace_dead(
             continue
         used_in.add(c["id"])
         out, out_sum, in_sum = slot["player"], _summary(slot["player"], xp_by_id), _summary(c, xp_by_id)
+        # ADR-153 — for a player the press and the crowd both say is leaving, his projected xP is **fiction**:
+        # FPL still calls him available, so `decision_xp` still credits him a full horizon of points he will
+        # not be here to score. Comparing a replacement against that produced *"recovers −8.6 xP"* — a
+        # negative recovery, which is not a sentence about anything.
+        #
+        # So the baseline is 0, exactly as it already is for a player FPL has marked `u`. This changes no
+        # analytics: `decision_xp` is untouched, and only this slot's arithmetic uses the number that will
+        # actually happen.
+        leaving = slot.get("event") is not None
+        baseline = 0.0 if leaving else out_sum["xp"]
         out_rows.append({
             "position": out["position"],
-            "out": out_sum,
+            "out": {**out_sum, **({"xp": 0.0} if leaving else {})},
             "in": in_sum,
-            "gain": round(in_sum["xp"] - out_sum["xp"], 1),
+            "gain": round(in_sum["xp"] - baseline, 1),
             "out_on_bench": out["id"] in bench,
             "reason": slot["reason"],
             "missed": slot["missed"],
             "total": slot["total"],
+            "reported": leaving,
         })
     return out_rows

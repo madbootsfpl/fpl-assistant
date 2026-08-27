@@ -111,7 +111,18 @@ def gameweeks_missed(player, upcoming, *, today: date, horizon: int = 5) -> tupl
     return missed, total
 
 
-def dead_slots(owned, upcoming, *, today: date, horizon: int = 5) -> list[dict]:
+def _reported_reason(event) -> str:
+    """Just the attribution — *"per Romano"* — because the caller's sentence already carries the claim.
+
+    Kept short on purpose: the renderer says *"X is reported to be leaving — …"*, so a reason of "reported
+    leaving" made that read *"is reported to be leaving — reported leaving — Romano"*. Naming **who** says it
+    is the part that adds anything, since it is what lets a reader weigh the source.
+    """
+    source = event.get("source")
+    return f"per {source}" if source else "per the press"
+
+
+def dead_slots(owned, upcoming, *, today: date, horizon: int = 5, reported_out=None) -> list[dict]:
     """The owned players who cannot score for the whole horizon — the slots worth a transfer.
 
     Each entry is ``{player, reason, until, missed, total}``. `reason` is the honest word for *why*, because
@@ -121,9 +132,22 @@ def dead_slots(owned, upcoming, *, today: date, horizon: int = 5) -> list[dict]:
     A player is a dead slot only when he misses **every** gameweek in the horizon. A dated return inside it
     (Doku, back 5 Sep, 2 of the next 5) is not a dead slot — selling a premium to fill a two-week hole is
     worse advice than the "hold" this exists to fix.
+
+    `reported_out` maps player id → the headline event showing he is **leaving the league** (ADR-153). FPL's
+    `status` is the usual evidence, but it lags the news by days: Watkins read `a` — fully available — while
+    Romano reported an agreed move to Al-Hilal and 167,825 managers sold him. **A confirmed departure is the
+    same dead slot ADR-136 already handles; we simply know before FPL does.**
     """
+    reported_out = reported_out or {}
     out = []
     for p in owned:
+        event = reported_out.get(_get(p, "id"))
+        if event is not None and not is_unavailable(p):
+            # The press and the crowd both say he is going, and FPL has not caught up. Treated as missing the
+            # whole horizon, because a player at a Saudi club scores nothing here ever again.
+            out.append({"player": p, "reason": _reported_reason(event), "until": None,
+                        "missed": horizon, "total": horizon, "event": event})
+            continue
         if not is_unavailable(p):
             continue
         missed, total = gameweeks_missed(p, upcoming, today=today, horizon=horizon)

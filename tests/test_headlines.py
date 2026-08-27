@@ -159,3 +159,30 @@ def test_money_alone_is_not_a_transfer():
     # …and a genuine transfer that merely mentions FPL must survive both guards
     real = "[Crystal Palace] Axel Disasi (4.5m in FPL) signs for Crystal Palace on a season-long loan"
     assert not is_about_the_game(real) and supports_kind(real, "transfer")
+
+
+# ---- leaving the league, not just changing shirts (ADR-153) --------------------------
+
+def test_two_signals_must_agree_before_we_call_a_player_gone():
+    """Measured on the live seed: **five** transfer headlines resolved, and only **one** also carried a heavy
+    unexplained sell-off.
+
+    | player | headline | exodus |
+    |---|---|---|
+    | **Watkins** → Al-Hilal | ✓ | **−167,825** |
+    | Pinnock → Coventry · Disasi → Palace · Baleba → Man Utd · Hadjam → Brighton | ✓ | none |
+
+    The four without one are moves **within or into** the league — the player is still playable, and the crowd
+    knows it, which is exactly why they are not selling. **The exodus is what separates "leaving football we
+    can see" from "changed shirts"** — and asking a model for the direction of a transfer would just be a
+    second thing to get wrong.
+    """
+    from src.analytics.headlines import reported_leaving
+
+    move = [{"kind": "transfer", "source": "Romano", "title": "…agreed a deal to sign Ollie Watkins"}]
+    exodus = {"net": -167_825, "pressure": -17_000}
+
+    assert reported_leaving(move, exodus) is not None, "press + crowd agree → he is going"
+    assert reported_leaving(move, None) is None, "a transfer nobody is selling is a move within the league"
+    assert reported_leaving([], exodus) is None, "an exodus with no story stays 'unexplained' (ADR-146)"
+    assert reported_leaving([{"kind": "injury", "title": "x"}], exodus) is None, "an injury is not a departure"

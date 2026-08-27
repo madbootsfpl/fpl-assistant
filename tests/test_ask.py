@@ -713,6 +713,11 @@ class _FakeStore:
     def get_upcoming_fixtures(self):
         return []
 
+    def get_headline_events(self):
+        # ADR-151/153: a snapshot built without a language model carries none, which is the ordinary case and
+        # the one this test models — the plan must read exactly as it did before headlines existed.
+        return []
+
 
 def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     # ADR-070: the decision carries the plan as `detail`, names all owned players + the buy as
