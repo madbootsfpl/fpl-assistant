@@ -3177,3 +3177,10 @@ def test_the_league_scan_offers_the_tap_when_the_component_is_live(monkeypatch):
     assert not plain.exception, "a missing component must never take the page down"
     assert not any("Tap a row" in c.value for c in plain.caption)
     assert any(s.label == "Team" for s in plain.selectbox), "the picker stays either way"
+
+
+def test_the_leagues_page_still_renders_with_the_head_to_head_section(monkeypatch):
+    """ADR-161 — the H2H sits behind the same N-calls button as the rest of the insight layer, so a no-network
+    render must reach the manager-id prompt and stop, exactly as before."""
+    at = _run(_PAGES / "5_Leagues.py")
+    assert not at.exception

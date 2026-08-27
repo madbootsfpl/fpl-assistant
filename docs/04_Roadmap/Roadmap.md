@@ -369,9 +369,16 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 - ◑ **The competitive layer** *(fplapex)* — **partly shipped.** ✅ *Differentials vs your rivals* is live as
   🏆 **Leagues** (ADR-141): league import by manager id, standings + movement, **effective ownership vs
   global** (the number that decides differential-or-template), captain split and chip usage.
-  ⬜ **Still open: mini-league H2H** and a **win-probability sim** — *"what do I need to do to catch him?"*,
-  which needs per-manager projections rather than per-player ones. Needs the **leagues API**; picks are public
-  from the GW1 deadline, so this is **unblocked**. Reinforces the Crowd/Signals track rather than the solver one — it answers *"what do I need to do
+  ✅ **Mini-league H2H — built** (ADR-161, Sprint 216, 2026-08-27): a rival picker on Leagues, and the gap
+  **decomposed** rather than totalled — the players you both start cancel, so the head-to-head is the
+  differential set priced by xP. Identical elevens with different captains are correctly *not* identical (the
+  captain's extra copy is its own differential); FPL's `multiplier` is taken at face value so Bench Boost and
+  Triple Captain score right.
+  ⏳ **Win-probability sim — GATED, recommended against** (ADR-161). Measured on GW1 returns: one starter's
+  points have **sd 3.51** (mean 3.99, median 2, max 17), so a 3-differential head-to-head has a gap **sd ≈ 8.6**
+  against typical projected margins of **2-5 points** — a probability would say *"roughly a coin flip"* every
+  week, in the format that invites the most trust, and would cost a whole new event simulator. **Owner's call
+  to reopen.** Reinforces the Crowd/Signals track rather than the solver one — it answers *"what do I need to do
   to catch him?"*, which is a different question from *"what's the best squad?"*. **Mini-league position also
   sharpens the chip advisor** (ADR-082): when to burn a Wildcard depends on whether you're chasing or defending.
 - ⬜ **DGW/BGW detection** — sharpens the chip advisor; in-season data.

@@ -19,6 +19,8 @@ import time
 import streamlit as st
 
 from src import config
+from src.analytics import decision_xp
+from src.analytics.h2h import catch_up_note, h2h_gap
 from src.analytics.league import (
     captain_split,
     chip_usage,
@@ -226,3 +228,71 @@ with c4:
     st.dataframe([{"Chip": c, "Managers": n} for c, n in chip_usage(picks)],
                  hide_index=True, width="stretch")
     st.caption("`none` = no chip that week. A consensus here is worth noticing.")
+
+# ---- Head-to-head: what would it take to catch one rival (ADR-161) --------------------
+# The league view answers "what is everyone doing"; this answers "what do I need to do about HIM". They are
+# different questions and the second one needs per-manager projections, not per-player ones.
+st.divider()
+st.markdown("##### ⚔️ Head to head")
+
+_my_entry = None
+_remembered_id = str(prefs.recall().get("manager_id") or st.session_state.get("manager_id") or "").strip()
+if _remembered_id.isdigit():
+    _my_entry = int(_remembered_id)
+
+_rivals = {f"{r['team']} · {r['manager']}": r["entry"] for r in shown if r["entry"] != _my_entry}
+if _my_entry is None:
+    st.info("Switch to **My leagues** above (or import your manager id on My Squad) and this compares your "
+            "squad with any rival's.")
+elif not _rivals:
+    st.caption("No one else in this league to compare against yet.")
+else:
+    _rival_label = st.selectbox("Compare against", list(_rivals), key="lg_h2h")
+    _rival = _rivals[_rival_label]
+    # My own picks may sit outside the standings page we read, so fetch them if they aren't already in hand.
+    _mine = picks.get(_my_entry) or _picks((_my_entry,), last_gw).get(_my_entry)
+    _theirs = picks.get(_rival)
+    if not _mine:
+        st.warning(f"Couldn't read your own squad (manager #{_my_entry}) for GW{last_gw}.")
+    elif not _theirs:
+        st.warning("Couldn't read that rival's squad — try another, or reload.")
+    else:
+        _st2 = Storage()
+        try:
+            _ranked = decision_xp(players, _st2.get_upcoming_fixtures(), _st2.get_history_by_code(),
+                                  horizon=1, gw_history_by_code=_st2.get_gw_history_by_code())
+        finally:
+            _st2.close()
+        _xp = {r["id"]: r["xp"] for r in _ranked}
+        _gap = h2h_gap(_mine, _theirs, _xp, players)
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("You project", f"{_gap['mine']['xp']:.1f}")
+        m2.metric(_rival_label.split(" · ")[0][:18], f"{_gap['theirs']['xp']:.1f}")
+        m3.metric("Gap", f"{_gap['gap']:+.1f}", help="Positive means you are ahead on projection.")
+        st.caption(catch_up_note(_gap, my_name="you", their_name="they"))
+
+        d1, d2 = st.columns(2)
+        for _col, _rows, _title, _why in (
+                (d1, _gap["their_edge"], "What he has that you don't", "Catching him runs through these."),
+                (d2, _gap["my_edge"], "What you have that he doesn't", "This is your lead, such as it is.")):
+            with _col:
+                st.markdown(f"**{_title}**")
+                if not _rows:
+                    st.caption("Nothing — identical on this side.")
+                    continue
+                st.dataframe(
+                    [{"photo": photos.get(r["id"], ""), "Player": r["web_name"], "Team": r["team"],
+                      "Pos": r["position"], "xP": r["xp"],
+                      "": "©" if r["multiplier"] > 1 else ""} for r in _rows],
+                    hide_index=True, width="stretch",
+                    column_config={"photo": st.column_config.ImageColumn("", width="small"),
+                                   "xP": st.column_config.NumberColumn("xP", format="%.1f"),
+                                   "": st.column_config.TextColumn("", width="small",
+                                                                   help="A captain's extra copy.")})
+                st.caption(_why)
+
+        st.caption(f"⚠️ These are **GW{last_gw} squads** — FPL only publishes picks after a deadline, so this "
+                   "projects the team he had, not the one he will field. He can still transfer and change "
+                   "his captain. xP is the same projection every other page decides with; it is an average, "
+                   "**not a win probability** — a 2-point projected lead is not a 2-point certainty.")
