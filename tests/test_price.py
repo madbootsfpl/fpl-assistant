@@ -5,7 +5,14 @@ A directional, ownership-normalised transfer-pressure **lens** — never `decisi
 """
 
 from src.analytics import decision_xp, price_flag, price_prediction, price_pressure
-from src.analytics.price import PRICE_DOWN, PRICE_FALL_PRESSURE, PRICE_RISE_PRESSURE, PRICE_UP
+from src.analytics.price import (
+    PRICE_DOWN,
+    PRICE_FALL_PRESSURE,
+    PRICE_RISE_PRESSURE,
+    PRICE_UP,
+    price_move,
+    price_series,
+)
 from src.storage import Storage
 
 
@@ -92,3 +99,48 @@ def test_both_legends_say_the_same_thing_in_two_dialects():
     assert ":green[" not in PRICE_LEGEND_PLAIN and ":red[" not in PRICE_LEGEND_PLAIN
     strip = PRICE_LEGEND.replace(f":green[{PRICE_UP}]", PRICE_UP).replace(f":red[{PRICE_DOWN}]", PRICE_DOWN)
     assert strip == PRICE_LEGEND_PLAIN, "the two legends have drifted apart"
+
+
+# ---- The price journey (ADR-160) ------------------------------------------------------------------
+# Retrospective, unlike everything above it in this file: `price_flag` predicts where a price is going,
+# these say where it has been.
+
+def _hist(pairs):
+    """`{code: [rows]}` for `[(round, value_in_tenths), …]`. A scoreline marks the gameweek as played."""
+    return {9: [{"round": r, "value": v, "minutes": 90, "total_points": 2,
+                 "team_h_score": 1, "team_a_score": 0, "was_home": True} for r, v in pairs]}
+
+
+def _pl(price, change=0):
+    return {"id": 1, "code": 9, "web_name": "P", "price": price, "cost_change_start": change}
+
+
+def test_the_move_since_the_season_started_is_read_straight_off_fpl():
+    assert price_move(_pl(4.6, 1)) == 0.1
+    assert price_move(_pl(7.9, -3)) == -0.3
+    assert price_move(_pl(15.5, 0)) == 0.0
+    assert price_move({"price": 5.0}) is None
+
+
+def test_todays_price_is_the_last_point_so_the_chart_cannot_contradict_the_page():
+    """`value` is only written when a gameweek is played, but prices move nightly. Watkins really does read
+    £8.0m at GW1 and £7.9m everywhere else in the app; a chart ending on the stale number would be a chart
+    disagreeing with the number printed beside it."""
+    assert price_series(_hist([(1, 80)]), 9, _pl(7.9, -1)) == [("GW1", 8.0), ("now", 7.9)]
+
+
+def test_a_price_that_has_not_moved_yields_one_point_not_a_flat_pair():
+    """Appending an identical 'now' would draw a dead-level line implying two observations of the same thing."""
+    assert price_series(_hist([(1, 45)]), 9, _pl(4.5, 0)) == [("GW1", 4.5)]
+
+
+def test_a_double_gameweek_does_not_add_a_price_to_itself():
+    """ADR-129's rule, and `value` is the column it was written for — summing two fixtures in one round would
+    read as a £4.5m rise."""
+    rows = _hist([(1, 45), (1, 45)])
+    assert price_series(rows, 9, _pl(4.5, 0)) == [("GW1", 4.5)]
+
+
+def test_a_player_with_no_gameweek_rows_still_reports_his_price():
+    assert price_series({}, 9, _pl(6.1, 0)) == [("now", 6.1)]
+    assert price_series(None, 9, {"web_name": "P"}) == []

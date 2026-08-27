@@ -174,3 +174,38 @@ def test_the_card_renders_nothing_at_all_without_minutes():
 def test_the_trend_panel_degrades_to_exactly_what_it_was_without_windows():
     """`windows` is additive, like the dots and the sparklines before it."""
     assert trend_panel_html([(1, 2), (2, 5)]) == trend_panel_html([(1, 2), (2, 5)], windows=None)
+
+
+# ---- The price strip on the trend card (ADR-160) --------------------------------------------------
+
+def test_the_strip_names_the_move_and_draws_a_line_when_there_is_one():
+    from src.web_streamlit.player_dna_view import price_strip_html
+    html = price_strip_html([("GW1", 8.0), ("now", 7.9)], -0.1, 7.9)
+    assert "£7.9m" in html and "▼ -0.1" in html
+    assert "he has dropped £0.1m" in html
+    assert "<svg" in html
+    assert 'tr-pr-d down' in html, "red for a fall — the colour is the fast channel (ADR-140)"
+
+
+def test_a_rise_is_the_other_glyph_and_the_other_colour():
+    from src.web_streamlit.player_dna_view import price_strip_html
+    html = price_strip_html([("GW1", 4.5), ("now", 4.6)], 0.1, 4.6)
+    assert "▲ +0.1" in html and "tr-pr-d up" in html and "he has risen" in html
+
+
+def test_an_unmoved_price_says_so_instead_of_drawing_a_flat_line():
+    """607 of 616 players today. A blank strip would have been the alternative, and 'nothing has happened' is
+    a real answer to 'what has his price done'."""
+    from src.web_streamlit.player_dna_view import price_strip_html
+    html = price_strip_html([("GW1", 15.5)], 0.0, 15.5)
+    assert "£15.5m" in html and "Unchanged since the season started" in html
+    assert "<svg" not in html and "▲" not in html and "▼" not in html
+
+
+def test_no_price_means_no_strip():
+    from src.web_streamlit.player_dna_view import price_strip_html
+    assert price_strip_html([], None, None) == ""
+
+
+def test_the_trend_panel_is_unchanged_without_a_price():
+    assert trend_panel_html([(1, 2), (2, 5)]) == trend_panel_html([(1, 2), (2, 5)], price=None)

@@ -171,7 +171,13 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
    significant-change threshold** (no distribution to set one on — a GW4-6 calibration job if wanted), and the
    caption says **"not in xP"** while `FORM_WEIGHT` is 0. ⚠️ Verified against synthetic gameweeks only; the
    populated state appears ~GW4.
-- ⬜ **Per-season price sparkline** — long open in the backlog; the per-GW `value` column now exists (ADR-128).
+- ✅ **Per-season price sparkline** — built (ADR-160, Sprint 215, 2026-08-27) as a **price journey** on the
+   trend card: price now · the move since the season started (`cost_change_start`, exact from day one) · a
+   sparkline once there are two points. **Today's live price is the final point on purpose** — `value` is only
+   written when a gameweek is played but prices move nightly, so Watkins reads £8.0m at GW1 and £7.9m
+   everywhere else, and a chart ending on the stale number disagrees with the figure beside it. Only **9 of
+   616** players can draw a line yet, so the change carries it now and the line carries it later; an unmoved
+   price says "unchanged" rather than drawing a flat segment.
 - ✅ **Price-change predictor** — shipped (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
    *(This page listed it as not-started for months; corrected here.)*
 - 🅾️ **Attack/Defence FDR split** (ADR-005) — **blocked at source, not by timing.** Checked the live API on

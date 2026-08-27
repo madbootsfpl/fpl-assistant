@@ -12,6 +12,7 @@ from src.analytics import player_gw_points, player_insights
 from src.analytics.form import form_windows
 from src.analytics.gw_form import form_dots, stat_series
 from src.analytics.player_dna import player_dna_this_or_last
+from src.analytics.price import PRICE_DOWN, PRICE_UP, price_move, price_series
 from src.web_streamlit.dna_card import render_dna_card
 from src.web_streamlit.insights_card import render_insights_card
 from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
@@ -57,6 +58,19 @@ font-variant-numeric:tabular-nums;}
 .tr-card .tr-fw-d.down{background:rgba(249,138,138,.14);color:#f98a8a;}
 .tr-card .tr-fw-d.level{background:rgba(168,179,196,.14);color:#a8b3c4;}
 .tr-card .tr-fw-s{color:#7c8899;font-size:.72rem;font-weight:600;flex:1 1 190px;min-width:0;}
+/* Price journey (ADR-160). The glyph colours are ADR-140's: green up, red down — plain triangles precisely so
+   each surface can paint them, since both obvious emoji are red. */
+.tr-card .tr-pr{display:flex;align-items:center;gap:13px;margin-top:13px;flex-wrap:wrap;
+border-top:1px solid rgba(255,255,255,.07);padding-top:12px;}
+.tr-card .tr-pr-n{font-weight:800;font-size:1.05rem;color:#f2f6fb;font-variant-numeric:tabular-nums;}
+.tr-card .tr-pr-l{color:#7c8899;font-size:.66rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;}
+.tr-card .tr-pr-w{display:flex;flex-direction:column;gap:1px;}
+.tr-card .tr-pr-d{font-weight:800;font-size:.82rem;padding:3px 9px;border-radius:999px;
+font-variant-numeric:tabular-nums;}
+.tr-card .tr-pr-d.up{background:rgba(94,234,212,.14);color:#5eead4;}
+.tr-card .tr-pr-d.down{background:rgba(249,138,138,.14);color:#f98a8a;}
+.tr-card .tr-pr-s{color:#7c8899;font-size:.72rem;font-weight:600;flex:1 1 170px;min-width:0;}
+.tr-card .tr-pr svg{width:104px;height:28px;margin:0;flex:0 0 auto;}
 </style>
 """
 
@@ -154,6 +168,35 @@ def sparkline_svg(series, *, w: int = 120, h: int = 30) -> str:
             f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="2.4" fill="#5eead4"/></svg>')
 
 
+def price_strip_html(series, move, price) -> str:
+    """The price journey: what he costs, what he has done since the season started, and a line once there is
+    one to draw (ADR-160).
+
+    The **change** carries this feature early and the **line** carries it later, which is why both are here.
+    `cost_change_start` is exact and available from day one; the per-gameweek series needs gameweeks, and at
+    the time of writing exactly 9 players in the game have two points. Showing only the sparkline would have
+    meant shipping a blank strip for 607 players.
+
+    Glyphs and colours are ADR-140's shared pair — green up, red down.
+    """
+    if price is None:
+        return ""
+    head = (f'<div class="tr-pr-w"><span class="tr-pr-n">\u00a3{float(price):.1f}m</span>'
+            f'<span class="tr-pr-l">Price now</span></div>')
+    if not move:
+        return (f'<div class="tr-pr">{head}'
+                f'<span class="tr-pr-s">Unchanged since the season started.</span></div>')
+
+    direction = "up" if move > 0 else "down"
+    glyph = PRICE_UP if move > 0 else PRICE_DOWN
+    spark = sparkline_svg(series) if len(series) >= 2 else ""
+    since = "he has risen" if move > 0 else "he has dropped"
+    return (f'<div class="tr-pr">{head}'
+            f'<span class="tr-pr-d {direction}">{glyph} {move:+.1f}</span>{spark}'
+            f'<span class="tr-pr-s">Since the season started {since} '
+            f'\u00a3{abs(move):.1f}m.</span></div>')
+
+
 def sparklines_html(by_stat) -> str:
     """A small grid of per-stat sparklines — `{label: [(round, value), …]}` (ADR-118's tracked follow-up).
 
@@ -171,7 +214,7 @@ def sparklines_html(by_stat) -> str:
     return f'<div class="tr-spk">{"".join(cards)}</div>' if cards else ""
 
 
-def trend_panel_html(series, dots=None, by_stat=None, windows=None) -> str:
+def trend_panel_html(series, dots=None, by_stat=None, windows=None, price=None) -> str:
     """The performance-trend card: a real per-GW line once there are two gameweeks to join, the single score
     on its own after one, else the honest pre-season placeholder.
 
@@ -197,7 +240,8 @@ def trend_panel_html(series, dots=None, by_stat=None, windows=None) -> str:
         body = perf_trend_svg(series)
         cap = f'<div class="tr-cap">Points per gameweek · {gws}</div>'
     return (_TREND_CSS + '<div class="tr-card"><div class="tr-ttl">📈 Performance trend</div>'
-            f'{body}{cap}{form_dots_html(dots)}{form_windows_html(windows)}{sparklines_html(by_stat)}</div>')
+            f'{body}{cap}{form_dots_html(dots)}{form_windows_html(windows)}'
+            f'{price_strip_html(**price) if price else ""}{sparklines_html(by_stat)}</div>')
 
 
 def _code(player):
@@ -237,6 +281,11 @@ def render_player_dna(player, players, xp_by_id, *, gw_history=None, owned=None,
     # ADR-159 — one number says how he is scoring; two say which way he is going. Rendered here and nowhere
     # else: it answers the same question the rest of this card answers, and the standing constraint is to cut
     # clutter, not to repeat a fact on every surface that could hold it.
+    # ADR-160 — the price journey sits beside the form windows because it answers the neighbouring question:
+    # not "how is he playing" but "what has the market done about it".
     st.markdown(trend_panel_html(player_gw_points(gwh, code), form_dots(gwh, code), by_stat,
-                                 windows=form_windows((gwh or {}).get(code) or [])),
+                                 windows=form_windows((gwh or {}).get(code) or []),
+                                 price={"series": price_series(gwh, code, player),
+                                        "move": price_move(player),
+                                        "price": player["price"]}),
                 unsafe_allow_html=True)
