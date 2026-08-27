@@ -13,6 +13,7 @@ import json
 import re
 import statistics
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 
 from src import llm
 from src.analytics import (
@@ -51,6 +52,8 @@ from src.analytics import (
     trending,
 )
 from src.analytics.captain import _next_opponent
+from src.analytics.crowd import crowd_exodus
+from src.analytics.headlines import leavers
 from src.fpl_rules import match_rules
 from src.squads import SquadStore
 from src.storage import Storage
@@ -430,11 +433,15 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
     if not owned:
         return None
     bench_ids = squad.get("bench_ids") or []
+    # ADR-156 — the transfer ranking values a reported leaver at zero, like the lineup does (ADR-154).
+    reported_out = leavers(owned, store.headline_events_by_id(), crowd_exodus,
+                           today=datetime.now(UTC).date())
 
     if count > 1:
         # A coordinated N-transfer plan (ADR-035), with a per-GW table as structured detail (ADR-036).
         plan = suggest_transfer_plan(
-            owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, count=count
+            owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, count=count,
+            reported_out=reported_out,
         )
         if not plan:
             return None
@@ -451,7 +458,8 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
         }
 
     moves = suggest_transfers(
-        owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, limit=rank + 1
+        owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, limit=rank + 1,
+        reported_out=reported_out,
     )
     if not moves:
         return None

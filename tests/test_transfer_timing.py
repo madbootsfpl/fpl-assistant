@@ -101,3 +101,52 @@ def test_a_second_move_worth_the_hit_is_recommended_when_banking_is_not():
     t = transfer_timing([_mv(gain=3.0), _mv("C", "D", 6.0)], free=1, next_gw_gain=9.0, horizon=6)
     assert t["decision"]["action"] == "use" and t["take_hit"] is True
     assert "worth the hit" in t["headline"]
+
+
+# ---- A dead slot takes the free transfer (ADR-156) ------------------------------------------------
+# The page used to say two things at once: a ⛔ banner naming Watkins as unable to score, and — directly
+# beneath it — "use your free transfer on Gibbs-White → Cunha". Both were computed correctly; neither knew
+# about the other.
+
+def _dead(out="Watkins", inn="Welbeck", gain=15.5, reason="per Romano"):
+    return {"out": {"web_name": out, "id": 9}, "in": {"web_name": inn, "id": 8},
+            "gain": gain, "reason": reason}
+
+
+def test_a_dead_slot_takes_the_free_transfer_ahead_of_a_bigger_looking_upgrade():
+    t = transfer_timing([_mv("Gibbs-White", "Cunha", 3.3)], free=1, next_gw_gain=1.2, horizon=6,
+                        dead=[_dead()])
+    assert "Watkins → Welbeck" in t["headline"]
+    assert "per Romano" in t["headline"]                 # the reader can check the claim
+    assert t["decision"]["action"] == "use"
+    assert "Gibbs-White" not in t["headline"], "the upgrade drops to being the hit question"
+
+
+def test_a_dead_slot_is_never_banked_against():
+    """Banking buys a second free transfer next week. A hole in the squad costs the same every week it stays."""
+    # next_gw_gain 0.0 + a second move worth 6.0 is the textbook "bank it" case…
+    banked = transfer_timing([_mv(gain=1.0), _mv("C", "D", 6.0)], free=1, next_gw_gain=0.0, horizon=6)
+    assert banked["decision"]["action"] == "bank"
+    # …and it stops being one the moment part of the squad cannot play.
+    t = transfer_timing([_mv(gain=1.0), _mv("C", "D", 6.0)], free=1, next_gw_gain=0.0, horizon=6,
+                        dead=[_dead()])
+    assert t["decision"]["action"] == "use"
+    assert "Bank" not in t["headline"]
+
+
+def test_the_best_ordinary_move_becomes_the_hit_question_behind_a_dead_slot():
+    t = transfer_timing([_mv("Gibbs-White", "Cunha", 6.5)], free=1, horizon=6, dead=[_dead()])
+    assert t["take_hit"] is True                         # 6.5 > the 4-point hit
+    assert "Gibbs-White → Cunha" in t["hit_verdict"]
+
+    quiet = transfer_timing([], free=1, horizon=6, dead=[_dead()])
+    assert "only move worth making" in quiet["hit_verdict"]
+    assert "Nothing is worth transferring in" not in quiet["hit_verdict"]
+
+
+def test_the_two_gains_are_never_compared_as_numbers():
+    """ADR-136 keeps them apart: `replace_dead`'s gain is 'points recovered from zero', an upgrade's is
+    'XI improvement'. The dead slot wins on kind, so a *smaller* number still goes first."""
+    t = transfer_timing([_mv("Gibbs-White", "Cunha", 9.9)], free=1, horizon=6,
+                        dead=[_dead(gain=1.1)])
+    assert "Watkins → Welbeck" in t["headline"]

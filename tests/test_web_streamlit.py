@@ -3132,3 +3132,27 @@ def test_health_shows_a_reported_departure_the_fpl_status_still_calls_available(
     block = "\n".join(c.value for c in at.code)
     assert "leaving — Romano" in block, "the analysis must name the outlet behind the departure"
     assert "(out)" in block, "…and mark his row, where the eye lands first"
+
+
+def test_transfer_view_puts_a_reported_departure_ahead_of_an_upgrade(monkeypatch):
+    """ADR-156 — the view used to say two things at once: a ⛔ banner naming the departing player, and beneath
+    it *"use your free transfer on Gibbs-White → Cunha"*. Both were right; neither knew about the other.
+
+    One lookup now feeds the banner, the timing call and the ranking.
+    """
+    from src.web_streamlit.views import squads as squads_view
+
+    seen = {}
+
+    def fake(owned):
+        if not owned:
+            return {}
+        seen["name"] = owned[0]["web_name"]
+        return {owned[0]["id"]: {"kind": "transfer", "source": "Romano", "title": "Al Hilal, here we go!"}}
+
+    monkeypatch.setattr(squads_view, "_reported_leavers", fake)
+    at = _squads_view("Transfer")
+    assert seen, "the stub was never called — the Transfer view is not asking the question"
+    said = " ".join([*(e.value for e in at.error), *(i.value for i in at.info)])
+    assert seen["name"] in said, "the departing player must be named on the page"
+    assert "per Romano" in said, "…and the outlet with him, so the claim is checkable"

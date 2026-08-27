@@ -385,3 +385,49 @@ def test_a_reported_leaver_is_measured_against_zero_not_his_paper_xp():
     assert move["gain"] == 6.0, "the replacement is worth what he scores, not the difference from a fiction"
     assert move["gain"] > 0, "a recovery must never read as negative"
     assert move["out"]["xp"] == 0.0 and move["reported"] is True
+
+
+# ---- Reported departures in the ranking (ADR-156) --------------------------------------------------
+# The owner: "Transfer doesn't pick up Watkins, he is not recommended to transfer." The ranking compared a
+# replacement against the 4.3 xP FPL still credits a player with an agreed move to Al-Hilal — points he will
+# never score — so the most urgent transfer in the squad ranked below a marginal upgrade.
+
+_LEAVING = {"kind": "transfer", "source": "Romano", "title": "Al Hilal, here we go!"}
+
+
+def test_a_reported_leaver_is_valued_at_zero_in_the_ranking():
+    owned = [_p(1, "MID", "AAA", 5.0)]
+    market = owned + [_p(2, "MID", "BBB", 5.0)]
+    xp = {1: 6.0, 2: 7.0}
+    # Without the fact he is worth 6.0, so the swap gains a nominal 1.0…
+    assert suggest_transfers(owned, market, xp, xi_aware=False)[0]["gain"] == 1.0
+    # …with it, the honest question is "7.0 versus nothing".
+    out = suggest_transfers(owned, market, xp, xi_aware=False, reported_out={1: _LEAVING})
+    assert out[0]["gain"] == 7.0
+    assert out[0]["out"]["xp"] == 0.0           # shown as zero, because this surface recommends
+    assert out[0]["out"]["leaving"] == _LEAVING
+
+
+def test_a_departing_player_is_never_a_suggested_signing():
+    owned = [_p(1, "MID", "AAA", 5.0)]
+    market = owned + [_p(2, "MID", "BBB", 5.0)]
+    xp = {1: 3.0, 2: 9.0}
+    assert suggest_transfers(owned, market, xp, xi_aware=False, reported_out={2: _LEAVING}) == []
+
+
+def test_the_stored_xp_map_is_never_mutated_by_the_ranking():
+    """The zeroing is a local copy — `decision_xp` is the app's single recipe and this must not touch it."""
+    owned = [_p(1, "MID", "AAA", 5.0)]
+    market = owned + [_p(2, "MID", "BBB", 5.0)]
+    xp = {1: 6.0, 2: 7.0}
+    suggest_transfers(owned, market, xp, xi_aware=False, reported_out={1: _LEAVING})
+    assert xp == {1: 6.0, 2: 7.0}
+
+
+def test_the_fact_threads_through_every_step_of_a_plan():
+    owned = [_p(1, "MID", "AAA", 5.0), _p(3, "DEF", "AAA", 5.0)]
+    market = owned + [_p(2, "MID", "BBB", 5.0), _p(4, "DEF", "CCC", 5.0)]
+    xp = {1: 6.0, 2: 7.0, 3: 1.0, 4: 2.0}
+    plan = suggest_transfer_plan(owned, market, xp, count=2, xi_aware=False, reported_out={1: _LEAVING})
+    first = next(m for m in plan if m["out"]["id"] == 1)
+    assert first["gain"] == 7.0                 # …and not the 1.0 his stored xP would have made it

@@ -80,7 +80,8 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     }
 
     # Transfer — the single best positive-gain, self-funding upgrade (ADR-030/046).
-    moves = suggest_transfers(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank, limit=1)
+    moves = suggest_transfers(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank, limit=1,
+                              reported_out=reported_out)
     transfer = moves[0] if moves else None
 
     # Replacements — the slots that cannot score at all (ADR-136). A dead player on the bench is invisible to

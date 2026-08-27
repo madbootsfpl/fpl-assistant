@@ -27,6 +27,18 @@ def _summary(player, xp_by_id) -> dict:
     }
 
 
+def _selection_xp(xp_by_id, reported_out):
+    """A **local copy** of the xP map with reported leavers zeroed — ADR-154's rule, reused (ADR-156).
+
+    Same reasoning as the lineup: FPL still rates a player with an agreed move abroad, so ranking on his stored
+    xP asks *"how much better is his replacement than the points he will score?"* when the honest question is
+    *"…than nothing?"*. `decision_xp` is untouched; this map exists for the length of one ranking.
+    """
+    if not reported_out:
+        return xp_by_id
+    return {k: (0.0 if k in reported_out else v) for k, v in xp_by_id.items()}
+
+
 def _club_ok(out, candidate, club_counts, max_per_club) -> bool:
     """Would bringing `candidate` in (and `out` out) keep ≤ max_per_club from any club?
 
@@ -42,7 +54,7 @@ def _club_ok(out, candidate, club_counts, max_per_club) -> bool:
 def suggest_transfers(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, limit: int = 5, max_per_club: int = MAX_PER_CLUB,
-    xi_aware: bool = True,
+    xi_aware: bool = True, reported_out=None,
 ) -> list[dict]:
     """Rank the best single transfers for a squad (ADR-030/046).
 
@@ -61,10 +73,17 @@ def suggest_transfers(
     The shortlist is a menu of *alternative* single swaps, so each is taken greedily and
     disjoint (ADR-040): no incoming player is suggested twice, and no outgoing player twice —
     a sell whose best target is already taken gets its next-best available one.
+
+    `reported_out` (id → event, ADR-153/154) values a player reported to be leaving the league at **zero** for
+    this ranking, and keeps one out of the incoming shortlist. Without it the ranking compares a replacement
+    against points the outgoing player will never score, and a bench leaver moves the XI by nothing — so the
+    single most urgent transfer in the squad never appears (ADR-156).
     """
     owned_ids = {p["id"] for p in owned}
     bench = set(bench_ids)
-    base_xi = best_xi_points(owned, xp_by_id) if xi_aware else 0.0
+    reported_out = reported_out or {}
+    rank_xp = _selection_xp(xp_by_id, reported_out)
+    base_xi = best_xi_points(owned, rank_xp) if xi_aware else 0.0
 
     club_counts: dict = {}
     for p in owned:
@@ -74,16 +93,18 @@ def suggest_transfers(
     pairs = []
     for out in owned:
         budget = out["price"] + bank
-        out_sum = _summary(out, xp_by_id)
+        out_sum = _summary(out, rank_xp)
+        out_sum["leaving"] = reported_out.get(out["id"])
         for c in players:
             if (c["position"] == out["position"]
                     and c["id"] not in owned_ids
                     and not is_unavailable(c)
+                    and c["id"] not in reported_out      # never buy someone on his way out (ADR-156)
                     and c["price"] <= budget
                     and _club_ok(out, c, club_counts, max_per_club)):
                 in_sum = _summary(c, xp_by_id)
                 if xi_aware:   # how much the swap lifts the best legal XI (ADR-046)
-                    after = best_xi_points([p for p in owned if p["id"] != out["id"]] + [c], xp_by_id)
+                    after = best_xi_points([p for p in owned if p["id"] != out["id"]] + [c], rank_xp)
                     gain = round(after - base_xi, 1)
                 else:
                     gain = round(in_sum["xp"] - out_sum["xp"], 1)
@@ -115,7 +136,7 @@ def suggest_transfers(
 def suggest_transfer_plan(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, count: int = 1, max_per_club: int = MAX_PER_CLUB,
-    xi_aware: bool = True,
+    xi_aware: bool = True, reported_out=None,
 ) -> list[dict]:
     """A coordinated, greedy plan of up to `count` transfers (ADR-035).
 
@@ -124,7 +145,8 @@ def suggest_transfer_plan(
     counts and ownership update, and no player is bought twice or a sold one re-bought. Reuses
     `suggest_transfers` on the evolving state, so every single-transfer rule holds across the
     plan. Returns the ordered moves, each annotated with `bank_after`; stops early when no
-    positive-gain move remains.
+    positive-gain move remains. `reported_out` threads through to every step (ADR-156), so a departing player
+    is worth zero on move 3 for the same reason he is on move 1.
     """
     by_id = {p["id"]: p for p in players}
     owned = list(owned)
@@ -136,7 +158,7 @@ def suggest_transfer_plan(
         market = [p for p in players if p["id"] not in sold]   # a sold player can't return
         moves = suggest_transfers(
             owned, market, xp_by_id, bench_ids=bench_ids, bank=running_bank,
-            limit=1, max_per_club=max_per_club, xi_aware=xi_aware,
+            limit=1, max_per_club=max_per_club, xi_aware=xi_aware, reported_out=reported_out,
         )
         if not moves:
             break

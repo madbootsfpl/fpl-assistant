@@ -82,12 +82,20 @@ def bank_or_use(moves, next_gw_gain=None, *, free: int = 1, hit_cost: int = HIT_
 
 
 def transfer_timing(moves, *, free: int = 1, next_gw_gain=None, hit_cost: int = HIT_COST,
-                    horizon: int = 1) -> dict:
+                    horizon: int = 1, dead=()) -> dict:
     """The whole timing picture: what to do this week, whether to take a hit, and why.
 
     `moves` is the ordered plan from `suggest_transfer_plan` (best first). `next_gw_gain` is what the top move
     is worth in the *next* gameweek alone — the cost of delaying it — and comes from `by_gameweek`.
+
+    `dead` is `replace_dead`'s output (ADR-136/156). A slot that cannot score **takes the free transfer**,
+    ahead of any upgrade: it is a permanent zero with no auto-sub cover, and banking against it is banking
+    against a hole. The two gains are deliberately *not* compared — ADR-136 keeps them apart because they
+    measure different things — so the dead slot wins on **kind**, not on number, and the ordinary plan simply
+    becomes the hit question behind it.
     """
+    if dead:
+        return _dead_first(dead, moves, free=free, hit_cost=hit_cost, horizon=horizon)
     decision = bank_or_use(moves, next_gw_gain, free=free, hit_cost=hit_cost)
     second = moves[1] if len(moves) > 1 else None
     take_hit = bool(second) and free < 2 and hit_is_worth_it(second["gain"], hit_cost=hit_cost)
@@ -97,6 +105,30 @@ def transfer_timing(moves, *, free: int = 1, next_gw_gain=None, hit_cost: int = 
         "hit_verdict": _hit_verdict(second, take_hit, free, hit_cost,
                                     banking=decision["action"] == "bank", moves=moves),
         "headline": _headline(moves, decision, take_hit, horizon, has_second=second is not None),
+    }
+
+
+def _dead_first(dead, moves, *, free, hit_cost, horizon) -> dict:
+    """The timing answer when part of the squad cannot play at all.
+
+    Fixing it is never "bank": a dead slot costs the same every week you leave it, and costs everything the
+    week a starter is knocked. The best ordinary upgrade drops down to being the hit question.
+    """
+    d = dead[0]
+    span = f"over {horizon} gameweeks" if horizon > 1 else "next gameweek"
+    nxt = moves[0] if moves else None
+    take_hit = bool(nxt) and free < 2 and hit_is_worth_it(nxt["gain"], hit_cost=hit_cost)
+    reason = f"{d['out']['web_name']} can't play ({d['reason']})"
+    return {
+        "moves": list(moves), "free": free, "horizon": horizon, "dead": list(dead),
+        "decision": {"action": "use", "value": 0.0, "cost": 0.0, "second_gain": nxt["gain"] if nxt else None,
+                     "reason": f"{reason}. A slot scoring nothing outranks any upgrade."},
+        "take_hit": take_hit,
+        "hit_verdict": (_hit_verdict(nxt, take_hit, free, hit_cost, banking=False, moves=moves) if nxt else
+                        "Filling the dead slot is the only move worth making, so there's no hit to consider."),
+        "headline": (f"**Use your free transfer on {d['out']['web_name']} → {d['in']['web_name']}** — "
+                     f"{reason}, so that slot recovers **{d['gain']:.1f} xP** {span}. "
+                     f"A dead slot comes before any upgrade."),
     }
 
 

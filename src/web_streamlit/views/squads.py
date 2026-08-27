@@ -799,8 +799,11 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     from datetime import UTC, datetime
 
     from src.analytics.transfer import replace_dead
+    # ADR-153/156 — one lookup for the whole view: it drives the ⛔ banner, the timing call and the ranking,
+    # and three separate lookups is how one page ends up contradicting itself.
+    leaving = _reported_leavers(owned)
     dead = replace_dead(owned, players, xp_by_id, upcoming, bench_ids=bench_ids, bank=bank,
-                        horizon=horizon, today=datetime.now(UTC).date())
+                        horizon=horizon, today=datetime.now(UTC).date(), reported_out=leaving)
     for i, d in enumerate(dead):
         st.error(f"⛔ **{d['out']['web_name']} ({d['out']['team']}) can't play — {d['reason']}.** "
                  f"That's a squad slot scoring nothing for the next {horizon} gameweeks, with no bench cover. "
@@ -821,7 +824,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     # ADR-132 — the timing question, above the moves themselves: use the free transfer, bank it, or take the
     # hit. Arithmetic over FPL's own rules, not a search — the roadmap's path/tree was scoped out on evidence.
     from src.analytics.transfer_timing import transfer_timing
-    _plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=2)
+    _plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=2,
+                                  reported_out=leaving)
     _next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     _bg = {r["id"]: r["by_gameweek"] for r in ranked}
     _delay = None
@@ -830,7 +834,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
                        - _bg.get(_plan[0]["out"]["id"], {}).get(_next_gw, 0.0), 2)
     _free = st.number_input("Free transfers you hold", 0, 5, 1,
                             help="FPL gives one a week and rolls unused ones up to five.")
-    _timing = transfer_timing(_plan, free=_free, next_gw_gain=_delay, horizon=horizon)
+    # ADR-156 — the same `dead` list the ⛔ banner above is built from, so the two cannot say different things.
+    _timing = transfer_timing(_plan, free=_free, next_gw_gain=_delay, horizon=horizon, dead=dead)
     st.info(_timing["headline"])
     st.caption(_timing["hit_verdict"])
 
@@ -863,7 +868,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
             st.caption("Bring one in with **✋ Manual transfer** below (a same-position swap).")
 
     if count > 1:
-        plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=count)
+        plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=count,
+                                     reported_out=leaving)
         st.code(render_transfer_plan(
             plan, squad_name, bank=bank, horizon=horizon,
             by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
@@ -887,7 +893,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
                     st.warning(f"{done}  ⚠ {warning}") if warning else st.success(done)
                     st.rerun()
     else:
-        swaps = suggest_transfers(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, limit=5)
+        swaps = suggest_transfers(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, limit=5,
+                                  reported_out=leaving)
         by_id = {p["id"]: p for p in players}
         render_player_table([{
             "out": photos.get(s["out"]["id"], ""), "Out": s["out"]["web_name"],

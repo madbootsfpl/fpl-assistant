@@ -728,9 +728,14 @@ def cmd_transfer(args) -> None:
 
         # ADR-136 — a slot that cannot score is invisible to an XI-gain ranking, so it is asked for
         # separately and printed first. Silent (empty string) when the 15 are all able to play.
+        # ADR-153/156 — and a player the press says is leaving is a dead slot FPL hasn't caught up with.
+        # Computed once: it changes the banner AND the ranking below, and deriving it twice is how the two
+        # end up disagreeing on the same page.
+        leaving = leavers(owned, store.headline_events_by_id(), crowd_exodus,
+                          today=datetime.now(UTC).date())
         banner = render_dead_slots(
             replace_dead(owned, players, xp_by_id, upcoming, bench_ids=bench_ids, bank=args.bank,
-                         horizon=args.next, today=datetime.now(UTC).date()),
+                         horizon=args.next, today=datetime.now(UTC).date(), reported_out=leaving),
             horizon=args.next,
         )
         if banner:
@@ -741,7 +746,7 @@ def cmd_transfer(args) -> None:
             # players' per-gameweek xP shown (ADR-036).
             plan = suggest_transfer_plan(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, count=args.count,
-                xi_aware=xi_aware,
+                xi_aware=xi_aware, reported_out=leaving,
             )
             print(render_transfer_plan(
                 plan, args.squad, bank=args.bank, horizon=args.next,
@@ -752,7 +757,7 @@ def cmd_transfer(args) -> None:
         else:
             suggestions = suggest_transfers(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, limit=args.limit,
-                xi_aware=xi_aware,
+                xi_aware=xi_aware, reported_out=leaving,
             )
             print(render_transfers(
                 suggestions, args.squad, bank=args.bank, horizon=args.next, show_xmins=show_xmins,
