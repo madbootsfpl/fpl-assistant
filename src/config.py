@@ -49,6 +49,19 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.2"
 OLLAMA_TIMEOUT = 60
 
+# …and a SEPARATE model for headline extraction (ADR-151/157). The two jobs want different things and one
+# constant was quietly making that choice for both: narration wants warmth, speed and a sentence, and runs
+# while a person waits; extraction wants the same answer every time and runs once, in `refresh`, unattended.
+# Measured on the live feed rather than assumed — see ADR-157 for the numbers.
+OLLAMA_EXTRACT_MODEL = "qwen3:8b"
+OLLAMA_EXTRACT_TIMEOUT = 120
+
+# How long extraction may hold `refresh` (ADR-151, raised in ADR-157). Measured, not guessed: the live feed
+# offers 112 headlines and the chosen model reads one in ~1.0s median, so a full read is ~110-150s. At the
+# old 180s that was 60-80% of the budget — and running out is silent truncation, the failure mode six sprints
+# have been spent removing. `refresh` is a manual, local, occasional command; the headroom is worth more.
+EXTRACT_BUDGET_SECONDS = 300.0
+
 # ClubElo — the second (external) data source: team Elo ratings (ADR-010).
 # The API returns CSV for a given date at CLUBELO_BASE_URL/<YYYY-MM-DD>.
 CLUBELO_BASE_URL = "http://api.clubelo.com"

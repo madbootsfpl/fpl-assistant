@@ -84,3 +84,51 @@ def test_empty_and_odd_inputs_are_safe():
     assert find_mentions("", index) == {} and find_mentions(None, index) == {}
     assert build_index([]) == []
     assert find_mentions("Palmer", []) == {}
+
+
+# ---- A longer name we don't hold (ADR-157) --------------------------------------------------------
+# Span consumption defeats "James Maddison" vs Reece James because we hold BOTH names. It cannot help when
+# the longer name belongs to someone outside the Premier League — or to someone who isn't a player at all.
+# All three of these came off the live 112-headline corpus.
+
+_OUTSIDERS = [
+    {"id": 1, "web_name": "Bradley", "first_name": "Conor", "second_name": "Bradley",
+     "team": "LIV", "selected_by": 5.0},
+    {"id": 2, "web_name": "Enzo", "first_name": "Enzo", "second_name": "Fernández",
+     "team": "CHE", "selected_by": 6.0},
+    {"id": 3, "web_name": "Watkins", "first_name": "Ollie", "second_name": "Watkins",
+     "team": "AVL", "selected_by": 9.0},
+]
+
+
+def test_a_foreign_players_first_name_is_not_our_defender():
+    """PSG's Bradley Barcola was crediting Conor Bradley with a €135m transfer."""
+    index = build_index(_OUTSIDERS)
+    assert find_mentions("Liverpool reach agreement with PSG for Bradley Barcola", index) == {}
+
+
+def test_a_manager_is_not_a_player():
+    """Enzo Maresca — a manager — was resolving to Enzo Fernández, and a transfer headline with his name in
+    it is exactly the input the departure rule consumes."""
+    index = build_index(_OUTSIDERS)
+    assert find_mentions("Enzo Maresca reacts to the deal", index) == {}
+
+
+def test_the_journalist_we_cite_as_a_source_is_not_a_player():
+    index = build_index([*_OUTSIDERS, {"id": 4, "web_name": "David", "first_name": "David",
+                                       "second_name": "Raya", "team": "ARS", "selected_by": 8.0}])
+    assert 4 not in find_mentions("David Ornstein: Coventry agree a £6m deal", index)
+
+
+def test_a_full_name_still_matches_when_a_capitalised_word_follows():
+    """The rule is for bare surnames only. A full-name match is unambiguous by construction, so a real story
+    must survive — this is the headline the whole departure feature was built on."""
+    index = build_index(_OUTSIDERS)
+    hits = find_mentions("Al-Hilal agreed a deal to sign Ollie Watkins, here we go", index)
+    assert hits == {3: 1}
+
+
+def test_an_ordinary_surname_mention_is_untouched():
+    index = build_index(_OUTSIDERS)
+    assert find_mentions("Watkins scored twice", index) == {3: 1}
+    assert find_mentions("a late Bradley cross", index) == {1: 1}

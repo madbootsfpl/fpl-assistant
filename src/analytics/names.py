@@ -111,22 +111,44 @@ def build_index(players) -> list:
     return sorted(index, key=lambda t: -len(t[0]))
 
 
+def _is_part_of_a_longer_name(text: str, end: int) -> bool:
+    """Is the name that just matched immediately followed by another capitalised word? (ADR-157)
+
+    Span consumption only defeats a name-inside-a-name when **we hold the longer name**. It cannot help with
+    someone who is not a Premier League player at all, and the live corpus was full of them: *Bradley*
+    Barcola (PSG) credited to Conor Bradley, *Enzo* Maresca — a **manager** — credited to Enzo Fernández, and
+    *David* Ornstein — the **journalist we cite as a source** — credited to a player called David.
+
+    Only bare `web_name` patterns are tested. A full-name match is already unambiguous, so "Ollie Watkins
+    Al-Hilal" must survive. Measured on the 112-headline corpus: 5 of 45 mentions rejected, **all five wrong,
+    none of the 40 good ones touched**.
+
+    A fully title-cased headline could still lose a real mention here. That is the direction to be wrong in
+    (ADR-154): a dropped mention costs silence, a wrong one puts another player's transfer on your captain.
+    """
+    return re.match(r"\s+[A-Z][a-zA-Z'\u2019-]+", text[end:]) is not None
+
+
 def find_mentions(text: str, index) -> dict:
     """`{player_id: hits}` for one piece of text, matching longest-first and consuming what it matches.
 
     Consumption is what stops "James Maddison" also counting as a mention of Reece James: the longer pattern
-    runs first and blanks those characters, so the shorter one never sees them.
+    runs first and blanks those characters, so the shorter one never sees them. `_is_part_of_a_longer_name`
+    covers the case consumption cannot: a longer name we do not hold, because its owner plays elsewhere — or
+    is not a player at all.
     """
     if not text:
         return {}
     low = text.lower()
     taken = bytearray(len(low))          # 1 where a longer pattern has already claimed a character
     hits = {}
-    for pattern, player, _exact in index:
+    for pattern, player, exact in index:
         for m in re.finditer(rf"\b{re.escape(pattern)}\b", low):
             a, b = m.span()
             if any(taken[a:b]):
                 continue                 # inside a name we have already credited
+            if not exact and _is_part_of_a_longer_name(text, b):
+                continue                 # a bare surname that is really someone else's first name
             taken[a:b] = b"\x01" * (b - a)
             pid = _get(player, "id")
             hits[pid] = hits.get(pid, 0) + 1

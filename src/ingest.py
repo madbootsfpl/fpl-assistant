@@ -130,7 +130,7 @@ def _refresh_elo(store: Storage, raw_teams, elo_client: EloClient | None) -> int
 
 
 def enrich_headlines(store, players=None, *, ask=None, feeds=None,
-                     budget_seconds: float = 180.0) -> tuple[int, str]:
+                     budget_seconds: float = config.EXTRACT_BUDGET_SECONDS) -> tuple[int, str]:
     """Read events out of the current headlines and store them (ADR-151). `(count, message)`.
 
     **Runs at refresh, not per page view**, and that is a deployment fact rather than a preference: extraction
@@ -162,10 +162,18 @@ def enrich_headlines(store, players=None, *, ask=None, feeds=None,
     if ask("ping") is None:                              # no model → no events, and say so plainly
         return 0, "no language model available (Ollama not running?) — headlines left unread"
 
+    # ADR-157 — say so when the budget cut the read short. `extract` stops cleanly and keeps what it has,
+    # which is right, but it stopped SILENTLY: a truncated run and a complete one printed the same sentence,
+    # so a feed that outgrew the budget would look like a quiet news day. Timing the call is enough to tell.
+    started = time.monotonic()
     events = extract_events(titles, players, ask, seen_at=datetime.now(UTC).isoformat(),
                             budget_seconds=budget_seconds)
+    elapsed = time.monotonic() - started
     stored = store.upsert_headline_events(events)
-    return stored, f"read {len(titles)} headlines → {stored} events"
+    if elapsed >= budget_seconds:
+        return stored, (f"{stored} events — ⚠ stopped at the {budget_seconds:.0f}s budget with "
+                        f"{len(titles)} headlines offered, so some went unread")
+    return stored, f"read {len(titles)} headlines in {elapsed:.0f}s → {stored} events"
 
 
 def _headline_titles() -> list:

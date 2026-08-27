@@ -5,6 +5,8 @@ The model is always faked — no test needs Ollama, and the point of the design 
 corpus (spike 206), and the case is named in the docstring.
 """
 
+import time
+
 from src.analytics.headlines import (
     event_phrase,
     extract,
@@ -223,3 +225,34 @@ def test_event_tag_is_the_outlet_not_the_headline():
     assert event_tag(event) == "leaving — Romano"
     assert event_tag({"kind": "transfer", "title": "no outlet named"}) == "reported leaving"
     assert len(event_tag(event)) < len(event_phrase(event))
+
+
+def test_a_truncated_read_says_so_instead_of_reading_like_a_quiet_news_day():
+    """ADR-157 — the budget stopped cleanly and *silently*, so a feed that outgrew it looked like no news.
+
+    Driven through `enrich_headlines` with a model slow enough to blow the budget on the first headline.
+    """
+    from src import ingest
+
+    class _Store:
+        def get_players(self):
+            return PLAYERS
+
+        def upsert_headline_events(self, events):
+            return len(events)
+
+    def slow(prompt):
+        if prompt == "ping":
+            return "ok"
+        time.sleep(0.05)
+        return '{"events":[]}'
+
+    count, message = ingest.enrich_headlines(
+        _Store(), PLAYERS, ask=slow, feeds=lambda: ["a headline", "another"], budget_seconds=0.01)
+    assert count == 0
+    assert "stopped at the" in message and "went unread" in message
+
+    quick = ingest.enrich_headlines(
+        _Store(), PLAYERS, ask=lambda p: "ok" if p == "ping" else '{"events":[]}',
+        feeds=lambda: ["a headline"], budget_seconds=30.0)[1]
+    assert "read 1 headlines" in quick and "unread" not in quick
