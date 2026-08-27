@@ -144,3 +144,18 @@ def test_resolve_requires_exactly_one_match():
                    "James agreed a deal to sign", INDEX) is not None      # one player web_named James
     assert resolve({"player": "Nobody At All", "kind": "transfer"},
                    "Nobody At All agreed a deal", INDEX) is None
+
+
+def test_money_alone_is_not_a_transfer():
+    """From a live `refresh`: *"£4.0m defender boost, Sangare assist + Ampadu DefCons: FPL notes"* was stored
+    as a **transfer**, because a bare "£" was a transfer cue — and **FPL prices are in pounds too**.
+
+    A fee needs a verb. Removing the bare currency symbol cost none of the seven correct events in that run:
+    each carries "sign", "joins", "agreed" or "closing in".
+    """
+    assert not supports_kind("£4.0m defender boost, Sangare assist: FPL notes", "transfer")
+    assert supports_kind("Coventry agree £6m deal to sign Ethan Pinnock", "transfer")
+    assert is_about_the_game("£4.0m defender boost, Sangare assist + Ampadu DefCons: FPL notes")
+    # …and a genuine transfer that merely mentions FPL must survive both guards
+    real = "[Crystal Palace] Axel Disasi (4.5m in FPL) signs for Crystal Palace on a season-long loan"
+    assert not is_about_the_game(real) and supports_kind(real, "transfer")

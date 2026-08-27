@@ -43,8 +43,12 @@ KINDS = ("transfer", "injury", "return")      # a closed set — anything else i
 # and a rule vetoing is stronger than either: the rule cannot invent an event, and the model cannot claim one
 # the text does not support.
 _KIND_CUES = {
+    # NB: a bare "£"/"€" is deliberately NOT a transfer cue. It was, and a live run produced
+    # *"£4.0m defender boost, Sangare assist + Ampadu DefCons: FPL notes"* as a transfer — because **FPL
+    # prices are in pounds too**. A fee needs a verb; the money alone means nothing. Removing it cost none of
+    # the seven correct events in that run (each carries "sign", "joins", "agreed" or "closing in").
     "transfer": ("sign", "signs", "signed", "joins", "join ", "deal", "agree", "agreed", "here we go",
-                 "medical", "loan", "bid", "move to", "transfer", "£", "€", "closing in", "swoop",
+                 "medical", "loan", "bid", "move to", "transfer", "closing in", "swoop",
                  "verbal agreement", "turn attention"),
     "injury": ("injur", "out for", "ruled out", "sidelined", "hamstring", "knee", "ankle", "groin", "acl",
                "surgery", "knock", "doubt", "not available", "unavailable", "absence", "strain", "concussion"),
@@ -83,7 +87,9 @@ _SOURCES = ("romano", "ornstein", "sky sports", "the athletic", "bbc", "guardian
 # ownership percentages.
 _FPL_META = ("transferred out", "transferred in", "price change", "price rise", "price fall",
              "ownership", "captaincy", "differential", "gameweek", "wildcard", "bench boost",
-             "triple captain", "free hit", "mini-league", "rate my team")
+             "triple captain", "free hit", "mini-league", "rate my team",
+             # from a live run: an FPL listicle that named three players and reported no football event
+             "fpl notes", "defcon")
 
 
 def is_about_the_game(title: str) -> bool:
