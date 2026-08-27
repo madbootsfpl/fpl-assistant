@@ -239,10 +239,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   🎯 Radar moved to a Players view.
 - ⬜ **Squad Lab icon → a lab motif** — swap the 🥾 boot on the Squad Lab header for a flask/test-tube; it fits
   *Lab* and distinguishes it from the boot-branded rest. **Needs the art** (clean transparent PNG).
-- ⬜ **Homepage copy is stale** — `madboots.com` still says *"No login to look around · your squad saves across
-  devices by a handle"*, untrue since Google auth went live (2026-08-12). ⚠ **The homepage source isn't in this
-  repo** (Cloudflare Pages) — owner to point at the file or we rebuild it. Also needs **hello@madboots.com** to
-  exist as a real inbox.
+- ⚠️ **Homepage copy** — audited 2026-08-27 (`docs/08_Marketing/Homepage_Copy.md`). **The stale line this item
+  named was already fixed** in the 2026-08-18 site audit: the page now says *"Sign in with Google — your squad
+  saves to your account and syncs across your devices"*, which is accurate. **This entry had outlived its own
+  problem.** What IS stale is the *"What's inside"* grid: it predates **🏆 Leagues · 📡 Signals · 📈 Trending**
+  and the **Fixtures → Team DNA** / **Squad optimiser → Squad Lab** renames. A paste-ready replacement grid is
+  in the deck. ⚠ **Still blocked on the source** — the homepage lives on Cloudflare Pages, not in this repo, so
+  it must be applied by hand; owner to point at the file. **Also still open: `hello@madboots.com` must be a
+  real inbox** — the mailto link exists, whether mail arrives is unverifiable from here.
 
 ---
 
