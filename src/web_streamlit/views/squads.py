@@ -674,6 +674,27 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
 # ---- Health (analyse the squad over the next 5 GW; ADR-031) ----------------------------------------
 
+def _reported_leavers(owned) -> dict:
+    """`{id: event}` for owned players the press says are leaving the league (ADR-153/155).
+
+    Wrapped in a try/except because it is a bonus on top of the snapshot: a database built before the events
+    table existed, or without a model to read headlines, must render Health exactly as it did before.
+    """
+    try:
+        from datetime import UTC, datetime
+
+        from src.analytics.crowd import crowd_exodus
+        from src.analytics.headlines import leavers
+        from src.storage import Storage
+        store = Storage()
+        try:
+            return leavers(owned, store.headline_events_by_id(), crowd_exodus, today=datetime.now(UTC).date())
+        finally:
+            store.close()
+    except Exception:                                    # noqa: BLE001 — never load-bearing
+        return {}
+
+
 def render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *,
                   team_names=None, horizon=5):
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
@@ -685,21 +706,28 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     bench_ids = set(squad.get("bench_ids") or [])
     xi_ids = ({p["id"] for p in owned if p["id"] not in bench_ids} if bench_ids
               else best_legal_xi(owned, xp_by_id))
+    # ADR-155 — Health reads the same reported-departure fact as AI Tips and the Risk Monitor. It was the one
+    # squad surface that didn't, so it counted a player with an agreed move as fully available.
+    leaving = _reported_leavers(owned)
     analysis = analyse_squad(
         owned, xi_ids, xp_by_id, horizon=horizon,
         by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
         gameweeks=ranked[0]["gameweeks"] if ranked else [],
         weight_by_id={r["id"]: r["minutes_weight"] for r in ranked},
+        reported_out=leaving,
     )
     captain_id = squad.get("captain_id")
     render_player_table([{
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": p["web_name"] + (" (C)" if p["id"] == captain_id else ""),
         "Team": p["team"], "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
-        "Role": "XI" if p["id"] in xi_ids else "Bench", "Trends": " ".join(crowd_flags(p)),
+        "Role": "XI" if p["id"] in xi_ids else "Bench",
+        "Trends": " ".join([*crowd_flags(p), *(["✈️ leaving"] if p["id"] in leaving else [])]),
         "Set": " ".join(set_piece_flags(p)),
     } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))],
-        help={"Set": SET_PIECE_LEGEND})
+        help={"Set": SET_PIECE_LEGEND,
+              "Trends": "Ownership, transfer momentum, price and form — plus **✈️ leaving** when the press "
+                        "reports a move out of the league (the analysis below names the outlet)."})
     st.code(render_squad_analysis(analysis, squad_name, show_xmins=True, captain_id=captain_id), language=None)
 
     # 🧬 Your teams (ADR-119, US-420) — the team-strength health check behind your squad: each of your clubs'

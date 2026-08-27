@@ -47,6 +47,8 @@ from src.analytics import (
     team_fdr,
     team_schedule,
 )
+from src.analytics.crowd import crowd_exodus
+from src.analytics.headlines import leavers
 from src.api.client import FplApiError
 from src.squads import SquadStore
 from src.storage import Storage
@@ -638,9 +640,12 @@ def cmd_analyse(args) -> None:
         xi_ids = ({p["id"] for p in owned if p["id"] not in bench_ids} if bench_ids
                   else best_legal_xi(owned, xp_by_id))
 
+        # ADR-155 — Health must know about a reported departure too; FPL still calls him available.
+        _leaving = leavers(owned, store.headline_events_by_id(), crowd_exodus, today=datetime.now(UTC).date())
         analysis = analyse_squad(
             owned, xi_ids, xp_by_id, horizon=args.next, sort=args.sort,
             by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks, weight_by_id=weight_by_id,
+            reported_out=_leaving,
         )
         print(render_squad_analysis(analysis, args.squad, show_xmins=not args.no_xmins))
     finally:

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 
 from src.analytics.captain import captain_picks
 from src.analytics.crowd import crowd_exodus
-from src.analytics.headlines import event_phrase, reported_leaving
+from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
 from src.analytics.transfer import replace_dead, suggest_transfers
 
@@ -48,11 +48,7 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # January move must change nothing about this gameweek.
     events_by_id = events_by_id or {}
     as_of = today or datetime.now(UTC).date()
-    reported_out = {}
-    for p in owned:
-        found = reported_leaving(events_by_id.get(p["id"]), crowd_exodus(p), today=as_of)
-        if found is not None:
-            reported_out[p["id"]] = found
+    reported_out = leavers(owned, events_by_id, crowd_exodus, today=as_of)
 
     # Captain — the next-GW pick from the owned, XI-eligible players (ADR-029). `limit=3` so the runner-up is
     # available for the captain explanation's lead-margin (ADR-089); the pick is still picks[0].

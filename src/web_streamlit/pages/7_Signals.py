@@ -136,9 +136,7 @@ if players:
     # ADR-151 — a sell-off with a headline behind it is no longer "unexplained"; it is *explained by the
     # press*. Shown first, because a sourced cause is the most useful thing on this page.
     _store2 = Storage()
-    _ev = {}
-    for _row in _store2.get_headline_events():
-        _ev.setdefault(_row["element_id"], []).append(dict(_row))
+    _ev = _store2.headline_events_by_id()
     _store2.close()
     _explained = [(p, e, _ev[p["id"]]) for p, e in _ex if p["id"] in _ev]
     for p, e, evs in _explained:

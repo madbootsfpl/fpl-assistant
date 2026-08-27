@@ -3107,3 +3107,28 @@ def test_the_exodus_list_is_scoped_to_players_people_actually_own():
     assert all((p["selected_by"] or 0) >= 1.0 for p in listed)
     unfiltered = [p for p in players if crowd_exodus(p)]
     assert len(listed) <= len(unfiltered), "the floor may only ever narrow the list"
+
+
+def test_health_shows_a_reported_departure_the_fpl_status_still_calls_available(monkeypatch):
+    """ADR-155 — Health was the last squad surface blind to this. It read *"Availability issues: 1"* on a
+    squad holding a player with an agreed move to Al-Hilal, because FPL's own status still said `a`.
+
+    The departure is stubbed rather than seeded: what is under test is that the view asks the question and
+    renders the answer, not the extraction that produces it (covered in test_headlines).
+    """
+    from src.web_streamlit.views import squads as squads_view
+
+    seen = {}
+
+    def fake(owned):
+        if not owned:
+            return {}
+        seen["id"] = owned[0]["id"]
+        return {owned[0]["id"]: {"kind": "transfer", "source": "Romano", "title": "Al Hilal, here we go!"}}
+
+    monkeypatch.setattr(squads_view, "_reported_leavers", fake)
+    at = _squads_view("Health")
+    assert seen, "the stub was never called — Health is not asking the question at all"
+    block = "\n".join(c.value for c in at.code)
+    assert "leaving — Romano" in block, "the analysis must name the outlet behind the departure"
+    assert "(out)" in block, "…and mark his row, where the eye lands first"

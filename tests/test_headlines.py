@@ -186,3 +186,40 @@ def test_two_signals_must_agree_before_we_call_a_player_gone():
     assert reported_leaving(move, None) is None, "a transfer nobody is selling is a move within the league"
     assert reported_leaving([], exodus) is None, "an exodus with no story stays 'unexplained' (ADR-146)"
     assert reported_leaving([{"kind": "injury", "title": "x"}], exodus) is None, "an injury is not a departure"
+
+
+def test_leavers_answers_for_a_whole_squad_so_four_surfaces_cannot_disagree():
+    """One implementation, because the surfaces that each wrote their own drifted apart (ADR-155).
+
+    AI Tips, the Risk Monitor and Health are all supposed to be reading the same table; Health wasn't reading
+    it at all, and reported a player with an agreed move as fully available.
+    """
+    from src.analytics.headlines import leavers
+
+    owned = [{"id": 1, "web_name": "Going"}, {"id": 2, "web_name": "Staying"}]
+    events = {1: [{"kind": "transfer", "source": "Romano", "title": "…agreed a deal to sign him"}],
+              2: [{"kind": "transfer", "source": "Romano", "title": "…agreed a deal to sign him"}]}
+    heavy = {"net": -167_825, "pressure": -17_000}
+
+    # Only player 1 is being sold — player 2's move is within the league, so the crowd is holding him.
+    found = leavers(owned, events, lambda p: heavy if p["id"] == 1 else None, today=None)
+    assert set(found) == {1}
+    assert found[1]["source"] == "Romano"
+    assert leavers(owned, {}, lambda p: heavy, today=None) == {}      # no headlines → nothing claimed
+    assert leavers([], events, lambda p: heavy, today=None) == {}
+
+    # …and it inherits ADR-154's window gate rather than re-implementing it, so Health can't start flagging a
+    # departure in October that AI Tips is deliberately staying quiet about.
+    from datetime import date
+    assert set(leavers(owned, events, lambda p: heavy if p["id"] == 1 else None, today=date(2026, 8, 27))) == {1}
+    assert leavers(owned, events, lambda p: heavy if p["id"] == 1 else None, today=date(2026, 10, 15)) == {}
+
+
+def test_event_tag_is_the_outlet_not_the_headline():
+    """The long quote is right where there is room to read it; in a list of six names it buries the other five."""
+    from src.analytics.headlines import event_phrase, event_tag
+
+    event = {"kind": "transfer", "source": "Romano", "title": "Al Hilal have now agreed all details of a deal"}
+    assert event_tag(event) == "leaving — Romano"
+    assert event_tag({"kind": "transfer", "title": "no outlet named"}) == "reported leaving"
+    assert len(event_tag(event)) < len(event_phrase(event))

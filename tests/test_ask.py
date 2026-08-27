@@ -718,6 +718,9 @@ class _FakeStore:
         # the one this test models — the plan must read exactly as it did before headlines existed.
         return []
 
+    def headline_events_by_id(self):
+        return {}
+
 
 def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     # ADR-070: the decision carries the plan as `detail`, names all owned players + the buy as

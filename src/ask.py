@@ -623,9 +623,7 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
     # ADR-153 — the headlines read at refresh (ADR-151). Empty on a snapshot built without a model, in which
     # case the plan reads exactly as it did before.
-    events_by_id = {}
-    for row in store.get_headline_events():
-        events_by_id.setdefault(row["element_id"], []).append(dict(row))
+    events_by_id = store.headline_events_by_id()
     plan = gameweek_plan(
         owned, players, store.get_upcoming_fixtures(), xp_by_id,
         baseline_by_code=baselines,

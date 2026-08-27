@@ -101,3 +101,41 @@ def test_render_marks_the_set_captain():
     a = analyse_squad(SQUAD, XI, XP)
     assert "P2 (C)" in render_squad_analysis(a, "TST", captain_id=2)
     assert "(C)" not in render_squad_analysis(a, "TST")
+
+
+# ---- Reported departures (ADR-155) -----------------------------------------------------------------
+# Health was the last squad surface that didn't know a player was leaving the league: it counted "Availability
+# issues: 1" on a squad holding a player with an agreed move to Al-Hilal, because FPL still reported him `a`.
+
+_EVENT = {"kind": "transfer", "source": "Romano", "title": "Al Hilal agree deal for P2, here we go!"}
+
+
+def test_a_reported_leaver_is_an_availability_issue_even_though_fpl_calls_him_fit():
+    a = analyse_squad(SQUAD, XI, XP, reported_out={2: _EVENT})
+    assert {p["id"] for p in a["issues"]} == {2}
+    assert a["issues"][0]["leaving"] == _EVENT
+    assert a["issues"][0]["status"] == "a"      # the point: FPL's own status still says available
+
+
+def test_a_fit_squad_has_no_issues_when_nobody_is_reported_leaving():
+    assert analyse_squad(SQUAD, XI, XP, reported_out={}) ["issues"] == []
+    assert analyse_squad(SQUAD, XI, XP)["issues"] == []      # and the argument stays optional
+
+
+def test_the_captain_lead_never_names_a_reported_leaver():
+    a = analyse_squad(SQUAD, XI, XP, reported_out={2: _EVENT})
+    assert a["top_pick"]["id"] == 1             # P2 has the most xP, but he is on his way out (ADR-154)
+
+
+def test_a_reported_leaver_keeps_his_xp_because_health_describes_the_squad_you_have():
+    # Deliberately unlike the gameweek plan, which zeroes him: that surface *recommends* an XI, this one
+    # reports what you own. Until he is transferred he is in the squad, and the totals should say so.
+    a = analyse_squad(SQUAD, XI, XP, reported_out={2: _EVENT})
+    assert a["projected_xp"] == 90.0
+    assert next(p for p in a["xi"] if p["id"] == 2)["xp"] == 40.0
+
+
+def test_render_names_the_outlet_behind_a_departure_and_marks_the_row():
+    out = render_squad_analysis(analyse_squad(SQUAD, XI, XP, reported_out={2: _EVENT}), "Test")
+    assert "Availability : P2 (leaving — Romano)" in out
+    assert "P2 (out)" in out                    # …and the table row, where the eye lands first

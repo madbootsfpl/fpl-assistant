@@ -683,3 +683,30 @@ def test_get_players_filters_combine_with_and(tmp_path):
     rows = store.get_players(position="MID", max_price=8.0)
     assert [r["web_name"] for r in rows] == ["CheapMid"]
     store.close()
+
+
+def test_headline_events_by_id_groups_the_table_once(tmp_path):
+    """The grouping every caller wanted, in one place (ADR-155).
+
+    Four surfaces had each written this loop, which is three chances to disagree about a fact they are all
+    reading from the same table.
+    """
+    store = Storage(tmp_path / "t.db")
+    store.upsert_headline_events([
+        {"element_id": 7, "title": "A", "kind": "transfer", "source": "Romano", "seen_at": "2026-08-20"},
+        {"element_id": 7, "title": "B", "kind": "injury", "source": None, "seen_at": "2026-08-21"},
+        {"element_id": 9, "title": "C", "kind": "return", "source": None, "seen_at": "2026-08-22"},
+    ])
+    grouped = store.headline_events_by_id()
+    assert set(grouped) == {7, 9}
+    assert [e["title"] for e in grouped[7]] == ["B", "A"]      # newest first, as get_headline_events orders
+    assert isinstance(grouped[7][0], dict)                     # plain dicts, safe to pass around
+    store.close()
+
+
+def test_headline_events_by_id_is_empty_on_a_snapshot_without_the_table(tmp_path):
+    """A database built before headlines existed must render every surface exactly as it did before."""
+    store = Storage(tmp_path / "old.db")
+    store.conn.execute("DROP TABLE IF EXISTS headline_events")
+    assert store.headline_events_by_id() == {}
+    store.close()

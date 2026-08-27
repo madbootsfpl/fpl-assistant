@@ -73,8 +73,7 @@ def render_risk_monitor(rows, badges=None) -> None:
     try:
         from src.storage import Storage
         _store = Storage()
-        for _row in _store.get_headline_events():
-            _events.setdefault(_row["element_id"], []).append(dict(_row))
+        _events = _store.headline_events_by_id()
         _store.close()
     except Exception:                                    # noqa: BLE001 — a bonus, never load-bearing
         _events = {}

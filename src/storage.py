@@ -760,5 +760,16 @@ class Storage:
         except sqlite3.OperationalError:      # a snapshot older than this table — degrade, never raise
             return []
 
+
+    def headline_events_by_id(self) -> dict:
+        """`{element_id: [event, …]}` — `get_headline_events` grouped, the shape every caller wanted.
+
+        Added because four surfaces had each written the same three-line grouping loop, which is three chances
+        for them to disagree about a fact they are all supposed to be reading from one table (ADR-155).
+        """
+        out = {}
+        for row in self.get_headline_events():
+            out.setdefault(row["element_id"], []).append(dict(row))
+        return out
     def close(self) -> None:
         self.conn.close()

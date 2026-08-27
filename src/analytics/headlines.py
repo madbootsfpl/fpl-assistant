@@ -191,6 +191,16 @@ def event_phrase(event) -> str:
     return f"{who}{kind} — “{title[:150]}”"
 
 
+def event_tag(event) -> str:
+    """`event_phrase` shortened to fit a list or a table cell — the outlet, not the headline (ADR-155).
+
+    The full quote is the right thing when there is room to read it; in a comma-separated line of six names it
+    buries the other five. The outlet alone still lets the reader weigh the claim.
+    """
+    who = event.get("source") if event else None
+    return f"leaving — {who}" if who else "reported leaving"
+
+
 def reported_leaving(events, exodus, *, today=None) -> dict | None:
     """The event proving a player is on his way **out of the league**, or `None` (ADR-153).
 
@@ -223,3 +233,21 @@ def reported_leaving(events, exodus, *, today=None) -> dict | None:
         if not transfer_window_open(today):
             return None
     return next((e for e in events if e.get("kind") == "transfer"), None)
+
+
+def leavers(owned, store_events, exodus_for, *, today) -> dict:
+    """`{player_id: event}` for owned players reported to be leaving the league (ADR-155).
+
+    A convenience over `reported_leaving`, because four separate surfaces need the same answer and each one
+    re-deriving it is how they end up disagreeing — the Health view said *"Availability issues: 1"* on a squad
+    whose most consequential unavailability was a player with an agreed move to Al-Hilal.
+
+    `store_events` maps id → that player's stored events; `exodus_for(player)` returns his exodus or None.
+    """
+    out = {}
+    for p in owned or []:
+        pid = p["id"] if "id" in (p.keys() if hasattr(p, "keys") else p) else None
+        found = reported_leaving((store_events or {}).get(pid), exodus_for(p), today=today)
+        if found is not None:
+            out[pid] = found
+    return out

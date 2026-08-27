@@ -5,6 +5,7 @@ squad health check — a summary block, the XI and bench tables, and highlights 
 cross-link to `captain` and `transfer`. Built on the shared table renderer (ADR-025).
 """
 
+from src.analytics.headlines import event_tag
 from src.analytics.minutes import expected_minutes
 
 from ._table import Col, render_rows
@@ -16,7 +17,9 @@ def _name(r, captain_id=None) -> str:
     """Player name with an availability marker (injured/suspended/doubtful) and, for the set captain, a
     trailing ` (C)` — kept inside `_NAME_W` so the columns stay aligned."""
     name = str(r["web_name"])
-    if r["status"] == "d" and r.get("chance") is not None:
+    if r.get("leaving"):        # ADR-155 — outranks `status`, which still calls him available
+        name = f"{name} (out)"
+    elif r["status"] == "d" and r.get("chance") is not None:
         name = f"{name} (d {r['chance']}%)"
     elif r["status"] in ("i", "s", "u", "n"):
         name = f"{name} ({r['status']})"
@@ -86,7 +89,12 @@ def render_squad_analysis(analysis: dict, squad_name: str, show_xmins: bool = Fa
     weak = ", ".join(f"{w['web_name']} ({w['xp']})" for w in analysis["weakest"])
     lines.append(f"Weakest links: {weak} — `transfer --squad {squad_name}`.")
     if analysis["issues"]:
-        names = ", ".join(p["web_name"] for p in analysis["issues"])
+        # Name the reason for a reported departure. Without it a fit, `status='a'` player sits in a list of
+        # injuries with nothing to explain him, and the reader assumes the list is wrong (ADR-155).
+        names = ", ".join(
+            f"{p['web_name']} ({event_tag(p['leaving'])})" if p.get("leaving") else p["web_name"]
+            for p in analysis["issues"]
+        )
         lines.append(f"Availability : {names}.")
 
     lines.append("")
