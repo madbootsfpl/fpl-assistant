@@ -3197,3 +3197,25 @@ def test_the_leagues_load_button_latches_so_a_rival_change_does_not_collapse_the
     assert 'st.session_state["lg_loaded_for"] = league_id' in src
     assert 'st.session_state.get("lg_loaded_for") != league_id' in src
     assert 'if not st.button(f"Read {len(shown)} squads' not in src, "the old collapse-on-rerun form is back"
+
+
+def test_the_manager_import_remembers_the_id_so_leagues_does_not_ask_again():
+    """US-432, owner: *"when you input your FPL team under My Squad it should also import your leagues.
+    Currently they are separate actions."*
+
+    Storing the id IS the fix — Leagues builds your league list from it. Fetching the leagues here as well
+    would put that page inside this one, which is the clutter the owner has asked to keep out.
+    """
+    src = (_ROOT / "src" / "web_streamlit" / "squads.py").read_text()
+    assert "prefs.remember(manager_id=manager_id.strip())" in src
+    assert "Leagues" in src, "the success message should point at where the id now works"
+
+
+def test_the_transfer_flow_asks_before_spending_a_second_round_of_calls():
+    """ADR-141's rule, kept: nothing that costs N calls happens because someone opened a tab. The activity
+    numbers are free (they ride on payloads already fetched) so they are always drawn; the identities are not.
+    """
+    src = (_PAGES / "5_Leagues.py").read_text()
+    assert "transfer_activity(picks)" in src, "the free half must not sit behind a button"
+    assert 'st.session_state["lg_flow_for"]' in src, "the paid half must latch, like the squads button"
+    assert "_transfers(tuple(picks))" in src

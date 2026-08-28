@@ -175,3 +175,90 @@ def my_leagues(entry_payload) -> list[dict]:
 def manager_name(entry_payload) -> str:
     """A manager's team name, for confirming the id resolved to who they expected."""
     return _get(entry_payload, "name", "") or ""
+
+
+# ---- Transfer flow (ADR-162) ----------------------------------------------------------------------
+#
+# Two halves with very different costs, kept apart for that reason. **The activity half is free**: FPL puts
+# `entry_history` on every picks payload the league view has already fetched, and it carries how many
+# transfers a manager made, what the hits cost and what they left on the bench. **The identity half is not**:
+# which players moved needs `/entry/{id}/transfers/`, one more call per manager — the second N-call step on a
+# page whose first one already spent N.
+
+def transfer_activity(picks_by_entry) -> dict:
+    """What the league *did* about its transfers — free, from the picks payloads already in hand.
+
+    Returns `{"managers", "movers", "transfers", "hits", "hit_points", "bench_points", "bank"}`. `movers` is
+    how many managers made at least one transfer, which is the number that says whether a gameweek was quiet
+    or frantic; a total alone hides one manager taking a −12 among thirty who did nothing.
+    """
+    n = movers = transfers = hits = hit_points = bench = 0
+    banks = []
+    for payload in (picks_by_entry or {}).values():
+        h = _get(payload, "entry_history", {}) or {}
+        n += 1
+        made = _get(h, "event_transfers", 0) or 0
+        cost = _get(h, "event_transfers_cost", 0) or 0
+        transfers += made
+        movers += 1 if made else 0
+        hits += 1 if cost else 0
+        hit_points += cost
+        bench += _get(h, "points_on_bench", 0) or 0
+        bank_val = _get(h, "bank")
+        if bank_val is not None:
+            banks.append(bank_val / 10.0)
+    return {
+        "managers": n,
+        "movers": movers,
+        "transfers": transfers,
+        "hits": hits,
+        "hit_points": hit_points,
+        "bench_points": bench,
+        "bank": round(sum(banks) / len(banks), 1) if banks else None,
+    }
+
+
+def transfer_flow(transfers_by_entry, gameweek) -> dict:
+    """Who the league moved in and out **in one gameweek** — `{"in": [(id, n)], "out": [(id, n)], "net": {}}`.
+
+    `transfers_by_entry` maps entry id → that manager's whole-season transfer list; the gameweek filter is
+    applied here because the endpoint has no per-gameweek form.
+
+    `net` is in-count minus out-count per player, which is the number worth reading: a player with 6 in and 5
+    out is not "popular", he is **churning**, and two separate top-tens would have shown him twice and said
+    neither.
+    """
+    ins, outs = Counter(), Counter()
+    for rows in (transfers_by_entry or {}).values():
+        for t in rows or []:
+            if _get(t, "event") != gameweek:
+                continue
+            if _get(t, "element_in") is not None:
+                ins[_get(t, "element_in")] += 1
+            if _get(t, "element_out") is not None:
+                outs[_get(t, "element_out")] += 1
+    net = {pid: ins[pid] - outs.get(pid, 0) for pid in set(ins) | set(outs)}
+    return {"in": ins.most_common(), "out": outs.most_common(), "net": net}
+
+
+def flow_rows(flow, players, *, limit: int = 10) -> list[dict]:
+    """The flow as one ranked table — biggest **net** move first, in or out.
+
+    One table rather than two, because a manager comparing a buy against a sell should not have to hold two
+    lists in their head; the sign does that work.
+    """
+    index = {p["id"]: p for p in players or []}
+    rows = []
+    for pid, net in (flow or {}).get("net", {}).items():
+        p = index.get(pid)
+        ins = dict(flow["in"]).get(pid, 0)
+        outs = dict(flow["out"]).get(pid, 0)
+        rows.append({
+            "id": pid,
+            "player": p["web_name"] if p is not None else f"#{pid}",
+            "team": p["team"] if p is not None else "",
+            "position": p["position"] if p is not None else "",
+            "in": ins, "out": outs, "net": net,
+        })
+    rows.sort(key=lambda r: (-abs(r["net"]), -r["in"]))
+    return rows[:limit]

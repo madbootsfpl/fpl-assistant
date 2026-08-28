@@ -86,6 +86,15 @@ class FplClient:
         """A manager's squad picks for `gameweek` (public **after** that GW's deadline; 404 before)."""
         return self._get_json(config.ENTRY_PICKS_PATH.format(entry_id, gameweek))
 
+    def get_entry_transfers(self, entry_id: int) -> list:
+        """Every transfer a manager has made **this season** (ADR-162) — `[]` before their first.
+
+        One call per manager and it returns the whole season, not one gameweek, so the caller filters by
+        `event`. That is why the league view asks for it behind its own button: it is the second N-call step
+        on that page, and the first one already spent N.
+        """
+        return self._get_json(config.ENTRY_TRANSFERS_PATH.format(entry_id))
+
     def get_league_standings(self, league_id: int, page: int = 1) -> dict:
         """A classic league's standings page (ADR-141) — 50 rows, newest ranks.
 

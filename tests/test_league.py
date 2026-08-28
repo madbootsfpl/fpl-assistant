@@ -9,12 +9,15 @@ from src.analytics.league import (
     captain_split,
     chip_usage,
     effective_ownership,
+    flow_rows,
     last_completed_gameweek,
     league_name,
     manager_name,
     my_leagues,
     ownership_gaps,
     standings_rows,
+    transfer_activity,
+    transfer_flow,
 )
 
 
@@ -191,3 +194,68 @@ def test_the_manager_name_comes_back_so_you_can_confirm_the_id_resolved():
     no way to tell. Showing whose team it is closes that."""
     assert manager_name(_entry(name="LOCKER DOOR")) == "LOCKER DOOR"
     assert manager_name({}) == ""
+
+
+# ---- Transfer flow (ADR-162) ----------------------------------------------------------------------
+# Split by cost: the activity numbers ride on picks payloads already fetched, the identities are one more
+# call per manager. Kept apart so a page can show the free half unconditionally.
+
+def _hist(transfers=0, cost=0, bench=0, bank=None):
+    h = {"event_transfers": transfers, "event_transfers_cost": cost, "points_on_bench": bench}
+    if bank is not None:
+        h["bank"] = bank
+    return {"entry_history": h}
+
+
+def test_activity_counts_movers_not_just_transfers():
+    """A total alone hides one manager taking a −12 among thirty who did nothing."""
+    picks = {1: _hist(2, 4, 6, bank=5), 2: _hist(0, 0, 11, bank=15), 3: _hist(1, 0, 2, bank=0)}
+    a = transfer_activity(picks)
+    assert (a["managers"], a["movers"], a["transfers"]) == (3, 2, 3)
+    assert (a["hits"], a["hit_points"]) == (1, 4)
+    assert a["bench_points"] == 19
+    assert a["bank"] == 0.7                       # tenths → £m, averaged
+
+
+def test_activity_is_empty_safe_and_survives_a_payload_without_entry_history():
+    assert transfer_activity({})["managers"] == 0
+    assert transfer_activity(None)["transfers"] == 0
+    assert transfer_activity({1: {}})["managers"] == 1     # counted, contributes nothing
+
+
+def test_the_flow_is_filtered_to_one_gameweek():
+    """The endpoint returns the whole season, so the gameweek filter lives here — without it, a GW6 view would
+    show every transfer since August."""
+    tr = {1: [{"event": 2, "element_in": 9, "element_out": 4},
+              {"event": 1, "element_in": 5, "element_out": 6}]}
+    flow = transfer_flow(tr, 2)
+    assert dict(flow["in"]) == {9: 1} and dict(flow["out"]) == {4: 1}
+    assert 5 not in flow["net"] and 6 not in flow["net"]
+
+
+def test_a_churning_player_appears_once_with_both_counts():
+    """6 in and 5 out is not popularity, it is churn. Two separate top-tens would list him twice and explain
+    neither; one net-sorted table says which."""
+    tr = {1: [{"event": 2, "element_in": 9, "element_out": 4}],
+          2: [{"event": 2, "element_in": 7, "element_out": 9}],
+          3: [{"event": 2, "element_in": 9, "element_out": 3}]}
+    players = [{"id": i, "web_name": f"P{i}", "team": "AAA", "position": "MID"} for i in range(1, 12)]
+    rows = flow_rows(transfer_flow(tr, 2), players)
+    nine = next(r for r in rows if r["id"] == 9)
+    assert (nine["in"], nine["out"], nine["net"]) == (2, 1, 1)
+    assert sum(1 for r in rows if r["id"] == 9) == 1
+
+
+def test_flow_rows_rank_by_the_size_of_the_move_in_either_direction():
+    tr = {i: [{"event": 2, "element_in": 1, "element_out": 2}] for i in range(5)}
+    tr[99] = [{"event": 2, "element_in": 3, "element_out": 2}]
+    players = [{"id": i, "web_name": f"P{i}", "team": "AAA", "position": "MID"} for i in range(1, 5)]
+    rows = flow_rows(transfer_flow(tr, 2), players)
+    assert rows[0]["id"] == 2 and rows[0]["net"] == -6     # the biggest move is an exodus, and it leads
+    assert [r["id"] for r in rows][1] == 1
+
+
+def test_an_empty_gameweek_yields_no_rows_rather_than_raising():
+    """GW1's real state: nobody has transferred, because every squad is still its opening pick."""
+    assert transfer_flow({}, 1) == {"in": [], "out": [], "net": {}}
+    assert flow_rows(transfer_flow({1: []}, 1), []) == []

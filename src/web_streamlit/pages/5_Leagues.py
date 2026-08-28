@@ -25,12 +25,15 @@ from src.analytics.league import (
     captain_split,
     chip_usage,
     effective_ownership,
+    flow_rows,
     last_completed_gameweek,
     league_name,
     manager_name,
     my_leagues,
     ownership_gaps,
     standings_rows,
+    transfer_activity,
+    transfer_flow,
 )
 from src.api.client import FplApiError, FplClient
 from src.storage import Storage
@@ -84,6 +87,27 @@ def _picks(entries: tuple, gameweek: int):
             pass
         bar.progress(i / len(entries), text=f"Reading {len(entries)} squads… {i}/{len(entries)}")
         time.sleep(config.HISTORY_THROTTLE)           # the same courtesy the history backfill pays (ADR-027)
+    bar.empty()
+    return out
+
+
+@st.cache_data(ttl=900, show_spinner=False)           # 15 min — unlike picks, this list GROWS mid-gameweek
+def _transfers(entries: tuple):
+    """Each manager's season transfer list, throttled (ADR-162).
+
+    Deliberately **not** cached forever the way `_picks` is: a completed gameweek's picks are immutable, but a
+    manager can transfer at any moment before the next deadline, so this list keeps growing. A short ttl is
+    the difference between "cheap" and "wrong".
+    """
+    client, out = FplClient(), {}
+    bar = st.progress(0.0, text=f"Reading {len(entries)} transfer histories…")
+    for i, entry in enumerate(entries, start=1):
+        try:
+            out[entry] = client.get_entry_transfers(entry)
+        except FplApiError:
+            pass
+        bar.progress(i / len(entries), text=f"Reading transfers… {i}/{len(entries)}")
+        time.sleep(config.HISTORY_THROTTLE)
     bar.empty()
     return out
 
@@ -234,6 +258,50 @@ with c4:
     st.dataframe([{"Chip": c, "Managers": n} for c, n in chip_usage(picks)],
                  hide_index=True, width="stretch")
     st.caption("`none` = no chip that week. A consensus here is worth noticing.")
+
+# ---- Transfer flow (ADR-162) ----------------------------------------------------------
+# Two halves, split by what they cost. The activity numbers ride on the picks payloads already fetched —
+# FPL puts `entry_history` on every one of them — so they are free and always shown. WHICH players moved is
+# one more call per manager, so it asks first, exactly as the squads above did.
+st.divider()
+st.markdown(f"##### 🔄 Transfer flow — GW{last_gw}")
+_activity = transfer_activity(picks)
+f1, f2, f3, f4 = st.columns(4)
+f1.metric("Managers who moved", f"{_activity['movers']} of {_activity['managers']}")
+f2.metric("Transfers made", _activity["transfers"])
+f3.metric("Points spent on hits", f"−{_activity['hit_points']}" if _activity["hit_points"] else "0",
+          help=f"{_activity['hits']} manager(s) took a hit.")
+f4.metric("Left on the bench", _activity["bench_points"],
+          help="Points their benched players scored — the cost of getting the XI wrong.")
+
+if _activity["transfers"] == 0:
+    st.caption(f"**Nobody transferred in GW{last_gw}** — which is expected in the first gameweek of a season, "
+               "when everyone's squad is still their opening pick. This fills in from GW2.")
+else:
+    st.caption(f"Average bank across the league: £{_activity['bank']:.1f}m. "
+               if _activity["bank"] is not None else "")
+    if st.button(f"Read {len(picks)} transfer histories →", key="lg_flow"):
+        st.session_state["lg_flow_for"] = (league_id, last_gw)
+    if st.session_state.get("lg_flow_for") == (league_id, last_gw):
+        _flow = transfer_flow(_transfers(tuple(picks)), last_gw)
+        _rows = flow_rows(_flow, players)
+        if not _rows:
+            st.info("No transfers landed in this gameweek for the managers we could read.")
+        else:
+            st.dataframe(
+                [{"photo": photos.get(r["id"], ""), "Player": r["player"], "Team": r["team"],
+                  "Pos": r["position"], "In": r["in"], "Out": r["out"], "Net": r["net"]} for r in _rows],
+                hide_index=True, width="stretch",
+                column_config={"photo": st.column_config.ImageColumn("", width="small"),
+                               "Net": st.column_config.NumberColumn("Net", format="%+d",
+                                                                    help="In minus out across the league.")})
+            st.caption("Sorted by the **size** of the net move, in either direction. A player with a big "
+                       "**In** *and* a big **Out** is churning, not popular — the net says which, and one "
+                       "table shows it where two top-tens would have listed him twice and explained neither.")
+    else:
+        st.caption(f"Which players moved needs one more call per manager "
+                   f"(~{len(picks) * (config.HISTORY_THROTTLE + 0.05):.0f}s). The numbers above are free — "
+                   "they come from the squads already read.")
 
 # ---- Head-to-head: what would it take to catch one rival (ADR-161) --------------------
 # The league view answers "what is everyone doing"; this answers "what do I need to do about HIM". They are

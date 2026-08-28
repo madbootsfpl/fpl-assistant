@@ -379,7 +379,14 @@ def render_your_team(squad: dict | None, *, is_yours: bool = True) -> None:
                 imported, message = fetch_manager_team(int(manager_id.strip()), players)
                 if imported:
                     set_active_squad(imported)
-                    st.success(message)
+                    # US-432 — the same id unlocks 🏆 Leagues, so importing a team should not leave you to
+                    # type it again on another tab. Persisted (ADR-147), so it follows you across devices
+                    # rather than only lasting this session. Storing the id is the whole fix: Leagues fetches
+                    # your leagues from it. Fetching them HERE would duplicate that page inside this one.
+                    from src.web_streamlit import prefs
+                    prefs.remember(manager_id=manager_id.strip())
+                    st.success(f"{message}  🏆 Your leagues are ready on the **Leagues** tab — same id, "
+                               "no need to enter it again.")
                 else:
                     st.info(message)
 

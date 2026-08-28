@@ -245,8 +245,8 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   problem.** What IS stale is the *"What's inside"* grid: it predates **🏆 Leagues · 📡 Signals · 📈 Trending**
   and the **Fixtures → Team DNA** / **Squad optimiser → Squad Lab** renames. A paste-ready replacement grid is
   in the deck. ⚠ **Still blocked on the source** — the homepage lives on Cloudflare Pages, not in this repo, so
-  it must be applied by hand; owner to point at the file. **Also still open: `hello@madboots.com` must be a
-  real inbox** — the mailto link exists, whether mail arrives is unverifiable from here.
+  it must be applied by hand; owner to point at the file. ✅ **`hello@` and `info@madboots.com` both receive
+  email** — confirmed by the owner 2026-08-28.
 
 ---
 
@@ -318,8 +318,10 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   deferred it — the table is ONE call, and the insight layer needs the current gameweek only, not a history.
   **Find a league by your MANAGER id** — nobody knows their league id, and `/entry/{id}/` already lists them (private leagues first; FPL's automatic club/region/Overall ones are 100,000× bigger and would bury them). Affordable because a completed gameweek's picks are **immutable**: cached with no expiry (17.5s first load,
   0.0s after). Insight sits behind a button — *nothing that costs N calls happens because someone opened a
-  tab*. ⬜ Not in v1, deliberately: **transfer flow** (one more call per manager) and **H2H leagues** (a
-  different endpoint).
+  tab*. ✅ Both now shipped: **transfer flow** (ADR-162) and **H2H** (ADR-161). ⚠️ *"One more call per manager"*
+  turned out **half wrong** — `entry_history` rides on every picks payload this page already fetches, so
+  transfers made, hits taken, bench points and bank were **free**; only *which players* moved needed the extra
+  call. **Before deferring on cost, open the response you are already getting.**
 - ✅ **Transfer advice names the dead slot** (ADR-136, Sprint 190, 2026-08-25) — *owner, 2026-08-19.*
   `suggest_transfers` ranks by starting-XI gain (ADR-046), so a departed player on the bench moved that number
   by zero and the advice read *"hold"*. Now asked as a separate question: a slot that cannot score for the

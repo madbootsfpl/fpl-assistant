@@ -56,11 +56,10 @@ the homepage hints it exists.
 
 ---
 
-## Not verified — owner action
+## ✅ Resolved — the inbox is real
 
-**`hello@madboots.com` must be a real inbox.** The footer carries an obfuscated mailto, so the *link* exists;
-whether mail sent to it arrives anywhere is not something this audit can check. A contact address that
-silently discards a beta tester's reply is worse than no address at all.
+**`hello@` and `info@madboots.com` both receive email** — confirmed by the owner, 2026-08-28. The audit could
+only see that the mailto link existed; delivery is not checkable from outside.
 
 ---
 
