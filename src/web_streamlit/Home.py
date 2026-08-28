@@ -1,8 +1,14 @@
 """The Streamlit UI home (ADR-052) — a read-only view over the analytics.
 
 Multipage: this is the landing (the sidebar's **Home** — its label is this file's name); `pages/` holds
-Players · Fixtures · My Squad · Squad Lab · Ask · News · Trending · Help · Feedback (ADR-105). Each page
-imports the same engine the CLI does and changes nothing in `src/`. Run:  python -m src.web_streamlit
+Squad Lab · Players · Team DNA & FDR · My Squad · Leagues · Ask · Signals · Trending · Help · Maddie
+Explains · Feedback · Admin. Each page imports the same engine the CLI does and changes nothing in `src/`.
+Run:  python -m src.web_streamlit
+
+⚠️ **The tour below names every page, so it goes stale on any rename or addition** (US-433: it still said
+*Fixtures* and *News* long after ADR-134 and ADR-149 renamed them, and never mentioned 🏆 Leagues at all).
+Its twin is the public `madboots.com` grid — `docs/08_Marketing/Homepage_Copy.md`. **Change both together**;
+they drifted apart because nothing tied them.
 """
 
 from datetime import datetime, timezone
@@ -67,19 +73,24 @@ st.markdown(
 - 🧪 **Squad Lab** — build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
   it to My Squad.
 - 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
-- 📅 **Fixtures** — upcoming fixtures and difficulty (1–8 GWs), for all teams or just your squad.
-- 🧩 **My Squad** — manage your XI, transfers, captain and chips, with **AI Tips** and **Health** analysis.
+- 🧬 **Team DNA & FDR** — how strong every club is at both ends, then the difficulty ticker week by week.
+- 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips** and **Health**.
+- 🏆 **Leagues** — import a mini-league by your manager id: effective ownership, the captain split, who's
+  transferring what, and a **head-to-head** against any rival.
 - 💬 **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
-- 📰 **News** — official FPL player news (injuries · doubts · returns), most serious first.
-- 📈 **Trending** — what the crowd's doing (most-owned · transferred in/out · in-form) + **Community Signals**.
+- 📡 **Signals** — everything the table doesn't say, most reliable first: official FPL news, unexplained
+  sell-offs, and reported moves out of the league.
+- 📈 **Trending** — what the crowd is *doing*, in numbers: most-owned · transferred in/out · in-form.
 - 🧭 **Help** — a step-by-step guide to getting started with MADBOOTS.
 - 🎥 **Maddie Explains** — quick video guides (90 seconds or less), from **Maddie**, your MADBOOTS guide.
+- 📣 **Feedback** — tell us what broke, or what would help.
 
 **Your squad**
 
 - 🧪 **Build** it in **Squad Lab** — name it, then **Use this squad →**.
 - ☁ **Saved to your account** and **auto-synced across your devices** — or **Download** a backup to your device.
-- 📤 **Upload** a saved backup, or **import your real FPL team** by Manager-ID (from GW1).
+- 📤 **Upload** a saved backup, or **import your real FPL team** by Manager-ID — the same id then opens your
+  mini-leagues on **Leagues**, so you only enter it once.
 - 🧩 **Manage** transfers · captaincy · chips · analysis in **My Squad**.
 - 👀 A **demo** squad populates the views on first visit.
 """

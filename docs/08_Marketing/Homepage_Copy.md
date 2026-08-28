@@ -69,3 +69,19 @@ only see that the mailto link existed; delivery is not checkable from outside.
 Signals shipped — the page simply stopped describing the app, and the only signal was a backlog entry that had
 itself gone out of date. Worth re-reading this page at each rename or new surface, which is cheaper than
 re-auditing it every few months.
+
+---
+
+## Update, 2026-08-28 — the in-app Home was fixed in the same pass (US-433)
+
+`src/web_streamlit/Home.py` carried **the same staleness for the same reason**: it still listed *Fixtures* and
+*News* after ADR-134 and ADR-149 renamed them, and never mentioned 🏆 Leagues. Fixed, and now **guarded by a
+test that derives the page list from `pages/`** — so the next rename fails CI instead of waiting for a tester.
+
+⚠️ **A test was holding the stale name in place.** `test_home_hero_box_consolidates_cta_and_nudges` asserted
+`"📅 **Fixtures**" in blob`, so *correcting* Home broke the suite. A test that pins outdated copy is worse
+than no test: it converts a silent rot into an active obstacle.
+
+**This public page has no such guard**, because its source is not in the repo — which is the strongest
+argument yet for moving it here (see the memory note / ADR-103's parked brand-infra changeover). Until then
+the grid above is still hand-applied.

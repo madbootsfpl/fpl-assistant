@@ -331,7 +331,8 @@ def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=No
     sel = next((t for t, lab in by_team.items() if lab == st.session_state.get("health_team_dna")), None)
     html = your_teams_strip_html(rows, clickable=tappable, selected=sel)
     if tappable:
-        tap.select_from_html(html, select_key="health_team_dna", label_by_id=by_team, key="health_dna_tap")
+        tap.select_from_html(html, select_key="health_team_dna", label_by_id=by_team,
+                            key="health_dna_tap", none_label="—")
     else:
         st.markdown(html, unsafe_allow_html=True)
     st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Your investments, both ends — a hard "

@@ -74,7 +74,24 @@ def _fresh(clicked, key):
     return clicked
 
 
-def select_from_html(html, *, select_key, label_by_id, key, prefix="team"):
+def _write_selection(select_key, label, none_label):
+    """Select `label`, or **clear** the selection when the same thing is tapped twice (US-444).
+
+    A tap that only ever selects is a one-way door: the owner reported the condensed player card could not be
+    dismissed without leaving the page and coming back. The dropdown beside it *could* clear it — its first
+    option is the `none_label` — but nobody looks in a dropdown to undo a tap, they tap again.
+
+    `none_label` is the caller's "nothing selected" option. Passing `None` means this surface has no such
+    option, so tapping the selected item just re-selects it rather than writing a state the picker can't show.
+    """
+    if none_label is not None and st.session_state.get(select_key) == label:
+        st.session_state[select_key] = none_label
+        return False
+    st.session_state[select_key] = label
+    return True
+
+
+def select_from_html(html, *, select_key, label_by_id, key, prefix="team", none_label=None):
     """Render clickable `html` and turn a tap on one of its anchors into a selection (ADR-158).
 
     The generalisation of ADR-133's gesture beyond the pitch: anchors carry `id="{prefix}:{something}"`, and
@@ -96,12 +113,16 @@ def select_from_html(html, *, select_key, label_by_id, key, prefix="team"):
     action, _, raw = str(clicked).partition(":")
     if action != prefix or raw not in label_by_id:        # not ours, or stale after a data refresh
         return None
-    st.session_state[select_key] = label_by_id[raw]
+    _write_selection(select_key, label_by_id[raw], none_label)
     return raw
 
 
-def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", **kw):
-    """Draw the pitch so tapping a shirt selects that player. Returns the tapped id, or None.
+def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", none_label="—", **kw):
+    """Draw the pitch so tapping a shirt selects that player. Returns the id that was tapped, or None.
+
+    **Tapping the selected shirt again clears the selection** (US-444) — `none_label` is the picker's
+    "nothing selected" option, which the tap writes to undo itself. The return value says which shirt was
+    tapped, not what happened to the selection; `session_state[select_key]` holds that.
 
     `select_key` is the `session_state` key the *selectbox* uses, and `label_for` maps a player row to that
     selectbox's label — the tap writes the same state the dropdown does, so the ADR-108 panel downstream is
@@ -131,5 +152,5 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
     player = by_id.get(pid)
     if player is None:                                   # not ours, or a stale id after a transfer — ignore
         return None
-    st.session_state[select_key] = label_for(player)
+    _write_selection(select_key, label_for(player), none_label)
     return player["id"]

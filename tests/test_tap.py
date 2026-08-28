@@ -190,3 +190,49 @@ def test_a_missing_component_selects_nothing_and_draws_nothing(monkeypatch):
     st.session_state.clear()
     assert tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan") is None
     assert "k" not in st.session_state
+
+
+# ---- Tapping the same thing twice clears it (US-444) -----------------------------------------------
+# Owner: *"Clicking on a player shows the condensed player profile, however you cannot release it unless you
+# leave the page and return."* The picker could always clear it — its first option is "—" — but nobody opens
+# a dropdown to undo a tap; they tap again.
+
+def test_tapping_the_selected_shirt_again_clears_the_selection(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "7"))
+    st.session_state.clear()
+
+    assert tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick",
+                                     label_for=_label, captain_id=None, xp_by_id={}, photos={},
+                                     next_opp={}) == 7
+    assert st.session_state["pa_pick"] == "Virgil · LIV"
+
+    # A second tap on the SAME shirt. The replay guard keys on the click value, so a genuine second tap has to
+    # look like a fresh one — which is what the component sends when the user really taps again.
+    st.session_state.pop("pitch_tap__seen")
+    assert tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick",
+                                     label_for=_label, captain_id=None, xp_by_id={}, photos={},
+                                     next_opp={}) == 7
+    assert st.session_state["pa_pick"] == "—", "a second tap must clear it, not re-select"
+
+
+def test_tapping_a_different_shirt_moves_the_selection_rather_than_clearing_it(monkeypatch):
+    import streamlit as st
+    st.session_state.clear()
+    st.session_state["pa_pick"] = "Virgil · LIV"
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "9"))
+    tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF"), _p(9, "Salah", "LIV", "MID")], [],
+                              select_key="pa_pick", label_for=_label, captain_id=None, xp_by_id={},
+                              photos={}, next_opp={})
+    assert st.session_state["pa_pick"] == "Salah · LIV"
+
+
+def test_a_surface_with_no_none_option_never_writes_one(monkeypatch):
+    """The Team DNA scan's picker has no '—' entry, so clearing would write a state it cannot display."""
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "team:LIV"))
+    st.session_state.clear()
+    tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan")
+    st.session_state.pop("scan__seen")
+    tap.select_from_html("<a>", select_key="k", label_by_id=_TEAMS, key="scan")
+    assert st.session_state["k"] == "Liverpool", "no none_label → the tap re-selects rather than clearing"

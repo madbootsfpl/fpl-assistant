@@ -7,6 +7,7 @@ needn't run — `ask` degrades to the decision + facts.
 """
 
 import pathlib
+import re
 
 import requests
 from streamlit.testing.v1 import AppTest
@@ -1115,17 +1116,36 @@ def test_waitlist_captures_an_over_cap_email(monkeypatch):
 
 
 def test_squads_gameweeks_selector_drives_the_horizon():
-    # US-237/315 (ADR-077): a "Gameweeks ahead" box-select (My Squad default 1, US-374) flows into Health — set it
-    # to 2 and the analysis projects over 2 GW (a GW2 column, no GW5)
+    """US-237/315 (ADR-077): the "Gameweeks ahead" box-select flows into Health — set it to 2 and the analysis
+    projects over 2 GW, with exactly two per-gameweek columns.
+
+    ⚠️ This used to assert a literal **"GW2" column and no "GW5"**, which quietly stopped being true the moment
+    GW2's deadline passed: ADR-123 cuts *upcoming* fixtures at the deadline, so the horizon rolls to GW3, GW4,
+    … as the season runs. It was a test with a **shelf life**, and it expired mid-session rather than on a code
+    change. The gameweek numbers now come from the same data the page reads, so the assertion is about the
+    horizon's *shape* — which is what the feature actually promises.
+    """
     at = _run(_PAGES / "4_My_Squad.py")
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
     assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-374/315
     gw[0].set_value(2).run()
     at.segmented_control[0].set_value("Health").run()
     assert not at.exception
-    if at.code:
-        blob = " ".join(c.value for c in at.code)
-        assert "2 GW" in blob and "GW2" in blob and "GW5" not in blob   # horizon narrowed to 2
+    if not at.code:
+        return
+    blob = " ".join(c.value for c in at.code)
+    assert "2 GW" in blob
+
+    from src.storage import Storage
+    store = Storage()
+    try:
+        events = sorted({f["event"] for f in store.get_upcoming_fixtures() if f["event"] is not None})
+    finally:
+        store.close()
+    if len(events) >= 2:
+        assert f"GW{events[0]}" in blob and f"GW{events[1]}" in blob, "both horizon gameweeks get a column"
+    if len(events) > 2:
+        assert f"GW{events[2]}" not in blob, "…and the third does not — the horizon really narrowed"
 
 
 def test_squads_gameweeks_box_select_offers_ten(monkeypatch):
@@ -2728,7 +2748,11 @@ def test_home_hero_box_consolidates_cta_and_nudges():
     assert "mb-hero" in blob                                    # the one highlighted box
     assert 'href="Squad_Lab"' in blob and "Build your first squad" in blob   # the highlighted CTA button-link
     assert "New here?" in blob and "Maddie Explains" in blob and "Testing this?" in blob   # nudges consolidated
-    assert "👟 **Players**" in blob and "📅 **Fixtures**" in blob   # the icon-led bullets
+    # US-433 — this line used to assert "📅 **Fixtures**", a page renamed to Team DNA & FDR by ADR-134. The
+    # test was not catching the stale tour, it was HOLDING IT IN PLACE: updating Home broke the test, which is
+    # exactly backwards. It now checks the bullets exist and leaves the naming to the guard that derives the
+    # list from `pages/`.
+    assert "👟 **Players**" in blob and "🧬 **Team DNA & FDR**" in blob   # the icon-led bullets
 
 
 def test_news_shows_the_shared_fit_flag():
@@ -3219,3 +3243,35 @@ def test_the_transfer_flow_asks_before_spending_a_second_round_of_calls():
     assert "transfer_activity(picks)" in src, "the free half must not sit behind a button"
     assert 'st.session_state["lg_flow_for"]' in src, "the paid half must latch, like the squads button"
     assert "_transfers(tuple(picks))" in src
+
+
+def test_the_home_tour_names_every_page_in_the_sidebar():
+    """US-433 — Home lists every page, so it rots on any rename or addition and nothing complains.
+
+    It really did: it still said *Fixtures* and *News* long after ADR-134 and ADR-149 renamed them to Team DNA
+    & FDR and Signals, and it never mentioned 🏆 Leagues at all — live for days by then. Fixing the words
+    would leave the next rename to a person's memory; this derives the list from `pages/` instead.
+
+    Matched against the **tour bullets only**, not the file. A whole-file substring search passes on almost
+    any breakage — the word survives in the docstring or another sentence — which is a test that cannot fail.
+    (Verified by deleting the Leagues bullet: the loose version still passed, this one doesn't.)
+
+    **Admin is excluded deliberately** — owner-only, and advertising it on the landing page would be a UX bug
+    rather than a fix.
+    """
+    home = (_ROOT / "src" / "web_streamlit" / "Home.py").read_text()
+    listed = set(re.findall(r"^- \S+ \*\*(.+?)\*\* —", home, flags=re.M))
+    assert listed, "no tour bullets found — the tour's shape changed, so this guard is no longer guarding"
+
+    missing = []
+    for page in sorted(_PAGES.glob("*.py")):
+        title = re.search(r'st\.title\("([^"]+)"', page.read_text())
+        if not title:
+            continue
+        name = re.sub(r"^[^\w]+", "", title.group(1).split("—")[0].strip()).strip()
+        if name.startswith("Admin"):
+            continue
+        if name not in listed:
+            missing.append(f"{page.name} → '{name}'")
+    assert not missing, ("Home's tour doesn't list: " + "; ".join(missing)
+                         + f" (it lists: {sorted(listed)})")
