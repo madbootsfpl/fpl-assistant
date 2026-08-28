@@ -197,23 +197,36 @@ def test_a_missing_component_selects_nothing_and_draws_nothing(monkeypatch):
 # leave the page and return."* The picker could always clear it — its first option is "—" — but nobody opens
 # a dropdown to undo a tap; they tap again.
 
-def test_tapping_the_selected_shirt_again_clears_the_selection(monkeypatch):
+def test_tapping_the_pitch_background_clears_the_selection(monkeypatch):
+    """US-444 rev — **tapping the same shirt twice cannot work**, and the first fix assumed it could.
+
+    `st_click_detector` reports the id of the *last* element clicked. Click the same shirt again and the value
+    is identical, so Streamlit sees no state change, does not rerun, and Python never hears about it. (Even on
+    a rerun forced by something else, the replay guard correctly swallows it — it cannot distinguish a real
+    second tap from the replay it exists to suppress.) The owner reported exactly this: *"the player double
+    click and then release does not work."*
+
+    The grass behind the shirts is a different anchor, so it always returns a different id and always gets
+    through — and it is the other half of what was asked for: *"click pitch **or** the player again"*.
+    """
     import streamlit as st
-    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: "7"))
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: tap.CLEAR_ID))
     st.session_state.clear()
+    st.session_state["pa_pick"] = "Virgil · LIV"
+    out = tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick",
+                                    label_for=_label, captain_id=None, xp_by_id={}, photos={}, next_opp={})
+    assert out is None
+    assert st.session_state["pa_pick"] == "—"
 
-    assert tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick",
-                                     label_for=_label, captain_id=None, xp_by_id={}, photos={},
-                                     next_opp={}) == 7
+
+def test_the_background_tap_does_nothing_where_there_is_no_none_option(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: tap.CLEAR_ID))
+    st.session_state.clear()
+    st.session_state["pa_pick"] = "Virgil · LIV"
+    tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick", none_label=None,
+                              label_for=_label, captain_id=None, xp_by_id={}, photos={}, next_opp={})
     assert st.session_state["pa_pick"] == "Virgil · LIV"
-
-    # A second tap on the SAME shirt. The replay guard keys on the click value, so a genuine second tap has to
-    # look like a fresh one — which is what the component sends when the user really taps again.
-    st.session_state.pop("pitch_tap__seen")
-    assert tap.render_tappable_pitch([_p(7, "Virgil", "LIV", "DEF")], [], select_key="pa_pick",
-                                     label_for=_label, captain_id=None, xp_by_id={}, photos={},
-                                     next_opp={}) == 7
-    assert st.session_state["pa_pick"] == "—", "a second tap must clear it, not re-select"
 
 
 def test_tapping_a_different_shirt_moves_the_selection_rather_than_clearing_it(monkeypatch):

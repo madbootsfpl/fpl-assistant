@@ -81,6 +81,11 @@ text-decoration:none!important;color:inherit!important;display:block;}
 /* The selected player's compact card, in place under his shirt (ADR-139 rev). Only the selected kit carries
    a .kit-pop at all on a clickable pitch, so this can never open two at once — which is what the hover did. */
 .kit.selected .kit-pop{display:block;}
+/* US-444 rev — a full-bleed anchor BEHIND the shirts. Tapping the grass returns a different id from the last
+   shirt, which is the only way a "close it" gesture can reach us at all (see tap.CLEAR_ID). */
+.fpl-pitch{position:relative;}
+.fpl-pitch .pitch-bg{position:absolute;inset:0;z-index:0;display:block;}
+.fpl-pitch .row{position:relative;z-index:1;}
 </style>
 """
 
@@ -169,6 +174,9 @@ def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=
     def _kit(p, **extra):
         return _kit_html(p, selected=(selected_id is not None and p["id"] == selected_id), **kw, **extra)
     parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
+    if clickable:
+        # Behind everything, so it only receives taps that missed a shirt (US-444 rev).
+        parts.append('<a href="#" id="sel:clear" class="pitch-bg" aria-label="Close the player card"></a>')
 
     for pos in _ROWS:
         line = [p for p in xi if p["position"] == pos]

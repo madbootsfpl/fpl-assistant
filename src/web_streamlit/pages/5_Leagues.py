@@ -269,12 +269,14 @@ st.markdown(f"##### 🔄 Transfer flow — GW{last_gw}")
 _activity = transfer_activity(picks)
 # ADR-163 — the shared strip: four across on a laptop, reflowing rather than slivering on a phone.
 render_stat_strip([
-    {"label": "Managers who moved", "value": f"{_activity['movers']} of {_activity['managers']}"},
-    {"label": "Transfers made", "value": _activity["transfers"]},
-    {"label": "Points spent on hits", "tone": "down" if _activity["hit_points"] else "mute",
+    {"label": "Moved", "sub": f"of {_activity['managers']}", "value": _activity["movers"],
+     "help": "Managers who made at least one transfer."},
+    {"label": "Transfers", "value": _activity["transfers"]},
+    {"label": "Hits", "tone": "down" if _activity["hit_points"] else "mute",
      "value": f"−{_activity['hit_points']}" if _activity["hit_points"] else "0",
-     "help": f"{_activity['hits']} manager(s) took a hit."},
-    {"label": "Left on the bench", "value": _activity["bench_points"],
+     "sub": f"{_activity['hits']} manager(s)",
+     "help": "Points spent taking transfers beyond the free one."},
+    {"label": "Bench pts", "value": _activity["bench_points"],
      "help": "Points their benched players scored — the cost of getting the XI wrong."},
 ])
 
@@ -345,8 +347,8 @@ else:
         _gap = h2h_gap(_mine, _theirs, _xp, players)
 
         render_stat_strip([
-            {"label": "You project", "value": f"{_gap['mine']['xp']:.1f}"},
-            {"label": _rival_label.split(" · ")[0][:18], "value": f"{_gap['theirs']['xp']:.1f}"},
+            {"label": "You", "value": f"{_gap['mine']['xp']:.1f}"},
+            {"label": _rival_label.split(" · ")[0][:14], "value": f"{_gap['theirs']['xp']:.1f}"},
             {"label": "Gap", "value": f"{_gap['gap']:+.1f}",
              "tone": "up" if _gap["gap"] >= 0 else "down",
              "help": "Positive means you are ahead on projection."},

@@ -333,7 +333,8 @@ def test_my_squad_per_gw_xp_toggle_switches_the_shown_xp():
     assert "Projected XI" in _strip_text(at)
     toggle.set_value(toggle.options[1]).run()        # "GW N only"
     assert not at.exception
-    assert "Projected XI (GW" in _strip_text(at)     # label flips to a single GW
+    strip = _strip_text(at)
+    assert "Projected XI" in strip and "GW" in strip  # the sub line flips to a single GW
 
 
 def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
@@ -1157,7 +1158,8 @@ def test_squads_gameweeks_box_select_offers_ten(monkeypatch):
     assert 10 in [int(o) for o in gw[0].options]           # the requested long window is offered
     gw[0].set_value(10).run()
     assert not at.exception
-    assert "Projected XI (10 GW)" in _strip_text(at)       # 10 drives the horizon
+    strip = _strip_text(at)
+    assert "Projected XI" in strip and "10 GW" in strip    # 10 drives the horizon
 
 
 def test_captain_view_notes_it_is_next_gameweek():
@@ -1204,7 +1206,10 @@ def test_my_squad_shows_a_quick_stats_summary():
 
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"][0]
     gw.set_value(2).run()
-    assert "Projected XI (2 GW)" in _strip_text(at)
+    strip = _strip_text(at)
+    # US-449 rev: the horizon moved out of the label into the strip's `sub` line, because a long label is
+    # what forces a column wide — so assert the two parts, not the old combined string.
+    assert "Projected XI" in strip and "2 GW" in strip
 
 
 def test_my_squad_projected_xi_includes_the_captain_next_gw_double():

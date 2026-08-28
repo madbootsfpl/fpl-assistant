@@ -422,7 +422,7 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # is why the owner hit it again on iPhone the moment two more strips shipped.
     from src.web_streamlit.components import render_stat_strip
     render_stat_strip([
-        {"label": f"Projected XI ({gw_label})", "value": f"{projected_xi:.1f} xP",
+        {"label": "Projected XI", "sub": gw_label, "value": f"{projected_xi:.1f} xP",
          "help": "Your starting XI's projected points over the selected horizon, plus your captain's "
                  "double for the next gameweek (the ×2 is a one-week thing)."},
         {"label": "Captain (2×)", "value": f"{cap_next * 2:.1f} xP" if cap_next else "—",
@@ -498,7 +498,7 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     from src.web_streamlit.tap import available as _tap_available
     st.caption(("**Tap a shirt** on the pitch, or pick below → " if _tap_available() else "Pick a player → ")
                + "view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
-               + ("**Tap them again to close it.** " if _tap_available() else "")
+               + ("**Tap the pitch to close it.** " if _tap_available() else "")
                + "Works on phone too (the pitch hover is desktop-only).")
     owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
     picked = owned_by_label.get(st.selectbox("Select a player", ["—", *owned_by_label], key="pa_pick",

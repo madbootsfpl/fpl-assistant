@@ -5,17 +5,31 @@ from outside on an iPhone. The tests pin the two properties that make a *shared*
 behaves the same wherever it is used, and it degrades to nothing rather than to a broken box.
 """
 
+import re
+
 from src.web_streamlit.components import banner_html, stat_strip_html
 
 
-def test_the_strip_wraps_rather_than_holding_a_fixed_column_count():
-    """The whole reason this isn't `st.metric` in `st.columns`: columns keep their ratio at any width, so a
-    phone narrows each one until the label wraps. `flex-wrap` plus a flex-basis lets items reflow, and
-    `clamp()` shrinks the number instead of breaking the line."""
+def test_the_strip_shrinks_on_a_phone_instead_of_reflowing_into_ragged_rows():
+    """US-449 rev. The first cut used `flex-wrap`, which reflowed correctly and still looked wrong: three
+    items became two-and-one with a full-width orphan — *taller* than the row it replaced, when the ask was
+    for something that shrinks. So the column count is explicit and the value clamps down instead."""
     html = stat_strip_html([{"label": "Projected XI", "value": "91.8 xP"}])
-    assert "flex-wrap:wrap" in html
-    assert "flex:1 1 150px" in html          # ask for ~150px, wrap when it can't be had
-    assert "clamp(" in html                  # …and shrink the value rather than wrapping it
+    assert "flex-wrap:wrap" not in html                      # not free reflow — that was the failed version
+    assert "grid-template-columns:repeat(var(--n" in html
+    assert "@media (max-width:620px)" in html                # …with an explicit narrow-screen count
+    assert "clamp(" in html                                  # …and a value that shrinks
+
+
+def test_the_column_count_is_the_item_count_until_four_when_a_phone_gets_two_rows():
+    """Four across a phone leaves each number about 60px. A 2x2 block reads better than a cramped row, and
+    both beat the orphan that free wrapping produced."""
+    def cols(n):
+        html = stat_strip_html([{"label": f"L{i}", "value": i} for i in range(n)])
+        return re.search(r'style="(--n:\d+;--m:\d+)"', html).group(1)
+    assert cols(2) == "--n:2;--m:2"
+    assert cols(3) == "--n:3;--m:3"          # three still fit side by side on a phone
+    assert cols(4) == "--n:4;--m:2"          # four do not — 2x2 instead
 
 
 def test_every_stat_renders_its_label_and_value():
@@ -45,7 +59,7 @@ def test_a_label_or_value_cannot_inject_markup():
 
 def test_an_empty_strip_renders_nothing_at_all():
     """A caller shouldn't have to check first — an empty box is worse than no box."""
-    assert stat_strip_html([]) == "" and stat_strip_html(None) == ""
+    assert stat_strip_html([]) == "" and stat_strip_html(()) == ""
 
 
 def test_a_missing_value_reads_as_a_dash_not_as_none():

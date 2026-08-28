@@ -41,6 +41,9 @@ def available() -> bool:
     return _detector() is not None
 
 
+CLEAR_ID = "sel:clear"      # the pitch background — see `render_tappable_pitch`
+
+
 def parse(clicked):
     """A clicked anchor id → a player id, or None if it isn't one of ours.
 
@@ -145,6 +148,20 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
     html = pitch_html(xi, bench, clickable=True, **kw)
     clicked = _fresh(detector(html, key=key), key)
     if not clicked:
+        return None
+
+    # US-444 rev — **tapping the same shirt twice cannot work, and this is why.** `st_click_detector` reports
+    # the id of the *last* element clicked; clicking the same one again produces the identical value, so
+    # Streamlit sees no state change, does not rerun, and the second tap never reaches Python at all. (Even
+    # when something else forces a rerun, `_fresh` correctly suppresses it — it cannot tell a real second tap
+    # from the replay it exists to swallow.)
+    #
+    # So the gesture is the other half of what the owner asked for: *"click pitch **or** the player again"*.
+    # The grass behind the shirts is a different anchor, so it always returns a different id, and it always
+    # gets through.
+    if str(clicked) == CLEAR_ID:
+        if none_label is not None:
+            st.session_state[select_key] = none_label
         return None
 
     pid = parse(clicked)
