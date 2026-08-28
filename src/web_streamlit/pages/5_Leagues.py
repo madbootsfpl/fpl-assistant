@@ -40,6 +40,7 @@ from src.storage import Storage
 from src.web_streamlit import analytics, brand, prefs
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import photo_url_by_id
+from src.web_streamlit.components import render_stat_strip
 from src.web_streamlit.status import render_data_status
 
 st.set_page_config(**brand.page_config("Leagues"))
@@ -266,13 +267,16 @@ with c4:
 st.divider()
 st.markdown(f"##### 🔄 Transfer flow — GW{last_gw}")
 _activity = transfer_activity(picks)
-f1, f2, f3, f4 = st.columns(4)
-f1.metric("Managers who moved", f"{_activity['movers']} of {_activity['managers']}")
-f2.metric("Transfers made", _activity["transfers"])
-f3.metric("Points spent on hits", f"−{_activity['hit_points']}" if _activity["hit_points"] else "0",
-          help=f"{_activity['hits']} manager(s) took a hit.")
-f4.metric("Left on the bench", _activity["bench_points"],
-          help="Points their benched players scored — the cost of getting the XI wrong.")
+# ADR-163 — the shared strip: four across on a laptop, reflowing rather than slivering on a phone.
+render_stat_strip([
+    {"label": "Managers who moved", "value": f"{_activity['movers']} of {_activity['managers']}"},
+    {"label": "Transfers made", "value": _activity["transfers"]},
+    {"label": "Points spent on hits", "tone": "down" if _activity["hit_points"] else "mute",
+     "value": f"−{_activity['hit_points']}" if _activity["hit_points"] else "0",
+     "help": f"{_activity['hits']} manager(s) took a hit."},
+    {"label": "Left on the bench", "value": _activity["bench_points"],
+     "help": "Points their benched players scored — the cost of getting the XI wrong."},
+])
 
 if _activity["transfers"] == 0:
     st.caption(f"**Nobody transferred in GW{last_gw}** — which is expected in the first gameweek of a season, "
@@ -340,10 +344,13 @@ else:
         _xp = {r["id"]: r["xp"] for r in _ranked}
         _gap = h2h_gap(_mine, _theirs, _xp, players)
 
-        m1, m2, m3 = st.columns(3)
-        m1.metric("You project", f"{_gap['mine']['xp']:.1f}")
-        m2.metric(_rival_label.split(" · ")[0][:18], f"{_gap['theirs']['xp']:.1f}")
-        m3.metric("Gap", f"{_gap['gap']:+.1f}", help="Positive means you are ahead on projection.")
+        render_stat_strip([
+            {"label": "You project", "value": f"{_gap['mine']['xp']:.1f}"},
+            {"label": _rival_label.split(" · ")[0][:18], "value": f"{_gap['theirs']['xp']:.1f}"},
+            {"label": "Gap", "value": f"{_gap['gap']:+.1f}",
+             "tone": "up" if _gap["gap"] >= 0 else "down",
+             "help": "Positive means you are ahead on projection."},
+        ])
         st.caption(catch_up_note(_gap, my_name="you", their_name="they"))
 
         d1, d2 = st.columns(2)

@@ -74,18 +74,43 @@ st.caption("Everything that tells you something the table doesn't — **most rel
            "news, then a sell-off we can't explain, then media headlines, then community chatter. "
            "**Trending** is the other half: what the crowd is *doing*, in numbers.")
 
-st.subheader("1 · Official FPL news")
-st.caption("FPL's own `news` field — injuries, doubts and returns, most serious first. This is the only "
-           "source here that is a **fact**, and the only one that moves a player's expected points.")
-
 store = Storage()
 try:
     players = store.get_players()
     teams = store.get_teams()
     photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
     badges = badge_url_by_short_name(teams)
+    _ev = store.headline_events_by_id()                # ADR-151's stored events, read once for the whole page
 finally:
     store.close()
+
+# --- 0 · The lede (US-443, ADR-163) -------------------------------------------------------------------------
+# Owner: *"I really like the blue banner summary under 'An exodus we can't explain', could we promote that near
+# the top as it's real news."* Agreed — but the sections below are ordered by **evidentiary strength**
+# (ADR-149), and moving one above *Official FPL news* would break that ordering for everything after it.
+#
+# So this is a **lede, not a reorder**: the few signals where the press and the crowd independently agree are
+# surfaced at the top, and the browsing sections keep their order underneath. A summary above an ordered list
+# is a different thing from re-ordering the list.
+_lede = []
+if players:
+    from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR as _FLOOR
+    from src.analytics.crowd import crowd_exodus as _exodus
+    _lede = [(p, e, _ev[p["id"]]) for p in players
+             if p["id"] in _ev and (p["selected_by"] or 0) >= _FLOOR and (e := _exodus(p))]
+if _lede:
+    from src.web_streamlit.components import render_banner
+    st.markdown("#### 🔴 Right now")
+    st.caption("Where the **press and the crowd agree** — a headline with a heavy sell-off behind it. Two "
+               "independent signals pointing the same way is the strongest thing on this page.")
+    for _p, _e, _evs in _lede:
+        render_banner(f"<b>{_p['web_name']}</b> ({_p['team']}) — {abs(_e['net']):,} sold this gameweek, "
+                      f"and {event_phrase(_evs[0])}", kind="signal", icon="📰")
+    st.divider()
+
+st.subheader("1 · Official FPL news")
+st.caption("FPL's own `news` field — injuries, doubts and returns, most serious first. This is the only "
+           "source here that is a **fact**, and the only one that moves a player's expected points.")
 
 if not players:
     st.info("No data yet — it's refreshing; check back shortly.")
@@ -134,14 +159,13 @@ if players:
     _ex = [(p, e) for p in players
            if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and (e := crowd_exodus(p))]
     # ADR-151 — a sell-off with a headline behind it is no longer "unexplained"; it is *explained by the
-    # press*. Shown first, because a sourced cause is the most useful thing on this page.
-    _store2 = Storage()
-    _ev = _store2.headline_events_by_id()
-    _store2.close()
-    _explained = [(p, e, _ev[p["id"]]) for p, e in _ex if p["id"] in _ev]
-    for p, e, evs in _explained:
-        st.info(f"📰 **{p['web_name']}** — {abs(e['net']):,} sold this gameweek, and "
-                f"{event_phrase(evs[0])}")
+    # press*, so it belongs in the lede at the top rather than in this list. US-443/ADR-163 moved it there;
+    # repeating it here would have the same fact appear twice on one page, which reads as two findings.
+    _explained = [(p, e) for p, e in _ex if p["id"] in _ev]
+    if _explained:
+        st.caption(f"⬆️ {len(_explained)} of these **do** have a reported cause — they're in "
+                   "**🔴 Right now** at the top of the page.")
+    _ex = [(p, e) for p, e in _ex if p["id"] not in _ev]      # this section is the UNexplained ones
     if not _ex:
         st.success("Nothing unexplained — every heavy sell-off right now has an injury or a status behind it.")
     else:

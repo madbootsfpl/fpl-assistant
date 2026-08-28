@@ -329,11 +329,11 @@ def test_my_squad_per_gw_xp_toggle_switches_the_shown_xp():
     toggle = next((s for s in at.segmented_control if s.label == "Projected xP"), None)
     if toggle is None or len(toggle.options) < 2:
         return                                       # no demo squad / data in this env
-    # cumulative label reads "N GW"; the metric is present
-    assert any("Projected XI" in (m.label or "") for m in at.get("metric"))
+    # cumulative label reads "N GW"; the strip is present
+    assert "Projected XI" in _strip_text(at)
     toggle.set_value(toggle.options[1]).run()        # "GW N only"
     assert not at.exception
-    assert any("Projected XI (GW" in (m.label or "") for m in at.get("metric"))   # label flips to a single GW
+    assert "Projected XI (GW" in _strip_text(at)     # label flips to a single GW
 
 
 def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
@@ -1157,7 +1157,7 @@ def test_squads_gameweeks_box_select_offers_ten(monkeypatch):
     assert 10 in [int(o) for o in gw[0].options]           # the requested long window is offered
     gw[0].set_value(10).run()
     assert not at.exception
-    assert any(m.label == "Projected XI (10 GW)" for m in at.metric)   # 10 drives the horizon
+    assert "Projected XI (10 GW)" in _strip_text(at)       # 10 drives the horizon
 
 
 def test_captain_view_notes_it_is_next_gameweek():
@@ -1181,18 +1181,30 @@ def test_my_squad_manage_expander_holds_rename_and_set_bench():
     assert any(b.label == "Rename" for b in at.button) and any(b.label == "Set bench" for b in at.button)
 
 
+def _strip_text(at) -> str:
+    """The stat strip's rendered markup (ADR-163).
+
+    It used to be `st.metric` in `st.columns`, which `AppTest` exposed as `at.metric` — a tidy API these tests
+    leaned on. The strip is HTML now because only CSS can reflow on a phone (US-449), so the assertions moved
+    from *"a metric widget with this label exists"* to *"this label and this number are on the page"*.
+
+    That is the better assertion anyway: the first pinned the widget, the second pins what the reader sees.
+    """
+    return " ".join(m.value for m in at.markdown if "mb-strip" in (m.value or ""))
+
+
 def test_my_squad_shows_a_quick_stats_summary():
     # US-239 + US-404 (ADR-115): the summary is a compact 3-number strip (Projected XI · Captain · Bench) — the
     # old Unavailable/Doubtful metrics folded into the availability line; the Projected-XI label tracks the horizon.
     at = _squads_view("My Squad")
-    labels = [m.label for m in at.metric]
-    assert any("Projected XI" in lbl for lbl in labels)
-    assert "Bench" in labels and any("Captain" in lbl for lbl in labels)
-    assert not any(lbl in ("Unavailable", "Doubtful") for lbl in labels)   # folded into the availability line
+    strip = _strip_text(at)
+    assert "Projected XI" in strip and "Bench" in strip and "Captain" in strip
+    for folded in ("Unavailable", "Doubtful"):
+        assert folded not in strip                     # folded into the availability line (US-404)
 
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"][0]
     gw.set_value(2).run()
-    assert any(m.label == "Projected XI (2 GW)" for m in at.metric)
+    assert "Projected XI (2 GW)" in _strip_text(at)
 
 
 def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
@@ -1227,8 +1239,9 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     # match `expected` and to surface the "next gameweek only" caption (moot, so hidden, at horizon 1).
     next(s for s in at.segmented_control if s.label == "Gameweeks ahead").set_value(5).run()
     assert not at.exception
-    proj = next(m for m in at.metric if m.label.startswith("Projected XI"))
-    assert proj.value == f"{expected:.1f} xP"              # XI + captain's next-GW double
+    strip = _strip_text(at)
+    assert "Projected XI" in strip
+    assert f"{expected:.1f} xP" in strip                   # XI + captain's next-GW double
     assert any("next gameweek only" in c.value for c in at.caption)   # the honest one-GW note
 
 
@@ -3275,3 +3288,39 @@ def test_the_home_tour_names_every_page_in_the_sidebar():
             missing.append(f"{page.name} → '{name}'")
     assert not missing, ("Home's tour doesn't list: " + "; ".join(missing)
                          + f" (it lists: {sorted(listed)})")
+
+
+def test_no_page_composes_a_stat_row_out_of_columns_and_metrics():
+    """ADR-163 — the guard that keeps US-449 fixed.
+
+    The wrapping came back because the fix in US-404 was *"use fewer metrics"*, which shrank the symptom and
+    left the mechanism. The moment two more strips shipped (ADR-161's head-to-head, ADR-162's transfer flow)
+    the owner hit it again on iPhone. A shared component only helps if the old pattern stops coming back, so
+    this fails on a reintroduced `stX.metric(` — the column-handle form that cannot reflow.
+
+    `st.metric` on its own is fine and stays available; it is the *row* of them that slivers. Admin is
+    exempt — it is an owner-only desktop console, not a page a tester opens on a phone.
+    """
+    offenders = []
+    for page in sorted(_PAGES.glob("*.py")):
+        if page.name.startswith("12_Admin"):
+            continue
+        for i, line in enumerate(page.read_text().splitlines(), start=1):
+            if re.search(r"\b[a-z]\d\.metric\(", line):
+                offenders.append(f"{page.name}:{i}")
+    for view in sorted((_ROOT / "src" / "web_streamlit" / "views").glob("*.py")):
+        for i, line in enumerate(view.read_text().splitlines(), start=1):
+            if re.search(r"\b[a-z]\d\.metric\(", line):
+                offenders.append(f"views/{view.name}:{i}")
+    assert not offenders, ("a column-handle metric row is back — use components.render_stat_strip so it "
+                           "reflows on a phone: " + "; ".join(offenders))
+
+
+def test_every_page_uses_the_same_widget_for_its_sub_boards():
+    """US-439 — Trending was the one page still on `st.tabs` where everything else uses a segmented control.
+
+    Not only cosmetic: `st.tabs` builds *every* panel on every run and hides all but one with CSS, so four
+    leaderboards were computed to show one. The consistent widget is also the cheaper one.
+    """
+    users = [p.name for p in sorted(_PAGES.glob("*.py")) if "st.tabs(" in p.read_text()]
+    assert not users, f"these pages still use st.tabs instead of st.segmented_control: {users}"

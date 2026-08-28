@@ -417,16 +417,20 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     cap_next = captain_bonus(captain_id, xi_ids, by_gameweek_by_id, cap_gw)
     projected_xi = xi_xp + cap_next
     captain_benched = captain_id is not None and captain_id not in xi_ids
-    # US-404: a compact 3-number strip (was a 5-across metric wall that slivered on mobile — Unavailable/Doubtful
-    # were their own metrics, but the flagged line below already names them).
-    m1, m2, m3 = st.columns(3)
-    m1.metric(f"Projected XI ({gw_label})", f"{projected_xi:.1f} xP",
-              help="Your starting XI's projected points over the selected horizon, plus your captain's "
-                   "double for the next gameweek (the ×2 is a one-week thing).")
-    m2.metric("Captain (2×)", f"{cap_next * 2:.1f} xP" if cap_next else "—",
-              help="Your captain's next-gameweek points, doubled. Captaincy is re-chosen each week, so the "
-                   "bonus counts for the next GW only. Set/change one on the Captain tab.")
-    m3.metric("Bench", f"{bench_xp:.1f} xP", help="Your bench's projected points (bench strength).")
+    # US-449 (ADR-163) — a shared strip that WRAPS instead of slivering. US-404 previously cut this from five
+    # metrics to three because it "slivered on mobile"; that shrank the symptom and left the mechanism, which
+    # is why the owner hit it again on iPhone the moment two more strips shipped.
+    from src.web_streamlit.components import render_stat_strip
+    render_stat_strip([
+        {"label": f"Projected XI ({gw_label})", "value": f"{projected_xi:.1f} xP",
+         "help": "Your starting XI's projected points over the selected horizon, plus your captain's "
+                 "double for the next gameweek (the ×2 is a one-week thing)."},
+        {"label": "Captain (2×)", "value": f"{cap_next * 2:.1f} xP" if cap_next else "—",
+         "help": "Your captain's next-gameweek points, doubled. Captaincy is re-chosen each week, so the "
+                 "bonus counts for the next GW only. Set/change one on the Captain tab."},
+        {"label": "Bench", "value": f"{bench_xp:.1f} xP", "tone": "mute",
+         "help": "Your bench's projected points (bench strength)."},
+    ])
     # Be explicit that the ×2 is a one-week thing when a longer horizon is selected (owner steer, ADR-083).
     cap_name = by_id[captain_id]["web_name"] if captain_id in by_id else None
     if cap_next and per_gw:

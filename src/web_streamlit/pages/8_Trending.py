@@ -69,12 +69,17 @@ else:
     # ADR-150 — the Reddit tabs moved to 📡 **Signals**. Trending is now *only* leaderboards: what the crowd
     # is **doing**, in numbers. What is being **said** is a different question with different reliability, and
     # mixing the two put a mention count beside an ownership percentage as though they were comparable.
-    tabs = st.tabs([b[1] for b in _BOARDS])
-    for tab, (by, label, header) in zip(tabs, _BOARDS):
-        with tab:
-            rows = apply_filter(trending(players, by=by, limit=len(players)), sel)   # all, filtered, paged
-            if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
-                st.info("No transfer / form data yet — this board lights up at **GW1 (2026-08-21)**.")
-            else:
-                page = show_count(rows)
-                _board(page, header, lambda r, by=by: _value(by, r["trend"]))
+    # US-439 (ADR-163) — a **segmented control**, like every other page. This was the one screen still using
+    # `st.tabs`, and the inconsistency is not only cosmetic: `st.tabs` renders every board on every run (all
+    # four are built, three are hidden with CSS), while a segmented control builds only the chosen one. The
+    # consistent widget is also the cheaper one.
+    _labels = {b[1]: b for b in _BOARDS}
+    _chosen = st.segmented_control("Board", list(_labels), default=_BOARDS[0][1], key="trend_board",
+                                   help="Which leaderboard to show.") or _BOARDS[0][1]
+    by, label, header = _labels[_chosen]
+    rows = apply_filter(trending(players, by=by, limit=len(players)), sel)   # all, filtered, paged
+    if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
+        st.info("No transfer / form data yet — this board lights up once a gameweek has been played.")
+    else:
+        page = show_count(rows)
+        _board(page, header, lambda r, by=by: _value(by, r["trend"]))
