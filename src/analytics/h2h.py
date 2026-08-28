@@ -1,7 +1,7 @@
 """Head-to-head against one rival — the projected gap, and what it is made of (ADR-161).
 
 🏆 Leagues (ADR-141) answers *"what is my league doing?"* with effective ownership. This answers the narrower,
-more actionable question the roadmap kept next to it: **"what do I need to do to catch him?"** — which needs
+more actionable question the roadmap kept next to it: **"what do I need to do to catch them?"** — which needs
 per-*manager* projections rather than per-player ones.
 
 The whole module rests on one structural fact, and it is why this is worth having at all:
@@ -17,9 +17,9 @@ Pure and offline: picks payloads and an xP map in, numbers out. The fetching liv
 `league.py`.
 
 ⚠️ **A picks payload is the last completed gameweek's**, because FPL only makes picks public after a deadline.
-So this projects *the squad he had*, not the one he will field — he can transfer, and he can change his
-captain. That limit is real, it is stated on the surface that renders this, and it does not make the read
-useless: most managers make 0-1 transfers a week, and the differential set is stable across one of them.
+So this projects *the squad they had*, not the one they will field — they can transfer, and they can change
+their captain. That limit is real, it is stated on the surface that renders this, and it does not make the
+read useless: most managers make 0-1 transfers a week, and the differential set is stable across one of them.
 """
 
 from src.analytics.league import _BENCH_FROM, _get
@@ -108,7 +108,7 @@ def h2h_gap(mine, theirs, xp_by_id, players=None) -> dict:
     their_mult = dict(their_proj["starters"])
     shared_ids = set(my_mult) & set(their_mult)
 
-    # A player you both start at the SAME multiplier cancels exactly. If only one of you captains him he does
+    # A player you both start at the SAME multiplier cancels exactly. If only one of you captains them, they do
     # not cancel — the extra copy is a differential in its own right, and it is the most common one there is.
     shared_xp = 0.0
     my_only, their_only = [], []
@@ -140,7 +140,7 @@ def catch_up_note(gap: dict, *, my_name: str = "You", their_name: str = "They") 
 
     Named after the question it answers. It leads with the differentials rather than the totals because the
     totals are mostly the same players — a reader told *"52.1 vs 49.8"* learns far less than one told *"three
-    players separate you, and his captain is worth 4.2 more than yours."*
+    players separate you, and their captain is worth 4.2 more than yours."*
     """
     if not gap:
         return ""

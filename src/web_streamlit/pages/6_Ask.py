@@ -25,7 +25,7 @@ st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Captaincy · transfers · your squad · comparisons · build a squad · best players · fixtures — the "
            "analytics decide and the answer is **checked** against the data (✓). It also explains **FPL "
            "rules** from a curated knowledge base (✓), and answers open **tactics** questions labelled "
-           "**ℹ not verified**. Follow-ups build on the last turn — try *\"why?\"* or *\"compare him to …\"*.")
+           "**ℹ not verified**. Follow-ups build on the last turn — try *\"why?\"* or *\"compare them to …\"*.")
 
 _active = active_squad()          # so "captain <its name>" / "analyse my team" use your loaded squad
 if _active:

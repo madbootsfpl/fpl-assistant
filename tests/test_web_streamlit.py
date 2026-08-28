@@ -3184,3 +3184,16 @@ def test_the_leagues_page_still_renders_with_the_head_to_head_section(monkeypatc
     render must reach the manager-id prompt and stop, exactly as before."""
     at = _run(_PAGES / "5_Leagues.py")
     assert not at.exception
+
+
+def test_the_leagues_load_button_latches_so_a_rival_change_does_not_collapse_the_page(monkeypatch):
+    """US-431, owner: *"when you change player on head to head, the 'Read N squads' collapses down."*
+
+    `st.button` is True only on the run it was clicked, so any widget below it — the H2H rival picker — re-ran
+    the page, found False, and hid everything. The latch is keyed on the **league id**, not a bare flag,
+    because loading costs N network calls: switching leagues must ask again rather than spend them silently.
+    """
+    src = (_PAGES / "5_Leagues.py").read_text()
+    assert 'st.session_state["lg_loaded_for"] = league_id' in src
+    assert 'st.session_state.get("lg_loaded_for") != league_id' in src
+    assert 'if not st.button(f"Read {len(shown)} squads' not in src, "the old collapse-on-rerun form is back"

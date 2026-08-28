@@ -98,3 +98,17 @@ def test_empty_payloads_are_safe():
     assert gap["gap"] == 0.0 and gap["shared_count"] == 0
     assert catch_up_note(gap).startswith("Identical")
     assert catch_up_note(None) == ""
+
+
+def test_the_note_uses_neutral_pronouns_for_a_rival():
+    """US-431, owner: *"'What you have that he doesn't' should be 'What you have that they don't'."*
+
+    A manager id says nothing about who is holding it, and the default is they/them. Pinned as a test because
+    copy is the kind of thing that gets rewritten later by someone who does not know it was a correction.
+    """
+    mine = _picks([1, 2, 3, 4, 11], captain=1)
+    theirs = _picks([1, 2, 3, 4, 12], captain=1)
+    note = catch_up_note(h2h_gap(mine, theirs, XP, PLAYERS), my_name="you", their_name="they")
+    lowered = note.lower()
+    for gendered in (" he ", " him ", " his ", " she ", " her "):
+        assert gendered not in f" {lowered} "

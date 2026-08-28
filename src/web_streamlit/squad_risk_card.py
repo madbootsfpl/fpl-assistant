@@ -83,7 +83,7 @@ def render_risk_monitor(rows, badges=None) -> None:
             if note:
                 st.warning(f"📉 {note}")
     st.caption("**Attention** blends the chance a player misses the 60-minute appearance points with how hard "
-               "his run is *relative to the league* — minutes weigh more, because a player who doesn't play "
+               "their run is *relative to the league* — minutes weigh more, because a player who doesn't play "
                "scores nothing while a hard fixture only shortens the odds. **Driver** names whichever "
                "contributes more — or **Crowd**, when a player our data says is fine is being sold heavily "
                "anyway, which is the one thing here we can only learn from other managers.")
@@ -97,14 +97,14 @@ def render_risk_monitor(rows, badges=None) -> None:
     st.dataframe(table, hide_index=True, width="stretch", height=min(520, 40 + 36 * len(table)),
                  column_config=column_config(labels, help={
                      "Attention": "How much this player might cost you — higher needs a look. Not how good "
-                                  "he is.",
-                     "Under 60": "The chance he doesn't reach 60 minutes, and so misses the second "
+                                  "they are.",
+                     "Under 60": "The chance they don't reach 60 minutes, and so miss the second "
                                  "appearance point.",
-                     "From": "What that chance is based on: his own per-gameweek record, or how often he "
-                             "started last season.",
-                     "Fixtures": "How hard his club's next 5 are, as a percentile across the league.",
+                     "From": "What that chance is based on: their own per-gameweek record, or how often "
+                             "they started last season.",
+                     "Fixtures": "How hard their club's next 5 are, as a percentile across the league.",
                      "Driver": "Which signal is the bigger contributor — or **Crowd** when managers are "
-                               "selling him and nothing in the data explains why.",
+                               "selling them and nothing in the data explains why.",
                  }))
     if unassessed:
         st.caption(f"🌱 {unassessed} player(s) show **—**: new to the league, so there's no minutes record to "

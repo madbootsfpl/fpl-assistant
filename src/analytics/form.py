@@ -80,7 +80,7 @@ def form_windows(gw_history, *, short: int = _SHORT_WINDOW, long: int = _LONG_WI
                  min_minutes: int = _FORM_MIN_MINUTES) -> dict:
     """A short and a long rolling points-per-90, and the gap between them (ADR-159).
 
-    One window says how a player is scoring; **two say which way he is going**, which is the question a single
+    One window says how a player is scoring; **two say which way they are going**, which is the question a single
     number cannot answer however well it is tuned. Both reuse `form_rate`, so the recency and minutes weighting
     is identical and the two are comparable by construction — a second rate written alongside it would drift.
 

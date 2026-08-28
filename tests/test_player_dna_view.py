@@ -182,7 +182,7 @@ def test_the_strip_names_the_move_and_draws_a_line_when_there_is_one():
     from src.web_streamlit.player_dna_view import price_strip_html
     html = price_strip_html([("GW1", 8.0), ("now", 7.9)], -0.1, 7.9)
     assert "£7.9m" in html and "▼ -0.1" in html
-    assert "he has dropped £0.1m" in html
+    assert "they have dropped £0.1m" in html
     assert "<svg" in html
     assert 'tr-pr-d down' in html, "red for a fall — the colour is the fast channel (ADR-140)"
 
@@ -190,7 +190,7 @@ def test_the_strip_names_the_move_and_draws_a_line_when_there_is_one():
 def test_a_rise_is_the_other_glyph_and_the_other_colour():
     from src.web_streamlit.player_dna_view import price_strip_html
     html = price_strip_html([("GW1", 4.5), ("now", 4.6)], 0.1, 4.6)
-    assert "▲ +0.1" in html and "tr-pr-d up" in html and "he has risen" in html
+    assert "▲ +0.1" in html and "tr-pr-d up" in html and "they have risen" in html
 
 
 def test_an_unmoved_price_says_so_instead_of_drawing_a_flat_line():

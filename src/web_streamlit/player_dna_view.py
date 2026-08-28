@@ -136,8 +136,8 @@ def form_windows_html(windows) -> str:
                 f'<span class="tr-fw-l">{label} \u00b7 {win["gws"]} GW</span></div>')
 
     if windows["direction"] is None:
-        note = ("Not enough gameweeks yet to say which way he's going — the two windows still cover the "
-                "same matches.")
+        note = ("Not enough gameweeks yet to say which way they're going — the two windows still cover "
+                "the same matches.")
         return (f'<div class="tr-fw">{cell(short, "Points / 90")}'
                 f'<span class="tr-fw-s">{note}</span></div>')
 
@@ -146,7 +146,7 @@ def form_windows_html(windows) -> str:
     word = {"up": "sharper lately", "down": "cooler lately", "level": "unchanged"}[direction]
     return (f'<div class="tr-fw">{cell(short, "Last 3")}{cell(long, "Last 6")}'
             f'<span class="tr-fw-d {direction}">{arrow} {delta:+.1f}</span>'
-            f'<span class="tr-fw-s">Points per 90 — his last 3 gameweeks against his last 6. '
+            f'<span class="tr-fw-s">Points per 90 — their last 3 gameweeks against their last 6. '
             f'<b>{word}</b>. Not a forecast, and not in xP.</span></div>')
 
 
@@ -169,8 +169,8 @@ def sparkline_svg(series, *, w: int = 120, h: int = 30) -> str:
 
 
 def price_strip_html(series, move, price) -> str:
-    """The price journey: what he costs, what he has done since the season started, and a line once there is
-    one to draw (ADR-160).
+    """The price journey: what they cost, what has happened since the season started, and a line once there
+    is one to draw (ADR-160).
 
     The **change** carries this feature early and the **line** carries it later, which is why both are here.
     `cost_change_start` is exact and available from day one; the per-gameweek series needs gameweeks, and at
@@ -190,7 +190,7 @@ def price_strip_html(series, move, price) -> str:
     direction = "up" if move > 0 else "down"
     glyph = PRICE_UP if move > 0 else PRICE_DOWN
     spark = sparkline_svg(series) if len(series) >= 2 else ""
-    since = "he has risen" if move > 0 else "he has dropped"
+    since = "they have risen" if move > 0 else "they have dropped"
     return (f'<div class="tr-pr">{head}'
             f'<span class="tr-pr-d {direction}">{glyph} {move:+.1f}</span>{spark}'
             f'<span class="tr-pr-s">Since the season started {since} '

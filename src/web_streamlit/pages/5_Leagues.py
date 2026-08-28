@@ -89,7 +89,7 @@ def _picks(entries: tuple, gameweek: int):
 
 
 # ADR-141 rev — **the manager id is the handle people actually have.** The first cut asked for a league id,
-# which appears only in a URL you have to go and find: the owner opened the page with his own manager id to
+# which appears only in a URL you have to go and find: the owner opened the page with their own manager id to
 # hand and could not get in. `/entry/{id}/` already lists every league behind that id, so this costs one call
 # the app was making anyway. "By league id" stays for anyone who does have one.
 scope = st.segmented_control(
@@ -184,7 +184,13 @@ st.caption(f"Reads one squad per manager ({len(shown)} calls, throttled — abou
            f"{len(shown) * (config.HISTORY_THROTTLE + 0.05):.0f}s the first time). A finished gameweek's "
            "picks never change, so it's cached and instant afterwards.")
 
-if not st.button(f"Read {len(shown)} squads →", key="lg_load"):
+# The button LATCHES, per league (US-431). `st.button` is True only on the run it was clicked, so before this
+# any widget below it — the head-to-head rival picker — re-ran the page, found False, and collapsed the whole
+# section back to the button. Latching on the league id rather than a bare flag matters: switching leagues must
+# ask again, because loading is N network calls and nobody should spend them by changing a dropdown.
+if st.button(f"Read {len(shown)} squads →", key="lg_load"):
+    st.session_state["lg_loaded_for"] = league_id
+if st.session_state.get("lg_loaded_for") != league_id:
     st.stop()
 
 picks = _picks(tuple(r["entry"] for r in shown), last_gw)
@@ -274,8 +280,10 @@ else:
 
         d1, d2 = st.columns(2)
         for _col, _rows, _title, _why in (
-                (d1, _gap["their_edge"], "What he has that you don't", "Catching him runs through these."),
-                (d2, _gap["my_edge"], "What you have that he doesn't", "This is your lead, such as it is.")):
+                (d1, _gap["their_edge"], "What they have that you don't",
+                 "Catching them runs through these."),
+                (d2, _gap["my_edge"], "What you have that they don't",
+                 "This is your lead, such as it is.")):
             with _col:
                 st.markdown(f"**{_title}**")
                 if not _rows:
@@ -293,6 +301,7 @@ else:
                 st.caption(_why)
 
         st.caption(f"⚠️ These are **GW{last_gw} squads** — FPL only publishes picks after a deadline, so this "
-                   "projects the team he had, not the one he will field. He can still transfer and change "
-                   "his captain. xP is the same projection every other page decides with; it is an average, "
+                   "projects the team they had, not the one they will field. They can still transfer and "
+                   "change their captain. xP is the same projection every other page decides with; it is an "
+                   "average, "
                    "**not a win probability** — a 2-point projected lead is not a 2-point certainty.")
