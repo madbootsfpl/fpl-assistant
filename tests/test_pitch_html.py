@@ -169,3 +169,32 @@ def test_the_hover_card_still_carries_the_per_gameweek_row():
     html = _html(clickable=False, fixtures_by_id=fixtures)
     assert 'class="plc-gwrow"' in html
     assert 'class="plc-gwcol total"' not in html, "no Total column — owner steer on ADR-109"
+
+
+# ---- The clear-anchor's two regressions (US-450) ---------------------------------------------------
+# Both shipped in one CSS block, and the owner caught both in one screenshot: a player card rendering behind
+# the shirts of the row below it, and "tap the pitch to close" doing nothing at all.
+
+def test_a_row_never_gets_a_z_index_because_it_would_trap_the_card_inside_it():
+    """A `z-index` on `.row` creates a stacking context **per row**, so `.kit-pop`'s `z-index:40` can only
+    rise within its own row — and a card opened on the defenders renders *behind* the midfielders' shirts.
+    `.kit` is already positioned, so the rows need nothing: positioned siblings paint in tree order and the
+    anchor is first in the DOM."""
+    html = _html(clickable=True)
+    row_css = html.split(".fpl-pitch .row{")[1].split("}")[0]
+    assert "z-index" not in row_css
+
+
+def test_the_rows_pass_clicks_through_so_the_background_anchor_can_receive_them():
+    """Paint order was never the issue for *clicks*: a `.row` is a full-width flex container, so it lies over
+    the grass and swallowed every tap meant for the anchor beneath — which is why closing did nothing."""
+    html = _html(clickable=True)
+    assert ".fpl-pitch .row{pointer-events:none;}" in html
+    assert ".fpl-pitch .kit{pointer-events:auto;}" in html     # …but a shirt still takes its own tap
+
+
+def test_the_clear_anchor_leads_the_pitch_and_only_when_tappable():
+    """Being first in tree order is what puts it behind the shirts without needing a z-index at all."""
+    body = _html(clickable=True).split('<div class="fpl-pitch">')[1]
+    assert body.lstrip().startswith('<a href="#" id="sel:clear"')
+    assert "sel:clear" not in _html()                          # a plain pitch has nothing to clear

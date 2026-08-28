@@ -82,10 +82,20 @@ text-decoration:none!important;color:inherit!important;display:block;}
    a .kit-pop at all on a clickable pitch, so this can never open two at once — which is what the hover did. */
 .kit.selected .kit-pop{display:block;}
 /* US-444 rev — a full-bleed anchor BEHIND the shirts. Tapping the grass returns a different id from the last
-   shirt, which is the only way a "close it" gesture can reach us at all (see tap.CLEAR_ID). */
+   shirt, which is the only way a "close it" gesture can reach us at all (see tap.CLEAR_ID).
+
+   Two mistakes to not make again, both shipped once (US-450):
+   * **No `z-index` on `.row`.** It creates a stacking context per row, which traps `.kit-pop`'s `z-index:40`
+     *inside* that row — so a card opened on the defenders rendered BEHIND the midfielders' shirts. `.kit` is
+     already `position:relative`, so the rows need nothing: positioned descendants paint in tree order, and
+     the anchor is first in the DOM.
+   * **`pointer-events` matter more than paint order here.** A `.row` is a full-width flex container, so it
+     covers the grass either way and swallowed every tap meant for the anchor beneath — which is why "tap the
+     pitch to close" did nothing. The rows pass clicks through; the shirts take their own. */
 .fpl-pitch{position:relative;}
 .fpl-pitch .pitch-bg{position:absolute;inset:0;z-index:0;display:block;}
-.fpl-pitch .row{position:relative;z-index:1;}
+.fpl-pitch .row{pointer-events:none;}
+.fpl-pitch .kit{pointer-events:auto;}
 </style>
 """
 
