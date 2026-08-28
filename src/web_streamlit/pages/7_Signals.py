@@ -84,6 +84,18 @@ try:
 finally:
     store.close()
 
+# --- The page-wide squad lens (US-442, ADR-164) --------------------------------------------------------------
+# Owner: *"Signals should have a global option for my squad only."* It was per-section — the filter lived
+# inside section 1 and one other section happened to reuse its result, so two of the four ignored it. A lens
+# that applies to *some* of a page is worse than none: the reader cannot tell whether a quiet section means
+# "nothing about your squad" or "not filtered".
+_sq = active_squad()
+sel = filter_controls(players, key="signals",
+                      my_squad_ids=set(_sq["player_ids"]) if _sq else None) if players else None
+_squad_only = bool(sel and sel.get("my_squad"))
+if _squad_only:
+    st.caption("🧩 **Filtered to your squad** — every section below, including the headlines.")
+
 # --- 0 · The lede (US-443, ADR-163) -------------------------------------------------------------------------
 # Owner: *"I really like the blue banner summary under 'An exodus we can't explain', could we promote that near
 # the top as it's real news."* Agreed — but the sections below are ordered by **evidentiary strength**
@@ -96,7 +108,7 @@ _lede = []
 if players:
     from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR as _FLOOR
     from src.analytics.crowd import crowd_exodus as _exodus
-    _lede = [(p, e, _ev[p["id"]]) for p in players
+    _lede = [(p, e, _ev[p["id"]]) for p in apply_filter(players, sel)
              if p["id"] in _ev and (p["selected_by"] or 0) >= _FLOOR and (e := _exodus(p))]
 if _lede:
     from src.web_streamlit.components import render_banner
@@ -119,11 +131,7 @@ else:
     if not flagged:
         st.success("No current news — everyone's available. 🎉")
     else:
-        # US-407b: filter the news to your squad / a team / position / player (the shared filter, ADR-064).
-        _sq = active_squad()
-        sel = filter_controls(players, key="news",
-                              my_squad_ids=set(_sq["player_ids"]) if _sq else None)
-        flagged = apply_filter(flagged, sel)
+        flagged = apply_filter(flagged, sel)          # the page-wide lens (ADR-164), not a second control
         flagged.sort(key=lambda p: (_SEVERITY.get(p["status"], 9), p["web_name"]))
         if not flagged:
             st.info("No news for that filter — clear a filter to see everyone with news.")
@@ -156,7 +164,7 @@ st.caption("Players being sold heavily while FPL's own `news` and `status` say n
            "the feed doesn't carry (a move abroad, a row, a press conference).")
 if players:
     from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, crowd_exodus
-    _ex = [(p, e) for p in players
+    _ex = [(p, e) for p in apply_filter(players, sel)
            if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and (e := crowd_exodus(p))]
     # ADR-151 — a sell-off with a headline behind it is no longer "unexplained"; it is *explained by the
     # press*, so it belongs in the lede at the top rather than in this list. US-443/ADR-163 moved it there;
@@ -193,7 +201,24 @@ if st.button("Load headlines", help="Fetch the latest FPL/football headlines (be
     if not groups:
         st.info("Couldn't reach the feeds right now — they can rate-limit; try again shortly.")
     else:
-        for source, items in groups.items():
+        # ADR-164 — the squad lens reaches the headlines too, which needs a different mechanism from the other
+        # sections: a headline is a **sentence**, not a player row, so there is nothing for `apply_filter` to
+        # match on. It is resolved with ADR-152's name index — the same longest-match-first resolver the
+        # extraction uses, so a headline about Reece James does not surface for an owner of James Maddison.
+        _kept = groups
+        if _squad_only and _sq:
+            from src.analytics.names import build_index, find_mentions
+            _mine = {p["id"] for p in players if p["id"] in set(_sq["player_ids"])}
+            _index = build_index([p for p in players if p["id"] in _mine])
+            _kept = {src: [i for i in items if find_mentions(i.get("title") or "", _index)]
+                     for src, items in groups.items()}
+            _kept = {src: items for src, items in _kept.items() if items}
+            _total = sum(len(v) for v in groups.values())
+            _shown = sum(len(v) for v in _kept.values())
+            st.caption(f"🧩 **{_shown} of {_total}** headlines mention one of your players.")
+        if not _kept:
+            st.info("No headlines mention your squad right now — untick **My squad only** to see them all.")
+        for source, items in _kept.items():
             st.markdown(f"**{source}**")
             for it in items:
                 when = f"  ·  _{it['published'][:16]}_" if it.get("published") else ""

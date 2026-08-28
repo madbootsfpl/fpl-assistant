@@ -3324,3 +3324,38 @@ def test_every_page_uses_the_same_widget_for_its_sub_boards():
     """
     users = [p.name for p in sorted(_PAGES.glob("*.py")) if "st.tabs(" in p.read_text()]
     assert not users, f"these pages still use st.tabs instead of st.segmented_control: {users}"
+
+
+def test_signals_has_one_squad_lens_not_a_control_per_section():
+    """US-442 (ADR-164) — the owner asked for a *global* my-squad option.
+
+    It was per-section: the filter was created inside section 1, one later section happened to reuse its
+    result, and two ignored it entirely. A lens that covers some of a page is worse than none — a quiet
+    section could mean "nothing about your squad" or "not filtered", and the reader can't tell which.
+    """
+    src = (_PAGES / "7_Signals.py").read_text()
+    assert src.count("filter_controls(") == 1, "one control for the page, not one per section"
+    # …and it is created before section 1, so every section below can honour it.
+    assert src.index("filter_controls(") < src.index('st.subheader("1 · Official FPL news")')
+    assert src.count("apply_filter(") >= 4, "the lede and sections 1, 2 and 4 all read it"
+    assert "find_mentions" in src, "…and the headlines, which need name resolution rather than a row filter"
+
+
+def test_team_dna_scan_and_ticker_share_one_squad_lens():
+    """US-441 (ADR-164) — the checkbox existed on the ticker only, so the 20-club scan above it ignored a
+    control the reader had already set: one page answering "my squad" in one half and "the league" in the
+    other, with nothing saying which."""
+    src = (_PAGES / "3_Team_DNA_and_FDR.py").read_text()
+    assert src.count('st.checkbox("My squad only"') == 1, "one checkbox for the page"
+    assert "ticker_myteam" not in src, "the ticker's separate key is gone"
+    # bound unconditionally, because the ticker reads it even on a snapshot with no DNA to draw
+    assert src.index("_squad_only = False") < src.index('st.checkbox("My squad only"')
+
+
+def test_the_dna_page_survives_having_no_team_dna_to_draw(monkeypatch):
+    """The `NameError` the shared lens nearly introduced: the checkbox is created inside `if _all_dna:` but
+    the ticker below reads it regardless, so an empty DNA map would have crashed the page."""
+    import src.analytics as analytics_pkg
+    monkeypatch.setattr(analytics_pkg, "team_dna_all", lambda *a, **k: {})
+    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    assert not at.exception
