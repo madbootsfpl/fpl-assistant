@@ -2,8 +2,8 @@
 
 **Decision ID:** ADR-165
 **Date:** 2026-08-28
-**Status:** ⚠️ **Built, benefit UNVERIFIED** (Sprint 224, 2026-08-28). **1568 → 1569 tests, ruff clean.**
-**Needs a Cloud check by the owner — the local measurement cannot see this feature at all (below).**
+**Status:** ✅ **Accepted — owner-verified on device** (Sprint 224, 2026-08-28). **1568 → 1569 tests, ruff clean.**
+Owner, on an iPhone against the live deploy: *"feels a little quicker on the phone."*
 **Superseded By / Replaces:** Follows the declined `decision_xp` cache (Backlog, 2026-08-28). **No `decision_xp` change.**
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
 
@@ -39,7 +39,7 @@ The closure is deliberate too: a fragment rerun does not re-execute the parent, 
 full run's values — correct for selection (the squad has not changed) and irrelevant for mutation (which
 forces a full rerun anyway).
 
-### ⚠️ The benefit is unverified, and here is exactly why
+### ✅ Verified the only way it could be, and ⚠️ here is why the local number was worthless
 
 `AppTest` **does not simulate fragment-scoped reruns.** Proved with a probe app — a counter outside the
 fragment incremented on every interaction with a widget *inside* it:
@@ -52,9 +52,18 @@ after a selection : outer=2 inner=2      ← a real fragment rerun would leave o
 So the local benchmark (64 ms with, 61 ms without) **measured nothing** — it is blind to the feature by
 construction. Reporting it as evidence either way would be worse than reporting no number at all.
 
-**What that leaves:** a change that is architecturally correct, low-risk, and of unproven benefit here. It is
-the mechanism Streamlit provides for this exact problem, the tests pass, and mutation still reruns the app —
-but whether the owner's phone feels different is a question only the owner's phone can answer.
+**What that left** was a change that is architecturally correct, low-risk, and of unproven benefit — so it
+shipped as unproven and the owner checked it on the device that had the complaint. Verdict: *"feels a little
+quicker on the phone."*
+
+That is a **subjective** report, and it is worth being precise about why it is nonetheless the right evidence:
+the thing being optimised *is* how an interaction feels to the person using it, and the only instrument that
+can read it is a person on a phone against the live deploy. A stopwatch on this machine would have been
+objective and about a different question.
+
+**"A little"** is also the honest size. The remaining latency is the websocket round-trip plus the custom
+component re-mounting — neither of which is ours, and no further Python-side work will move them. **This
+closes the performance thread** rather than inviting another pass.
 
 ### 🧪 Definition of Done
 

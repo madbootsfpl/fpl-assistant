@@ -1,7 +1,8 @@
 # Sprint 224: The player panel reruns on its own (ADR-165)
 
 **Dates:** 2026-08-28
-**Status:** ⚠️ Built; **benefit unverified** — needs a Cloud check. 1568 → 1569 tests, ruff clean.
+**Status:** ✅ Complete — **owner-verified on device**: *"feels a little quicker on the phone."*
+1568 → 1569 tests, ruff clean.
 
 > **Owner:** *"works, it's a little laggy but let's see what the feedback is"* → then *"do the st.fragment one"*.
 
@@ -33,8 +34,12 @@ after a selection : outer=2 inner=2      ← a real fragment rerun would leave o
 So the benchmark I ran (64 ms with the fragment, 61 ms without) **measured nothing**. It is blind to the
 feature by construction, and I nearly reported it as evidence the change didn't work.
 
-What ships is therefore honest but unproven: architecturally right, low-risk, tests green — and only the
-owner's phone can say whether it feels different.
+So it shipped honest-but-unproven, and the owner checked it where the complaint came from: *"feels a little
+quicker on the phone."* Subjective — and the right instrument, because how an interaction *feels* is the thing
+being optimised, and no stopwatch on a laptop can read it.
+
+**"A little" is the honest size**, too. What remains is the websocket round-trip and the component re-mount,
+neither of which is ours. That closes the performance thread rather than inviting another pass at it.
 
 ---
 
