@@ -180,10 +180,18 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
    price says "unchanged" rather than drawing a flat segment.
 - ✅ **Price-change predictor** — shipped (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
    *(This page listed it as not-started for months; corrected here.)*
-- 🅾️ **Attack/Defence FDR split** (ADR-005) — **blocked at source, not by timing.** Checked the live API on
-   2026-08-24: `strength_attack_home` and friends are **still 0 after GW1**, and the `teams` table doesn't even
-   carry the columns. FPL is not populating them. This dies unless we **derive our own attack/defence strength
-   from results** — a different and much bigger piece of work. **Needs a decision, not a wait.**
+- ◑ **Attack/Defence FDR split** (ADR-005) — **decided 2026-08-28: derive our own** (owner ask; see the
+   Backlog's *"Market goal projections"* entry). Still blocked at source — `strength_attack_home` and friends
+   are **0 after GW1** and FPL never populates them — but the *"much bigger piece of work"* that clause pointed
+   at got smaller: **ADR-128 put `xg` and `xgc` per player per FIXTURE in the per-GW table**, and aggregated by
+   team that *is* attack and defence strength from results. Prompted by the owner asking whether we could pull
+   Spreadex's per-team projected goals. **Measured first: their CS% column is not independent data** — it is
+   `exp(−opponent's projected goals) + 2.9pp`, sd **0.6pp** across all 20 teams, so the market publishes ONE
+   number and the rest is arithmetic. **Scraping the bookmaker is declined** (no public API, against their
+   terms, their commercial product); a licensed odds API stays as the fallback if our derived number proves
+   poor. ⏳ **GW4-6** — but ranked **above** the form / set-piece / DefCon weight calibrations in that batch:
+   those tune terms we already have, this adds one we are missing. A real clean-sheet probability replaces
+   `defcon_magnifier`'s FDR-1-5 proxy and reprices every defender and keeper (4 points each, half a squad).
 
 ---
 

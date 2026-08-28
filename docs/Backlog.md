@@ -14,6 +14,46 @@ nice-to-haves and tech-debt.)*
 > navigate.** Every UI/IA change below is measured against it — don't just move clutter around, and keep the brand
 > vocabulary/mascot tasteful, not gimmicky. *(Worth pinning as a design ADR.)*
 
+## Market goal projections → team attack/defence strength (owner ask, 2026-08-28)
+
+**The ask:** *"could we pull this data from Spreadex?"* — the Fantasy Football Hub graphic that republishes
+Spreadex's per-team **projected goals** and **clean-sheet %** for a gameweek (*"Data from Spreadex"*).
+
+**Measured before recommending anything.** The CS% column is **not independent data** — it is derived from the
+goals column:
+
+```
+CS% ≈ exp(−opponent's projected goals) + 2.9pp        sd 0.6pp across all 20 teams (GW2 graphic)
+```
+
+A textbook Poisson clean sheet with a Dixon-Coles low-score bump, holding to under a point everywhere. So the
+source publishes **one** number per team and the rest is one line of arithmetic. **The ask is therefore not
+"get Spreadex's spreads" but "get a projected-goals number per team per fixture."**
+
+**Why that one number is worth more than it looks:**
+
+- **It is the attack/defence split ADR-005 declared dead.** That ADR is 🅾️ *blocked at source* because FPL
+  leaves `strength_attack_home` and friends at **0** and never populates them. Man Utd **2.42** against Ipswich
+  **1.01** is exactly the thing ADR-005 said we could only get by deriving our own.
+- **It replaces a proxy we know is crude.** `defcon_magnifier` currently reads clean-sheet likelihood off
+  FDR 1-5. A real probability reprices every defender and keeper — 4 points each, about half a squad.
+
+**Three routes. Decision: the third.**
+
+| route | verdict |
+|---|---|
+| Scrape Spreadex | 🅾️ **No.** No public API, near-certainly against their terms, fragile, and it is their commercial product. The FFH graphic is a screenshot in a Telegram channel — neither is a source we can call. |
+| A licensed odds API | ◑ Legitimate: solve for the same λ from 1X2 + over/under. Costs a dependency, a key and a new Cloud secret. **Kept as the fallback** if our own number proves poor. No provider's terms have been checked. |
+| **Derive it ourselves** | ✅ **Chosen.** ADR-128 put **`xg` and `xgc` per player per fixture** in the per-GW table; aggregated by team that *is* attack and defence strength from results. No dependency, no key, no terms question — and it keeps the promise that the app computes its own number. |
+
+**⏳ Gated to GW4-6**, the same wall as the rest of the calibration batch: one round of xG cannot fit a team
+strength. **But ranked ABOVE the form / set-piece / DefCon weight calibrations in that batch** — those tune
+terms we already have, this adds one we are missing.
+
+**Cheap thing to do meanwhile (owner):** keep saving the weekly FFH/Spreadex graphics. At GW6 we can **measure**
+our derived λ against the market's rather than assuming ours is good enough — which is the only honest way to
+find out, and the habit that has killed three features and saved several others this month.
+
 ## ✅ GW1 — done (2026-08-21 played; the flip ran 2026-08-24)
 
 The Data-Hardening flip is **complete**: `history --backfill` (609 players, now **27 per-GW columns** after
