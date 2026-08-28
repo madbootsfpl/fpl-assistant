@@ -476,145 +476,164 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # **menu** that briefly lived here (ADR-135) is reverted: every tap costs a full rerun plus a decision_xp
     # recompute, so a floating menu — and especially a two-tap flow costing two round-trips — felt slower and
     # messier than the widgets it replaced. Selection is one round-trip and genuinely replaces a dropdown.
-    from src.web_streamlit.tap import render_tappable_pitch
-    _label = lambda p: f"{p['web_name']} · {p['team']}"      # noqa: E731 — matches the picker's option text
-    _sel_now = st.session_state.get("pa_pick")
-    _sel_id = next((p["id"] for p in owned if _label(p) == _sel_now), None)
-    render_tappable_pitch(
-        xi, bench, select_key="pa_pick", label_for=_label,
-        captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
-        team_names=team_names, bench_roles=bench_roles, kits=kits, selected_id=_sel_id,
-        fixtures_by_id=fixtures_by_id)                      # ADR-109: per-GW row in the hover popover
+    # ---- The pitch + player panel, as a FRAGMENT (ADR-165) ------------------------------------------
+    # Streamlit reruns the **whole page script** on every interaction, so tapping a shirt re-executed this
+    # entire view — the strip, the pitch, the panel, the DNA card — to change one selection. A fragment reruns
+    # only itself, which is the one lever that actually shortens a tap. (Measured first: caching `decision_xp`
+    # was the obvious fix and was wrong — 7ms of a 56ms render. See `docs/Backlog.md`.)
+    #
+    # **The boundary is the point.** Everything in here either *reads* the squad or *selects* within it, so a
+    # partial rerun is correct. The two things that MUTATE it — Make captain, Substitute — call `st.rerun()`,
+    # which defaults to `scope="app"` and so reruns the whole page: the xP strip above this fragment has to
+    # change when the captain does, and a fragment cannot repaint it.
+    #
+    # The closure is deliberate. A fragment rerun does not re-execute the parent, so these locals hold the last
+    # full run's values — right for selection (the squad has not changed) and irrelevant for mutation (which
+    # forces a full rerun anyway).
+    @st.fragment
+    def _player_panel():
+        from src.web_streamlit.tap import render_tappable_pitch
+        _label = lambda p: f"{p['web_name']} · {p['team']}"      # noqa: E731 — matches the picker's option text
+        _sel_now = st.session_state.get("pa_pick")
+        _sel_id = next((p["id"] for p in owned if _label(p) == _sel_now), None)
+        render_tappable_pitch(
+            xi, bench, select_key="pa_pick", label_for=_label,
+            captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
+            team_names=team_names, bench_roles=bench_roles, kits=kits, selected_id=_sel_id,
+            fixtures_by_id=fixtures_by_id)                      # ADR-109: per-GW row in the hover popover
 
-    # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +
-    # **Substitute**, together, in one panel on the golden page (consolidates the old card picker + Substitute
-    # expander + the stranded Captain-tab set control). Native selectbox+button → it works on phone/tablet, and
-    # gives mobile the full card the desktop-only hover popover never could. Reuses the card renderer +
-    # `set_captain` + `substitute` — no analytics change.
-    from src.web_streamlit.player_card import render_player_card, render_player_compare
-    st.subheader("⚙ Players & lineup")
-    # ADR-133: name the tap only when it's actually live. The fallback is invisible by design, so this caption
-    # is both the user-facing hint that the gesture exists and the signal that the component loaded.
-    from src.web_streamlit.tap import available as _tap_available
-    st.caption(("**Tap a shirt** on the pitch, or pick below → " if _tap_available() else "Pick a player → ")
-               + "view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
-               + ("**Tap the pitch to close it.** " if _tap_available() else "")
-               + "Works on phone too (the pitch hover is desktop-only).")
-    owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
-    picked = owned_by_label.get(st.selectbox("Select a player", ["—", *owned_by_label], key="pa_pick",
-                                             help="Or hover a shirt on the pitch (desktop only)."))
-    if picked:
-        short = picked["team"]
-        # ADR-139 — the CARD FIRST. It used to render below three Boot Battle widgets, so a tap put the teal
-        # outline on the shirt and the card a scroll away, behind controls for a different question. Tap → card
-        # only feels like one action if the card is where the eye lands. This is the half of ADR-139 that
-        # *delivers* the request; removing the hover popover alone would have taken something away without
-        # putting anything in its place.
-        # Read *last* run's Boot Battle pick to decide whether the card or the comparison goes here. It has
-        # to be read before the widget is created, because the card renders above it — that is the whole point
-        # of the reorder. Streamlit has already applied any interaction to session_state by now, so this is the
-        # current choice, not a stale one.
-        _comparing = st.session_state.get("pa_boot", "—") != "—"
-        if not _comparing:
-            render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
-                               fixtures=fixtures_by_id.get(picked["id"]),   # ADR-109 per-GW row (no Total col)
-                               projected_xp=xp_by_id.get(picked["id"]))
+        # ⚙ Player actions (ADR-108, US-365/366) — one selection drives the **full card** + **Make captain** +
+        # **Substitute**, together, in one panel on the golden page (consolidates the old card picker + Substitute
+        # expander + the stranded Captain-tab set control). Native selectbox+button → it works on phone/tablet, and
+        # gives mobile the full card the desktop-only hover popover never could. Reuses the card renderer +
+        # `set_captain` + `substitute` — no analytics change.
+        from src.web_streamlit.player_card import render_player_card, render_player_compare
+        st.subheader("⚙ Players & lineup")
+        # ADR-133: name the tap only when it's actually live. The fallback is invisible by design, so this caption
+        # is both the user-facing hint that the gesture exists and the signal that the component loaded.
+        from src.web_streamlit.tap import available as _tap_available
+        st.caption(("**Tap a shirt** on the pitch, or pick below → " if _tap_available() else "Pick a player → ")
+                   + "view their card, ⚔️ Boot Battle (compare), make them captain, or substitute. "
+                   + ("**Tap the pitch to close it.** " if _tap_available() else "")
+                   + "Works on phone too (the pitch hover is desktop-only).")
+        owned_by_label = {f"{p['web_name']} · {p['team']}": p for p in owned}
+        picked = owned_by_label.get(st.selectbox("Select a player", ["—", *owned_by_label], key="pa_pick",
+                                                 help="Or hover a shirt on the pitch (desktop only)."))
+        if picked:
+            short = picked["team"]
+            # ADR-139 — the CARD FIRST. It used to render below three Boot Battle widgets, so a tap put the teal
+            # outline on the shirt and the card a scroll away, behind controls for a different question. Tap → card
+            # only feels like one action if the card is where the eye lands. This is the half of ADR-139 that
+            # *delivers* the request; removing the hover popover alone would have taken something away without
+            # putting anything in its place.
+            # Read *last* run's Boot Battle pick to decide whether the card or the comparison goes here. It has
+            # to be read before the widget is created, because the card renders above it — that is the whole point
+            # of the reorder. Streamlit has already applied any interaction to session_state by now, so this is the
+            # current choice, not a stale one.
+            _comparing = st.session_state.get("pa_boot", "—") != "—"
+            if not _comparing:
+                render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
+                                   fixtures=fixtures_by_id.get(picked["id"]),   # ADR-109 per-GW row (no Total col)
+                                   projected_xp=xp_by_id.get(picked["id"]))
 
-        # ⚔️ Boot Battle (US-377/380, ADR-110/111) — compare the selected player with another **same-position** player,
-        # side by side (winner-tinted). A **pool** selector (US-380): My team (owned) · All players · By club. Reuses
-        # `render_player_compare`; the target's per-GW fixtures build on demand (`xp_by_id`/`card_bg_by_id` cover all).
-        bb_pool = st.segmented_control("⚔️ Boot Battle — pool", ["My team", "All", "By club"],
-                                       default="My team", key="pa_boot_pool") or "My team"
-        if bb_pool == "By club":
-            club_labels = {team_names.get(t, t): t
-                           for t in sorted({q["team"] for q in players if q["position"] == picked["position"]})}
-            club = club_labels.get(st.selectbox("Club", list(club_labels), key="pa_boot_club"))
-            base = [q for q in players if q["team"] == club]
-        elif bb_pool == "All":
-            base = players
-        else:                                                    # My team (same-position squad players)
-            base = owned
-        cands = sorted((q for q in base if q["position"] == picked["position"] and q["id"] != picked["id"]),
-                       key=lambda q: q["web_name"] or "")
-        bb_by_label = {f"{q['web_name']} · {q['team']}": q for q in cands}
-        bb = bb_by_label.get(st.selectbox("⚔️ Boot Battle — compare with…", ["—", *bb_by_label], key="pa_boot",
-                                          help="Type to search a same-position player to compare side by side."))
-        if bb:
-            cshort = bb["team"]
-            render_player_compare(
-                picked, bb, a_team=team_names.get(short, short), b_team=team_names.get(cshort, cshort),
-                a_photo=photos.get(picked["id"]), b_photo=photos.get(bb["id"]),
-                a_fixtures=_pergw_fixtures(picked), b_fixtures=_pergw_fixtures(bb),
-                a_xp=xp_by_id.get(picked["id"]), b_xp=xp_by_id.get(bb["id"]))
-        elif _comparing:
-            # The stored comparison no longer resolves — usually because the selection moved to another
-            # position, so the remembered opponent isn't in this pool. Without this the card was skipped above
-            # *and* no comparison renders, and the panel silently shows nothing about the player you tapped.
-            render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
-                               fixtures=fixtures_by_id.get(picked["id"]),
-                               projected_xp=xp_by_id.get(picked["id"]))
+            # ⚔️ Boot Battle (US-377/380, ADR-110/111) — compare the selected player with another
+            # **same-position** player, side by side (winner-tinted). A **pool** selector (US-380): My team
+            # (owned) · All players · By club. Reuses `render_player_compare`; the target's per-GW fixtures
+            # build on demand (`xp_by_id` / `card_bg_by_id` cover all).
+            bb_pool = st.segmented_control("⚔️ Boot Battle — pool", ["My team", "All", "By club"],
+                                           default="My team", key="pa_boot_pool") or "My team"
+            if bb_pool == "By club":
+                club_labels = {team_names.get(t, t): t
+                               for t in sorted({q["team"] for q in players if q["position"] == picked["position"]})}
+                club = club_labels.get(st.selectbox("Club", list(club_labels), key="pa_boot_club"))
+                base = [q for q in players if q["team"] == club]
+            elif bb_pool == "All":
+                base = players
+            else:                                                    # My team (same-position squad players)
+                base = owned
+            cands = sorted((q for q in base if q["position"] == picked["position"] and q["id"] != picked["id"]),
+                           key=lambda q: q["web_name"] or "")
+            bb_by_label = {f"{q['web_name']} · {q['team']}": q for q in cands}
+            bb = bb_by_label.get(st.selectbox("⚔️ Boot Battle — compare with…", ["—", *bb_by_label], key="pa_boot",
+                                              help="Type to search a same-position player to compare side by side."))
+            if bb:
+                cshort = bb["team"]
+                render_player_compare(
+                    picked, bb, a_team=team_names.get(short, short), b_team=team_names.get(cshort, cshort),
+                    a_photo=photos.get(picked["id"]), b_photo=photos.get(bb["id"]),
+                    a_fixtures=_pergw_fixtures(picked), b_fixtures=_pergw_fixtures(bb),
+                    a_xp=xp_by_id.get(picked["id"]), b_xp=xp_by_id.get(bb["id"]))
+            elif _comparing:
+                # The stored comparison no longer resolves — usually because the selection moved to another
+                # position, so the remembered opponent isn't in this pool. Without this the card was skipped above
+                # *and* no comparison renders, and the panel silently shows nothing about the player you tapped.
+                render_player_card(picked, team_name=team_names.get(short, short), photo_url=photos.get(picked["id"]),
+                                   fixtures=fixtures_by_id.get(picked["id"]),
+                                   projected_xp=xp_by_id.get(picked["id"]))
 
-        # 👑 Make captain — one click; ×2 next GW. (Briefly moved onto the shirt by ADR-135 and moved back:
-        # a button here costs the same rerun without a floating menu or a hover collision.)
-        if picked["id"] == captain_id:
-            st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")
-        elif st.button(f"👑 Make {picked['web_name']} captain", key="pa_captain"):
-            set_active_squad(set_captain(squad, picked["id"]))
-            st.success(f"Captain set: **{picked['web_name']} (C)** — they score ×2 next gameweek.")
-            st.rerun()
-
-        # 🔁 Substitute (US-366, ADR-108) — the selected player is one side of the swap; pick the other. Only
-        # legal swaps are offered (substitute() returns no issues: GK↔GK, a swap that keeps a legal formation).
-        # A benched pick brings them ON (choose the starter to drop); a starter takes them OFF (choose the bench
-        # player). Reuses substitute(); folds in the old standalone expander + the _sub_prefill_for seed. The
-        # static pitch card still can't hold a working button (S139), so this selection-driven panel is the path.
-        pid = picked["id"]
-
-        def _do_sub(off_id, on_id):
-            new, issues = substitute(squad, off_id, on_id, by_id)
-            if issues:      # belt-and-braces: the option lists already exclude illegal swaps
-                st.error("Can't substitute — that leaves an illegal XI: " + "; ".join(issues))
-            else:
-                set_active_squad(new)
-                st.success(f"Subbed **{by_id[off_id]['web_name']} → {by_id[on_id]['web_name']}** — "
-                           "the bench updates too.")
+            # 👑 Make captain — one click; ×2 next GW. (Briefly moved onto the shirt by ADR-135 and moved back:
+            # a button here costs the same rerun without a floating menu or a hover collision.)
+            if picked["id"] == captain_id:
+                st.caption(f"👑 **{picked['web_name']}** is already your captain (×2 next gameweek).")
+            elif st.button(f"👑 Make {picked['web_name']} captain", key="pa_captain"):
+                set_active_squad(set_captain(squad, picked["id"]))
+                st.success(f"Captain set: **{picked['web_name']} (C)** — they score ×2 next gameweek.")
                 st.rerun()
 
-        # The picker is unconditional again. ADR-135 hid it at rest (the shirt's 🔁 armed the flow); that menu is
-        # reverted, so this is the only path to a substitution and must always be on the page.
-        if pid in bench_ids:                                   # a bench player → bring them ON for a starter
-            legal = {f"{p['position']} {p['web_name']}": p["id"]
-                     for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))
-                     if not substitute(squad, p["id"], pid, by_id)[1]}
-            if legal:
-                off = st.selectbox(f"🔁 Bring {picked['web_name']} on — take off", list(legal), key="pa_sub",
-                                   help="The starter to move to the bench — only legal swaps are shown.")
-                if st.button("Substitute →", key="pa_do_sub"):
-                    _do_sub(legal[off], pid)
-            else:
-                st.caption(f"No legal swap brings **{picked['web_name']}** on (no starter keeps a legal XI).")
-        elif bench:                                              # a starter → take them OFF for a bench player
-            legal = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
-                     for p in bench if not substitute(squad, pid, p["id"], by_id)[1]}
-            if legal:
-                on = st.selectbox(f"🔁 Take {picked['web_name']} off — bring on", list(legal), key="pa_sub",
-                                  help="The bench player to bring into your XI — only legal swaps are shown.")
-                if st.button("Substitute →", key="pa_do_sub"):
-                    _do_sub(pid, legal[on])
-            else:
-                why = ("the bench GK only covers your keeper" if picked["position"] == "GK"
-                       else "no bench player keeps a legal formation")
-                st.caption(f"No legal swap for **{picked['web_name']}** — {why}.")
+            # 🔁 Substitute (US-366, ADR-108) — the selected player is one side of the swap; pick the other. Only
+            # legal swaps are offered (substitute() returns no issues: GK↔GK, a swap that keeps a legal formation).
+            # A benched pick brings them ON (choose the starter to drop); a starter takes them OFF (choose the bench
+            # player). Reuses substitute(); folds in the old standalone expander + the _sub_prefill_for seed. The
+            # static pitch card still can't hold a working button (S139), so this selection-driven panel is the path.
+            pid = picked["id"]
 
-        if not bb:      # 🧬 Player DNA (ADR-118, US-417) — the same section as Players ▸ Card, owned-aware
-            # (Hold/Sell), below the actions. Skipped while Boot-Battle comparing. Reuses the panel's xp_by_id +
-            # gw_history; display-only, no decision_xp change.
-            from src.analytics import last_season_name, last_season_rows
-            from src.web_streamlit.player_dna_view import render_player_dna
-            # ADR-126: the DNA peer pool needs 450 mins, so hand it last season to rank against until ~GW5.
-            render_player_dna(picked, players, xp_by_id, gw_history=gw_history, owned=True,
-                              last_rows=last_season_rows(players, history),
-                              season_name=last_season_name(history))
+            def _do_sub(off_id, on_id):
+                new, issues = substitute(squad, off_id, on_id, by_id)
+                if issues:      # belt-and-braces: the option lists already exclude illegal swaps
+                    st.error("Can't substitute — that leaves an illegal XI: " + "; ".join(issues))
+                else:
+                    set_active_squad(new)
+                    st.success(f"Subbed **{by_id[off_id]['web_name']} → {by_id[on_id]['web_name']}** — "
+                               "the bench updates too.")
+                    st.rerun()
+
+            # The picker is unconditional again. ADR-135 hid it at rest (the shirt's 🔁 armed the flow); that menu is
+            # reverted, so this is the only path to a substitution and must always be on the page.
+            if pid in bench_ids:                                   # a bench player → bring them ON for a starter
+                legal = {f"{p['position']} {p['web_name']}": p["id"]
+                         for p in sorted(xi, key=lambda x: _ORDER.get(x["position"], 9))
+                         if not substitute(squad, p["id"], pid, by_id)[1]}
+                if legal:
+                    off = st.selectbox(f"🔁 Bring {picked['web_name']} on — take off", list(legal), key="pa_sub",
+                                       help="The starter to move to the bench — only legal swaps are shown.")
+                    if st.button("Substitute →", key="pa_do_sub"):
+                        _do_sub(legal[off], pid)
+                else:
+                    st.caption(f"No legal swap brings **{picked['web_name']}** on (no starter keeps a legal XI).")
+            elif bench:                                              # a starter → take them OFF for a bench player
+                legal = {f"{p['position']} {p['web_name']} · {round(xp_by_id.get(p['id'], 0), 1)} xP": p["id"]
+                         for p in bench if not substitute(squad, pid, p["id"], by_id)[1]}
+                if legal:
+                    on = st.selectbox(f"🔁 Take {picked['web_name']} off — bring on", list(legal), key="pa_sub",
+                                      help="The bench player to bring into your XI — only legal swaps are shown.")
+                    if st.button("Substitute →", key="pa_do_sub"):
+                        _do_sub(pid, legal[on])
+                else:
+                    why = ("the bench GK only covers your keeper" if picked["position"] == "GK"
+                           else "no bench player keeps a legal formation")
+                    st.caption(f"No legal swap for **{picked['web_name']}** — {why}.")
+
+            if not bb:      # 🧬 Player DNA (ADR-118, US-417) — the same section as Players ▸ Card, owned-aware
+                # (Hold/Sell), below the actions. Skipped while Boot-Battle comparing. Reuses the panel's xp_by_id +
+                # gw_history; display-only, no decision_xp change.
+                from src.analytics import last_season_name, last_season_rows
+                from src.web_streamlit.player_dna_view import render_player_dna
+                # ADR-126: the DNA peer pool needs 450 mins, so hand it last season to rank against until ~GW5.
+                render_player_dna(picked, players, xp_by_id, gw_history=gw_history, owned=True,
+                                  last_rows=last_season_rows(players, history),
+                                  season_name=last_season_name(history))
+
+    _player_panel()
 
     if bench_ordered:
         line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"

@@ -3364,3 +3364,22 @@ def test_the_dna_page_survives_having_no_team_dna_to_draw(monkeypatch):
     monkeypatch.setattr(analytics_pkg, "team_dna_all", lambda *a, **k: {})
     at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
     assert not at.exception
+
+
+def test_the_player_panel_is_a_fragment_but_mutations_still_rerun_the_whole_app():
+    """ADR-165 — the fragment's value is that a *selection* stops re-running the page; its danger is that a
+    *mutation* might stop re-running it too.
+
+    Making someone captain changes the xP strip **above** this fragment, and a fragment-scoped rerun cannot
+    repaint anything outside itself. `st.rerun()` defaults to `scope="app"`, so the existing calls are already
+    right — this pins that nobody "optimises" them to `scope="fragment"` later and quietly leaves the strip
+    showing the old captain's numbers.
+    """
+    src = (_ROOT / "src" / "web_streamlit" / "views" / "squads.py").read_text()
+    assert "@st.fragment" in src
+    assert 'scope="fragment"' not in src, (
+        "a fragment-scoped rerun cannot repaint the xP strip above the fragment — captain and substitute "
+        "must rerun the whole app")
+    # the mutating buttons live inside the fragment, so they are the calls this is protecting
+    frag = src.split("@st.fragment")[1]
+    assert "pa_captain" in frag and "pa_do_sub" in frag
