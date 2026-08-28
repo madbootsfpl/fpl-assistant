@@ -54,6 +54,37 @@ terms we already have, this adds one we are missing.
 our derived λ against the market's rather than assuming ours is good enough — which is the only honest way to
 find out, and the habit that has killed three features and saved several others this month.
 
+## 🅾️ Cache `decision_xp` to fix the tap lag — MEASURED AND DECLINED (2026-08-28)
+
+**The proposal was mine**, after the owner reported My Squad felt *"a little laggy"*: `views/squads.py` calls
+`decision_xp` in seven places with no `st.cache_data` anywhere on the path, so memoising it looked obviously
+right. **Measured before building, and it is not.**
+
+```
+decision_xp(620 players, horizon 5)   :    7 ms
+three calls (one My Squad render)     :   21 ms
+Storage loads (players/fixtures/hist) :   20 ms
+── a full page RERUN, which is what a tap costs ──
+Python, server-side                   :   56 ms
+the page module on a warm container   :   85 ms
+pitch HTML sent to the component      : 14 KB, 0 inline images
+── first load, cold ──
+cold start (dominated by imports: pandas 349 ms + streamlit 158 ms) : 4,228 ms
+```
+
+**So the cache would save ~15 ms of a ~56 ms server-side render**, inside an interaction whose real cost is a
+websocket round-trip to Streamlit Cloud and a custom component re-mounting — typically 200-500 ms on a phone,
+and none of it ours. **It would also carry real risk**: the xP map must track the current squad and horizon, so
+a stale entry shows *wrong numbers*, which is far worse than 15 ms.
+
+**The actual lever, if the lag matters: `st.fragment`.** Streamlit reruns the **whole page script** on every
+interaction; a fragment reruns only its own block. Wrapping the pitch + player panel would cut a tap from a
+full-page rerun to a partial one. That is an architectural change, needs its own gate, and should be measured
+on Cloud rather than locally — the local number (56 ms) is not what the owner is feeling.
+
+**Also worth knowing:** the 4.2 s cold start is ~0.5 s of imports and Streamlit Cloud container wake-up. No
+cache touches it.
+
 ## ✅ GW1 — done (2026-08-21 played; the flip ran 2026-08-24)
 
 The Data-Hardening flip is **complete**: `history --backfill` (609 players, now **27 per-GW columns** after
