@@ -631,3 +631,51 @@ def render_value(rows, sel, badges, upcoming, history, gw_history):
                        "vs price peers": st.column_config.NumberColumn(
                            "vs price peers", format="%+.1f",
                            help="How far above the median player at the same price.")})
+
+
+# ---- Scout: five boards in one place, led by what they agree on (ADR-167) --------------------------
+
+_SCOUT_BOARDS = ("Set pieces", "Over/under", "DefCon", "Clean sheets", "xG · xA")
+
+
+def render_scout(players, sel, badges, last_rows=None, season_name=None):
+    """The five stat boards behind one selector, under a **worth a look** shortlist (ADR-167).
+
+    Owner: *"I see a similar table in each tab, I am getting weary as I tab through… could we call out a
+    recommendation rather than just showing multiple tables of fact which none will use."*
+
+    The tables are unchanged — each one is still exactly the board it was, with its own columns and column
+    help. What changes is that they stop being five destinations, and that **something reads them for you
+    first**: the players two or more boards agree on, with the evidence attached.
+
+    The shortlist deliberately says *worth a look*, never *worth points*. Set-piece and DefCon value are not
+    in `decision_xp` yet (both weights are 0 until the GW4-6 calibration), so ranking on them would assert a
+    confidence the engine has withheld — and put a second opinion beside the one number the app decides with.
+    """
+    from src.analytics.scout import scout_note, worth_a_look
+    from src.web_streamlit.components import render_banner
+
+    st.markdown("##### 👀 Worth a look")
+    found = worth_a_look(players, rows=last_rows or players, season=season_name)
+    st.caption(scout_note(found, season=season_name if last_rows else None))
+    for r in found:
+        own = f" · {r['selected_by']}% owned" if r.get("selected_by") is not None else ""
+        price = f" · £{r['price']:.1f}m" if r.get("price") is not None else ""
+        render_banner(f"<b>{r['web_name']}</b> ({r['team']} {r['position']}{price}{own}) — "
+                      + " · ".join(r["reasons"]), kind="signal", icon="👀")
+
+    st.divider()
+    # The boards themselves: one selector instead of five tabs. Same renderers, same columns, same help —
+    # merging the *navigation* was the ask, not merging the numbers, which measure different things.
+    board = st.segmented_control("Board", list(_SCOUT_BOARDS), default=_SCOUT_BOARDS[0], key="scout_board",
+                                 help="The underlying stat behind the shortlist above.") or _SCOUT_BOARDS[0]
+    if board == "Set pieces":
+        render_set_pieces(players, sel, badges)
+    elif board == "Over/under":
+        render_over_under(players, sel, badges, last_rows, season_name)
+    elif board == "DefCon":
+        render_defcon(players, sel, badges, last_rows, season_name)
+    elif board == "Clean sheets":
+        render_cleansheet(players, sel, badges, last_rows, season_name)
+    else:
+        render_xg(players, sel, badges)

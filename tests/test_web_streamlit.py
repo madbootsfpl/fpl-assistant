@@ -724,13 +724,23 @@ def test_player_stats_filter_narrows_a_board():
         assert set(df.value["Team"].tolist()) <= {"ARS"}
 
 
-def test_set_pieces_board_renders_the_order_columns():
-    # ADR-081 / US-250: the "Set pieces" view shows Pen/Corners/FK order + Own%/Val/£m through the filter
+def _scout_board(board):
+    """A stat board, now one level in: ADR-167 merged five same-shaped leaderboards into **Scout**, with a
+    board selector, so the page could stop being ten views and start saying what the boards agree on."""
     at = _run(_PAGES / "2_Players.py")
     if not at.segmented_control:
-        return
-    at.segmented_control[0].set_value("Set pieces").run()
+        return None
+    next(c for c in at.segmented_control if c.label == "View").set_value("Scout").run()
+    next(c for c in at.segmented_control if c.label == "Board").set_value(board).run()
     assert not at.exception
+    return at
+
+
+def test_set_pieces_board_renders_the_order_columns():
+    # ADR-081 / US-250: the "Set pieces" view shows Pen/Corners/FK order + Own%/Val/£m through the filter
+    at = _scout_board("Set pieces")
+    if at is None:
+        return
     if at.dataframe:                                          # populated DB → a board with the order columns
         cols = at.dataframe[0].value.columns.tolist()
         assert {"Pen order", "Corner order", "FK order", "Own%", "Val/£m"} <= set(cols)   # US-376: read as order
@@ -847,11 +857,9 @@ def test_pool_number_columns_stay_numeric_formatting_is_display_only():
 
 def test_clean_sheets_board_shows_a_quality_rating_and_legend():
     # ADR-071: xGC/90 board gains a relative Rating column (🟢…🔴) + a "vs the players shown" legend
-    at = _run(_PAGES / "2_Players.py")
-    if not at.segmented_control:
+    at = _scout_board("Clean sheets")
+    if at is None:
         return
-    at.segmented_control[0].set_value("Clean sheets").run()
-    assert not at.exception
     assert any("relative to the players shown" in c.value for c in at.caption)   # the legend
     if at.dataframe:
         df = at.dataframe[0].value
@@ -901,11 +909,9 @@ def test_clean_sheet_fallback_warns_that_xgc_crosses_a_transfer():
     """xGC is a *team* stat and FPL's history records what a player did without recording who for — so a summer
     signing brings his old side's defence under his new side's badge. The other two boards are player-level and
     need no such warning."""
-    at = _run(_PAGES / "2_Players.py")
-    if not at.segmented_control:
+    at = _scout_board("Clean sheets")
+    if at is None:
         return
-    at.segmented_control[0].set_value("Clean sheets").run()
-    assert not at.exception
     blob = " ".join(str(i.value) for i in at.info)
     if "Showing" in blob:
         assert "team" in blob and "old club" in blob
@@ -929,11 +935,9 @@ def test_stat_boards_show_the_availability_fit_column():
 def test_xg_board_rates_only_meaningful_players():
     # ADR-071/073: the xG board rates xGI, but only for outfield players with minutes — the column is
     # named "xGI rating" and sits before xGC; goalkeepers (xGI ≈ noise) are left unrated (—).
-    at = _run(_PAGES / "2_Players.py")
-    if not at.segmented_control:
+    at = _scout_board("xG · xA")
+    if at is None:
         return
-    at.segmented_control[0].set_value("xG · xA").run()
-    assert not at.exception
     if not at.dataframe:
         return
     cols = list(at.dataframe[0].value.columns)
@@ -3422,3 +3426,51 @@ def test_the_player_panel_is_a_fragment_but_mutations_still_rerun_the_whole_app(
     # the mutating buttons live inside the fragment, so they are the calls this is protecting
     frag = src.split("@st.fragment")[1]
     assert "pa_captain" in frag and "pa_do_sub" in frag
+
+
+def test_the_scout_view_leads_with_what_the_boards_agree_on():
+    """ADR-167 — the owner: *"I see a similar table in each tab… could we call out a recommendation rather
+    than just showing multiple tables of fact which none will use."*
+
+    Five same-shaped leaderboards became one view with a board selector, under a shortlist of the players two
+    or more of them agree on. This pins both halves: the shortlist leads, and every board is still reachable.
+    """
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    next(c for c in at.segmented_control if c.label == "View").set_value("Scout").run()
+    assert not at.exception
+    assert any("Worth a look" in m.value for m in at.markdown)
+    board = next(c for c in at.segmented_control if c.label == "Board")
+    assert list(board.options) == ["Set pieces", "Over/under", "DefCon", "Clean sheets", "xG · xA"]
+
+
+def test_the_scout_shortlist_never_promises_points():
+    """The design constraint, as a test. SET_PIECE_WEIGHT and DEFCON_MAGNIFIER_WEIGHT are both 0, so ranking
+    players on those signals would assert a confidence `decision_xp` has explicitly withheld — a second
+    opinion beside the one number the app decides with (ADR-041)."""
+    from src import config
+    assert config.SET_PIECE_WEIGHT == 0.0 and config.DEFCON_MAGNIFIER_WEIGHT == 0.0, \
+        "if these are live, the scout copy must change — it currently says this value is NOT in xP"
+
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    next(c for c in at.segmented_control if c.label == "View").set_value("Scout").run()
+    caps = " ".join(c.value for c in at.caption).lower()
+    assert "not a points projection" in caps
+    for promise in ("you should buy", "transfer in", "best captain"):
+        assert promise not in caps
+
+
+def test_players_is_back_under_its_own_ceiling():
+    """The page carried a note that ten views was the ceiling and the next one needed a **merge** first.
+    ADR-167 is that merge — and the room it frees is what unblocks moving Trending here (US-438)."""
+    at = _run(_PAGES / "2_Players.py")
+    if not at.segmented_control:
+        return
+    views = next(c for c in at.segmented_control if c.label == "View").options
+    assert len(views) == 6, f"ten views became six; got {list(views)}"
+    assert "Scout" in views
+    for merged in ("Set pieces", "DefCon", "Clean sheets", "Over/under", "xG · xA"):
+        assert merged not in views, f"{merged} is a board inside Scout now, not a top-level view"

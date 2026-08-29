@@ -55,12 +55,10 @@ else:
     _last_rows = last_season_rows(rows, history)
     _last_name = last_season_name(history)
     view = st.segmented_control(
-        # ADR-134: the Radar moved here from the fixtures tab, taking the list to nine. Labels shortened in the
-        # same change so nine still fit the three rows that eight occupied — the move is what made it necessary.
-        # ADR-138 adds "Value" — the tenth. ⚠️ TEN IS THE CEILING: ADR-134 already noted nine labels stretch
-        # three rows. The next view this page gains needs a **merge** first, not another label.
-        "View", ["Pool", "Value", "Card", "Radar", "Set pieces", "Over/under", "DefCon", "Clean sheets",
-                 "xG · xA", "History"],
+        # ADR-167 — the merge the ceiling note demanded. Five stat boards of the same shape (Set pieces ·
+        # Over/under · DefCon · Clean sheets · xG·xA) became one **Scout** view with a board selector, led by
+        # what those boards agree on. Ten views → six, which is room the page did not have.
+        "View", ["Pool", "Value", "Card", "Radar", "Scout", "History"],
         default="Pool", help="The player pool, 📈 **Value** (price vs expected points, with the value "
                              "frontier), a rich **player card**, the 🎯 **Radar** (best players from the "
                              "easiest-run teams), the stat boards, and a player's season history.")
@@ -69,18 +67,10 @@ else:
         views.render_value(rows, sel, badges, upcoming, history, gw_history)
     elif view == "Card":                                   # a rich, position-adaptive player card (US-343)
         views.render_card(rows, sel, teams, photos, badges)
-    elif view == "Set pieces":
-        views.render_set_pieces(rows, sel, badges)
     elif view == "Radar":
         views.render_radar(rows, sel, badges, upcoming, history, gw_history)
-    elif view == "Over/under":
-        views.render_over_under(rows, sel, badges, _last_rows, _last_name)
-    elif view == "DefCon":
-        views.render_defcon(rows, sel, badges, _last_rows, _last_name)
-    elif view == "Clean sheets":
-        views.render_cleansheet(rows, sel, badges, _last_rows, _last_name)
-    elif view == "xG · xA":
-        views.render_xg(rows, sel, badges)
+    elif view == "Scout":                                   # ADR-167: the five stat boards, plus what they agree on
+        views.render_scout(rows, sel, badges, _last_rows, _last_name)
     elif view == "History":                                 # a per-player season history (US-298)
         views.render_history(rows, sel, photos, badges)
     else:                                                   # "Pool" (default; also if the control resets)
