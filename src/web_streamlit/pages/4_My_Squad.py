@@ -42,10 +42,13 @@ if active_squad() is None:   # US-360: no team built/loaded yet → point new us
 # * **Lab last** (US-445): a few times a season — season start, wildcard, free hit — so it belongs at the end
 #   of the squad's own workflow, not at the top of the sidebar where it sat.
 view = st.segmented_control(
-    "Tool", ["My Squad", "AI Tips", "Transfer", "Captain", "DNA", "Lab"], default="My Squad",
+    "Tool", ["My Squad", "AI Tips", "Transfer", "Captain", "DNA", "Leagues", "Lab"], default="My Squad",
+    key="ms_tool",     # keyed: without one Streamlit identifies it positionally, so a tab that adds widgets
+                       # (Leagues adds a dozen) can shift its identity and silently reset the selection.
     help="**AI Tips** = your week in one answer (captain · lineup · a transfer · flags) plus when to play each "
          "chip; **My Squad** the pitch and lineup; **Transfer** the best swaps; **Captain** who to "
-         "(vice-)captain; **DNA** your squad's fingerprint and health; **Lab** build a new squad from scratch.")
+         "(vice-)captain; **DNA** your squad's fingerprint and health; **Leagues** how your picks compare with "
+         "your rivals'; **Lab** build a new squad from scratch.")
 
 # The prediction horizon flows through every sub-tab (ADR-077). A box select (US-315) over a handful of
 # useful windows — short for mid-season, up to 10 for a wildcard / start of season. Default 5 = today's
@@ -110,6 +113,12 @@ else:
         team_names = {t["short_name"]: t["name"] for t in teams}
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
                             team_names=team_names, horizon=horizon)
+    elif view == "Leagues":
+        # US-437 (ADR-166) — the owner: *"Leagues is tightly associated with your squad."* It is: every number
+        # there measures YOUR picks against other people's, which is this page's subject, not a neighbouring
+        # one. It loads its own data (a different API), so it takes nothing from the shared load above.
+        from src.web_streamlit.views.leagues import render_leagues
+        render_leagues()
     elif view == "Lab":
         # The Lab keeps the header it had as a page (US-360/ADR-105). A tab called "Lab" has to say what it
         # is: folding a page in must not cost it its identity, only its sidebar slot.

@@ -493,7 +493,10 @@ def _squads_view(view):
     """A My Squad sub-tab. ADR-105 split Build onto its own Squad Lab page; ADR-166 folded it back as the
     **Lab** tab — a builder you use a few times a season did not earn the top slot in the sidebar."""
     at = _run(_PAGES / "4_My_Squad.py")
-    at.segmented_control[0].set_value("Lab" if view == "Build" else view).run()
+    # By label, not by index: My Squad now carries several segmented controls (Tool · Gameweeks ahead · and
+    # whatever the selected tab adds), so `[0]` was an assumption about layout rather than about the switch.
+    next(c for c in at.segmented_control if c.label == "Tool").set_value(
+        "Lab" if view == "Build" else view).run()
     assert not at.exception, f"Squads[{view}] raised: {at.exception}"
     return at
 
@@ -692,7 +695,7 @@ def test_sidebar_pages():
     # filename *without* its numeric prefix, so renumbering moves nav order without breaking any link.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
-                              "5_Leagues.py", "6_Ask.py", "7_Signals.py", "8_Trending.py", "9_Help.py",
+                              "6_Ask.py", "7_Signals.py", "8_Trending.py", "9_Help.py",
                               "11_Feedback.py", "12_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
@@ -2935,6 +2938,9 @@ def test_the_leagues_page_shows_a_table_but_never_fetches_squads_on_load(monkeyp
     picks_calls = []
 
     class FakeClient:
+        def get_entry(self, entry_id):                     # ADR-166: a remembered id makes this reachable
+            return {"name": "Someone", "leagues": {"classic": []}}
+
         def get_league_standings(self, league_id, page=1):
             return standings
 
@@ -2943,8 +2949,10 @@ def test_the_leagues_page_shows_a_table_but_never_fetches_squads_on_load(monkeyp
             return {"picks": [], "active_chip": None}
 
     monkeypatch.setattr(client_mod, "FplClient", FakeClient)
-    at = _run(_PAGES / "5_Leagues.py")
-    at.segmented_control[0].set_value("Elite").run()       # a scope that needs no id typed
+    at = _squads_view("Leagues")
+    # ADR-166 — Leagues is a My Squad tab now, so `segmented_control[0]` is the **Tool** switch. Pick the
+    # scope by its label instead; an index into a page's widgets is a positional assumption waiting to break.
+    next(c for c in at.segmented_control if c.label == "Find a league").set_value("Elite").run()
     if at.exception:
         raise AssertionError(at.exception)
 
@@ -2971,6 +2979,9 @@ def test_the_leagues_page_states_its_cap_rather_than_truncating_silently(monkeyp
              "event_total": 50, "total": 100} for i in range(1, 61)]      # 60 rows, more than the cap
 
     class FakeClient:
+        def get_entry(self, entry_id):                     # ADR-166: a remembered id makes this reachable
+            return {"name": "Someone", "leagues": {"classic": []}}
+
         def get_league_standings(self, league_id, page=1):
             return {"league": {"name": "Big League"}, "standings": {"has_next": True, "results": rows}}
 
@@ -2978,8 +2989,13 @@ def test_the_leagues_page_states_its_cap_rather_than_truncating_silently(monkeyp
             raise AssertionError("must not be called on load")
 
     monkeypatch.setattr(client_mod, "FplClient", FakeClient)
-    at = _run(_PAGES / "5_Leagues.py")
-    at.segmented_control[0].set_value("Elite").run()
+    at = _squads_view("Leagues")
+    # A league id **unique to this test**, entered directly rather than via the Elite preset. Both tests used
+    # Elite (314), and `_standings` is cached on the league id alone — so whichever ran second silently read
+    # the first one's fake league. `st.cache_data.clear()` cannot fix it: called from a test body it runs
+    # outside AppTest's script context and never touches the cache the page uses.
+    next(c for c in at.segmented_control if c.label == "Find a league").set_value("By league id").run()
+    next(t for t in at.text_input if "league id" in (t.label or "").lower()).set_value("555001").run()
     if at.exception:
         raise AssertionError(at.exception)
 
@@ -3016,10 +3032,16 @@ def test_the_leagues_page_finds_your_leagues_from_a_manager_id(monkeypatch):
             raise AssertionError("must not be called on load")
 
     monkeypatch.setattr(client_mod, "FplClient", FakeClient)
-    at = _run(_PAGES / "5_Leagues.py")
-    assert at.segmented_control[0].value == "My leagues", "the id people actually have is the default path"
+    at = _squads_view("Leagues")
+    assert (next(c for c in at.segmented_control if c.label == "Find a league").value == "My leagues"), \
+        "the id people actually have is the default path"
 
-    at.text_input[0].set_value("1234567").run()
+    # ADR-166 — on a tab, `text_input[0]` is My Squad's own field, not this one. Address it by label:
+    # positional indexing into a page's widgets is an assumption that breaks the moment the page grows.
+    # A manager id **unique to this test**. `st.cache_data.clear()` above is not enough: called from the test
+    # body it runs outside AppTest's script context, so it does not reach the cache the page actually uses —
+    # and `_entry` is keyed on the id alone, so a shared id silently returns the previous test's fake league.
+    next(t for t in at.text_input if t.label == "Your FPL manager id").set_value("7654321").run()
     if at.exception:
         raise AssertionError(at.exception)
 
@@ -3241,7 +3263,7 @@ def test_the_league_scan_offers_the_tap_when_the_component_is_live(monkeypatch):
 def test_the_leagues_page_still_renders_with_the_head_to_head_section(monkeypatch):
     """ADR-161 — the H2H sits behind the same N-calls button as the rest of the insight layer, so a no-network
     render must reach the manager-id prompt and stop, exactly as before."""
-    at = _run(_PAGES / "5_Leagues.py")
+    at = _squads_view("Leagues")
     assert not at.exception
 
 
@@ -3252,7 +3274,7 @@ def test_the_leagues_load_button_latches_so_a_rival_change_does_not_collapse_the
     the page, found False, and hid everything. The latch is keyed on the **league id**, not a bare flag,
     because loading costs N network calls: switching leagues must ask again rather than spend them silently.
     """
-    src = (_PAGES / "5_Leagues.py").read_text()
+    src = (_ROOT / "src" / "web_streamlit" / "views" / "leagues.py").read_text()
     assert 'st.session_state["lg_loaded_for"] = league_id' in src
     assert 'st.session_state.get("lg_loaded_for") != league_id' in src
     assert 'if not st.button(f"Read {len(shown)} squads' not in src, "the old collapse-on-rerun form is back"
@@ -3274,7 +3296,7 @@ def test_the_transfer_flow_asks_before_spending_a_second_round_of_calls():
     """ADR-141's rule, kept: nothing that costs N calls happens because someone opened a tab. The activity
     numbers are free (they ride on payloads already fetched) so they are always drawn; the identities are not.
     """
-    src = (_PAGES / "5_Leagues.py").read_text()
+    src = (_ROOT / "src" / "web_streamlit" / "views" / "leagues.py").read_text()
     assert "transfer_activity(picks)" in src, "the free half must not sit behind a button"
     assert 'st.session_state["lg_flow_for"]' in src, "the paid half must latch, like the squads button"
     assert "_transfers(tuple(picks))" in src

@@ -1,9 +1,9 @@
 """The Streamlit UI home (ADR-052) — a read-only view over the analytics.
 
 Multipage: this is the landing (the sidebar's **Home** — its label is this file's name); `pages/` holds
-Players · Team DNA & FDR · My Squad · Leagues · Ask · Signals · Trending · Help · Feedback · Admin.
-(ADR-166 folded Squad Lab into My Squad ▸ Lab, and Maddie Explains into Help ▸ Watch — ten pages, not
-twelve.) Each page imports the same engine the CLI does and changes nothing in `src/`.
+Players · Team DNA & FDR · My Squad · Ask · Signals · Trending · Help · Feedback · Admin. ADR-166 folded
+Squad Lab and Leagues into My Squad, and Maddie Explains into Help ▸ Watch — **nine pages, not twelve**.
+Each page imports the same engine the CLI does and changes nothing in `src/`.
 Run:  python -m src.web_streamlit
 
 ⚠️ **The tour below names every page, so it goes stale on any rename or addition** (US-433: it still said
@@ -73,10 +73,9 @@ st.markdown(
 
 - 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
 - 🧬 **Team DNA & FDR** — how strong every club is at both ends, then the difficulty ticker week by week.
-- 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, and the
-  **Lab** for building a fresh 15 (season start · wildcard · revamp).
-- 🏆 **Leagues** — import a mini-league by your manager id: effective ownership, the captain split, who's
-  transferring what, and a **head-to-head** against any rival.
+- 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, your
+  🏆 **Leagues** (effective ownership · captain split · transfer flow · head-to-head), and the **Lab** for
+  building a fresh 15 (season start · wildcard · revamp).
 - 💬 **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
 - 📡 **Signals** — everything the table doesn't say, most reliable first: official FPL news, unexplained
   sell-offs, and reported moves out of the league.
