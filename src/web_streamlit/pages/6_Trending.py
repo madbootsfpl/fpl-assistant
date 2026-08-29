@@ -61,6 +61,25 @@ else:
                            "badge": st.column_config.ImageColumn("", width="small")},
         )
 
+    # ---- 👀 Worth noticing (ADR-170) — the signals that live BETWEEN the boards -------------------
+    # Each board below ranks one number. The useful patterns need two at once: a player can top none of the
+    # four and still be the most interesting name here. Same shape as Players ▸ Scout, and the same
+    # discipline — crowd data is a lens that never enters xP, so this says what other managers are **doing**,
+    # never why. The "why" is 📡 Signals' half of the ADR-149/150 doing-vs-saying axis.
+    from src.analytics.crowd_watch import watch_note, worth_noticing
+    from src.web_streamlit.components import render_banner
+
+    st.markdown("##### 👀 Worth noticing")
+    _groups = worth_noticing(players)
+    st.caption(watch_note(_groups))
+    for _g in _groups:
+        st.markdown(f"**{_g['label']}**")
+        for _r in _g["players"]:
+            _price = f" · £{_r['price']:.1f}m" if _r.get("price") is not None else ""
+            render_banner(f"<b>{_r['web_name']}</b> ({_r['team']} {_r['position']}{_price}) — {_r['reason']}",
+                          kind="signal", icon="👀")
+    st.divider()
+
     # A shared filter (ADR-064): Team / Position / Player, AND-combinable — applied to every board.
     _sq = active_squad()                                    # US-407b: add a "My squad only" scope to the filter
     sel = filter_controls(players, key="trending",

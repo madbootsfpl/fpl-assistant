@@ -3454,3 +3454,28 @@ def test_ask_is_owner_only_now_and_off_by_default():
     assert "Ask — under evaluation" in src
     assert 'st.checkbox("Load Ask"' in src, "off by default"
     assert not (_PAGES / "6_Ask.py").exists(), "the public page is retired"
+
+
+def test_trending_leads_with_what_the_boards_only_show_between_them():
+    """ADR-170 — the owner: *"For Trending I'd like an overview like you did for Scout, as it's a fab way of
+    directing people's attention to the more notable items."*
+
+    Pins both halves: the overview leads, and all four boards are still reachable underneath.
+    """
+    at = _run(_PAGES / "6_Trending.py")
+    assert not at.exception
+    assert any("Worth noticing" in m.value for m in at.markdown)
+    board = next((c for c in at.segmented_control if c.label == "Board"), None)
+    assert board is not None and len(board.options) == 4
+
+
+def test_trending_never_explains_why_the_crowd_is_moving():
+    """Trending says what the crowd is **doing**; Signals says what is being **said** (ADR-149/150). The
+    overview must point at Signals for a cause rather than guessing one — a guess printed beside a measured
+    number reads as though it were measured too.
+    """
+    at = _run(_PAGES / "6_Trending.py")
+    caps = " ".join(c.value for c in at.caption)
+    assert "Signals" in caps, "the reader must be told where 'why' lives"
+    for guess in ("because", "injured", "rumour", "expected to sign"):
+        assert guess not in caps.lower()
