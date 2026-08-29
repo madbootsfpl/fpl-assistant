@@ -1,20 +1,18 @@
-"""Team DNA & FDR — the team-level tab (ADR-134).
+"""Team DNA — how strong every club is at both ends: a percentile-vs-league fingerprint per club,
+and the players to target.
 
-Organised by *level*: team things live here, player things live on Players (which is where the 🎯 Radar moved).
-The section opens on a **scan** of all 20 clubs — grade + ATT/DEF/FIX + next opponent — then drills into one
-club's full DNA card, then the fixture-ticker grid (Sprint 062): teams × gameweeks, colour-coded by difficulty.
+Split from the combined *Team DNA & FDR* page (ADR-169). They shared a **topic** (teams) but not a **moment**:
+the ticker is a weekly "who has a good run?", the fingerprints are occasional research. Bundling them put a
+frequent check behind the same click as an infrequent one — the same frequency argument that folded Squad Lab
+*into* My Squad (ADR-166) argues for pulling these apart.
 
-Pick how many weeks to show (1–8); teams are rows (easiest run first), gameweeks are columns, each cell the
-opponent + (H/A) shaded green (easy) → red (hard). Reuses `fixture_ticker` (which reuses `team_fdr` /
-`team_schedule`) — no core change, no new analytics.
+⚠️ `/Team_DNA_and_FDR` is retired by the split, so a bookmark to it breaks — the cost ADR-149 named for
+`/News → /Signals`. Renumbering every other page is free: Streamlit's slug drops the number prefix.
 """
 
-from collections import Counter
 
-import pandas as pd
 import streamlit as st
 
-from src.analytics import fixture_ticker
 from src.storage import Storage
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
@@ -22,17 +20,14 @@ from src.web_streamlit.badges import badge_url_by_short_name
 from src.web_streamlit.squads import active_squad
 from src.web_streamlit.status import render_data_status
 
-# FPL difficulty 1–5 → the shared brand FDR scale (ADR-114): (bg, text) pairs, vibrant green→red, each with a text
-# colour that clears contrast. One home for the palette (brand.FDR_STYLE) — the ticker + the card FDR pills share it.
-
-st.set_page_config(**brand.page_config("Team DNA and FDR"))
+st.set_page_config(**brand.page_config("Team DNA"))
 require_access()          # opt-in beta gate (ADR-087)
-analytics.boot("Fixtures")
+analytics.boot("Team DNA")
 render_data_status()
-st.title("🧬 Team DNA & FDR")
+st.title("🧬 Team DNA")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
-st.caption("How strong every club is, both ends — then the difficulty ticker, week by week. "
-           "Looking for **players** to buy? The 🎯 **Radar** moved to the **Players** tab.")
+st.caption("How strong every club is, both ends — a percentile-vs-league fingerprint, its grade and the "
+           "players to target. For the week-by-week difficulty grid, see 📅 **FDR**.")
 
 store = Storage()
 try:
@@ -123,68 +118,3 @@ else:
                 players, _picked, _last_rows, last_season_name(history))
             render_team_dna(_all_dna[_picked], fixtures=_fx, key_players=_kp, key_players_season=_kp_season,
                             form=team_form(gw_history, players, _picked))
-
-
-    st.divider()
-    # The ticker — the detailed week-by-week view, below the league scan (ADR-134).
-    # US-440 — it had **no heading at all**: the page title said "Team DNA & FDR" and only the DNA half was
-    # ever announced, so the second half of the page read as an unlabelled appendage to the first.
-    st.subheader("📅 FDR — the difficulty ticker")
-    st.caption("Every club's next few gameweeks, shaded by difficulty — the week-by-week detail behind the "
-               "**FIX** percentile above.")
-    weeks = st.slider("Weeks to show", 1, 8, 6,
-                      help="How many upcoming gameweeks to show in the difficulty ticker.")
-    # US-302 (ADR-049) / US-441 (ADR-164): the ticker reads the page's **one** squad lens, set above the scan,
-    # rather than carrying a second checkbox that could disagree with it.
-    my_counts: dict = {}
-    if _squad_only:
-        squad = active_squad()
-        if not squad:
-            st.caption("No squad loaded — build or import one on **My Squad**, then come back.")
-        else:
-            by_id = {p["id"]: p for p in players}
-            my_counts = Counter(by_id[i]["team"] for i in squad["player_ids"] if i in by_id)
-
-    ticker = fixture_ticker(upcoming, next_n=weeks, source="fpl")
-    gws = ticker["gameweeks"]
-    gw_cols = [f"GW{g}" for g in gws]
-
-    # When scoped to the squad, keep only the owned teams and add a "Players" count column.
-    ticker_rows = [r for r in ticker["rows"] if r["team"] in my_counts] if my_counts else ticker["rows"]
-    display_rows, diff_rows = [], []
-    for r in ticker_rows:
-        disp = {"badge": badges.get(r["team"], ""), "Team": r["team"]}
-        if my_counts:
-            disp["Players"] = my_counts.get(r["team"], 0)
-        diff = {}
-        for gw, col in zip(gws, gw_cols):
-            cell = r["cells"].get(gw)
-            # Include the difficulty digit so the run isn't colour-only (colour-blind-safe; US-391/audit).
-            # A double gameweek lists both matches — the ticker is where you go to find them (ADR-129 audit).
-            if cell:
-                fx = cell.get("fixtures") or [cell]
-                disp[col] = " + ".join(f"{f['opponent']} ({f['venue']})" for f in fx) + f" · {cell['difficulty']}"
-            else:
-                disp[col] = "—"
-            diff[col] = cell["difficulty"] if cell else None
-        display_rows.append(disp)
-        diff_rows.append(diff)
-
-    disp_df = pd.DataFrame(display_rows)
-    diff_df = pd.DataFrame(diff_rows)
-
-    def _shade(_):
-        # A same-shaped CSS frame: colour the GW cells by their difficulty; leave badge/Team blank.
-        css = pd.DataFrame("", index=disp_df.index, columns=disp_df.columns)
-        for col in gw_cols:
-            css[col] = [f"background-color: {brand.FDR_STYLE[d][0]}; color: {brand.FDR_STYLE[d][1]}"
-                        if d in brand.FDR_STYLE else "" for d in diff_df[col]]
-        return css
-
-    st.caption("Easiest run first · green = easy, red = hard · the **· N** in each cell is the difficulty "
-               "(1 easy – 5 hard) · (H)ome / (A)way.")
-    st.dataframe(
-        disp_df.style.apply(_shade, axis=None),
-        hide_index=True, width="stretch",
-        column_config={"badge": st.column_config.ImageColumn("", width="small")},
-    )

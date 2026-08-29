@@ -26,8 +26,9 @@ _DEFAULT_ORIGIN = "https://madboots.streamlit.app"
 # ⚠️ Stale by default, like Home's tour was (US-433): this still said *Fixtures* and *News* long after
 # ADR-134/149 renamed them, and never gained Leagues or Signals. Sub-tabs are listed where a tester would say
 # them — nobody reports a bug against "My Squad", they report it against "Chips".
-_PAGES = ("(not sure)", "Home", "Players", "Team DNA & FDR", "My Squad", "Leagues", "Squad Lab (My Squad ▸ Lab)",
-          "Signals", "Trending", "Help", "Feedback")
+_PAGES = ("(not sure)", "Home", "My Squad", "FDR", "Signals", "Team DNA", "Players", "Trending",
+          "Leagues (My Squad ▸ Leagues)", "Squad Lab (My Squad ▸ Lab)", "Scout (Players ▸ Scout)",
+          "Help", "Feedback")
 
 
 def _app_version() -> str:

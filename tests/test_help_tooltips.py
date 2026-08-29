@@ -19,8 +19,8 @@ _INPUTS = ("selectbox", "multiselect", "slider", "number_input", "text_input", "
 # The consolidated pages default to their first view (Players→Pool, My Squad→the pitch); those views' input
 # controls all carry help. Other sub-views get their help when selected (kept from Sprint 074; not re-checked
 # here — the default-view check is the standing gate).
-# ADR-166 folded Squad Lab into My Squad ▸ Lab, so the page it used to be is covered by 4_My_Squad.py.
-_COVERED = ["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py", "8_Trending.py"]
+# ADR-166 folded Squad Lab into My Squad ▸ Lab, so the page it used to be is covered by 1_My_Squad.py.
+_COVERED = ["5_Players.py", "4_Team_DNA.py", "2_FDR.py", "1_My_Squad.py", "6_Trending.py"]
 
 
 def _inputs(at):

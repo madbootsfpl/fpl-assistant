@@ -43,13 +43,13 @@ def test_home_shows_the_deadline_countdown():
 
 
 def test_players_page_shows_a_table():
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     assert len(at.dataframe) == 1 or len(at.info) == 1     # a table, or the "run refresh" note
 
 
 def test_players_page_has_a_top15_bar_when_data_present():
     # ADR-064: the scatter is gone; a filter-responsive top-15 bar (a vega/altair chart) takes its place
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if at.dataframe:
         assert at.get("arrow_vega_lite_chart") or at.get("vega_lite_chart")
 
@@ -57,7 +57,7 @@ def test_players_page_has_a_top15_bar_when_data_present():
 def test_players_price_filter_includes_the_priciest_player():
     # US-345: the Max-price cap follows the highest player price, so the £15.5m player isn't filtered out
     import pandas as pd
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -67,7 +67,7 @@ def test_players_price_filter_includes_the_priciest_player():
 
 def test_trending_top_discussions_before_community_signals():
     # US-345: surface 🔥 Top discussions first; the long Community Signals list sits below
-    at = _run(_PAGES / "7_Signals.py")
+    at = _run(_PAGES / "3_Signals.py")
     caps = [c.value for c in at.caption]
     top = next((i for i, c in enumerate(caps) if "Top discussions this week" in c), None)
     comm = next((i for i, c in enumerate(caps) if "Community Signals" in c), None)
@@ -77,7 +77,7 @@ def test_trending_top_discussions_before_community_signals():
 def test_help_save_step_reflects_auth_live_persistence():
     # US-378 (ADR-111) + US-385 (ADR-113): the Save section reflects auth-live persistence via the unified
     # "Your team" panel (account sync + import + download), not the stale "per-session / no accounts" copy.
-    at = _run(_PAGES / "9_Help.py")
+    at = _run(_PAGES / "7_Help.py")
     blob = " ".join(m.value for m in at.markdown)
     caps = " ".join(c.value for c in at.caption)
     assert "saved to your account" in blob and "Your team" in blob          # auth-live persistence, unified panel
@@ -88,7 +88,7 @@ def test_help_save_step_reflects_auth_live_persistence():
 
 def test_help_explainer_glossary_renders():
     # US-379 (ADR-111): the MadBoots Explainer — one glossary expander with category subheaders + key terms.
-    at = _run(_PAGES / "9_Help.py")
+    at = _run(_PAGES / "7_Help.py")
     blob = " ".join(m.value for m in at.markdown)
     assert "FPL basics" in blob and "Squad decisions" in blob and "MadBoots tools" in blob   # category headers
     assert "xP — Expected Points" in blob and "Boot Battle ⚔️" in blob and "Radar 🎯" in blob  # reconciled terms
@@ -96,7 +96,7 @@ def test_help_explainer_glossary_renders():
 
 def test_players_card_view_renders_a_player_card():
     # US-343 (ADR-084): the "Card" view → a player selectbox → the self-contained player-card HTML block
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return                                                 # no data → nothing to card
     at.segmented_control[0].set_value("Card").run()
@@ -108,7 +108,7 @@ def test_players_card_view_renders_a_player_card():
 
 def test_players_card_view_compares_two_players():
     # US-370 (ADR-110) / US-377 (ADR-111): the Card view's ⚔️ "Boot Battle — compare with" picker → the comparison.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return                                                 # no data → nothing to compare
     at.segmented_control[0].set_value("Card").run()
@@ -125,7 +125,7 @@ def test_players_card_view_compares_two_players():
 
 def test_players_page_shows_the_crowd_lens_columns():
     # US-183 / ADR-057: the Players table gains Form · ICT · Trends (crowd flags), display-only
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     cols = at.dataframe[0].value.columns.tolist()
@@ -133,7 +133,7 @@ def test_players_page_shows_the_crowd_lens_columns():
 
 
 def test_players_page_has_photo_and_badge_columns_when_data_present():
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if at.dataframe:
         df = at.dataframe[0].value
         assert "photos/players" in str(df["photo"].iloc[0])   # the player photo URL
@@ -143,7 +143,7 @@ def test_players_page_has_photo_and_badge_columns_when_data_present():
 
 def test_players_filters_narrow_the_table(monkeypatch):
     # ADR-064 filter (US-424 popover): multiselects are [0] Team · [1] Player; Position is a pills widget
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.multiselect:                                  # no data locally → the info branch
         return
     next(p for p in at.pills if p.label == "Position").set_value(["GK"]).run()   # Position → keepers only
@@ -154,7 +154,7 @@ def test_players_filters_narrow_the_table(monkeypatch):
 
 def test_players_filter_by_team_narrows_the_table():
     # ADR-064: filter by team (multiselect[0]) restricts the table to that team
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     at.multiselect[0].set_value(["ARS"]).run()              # Team = ARS
@@ -164,7 +164,7 @@ def test_players_filter_by_team_narrows_the_table():
 
 def test_player_multiselect_is_team_scoped():
     # US-213: choosing a team scopes the Player multiselect's options to that team's players
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.multiselect:
         return
     all_players = len(at.multiselect[1].options)            # [0] Team · [1] Player (Position is a pills widget)
@@ -203,7 +203,7 @@ def test_stat_boards_carry_id_so_my_squad_filter_keeps_rows():
 
 def test_history_view_respects_the_shared_filter():
     # US-427: the History player picker was ignoring the shared filter — a team filter must narrow its options.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if at.exception:
         return
     view = next((s for s in at.segmented_control if s.label == "View"), None)
@@ -230,7 +230,7 @@ def test_watchlist_cap_is_thirty():
 
 def test_players_pool_has_the_add_to_watchlist_control():
     # ADR-117: the pool offers ⭐ Add (select rows → add) + a "N/30 watched" count.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     assert any("Add selected" in b.label and "watchlist" in b.label for b in at.button)
@@ -239,7 +239,7 @@ def test_players_pool_has_the_add_to_watchlist_control():
 
 def test_players_card_can_star_a_player_to_the_watchlist():
     # ADR-117: ⭐ on the player card adds them to the (session) watchlist.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     view = next((s for s in at.segmented_control if s.label == "View"), None)
     if view is None:
         return
@@ -259,7 +259,7 @@ def test_transfer_tab_shows_the_watchlist_section():
     store = Storage()
     ids = [r["id"] for r in store.get_players()[:3]]
     store.close()
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["_watchlist"] = ids                    # a non-empty watchlist
     at.run()
     at.segmented_control[0].set_value("Transfer").run()
@@ -272,7 +272,7 @@ def test_transfer_tab_shows_the_watchlist_section():
 def test_players_pool_shows_the_full_sorted_list():
     # ADR-116: the pool is ONE scrollable table (no paging) ordered by "Sort by", so the whole set is shown and
     # the native column-header sort is honest (it orders everything, not just a page).
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     next(s for s in at.selectbox if s.label == "Sort by").set_value("team").run()
@@ -284,7 +284,7 @@ def test_players_pool_shows_the_full_sorted_list():
 
 def test_fixtures_ticker_grid_and_weeks_selector():
     # US-186: a teams × GW ticker grid; the weeks slider changes the number of GW columns
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "2_FDR.py")
     assert len(at.dataframe) >= 1 or len(at.info) == 1     # US-301 added a second (targets) table
     if not at.dataframe:
         return
@@ -297,7 +297,7 @@ def test_fixtures_ticker_grid_and_weeks_selector():
 
 def test_my_squad_health_shows_the_your_teams_strip():
     # US-420 (ADR-119): My Squad ▸ Health has a "Your teams" strip (the squad's clubs' Team DNA).
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30).run()
     if at.exception:
         return
     health = next((s for s in at.segmented_control if "DNA" in (s.options or [])), None)
@@ -318,7 +318,7 @@ def test_my_squad_health_shows_the_your_teams_strip():
 
 def test_my_squad_per_gw_xp_toggle_switches_the_shown_xp():
     # US-422 (ADR-121): with a >1 horizon, a "Projected xP" toggle switches cumulative ↔ single-GW.
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30).run()
     if at.exception:
         return
     horizon = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
@@ -354,7 +354,7 @@ def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
 
 def test_fixtures_team_dna_section_renders_a_team_card():
     # US-419 (ADR-119): a 🧬 Team DNA section on Fixtures — pick a team → grade + radar + key-players.
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "4_Team_DNA.py")
     if at.exception or not at.dataframe:
         return                                          # no fixtures/data in this environment
     assert any(s.value == "🧬 Team DNA" for s in at.subheader)
@@ -371,7 +371,7 @@ def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
     # US-301: a "🎯 Radar" section (renamed from "Target by fixtures", ADR-107) names the best available
     # players from the easiest-run teams, scoped by a Position filter.
     # ADR-134: the Radar moved to a **Players** view — player-discovery belongs where players live.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Radar").run()
@@ -389,7 +389,7 @@ def test_fixtures_target_by_fixtures_lists_players_and_filters_by_position():
 def test_fixtures_target_max_price_cap_drops_dearer_targets():
     # US-303: the Max price slider caps the target list to affordable players.
     # ADR-134: the Radar is a **Players** view now.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Radar").run()
@@ -405,7 +405,7 @@ def test_fixtures_target_max_price_cap_drops_dearer_targets():
 def test_fixtures_target_value_column_and_sort_toggle():
     # US-304: a Val/£m column + a Sort toggle that reorders each team's picks by value.
     # ADR-134: the Radar is a **Players** view now.
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Radar").run()
@@ -430,7 +430,7 @@ def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
     squads = demo_squads()
     if not squads:
         return
-    at = AppTest.from_file(str(_PAGES / "2_Players.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "5_Players.py"), default_timeout=30)
     at.session_state["squad"] = next(iter(squads.values()))
     at.run()
     assert not at.exception
@@ -439,7 +439,7 @@ def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
 
 def test_players_card_view_renders_the_player_dna_section():
     # ADR-118 (S168–S171): the Card view shows AI Verdict → radar → insights → trend for the selected player.
-    at = AppTest.from_file(str(_PAGES / "2_Players.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "5_Players.py"), default_timeout=30).run()
     if at.exception:
         return
     view = next((s for s in at.segmented_control if s.label == "View"), None)
@@ -455,7 +455,7 @@ def test_players_card_view_renders_the_player_dna_section():
 
 def test_my_squad_lineup_shows_owned_player_dna_with_hold_sell_framing():
     # US-417 (ADR-118): picking one of your XI in ⚙ Players & lineup shows the same DNA, owned-aware (Hold/Sell).
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30).run()
     if at.exception:
         return
     pick = next((s for s in at.selectbox if s.label == "Select a player"), None)
@@ -471,7 +471,7 @@ def test_my_squad_lineup_shows_owned_player_dna_with_hold_sell_framing():
 def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     # US-302 (ADR-049) + US-407b: a "My squad only" checkbox restricts the ticker to your teams + a Players count.
     from src.web_streamlit.squads import demo_squads
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "2_FDR.py")
     if not at.dataframe:
         return
     all_teams = at.dataframe[0].value
@@ -493,7 +493,7 @@ def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
 def _squads_view(view):
     """A My Squad sub-tab. ADR-105 split Build onto its own Squad Lab page; ADR-166 folded it back as the
     **Lab** tab — a builder you use a few times a season did not earn the top slot in the sidebar."""
-    at = _run(_PAGES / "4_My_Squad.py")
+    at = _run(_PAGES / "1_My_Squad.py")
     # By label, not by index: My Squad now carries several segmented controls (Tool · Gameweeks ahead · and
     # whatever the selected tab adds), so `[0]` was an assumption about layout rather than about the switch.
     next(c for c in at.segmented_control if c.label == "Tool").set_value(
@@ -566,7 +566,7 @@ def test_the_transfer_page_warns_about_a_dead_slot_and_offers_the_fix():
     picked[gone["position"]][-1] = gone                    # …and one of them has left the league
     squad = [p for v in picked.values() for p in v]
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=60)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=60)
     at.session_state["squad"] = {"name": "DeadSlot", "player_ids": [p["id"] for p in squad],
                                  "bench_ids": [squad[-1]["id"]], "cost": 100.0}
     at.run()
@@ -583,7 +583,7 @@ def test_the_transfer_page_warns_about_a_dead_slot_and_offers_the_fix():
 def test_your_team_panel_consolidates_import_upload_download():
     # US-385 (ADR-113): one inline "Your team" panel on My Squad gathers Manager-ID import + Upload + Download
     # backup in one place (was scattered across the sidebar).
-    at = _run(_PAGES / "4_My_Squad.py")
+    at = _run(_PAGES / "1_My_Squad.py")
     assert any(e.label == "⚙ Backup / import your team" for e in at.get("expander"))
     assert any(t.label == "FPL manager-ID" for t in at.text_input)                    # import by Manager-ID
     assert any(b.label == "Import team" for b in at.button)
@@ -668,7 +668,7 @@ def test_consumer_views_use_a_session_active_squad():
     # build sets session_state["squad"]; the Squads manage views must offer it in the picker (ADR-054/055)
     squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
     for view in ("Health", "Transfer", "Captain", "My Squad"):
-        at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+        at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
         at.segmented_control[0].set_value(view).run()
@@ -679,7 +679,7 @@ def test_consumer_views_use_a_session_active_squad():
 
 def test_help_page_renders_the_guide_without_data():
     # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps + an example
-    at = _run(_PAGES / "9_Help.py")
+    at = _run(_PAGES / "7_Help.py")
     blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
     assert "Squad Lab" in blob and "My Squad" in blob          # the core steps (ADR-105 nav)
     assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
@@ -695,9 +695,9 @@ def test_sidebar_pages():
     # ADR-141 inserted Leagues at 5 and shifted Ask→12 up by one. Streamlit derives a page's URL from the
     # filename *without* its numeric prefix, so renumbering moves nav order without breaking any link.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
-    assert present == sorted(["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
-                              "7_Signals.py", "8_Trending.py", "9_Help.py",
-                              "11_Feedback.py", "12_Admin.py"])
+    assert present == sorted(["5_Players.py", "2_FDR.py", "4_Team_DNA.py", "1_My_Squad.py",
+                              "3_Signals.py", "6_Trending.py", "7_Help.py",
+                              "8_Feedback.py", "9_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
         assert not (_PAGES / gone).exists()
@@ -705,7 +705,7 @@ def test_sidebar_pages():
 
 def test_player_stats_board_renders_via_the_segmented_control():
     # ADR-069: Player Stats merged into Players — a stat board renders when its segmented-control view is picked
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Over/under").run()
@@ -715,7 +715,7 @@ def test_player_stats_board_renders_via_the_segmented_control():
 
 def test_player_stats_filter_narrows_a_board():
     # ADR-064/069: the shared filter narrows a stat board on the merged Players page
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     at.segmented_control[0].set_value("DefCon").run()
@@ -728,7 +728,7 @@ def test_player_stats_filter_narrows_a_board():
 def _scout_board(board):
     """A stat board, now one level in: ADR-167 merged five same-shaped leaderboards into **Scout**, with a
     board selector, so the page could stop being ten views and start saying what the boards agree on."""
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return None
     next(c for c in at.segmented_control if c.label == "View").set_value("Scout").run()
@@ -751,7 +751,7 @@ def test_set_pieces_board_renders_the_order_columns():
 
 def test_pool_shows_a_set_piece_column():
     # ADR-081 / US-250: the Pool gains a compact "Set" column (⚽/🚩/🎯 for first-choice takers)
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -760,7 +760,7 @@ def test_pool_shows_a_set_piece_column():
 
 def test_pool_shows_an_availability_fit_column():
     # ADR-074 + US-276: the Pool's Fit column shows ✅ for fit players (not blank) and 🚑/🚫/⛔/❓ for concerns
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -780,7 +780,7 @@ def test_pool_shows_the_price_prediction_column():
     """
     from src.analytics import PRICE_DOWN, PRICE_UP
 
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -792,7 +792,7 @@ def test_pool_shows_the_price_prediction_column():
 
 def test_players_history_view_shows_a_season_table_for_a_known_player():
     # US-298: the Players "History" view — pick a player → a season table (+ the GW1 note preseason).
-    at = AppTest.from_file(str(_PAGES / "2_Players.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "5_Players.py"), default_timeout=30).run()
     if at.exception or not at.segmented_control:
         return
     at.segmented_control[0].set_value("History").run()
@@ -827,7 +827,7 @@ def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):
     # US-286: My Squad names owned players under price pressure (forced here — net transfers are flat preseason).
     import src.web_streamlit.views.squads as sq
     monkeypatch.setattr(sq, "price_prediction", lambda p: "fall")
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30).run()
     for control in at.segmented_control:
         try:
             control.set_value("My Squad").run()
@@ -847,7 +847,7 @@ def test_pool_number_columns_stay_numeric_formatting_is_display_only():
     # raw numbers (not pre-rounded strings), so they stay sortable and truthful.
     import pandas as pd
 
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.dataframe:
         return
     df = at.dataframe[0].value
@@ -871,7 +871,7 @@ def test_clean_sheets_board_shows_a_quality_rating_and_legend():
 def test_team_dna_key_players_falls_back_to_last_season():
     """ADR-126 follow-up: the Team DNA card's key-players table has the same 900-minute gate as the three stat
     boards, so it gets the same fallback — through the real page, not just the pure function."""
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "4_Team_DNA.py")
     sel = next((s for s in at.selectbox if s.label == "Team"), None)
     if sel is None:
         return                                  # gated or no data
@@ -890,7 +890,7 @@ def test_gated_boards_fall_back_to_last_season_and_say_so():
     to show, they render last season's numbers behind a banner naming the season. The banner is the point — an
     unlabelled number from a different season is worse than an empty board."""
     for view in ("Over/under", "DefCon", "Clean sheets"):
-        at = _run(_PAGES / "2_Players.py")
+        at = _run(_PAGES / "5_Players.py")
         if not at.segmented_control:
             return
         at.segmented_control[0].set_value(view).run()
@@ -921,7 +921,7 @@ def test_clean_sheet_fallback_warns_that_xgc_crosses_a_transfer():
 def test_stat_boards_show_the_availability_fit_column():
     # ADR-074 / US-229: every stat board gains the Fit column (raw rows on xG; a lookup on the trimmed ones)
     for view in ("Over/under", "DefCon", "Clean sheets", "xG · xA"):
-        at = _run(_PAGES / "2_Players.py")
+        at = _run(_PAGES / "5_Players.py")
         if not at.segmented_control:
             return
         at.segmented_control[0].set_value(view).run()
@@ -952,9 +952,9 @@ def test_xg_board_rates_only_meaningful_players():
         assert ratings <= {"—"}, f"goalkeepers should not be rated on xGI, got {ratings}"
 
 
-_TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩",
-              "7_Signals.py": "📡", "8_Trending.py": "📈", "9_Help.py": "🧭",
-              "11_Feedback.py": "📣", "12_Admin.py": "📊"}
+_TAB_EMOJI = {"5_Players.py": "👟", "2_FDR.py": "📅", "4_Team_DNA.py": "🧬", "1_My_Squad.py": "🧩",
+              "3_Signals.py": "📡", "6_Trending.py": "📈", "7_Help.py": "🧭",
+              "8_Feedback.py": "📣", "9_Admin.py": "📊"}
 
 
 def test_every_tab_has_an_emoji_led_header():
@@ -968,7 +968,7 @@ def test_every_tab_has_an_emoji_led_header():
 def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
     # US-307: with no FPL_FEEDBACK_WEBHOOK a submit offers a pre-filled mailto to the inbox (no network),
     # and the "Join the beta" link is hidden until FPL_SIGNUP_URL is set.
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     assert not at.exception
     assert at.text_area and any(b.label == "Send feedback" for b in at.button)   # the form is there
     assert not any("Join the beta" in b.label for b in at.get("link_button"))     # no signup URL configured
@@ -984,7 +984,7 @@ def test_feedback_page_form_degrades_to_a_prefilled_email_without_a_webhook():
 def test_feedback_page_shows_the_beta_signup_when_configured(monkeypatch):
     # US-264: the "Join the beta" link appears once FPL_SIGNUP_URL is set
     monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/signup")
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     assert any("Join the beta" in b.label for b in at.get("link_button"))
 
 
@@ -1001,20 +1001,20 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
         return type("R", (), {})()
 
     monkeypatch.setattr("requests.post", fake_post)
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     assert any(s.label == "Which page?" for s in at.selectbox)          # the page picker exists
     at.text_area[0].set_value("Fixtures target list is great").run()
     # ADR-166 renamed the pages this picker offers; the test is about the *payload*, so it picks a live one.
-    next(s for s in at.selectbox if s.label == "Which page?").set_value("Team DNA & FDR").run()
+    next(s for s in at.selectbox if s.label == "Which page?").set_value("Team DNA").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
 
     assert not at.exception and captured.get("url") == "https://example.test/sink"
     payload = captured["json"]
     assert payload["message"] == "Fixtures target list is great"
-    assert payload["page"] == "Team DNA & FDR"
+    assert payload["page"] == "Team DNA"
     assert payload["version"] and payload["source"] == "fpl-assistant-beta"
     assert "T" in payload["ts"]                                          # an ISO timestamp
-    assert payload["_subject"].endswith("Team DNA & FDR")               # US-308: FormSubmit subject
+    assert payload["_subject"].endswith("Team DNA")                     # US-308: FormSubmit subject
     assert (captured["headers"] or {}).get("Origin", "").startswith("http")   # server-side Origin for FormSubmit
     assert "access_key" not in payload                                  # no Web3Forms key set → omitted
 
@@ -1027,7 +1027,7 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None:
                         captured.update(json=json) or type("R", (), {})())
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     at.text_area[0].set_value("Nice work").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert captured["json"]["access_key"] == "test-access-key"
@@ -1061,7 +1061,7 @@ def _registration_env(monkeypatch, cap="2"):
 
 def test_gate_is_off_by_default():
     # US-324: no cap / no code → the app is open (no gate), byte-identical to today
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     assert not at.exception
     assert not any("private beta" in (t.value or "") for t in at.title)   # no gate title
     assert any(b.label == "Send feedback" for b in at.button)              # the real page rendered
@@ -1071,7 +1071,7 @@ def test_registration_gate_admits_with_code_and_email(monkeypatch):
     _registration_env(monkeypatch)
     rows = []
     _fake_user_store(monkeypatch, rows)
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     assert any(t.label == "Invite code" for t in at.text_input)           # registration mode shows both fields
     assert any(t.label == "Your email" for t in at.text_input)
     next(t for t in at.text_input if t.label == "Invite code").set_value("nope").run()
@@ -1088,7 +1088,7 @@ def test_registration_gate_full_shows_the_waitlist(monkeypatch):
     _registration_env(monkeypatch, cap="0")                               # already full
     monkeypatch.setenv("FPL_SIGNUP_URL", "https://example.com/waitlist")
     _fake_user_store(monkeypatch, [])
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -1109,7 +1109,7 @@ def test_waitlist_captures_a_wrong_code_email(monkeypatch):
     _registration_env(monkeypatch)
     _fake_user_store(monkeypatch, [])
     calls = _capture_waitlist(monkeypatch)
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("wrong").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("hopeful@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -1121,7 +1121,7 @@ def test_waitlist_captures_an_over_cap_email(monkeypatch):
     _registration_env(monkeypatch, cap="0")
     _fake_user_store(monkeypatch, [])
     calls = _capture_waitlist(monkeypatch)
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     next(t for t in at.text_input if t.label == "Invite code").set_value("letmein").run()
     next(t for t in at.text_input if t.label == "Your email").set_value("late@b.com").run()
     next(b for b in at.button if "Join" in b.label).click().run()
@@ -1138,7 +1138,7 @@ def test_squads_gameweeks_selector_drives_the_horizon():
     change. The gameweek numbers now come from the same data the page reads, so the assertion is about the
     horizon's *shape* — which is what the feature actually promises.
     """
-    at = _run(_PAGES / "4_My_Squad.py")
+    at = _run(_PAGES / "1_My_Squad.py")
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
     assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-374/315
     gw[0].set_value(2).run()
@@ -1248,7 +1248,7 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     cap = max(xi, key=lambda i: xp[i])                     # captain = the best XI player
     expected = round(sum(xp[i] for i in xi) + by_gw[cap][g1], 1)
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = {**sq, "captain_id": cap, "name": "RoboTS"}
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1305,7 +1305,7 @@ def test_my_squad_shows_the_bench_order():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # a GK + 3 outfield
     squad = {"name": "BenchTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1334,7 +1334,7 @@ def test_my_squad_pitch_labels_the_bench_subs():
     squad = {"name": "BenchLabels", "player_ids": ids, "bench_ids": bench, "cost": 100.0,
              "captain_id": mids[0]["id"]}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1363,7 +1363,7 @@ def test_my_squad_bench_reorder_persists_and_recommended_applies():
     bench = [defs[4]["id"], mids[4]["id"], fwds[2]["id"], gks[1]["id"]]   # a deliberately non-xP order
     squad = {"name": "BenchOrder", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1399,7 +1399,7 @@ def test_my_squad_substitute_control_swaps_a_starter_and_bench_player():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # GK + 3 outfield → XI is a legal 4-4-2
     squad = {"name": "SubTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1440,7 +1440,7 @@ def test_my_squad_panel_brings_a_bench_player_on():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]   # GK + 3 outfield
     squad = {"name": "PrefillTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1473,7 +1473,7 @@ def test_my_squad_flags_unavailable_players_by_name():
     squad = {"name": "Test XI", "player_ids": [injured["id"]] + [p["id"] for p in others],
              "bench_ids": [], "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -1499,7 +1499,7 @@ def test_the_lab_keeps_its_identity_as_a_tab():
 def test_my_squad_empty_state_points_to_the_lab_tab():
     """US-360 → US-445: the pointer still exists, but it names the **tab** now — sending someone to a sidebar
     page that no longer exists would be worse than not pointing at all."""
-    at = _run(_PAGES / "4_My_Squad.py")                    # no injected squad → active_squad() is None
+    at = _run(_PAGES / "1_My_Squad.py")                    # no injected squad → active_squad() is None
     assert any("Lab" in i.value for i in at.info)
 
 
@@ -1634,7 +1634,7 @@ def test_the_value_view_measures_the_whole_pool_but_plots_the_decisions(monkeypa
     Injured and departed players are excluded from *both*: they all score 0, and counting them as price peers
     inflated every verdict on the chart (Rice read +7.0 with them in, +3.1 with them out).
     """
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     at.segmented_control[0].set_value("Value").run()
@@ -1832,7 +1832,7 @@ def test_my_squad_transfer_include_injured_surfaces_a_flagged_player():
         return
     squad = {"name": "FlagTest", "player_ids": ids, "bench_ids": ids[11:], "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("Transfer").run()      # ADR-115: manual transfer moved to the Transfer tab
@@ -1878,7 +1878,7 @@ def test_cloud_linked_squad_autosyncs_edits(monkeypatch):
         return
     squad = {"name": "Sync", "player_ids": ids, "bench_ids": ids[11:], "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.session_state["_cloud_linked_handle"] = "myhandle"      # linked (as if Saved/Loaded under this handle)
     at.run()
@@ -1910,7 +1910,7 @@ def _squads_with_active(monkeypatch):
     is now in the sidebar and Saves the session's active squad)."""
     monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
     monkeypatch.setenv("FPL_STORE_KEY", "k")
-    at = _run(_PAGES / "4_My_Squad.py")
+    at = _run(_PAGES / "1_My_Squad.py")
     at.session_state["squad"] = {"name": "My XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
     at.run()                                                                # the sidebar now sees the active squad
     return at
@@ -1930,7 +1930,7 @@ def _signed_in_squads(monkeypatch, stored=None):
     rows = [{"data": stored}] if stored else []
     monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(rows))
     monkeypatch.setattr("requests.post", lambda url, json=None, headers=None, timeout=None: _StoreResp())
-    return _run(_PAGES / "4_My_Squad.py")
+    return _run(_PAGES / "1_My_Squad.py")
 
 
 def test_team_banner_highlights_your_team(monkeypatch):
@@ -1942,7 +1942,7 @@ def test_team_banner_highlights_your_team(monkeypatch):
 
 def test_team_banner_shows_demo_prompt_without_your_team():
     # US-386: viewing the demo → the card prompts to make it yours (the default never looks like your team).
-    at = _run(_PAGES / "4_My_Squad.py")
+    at = _run(_PAGES / "1_My_Squad.py")
     blob = " ".join(m.value for m in at.markdown)
     assert "demo squad" in blob
 
@@ -1982,7 +1982,7 @@ def test_cloud_save_load_hidden_in_sidebar_without_secrets(monkeypatch):
     # US-310/331 (ADR-094): the ☁ cross-device store is secret-gated — with no FPL_STORE_URL/KEY it's invisible.
     monkeypatch.delenv("FPL_STORE_URL", raising=False)
     monkeypatch.delenv("FPL_STORE_KEY", raising=False)
-    at = _run(_PAGES / "4_My_Squad.py")
+    at = _run(_PAGES / "1_My_Squad.py")
     assert not any(t.label == "Your handle" for t in at.text_input)          # no cloud UI when unconfigured
 
 
@@ -2061,7 +2061,7 @@ def test_feedback_submitted_event(monkeypatch):
     monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.test/sink")
     monkeypatch.setattr("requests.post",
                         lambda url, json=None, headers=None, timeout=None: type("R", (), {})())
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     at.text_area[0].set_value("Love the fixture ticker").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
     assert any(e == "feedback_submitted" for e, kw in events)
@@ -2100,7 +2100,7 @@ def test_cloud_save_disabled_without_an_active_squad(monkeypatch):
     # US-331: the sidebar renders on any sub-view; Save needs an active squad (Load works any time).
     monkeypatch.setenv("FPL_STORE_URL", "https://proj.supabase.co/rest/v1/squads")
     monkeypatch.setenv("FPL_STORE_KEY", "k")
-    at = _run(_PAGES / "4_My_Squad.py")                                       # Build view, no active squad in session
+    at = _run(_PAGES / "1_My_Squad.py")                                       # Build view, no active squad in session
     assert any(t.label == "Your handle" for t in at.text_input)             # the cloud UI is present (sidebar)…
     save = next(b for b in at.button if b.label == "Save")
     assert save.disabled                                                     # …but Save is disabled until you have one
@@ -2144,7 +2144,7 @@ def test_my_squad_panel_make_captain_sets_the_captain():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "CaptainTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -2225,7 +2225,7 @@ def test_my_squad_panel_card_shows_per_gameweek_xp():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "GWPitchTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -2299,7 +2299,7 @@ def test_my_squad_per_gw_card_is_horizon_independent():
     target = mids[0]
 
     def pergw(hz):
-        at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+        at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
         at.segmented_control[0].set_value("My Squad").run()
@@ -2332,7 +2332,7 @@ def test_my_squad_panel_boot_battle_compares_squad_players():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "BootTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -2365,7 +2365,7 @@ def test_my_squad_panel_boot_battle_pool_selector():
     bench = [gks[1]["id"], defs[4]["id"], mids[4]["id"], fwds[2]["id"]]
     squad = {"name": "PoolTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
 
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
@@ -2389,7 +2389,7 @@ def test_the_lab_keeps_its_own_horizon_after_the_merge():
     """US-374 → US-445 (ADR-166): managing this week wants the next GW; building for a wildcard wants a long
     run. They were separate pages with separate defaults; now they are tabs, and the control is **keyed per
     mode** so folding the pages together did not fold their horizons together."""
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=60).run()
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=60).run()
     hz = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
     if hz is not None:
         assert hz.value == 1
@@ -2411,7 +2411,7 @@ def test_my_squad_set_bench_picks_four():
 
 def test_trending_page_shows_a_leaderboard():
     # US-194: a community leaderboard (owned board renders now; momentum boards note "live at GW1")
-    at = _run(_PAGES / "8_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     assert at.dataframe or at.info                          # a board, or the no-data note
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
@@ -2447,7 +2447,7 @@ def test_talked_about_board_shows_all_mentions(monkeypatch):
     st.cache_data.clear()                                     # don't inherit another test's cached fetch
     monkeypatch.setattr(reddit.RedditRssClient, "get_subreddit_rss", lambda self, *a, **k: rss)
 
-    at = _run(_PAGES / "7_Signals.py")          # ADR-150: chatter lives on Signals now
+    at = _run(_PAGES / "3_Signals.py")          # ADR-150: chatter lives on Signals now
     btn = [b for b in at.button if b.label.startswith("Show what")]
     assert btn, "the Talked about button should exist"
     btn[0].click().run()
@@ -2458,7 +2458,7 @@ def test_talked_about_board_shows_all_mentions(monkeypatch):
 
 def test_trending_filter_narrows_the_owned_board():
     # ADR-064 reuse: the shared Team/Position/Player filter narrows Trending (the owned board is populated)
-    at = _run(_PAGES / "8_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     if not at.dataframe:
         return
     at.multiselect[0].set_value(["ARS"]).run()             # Team = ARS (the first filter multiselect)
@@ -2468,7 +2468,7 @@ def test_trending_filter_narrows_the_owned_board():
 
 def test_trending_owned_board_shows_the_full_list():
     # ADR-116: the always-populated owned board is one scrollable table (no 30-row page control)
-    at = _run(_PAGES / "8_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     if not at.dataframe:
         return
     assert not any(sb.label == "Page" for sb in at.selectbox)   # no page control (ADR-116)
@@ -2476,7 +2476,7 @@ def test_trending_owned_board_shows_the_full_list():
 
 def test_news_page_lists_flagged_players_or_all_clear():
     # US-190 / ADR-058: the News lens shows flagged players (News + Source cols) or an all-clear message
-    at = _run(_PAGES / "7_Signals.py")
+    at = _run(_PAGES / "3_Signals.py")
     if at.dataframe:
         cols = list(at.dataframe[0].value.columns)
         assert "News" in cols and "Source" in cols
@@ -2486,7 +2486,7 @@ def test_news_page_lists_flagged_players_or_all_clear():
 
 def test_news_page_has_the_headlines_lens_gated_no_network():
     # US-291 (ADR-093): a Headlines section + a button, rendered WITHOUT fetching (no click → no live network).
-    at = _run(_PAGES / "7_Signals.py")
+    at = _run(_PAGES / "3_Signals.py")
     assert not at.exception
     assert any("Headlines" in s.value for s in at.subheader)
     assert any(b.label == "Load headlines" for b in at.button)   # opt-in — the feeds fetch only on click
@@ -2564,7 +2564,7 @@ def test_data_freshness_caption_on_every_tab(monkeypatch):
     # US-180/ADR-056: the "… data as of <date>" caption renders in both modes, on every page.
     # US-219: it now leads with the player count so a stale snapshot is obvious.
     monkeypatch.delenv("FPL_LOCAL", raising=False)
-    for page in (_APP, _PAGES / "2_Players.py", _PAGES / "4_My_Squad.py"):
+    for page in (_APP, _PAGES / "5_Players.py", _PAGES / "1_My_Squad.py"):
         at = _run(page)
         assert any("data as of" in c.value for c in at.caption), f"{page} should show a freshness caption"
         assert any("players · data as of" in c.value for c in at.caption), \
@@ -2667,7 +2667,7 @@ def test_help_watch_view_renders_videos_and_coming_soon(monkeypatch):
         {"topic": "Picking your captain", "blurb": "how MADBOOTS ranks captains", "youtube_url": "https://youtu.be/x"},
         {"topic": "More explainers soon", "blurb": "", "youtube_url": None},
     ])
-    at = _run(_PAGES / "9_Help.py")
+    at = _run(_PAGES / "7_Help.py")
     at.segmented_control[0].set_value("🎥 Watch").run()
     assert not at.exception
     assert any("Picking your captain" in h.value for h in at.subheader)
@@ -2700,7 +2700,7 @@ def test_my_squad_banner_renders_the_styled_card():
 
 def test_data_pages_carry_the_brand_mark():
     # US-397: the data-page headers show the MADBOOTS mark (was a bare emoji title).
-    for page in ("2_Players.py", "3_Team_DNA_and_FDR.py", "7_Signals.py", "8_Trending.py"):
+    for page in ("5_Players.py", "4_Team_DNA.py", "2_FDR.py", "3_Signals.py", "6_Trending.py"):
         at = _run(_PAGES / page)
         blob = " ".join(m.value for m in at.markdown)
         assert 'aria-label="MADBOOTS"' in blob, f"{page} is missing the brand mark"
@@ -2716,16 +2716,18 @@ def test_home_hero_box_consolidates_cta_and_nudges():
     # be a worse first impression than no CTA at all.
     assert 'href="My_Squad"' in blob and "Build your first squad" in blob   # the highlighted CTA button-link
     assert "New here?" in blob and "Help ▸ Watch" in blob and "Testing this?" in blob   # nudges consolidated
-    # US-433 — this line used to assert "📅 **Fixtures**", a page renamed to Team DNA & FDR by ADR-134. The
-    # test was not catching the stale tour, it was HOLDING IT IN PLACE: updating Home broke the test, which is
-    # exactly backwards. It now checks the bullets exist and leaves the naming to the guard that derives the
-    # list from `pages/`.
-    assert "👟 **Players**" in blob and "🧬 **Team DNA & FDR**" in blob   # the icon-led bullets
+    # US-433 → ADR-169. This line has now pinned a page name **twice**: it asserted "📅 **Fixtures**" until
+    # ADR-134 renamed that page, then "🧬 **Team DNA & FDR**" until ADR-169 split it — each time the test broke
+    # because the app *improved*, which is exactly backwards. It asserts the **shape** now (an emoji-led
+    # bullet list, several of them); naming is the job of the guard that derives the list from `pages/`.
+    import re as _re
+    bullets = _re.findall(r"^- \S+ \*\*(.+?)\*\* —", blob, flags=_re.M)
+    assert len(bullets) >= 6, f"the tour should be an emoji-led bullet per page; found {bullets}"
 
 
 def test_news_shows_the_shared_fit_flag():
     # US-400: News uses the same availability emoji (the Fit column) as every other surface.
-    at = _run(_PAGES / "7_Signals.py")
+    at = _run(_PAGES / "3_Signals.py")
     dfs = at.get("dataframe")
     assert not dfs or "Fit" in list(dfs[0].value.columns)   # when there's news, the Fit column is present
 
@@ -2733,17 +2735,20 @@ def test_news_shows_the_shared_fit_flag():
 def test_feedback_page_picker_matches_the_current_nav():
     """US-393 → ADR-166: the picker names where a tester would say a bug happened. It had gone stale the same
     way Home's tour did — still offering *Fixtures* and *News*, never gaining Leagues or Signals."""
-    at = _run(_PAGES / "11_Feedback.py")
+    at = _run(_PAGES / "8_Feedback.py")
     opts = [o for sb in at.selectbox for o in sb.options]
-    assert "My Squad" in opts and "Leagues" in opts and "Signals" in opts
-    assert any("Squad Lab" in o for o in opts)                 # now a My Squad tab, still reportable by name
-    for stale in ("Squads", "Fixtures", "News", "Maddie Explains"):
+    assert {"My Squad", "FDR", "Signals", "Team DNA", "Players", "Trending"} <= set(opts)
+    # Tabs a tester would name are listed with where they live — nobody reports a bug against "My Squad",
+    # they report it against "Leagues".
+    for tab in ("Leagues", "Squad Lab", "Scout"):
+        assert any(tab in o for o in opts), f"{tab} should be reportable by its own name"
+    for stale in ("Squads", "Fixtures", "News", "Maddie Explains", "Ask", "Team DNA & FDR"):
         assert stale not in opts, f"{stale} is not a page any more"
 
 
 def test_fixtures_ticker_shows_the_difficulty_number():
     # US-391: the difficulty run isn't colour-only — each cell carries the FDR digit (colour-blind-safe).
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "2_FDR.py")
     caps = " ".join(c.value for c in at.caption)
     assert "is the difficulty" in caps                         # the legend explains the per-cell number
 
@@ -3000,7 +3005,7 @@ def test_health_shows_a_concentration_note_only_when_a_week_is_actually_narrow()
     squad = SquadStore().load("TS")
     if not squad:
         return                                          # no seed squad in this environment
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=180)
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=180)
     at.session_state["squad"] = {"name": "TS", "player_ids": squad["player_ids"],
                                  "bench_ids": squad.get("bench_ids") or [],
                                  "cost": squad.get("cost") or 100.0}
@@ -3053,7 +3058,7 @@ def test_the_buzz_tab_states_the_full_count_beside_the_filtered_one():
     number mean anything ("6 of 47" says the crowd is busy and mostly not about you; "6" alone says nothing).
     The scan is cached for 30 minutes, so keeping it costs nothing.
     """
-    source = (_PAGES / "7_Signals.py").read_text()
+    source = (_PAGES / "3_Signals.py").read_text()
     assert "apply_filter(buzz, sel)" in source, "filtered after the scan, not before"
     assert "of {len(buzz)} players mentioned match your filter" in source
     assert "untick **My squad only**" in source, "an empty result must say how to get back out of it"
@@ -3071,7 +3076,7 @@ def test_signals_orders_its_sources_by_how_much_they_actually_know():
     3. media headlines — reported by named outlets
     4. community chatter — a mention count, never sentiment
     """
-    at = _run(_PAGES / "7_Signals.py")
+    at = _run(_PAGES / "3_Signals.py")
     if at.exception:
         raise AssertionError(at.exception)
     heads = [h.value for h in at.subheader]
@@ -3081,7 +3086,7 @@ def test_signals_orders_its_sources_by_how_much_they_actually_know():
 
 def test_signals_says_what_each_source_is_worth():
     """A merged page has to label its sources or the merge itself is the misinformation."""
-    at = _run(_PAGES / "7_Signals.py")
+    at = _run(_PAGES / "3_Signals.py")
     if at.exception:
         raise AssertionError(at.exception)
     caps = " ".join(c.value for c in at.caption)
@@ -3093,7 +3098,7 @@ def test_signals_says_what_each_source_is_worth():
 def test_trending_is_leaderboards_only_now():
     """The other half of the split: Trending answers *what the crowd is doing*, in numbers. Mixing chatter in
     put a mention count beside an ownership percentage as though they were the same kind of thing."""
-    at = _run(_PAGES / "8_Trending.py")
+    at = _run(_PAGES / "6_Trending.py")
     if at.exception:
         raise AssertionError(at.exception)
     labels = [b.label for b in at.button]
@@ -3184,12 +3189,12 @@ def test_the_league_scan_offers_the_tap_when_the_component_is_live(monkeypatch):
     from src.web_streamlit import tap
 
     monkeypatch.setattr(tap, "_detector", lambda: (lambda html, key=None: ""))
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "4_Team_DNA.py")
     assert not at.exception
     assert any("Tap a row" in c.value for c in at.caption), "the caption must say the gesture exists"
 
     monkeypatch.setattr(tap, "_detector", lambda: None)
-    plain = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    plain = _run(_PAGES / "4_Team_DNA.py")
     assert not plain.exception, "a missing component must never take the page down"
     assert not any("Tap a row" in c.value for c in plain.caption)
     assert any(s.label == "Team" for s in plain.selectbox), "the picker stays either way"
@@ -3282,7 +3287,7 @@ def test_no_page_composes_a_stat_row_out_of_columns_and_metrics():
     """
     offenders = []
     for page in sorted(_PAGES.glob("*.py")):
-        if page.name.startswith("12_Admin"):
+        if page.name.startswith("9_Admin"):
             continue
         for i, line in enumerate(page.read_text().splitlines(), start=1):
             if re.search(r"\b[a-z]\d\.metric\(", line):
@@ -3312,7 +3317,7 @@ def test_signals_has_one_squad_lens_not_a_control_per_section():
     result, and two ignored it entirely. A lens that covers some of a page is worse than none — a quiet
     section could mean "nothing about your squad" or "not filtered", and the reader can't tell which.
     """
-    src = (_PAGES / "7_Signals.py").read_text()
+    src = (_PAGES / "3_Signals.py").read_text()
     assert src.count("filter_controls(") == 1, "one control for the page, not one per section"
     # …and it is created before section 1, so every section below can honour it.
     assert src.index("filter_controls(") < src.index('st.subheader("1 · Official FPL news")')
@@ -3324,7 +3329,7 @@ def test_team_dna_scan_and_ticker_share_one_squad_lens():
     """US-441 (ADR-164) — the checkbox existed on the ticker only, so the 20-club scan above it ignored a
     control the reader had already set: one page answering "my squad" in one half and "the league" in the
     other, with nothing saying which."""
-    src = (_PAGES / "3_Team_DNA_and_FDR.py").read_text()
+    src = (_PAGES / "4_Team_DNA.py").read_text()
     assert src.count('st.checkbox("My squad only"') == 1, "one checkbox for the page"
     assert "ticker_myteam" not in src, "the ticker's separate key is gone"
     # bound unconditionally, because the ticker reads it even on a snapshot with no DNA to draw
@@ -3336,7 +3341,7 @@ def test_the_dna_page_survives_having_no_team_dna_to_draw(monkeypatch):
     the ticker below reads it regardless, so an empty DNA map would have crashed the page."""
     import src.analytics as analytics_pkg
     monkeypatch.setattr(analytics_pkg, "team_dna_all", lambda *a, **k: {})
-    at = _run(_PAGES / "3_Team_DNA_and_FDR.py")
+    at = _run(_PAGES / "4_Team_DNA.py")
     assert not at.exception
 
 
@@ -3366,7 +3371,7 @@ def test_the_scout_view_leads_with_what_the_boards_agree_on():
     Five same-shaped leaderboards became one view with a board selector, under a shortlist of the players two
     or more of them agree on. This pins both halves: the shortlist leads, and every board is still reachable.
     """
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     next(c for c in at.segmented_control if c.label == "View").set_value("Scout").run()
@@ -3384,7 +3389,7 @@ def test_the_scout_shortlist_never_promises_points():
     assert config.SET_PIECE_WEIGHT == 0.0 and config.DEFCON_MAGNIFIER_WEIGHT == 0.0, \
         "if these are live, the scout copy must change — it currently says this value is NOT in xP"
 
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     next(c for c in at.segmented_control if c.label == "View").set_value("Scout").run()
@@ -3397,7 +3402,7 @@ def test_the_scout_shortlist_never_promises_points():
 def test_players_is_back_under_its_own_ceiling():
     """The page carried a note that ten views was the ceiling and the next one needed a **merge** first.
     ADR-167 is that merge — and the room it frees is what unblocks moving Trending here (US-438)."""
-    at = _run(_PAGES / "2_Players.py")
+    at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:
         return
     views = next(c for c in at.segmented_control if c.label == "View").options
@@ -3415,7 +3420,7 @@ def test_help_carries_the_fpl_rules_ask_was_the_only_route_to():
     """
     from src.fpl_rules import RULES
 
-    at = _run(_PAGES / "9_Help.py")
+    at = _run(_PAGES / "7_Help.py")
     assert not at.exception
     labels = " ".join(e.label or "" for e in at.get("expander"))
     assert "FPL rules" in " ".join(h.value for h in at.subheader)
@@ -3436,7 +3441,7 @@ def test_the_app_does_not_promise_narration_it_cannot_deliver():
 
     assert "AI explains" not in brand.MANTRA
     assert "shows its working" in brand.MANTRA
-    for page in ("9_Help.py",):
+    for page in ("7_Help.py",):
         src = (_PAGES / page).read_text()
         assert "The AI explains. You make the call." not in src, f"{page} hard-codes the retired promise"
     assert "The AI explains. You make the call." not in (_ROOT / "src" / "web_streamlit" / "Home.py").read_text()
@@ -3445,7 +3450,7 @@ def test_the_app_does_not_promise_narration_it_cannot_deliver():
 def test_ask_is_owner_only_now_and_off_by_default():
     """It survives for evaluation, not for shipping: behind the Admin key, and behind a checkbox even there —
     it runs the full grounded pipeline, and ADR-141's rule is that nothing expensive happens on page load."""
-    src = (_PAGES / "12_Admin.py").read_text()
+    src = (_PAGES / "9_Admin.py").read_text()
     assert "Ask — under evaluation" in src
     assert 'st.checkbox("Load Ask"' in src, "off by default"
     assert not (_PAGES / "6_Ask.py").exists(), "the public page is retired"

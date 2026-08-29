@@ -321,7 +321,7 @@ def test_recent_events_reads_or_degrades(monkeypatch):
 
 def _admin():
     from pathlib import Path
-    return str(Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "pages" / "12_Admin.py")
+    return str(Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "pages" / "9_Admin.py")
 
 
 def test_admin_is_inert_without_a_key(monkeypatch):

@@ -1,9 +1,10 @@
 """The Streamlit UI home (ADR-052) — a read-only view over the analytics.
 
 Multipage: this is the landing (the sidebar's **Home** — its label is this file's name); `pages/` holds
-Players · Team DNA & FDR · My Squad · Signals · Trending · Help · Feedback · Admin. ADR-166 folded
+My Squad · FDR · Signals · Team DNA · Players · Trending · Help · Feedback · Admin. ADR-166 folded
 Squad Lab and Leagues into My Squad, and Maddie Explains into Help ▸ Watch; ADR-168 retired Ask to Admin —
-**eight pages, not twelve**.
+**eight**, and ADR-169 split FDR from Team DNA and reordered the lot by how often each is
+actually needed.
 Each page imports the same engine the CLI does and changes nothing in `src/`.
 Run:  python -m src.web_streamlit
 
@@ -45,7 +46,7 @@ if _line:
     render_countdown(_gw, _deadline, datetime.now(timezone.utc), _urgency)   # the live clock (ADR-088)
     st.caption(_text)          # the accessible, no-JS text line (context + date) beneath the clock
     if _urgency != "calm":     # a nudge to the pre-deadline actions when it's close
-        st.page_link("pages/4_My_Squad.py",
+        st.page_link("pages/1_My_Squad.py",
                      label="⚙️ Before it locks — set your captain · make transfers · pick a chip →")
 
 # US-398 (rev, owner 2026-08-17): ONE highlighted "get started" box — a purple CTA button (links to Squad Lab via
@@ -73,7 +74,8 @@ st.markdown(
 **Explore the sidebar:**
 
 - 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
-- 🧬 **Team DNA & FDR** — how strong every club is at both ends, then the difficulty ticker week by week.
+- 📅 **FDR** — every club's next few gameweeks, shaded by difficulty; easiest run first.
+- 🧬 **Team DNA** — how strong every club is at both ends, and the players to target there.
 - 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, your
   🏆 **Leagues** (effective ownership · captain split · transfer flow · head-to-head), and the **Lab** for
   building a fresh 15 (season start · wildcard · revamp).
