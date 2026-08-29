@@ -1,8 +1,9 @@
 """The Streamlit UI home (ADR-052) — a read-only view over the analytics.
 
 Multipage: this is the landing (the sidebar's **Home** — its label is this file's name); `pages/` holds
-Squad Lab · Players · Team DNA & FDR · My Squad · Leagues · Ask · Signals · Trending · Help · Maddie
-Explains · Feedback · Admin. Each page imports the same engine the CLI does and changes nothing in `src/`.
+Players · Team DNA & FDR · My Squad · Leagues · Ask · Signals · Trending · Help · Feedback · Admin.
+(ADR-166 folded Squad Lab into My Squad ▸ Lab, and Maddie Explains into Help ▸ Watch — ten pages, not
+twelve.) Each page imports the same engine the CLI does and changes nothing in `src/`.
 Run:  python -m src.web_streamlit
 
 ⚠️ **The tour below names every page, so it goes stale on any rename or addition** (US-433: it still said
@@ -58,10 +59,10 @@ _HERO_CSS = (
     ".mb-hero a.ext{color:#7a1fb8;font-weight:700;}</style>")
 st.markdown(
     _HERO_CSS + '<div class="mb-hero">'
-    '<a class="cta" href="Squad_Lab" target="_self">🧪 Build your first squad → Squad Lab</a>'
+    '<a class="cta" href="My_Squad" target="_self">🧪 Build your first squad → My Squad ▸ Lab</a>'
     '<div class="nudges">'
     '🧭 <b>New here?</b> The <b>Help</b> tab is a step-by-step guide.&nbsp;&nbsp;'
-    '🎥 <b>Maddie Explains</b> has quick video guides — 90 seconds or less.<br>'
+    '🎥 <b>Help ▸ Watch</b> has quick video guides — 90 seconds or less.<br>'
     '🧪 <b>Testing this?</b> Tell us what breaks on the <b>Feedback</b> tab — or '
     '<a class="ext" href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.'
     '</div></div>', unsafe_allow_html=True)
@@ -70,24 +71,22 @@ st.markdown(
     """
 **Explore the sidebar:**
 
-- 🧪 **Squad Lab** — build and optimise a fresh 15 (season start · wildcard · revamp); **Use this squad →** sends
-  it to My Squad.
 - 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
 - 🧬 **Team DNA & FDR** — how strong every club is at both ends, then the difficulty ticker week by week.
-- 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips** and **Health**.
+- 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, and the
+  **Lab** for building a fresh 15 (season start · wildcard · revamp).
 - 🏆 **Leagues** — import a mini-league by your manager id: effective ownership, the captain split, who's
   transferring what, and a **head-to-head** against any rival.
 - 💬 **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
 - 📡 **Signals** — everything the table doesn't say, most reliable first: official FPL news, unexplained
   sell-offs, and reported moves out of the league.
 - 📈 **Trending** — what the crowd is *doing*, in numbers: most-owned · transferred in/out · in-form.
-- 🧭 **Help** — a step-by-step guide to getting started with MADBOOTS.
-- 🎥 **Maddie Explains** — quick video guides (90 seconds or less), from **Maddie**, your MADBOOTS guide.
+- 🧭 **Help** — a step-by-step guide to getting started, plus **Maddie's** 90-second video explainers.
 - 📣 **Feedback** — tell us what broke, or what would help.
 
 **Your squad**
 
-- 🧪 **Build** it in **Squad Lab** — name it, then **Use this squad →**.
+- 🧪 **Build** it in **My Squad ▸ Lab** — name it, then **Use this squad →**.
 - ☁ **Saved to your account** and **auto-synced across your devices** — or **Download** a backup to your device.
 - 📤 **Upload** a saved backup, or **import your real FPL team** by Manager-ID — the same id then opens your
   mini-leagues on **Leagues**, so you only enter it once.

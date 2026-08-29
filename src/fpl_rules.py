@@ -234,3 +234,21 @@ def transfer_window_open(today) -> bool:
     """
     stamp = f"{today.month:02d}-{today.day:02d}"
     return any(start <= stamp <= end for start, end in TRANSFER_WINDOWS)
+
+
+# Chips come in two sets: one for each half of the season, the second unlocking around GW20 (the `chips` rule
+# above states this). So a chip has a **deadline**, and it is not the gameweek you happen to be looking at.
+CHIP_HALVES = (19, 38)
+
+
+def chip_deadline(gameweek) -> int:
+    """The last gameweek the current set of chips can be played in (ADR-166).
+
+    A chip is a *season* decision with a fixed expiry, so the question is never "is this week good?" but "is
+    this week better than the weeks I have left?". Answering it over a 1-gameweek window — which is what the
+    My Squad horizon defaulted to — is not a smaller version of that question, it is a different one.
+    """
+    for last in CHIP_HALVES:
+        if gameweek is not None and gameweek <= last:
+            return last
+    return CHIP_HALVES[-1]

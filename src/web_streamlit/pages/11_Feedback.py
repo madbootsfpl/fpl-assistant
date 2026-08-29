@@ -23,8 +23,11 @@ _GITHUB_ISSUE = "https://github.com/madbootsfpl/fpl-assistant/issues/new"
 # error. Any https origin passes a non-domain-locked form; override via FPL_FEEDBACK_ORIGIN for your app URL.
 _DEFAULT_ORIGIN = "https://madboots.streamlit.app"
 # The pages a tester might be reporting about (US-306) — so feedback carries where it happened.
-_PAGES = ("(not sure)", "Home", "Players", "Fixtures", "My Squad", "Squad Lab", "Ask", "News", "Trending",
-          "Help", "Maddie Explains", "Feedback")
+# ⚠️ Stale by default, like Home's tour was (US-433): this still said *Fixtures* and *News* long after
+# ADR-134/149 renamed them, and never gained Leagues or Signals. Sub-tabs are listed where a tester would say
+# them — nobody reports a bug against "My Squad", they report it against "Chips".
+_PAGES = ("(not sure)", "Home", "Players", "Team DNA & FDR", "My Squad", "Leagues", "Squad Lab (My Squad ▸ Lab)",
+          "Ask", "Signals", "Trending", "Help", "Feedback")
 
 
 def _app_version() -> str:

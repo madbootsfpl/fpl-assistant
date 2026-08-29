@@ -299,10 +299,10 @@ def test_my_squad_health_shows_the_your_teams_strip():
     at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
     if at.exception:
         return
-    health = next((s for s in at.segmented_control if "Health" in (s.options or [])), None)
+    health = next((s for s in at.segmented_control if "DNA" in (s.options or [])), None)
     if health is None:
         return
-    health.set_value("Health").run()
+    health.set_value("DNA").run()
     assert not at.exception
     md = " ".join(m.value or "" for m in at.markdown)
     if "Your teams" not in md:                          # no demo squad in this environment
@@ -490,19 +490,17 @@ def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
 
 
 def _squads_view(view):
-    # ADR-105: Build is now its own Squad Lab tab; the rest are sub-tabs of My Squad
-    if view == "Build":
-        at = _run(_PAGES / "1_Squad_Lab.py")
-    else:
-        at = _run(_PAGES / "4_My_Squad.py")
-        at.segmented_control[0].set_value(view).run()
+    """A My Squad sub-tab. ADR-105 split Build onto its own Squad Lab page; ADR-166 folded it back as the
+    **Lab** tab — a builder you use a few times a season did not earn the top slot in the sidebar."""
+    at = _run(_PAGES / "4_My_Squad.py")
+    at.segmented_control[0].set_value("Lab" if view == "Build" else view).run()
     assert not at.exception, f"Squads[{view}] raised: {at.exception}"
     return at
 
 
 def test_squads_page_analyses_the_demo_squad():
     # Health view: the demo seed populates the picker (ADR-054) → an analysis renders, no crash
-    at = _squads_view("Health")
+    at = _squads_view("DNA")
     assert any(s.label == "Squad" for s in at.selectbox)   # the squad picker (a GW selector is also present)
     assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
@@ -516,12 +514,17 @@ def test_squads_ai_tips_view_renders_a_gameweek_plan():
     assert "Start Ollama" not in at.code[0].value          # US-375: no dev-only Ollama hint for web users
 
 
-def test_squads_chips_view_renders_chip_advice():
-    # ADR-082 / US-252: the "Chips" view routes through ask.answer → the grounded chip block renders
-    # (no Ollama in the test → the advice block + facts, no prose), no crash
-    at = _squads_view("Chips")
-    assert len(at.code) == 1                               # the rendered chip advice
-    block = at.code[0].value
+def test_chip_advice_renders_under_ai_tips_but_only_on_request():
+    """ADR-082/US-252 → US-434 (ADR-166): chips moved under **AI Tips** — the same question on a different
+    clock. Behind a button, because it is another **6.6 s** of analytics and ADR-141's rule holds: nothing
+    expensive happens because someone opened a tab."""
+    at = _squads_view("AI Tips")
+    assert len(at.code) == 1, "AI Tips renders; chips have not run yet"
+    assert not any("Chip strategy" in c.value for c in at.code)
+
+    btn = next(b for b in at.button if b.key == "ms_chips")
+    btn.click().run()
+    block = " ".join(c.value for c in at.code)
     assert "Chip strategy" in block                        # the advice block header
     assert all(chip in block for chip in ("Triple Captain", "Bench Boost", "Free Hit", "Wildcard"))
 
@@ -688,9 +691,9 @@ def test_sidebar_pages():
     # ADR-141 inserted Leagues at 5 and shifted Ask→12 up by one. Streamlit derives a page's URL from the
     # filename *without* its numeric prefix, so renumbering moves nav order without breaking any link.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
-    assert present == sorted(["1_Squad_Lab.py", "2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
+    assert present == sorted(["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
                               "5_Leagues.py", "6_Ask.py", "7_Signals.py", "8_Trending.py", "9_Help.py",
-                              "10_Maddie_Explains.py", "11_Feedback.py", "12_Admin.py"])
+                              "11_Feedback.py", "12_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
         assert not (_PAGES / gone).exists()
@@ -941,9 +944,9 @@ def test_xg_board_rates_only_meaningful_players():
         assert ratings <= {"—"}, f"goalkeepers should not be rated on xGI, got {ratings}"
 
 
-_TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩", "1_Squad_Lab.py": "🧪",
+_TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩",
               "6_Ask.py": "💬", "7_Signals.py": "📡", "8_Trending.py": "📈", "9_Help.py": "🧭",
-              "10_Maddie_Explains.py": "🎥", "11_Feedback.py": "📣", "12_Admin.py": "📊"}
+              "11_Feedback.py": "📣", "12_Admin.py": "📊"}
 
 
 def test_every_tab_has_an_emoji_led_header():
@@ -993,16 +996,17 @@ def test_feedback_payload_carries_page_version_and_timestamp(monkeypatch):
     at = _run(_PAGES / "11_Feedback.py")
     assert any(s.label == "Which page?" for s in at.selectbox)          # the page picker exists
     at.text_area[0].set_value("Fixtures target list is great").run()
-    next(s for s in at.selectbox if s.label == "Which page?").set_value("Fixtures").run()
+    # ADR-166 renamed the pages this picker offers; the test is about the *payload*, so it picks a live one.
+    next(s for s in at.selectbox if s.label == "Which page?").set_value("Team DNA & FDR").run()
     next(b for b in at.button if b.label == "Send feedback").click().run()
 
     assert not at.exception and captured.get("url") == "https://example.test/sink"
     payload = captured["json"]
     assert payload["message"] == "Fixtures target list is great"
-    assert payload["page"] == "Fixtures"
+    assert payload["page"] == "Team DNA & FDR"
     assert payload["version"] and payload["source"] == "fpl-assistant-beta"
     assert "T" in payload["ts"]                                          # an ISO timestamp
-    assert payload["_subject"].endswith("Fixtures")                     # US-308: FormSubmit subject
+    assert payload["_subject"].endswith("Team DNA & FDR")               # US-308: FormSubmit subject
     assert (captured["headers"] or {}).get("Origin", "").startswith("http")   # server-side Origin for FormSubmit
     assert "access_key" not in payload                                  # no Web3Forms key set → omitted
 
@@ -1130,7 +1134,7 @@ def test_squads_gameweeks_selector_drives_the_horizon():
     gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
     assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-374/315
     gw[0].set_value(2).run()
-    at.segmented_control[0].set_value("Health").run()
+    at.segmented_control[0].set_value("DNA").run()
     assert not at.exception
     if not at.code:
         return
@@ -1476,21 +1480,23 @@ def test_my_squad_points_to_build():
     assert any("Squad Lab" in c.value for c in at.caption)
 
 
-def test_squad_lab_page_builds_and_has_a_mascot_header():
-    # US-360 (ADR-105): Squad Lab is the builder, with a mascot-themed header
-    at = _run(_PAGES / "1_Squad_Lab.py")
-    assert at.title and "Squad Lab" in at.title[0].value
+def test_the_lab_keeps_its_identity_as_a_tab():
+    """US-360 (ADR-105) → US-445 (ADR-166): the builder lost its sidebar slot, not its name. It is on My
+    Squad now, so the page title is "My Squad" — the Lab announces itself with its own heading instead."""
+    at = _squads_view("Build")
+    assert any("Squad Lab" in h.value for h in at.subheader), "the Lab tab must still say what it is"
     assert any("Build your squad" in c.value for c in at.caption)   # the header copy
 
 
-def test_my_squad_empty_state_points_to_squad_lab():
-    # US-360 (ADR-105): with no team built/loaded, My Squad points new users at Squad Lab
+def test_my_squad_empty_state_points_to_the_lab_tab():
+    """US-360 → US-445: the pointer still exists, but it names the **tab** now — sending someone to a sidebar
+    page that no longer exists would be worse than not pointing at all."""
     at = _run(_PAGES / "4_My_Squad.py")                    # no injected squad → active_squad() is None
-    assert any("Squad Lab" in i.value for i in at.info)
+    assert any("Lab" in i.value for i in at.info)
 
 
 def test_build_page_returns_a_squad(monkeypatch):
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     # a squad is rendered (the explanation block + the squad table) — or the "no data" note; no crash
     assert len(at.code) >= 1 or len(at.info) >= 1
     # move an archetype control → rebuild, still no crash
@@ -1500,7 +1506,7 @@ def test_build_page_returns_a_squad(monkeypatch):
 
 def test_build_shows_the_squad_on_the_pitch():
     # US-261 (ADR-084 reuse): the built 15 render on the green pitch (a full 15 kit cards) + the table below
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:                                        # no data locally → the info branch
         return
     blob = " ".join(m.value for m in at.markdown)
@@ -1511,7 +1517,7 @@ def test_build_shows_the_squad_on_the_pitch():
 
 def test_build_formation_preview_shows_the_xi_score():
     # US-230 (ADR-075): the "Preview the best XI in a shape" expander shows a Projected XI xP total
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     mets = [(m.label, str(m.value)) for m in at.metric]
@@ -1523,7 +1529,7 @@ def test_build_formation_preview_shows_the_xi_score():
 def test_build_compare_all_formations_is_gated():
     # US-231 (ADR-075): the "Compare all formations" table is absent by default and appears only on tick,
     # ranking all 7 shapes by XI xP (desc) with a Δ-vs-best column.
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     assert not any("Formation" in df.value.columns for df in at.dataframe)   # off by default → no table
@@ -1542,7 +1548,7 @@ def test_build_compare_all_formations_is_gated():
 
 
 def test_build_page_offers_a_download_and_sets_the_active_squad(monkeypatch):
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:                                        # no data locally → the "run refresh" note
         return
     assert at.get("download_button"), "an Optimal build must offer a squad.json download"
@@ -1558,7 +1564,7 @@ def test_build_starts_the_bench_in_recommended_order():
     from src.analytics import decision_xp
     from src.storage import Storage
 
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     next(b for b in at.button if b.label.startswith("Use this squad")).click().run()
@@ -1578,7 +1584,7 @@ def test_build_starts_the_bench_in_recommended_order():
 
 def test_build_page_renders_non_zero_xp(monkeypatch):
     # regression (US-172): Build must attach xp/minutes_weight so the table + projected total aren't zeros
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     out = next((c.value for c in at.code if "Total:" in c.value), "")   # the squad table (not the explanation)
@@ -1589,7 +1595,7 @@ def test_build_page_renders_non_zero_xp(monkeypatch):
 
 def test_build_page_names_the_squad(monkeypatch):
     # US-172: the squad-name input flows into the active squad (and the download key)
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     at.text_input[0].set_value("Tony's XI").run()
@@ -1599,7 +1605,7 @@ def test_build_page_names_the_squad(monkeypatch):
 
 def test_build_page_objective_switch_rebuilds(monkeypatch):
     # ADR-062: switching the objective (xp→xgi) rebuilds on the same engine, no crash, still a squad
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     next(s for s in at.selectbox if s.label == "Objective").set_value("xgi").run()
@@ -1643,7 +1649,7 @@ def test_the_value_view_measures_the_whole_pool_but_plots_the_decisions(monkeypa
 def test_build_page_weekly_and_include_unavailable(monkeypatch):
     # ADR-062: the build-mode radio + include-unavailable checkbox drive the same select_squad
     # ADR-137: the mode is now named for what it builds — a *cheap* bench, bought so the money goes into the XI
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     at.radio[0].set_value("Strong XI (cheap bench)").run()
@@ -1661,7 +1667,7 @@ def test_the_build_modes_are_the_two_that_actually_exist(monkeypatch):
     This pins both halves — that the radio offers two, and that the Bench Boost question is still answered
     where it is asked, rather than silently dropped.
     """
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     mode = at.radio[0]
@@ -1673,7 +1679,7 @@ def test_the_build_modes_are_the_two_that_actually_exist(monkeypatch):
 
 def test_build_page_formation_preview_is_display_only(monkeypatch):
     # ADR-062: the formation preview is XI-only and never adds a second (save) download
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     next(s for s in at.selectbox if s.label == "Formation").set_value("4-3-3").run()
@@ -1683,7 +1689,7 @@ def test_build_page_formation_preview_is_display_only(monkeypatch):
 
 def test_build_page_exclude_removes_the_player_from_the_save(monkeypatch):
     # ADR-062: the "Must exclude" control wires through to the saved 15 (the tester's key ask)
-    at = _run(_PAGES / "1_Squad_Lab.py")
+    at = _squads_view("Build")
     if not at.code:
         return
     opts = at.multiselect[1].options                       # [0] include, [1] exclude, [2] bench
@@ -2011,13 +2017,13 @@ def _capture_events(monkeypatch):
 
 def test_analysis_run_event_on_a_manage_view(monkeypatch):
     events = _capture_events(monkeypatch)
-    _squads_view("Health")
-    assert any(e == "analysis_run" and kw.get("view") == "Health" for e, kw in events)
+    _squads_view("DNA")
+    assert any(e == "analysis_run" and kw.get("view") == "DNA" for e, kw in events)
 
 
 def test_squad_created_event_on_use_this_squad(monkeypatch):
     events = _capture_events(monkeypatch)
-    at = _run(_PAGES / "1_Squad_Lab.py")                    # Build view (default)
+    at = _squads_view("Build")                    # Build view (default)
     use = [b for b in at.button if b.label.startswith("Use this squad")]
     if not use:
         return                                           # no build (empty pool) → nothing to create
@@ -2059,9 +2065,9 @@ def test_feedback_submitted_event(monkeypatch):
 
 def test_squads_page_emits_data_load_and_analysis_perf(monkeypatch):
     events = _capture_events(monkeypatch)
-    _run(_PAGES / "1_Squad_Lab.py")                        # the builder: loads data + runs the optimiser (ADR-105)
+    _squads_view("Build")                        # the builder: loads data + runs the optimiser (ADR-105)
     perf = [(kw.get("op"), kw.get("page"), kw.get("ok")) for e, kw in events if e == "perf"]
-    assert ("data_load", "Squad Lab", True) in perf      # FPL data loading timed
+    assert ("data_load", "My Squad", True) in perf       # FPL data loading timed (the Lab is a tab now)
     assert any(op == "analysis" and ok for op, _p, ok in perf)   # the squad-optimiser calculation timed
     for _e, kw in events:                                # perf carries a duration, never PII
         if _e == "perf":
@@ -2371,16 +2377,18 @@ def test_my_squad_panel_boot_battle_pool_selector():
     assert not at.exception
 
 
-def test_default_horizon_my_squad_1_squad_lab_5():
-    # US-374: My Squad defaults to the next GW (manage this week); Squad Lab stays 5 (build for the run).
-    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=30).run()
+def test_the_lab_keeps_its_own_horizon_after_the_merge():
+    """US-374 → US-445 (ADR-166): managing this week wants the next GW; building for a wildcard wants a long
+    run. They were separate pages with separate defaults; now they are tabs, and the control is **keyed per
+    mode** so folding the pages together did not fold their horizons together."""
+    at = AppTest.from_file(str(_PAGES / "4_My_Squad.py"), default_timeout=60).run()
     hz = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
     if hz is not None:
         assert hz.value == 1
-    lab = AppTest.from_file(str(_PAGES / "1_Squad_Lab.py"), default_timeout=30).run()
-    hz2 = next((s for s in lab.segmented_control if s.label == "Gameweeks ahead"), None)
+    at.segmented_control[0].set_value("Lab").run()
+    hz2 = next((s for s in at.segmented_control if s.label == "Gameweeks ahead"), None)
     if hz2 is not None:
-        assert hz2.value == 5
+        assert hz2.value == 5, "the Lab must not inherit the squad tools' 1-GW window"
 
 
 def test_my_squad_set_bench_picks_four():
@@ -2714,8 +2722,9 @@ def test_maddie_videos_fall_back_on_store_error(monkeypatch):
     assert out and out[0]["topic"] == "Meet Maddie"
 
 
-def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
-    # The hub embeds a clip for a published video and shows "coming soon" for a URL-less row (no crash).
+def test_help_watch_view_renders_videos_and_coming_soon(monkeypatch):
+    """US-448 (ADR-166) — Maddie folded into Help as a **Watch** view rather than a second sidebar page. Both
+    answer "how does this app work?"; text-vs-video is a preference, not a topic."""
     import streamlit as st
 
     from src.web_streamlit import maddie
@@ -2724,10 +2733,11 @@ def test_ask_maddie_page_renders_videos_and_coming_soon(monkeypatch):
         {"topic": "Picking your captain", "blurb": "how MADBOOTS ranks captains", "youtube_url": "https://youtu.be/x"},
         {"topic": "More explainers soon", "blurb": "", "youtube_url": None},
     ])
-    at = _run(_PAGES / "10_Maddie_Explains.py")
-    assert any("Maddie Explains" in t.value for t in at.title)
-    assert any("Picking your captain" in s.value for s in at.subheader)      # the published topic renders
-    assert any("Coming soon" in i.value for i in at.info)                    # the URL-less row degrades
+    at = _run(_PAGES / "9_Help.py")
+    at.segmented_control[0].set_value("🎥 Watch").run()
+    assert not at.exception
+    assert any("Picking your captain" in h.value for h in at.subheader)
+    assert any("Coming soon" in i.value for i in at.info)          # the URL-less row degrades, no crash
 
 
 def test_brand_tokens_and_mantra_are_defined():
@@ -2764,8 +2774,10 @@ def test_home_hero_box_consolidates_cta_and_nudges():
     at = _run(_APP)
     blob = " ".join(m.value for m in at.markdown)
     assert "mb-hero" in blob                                    # the one highlighted box
-    assert 'href="Squad_Lab"' in blob and "Build your first squad" in blob   # the highlighted CTA button-link
-    assert "New here?" in blob and "Maddie Explains" in blob and "Testing this?" in blob   # nudges consolidated
+    # ADR-166: the builder is a My Squad tab now, so the CTA points there — a link to a deleted page would
+    # be a worse first impression than no CTA at all.
+    assert 'href="My_Squad"' in blob and "Build your first squad" in blob   # the highlighted CTA button-link
+    assert "New here?" in blob and "Help ▸ Watch" in blob and "Testing this?" in blob   # nudges consolidated
     # US-433 — this line used to assert "📅 **Fixtures**", a page renamed to Team DNA & FDR by ADR-134. The
     # test was not catching the stale tour, it was HOLDING IT IN PLACE: updating Home broke the test, which is
     # exactly backwards. It now checks the bullets exist and leaves the naming to the guard that derives the
@@ -2781,11 +2793,14 @@ def test_news_shows_the_shared_fit_flag():
 
 
 def test_feedback_page_picker_matches_the_current_nav():
-    # US-393: the "which page?" picker is synced to the live nav (no stale "Squads"; has My Squad/Squad Lab/Maddie).
+    """US-393 → ADR-166: the picker names where a tester would say a bug happened. It had gone stale the same
+    way Home's tour did — still offering *Fixtures* and *News*, never gaining Leagues or Signals."""
     at = _run(_PAGES / "11_Feedback.py")
     opts = [o for sb in at.selectbox for o in sb.options]
-    assert "My Squad" in opts and "Squad Lab" in opts and "Maddie Explains" in opts
-    assert "Squads" not in opts                                # the pre-ADR-105 label is gone
+    assert "My Squad" in opts and "Leagues" in opts and "Signals" in opts
+    assert any("Squad Lab" in o for o in opts)                 # now a My Squad tab, still reportable by name
+    for stale in ("Squads", "Fixtures", "News", "Maddie Explains"):
+        assert stale not in opts, f"{stale} is not a page any more"
 
 
 def test_fixtures_ticker_shows_the_difficulty_number():
@@ -2795,17 +2810,19 @@ def test_fixtures_ticker_shows_the_difficulty_number():
     assert "is the difficulty" in caps                         # the legend explains the per-cell number
 
 
-def test_home_mentions_maddie_explains_in_the_hero():
-    # US-383 (rev US-398): the Maddie nudge is now text in the consolidated hero box (not a separate page_link).
+def test_home_still_points_at_the_video_guides():
+    """US-383 → US-398 → ADR-166: the nudge is text in the consolidated hero box, and it now names **Help ▸
+    Watch** — Maddie stopped being a page, so pointing at one would send people nowhere."""
     at = _run(_APP)
     blob = " ".join(m.value for m in at.markdown)
-    assert "Maddie Explains" in blob
+    assert "Help ▸ Watch" in blob and "video guides" in blob
+    assert "Maddie Explains</b>" not in blob                # the page that no longer exists
 
 
 
 def test_health_shows_the_risk_monitor_and_squad_dna():
     """ADR-130 — Health said how good a squad was; it now also says what needs attention this week."""
-    at = _squads_view("Health")
+    at = _squads_view("DNA")
     if at.exception:
         raise AssertionError(at.exception)
     blob = " ".join(m.value for m in at.markdown)
@@ -2820,7 +2837,7 @@ def test_health_shows_the_risk_monitor_and_squad_dna():
 
 def test_health_shows_the_forward_planner():
     """ADR-131 — the card leads with fixture exposure and states the xP range rather than implying a forecast."""
-    at = _squads_view("Health")
+    at = _squads_view("DNA")
     if at.exception:
         raise AssertionError(at.exception)
     blob = " ".join(m.value for m in at.markdown)
@@ -3031,7 +3048,7 @@ def test_health_shows_a_concentration_note_only_when_a_week_is_actually_narrow()
                                  "bench_ids": squad.get("bench_ids") or [],
                                  "cost": squad.get("cost") or 100.0}
     at.run()
-    at.segmented_control[0].set_value("Health").run()
+    at.segmented_control[0].set_value("DNA").run()
     assert not at.exception
 
     notes = [c.value for c in at.caption if c.value.startswith("🎯")]
@@ -3169,7 +3186,7 @@ def test_health_shows_a_reported_departure_the_fpl_status_still_calls_available(
         return {owned[0]["id"]: {"kind": "transfer", "source": "Romano", "title": "Al Hilal, here we go!"}}
 
     monkeypatch.setattr(squads_view, "_reported_leavers", fake)
-    at = _squads_view("Health")
+    at = _squads_view("DNA")
     assert seen, "the stub was never called — Health is not asking the question at all"
     block = "\n".join(c.value for c in at.code)
     assert "leaving — Romano" in block, "the analysis must name the outlet behind the departure"

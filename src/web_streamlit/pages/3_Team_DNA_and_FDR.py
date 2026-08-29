@@ -127,6 +127,11 @@ else:
 
     st.divider()
     # The ticker — the detailed week-by-week view, below the league scan (ADR-134).
+    # US-440 — it had **no heading at all**: the page title said "Team DNA & FDR" and only the DNA half was
+    # ever announced, so the second half of the page read as an unlabelled appendage to the first.
+    st.subheader("📅 FDR — the difficulty ticker")
+    st.caption("Every club's next few gameweeks, shaded by difficulty — the week-by-week detail behind the "
+               "**FIX** percentile above.")
     weeks = st.slider("Weeks to show", 1, 8, 6,
                       help="How many upcoming gameweeks to show in the difficulty ticker.")
     # US-302 (ADR-049) / US-441 (ADR-164): the ticker reads the page's **one** squad lens, set above the scan,

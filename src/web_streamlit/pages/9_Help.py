@@ -14,6 +14,38 @@ require_access()          # opt-in beta gate (ADR-087)
 analytics.boot("Help")
 st.title("🧭 Help")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
+
+# US-448 (ADR-166) — 🎥 Maddie Explains folded in here as a second view rather than a second sidebar page.
+# Both answer *"how does this app work?"*; the only difference is text versus video, which is a preference,
+# not a topic. Two entries for one question is exactly the sidebar bloat the owner asked to reduce — and this
+# removes one without pushing anything into a page that is already at its own ceiling.
+_help_view = st.segmented_control("How would you like it?", ["📖 Read", "🎥 Watch"], default="📖 Read",
+                                  key="help_view",
+                                  help="The written walkthrough, or Maddie's 90-second explainers.") or "📖 Read"
+
+if _help_view == "🎥 Watch":
+    from src.web_streamlit import maddie
+
+    @st.cache_data(ttl=900, show_spinner=False)
+    def _cached_videos():
+        return maddie.videos()
+
+    st.caption(f"Short explainers — **90 seconds or less** — from **Maddie**, your MADBOOTS guide. "
+               f"{brand.MANTRA} New clips land here as they're made.")
+    st.divider()
+    _videos = _cached_videos()
+    for _i, _v in enumerate(_videos):
+        st.subheader(_v["topic"])
+        if _v.get("blurb"):
+            st.caption(_v["blurb"])
+        if _v.get("youtube_url"):
+            st.video(_v["youtube_url"])
+        else:
+            st.info("🎬 Coming soon — this explainer is on its way.")
+        if _i < len(_videos) - 1:
+            st.divider()
+    st.caption("Prefer to read? Switch to **📖 Read** above for the written guide + glossary.")
+    st.stop()
 st.caption(f"A step-by-step guide to getting the most from MADBOOTS. **{brand.MANTRA}** Every answer is checked "
            "against the underlying data with a **✓/⚠** trust line.")
 

@@ -741,19 +741,10 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
         reported_out=leaving,
     )
     captain_id = squad.get("captain_id")
-    render_player_table([{
-        "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
-        "Pos": p["position"], "Player": p["web_name"] + (" (C)" if p["id"] == captain_id else ""),
-        "Team": p["team"], "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
-        "Role": "XI" if p["id"] in xi_ids else "Bench",
-        "Trends": " ".join([*crowd_flags(p), *(["✈️ leaving"] if p["id"] in leaving else [])]),
-        "Set": " ".join(set_piece_flags(p)),
-    } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))],
-        help={"Set": SET_PIECE_LEGEND,
-              "Trends": "Ownership, transfer momentum, price and form — plus **✈️ leaving** when the press "
-                        "reports a move out of the league (the analysis below names the outlet)."})
-    st.code(render_squad_analysis(analysis, squad_name, show_xmins=True, captain_id=captain_id), language=None)
-
+    # US-436 (ADR-166) — **the fingerprint leads.** The owner: *"the Squad DNA is powerful, maybe rename Health
+    # to DNA. Lead with that and have the health underneath as it's less informative."* Agreed, and the tab is
+    # renamed to match: what was on top was a 15-row table and a wall of monospace totals — true, but it is the
+    # *working* rather than the *reading*. Nothing here is recomputed; the order changed, not the analysis.
     # 🧬 Your teams (ADR-119, US-420) — the team-strength health check behind your squad: each of your clubs'
     # grade + attack/defence/fixture read + your players, drilling into the full Team DNA. Reuses players/upcoming.
     st.divider()
@@ -773,7 +764,6 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     # together. Both reuse existing engines (xMins · Player DNA · Team DNA); no new analytics.
     _last = last_season_rows(players, history)
     _name = last_season_name(history)
-    st.divider()
     render_risk_monitor(squad_risk_rows(owned, upcoming, gw_history=gw_history, history=history), badges)
     _dna_by_id = {p["id"]: player_dna_this_or_last(p, players, _last, _name)[0] for p in owned}
     _tdna = team_dna_all(players, upcoming, gw_history=gw_history, last_rows=_last)
@@ -793,6 +783,25 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
               if (n := concentration_note(r))]
     for _n in _notes:
         st.caption(f"🎯 {_n}")
+    st.divider()
+    st.divider()
+
+    # …and the health check underneath: the 15 as a table, then the totals. Still here, still exact — just no
+    # longer the first thing you meet.
+    st.markdown("##### 🩺 Squad health — the 15, and the totals")
+    render_player_table([{
+        "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
+        "Pos": p["position"], "Player": p["web_name"] + (" (C)" if p["id"] == captain_id else ""),
+        "Team": p["team"], "£m": p["price"], "xP": round(xp_by_id.get(p["id"], 0), 1),
+        "Role": "XI" if p["id"] in xi_ids else "Bench",
+        "Trends": " ".join([*crowd_flags(p), *(["✈️ leaving"] if p["id"] in leaving else [])]),
+        "Set": " ".join(set_piece_flags(p)),
+    } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))],
+        help={"Set": SET_PIECE_LEGEND,
+              "Trends": "Ownership, transfer momentum, price and form — plus **✈️ leaving** when the press "
+                        "reports a move out of the league (the analysis below names the outlet)."})
+    st.code(render_squad_analysis(analysis, squad_name, show_xmins=True, captain_id=captain_id), language=None)
+
     st.divider()
     # ADR-126: the key-players table needs ~900 minutes to rank anyone, so hand it last season to fall back on.
     render_your_teams(squad, players, upcoming, team_names=team_names,
@@ -1078,7 +1087,7 @@ def render_ai_tips(squad_name, squad, *, horizon=5):
 
 
 # ---- Chips (a grounded chip-strategy advisor; ADR-082) ----------------------------------------------
-def render_chips(squad_name, squad, *, horizon=5):
+def render_chips(squad_name, squad, *, upcoming=None, horizon=None):
     """A grounded chip-strategy recommendation for the picked squad — when to play each chip.
 
     Shown under the **Chips** tab. Routes through `ask.answer` (analytics decide, the LLM narrates, every
@@ -1086,9 +1095,19 @@ def render_chips(squad_name, squad, *, horizon=5):
     over. Fixture-run + xP based — double/blank gameweeks and mini-league position sharpen it in-season.
     Degrades without Ollama. No server writes.
     """
-    st.caption("When to play each chip — **Triple Captain · Bench Boost · Free Hit · Wildcard** — from your "
-               "squad's projected points over the selected horizon. The analytics decide; the answer is "
-               "checked against the data (✓/⚠). Double/blank gameweeks and mini-league position sharpen this "
-               "in-season (live from GW1).")
+    # ADR-166 — the window is **the chip's deadline**, not the tab's horizon. Chips expire at the end of each
+    # half-season, so "which week should I play this?" only means something across the weeks that remain; the
+    # tab defaults to 1 GW, which asked whether *this* week is good and could never answer *which* week is.
+    from src.fpl_rules import chip_deadline
+    gws = sorted({f["event"] for f in (upcoming or []) if f["event"] is not None})
+    if horizon is None:
+        horizon = max(1, chip_deadline(gws[0]) - gws[0] + 1) if gws else 5
+        horizon = min(horizon, len(gws)) if gws else horizon
+    _last = gws[0] + horizon - 1 if gws else None
+    st.caption("When to play each chip — **Triple Captain · Bench Boost · Free Hit · Wildcard**. Looked at "
+               + (f"over **GW{gws[0]}–GW{_last}**, to this set's chip deadline — a chip expires at the end of "
+                  "the half-season, so the question is which of your remaining weeks is best, not whether "
+                  "this one is good. " if gws else "")
+               + "The analytics decide; the answer is checked against the data (✓/⚠).")
     result = ask.answer(f"which chip should I use for {squad_name}?", active_squad=squad, horizon=horizon)
     st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users
