@@ -27,7 +27,7 @@ _DEFAULT_ORIGIN = "https://madboots.streamlit.app"
 # ADR-134/149 renamed them, and never gained Leagues or Signals. Sub-tabs are listed where a tester would say
 # them — nobody reports a bug against "My Squad", they report it against "Chips".
 _PAGES = ("(not sure)", "Home", "Players", "Team DNA & FDR", "My Squad", "Leagues", "Squad Lab (My Squad ▸ Lab)",
-          "Ask", "Signals", "Trending", "Help", "Feedback")
+          "Signals", "Trending", "Help", "Feedback")
 
 
 def _app_version() -> str:

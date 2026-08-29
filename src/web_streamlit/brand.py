@@ -50,7 +50,16 @@ SPACE = (4, 8, 12, 16, 20, 24)
 RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_PILL = 10, 14, 18, 999
 
 # The canonical throughline — one wording, referenced everywhere (was ~4 variants).
-MANTRA = "The analytics decide. The AI explains. You make the call."
+#
+# ⚠️ **Changed 2026-08-29 (ADR-168): it used to say "The AI explains."** That was a promise the deployed app
+# could not keep — there is no Ollama on Streamlit Cloud, so for every tester the narration simply is not
+# there (Help said so; the mantra did not). madboots.com had already quietly dropped the clause, running
+# "The analytics decide; you stay in control" — so the in-app wording was the last place still claiming it.
+#
+# What replaced it is the thing the app actually does, on Cloud, today: every answer carries its evidence —
+# the ✓/⚠ trust line, the named outlet behind a departure, the reasons under a Scout pick. "Ask it anything"
+# is what everyone claims; showing the working is what almost nobody does.
+MANTRA = "The analytics decide. Every answer shows its working. You make the call."
 # NOTE: a `token_css_vars()` CSS-variable helper was tried (S165) to single-source the card hexes, but prepending a
 # 2nd `<style>` block broke Streamlit's markdown rendering of the cards (the banner rendered unstyled). Reverted —
 # the shared brand hexes stay inline in the card CSS. Not worth a 2nd style block; revisit only with a safer route.

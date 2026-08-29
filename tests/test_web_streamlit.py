@@ -24,10 +24,11 @@ def _run(path):
 
 
 def test_home_renders():
+    from src.web_streamlit import brand
     at = _run(_APP)
     caps = " ".join(c.value for c in at.caption)
     blob = " ".join(m.value for m in at.markdown)
-    assert "The analytics decide. The AI explains. You make the call." in caps    # brand.MANTRA (ADR-114)
+    assert brand.MANTRA in caps                                   # ADR-114; wording changed by ADR-168
     assert "Explore the sidebar" in blob and "auto-synced across your devices" in blob   # US-373: sidebar + your-squad
     assert "read-only view over the analytics" not in caps         # the internal ADR ref dropped from user copy
 
@@ -695,7 +696,7 @@ def test_sidebar_pages():
     # filename *without* its numeric prefix, so renumbering moves nav order without breaking any link.
     present = sorted(p.name for p in _PAGES.glob("*.py"))
     assert present == sorted(["2_Players.py", "3_Team_DNA_and_FDR.py", "4_My_Squad.py",
-                              "6_Ask.py", "7_Signals.py", "8_Trending.py", "9_Help.py",
+                              "7_Signals.py", "8_Trending.py", "9_Help.py",
                               "11_Feedback.py", "12_Admin.py"])
     for gone in ("2_Player_Stats.py", "4_Build_Squad.py", "5_My_Squad.py",
                  "6_Squad_Health.py", "7_Transfer.py", "8_Captain.py"):
@@ -952,7 +953,7 @@ def test_xg_board_rates_only_meaningful_players():
 
 
 _TAB_EMOJI = {"2_Players.py": "👟", "3_Team_DNA_and_FDR.py": "🧬", "4_My_Squad.py": "🧩",
-              "6_Ask.py": "💬", "7_Signals.py": "📡", "8_Trending.py": "📈", "9_Help.py": "🧭",
+              "7_Signals.py": "📡", "8_Trending.py": "📈", "9_Help.py": "🧭",
               "11_Feedback.py": "📣", "12_Admin.py": "📊"}
 
 
@@ -2491,80 +2492,6 @@ def test_news_page_has_the_headlines_lens_gated_no_network():
     assert any(b.label == "Load headlines" for b in at.button)   # opt-in — the feeds fetch only on click
 
 
-def test_ask_page_example_prompts_are_clickable():
-    # US-227/US-234: the Ask page lists example questions as buttons; clicking one runs it
-    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
-    assert not at.exception
-    labels = [b.label for b in at.button if b.key and b.key.startswith("example_")]
-    assert any("best differential midfielders" in lbl for lbl in labels)
-    assert any("this week for my squad" in lbl for lbl in labels)
-
-    btn = next(b for b in at.button if b.key == "example_0")
-    btn.click().run()                                       # clicking runs the grounded pipeline
-    assert not at.exception and len(at.session_state["history"]) == 1
-    assert any("Q:" in m.value for m in at.markdown)        # US-399: the answer renders as chat markdown
-
-
-def test_ask_scroll_nudge_is_unique_per_turn_and_multi_tick():
-    # US-283/US-287: the scroll nudge re-fires each answer (unique per turn) and scrolls to the bottom several
-    # times (instant) so it lands reliably after layout settles — not one smooth attempt that lands sometimes.
-    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
-    at.chat_input[0].set_value("how does bench boost work?").run()
-    first = at.get("iframe")[-1].proto.srcdoc
-    at.chat_input[0].set_value("how do transfers work?").run()
-    second = at.get("iframe")[-1].proto.srcdoc
-    assert "/*turn 1*/" in first and "/*turn 2*/" in second and first != second   # unique → re-renders/re-runs
-    assert "[50,200,450,800]" in second and "forEach" in second and "scrollHeight" in second   # US-287: multi-tick
-    assert "behavior:'smooth'" not in second                                      # instant (scroll-restore can't win)
-
-
-def test_ask_page_example_prompts_name_the_loaded_squad():
-    # US-280: with a squad loaded, the example buttons read its real name (so "my-team" → your squad and the
-    # click scopes correctly), instead of the literal "my-team".
-    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30)
-    at.session_state["squad"] = {"name": "RoboTS", "player_ids": list(range(1, 16)),
-                                 "player_names": [f"P{i}" for i in range(1, 16)], "bench_ids": [], "cost": 100.0}
-    at.run()
-    assert not at.exception
-    labels = [b.label for b in at.button if b.key and b.key.startswith("example_")]
-    assert any("RoboTS" in lbl for lbl in labels) and not any("my squad" in lbl for lbl in labels)
-
-
-def test_ask_page_is_conversational_pronouns_and_followups():
-    # US-248 (ADR-047/080): the web Ask threads Context, so a pronoun resolves to the last player and a
-    # follow-up builds on the last turn
-    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
-    at.chat_input[0].set_value("is Haaland worth the money?").run()
-    assert not at.exception and at.session_state["chat_context"] is not None   # context threaded
-    at.chat_input[0].set_value("compare him to Isak").run()                    # 'him' → Haaland
-    assert not at.exception
-    blob = " ".join(a for _q, a in at.session_state["history"])
-    assert "Haaland" in blob and "Isak" in blob                               # resolved compare, not a fallback
-
-
-def test_ask_chat_answers_a_grounded_question():
-    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
-    assert not at.exception
-    at.chat_input[0].set_value("who has the best fixtures over the next 5?").run()
-    assert not at.exception
-    assert any("Avg FDR" in m.value for m in at.markdown)      # the grounded FDR answer in the chat
-    assert len(at.session_state["history"]) == 1           # the turn was kept in history
-
-
-def test_ask_build_offers_use_this_squad(monkeypatch):
-    # ADR-062: a "build me a squad" answer offers "Use this squad →" → adopts the session squad
-    at = AppTest.from_file(str(_PAGES / "6_Ask.py"), default_timeout=30).run()
-    assert not at.exception
-    at.chat_input[0].set_value("build me a squad for £100m").run()
-    assert not at.exception
-    btn = [b for b in at.button if "Use this squad" in b.label]
-    if not btn:                                            # no data locally → no build → skip
-        return
-    btn[0].click().run()
-    squad = at.session_state["squad"]
-    assert squad["name"] == "My squad" and 11 <= len(squad["player_ids"]) <= 15
-
-
 def test_badge_url_helper():
     from src.web_streamlit.badges import badge_url, badge_url_by_short_name
     assert badge_url(3).endswith("/t3.png")
@@ -2750,7 +2677,11 @@ def test_help_watch_view_renders_videos_and_coming_soon(monkeypatch):
 def test_brand_tokens_and_mantra_are_defined():
     # ADR-114: brand.py is the token source of truth — semantic pairs, the FDR scale, and one canonical mantra.
     from src.web_streamlit import brand
-    assert brand.MANTRA == "The analytics decide. The AI explains. You make the call."
+    # ADR-168 — the mantra stopped promising narration the deployed app cannot produce. It said "The AI
+    # explains"; there is no Ollama on Cloud, so for every tester that clause was simply untrue. What replaced
+    # it is what the app does do everywhere, including Cloud: it shows its working.
+    assert brand.MANTRA == "The analytics decide. Every answer shows its working. You make the call."
+    assert "AI explains" not in brand.MANTRA
     for name in ("GOOD", "GOOD_TINT", "GOOD_FG", "WARN", "WARN_TINT", "BAD", "BAD_TINT", "ACCENT_TEAL"):
         assert getattr(brand, name).startswith("#")
     assert set(brand.FDR_STYLE) == {1, 2, 3, 4, 5}
@@ -3474,3 +3405,47 @@ def test_players_is_back_under_its_own_ceiling():
     assert "Scout" in views
     for merged in ("Set pieces", "DefCon", "Clean sheets", "Over/under", "xG · xA"):
         assert merged not in views, f"{merged} is a board inside Scout now, not a top-level view"
+
+
+def test_help_carries_the_fpl_rules_ask_was_the_only_route_to():
+    """ADR-168 — retiring Ask would have cost testers its only two non-duplicating intents (`rules`,
+    `scoring`). Help explains the *app*; it had nothing about the *game* — no scoring values, no chip
+    mechanics, no autosub rules. So the reference moved here, where you can browse it instead of having to
+    know what to ask before you can find out.
+    """
+    from src.fpl_rules import RULES
+
+    at = _run(_PAGES / "9_Help.py")
+    assert not at.exception
+    labels = " ".join(e.label or "" for e in at.get("expander"))
+    assert "FPL rules" in " ".join(h.value for h in at.subheader)
+    for topic in ("Scoring", "Chips", "Transfers", "Automatic substitutions"):
+        assert topic in labels, f"the {topic} rules should be browsable"
+    assert len(RULES) >= 20, "the curated rule set is what this page renders"
+
+
+def test_the_app_does_not_promise_narration_it_cannot_deliver():
+    """ADR-168 — the mantra said *"The AI explains"*, and there is no Ollama on Streamlit Cloud, so for every
+    tester that clause was untrue. `docs/DEPLOY.md` had documented the gap; the brand line had not caught up,
+    and madboots.com had already dropped the clause on its own.
+
+    This guards the wording *and* its reach: the mantra is rendered on several pages, so a revert anywhere
+    would put the promise back.
+    """
+    from src.web_streamlit import brand
+
+    assert "AI explains" not in brand.MANTRA
+    assert "shows its working" in brand.MANTRA
+    for page in ("9_Help.py",):
+        src = (_PAGES / page).read_text()
+        assert "The AI explains. You make the call." not in src, f"{page} hard-codes the retired promise"
+    assert "The AI explains. You make the call." not in (_ROOT / "src" / "web_streamlit" / "Home.py").read_text()
+
+
+def test_ask_is_owner_only_now_and_off_by_default():
+    """It survives for evaluation, not for shipping: behind the Admin key, and behind a checkbox even there —
+    it runs the full grounded pipeline, and ADR-141's rule is that nothing expensive happens on page load."""
+    src = (_PAGES / "12_Admin.py").read_text()
+    assert "Ask — under evaluation" in src
+    assert 'st.checkbox("Load Ask"' in src, "off by default"
+    assert not (_PAGES / "6_Ask.py").exists(), "the public page is retired"

@@ -190,3 +190,52 @@ if s["perf"]:
     st.dataframe(s["perf"], hide_index=True, use_container_width=True)
 else:
     st.caption("No `perf` events yet (data-load / analysis / save / load timings appear here).")
+
+
+# ---- 💬 Ask — kept here to be evaluated, not to be shipped (ADR-168) -------------------------------
+# Retired as a public page: 14 of its 16 intents duplicated a tab, and the two that didn't (rules, scoring)
+# moved to Help, where a reference belongs. It survives **here** because the owner asked the right question —
+# *"maybe I could have it as a tab in Admin so I could test with my local Ollama, which would mimic a hosted
+# model, so I can gauge its usefulness."*
+#
+# ⚠️ **What this can and cannot measure.** Run locally with Ollama it shows the full experience — narration on
+# top of the grounded block — which is exactly the thing a hosted model would buy. Opened on Cloud it shows
+# the same data-only answer every tester saw, because there is no model there either. So it answers *"is the
+# writing worth paying for?"* and says nothing about whether testers would use it, since they will never see it.
+#
+# ⏳ **Decision trigger: the GW4-6 calibration sitting.** By then it has been used or it has not, and "I never
+# opened it" is a decisive answer. An experiment with no end date is just a parked page (this project has two).
+st.divider()
+st.subheader("💬 Ask — under evaluation")
+st.caption("Retired from the sidebar (ADR-168) and kept here to judge one question: **is the narration worth "
+           "a hosted model?** Local Ollama → you see what a paid model would add. On Cloud → data-only, the "
+           "same answer every tester got. Revisit at the GW4-6 calibration.")
+
+if st.checkbox("Load Ask", key="admin_ask_on", help="Off by default — it runs the full grounded pipeline."):
+    from src import ask as _ask_mod
+    from src.storage import Storage as _Store
+    from src.ui.ask import render_ask as _render_ask
+    from src.web_streamlit.squads import active_squad as _active_squad
+
+    if "admin_ask_history" not in st.session_state:
+        st.session_state.admin_ask_history = []
+        st.session_state.admin_ask_ctx = None
+
+    _q = st.text_input("Ask a question", key="admin_ask_q",
+                       placeholder="who should I captain from my squad?")
+    if st.button("Ask →", key="admin_ask_go") and _q.strip():
+        _store = _Store()
+        try:
+            _result, _ctx = _ask_mod.converse(_q, st.session_state.admin_ask_ctx,
+                                              store=_store, active_squad=_active_squad())
+        finally:
+            _store.close()
+        st.session_state.admin_ask_ctx = _ctx
+        # `ollama_hint=True` **on purpose**, unlike the old page: this surface exists to tell you whether a
+        # model is answering, so the "start Ollama" line is the diagnostic rather than noise.
+        st.session_state.admin_ask_history.append((_q, _render_ask(_result, markdown=True)))
+
+    for _question, _answer in reversed(st.session_state.admin_ask_history):
+        st.markdown(f"**{_question}**")
+        st.markdown(_answer)
+        st.divider()

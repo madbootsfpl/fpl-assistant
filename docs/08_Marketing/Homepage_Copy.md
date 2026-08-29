@@ -85,3 +85,24 @@ than no test: it converts a silent rot into an active obstacle.
 **This public page has no such guard**, because its source is not in the repo — which is the strongest
 argument yet for moving it here (see the memory note / ADR-103's parked brand-infra changeover). Until then
 the grid above is still hand-applied.
+
+---
+
+## Update, 2026-08-29 — **Ask is retired** (ADR-168), so the grid changes again
+
+The replacement grid above still lists **Ask — plain-English questions, grounded answers**. That line must go:
+Ask is no longer a page. Fourteen of its sixteen intents duplicated a tab, its two unique ones (FPL rules and
+scoring) moved to **Help**, and its distinguishing feature — written narration — never existed in production,
+because there is no Ollama on Streamlit Cloud.
+
+**Replace that bullet with:**
+
+- **Help** — a step-by-step guide, plus the **FPL rules** MADBOOTS checks its answers against
+
+**And note what the site already got right.** madboots.com runs *"The analytics decide; you stay in control"*
+— it had **already dropped** the *"The AI explains"* clause that the in-app mantra kept until today. The app
+now matches: *"The analytics decide. Every answer shows its working. You make the call."* If the site ever
+regains an AI claim, it should be because a hosted model was funded, not because the sentence sounded better.
+
+**Current sidebar, for the grid:** Players · Team DNA & FDR · My Squad (squad · AI Tips · Transfer · Captain ·
+DNA · Leagues · Lab) · Signals · Trending · Help · Feedback.

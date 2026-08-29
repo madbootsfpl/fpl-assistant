@@ -1,8 +1,9 @@
 """The Streamlit UI home (ADR-052) — a read-only view over the analytics.
 
 Multipage: this is the landing (the sidebar's **Home** — its label is this file's name); `pages/` holds
-Players · Team DNA & FDR · My Squad · Ask · Signals · Trending · Help · Feedback · Admin. ADR-166 folded
-Squad Lab and Leagues into My Squad, and Maddie Explains into Help ▸ Watch — **nine pages, not twelve**.
+Players · Team DNA & FDR · My Squad · Signals · Trending · Help · Feedback · Admin. ADR-166 folded
+Squad Lab and Leagues into My Squad, and Maddie Explains into Help ▸ Watch; ADR-168 retired Ask to Admin —
+**eight pages, not twelve**.
 Each page imports the same engine the CLI does and changes nothing in `src/`.
 Run:  python -m src.web_streamlit
 
@@ -76,11 +77,11 @@ st.markdown(
 - 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, your
   🏆 **Leagues** (effective ownership · captain split · transfer flow · head-to-head), and the **Lab** for
   building a fresh 15 (season start · wildcard · revamp).
-- 💬 **Ask** — ask a question in plain English — a grounded chat; every answer is checked against the data.
 - 📡 **Signals** — everything the table doesn't say, most reliable first: official FPL news, unexplained
   sell-offs, and reported moves out of the league.
 - 📈 **Trending** — what the crowd is *doing*, in numbers: most-owned · transferred in/out · in-form.
-- 🧭 **Help** — a step-by-step guide to getting started, plus **Maddie's** 90-second video explainers.
+- 🧭 **Help** — a step-by-step guide to getting started, the **FPL rules** MADBOOTS checks against, plus
+  **Maddie's** 90-second video explainers.
 - 📣 **Feedback** — tell us what broke, or what would help.
 
 **Your squad**

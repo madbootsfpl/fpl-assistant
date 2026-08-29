@@ -6,6 +6,7 @@ refresh, and no input controls. It complements Home (the short overview) with a 
 
 import streamlit as st
 
+from src.fpl_rules import RULES
 from src.web_streamlit import analytics, brand
 from src.web_streamlit.access import require_access
 
@@ -265,8 +266,30 @@ with st.expander("📖 9 · MADBOOTS Explainer  →  a plain-English glossary"):
         "- **Local AI** — MADBOOTS can use a *local* Ollama model to narrate the analytics (available when you run "
         "it yourself). The AI explains the numbers; it doesn't decide them or make them up. The hosted app runs "
         "**data-only** — you get the full plan and numbers without the written narration.\n\n"
-        "**The analytics decide. The AI explains. You make the call.**"
+        f"**{brand.MANTRA}**"
     )
+
+# ---- FPL rules (ADR-168) ---------------------------------------------------------------------------
+# `fpl_rules.RULES` carries 21 curated topics — scoring, chips, autosubs, deadlines, price changes. Until now
+# the ONLY way to read them was to type a question at Ask, which is a strange place to keep a reference: you
+# had to know what to ask before you could find out. Retiring Ask made this necessary; it is also just better.
+st.divider()
+st.subheader("📖 FPL rules — how the game scores")
+st.caption("The rules MADBOOTS checks its answers against. Not our opinion — the game's own scoring, "
+           "chip and transfer rules, kept in one place.")
+
+_TOPIC_LABEL = {"scoring": "Scoring", "clean_sheets": "Clean sheets & keepers", "bonus": "Bonus points",
+                "defensive_contribution": "Defensive Contribution", "chips": "Chips",
+                "chip_limits": "Chips — one per gameweek", "transfers": "Transfers & hits",
+                "preseason_transfers": "Preseason transfers", "price_changes": "Price changes",
+                "team_value": "Team value", "squad_rules": "Squad rules", "formation": "Formation",
+                "captain": "Captain & vice", "autosubs": "Automatic substitutions",
+                "bench_points": "Bench points", "deadline": "Deadlines", "gameweeks": "Double & blank gameweeks",
+                "flags": "Injury flags", "wildcard_timing": "Wildcard timing", "leagues": "Leagues",
+                "ranking": "Ranking"}
+for _rule in RULES:
+    with st.expander(_TOPIC_LABEL.get(_rule["topic"], _rule["topic"].replace("_", " ").title())):
+        st.markdown(_rule["fact"].replace("\n", "  \n"))
 
 st.divider()
 st.markdown(
