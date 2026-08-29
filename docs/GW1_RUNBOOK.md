@@ -68,6 +68,84 @@ pytest -q` + a manual smoke that xP moved sensibly.
 
 ---
 
+## B0. Pre-registered criteria — **written 2026-08-29, with 1 played gameweek and nothing to look at**
+
+> Fixed **before** the data exists, which is the only time it can be fixed honestly. *"Only if it clearly
+> helps"* is a standard you choose after seeing the curve; these are numbers you can fail against.
+>
+> If a rule below turns out to be wrong, **change it in a commit that says so and explains why** — amending a
+> criterion is legitimate, amending it silently after seeing the result is not.
+
+### The bar each weight must clear
+
+A weight ships **only if all four hold**. Any one failing ⇒ leave it at **0**.
+
+| # | Criterion | Why this number |
+|---|---|---|
+| 1 | **ρ improves by ≥ 1 standard error** of ρ at the eligible sample size (`SE ≈ 1/√(n−1)`; the harness prints `n`). At n≈400 that is **≈ +0.05**. | Below its own noise floor an improvement is indistinguishable from luck. Stated as a *formula*, not a fixed number, because `n` changes every gameweek. |
+| 2 | **MAE worsens by ≤ 1%** against weight 0. | Rank is the objective (ADR-101), but a value that sharpens the order while making every projection worse is trading a metric we optimise for one we show. |
+| 3 | **hit@20 does not fall at all.** | A count out of 20. There is no "small" drop in an integer that size — a fall means the top of the board got worse, which is the part anyone reads. |
+| 4 | **The gain holds at ≥ 2 adjacent sweep values.** | One spike on a swept curve is the shape noise makes. A real effect is a *region*, not a point. |
+
+**Choosing the value:** the **smallest** weight whose ρ is within 1 SE of the best. Ties go to the smaller
+number — a weight is a claim about how much we trust a signal, and the smaller claim is the cheaper mistake.
+
+### What we expect, recorded now so a surprise is legible
+
+Writing the prediction down is what makes an odd result *informative* rather than just a number to accept. A
+result far outside these is a reason to **check the harness before believing it**.
+
+| weight | expectation | if it comes back very differently |
+|---|---|---|
+| `FORM_WEIGHT` | small positive, **≈ 0.05–0.20**. FPL's `form` is a 30-day mean — real signal, largely already inside `points_per_game`. | > 0.35 suggests the baseline rate is being under-used, not that form is magic. Inspect the tiers (ADR-028/124) first. |
+| `SET_PIECE_WEIGHT` | small positive, driven almost entirely by **penalties**; corners/FKs near zero. | A large gain with pens excluded means the proxy is picking up "good attacker", not set-piece duty. |
+| `DEFCON_MAGNIFIER_WEIGHT` | **genuinely unknown** — a new stat, one season of history. Coin-flip whether it clears the bar. | Any large effect deserves suspicion: check it is not just re-ranking defenders by minutes. |
+
+### Stopping rule — so "re-run later" cannot become forever
+
+- **GW4:** first honest attempt. Expect at least one weight to fail on sample size alone.
+- **GW6:** the real sitting. Whatever clears the bar ships; whatever does not stays 0.
+- **GW10:** last look. Anything still failing is **closed as not supported** and the config comment says so —
+  not left as a permanent "revisit later", which is how a dormant weight becomes furniture.
+
+Re-running a sweep after a fail is fine **once per checkpoint above**. Re-running until it passes is the same
+mistake as choosing the criterion afterwards, spread over more weeks.
+
+### Also in this sitting (same data, different check)
+
+Not backtests — these are **constants measured once, on one gameweek**, and the question is whether the
+population they were measured on was big enough to mean anything.
+
+| constant | measured on | ships if |
+|---|---|---|
+| `EXODUS_PRESSURE` (p10) · `EXODUS_OWNERSHIP_FLOOR` | GW1, 199 players ≥1% owned (ADR-146/150) | re-measured on ≥4 GWs it moves **< 20%** → keep. **≥ 20%** → the original was noise; take the new value and say so. |
+| captain-margin quartiles · concentration quartiles (ADR-143/145) | one gameweek | same 20% test. These gate *whether a message appears at all*, so a wrong quartile is a feature that fires on everyone or no one. |
+| ADR-125 in-season xMins share | deliberately deferred to this sitting | `c ≈ GWs/(GWs+k)` reaches a share worth having only when it changes a projection by **> 0.5 xP for ≥ 20 players**. Below that it is churn. |
+| Scout / Trending copy | — | ⚠️ **When any weight flips, `test_the_scout_shortlist_never_promises_points` fails by design** — the page says this value *is not in xP*, which stops being true. Rewrite the copy in the same commit as the flip. |
+
+### ⚠️ Verified while writing this, not assumed
+
+Two claims above are only worth making if the tripwires actually fire, so they were tested by flipping each
+weight and watching:
+
+* **`test_the_scout_shortlist_never_promises_points` fails at 0.1** — confirmed. Good: the Scout page says
+  this value is not in xP, and that stops being true at the flip.
+* **The set-piece dormancy test was blind below 0.2** — `weight × PENALTY_BONUS (0.3)` rounded away at 1dp, so
+  at **0.05 / 0.10 / 0.15**, the exact range pre-registered above as *expected*, it stayed green while
+  guarding nothing. **Fixed** (2026-08-29): it now asserts `config.SET_PIECE_WEIGHT == 0.0` directly, so it
+  fails at any non-zero value. Form and DefCon were checked the same way and already fail at every value.
+
+The general point, since it has now caught three things this month: **a tripwire you have not fired is a
+tripwire you are assuming.**
+
+### The one rule that outranks the rest
+
+**The harness recommends; a human commits.** Nothing here auto-applies. If every criterion passes and the
+result still looks wrong, that is a valid reason not to ship it — and a reason to write down what looked
+wrong, because it is usually the harness.
+
+---
+
 ## Principles (ADR-101)
 
 - **The harness recommends; you commit.** Weights stay 0 in the repo until a reviewed commit sets them.

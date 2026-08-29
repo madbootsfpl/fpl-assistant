@@ -66,7 +66,20 @@ def test_player_xp_does_not_boost_a_non_taker():
 # ---- decision_xp: invariance (dormant) + activation -------------------------
 
 def test_decision_xp_invariant_while_set_piece_dormant():
-    # config.SET_PIECE_WEIGHT defaults to 0 → a pen taker's xP is unchanged
+    """The default is 0, so a pen taker's xP is unchanged.
+
+    ⚠️ **The `== 5.0` check alone is not a tripwire, and the runbook used to imply it was.** The bonus lands
+    as `weight × PENALTY_BONUS` (0.3) and xP rounds to 1dp, so at **0.05 / 0.10 / 0.15** — exactly the range
+    GW1_RUNBOOK §B0 pre-registers as *expected* for this weight — the sum still rounds to 5.0 and this test
+    goes green while guarding nothing. It only bites at ≥ 0.2.
+
+    So the default is asserted **directly**. At the flip this fails loudly and unmissably, which is the alert
+    the runbook is relying on; the rounding check stays as the behavioural half. (Form and DefCon were checked
+    the same way and do fail at every value — this one was alone in being blind.)
+    """
+    assert config.SET_PIECE_WEIGHT == 0.0, (
+        "the set-piece weight has been flipped — update this test per GW1_RUNBOOK §B, and rewrite the Scout "
+        "copy that says this value is not in xP")
     pen = _player(penalties_order=1)
     assert decision_xp([pen], [_fixture()], {}, horizon=1)[0]["xp"] == 5.0
 
