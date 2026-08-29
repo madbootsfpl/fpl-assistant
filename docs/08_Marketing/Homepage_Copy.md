@@ -1,8 +1,19 @@
 # madboots.com — homepage copy
 
 **Audited:** 2026-08-29 against the live page and the live app.
-**Status:** ⚠️ **Apply by hand.** The page source is **not in this repo** (Cloudflare Pages). Point me at it
-and I'll edit it properly instead of handing over paste-able copy.
+**Status:** ✅ **Both changes applied 2026-08-29** — awaiting deploy.
+
+**📍 The source is `~/madboots-site/index.html`** (with `favicon.png` + `og-image.png`). Not in this repo and
+not a git repo; it was missed for two audits because the search only ever covered `~/Projects`. **Look there
+first next time.** Deploy is a drag-and-drop of that folder to Cloudflare Pages — no `wrangler.toml`, no
+`package.json`, nothing to build.
+
+⚠️ **No backup was taken** — the `cp` was in a command the sandbox blocked, so `index.html` is edited in
+place. The original wording is quoted verbatim below if it ever needs reverting.
+
+✅ **Checked and needing nothing:** the `og-image.png`, the `<title>`, and every `og:` / `twitter:` meta tag.
+They describe the **product** (*"does the maths for you"*, *"one honest expected-points number"*) and never
+the feature list — so they do not go stale when a page is renamed. The perishable copy was all in the body.
 
 > **This file was rewritten, not appended to.** It had grown three stacked "update" sections whose replacement
 > grid still advertised **Ask** — a deck about stale copy, going stale. One current version only, from here on.
@@ -21,7 +32,7 @@ and I'll edit it properly instead of handing over paste-able copy.
 
 ---
 
-## 🔴 Change 1 — the ✅ card claims an AI that isn't there
+## ✅ Change 1 (APPLIED) — the ✅ card claimed an AI that isn't there
 
 **Currently:**
 
@@ -42,7 +53,7 @@ reported transfer, the reasons under a shortlist pick.
 
 ---
 
-## 🔴 Change 2 — "What's inside" describes an older app
+## ✅ Change 2 (APPLIED) — "What's inside" described an older app
 
 Two entries are renamed, one is retired, and the most distinctive things built since are missing.
 
@@ -65,9 +76,9 @@ Two entries are renamed, one is retired, and the most distinctive things built s
 - **Team DNA & FDR** — how strong every club is at both ends, and the week-by-week difficulty
 - **Squad Lab** — a legal 15 to your budget, for a wildcard or a fresh season
 
-**If you have room for a seventh**, add **Scout — the players two or more stat boards agree on, with the
-evidence**. It is the clearest example of what the app does that a spreadsheet doesn't, but the grid reads as
-2×3 today and a lone seventh would look like an afterthought.
+**Seven shipped, not six.** `.chips` is `display:flex; flex-wrap:wrap` — a wrapping pill list, not a 2×3
+grid — so the seventh reflows rather than stranding itself, and **Scout** is the clearest example of what the
+app does that a spreadsheet doesn't.
 
 ---
 
