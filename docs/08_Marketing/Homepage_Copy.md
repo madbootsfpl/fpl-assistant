@@ -67,18 +67,28 @@ Two entries are renamed, one is retired, and the most distinctive things built s
 | — | **Scout** missing — the players two or more stat boards agree on |
 | Players · Transfers · Captain | accurate, keep |
 
-**Replacement grid (six slots, same voice — name, em dash, one plain claim):**
+**The grid as shipped — seven chips, `My Squad` leading:**
 
-- **Players** — the whole pool, sortable stats
-- **Signals** — injuries, unexplained sell-offs and reported moves out of the league, most reliable first
-- **Transfers & captain** — the best swaps by XI gain, and who to armband, with the why
+- **My Squad** — your XI, captain, transfers and chips in one place, plus the **Lab** to build a fresh 15
+- **Signals** — injuries, unexplained sell-offs and reported moves out of the league
 - **Leagues** — effective ownership, the captain split, and a head-to-head against any rival
-- **Team DNA & FDR** — how strong every club is at both ends, and the week-by-week difficulty
-- **Squad Lab** — a legal 15 to your budget, for a wildcard or a fresh season
+- **Scout** — the players two or more stat boards agree on, with the evidence
+- **Players** — the whole pool, sortable stats
+- **Team DNA** — how strong every club is, at both ends
+- **FDR** — every club's run, week by week
 
-**Seven shipped, not six.** `.chips` is `display:flex; flex-wrap:wrap` — a wrapping pill list, not a 2×3
-grid — so the seventh reflows rather than stranding itself, and **Scout** is the clearest example of what the
-app does that a spreadsheet doesn't.
+**Two corrections the owner caught in the first draft, both worth stating as rules:**
+
+1. **The golden page was missing entirely.** The draft listed *Squad Lab* as its own chip while never naming
+   **My Squad** — the page the whole app is arranged around. A feature list that omits the destination and
+   advertises one of its tabs has the hierarchy backwards. My Squad leads now, and the Lab appears **inside**
+   its line, which is also where it lives (ADR-166).
+2. **"Team DNA & FDR" was written as one chip** — the merged page ADR-169 split *the same day*. Copy drafted
+   from a slightly older mental model of the app, which is exactly the rot this deck exists to catch, produced
+   by the person maintaining the deck.
+
+**Seven, not six.** `.chips` is `display:flex; flex-wrap:wrap` — a wrapping pill list, not a fixed grid — so
+the count is free and the seventh reflows rather than stranding itself.
 
 ---
 
