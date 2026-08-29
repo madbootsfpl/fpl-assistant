@@ -1,108 +1,91 @@
-# madboots.com — homepage copy deck
+# madboots.com — homepage copy
 
-**Audited:** 2026-08-27 against the live page and the live app.
-**Status:** ⚠️ **Apply by hand.** The homepage source is **not in this repo** (Cloudflare Pages), so this is a
-paste-ready deck, not a deploy. Point me at the source and I'll edit it properly.
+**Audited:** 2026-08-29 against the live page and the live app.
+**Status:** ⚠️ **Apply by hand.** The page source is **not in this repo** (Cloudflare Pages). Point me at it
+and I'll edit it properly instead of handing over paste-able copy.
 
----
-
-## First: the roadmap item was already fixed
-
-The backlog said the page still read *"No login to look around · your squad saves across devices by a
-handle"*, untrue since Google auth went live on 2026-08-12. **That line is not on the page.** It now reads:
-
-> 🔒 Invite-only beta — Free · email-only sign-in · your data stays yours · a personal project.
-
-> Sign in with Google — your squad saves to your account and syncs across your devices. Private beta: new
-> sign-ins join the waitlist.
-
-Both are accurate today, including for the ADR-147/148 cross-device preferences. It was fixed in the
-2026-08-18 site audit and the roadmap entry outlived the problem. **Roadmap item closed on that basis, and the
-real staleness is below** — which is a different thing entirely.
+> **This file was rewritten, not appended to.** It had grown three stacked "update" sections whose replacement
+> grid still advertised **Ask** — a deck about stale copy, going stale. One current version only, from here on.
 
 ---
 
-## What is actually stale: the feature list
+## ✅ What is accurate today — leave alone
 
-*"What's inside"* predates four surfaces and two renames. Everything in the hero, the "Why MADBOOTS" trio and
-the footer checks out; this one grid does not.
+- The hero: *"The FPL tool that does the maths for you — captain, transfers, fixtures and your whole squad,
+  all from one honest expected-points number. The analytics decide; you stay in control."*
+  **Note the site already dropped *"The AI explains"*** from its tagline — it was ahead of the app, which only
+  caught up on 2026-08-29 (ADR-168).
+- *"🔒 Invite-only beta — Free · email-only sign-in · your data stays yours · a personal project."*
+- The sign-in line, the disclaimer, the footer.
+- **🎯 One honest number** and **⚙️ Your whole week** — both still true.
 
-| on the page now | reality |
+---
+
+## 🔴 Change 1 — the ✅ card claims an AI that isn't there
+
+**Currently:**
+
+> ✅ **Grounded, not guessing** — Answers are checked against the real data and marked ✓ or ⚠.
+> **The AI only puts it into words** — the analytics make the call.
+
+The second sentence is **not true of the hosted app**. There is no model on Streamlit Cloud, so nothing puts
+anything into words for a visitor who signs up — `DEPLOY.md` has said so all along, and ADR-168 removed the
+same claim from the in-app mantra. It is the last place still making it.
+
+**Replace with:**
+
+> ✅ **Grounded, not guessing** — Every answer is checked against the real data and marked ✓ or ⚠, and shows
+> the working behind it: the number, where it came from, and what we don't know.
+
+That is what the app actually does, everywhere, including on Cloud — the trust line, the named outlet behind a
+reported transfer, the reasons under a shortlist pick.
+
+---
+
+## 🔴 Change 2 — "What's inside" describes an older app
+
+Two entries are renamed, one is retired, and the most distinctive things built since are missing.
+
+| currently | reality |
 |---|---|
-| **Fixtures** — a difficulty ticker + who to target | renamed **🧬 Team DNA & FDR** (ADR-134) and it leads with a 20-club strength scan, not the ticker |
-| **Squad optimiser** — a legal 15 to your budget | renamed **🧪 Squad Lab** (ADR-105) |
-| — | **🏆 Leagues** missing entirely |
-| — | **📡 Signals** missing entirely |
-| — | **📈 Trending** missing entirely |
-| Players · Transfers · Captain · Ask | accurate, keep as-is |
+| **Fixtures** — a difficulty ticker + who to target | split into **FDR** (the ticker) and **Team DNA** (ADR-169) |
+| **Squad optimiser** — a legal 15 to your budget | renamed **Squad Lab**, now inside My Squad (ADR-166) |
+| **Ask** — plain-English questions, grounded answers | 🔴 **retired** (ADR-168) — must go |
+| — | **Signals** missing — press + crowd departure detection, the most distinctive thing in the app |
+| — | **Leagues** missing — effective ownership, captain split, head-to-head |
+| — | **Scout** missing — the players two or more stat boards agree on |
+| Players · Transfers · Captain | accurate, keep |
 
-### Replacement grid
-
-Written to match the existing voice — a name, an em dash, one plain claim, no adjectives.
+**Replacement grid (six slots, same voice — name, em dash, one plain claim):**
 
 - **Players** — the whole pool, sortable stats
-- **Team DNA** — how strong every club is at both ends, then the week-by-week difficulty ticker
-- **Signals** — injuries, news and crowd moves, most reliable first
-- **Transfers** — the best swaps by XI gain
-- **Captain** — who to armband, with the why
-- **Squad Lab** — a legal 15 to your budget
-- **Leagues** — import your mini-league by id, or scan the elite
-- **Ask** — plain-English questions, grounded answers
+- **Signals** — injuries, unexplained sell-offs and reported moves out of the league, most reliable first
+- **Transfers & captain** — the best swaps by XI gain, and who to armband, with the why
+- **Leagues** — effective ownership, the captain split, and a head-to-head against any rival
+- **Team DNA & FDR** — how strong every club is at both ends, and the week-by-week difficulty
+- **Squad Lab** — a legal 15 to your budget, for a wildcard or a fresh season
 
-**If the grid is fixed at six**, drop *Trending* (already implied by Signals) and fold *Captain* into
-*Transfers* as **"Transfers & captain — the best swaps by XI gain, and who to armband"**. Keep **Signals** in
-whatever happens: press-plus-crowd departure detection is the most distinctive thing in the app and nothing on
-the homepage hints it exists.
+**If you have room for a seventh**, add **Scout — the players two or more stat boards agree on, with the
+evidence**. It is the clearest example of what the app does that a spreadsheet doesn't, but the grid reads as
+2×3 today and a lone seventh would look like an afterthought.
 
 ---
 
-## ✅ Resolved — the inbox is real
+## 🎯 What to lead with, if the grid is ever reordered
 
-**`hello@` and `info@madboots.com` both receive email** — confirmed by the owner, 2026-08-28. The audit could
-only see that the mailto link existed; delivery is not checkable from outside.
+The competitive read (Roadmap): fplapex is the solver, aceanalyst the visualiser, FFH the card-and-menu.
+**Nobody else is doing Signals** — press and crowd agreeing that a player is leaving the league, sourced and
+dated. **Nobody else shows its working** the way the ✓/⚠ trust line does.
 
----
-
-## The rule this deck exists to enforce
-
-**Marketing copy is a claim about the product, and it goes stale silently.** Nothing broke when Leagues and
-Signals shipped — the page simply stopped describing the app, and the only signal was a backlog entry that had
-itself gone out of date. Worth re-reading this page at each rename or new surface, which is cheaper than
-re-auditing it every few months.
+*"Ask it anything"* is what every tool claims. **"Here is the number, here is why, and here is what we don't
+know"** is what almost none of them do — and it is now the app's actual mantra:
+*"The analytics decide. Every answer shows its working. You make the call."*
 
 ---
 
-## Update, 2026-08-28 — the in-app Home was fixed in the same pass (US-433)
+## ✅ Resolved
 
-`src/web_streamlit/Home.py` carried **the same staleness for the same reason**: it still listed *Fixtures* and
-*News* after ADR-134 and ADR-149 renamed them, and never mentioned 🏆 Leagues. Fixed, and now **guarded by a
-test that derives the page list from `pages/`** — so the next rename fails CI instead of waiting for a tester.
-
-⚠️ **A test was holding the stale name in place.** `test_home_hero_box_consolidates_cta_and_nudges` asserted
-`"📅 **Fixtures**" in blob`, so *correcting* Home broke the suite. A test that pins outdated copy is worse
-than no test: it converts a silent rot into an active obstacle.
-
-**This public page has no such guard**, because its source is not in the repo — which is the strongest
-argument yet for moving it here (see the memory note / ADR-103's parked brand-infra changeover). Until then
-the grid above is still hand-applied.
-
----
-
-## Update, 2026-08-29 — **Ask is retired** (ADR-168), so the grid changes again
-
-The replacement grid above still lists **Ask — plain-English questions, grounded answers**. That line must go:
-Ask is no longer a page. Fourteen of its sixteen intents duplicated a tab, its two unique ones (FPL rules and
-scoring) moved to **Help**, and its distinguishing feature — written narration — never existed in production,
-because there is no Ollama on Streamlit Cloud.
-
-**Replace that bullet with:**
-
-- **Help** — a step-by-step guide, plus the **FPL rules** MADBOOTS checks its answers against
-
-**And note what the site already got right.** madboots.com runs *"The analytics decide; you stay in control"*
-— it had **already dropped** the *"The AI explains"* clause that the in-app mantra kept until today. The app
-now matches: *"The analytics decide. Every answer shows its working. You make the call."* If the site ever
-regains an AI claim, it should be because a hosted model was funded, not because the sentence sounded better.
-
-**Current sidebar, for the grid:** Players · Team DNA & FDR · My Squad (squad · AI Tips · Transfer · Captain ·
-DNA · Leagues · Lab) · Signals · Trending · Help · Feedback.
+**`hello@` and `info@madboots.com` both receive email** — owner-confirmed, 2026-08-28.
+The in-app Home tour is fixed **and guarded by a test** that derives the page list from `pages/` (US-433).
+**This page has no such guard**, because its source is not in the repo — which remains the strongest argument
+for moving it here (see ADR-103's parked brand-infra changeover).
