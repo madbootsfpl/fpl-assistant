@@ -75,6 +75,45 @@ source is not in this repo, so it is in `docs/08_Marketing/Homepage_Copy.md` rat
 
 ---
 
+### 🔬 First evaluation finding (2026-08-30) — **the constraint is the router, not the prose**
+
+The owner opened the Admin surface with Ollama running and asked:
+
+> *"what's my best strategy for FPL"*
+
+and got the catch-all list of things Ask can answer. His question was whether that meant Ollama needed setting
+up. **It did not, and the answer reframes what this experiment is measuring.**
+
+**What actually happened.** That reply is `_FALLBACK` (`ask.py:156`), emitted by `route()` when a question
+matches none of the 16 intents. `route()` contains **no LLM reference at all** — routing happens first, and
+narration only ever decorates an answer that already exists. **The identical response comes back with a model
+running**, which is exactly what he saw.
+
+**What the model does buy**, measured on a question that *does* route (`who should I captain from RoboTS?`,
+Ollama up, 4.1 s):
+
+> *"B.Fernandes is a good captain pick this gameweek due to his high expected points, being a penalty taker,
+> and set-piece involvement. His away fixture against EVE is the only risk…"*
+> ✓ Checked: every figure and name in the explanation traces to the data above.
+
+**That paragraph and its verification line are the entire difference between local and Cloud.** The pick, the
+confidence score, the Edge/Risk bullets and the alternatives all render identically with no model.
+
+**So the question this ADR set out to answer — *"is the narration worth a hosted model?"* — is the wrong
+one, or at least not the interesting one.** *"What's my best strategy for FPL"* is a reasonable thing to ask
+and the app cannot take it, **not because the prose is missing but because no intent covers open strategic
+questions**. A hosted model, dropped in as-is, would buy a nicer paragraph on the questions that already
+work — and would still fall through on that one.
+
+**The question worth carrying into the GW4-6 decision instead:** would an **LLM intent classifier** — letting
+the model *choose* an intent, or synthesise across several — make Ask do something the tabs cannot? That is
+already in the backlog under *"More `ask` intents"*, and it is a materially different proposition: routing is
+where the ceiling is, and it is the half a language model is genuinely good at.
+
+⚠️ **Recorded before deciding anything.** One question is one data point, and it is the owner's own question
+rather than a tester's — nobody else can reach this surface. Treat it as a hypothesis to test at the sitting,
+not a finding.
+
 ### 💡 The lesson
 
 **The unused feature was the symptom; the unbacked promise was the disease.** The question asked was how to

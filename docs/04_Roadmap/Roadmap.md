@@ -56,6 +56,7 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 - **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
 - **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.
 - **Reddit aggregate sentiment** — needs the Reddit API + a Cloud secret. RSS gives a *count*, not sentiment.
+- **LLM intent classifier for Ask** ◑ — the live question after the first Admin-Ask evaluation: the ceiling is the **router**, not the prose (ADR-168 §🔬). Decide at GW4-6.
 - **Pundit / video NLP** — research-heavy; the ADR-151 extraction pipeline is the obvious base.
 - **Session/cookie auth** for `/my-team/{id}/` · **source versioning** · **cache TTLs** · **auth polish** — infrastructure, no user pull yet.
 - **PuLP 4.0 migration** ◑ — variables migrated, `PULP_CBC_CMD` deliberately kept.
@@ -484,7 +485,12 @@ import, Reddit RSS buzz, media headlines. Momentum boards are live now that GW1 
   `community_buzz`'s surname collision ("Palmer" listed twice). ❌ Not building: a sentiment score, a trained
   model, or a Signals+Trending blend — **blending needs weights, weights need the evaluation loop**.
 - ⬜ **Pundit / video NLP** — LLM-summarise FPL YouTube / articles into structured signals. Research-heavy.
-- ⬜ **More `ask` intents** — differentials; a persisted chat; an LLM intent classifier.
+- ◑ **More `ask` intents / an LLM intent classifier** — **promoted 2026-08-30 by the first Admin-Ask
+  evaluation (ADR-168 §🔬).** The owner asked *"what's my best strategy for FPL"* with Ollama **running** and
+  got the catch-all list: `route()` matched none of the 16 intents, and it contains **no LLM reference** — so
+  the same reply comes back with or without a model. **The ceiling is the router, not the narration**, and
+  routing is the half a language model is actually good at. A hosted model dropped in as-is would buy a nicer
+  paragraph on questions that already work and still fall through on that one. Decide at the GW4-6 sitting.
 - 🅾️ **X/Twitter signals** — paid/restricted. Skipped.
 - 🅾️ **Betting/odds as a lens** (ADR-093) — declined *as a lens*; a possible **Tier-3 modelling input** later,
   never a display.
