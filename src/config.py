@@ -47,8 +47,17 @@ HISTORY_THROTTLE = 0.3
 # Local LLM for the `ask` command (ADR-034). Ollama's generate endpoint; the model is one
 # pulled locally. The LLM is OPTIONAL — `ask` degrades to the analytics decision if it's absent.
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3.2"
-OLLAMA_TIMEOUT = 60
+# ADR-168 §🔬 — narration moved llama3.2 → qwen3:8b (2026-08-30). Measured side by side on four answers:
+# llama3.2 reframed a risk as a benefit ("selling Hume frees £0.5m"), dropped a differential warning, and
+# wrote "increases projected points by £25.4" — a currency symbol on a points figure. qwen3:8b named the
+# risk *as* a risk and carried the units. It is the model the extraction already uses (ADR-157).
+OLLAMA_MODEL = "qwen3:8b"
+
+# …and the timeout has to rise with it. **60s was silently failing**: qwen3 needs ~90s on the longest prompt
+# (the chip strategy, whose facts dict is the biggest), so narration returned None and the UI showed
+# "Start Ollama for a written summary" on a machine where Ollama was running perfectly. A silent timeout that
+# blames the user for a missing service is the worst of both.
+OLLAMA_TIMEOUT = 240
 
 # …and a SEPARATE model for headline extraction (ADR-151/157). The two jobs want different things and one
 # constant was quietly making that choice for both: narration wants warmth, speed and a sentence, and runs

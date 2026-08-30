@@ -193,6 +193,73 @@ questions.** It sharpens the question for GW4-6; it does not settle it.
    two of four with nothing lost.
 3. **Only then** ask whether a bigger model is worth paying for.
 
+### 🔬 Third finding (2026-08-30) — **both cheap tests run: the caveat rule, and a bigger model**
+
+Suggestions 1 and 3 above, taken together because the caveat rule needed a model that could follow it.
+
+**Model comparison, same four questions, `llama3.2` vs `qwen3:8b`.** The transfer answer is the one that
+decided it:
+
+| | llama3.2 (2 GB) | qwen3:8b |
+|---|---|---|
+| *transfer* | *"Selling Hume frees £0.5m, and buying Mendy increases projected points by **£25.4**"* — risk **reframed as a benefit**, differential warning dropped, and a **currency symbol on a points figure** | names the risk as a risk |
+
+`llama3.2` did not merely omit the caveat, it **inverted it**: "selling Hume" is the risk, and it appears as
+the upside. That is the failure mode a reader cannot detect from the prose.
+
+**The caveat rule** (`_RULES`, `ask.py`): if the facts carry a `risk`, the last sentence must state it,
+beginning *"The risk is"*, **as a risk, never reworded into a benefit**; if `risk` is absent, add nothing.
+
+**Re-run against the four samples that motivated it:**
+
+| question | `risk` fact | narration ends |
+|---|---|---|
+| transfer | *Selling Hume (13.9 xP); Differential (4% owned)* | ✅ *"The risk is selling Hume…"* — **the case that dropped both caveats** |
+| captain | *Away fixture* | ✅ *"The risk is the away fixture."* |
+| worth | *Premium price (£15.5m…)* | ✅ *"The risk is premium price…"* |
+| chips | **none** | ⚠️ *"The risk is low confidence across all chips."* |
+
+**3/3 where a risk exists; the "add nothing" half was not obeyed.** The chips line is **not fabricated** —
+`facts["confidence"]` reads *"triple captain 40/100 (Low); … wildcard 43/100 (Low)"*, so the claim is true and
+grounded. But it is a **different field, relabelled** with the phrase the rule reserved for `risk`, and
+nothing in the prose tells a reader which field it came from. Substantively useful, weak evidence of
+instruction-following: the rule fixed omission, not labelling.
+
+Chips also **restated its four rows verbatim** — the second finding's "list-shaped answers add nothing" holds
+under a better model, so it is a property of narration, not a small-model artefact. Suggestion 2 (narrate
+judgement intents only) survives untouched and is now the cheapest remaining test.
+
+⚠️ **The timeout was a silent failure, not a setting.** `qwen3:8b` takes ~16–57 s where `llama3.2` took ~2 s
+(chips measured 89.6 s once, 56.9 s later). At `OLLAMA_TIMEOUT = 60` the chips answer returned `None` — so
+the surface showed **"Start Ollama for a written summary" on a machine where Ollama was running.** A degraded
+path that is indistinguishable from "not installed" hides its own cause. Now 240 s, since this is Admin-only
+and unattended slowness beats a misleading message.
+
+### 🔬 What the model swap actually exposed — **the test suite was calling a real Ollama**
+
+The swap took the suite from **78 s to 354 s** and failed one AppTest on its 30-second limit. The cause was
+not the model: there was **no `tests/conftest.py` at all**, so every test reaching `ask.answer` called
+whatever Ollama happened to be running locally.
+
+* **CI has never exercised the narrated path.** GitHub Actions has no Ollama, so `narrate` returned `None` in
+  milliseconds and every test took the degraded branch. Green, and half-blind.
+* **Locally the same tests hit a live model** — non-hermetic, and slower every time the model grew. The
+  30-second failure was the first time that dependency was visible in four months.
+
+Fixed with an autouse fixture stubbing `narrate`/`extract` to `None` — `src/llm.py`'s own contract for
+"unavailable", so local runs now match CI exactly. **Two seams, not one:** `ask.py` declares
+`def answer(..., narrator=llm.narrate)`, and a default argument is bound **once at import**, so patching the
+module alone left every one of those call sites talking to a real Ollama. The fixture rewrites the captured
+defaults too, matching by **identity** so a fourth `narrator=` seam is covered automatically.
+`tests/test_llm.py` opts out via a `real_llm` marker (it tests the client itself, and stubs `urlopen`).
+
+**Suite: 1624 passed in 50 s** — below the original 78 s baseline, because tests that used to call
+`llama3.2` now call nothing.
+
+`tests/test_no_language_model_in_tests.py` makes any network call from a test an `AssertionError`. It was
+**verified by breaking the fixture and watching it fail** — with only the module patched it went straight to
+the network, which is how the default-argument seam was found rather than assumed.
+
 ### 💡 The lesson
 
 **The unused feature was the symptom; the unbacked promise was the disease.** The question asked was how to
@@ -204,3 +271,9 @@ The second, which the owner reached first: **when you remove a capability, remov
 commit.** Copy outlives code by default — we have now watched it happen three times in a month (Home's tour,
 the Feedback picker, the madboots.com grid). The only reliable fix is to treat the sentence as part of the
 feature, not as documentation of it.
+
+**And a third, from the swap:** *a passing suite tells you the tests ran, not what they ran against.* These
+tests silently called a live language model for four months and nobody could see it — because the dependency
+only ever made them **slower**, never red. It took a 4× slowdown to surface it. **A dependency that degrades
+quietly is invisible until something makes it expensive**, so the check worth having is not "do the tests
+pass" but "what can this test reach that I did not choose for it."

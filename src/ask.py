@@ -160,7 +160,17 @@ _INTENT_KEYWORDS = {
 _RULES = (
     "Rules: do NOT rank or compare players, do NOT compute or invent any number, do NOT expand "
     "or rename teams (use the codes exactly as written), do NOT merge separate facts, and do NOT "
-    "mention anything that is not in the facts."
+    "mention anything that is not in the facts. "
+    # ADR-168 §🔬 — the caveat rule. Measured on four answers: the narration walked every ✓ Edge bullet and
+    # silently dropped the ⚠ Risk ones, most damagingly on `transfer`, where it reframed "selling Hume
+    # (13.9 xP)" as "selling Hume frees £0.5m" — a risk rendered as a benefit — and never mentioned the
+    # 4%-owned warning at all. The facts always contained them; the prompt never asked for them.
+    #
+    # It is stated as an obligation with a fixed form because "mention the risk" was evidently not enough:
+    # both models had the risk and both were inconsistent about using it.
+    "If the facts contain a 'risk' entry, you MUST state it in the last sentence, beginning with "
+    "'The risk is' — as a risk, never reworded into a benefit. If 'risk' is absent or 'none noted', "
+    "add nothing."
 )
 
 _FALLBACK = (

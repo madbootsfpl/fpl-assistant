@@ -10,7 +10,13 @@ import io
 import json
 import urllib.request
 
+import pytest
+
 from src import config, llm
+
+# These test `llm` itself, so they opt out of `conftest`'s autouse stub (which replaces exactly the two
+# functions under test here). They remain offline — `_capture` stubs `urlopen` in every one.
+pytestmark = pytest.mark.real_llm
 
 
 def _capture(monkeypatch, response="ok"):
