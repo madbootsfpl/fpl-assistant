@@ -433,9 +433,9 @@ Five feature requests, triaged by feasibility (✅ buildable now · ◑ partial/
   needs a model — the cloud degrades to rules + grounded); ~~grow the KB~~ **grown 13 → 21 topics** (Sprint 110,
   US-282: flags · preseason transfers · one-chip-per-GW · bench points · wildcard timing · leagues · ranking ·
   team value) + the routing cues so each verifies ✓. Keep growing as questions arrive.
-- ⏳ **Elite Manager Comparison** — how your squad compares to top-ranked managers + what the **Top 1,000**
-  are doing (captain trends, transfer flow). *Needs:* the FPL leagues API + per-manager picks; **picks are
-  public only from the GW1 deadline (2026-08-21)** → no data preseason. Build post-GW1.
+- ✅ **Elite Manager Comparison — SHIPPED** (ADR-141 + ADR-161/162). 🏆 Leagues carries an **Elite** scope: the
+  global Overall league's top 50, with effective ownership vs global, the captain split, chip usage, transfer
+  flow and a head-to-head. *(Entry was still marked ⏳ on 2026-08-30, four sprints after it shipped.)*
 - ✅ **DONE (Sprint 095, ADR-081)** — **Set Piece & Ownership Data** — who takes **penalties · corners ·
   free-kicks** for each team, plus **ownership combinations** to find high-value, low-ownership
   **differentials**. Ingested `corners_order` + `freekicks_order` (auto-migrated); `set_piece_flags`;

@@ -18,6 +18,70 @@ differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
 **1285 tests · 134 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
+---
+
+# 📋 Everything open, in one list — **audited 2026-08-30**
+
+Compiled by **reading the files and checking the code**, not from memory. Three entries were already done and
+still marked open (noted inline below); the previous audit's own complaint about the homepage had likewise
+outlived its problem. **Assume this list is stale before you assume the work is undone.**
+
+## 🔒 Blocked on gameweeks — nothing to do but wait
+
+Every item here has the same gate: **`player_history` holds 1 played round** (GW2 was in flight on 29 Aug),
+**0 of 620 players have 900 minutes**, and `calibrate` refuses with *"have 1, need ≥4"*.
+
+| item | unblocks at | note |
+|---|---|---|
+| `FORM_WEIGHT` · `SET_PIECE_WEIGHT` · `DEFCON_MAGNIFIER_WEIGHT` | **GW4**, real sitting **GW6** | criteria pre-registered in **GW1_RUNBOOK §B0** — four numeric bars, a stopping rule, and expected results recorded so a surprise is legible |
+| In-season xMins share (ADR-125) | same sitting | ⚠️ **this is the Kinsky bug.** He is **0.46 xP/GW at 22.6% owned**, rank 27 of 68 GKs — a role-change cold-start (rate fine at 2.59, xMins stuck at 0.18 from last season's 630 backup minutes). Reported 2026-08-18 and **still live**. The most user-visible consequence of any deferral here. |
+| Re-measure the 6 single-GW constants | GW4-6 | exodus p10 · ownership floor · captain-margin + concentration quartiles. Ship the new value if it moves ≥20%. |
+| Market goals → attack/defence strength (**ADR-005 unblocked**) | ~GW10 | derive our own from per-fixture `xg`/`xgc`; **ranked above the weight tuning** — those tune terms we have, this adds one we lack |
+| Scout's boards get current data | ~GW10 | 3 of 5 need 900 minutes and read **last season** until then |
+| Ceiling / differential captaincy | GW4-6 | needs a variance distribution — the same wall the win-probability sim hit |
+| DGW/BGW detection · **Evaluation & feedback loops** | in-season | Evaluation is the only item that says whether *any* of this helped |
+| Tier 3 — the crowd backtest | with Evaluation | does following vs fading the crowd beat xP-only? |
+
+## 👤 Needs you — I cannot do these
+
+| item | why it matters |
+|---|---|
+| 🔴 **Supabase `beta_users` DELETE policy** (ADR-122, BETA.md §4) | **A promise the app makes and does not keep.** *"Remove me = we delete your rows"* silently no-ops without it — the tester is signed out but stays allow-listed. Console work, not code. **Unverified — tell me if you've since added it.** |
+| **Deploy madboots.com** | edits are applied to `~/madboots-site/index.html`; live site still shows the old copy until you drag the folder to Cloudflare Pages |
+| **Squad Lab icon** — a flask/test-tube instead of 🥾 | needs the art (clean transparent PNG) |
+| **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
+| The 4 uncommitted files in your tree | 3 sprint lesson docs + `spikes/015-soccerdata/compare_npxg.py` — kept out of every commit deliberately |
+
+## 🟢 Buildable now — nothing blocking
+
+- **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
+- **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.
+- **Reddit aggregate sentiment** — needs the Reddit API + a Cloud secret. RSS gives a *count*, not sentiment.
+- **Pundit / video NLP** — research-heavy; the ADR-151 extraction pipeline is the obvious base.
+- **Session/cookie auth** for `/my-team/{id}/` · **source versioning** · **cache TTLs** · **auth polish** — infrastructure, no user pull yet.
+- **PuLP 4.0 migration** ◑ — variables migrated, `PULP_CBC_CMD` deliberately kept.
+
+## 🅾️ Declined on evidence — do not re-propose without new data
+
+Each was measured, and the number is in the ADR so the question does not reopen from scratch.
+
+| item | the number that killed it |
+|---|---|
+| Win-probability sim (ADR-161) | one starter's points have **sd 3.51**; a 3-differential H2H has gap **sd ≈ 8.6** against typical margins of 2-5 pts → *"it's close"*, every week |
+| Multi-GW path search (ADR-132) | the best sell was the **same player in all six gameweeks**; the market yielded **one** beneficial move — a tree with one branch |
+| Chip-sequence ranking (ADR-143) | worth **0.3 xP**; the legality defect it hid (two chips advised for one gameweek, **28% of squads**) was the real find |
+| Cache `decision_xp` for tap lag (2026-08-28) | **7 ms of a 56 ms** render, inside an interaction dominated by a websocket round-trip; a stale entry would show **wrong xP** |
+| Attack/Defence FDR from FPL's own fields (ADR-005) | `strength_attack_home` is **0** after GW1 and always has been — hence deriving our own instead |
+| Player clashes (ADR-145) | would have fired for **100% of squads every week** |
+
+## ⏸️ Parked with a trigger
+
+- **`decision_xp` fixture sensitivity** — two features came back smaller than expected because the multiplier is only ±20% (ADR-006). Revisit *with* the weight calibration, not before, and **not to make a chart look better**.
+- **MADBOOTS rebrand infra changeover** (ADR-103) — repo transfer + domain, to do all together. The site source lives at `~/madboots-site`, which is the strongest argument for folding it into the repo.
+
+---
+
+
 **GW1 (2026-08-21) has been played and the season is live.** The data-hardening flip is done: per-GW history is
 backfilled (609 players), and the season-to-date surfaces that reset at rollover now fall back to last season
 until they can answer for themselves (ADR-126). What remains gated is **calibration** — the weights stay 0 until
@@ -463,7 +527,8 @@ Kept so the reasoning isn't re-litigated:
 - ⚠️ **OWNER ACTION — ADR-122's unsubscribe silently no-ops** until a `beta_users` **DELETE policy** is added in
   Supabase (BETA.md §4). The *"remove me = we delete your rows"* promise isn't kept without it. Console work,
   not code.
-- ⚠️ **OWNER ACTION — admin-read smoke** (ADR-100): add the anon SELECT policy + set `FPL_ADMIN_KEY`.
+- ✅ **OWNER ACTION — admin-read smoke** (ADR-100) — **done 2026-08-25** (*"ran it, admin says ok now"*). This
+   entry sat open for five days after it was completed; found by re-checking on 2026-08-30, not by remembering.
 - ⬜ **Session/cookie auth for user-specific data** (`/my-team/{id}/`) — unlocks a manager-ID fetch inside
   `analyse`/`transfer`. Native `st.login()` is the product-path upgrade above the current gate.
 - ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.
