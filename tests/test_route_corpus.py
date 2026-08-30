@@ -95,3 +95,42 @@ def test_the_natural_phrasings_that_used_to_fall_through():
                                ("is my team any good?", "analyse"),
                                ("is Watkins overpriced?", "worth")):
         assert route(question, known_squads=_SQUADS)[0] == expected, question
+
+
+def test_a_named_gameweek_reaches_the_weekly_plan():
+    """*"What's the best strategy for GW3?"* used to hit the fallback (2026-08-30, owner-reported).
+
+    The miss was narrow and slightly absurd: `gameweek` already answered this question — but every phrasing
+    it knew assumed *this* week (`"this week"`, `"gw plan"`, `"what should i do"`), so naming the gameweek
+    made it unreachable. `"what should I do in GW3?"` worked the whole time.
+    """
+    for q in ("what's the best strategy for GW3?",
+              "what's th best strategy for GW3?",        # the owner's typo — routing must not care
+              "what's the best strategy for gameweek 3?",
+              "my plan for GW3",
+              "how should I approach GW3?"):
+        assert route(q, known_squads=_SQUADS)[0] == "gameweek", q
+
+
+def test_strategy_is_a_modifier_not_a_topic():
+    """`"<topic> strategy"` reaches the topic; bare `"strategy"` deliberately reaches **nothing**.
+
+    Routing a bare "strategy" somewhere would mean picking one of chips/transfers/captaincy on the user's
+    behalf and answering confidently — the exact failure shape as the wildcard-question-that-built-a-squad
+    above. An honest miss now lists every intent (see `test_ask.py`), which is a better answer than a guess.
+    """
+    for q, expected in (("transfer strategy for GW3", "transfer"),
+                        ("captaincy strategy for GW3", "captain"),
+                        ("chip strategy for GW3", "chips")):
+        assert route(q, known_squads=_SQUADS)[0] == expected, q
+
+    for q in ("strategy", "best strategy", "what's the best strategy?"):
+        assert route(q, known_squads=_SQUADS)[0] is None, q
+
+
+def test_a_named_gameweek_does_not_swallow_the_position_shortlist():
+    """`gameweek` is checked **before** `shortlist`, so its new phrases are "<planning word> for GW", never a
+    bare "for gw" — which would have quietly captured every "best <position> for GW3"."""
+    for q in ("best midfielders for GW3", "best value defenders for GW3",
+              "best differential forwards for GW3"):
+        assert route(q, known_squads=_SQUADS)[0] == "shortlist", q

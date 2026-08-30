@@ -148,7 +148,20 @@ _INTENT_KEYWORDS = {
     # "this week" only fires the weekly plan, not a stray word.
     "gameweek": ("this week", "this gameweek", "gameweek plan", "gw plan", "weekly plan",
                  "plan for the week", "plan for this week", "what should i do", "what do i do",
-                 "recommend my", "recommendation for my"),
+                 "recommend my", "recommendation for my",
+                 # A **named** gameweek (2026-08-30). Every phrasing above assumes *this* week, so
+                 # "what's the best strategy for GW3?" matched nothing and fell to the fallback — even
+                 # though "what should I do in GW3?" already answered it. The owner hit exactly that.
+                 #
+                 # Each is "<planning word> for/at GW<n>", never a bare "for gw": `gameweek` is checked
+                 # BEFORE `shortlist`, so a loose "gw" would swallow "best midfielders for GW3". And a bare
+                 # "strategy" is deliberately still unroutable — it is a modifier, not a topic ("transfer
+                 # strategy" and "captaincy strategy" correctly reach their own intents, which are checked
+                 # first), so guessing an intent for it would trade an honest miss for a confident wrong
+                 # answer — the one failure the routing corpus measured as actually harmful.
+                 "strategy for gw", "strategy for gameweek", "strategy in gw", "strategy in gameweek",
+                 "plan for gw", "plan for gameweek", "approach gw", "approach gameweek",
+                 "approach to gw", "approach to gameweek", "approach for gw", "approach for gameweek"),
     "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
                   "best value", "best players", "differential", "differentials"),
     "compare": ("compare", "versus", " vs ", "better", " or "),
@@ -173,11 +186,53 @@ _RULES = (
     "add nothing."
 )
 
+# What each intent answers, in plain words — the single source of the "I can answer about…" message.
+#
+# **Derived, not hand-written** (2026-08-30). The old message was prose maintained by hand, and it had drifted
+# to advertise **8 of 15** intents: `chips`, `gameweek`, `price`, `rules`, `trends`, `history` and `fixtures`
+# were all reachable and none was mentioned. The owner asked *"what's th best strategy for GW3?"*, got the
+# fallback, and the two intents that would have answered — `gameweek` ("what should I do in GW3?") and
+# `chips` — were precisely the ones it omitted. A capability list that under-sells the product is the same
+# failure as one that over-sells it (ADR-168): the sentence stopped describing the code and nobody could see.
+#
+# `test_ask.py` pins every intent to a blurb in both directions, so a new intent cannot ship undescribed and
+# a deleted one cannot linger in the copy.
+_INTENT_BLURB = {
+    "captain": "captaincy",
+    "transfer": "transfers",
+    "gameweek": "a plan for the week",
+    "chips": "chip timing (wildcard, bench boost, triple captain, free hit)",
+    "analyse": "your squad's health",
+    "start_bench": "your lineup",
+    "build_squad": "building a squad",
+    "shortlist": "the best players in a position (incl. differentials)",
+    "worth": "whether a player is worth the money",
+    "compare": "comparing players",
+    "fixtures": "fixtures and difficulty",
+    "trends": "what the crowd is doing (most owned, most transferred, in form)",
+    "price": "price changes",
+    "history": "a player's past seasons",
+    "rules": "the FPL rules and scoring",
+}
+
+
+def _capabilities() -> str:
+    """The blurbs as one bullet per line.
+
+    A list, not a sentence: fifteen comma-separated clauses is a wall nobody reads to the end of, and this
+    text renders in **monospace** everywhere it appears (`st.code` on the web, plain stdout in the CLI), so a
+    bullet per line is both scannable and safe — markdown would render literally.
+    """
+    return "\n".join(f"  \u2022 {blurb}" for blurb in _INTENT_BLURB.values())
+
+
 _FALLBACK = (
-    "I can answer about captaincy, transfers, your squad's health, your lineup, comparing players, "
-    "building a squad, the best players in a position (incl. differentials), or whether a player is "
-    'worth the money. Try: ask "who should I captain from <squad>?", ask "best differential '
-    'midfielders under £8m", or ask "is Haaland worth the money?".'
+    "I can answer about:\n"
+    f"{_capabilities()}\n\n"
+    # One example per *shape* of question: squad-scoped, whole-gameweek, single-player. The middle one is the
+    # question that exposed the drift, so the next person who asks it finds the door rather than this message.
+    'Try: ask "who should I captain from <squad>?", ask "what should I do in GW3?", '
+    'or ask "is Haaland worth the money?".'
 )
 
 _NUDGE = (   # a follow-up ("why?", "and the next?") arrived before any question to build on (ADR-047)
@@ -212,6 +267,24 @@ def _squad_name(question: str, known_squads) -> str | None:
         tokens.add(raw)
         tokens.add(re.sub(r"['’]s$", "", raw).strip(".,!;:'’\""))   # "TS's" → "TS", "TS." → "TS"
     return next((name for name in known_squads if name in tokens), None)
+
+
+# "GW3", "gw 3", "gameweek 3" — the number a question names, if any.
+_GW_IN_QUESTION = re.compile(r"\b(?:gw|gameweek)\s*(\d{1,2})\b")
+
+
+def _named_gameweek(question) -> int | None:
+    """The gameweek a question explicitly names, or None.
+
+    Exists because `gameweek` answers **the next gameweek, always** — it takes no GW argument and the captain
+    is next-GW by construction. Every phrasing it originally knew said so out loud ("this week", "what should
+    I do"), so the assumption was safe. Once it learned to match a *named* gameweek (2026-08-30), it could be
+    asked about GW3 while GW2 is next and would answer the wrong week under a "This week" header — a
+    confident answer to a question nobody asked, which is the failure this project treats as worse than a
+    miss. So the number is read back out and the mismatch is stated.
+    """
+    match = _GW_IN_QUESTION.search((question or "").lower())
+    return int(match.group(1)) if match else None
 
 
 def route(question: str, known_squads=None) -> tuple[str | None, str | None]:
@@ -632,7 +705,7 @@ def _gameweek_facts(plan: dict) -> dict:
 
 
 def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
-                     *, horizon=_HORIZON) -> dict | None:
+                     *, horizon=_HORIZON, question=None) -> dict | None:
     """Analytics DECIDE a one-gameweek plan (ADR-070): captain · lineup · a transfer · flags.
 
     An assembly of the existing primitives (via `gameweek_plan`), humanised for narration and
@@ -643,7 +716,7 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     data = _squad_xp(store, squad_name, active_squad, horizon=horizon)
     if data is None:
         return None
-    squad, players, owned, xp_by_id, _by_gw, _gws, _weight = data
+    squad, players, owned, xp_by_id, _by_gw, gws, _weight = data
     if not owned:
         return None
 
@@ -676,8 +749,18 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     subjects = ([p["web_name"] for p in owned]
                 + ([tr["in"]["web_name"]] if tr else [])
                 + [r["in"]["web_name"] for r in (plan.get("replacements") or [])])
+    # If the question named a gameweek that is not the one being planned, say so *before* the plan rather
+    # than letting a "This week" header quietly answer a different question (see `_named_gameweek`).
+    named, planned = _named_gameweek(question), (gws[0] if gws else None)
+    scope = None
+    if named is not None and planned is not None and named != planned:
+        scope = (f"Note: you asked about GW{named}, but this plans **GW{planned}** — the weekly plan always "
+                 f"covers the next gameweek. For chip timing further out, ask \"which chip should I use?\".")
+        facts = {"scope": scope, **facts}
+
+    detail = render_gameweek_plan(plan, squad_name, horizon=horizon, explanation=explanation)
     return {
-        "detail": render_gameweek_plan(plan, squad_name, horizon=horizon, explanation=explanation),
+        "detail": f"{scope}\n\n{detail}" if scope else detail,
         "headline": f"This week (squad '{squad_name}'): captain "
                     f"{cap['web_name'] if cap else '—'}",
         "facts": facts,
@@ -1568,7 +1651,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "start_bench":
         return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "gameweek":
-        return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon)
+        return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon,
+                                question=question)
     if intent == "chips":
         return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon)
     if intent == "rules":

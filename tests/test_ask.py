@@ -1195,3 +1195,93 @@ def test_decide_trends_momentum_is_preseason_gated():
     store = types.SimpleNamespace(get_players=lambda: players)
     d = ask._decide_trends(store, "who is most transferred in")
     assert "GW1" in d["message"] and "detail" not in d              # a clear "live from GW1" message
+
+
+# --- the capability message describes the code, and is kept honest by a test -------------------------
+
+def test_every_intent_the_router_can_reach_is_described_in_the_fallback():
+    """The fallback advertised **8 of 15** intents (2026-08-30).
+
+    Undescribed: `chips`, `gameweek`, `price`, `rules`, `trends`, `history`, `fixtures`. The owner asked
+    *"what's th best strategy for GW3?"*, got the fallback, and the two intents that answer it — `gameweek`
+    and `chips` — were among the ones it omitted. The list was prose maintained by hand, so it drifted the
+    moment an intent was added without anyone editing a sentence three hundred lines away.
+
+    This is the same failure as a promise outliving its feature (ADR-168), inverted: copy that under-sells
+    the product hides working features just as effectively as over-selling invents missing ones.
+    """
+    assert set(ask._INTENT_BLURB) == set(ask._INTENT_KEYWORDS), (
+        "every routable intent needs a plain-words blurb, and every blurb needs a live intent — "
+        f"undescribed: {sorted(set(ask._INTENT_KEYWORDS) - set(ask._INTENT_BLURB))}, "
+        f"stale: {sorted(set(ask._INTENT_BLURB) - set(ask._INTENT_KEYWORDS))}"
+    )
+
+
+def test_the_fallback_actually_contains_every_blurb():
+    """Pinning the dicts to each other is not enough — the message is what a person reads."""
+    for blurb in ask._INTENT_BLURB.values():
+        assert blurb in ask._FALLBACK, blurb
+
+
+def test_the_fallback_names_the_two_intents_that_were_hidden():
+    """A regression guard in the user's own terms: the words that would have answered the question."""
+    assert "chip timing" in ask._FALLBACK
+    assert "a plan for the week" in ask._FALLBACK
+    # …and it points at the question that exposed the gap, so the next person finds the door.
+    assert "what should I do in GW3?" in ask._FALLBACK
+
+
+# --- a named gameweek is answered for the week actually planned -------------------------------------
+
+def _gameweek_stubs(monkeypatch, gameweeks):
+    """The `_decide_gameweek` scaffolding, with the horizon's gameweeks under test."""
+    owned = [{"id": 1, "web_name": "Haaland"}, {"id": 2, "web_name": "Saka"}]
+    plan = {
+        "captain": {"web_name": "Haaland", "team": "MCI", "xp": 6.2, "venue": "H",
+                    "opponent": "BUR", "penalty_taker": True, "doubtful": False},
+        "lineup": {"start": owned, "bench": [], "has_declared_bench": False, "bring_in": [], "drop": []},
+        "transfer": None,
+        "flags": [],
+    }
+    monkeypatch.setattr(
+        ask, "_squad_xp",
+        lambda store, name, active_squad=None, *, horizon=5: (
+            {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {1: 6.2, 2: 3.1}, {}, gameweeks, {}),
+    )
+    monkeypatch.setattr(ask, "gameweek_plan", lambda *a, **k: plan)
+
+
+def test_a_named_gameweek_that_is_not_next_says_so(monkeypatch):
+    """`gameweek` plans **the next gameweek, always** — it takes no GW argument.
+
+    Once routing learned to match "strategy for GW9" (2026-08-30), that assumption became load-bearing and
+    silent: the plan would answer GW3 under a "This week" header. Stating the mismatch is the difference
+    between a useful answer and a confidently wrong one.
+    """
+    _gameweek_stubs(monkeypatch, [3, 4, 5, 6, 7])
+    decision = _decide_gameweek(_FakeStore(), "TST", question="what's the best strategy for GW9?")
+    scope = decision["facts"]["scope"]
+    assert "GW9" in scope and "GW3" in scope
+    assert scope in decision["detail"]          # ahead of the plan, not buried in the facts
+    assert list(decision["facts"])[0] == "scope"  # first, so narration and the reader meet it first
+
+
+def test_a_named_gameweek_that_IS_next_adds_no_note(monkeypatch):
+    """The common case — "strategy for GW3" when GW3 is next — must stay clean.
+
+    A caveat that fires when nothing is wrong trains people to skip caveats.
+    """
+    _gameweek_stubs(monkeypatch, [3, 4, 5, 6, 7])
+    for question in ("what's the best strategy for GW3?", "what should I do this week?", None):
+        decision = _decide_gameweek(_FakeStore(), "TST", question=question)
+        assert "scope" not in decision["facts"], question
+
+
+def test_named_gameweek_is_read_from_the_ways_people_write_it():
+    assert ask._named_gameweek("what's th best strategy for GW3?") == 3
+    assert ask._named_gameweek("my plan for gw 12") == 12
+    assert ask._named_gameweek("strategy for gameweek 7") == 7
+    # No number named → the plan speaks for itself, no note.
+    assert ask._named_gameweek("what should I do this week?") is None
+    assert ask._named_gameweek("gameweek plan") is None
+    assert ask._named_gameweek(None) is None

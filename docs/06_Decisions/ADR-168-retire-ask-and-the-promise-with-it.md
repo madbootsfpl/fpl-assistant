@@ -260,6 +260,41 @@ defaults too, matching by **identity** so a fourth `narrator=` seam is covered a
 **verified by breaking the fixture and watching it fail** — with only the module patched it went straight to
 the network, which is how the default-argument seam was found rather than assumed.
 
+### 🔬 Fourth finding (2026-08-30) — **the capability message was under-selling the product**
+
+Owner, in Admin Ask: *"what's th best strategy for GW3?"* → the fallback. Two separate defects behind it.
+
+**1. The fallback advertised 8 of the 15 intents the router can reach.** Undescribed: `chips`, `gameweek`,
+`price`, `rules`, `trends`, `history`, `fixtures`. The two that answer the question asked — `gameweek`
+(*"what should I do in GW3?"* already worked) and `chips` — were both among the missing. It was prose kept by
+hand three hundred lines from the intent table, so it drifted the moment an intent was added.
+
+**This is finding 1's disease with the sign flipped.** Ask was retired because copy promised a feature that
+did not exist; here copy hid seven that did. *Both* are the sentence quietly ceasing to describe the code.
+`_FALLBACK` is now generated from an `_INTENT_BLURB` map, pinned to `_INTENT_KEYWORDS` in **both directions**
+by a test — a new intent cannot ship undescribed, a deleted one cannot linger in the copy. Verified by
+deleting the `chips` blurb and watching the test name it.
+
+**2. `gameweek` knew "this week" but not a *named* week.** Every phrase it matched was present-tense
+(`"this week"`, `"gw plan"`, `"what should i do"`), so naming the gameweek made a working answer unreachable.
+Added `"<planning word> for/at GW<n>"` phrasings — never a bare `"for gw"`, since `gameweek` is checked
+*before* `shortlist` and would have swallowed *"best midfielders for GW3"*.
+
+⚠️ **And that fix created a risk, which needed its own guard.** `_decide_gameweek` takes **no gameweek
+argument** — the captain is next-GW by construction. So a question naming GW9 would have been answered with
+the GW3 plan under a *"This week"* header: a confident answer to a question nobody asked, the exact failure
+the routing corpus already records as the only genuinely harmful mis-route. The named gameweek is now read
+back out and any mismatch stated **before** the plan. It stays silent when the named week *is* the next one —
+a caveat that fires when nothing is wrong teaches people to skip caveats.
+
+**Bare `"strategy"` is still deliberately unroutable.** It is a modifier, not a topic: `"transfer strategy"`
+and `"captaincy strategy"` correctly reach their own intents. Routing it alone would mean choosing between
+chips, transfers and captaincy on the user's behalf — trading an honest miss, which now lists all fifteen
+capabilities, for a guess.
+
+**Ask's constraint is still the router** (finding 1), and this is the fourth owner-found routing miss. Every
+one was found by using the product, not by reading the table.
+
 ### 💡 The lesson
 
 **The unused feature was the symptom; the unbacked promise was the disease.** The question asked was how to
