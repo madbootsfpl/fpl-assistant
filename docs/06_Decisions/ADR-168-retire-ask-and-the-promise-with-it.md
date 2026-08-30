@@ -144,6 +144,38 @@ keywords work everywhere. Building it would be spending the one thing Ask cannot
 remains unanswerable, and correctly so), or a corpus of **real tester** questions showing the keyword table
 failing in ways keywords cannot fix. Neither exists yet. **Revisit at GW4-6, with the corpus as the evidence.**
 
+### 🔬 Second finding (2026-08-30) — **the prose is either redundant or unverified**
+
+Three answers sampled locally with Ollama up, on the surface that finally works (see the gate fix below).
+
+| question | what the narration added |
+|---|---|
+| *wildcard now or wait?* (chips) | **nothing.** *"GW3: Triple Captain - M.Sangaré due to highest single-GW ceiling…"* — each clause restates the row directly above it |
+| *is Haaland worth the money?* (worth) | **nothing new.** It walks the Edge bullets in order, joins them with *"and"*, appends the Risk bullet after *"However"* |
+| *who should I captain?* (captain) | **one clause**: *"his away fixture is the only risk, but it's a relatively low-risk scenario"* — a judgement, not a restatement |
+
+**The pattern, and the mechanism behind it.** The answers that are already a *structured list* — chips,
+build, shortlist — leave the model nothing to do but read the table back. The answers that are a *judgement*
+— captain, worth, transfer — give it something to synthesise, and that is where it produced its only original
+sentence in three samples.
+
+**And that one original sentence is the one thing that cannot be checked.** `verify_grounding` flags
+**numbers and names** — nothing else. So *"it's a relatively low-risk scenario"* passes untouched, because it
+contains neither. The ✓ line is honestly worded (*"every figure and name in the explanation traces to the data
+above"*) and claims exactly what it verifies — but the useful half of the narration sits outside its scope by
+construction.
+
+**So the narration is redundant where it is checkable, and unchecked where it is useful.** That is a
+materially worse case for a hosted model than *"is the writing nice?"* suggested.
+
+⚠️ **The load-bearing caveat: this was measured on `llama3.2`** — a 2 GB model, 17 months old. A frontier
+hosted model would very likely synthesise better, and the redundancy on list-shaped answers might be a
+small-model artefact rather than a property of narration. **Three samples, one small model, the owner's own
+questions.** It sharpens the question for GW4-6; it does not settle it.
+
+**What it does suggest testing at the sitting:** narrate *selectively* — only the judgement-shaped intents —
+rather than paying to narrate everything. That is cheap to try and would have caught two of these three.
+
 ### 💡 The lesson
 
 **The unused feature was the symptom; the unbacked promise was the disease.** The question asked was how to
