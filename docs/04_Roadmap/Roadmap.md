@@ -46,7 +46,6 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 
 | item | why it matters |
 |---|---|
-| 🔴 **Supabase `beta_users` DELETE policy** (ADR-122, BETA.md §4) | **A promise the app makes and does not keep.** *"Remove me = we delete your rows"* silently no-ops without it — the tester is signed out but stays allow-listed. Console work, not code. **Unverified — tell me if you've since added it.** |
 | **Deploy madboots.com** | edits are applied to `~/madboots-site/index.html`; live site still shows the old copy until you drag the folder to Cloudflare Pages |
 | **Squad Lab icon** — a flask/test-tube instead of 🥾 | needs the art (clean transparent PNG) |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
@@ -524,9 +523,11 @@ Kept so the reasoning isn't re-litigated:
   anonymous usage analytics (ADR-100) · beta gate + waitlist (ADR-087/102) · self-service unsubscribe (ADR-122).
 - ✅ **ADR-120 — Admin tester-activity roster + load watch** — built (Sprint 186). ⏳ Owner smoke outstanding
   (`FPL_ADMIN_KEY` + the anon SELECT policy) before the numbers have been seen.
-- ⚠️ **OWNER ACTION — ADR-122's unsubscribe silently no-ops** until a `beta_users` **DELETE policy** is added in
-  Supabase (BETA.md §4). The *"remove me = we delete your rows"* promise isn't kept without it. Console work,
-  not code.
+- ✅ **OWNER ACTION — ADR-122's unsubscribe** — **done, owner-confirmed 2026-08-30**: the `beta_users` DELETE
+  policy is in place and *"remove me"* now removes the user from Supabase. With `beta_waitlist`, `squads` and
+  `player_watchlist` already RLS-off, **the whole *"remove me = we delete your rows"* promise is now kept.**
+  ⚠️ Owner-confirmed, not machine-verified — the check needs live Supabase credentials that exist only in
+  Streamlit secrets, so nothing here can assert it. Re-test after any Supabase policy change.
 - ✅ **OWNER ACTION — admin-read smoke** (ADR-100) — **done 2026-08-25** (*"ran it, admin says ok now"*). This
    entry sat open for five days after it was completed; found by re-checking on 2026-08-30, not by remembering.
 - ⬜ **Session/cookie auth for user-specific data** (`/my-team/{id}/`) — unlocks a manager-ID fetch inside
