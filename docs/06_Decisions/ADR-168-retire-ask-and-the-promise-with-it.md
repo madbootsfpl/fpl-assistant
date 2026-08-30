@@ -168,13 +168,30 @@ construction.
 **So the narration is redundant where it is checkable, and unchecked where it is useful.** That is a
 materially worse case for a hosted model than *"is the writing nice?"* suggested.
 
+**Fourth sample (transfer) revised the above.** *"Thomas → Mendy"* narrated as: *"…improves the XI as it
+increases starting XI improvement by +30.3 points, with Mendy offering significantly higher projected points
+and being in form."* It walked all three ✓ Edge bullets and **dropped both ⚠ Risk bullets** — no mention of
+selling a 6.8 xP player, none of the 4%-owned differential warning. `_build_prompt` hands the model the whole
+facts dict and `facts["risk"]` is populated (`ask.py:486`), so **it had the caveats and omitted them**.
+
+So the pattern is not *"judgement intents synthesise better"* — it is **inconsistency about carrying
+caveats**: `worth` and `captain` both kept theirs, `transfer` dropped both. **That is worse than a systematic
+bias**, because a reader cannot tell from the prose whether a caveat was absent or omitted — and on the one
+intent that recommends spending a transfer, it read as an unqualified endorsement of a differential punt.
+
 ⚠️ **The load-bearing caveat: this was measured on `llama3.2`** — a 2 GB model, 17 months old. A frontier
 hosted model would very likely synthesise better, and the redundancy on list-shaped answers might be a
 small-model artefact rather than a property of narration. **Three samples, one small model, the owner's own
 questions.** It sharpens the question for GW4-6; it does not settle it.
 
-**What it does suggest testing at the sitting:** narrate *selectively* — only the judgement-shaped intents —
-rather than paying to narrate everything. That is cheap to try and would have caught two of these three.
+**What it suggests testing at the sitting**, in order of cheapness:
+
+1. **Require the caveats.** The prompt says *"using ONLY the facts below"* but never *"and you must state any
+   risk"*. One line, testable against the four samples, and it addresses the only finding here that is a
+   correctness problem rather than a value one.
+2. **Narrate selectively** — judgement-shaped intents only, skipping the list-shaped ones. Would have removed
+   two of four with nothing lost.
+3. **Only then** ask whether a bigger model is worth paying for.
 
 ### 💡 The lesson
 
