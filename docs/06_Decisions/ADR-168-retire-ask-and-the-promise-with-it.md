@@ -114,6 +114,36 @@ where the ceiling is, and it is the half a language model is genuinely good at.
 rather than a tester's — nobody else can reach this surface. Treat it as a hypothesis to test at the sitting,
 not a finding.
 
+### 🧪 Tested the hypothesis (2026-08-30) — **and it mostly did not hold**
+
+The owner asked for the LLM intent classifier. Built a **30-question corpus** first, deliberately weighted
+toward phrasings the keyword table *should* already get, so a bad score would indict the corpus rather than
+the router.
+
+```
+baseline   20/25 routable correct · 3 missed · 2 "wrong"
+verified   …of those 2, ONE was my label being wrong — `rules` answers
+           "how many points is a goal worth?" with the exact scoring table
+actual     1 genuinely harmful mis-route in 30:
+           "wildcard now or wait?" → build_squad → built a squad, "Confidence 95/100"
+after      24/25 routable · 0 missed — from FOUR keyword additions
+```
+
+The three misses were people talking normally — *"should I bring in X?"*, *"is my team any good?"*,
+*"is X overpriced?"* — and the harmful one was a missing bare `"wildcard"` in `chips`, which `build_squad`
+had instead.
+
+**So the ceiling was lower than one question suggested, and four keywords raised it.** The corpus is now
+`tests/test_route_corpus.py`, a standing check rather than a one-off measurement.
+
+**The decisive argument against the classifier is not the score, though — it is deployment.** There is no
+model on Streamlit Cloud, so an LLM router could only ever help the **owner-only Admin surface**, while
+keywords work everywhere. Building it would be spending the one thing Ask cannot have in production.
+
+**What would still justify one:** a question that is *genuinely* multi-intent (*"what's my best strategy"*
+remains unanswerable, and correctly so), or a corpus of **real tester** questions showing the keyword table
+failing in ways keywords cannot fix. Neither exists yet. **Revisit at GW4-6, with the corpus as the evidence.**
+
 ### 💡 The lesson
 
 **The unused feature was the symptom; the unbacked promise was the disease.** The question asked was how to

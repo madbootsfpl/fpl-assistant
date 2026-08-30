@@ -114,21 +114,31 @@ _INTENT_KEYWORDS = {
     # bench boost" must still build); NOT bare "captain"/"bench" (those stay their own intents).
     "chips": ("chip strategy", "which chip", "what chip", "chips", " chip ", "chip?", "use a chip",
               "triple captain", "free hit", "use my bench boost", "use my wildcard", "when to bench boost",
-              "when to wildcard", "play my bench boost", "play my wildcard"),
+              "when to wildcard", "play my bench boost", "play my wildcard",
+              # Timing phrasings (2026-08-30). Without these, "wildcard now or wait?" fell through to
+              # build_squad's bare "wildcard" and **built a squad** — a confidently wrong answer to a
+              # question about when, measured as the only harmful mis-route in a 30-question corpus.
+              "wildcard now", "wildcard or wait", "wildcard this week", "wildcard yet",
+              "when should i wildcard", "hold my wildcard", "save my wildcard"),
     # trends: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
     "trends": ("trending", "most owned", "most picked", "most transferred", "most sold", "most bought",
                "in form", "risers", "fallers", "bandwagon", "most popular"),
     # worth (a single-player value verdict, ADR-061) before captain/transfer so "worth buying" isn't
     # caught by "buy"; the phrases are value-specific, so "worth captaining" still falls to captain.
     "worth": ("worth the money", "worth it", "good value", "value for money", "worth buying",
-              "worth the price", "worth the cost"),
+              "worth the price", "worth the cost",
+              # The negative framing is just as common and matched nothing (2026-08-30).
+              "overpriced", "too expensive", "overrated"),
     # history (US-296): a single-player season record — distinctive phrases so it wins for "X's history" /
     # "how did X do last season" without stealing worth ("is X worth it") or the squad commands.
     "history": ("history", "last season", "last year", "how did", "track record", "past seasons",
                 "season by season", "season record"),
     "captain": ("captain", "armband"),
-    "transfer": ("transfer", "sell", "buy", "swap"),
-    "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good"),
+    # "bring in" is how people actually phrase a transfer in — added 2026-08-30 after it fell through.
+    "transfer": ("transfer", "sell", "buy", "swap", "bring in", "get rid of", "move on"),
+    "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good",
+                # "is my team any good?" — the natural phrasing, which "how good" misses (2026-08-30).
+                "team any good", "squad any good", "team look", "squad look"),
     # build_squad before start_bench so "build me a squad for a bench boost" isn't caught by "bench".
     "build_squad": ("build", "wildcard", "best squad", "best team", "best xi", "new squad",
                     "new team", "pick a squad", "pick a team"),

@@ -56,7 +56,7 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 - **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
 - **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.
 - **Reddit aggregate sentiment** — needs the Reddit API + a Cloud secret. RSS gives a *count*, not sentiment.
-- **LLM intent classifier for Ask** ◑ — the live question after the first Admin-Ask evaluation: the ceiling is the **router**, not the prose (ADR-168 §🔬). Decide at GW4-6.
+- **LLM intent classifier for Ask** ⏸️ — **tested 2026-08-30 and largely declined** (ADR-168 §🧪). A 30-question corpus found **one** harmful mis-route, fixed by **four keywords** → 24/25 routable, 0 missed. And a model cannot run on Cloud at all, so it would only help the owner-only Admin surface. Revisit only with real tester questions that keywords cannot fix — `tests/test_route_corpus.py` is the evidence.
 - **Pundit / video NLP** — research-heavy; the ADR-151 extraction pipeline is the obvious base.
 - **Session/cookie auth** for `/my-team/{id}/` · **source versioning** · **cache TTLs** · **auth polish** — infrastructure, no user pull yet.
 - **PuLP 4.0 migration** ◑ — variables migrated, `PULP_CBC_CMD` deliberately kept.
