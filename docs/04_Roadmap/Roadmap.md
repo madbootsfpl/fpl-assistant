@@ -56,8 +56,9 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 *(**US-435 — the merged golden page — shipped 2026-08-31**, ADR-171. That was the last open item of the
 17-item UX review; the review is now fully closed. New follow-up from building it: **`llm.narrate` never sets
 `"think": False`** while `llm.extract` does, which is most of the 27 s a narrated answer costs locally — its
-own ADR, because narration and extraction were split deliberately (ADR-151/157). Also found: the **ADR index
-is 48 entries stale** — `ADR-000-index.md` stops at 122 while 171 ADRs exist.)*
+own ADR, because narration and extraction were split deliberately (ADR-151/157). The **ADR index backfill is
+DONE** (2026-08-31) — it had stopped at 122 while 171 ADRs existed; all 49 added, re-sorted ascending, and
+`tests/test_adr_index.py` now fails if an ADR is ever filed without a row.)*
 
 - **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
 - **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.
