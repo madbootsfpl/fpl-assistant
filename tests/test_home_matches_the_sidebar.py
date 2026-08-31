@@ -79,3 +79,34 @@ def test_home_only_points_at_sub_tabs_that_exist():
         f"Home points at My Squad sub-tabs that do not exist: {sorted(named - real)}.\n"
         f"  real tabs: {sorted(real)}"
     )
+
+
+# ---- Help teaches the navigation too, so it rots the same way (2026-08-31) -------------------------
+
+HELP = PAGES / "7_Help.py"
+
+
+def test_help_does_not_teach_a_navigation_that_no_longer_exists():
+    """The onboarding guide is the worst place for a stale tab name — it strands the newest user.
+
+    Found 2026-08-31: Help still said *"switch My Squad · AI Tips · Captain · Transfer · Chips · Health"*
+    (four of six wrong), routed people to a sidebar **Squad Lab** folded away by ADR-166, sent them to
+    **My Squad → Health** renamed by the same ADR, and devoted a whole numbered step with nine copy-paste
+    examples to **Ask**, which ADR-168 retired.
+    """
+    text = HELP.read_text()
+    gone = {
+        "Squad Lab** tab": "Lab is My Squad ▸ Lab (ADR-166), not a sidebar tab",
+        "My Squad → Health": "Health was renamed DNA (ADR-166/US-436)",
+        "Team DNA & FDR": "split into two pages (ADR-169)",
+        "the **Ask** tab": "Ask was retired (ADR-168)",
+        "· Chips · ": "Chips is a section of My Squad, not a sub-tab (ADR-166/171)",
+    }
+    found = [f"{k!r} — {why}" for k, why in gone.items() if k in text]
+    assert not found, "Help teaches navigation that no longer exists:\n  " + "\n  ".join(found)
+
+
+def test_help_points_at_sub_tabs_that_exist():
+    named = set(re.findall(r"My Squad ▸ (\w+)", HELP.read_text()))
+    real = set(_my_squad_subtabs())
+    assert named <= real, f"Help points at missing My Squad sub-tabs: {sorted(named - real)} (real: {sorted(real)})"

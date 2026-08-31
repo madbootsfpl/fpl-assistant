@@ -705,15 +705,19 @@ def test_consumer_views_use_a_session_active_squad():
 
 
 def test_help_page_renders_the_guide_without_data():
-    # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps + an example
+    # ADR-068: the Help tab is static — it renders even with no DB, and carries the key steps.
+    # ⚠️ Rewritten 2026-08-31: this test had been *pinning stale copy*. It asserted the guide mentioned "Ask"
+    # and a copy-paste Ask example — a page ADR-168 retired two days earlier — so it was actively holding the
+    # onboarding guide in the past. A test that fails when the docs are fixed is worse than no test.
     at = _run(_PAGES / "7_Help.py")
-    blob = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.code)
-    assert "Squad Lab" in blob and "My Squad" in blob          # the core steps (ADR-105 nav)
-    assert "Ask" in blob and "worth the money" in blob         # the Ask step + a copy-paste example
-    assert "AI Tips" in blob                                   # US-226: the gameweek tab (renamed) is in the guide
-    assert "this week for my squad" in blob                     # US-224: the gameweek Ask example
-    assert "quality rating" in blob                            # US-224: the stat-board rating is explained
-    assert not at.get("dataframe")                             # static content — no data widgets
+    # subheaders + captions count too: the FPL-rules section ADR-168 moved here is a subheader, so a
+    # markdown-only blob could not see it and the assertion would have been quietly weakened to suit.
+    blob = " ".join(e.value for e in (*at.markdown, *at.code, *at.subheader, *at.caption))
+    assert "My Squad" in blob and "Lab" in blob                 # the core steps, current nav (ADR-166/171)
+    assert "This week" in blob                                  # ADR-171: the week's answer is on the page
+    assert "quality rating" in blob                             # US-224: the stat-board rating is explained
+    assert "FPL rules" in blob                                  # ADR-168: the rules KB is readable here
+    assert not at.get("dataframe")                              # static content — no data widgets
 
 
 def test_sidebar_pages():
