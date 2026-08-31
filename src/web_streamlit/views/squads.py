@@ -10,7 +10,7 @@ import json
 
 import streamlit as st
 
-from src import ask
+from src import ask, llm
 from src.analytics import (
     PRICE_DOWN,
     PRICE_UP,
@@ -315,7 +315,12 @@ def _card_horizon(upcoming, card_gws: int = _CARD_GWS) -> int:
     return max([card_gws, *reach])
 
 
-def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5):
+def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5,
+                    this_week=None):
+    """`this_week` (ADR-171): a zero-arg renderer dropped in **between the team banner and the xP strip** —
+    the ① slot of the merged golden page. A callable rather than a flag because the answer needs `ask`, which
+    this module's pitch/lineup half has no other reason to touch; passing the *rendering* in keeps the
+    dependency at the page, where the composition decision is."""
     # US-423 (density): the "on the pitch — pick a player…" caption dropped (the pitch + ⚙ panel are discoverable)
     # so the pitch sits higher on mobile.
     # US-386: a brand status card so your team stands out + Save/backup is signposted. "Yours" = the shown squad is
@@ -388,6 +393,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         # US-423 (density): a compact caption, not a full green success box, so the pitch sits higher.
         st.caption(f"£{cost:.1f}m · ✓ a legal 15" if over <= 0
                    else f"£{cost:.1f}m · ✓ legal · ⚠ £{over:.1f}m over the £{FPL_BUDGET:.0f}m budget")
+
+    if this_week is not None:      # ① the week's answer, above the pitch it is about (ADR-171)
+        this_week()
 
     # A quick-view team summary (US-239) — reuses the horizon-aware xP + availability; display-only.
     # The projected XI is the declared XI (if a bench is set) else the best legal XI — same as Health.
@@ -1055,34 +1063,91 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
     render_captain_card(picks, explanation, scope=f"from squad '{squad_name}'",   # a styled card (US-294)
                         team_names=team_names)
 
+    # ADR-171 — **the setter lives in one place, and it is not here.** While this was its own tab the
+    # duplication was invisible: the ⚙ panel had "👑 Make X captain", this tab had a selectbox and a button,
+    # and AI Tips recommended a third. Merging all three onto one screen did not create the problem, it
+    # revealed it. The ⚙ panel's button wins because that is where the *selection* already lives (ADR-135's
+    # surviving shape) — a second control acting on the same state, six inches down the same page, is a bug
+    # you can see. What is unique to this section — the ranked 15 and the grounded card — stays.
     current = squad.get("captain_id")
     if current:
         cur = next((p["web_name"] for p in owned if p["id"] == current), "?")
-        st.caption(f"Your captain: **{cur} (C)**")
-    labels = {f"{p['position']} {p['web_name']}": p["id"] for p in owned}
-    recommended = picks[0]["id"] if picks else None
-    want = current or recommended
-    idx = next((i for i, pid in enumerate(labels.values()) if pid == want), 0)
-    choice = st.selectbox("Set your captain", list(labels), index=idx, key="set_captain",
-                          help="Choose your captain — they score double; shown as (C).")
-    if st.button("Set as captain"):
-        set_active_squad(set_captain(squad, labels[choice]))
-        st.success(f"Captain set: **{choice.split(' ', 1)[1]} (C)** — shown in Health + your download.")
-        st.rerun()
+        st.caption(f"Your captain: **{cur} (C)** — change it on the pitch above (tap a shirt → "
+                   "**👑 Make … captain**).")
+    else:
+        top = picks[0] if picks else None
+        st.caption((f"No captain set — the pick above is **{top['web_name']}**. " if top else "No captain set. ")
+                   + "Set one on the pitch above (tap a shirt → **👑 Make … captain**).")
+
+
+_DEFAULT_NARRATOR = object()   # "caller said nothing" — distinct from an explicit `narrator=None`
+
+
+# ---- The eager/button rule (ADR-171) ---------------------------------------------------------------
+
+def narrator_attached() -> bool:
+    """Is a language model attached to *this* deployment? Probed once per session, then remembered.
+
+    This is the whole hinge of the merged page. `ask.answer` costs **~120 ms** with no model and **27-86 s**
+    with `qwen3:8b` narrating, so "is this cheap enough to render on load?" has no fixed answer — it depends
+    on the machine. ADR-166 answered it once, in a constant, from a dev box; the number went stale silently
+    and cost the golden page its best section for three days.
+
+    Cached in `session_state` rather than `st.cache_data` on purpose: the answer is a property of the running
+    deployment (it cannot change mid-session), and a session-scoped cache is one that tests get a fresh copy
+    of, rather than one leaking a dev machine's answer into the next assertion.
+    """
+    if "llm_attached" not in st.session_state:
+        st.session_state["llm_attached"] = llm.reachable()
+    return st.session_state["llm_attached"]
+
+
+def render_this_week(squad_name, squad, *, horizon=5):
+    """① of the merged golden page — the week's answer, eager when it is cheap (ADR-171).
+
+    **Eager when cheap, a click when a narrator is attached.** On Cloud that is 123 ms and the user simply
+    gets the answer; locally it would be half a minute, so it stays a button. One rule, asked of the socket,
+    rather than a per-tab guess that can go stale.
+    """
+    st.markdown("##### 🤖 This week")
+    if not narrator_attached():
+        # **The decision is binding, not a prediction.** Found by the ADR-171 smoke test: `narrator_attached`
+        # picks the *layout*, but on its own it does nothing to stop `ask.answer` reaching for a model — so a
+        # probe that guessed wrong would render eagerly AND narrate, producing the exact 49-second landing
+        # this design exists to prevent. Passing `narrator=None` closes that gap: having judged the answer
+        # cheap, we render the cheap answer, and the two can no longer disagree.
+        render_ai_tips(squad_name, squad, horizon=horizon, narrator=None)
+        return
+    if st.button("Work out my week →", key="ms_week",
+                 help="A language model is attached to this instance, so the written answer takes ~30s."):
+        st.session_state["ms_week_on"] = True
+    if st.session_state.get("ms_week_on"):
+        render_ai_tips(squad_name, squad, horizon=horizon)
+    else:
+        st.caption("A language model is attached to this instance, so narrating the answer takes about "
+                   "**half a minute** — which is why it is a click here and automatic on the deployed app, "
+                   "where there is no model and the same answer costs a tenth of a second.")
 
 
 # ---- AI Tips (a grounded gameweek plan; ADR-070, labelled "AI Tips" per US-226) ---------------------
-def render_ai_tips(squad_name, squad, *, horizon=5):
+def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR):
     """A grounded gameweek recommendation for the picked squad — captain · lineup · a transfer · flags.
 
-    Shown under the **AI Tips** tab. Routes through `ask.answer` (analytics decide, the LLM narrates,
-    every figure/name checked, ADR-037), reusing the session squad. `horizon` (ADR-077) sets the
-    lineup/transfer window; the captain is always next-GW. Degrades without Ollama. No server writes.
+    Section ① of the merged golden page (ADR-171; was the **AI Tips** tab). Routes through `ask.answer`
+    (analytics decide, the LLM narrates, every figure/name checked, ADR-037), reusing the session squad.
+    `horizon` (ADR-077) sets the lineup/transfer window; the captain is always next-GW. Degrades without
+    Ollama. No server writes.
+
+    `narrator=None` renders the **analytics only**, whatever is installed on the machine — used by
+    `render_this_week` when it has decided to render eagerly, so that decision cannot be contradicted by a
+    model it did not know about (ADR-171).
     """
     st.caption("Your whole week in one view — who to **captain**, any **lineup** change, one **transfer** "
                "to consider, and any **flagged** players. The analytics decide; the answer is checked "
                "against the data (✓/⚠).")
-    result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon)
+    _kw = {} if narrator is _DEFAULT_NARRATOR else {"narrator": narrator or (lambda *a, **k: None)}
+    result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon,
+                        **_kw)
     st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users
 
 

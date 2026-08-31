@@ -8,6 +8,7 @@ both. Offline: `urlopen` is stubbed, no Ollama required.
 
 import io
 import json
+import socket
 import urllib.request
 
 import pytest
@@ -73,3 +74,47 @@ def test_a_missing_model_costs_nothing_but_the_answer(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", boom)
     assert llm.extract("x") is None
     assert llm.narrate("x") is None
+
+
+# ---- reachable: the eager/button hinge (ADR-171) ---------------------------------------------------
+#
+# `reachable` is the one function here that is *not* about narration quality — it decides whether a page
+# renders its answer on load or behind a button, so its FAILURE DIRECTION is the thing worth pinning. A
+# wrong "no model" answer costs a 27-second page load; a wrong "model attached" answer costs one click.
+# It must therefore only ever say "no" when it is certain, and guess "yes" whenever it cannot tell.
+
+def _closed_port() -> int:
+    """A port nothing is listening on — bind it, read the number, close it."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def test_reachable_is_true_when_something_is_listening():
+    with socket.socket() as srv:
+        srv.bind(("127.0.0.1", 0))
+        srv.listen(1)
+        port = srv.getsockname()[1]
+        assert llm.reachable(url=f"http://127.0.0.1:{port}/api/generate") is True
+
+
+def test_reachable_is_false_only_when_the_connection_is_refused():
+    # The Cloud case: nothing is listening, the OS says so immediately, and we may render eagerly.
+    assert llm.reachable(url=f"http://127.0.0.1:{_closed_port()}/api/generate") is False
+
+
+def test_reachable_guesses_attached_when_it_cannot_tell():
+    """A timeout is *ambiguous*, and ambiguity must resolve towards the button.
+
+    192.0.2.0/24 is TEST-NET-1 (RFC 5737) — reserved, never routed — so this times out rather than being
+    refused. Returning False here would be the expensive mistake: a machine that really does have a model
+    would render eagerly and hang for half a minute.
+    """
+    assert llm.reachable(url="http://192.0.2.1:11434/api/generate", timeout=0.05) is True
+
+
+def test_reachable_does_not_generate_anything(monkeypatch):
+    # It is a connect, not a call: it must not spend a model's time answering "is a model there?".
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda *a, **k: pytest.fail("reachable() must not make an HTTP request"))
+    llm.reachable(url=f"http://127.0.0.1:{_closed_port()}/api/generate")

@@ -46,12 +46,18 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 
 | item | why it matters |
 |---|---|
-| **Deploy madboots.com** | edits are applied to `~/madboots-site/index.html`; live site still shows the old copy until you drag the folder to Cloudflare Pages |
+| ~~**Deploy madboots.com**~~ | ✅ **DONE — owner deployed 2026-08-31.** The Cloudflare Pages drag-and-drop is done and the live site now carries the current copy; `~/madboots-site/index.html` and the live page are back in step. Next edit to that file re-opens the same manual step (it is outside the repo — see the ADR-103 changeover, parked below). |
 | **Squad Lab icon** — a flask/test-tube instead of 🥾 | needs the art (clean transparent PNG) |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
 | The 4 uncommitted files in your tree | 3 sprint lesson docs + `spikes/015-soccerdata/compare_npxg.py` — kept out of every commit deliberately |
 
 ## 🟢 Buildable now — nothing blocking
+
+*(**US-435 — the merged golden page — shipped 2026-08-31**, ADR-171. That was the last open item of the
+17-item UX review; the review is now fully closed. New follow-up from building it: **`llm.narrate` never sets
+`"think": False`** while `llm.extract` does, which is most of the 27 s a narrated answer costs locally — its
+own ADR, because narration and extraction were split deliberately (ADR-151/157). Also found: the **ADR index
+is 48 entries stale** — `ADR-000-index.md` stops at 122 while 171 ADRs exist.)*
 
 - **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
 - **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.

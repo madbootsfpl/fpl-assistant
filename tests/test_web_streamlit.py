@@ -496,9 +496,18 @@ def _squads_view(view):
     at = _run(_PAGES / "1_My_Squad.py")
     # By label, not by index: My Squad now carries several segmented controls (Tool · Gameweeks ahead · and
     # whatever the selected tab adds), so `[0]` was an assumption about layout rather than about the switch.
-    next(c for c in at.segmented_control if c.label == "Tool").set_value(
-        "Lab" if view == "Build" else view).run()
+    # ADR-171 folded AI Tips + Captain into the My Squad screen, so those names are no longer switch
+    # values — a test asking for them is asking for a *section*, which lives on the default tab.
+    _MERGED = {"AI Tips": "My Squad", "Captain": "My Squad"}
+    want = "Lab" if view == "Build" else _MERGED.get(view, view)
+    next(c for c in at.segmented_control if c.label == "Tool").set_value(want).run()
     assert not at.exception, f"Squads[{view}] raised: {at.exception}"
+    # ⚠ Found 2026-08-31 (ADR-171): `set_value` accepts an option that does not exist and **silently keeps
+    # the current selection**. ADR-166 renamed Health → DNA and two callers here kept asking for "Health";
+    # both went on passing while testing the DEFAULT tab instead. Green stayed green and the coverage was
+    # gone. So the switch is now checked: a stale tab name fails loudly rather than quietly testing My Squad.
+    landed = next(c for c in at.segmented_control if c.label == "Tool").value
+    assert landed == want, f"tab {want!r} does not exist — the page is showing {landed!r} instead"
     return at
 
 
@@ -512,10 +521,12 @@ def test_squads_page_analyses_the_demo_squad():
 def test_squads_ai_tips_view_renders_a_gameweek_plan():
     # ADR-070 / US-226: the "AI Tips" view (renamed from This week) routes through ask.answer → the
     # grounded plan block renders (no Ollama in the test → the plan + facts, no prose), no crash
+    # ADR-171: it is section ① of My Squad now, and with no narrator attached it renders EAGERLY — which is
+    # exactly the deployed behaviour, since Streamlit Cloud has no Ollama either.
     at = _squads_view("AI Tips")
-    assert len(at.code) == 1                               # the rendered gameweek plan
-    assert "This week" in at.code[0].value                 # the plan block header (the plan is for this GW)
-    assert "Start Ollama" not in at.code[0].value          # US-375: no dev-only Ollama hint for web users
+    plan = [c for c in at.code if "This week" in c.value]
+    assert len(plan) == 1                                  # the rendered gameweek plan, without being asked
+    assert "Start Ollama" not in plan[0].value             # US-375: no dev-only Ollama hint for web users
 
 
 def test_chip_advice_renders_under_ai_tips_but_only_on_request():
@@ -523,8 +534,8 @@ def test_chip_advice_renders_under_ai_tips_but_only_on_request():
     clock. Behind a button, because it is another **6.6 s** of analytics and ADR-141's rule holds: nothing
     expensive happens because someone opened a tab."""
     at = _squads_view("AI Tips")
-    assert len(at.code) == 1, "AI Tips renders; chips have not run yet"
-    assert not any("Chip strategy" in c.value for c in at.code)
+    assert any("This week" in c.value for c in at.code), "the week's answer renders"
+    assert not any("Chip strategy" in c.value for c in at.code), "chips have not run yet"
 
     btn = next(b for b in at.button if b.key == "ms_chips")
     btn.click().run()
@@ -627,7 +638,7 @@ def test_transfer_page_applies_a_coordinated_plan():
 def test_captain_page_renders_the_pick_card_or_a_note():
     # US-294: the web Captain view renders the styled HTML card (not the mono block) — or a "no data" note.
     at = _squads_view("Captain")
-    assert len(at.selectbox) >= 1                          # the squad picker (+ a set-captain selector)
+    assert len(at.selectbox) >= 1                          # the squad picker
     blobs = " ".join(m.value for m in at.markdown)
     assert ("cap-card" in blobs and "🥇 Captain Pick" in blobs) or len(at.info) >= 1
 
@@ -652,11 +663,27 @@ def test_transfer_page_shows_incoming_crowd_flags():
     assert "In set" in at.dataframe[0].value.columns.tolist()   # US-254: set-piece parity (ADR-081)
 
 
-def test_captain_page_sets_and_persists_a_captain():
-    # US-175: "Set as captain" writes captain_id onto the (adopted) session squad
-    at = _squads_view("Captain")
-    setbtn = [b for b in at.button if b.label == "Set as captain"]
-    if not setbtn:                                         # no data locally → nothing to set
+def test_the_squad_has_exactly_one_captain_setter():
+    """ADR-171 / US-435 — the merged page must not carry three ways to set a captain.
+
+    Before the merge there were: the ⚙ panel's "👑 Make X captain", the Captain tab's selectbox + "Set as
+    captain" button, and AI Tips recommending one. Two of those acted on the same state; on separate tabs
+    that was invisible, and on one screen it is a defect. The ⚙ panel's button is the survivor (it is where
+    the selection already lives, ADR-135). This fails if a second setter creeps back — which is the ADR-135
+    lesson applied to controls rather than to widget count: a target nobody checks is a target that erodes.
+    """
+    at = _squads_view("My Squad")
+    setters = [b.label for b in at.button if "captain" in b.label.lower()]
+    assert len(setters) <= 1, f"more than one captain setter on the merged page: {setters}"
+    assert not any(s.label == "Set your captain" for s in at.selectbox), "the Captain tab's setter is gone"
+    assert not any(b.label == "Set as captain" for b in at.button), "the Captain tab's setter is gone"
+
+
+def test_the_pitch_panel_still_sets_and_persists_a_captain():
+    # US-175, via the ONE surviving setter (ADR-171): the ⚙ panel writes captain_id onto the session squad.
+    at = _squads_view("My Squad")
+    setbtn = [b for b in at.button if b.label.startswith("👑 Make ")]
+    if not setbtn:                                         # no data locally / nobody selected → nothing to set
         return
     setbtn[0].click().run()
     assert not at.exception
@@ -667,7 +694,7 @@ def test_captain_page_sets_and_persists_a_captain():
 def test_consumer_views_use_a_session_active_squad():
     # build sets session_state["squad"]; the Squads manage views must offer it in the picker (ADR-054/055)
     squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
-    for view in ("Health", "Transfer", "Captain", "My Squad"):
+    for view in ("DNA", "Transfer", "My Squad"):     # ADR-171: Captain is a section of My Squad now
         at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
@@ -1726,7 +1753,13 @@ def test_my_squad_pitch_view_lays_out_the_squad():
     at = _squads_view("My Squad")
     if not at.get("download_button"):                      # no data locally → the info branch
         return
-    assert len(at.dataframe) == 0                          # the pitch replaced the dataframe
+    # ADR-171: the page gained the captaincy table, so "no dataframes at all" is no longer the right shape.
+    # The point US-187 was pinning survives intact — **the squad is a pitch, not a table** — so what is
+    # asserted is that the only table here is the captain candidates, never a 15-row squad grid.
+    assert len(at.dataframe) <= 1, "the squad must not come back as a table"
+    if at.dataframe:
+        cols = at.dataframe[0].value.columns.tolist()
+        assert "Opp" in cols and "xP" in cols, f"the one table should be the captain candidates, got {cols}"
     # ADR-133: the pitch renders through the click component, so its markup is no longer in `at.markdown`.
     # The markup is asserted directly in tests/test_pitch_html.py — stricter, and without a page render.
     assert not at.exception
@@ -2536,7 +2569,10 @@ def test_photo_url_by_id_falls_back_to_the_club_shirt(monkeypatch):
 
 def test_squad_views_show_image_tables():
     # US-179 / ADR-069: the Build/Health/Captain views show a photo+badge image table
-    for view in ("Build", "Health", "Captain"):
+    # "Captain" is the captaincy section of My Squad now (ADR-171). "Health" used to be the third entry and
+    # had silently meant "My Squad" ever since ADR-166 renamed it DNA — DNA's first table is the risk monitor,
+    # which carries a badge but no photo, so it never belonged in this assertion.
+    for view in ("Build", "Captain"):
         at = _squads_view(view)
         if not at.dataframe:                                # no data locally → the info branch
             continue
@@ -3479,3 +3515,78 @@ def test_trending_never_explains_why_the_crowd_is_moving():
     assert "Signals" in caps, "the reader must be told where 'why' lives"
     for guess in ("because", "injured", "rumour", "expected to sign"):
         assert guess not in caps.lower()
+
+
+# ---- ADR-171 / US-435: one screen for the week -----------------------------------------------------
+
+def test_the_golden_page_carries_the_whole_week_in_order():
+    """The merge itself: ① the answer, the pitch it is about, ② captaincy, ③ chips — on one screen.
+
+    US-435's ask was *"most of what's needed for an informed decision is then on the golden page"*, so the
+    test is that the three things are present together, in that order — not that three functions were called.
+    """
+    at = _squads_view("My Squad")
+    heads = [m.value for m in at.markdown if m.value.startswith("#####")]
+    order = [h for h in heads if any(k in h for k in ("This week", "Captaincy", "Chips"))]
+    assert [k for k in ("This week", "Captaincy", "Chips") if any(k in h for h in order)] == \
+           ["This week", "Captaincy", "Chips"], f"sections missing or out of order: {order}"
+    assert any("This week" in c.value for c in at.code), "① the week's answer renders"
+    assert any(b.key == "ms_chips" for b in at.button), "③ chips is a click, not automatic"
+
+
+def test_the_sub_nav_lost_the_two_views_that_became_sections():
+    # ADR-171: 7 tools → 5. Transfer stays its own tab (a genuinely different task); AI Tips and Captain do not.
+    at = _run(_PAGES / "1_My_Squad.py")
+    tools = next(c for c in at.segmented_control if c.label == "Tool").options
+    assert tools == ["My Squad", "Transfer", "DNA", "Leagues", "Lab"]
+    assert "AI Tips" not in tools and "Captain" not in tools
+
+
+def test_the_week_renders_eagerly_when_no_model_is_attached():
+    """The deployed case, and the whole point of ADR-171.
+
+    Streamlit Cloud has no Ollama, so `ask.answer` costs ~123 ms and the user should simply get the answer.
+    `conftest` pins `reachable` to False, which is exactly that state.
+    """
+    at = _squads_view("My Squad")
+    assert any("This week" in c.value for c in at.code), "the answer renders without being asked for"
+    assert not any(b.key == "ms_week" for b in at.button), "no button is needed when the answer is cheap"
+
+
+def test_the_week_waits_behind_a_button_when_a_model_is_attached(monkeypatch):
+    """The dev-machine case: with `qwen3:8b` attached the same call takes 27-86 s, so it must be a click.
+
+    This is the half ADR-166 got right and encoded in the wrong place — as a constant about which *tab* was
+    slow, rather than a question about which *machine* is running.
+    """
+    from src import llm
+    monkeypatch.setattr(llm, "reachable", lambda **kwargs: True)
+    at = _squads_view("My Squad")
+    assert any(b.key == "ms_week" for b in at.button), "a narrator is attached → the answer is a click"
+    assert not any("This week — squad" in c.value for c in at.code), "…and nothing narrated on load"
+
+
+def test_rendering_eagerly_never_reaches_for_a_model(monkeypatch):
+    """ADR-171 — the eager decision must be BINDING, not a prediction.
+
+    Found by the sprint's smoke test, not by any unit test: `narrator_attached()` chose the layout while
+    `ask.answer` independently reached for whatever model was installed, so a machine the probe misjudged
+    rendered eagerly *and* narrated — a **49-second landing**, the precise outcome the design exists to
+    prevent. Having judged the answer cheap, the view must render the cheap answer.
+    """
+    from src.web_streamlit.views import squads as views
+
+    seen = {}
+
+    def _fake_answer(question, **kwargs):
+        seen.update(kwargs)
+        return __import__("src.ask", fromlist=["AskResult"]).AskResult(
+            question=question, intent="gameweek", headline="ok", message="", facts={}, detail=None)
+
+    monkeypatch.setattr(views.ask, "answer", _fake_answer)
+    monkeypatch.setattr(views.llm, "reachable", lambda **k: False)
+    monkeypatch.setattr(views.st, "session_state", {})
+
+    views.render_this_week("TS", {"player_ids": [], "name": "TS"}, horizon=1)
+    assert "narrator" in seen, "the eager path must pin the narrator rather than inherit the default"
+    assert seen["narrator"]() is None, "…and pin it to one that cannot narrate"

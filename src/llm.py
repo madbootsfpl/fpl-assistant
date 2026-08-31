@@ -7,10 +7,35 @@ new dependency; local, private, free.
 """
 
 import json
+import socket
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from src import config
+
+
+def reachable(*, url: str | None = None, timeout: float = 0.4) -> bool:
+    """Is a narrator actually attached? A connect attempt, not a generation (ADR-171).
+
+    Callers use this to decide whether an `ask.answer` costs **milliseconds or half a minute**, because that
+    is the whole difference between the deployed app and a dev machine: with no Ollama, `ask.answer` returns
+    the analytics in ~120 ms; with `qwen3:8b` attached it narrates for 27-86 s. ADR-166 hard-coded an answer
+    to that question and it went stale the moment the model changed — so ask the socket instead of assuming.
+
+    **The failure direction is the design.** *Connection refused* is a definitive "nothing is listening", so
+    it returns False and the caller may render eagerly. **Every other failure — timeout, DNS, a bad URL — is
+    ambiguous, and returns True.** Being wrong in that direction costs one click; being wrong in the other
+    direction costs a 27-second page load, which is the exact outcome this whole ADR exists to avoid.
+    """
+    parsed = urllib.parse.urlparse(url or config.OLLAMA_URL)
+    try:
+        with socket.create_connection((parsed.hostname or "localhost", parsed.port or 80), timeout):
+            return True
+    except ConnectionRefusedError:
+        return False          # definitively nothing there — the Cloud case
+    except OSError:
+        return True           # unknown → assume attached, so a wrong guess costs a click not a minute
 
 
 def extract(prompt: str, *, model: str | None = None, url: str | None = None,

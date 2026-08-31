@@ -58,6 +58,11 @@ def _no_language_model(request, monkeypatch):
 
     monkeypatch.setattr(llm, "narrate", stub)
     monkeypatch.setattr(llm, "extract", stub)
+    # ADR-171: `reachable` opens a real socket, so on a machine with Ollama running it would answer True
+    # while `narrate` above answers None — the suite would then test a state that cannot exist in life, and
+    # would do it differently on CI than locally. That is the identical non-hermetic bug this file was
+    # written to kill, one layer along. Pinned to False = "no narrator attached", matching the stub.
+    monkeypatch.setattr(llm, "reachable", lambda **kwargs: False)
 
     for obj in vars(ask).values():
         if inspect.isfunction(obj) and obj.__kwdefaults__:
