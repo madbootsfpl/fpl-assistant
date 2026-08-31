@@ -5,7 +5,11 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 ## Brand & production notes (apply to every script)
 
 - **Name:** always **MADBOOTS** (all-caps, one word). Never "MadBoots" / "Mad Boots".
-- **Throughline / sign-off:** *"The analytics decide. The AI explains. You make the call."*
+- **Throughline / sign-off:** *"The analytics decide. **Every answer shows its working.** You make the call."*
+  ⚠️ **Changed by ADR-168 (2026-08-29) and this file did not follow until 2026-08-31.** The old middle clause
+  was *"The AI explains"* — a three-part promise the deployed app kept two thirds of, because there is no
+  Ollama on Streamlit Cloud. `brand.MANTRA` is the source of truth; **§§1-2 and 4-9 below still close on the
+  retired line and need re-cutting before they are produced.**
 - **Presenter & voice** *(owner decision, 2026-08-13):* the **MADBOOTS avatar/mascot** — named **Maddie**
   *(owner, 2026-08-15; avatar generated, first HeyGen video made)* — **not** an AI human, so it stays on-brand and
   dodges the uncanny-valley that would undercut an honesty brand. Voice: a **strong female** — calm, clear,
@@ -23,6 +27,58 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 - **Show, don't tell:** mark where real UI shots go — the green pitch · Boot Battle head-to-head · the AI-Tips plan ·
   the ✓/⚠ trust line. Visuals sell harder than the voiceover.
 - **Cuts:** a 2-min explainer (hero), a 60-sec social cut, and 30–45s single-feature shorts (Reels/TikTok/Shorts).
+
+---
+
+## 0 · Maddie's intro — ~85s  *(PRODUCED: <https://youtu.be/a7WG0MBDLFg>; **revised 2026-08-31, needs a re-record**)*
+
+The only script here that has been rendered — it fronts the madboots.com hero lightbox and seeds the in-app
+**Maddie Explains** hub. **⚠ Screens marked "NEW SHOT" changed under it** (ADR-166 folded Squad Lab into
+My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
+
+> **[0:00 — Open · the MADBOOTS mark]**
+> Hi — I'm Maddie. Welcome to MADBOOTS, the Fantasy Premier League assistant that shows its working.
+>
+> **[0:08 — Build or import · ⚠ NEW SHOT: My Squad ▸ Lab, not a sidebar page]**
+> In My Squad, open the Lab: set your budget, what to optimise for, and how strong you want your bench — and
+> MADBOOTS builds an optimised fifteen in seconds. Already play? Import your real team with your manager ID.
+>
+> **[0:29 — Adopt it · the *Use this squad* button]**
+> Happy with it? Tap *Use this squad*, and it's your active team.
+>
+> **[0:35 — ⚠ NEW SHOT: the top of My Squad — the *This week* block]**
+> My Squad then gives you the whole week on one screen: who to captain, any lineup change, and the one
+> transfer worth making — each with the edge for it, the risk against, and a confidence score.
+>
+> **[0:53 — The pitch · tap a shirt → card → Boot Battle, then scroll to Captaincy + Chips]**
+> Below it, your team on a live pitch. Tap any player for their card, or compare two with Boot Battle. Then
+> captaincy ranked, and when to play each chip.
+>
+> **[1:07 — ⚠ NEW SHOT: Players ▸ Scout, then My Squad ▸ Leagues]**
+> Going deeper? Scout reads five stat boards at once and names the players worth a look — and Leagues puts
+> your picks against your rivals'.
+>
+> **[1:18 — Close · the ✓ trust line, then the mark]**
+> The analytics decide. Every answer shows its working. And you make the call. MADBOOTS — free at
+> **madboots.com**.
+
+*176 words ≈ **89s** at Maddie's measured pace (~119 wpm, derived from the produced 80s cut). To land nearer
+80s, drop the Leagues clause — "— and Leagues puts your picks against your rivals'" — for ~84s.*
+
+**What changed from the produced version, and why:**
+
+| was | now | why |
+|---|---|---|
+| "**AI** clarifies the data" | "shows its working" · "every answer shows its working" | **The deployed app has no AI.** ADR-168 removed this exact clause from `brand.MANTRA` for this exact reason. An honesty brand whose *first sentence* over-promises is the worst possible place for it |
+| "MadBoots" | **MADBOOTS** | this file's own first brand rule |
+| "your **ultimate** FPL assistant" | "the FPL assistant that shows its working" | *"never FPL-bro hype"* — and an unfalsifiable superlative is a strange opener for a tool whose pitch is that every claim is checkable |
+| "you take the reins" | "you make the call" | the actual mantra, and sharper |
+| "Open **Squad Lab**" | "In My Squad, open the **Lab**" | ADR-166 folded it in from the sidebar |
+| "set your budget, **formation**, strategy, and objectives" | "your budget, what to optimise for, and how strong you want your bench" | **Formation is not a build input** — it is a *preview* control ("preview the best XI in a shape"). The real inputs are budget · objective · build mode · archetypes |
+| "complete **transfers**" *(in the My Squad beat)* | moved into the *This week* answer | ADR-115 moved the transfer picker off that screen to its own tab; the script had it in the wrong place |
+| — | "the whole week on one screen" | **ADR-171**, and the strongest beat in the product — the old script did not mention the gameweek answer at all |
+| "discover differentials" | "Scout … names the players worth a look" | ADR-167. Say **worth a look, not worth points** — two of Scout's signals are not priced into xP, and the counterweight is the claim |
+| "Analytics decide. **AI explains.** You make the call." | the current mantra | ADR-168 |
 
 ---
 
@@ -76,6 +132,26 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 > **[0:52 – Close + CTA]** Honest analytics. No guessing. **Try MADBOOTS free at madboots.com.**
 
 *(~150 words ≈ 60s at a natural pace. Trim the Ask beat first if it runs long.)*
+
+---
+
+## ⚠️ Audit — every script below §2 predates the app it describes  *(2026-08-31)*
+
+Found while revising §0. **None of §§1-9 have been produced**, so this is cheap now and expensive after nine
+renders. Each needs the same pass §0 just had:
+
+| what the scripts say | what the app does | since |
+|---|---|---|
+| six sign-offs close on *"The AI explains"* | there is no AI on Cloud; the mantra is *"Every answer shows its working"* | ADR-168 |
+| **§8 is a full 45s script for "Ask Anything"**, and Ask features in §1 (1:32) and §2 (0:44) | **Ask is retired** — owner-gated in Admin, not a user surface | ADR-168 |
+| **Squad Lab** is a destination (§1, §2, §6, series row A) | it is **My Squad ▸ Lab** | ADR-166 |
+| **AI Tips** is a destination (§1, §2, §7, series row B) | it is the *This week* section at the top of My Squad | ADR-171 |
+| research beats list the five stat boards separately (§5) | they are one **Scout** view behind a shortlist | ADR-167 |
+| no script mentions Scout, Worth noticing, Team DNA, Leagues or head-to-head | all shipped and all differentiators | ADR-141/161/167/169/170 |
+
+Two smaller notes: §5 uses *"analyze"* where the rest of the project is British (`analyse` is the CLI command
+name), and the CTA *"free at madboots.com"* is wrong for the in-app **Maddie Explains** hub, where the viewer
+is already inside the app — that tail wants a second cut.
 
 ---
 
