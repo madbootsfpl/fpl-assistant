@@ -460,7 +460,7 @@ def render_radar(rows, sel, badges, upcoming, history, gw_history):
     from src.web_streamlit.squads import active_squad
 
     st.caption("Players on your radar — the best available from the easiest-run teams over your window, "
-               "for planning a new squad or a wildcard. Team-level runs live on **🧬 Team DNA & FDR**.")
+               "for planning a new squad or a wildcard. Team-level runs live on **📅 FDR**.")
     c1, c2 = st.columns(2)
     weeks = c1.slider("Weeks to look ahead", 1, 8, 6, key="radar_weeks",
                       help="How far ahead to judge each team's run.")

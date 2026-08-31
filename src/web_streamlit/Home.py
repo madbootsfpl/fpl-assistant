@@ -72,7 +72,7 @@ st.markdown(
 # The list is in **sidebar order**, which is the order the pages are numbered — My Squad · FDR · Signals ·
 # Team DNA · Players · Trending · Help · Feedback. That order is itself a decision (ADR-166/169: ordered by
 # how often you need it), so a Home page listing them in some other sequence teaches a nav that does not
-# exist. It had drifted to Players-first. `tests/test_home_matches_the_sidebar.py` fails if the two diverge.
+# exist. It had drifted to Players-first. `tests/test_navigation_copy.py` fails if the two diverge.
 st.markdown(
     """
 **Explore the sidebar:**

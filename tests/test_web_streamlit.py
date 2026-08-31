@@ -1514,9 +1514,14 @@ def test_my_squad_flags_unavailable_players_by_name():
 
 
 def test_my_squad_points_to_build():
-    # ADR-105: the My Squad view points to Squad Lab for a full rebuild
+    """ADR-105: the My Squad view points at the builder for a full rebuild.
+
+    The *pointer* is the requirement; its wording is not. This asserted the literal string "Squad Lab" and so
+    failed when the caption was corrected — the Lab has been a My Squad tab since ADR-166, and the caption
+    had still been sending people to a sidebar entry that is not there. Matched on the destination instead.
+    """
     at = _squads_view("My Squad")
-    assert any("Squad Lab" in c.value for c in at.caption)
+    assert any("My Squad ▸ Lab" in c.value for c in at.caption), "no pointer to the builder"
 
 
 def test_the_lab_keeps_its_identity_as_a_tab():

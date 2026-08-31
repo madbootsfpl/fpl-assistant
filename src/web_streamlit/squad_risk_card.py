@@ -1,4 +1,4 @@
-"""My Squad ▸ Health: the ⚠️ Risk Monitor table and the 🧬 Squad DNA card (ADR-130).
+"""My Squad ▸ DNA: the ⚠️ Risk Monitor table and the 🧬 Squad DNA card (ADR-130).
 
 Display-only over `analytics.squad_risk`. Health already said how good a squad was; these say **what needs
 attention this week** and **how the 15 look together**.

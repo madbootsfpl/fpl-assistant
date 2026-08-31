@@ -179,7 +179,7 @@ def render_team_dna(dna, *, fixtures=None, key_players=None, key_players_season=
     st.markdown(key_players_html(key_players or [], key_players_season), unsafe_allow_html=True)
 
 
-# ── My Squad ▸ Health: the "Your teams" strip (US-420) ────────────────────────
+# ── My Squad ▸ DNA: the "Your teams" strip (US-420) ────────────────────────
 
 YT_CSS = """
 <style>
@@ -310,7 +310,7 @@ def your_teams_strip_html(rows, *, title: str = "🧬 Your teams — strength be
 
 def render_your_teams(squad, players, fixtures, *, team_names=None, last_rows=None, season_name=None,
                       gw_history=None) -> None:
-    """The My Squad ▸ Health "Your teams" strip (ADR-119): each of your clubs' grade + key axes + your players,
+    """The My Squad ▸ DNA "Your teams" strip (ADR-119): each of your clubs' grade + key axes + your players,
     then a drill-in into the full Team DNA card. No-op without a squad. Reuses the caller's `players`/`fixtures`."""
     if not squad or not squad.get("player_ids"):
         return

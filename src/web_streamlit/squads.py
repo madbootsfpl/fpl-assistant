@@ -1,7 +1,7 @@
 """Cloud squad state for the Streamlit edge (ADR-054).
 
 Squads on the deployed app are **per-user, no server**: a session **active squad** in `st.session_state`
-(built on the Build page or uploaded), persisted as the **user's own downloadable `squad.json`** (the CLI
+(built in My Squad ▸ Lab or uploaded), persisted as the **user's own downloadable `squad.json`** (the CLI
 `SquadStore` format, so it's interoperable). The demo squad(s) come from `SquadStore` (read-only, a
 committed `seed_squads.json`). The web **never writes** — the DB/squads stay read-only.
 """
@@ -76,8 +76,8 @@ def squad_picker(label: str = "Squad", key: str | None = None) -> tuple[str, dic
     squads = available_squads()
     labels = list(squads)
     if not labels:                          # no demo seed and nothing built/uploaded (an empty store)
-        st.info("No squad yet — **build** one on the Build page, or **upload** a `squad.json` "
-                "(sidebar).")
+        st.info("No squad yet — **build** one in **My Squad ▸ Lab**, or **upload** a `squad.json` "
+                "from the **⚙ Your team** panel on My Squad.")
         st.stop()
     act = active_squad()
     index = next((i for i, s in enumerate(squads.values()) if s is act), 0)   # default to the active one
@@ -313,8 +313,9 @@ def team_banner_html(squad: dict, *, is_yours: bool, synced: bool) -> str:
     if not is_yours:
         return (_YTB_CSS + '<div class="ytb-demo"><div class="ytb-top"><div>'
                 '<div class="ytb-h">👀 You’re viewing the <b>demo squad</b></div>'
-                '<div class="ytb-s">Make it yours — <b>import your FPL team</b>, upload a backup, or build one in '
-                'Squad Lab (all just below). It’ll then sync to your account across your devices.</div></div>'
+                '<div class="ytb-s">Make it yours — <b>import your FPL team</b> or upload a backup (both just '
+                'below), or build one in the <b>Lab</b> tab above. It’ll then sync to your account across your '
+                'devices.</div></div>'
                 f'{mark}</div></div>')
     # US-423 (density): a compact single-line status card — the pill conveys the sync state; the reassurance
     # paragraph + foot mark are dropped so the pitch sits higher on mobile (the save details live on Help + the
@@ -385,13 +386,13 @@ def render_your_team(squad: dict | None, *, is_yours: bool = True) -> None:
                     # your leagues from it. Fetching them HERE would duplicate that page inside this one.
                     from src.web_streamlit import prefs
                     prefs.remember(manager_id=manager_id.strip())
-                    st.success(f"{message}  🏆 Your leagues are ready on the **Leagues** tab — same id, "
+                    st.success(f"{message}  🏆 Your leagues are ready on **My Squad ▸ Leagues** — same id, "
                                "no need to enter it again.")
                 else:
                     st.info(message)
 
         uploaded = st.file_uploader("…or restore your team from a backup file", type="json", key="squad_uploader",
-                                    help="Upload a squad.json you downloaded earlier (a backup, or from Squad Lab).")
+                                    help="Upload a squad.json you downloaded earlier (a backup, or from the Lab).")
         if uploaded is not None and st.session_state.get(_UPLOAD_APPLIED) != uploaded.file_id:
             parsed, err = parse_uploaded(uploaded)
             if err:
@@ -401,8 +402,8 @@ def render_your_team(squad: dict | None, *, is_yours: bool = True) -> None:
                 st.session_state[_UPLOAD_APPLIED] = uploaded.file_id
                 st.success(f"Loaded **{parsed['name']}** ({len(parsed['player_ids'])} players).")
 
-        st.caption("🧪 …or **build a fresh squad** in the **Squad Lab** tab (sidebar) — *Use this squad →* "
-                   "sends it here.")
+        st.caption("🧪 …or **build a fresh squad** in **My Squad ▸ Lab**, at the top of this page — "
+                   "*Use this squad →* sends it here.")
 
 
 def render_cloud_sync() -> None:

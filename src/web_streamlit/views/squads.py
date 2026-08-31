@@ -1155,7 +1155,8 @@ def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR):
 def render_chips(squad_name, squad, *, upcoming=None, horizon=None):
     """A grounded chip-strategy recommendation for the picked squad — when to play each chip.
 
-    Shown under the **Chips** tab. Routes through `ask.answer` (analytics decide, the LLM narrates, every
+    Section ③ of the merged golden page (ADR-171; was the **Chips** half of the AI Tips tab, and a tab of its
+    own before ADR-166). Routes through `ask.answer` (analytics decide, the LLM narrates, every
     figure/name checked, ADR-037), reusing the session squad. `horizon` (ADR-077) sets the window it looks
     over. Fixture-run + xP based — double/blank gameweeks and mini-league position sharpen it in-season.
     Degrades without Ollama. No server writes.
