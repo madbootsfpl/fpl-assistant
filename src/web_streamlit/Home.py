@@ -69,18 +69,22 @@ st.markdown(
     '<a class="ext" href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.'
     '</div></div>', unsafe_allow_html=True)
 
+# The list is in **sidebar order**, which is the order the pages are numbered — My Squad · FDR · Signals ·
+# Team DNA · Players · Trending · Help · Feedback. That order is itself a decision (ADR-166/169: ordered by
+# how often you need it), so a Home page listing them in some other sequence teaches a nav that does not
+# exist. It had drifted to Players-first. `tests/test_home_matches_the_sidebar.py` fails if the two diverge.
 st.markdown(
     """
 **Explore the sidebar:**
 
-- 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
-- 📅 **FDR** — every club's next few gameweeks, shaded by difficulty; easiest run first.
-- 🧬 **Team DNA** — how strong every club is at both ends, and the players to target there.
 - 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, your
   🏆 **Leagues** (effective ownership · captain split · transfer flow · head-to-head), and the **Lab** for
   building a fresh 15 (season start · wildcard · revamp).
+- 📅 **FDR** — every club's next few gameweeks, shaded by difficulty; easiest run first.
 - 📡 **Signals** — everything the table doesn't say, most reliable first: official FPL news, unexplained
   sell-offs, and reported moves out of the league.
+- 🧬 **Team DNA** — how strong every club is at both ends, and the players to target there.
+- 👟 **Players** — browse, filter and sort the full player pool and stats; view player cards and **compare** two.
 - 📈 **Trending** — what the crowd is *doing*, in numbers: most-owned · transferred in/out · in-form.
 - 🧭 **Help** — a step-by-step guide to getting started, the **FPL rules** MADBOOTS checks against, plus
   **Maddie's** 90-second video explainers.
