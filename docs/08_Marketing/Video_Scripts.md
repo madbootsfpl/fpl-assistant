@@ -26,26 +26,36 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
   deadline, 21 Aug 2026** — dormant if a video launches preseason.)
 - **Show, don't tell:** mark where real UI shots go — the green pitch · Boot Battle head-to-head · the AI-Tips plan ·
   the ✓/⚠ trust line. Visuals sell harder than the voiceover.
-- **Cuts:** a 2-min explainer (hero), a 60-sec social cut, and 30–45s single-feature shorts (Reels/TikTok/Shorts).
+- **Cuts:** a 2-min explainer (hero), a 60-sec social cut, 30–45s single-feature shorts
+  (Reels/TikTok/Shorts), and — **owner decision, 2026-08-31** — **~90s educational pieces for YouTube**
+  (§§4-5). Those two came in at 87s and 90s and were the only scripts that would not fit a Shorts slot;
+  rather than cut the reasoning out of the two pieces whose whole job *is* the reasoning, they get the format
+  that suits them. **The trade is discovery, and it is a good one:** a Short is served to people scrolling,
+  while these are **searched for** — *"what is expected points FPL"*, *"how to find FPL differentials"* — so
+  they compound instead of decaying, and they carry the honesty pitch to people already looking for an answer.
+  Title and description matter more here than for a Short; write them for the search, not for the feed.
 - ⏱️ **Maddie reads at ~119 wpm — measured, not assumed** *(2026-08-31)*. The produced §0 cut is **159 words
   in ~80s**. Every draft in this file was written to a faster pace (~150 wpm), so **every stated duration was
   optimistic by 25-70%**: the "2-minute" hero is really **2:27**, the "~50s" shorts run **61-90s**. Budget
-  **~2 words per second** when drafting, and treat the numbers below as the real ones:
+  **~2 words per second** when drafting, and treat the numbers below as the real ones. **Every beat timecode
+  in this file was recomputed at 119 wpm on 2026-08-31** — they had been written to the same optimistic pace,
+  so §4's markers stopped at 0:53 for what is really an 87-second script, which would have misled the edit.
 
   | § | script | words | real length | its target | verdict |
   |---|---|---:|---:|---:|---|
   | 0 | Maddie's intro | 178 | **~90s** | ~80s | trim the Leagues clause → ~84s |
   | 1 | Hero explainer | 291 | **~2:27** | 2:00 | fine as a hero; retitled honestly |
   | 2 | Social cut | 125 | **~63s** | 60s | ✅ lands |
-  | 4 | xP & Confidence | 172 | **~87s** | ~55s | **needs a real cut** for a short |
-  | 5 | Finding Differentials | 178 | **~90s** | ~50s | **needs a real cut** — or split into two |
-  | 6 | Build the Perfect Squad | 134 | **~68s** | ~50s | trim |
-  | 7 | Your Week, Answered | 121 | **~61s** | ~50s | close |
-  | 8 | Leagues & Head-to-Head | 107 | **~54s** | ~45s | close |
-  | 9 | Boot Battle | 97 | **~49s** | ~40s | close |
+  | 4 | xP & Confidence | 172 | **~87s** | **~90s YouTube** | ✅ fits the format it was moved to |
+  | 5 | Finding Differentials | 178 | **~90s** | **~90s YouTube** | ✅ fits — and is **at capacity**, so a new beat means cutting one |
+  | 6 | Build the Perfect Squad | 134 | **~1:07** | 45s short | trim ~28 words in the edit |
+  | 7 | Your Week, Answered | 121 | **~1:01** | 45s short | trim ~32 words |
+  | 8 | Leagues & Head-to-Head | 107 | **~0:53** | 45s short | trim ~16 words |
+  | 9 | Boot Battle | 97 | **~0:48** | 40s short | trim ~18 words |
 
-  §§4 and 5 are the two that genuinely do not fit a Reels/Shorts slot as written — worth deciding whether to
-  cut them hard or let them be 90-second YouTube pieces, since both are educational and age well.
+  §§4 and 5 were the two that would not fit a Reels/Shorts slot; they are now **YouTube pieces** (above).
+  Both sit within a second or two of 90s, so neither has headroom — adding a beat to either means removing
+  one.
 
 ---
 
@@ -58,26 +68,26 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 > **[0:00 — Open · the MADBOOTS mark]**
 > Hi — I'm Maddie. Welcome to MADBOOTS, the Fantasy Premier League assistant that shows its working.
 >
-> **[0:08 — Build or import · ⚠ NEW SHOT: My Squad ▸ Lab, not a sidebar page]**
+> **[0:09 — Build or import · ⚠ NEW SHOT: My Squad ▸ Lab, not a sidebar page]**
 > In My Squad, open the Lab: set your budget, what to optimise for, and how strong you want your bench — and
 > MADBOOTS builds an optimised fifteen in seconds. Already play? Import your real team with your manager ID.
 >
-> **[0:29 — Adopt it · the *Use this squad* button]**
+> **[0:30 — Adopt it · the *Use this squad* button]**
 > Happy with it? Tap *Use this squad*, and it's your active team.
 >
-> **[0:35 — ⚠ NEW SHOT: the top of My Squad — the *This week* block]**
+> **[0:37 — ⚠ NEW SHOT: the top of My Squad — the *This week* block]**
 > My Squad then gives you the whole week on one screen: who to captain, any lineup change, and the one
 > transfer worth making — each with the edge for it, the risk against, and a confidence score.
 >
-> **[0:53 — The pitch · tap a shirt → card → Boot Battle, then scroll to Captaincy + Chips]**
+> **[0:57 — The pitch · tap a shirt → card → Boot Battle, then scroll to Captaincy + Chips]**
 > Below it, your team on a live pitch. Tap any player for their card, or compare two with Boot Battle. Then
 > captaincy ranked, and when to play each chip.
 >
-> **[1:07 — ⚠ NEW SHOT: Players ▸ Scout, then My Squad ▸ Leagues]**
+> **[1:14 — ⚠ NEW SHOT: Players ▸ Scout, then My Squad ▸ Leagues]**
 > Going deeper? Scout reads five stat boards at once and names the players worth a look — and Leagues puts
 > your picks against your rivals'.
 >
-> **[1:18 — Close · the ✓ trust line, then the mark]**
+> **[1:28 — Close · the ✓ trust line, then the mark]**
 > The analytics decide. Every answer shows its working. And you make the call. MADBOOTS — free at
 > **madboots.com**.
 
@@ -107,29 +117,29 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 > different: **the analytics decide — and every answer shows its working**, so you always know what to trust.
 > *(UI: the ✓/⚠ trust line.)*
 >
-> **[0:12 – Build or import]** Getting started takes seconds. In **My Squad**, open the **Lab**: set your
+> **[0:18 – Build or import]** Getting started takes seconds. In **My Squad**, open the **Lab**: set your
 > budget and strategy, and MADBOOTS builds your optimal 15. Already play FPL? **Import your real team with
 > your manager ID.** One tap — it's your active squad.
 >
-> **[0:30 – Your week, answered]** Then **My Squad opens on the answer**: who to captain, any lineup change,
+> **[0:39 – Your week, answered]** Then **My Squad opens on the answer**: who to captain, any lineup change,
 > the one transfer worth making, and the players to watch — each with the **Edge** for it, the **Risk**
 > against, and a confidence score. *(UI: the* This week *block at the top of My Squad.)*
 >
-> **[0:50 – The pitch]** Below it, your team on a live pitch — set your captain, make subs, set your bench,
+> **[0:59 – The pitch]** Below it, your team on a live pitch — set your captain, make subs, set your bench,
 > legality checked as you go. Tap any player for a rich card: form, expected points, fixtures, set-pieces.
 > Torn between two? **Boot Battle** puts them head-to-head and highlights the winner, stat by stat. Then your
 > captaincy options ranked, and when to play each chip.
 >
-> **[1:16 – Research]** Want to go deeper? **Scout** reads five stat boards at once and names the players
+> **[1:32 – Research]** Want to go deeper? **Scout** reads five stat boards at once and names the players
 > **worth a look**. **Radar** finds the form buys from the easiest fixture runs. **Team DNA** grades every
 > club at both ends. And **Trending** and **Signals** keep what the crowd is *doing* separate from what is
 > being *said*.
 >
-> **[1:38 – Leagues]** Then take it to your mini-league. **Leagues** shows effective ownership, the captain
+> **[2:00 – Leagues]** Then take it to your mini-league. **Leagues** shows effective ownership, the captain
 > split, and a head-to-head that prices only the players you *don't* share — because the ones you both own
 > cancel out.
 >
-> **[1:52 – Close + CTA]** No paid black boxes. No AI guessing. Just honest analytics you can check. **The
+> **[2:18 – Close + CTA]** No paid black boxes. No AI guessing. Just honest analytics you can check. **The
 > analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at
 > **madboots.com**.
 
@@ -152,20 +162,20 @@ decided.
 > **[0:00 – Hook]** Fantasy Premier League, minus the guesswork. MADBOOTS is the FPL assistant where **the
 > analytics decide** — and every answer shows its working. *(UI: the ✓/⚠ line.)*
 >
-> **[0:10 – Build / import]** Build your optimal squad in **My Squad ▸ Lab** — or **import your real team**
+> **[0:12 – Build / import]** Build your optimal squad in **My Squad ▸ Lab** — or **import your real team**
 > with your manager ID. One tap and it's live.
 >
-> **[0:20 – Your week, answered]** Short on time? **My Squad opens on the answer**: who to captain, the
+> **[0:25 – Your week, answered]** Short on time? **My Squad opens on the answer**: who to captain, the
 > transfer worth making, the players to watch — each with the **Edge** for it, the **Risk** against, and a
 > confidence score.
 >
-> **[0:35 – Boot Battle]** Torn between two players? **Boot Battle** puts them head-to-head and highlights the
+> **[0:44 – Boot Battle]** Torn between two players? **Boot Battle** puts them head-to-head and highlights the
 > winner, stat by stat. *(UI: the two-player compare card.)*
 >
-> **[0:44 – Scout]** And when you're hunting? **Scout** reads five stat boards at once and names the players
+> **[0:53 – Scout]** And when you're hunting? **Scout** reads five stat boards at once and names the players
 > **worth a look**.
 >
-> **[0:52 – Close + CTA]** Honest analytics. No guessing. **Try MADBOOTS free at madboots.com.**
+> **[1:03 – Close + CTA]** Honest analytics. No guessing. **Try MADBOOTS free at madboots.com.**
 
 *(~150 words ≈ 60s. Trim the **Scout** beat first if it runs long — it replaced the retired **Ask** beat,
 which used to carry that instruction.)*
@@ -201,43 +211,46 @@ it. Corrected 2026-08-31.)*
 
 ## 3 · The series roadmap  *(owner-planned + candidates; **re-cut 2026-08-31**)*
 
-One feature/idea per short (30–45s for Reels/TikTok/Shorts); each ends on the same trust line + CTA.
+One feature/idea per video; each ends on the same trust line + CTA. **Two formats** (owner decision,
+2026-08-31): the feature pieces are **shorts** (30–45s, Reels/TikTok/Shorts, served to people scrolling), and
+the two educational ones are **~90s YouTube pieces** (searched for, so they compound rather than decay).
 
 | # | Title | Angle | Status |
 |---|-------|-------|--------|
 | A | **Build the Perfect Squad** *(My Squad ▸ Lab)* | Budget · objective · archetypes · build modes → an optimised 15 in seconds; "Use this squad →". A wildcard/season-start hook. | **drafted (§6)** |
 | B | **Your Week, Answered** *(This week + Transfers)* | The whole gameweek plan the moment the page opens, then transfers ranked by XI improvement; Apply-this-plan. Edge/Risk/Confidence on show. | **drafted (§7)** |
 | C | ~~**Ask Anything**~~ → **Leagues & Head-to-Head** | *Replaced.* Ask was retired (ADR-168). The slot goes to the mini-league layer: effective ownership · captain split · a head-to-head that prices only your differentials. | **drafted (§8)** |
-| D | **Finding Differentials** 💎 | *Educational + trust.* Low-owned + the underlying data → a real edge; Scout, Trending's *Worth noticing*, and Radar. (Searchable topic.) | **drafted (§5)** |
-| E | **Understanding xP & Confidence** | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). | **drafted (§4)** |
+| D | **Finding Differentials** 💎 *(~90s YouTube)* | *Educational + trust.* Low-owned + the underlying data → a real edge; Scout, Trending's *Worth noticing*, and Radar. Search target: *"how to find FPL differentials"*. | **drafted (§5)** |
+| E | **Understanding xP & Confidence** *(~90s YouTube)* | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). Search target: *"what is expected points FPL"*. | **drafted (§4)** |
 | F | **Boot Battle** ⚔️ | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
 | G | **Scout — worth a look** *(candidate)* | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | *candidate* |
 | H | **Team DNA** *(candidate)* | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar). | *candidate* |
 
-**Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C → D → E (the educational two
-anchor the brand and age well). G and H are the strongest un-scripted candidates — both shipped, both
-differentiators, neither mentioned in any cut before 2026-08-31.
+**Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C, then the two YouTube pieces
+D → E. The shorts come first because they are cheaper to cut and feed the algorithm; the educational pair
+anchors the brand and ages well, so it earns its place later rather than sooner. G and H are the strongest
+un-scripted candidates — both shipped, both differentiators, neither mentioned in any cut before 2026-08-31.
 
 ---
 
-## 4 · Understanding xP & Confidence — short (~55s)  *(drafted 2026-08-13; sign-off updated 2026-08-31 — the moat/educational piece)*
+## 4 · Understanding xP & Confidence — **YouTube piece, ~90s**  *(drafted 2026-08-13; sign-off updated + format set 2026-08-31 — the moat/educational piece)*
 
 > **[0:00 – Hook]** Fantasy Premier League comes down to points — but the points haven't happened yet. So how do you
 > choose between two players?
 >
-> **[0:09 – xP]** That's **Expected Points — xP**: MADBOOTS's honest projection of how many points a player is
+> **[0:12 – xP]** That's **Expected Points — xP**: MADBOOTS's honest projection of how many points a player is
 > *likely* to score, built from the real numbers — minutes, chances created, fixtures, form. One number, so you can
 > compare anyone at a glance. *(UI: the player card's xP chip + the per-GW row.)*
 >
-> **[0:26 – Confidence]** But a number alone can mislead. So every pick comes with a **Confidence** score — how
+> **[0:33 – Confidence]** But a number alone can mislead. So every pick comes with a **Confidence** score — how
 > strongly the data actually backs it — plus the **Edge** for it, and the **Risk** against. *(UI: the
 > Confidence · Edge · Risk block.)*
 >
-> **[0:40 – The honesty]** And here's the difference: it's a heuristic, not a crystal ball. A "Medium" means a
+> **[0:55 – The honesty]** And here's the difference: it's a heuristic, not a crystal ball. A "Medium" means a
 > *lean, not a lock* — and the ⚠ risk is right there. Every figure traces back to the data, with a ✓ when it's
 > verified. No paid black box. No guessing.
 >
-> **[0:53 – Close + CTA]** Expected Points you can actually trust. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[1:20 – Close + CTA]** Expected Points you can actually trust. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors (all true to the app):** xP = one honest number from `decision_xp` (minutes-weighted · xGI ·
 fixtures · form), ADR-041's one-xP-metric. Confidence · Edge · Risk = the explainability block (ADR-089) — a
@@ -249,25 +262,25 @@ the risk." Everyone else projects false certainty; the honest confidence score i
 
 ---
 
-## 5 · Finding Differentials — short (~50s)  *(drafted 2026-08-13; **re-cut 2026-08-31**; pairs with §4)*
+## 5 · Finding Differentials — **YouTube piece, ~90s**  *(drafted 2026-08-13; **re-cut** + format set 2026-08-31; pairs with §4)*
 
 > **[0:00 – Hook]** Everyone owns the same big names. To climb your mini-league, you need the players your rivals
 > *don't* have — **differentials**.
 >
-> **[0:10 – What]** A differential is a low-owned player — often under a few percent. When they haul, you gain rank on
+> **[0:11 – What]** A differential is a low-owned player — often under a few percent. When they haul, you gain rank on
 > everyone who missed them. But most low-owned players are low-owned for a reason — the trick is finding the *good*
 > ones. *(UI: the 💎 ownership tier.)*
 >
-> **[0:24 – How]** MADBOOTS crosses ownership with the underlying data — three ways. **Scout** names the
+> **[0:33 – How]** MADBOOTS crosses ownership with the underlying data — three ways. **Scout** names the
 > players standing out on two or more stat boards at once. **Trending's** *Worth noticing* finds the ones
 > **in form but still under-owned** — which is the definition of a differential, spotted before the crowd
 > catches up. And **Radar** finds hidden value from the easiest fixture runs. *(UI: Scout's shortlist;
 > Trending's* Worth noticing *strip; Radar.)*
 >
-> **[0:42 – The edge]** Because a differential's only an edge if the numbers back it. MADBOOTS shows you the ones that
+> **[1:09 – The edge]** Because a differential's only an edge if the numbers back it. MADBOOTS shows you the ones that
 > are low-owned *and* genuinely good — a real edge, not a punt.
 >
-> **[0:52 – Close + CTA]** Find your edge. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS
+> **[1:25 – Close + CTA]** Find your edge. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS
 > **free** at **madboots.com**.
 
 **Accuracy anchors:** 💎 = low ownership (`ownership_tier`); **Scout** = five boards behind a *worth a look*
@@ -282,22 +295,22 @@ grounded xP supports. ⚠ Scout is *worth a look*, **not** *worth points*: say t
 
 ---
 
-## 6 · Build the Perfect Squad — short (~50s)  *(drafted 2026-08-13; **re-cut 2026-08-31**; My Squad ▸ Lab)*
+## 6 · Build the Perfect Squad — short, **runs ~1:07 (trim to 45s)**  *(drafted 2026-08-13; **re-cut 2026-08-31**; My Squad ▸ Lab)*
 
 > **[0:00 – Hook]** New season? Wildcard burning a hole? Fitting 15 players under budget is a puzzle — MADBOOTS solves
 > it in seconds.
 >
-> **[0:10 – Controls]** In **My Squad**, open the **Lab**. Set your budget, pick what to optimise for —
+> **[0:11 – Controls]** In **My Squad**, open the **Lab**. Set your budget, pick what to optimise for —
 > **expected points, value, or goal threat** — add a strategy (cheap enablers, premium-heavy, or
 > differentials), choose whether you want an **all-round squad or a strong XI with a cheap bench**, and lock
 > in your must-haves. *(UI: the Lab controls.)*
 >
-> **[0:28 – Build]** Hit build, and MADBOOTS returns your **optimal 15** — the best squad your money can buy, every
+> **[0:38 – Build]** Hit build, and MADBOOTS returns your **optimal 15** — the best squad your money can buy, every
 > position filled.
 >
-> **[0:38 – Use it]** Love it? **Use this squad →** and it's your active team. Or download it as a backup.
+> **[0:49 – Use it]** Love it? **Use this squad →** and it's your active team. Or download it as a backup.
 >
-> **[0:48 – Close + CTA]** Your perfect squad, built on the data. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:58 – Close + CTA]** Your perfect squad, built on the data. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the ILP optimiser (ADR-008); the **objective** toggle xP/Points/Value/xGI (ADR-011);
 **archetypes** cheap/premium/differential; include/exclude must-haves (ADR-009); **Use this squad →** +
@@ -308,19 +321,19 @@ so the money goes into the XI. Playing Bench Boost? That is **All-round**, not a
 
 ---
 
-## 7 · Your Week, Answered — short (~50s)  *(drafted 2026-08-13 as "Master AI Tips & Transfers"; **re-cut 2026-08-31**)*
+## 7 · Your Week, Answered — short, **runs ~1:01 (trim to 45s)**  *(drafted 2026-08-13 as "Master AI Tips & Transfers"; **re-cut 2026-08-31**)*
 
 > **[0:00 – Hook]** Every gameweek, the same questions: who to captain, who to bring in, who to bench.
 > **MADBOOTS answers all of them — before you ask.**
 >
-> **[0:10 – The plan]** Open **My Squad** and the answer is already there: **who to captain**, any **lineup
+> **[0:13 – The plan]** Open **My Squad** and the answer is already there: **who to captain**, any **lineup
 > change**, the **one transfer** worth making, and the **players to watch** — each with the **Edge** for it
 > and the **Risk** against, all checked against the data. *(UI: the* This week *block, on load.)*
 >
-> **[0:30 – Transfers]** Going further? MADBOOTS ranks every transfer by how much it **improves your starting
+> **[0:35 – Transfers]** Going further? MADBOOTS ranks every transfer by how much it **improves your starting
 > XI** — set your bank, get a coordinated two- or three-move plan, and **apply it in one tap**.
 >
-> **[0:45 – Close + CTA]** Your sharpest gameweek, sorted. **The analytics decide. Every answer shows its
+> **[0:52 – Close + CTA]** Your sharpest gameweek, sorted. **The analytics decide. Every answer shows its
 > working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the gameweek plan (ADR-070); Edge · Risk · Confidence (ADR-089) + ✓/⚠ grounding
@@ -334,20 +347,20 @@ the tap it replaced.
 
 ---
 
-## 8 · Leagues & Head-to-Head — short (~45s)  *(**new 2026-08-31**, replacing the retired "Ask Anything")*
+## 8 · Leagues & Head-to-Head — short, **runs ~0:53 (trim to 45s)**  *(**new 2026-08-31**, replacing the retired "Ask Anything")*
 
 > **[0:00 – Hook]** You're not playing against the game. You're playing against the twelve people in your
 > mini-league.
 >
-> **[0:08 – Import]** Import your league and MADBOOTS shows you the table — then goes past it: **effective
+> **[0:09 – Import]** Import your league and MADBOOTS shows you the table — then goes past it: **effective
 > ownership** against the global crowd, who the group is captaining, and where the transfers are flowing.
 > *(UI: the league scan; tap any row.)*
 >
-> **[0:24 – Head-to-head]** Pick a rival, and here's the part that matters: **the players you both own
+> **[0:26 – Head-to-head]** Pick a rival, and here's the part that matters: **the players you both own
 > cancel.** MADBOOTS prices only the ones you *don't* share — so you can see exactly where the gap will
 > actually come from. *(UI: the H2H differential set.)*
 >
-> **[0:38 – Close + CTA]** Know your rivals, not just your team. **The analytics decide. Every answer shows
+> **[0:45 – Close + CTA]** Know your rivals, not just your team. **The analytics decide. Every answer shows
 > its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** league import + effective ownership / captain split / transfer flow (ADR-141); the H2H
@@ -376,7 +389,7 @@ English"* framing would still need re-checking against what the hosted app can a
 
 ---
 
-## 9 · Boot Battle ⚔️ — short (~40s)  *(drafted 2026-08-13; sign-off updated 2026-08-31; the most visual/shareable)*
+## 9 · Boot Battle ⚔️ — short, **runs ~0:48 (trim to 40s)**  *(drafted 2026-08-13; sign-off updated 2026-08-31; the most visual/shareable)*
 
 > **[0:00 – Hook]** Two players, one spot — who gets in? Settle it with a **Boot Battle**.
 >
@@ -384,10 +397,10 @@ English"* framing would still need re-checking against what the hosted app can a
 > points, goals, expected points, form, fixtures — highlighting the winner, stat by stat. *(UI: the two-player
 > compare card, winners tinted teal.)*
 >
-> **[0:24 – Where]** Compare anyone — your own squad, the whole league, or a specific club — right from any player
+> **[0:28 – Where]** Compare anyone — your own squad, the whole league, or a specific club — right from any player
 > card.
 >
-> **[0:32 – Close + CTA]** Stop guessing. Let the stats fight it out. **The analytics decide. Every answer
+> **[0:38 – Close + CTA]** Stop guessing. Let the stats fight it out. **The analytics decide. Every answer
 > shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the same-position compare card (ADR-110), winner-tinted per stat (`_BETTER` direction map),
