@@ -55,3 +55,27 @@ def test_home_lists_every_page_in_sidebar_order():
 
 def test_home_does_not_advertise_the_owner_only_page():
     assert "Admin" not in _home_order(), "Admin is owner-gated (ADR-120) and must not be listed for users"
+
+
+def _my_squad_subtabs():
+    """The real sub-tab names, read off the segmented control in the page source."""
+    src = (PAGES / "1_My_Squad.py").read_text()
+    m = re.search(r'"Tool",\s*\[(.*?)\]', src, re.S)
+    assert m, "could not find the My Squad tool switch"
+    return re.findall(r'"(.+?)"', m.group(1))
+
+
+def test_home_only_points_at_sub_tabs_that_exist():
+    """Home says things like "My Squad ▸ Lab" — every one must be a real tab.
+
+    ADR-166 folded Squad Lab and Leagues in from the sidebar and ADR-171 folded AI Tips and Captain into the
+    page itself, so the set of valid names has moved twice in a week. Home was still telling people to
+    "manage transfers · captaincy · chips · analysis in My Squad" — a list of tabs, two of which no longer
+    existed and one of which had been renamed.
+    """
+    named = set(re.findall(r"My Squad ▸ (\w+)", HOME.read_text()))
+    real = set(_my_squad_subtabs())
+    assert named <= real, (
+        f"Home points at My Squad sub-tabs that do not exist: {sorted(named - real)}.\n"
+        f"  real tabs: {sorted(real)}"
+    )

@@ -95,8 +95,10 @@ st.markdown(
 - 🧪 **Build** it in **My Squad ▸ Lab** — name it, then **Use this squad →**.
 - ☁ **Saved to your account** and **auto-synced across your devices** — or **Download** a backup to your device.
 - 📤 **Upload** a saved backup, or **import your real FPL team** by Manager-ID — the same id then opens your
-  mini-leagues on **Leagues**, so you only enter it once.
-- 🧩 **Manage** transfers · captaincy · chips · analysis in **My Squad**.
+  mini-leagues on **My Squad ▸ Leagues**, so you only enter it once.
+- 🧩 **Manage** it on **My Squad** — one screen with your week's answer, the pitch and lineup, who to
+  **captain** and when to play each **chip**. **My Squad ▸ Transfer** ranks your best swaps, and
+  **My Squad ▸ DNA** grades the 15.
 - 👀 A **demo** squad populates the views on first visit.
 """
 )
