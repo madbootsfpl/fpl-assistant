@@ -47,6 +47,8 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 | item | why it matters |
 |---|---|
 | ~~**Deploy madboots.com**~~ | ✅ **DONE — owner deployed 2026-08-31.** The Cloudflare Pages drag-and-drop is done and the live site now carries the current copy; `~/madboots-site/index.html` and the live page are back in step. Next edit to that file re-opens the same manual step (it is outside the repo — see the ADR-103 changeover, parked below). |
+| 🚨 **Re-record the Maddie intro** — the live one makes a claim the product does not keep | **It is on madboots.com right now**, opening *"analytics guide your decisions, **AI clarifies the data**"* — the exact clause ADR-168 removed from the mantra, because there is no Ollama on Cloud and the deployed app is data-only. An honesty brand's *first sentence* over-promising is the one place it cannot afford to. Revised script ready at `docs/08_Marketing/Video_Scripts.md` §0, with the three changed shots marked. HeyGen re-render → new unlisted YouTube → swap the link in `~/madboots-site/index.html` **and** the `maddie_videos` row |
+| **Produce the video series** — 11 scripts, all re-cut and none yet shot | All of §§1-9, G and H are current as of 2026-09-01 and were **not** before (they described a nav that had moved three times). Suggested order is in §3. ⚠ **§G Scout must wait until ~GW10** or keep its voiceover off "this season" — four of its five boards need 900 minutes and **0 of 626 players** clear that bar today, so they show last season. Record **both CTA tails** in the same session (acquisition + in-app) |
 | **Squad Lab icon** — a flask/test-tube instead of 🥾 | needs the art (clean transparent PNG) |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
 | The 4 uncommitted files in your tree | 3 sprint lesson docs + `spikes/015-soccerdata/compare_npxg.py` — kept out of every commit deliberately |
@@ -58,7 +60,16 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 `"think": False`** while `llm.extract` does, which is most of the 27 s a narrated answer costs locally — its
 own ADR, because narration and extraction were split deliberately (ADR-151/157). The **ADR index backfill is
 DONE** (2026-08-31) — it had stopped at 122 while 171 ADRs existed; all 49 added, re-sorted ascending, and
-`tests/test_adr_index.py` now fails if an ADR is ever filed without a row.)*
+`tests/test_adr_index.py` now fails if an ADR is ever filed without a row.
+
+**The marketing scripts are current for the first time** (2026-08-31 → 09-01): every one of §§1-9 predated the
+app it described — six sign-offs closed on the retired *"The AI explains"* mantra, §8 was a full script for
+**Ask** (retired, ADR-168), Squad Lab and AI Tips were destinations (ADR-166/171), and **five shipped
+differentiators had no marketing at all**. All re-cut; §8 replaced with **Leagues & Head-to-Head**; the Ask
+draft archived as §8b with its GW4-6 trigger; **§G Scout** and **§H Team DNA** newly drafted. Also measured
+rather than assumed: **Maddie reads at ~119 wpm**, not the ~150 the drafts assumed, so every stated duration
+*and every beat timecode* was optimistic by 25-70% — all recomputed. §§4-5 became **~90s YouTube pieces**
+(owner's call) rather than being cut down; they are searched for, so they compound instead of decaying.)*
 
 - **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
 - **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.
