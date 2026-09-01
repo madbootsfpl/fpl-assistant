@@ -89,3 +89,56 @@ ADR-125's deferred in-season minutes share, and fixing both at once would leave 
 
 **Calafiori is the mirror image** — 5.29 baseline, **2.00** xP, because xMins is 0.43 from last season's
 injury-hit minutes while `FORM_WEIGHT` is 0 until GW4-6. A second Kinsky, and ADR-125's gate, not this one.
+
+---
+
+## Addendum — the xMins half, attempted (2026-09-01)
+
+The owner asked for the deferred half the same day. **It is still deferred, and the reason changed.**
+
+### ⛔ Blocked on data, not design
+
+`player_history` holds **GW1 only**, while the aggregate `players.minutes` already carries two gameweeks
+(Sangaré: 75 in GW1, 165 total). The per-GW backfill has not run since GW2 finished. An in-season minutes
+share built today would rest on **one gameweek** and contradict the aggregate every other surface reads.
+
+Worth recording: **ADR-125's trap is already solved.** It warned that FPL writes a per-GW row when a fixture
+is merely *scheduled*, so `minutes = 0` can mean "not kicked off yet". `yet_to_play` (ADR-138) already counts
+a gameweek only when it has a **scoreline**. The design is ready; the data is not.
+**Owner action: `python app.py history --backfill`.**
+
+### 🔧 But the attempt found two real bugs — and they had been cancelling each other
+
+**1. Mine, from that morning.** ADR-172 swapped the shrink target from `ep_next` to the replacement prior and
+kept ADR-104's *"do not discount this term by minutes"* rule. That rule is a fact about `ep_next` — expected
+points *for the next gameweek*, minutes already priced in. The prior is a **points-per-90 rate**, and a rate
+becomes points only when multiplied by expected minutes. The same prior was therefore minutes-scaled in the
+`fallback` tier and unscaled in `cold_start`: halving a player's minutes took him to **48%** of his xP on one
+path and **76%** on the other.
+
+**2. Pre-existing, and invisible until the first was fixed.** `minutes_share` averages stored seasons, and a
+player promoted with his club carries seasons for years spent **outside** the league — Thomas has four, all
+zero — which average to a share of **0.0**, read as *"never plays"*. An **empty** history returns `None` and
+the module's own rule applies: *never penalise the unknown*. Same ignorance, opposite answers.
+
+> **Two bugs in opposite directions, netting to a plausible number.** The 0.0 share took a player's points
+> away; the unweighted prior handed them straight back. Neither was observable while both existed, and no
+> test could see a discrepancy that cancels before anyone looks at it. Fixing one made the other appear as a
+> regression — Thomas at **0.00 xP** having started both games.
+
+32 players carry an all-empty history; **7 have played this season**, two of them every available minute.
+
+### 💡 The lesson
+
+> **A fix that exposes a regression has not necessarily caused it.** The instinct is to revert; the right
+> move is to ask what the removed error was hiding.
+
+And a second, from how the narrower rule was found: the first attempt tested the k-season window, which would
+have rescued a genuinely declining player along with Thomas — three empty seasons *after* a full one is real
+evidence. `test_only_the_last_k_seasons_count` failed and said so. **The suite knew the correct rule before I
+did**, which is the argument for changing a test's subject rather than its expectation.
+
+### 🧪 Tests
+
+**+6** (1661 → 1667), mutation-checked in both directions each time: reverting the fix fails, and
+*over*-applying it — scaling `ep_next` too, or widening the empty-history rule to the window — also fails.

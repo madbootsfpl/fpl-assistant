@@ -171,3 +171,43 @@ def test_a_fixture_that_has_not_kicked_off_proves_nothing():
 def test_no_history_at_all_is_not_an_accusation():
     for history in ({}, {1: []}, None):
         assert yet_to_play(_mp(), history) is False
+
+
+def test_a_history_of_empty_seasons_means_unknown_not_never_plays():
+    """Found 2026-09-01, via ADR-172's amendment.
+
+    A player promoted with his club carries stored seasons for years spent outside the league. Thomas (COV)
+    has **four, all with zero minutes**. Averaging those gave a share of 0.0 — "never plays" — for a player
+    who has started every game this season, while an *empty* history two lines up returns None and the
+    module's stated rule applies: never penalise the unknown. Same ignorance, opposite answers.
+
+    It stayed invisible because a second bug cancelled it: the cold-start shrink prior escaped the minutes
+    weight, quietly handing back the points the 0.0 share had removed. Fixing that (ADR-172) exposed this —
+    seven players who have played this season, two of them every minute, would have projected exactly 0.
+    """
+    assert minutes_share([{"minutes": 0}, {"minutes": 0}, {"minutes": 0}]) is None
+    assert minutes_share([]) is None, "and it agrees with the empty case it was contradicting"
+
+
+def test_a_single_real_season_still_counts_among_empty_ones():
+    # Only *total* absence is unknown. One real season is evidence, and must not be discarded with the blanks.
+    share = minutes_share([{"minutes": 0}, {"minutes": 0}, {"minutes": 1710}])
+    assert share is not None and 0 < share < 1
+
+
+def test_an_all_empty_history_no_longer_zeroes_a_player_who_is_playing():
+    # The end-to-end shape: availability_weight must not read blank seasons as a benching.
+    player = {"status": "a", "chance": None}
+    assert availability_weight(player, [{"minutes": 0}, {"minutes": 0}]) == 1.0
+
+
+def test_seasons_that_stopped_are_still_evidence_of_a_benching():
+    """The counter-case that narrowed the rule above, and the reason it tests the whole history.
+
+    Minutes alone cannot tell a season spent outside the league from a season spent on the bench. So the
+    only honest cut is *have we ever seen him play* — a player with a full season behind him and three
+    empty ones since has declined, and must keep his 0.0 share. A pre-existing test
+    (`test_only_the_last_k_seasons_count`) said exactly this, and a blanket check on the k-season window
+    would have quietly rescued him along with Thomas.
+    """
+    assert minutes_share(_hist(38 * 90, 0, 0, 0), k_seasons=3) == 0.0

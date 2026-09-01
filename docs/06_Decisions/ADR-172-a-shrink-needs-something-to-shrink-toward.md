@@ -2,8 +2,9 @@
 
 **Decision ID:** ADR-172
 **Date:** 2026-09-01
-**Status:** ✅ **Accepted — owner-reported, measured, gated, built** (Sprint 233, 2026-09-01).
-**1655 → 1661 tests, ruff clean.**
+**Status:** ✅ **Accepted — owner-reported, measured, gated, built** (Sprint 233, 2026-09-01), then
+**amended the same day** (§Amendment) after the first cut was found to have inherited the wrong rule for its
+new shrink target. **1655 → 1667 tests, ruff clean.**
 **Superseded By / Replaces:** Repairs **ADR-124**, whose protection is inert on this season's data. Restores
 the intent of **ADR-104**. **Not** ADR-125 — that defers in-season *minutes* to GW4-6; this is the *rate*,
 and it is live now. **Changes `decision_xp` for 42 players** (see §Blast radius).
@@ -225,3 +226,78 @@ asserts the identical-inputs case does **not** return the input, and
 `test_the_cancellation_is_broken_at_every_level_of_evidence` asserts the rate actually *slopes* with evidence
 — a flat line across `c` is the signature of the shrink cancelling again. A test asserting only *"Sangaré is
 lower"* would have passed on any change that lowered him, including a wrong one.
+
+
+---
+
+### 🔧 Amendment (2026-09-01, same day) — the prior is a rate, and `ep_next` is not
+
+Found while investigating the deferred xMins half. **The first cut of this ADR swapped the shrink target and
+kept ADR-104's rule about it**, and the rule does not transfer:
+
+* **`ep_next`** is FPL's *expected points for the next gameweek*. Minutes are already priced in, so
+  discounting it by xMins again would double-count. **ADR-104, correct, unchanged.**
+* **`prior`** is a **points-per-90 rate** — the same one `fallback_rate` shrinks toward. A rate becomes
+  points only when multiplied by expected minutes.
+
+Keeping the no-discount rule on the new target left **the identical prior minutes-scaled in the `fallback`
+tier and unscaled in `cold_start`**. Measured: halving a player's expected minutes took him to **48%** of his
+xP on one path and **76%** on the other — the difference being only whether we happened to hold a thin
+history row for him.
+
+Fixed: in the degenerate branch the whole blend carries the weight, `weight × (ppg·c + prior·(1−c))`. The
+`ep_next` branch is untouched.
+
+**Visible effect today: none.** All five cold-start players with a partial weight are status `d` and already
+gated to xP 0 by availability. This is a latent correctness fix, and it is the right foundation for the
+in-season minutes share when it lands.
+
+---
+
+### 🔬 And it uncovered two bugs that had been cancelling each other
+
+Removing the unscaled prior made a **pre-existing** defect visible: Thomas dropped to **0.00 xP** having
+started both games.
+
+`minutes_share` averages stored seasons. A player promoted with his club carries seasons for years spent
+**outside** the league — Thomas has four, all zero — and averaging them gives a share of **0.0**, read as
+*"never plays"*. An **empty** history two lines above returns `None`, and the module's own rule applies:
+*never penalise the unknown*. **Same ignorance, opposite answers.** `fallback_rate` already drew this line
+(`if total_min <= 0: return None`); the minutes half never had.
+
+**Neither bug was visible while both existed.** The 0.0 share removed a player's points; the unweighted prior
+handed them straight back. Two errors in opposite directions, netting to a plausible number — which is the
+worst kind, because the output looks fine and no test can see a discrepancy that cancels before it is
+observed.
+
+Fixed in `minutes_share`: no minutes anywhere in the stored history → `None`. **32 players** carry an
+all-empty history and **7 have played this season**; two of them every available minute. They were about to
+project exactly zero.
+
+**⚠️ The rule tests the whole history, not the k-season window, and a pre-existing test is why.** Three empty
+seasons *after* a full one is real evidence — a player who stopped playing — and must keep its 0.0 share.
+Minutes alone cannot distinguish a benching from a season outside the league, so the only honest cut is *have
+we ever seen him play*. The first attempt checked the window, and
+`test_only_the_last_k_seasons_count` failed. **The suite knew the narrower rule was the right one before I
+did**, which is the argument for fixing the test's subject rather than its expectation.
+
+---
+
+### ⛔ The xMins half is still deferred — and now for a different reason
+
+The owner asked for it; it cannot be built today, and the blocker is **data, not design**:
+
+| | |
+|---|---|
+| gameweeks in `player_history` | **GW1 only** |
+| gameweeks in the aggregate `players.minutes` | **two** (Sangaré: 75 in GW1, 165 total) |
+
+The per-GW backfill has not run since GW2 finished, so an in-season minutes share would be computed from
+**one gameweek**, and would contradict the aggregate every other surface reads. ADR-125's own reasoning holds
+independently — *one gameweek isn't evidence*.
+
+Worth recording: **ADR-125's trap is already solved.** It warned that FPL writes a per-GW row when a fixture
+is *scheduled*, so `minutes = 0` can mean "not kicked off". `yet_to_play` (ADR-138) counts a gameweek only
+when it has a **scoreline**, which is exactly the guard needed. The design is ready; the data is not.
+
+**Owner action: `python app.py history --backfill`.** Then revisit at GW4-6 with ADR-125, as planned.

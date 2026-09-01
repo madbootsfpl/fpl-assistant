@@ -259,3 +259,34 @@ def test_two_games_do_not_outrank_a_proven_player():
                                          baseline_by_code={888: 5.7})}   # a real multi-season baseline
     assert out[1]["rate_source"] == "cold_start" and out[2]["rate_source"] == "hist"
     assert out[1]["xp"] < out[2]["xp"], "two games must not out-project a proven baseline"
+
+
+def test_the_prior_carries_the_minutes_weight_but_ep_next_does_not():
+    """ADR-172 amendment: the two shrink targets are different *kinds* of number.
+
+    `ep_next` is FPL's expected points **for the next gameweek** — minutes already priced in, so discounting
+    it again double-counts (ADR-104). `prior` is a **points-per-90 rate**, and a rate is only points once
+    multiplied by expected minutes. ADR-172's first cut swapped the target and kept ADR-104's rule, which
+    left the same prior scaled in the `fallback` tier and unscaled here.
+    """
+    full = cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=165)
+    half = cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=165, weight=0.5)
+    assert half == pytest.approx(full / 2), "the prior term must halve with expected minutes"
+
+    # the ep_next path is unchanged: only the ppg term is discounted
+    ep_full = cold_start_rate(points_per_game=9.0, ep_next=3.0, minutes=165)
+    ep_half = cold_start_rate(points_per_game=9.0, ep_next=3.0, minutes=165, weight=0.5)
+    assert ep_half > ep_full / 2, "ep_next already prices minutes — it must not be discounted again"
+
+
+def test_the_two_tiers_respond_to_minutes_the_same_way():
+    """The same 2.0 prior underlies both tiers, so halving expected minutes must halve both alike.
+
+    Measured before the fix: cold_start fell to 76% of full while fallback fell to 48% — one player, two
+    answers, depending only on whether we happened to hold a thin history row for him.
+    """
+    cold_full = cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=165)
+    cold_half = cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=165, weight=0.5)
+    # `fallback_rate` is unweighted by design — player_xp applies the weight outside it — so the equivalent
+    # ratio there is exactly 0.5. The cold-start tier folds the weight in, and must land on the same ratio.
+    assert cold_half / cold_full == pytest.approx(0.5)

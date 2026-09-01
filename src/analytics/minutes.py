@@ -54,6 +54,23 @@ def minutes_share(history, k_seasons: int = _MINUTES_SEASONS):
     seasons = history[-k_seasons:]
     if not seasons:
         return None
+    # ⚠️ **Rows with no minutes are absence of evidence, not evidence of absence** (found 2026-09-01).
+    # A player promoted with his club carries stored seasons for years he spent outside the league — Thomas
+    # has four, all zero. Averaging those gives share 0.0, i.e. "never plays", for someone who has started
+    # every game this season. That is the opposite of what an empty history means two lines above, where the
+    # same ignorance returns None and the module's own rule applies: *never penalise the unknown*.
+    # `fallback_rate` already draws exactly this line (`if total_min <= 0: return None`); the minutes half
+    # had not. It stayed invisible while the shrink prior escaped the weight and quietly restored the points
+    # a 0.0 share had taken away — two bugs cancelling, until ADR-172's amendment removed one of them.
+    #
+    # **The test is the WHOLE history, not the k-season window, and that distinction is the whole rule.**
+    # Three empty seasons *after* a full one is real evidence — a player who stopped playing — and must
+    # still give 0.0. Never having played at all is the absence of evidence. Minutes alone cannot tell a
+    # benching from a season spent outside the league, so the only honest cut is: have we *ever* seen him
+    # play? A blanket check on the window would have rescued the decline case too, and a pre-existing test
+    # said so.
+    if sum((_field(h, "minutes") or 0) for h in history) <= 0:
+        return None
     num = den = 0.0
     for rank, h in enumerate(seasons, start=1):   # oldest → 1 … newest → n (recency)
         share = min(1.0, (_field(h, "minutes") or 0) / _FULL_SEASON_MINUTES)

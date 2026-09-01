@@ -142,11 +142,20 @@ def cold_start_rate(points_per_game, ep_next, minutes, weight: float = 1.0,
     """
     ppg = float(points_per_game or 0)
     ep = float(ep_next or 0)
+    c = min(1.0, max(0.0, (minutes or 0) / min_minutes))
     # Equality is a heuristic for "this tells us nothing new", and it is allowed to be: on a coincidence the
     # player is still a low-evidence cold start, so the conservative branch is the right answer anyway.
-    toward = prior if (ep == ppg and ppg > 0) else ep
-    c = min(1.0, max(0.0, (minutes or 0) / min_minutes))
-    return weight * ppg * c + toward * (1.0 - c)
+    if ep == ppg and ppg > 0:
+        # ⚠️ **The whole blend carries the weight here, and that is the difference that matters.** ADR-104's
+        # rule — do not discount the far term by minutes — is a fact about **`ep_next`**, which is FPL's
+        # *expected points for the next gameweek* and has already priced minutes in. `prior` is not that
+        # kind of number: it is a **points-per-90 rate**, the same one `fallback_rate` shrinks toward, and a
+        # rate becomes points only when multiplied by expected minutes. ADR-172's first cut swapped the
+        # target and kept the rule, which left the identical prior minutes-scaled in the `fallback` tier and
+        # unscaled here — the same player halving to 48% of his xP on one path and 76% on the other.
+        return weight * (ppg * c + prior * (1.0 - c))
+    # `ep_next` already prices minutes, so only the `ppg` term is discounted (ADR-104, unchanged).
+    return weight * ppg * c + ep * (1.0 - c)
 
 
 def _multiplier(difficulty) -> float:
