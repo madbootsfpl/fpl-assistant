@@ -124,6 +124,22 @@ falling further as ADR-124's `c` grows); the deferral could be forgotten (*mitig
 - **Accepted — Defer.** No engine change. The one thing landed: a docstring note on
   `Storage.get_gw_history_by_code` recording that per-GW rows exist **before** their fixture is played, so the
   next reader of that table does not have to rediscover it.
+- **📌 Update 2026-09-01 — one of the two obstacles is gone; the deferral stands on the other.**
+  Re-examined when the owner asked for the cold-start xMins half (ADR-172 §⛔), and **re-affirmed as a hold**
+  after the blocker was cleared:
+  * ✅ **The `minutes = 0` trap this ADR recorded is solved.** `yet_to_play` (ADR-138) counts a gameweek only
+    when it carries a **scoreline**, never on row presence — exactly the guard §2 asked for. It arrived for a
+    different feature and nobody connected it back here.
+  * ✅ **The data gap is closed.** `player_history` had fallen a gameweek behind the aggregate (GW1 only vs
+    two gameweeks in `players.minutes`); backfilled 2026-09-01 → **1236 per-GW rows, GW1 and GW2, both
+    finished**, per-GW sums matching the aggregate exactly.
+  * ⏳ **What still defers it is sample size, and only that.** Two gameweeks cannot separate a player rested
+    once from a player being phased out — Mendy's 63 and 58 minutes are real signal and an ambiguous one.
+    **Owner's call, 2026-09-01: hold for GW4-6.**
+
+  So a future reader should not re-derive the data problem: **the design is ready and the inputs exist.** The
+  single open question at the sitting is whether the sample is now long enough to separate rotation from
+  decline.
 - **Trigger to revisit:** when `calibrate` clears its ≥4-gameweek guard (~GW4-6), gated together with
   `FORM_WEIGHT`.
 - **Design to build then:** the shrinkage above, with `gameweeks_actually_played` counted from rows whose

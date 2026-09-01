@@ -283,7 +283,16 @@ did**, which is the argument for fixing the test's subject rather than its expec
 
 ---
 
-### ⛔ The xMins half is still deferred — and now for a different reason
+### ⏳ The xMins half — blocker cleared 2026-09-01, then **held by decision**
+
+> **Resolved after this section was written.** The backfill below was run the same day: `player_history` now
+> holds **1236 rows across GW1 and GW2, both finished**, and the per-GW sums match the aggregate exactly. The
+> data objection is **gone**. The owner then re-affirmed the hold on the remaining ground — **two gameweeks
+> cannot separate a player rested once from one being phased out** — so it stays with ADR-125 for the GW4-6
+> sitting, now as a judgement about evidence rather than a wait for data. The original reasoning is kept
+> below because it is what the backfill was run to fix.
+
+#### What was blocking it (2026-09-01, before the backfill)
 
 The owner asked for it; it cannot be built today, and the blocker is **data, not design**:
 

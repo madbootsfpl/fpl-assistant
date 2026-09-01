@@ -142,3 +142,25 @@ did**, which is the argument for changing a test's subject rather than its expec
 
 **+6** (1661 → 1667), mutation-checked in both directions each time: reverting the fix fails, and
 *over*-applying it — scaling `ep_next` too, or widening the empty-history rule to the window — also fails.
+
+---
+
+## Closing state — GW2 backfilled, xMins held (2026-09-01)
+
+**The backfill ran** (`2980ce9`): 626 players, 2071 season rows, **1236 per-GW rows** (was 609), no failures.
+GW1 and GW2 both carry scorelines and the per-GW sums match the aggregate exactly. Reseeded and pushed.
+
+**And the xMins work is held anyway — by decision, not by obstacle.** The reason narrowed from two to one:
+
+| | before today | now |
+|---|---|---|
+| ADR-125's `minutes = 0` trap | recorded as unsolved | ✅ **already solved** by `yet_to_play` (ADR-138) — it arrived for another feature and nobody connected it back |
+| per-GW data | GW1 only, a gameweek behind the aggregate | ✅ **closed** — GW1 + GW2, both finished |
+| sample size | — | ⏳ **the only thing left.** Two gameweeks cannot separate a player rested once from one being phased out |
+
+Owner's call: **hold for GW4-6**, with ADR-125.
+
+**Why the narrowing is worth writing down.** A deferral that keeps its original reasons accumulates
+justification it no longer has — and the next reader inherits a list of obstacles, most of which have quietly
+gone. Recording *which* reason survives means the GW4-6 sitting opens on one question (is the sample long
+enough to tell rotation from decline?) rather than re-deriving a data problem that was fixed months earlier.
