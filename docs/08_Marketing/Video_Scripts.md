@@ -595,8 +595,30 @@ changed shots marked. When the new render is on YouTube it is a **one-token swap
 appears exactly twice in `index.html`, in the HTML comment at the lightbox and in the `mbPlay()` iframe `src`.
 Replace both, then deploy once and the tagline goes live with it.
 
-**Deploy checklist:** swap the video id (2×) → open `index.html` locally to check the lightbox plays → drag the
-folder to Cloudflare Pages → hard-refresh madboots.com and confirm the hero reads the new mantra.
+### 🔁 How to swap the video in
+
+From the repo, with the new YouTube link:
+
+```bash
+python scripts/swap_intro_video.py https://youtu.be/NEW_ID          # add --dry-run to preview
+```
+
+It reads the id the page plays today, backs the file up **outside** the deploy folder, replaces both
+occurrences, and **refuses to write** unless it finds exactly the two it expects — so a changed markup fails
+loudly instead of half-swapping. Any YouTube form works (`youtu.be/…`, `watch?v=…`, `/embed/…`, or the bare
+11-character id).
+
+Then: **open `~/madboots-site/index.html` in a browser → click "See how it works"** (the new clip should
+play) → **drag `~/madboots-site` to Cloudflare Pages** → hard-refresh madboots.com and check both the hero
+tagline and the video.
+
+⚠️ **Keep backups out of `~/madboots-site/`.** Everything in that folder is uploaded, so a stray
+`index.html.bak-…` would be served at `madboots.com/index.html.bak-…`. Backups go to
+`~/madboots-site-backups/`, which is where the script writes them and where the 2026-09-01 one was moved.
+
+*(Doing it by hand instead: find `a7WG0MBDLFg` in `index.html` — it appears twice, in the HTML comment above
+the lightbox and in the `mbPlay()` iframe `src` — and replace both. The comment is cosmetic; the `src` is the
+one that plays.)*
 
 ---
 
