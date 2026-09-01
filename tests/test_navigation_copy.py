@@ -98,6 +98,15 @@ WEB = ROOT / "src" / "web_streamlit"
 
 # Retired navigation, with what replaced it. Substring match on purpose — these are exact phrasings that
 # shipped, not patterns, so a false positive means someone re-wrote a real mistake.
+#
+# ➕ **Adding to this is a step in the ADR template** (`docs/07_Templates/Decision_Record_Template.md`,
+# "If this ADR renames, moves, merges or retires a user-facing surface"). Add the retired phrasing **in the
+# same commit as the rename** and let the failure list tell you where the copy still says the old thing —
+# that is cheaper than finding it three sprints later, which is how every entry below was found.
+#
+# What this cannot do, so do not mistake a green run for a clean app: it only knows phrases someone put here,
+# and it only reads `src/web_streamlit`. The marketing scripts, madboots.com and any recorded video are
+# outside its reach entirely.
 RETIRED = {
     "Squad Lab** tab": "the Lab is My Squad ▸ Lab (ADR-166), not a sidebar tab",
     "Build page": "there is no Build page — ADR-105 renamed it, ADR-166 folded it in",
