@@ -148,7 +148,7 @@ did**, which is the argument for changing a test's subject rather than its expec
 ## Closing state — GW2 backfilled, xMins held (2026-09-01)
 
 **The backfill ran** (`2980ce9`): 626 players, 2071 season rows, **1236 per-GW rows** (was 609), no failures.
-GW1 and GW2 both carry scorelines and the per-GW sums match the aggregate exactly. Reseeded and pushed.
+GW1 and GW2 both carry scorelines and the per-GW sums match the aggregate exactly. Reseeded and pushed — **✅ Cloud-verified by the owner, 2026-09-01: rebooted, data status reads 1 Sep.** The full GW1_RUNBOOK §A sequence (backfill → reseed → commit → push → reboot) is complete.
 
 **And the xMins work is held anyway — by decision, not by obstacle.** The reason narrowed from two to one:
 
