@@ -21,7 +21,16 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 - **❌ Never mention Ollama / "run it locally".** The live app is **data-only**; naming a local dev tool confuses
   viewers and undercuts the honest-analytics story. Frame explanation as the **Edge · Risk · Confidence** + the ✓/⚠
   that everyone sees.
-- **Always end on a CTA:** *"Try MADBOOTS **free** at **madboots.com**."* (Say **free** — kills friction.)
+- **Always end on a CTA — but there are two, and which one you use depends on where the clip plays.**
+  Every script below carries the **acquisition** tail. Swap it when cutting for in-app.
+
+  | where it plays | tail | why |
+  |---|---|---|
+  | madboots.com hero · YouTube · Reels/TikTok/Shorts | *"Try MADBOOTS **free** at **madboots.com**."* | the viewer is outside; say **free** — it kills friction |
+  | **in-app** (Help ▸ Watch, the *Maddie Explains* hub) | *"It's all in the app — open **My Squad** and take a look."* | they are **already inside**, already past the gate. Sending them to the front door is the one CTA guaranteed not to convert, and it reads as a clip nobody checked |
+
+  *Cost: one extra tail per clip at record time — the same avatar, voice and music, ~4 seconds. Cutting it
+  later from a finished render is far more expensive, so record both tails in the same session.*
 - **Conversion beat for existing managers:** *"Import your real team with your manager ID."* (⚠ live from the **GW1
   deadline, 21 Aug 2026** — dormant if a video launches preseason.)
 - **Show, don't tell:** mark where real UI shots go — the green pitch · Boot Battle head-to-head · the AI-Tips plan ·
@@ -52,6 +61,8 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
   | 7 | Your Week, Answered | 121 | **~1:01** | 45s short | trim ~32 words |
   | 8 | Leagues & Head-to-Head | 107 | **~0:53** | 45s short | trim ~16 words |
   | 9 | Boot Battle | 97 | **~0:48** | 40s short | trim ~18 words |
+  | G | Scout — worth a look | 107 | **~0:53** | 45s short | trim ~16 words — **not** the honesty beat |
+  | H | Team DNA | 123 | **~1:02** | 45s short | trim ~32 words; the eight-axis list is the obvious cut (show them, don't say them) |
 
   §§4 and 5 were the two that would not fit a Reels/Shorts slot; they are now **YouTube pieces** (above).
   Both sit within a second or two of 90s, so neither has headroom — adding a beat to either means removing
@@ -202,8 +213,9 @@ are unpriced (ADR-167). And no script may offer a **win probability**: ADR-161 m
 (gap sd ≈ 8.6 against margins of 2-5) and gated it, so selling it would market the one thing we refused to
 ship.
 
-One smaller note: the CTA *"free at madboots.com"* is wrong for the in-app **Maddie Explains** hub, where the
-viewer is already inside the app — that tail wants a second cut. *(An earlier version of this audit said §5
+✅ **The in-app CTA is resolved** (2026-09-01): there are now **two tails**, specified in the brand notes
+above — the acquisition one every script carries, and an in-app one for the *Maddie Explains* hub, where
+"try it at madboots.com" is aimed at someone already inside the app. Record both in the same session. *(An earlier version of this audit said §5
 used the US spelling "analyze". It does not — that was in the **produced §0 script**, and the rewrite drops
 it. Corrected 2026-08-31.)*
 
@@ -223,8 +235,8 @@ the two educational ones are **~90s YouTube pieces** (searched for, so they comp
 | D | **Finding Differentials** 💎 *(~90s YouTube)* | *Educational + trust.* Low-owned + the underlying data → a real edge; Scout, Trending's *Worth noticing*, and Radar. Search target: *"how to find FPL differentials"*. | **drafted (§5)** |
 | E | **Understanding xP & Confidence** *(~90s YouTube)* | *Educational + trust — the moat piece.* What Expected Points is, and why our number is honest (grounded, ✓/⚠, no paid black box). Search target: *"what is expected points FPL"*. | **drafted (§4)** |
 | F | **Boot Battle** ⚔️ | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
-| G | **Scout — worth a look** *(candidate)* | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | *candidate* |
-| H | **Team DNA** *(candidate)* | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar). | *candidate* |
+| G | **Scout — worth a look** | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | **drafted (§G)** ⚠ shoot after ~GW10, or keep the voiceover off "this season" |
+| H | **Team DNA** | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar), and the refuses-to-draw guard is the brand in one shot. | **drafted (§H)** |
 
 **Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C, then the two YouTube pieces
 D → E. The shorts come first because they are cheaper to cut and feed the algorithm; the educational pair
@@ -386,6 +398,66 @@ English"* framing would still need re-checking against what the hosted app can a
 **The half worth salvaging:** its real subject was never the text box, it was the **honest third state** —
 *data-verified* versus *general guidance, clearly labelled*. That idea is alive and shipping everywhere (the
 ✓/⚠ line, ADR-085's *"not checked against your data"*), and §4 already carries it better.
+
+---
+
+## G · Scout — worth a look — short, **runs ~0:53 (trim to 45s)**  *(**new 2026-09-01**)*
+
+⚠️ **Shot-timing constraint — check before filming.** Four of Scout's five boards need **900 minutes** to
+speak for this season, and today **0 of 626 players** clear that bar, so they honestly label themselves and
+show **last season** (ADR-126). Filming now captures last-season numbers on four of five boards. Either shoot
+**after ~GW10**, or keep the voiceover off "this season" entirely — the script below is written so it stays
+true either way, which is the safer option if you want it sooner.
+
+> **[0:00 – Hook]** Five stat boards. Hundreds of players. Nobody reads all of it.
+>
+> **[0:07 – What]** So MADBOOTS reads it for you. **Scout** looks across set pieces, over- and
+> under-performance, defensive contribution, clean sheets and expected goals — and names the players standing
+> out on **two or more at once**. *(UI: the shortlist, then the board selector behind it.)*
+>
+> **[0:26 – The honest bit]** And it tells you what that means. These are players **worth a look** — not worth
+> points. Two of those signals aren't in our projection at all, so Scout points you somewhere; it doesn't
+> pretend to rank the answer.
+>
+> **[0:42 – Close + CTA]** Five boards, one shortlist. **The analytics decide. Every answer shows its working.
+> You make the call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Accuracy anchors:** the five boards are **Set pieces · Over/under · DefCon · Clean sheets · xG · xA**
+(ADR-167); the shortlist is convergence — standing out on **two or more**, never a score; the counterweight
+*worth a look, **not** worth points* is the claim, because two signals sit at weight **0** in `decision_xp`
+and saying otherwise would sell a number we deliberately have not shipped.
+
+**Why this one is worth making:** it is the clearest demonstration of the brand's actual position. Everyone
+else's answer to "too many tables" is a sixth table. Ours is a **reader** — and then a sentence telling you
+what it is *not* worth. The honesty beat is the differentiator, so do not cut it for length.
+
+---
+
+## H · Team DNA — short, **runs ~1:02 (trim to 45s)**  *(**new 2026-09-01**)*
+
+> **[0:00 – Hook]** You pick players. But points come from teams.
+>
+> **[0:06 – What]** **Team DNA** grades all twenty clubs on eight axes — attacking threat, chance creation,
+> defensive strength, clean-sheet potential, fixture strength, set-piece threat, FPL output and squad depth —
+> each one a percentile against the rest of the league. *(UI: the radar drawing in, then the grade.)*
+>
+> **[0:27 – Use it]** So you can see at a glance who is strong where, and which of their players to target.
+> Pair it with **FDR** for who they play next.
+>
+> **[0:40 – The honest bit]** And when a club can't be ranked on an axis yet, it says so — instead of drawing
+> a shape that looks like knowledge.
+>
+> **[0:50 – Close + CTA]** Know the team before you buy the player. **The analytics decide. Every answer shows
+> its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Accuracy anchors:** the eight axes in radar order are **Attacking Threat · Chance Creation · Defensive
+Strength · Clean-Sheet Potential · Fixture Strength · Set-Piece Threat · FPL Output · Squad Depth**
+(`team_dna.py`), each a **percentile across the 20 clubs**; the grade comes from four of them (attack ·
+defence · fixtures · output). Team DNA is its **own page** since ADR-169 — do not film it as part of FDR.
+
+**The honesty beat is real, not a flourish:** the radar refuses to draw an axis it cannot rank (ADR-133's
+guard). That is the most filmable version of the whole brand — a competitor's radar always draws eight points
+because an empty axis looks broken; ours leaves the gap and says why.
 
 ---
 
