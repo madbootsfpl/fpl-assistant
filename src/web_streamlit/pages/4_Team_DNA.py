@@ -26,8 +26,8 @@ analytics.boot("Team DNA")
 render_data_status()
 st.title("🧬 Team DNA")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
-st.caption("How strong every club is, both ends — a percentile-vs-league fingerprint, its grade and the "
-           "players to target. For the week-by-week difficulty grid, see 📅 **FDR**.")
+st.caption("How strong every club is, both ends — a percentile-vs-league fingerprint, its grade, fixtures "
+           "and the players to target. For the week-by-week difficulty grid, see 📅 **FDR**.")
 
 store = Storage()
 try:
@@ -46,10 +46,6 @@ else:
     from src.analytics import last_season_name, last_season_rows, team_dna_all, team_schedule
     from src.analytics.gw_form import team_form
     from src.web_streamlit.team_dna_card import key_players_this_or_last, render_team_dna
-    st.subheader("🧬 Team DNA")
-    st.caption("How strong is a team, both ends — a percentile-vs-league fingerprint, its grade, fixtures and the "
-               "players to target. Attack/creation/output from our aggregates; the defensive axes are proxies "
-               "(labelled) that sharpen once the season runs.")
     _names = {t["short_name"]: t["name"] for t in teams}
     _last_rows = last_season_rows(players, history)
     _all_dna = team_dna_all(players, upcoming, team_names=_names, gw_history=gw_history,
@@ -102,8 +98,11 @@ else:
                                  key="dna_scan_tap")
         else:
             st.markdown(_scan_html, unsafe_allow_html=True)
-        st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak). Fixture chips are tinted by "
-                   "difficulty; **h**/**a** = home or away. "
+        # The provenance line sits here, not at the top of the page: it qualifies these dots, and a caveat
+        # is easiest to trust beside the number it is about rather than three scrolls above it.
+        st.caption("Dots = percentile vs the league (🟢 elite → 🔴 weak) — attack, creation and output from "
+                   "our own aggregates; the defensive axes are labelled **proxies** that sharpen as the "
+                   "season runs. Fixture chips are tinted by difficulty; **h**/**a** = home or away. "
                    + ("**Tap a row** for that club's full DNA, or pick one below."
                       if _tappable else "Pick a club below for its full DNA."))
     if _all_dna:

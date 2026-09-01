@@ -352,12 +352,21 @@ def test_flag_unavailable_warns_on_a_squad_member_who_cant_play(monkeypatch):
     assert warned == []
 
 
-def test_fixtures_team_dna_section_renders_a_team_card():
-    # US-419 (ADR-119): a 🧬 Team DNA section on Fixtures — pick a team → grade + radar + key-players.
+def test_team_dna_page_renders_a_team_card():
+    """US-419 (ADR-119) → ADR-169: pick a team → grade + radar + key-players.
+
+    Renamed and re-pointed 2026-09-01. It was `test_fixtures_team_dna_section_...` and asserted a
+    **subheader** reading "🧬 Team DNA" — correct when ADR-119 made this a *section* of the Fixtures page,
+    where a subheader was how it announced itself. ADR-169 gave it its own page and the **title** took that
+    job, so the subheader had been repeating the title. Asserting it would have blocked removing the
+    duplication, which is the requirement inverted: the card rendering is what matters.
+    """
     at = _run(_PAGES / "4_Team_DNA.py")
     if at.exception or not at.dataframe:
         return                                          # no fixtures/data in this environment
-    assert any(s.value == "🧬 Team DNA" for s in at.subheader)
+    assert any("🧬 Team DNA" in (t.value or "") for t in at.title), "the page still says what it is"
+    assert not any((sh.value or "") == "🧬 Team DNA" for sh in at.subheader), \
+        "the title carries the identity — a subheader repeating it is dead real estate"
     pick = next((s for s in at.selectbox if s.label == "Team"), None)
     if pick is None or not pick.options:
         return
