@@ -88,7 +88,7 @@ def fallback_rate(history, prior: float = _FALLBACK_PRIOR):
 
 
 def cold_start_rate(points_per_game, ep_next, minutes, weight: float = 1.0,
-                    min_minutes: int = _MIN_SEASON_MINUTES) -> float:
+                    min_minutes: int = _MIN_SEASON_MINUTES, prior: float = _FALLBACK_PRIOR) -> float:
     """A scoring rate for a player with **no history at all**, shrunk toward `ep_next` by evidence (ADR-124).
 
         rate = (weight × points_per_game) × c + ep_next × (1 − c),   c = min(1, minutes / min_minutes)
@@ -114,9 +114,39 @@ def cold_start_rate(points_per_game, ep_next, minutes, weight: float = 1.0,
     `weight` (the xMins minutes weight) scales the `points_per_game` term **only** — `ep_next` is FPL's own
     expected points for the next gameweek and already prices minutes, so discounting it again would double-count
     (ADR-104). The caller therefore passes 1.0 as the outer weight; see `player_xp`.
+
+    ⚠️ **ADR-172 — a shrink needs something to shrink toward.** The blend above assumes its two inputs are
+    independent. Upstream they are not: FPL currently publishes `ep_next` **equal to `points_per_game`** for
+    513 of 626 players, and blending a number with itself returns it —
+
+        ppg × c + ppg × (1 − c)  =  ppg      at *every* value of c
+
+    — so the evidence weighting cancelled and this function returned raw `points_per_game`, which is exactly the
+    failure it was written to prevent. Sangaré, two games in, projected **9.9 xP**; 8 of the top 20 were on this
+    tier and the top 3 were all of it, with Haaland 4th.
+
+    So when `ep_next` carries **no information about this player beyond what `ppg` already says**, shrink toward
+    the replacement `prior` instead — the same `_FALLBACK_PRIOR` that `fallback_rate` (ADR-040) already shrinks
+    thin evidence toward. No new constant: the one tier that could not reach it now does.
+
+    **The `ppg > 0` half of the test is load-bearing, not defensive.** Preseason `ppg` is 0 and `ep_next` is
+    often 0 too, so a bare equality check would fire on the zero-evidence case and hand a player who has never
+    kicked a ball the replacement prior instead of FPL's 0. That would re-break ADR-104, which this ADR is
+    restoring. With the guard, both ends survive untouched:
+
+      * `minutes = 0` → `c = 0` → `rate = ep_next` (ADR-104, unchanged — `ppg` is 0 so the test cannot fire)
+      * `minutes ≥ min_minutes` → `c = 1` → `rate = weight × ppg` (unchanged either way)
+
+    And it **self-repairs**: the day FPL publishes a real `ep_next`, the equality stops holding and the shrink
+    goes back to using it, with no constant to remember to revert.
     """
+    ppg = float(points_per_game or 0)
+    ep = float(ep_next or 0)
+    # Equality is a heuristic for "this tells us nothing new", and it is allowed to be: on a coincidence the
+    # player is still a low-evidence cold start, so the conservative branch is the right answer anyway.
+    toward = prior if (ep == ppg and ppg > 0) else ep
     c = min(1.0, max(0.0, (minutes or 0) / min_minutes))
-    return weight * float(points_per_game or 0) * c + float(ep_next or 0) * (1.0 - c)
+    return weight * ppg * c + toward * (1.0 - c)
 
 
 def _multiplier(difficulty) -> float:

@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-172
 **Date:** 2026-09-01
-**Status:** 🚧 **Proposed — owner-reported, measured, awaiting the go-ahead to build.**
+**Status:** ✅ **Accepted — owner-reported, measured, gated, built** (Sprint 233, 2026-09-01).
+**1655 → 1661 tests, ruff clean.**
 **Superseded By / Replaces:** Repairs **ADR-124**, whose protection is inert on this season's data. Restores
 the intent of **ADR-104**. **Not** ADR-125 — that defers in-season *minutes* to GW4-6; this is the *rate*,
 and it is live now. **Changes `decision_xp` for 42 players** (see §Blast radius).
@@ -78,7 +79,7 @@ The owner met it as three separate bad recommendations in one answer. They were 
 
 ---
 
-### ✅ Proposed Decision
+### ✅ Decision
 
 **When `ep_next` carries no information, do not pretend it does — shrink toward the replacement prior instead.**
 
@@ -172,3 +173,55 @@ GW4-6 sitting, so nothing can see he has started both games. He is a second Kins
   ends. A test that only checks "Sangaré is lower" would pass on any change that lowers him.
 - **Mutation-check the new guard** before trusting it, and check no existing test asserts the inflated value.
 - Not a navigation change, so the ADR template's nav checklist is N/A. The index row is not.
+
+
+---
+
+### 📊 Built — measured after (2026-09-01)
+
+**The top of the board, before → after:**
+
+| # | before | | after |
+|---|---|---|---|
+| 1 | Tzolakis 10.0 *(cold, inert)* | → | **Haaland 6.3** |
+| 2 | M.Sangaré 9.9 *(cold, inert)* | → | B.Fernandes 5.3 |
+| 3 | Mendy 8.0 *(cold, inert)* | → | Watkins 5.3 |
+| 4 | **Haaland 6.3** | → | Semenyo 5.0 |
+
+**Cold-start-with-inert-shrink players in the top 20: 8 → 0.** The players the owner questioned:
+Sangaré **9.9 → 3.6**, Tzolakis **10.0 → 3.6**, Mendy **8.0 → 2.8**, Thomas **3.6 → 1.3**. Raya is unchanged
+at 3.6 — so the transfer that read *"+6.4"* is now worth nothing, which is the correct answer.
+
+**The lineup call flips, and that is the interesting one.** Thomas 3.6 → 1.3 while João Pedro is untouched at
+3.1, so *"start Thomas over João Pedro"* becomes *"start João Pedro"*. The owner had agreed with the original
+on instinct — it was the bug agreeing with him, and the repair disagrees with both.
+
+**End-to-end on the demo squad**, the same answer that exposed this: the transfer was
+`Kelleher → Tzolakis (+7.3 XI xP)`; it is now `Senesi → Mukiele (+1.0 · Confidence 58/100 · Medium)`. A
+phantom +7.3 became a modest, honestly-hedged +1.0 that agrees with the reported-departure signal already
+flagging Senesi.
+
+---
+
+### 🔬 What building it found
+
+**A test fixture had been depending on the bug.** `tests/test_ask.py::_worth_player` builds a MID with
+`ep_next = ppg` and **no minutes at all**, then asserts `xp == ppg` so the value ranking has round numbers.
+It got that equality from the *cancelled shrink*, not from evidence — and `ppg > 0` with `minutes = 0` cannot
+occur in real data, because FPL derives points-per-game **from games played**. The fixture was only plausible
+while the bug made it so. Fixed by giving it `minutes=900`, which produces the same numbers for the right
+reason; the test is about value ranking, not this tier.
+
+That is a different species from the tests found in Sprint 232 pinning stale *copy*. This one pinned a
+**stale model of the data** — and it is the more dangerous kind, because it makes a bug look like the
+specification.
+
+**Every guard was mutation-checked**, including the subtle one: dropping the `ppg > 0` half of the test (so
+the equality fires on the preseason zero-evidence case) must fail, and does. Reverting the fix outright fails
+three tests; shrinking toward the prior unconditionally fails two.
+
+**What is pinned is the cancellation, not the symptom.** `test_a_degenerate_ep_next_does_not_cancel_the_shrink`
+asserts the identical-inputs case does **not** return the input, and
+`test_the_cancellation_is_broken_at_every_level_of_evidence` asserts the rate actually *slopes* with evidence
+— a flat line across `c` is the signature of the shrink cancelling again. A test asserting only *"Sangaré is
+lower"* would have passed on any change that lowered him, including a wrong one.

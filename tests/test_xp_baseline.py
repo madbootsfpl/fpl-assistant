@@ -5,6 +5,8 @@ cases) and its use in player_xp: baseline-when-present, fall back to current ppg
 and the rate_source flag. Offline, plain dicts.
 """
 
+import pytest
+
 from src.analytics import baseline_rate, fallback_rate, player_xp
 from src.analytics.xp import cold_start_rate
 
@@ -192,3 +194,68 @@ def test_player_xp_reports_the_weight_that_actually_landed():
                         baseline_by_code={}, **half)
     assert at_zero[0]["minutes_weight"] == 1.0     # nothing was discounted (ADR-104's end)
     assert at_full[0]["minutes_weight"] == 0.5     # the ppg term took the full weight
+
+
+# ---- ADR-172: the blend needs two independent inputs ------------------------
+#
+# ADR-124's blend assumed `ppg` and `ep_next` say different things. Upstream they stopped doing so — FPL
+# publishes `ep_next == points_per_game` for 513 of 626 players — and blending a number with itself returns
+# it, so the shrink cancelled at *every* value of c and this tier handed back raw ppg. That is the exact
+# failure ADR-124 exists to prevent, arriving through the input rather than the formula.
+#
+# These pin the CANCELLATION, not the symptom. A test that merely asserted "Sangaré is lower now" would pass
+# on any change that lowers him, including a wrong one.
+
+def test_a_degenerate_ep_next_does_not_cancel_the_shrink():
+    """The bug itself: identical inputs must not return the input.
+
+    ppg 9.0 with 165 minutes is c = 0.18 — 82% of the rate is supposed to come from the conservative side.
+    Before ADR-172 this returned exactly 9.0, at any c, because 9·c + 9·(1−c) = 9.
+    """
+    assert cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=165) != 9.0
+    # and it lands where the existing replacement prior puts it: 9·0.183 + 2·0.817
+    assert cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=165) == pytest.approx(3.28, abs=0.01)
+
+
+def test_the_cancellation_is_broken_at_every_level_of_evidence():
+    """Not just at one c. The old behaviour was flat — the fix must slope."""
+    rates = [cold_start_rate(points_per_game=9.0, ep_next=9.0, minutes=m) for m in (0, 90, 300, 600)]
+    assert rates == sorted(rates), "more evidence must move the rate toward the player's own ppg"
+    assert len(set(rates)) == len(rates), "a flat line across c means the shrink is cancelling again"
+
+
+def test_an_informative_ep_next_is_still_used():
+    # The repair must not fire when FPL is being useful: unequal inputs take the ADR-124 path, unchanged.
+    assert cold_start_rate(points_per_game=9.0, ep_next=3.0, minutes=165) == pytest.approx(4.10, abs=0.01)
+
+
+def test_zero_evidence_still_yields_ep_next_even_when_it_equals_ppg():
+    """The `ppg > 0` guard is load-bearing, and this is why.
+
+    Preseason `ppg` is 0 and `ep_next` is often 0 too, so a bare equality check would fire on the
+    zero-evidence case and hand a player who has never kicked a ball the replacement prior instead of FPL's
+    own number — re-breaking ADR-104, which ADR-172 is restoring.
+    """
+    assert cold_start_rate(points_per_game=0, ep_next=0, minutes=0) == 0.0
+    assert cold_start_rate(points_per_game=0, ep_next=2.5, minutes=0) == 2.5
+
+
+def test_full_evidence_is_the_players_own_ppg_either_way():
+    # At c = 1 the conservative term has zero weight, so which side it came from cannot matter.
+    assert cold_start_rate(points_per_game=6.0, ep_next=6.0, minutes=900) == 6.0
+    assert cold_start_rate(points_per_game=6.0, ep_next=2.0, minutes=900) == 6.0
+
+
+def test_two_games_do_not_outrank_a_proven_player():
+    """The end-to-end shape of the bug, as the owner met it.
+
+    A cold-start player with a huge two-game ppg and a degenerate `ep_next` was out-projecting established
+    players — 8 of the top 20, and the top 3 outright, with Haaland 4th.
+    """
+    hot = _player(1, code=999, ppg=9.0, minutes=165)        # two games, nothing else known
+    hot["ep_next"] = 9.0                                    # FPL's degenerate value
+    proven = _player(2, code=888, ppg=6.0, minutes=180)
+    out = {r["id"]: r for r in player_xp([hot, proven], [_fixture()],
+                                         baseline_by_code={888: 5.7})}   # a real multi-season baseline
+    assert out[1]["rate_source"] == "cold_start" and out[2]["rate_source"] == "hist"
+    assert out[1]["xp"] < out[2]["xp"], "two games must not out-project a proven baseline"

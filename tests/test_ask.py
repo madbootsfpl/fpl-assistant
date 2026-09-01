@@ -536,9 +536,17 @@ def _worth_store(players):
 
 
 def _worth_player(name, ppg, price, pid, code, status="a"):
-    # neutral fixture (difficulty 3) → xp == ppg, so value == ppg / price
+    """A MID whose xp lands exactly on `ppg`, so value == ppg / price and the ranking maths stays readable.
+
+    ⚠️ `minutes=900` is load-bearing, added 2026-09-01 (ADR-172). This fixture sets `ep_next = ppg` — the
+    degenerate pairing FPL actually publishes — and used to omit minutes entirely, so it got `xp == ppg` from
+    the **cancelled shrink** rather than from having evidence. That combination cannot occur in real data
+    (FPL derives points-per-game *from games played*, so ppg > 0 implies minutes > 0), and the fixture was
+    only plausible while the bug made it so. Full evidence gives the same numbers for the right reason, and
+    this test is about value ranking, not the cold-start tier.
+    """
     return {"id": pid, "code": code, "web_name": name, "position": "MID", "price": price,
-            "status": status, "chance": None, "team": "ARS", "team_id": 1,
+            "status": status, "chance": None, "team": "ARS", "team_id": 1, "minutes": 900,
             "points_per_game": ppg, "ep_next": ppg, "selected_by": 3.0}
 
 

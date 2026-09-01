@@ -34,7 +34,9 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 | item | unblocks at | note |
 |---|---|---|
 | `FORM_WEIGHT` · `SET_PIECE_WEIGHT` · `DEFCON_MAGNIFIER_WEIGHT` | **GW4**, real sitting **GW6** | criteria pre-registered in **GW1_RUNBOOK §B0** — four numeric bars, a stopping rule, and expected results recorded so a surprise is legible |
+| **Cold-start xMins forced to 1.0** (ADR-172 §Deliberately NOT) | GW4-6, with ADR-125 | ⚠️ **new, measured 2026-09-01.** A no-history player is modelled as a nailed 90-minute starter: **Mendy projects on 60 minutes a game, Yalcouyé on 38.** ADR-172 fixed the *rate* half of this pair; this is the *minutes* half, stacked on top, and it wants its own gate because fixing both at once would leave neither measurable |
 | In-season xMins share (ADR-125) | same sitting | ⚠️ **this is the Kinsky bug.** He is **0.46 xP/GW at 22.6% owned**, rank 27 of 68 GKs — a role-change cold-start (rate fine at 2.59, xMins stuck at 0.18 from last season's 630 backup minutes). Reported 2026-08-18 and **still live**. The most user-visible consequence of any deferral here. |
+| **Calafiori — the mirror image** (ADR-172 §Deliberately NOT) | GW4-6 | ⚠️ **new.** Baseline **5.29 pp90**, projects **2.00 xP**, because xMins is **0.43** from last season's injury-hit 1,697 minutes while `FORM_WEIGHT` is 0 — so nothing can see he has started both games. **A second Kinsky**, from the opposite direction to ADR-172's over-projection |
 | Re-measure the 6 single-GW constants | GW4-6 | exodus p10 · ownership floor · captain-margin + concentration quartiles. Ship the new value if it moves ≥20%. |
 | Market goals → attack/defence strength (**ADR-005 unblocked**) | ~GW10 | derive our own from per-fixture `xg`/`xgc`; **ranked above the weight tuning** — those tune terms we have, this adds one we lack |
 | Scout's boards get current data | ~GW10 | 3 of 5 need 900 minutes and read **last season** until then |
