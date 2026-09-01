@@ -571,6 +571,35 @@ the **voice + assembly** and keep the mascot as a brand element (intro/outro/cor
 - **Photos:** the card renders use silhouette stand-ins (real player photos are CDN-blocked in the render) — capture
   photo-heavy shots (the big player-card headshot, the pitch kits) from the **live app**.
 
+## 📦 The madboots.com batch — one deploy, two fixes  *(2026-09-01)*
+
+Both are honesty fixes to the same file, so they ship together in a single Cloudflare Pages drag-and-drop.
+
+**✅ Done — the tagline is aligned.** `~/madboots-site/index.html` had been running a *different* mantra from
+the app: *"The analytics decide; you stay in control."* Two beats, never the AI clause — the site dropped that
+independently, before ADR-168 did. It now matches `brand.MANTRA` in both places it appears.
+
+⚠️ **The meta description had to be rewritten, not just patched.** Appending the three-beat mantra pushed it to
+**240 characters** with the mantra starting at 168 — past Google's ~155-character cut, so the line would have
+been invisible in every search result. Rewritten to **168 chars with the mantra inside the first 155**, and it
+now leads with *free* and carries both "Fantasy Premier League" and "FPL" for search:
+
+> MADBOOTS is a free Fantasy Premier League (FPL) assistant: the analytics decide, every answer shows its
+> working, you make the call. Captain, transfers, fixtures, squad.
+
+*Backup at `index.html.bak-2026-09-01` — the site is not a git repo, so there is no other undo.*
+
+**⏳ Waiting on you — the intro re-record.** The live clip opens *"analytics guide your decisions, AI clarifies
+the data"*, the clause ADR-168 removed because Cloud has no model. Revised script is §0 above, with the three
+changed shots marked. When the new render is on YouTube it is a **one-token swap** — the id `a7WG0MBDLFg`
+appears exactly twice in `index.html`, in the HTML comment at the lightbox and in the `mbPlay()` iframe `src`.
+Replace both, then deploy once and the tagline goes live with it.
+
+**Deploy checklist:** swap the video id (2×) → open `index.html` locally to check the lightbox plays → drag the
+folder to Cloudflare Pages → hard-refresh madboots.com and confirm the hero reads the new mantra.
+
+---
+
 ## Landing-page "See how it works" → the Maddie intro — ✅ WIRED (2026-08-18)
 
 **Done:** on **madboots.com** (`~/madboots-site/index.html`, not a git repo — deploy via Cloudflare Pages), the hero
