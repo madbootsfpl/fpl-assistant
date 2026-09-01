@@ -600,7 +600,7 @@ Replace both, then deploy once and the tagline goes live with it.
 From the repo, with the new YouTube link:
 
 ```bash
-python scripts/swap_intro_video.py https://youtu.be/NEW_ID          # add --dry-run to preview
+venv/bin/python scripts/swap_intro_video.py https://youtu.be/NEW_ID   # add --dry-run to preview
 ```
 
 It reads the id the page plays today, backs the file up **outside** the deploy folder, replaces both
