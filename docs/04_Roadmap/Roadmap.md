@@ -44,17 +44,29 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 | DGW/BGW detection · **Evaluation & feedback loops** | in-season | Evaluation is the only item that says whether *any* of this helped |
 | Tier 3 — the crowd backtest | with Evaluation | does following vs fading the crowd beat xP-only? |
 
-## 👤 Needs you — I cannot do these
+## 👤 Needs you — I cannot do these  *(audited 2026-09-02)*
+
+**Two of six were already done, and a third was never blocked on what it said.** Audited by checking the code
+and the live site, not by re-reading the rows: `madboots.com` (closed 31 Aug), the **Squad Lab icon** (done
+**2026-08-12**, and the *"needs the art"* it waited 21 days for was never required — 🧪 is an emoji), and the
+**Maddie intro** (shipped and verified live today). Of the three that remain, **two had wrong numbers in
+them** — the video row counted the series roadmap as a script and had not noticed §0 was shot, and the
+uncommitted-files row said 4 when it is 6.
+
+⚠️ **The failure mode here is not stale prose, it is a blocker that was never real.** *"Needs the art"* was
+wrong the day it was written, and nothing re-reads a row that says someone else is the holdup. Re-audit this
+list on sight, not on suspicion.
+
 
 | item | why it matters |
 |---|---|
 | ~~**Deploy madboots.com**~~ | ✅ **DONE — owner deployed 2026-08-31.** The Cloudflare Pages drag-and-drop is done and the live site now carries the current copy; `~/madboots-site/index.html` and the live page are back in step. Next edit to that file re-opens the same manual step (it is outside the repo — see the ADR-103 changeover, parked below). |
 | ~~🚨 **Re-record the Maddie intro**~~ | ✅ **DONE — owner updated it 2026-09-02.** The live clip no longer claims *"AI clarifies the data"*, the clause ADR-168 removed because Cloud has no model. The site edit batched with it (the tagline now matching `brand.MANTRA`, and a meta description rewritten so the mantra survives Google's ~155-character cut) ships in the same deploy. |
-| **Produce the video series** — 11 scripts, all re-cut and none yet shot | All of §§1-9, G and H are current as of 2026-09-01 and were **not** before (they described a nav that had moved three times). Suggested order is in §3. ⚠ **§G Scout must wait until ~GW10** or keep its voiceover off "this season" — four of its five boards need 900 minutes and **0 of 626 players** clear that bar today, so they show last season. Record **both CTA tails** in the same session (acquisition + in-app) |
+| **Produce the video series** — **10** to shoot | ✅ **§0 (the Maddie intro) IS shot** — re-recorded and live 2026-09-02. What remains is **§§1, 2, 4-9, G, H = 10 scripts**, all current as of 2026-09-01 and none of them true before that (they described a nav that had moved three times). §8b (Ask) is retired, not pending. Suggested order in §3 — which is the roadmap table, **not a script**, and was being counted as one. ⚠️ **§G Scout must wait until ~GW10** or keep its voiceover off "this season": four of its five boards need 900 minutes and **0 of 651 players** clear that bar. Record **both CTA tails** (acquisition + in-app) in the same session. |
 | ~~🔄 **Run `python app.py history --backfill`**~~ | ✅ **DONE 2026-09-01** — 626 players, 2071 season rows, **1236 per-GW rows** (was 609), no failures; GW1 **and** GW2 now carry scorelines and the per-GW sums match the aggregate. Reseeded and pushed (`2980ce9`). **The xMins data blocker is cleared** — what defers that work now is sample size alone (owner's call: hold for GW4-6). ⚠️ ClubElo was down (502) during the reseed so last-known Elo was kept — re-run before anything leaning on Elo-based FDR. |
 | ~~**Squad Lab icon**~~ | ✅ **ALREADY DONE — 2026-08-12, commit `0898efc`** *("Squad Lab: lab-motif icon (🧪)")*. The header has read **🧪 Squad Lab** for three weeks; `🥾` appears nowhere in `src/`. ⚠️ **It never needed the art it was listed as blocked on** — 🧪 is an emoji, not a PNG — so this sat on *"Needs you"* for **21 days** waiting for something nobody had to make. Found 2026-09-02 when the owner asked to build it. |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
-| The 4 uncommitted files in your tree | 3 sprint lesson docs + `spikes/015-soccerdata/compare_npxg.py` — kept out of every commit deliberately |
+| The **6** uncommitted files in your tree | **4 modified** — 3 sprint lesson docs + `spikes/015-soccerdata/compare_npxg.py`, kept out of every commit deliberately — **plus 2 untracked `.jpeg`s** in `docs/05_Sprints/` (`04DDE8FC-…` and `CB58EA3C-…`), which have been sitting there since before 2026-08-31 and are not mentioned anywhere. Either commit them with a name that says what they are, or delete them; an untracked binary nobody can identify is the kind of thing that gets swept into a commit by accident — which nearly happened on 2026-09-01. |
 
 ## 🟢 Buildable now — nothing blocking
 
