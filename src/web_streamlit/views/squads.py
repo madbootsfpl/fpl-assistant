@@ -1118,7 +1118,41 @@ def narrator_attached() -> bool:
     return st.session_state["llm_attached"]
 
 
-def render_this_week(squad_name, squad, *, horizon=5):
+def _apply_the_transfer(result, squad, players) -> None:
+    """The one action ADR-174 puts on the golden page: apply the transfer the block just recommended.
+
+    **The page already named the move; only the doing was missing.** ADR-171 put the recommendation here and
+    a manager still had to cross to another tab to act on it, having read exactly what to do.
+
+    It applies `result.plan`'s transfer — **the object the text above was rendered from** — so the button and
+    the sentence cannot disagree. Recomputing the swap here would be a second search that could legitimately
+    return a different move.
+
+    ⚠️ **This is one button, not the Transfer tab moved.** ADR-115 removed an in-page transfer expander as
+    *"a real redundancy"* and that still holds: the tab owns *finding* a move — filters, the manual picker,
+    multi-move plans, the watchlist — and this owns *acting on the one already named*. It is ADR-135's line
+    ("the entity owns actions on things you have; the pickers own finding things you don't") applied to a
+    recommendation instead of a shirt.
+    """
+    tr = (getattr(result, "plan", None) or {}).get("transfer")
+    if not tr or not players:
+        return
+    out_n, in_n = tr["out"]["web_name"], tr["in"]["web_name"]
+    # Name both players on the button. The block above is a wall of text on a phone, and a bare "Apply" at
+    # the end of it is a control whose effect you have to scroll back up to remember.
+    if st.button(f"🔄 Apply: {out_n} → {in_n}", key="ms_week_apply",
+                 help="Applies this exact swap to your squad. Explore alternatives on the Transfer tab."):
+        ok, issues, warning, new = apply_transfer(squad, tr["out"]["id"], tr["in"]["id"], players)
+        if not ok:
+            st.error("Can't apply — that would leave an illegal squad: " + "; ".join(issues))
+        else:
+            set_active_squad(new)
+            done = f"Applied **{out_n} → {in_n}** — new cost £{new['cost']:.1f}m."
+            st.warning(f"{done}  ⚠ {warning}") if warning else st.success(done)
+            st.rerun()
+
+
+def render_this_week(squad_name, squad, *, horizon=5, players=None):
     """① of the merged golden page — the week's answer, eager when it is cheap (ADR-171).
 
     **Eager when cheap, a click when a narrator is attached.** On Cloud that is 123 ms and the user simply
@@ -1126,19 +1160,20 @@ def render_this_week(squad_name, squad, *, horizon=5):
     rather than a per-tab guess that can go stale.
     """
     st.markdown("##### 🤖 This week")
+    _result = None
     if not narrator_attached():
         # **The decision is binding, not a prediction.** Found by the ADR-171 smoke test: `narrator_attached`
         # picks the *layout*, but on its own it does nothing to stop `ask.answer` reaching for a model — so a
         # probe that guessed wrong would render eagerly AND narrate, producing the exact 49-second landing
         # this design exists to prevent. Passing `narrator=None` closes that gap: having judged the answer
         # cheap, we render the cheap answer, and the two can no longer disagree.
-        render_ai_tips(squad_name, squad, horizon=horizon, narrator=None)
+        _apply_the_transfer(render_ai_tips(squad_name, squad, horizon=horizon, narrator=None), squad, players)
         return
     if st.button("Work out my week →", key="ms_week",
                  help="A language model is attached to this instance, so the written answer takes ~30s."):
         st.session_state["ms_week_on"] = True
     if st.session_state.get("ms_week_on"):
-        render_ai_tips(squad_name, squad, horizon=horizon)
+        _apply_the_transfer(render_ai_tips(squad_name, squad, horizon=horizon), squad, players)
     else:
         st.caption("A language model is attached to this instance, so narrating the answer takes about "
                    "**half a minute** — which is why it is a click here and automatic on the deployed app, "
@@ -1165,6 +1200,7 @@ def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR):
     result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon,
                         **_kw)
     st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users
+    return result                      # ADR-174: the caller acts on the plan this just rendered
 
 
 # ---- Chips (a grounded chip-strategy advisor; ADR-082) ----------------------------------------------

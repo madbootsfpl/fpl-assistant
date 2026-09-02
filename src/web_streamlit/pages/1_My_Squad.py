@@ -94,7 +94,8 @@ else:
         team_names = {t["short_name"]: t["name"] for t in teams}   # "MUN" → "Man Utd" (US-278)
         views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
                               teams=teams, horizon=horizon,
-                              this_week=lambda: views.render_this_week(squad_name, squad, horizon=horizon))
+                              this_week=lambda: views.render_this_week(squad_name, squad, horizon=horizon,
+                                                                       players=players))
 
         st.divider()
         st.markdown("##### 👑 Captaincy")

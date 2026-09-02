@@ -3671,3 +3671,53 @@ def test_the_fdr_ticker_can_be_sorted_alphabetically():
     alpha = list(at.dataframe[0].value["Team"])
     assert alpha == sorted(alpha)
     assert set(alpha) == set(easiest), "sorting must reorder the clubs, never drop or add one"
+
+
+# ---- ADR-174: acting on the recommendation, without moving the Transfer tab -------------------------
+
+
+def test_the_week_offers_to_apply_the_transfer_it_just_named():
+    """ADR-171 put the recommendation on the golden page and left a manager crossing to another tab to do
+    the thing they had just been told to do. One button closes that."""
+    at = _squads_view("My Squad")
+    week = next((c for c in at.code if "This week" in c.value), None)
+    if week is None or "Transfer: none" in week.value:
+        return                                        # no positive-gain move on this snapshot
+    btn = next((b for b in at.button if b.key == "ms_week_apply"), None)
+    assert btn is not None, "the week names a transfer and must offer to apply it"
+
+
+def test_the_button_names_the_move_that_is_on_screen():
+    """The button applies `plan.transfer` — the object the text was rendered from — so the two cannot
+    disagree. Recomputing the swap at the surface would be a second search that could legitimately return a
+    different move, leaving the button and the sentence above it naming different players.
+    """
+    at = _squads_view("My Squad")
+    week = next((c for c in at.code if "This week" in c.value), None)
+    btn = next((b for b in at.button if b.key == "ms_week_apply"), None)
+    if week is None or btn is None:
+        return
+    line = next(x for x in week.value.splitlines() if "Transfer:" in x)
+    out_name, in_name = btn.label.replace("🔄 Apply: ", "").split(" → ")
+    assert out_name in line and in_name in line, f"button {btn.label!r} does not match {line!r}"
+
+
+def test_applying_it_changes_the_squad():
+    at = _squads_view("My Squad")
+    btn = next((b for b in at.button if b.key == "ms_week_apply"), None)
+    if btn is None:
+        return
+    btn.click().run()
+    assert not at.exception
+    squad = at.session_state["squad"]
+    assert squad["player_ids"] and squad.get("cost")      # applied, re-costed, no crash
+
+
+def test_the_transfer_tab_keeps_everything_it_had():
+    """ADR-115 removed an in-page transfer expander as "a real redundancy", and that still holds. This adds
+    one action on the named move; the tab keeps *finding* moves — the manual picker, the filter, the plans.
+    """
+    at = _squads_view("Transfer")
+    labels = [s.label for s in at.selectbox]
+    assert "Transfer out" in labels and "Bring in" in labels, "the manual picker must stay on the tab"
+    assert any(b.label.startswith("Transfer →") for b in at.button)

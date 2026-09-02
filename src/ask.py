@@ -252,6 +252,8 @@ class AskResult:
     detail: str | None = None        # a pre-rendered structured table (e.g. a plan; ADR-036)
     trust: dict | None = None        # verify_grounding result when there's narration (ADR-037)
     squad: dict | None = None        # a built squad (SquadStore shape) an edge can adopt (ADR-062)
+    plan: dict | None = None         # the gameweek plan an edge can ACT on (ADR-070/174) — same object the
+                                     # `detail` above was rendered from, so a button applies what is displayed
 
 
 def _squad_name(question: str, known_squads) -> str | None:
@@ -769,6 +771,10 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
 
     detail = render_gameweek_plan(plan, squad_name, horizon=horizon, explanation=explanation)
     return {
+        # ADR-174 — the plan travels with the rendered text, so an edge that offers "apply this transfer"
+        # applies **the move on screen**. Recomputing it at the surface would be a second search that could
+        # legitimately return something else, and then the button and the sentence above it would disagree.
+        "plan": plan,
         "detail": f"{scope}\n\n{detail}" if scope else detail,
         "headline": f"This week (squad '{squad_name}'): captain "
                     f"{cap['web_name'] if cap else '—'}",
@@ -1641,6 +1647,7 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
         question, intent, headline=decision.get("headline"), facts=decision["facts"],
         explanation=explanation, detail=decision.get("detail"), trust=trust,
         squad=decision.get("squad"),   # a build answer carries the 15 an edge can adopt (ADR-062)
+        plan=decision.get("plan"),     # a gameweek answer carries the plan an edge can act on (ADR-174)
     )
 
 
