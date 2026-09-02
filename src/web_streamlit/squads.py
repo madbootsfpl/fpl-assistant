@@ -84,6 +84,14 @@ def squad_picker(label: str = "Squad", key: str | None = None) -> tuple[str, dic
     # ADR-175 — **one squad, no picker.** With a single option the control is a line of chrome that answers a
     # question nobody has, above a banner already naming the team. With more than one it stays, but the
     # "Squad" label goes: the banner underneath says what this is, so the caption said it twice.
+    # ADR-175 rev — **once you have your own team, there is no picker.** The demos exist so an empty app has
+    # something to show; they stop being a choice the moment you have a squad, and a dropdown reading
+    # "TS (yours)" above a banner reading "YOUR TEAM · TS" is the duplication this ADR set out to remove,
+    # surviving only because `available_squads()` still counted two demos as options worth offering.
+    act = active_squad()
+    if act is not None:
+        name = act.get("name") or next((k for k, v in squads.items() if v is act), labels[0])
+        return name, act
     if len(labels) == 1:
         return labels[0], squads[labels[0]]
     choice = st.selectbox(label, labels, index=index, key=key, label_visibility="collapsed",

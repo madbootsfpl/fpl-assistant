@@ -499,7 +499,7 @@ def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     assert scoped["Players"].sum() == 15                    # a full squad's 15 players across its teams
 
 
-def _open_panel(at, panel="🔄 Transfer"):
+def _open_panel(at, panel="Transfer"):
     """Open one of the answer panels under the pitch (ADR-175).
 
     Transfer, Captain, This week and Chips are no longer top-level tabs — they are one selector below the
@@ -522,8 +522,9 @@ def _squads_view(view):
     # ADR-171 folded AI Tips + Captain into the My Squad screen and ADR-175 added Transfer, so none of those
     # are top-level switch values any more. A test asking for one is asking for an **answer panel**, which
     # lives under the pitch on the default tab — so drive the tool switch, then the answer selector.
-    _PANEL = {"AI Tips": "🤖 This week", "This week": "🤖 This week", "Captain": "👑 Captain",
-              "Transfer": "🔄 Transfer", "Chips": "🎴 Chips"}
+    # ADR-175 rev — the labels carry no emoji: four of them had to fit one phone row and wrapped instead.
+    _PANEL = {"AI Tips": "This week", "This week": "This week", "Captain": "Captain",
+              "Transfer": "Transfer", "Chips": "Chips"}
     want = "Lab" if view == "Build" else ("My Squad" if view in _PANEL else view)
     next(c for c in at.segmented_control if c.label == "Tool").set_value(want).run()
     assert not at.exception, f"Squads[{view}] raised: {at.exception}"
@@ -724,16 +725,29 @@ def test_the_pitch_panel_still_sets_and_persists_a_captain():
 
 
 def test_consumer_views_use_a_session_active_squad():
-    # build sets session_state["squad"]; the Squads manage views must offer it in the picker (ADR-054/055)
+    """ADR-054/055: the views operate on the squad you loaded, not a demo.
+
+    This used to assert the **picker** offered "My squad (yours)". ADR-175 removed the picker in exactly that
+    case — with a team of your own the demos stop being a choice, and a dropdown above a banner naming the
+    same squad was the duplication that ADR set out to cut. So the assertion moves to the requirement it was
+    standing in for: **the loaded squad is the one on screen.**
+    """
     squad = {"name": "My squad", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}
-    for view in ("DNA", "Transfer", "My Squad"):     # ADR-171: Captain is a section of My Squad now
+    for view in ("DNA", "Transfer", "My Squad"):
         at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
         at.session_state["squad"] = squad
         at.run()
-        at.segmented_control[0].set_value(view).run()
+        if view == "Transfer":
+            _open_panel(at)                       # an answer under the pitch now, not a tab (ADR-175)
+        else:
+            next(c for c in at.segmented_control if c.label == "Tool").set_value(view).run()
         assert not at.exception, f"Squads[{view}] raised: {at.exception}"
-        picker = next(s for s in at.selectbox if s.label == "Squad")   # by label (a GW selector was added)
-        assert any("My squad (yours)" in o for o in picker.options)
+        assert not any(s.label == "Squad" for s in at.selectbox), "no picker once the team is yours"
+        if view == "My Squad":
+            # only this view names the squad on screen (the banner). The others share the same
+            # `squad_picker()` call, so what is asserted for them is that they render it without asking.
+            blob = " ".join((m.value or "") for m in at.markdown)
+            assert "My squad" in blob, "the banner names the squad you loaded, not a demo"
 
 
 def test_help_page_renders_the_guide_without_data():

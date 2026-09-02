@@ -72,13 +72,13 @@ view = st.segmented_control(
 if view == "Lab":
     _opts, _default, _key, _fmt = [1, 2, 3, 4, 5, 10], 5, "gw_lab", str
 elif view == "My Squad":
-    _opts, _default, _key, _fmt = [1, 3], 1, "gw_pitch", (lambda n: "GW1" if n == 1 else "GW1–3")
+    _opts = None                 # ADR-175 rev — the pitch renders its own, beside the deadline/cost line
 else:
     _opts, _default, _key, _fmt = [1, 2, 3, 4, 5], 1, "gw_analysis", str
-horizon = st.segmented_control(
+horizon = 1 if _opts is None else (st.segmented_control(
     "Gameweeks ahead", _opts, default=_default, key=_key, format_func=_fmt, label_visibility="collapsed",
     help="How many upcoming gameweeks the projections look over. (Captaincy is always the next gameweek.)"
-) or _default
+) or _default)
 
 store = Storage()
 try:
@@ -94,8 +94,7 @@ finally:
     store.close()
 
 _line = deadline_line(upcoming, datetime.now(timezone.utc))    # the next FPL deadline (ADR-086/US-267)
-if _line:
-    st.caption(_line[2])                                       # the text; the emoji conveys urgency
+_deadline = _line[2] if _line else None
 
 if not players:
     st.info("No players — it's refreshing; check back shortly.")
@@ -115,22 +114,22 @@ else:
         # Scout already use. Transfer joins it: ADR-174 declined to bring that tab in because ~10 widgets
         # would *stack* onto a 41-block page, and behind a selector they exist only when chosen.
         team_names = {t["short_name"]: t["name"] for t in teams}   # "MUN" → "Man Utd" (US-278)
-        views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
-                              teams=teams, horizon=horizon)
+        horizon = views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
+                                        teams=teams, horizon=horizon, deadline=_deadline)
 
         st.divider()
         answer = st.segmented_control(
-            "Answer", ["🤖 This week", "👑 Captain", "🔄 Transfer", "🎴 Chips"], default="🤖 This week",
+            "Answer", ["This week", "Captain", "Transfer", "Chips"], default="This week",
             key="ms_answer", label_visibility="collapsed",
             help="**This week** your whole gameweek in one answer · **Captain** the 15 ranked · **Transfer** "
                  "the best swaps, a coordinated plan, or a manual one · **Chips** when to play each."
-        ) or "🤖 This week"
+        ) or "This week"
 
-        if answer == "🤖 This week":
+        if answer == "This week":
             views.render_this_week(squad_name, squad, horizon=horizon, players=players)
-        elif answer == "👑 Captain":
+        elif answer == "Captain":
             views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names)
-        elif answer == "🔄 Transfer":
+        elif answer == "Transfer":
             views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
                                   horizon=horizon)
         else:
@@ -146,6 +145,8 @@ else:
                 st.caption("A chip is a season decision, so this looks across **every gameweek left before "
                            "it expires** rather than the horizon above — which is why it is a click.")
     elif view == "DNA":
+        if _deadline:
+            st.caption(_deadline)
         team_names = {t["short_name"]: t["name"] for t in teams}
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
                             team_names=team_names, horizon=horizon)

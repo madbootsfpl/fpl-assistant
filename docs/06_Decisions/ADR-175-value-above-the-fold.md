@@ -160,3 +160,28 @@ which is worth distinguishing from the four times this week it was the other way
 
 **Help described the structure, not just the names**, so *"top to bottom"* and *"at the bottom, behind a
 button"* stopped being true even though every tab name in them was still valid. Re-described.
+
+
+---
+
+### 🔁 Revision (same day) — the build had drifted from the preview
+
+The owner rebooted and reported it *"not nearly as good"* as the preview he approved, which was correct: I
+built from the ADR's prose and the preview was more specific than the prose. **Five gaps, all mine:**
+
+| the preview showed | the build did | fixed |
+|---|---|---|
+| deadline **and** cost on one line | two full-width captions with the banner wedged between | one line |
+| the horizon **on** the pitch | its own full-width row | shares the deadline/cost row — Streamlit cannot put a live widget over an HTML block, but a column beside the facts it qualifies is the same idea at the same cost |
+| no squad picker | *"TS (yours)"* dropdown above a banner reading *"YOUR TEAM · TS"* | the picker is gone whenever the active squad is yours. My first rule was *"no picker when there is one squad"* — but `available_squads()` counts **two demos**, so it never fired. The demos stop being a choice the moment you have a team |
+| no ⚙ Players & lineup at all | the page's biggest block, fully open under every pitch | collapsed, and **auto-opens when a player is picked** — tapping a shirt writes `pa_pick`, which is exactly that signal. ADR-133's fallback picker survives, one click deeper |
+| `This week · Captain · Transfer · Chips` | `🤖 This week · 👑 Captain · 🔄 Transfer · 🎴 Chips` — **wrapped on a phone** | emoji dropped; four labels have to fit one row |
+
+**The lesson, and it is about the preview, not the page:** *a preview the owner approves is the
+specification — more so than the ADR that describes it.* The prose said "cut the caption, fold the picker,
+one selector"; the preview showed exactly **which** line each element sat on. I implemented the sentences and
+lost the layout, then needed the owner to notice. Next time, diff the build against the preview before
+shipping, not after.
+
+*(The MADBOOTS mark stayed. The preview omitted it, but it renders on all ten pages, it was not in the
+owner's list, and cutting brand furniture from one page only is an inconsistency rather than a saving.)*
