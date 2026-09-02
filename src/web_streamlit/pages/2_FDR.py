@@ -61,12 +61,23 @@ else:
             by_id = {p["id"]: p for p in players}
             my_counts = Counter(by_id[i]["team"] for i in squad["player_ids"] if i in by_id)
 
+    # The ticker already comes back easiest-run-first, which is the question it exists to answer. The second
+    # question is "where is *my* club?" — and scanning 20 rows ordered by difficulty to find one team is the
+    # only thing this page was bad at. Two options, not three: "hardest" is this list read from the bottom,
+    # and ADR-166's lesson is that a control earns its place by answering a distinct question.
+    _sort = st.segmented_control(
+        "Sort by", ["Easiest run", "Team A–Z"], default="Easiest run", key="fdr_sort",
+        help="Easiest run first (the default), or alphabetically to find a specific club.") or "Easiest run"
+
     ticker = fixture_ticker(upcoming, next_n=weeks, source="fpl")
     gws = ticker["gameweeks"]
     gw_cols = [f"GW{g}" for g in gws]
 
     # When scoped to the squad, keep only the owned teams and add a "Players" count column.
     ticker_rows = [r for r in ticker["rows"] if r["team"] in my_counts] if my_counts else ticker["rows"]
+    if _sort == "Team A–Z":
+        # `team` is the short name (ARS, MCI) — what the badge column shows, so the order matches what is read.
+        ticker_rows = sorted(ticker_rows, key=lambda r: r["team"])
     display_rows, diff_rows = [], []
     for r in ticker_rows:
         disp = {"badge": badges.get(r["team"], ""), "Team": r["team"]}

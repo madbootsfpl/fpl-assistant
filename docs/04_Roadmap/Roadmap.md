@@ -70,6 +70,18 @@ list on sight, not on suspicion.
 
 ## 🟢 Buildable now — nothing blocking
 
+*(**Sprint 61's design notes audited 2026-09-02** — the two screenshots the owner attached four days ago were
+read and checked against the app. **📅 Fixtures: fully shipped**, and better than the reference in one respect
+— the ticker is a badge × gameweek grid with a **difficulty digit** beside the colour, which the mockup is
+colour-only. Its one real gap, a **sort control**, is now built (*Easiest run* · *Team A–Z*, easiest still the
+default). **🧩 My Squad: the card already matched** — name · price · opponent · xP · armband · bench roles —
+and its one real gap, the **vice-captain**, is now built end to end, including the `is_vice_captain` the
+manager-ID import had been discarding. **Deliberately not built:** whole-card colour-by-points, which trades a
+readable number for a hue on the surface ADR-135 taught us not to over-density. **Still open:** bank + free
+transfers on the My Squad strip — we hold both numbers, but that strip was cut 5 → 3 once already (US-404) for
+slivering on mobile, so it wants a gate, not enthusiasm.)*
+
+
 *(**US-435 — the merged golden page — shipped 2026-08-31**, ADR-171. That was the last open item of the
 17-item UX review; the review is now fully closed. New follow-up from building it: **`llm.narrate` never sets
 `"think": False`** while `llm.extract` does, which is most of the 27 s a narrated answer costs locally — its

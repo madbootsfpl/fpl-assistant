@@ -3648,3 +3648,26 @@ def test_the_view_passes_the_vice_through_to_the_pitch(monkeypatch):
     assert not at.exception
     # the demo squad may carry no vice; what matters is that the argument is threaded, not its value
     assert "vice_captain_id" in seen, "render_my_squad must hand the pitch a vice, even when it is None"
+
+
+def test_the_fdr_ticker_can_be_sorted_alphabetically():
+    """From the owner's Sprint 61 note — the reference ticker had a sort and ours had none (2026-09-02).
+
+    Easiest-run-first is what the page is *for* and stays the default, so nobody's view changes unless they
+    ask. The second question is "where is my club?", and scanning 20 difficulty-ordered rows to find one team
+    was the only thing this page was bad at.
+    """
+    at = _run(_PAGES / "2_FDR.py")
+    if not at.dataframe:
+        return                                          # no fixtures in this environment
+    sort = next(c for c in at.segmented_control if c.label == "Sort by")
+    assert sort.value == "Easiest run", "the default must be today's behaviour"
+
+    easiest = list(at.dataframe[0].value["Team"])
+    assert easiest != sorted(easiest), "the default is difficulty order, not alphabetical"
+
+    sort.set_value("Team A–Z").run()
+    assert not at.exception
+    alpha = list(at.dataframe[0].value["Team"])
+    assert alpha == sorted(alpha)
+    assert set(alpha) == set(easiest), "sorting must reorder the clubs, never drop or add one"
