@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-176
 **Date:** 2026-09-02
-**Status:** 🚧 **Proposed — preview before code.**
+**Status:** ✅ **Accepted — approved from a preview ("build it — love it"), built** (Sprint 237, 2026-09-02). **1702 → 1706 tests, ruff clean.**
 **Superseded By / Replaces:** Extends **ADR-163** (shared presentation primitives) from the stat strip and
 banner to the *navigation*. Applies **ADR-175**'s golden-page shape to four more pages. Respects **ADR-114**
 (the brand purple lives where we control it, never the widget theme) and **ADR-150** (Signals is excluded,
@@ -31,7 +31,7 @@ None of them needs a redesign. They need the primitive My Squad now has, and the
 
 ---
 
-### ✅ Proposed Decision
+### ✅ Decision
 
 **1. One shared helper, not five copies.** `brand.nav_css(key)` joins `render_stat_strip` and the banner as a
 presentation primitive (ADR-163). The purple, full-width, equal-segment selector is defined **once** and
@@ -99,3 +99,33 @@ about).
 
 **Not by line count.** By two things: the four pages look like the same app as My Squad, and **Signals still
 reads top to bottom** — because the moment it does not, this ADR has done harm rather than good.
+
+
+---
+
+### 📊 Built
+
+`brand.nav_css(key)` is the one definition; **five** pages call it — My Squad (which had it inline), Players,
+Trending, Team DNA and FDR — each with its own container key so the scoping cannot leak between them. The
+optional `primary_button` argument styles ADR-174's *Apply this transfer* the same way.
+
+**Chrome cut:** Players' *"🎯 Looking for **who to buy**? The **Radar** view below…"* caption is gone — it
+signposted an option in the selector directly beneath it. FDR's weeks slider and squad checkbox share one
+row instead of stacking two labelled blocks.
+
+**📡 Signals is untouched**, and now has a test saying so.
+
+---
+
+### 🧪 Four guards, each mutation-checked
+
+| guard | what it stops |
+|---|---|
+| no page hand-rolls the selector CSS | the copy-paste that ADR-140 warns about |
+| the CSS exists **only** in `brand.py` | a second definition appearing anywhere |
+| every adopter uses its **own** key | two pages sharing a key and leaking styling |
+| **Signals is not behind a selector**, and its four sections still read in order | the tidy-up that would make Signals *"consistent with the others"* and destroy ADR-150's evidence ladder |
+
+That last one is the reason this file exists. The first three protect a look; the fourth protects a claim —
+that what the app shows you first is what it can most stand behind. **A page can be made consistent and worse
+in the same edit**, and the only defence is a test that knows why the odd one out is odd.

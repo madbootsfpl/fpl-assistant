@@ -25,8 +25,9 @@ st.title("👟 Players")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Explore the full player pool and stats — filter, sort and see who's over- or under-performing, "
            "with form, clean sheets, xG, xA, xGI, set pieces and history.")
-st.caption("🎯 Looking for **who to buy**? The **Radar** view below shortlists the best players from the "
-           "easiest-run teams (it moved here from the fixtures tab — ADR-134).")
+# ADR-176 — the "🎯 Looking for who to buy? The Radar view below…" caption is gone. It signposted an
+# option in the selector **directly beneath it**: chrome pointing at something already visible,
+# named, and one tap away.
 
 store = Storage()
 try:
@@ -54,7 +55,11 @@ else:
     # last season rather than nothing. Computed once and shared — only the three gated boards read it.
     _last_rows = last_season_rows(rows, history)
     _last_name = last_season_name(history)
-    view = st.segmented_control(
+    # ADR-176 — the shared nav primitive: the same purple, full-width selector the
+    # golden page uses. Defined once in `brand`, never pasted (ADR-140).
+    st.markdown(brand.nav_css("players_nav"), unsafe_allow_html=True)
+    _nav = st.container(key="players_nav")
+    view = _nav.segmented_control(
         # ADR-167 — the merge the ceiling note demanded. Five stat boards of the same shape (Set pieces ·
         # Over/under · DefCon · Clean sheets · xG·xA) became one **Scout** view with a board selector, led by
         # what those boards agree on. Ten views → six, which is room the page did not have.

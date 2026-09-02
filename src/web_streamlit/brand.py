@@ -104,6 +104,46 @@ def mark_html(badge_px: int = 15, font_px: int = 12, purple: str = PURPLE) -> st
         f'<span aria-hidden="true" style="color:{ORANGE}">BOOTS</span></span></span>')
 
 
+def nav_css(key: str, *, primary_button: str | None = None) -> str:
+    """CSS for the app's main selector — purple, full width, equal segments (ADR-176).
+
+    Returns a `<style>` block scoped to `st.container(key=…)`, which Streamlit renders with a `.st-key-{key}`
+    class. Pass the same key you gave the container.
+
+    **Why CSS and not a theme.** ADR-114 tried `primaryColor` in `config.toml` and reverted it: **any**
+    `[theme]` block *pins* the theme — `base` defaults to light — which removes the viewer's Light/Dark/System
+    toggle. Theme-following beats a brand accent, so the purple lives where we control it directly. This is
+    that rule applied to a widget instead of markup.
+
+    **Why one function and not five copies.** This began inline in `1_My_Squad.py` (ADR-175). Pasting it into
+    each page is *"one rule written twice always drifts"* (ADR-140) — the failure this project has since paid
+    for in a stale caption, a stale ADR index and a stale runbook. A test asserts no page hand-rolls it.
+
+    `primary_button` optionally styles a keyed button container the same way, for the one action a panel is
+    really about (ADR-174's *Apply this transfer*).
+
+    ⚠️ It degrades to Streamlit's own widget if these selectors ever stop matching — the control keeps
+    working and merely looks default, which is what these pages had before. A broken selector is not a
+    possible outcome of this failing.
+    """
+    css = f"""
+        .st-key-{key} div[data-testid="stButtonGroup"] {{ width: 100%; }}
+        .st-key-{key} div[data-testid="stButtonGroup"] > div {{ width: 100%; display: flex; gap: 4px; }}
+        .st-key-{key} div[data-testid="stButtonGroup"] button {{ flex: 1 1 0; min-width: 0; }}
+        .st-key-{key} button[aria-checked="true"],
+        .st-key-{key} button[kind="segmented_controlActive"] {{
+            background: {PURPLE} !important; border-color: {PURPLE} !important; color: #fff !important; }}
+    """
+    if primary_button:
+        css += f"""
+        .st-key-{primary_button} button {{
+            width: 100%; background: {PURPLE}; border-color: {PURPLE}; color: #fff; font-weight: 600; }}
+        .st-key-{primary_button} button:hover {{
+            background: {PURPLE_LT}; border-color: {PURPLE_LT}; color: #fff; }}
+    """
+    return f"<style>{css}</style>"
+
+
 def wordmark_html(px: int = 38) -> str:
     """The two-tone **MADBOOTS** wordmark as inline HTML — **MAD** purple · **BOOTS** orange, the colour split doing
     the word-break (no literal space). `aria-label` carries the whole-word accessible text; the coloured spans are

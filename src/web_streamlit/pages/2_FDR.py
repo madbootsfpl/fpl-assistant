@@ -45,12 +45,14 @@ finally:
 if not upcoming:
     st.info("No fixtures yet — it's refreshing; check back shortly.")
 else:
-    weeks = st.slider("Weeks to show", 1, 8, 6,
-                      help="How many upcoming gameweeks to show in the difficulty ticker.")
+    # ADR-176 — the controls share one row instead of stacking three labelled blocks before the grid.
+    _c1, _c2 = st.columns([2, 1])
+    weeks = _c1.slider("Weeks to show", 1, 8, 6, label_visibility="collapsed",
+                       help="How many upcoming gameweeks to show in the difficulty ticker.")
     # US-302 (ADR-049) / US-441 (ADR-164): one squad lens per page. It lived on Team DNA and this half read
     # it across the page boundary; separate pages means each owns its own — which is the rule, not a
     # duplication of it.
-    _squad_only = st.checkbox("My squad only", key="fdr_myteam",
+    _squad_only = _c2.checkbox("My squad only", key="fdr_myteam",
                               help="Show only the clubs you own players in.")
     my_counts: dict = {}
     if _squad_only:
@@ -65,7 +67,10 @@ else:
     # question is "where is *my* club?" — and scanning 20 rows ordered by difficulty to find one team is the
     # only thing this page was bad at. Two options, not three: "hardest" is this list read from the bottom,
     # and ADR-166's lesson is that a control earns its place by answering a distinct question.
-    _sort = st.segmented_control(
+    # ADR-176 — the shared nav primitive, defined once in `brand` (ADR-140: never pasted).
+    st.markdown(brand.nav_css("fdr_nav"), unsafe_allow_html=True)
+    _nav = st.container(key="fdr_nav")
+    _sort = _nav.segmented_control(
         "Sort by", ["Easiest run", "Team A–Z"], default="Easiest run", key="fdr_sort",
         help="Easiest run first (the default), or alphabetically to find a specific club.") or "Easiest run"
 

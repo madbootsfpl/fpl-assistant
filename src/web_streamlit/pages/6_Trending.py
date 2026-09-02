@@ -93,7 +93,11 @@ else:
     # four are built, three are hidden with CSS), while a segmented control builds only the chosen one. The
     # consistent widget is also the cheaper one.
     _labels = {b[1]: b for b in _BOARDS}
-    _chosen = st.segmented_control("Board", list(_labels), default=_BOARDS[0][1], key="trend_board",
+    # ADR-176 — the shared nav primitive: the same purple, full-width selector the
+    # golden page uses. Defined once in `brand`, never pasted (ADR-140).
+    st.markdown(brand.nav_css("trending_nav"), unsafe_allow_html=True)
+    _nav = st.container(key="trending_nav")
+    _chosen = _nav.segmented_control("Board", list(_labels), default=_BOARDS[0][1], key="trend_board",
                                    help="Which leaderboard to show.") or _BOARDS[0][1]
     by, label, header = _labels[_chosen]
     rows = apply_filter(trending(players, by=by, limit=len(players)), sel)   # all, filtered, paged

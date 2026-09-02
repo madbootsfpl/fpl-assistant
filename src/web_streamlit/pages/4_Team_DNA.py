@@ -67,7 +67,10 @@ else:
         _squad_only = st.checkbox("My squad only", key="dna_myteam", disabled=not _my_clubs,
                                   help=("Show only the clubs you own players in — on the scan AND the ticker."
                                         if _my_clubs else "Load a squad on My Squad to use this."))
-        _sort = st.segmented_control("Sort the league by", ["Grade", "Fixtures"], default="Grade",
+        # ADR-176 — the shared nav primitive, defined once in `brand` (ADR-140: never pasted).
+        st.markdown(brand.nav_css("dna_nav"), unsafe_allow_html=True)
+        _nav = st.container(key="dna_nav")
+        _sort = _nav.segmented_control("Sort the league by", ["Grade", "Fixtures"], default="Grade",
                                      key="dna_league_sort",
                                      help="Best teams first, or easiest run first.") or "Grade"
         # Three fixtures, not one: one opponent says who's next, three say whether the run the FIX percentile
