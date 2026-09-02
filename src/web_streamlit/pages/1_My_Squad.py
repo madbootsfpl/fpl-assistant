@@ -118,7 +118,26 @@ else:
                                         teams=teams, horizon=horizon, deadline=_deadline)
 
         st.divider()
-        answer = st.segmented_control(
+        # ADR-175 rev — **the answer nav is styled, not default.** ADR-114 records why the brand purple cannot
+        # be the widget theme: any `[theme]` block in config.toml *pins* the theme and takes away the user's
+        # Light/Dark/System toggle. So it is scoped CSS, keyed to this one container — the same trick the
+        # cards and banners already use, applied to a widget instead of markup.
+        st.markdown(f"""<style>
+        .st-key-ms_answer_nav div[data-testid="stButtonGroup"] {{ width: 100%; }}
+        .st-key-ms_answer_nav div[data-testid="stButtonGroup"] > div {{ width: 100%; display: flex; gap: 4px; }}
+        .st-key-ms_answer_nav div[data-testid="stButtonGroup"] button {{ flex: 1 1 0; min-width: 0; }}
+        .st-key-ms_answer_nav button[aria-checked="true"],
+        .st-key-ms_answer_nav button[kind="segmented_controlActive"] {{
+            background: {brand.PURPLE} !important; border-color: {brand.PURPLE} !important;
+            color: #fff !important; }}
+        .st-key-ms_week_apply button {{
+            width: 100%; background: {brand.PURPLE}; border-color: {brand.PURPLE}; color: #fff;
+            font-weight: 600; }}
+        .st-key-ms_week_apply button:hover {{ background: {brand.PURPLE_LT}; border-color: {brand.PURPLE_LT};
+            color: #fff; }}
+        </style>""", unsafe_allow_html=True)
+        _nav = st.container(key="ms_answer_nav")
+        answer = _nav.segmented_control(
             "Answer", ["This week", "Captain", "Transfer", "Chips"], default="This week",
             key="ms_answer", label_visibility="collapsed",
             help="**This week** your whole gameweek in one answer · **Captain** the 15 ranked · **Transfer** "

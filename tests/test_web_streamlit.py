@@ -1263,10 +1263,22 @@ def test_captain_view_notes_it_is_next_gameweek():
     assert any("next gameweek" in c.value.lower() for c in at.caption)
 
 
-def test_my_squad_manage_expander_holds_rename_and_set_bench():
-    # ADR-115/US-406: Rename + Set-whole-bench fold into one ⚙ Manage expander (flat — expanders can't nest).
+def test_my_squad_manage_holds_rename_and_set_bench():
+    """ADR-115/US-406 → ADR-175: Rename + Set-whole-bench are still together and still one click away.
+
+    They were their own expander; they are now a flat subsection **inside** the players panel, because
+    ADR-175 moved everything that sat between the pitch and the answers into that panel — and expanders
+    cannot nest, which is the same constraint ADR-115 hit and named. The requirement is unchanged: both
+    controls exist and neither is on the resting page.
+    """
     at = _squads_view("My Squad")
-    assert any("Manage" in (e.label or "") for e in at.get("expander"))
+    labels = [e.label or "" for e in (at.main.get("expander") or [])]
+    assert any("Players & lineup" in x for x in labels)
+    # Reorder and Manage were their own expanders between the pitch and the answers; they are subsections
+    # inside the panel now. (Backup/import may legitimately be here too — with no squad of your own there is
+    # something to import, which is the one case ADR-175 keeps it on the page for.)
+    assert not any("Manage" in x or "Reorder" in x for x in labels), \
+        "lineup chrome belongs inside the panel, not between the pitch and the answers"
     assert any(b.label == "Rename" for b in at.button) and any(b.label == "Set bench" for b in at.button)
 
 
@@ -3729,7 +3741,7 @@ def test_the_week_offers_to_apply_the_transfer_it_just_named():
     week = next((c for c in at.code if "This week" in c.value), None)
     if week is None or "Transfer: none" in week.value:
         return                                        # no positive-gain move on this snapshot
-    btn = next((b for b in at.button if b.key == "ms_week_apply"), None)
+    btn = next((b for b in at.button if b.key == "ms_week_apply_btn"), None)
     assert btn is not None, "the week names a transfer and must offer to apply it"
 
 
@@ -3740,7 +3752,7 @@ def test_the_button_names_the_move_that_is_on_screen():
     """
     at = _squads_view("My Squad")
     week = next((c for c in at.code if "This week" in c.value), None)
-    btn = next((b for b in at.button if b.key == "ms_week_apply"), None)
+    btn = next((b for b in at.button if b.key == "ms_week_apply_btn"), None)
     if week is None or btn is None:
         return
     line = next(x for x in week.value.splitlines() if "Transfer:" in x)
@@ -3750,7 +3762,7 @@ def test_the_button_names_the_move_that_is_on_screen():
 
 def test_applying_it_changes_the_squad():
     at = _squads_view("My Squad")
-    btn = next((b for b in at.button if b.key == "ms_week_apply"), None)
+    btn = next((b for b in at.button if b.key == "ms_week_apply_btn"), None)
     if btn is None:
         return
     btn.click().run()

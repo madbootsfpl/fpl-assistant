@@ -686,67 +686,77 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                                       last_rows=last_season_rows(players, history),
                                       season_name=last_season_name(history))
 
+            # ADR-175 rev — bench order, the reorder control and ⚙ Manage live INSIDE this panel now.
+            # They are lineup management, they were sitting between the pitch and the answers, and the
+            # owner's preview had *nothing* in that gap.
+            if bench_ordered:
+                line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
+                                  for i, p in enumerate(outfield_subs))
+                if gk_sub:
+                    line += f" · **GK** {gk_sub['web_name']}"
+                st.caption(f"🔁 **Bench order** (auto-subs): {line} — FPL brings on the first that keeps a legal XI; "
+                           "the bench GK only covers your keeper.")
+                # ADR-115's constraint, hit again: expanders cannot nest, so inside the players panel these are
+            # flat subsections rather than a second layer of disclosure.
+            st.markdown("**🔁 Reorder the bench** (auto-sub priority)")
+            if True:
+                    for i, p in enumerate(outfield_subs):
+                        c_name, c_up, c_down = st.columns([6, 1, 1])
+                        c_name.write(f"**{_SUB_LABEL[i]}** {p['web_name']} · "
+                                     f"{round(xp_by_id.get(p['id'], 0), 1)} xP")
+                        if c_up.button("⬆", key=f"bench_up_{p['id']}", disabled=(i == 0),
+                                       help="Move this sub up the priority."):
+                            set_active_squad(move_bench_sub(squad, p["id"], "up", by_id))
+                            st.rerun()
+                        if c_down.button("⬇", key=f"bench_down_{p['id']}", disabled=(i == len(outfield_subs) - 1),
+                                         help="Move this sub down the priority."):
+                            set_active_squad(move_bench_sub(squad, p["id"], "down", by_id))
+                            st.rerun()
+                    if st.button("↻ Use recommended (xP) order",
+                                 help="Order the outfield subs by expected points (highest first)."):
+                        rec_ids = ([p["id"] for role, p in bench_order(bench_ordered, xp_by_id) if role != "GK"]
+                                   + ([gk_sub["id"]] if gk_sub else []))
+                        set_active_squad(set_bench(squad, rec_ids))
+                        st.rerun()
+
+            st.divider()
+            # ADR-175 rev — the "make a transfer on the **Transfer tab above**" pointer is gone. Transfer is an
+            # answer **below** this pitch now, so the sentence pointed the wrong way — and a signpost to
+            # something three inches down the same screen is chrome, not help.
+
+            # US-406 (ADR-115): the secondary edits fold into one collapsed **⚙ Manage** — flat subsections, because
+            # Streamlit expanders can't nest.
+            st.markdown("**⚙ Manage** — rename · set the whole bench")
+            if True:
+                st.markdown("**✏️ Rename**")
+                new_name = st.text_input("Squad name", value=squad.get("name", "My squad"), max_chars=40,
+                                         key="mng_rename",
+                                         help="Rename this squad (shown in the download and as the active label).")
+                if st.button("Rename", key="mng_rename_btn"):
+                    set_active_squad(rename(squad, new_name))
+                    st.rerun()
+
+                st.markdown("**🪑 Set the whole bench (pick 4)**")
+                st.caption("Bulk edit — re-pick all four bench players. For a single swap, use "
+                           "**🔁 Substitute** above.")
+                bench_labels = {f"{p['position']} {p['web_name']}": p["id"] for p in
+                                sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
+                bench_default = [lab for lab, i in bench_labels.items() if i in bench_ids]
+                bench_pick = st.multiselect("Bench", list(bench_labels), default=bench_default, max_selections=4,
+                                            key="mng_setbench",
+                                            help="Pick your 4 bench players; the other 11 are your XI.")
+                if st.button("Set bench", key="mng_setbench_btn"):
+                    new = set_bench(squad, [bench_labels[lab] for lab in bench_pick])
+                    new_xi = [by_id[i] for i in new["player_ids"] if i not in set(new["bench_ids"]) and i in by_id]
+                    xi_problem = legal_xi_issues(new_xi) if len(new_xi) == 11 else ["the XI isn't 11 players"]
+                    set_active_squad(new)
+                    if xi_problem:
+                        st.warning("Bench set — but the XI isn't legal: " + "; ".join(xi_problem))
+                    else:
+                        st.success("Bench set.")
+                    st.rerun()
+
     _player_panel()
-
-    if bench_ordered:
-        line = " · ".join(f"**{_SUB_LABEL[i]}** {p['web_name']} ({round(xp_by_id.get(p['id'], 0), 1)} xP)"
-                          for i, p in enumerate(outfield_subs))
-        if gk_sub:
-            line += f" · **GK** {gk_sub['web_name']}"
-        st.caption(f"🔁 **Bench order** (auto-subs): {line} — FPL brings on the first that keeps a legal XI; "
-                   "the bench GK only covers your keeper.")
-        with st.expander("Reorder the bench (auto-sub priority)"):
-            for i, p in enumerate(outfield_subs):
-                c_name, c_up, c_down = st.columns([6, 1, 1])
-                c_name.write(f"**{_SUB_LABEL[i]}** {p['web_name']} · "
-                             f"{round(xp_by_id.get(p['id'], 0), 1)} xP")
-                if c_up.button("⬆", key=f"bench_up_{p['id']}", disabled=(i == 0),
-                               help="Move this sub up the priority."):
-                    set_active_squad(move_bench_sub(squad, p["id"], "up", by_id))
-                    st.rerun()
-                if c_down.button("⬇", key=f"bench_down_{p['id']}", disabled=(i == len(outfield_subs) - 1),
-                                 help="Move this sub down the priority."):
-                    set_active_squad(move_bench_sub(squad, p["id"], "down", by_id))
-                    st.rerun()
-            if st.button("↻ Use recommended (xP) order",
-                         help="Order the outfield subs by expected points (highest first)."):
-                rec_ids = ([p["id"] for role, p in bench_order(bench_ordered, xp_by_id) if role != "GK"]
-                           + ([gk_sub["id"]] if gk_sub else []))
-                set_active_squad(set_bench(squad, rec_ids))
-                st.rerun()
-
-    st.divider()
-    # US-405 (ADR-115): transfers live on the **Transfer tab** — the in-page expander that duplicated it is gone.
-    st.caption("🔄 **Make a transfer** — bring in a **new** player — on the **Transfer** tab above (it sells one "
-               "of your 15 for a same-position replacement). *(🔁 **Substitute**, above, just swaps your XI ↔ bench.)*")
-
-    # US-406 (ADR-115): the secondary edits fold into one collapsed **⚙ Manage** — flat subsections, because
-    # Streamlit expanders can't nest.
-    with st.expander("⚙ Manage — rename · set the whole bench"):
-        st.markdown("**✏️ Rename**")
-        new_name = st.text_input("Squad name", value=squad.get("name", "My squad"), max_chars=40, key="mng_rename",
-                                 help="Rename this squad (shown in the download and as the active label).")
-        if st.button("Rename", key="mng_rename_btn"):
-            set_active_squad(rename(squad, new_name))
-            st.rerun()
-
-        st.markdown("**🪑 Set the whole bench (pick 4)**")
-        st.caption("Bulk edit — re-pick all four bench players. For a single swap, use **🔁 Substitute** above.")
-        bench_labels = {f"{p['position']} {p['web_name']}": p["id"] for p in
-                        sorted(owned, key=lambda x: _ORDER.get(x["position"], 9))}
-        bench_default = [lab for lab, i in bench_labels.items() if i in bench_ids]
-        bench_pick = st.multiselect("Bench", list(bench_labels), default=bench_default, max_selections=4,
-                                    key="mng_setbench", help="Pick your 4 bench players; the other 11 are your XI.")
-        if st.button("Set bench", key="mng_setbench_btn"):
-            new = set_bench(squad, [bench_labels[lab] for lab in bench_pick])
-            new_xi = [by_id[i] for i in new["player_ids"] if i not in set(new["bench_ids"]) and i in by_id]
-            xi_problem = legal_xi_issues(new_xi) if len(new_xi) == 11 else ["the XI isn't 11 players"]
-            set_active_squad(new)
-            if xi_problem:
-                st.warning("Bench set — but the XI isn't legal: " + "; ".join(xi_problem))
-            else:
-                st.success("Bench set.")
-            st.rerun()
 
     return horizon      # ADR-175: the answer panels below share the pitch's window
 
@@ -1170,7 +1180,8 @@ def _apply_the_transfer(result, squad, players) -> None:
     out_n, in_n = tr["out"]["web_name"], tr["in"]["web_name"]
     # Name both players on the button. The block above is a wall of text on a phone, and a bare "Apply" at
     # the end of it is a control whose effect you have to scroll back up to remember.
-    if st.button(f"🔄 Apply: {out_n} → {in_n}", key="ms_week_apply",
+    _apply = st.container(key="ms_week_apply")   # ADR-175 rev — a CSS hook so the primary action reads primary
+    if _apply.button(f"🔄 Apply: {out_n} → {in_n}", key="ms_week_apply_btn",
                  help="Applies this exact swap to your squad. Explore alternatives on the Transfer tab."):
         ok, issues, warning, new = apply_transfer(squad, tr["out"]["id"], tr["in"]["id"], players)
         if not ok:

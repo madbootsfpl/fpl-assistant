@@ -185,3 +185,36 @@ shipping, not after.
 
 *(The MADBOOTS mark stayed. The preview omitted it, but it renders on all ten pages, it was not in the
 owner's list, and cutting brand furniture from one page only is an inconsistency rather than a saving.)*
+
+
+---
+
+### 🎨 Revision 2 — the gap between the pitch and the answers, and the style
+
+The owner sent the preview and the build side by side. Two more differences, and the second is the one that
+made it read as *"not nearly as good"*.
+
+**1. Four blocks still sat between the pitch and the answers.** The bench-order caption, a *Reorder the
+bench* expander, a *"make a transfer on the **Transfer tab above**"* pointer, and the ⚙ Manage expander — so
+the selector was a screen further down than the preview put it. All of it is lineup management, so it moved
+**inside** the players panel. Two of them were expanders and **expanders cannot nest** — the constraint
+ADR-115 hit and named — so they are flat subsections, which is the pattern ADR-115 already established.
+
+⚠️ **The transfer pointer was deleted, not moved.** It said Transfer was *"on the Transfer tab above"*. After
+ADR-175 it is an answer **below**, so the sentence pointed the wrong way — and a signpost to something three
+inches down the same screen is chrome, not help.
+
+**2. The selector was default-styled: red, compact, left-aligned.** The preview showed it purple, full-width
+and equal-width across four segments, with the Apply button as a full-width primary.
+
+**ADR-114 explains why this could not be a theme change.** A `[theme]` block in `config.toml` *pins* the
+theme — `base` defaults to light — which removes the user's Light/Dark/System toggle. That was tried and
+reverted, and the note says the brand purple stays *"where we control it directly… not the widget theme"*.
+
+So it is **scoped CSS on a keyed container** (`st.container(key=…)` → `.st-key-…`), which is the same trick
+the cards and banners already use, applied to a widget instead of markup. It touches this one selector and
+this one button, and the rest of the app keeps following the viewer's theme.
+
+**The lesson from revision 1 repeated, and I should have applied it:** the preview is the specification. It
+showed the purple pill and the full-width action; I built the structure and left the styling to Streamlit's
+defaults. *"Matches the preview"* has to include how it looks, not only what is on it.
