@@ -78,6 +78,34 @@ def _conf(explanation) -> str:
     return f"  · Confidence {explanation.confidence}/100 · {explanation.band}" if explanation else ""
 
 
+def _timing_lines(plan, horizon) -> list:
+    """The two lines ADR-173 added: what the swap is worth further out, and whether to bank instead.
+
+    The owner rejected a transfer that was right for next week and wrong for his season — *"there is value in
+    letting your transfers build up"*. Both halves of that are answerable and neither was being said: the
+    plan showed one option, priced over one gameweek, with no alternative and no longer view. It never lied
+    (the line reads "next GW"), but a single number with nothing beside it reads as a verdict.
+    """
+    out, transfer = [], plan.get("transfer")
+    if not transfer:
+        return out
+
+    wide = plan.get("horizon_gain")
+    if wide is not None:
+        near = transfer.get("gain")
+        # Name the disagreement when there is one. A move worth less over the longer run is exactly the case
+        # the owner hit, and the one a weekly number hides.
+        shape = ("and still ahead over" if near is None or wide >= near
+                 else "but worth less over")
+        out.append(f"            Longer view: {wide:+.1f} XI xP {shape} the next "
+                   f"{plan.get('horizon_gw', 5)} GWs")
+
+    timing = plan.get("timing") or {}
+    if timing.get("action") == "bank":
+        out.append(f"            Or bank it: {timing.get('reason', '')}".rstrip())
+    return out
+
+
 def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -> str:
     """The one-gameweek plan as a readable block (ADR-070). `horizon` labels the transfer's window
     (ADR-077); the captain + lineup are inherently about the immediate week. `explanation`
@@ -103,6 +131,7 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
                  f"{_conf(tr_ex)}")
     if tr_ex and tr_ex.reasons:
         lines.append("            Edge: " + " · ".join(tr_ex.reasons[:2]))
+    lines += _timing_lines(plan, horizon)
 
     lines.append(f"  Flags:    {_flags_line(plan['flags'])}")
     if explanation:                       # the honest attribution closing an explained plan (US-278)

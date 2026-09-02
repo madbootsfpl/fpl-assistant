@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-173
 **Date:** 2026-09-02
-**Status:** 🚧 **Proposed — owner-reported from the week's answer, measured, awaiting the go-ahead to build.**
+**Status:** ✅ **Accepted — owner-reported, measured, gated, built** (Sprint 234, 2026-09-02).
+**1667 → 1679 tests, ruff clean.**
 **Superseded By / Replaces:** **Partly supersedes ADR-125's blanket defer** of the in-season minutes share —
 which was re-affirmed as recently as 2026-09-01 and was correct on the evidence then. Completes the pair
 ADR-172 opened (it fixed the *rate*; this is the *minutes*). Surfaces **ADR-132**'s existing banking
@@ -56,7 +57,7 @@ into **the Transfer tab only**. The week's answer — the thing most people read
 
 ---
 
-### ✅ Proposed Decision
+### ✅ Decision
 
 **1. Use the minutes a player has actually played — but only when he has played them all.**
 
@@ -145,3 +146,52 @@ he is *playing* (*mitigation:* stated plainly; that remains ADR-125/the GW4-6 ca
   historical share, and a player with a row for only some gameweeks must not qualify. A test that only
   asserted "Calafiori is higher" would pass on any change that raised him.
 - Not a navigation change, so the ADR template's nav checklist is N/A. The index row is not.
+
+
+---
+
+### 📊 Built — measured after (2026-09-02)
+
+All three parts shipped. The week's answer now reads:
+
+```
+  Transfer: Senesi (TOT) → De Cuyper (BHA)  (+2.5 XI xP next GW)  · Confidence 86/100 · High
+            Edge: +2.5 to your starting XI over 1 GW · Higher projected points (5.5 vs 3.0)
+            Longer view: +10.4 XI xP and still ahead over the next 5 GWs
+```
+
+…and where banking wins, an *"Or bank it: it saves 3.0 (the hit avoided on a second move worth 3.0) and
+costs 0.3 by waiting a week"* line appears beneath it. It is shown **only** when banking is the better
+answer — an alternative offered every week is noise, not advice.
+
+**The longer view names the disagreement.** *"still ahead over"* when the move holds up, *"but worth less
+over"* when it does not — which is the case the owner hit and the one a weekly number hides.
+
+**Deliberately the same players re-priced, not a second search.** Re-running `suggest_transfers` over five
+gameweeks could name a *different* move, and then the two numbers would be answering different questions
+while sitting on adjacent lines.
+
+---
+
+### 🔬 What building it found — three tests and a fake modelling less than reality
+
+**1. `gw_history_by_code` stopped being optional, and a test was relying on it being so.**
+`test_build_starts_the_bench_in_recommended_order` recomputed xP *without* it and asserted the app's bench
+order matched. Harmless before — the per-GW data only fed the dormant form term, so omitting it changed
+nothing — but it now drives the minutes weight too, so the test was checking one ranking against a different
+one and failed for the correct behaviour.
+
+**2. Two `_FakeStore`s had no `get_gw_history_by_code`.** The real `Storage` has always had it; the fakes
+modelled less than the thing they stand in for, and passed only while nobody read that method.
+
+**3. A stubbed transfer had no `gain`.** `test_gameweek_plan_assembles_...` faked `suggest_transfers` as
+`[{"out": {"id": 4}}]`, which the real function never returns — every move carries `gain` and `in`. Fixed the
+fake rather than making the code tolerate a shape that cannot occur.
+
+> **All three are the same species as ADR-172's `_worth_player`: a test fixture modelling less than reality,
+> which passes right up until the code looks at the part that was missing.** They are not caught by review —
+> they are caught by a change that reads one more field, which is a poor early-warning system.
+
+**Every guard was mutation-checked**, in both directions where a direction exists: dropping the *"played
+every completed gameweek"* check fails; accepting rows without a scoreline fails; showing the banking line
+always fails; never naming the disagreement fails.

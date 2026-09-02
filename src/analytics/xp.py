@@ -340,7 +340,10 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
     backfill + raising `FORM_WEIGHT`; nothing else here changes.
     """
     baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
-    weight = minutes_weight_from_history(history_by_code) if minutes_weighted else None
+    # ADR-173 — the weight prefers minutes he has actually played this season, where that is
+    # unambiguous; `gw_history_by_code` is the same per-GW data the form term below reads.
+    weight = (minutes_weight_from_history(history_by_code, gw_history_by_code)
+              if minutes_weighted else None)
     # form_by_code: code → (form_pp90, confidence); only players with a computable rate. Empty
     # preseason (no per-GW history) → no blend. Keyed by the same `code` the baseline uses.
     form_by_code = {

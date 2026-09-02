@@ -14,6 +14,7 @@ from src.analytics.crowd import crowd_exodus
 from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
 from src.analytics.transfer import replace_dead, suggest_transfers
+from src.analytics.transfer_timing import bank_or_use
 
 # FPL status codes → a human word for a flag (mirrors the CLI's availability messages, ADR-023).
 # "d" (doubtful) is handled separately — it's a warning, not an unavailability.
@@ -22,7 +23,8 @@ _STATUS_WORD = {"i": "injured", "s": "suspended", "u": "unavailable", "n": "unav
 
 def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                   baseline_by_code=None, minutes_weight=None, history_by_code=None,
-                  bench_ids=(), bank: float = 0.0, horizon: int = 5, today=None, events_by_id=None) -> dict:
+                  bench_ids=(), bank: float = 0.0, horizon: int = 5, today=None, events_by_id=None,
+                  free: int = 1, horizon_xp=None) -> dict:
     """Assemble this gameweek's plan for a squad from the existing primitives.
 
     `owned` are the squad's player rows; `market` is the whole player pool (for the transfer);
@@ -36,6 +38,10 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     - **lineup** — ``{start, bench, bring_in, drop, has_declared_bench}``: the best legal XI (rows)
       and its bench, plus who to bring in / drop vs the declared XI (empty when already optimal).
     - **transfer** — the single best positive-gain upgrade (a `suggest_transfers` dict), or None.
+    - **timing** — `bank_or_use`'s verdict (ADR-132/173): spend the free transfer now, or bank it because a
+      second move worth having is coming. Always present, so a caller cannot forget the alternative exists.
+    - **horizon_gain** — the same swap's gain over `horizon_xp`'s wider window, or None when not supplied.
+      A one-week number reads as a season verdict when it stands alone (ADR-173).
     - **replacements** — one move per **dead slot**: a squad place that cannot score for the whole horizon
       (ADR-136). Deliberately a separate key rather than folded into `transfer`, because its `gain` answers a
       different question — what the slot is throwing away, not what the swap adds to your XI — and a
@@ -80,9 +86,26 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     }
 
     # Transfer — the single best positive-gain, self-funding upgrade (ADR-030/046).
-    moves = suggest_transfers(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank, limit=1,
+    # ADR-173 — **two moves, not one.** The second is never shown; it exists so `bank_or_use` can answer the
+    # question the owner asked ("is there value in letting transfers build up?"), which turns entirely on
+    # whether a *second* move worth having exists. Asking for one move made that unanswerable here, which is
+    # why the arithmetic has lived on the Transfer tab since ADR-132 and never reached the week's answer.
+    moves = suggest_transfers(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank, limit=2,
                               reported_out=reported_out)
     transfer = moves[0] if moves else None
+
+    # Bank or use it (ADR-132, surfaced here by ADR-173). Banking buys a second free transfer next week,
+    # which is worth only the hit it saves — and costs the gain skipped by waiting a week.
+    timing = bank_or_use(moves, transfer["gain"] if transfer else None, free=free)
+
+    # The same swap over a longer window (ADR-173). A one-week gain reads as a verdict when it stands alone;
+    # the owner rejected a transfer that was right for next week and wrong for his season. `horizon_xp` is an
+    # xP map over a wider horizon — the *same* players, priced over more gameweeks — so this compares like
+    # with like rather than re-running the search and possibly naming a different move.
+    horizon_gain = None
+    if transfer and horizon_xp:
+        horizon_gain = round(horizon_xp.get(transfer["in"]["id"], 0)
+                             - horizon_xp.get(transfer["out"]["id"], 0), 1)
 
     # Replacements — the slots that cannot score at all (ADR-136). A dead player on the bench is invisible to
     # the XI-gain ranking above (it moves the XI by zero), so "hold" was the advice on a squad with a hole in
@@ -121,4 +144,5 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                       "reason": reason, "chance": p["chance"]})
 
     return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
-            "transfer": transfer, "replacements": replacements, "flags": flags}
+            "transfer": transfer, "replacements": replacements, "flags": flags,
+            "timing": timing, "horizon_gain": horizon_gain}

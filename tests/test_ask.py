@@ -718,6 +718,11 @@ class _FakeStore:
     def get_history_by_code(self):
         return {}
 
+    def get_gw_history_by_code(self):
+        # ADR-173: the xMins weight reads per-GW minutes. Empty here, which is the no-evidence case —
+        # `in_season_share` returns None and the weight falls back to history, exactly as before.
+        return {}
+
     def get_upcoming_fixtures(self):
         return []
 

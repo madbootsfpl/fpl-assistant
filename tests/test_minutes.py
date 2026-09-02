@@ -9,7 +9,9 @@ graceful fallbacks (no history / no news → nailed-on).
 from src.analytics.minutes import (
     availability_weight,
     chance_factor,
+    completed_gameweeks,
     expected_minutes,
+    in_season_share,
     minutes_share,
     minutes_weight_from_history,
     yet_to_play,
@@ -211,3 +213,64 @@ def test_seasons_that_stopped_are_still_evidence_of_a_benching():
     would have quietly rescued him along with Thomas.
     """
     assert minutes_share(_hist(38 * 90, 0, 0, 0), k_seasons=3) == 0.0
+
+
+# ---- ADR-173: the minutes he has actually played ---------------------------
+
+
+def test_a_gameweek_counts_only_once_it_has_a_scoreline():
+    # ADR-125's trap: FPL writes the row when the fixture is SCHEDULED, so minutes 0 can mean "not kicked
+    # off". Only a scoreline proves it finished — the same test `yet_to_play` uses.
+    assert completed_gameweeks({1: [_gw(1, 90), _gw(2, 0, played=False)]}) == {1}
+
+
+def test_the_share_is_the_minutes_he_played_of_those_available():
+    gwh = {7: [_gw(1, 90), _gw(2, 45)]}
+    p = {"code": 7, "status": "a", "chance": None}
+    assert in_season_share(p, gwh) == 0.75          # 135 of 180
+
+
+def test_sitting_one_gameweek_out_falls_back_to_history_rather_than_cratering_him():
+    """The guard, and the reason the whole design is defensible.
+
+    Two gameweeks cannot tell a player rested once from one being phased out (ADR-125's objection, which
+    stands). So this refuses the ambiguous case entirely instead of guessing: a 0-minute gameweek returns
+    None, the caller keeps the historical share, and one rest can never crater a player.
+    """
+    gwh = {7: [_gw(1, 90), _gw(2, 0)]}
+    p = {"code": 7, "status": "a", "chance": None}
+    assert in_season_share(p, gwh) is None
+
+
+def test_missing_from_a_completed_gameweek_does_not_qualify_either():
+    # No row at all for a gameweek his league played — same ignorance, same answer.
+    gwh = {7: [_gw(1, 90)], 8: [_gw(1, 90), _gw(2, 90)]}
+    assert in_season_share({"code": 7, "status": "a", "chance": None}, gwh) is None
+    assert in_season_share({"code": 8, "status": "a", "chance": None}, gwh) == 1.0
+
+
+def test_no_completed_gameweeks_means_no_opinion():
+    # Preseason and mid-first-gameweek: nothing has finished, so nothing is claimed.
+    assert in_season_share({"code": 7}, {7: [_gw(1, 0, played=False)]}) is None
+    assert in_season_share({"code": 7}, {}) is None
+
+
+def test_the_weight_prefers_played_minutes_over_last_seasons():
+    """End to end: a player with a thin history but a full record this season is no longer held down.
+
+    Calafiori carried 0.43 from an injury-hit season while playing 94% of the minutes available; Kinsky
+    carried 0.18 while being first choice. The historical share is not wrong about last season — it is
+    answering a question about this one.
+    """
+    hist = {7: [{"minutes": 900, "total_points": 40}]}        # a half-season → a low historical share
+    gwh = {7: [_gw(1, 90), _gw(2, 90)]}                       # …but he has started every game since
+    p = {"code": 7, "status": "a", "chance": None}
+    assert minutes_weight_from_history(hist)(p) < 0.5         # today, without the per-GW data
+    assert minutes_weight_from_history(hist, gwh)(p) == 1.0   # with it
+
+
+def test_availability_still_gates_the_in_season_share():
+    # A flagged player is unavailable no matter how many minutes he has played — chance_factor still applies.
+    gwh = {7: [_gw(1, 90), _gw(2, 90)]}
+    injured = {"code": 7, "status": "i", "chance": 0}
+    assert minutes_weight_from_history({}, gwh)(injured) == 0.0

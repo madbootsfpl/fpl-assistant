@@ -7,6 +7,7 @@ the lineup bring-in/drop vs the declared bench, the availability flags, and grac
 """
 
 from src.analytics import gameweek as gw
+from src.analytics.transfer_timing import bank_or_use
 from src.ui.gameweek import render_gameweek_plan
 
 
@@ -22,7 +23,11 @@ def test_gameweek_plan_assembles_captain_lineup_transfer_and_flags(monkeypatch):
 
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [{"web_name": "A", "xp": 5.0}])
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1, 2, 3})       # optimal XI = 1,2,3
-    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [{"out": {"id": 4}}])
+    # ADR-173: a real `suggest_transfers` move always carries `gain` (and `in`), and the plan now reads both
+    # for the bank-or-use verdict. The fake was under-specified — it modelled less than the real thing ever
+    # returns, so it passed only while nobody looked at those keys.
+    monkeypatch.setattr(gw, "suggest_transfers",
+                        lambda *a, **k: [{"out": {"id": 4}, "in": {"id": 9}, "gain": 2.0}])
 
     plan = gw.gameweek_plan(owned, owned, [], xp, bench_ids=[3])           # declared bench = P3
 
@@ -31,7 +36,7 @@ def test_gameweek_plan_assembles_captain_lineup_transfer_and_flags(monkeypatch):
     assert {p["id"] for p in plan["lineup"]["bring_in"]} == {3}
     assert {p["id"] for p in plan["lineup"]["drop"]} == {4}
     assert plan["lineup"]["has_declared_bench"] is True
-    assert plan["transfer"] == {"out": {"id": 4}}
+    assert plan["transfer"] == {"out": {"id": 4}, "in": {"id": 9}, "gain": 2.0}
     # only the unavailable/doubtful players are flagged, with the right reason (A, B are fine)
     assert {f["web_name"]: f["reason"] for f in plan["flags"]} == {"C": "doubtful", "D": "injured"}
 
@@ -240,3 +245,66 @@ def test_outside_a_transfer_window_he_is_treated_completely_normally(monkeypatch
 
     assert seen["scores"][2] == 9.0, "his xP stands — he is not going anywhere until January"
     assert 2 in seen["pool"], "and he is a perfectly good captain"
+
+
+# ---- ADR-173: the plan offers the alternative and the longer view ----------
+
+def _tr(gain=2.0, out_id=1, in_id=2):
+    return {"position": "MID", "out": {"id": out_id, "web_name": "Out", "team": "ARS", "price": 5.0, "xp": 3.0},
+            "in": {"id": in_id, "web_name": "In", "team": "CHE", "price": 5.0, "xp": 3.0 + gain},
+            "gain": gain, "out_on_bench": False}
+
+
+def _plan(transfer=None, timing=None, horizon_gain=None):
+    return {"captain": None, "captain_ranked": [], "flags": [], "replacements": [],
+            "lineup": {"start": [], "drop": [], "has_declared_bench": False},
+            "transfer": transfer, "timing": timing, "horizon_gain": horizon_gain, "horizon_gw": 5}
+
+
+def test_the_plan_says_when_banking_beats_spending():
+    """The owner's point: *"there is value in letting your transfers build up."*
+
+    The arithmetic for this has existed since ADR-132 and was wired into the Transfer tab only — so the
+    surface most people read presented one option as the only one. It never lied; it just never mentioned
+    the alternative.
+    """
+    timing = bank_or_use([{"gain": 0.3}, {"gain": 3.0}], 0.3)
+    assert timing["action"] == "bank"
+    out = render_gameweek_plan(_plan(_tr(0.3), timing), "TST", horizon=1)
+    assert "Or bank it:" in out and "saves 3.0" in out
+
+
+def test_a_worthwhile_move_is_not_second_guessed():
+    # When spending is right, no "or bank it" line — an alternative offered every week is noise, not advice.
+    out = render_gameweek_plan(_plan(_tr(4.0), bank_or_use([{"gain": 4.0}], 4.0)), "TST", horizon=1)
+    assert "Or bank it" not in out
+
+
+def test_the_longer_view_names_the_disagreement():
+    """A one-week gain reads as a season verdict when it stands alone — the mistake the owner caught.
+
+    He rejected a transfer that was right for next week and wrong for his season, and the line said only
+    "+1.5 XI xP next GW". The window was never hidden; the *other* window was simply absent.
+    """
+    worse = render_gameweek_plan(_plan(_tr(2.0), None, horizon_gain=0.4), "TST", horizon=1)
+    assert "worth less over the next 5 GWs" in worse
+
+    better = render_gameweek_plan(_plan(_tr(2.0), None, horizon_gain=9.0), "TST", horizon=1)
+    assert "still ahead over the next 5 GWs" in better
+
+
+def test_no_transfer_means_no_timing_lines():
+    out = render_gameweek_plan(_plan(None, bank_or_use([], None), horizon_gain=3.0), "TST", horizon=1)
+    assert "Longer view" not in out and "Or bank it" not in out
+
+
+def test_the_plan_always_carries_a_timing_verdict(monkeypatch):
+    """`timing` is always present, so a caller cannot silently drop the alternative."""
+    import src.analytics.gameweek as gw
+    monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: set())
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
+    plan = gw.gameweek_plan([], [], [], {}, bench_ids=[])
+    assert plan["timing"]["action"] == "bank"          # nothing worth doing → hold it
+    assert plan["horizon_gain"] is None

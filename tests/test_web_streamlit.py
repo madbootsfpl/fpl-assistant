@@ -1625,8 +1625,13 @@ def test_build_starts_the_bench_in_recommended_order():
 
     store = Storage()
     rows = store.get_players()
+    # ⚠️ `gw_history_by_code` is required, not optional (ADR-173). Recomputing xP without it gives a
+    # DIFFERENT number from the one the app ordered the bench with, so this asserted one ranking against
+    # another and would fail for the right behaviour. Harmless before — the per-GW data only fed the dormant
+    # form term, so omitting it changed nothing — but it now also drives the minutes weight.
     xp = {r["id"]: r["xp"]
-          for r in decision_xp(rows, store.get_upcoming_fixtures(), store.get_history_by_code())}
+          for r in decision_xp(rows, store.get_upcoming_fixtures(), store.get_history_by_code(),
+                               gw_history_by_code=store.get_gw_history_by_code())}
     store.close()
     by_id = {p["id"]: p for p in rows}
     bench = [by_id[i] for i in squad["bench_ids"] if i in by_id]

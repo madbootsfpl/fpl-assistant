@@ -19,6 +19,7 @@ full probabilistic model (congestion, rotation profiles, in-season minutes) is P
 _UNAVAILABLE = frozenset({"i", "s", "u"})   # injured / suspended / unavailable → won't feature
 _MINUTES_SEASONS = 3                         # recent seasons to gauge a typical minutes share
 _FULL_SEASON_MINUTES = 38 * 90               # a full Premier League season of minutes
+_FULL_GAME_MINUTES = 90                      # one match, for the in-season share (ADR-173)
 
 
 def _field(row, key):
@@ -89,14 +90,62 @@ def availability_weight(player, history) -> float:
     return chance_factor(player) * (1.0 if share is None else share)
 
 
-def minutes_weight_from_history(history_by_code):
+def completed_gameweeks(gw_history_by_code) -> set:
+    """The rounds that have actually **finished**, league-wide — a scoreline is the only proof.
+
+    Never row presence and never `minutes == 0`: FPL writes a player's per-gameweek row when the fixture is
+    *scheduled*, so a 0 there can mean "has not kicked off yet" (ADR-125/129). Reading that as "did not play"
+    would libel every player at every club whose gameweek is in flight — the trap ADR-125 recorded and
+    `yet_to_play` (ADR-138) already solved. This is the same test, hoisted so more than one caller can use it.
+    """
+    return {_field(r, "round")
+            for rows in (gw_history_by_code or {}).values() for r in rows
+            if _field(r, "round") is not None
+            and _field(r, "team_h_score") is not None and _field(r, "team_a_score") is not None}
+
+
+def in_season_share(player, gw_history_by_code, completed=None):
+    """The share of available minutes he has **actually played** — or None when we cannot say (ADR-173).
+
+    Returns a share only for a player who appeared in **every completed gameweek**, with minutes in each.
+    **That guard is the decision, not a caveat.** ADR-125 deferred this on sample size and the objection is
+    real: two gameweeks cannot tell a player rested once from one being phased out. So this refuses the
+    ambiguous case entirely rather than guessing at it — a player who sat one out returns None and keeps his
+    historical share, and cannot be cratered by a single rest.
+
+    What is left is the case with no ambiguity at all: he has started every week, and last season's minutes
+    are simply the wrong number for him. Calafiori was carrying **0.43** from an injury-hit season while
+    playing **0.94** of the minutes available; Kinsky **0.18** while first choice.
+
+    ⚠️ A player whose club had a **blank** gameweek has no row for it and so does not qualify — he falls back
+    to history. Conservative and correct today (no blanks yet); revisit when the first blank lands, because
+    then "every completed gameweek" and "every gameweek his club played" stop being the same question.
+    """
+    completed = completed_gameweeks(gw_history_by_code) if completed is None else completed
+    if not completed:
+        return None
+    rows = {_field(r, "round"): r for r in ((gw_history_by_code or {}).get(_field(player, "code")) or [])}
+    played = [rows[g] for g in completed if g in rows]
+    if len(played) < len(completed) or any((_field(r, "minutes") or 0) <= 0 for r in played):
+        return None                                   # missed one, or was not on the sheet for one
+    return min(1.0, sum(_field(r, "minutes") or 0 for r in played) / (len(played) * _FULL_GAME_MINUTES))
+
+
+def minutes_weight_from_history(history_by_code, gw_history_by_code=None):
     """A `player → [0, 1]` closure for `player_xp(minutes_weight=…)`, from stored history.
 
     Looks each player's past seasons up by `code` (element_code) in `history_by_code`
     (as `Storage.get_history_by_code()` returns) and applies `availability_weight`. The
     decision layer builds this once and passes it default-on; `--no-xmins` passes None.
     """
+    completed = completed_gameweeks(gw_history_by_code) if gw_history_by_code else set()
+
     def weight(player) -> float:
+        # ADR-173 — what he has played this season beats what he played last, but only where there is no
+        # doubt. `in_season_share` returns None for every ambiguous case, and None means "unchanged".
+        share = in_season_share(player, gw_history_by_code, completed) if completed else None
+        if share is not None:
+            return chance_factor(player) * share
         return availability_weight(player, history_by_code.get(_field(player, "code"), []))
     return weight
 

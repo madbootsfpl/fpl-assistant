@@ -410,7 +410,7 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
     # xMins v0 (ADR-038): `ask` is a decision, so weight xP by expected minutes (default-on).
     picks = captain_picks(
         players, upcoming, baseline_by_code=baselines, limit=max(3, rank + 1),
-        minutes_weight=minutes_weight_from_history(history_by_code),
+        minutes_weight=minutes_weight_from_history(history_by_code, store.get_gw_history_by_code()),
         history_by_code=history_by_code,
     )
     if not picks:
@@ -725,14 +725,23 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     # ADR-153 — the headlines read at refresh (ADR-151). Empty on a snapshot built without a model, in which
     # case the plan reads exactly as it did before.
     events_by_id = store.headline_events_by_id()
+    # ADR-173 — the same squad priced over a wider window, so the plan can say what a swap is worth beyond
+    # next week. Deliberately the *same players* re-priced rather than a second search: re-running the search
+    # could name a different move, and then the two numbers would be answering different questions.
+    _WIDE = 5
+    wide = _squad_xp(store, squad_name, active_squad, horizon=_WIDE) if horizon < _WIDE else None
+    horizon_xp = wide[3] if wide else None
+
     plan = gameweek_plan(
         owned, players, store.get_upcoming_fixtures(), xp_by_id,
         baseline_by_code=baselines,
-        minutes_weight=minutes_weight_from_history(history_by_code),
+        minutes_weight=minutes_weight_from_history(history_by_code, store.get_gw_history_by_code()),
         history_by_code=history_by_code,
         bench_ids=squad.get("bench_ids") or [],
         events_by_id=events_by_id,
+        horizon_xp=horizon_xp,
     )
+    plan["horizon_gw"] = _WIDE
     cap, tr = plan["captain"], plan["transfer"]
     # Explainability (ADR-089): per-recommendation Why/Confidence (captain + transfer reused) + an overall read.
     explanation = explain_gameweek(plan, {p["id"]: p for p in players}, xp_by_id, horizon=horizon)

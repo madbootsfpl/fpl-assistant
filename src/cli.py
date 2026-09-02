@@ -533,7 +533,9 @@ def cmd_captain(args) -> None:
         history_by_code = store.get_history_by_code()
         baseline_by_code = {code: baseline_rate(rows) for code, rows in history_by_code.items()}
         # xMins v0 (ADR-038): weight xP by expected minutes unless --no-xmins.
-        minutes_weight = None if args.no_xmins else minutes_weight_from_history(history_by_code)
+        minutes_weight = (None if args.no_xmins
+                          else minutes_weight_from_history(history_by_code,
+                                                           store.get_gw_history_by_code()))
         picks = captain_picks(
             players, upcoming, baseline_by_code=baseline_by_code,
             source=args.type, limit=args.limit, minutes_weight=minutes_weight,
