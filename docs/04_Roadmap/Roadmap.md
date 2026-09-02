@@ -49,10 +49,10 @@ Every item here has the same gate: **`player_history` holds 1 played round** (GW
 | item | why it matters |
 |---|---|
 | ~~**Deploy madboots.com**~~ | ✅ **DONE — owner deployed 2026-08-31.** The Cloudflare Pages drag-and-drop is done and the live site now carries the current copy; `~/madboots-site/index.html` and the live page are back in step. Next edit to that file re-opens the same manual step (it is outside the repo — see the ADR-103 changeover, parked below). |
-| 🚨 **Re-record the Maddie intro** — *now batched with a done site edit* — the live one makes a claim the product does not keep | **It is on madboots.com right now**, opening *"analytics guide your decisions, **AI clarifies the data**"* — the exact clause ADR-168 removed from the mantra, because there is no Ollama on Cloud and the deployed app is data-only. An honesty brand's *first sentence* over-promising is the one place it cannot afford to. Revised script ready at `docs/08_Marketing/Video_Scripts.md` §0, with the three changed shots marked. HeyGen re-render → new unlisted YouTube → swap the link in `~/madboots-site/index.html` **and** the `maddie_videos` row |
+| ~~🚨 **Re-record the Maddie intro**~~ | ✅ **DONE — owner updated it 2026-09-02.** The live clip no longer claims *"AI clarifies the data"*, the clause ADR-168 removed because Cloud has no model. The site edit batched with it (the tagline now matching `brand.MANTRA`, and a meta description rewritten so the mantra survives Google's ~155-character cut) ships in the same deploy. |
 | **Produce the video series** — 11 scripts, all re-cut and none yet shot | All of §§1-9, G and H are current as of 2026-09-01 and were **not** before (they described a nav that had moved three times). Suggested order is in §3. ⚠ **§G Scout must wait until ~GW10** or keep its voiceover off "this season" — four of its five boards need 900 minutes and **0 of 626 players** clear that bar today, so they show last season. Record **both CTA tails** in the same session (acquisition + in-app) |
 | ~~🔄 **Run `python app.py history --backfill`**~~ | ✅ **DONE 2026-09-01** — 626 players, 2071 season rows, **1236 per-GW rows** (was 609), no failures; GW1 **and** GW2 now carry scorelines and the per-GW sums match the aggregate. Reseeded and pushed (`2980ce9`). **The xMins data blocker is cleared** — what defers that work now is sample size alone (owner's call: hold for GW4-6). ⚠️ ClubElo was down (502) during the reseed so last-known Elo was kept — re-run before anything leaning on Elo-based FDR. |
-| **Squad Lab icon** — a flask/test-tube instead of 🥾 | needs the art (clean transparent PNG) |
+| ~~**Squad Lab icon**~~ | ✅ **ALREADY DONE — 2026-08-12, commit `0898efc`** *("Squad Lab: lab-motif icon (🧪)")*. The header has read **🧪 Squad Lab** for three weeks; `🥾` appears nowhere in `src/`. ⚠️ **It never needed the art it was listed as blocked on** — 🧪 is an emoji, not a PNG — so this sat on *"Needs you"* for **21 days** waiting for something nobody had to make. Found 2026-09-02 when the owner asked to build it. |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
 | The 4 uncommitted files in your tree | 3 sprint lesson docs + `spikes/015-soccerdata/compare_npxg.py` — kept out of every commit deliberately |
 
@@ -330,8 +330,8 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 - ✅ **Fixtures IA restructure** — built (ADR-134, Sprint 187). Team DNA leads, opening on a **league-wide
   scan** of all 20 clubs (which resolved the scan-vs-drill tension rather than trading it off); ticker second;
   🎯 Radar moved to a Players view.
-- ⬜ **Squad Lab icon → a lab motif** — swap the 🥾 boot on the Squad Lab header for a flask/test-tube; it fits
-  *Lab* and distinguishes it from the boot-branded rest. **Needs the art** (clean transparent PNG).
+- ✅ **Squad Lab icon → a lab motif** — done **2026-08-12** (`0898efc`). The header reads **🧪 Squad Lab**. The *"needs the art"* note was wrong from the start: an emoji needs no PNG, and the entry
+  outlived its problem by three weeks because nobody re-read it.
 - ⚠️ **Homepage copy** — audited 2026-08-27 (`docs/08_Marketing/Homepage_Copy.md`). **The stale line this item
   named was already fixed** in the 2026-08-18 site audit: the page now says *"Sign in with Google — your squad
   saves to your account and syncs across your devices"*, which is accurate. **This entry had outlived its own

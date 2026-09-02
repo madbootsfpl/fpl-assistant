@@ -70,7 +70,7 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 
 ---
 
-## 0 · Maddie's intro — ~85s  *(PRODUCED: <https://youtu.be/a7WG0MBDLFg>; **revised 2026-08-31, needs a re-record**)*
+## 0 · Maddie's intro — ~85s  *(**RE-RECORDED 2026-09-02** — the revised script below is the one that shipped)*
 
 The only script here that has been rendered — it fronts the madboots.com hero lightbox and seeds the in-app
 **Maddie Explains** hub. **⚠ Screens marked "NEW SHOT" changed under it** (ADR-166 folded Squad Lab into
@@ -589,7 +589,9 @@ now leads with *free* and carries both "Fantasy Premier League" and "FPL" for se
 
 *Backup at `index.html.bak-2026-09-01` — the site is not a git repo, so there is no other undo.*
 
-**⏳ Waiting on you — the intro re-record.** The live clip opens *"analytics guide your decisions, AI clarifies
+**✅ Done and DEPLOYED — verified live on madboots.com, 2026-09-02.** The page serves the new tagline (*"The analytics decide. Every answer shows its working…"*) and the new clip (`99CATSFHBAA`), matching the local source exactly. The intro no longer opens on the AI claim, so the app, the site and the video finally say the same thing.
+
+*(Historic — what the wait was for:)* The live clip opens *"analytics guide your decisions, AI clarifies
 the data"*, the clause ADR-168 removed because Cloud has no model. Revised script is §0 above, with the three
 changed shots marked. When the new render is on YouTube it is a **one-token swap** — the id `a7WG0MBDLFg`
 appears exactly twice in `index.html`, in the HTML comment at the lightbox and in the `mbPlay()` iframe `src`.
