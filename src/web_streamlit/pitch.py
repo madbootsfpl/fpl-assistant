@@ -40,6 +40,11 @@ font-size:1.5rem;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}
 .fpl-pitch .c-badge{position:absolute;top:-5px;right:-6px;width:17px;height:17px;border-radius:50%;
 background:#ffd23f;color:#1a1a1a;font-size:.62rem;font-weight:800;line-height:17px;text-align:center;
 box-shadow:0 1px 2px rgba(0,0,0,.45);}
+/* The vice sits in the same corner, deliberately quieter: he only plays if the captain does not, so an
+   equally loud badge would read as a second captain. Same size and place, muted fill. */
+.fpl-pitch .v-badge{position:absolute;top:-5px;right:-6px;width:17px;height:17px;border-radius:50%;
+background:#d9d4e6;color:#3a3350;font-size:.62rem;font-weight:800;line-height:17px;text-align:center;
+box-shadow:0 1px 2px rgba(0,0,0,.35);}
 .fpl-pitch .s-badge{position:absolute;top:-5px;left:-6px;height:17px;min-width:17px;border-radius:9px;
 background:#0a7a34;color:#fff;font-size:.6rem;font-weight:700;line-height:17px;text-align:center;padding:0 4px;
 box-shadow:0 1px 2px rgba(0,0,0,.45);}
@@ -101,6 +106,7 @@ text-decoration:none!important;color:inherit!important;display:block;}
 
 
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
+              vice_captain_id=None,
               fixtures_by_id=None, kits=None, clickable=False, selected=False) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
@@ -116,6 +122,10 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     pic = f'<img src="{e(kit)}" alt="">' if kit else '<div class="noimg">👕</div>'
     if player["id"] == captain_id:
         pic += '<span class="c-badge" title="Captain">C</span>'
+    elif player["id"] == vice_captain_id:
+        # `elif`: a player cannot be both, and if a stale squad says so the captain wins — the badge that
+        # changes the score should never be the one that gets hidden.
+        pic += '<span class="v-badge" title="Vice-captain — plays if your captain does not">V</span>'
     if sub_role:
         pic += (f'<span class="s-badge" title="{e(sub_role)} sub">'
                 f'{e(_SUB_BADGE.get(sub_role, sub_role))}</span>')
@@ -169,6 +179,7 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
 
 
 def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
+               vice_captain_id=None,
                fixtures_by_id=None, kits=None, clickable=False, selected_id=None) -> str:
     """Build the pitch markup (ADR-084) — see `render_pitch` for the arguments.
 
@@ -178,7 +189,8 @@ def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=
 
     `selected_id` outlines one card, so it is visible which player the picker below refers to.
     """
-    kw = dict(captain_id=captain_id, xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
+    kw = dict(captain_id=captain_id, vice_captain_id=vice_captain_id,
+              xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
               fixtures_by_id=fixtures_by_id, kits=kits, clickable=clickable)
 
     def _kit(p, **extra):

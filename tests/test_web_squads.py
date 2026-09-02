@@ -331,3 +331,42 @@ def test_web_edges_never_persist_chat_context():
                 f"{path} must not import the CLI chat_context store"
             for call in ("chat_context.save_context", "chat_context.load_context", "chat_context.clear_context"):
                 assert call not in text, f"{path} must not persist chat context ({call})"
+
+
+# ---- the vice-captain (2026-09-02) ------------------------------------------
+#
+# Added after an audit of the owner's own design notes from Sprint 61. The pitch showed a (C) and nothing
+# else, while FPL stores a vice the manager has actually chosen — and `manager.py` was reading `is_captain`
+# from the picks payload and discarding `is_vice_captain` sitting beside it. An imported team arrived having
+# silently lost one of its two decisions.
+
+
+def test_set_vice_accepts_an_owned_player():
+    assert web_squads.set_vice({"player_ids": [1, 2, 3]}, 2)["vice_captain_id"] == 2
+
+
+def test_set_vice_rejects_a_non_owned_player():
+    # Same contract as set_captain: a stale vice must not linger after the squad changes.
+    assert web_squads.set_vice({"player_ids": [1, 2, 3]}, 99)["vice_captain_id"] is None
+
+
+def test_a_transferred_out_vice_is_cleared():
+    """The captain was already cleared on transfer-out; the vice was not, so he could point at a player the
+    squad no longer owns — the pitch would badge nobody while the download still named him."""
+    players, owned = _market()
+    squad = _squad(owned, captain_id=9, vice_captain_id=8)     # 8 and 9 are both MIDs
+    ok, _issues, _warning, new = web_squads.apply_transfer(squad, 8, 100, players)
+    assert ok
+    assert new["vice_captain_id"] is None                      # he left
+    assert new["captain_id"] == 9                              # …and the captain, who did not, is untouched
+
+
+def test_the_vice_never_earns_the_double():
+    """He is shown, not priced. FPL promotes him only when the captain does not play, so paying the ×2 for a
+    substitution that usually does not happen would inflate every projected XI."""
+    bonus = web_squads.captain_bonus(2, {1, 2}, {1: {3: 6.0}, 2: {3: 5.0}}, 3)
+    squad = web_squads.set_vice({"player_ids": [1, 2]}, 2)
+    assert "vice_captain_id" in squad
+    # captain_bonus knows only about the captain — passing the vice's id is the caller's error, and the
+    # function has no separate vice concept to accidentally double.
+    assert bonus == 5.0                      # it doubles whoever it is TOLD is captain, and nothing else

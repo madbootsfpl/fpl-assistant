@@ -3613,3 +3613,38 @@ def test_rendering_eagerly_never_reaches_for_a_model(monkeypatch):
     views.render_this_week("TS", {"player_ids": [], "name": "TS"}, horizon=1)
     assert "narrator" in seen, "the eager path must pin the narrator rather than inherit the default"
     assert seen["narrator"]() is None, "…and pin it to one that cannot narrate"
+
+
+def test_the_pitch_badges_a_vice_captain():
+    """The pitch showed a (C) and nothing else, while FPL stores a vice the manager chose (2026-09-02)."""
+    from src.web_streamlit.pitch import pitch_html
+    xi = [{"id": 1, "web_name": "Cap", "team": "ARS", "position": "MID", "price": 9.0},
+          {"id": 2, "web_name": "Vice", "team": "CHE", "position": "FWD", "price": 8.0}]
+    kw = dict(xp_by_id={1: 6.0, 2: 5.0}, photos={}, next_opp={"ARS": None, "CHE": None})
+    both = pitch_html(xi, [], captain_id=1, vice_captain_id=2, **kw)
+    assert both.count(">C</span>") == 1 and both.count(">V</span>") == 1
+
+    # A player cannot be both; if a stale squad says so, the badge that changes the score wins.
+    same = pitch_html(xi, [], captain_id=1, vice_captain_id=1, **kw)
+    assert same.count(">C</span>") == 1 and same.count(">V</span>") == 0
+
+    none = pitch_html(xi, [], captain_id=1, vice_captain_id=None, **kw)
+    assert none.count(">V</span>") == 0
+
+
+def test_the_view_passes_the_vice_through_to_the_pitch(monkeypatch):
+    """Pins the WIRING, which the pitch unit test cannot.
+
+    `pitch_html` emitting a (V) proves nothing about `render_my_squad` handing it one. And AppTest cannot
+    check the rendered badge — the pitch goes through the tap component, so it never reaches `at.markdown` —
+    which is exactly how a smoke test for the badge produced a false negative on 2026-09-02.
+    """
+    from src.web_streamlit import tap
+    seen = {}
+    monkeypatch.setattr(tap, "render_tappable_pitch", lambda *a, **kw: seen.update(kw))
+    monkeypatch.setattr(tap, "available", lambda: True)
+
+    at = _squads_view("My Squad")
+    assert not at.exception
+    # the demo squad may carry no vice; what matters is that the argument is threaded, not its value
+    assert "vice_captain_id" in seen, "render_my_squad must hand the pitch a vice, even when it is None"

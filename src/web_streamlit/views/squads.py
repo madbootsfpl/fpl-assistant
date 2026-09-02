@@ -62,6 +62,7 @@ from src.web_streamlit.squads import (
     set_active_squad,
     set_bench,
     set_captain,
+    set_vice,
     substitute,
     team_banner_html,
 )
@@ -506,7 +507,8 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         _sel_id = next((p["id"] for p in owned if _label(p) == _sel_now), None)
         render_tappable_pitch(
             xi, bench, select_key="pa_pick", label_for=_label,
-            captain_id=captain_id, xp_by_id=display_xp, photos=photos, next_opp=next_opp,
+            captain_id=captain_id, vice_captain_id=squad.get("vice_captain_id"),
+            xp_by_id=display_xp, photos=photos, next_opp=next_opp,
             team_names=team_names, bench_roles=bench_roles, kits=kits, selected_id=_sel_id,
             fixtures_by_id=fixtures_by_id)                      # ADR-109: per-GW row in the hover popover
 
@@ -586,6 +588,20 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
             elif st.button(f"👑 Make {picked['web_name']} captain", key="pa_captain"):
                 set_active_squad(set_captain(squad, picked["id"]))
                 st.success(f"Captain set: **{picked['web_name']} (C)** — they score ×2 next gameweek.")
+                st.rerun()
+            # The vice is a decision the manager makes and FPL stores, so the app should hold it too. It is
+            # **display-only in xP terms** — no ×2 — because FPL promotes him only when the captain does not
+            # play, and pricing a substitution that usually does not happen would inflate every projected XI.
+            # Both setters call `st.rerun()`: the pitch is a fragment (ADR-165) and a fragment rerun does not
+            # re-execute the parent, so without it the badge would not appear until something else redrew.
+            if squad.get("vice_captain_id") == picked["id"]:
+                st.caption(f"🅥 **{picked['web_name']}** is your vice-captain — he takes the armband only if "
+                           "your captain doesn't play.")
+            elif picked["id"] != captain_id and st.button(f"🅥 Make {picked['web_name']} vice-captain",
+                                                          key="pa_vice"):
+                set_active_squad(set_vice(squad, picked["id"]))
+                st.success(f"Vice-captain set: **{picked['web_name']} (V)** — he plays only if your captain "
+                           "doesn't. No ×2.")
                 st.rerun()
 
             # 🔁 Substitute (US-366, ADR-108) — the selected player is one side of the swap; pick the other. Only

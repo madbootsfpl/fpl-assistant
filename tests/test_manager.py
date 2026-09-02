@@ -67,3 +67,19 @@ def test_fetch_manager_team_picks_not_available_degrades():
     client = _FakeClient(entry={"name": "Ada", "current_event": 1}, raise_on={"picks"})
     squad, msg = fetch_manager_team(42, _PLAYERS, client=client)
     assert squad is None and "GW1 deadline" in msg           # 404 picks → the graceful message
+
+
+def test_the_import_keeps_the_vice_captain_fpl_already_sent():
+    """`is_vice_captain` sits beside `is_captain` in the same pick and was being discarded, so an imported
+    team silently arrived having lost one of the two decisions its owner had made (2026-09-02)."""
+    players = [{"id": i, "web_name": f"P{i}", "price": 5.0} for i in range(1, 16)]
+    picks = {"picks": [{"element": i, "position": i,
+                        "is_captain": i == 3, "is_vice_captain": i == 7} for i in range(1, 16)]}
+    squad = picks_to_squad(picks, players, name="T")
+    assert squad["captain_id"] == 3 and squad["vice_captain_id"] == 7
+
+
+def test_a_team_with_no_vice_imports_cleanly():
+    players = [{"id": i, "web_name": f"P{i}", "price": 5.0} for i in range(1, 16)]
+    picks = {"picks": [{"element": i, "position": i, "is_captain": i == 3} for i in range(1, 16)]}
+    assert picks_to_squad(picks, players, name="T")["vice_captain_id"] is None

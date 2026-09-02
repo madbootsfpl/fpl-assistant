@@ -25,12 +25,16 @@ def picks_to_squad(picks_payload: dict, players, *, name: str) -> dict | None:
         return None
     bench_ids = [pk["element"] for pk in picks if pk.get("position", 0) >= _BENCH_FROM]
     captain_id = next((pk["element"] for pk in picks if pk.get("is_captain")), None)
+    # FPL sends `is_vice_captain` beside `is_captain` in the same pick, and it was being discarded — so an
+    # imported team lost a decision its owner had actually made, and the pitch could not show a (V).
+    vice_captain_id = next((pk["element"] for pk in picks if pk.get("is_vice_captain")), None)
     return {
         "name": name,
         "player_ids": ids,
         "player_names": [by_id[i]["web_name"] for i in ids],
         "bench_ids": bench_ids,
         "captain_id": captain_id,
+        "vice_captain_id": vice_captain_id,
         "cost": round(sum(by_id[i]["price"] for i in ids), 1),
     }
 

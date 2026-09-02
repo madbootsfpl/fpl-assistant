@@ -101,6 +101,21 @@ def set_captain(squad: dict, captain_id) -> dict:
     return new
 
 
+def set_vice(squad: dict, vice_id) -> dict:
+    """A copy of `squad` with `vice_captain_id` set — the same contract as `set_captain`.
+
+    Shown as **(V)** and travels in the download. **The vice is never given the ×2**: FPL only promotes him if
+    the captain does not play, and pricing a substitution that usually does not happen would inflate every
+    projected XI. He is shown because he is a decision the manager made, not because he changes the number.
+
+    Clearing the captain is deliberately *not* implied here — a squad can hold a vice while the captain slot
+    is empty, which is exactly the state an imported team arrives in when FPL's captain has been transferred.
+    """
+    new = dict(squad)
+    new["vice_captain_id"] = vice_id if vice_id in squad["player_ids"] else None
+    return new
+
+
 def captain_bonus(captain_id, xi_ids, by_gameweek_by_id, next_gw) -> float:
     """The captain's extra points from the armband, for the **next gameweek only** (ADR-083).
 
@@ -199,6 +214,8 @@ def apply_transfer(squad: dict, out_id: int, in_id: int, players,
     new["bench_ids"] = [in_id if i == out_id else i for i in squad.get("bench_ids", [])]
     if new.get("captain_id") == out_id:
         new["captain_id"] = None                      # the captain was transferred out — clear it
+    if new.get("vice_captain_id") == out_id:
+        new["vice_captain_id"] = None                 # …and the vice, for the same reason
     cost = round(sum(by_id[i]["price"] for i in new_ids), 1)
     new["cost"] = cost
     warning = (f"£{cost - budget:.1f}m over the £{budget:.0f}m budget"
