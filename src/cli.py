@@ -867,18 +867,39 @@ def cmd_calibrate(args) -> None:
     finally:
         store.close()
 
+    # ⚠️ **"Could not test" is not "tested and found nothing."** `sweep` returns `insufficient` and nothing
+    # read it, so a run that evaluated **zero folds** printed an empty table under the verdict "No clear
+    # signal yet — leave the weight at 0". That is evidence-of-absence phrasing for absence-of-evidence, on
+    # the instrument that decides whether a weight ships. Two guards read the same constant here — this one
+    # and `sweep`'s own default — so they agree today and could drift apart in one edit.
+    if result.get("insufficient"):
+        print(f"Not enough gameweeks yet — have {result['gws']}, need ≥{result.get('min_gws', backtest.MIN_GWS)}. "
+              "Nothing was evaluated (see docs/GW1_RUNBOOK.md §B0).")
+        return
+
     print(f"Calibrating {weight} ({attr}) over {result['gws']} gameweeks — walk-forward, rank correlation (ADR-101).\n")
-    print(f"  {'weight':>7}  {'ρ (rank)':>9}  {'MAE':>6}  {'hit@20':>6}")
+    print(f"  {'weight':>7}  {'ρ (rank)':>9}  {'MAE':>6}  {'hit@20':>6}  {'n':>5}  {'±1 SE':>6}")
     for row in result["rows"]:
         rho = f"{row['spearman']:.3f}" if row["spearman"] is not None else "   —"
         mae = f"{row['mae']:.2f}" if row["mae"] is not None else "  —"
         hit = f"{row['hit_rate']:.2f}" if row["hit_rate"] is not None else "  —"
-        print(f"  {row['weight']:>7.3f}  {rho:>9}  {mae:>6}  {hit:>6}")
+        se = f"{row['se']:.3f}" if row.get("se") is not None else "   —"
+        print(f"  {row['weight']:>7.3f}  {rho:>9}  {mae:>6}  {hit:>6}  {row.get('n', 0):>5}  {se:>6}")
+
+    # `n` and the SE are printed because §B0's first criterion is written in them: a ρ improvement counts only
+    # if it clears ~1 SE ≈ 1/√(n−1). Quoting the bar next to the numbers is what stops it being applied from
+    # memory at the sitting.
+    base = next((r for r in result["rows"] if r["weight"] == 0), None)
+    if base and base.get("se") is not None:
+        print(f"\n  §B0 criterion 1: ρ must beat weight-0's {base['spearman']:.3f} by ≥ {base['se']:.3f} "
+              f"(1 SE at n={base['n']}) before it counts as signal rather than noise.")
+
     if result["best"] is not None:
         print(f"\nRecommended {attr} ≈ {result['best']:.3f} (highest rank correlation; the smaller value on a flat "
-              f"curve). Set it in config.py + update the invariance test, then commit (docs/GW1_RUNBOOK.md).")
+              f"curve). Check it against ALL FOUR §B0 criteria before committing — this line is one of them. "
+              f"Set it in config.py + update the invariance test, then commit (docs/GW1_RUNBOOK.md).")
     else:
-        print("\nNo clear signal yet — leave the weight at 0 and re-run as more gameweeks play.")
+        print("\nNo weight scored — leave it at 0 and re-run as more gameweeks play.")
 
 
 def build_parser() -> argparse.ArgumentParser:

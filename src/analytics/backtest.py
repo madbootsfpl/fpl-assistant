@@ -97,6 +97,34 @@ def _by_gw(triples) -> dict:
     return out
 
 
+def eligible_n(triples):
+    """The per-gameweek eligible sample size — the `n` GW1_RUNBOOK §B0's first criterion is written in.
+
+    That criterion is *"ρ improves by ≥ 1 standard error at the eligible sample size (SE ≈ 1/√(n−1)); the
+    harness prints n"*. It did not print `n` — `pairs` produced the triples and every consumer threw the
+    count away — so the bar could not be applied without estimating the number it depends on. Found
+    2026-09-02 by dry-running the harness before its first real use, rather than at the sitting.
+
+    Reported as the **median** across gameweeks: ρ is computed per gameweek and averaged (`mean_gw_spearman`),
+    so the sample size that governs one ρ is one gameweek's pairs, not the pooled total. A mean would be
+    dragged by a partial gameweek; the median says what a typical fold rested on.
+    """
+    counts = sorted(len(preds) for preds, _ in _by_gw(triples).values())
+    # On an even number of gameweeks take the **lower** middle, not the upper. `n` only exists here to set a
+    # bar — `SE ≈ 1/√(n−1)` — so overstating it shrinks the SE and makes a noise-level gain look like signal.
+    # Erring small errs toward *rejecting* a weight, which is the cheaper mistake for a dormant one.
+    return counts[(len(counts) - 1) // 2] if counts else 0
+
+
+def spearman_se(n):
+    """`SE ≈ 1/√(n−1)` — the noise floor a ρ improvement has to clear (GW1_RUNBOOK §B0, criterion 1).
+
+    Pre-registered as a *formula* rather than a fixed number precisely because `n` moves every gameweek, so it
+    is computed here rather than quoted. Returns None below n=2, where the question is meaningless.
+    """
+    return (1.0 / ((n - 1) ** 0.5)) if n and n > 1 else None
+
+
 def mean_gw_spearman(triples):
     """The **primary** metric (ADR-101): Spearman per gameweek, averaged. None if no GW has ≥2 comparable pairs."""
     rhos = [spearman(preds, actuals) for preds, actuals in _by_gw(triples).values()]
@@ -141,8 +169,10 @@ def sweep(gw_history_by_code, make_predict, values, *, top_n: int = 20, min_gws:
     rows = []
     for value in values:
         triples = pairs(gw_history_by_code, make_predict(value))
+        n = eligible_n(triples)
         rows.append({"weight": value, "spearman": mean_gw_spearman(triples),
-                     "mae": mae(triples), "hit_rate": hit_rate(triples, top_n)})
+                     "mae": mae(triples), "hit_rate": hit_rate(triples, top_n),
+                     "n": n, "se": spearman_se(n)})
     scored = [r for r in rows if r["spearman"] is not None]
     best = None
     if scored:

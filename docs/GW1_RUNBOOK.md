@@ -138,6 +138,47 @@ weight and watching:
 The general point, since it has now caught three things this month: **a tripwire you have not fired is a
 tripwire you are assuming.**
 
+### 🔬 Pre-flight — the harness was dry-run before its first real use (2026-09-02)
+
+The owner asked to calibrate at **GW3, with 2 played gameweeks**. The answer was no — §B0's stopping rule
+puts the first honest attempt at GW4, and *"only if it clearly helps"* is exactly the standard you choose
+after seeing a curve. But the harness had **never produced output**: it has been guarded since ADR-101 built
+it, so GW4 would have been its first run. Dry-running it found two faults, both fixed before there was a
+result to be tempted by.
+
+**1. ⚠️ Criterion 1 could not be applied — the harness did not print `n`.** The bar above says *"SE ≈
+1/√(n−1); the harness prints `n`"*. It did not: `pairs` produced the triples and every consumer discarded the
+count. The criterion depended on a number the tool never reported, so at the sitting it would have been
+estimated or skipped. **Fixed** — each sweep row now carries `n` and `±1 SE`, and the CLI prints the bar
+underneath the table so it is read off the output rather than from memory:
+
+```
+   weight   ρ (rank)     MAE  hit@20      n   ±1 SE
+    0.000      0.657    1.25    0.20    626   0.040
+  §B0 criterion 1: ρ must beat weight-0's 0.657 by ≥ 0.040 (1 SE at n=626)
+```
+
+`n` is the **per-gameweek** eligible count, not the pooled total — ρ is computed per gameweek and averaged,
+so pooling would report ~G× too many and shrink the SE by √G, making a noise-level gain look like signal
+against the one criterion written to prevent that. On an even number of gameweeks it takes the **lower**
+middle, because understating `n` raises the bar, and erring toward rejecting a dormant weight is the cheaper
+mistake.
+
+**2. ⚠️ "Could not test" was printed as "tested and found nothing".** `sweep` returns an `insufficient` flag
+and **nothing read it**. A run that evaluated zero folds printed an empty table under *"No clear signal yet —
+leave the weight at 0"*. Today the CLI's own guard fires first so it never surfaced, but that is two guards
+reading one constant, and they agree only until someone edits one. **Fixed** — the CLI reports *"Not enough
+gameweeks… Nothing was evaluated"* and returns.
+
+**The numbers from the dry run are discarded and are not recorded here**, deliberately: two gameweeks
+calibrate nothing, and writing them down would be the first step toward remembering them at GW4.
+
+> **The general point, and it is the same one this file already makes about tripwires:** an instrument you
+> have never run is an instrument you are assuming. The cheapest time to find it broken is before you need
+> its answer — because afterwards, every fix looks like it might be aimed at the result.
+
+---
+
 ### The one rule that outranks the rest
 
 **The harness recommends; a human commits.** Nothing here auto-applies. If every criterion passes and the

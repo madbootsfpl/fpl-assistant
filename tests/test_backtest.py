@@ -150,3 +150,55 @@ def test_pairs_walks_forward_over_sqlite_rows():
     out = backtest.pairs({7: rows}, predict)
     assert out == [(5.0, 10, 1), (5.0, 4, 2)]
     assert seen == {1: 0, 2: 1}                          # no leakage: round N sees only rounds < N
+
+
+# ---- GW1_RUNBOOK §B0 needs numbers the harness must actually report (2026-09-02) -------------------
+
+
+def test_the_sweep_reports_the_sample_size_its_criterion_is_written_in():
+    """§B0 criterion 1 is *"ρ improves by ≥ 1 SE at the eligible sample size (SE ≈ 1/√(n−1)); the harness
+    prints n"* — and it did not. `pairs` produced the triples and every consumer threw the count away, so the
+    bar could not be applied without estimating the number it rests on. Found by dry-running the harness
+    before its first real use rather than at the sitting.
+    """
+    out = backtest.sweep(_HIST, lambda v: (lambda before, n: {c: _ACTUALS[c][n] for c in _ACTUALS}),
+                         [0.0, 0.1])
+    assert all("n" in r and "se" in r for r in out["rows"]), "n and its SE must reach the caller"
+    assert out["rows"][0]["n"] > 0
+
+
+def test_the_standard_error_is_the_pre_registered_formula():
+    # SE ≈ 1/√(n−1), pre-registered as a formula because n moves every gameweek.
+    assert backtest.spearman_se(626) == pytest.approx(1 / (625 ** 0.5), rel=1e-9)
+    assert backtest.spearman_se(401) == pytest.approx(0.05, abs=0.001)   # the runbook's worked example, n≈400
+    assert backtest.spearman_se(1) is None and backtest.spearman_se(0) is None
+
+
+def test_the_eligible_n_is_per_gameweek_not_pooled():
+    """ρ is computed per gameweek and averaged, so the sample size governing one ρ is one gameweek's pairs.
+
+    Pooling would report ~G× too many and shrink the SE by √G — making a noise-level gain look like signal,
+    against the one criterion that exists to prevent exactly that.
+    """
+    triples = [(1.0, 2, 1), (2.0, 3, 1), (3.0, 4, 1), (1.0, 2, 2), (2.0, 3, 2)]
+    assert backtest.eligible_n(triples) == 2          # median of (3, 2), not the pooled 5
+    assert backtest.eligible_n([]) == 0
+
+
+def test_the_cli_says_not_enough_data_rather_than_no_signal(capsys, monkeypatch):
+    """"Could not test" must never be printed as "tested and found nothing".
+
+    `sweep` has always returned `insufficient`; nothing read it. A run that evaluated **zero folds** printed
+    an empty table under *"No clear signal yet — leave the weight at 0"* — evidence-of-absence phrasing for
+    absence of evidence, on the instrument that decides whether a weight ships.
+    """
+    from types import SimpleNamespace
+
+    from src import cli
+    monkeypatch.setattr(cli.Storage, "get_gw_history_by_code", lambda self: _HIST, raising=False)
+    monkeypatch.setattr(backtest, "sweep",
+                        lambda *a, **k: {"insufficient": True, "gws": 2, "min_gws": 4, "rows": [], "best": None})
+    cli.cmd_calibrate(SimpleNamespace(weight="form", range="0,0.1,0.05"))
+    out = capsys.readouterr().out
+    assert "Not enough gameweeks" in out and "Nothing was evaluated" in out
+    assert "No clear signal" not in out, "an unevaluated run must not read as a verdict"
