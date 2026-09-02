@@ -27,7 +27,10 @@ render_data_status()
 render_sidebar()
 st.title("🧩 My Squad")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
-st.caption("Your team, all in one place — squad · captain · transfers · chips · health, over the next 1–5 GWs.")
+# ADR-175 — the page caption is gone. It said "squad · captain · transfers · chips · **health**" — a name
+# ADR-166 retired six days earlier — and it explained the page to someone already standing on it, beneath a
+# title that names it and above tabs that list every item in the sentence. Ten blocks preceded the first
+# useful thing; this was the cheapest of them to remove.
 
 if active_squad() is None:   # US-360: no team built/loaded yet → point new users at the builder (the views use a demo)
     st.info("🛠️ **No team yet?** The views below use a demo — build your own in the **Lab** tab above, "
@@ -43,8 +46,10 @@ if active_squad() is None:   # US-360: no team built/loaded yet → point new us
 # * **Health → DNA** (US-436): the Squad DNA fingerprint is the informative half, so it leads and names the tab.
 # * **Lab last** (US-445): a few times a season — season start, wildcard, free hit — so it belongs at the end
 #   of the squad's own workflow, not at the top of the sidebar where it sat.
+# ADR-175 — Transfer joins the answer selector under the pitch, so the top nav is four. Its widgets exist
+# only when chosen there, which is what dissolves ADR-174's density objection to bringing it in at all.
 view = st.segmented_control(
-    "Tool", ["My Squad", "Transfer", "DNA", "Leagues", "Lab"], default="My Squad",
+    "Tool", ["My Squad", "DNA", "Leagues", "Lab"], default="My Squad", label_visibility="collapsed",
     key="ms_tool",     # keyed: without one Streamlit identifies it positionally, so a tab that adds widgets
                        # (Leagues adds a dozen) can shift its identity and silently reset the selection.
     help="**My Squad** = your week in one screen — the answer, the pitch and lineup, then who to "
@@ -52,17 +57,28 @@ view = st.segmented_control(
          "fingerprint and health; **Leagues** how your picks compare with your rivals'; **Lab** build a new "
          "squad from scratch.")
 
-# The prediction horizon flows through every sub-tab (ADR-077). A box select (US-315) over a handful of
-# useful windows — short for mid-season, up to 10 for a wildcard / start of season. Default 5 = today's
-# behaviour; deselecting the segmented control falls back to 5.
-# US-374: the squad tools default to the next GW; the **Lab** wants a long window (a wildcard is a
-# multi-week bet), which is why it kept its own default of 5 as a page. Keyed per mode so each remembers its
-# own setting rather than one clobbering the other — merging the pages must not merge their horizons.
-_lab = view == "Lab"
+# ADR-175 — the horizon offers what each surface is actually used for, not one range for all of them.
+# The owner: *"I don't think this analysis will be done here — yes in the Lab when you're creating your team,
+# but not now when active."* US-374 had already half-agreed, defaulting the squad tools to 1 and the Lab to 5
+# because a wildcard is a multi-week bet and a Tuesday is not; offering **10** on an active squad offered a
+# window nobody chose.
+#
+# Three modes, three keys, because one control fed five consumers and they do not want the same thing:
+#   * the **pitch** — this week, or the short run: GW1 · GW1–3.
+#   * the **Lab** — a wildcard is a multi-week bet, so it keeps its long range (US-374, unchanged).
+#   * **DNA / Leagues** — occasional analysis, where a five-week read is defensible and was never the
+#     complaint. Transfer moved under the pitch (see the selector below) and reads the pitch's window.
+# Keyed per mode so each remembers its own setting: merging the surfaces must not merge their horizons.
+if view == "Lab":
+    _opts, _default, _key, _fmt = [1, 2, 3, 4, 5, 10], 5, "gw_lab", str
+elif view == "My Squad":
+    _opts, _default, _key, _fmt = [1, 3], 1, "gw_pitch", (lambda n: "GW1" if n == 1 else "GW1–3")
+else:
+    _opts, _default, _key, _fmt = [1, 2, 3, 4, 5], 1, "gw_analysis", str
 horizon = st.segmented_control(
-    "Gameweeks ahead", [1, 2, 3, 4, 5, 10], default=5 if _lab else 1, key=f"gw_ahead_{'lab' if _lab else 'squad'}",
-    help="How many upcoming gameweeks the projections look over — short for mid-season, longer for a "
-         "wildcard / start of season. (Captaincy is always the next gameweek.)") or (5 if _lab else 1)
+    "Gameweeks ahead", _opts, default=_default, key=_key, format_func=_fmt, label_visibility="collapsed",
+    help="How many upcoming gameweeks the projections look over. (Captaincy is always the next gameweek.)"
+) or _default
 
 store = Storage()
 try:
@@ -87,36 +103,48 @@ else:
     squad_name, squad = squad_picker()      # one picker feeds the manage views
     analytics.track("analysis_run", view=view)   # usage: which manage view was run (no squad contents)
     if view == "My Squad":
-        # ADR-171 — the golden page, in the order the week is actually decided:
-        #   ① the answer · the pitch + ⚙ panel it is about · ② captaincy · ③ chips.
-        # Transfer is deliberately NOT folded in: US-435 did not ask for it, and it is the one view here that
-        # is a genuinely different task rather than another angle on this week.
+        # ADR-175 — value first: the strip and the pitch, then **one** answer at a time.
+        #
+        # ADR-171 stacked This week · Captaincy · Chips down this page and led with the answer. That was right
+        # on the evidence then — its measurement proved the answer *could* render here at all (123 ms, against
+        # a supposed 4.4 s) — but the ordering was a judgement laid on top of that finding, and the owner has
+        # since lived with it. Ten blocks preceded the first useful thing.
+        #
+        # A selector is not the tabs ADR-171 removed. Those took you off the page; **this keeps the pitch on
+        # screen while you switch**, which is the whole difference, and it is the idiom Players, Trending and
+        # Scout already use. Transfer joins it: ADR-174 declined to bring that tab in because ~10 widgets
+        # would *stack* onto a 41-block page, and behind a selector they exist only when chosen.
         team_names = {t["short_name"]: t["name"] for t in teams}   # "MUN" → "Man Utd" (US-278)
         views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
-                              teams=teams, horizon=horizon,
-                              this_week=lambda: views.render_this_week(squad_name, squad, horizon=horizon,
-                                                                       players=players))
+                              teams=teams, horizon=horizon)
 
         st.divider()
-        st.markdown("##### 👑 Captaincy")
-        views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names)
+        answer = st.segmented_control(
+            "Answer", ["🤖 This week", "👑 Captain", "🔄 Transfer", "🎴 Chips"], default="🤖 This week",
+            key="ms_answer", label_visibility="collapsed",
+            help="**This week** your whole gameweek in one answer · **Captain** the 15 ranked · **Transfer** "
+                 "the best swaps, a coordinated plan, or a manual one · **Chips** when to play each."
+        ) or "🤖 This week"
 
-        st.divider()
-        # ③ Chips — a click on BOTH paths, and not because it is slow. A chip expires at the end of the
-        # half-season, so the question is *which* of your remaining weeks is best; asking it every time
-        # someone opens their squad answers a question nobody was holding (ADR-166, upheld).
-        st.markdown("##### 🎴 Chips — when to play each")
-        if st.button("Work out my chips →", key="ms_chips",
-                     help="Looks across every gameweek left before this set of chips expires."):
-            st.session_state["ms_chips_on"] = True
-        if st.session_state.get("ms_chips_on"):
-            views.render_chips(squad_name, squad, upcoming=upcoming)
+        if answer == "🤖 This week":
+            views.render_this_week(squad_name, squad, horizon=horizon, players=players)
+        elif answer == "👑 Captain":
+            views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names)
+        elif answer == "🔄 Transfer":
+            views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
+                                  horizon=horizon)
         else:
-            st.caption("A chip is a season decision, so this looks across **every gameweek left before it "
-                       "expires** rather than the horizon above — which is why it is a click, not automatic.")
-    elif view == "Transfer":
-        views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
-                              horizon=horizon)
+            # Chips stays a click inside its own panel, and still not for latency: a chip expires at the end
+            # of the half-season, so asking every time someone opens the panel answers a question nobody was
+            # holding (ADR-166, upheld through two restructures now).
+            if st.button("Work out my chips →", key="ms_chips",
+                         help="Looks across every gameweek left before this set of chips expires."):
+                st.session_state["ms_chips_on"] = True
+            if st.session_state.get("ms_chips_on"):
+                views.render_chips(squad_name, squad, upcoming=upcoming)
+            else:
+                st.caption("A chip is a season decision, so this looks across **every gameweek left before "
+                           "it expires** rather than the horizon above — which is why it is a click.")
     elif view == "DNA":
         team_names = {t["short_name"]: t["name"] for t in teams}
         views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,

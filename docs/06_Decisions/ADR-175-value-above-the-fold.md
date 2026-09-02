@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-175
 **Date:** 2026-09-02
-**Status:** 🚧 **Proposed — owner's design, four changes in one pass. Preview before code.**
+**Status:** ✅ **Accepted — owner's design, approved from a real-data preview ("build it — looks class"),
+built** (Sprint 236, 2026-09-02). **1696 → 1702 tests, ruff clean.**
 **Superseded By / Replaces:** **Reverses ADR-171 §3** (answer-first) and **supersedes ADR-174** (which put the
 apply button in a stacked block). Narrows **ADR-077**'s shared horizon on this page. Moves **ADR-113**'s
 Your-team panel conditionally. Re-opens what **ADR-115** settled, with a different mechanism.
@@ -117,3 +118,45 @@ round-trip, and the owner reviews a real-data preview before any code).
 
 Not by block count — that is ADR-135's trap. By one thing: **on a phone, the strip and the pitch are visible
 without scrolling.** Everything above them is chrome and has to earn its line.
+
+
+---
+
+### 📊 Built — what the page does now
+
+```
+🧩 My Squad · [My Squad | DNA | Leagues | Lab] · GW1 | GW1–3
+⏳ GW3 deadline … · £99.7m ✓ legal 15
+YOUR TEAM  RoboTS                                    [synced]
+PROJECTED XI 49.2 · CAPTAIN — · BENCH 6.3
+[ the pitch + ⚙ panel ]
+[ This week | Captain | Transfer | Chips ]
+[ the chosen answer ]
+```
+
+Top nav **5 → 4**. Horizon **1/2/3/4/5/10 → GW1 · GW1–3** on the pitch, with the Lab keeping its long range
+and DNA/Leagues keeping 1–5 on their own key. The page caption and the standalone "Squad" label are gone;
+**with a single squad there is no picker at all**. Backup/import sits in the sidebar once you have a team and
+stays on the page while you do not.
+
+---
+
+### 🔬 What building it found
+
+**Two of my own guards failed, and both were right to.** I had written this ADR saying the switcher folds
+into the banner and then not done it — the test caught the gap between the record and the code. And the
+backup/import test asserted the panel had left the page while injecting *no squad*, which is precisely the
+state where it should stay; it was testing the opposite of its own name.
+
+**An unscoped AppTest assertion reads the sidebar as the page.** `at.get("expander")` spans both, so
+"still on the page" came back true for a panel that had correctly moved off it. `at.main` is the scope that
+answers the question actually being asked.
+
+**Nineteen tests broke, and one of them was the nav guard I wrote this week** — flagging that Home and Help
+point at *"My Squad ▸ Transfer"*. That pointer is still **true**: Transfer is on My Squad, one control lower.
+The guard's model was too narrow, so it now reads **both** switches — the tool tabs and the answer selector —
+which is the honest definition of "a place you can be sent". **The copy was right and the guard was wrong**,
+which is worth distinguishing from the four times this week it was the other way round.
+
+**Help described the structure, not just the names**, so *"top to bottom"* and *"at the bottom, behind a
+button"* stopped being true even though every tab name in them was still valid. Re-described.

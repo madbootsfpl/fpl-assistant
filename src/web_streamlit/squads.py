@@ -81,7 +81,12 @@ def squad_picker(label: str = "Squad", key: str | None = None) -> tuple[str, dic
         st.stop()
     act = active_squad()
     index = next((i for i, s in enumerate(squads.values()) if s is act), 0)   # default to the active one
-    choice = st.selectbox(label, labels, index=index, key=key,
+    # ADR-175 — **one squad, no picker.** With a single option the control is a line of chrome that answers a
+    # question nobody has, above a banner already naming the team. With more than one it stays, but the
+    # "Squad" label goes: the banner underneath says what this is, so the caption said it twice.
+    if len(labels) == 1:
+        return labels[0], squads[labels[0]]
+    choice = st.selectbox(label, labels, index=index, key=key, label_visibility="collapsed",
                           help="Which squad to work on — your active/built one, or the demo.")
     return choice, squads[choice]
 
@@ -292,7 +297,8 @@ def render_sidebar() -> None:
         act = active_squad()
         st.caption(f"Active: **{act.get('name', 'unnamed')}**" if act
                    else "Active: **none** yet.")
-        st.caption("⚙ Import · back up · sync your team in the **Your team** panel on **My Squad**.")
+        if active_squad() is None:   # ADR-175 — once you have a team the panel is right here, not over there
+            st.caption("⚙ Import · back up · sync your team in the **Your team** panel on **My Squad**.")
     render_cloud_sync()          # ☁ handle Save/Load — no-login fallback only (hidden when signed in, US-384)
 
 
@@ -372,7 +378,15 @@ def render_your_team(squad: dict | None, *, is_yours: bool = True) -> None:
     # US-423 (density): Backup + Import folded into ONE collapsed panel (was an always-visible Download + a
     # separate expander) so the pitch sits higher on mobile. Auto-expands when the squad isn't yours (import
     # immediate); collapses once you have a synced team.
-    with st.expander("⚙ Backup / import your team", expanded=(squad is None or not is_yours)):
+    # ADR-175 — **where** this renders now depends on whether there is anything to import. ADR-113's own
+    # words are *"import it **once**, edit anywhere"*, and a once-a-season action was holding permanent space
+    # on the most-visited page — but it was consolidated here so a new user could find it, which is a real
+    # reason and only applies while they have no team. So: on the page while the squad is missing or a demo
+    # (where the expander already auto-opened), in the sidebar once it is yours. Discoverable exactly when it
+    # matters, gone when it does not.
+    _needed_now = squad is None or not is_yours
+    _where = st.container() if _needed_now else st.sidebar
+    with _where, st.expander("⚙ Backup / import your team", expanded=_needed_now):
         if squad:
             st.download_button("⬇︎ Download a backup", _download_payload(squad),
                                file_name=f"{_safe_filename(squad.get('name', 'squad'))}.json",

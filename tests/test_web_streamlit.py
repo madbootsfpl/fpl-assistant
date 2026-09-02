@@ -262,7 +262,7 @@ def test_transfer_tab_shows_the_watchlist_section():
     at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["_watchlist"] = ids                    # a non-empty watchlist
     at.run()
-    at.segmented_control[0].set_value("Transfer").run()
+    _open_panel(at)
     assert not at.exception
     assert any("Your watchlist" in (e.label or "") for e in at.get("expander"))
     if ids:                                                 # the watched players render as a table (the crash site)
@@ -499,18 +499,40 @@ def test_fixtures_ticker_my_squad_scope_filters_to_owned_teams_with_counts():
     assert scoped["Players"].sum() == 15                    # a full squad's 15 players across its teams
 
 
+def _open_panel(at, panel="🔄 Transfer"):
+    """Open one of the answer panels under the pitch (ADR-175).
+
+    Transfer, Captain, This week and Chips are no longer top-level tabs — they are one selector below the
+    pitch, so that the pitch stays on screen while you switch. Tests that used to drive
+    `segmented_control[0]` now drive two controls, and this is that step in one place.
+    """
+    next(c for c in at.segmented_control if c.label == "Tool").set_value("My Squad").run()
+    sel = next((c for c in at.segmented_control if c.key == "ms_answer"), None)
+    if sel is not None:
+        sel.set_value(panel).run()
+    return at
+
+
 def _squads_view(view):
     """A My Squad sub-tab. ADR-105 split Build onto its own Squad Lab page; ADR-166 folded it back as the
     **Lab** tab — a builder you use a few times a season did not earn the top slot in the sidebar."""
     at = _run(_PAGES / "1_My_Squad.py")
     # By label, not by index: My Squad now carries several segmented controls (Tool · Gameweeks ahead · and
     # whatever the selected tab adds), so `[0]` was an assumption about layout rather than about the switch.
-    # ADR-171 folded AI Tips + Captain into the My Squad screen, so those names are no longer switch
-    # values — a test asking for them is asking for a *section*, which lives on the default tab.
-    _MERGED = {"AI Tips": "My Squad", "Captain": "My Squad"}
-    want = "Lab" if view == "Build" else _MERGED.get(view, view)
+    # ADR-171 folded AI Tips + Captain into the My Squad screen and ADR-175 added Transfer, so none of those
+    # are top-level switch values any more. A test asking for one is asking for an **answer panel**, which
+    # lives under the pitch on the default tab — so drive the tool switch, then the answer selector.
+    _PANEL = {"AI Tips": "🤖 This week", "This week": "🤖 This week", "Captain": "👑 Captain",
+              "Transfer": "🔄 Transfer", "Chips": "🎴 Chips"}
+    want = "Lab" if view == "Build" else ("My Squad" if view in _PANEL else view)
     next(c for c in at.segmented_control if c.label == "Tool").set_value(want).run()
     assert not at.exception, f"Squads[{view}] raised: {at.exception}"
+    if view in _PANEL:
+        panel = next((c for c in at.segmented_control if c.key == "ms_answer"), None)
+        if panel is not None:
+            panel.set_value(_PANEL[view]).run()
+            assert not at.exception, f"Squads[{view}] panel raised: {at.exception}"
+        return at
     # ⚠ Found 2026-08-31 (ADR-171): `set_value` accepts an option that does not exist and **silently keeps
     # the current selection**. ADR-166 renamed Health → DNA and two callers here kept asking for "Health";
     # both went on passing while testing the DEFAULT tab instead. Green stayed green and the coverage was
@@ -538,18 +560,19 @@ def test_squads_ai_tips_view_renders_a_gameweek_plan():
     assert "Start Ollama" not in plan[0].value             # US-375: no dev-only Ollama hint for web users
 
 
-def test_chip_advice_renders_under_ai_tips_but_only_on_request():
-    """ADR-082/US-252 → US-434 (ADR-166): chips moved under **AI Tips** — the same question on a different
-    clock. Behind a button, because it is another **6.6 s** of analytics and ADR-141's rule holds: nothing
-    expensive happens because someone opened a tab."""
-    at = _squads_view("AI Tips")
-    assert any("This week" in c.value for c in at.code), "the week's answer renders"
+def test_chip_advice_is_its_own_panel_and_still_only_on_request():
+    """ADR-082/US-252 → ADR-166 (folded under AI Tips) → ADR-175 (its own answer panel).
+
+    What has survived all three moves is the reason it is a click: a chip expires at the end of the
+    half-season, so *which* of your remaining weeks is best is not a question anyone is holding when they
+    open their squad. Position changed three times; that has not.
+    """
+    at = _squads_view("Chips")
     assert not any("Chip strategy" in c.value for c in at.code), "chips have not run yet"
 
-    btn = next(b for b in at.button if b.key == "ms_chips")
-    btn.click().run()
+    next(b for b in at.button if b.key == "ms_chips").click().run()
     block = " ".join(c.value for c in at.code)
-    assert "Chip strategy" in block                        # the advice block header
+    assert "Chip strategy" in block
     assert all(chip in block for chip in ("Triple Captain", "Bench Boost", "Free Hit", "Wildcard"))
 
 
@@ -590,7 +613,7 @@ def test_the_transfer_page_warns_about_a_dead_slot_and_offers_the_fix():
     at.session_state["squad"] = {"name": "DeadSlot", "player_ids": [p["id"] for p in squad],
                                  "bench_ids": [squad[-1]["id"]], "cost": 100.0}
     at.run()
-    at.segmented_control[0].set_value("Transfer").run()
+    _open_panel(at)
     assert not at.exception
 
     warnings = " ".join(e.value for e in at.error)
@@ -1178,11 +1201,14 @@ def test_squads_gameweeks_selector_drives_the_horizon():
     change. The gameweek numbers now come from the same data the page reads, so the assertion is about the
     horizon's *shape* — which is what the feature actually promises.
     """
+    # ADR-175 — three horizons, keyed per surface, because one control fed five consumers that do not want
+    # the same window. This test's subject is DNA, so it drives DNA's own control (`gw_analysis`); the pitch
+    # has GW1/GW1–3 and the Lab keeps the long range.
     at = _run(_PAGES / "1_My_Squad.py")
-    gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
-    assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5", "10"]   # US-374/315
-    gw[0].set_value(2).run()
     at.segmented_control[0].set_value("DNA").run()
+    gw = [c for c in at.segmented_control if c.key == "gw_analysis"]
+    assert gw and gw[0].value == 1 and list(gw[0].options) == ["1", "2", "3", "4", "5"]
+    gw[0].set_value(2).run()
     assert not at.exception
     if not at.code:
         return
@@ -1202,30 +1228,25 @@ def test_squads_gameweeks_selector_drives_the_horizon():
 
 
 def test_squads_gameweeks_box_select_offers_ten(monkeypatch):
-    # US-315: the box-select includes 10 (a wildcard/start-of-season horizon) and it flows through.
-    at = _squads_view("My Squad")
-    gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"]
+    """US-315: the long window is offered — and ADR-175 moved it to the surface that wants it.
+
+    A wildcard is a multi-week bet, so 10 belongs in the **Lab**. On an active squad it offered a window
+    nobody chose: the owner does not plan a wildcard from a team that is already picked, and US-374 had
+    already defaulted these tools to 1 against the Lab's 5.
+    """
+    at = _squads_view("Build")
+    gw = [c for c in at.segmented_control if c.key == "gw_lab"]
     if not gw:
         return
-    assert 10 in [int(o) for o in gw[0].options]           # the requested long window is offered
+    assert 10 in [int(o) for o in gw[0].options]           # the long window is still offered — on the Lab
     gw[0].set_value(10).run()
     assert not at.exception
-    strip = _strip_text(at)
-    assert "Projected XI" in strip and "10 GW" in strip    # 10 drives the horizon
 
 
 def test_captain_view_notes_it_is_next_gameweek():
     # US-237: captaincy is a one-week decision — a caption says the GW selector doesn't apply
     at = _squads_view("Captain")
     assert any("next gameweek" in c.value.lower() for c in at.caption)
-
-
-def test_my_squad_transfer_moved_to_the_tab_with_a_pointer():
-    # ADR-115/US-405: the My Squad edit view has NO in-page transfer picker — just a pointer to the Transfer tab.
-    at = _squads_view("My Squad")
-    caps = " ".join(c.value for c in at.caption)
-    assert "Transfer" in caps and "Substitute" in caps               # the pointer distinguishes the two
-    assert not any(s.label == "Transfer out" for s in at.selectbox)  # the manual picker is gone from here
 
 
 def test_my_squad_manage_expander_holds_rename_and_set_bench():
@@ -1238,11 +1259,10 @@ def test_my_squad_manage_expander_holds_rename_and_set_bench():
 def _strip_text(at) -> str:
     """The stat strip's rendered markup (ADR-163).
 
-    It used to be `st.metric` in `st.columns`, which `AppTest` exposed as `at.metric` — a tidy API these tests
-    leaned on. The strip is HTML now because only CSS can reflow on a phone (US-449), so the assertions moved
-    from *"a metric widget with this label exists"* to *"this label and this number are on the page"*.
-
-    That is the better assertion anyway: the first pinned the widget, the second pins what the reader sees.
+    It used to be `st.metric` in `st.columns`, which `AppTest` exposed as `at.metric`. The strip is HTML now
+    because only CSS can reflow on a phone (US-449), so the assertions moved from *"a metric widget with this
+    label exists"* to *"this label and this number are on the page"* — which is the better assertion anyway:
+    the first pinned the widget, the second pins what the reader sees.
     """
     return " ".join(m.value for m in at.markdown if "mb-strip" in (m.value or ""))
 
@@ -1256,12 +1276,15 @@ def test_my_squad_shows_a_quick_stats_summary():
     for folded in ("Unavailable", "Doubtful"):
         assert folded not in strip                     # folded into the availability line (US-404)
 
-    gw = [s for s in at.segmented_control if s.label == "Gameweeks ahead"][0]
-    gw.set_value(2).run()
+    # ADR-175 — the pitch offers GW1 · GW1–3, not 1/2/3/4/5/10. Nobody reads a five-week projection off an
+    # active squad; that question belongs to the Lab, which kept the long range.
+    gw = [c for c in at.segmented_control if c.key == "gw_pitch"][0]
+    assert list(gw.options) == ["GW1", "GW1–3"], "the pitch offers this week or the short run, nothing longer"
+    gw.set_value(3).run()
     strip = _strip_text(at)
     # US-449 rev: the horizon moved out of the label into the strip's `sub` line, because a long label is
     # what forces a column wide — so assert the two parts, not the old combined string.
-    assert "Projected XI" in strip and "2 GW" in strip
+    assert "Projected XI" in strip and "3 GW" in strip
 
 
 def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
@@ -1278,7 +1301,7 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
         return
     by_id = {p["id"]: p for p in players}
     ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
-                         horizon=5, gw_history_by_code=store.get_gw_history_by_code())   # a multi-GW horizon (see below)
+                         horizon=3, gw_history_by_code=store.get_gw_history_by_code())   # a multi-GW horizon (see below)
     store.close()
     xp = {r["id"]: r["xp"] for r in ranked}
     by_gw = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -1292,9 +1315,10 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     at.session_state["squad"] = {**sq, "captain_id": cap, "name": "RoboTS"}
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
-    # US-374: My Squad now defaults to 1 GW; this test is about the multi-GW captain double, so set it to 5 to
-    # match `expected` and to surface the "next gameweek only" caption (moot, so hidden, at horizon 1).
-    next(s for s in at.segmented_control if s.label == "Gameweeks ahead").set_value(5).run()
+    # US-374 defaulted My Squad to 1 GW; ADR-175 narrowed the pitch to **GW1 · GW1–3**, so the multi-GW case
+    # this test is about is now 3, not 5. The subject is unchanged — the captain's double counts for the next
+    # gameweek only, and the caption saying so is moot (and hidden) at a horizon of 1.
+    next(c for c in at.segmented_control if c.key == "gw_pitch").set_value(3).run()
     assert not at.exception
     strip = _strip_text(at)
     assert "Projected XI" in strip
@@ -1891,7 +1915,7 @@ def test_my_squad_transfer_include_injured_surfaces_a_flagged_player():
     at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
     at.session_state["squad"] = squad
     at.run()
-    at.segmented_control[0].set_value("Transfer").run()      # ADR-115: manual transfer moved to the Transfer tab
+    _open_panel(at)          # ADR-115 moved the manual transfer off the pitch; ADR-175 put it in a panel
     assert not at.exception
 
     out = next((s for s in at.selectbox if s.label == "Transfer out"), None)
@@ -3543,26 +3567,34 @@ def test_trending_never_explains_why_the_crowd_is_moving():
 # ---- ADR-171 / US-435: one screen for the week -----------------------------------------------------
 
 def test_the_golden_page_carries_the_whole_week_in_order():
-    """The merge itself: ① the answer, the pitch it is about, ② captaincy, ③ chips — on one screen.
+    """ADR-171 asked for the whole week on one screen; ADR-175 kept that and changed *how*.
 
-    US-435's ask was *"most of what's needed for an informed decision is then on the golden page"*, so the
-    test is that the three things are present together, in that order — not that three functions were called.
+    The three answers were stacked down the page, which is what pushed the first useful thing to the eleventh
+    block. They are one selector now — same four answers, one at a time, with the pitch still on screen
+    while you switch. So the assertion moves from "three headings in order" to "four answers offered, and
+    each one renders".
     """
     at = _squads_view("My Squad")
-    heads = [m.value for m in at.markdown if m.value.startswith("#####")]
-    order = [h for h in heads if any(k in h for k in ("This week", "Captaincy", "Chips"))]
-    assert [k for k in ("This week", "Captaincy", "Chips") if any(k in h for h in order)] == \
-           ["This week", "Captaincy", "Chips"], f"sections missing or out of order: {order}"
-    assert any("This week" in c.value for c in at.code), "① the week's answer renders"
-    assert any(b.key == "ms_chips" for b in at.button), "③ chips is a click, not automatic"
+    sel = next(c for c in at.segmented_control if c.key == "ms_answer")
+    assert list(sel.options) == ["This week", "Captain", "Transfer", "Chips"]
+    assert any("This week" in c.value for c in at.code), "the default answer renders without being asked"
+
+    for panel in sel.options[1:]:
+        sel.set_value(panel).run()
+        assert not at.exception, f"{panel} raised: {at.exception}"
 
 
 def test_the_sub_nav_lost_the_two_views_that_became_sections():
-    # ADR-171: 7 tools → 5. Transfer stays its own tab (a genuinely different task); AI Tips and Captain do not.
+    """7 tools → 5 (ADR-171) → **4** (ADR-175), as each became an answer rather than a destination.
+
+    AI Tips and Captain went first; Transfer followed once a selector meant its ~10 widgets exist only when
+    chosen, which is the objection ADR-174 had raised against stacking them.
+    """
     at = _run(_PAGES / "1_My_Squad.py")
     tools = next(c for c in at.segmented_control if c.label == "Tool").options
-    assert tools == ["My Squad", "Transfer", "DNA", "Leagues", "Lab"]
-    assert "AI Tips" not in tools and "Captain" not in tools
+    assert tools == ["My Squad", "DNA", "Leagues", "Lab"]
+    for gone in ("AI Tips", "Captain", "Transfer"):
+        assert gone not in tools, f"{gone} is an answer under the pitch now, not a destination"
 
 
 def test_the_week_renders_eagerly_when_no_model_is_attached():
@@ -3721,3 +3753,76 @@ def test_the_transfer_tab_keeps_everything_it_had():
     labels = [s.label for s in at.selectbox]
     assert "Transfer out" in labels and "Bring in" in labels, "the manual picker must stay on the tab"
     assert any(b.label.startswith("Transfer →") for b in at.button)
+
+
+# ---- ADR-175: value above the fold -----------------------------------------------------------------
+
+
+def test_the_page_no_longer_explains_itself_before_showing_anything():
+    """The cut caption said "squad · captain · transfers · chips · **health**" — a name ADR-166 retired six
+    days earlier — and explained the page to someone already standing on it, under a title that names it and
+    above tabs that list every item in the sentence. It was one of ten blocks before the first useful thing.
+    """
+    at = _squads_view("My Squad")
+    caps = " ".join(c.value or "" for c in at.caption)
+    assert "all in one place" not in caps
+    assert "health" not in caps.lower(), "the caption named a tab that has been called DNA since ADR-166"
+
+
+def test_the_squad_switcher_is_not_duplicated_by_the_banner():
+    """The picker read "RoboTS (yours)" four lines above a banner reading "YOUR TEAM · RoboTS" — two
+    elements, stacked, naming one squad."""
+    src = (_ROOT / "src" / "web_streamlit" / "squads.py").read_text()
+    assert 'label_visibility="collapsed"' in src.split("def squad_picker")[1].split("def ")[0], \
+        "the 'Squad' caption said what the banner beneath it already said"
+    assert "if len(labels) == 1:" in src, "one squad needs no picker at all"
+
+
+def test_the_pitch_offers_this_week_or_the_short_run_only():
+    at = _squads_view("My Squad")
+    gw = next(c for c in at.segmented_control if c.key == "gw_pitch")
+    assert list(gw.options) == ["GW1", "GW1–3"] and gw.value == 1
+
+
+def test_the_lab_keeps_the_long_window_it_actually_uses():
+    """A wildcard IS a multi-week bet — the horizon was never wrong there, only on an active squad."""
+    at = _squads_view("Build")
+    gw = [c for c in at.segmented_control if c.key == "gw_lab"]
+    if gw:
+        assert 10 in [int(o) for o in gw[0].options]
+
+
+def test_backup_and_import_leave_the_page_once_you_have_a_team():
+    """ADR-113's own words are "import it **once**". A once-a-season action was holding permanent space on
+    the most-visited page — but it was put there so a new user could find it, which only applies while there
+    is nothing to import."""
+    from src.squads import SquadStore
+    sq = SquadStore().load("RoboTS")
+    if not sq:
+        return
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=60)
+    at.session_state["squad"] = {**sq, "name": "RoboTS"}     # a team of your own, so nothing to import
+    at.run()
+    # ⚠️ Scope to `at.main`. The top-level `at.get("expander")` includes the sidebar, so an unscoped
+    # assertion here reads "still on the page" for a panel that has correctly moved off it.
+    on_page = [e.label for e in (at.main.get("expander") or [])]
+    in_sidebar = [e.label for e in (at.sidebar.get("expander") or [])]
+    assert not any("Backup / import" in (lbl or "") for lbl in on_page), "it left the page"
+    assert any("Backup / import" in (lbl or "") for lbl in in_sidebar), "…and arrived in the sidebar"
+
+
+def test_backup_and_import_stay_on_the_page_while_there_is_nothing_to_import():
+    """The other half, and the reason this is conditional rather than a straight move: ADR-113 put the panel
+    here so a new user could find it, and that reason is real — it just expires the moment they have a team.
+    """
+    at = _squads_view("My Squad")                            # no session squad → the demo is shown
+    on_page = [e.label for e in (at.main.get("expander") or [])]
+    assert any("Backup / import" in (lbl or "") for lbl in on_page)
+
+
+def test_the_answers_are_one_selector_not_a_stack():
+    at = _squads_view("My Squad")
+    sel = next(c for c in at.segmented_control if c.key == "ms_answer")
+    assert list(sel.options) == ["This week", "Captain", "Transfer", "Chips"]
+    # only ONE answer renders at a time — the stacked version put all three on the page at once
+    assert not any("Chip strategy" in c.value for c in at.code)

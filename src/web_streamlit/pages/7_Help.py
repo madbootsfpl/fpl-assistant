@@ -59,9 +59,10 @@ st.markdown(
     "5. **💾 Download** your `squad.json` backup"
 )
 
-st.caption("Your team lives on the **🧩 My Squad** tab — switch **My Squad · Transfer · DNA · Leagues · Lab** with "
-           "the buttons at the top. The first of those is the whole week in one screen: your **answer**, then the "
-           "pitch and lineup it is about, then **captaincy**, then **chips**. **🏠 Home** shows a ⏳ **live deadline "
+st.caption("Your team lives on the **🧩 My Squad** tab — switch **My Squad · DNA · Leagues · Lab** with "
+           "the buttons at the top. The first of those leads with your squad: the projected points, then the "
+           "pitch — and under it one selector for **This week · Captain · Transfer · Chips**, so the pitch "
+           "stays on screen while you switch between them. **🏠 Home** shows a ⏳ **live deadline "
            "clock** that turns 🟠 then 🔴 as it nears — a reminder to set your captain, transfers and chips before "
            "the gameweek locks.")
 
@@ -114,21 +115,22 @@ with st.expander("🧬 3 · Grade the 15  →  **My Squad ▸ DNA**"):
         "- **One xP number** — the same engine the CLI uses, so the projection stays consistent."
     )
 
-with st.expander("🗓️ 4 · Plan your week  →  **My Squad**, top to bottom"):
+with st.expander("🗓️ 4 · Plan your week  →  **My Squad**, one answer at a time"):
     st.markdown(
-        "Most of this is on the **My Squad** screen itself, in the order the week is actually decided.\n\n"
-        "**🤖 This week** — at the top, your fastest gameweek plan: **👑** who to captain · **🔁** any lineup "
+        "All of it is on the **My Squad** screen, under one selector below the pitch — so the pitch stays on "
+        "screen while you move between the four answers.\n\n"
+        "**🤖 This week** — the default, and your fastest gameweek plan: **👑** who to captain · **🔁** any lineup "
         "change · **🔄** one transfer to consider · **🚑** injuries and doubts, all **✓/⚠** checked against the "
         "data. *You always get the full data-driven plan; where a local AI is available it adds a written "
         "narration — the hosted app is data-only, which is why the answer appears instantly here and waits "
         "behind a button when you run it yourself.*\n\n"
-        "**👑 Captaincy** — below the pitch: your 15 ranked by expected points, with opponent · penalty duty · "
+        "**👑 Captain** — your 15 ranked by expected points, with opponent · penalty duty · "
         "ownership (💎 differential → 👑 essential), and a **Confidence** score with the reasoning. To set one, "
         "tap the shirt on the pitch → **👑 Make … captain**.\n\n"
-        "**🎴 Chips** — at the bottom, behind a button: *when* to play **Triple Captain · Bench Boost · Free Hit "
+        "**🎴 Chips** — behind a button: *when* to play **Triple Captain · Bench Boost · Free Hit "
         "· Wildcard**. A chip expires at the end of the half-season, so this looks across **every gameweek left "
         "before that deadline** rather than your chosen horizon — which is why it is a click, not automatic.\n\n"
-        "**🔄 My Squad ▸ Transfer** — the one that has its own tab, because it is its own job: the best single "
+        "**🔄 Transfer** — the fourth answer, and the biggest: the best single "
         "swaps ranked by how much they improve your legal XI. Set your **bank** with the slider, or ask for a "
         "coordinated **2–3 transfer plan**. **Apply** one swap, or **Apply this plan →** for all at once."
     )

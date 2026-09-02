@@ -63,11 +63,21 @@ def test_home_does_not_advertise_the_owner_only_page():
 
 
 def _my_squad_subtabs():
-    """The real sub-tab names, read off the segmented control in the page source."""
+    """Everywhere `My Squad ▸ X` can legitimately point — **both** switches, not just the top one.
+
+    ADR-175 moved Transfer under the pitch into an answer selector, and this guard failed on
+    "My Squad ▸ Transfer" in Home and Help. But that pointer is still *true*: Transfer is on My Squad, one
+    control lower. The guard's model was too narrow, not the copy wrong — so it reads the tool switch **and**
+    the answer selector, which is the honest definition of "a place on this page you can be sent".
+    """
     src = (PAGES / "1_My_Squad.py").read_text()
-    m = re.search(r'"Tool",\s*\[(.*?)\]', src, re.S)
-    assert m, "could not find the My Squad tool switch"
-    return re.findall(r'"(.+?)"', m.group(1))
+    names = []
+    for pattern in (r'"Tool",\s*\[(.*?)\]', r'"Answer",\s*\[(.*?)\]'):
+        m = re.search(pattern, src, re.S)
+        assert m, f"could not find the switch matching {pattern!r}"
+        # the answer selector's labels carry an emoji — strip it, since the copy names the word
+        names += [x.split(" ", 1)[-1] if " " in x else x for x in re.findall(r'"(.+?)"', m.group(1))]
+    return names
 
 
 def test_home_only_points_at_sub_tabs_that_exist():
