@@ -82,7 +82,12 @@ since its momentum data is 0 in preseason.
 - Surfacing the preseason-emptiness up front (at planning) made that split an easy, informed decision.
 
 ### Notes _(for Tony)_
+Fixtures - could we select the number of weeks to view difficulty
+Fixtures - could we display like attached?
+![alt text](04DDE8FC-5453-479D-8F9A-64635CA51CDD_1_105_c.jpeg)
 
+MySquad - Could we display like this, keep the information we have & layout per attached image?
+![alt text](CB58EA3C-DED7-4545-AFCB-AF3C6F045BED_1_105_c.jpeg)
 ---
 
 # Decisions Made 📋
