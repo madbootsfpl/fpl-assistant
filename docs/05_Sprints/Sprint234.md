@@ -72,3 +72,21 @@ owner would give.
 **+12**, every guard mutation-checked in both directions: dropping the *played-every-gameweek* check fails ·
 accepting rows without a scoreline fails · showing the banking line unconditionally fails · never naming the
 longer-view disagreement fails · the plan dropping its timing verdict fails.
+
+
+---
+
+### Verified (2026-09-02)
+
+Owner rebooted, data status reads 2 Sep, and on the recommendations themselves:
+
+> *"Output looks much more in line with my thinking."*
+
+**That is the check that counts, and it is the same one that started this.** Both ADR-172 and ADR-173 began
+with him reading a number and not believing it — Sangare at 9.9, then a transfer he would never make. Neither
+was caught by a test, because in both cases the code did exactly what it said; what was wrong was an
+assumption underneath it. The suite could confirm the fixes but could never have found the faults.
+
+**Worth stating plainly while it is fresh:** the fastest defect-detection loop this project has is a person
+looking at output and finding it implausible. That is an argument for keeping the manual smoke in the
+Definition of Done, and for showing the owner real output early rather than describing what was built.
