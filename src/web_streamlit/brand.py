@@ -129,7 +129,15 @@ def nav_css(key: str, *, primary_button: str | None = None) -> str:
     css = f"""
         .st-key-{key} div[data-testid="stButtonGroup"] {{ width: 100%; }}
         .st-key-{key} div[data-testid="stButtonGroup"] > div {{ width: 100%; display: flex; gap: 4px; }}
-        .st-key-{key} div[data-testid="stButtonGroup"] button {{ flex: 1 1 0; min-width: 0; }}
+        /* `min-width: 0` lets a segment shrink below its label, and Streamlit's own ~1rem of horizontal
+           padding then pushed "This week" and "Transfer" into "This …" / "Trans…" on a phone. Trimming
+           the padding buys the characters back; `nowrap` keeps a segment one line if it still runs
+           short, because a wrapped label makes the whole row taller. (Owner, 2026-09-03.) */
+        .st-key-{key} div[data-testid="stButtonGroup"] button {{
+            flex: 1 1 0; min-width: 0; padding-left: 0.35rem; padding-right: 0.35rem;
+            white-space: nowrap; }}
+        .st-key-{key} div[data-testid="stButtonGroup"] button p {{
+            overflow: hidden; text-overflow: ellipsis; }}
         .st-key-{key} button[aria-checked="true"],
         .st-key-{key} button[kind="segmented_controlActive"] {{
             background: {PURPLE} !important; border-color: {PURPLE} !important; color: #fff !important; }}

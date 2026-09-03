@@ -4329,3 +4329,60 @@ def test_my_squad_copy_does_not_point_at_a_control_it_no_longer_has():
     assert "next gameweek" in captions.lower(), "the fact is still true and still worth saying"
     assert "Gameweeks ahead" not in captions, \
         "My Squad has no horizon selector — copy must not send the reader looking for one"
+
+
+def test_pitch_text_inherits_the_pitch_colour_unless_it_sits_on_its_own_background():
+    """Owner, 2026-09-03: *"can't really see the GW1-3 numbers on the pitch, make the white maybe."*
+
+    The per-gameweek line shipped as `#2b6a3f` — **dark green text on a green pitch**. It was picked to sit
+    beside the brand's greens rather than against the surface it actually lands on.
+
+    > **A colour chosen against the palette rather than against the ground it renders on is not a colour
+    > choice.**
+
+    So the rule this asserts is structural rather than a hex: **text drawn straight onto the grass sets no
+    colour of its own** — it inherits the pitch's white and carries the shadow that keeps it legible. Only
+    elements with their own solid background (the badges, the xP pill) may set one, because they bring their
+    own ground with them.
+
+    ⚠️ It reads the stylesheet, which is weaker than driving a browser — but CSS has no other seam here, and
+    a rule this test cannot see is a rule nothing protects. Stated plainly rather than dressed up.
+    """
+    import re
+
+    from src.web_streamlit.pitch import _PITCH_CSS
+
+    on_the_grass = {"name", "meta", "weeks", "flags"}
+    for cls in on_the_grass:
+        block = re.search(rf"\.fpl-pitch \.{cls}\{{(.*?)\}}", _PITCH_CSS, re.S)
+        assert block, f".{cls} has no rule"
+        body = block.group(1)
+        assert "background" not in body, f".{cls} draws on the grass, so it has no ground of its own"
+        assert not re.search(r"(^|;)\s*color\s*:", body), \
+            f".{cls} must inherit the pitch's white — a colour here is chosen against the wrong surface"
+
+    # The two that legitimately set one, because they paint their own background first.
+    for cls in ("xp", "c-badge"):
+        block = re.search(rf"\.fpl-pitch \.{cls}\{{(.*?)\}}", _PITCH_CSS, re.S)
+        assert block and "background" in block.group(1) and "color" in block.group(1)
+
+    # …and the numbers keep the shadow that makes white readable over a light patch of grass.
+    weeks = re.search(r"\.fpl-pitch \.weeks\{(.*?)\}", _PITCH_CSS, re.S).group(1)
+    assert "text-shadow" in weeks
+
+
+def test_a_nav_segment_is_not_squeezed_until_its_label_truncates():
+    """Owner, 2026-09-03, with a screenshot: *"some truncation across the tabs"* — the answer selector read
+    **This … | Captain | Trans… | Chips**.
+
+    `flex: 1 1 0` with `min-width: 0` lets each segment shrink below its label, and Streamlit's own ~1rem of
+    horizontal padding then ate the characters. The equal-width fill is wanted (ADR-176); the padding is not.
+    Fixed in the **primitive**, so all five pages that call it are fixed at once.
+    """
+    from src.web_streamlit import brand
+
+    css = brand.nav_css("demo")
+    assert "flex: 1 1 0" in css, "equal segments across the row is the point of the primitive (ADR-176)"
+    assert "padding-left: 0.35rem" in css and "padding-right: 0.35rem" in css, \
+        "the label needs those characters back"
+    assert "white-space: nowrap" in css, "a wrapped label makes the whole row taller"

@@ -54,7 +54,11 @@ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 color:#0a7a34;font-weight:700;font-size:.72rem;box-shadow:0 1px 2px rgba(0,0,0,.25);}
 .fpl-pitch .meta{font-size:.64rem;opacity:.92;text-shadow:0 1px 2px rgba(0,0,0,.5);margin-top:2px;}
 .fpl-pitch .flags{font-size:.8rem;margin-top:2px;line-height:1.45;letter-spacing:1px;}
-.fpl-pitch .weeks{font-size:.62rem;margin-top:2px;color:#2b6a3f;font-variant-numeric:tabular-nums;}
+/* ADR-179 rev — WHITE, with the same shadow the name and meta lines carry. Shipped as #2b6a3f: dark
+   green text on a green pitch, which the owner could not read. A colour chosen against the token
+   palette rather than against the surface it lands on is not a colour choice. */
+.fpl-pitch .weeks{font-size:.66rem;margin-top:2px;font-weight:600;letter-spacing:.2px;
+  text-shadow:0 1px 2px rgba(0,0,0,.55);font-variant-numeric:tabular-nums;}
 .fpl-pitch .bench-label{color:#eafff0;font-size:.72rem;letter-spacing:.12em;text-align:center;
 margin:18px 0 2px;opacity:.85;text-transform:uppercase;}
 .fpl-pitch .bench{background:rgba(0,0,0,.16);border-radius:12px;padding:10px 6px;margin-top:2px;}
