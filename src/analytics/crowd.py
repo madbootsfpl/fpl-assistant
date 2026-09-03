@@ -150,18 +150,43 @@ CROWD_LEGEND = (
 )
 
 
+# The one table of set-piece duties (ADR-081): the stored order field, the glyph, the short label a table
+# column uses, and the long word the legend uses. ADR-178 put the **glyph alone** on the pitch and the words
+# in a table, so the two renderings must not be able to disagree about which glyph means what — they are
+# both built from this.
+SET_PIECES = (
+    ("penalties_order", "⚽", "pens", "penalties"),
+    ("corners_order", "🚩", "corners", "corners"),
+    ("freekicks_order", "🎯", "FK", "free-kicks"),
+)
+
+
+def _duties(player):
+    """The set-piece rows this player is **first choice** for."""
+    return [row for row in SET_PIECES if _get(player, row[0]) == 1]
+
+
 def set_piece_flags(player) -> list:
     """First-choice set-piece duty flags for a player (ADR-081) — ⚽ pens · 🚩 corners · 🎯 FK, each
     when that order is 1 (the taker). Display-only; empty-safe (a Row or a dict). A low-owned taker is a
-    prime differential; the returns are already in the player's points, so this is a *lens*, not xP."""
-    flags = []
-    if _get(player, "penalties_order") == 1:
-        flags.append("⚽ pens")
-    if _get(player, "corners_order") == 1:
-        flags.append("🚩 corners")
-    if _get(player, "freekicks_order") == 1:
-        flags.append("🎯 FK")
-    return flags
+    prime differential; the returns are already in the player's points, so this is a *lens*, not xP.
+
+    The **worded** form, for a table column. The pitch uses `set_piece_glyphs` instead (ADR-178)."""
+    return [f"{glyph} {short}" for _field, glyph, short, _long in _duties(player)]
+
+
+def set_piece_glyphs(player) -> list:
+    """`[(glyph, meaning)]` — the **bare** form the pitch renders (ADR-178).
+
+    Owner: *"would it be cleaner to use just the emoji under the player and have a key at the bottom of the
+    pitch?"* On a 104px kit card the worded form wraps to three lines; three glyphs fit on one. The meaning
+    rides along as a `title`, so a desktop hover explains without the key — and the key carries the phone.
+
+    This is only legible **because the set is three**. The market flags were cut from the pitch first
+    (ADR-178): 💰↑ and 💸↓ are near-identical at 10px, and 💎 ⭐ 🟦 👑 is a four-point ordinal scale drawn as
+    four unrelated pictures. Three role glyphs are memorable; seven market glyphs are a rebus.
+    """
+    return [(glyph, long) for _field, glyph, _short, long in _duties(player)]
 
 
 def availability_flag(player) -> str:

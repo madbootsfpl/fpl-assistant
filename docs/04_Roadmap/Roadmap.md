@@ -447,6 +447,19 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **Plan in the Lab, play on the pitch** (ADR-178, Sprint 239, 2026-09-03) — *owner UX feedback.* Three
+  changes. The pitch carries **set-piece glyphs only** (⚽🚩🎯, no words) with **one key beneath it on both
+  pages** — every player used to carry at least one flag (the ownership tier always fires) and the six-flag
+  players were Palmer · Szoboszlai · Groß, so the clutter concentrated on the players a good squad owns;
+  set-pieces-only leaves **94% of shirts clean**. The Lab now **starts from a squad you already own**, and
+  every Lab table shows **a score per gameweek** rather than one total, because *a cumulative number hides a
+  blank* (5·5·5 and 15·0·0 read identically). ⚠️ Holds ADR-132's line: the Lab **reads** your squad, it does
+  not search a transfer path through it. The owner's counter-proposal at preview (*"just the emoji and a
+  key?"*) **made the change smaller** — the Lab already carried every flag in a table with words, so the
+  split was **pitch vs table**, not page vs page, which deleted the per-page flag mode from the design.
+  ⏳ **GW1–3 on My Squad stays gated**: the XI differs in **63.7%** of squads but the GW1–3 XI costs
+  **0.32 xP** in the week you play it, inside ADR-161's sd 3.51 — so both obvious arguments fail and it is a
+  judgement about page cost. And *there is nothing to move*: the Lab has offered 1-10 since US-374.
 - ✅ **Squad Lab's three build modes are really two** (ADR-137, Sprint 191, 2026-08-25) — *owner,
   2026-08-19.* Measured before building, and it was worse than reported: "Bench Boost" produced the same
   fifteen as "Balanced" **even when run with `bench_weight=1.0`**, because maximising the XI plus a

@@ -55,6 +55,7 @@ from src.web_streamlit.squads import (
     active_squad,
     apply_transfer,
     apply_transfer_plan,
+    available_squads,
     captain_bonus,
     move_bench_sub,
     rename,
@@ -89,6 +90,110 @@ def _formation_xi_scores(pool, budget, include, exclude, scores, display_xp):
 
 # ---- Build (the full CLI `squad` options → a saveable 15; ADR-062) ---------------------------------
 
+_NEW_SQUAD = "➕ Build a new squad"
+
+# ADR-178 — how many gameweeks get their own column before the rest fold into the total.
+#
+# ⚠️ **Capped deliberately.** The Lab offers horizons out to 10, and ten weekly numbers would show a precision
+# the model does not have — ADR-173 caught exactly that, where a longer window multiplied a suppressed rate
+# instead of correcting it. Five is the point beyond which a per-week figure is a guess wearing a decimal.
+_BREAKOUT_MAX = 5
+_BREAKOUT_HELP = ("Total expected points over the horizon — the per-gameweek columns are its parts and sum "
+                  "to it (ADR-032). An empty gameweek cell means that team has no fixture, not a projected "
+                  "zero.")
+
+
+def _breakout_gameweeks(ranked) -> list:
+    """The gameweeks that get their own column — the window's first few (ADR-178)."""
+    gws = ranked[0]["gameweeks"] if ranked and ranked[0]["gameweeks"] else []
+    return list(gws)[:_BREAKOUT_MAX]
+
+
+def _gw_columns(pid, by_gameweek_by_id, gws, played):
+    """`{"GW3": 5.1, "GW4": None, …}` — the per-gameweek xP breakout (ADR-178).
+
+    ⚠️ **A blank gameweek is `None`, not `0.0`, and that is the whole point of the column.** `decision_xp`
+    initialises `by_gameweek` for every gameweek in the window (ADR-032), so a team with no fixture reads
+    `0.0` — indistinguishable from a player projected to score nothing. `played` says which gameweeks that
+    team actually has a fixture in, so the cell can be **empty**: not projected, rather than projected zero.
+
+    This is the reason the breakout exists at all. A cumulative total reads identically whether it is
+    5 · 5 · 5 or 15 · 0 · 0, and blanks and doubles are exactly what multi-week planning is about — the total
+    does not merely omit them, it conceals them.
+    """
+    bg = by_gameweek_by_id.get(pid, {})
+    return {f"GW{g}": (bg.get(g, 0.0) if g in played else None) for g in gws}
+
+
+def _fixture_gameweeks(upcoming, gws) -> dict:
+    """`{team short_name: {gameweek, …}}` — which of `gws` each team actually plays in."""
+    # ⚠️ Keyed by `home`/`away` — the **short names** — not `team_h`/`team_a`, which are FPL's numeric ids.
+    # Reading the ids and looking them up by short name returned an empty set for every team, i.e. "nobody
+    # plays", which would have blanked the entire breakout while looking like a real answer.
+    out = {}
+    for f in upcoming or []:
+        event = f["event"]
+        if event in gws:
+            for side in ("home", "away"):
+                out.setdefault(f[side], set()).add(event)
+    return out
+
+
+def render_plan(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *,
+                teams=None, horizon=5):
+    """Plan an **existing** squad over the gameweeks ahead — the Lab's second mode (ADR-178).
+
+    Owner: *"it is used for planning your squad for the future — should this be done in the Lab? Then the Lab
+    becomes more useful."* The Lab could only ever build from nothing, which is a few-times-a-season job, so
+    the page was closed the rest of the time. This is the read that makes it worth opening: your fifteen,
+    priced week by week, at the long horizons the Lab has always offered.
+
+    ⚠️ **A read, not an optimise.** Nothing here proposes a transfer. Searching a path from a squad you
+    already own is ADR-132, declined on evidence — and the distinction is the whole reason this is cheap:
+    the Lab *showing* your squad over ten weeks needs no new model, while the Lab *routing* you through them
+    needs one nobody has justified.
+    """
+    by_id = {p["id"]: p for p in players}
+    owned = [by_id[i] for i in squad.get("player_ids", []) if i in by_id]
+    if not owned:
+        st.info("That squad has no players we can resolve — rebuild it, or pick another.")
+        return
+
+    _flag_unavailable(owned)
+    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
+    xp_by_id = {r["id"]: r["xp"] for r in ranked}
+    bg = {r["id"]: r["by_gameweek"] for r in ranked}
+    gws = _breakout_gameweeks(ranked)
+    played = _fixture_gameweeks(upcoming, set(gws))
+
+    bench_ids = set(squad.get("bench_ids") or [])
+    xi_ids = ({p["id"] for p in owned} - bench_ids) if bench_ids else best_legal_xi(owned, xp_by_id)
+    xi_players = [p for p in owned if p["id"] in xi_ids]
+    bench_players = [p for p in owned if p["id"] not in xi_ids]
+
+    cost = round(sum(p["price"] for p in owned), 1)
+    st.caption(f"**{squad_name}** · £{cost:.1f}m · projected over "
+               + (f"GW{gws[0]}–{gws[-1]}" if len(gws) > 1 else f"GW{gws[0]}" if gws else "the window")
+               + ". Planning only — nothing here changes your squad.")
+
+    next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
+    kits = shirt_url_by_id(owned, teams)
+    bench_roles = {p["id"]: role for role, p in bench_order(bench_players, xp_by_id)}
+    render_pitch(xi_players, bench_players, captain_id=squad.get("captain_id"), xp_by_id=xp_by_id,
+                 photos=photos, next_opp=next_opp, bench_roles=bench_roles, kits=kits)
+
+    render_player_table([{
+        "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
+        "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
+        "£m": p["price"],
+        **_gw_columns(p["id"], bg, gws, played.get(p["team"], set())),
+        "xP": round(xp_by_id.get(p["id"], 0), 1),
+        "Role": "XI" if p["id"] in xi_ids else "Bench", "Trends": " ".join(crowd_flags(p)),
+        "Set": " ".join(set_piece_flags(p)),
+    } for p in sorted(owned, key=lambda x: (x["id"] not in xi_ids, _ORDER.get(x["position"], 9)))],
+        help={"Set": SET_PIECE_LEGEND, "xP": _BREAKOUT_HELP})
+
+
 def render_build(players, upcoming, history, gw_history, photos, badges, *, teams=None, horizon=5):
     by_label = {f"{p['web_name']} · {p['team']} · £{p['price']:.1f}m": p["id"]
                 for p in sorted(players, key=lambda p: (p["web_name"] or "").lower())}
@@ -97,10 +202,31 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
     def _ids(chosen):
         return [by_label[la] for la in chosen]
 
+    # ADR-178 — the Lab starts from a **squad**, not always from nothing. Owner: *"instead of having just a
+    # new squad, use the drop down that currently has 'Squad name' and select your Current Squad or a New
+    # Squad (even multiple)."* The field below used only to *label the output*; the picker makes it an input,
+    # which is what turns the Lab from a few-times-a-season optimiser into the place you plan from where you
+    # actually are.
+    #
+    # ⚠️ Picking an existing squad **reads** it — it does not optimise over it. Searching a transfer path from
+    # your current fifteen is ADR-132, which was declined on evidence: the best sell was the same player in
+    # all six gameweeks and the market yielded one beneficial move, a tree with one branch. That line holds.
+    _saved = available_squads()
+    # ⚠ Labelled **"Start from"**, not "Squad". The page already carries a picker labelled "Squad" (the shared
+    # `squad_picker`, ADR-054), and two identically-labelled dropdowns stacked on one tab is ambiguous for a
+    # reader and unaddressable for a test. Found by a guard that grabbed the wrong one.
+    _choice = st.selectbox(
+        "Start from", [_NEW_SQUAD, *_saved], key="lab_squad",
+        help="Plan a squad you already own over the gameweeks ahead, or build a new one from scratch.")
+    if _choice != _NEW_SQUAD:
+        render_plan(_choice, _saved[_choice], players, upcoming, history, gw_history, photos, badges,
+                    teams=teams, horizon=horizon)
+        return
+
     c1, c2, c3 = st.columns(3)
     budget = c1.slider("Budget (£m)", 80.0, 100.0, 100.0, step=0.5,
                        help="The most you'll spend across all 15 players.")
-    name = c1.text_input("Squad name", value="My squad", max_chars=40,
+    name = c1.text_input("Name this squad", value="My squad", max_chars=40,
                          help="A name for this squad — used in the download and as the active-squad "
                               "label.").strip() or "My squad"
     objective = c2.selectbox("Objective", ["xp", "points", "value", "xgi"],
@@ -203,14 +329,20 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
     render_pitch(xi_players, bench_players, captain_id=None, xp_by_id=display_xp, photos=photos,
                  next_opp=next_opp, bench_roles=bench_roles, kits=kits)
 
+    # ADR-178 — a score per gameweek, not one total. The Trends/Set columns keep their **words**: this is the
+    # reference surface the pitch's glyphs point at, and it is why the pitch needs no market flags of its own.
+    _bg = {r["id"]: r["by_gameweek"] for r in ranked}
+    _gws, _played = _breakout_gameweeks(ranked), _fixture_gameweeks(upcoming, _breakout_gameweeks(ranked))
     render_player_table([{
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
-        "£m": p["price"], "xP": round(p.get("xp", 0), 1),
+        "£m": p["price"],
+        **_gw_columns(p["id"], _bg, _gws, _played.get(p["team"], set())),
+        "xP": round(p.get("xp", 0), 1),
         "Role": "XI" if p["id"] in xi else "Bench", "Trends": " ".join(crowd_flags(p)),
         "Set": " ".join(set_piece_flags(p)),
     } for p in sorted(selected, key=lambda x: (x["id"] not in xi, _ORDER.get(x["position"], 9)))],
-        help={"Set": SET_PIECE_LEGEND})
+        help={"Set": SET_PIECE_LEGEND, "xP": _BREAKOUT_HELP})
     st.code(render_squad(result, budget=budget, objective=objective, full=True,
                          xi_ids=xi_ids), language=None)
 
@@ -250,13 +382,18 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
             st.metric(f"Projected XI — {shape}", f"{xi_xp:.1f} xP",
                       help="Total projected xP of this shape's best XI. Switch the formation (or tick "
                            "'Compare all formations') to see the effect of a different shape.")
+            # ADR-178 — the breakout belongs here too. Found by a guard asserting *every* Lab player table
+            # carries it: this one had been left cumulative, and one table quietly answering a different
+            # question than the two above it is how a reader learns not to trust any of them.
             render_player_table([{
                 "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
                 "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
-                "£m": p["price"], "xP": round(p.get("xp", 0), 1), "Trends": " ".join(crowd_flags(p)),
+                "£m": p["price"],
+                **_gw_columns(p["id"], _bg, _gws, _played.get(p["team"], set())),
+                "xP": round(p.get("xp", 0), 1), "Trends": " ".join(crowd_flags(p)),
                 "Set": " ".join(set_piece_flags(p)),
             } for p in sorted(xi_result["selected"], key=lambda x: _ORDER.get(x["position"], 9))],
-                help={"Set": SET_PIECE_LEGEND})
+                help={"Set": SET_PIECE_LEGEND, "xP": _BREAKOUT_HELP})
             st.caption(f"Best **{shape}** XI (display only) — the saveable build above is always a full 15.")
 
         # Compare all shapes at a glance (ADR-075) — gated: the 7 extra ILP solves run only on tick,

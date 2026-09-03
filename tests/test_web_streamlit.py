@@ -3932,3 +3932,228 @@ def test_the_head_to_head_drops_a_spent_chip_and_leads_with_the_season_gap(monke
         f"a chip played last week has to be said out loud: {captions}"
     assert any("cannot separate you" in c for c in captions), \
         f"identical squads must project level; a spent chip carried forward is what made them differ: {captions}"
+
+
+# ---- ADR-178: the pitch is a team sheet, the table is a reference -------------------------------
+
+_MARKET_GLYPHS = ("💎", "⭐", "🟦", "👑", "🔥", "❄️", "💰", "💸", "📈")
+
+
+def test_no_market_flag_reaches_a_shirt_and_no_glyph_carries_its_word():
+    """ADR-178, owner: *"the players on the pitch have a lot of emojis under them… maybe reduce to corners,
+    pens, FKs"* — then, at the preview: *"would it be cleaner to use just the emoji and have a key?"*
+
+    Both halves are asserted here because they fail differently. The **market** flags left the pitch because
+    every player carries at least one (the ownership tier always fires, so the pitch was never clean) and
+    because they are a *third copy* of things already on the page by name — the price line, the Flagged line,
+    Trending/Signals. The **words** left because on a 104px card three worded flags wrap to three lines.
+
+    Set pieces stayed on merit, not preference: they describe the player's **role**, not the market, and are
+    the one group with no better home.
+    """
+    from src.web_streamlit.pitch import _kit_html
+
+    loud = {"id": 1, "web_name": "Szoboszlai", "team": "LIV", "position": "MID", "price": 7.0,
+            "penalties_order": 1, "corners_order": 1, "freekicks_order": 1,      # all three duties
+            "selected_by_percent": 25.0, "transfers_in_event": 900_000,          # …and every market signal
+            "cost_change_event": 1, "form": 6.0}
+    html = _kit_html(loud, captain_id=None, xp_by_id={1: 5.1}, photos={}, next_opp={})
+    flags = html[html.index('<div class="flags"'):]
+    flags = flags[:flags.index("</div>") + 6]
+
+    import re
+
+    assert flags.count("<span") == 3, f"three duties, three glyphs: {flags}"
+    # ⚠ Assert the span CONTENT has no letters, rather than listing words to look for. The first version
+    # checked `">pens<" not in flags` and a mutation that rendered "⚽ pens" survived it — the word was there,
+    # just not preceded by ">". A blacklist of the words you thought of is not a test that no word appears.
+    for shown in re.findall(r"<span[^>]*>([^<]*)</span>", flags):
+        assert not re.search(r"[A-Za-z]", shown), f"the shirt must carry the glyph alone, got {shown!r}"
+    for glyph in _MARKET_GLYPHS:
+        assert glyph not in flags, f"{glyph} is a market signal and belongs on Trending/Signals, not a shirt"
+    # …and the meaning still rides along, so a desktop hover explains without scrolling to the key.
+    assert 'title="penalties"' in flags and 'title="free-kicks"' in flags
+
+
+def test_the_pitch_prints_the_key_only_when_a_shirt_carries_a_glyph():
+    """The key the owner asked for, and the condition on it.
+
+    It is conditional because the sentence ends *"blank = not on set pieces"*, which says nothing on a pitch
+    where every shirt is blank — a legend explaining an absent thing is noise, not help.
+
+    ⚠ **This test used to read the source** for the legend text and count `st.caption` calls. A mutation that
+    replaced the whole condition with `if False:` sailed straight through it: the source still contained
+    every string it was looking for. `set_piece_key` was extracted so the branch itself is assertable, and
+    the render is now checked on the page rather than in the file.
+    """
+    from src.web_streamlit.pitch import set_piece_key
+
+    # One definition of the WORDS — both render paths call this, neither writes its own.
+    for module in ("views/squads.py", "tap.py"):
+        assert "Set pieces: " not in (_ROOT / "src" / "web_streamlit" / module).read_text(), \
+            f"{module} must call set_piece_key, not restate the key"
+
+    taker = {"penalties_order": 1, "corners_order": 0, "freekicks_order": 0}
+    plain = {"penalties_order": 0, "corners_order": 0, "freekicks_order": 0}
+    assert "⚽ penalties" in set_piece_key([plain, taker])
+    assert "first-choice" in set_piece_key([taker])
+    assert set_piece_key([plain, plain]) == "", "a key for nothing is noise"
+    assert set_piece_key([]) == "" and set_piece_key(None) == ""
+
+    # …and it actually reaches the page, from the ONE place both surfaces share.
+    #
+    # ⚠ A squad is INJECTED. Written as a bare `_squads_view("My Squad")` this fell to the empty state (no
+    # active squad in a fresh AppTest), the "no pitch locally" guard returned early, and a mutation deleting
+    # the caption entirely still passed. **A test that skips is not a test that passes** — and the skip is
+    # invisible in a green run, which is what makes it worse than a failure.
+    from src.web_streamlit.squads import demo_squads
+
+    squads = demo_squads()
+    if not squads:
+        return
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=90)
+    at.session_state["squad"] = next(iter(squads.values()))
+    at.run()
+    assert not at.exception, at.exception
+    # ⚠ Not asserted via the pitch HTML: My Squad draws through the **click-detector component**, whose markup
+    # is not an `st.markdown` element, so "fpl-pitch in at.markdown" is False on the very page that matters.
+    # That is also the bug this test caught — the key was added to `render_pitch` only, which My Squad never
+    # calls, so the golden page was the one pitch with no key.
+    assert any(c.value.startswith("Set pieces:") for c in at.caption), \
+        "the pitch must print its own key on BOTH render paths — neither page should have to remember to"
+
+    # …and the Lab's pitch, which goes through `render_pitch` rather than the component. Asserted separately
+    # because it IS a separate path: a mutation deleting the caption from `render_pitch` alone left the
+    # My-Squad assertion above perfectly green. Two render paths need two assertions, or one of them is
+    # protected by nothing.
+    lab = _squads_view("Build")
+    if lab.code:                                           # a squad was built (skipped when there is no data)
+        assert any(c.value.startswith("Set pieces:") for c in lab.caption), \
+            "the Lab's pitch needs the same key — it shows the same glyphs"
+
+
+def test_the_glyph_and_the_word_come_from_one_table():
+    """`set_piece_flags` (words, for a table) and `set_piece_glyphs` (bare, for a shirt) render the same fact
+    two ways. Built separately they could disagree about which glyph means what — and the pitch's key would
+    then be teaching a mapping the table contradicts."""
+    from src.analytics.crowd import SET_PIECES, set_piece_flags, set_piece_glyphs
+
+    taker = {"penalties_order": 1, "corners_order": 1, "freekicks_order": 1}
+    worded = set_piece_flags(taker)
+    bare = set_piece_glyphs(taker)
+    assert len(worded) == len(bare) == len(SET_PIECES)
+    for (glyph, meaning), word in zip(bare, worded, strict=True):
+        assert word.startswith(glyph), f"{word!r} and {glyph!r} disagree"
+        assert meaning                                     # every glyph can be explained
+    assert set_piece_flags({}) == [] and set_piece_glyphs({}) == []
+
+
+def test_the_lab_table_keeps_its_words():
+    """The other half of the split, and the reason the pitch can afford to be bare.
+
+    ADR-178's first draft said *"the Lab shows all the flags"* — it already did, in a table, with words. So
+    the line was never My Squad vs Lab but **pitch vs table**: glyphs on the team sheet, words on the
+    reference. If this column ever went glyph-only, the pitch's key would be the only explanation left.
+    """
+    at = _squads_view("Build")
+    if not at.code:                                        # no data locally → the info branch
+        return
+    # ⚠ Checked on EVERY player table, not the union of all of them. Written as a union this passed while the
+    # build table had lost the column, because a *different* table on the same tab (the formation preview)
+    # still carried it. A union asks "does any table have this?" when the requirement is "do all of them?".
+    tables = [df.value for df in at.dataframe if "Player" in getattr(df.value, "columns", [])]
+    assert tables, "the Lab must render at least one player table"
+    for frame in tables:
+        cols = set(frame.columns)
+        assert {"Trends", "Set"} <= cols, f"a Lab player table lost its reference columns: {cols}"
+        gw_cols = [c for c in cols if str(c).startswith("GW")]
+        assert gw_cols, f"and every Lab player table gets the per-gameweek breakout: {cols}"
+
+
+def test_the_per_gameweek_columns_are_the_parts_of_the_total():
+    """ADR-178/ADR-032 — the breakout must be the total decomposed, never a second projection.
+
+    A cumulative number **hides a blank**: 15 points over three weeks reads identically whether it is 5·5·5
+    or 15·0·0, and blanks and doubles are exactly what multi-week planning is for. That only helps if the
+    parts add up to the number they replace.
+    """
+    from src.web_streamlit.views.squads import _breakout_gameweeks, _fixture_gameweeks, _gw_columns
+
+    ranked = [{"id": 7, "xp": 14.9, "gameweeks": [3, 4, 5], "by_gameweek": {3: 5.1, 4: 5.1, 5: 4.7}}]
+    gws = _breakout_gameweeks(ranked)
+    cols = _gw_columns(7, {7: ranked[0]["by_gameweek"]}, gws, played={3, 4, 5})
+    assert round(sum(cols.values()), 1) == ranked[0]["xp"]
+
+    # A blank is None, not 0.0 — "not projected", not "projected to score nothing". `decision_xp` seeds every
+    # gameweek in the window at 0.0 (ADR-032), so without this the two are indistinguishable.
+    blanked = _gw_columns(7, {7: ranked[0]["by_gameweek"]}, gws, played={3, 5})
+    assert blanked["GW4"] is None and blanked["GW3"] == 5.1
+
+    # The fixture map is keyed by SHORT NAME. Keyed by `team_h`/`team_a` (FPL's numeric ids) it returned an
+    # empty set for every team — "nobody plays" — which blanks the whole breakout while looking like data.
+    played = _fixture_gameweeks([{"event": 3, "home": "LIV", "away": "IPS"}], {3, 4})
+    assert played == {"LIV": {3}, "IPS": {3}}
+
+
+def test_the_breakout_is_capped_so_ten_weeks_do_not_get_ten_columns():
+    """ADR-178 — the Lab offers horizons to 10, and ten weekly numbers would show a precision the model does
+    not have. ADR-173 caught exactly that: a longer window multiplies a suppressed rate rather than
+    correcting it."""
+    from src.web_streamlit.views.squads import _BREAKOUT_MAX, _breakout_gameweeks
+
+    wide = [{"id": 1, "gameweeks": list(range(3, 13)), "by_gameweek": {}}]
+    assert len(_breakout_gameweeks(wide)) == _BREAKOUT_MAX <= 5
+    assert _breakout_gameweeks([]) == []
+
+
+def test_the_lab_can_plan_a_squad_you_already_own_without_optimising_it():
+    """ADR-178, owner: *"instead of having just a new squad, use the drop down… and select your Current Squad
+    or a New Squad (even multiple)"* — the change that makes the Lab worth opening between wildcards.
+
+    ⚠️ The assertion that matters is the **negative** one: picking an existing squad must not run the
+    optimiser over it. Searching a transfer path from a squad you already own is ADR-132, declined on
+    evidence — the best sell was the same player in all six gameweeks and the market yielded one beneficial
+    move, *a tree with one branch*. The Lab reads your squad; it does not route you through it.
+    """
+    from src.web_streamlit.views import squads as squads_view
+
+    called = []
+    original = squads_view.select_squad
+
+    def _spy(*a, **kw):
+        called.append(True)
+        return original(*a, **kw)
+
+    at = _squads_view("Build")
+    # ⚠ By KEY, not label: the page also carries a picker labelled "Squad" (`squad_picker`, ADR-054), and
+    # addressing this one by label grabbed that one instead. The Lab's is labelled "Start from" for the same
+    # reason — two identical labels on one tab are ambiguous for a reader too, not only for a test.
+    picker = next((s for s in at.selectbox if s.key == "lab_squad"), None)
+    assert picker is not None, "the Lab must offer a squad picker, not just a name field"
+    assert picker.label == "Start from", "and it must not collide with the page's own Squad picker"
+    assert any("new squad" in str(o).lower() for o in picker.options), \
+        f"building from scratch must stay one of the options: {picker.options}"
+    saved = [o for o in picker.options if "new squad" not in str(o).lower()]
+    if not saved:                                          # no demo seed locally
+        return
+    squads_view.select_squad = _spy
+    try:
+        at = picker.set_value(saved[0]).run()
+        assert not at.exception, at.exception
+    finally:
+        squads_view.select_squad = original
+    assert not called, "picking an existing squad must READ it, never optimise over it (ADR-132)"
+    blob = " ".join(m.value for m in at.markdown)
+    assert "fpl-pitch" in blob, "the planned squad still renders on the pitch"
+    assert any("Planning only" in c.value for c in at.caption), \
+        "the page must say it changes nothing — this mode looks like the builder"
+
+    # The plan table is only reachable in this mode, so it is asserted here — the Lab-table guard runs in the
+    # default *build* mode and never sees it. A mutation stripping this table's words passed everything else.
+    planned = [df.value for df in at.dataframe if "Player" in getattr(df.value, "columns", [])]
+    assert planned, "planning a squad must show it as a table, not only as a pitch"
+    for frame in planned:
+        cols = set(frame.columns)
+        assert {"Trends", "Set"} <= cols, f"the plan table keeps the reference words: {cols}"
+        assert [c for c in cols if str(c).startswith("GW")], \
+            f"planning is the reason the breakout exists — it must be here: {cols}"

@@ -11,7 +11,7 @@ import html
 
 import streamlit as st
 
-from src.analytics import crowd_flags, set_piece_flags
+from src.analytics.crowd import SET_PIECES, set_piece_glyphs
 from src.web_streamlit.player_card import CARD_CSS, card_body
 
 _ROWS = ("GK", "DEF", "MID", "FWD")
@@ -133,8 +133,20 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     opp = next_opp.get(player["team"])
     opp_str = f'{e(opp["opponent"])} ({e(opp["venue"])})' if opp else "—"
     meta = f'£{player["price"]:.1f}m · {opp_str}'
-    flags = crowd_flags(player) + set_piece_flags(player)
-    flags_html = f'<div class="flags">{e(" ".join(flags))}</div>' if flags else ""
+    # ADR-178 — **set-piece glyphs only, and no words**. The pitch used to carry `crowd_flags` too, which put
+    # up to six labelled flags under a 104px name and wrapped them over three lines. Two reasons they went:
+    # every player carries at least one (the ownership tier always fires, so the pitch was never clean), and
+    # the market flags are a **third copy** of things already on the page *by name* — the price line under the
+    # pitch, the Flagged availability line, and the Trending / Signals pages. The shirt was the only copy that
+    # could not say *why*. Set pieces stay because they describe the player's **role**, not the market.
+    #
+    # The meaning rides as a `title` (a desktop hover), and `render_pitch` prints the key underneath for phones.
+    glyphs = set_piece_glyphs(player)
+    flags_html = ""
+    if glyphs:
+        spans = "".join(f'<span title="{e(meaning)}">{glyph}</span>' for glyph, meaning in glyphs)
+        flags_html = f'<div class="flags">{spans}</div>'
+
     # On hover: a compact player card (US-344). Reuses the card renderer (CSS is on the page once). ADR-109: when a
     # per-GW `fixtures_by_id` is supplied, the popover carries the **per-GW row** (xP over fixture, up to 3 GWs) —
     # the tester's card-under-the-shirt. `card_body` html-escapes its own values.
@@ -221,6 +233,27 @@ def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=
     return "".join(parts)
 
 
+def set_piece_key(players) -> str:
+    """The legend for the glyphs on the shirts — or `""` when no shirt carries one (ADR-178).
+
+    Owner: *"have a key at the bottom of the pitch to remind users what they mean, for both My Squad and the
+    Lab."* It lives here rather than in each caller so both pages get it from one place and cannot drift, and
+    it is built from `SET_PIECES` — the same table the glyphs come from, so the key cannot teach a mapping the
+    table contradicts.
+
+    **Empty when nothing is flagged**, because the sentence ends *"blank = not on set pieces"*, which says
+    nothing on a pitch where every shirt is blank — a legend explaining an absent thing is noise.
+
+    Returned rather than rendered so the condition is testable: as an `if` inside the render call, a guard
+    could only assert the source text, and a mutation to `if False` sailed through exactly that.
+    """
+    if not any(set_piece_glyphs(p) for p in players or []):
+        return ""
+    return ("Set pieces: "
+            + " · ".join(f"{glyph} {long}" for _field, glyph, _short, long in SET_PIECES)
+            + " — shown for the **first-choice** taker (blank = not on set pieces).")
+
+
 def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
                  fixtures_by_id=None, kits=None) -> None:
     """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
@@ -234,3 +267,5 @@ def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_name
     st.markdown(pitch_html(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos,
                            next_opp=next_opp, team_names=team_names, bench_roles=bench_roles,
                            fixtures_by_id=fixtures_by_id, kits=kits), unsafe_allow_html=True)
+    if key := set_piece_key(list(xi) + list(bench)):
+        st.caption(key)

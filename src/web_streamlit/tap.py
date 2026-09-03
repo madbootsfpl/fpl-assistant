@@ -14,7 +14,7 @@ input, never a replacement. The dropdown beside it stays permanently, which is w
 
 import streamlit as st
 
-from src.web_streamlit.pitch import pitch_html, render_pitch
+from src.web_streamlit.pitch import pitch_html, render_pitch, set_piece_key
 
 
 def _detector():
@@ -147,6 +147,13 @@ def render_tappable_pitch(xi, bench, *, select_key, label_for, key="pitch_tap", 
 
     html = pitch_html(xi, bench, clickable=True, **kw)
     clicked = _fresh(detector(html, key=key), key)
+    # ADR-178 — the set-piece key, on **this** path too. The fallback above delegates to `render_pitch`, which
+    # prints it; this branch builds the HTML itself and would otherwise be the one pitch with no key — and it
+    # is the golden page's pitch, so it would have been the only one that mattered. Found by mutation-testing
+    # the guard: deleting the caption from `render_pitch` left every test green, because My Squad never called
+    # it. The text has one definition (`set_piece_key`); only the emitting differs.
+    if key_text := set_piece_key(list(xi) + list(bench)):
+        st.caption(key_text)
     if not clicked:
         return None
 

@@ -10,6 +10,8 @@ analytics value is untouched: this is display, not a round of the data.
 with the ADR-071 tooltips (same `NumberColumn`, with `help=`).
 """
 
+import re
+
 import streamlit as st
 
 from src.analytics.price import PRICE_DOWN, PRICE_UP
@@ -24,6 +26,13 @@ FORMATS = {
     "xG": "%.2f", "xA": "%.2f", "xGI": "%.2f", "xGC": "%.2f", "xGC/90": "%.2f",
     "Diff": "%+.1f", "Margin": "%+.1f", "+xP": "%+.1f",
 }
+
+# ADR-178 — a per-gameweek xP column (`GW3`, `GW4`, …). There is one per gameweek in the window, so they
+# cannot be enumerated in FORMATS; they take the same 1dp as `xP`, of which they are the parts (ADR-032).
+# A **blank** gameweek is passed as None, which a NumberColumn renders as an empty cell — the honest shape,
+# because a team with no fixture has not been projected to score zero, it has not been projected at all.
+_GW_COLUMN = re.compile(r"^GW\d+$")
+
 
 # Labels whose cells hold an FPL CDN URL → rendered as a thumbnail.
 IMAGE_COLS = ("photo", "badge", "out", "in")
@@ -42,9 +51,9 @@ def column_config(labels, *, help=None, images=IMAGE_COLS) -> dict:
     for label in labels:
         if label in images:
             config[label] = st.column_config.ImageColumn("", width="small")
-        elif label in FORMATS:
+        elif label in FORMATS or _GW_COLUMN.match(str(label)):
             config[label] = st.column_config.NumberColumn(
-                label, format=FORMATS[label], help=help.get(label))
+                label, format=FORMATS.get(label, "%.1f"), help=help.get(label))
         elif label in help:
             config[label] = st.column_config.Column(label, help=help[label])
     return config
