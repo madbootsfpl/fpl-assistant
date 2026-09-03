@@ -4157,3 +4157,73 @@ def test_the_lab_can_plan_a_squad_you_already_own_without_optimising_it():
         assert {"Trends", "Set"} <= cols, f"the plan table keeps the reference words: {cols}"
         assert [c for c in cols if str(c).startswith("GW")], \
             f"planning is the reason the breakout exists — it must be here: {cols}"
+
+
+# ---- ADR-179: the vice-captain, and the degrade path it was breaking ---------------------------
+
+def test_the_plain_pitch_draws_a_vice_captain_and_does_not_raise_on_the_degrade_path():
+    """ADR-179, owner: *"Bruno Fernandes was Vice Captain on My Squad but not shown in Lab."*
+
+    He reported a missing badge. `render_pitch` had **no `vice_captain_id` parameter at all** — `_kit_html`
+    drew the V and `pitch_html` forwarded it, but the plain renderer between them never took it. So every
+    surface drawing through `render_pitch` lost the badge.
+
+    ⚠️ **The half he could not see is the reason this shipped on its own.** ADR-133's degrade path falls back
+    to `render_pitch(**kw)` when the click-detector component is absent, forwarding `vice_captain_id` into a
+    function that did not accept it: **My Squad raised instead of degrading**, on the exact path whose stated
+    purpose is that *"a missing component must never take the page down"*.
+
+    **A reported symptom is a place to start looking, not the size of the problem.**
+    """
+    import inspect
+
+    from src.web_streamlit.pitch import pitch_html, render_pitch
+
+    assert "vice_captain_id" in inspect.signature(render_pitch).parameters, \
+        "the plain renderer must accept it — the tappable one is not the only pitch"
+
+    # 1. The badge reaches the markup, and the captain still wins if a stale squad claims both.
+    xi = [{"id": 1, "web_name": "Haaland", "team": "MCI", "position": "FWD", "price": 15.5},
+          {"id": 2, "web_name": "B.Fernandes", "team": "MUN", "position": "MID", "price": 12.0}]
+    html = pitch_html(xi, [], captain_id=1, vice_captain_id=2, xp_by_id={1: 7.6, 2: 6.0},
+                      photos={}, next_opp={})
+    assert 'class="v-badge"' in html and 'class="c-badge"' in html
+    both = pitch_html(xi, [], captain_id=1, vice_captain_id=1, xp_by_id={}, photos={}, next_opp={})
+    assert both.count('class="v-badge"') == 0, "a player cannot be both; the captain badge wins"
+
+    # 2. The degrade path — the call ADR-133 makes when the component is missing. This raised a TypeError.
+    kw = {"captain_id": 1, "vice_captain_id": 2, "xp_by_id": {}, "photos": {}, "next_opp": {},
+          "team_names": {}, "bench_roles": {}, "kits": {}, "fixtures_by_id": {}, "selected_id": None}
+    render_pitch(xi, [], **{k: v for k, v in kw.items() if k != "selected_id"})
+
+
+def test_the_lab_shows_the_vice_captain_of_the_squad_it_is_planning(monkeypatch):
+    """The surface the owner was actually looking at. The Lab's plan view (ADR-178) is simply the first place
+    a squad *with* a vice-captain reached `render_pitch` — the build view has no captain at all, so the gap
+    had never been visible."""
+    from src.web_streamlit.squads import demo_squads
+
+    squads = demo_squads()
+    if not squads:
+        return
+    squad = dict(next(iter(squads.values())))
+    squad["captain_id"] = squad["player_ids"][0]
+    squad["vice_captain_id"] = squad["player_ids"][1]
+
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=90)
+    at.session_state["squad"] = squad
+    at.run()
+    next(c for c in at.segmented_control if c.label == "Tool").set_value("Lab").run()
+    picker = next(s for s in at.selectbox if s.key == "lab_squad")
+    saved = [o for o in picker.options if "new squad" not in str(o).lower()]
+    if not saved:
+        return
+    yours = [o for o in saved if "yours" in str(o).lower()] or saved
+    at = picker.set_value(yours[0]).run()
+    assert not at.exception, at.exception
+    blob = " ".join(m.value for m in at.markdown)
+    # ⚠ `class="v-badge"`, not `"v-badge"`. The bare substring also matches the **CSS block**
+    # (`.fpl-pitch .v-badge{…}`), which every pitch emits whether or not a badge is drawn — so the first
+    # version of this assertion passed with the fix reverted. A selector is not a rendered element.
+    assert 'class="v-badge"' in blob, \
+        "planning a squad must show who takes over if your captain doesn't play"

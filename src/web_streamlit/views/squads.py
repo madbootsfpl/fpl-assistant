@@ -179,7 +179,8 @@ def render_plan(squad_name, squad, players, upcoming, history, gw_history, photo
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     kits = shirt_url_by_id(owned, teams)
     bench_roles = {p["id"]: role for role, p in bench_order(bench_players, xp_by_id)}
-    render_pitch(xi_players, bench_players, captain_id=squad.get("captain_id"), xp_by_id=xp_by_id,
+    render_pitch(xi_players, bench_players, captain_id=squad.get("captain_id"),
+                 vice_captain_id=squad.get("vice_captain_id"), xp_by_id=xp_by_id,
                  photos=photos, next_opp=next_opp, bench_roles=bench_roles, kits=kits)
 
     render_player_table([{

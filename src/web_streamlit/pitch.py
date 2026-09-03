@@ -255,8 +255,17 @@ def set_piece_key(players) -> str:
 
 
 def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
+                 vice_captain_id=None,
                  fixtures_by_id=None, kits=None) -> None:
     """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
+
+    ⚠️ **`vice_captain_id` is threaded here deliberately (ADR-179).** `_kit_html` has drawn the V badge since
+    it was added, and `pitch_html` forwarded it — but *this* function, the plain renderer between them, never
+    took the argument. Two things followed. Every surface drawing through `render_pitch` silently lost the
+    badge (the owner found it in the Lab). And ADR-133's degrade path, which falls back to
+    `render_pitch(**kw)` when the click-detector component is absent, passed `vice_captain_id` into a function
+    that did not accept it — so My Squad **raised** instead of degrading, on exactly the path whose purpose is
+    that *"a missing component never takes the page down"*.
 
     `xi` / `bench` are player rows; `next_opp` maps a team short_name → its next fixture cell
     (`{opponent, venue, ...}`) or None. `bench_roles` (US-246) maps id → sub role ("1st"/"2nd"/"3rd"/"GK");
@@ -264,7 +273,8 @@ def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_name
     **live club kit** on the pitch (transfer-proof); the hover card keeps the mugshot (`photos`). Emits one
     self-contained HTML/CSS block (no JS) — display-only; the edit controls live on the page.
     """
-    st.markdown(pitch_html(xi, bench, captain_id=captain_id, xp_by_id=xp_by_id, photos=photos,
+    st.markdown(pitch_html(xi, bench, captain_id=captain_id, vice_captain_id=vice_captain_id,
+                           xp_by_id=xp_by_id, photos=photos,
                            next_opp=next_opp, team_names=team_names, bench_roles=bench_roles,
                            fixtures_by_id=fixtures_by_id, kits=kits), unsafe_allow_html=True)
     if key := set_piece_key(list(xi) + list(bench)):
