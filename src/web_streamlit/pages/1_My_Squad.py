@@ -48,7 +48,12 @@ if active_squad() is None:   # US-360: no team built/loaded yet → point new us
 #   of the squad's own workflow, not at the top of the sidebar where it sat.
 # ADR-175 — Transfer joins the answer selector under the pitch, so the top nav is four. Its widgets exist
 # only when chosen there, which is what dissolves ADR-174's density objection to bringing it in at all.
-view = st.segmented_control(
+# ADR-180 — the top nav joins the primitive at last. It is the one selector ADR-176 never wrapped, which is
+# why it rendered narrower than every other row on the app *and*, in dark mode, in Streamlit's default red.
+# The colour now comes from the theme (config.toml); this container is only for the full-width layout.
+_tool_nav = st.container(key="ms_tool_nav")
+st.markdown(brand.nav_css("ms_tool_nav"), unsafe_allow_html=True)
+view = _tool_nav.segmented_control(
     "Tool", ["My Squad", "DNA", "Leagues", "Lab"], default="My Squad", label_visibility="collapsed",
     key="ms_tool",     # keyed: without one Streamlit identifies it positionally, so a tab that adds widgets
                        # (Leagues adds a dozen) can shift its identity and silently reset the selection.

@@ -5,7 +5,24 @@ headless = true          # no auto-open a browser (also the Community Cloud defa
 [browser]
 gatherUsageStats = false  # don't phone home
 
-# NOTE (ADR-114 reverted, 2026-08-17): a `[theme]` block was tried (primaryColor = MADBOOTS purple) but **any**
-# `[theme]` in config.toml *pins* the theme — `base` defaults to light, so it forced **light-only** and removed the
-# user's Light/Dark/System toggle. Theme-following matters more than a purple accent, so it's removed. The brand
-# purple stays where we control it directly (the cards/banners via `brand.token_css_vars()`), not the widget theme.
+# The MADBOOTS accent (ADR-180, 2026-09-03) — one declaration for every widget, in both themes.
+#
+# HISTORY, kept because it is the reason this looks over-explained: ADR-114 (2026-08-17) tried `primaryColor`
+# here and **reverted it**, having found that *any* `[theme]` block pinned the theme (`base` defaulting to
+# light) and so removed the viewer's Light/Dark/System toggle. That was true then and its reasoning still
+# stands — **theme-following beats a brand accent**. It is simply no longer a trade-off: Streamlit 1.61 added
+# **per-mode sections**, which did not exist when ADR-114 was written.
+#
+# Re-measured before re-instating (ADR-157's rule: re-run a remembered measurement before it justifies work):
+#   * `theme.base` resolves to None — nothing is pinned;
+#   * on the WIRE, `CustomThemeConfig` carries nested `light`/`dark` messages and the **top-level message —
+#     the one holding `base` — has no fields set at all**;
+#   * a local run served the app with this block in place.
+#
+# ⚠️ If the accent ever fails to render on Community Cloud, the fallback is to restore the colour rule in
+# `brand.nav_css` (removed by ADR-180) — do not re-derive it.
+[theme.light]
+primaryColor = "#8B2FC9"          # brand.PURPLE
+
+[theme.dark]
+primaryColor = "#B45CF0"          # brand.PURPLE_LT — #8B2FC9 is dim on a near-black ground

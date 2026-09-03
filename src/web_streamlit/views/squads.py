@@ -139,6 +139,25 @@ def _fixture_gameweeks(upcoming, gws) -> dict:
     return out
 
 
+# ADR-180 — the Lab's optional constraints, and their inert defaults. The expander may only hide a control
+# that **cannot change the answer while untouched**; this list is what a guard checks that claim against.
+LAB_CONSTRAINTS = {
+    "lab_no_xmins": False, "lab_unavailable": False,
+    "lab_cheap": 0, "lab_premium": 0, "lab_differential": 0,
+    "lab_include": [], "lab_exclude": [], "lab_bench": [],
+}
+
+
+def _constraint_count() -> int:
+    """How many optional constraints are actually set — so the expander can say so in its own label.
+
+    Folding controls away is only safe if a *set* one cannot hide. Reads `session_state` rather than the
+    return values, because the label has to be written **before** the widgets inside it are created.
+    """
+    return sum(1 for key, inert in LAB_CONSTRAINTS.items()
+               if st.session_state.get(key, inert) not in (inert, None))
+
+
 def render_plan(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *,
                 teams=None, horizon=5):
     """Plan an **existing** squad over the gameweeks ahead — the Lab's second mode (ADR-178).
@@ -238,8 +257,6 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
                               "label.").strip() or "My squad"
     objective = c2.selectbox("Objective", ["xp", "points", "value", "xgi"],
                              help="xp = expected points (xMins-weighted); the CLI default.")
-    no_xmins = c2.checkbox("Ignore expected minutes (--no-xmins)", value=False,
-                           disabled=objective != "xp", help="xp objective only.")
     # ADR-137 — TWO modes, not three, and named for what they build. "Bench Boost" used to sit here as a third
     # option and produced the *same fifteen* as "Balanced": maximising `Σ score·start + 1·score·bench` is
     # maximising `Σ score` over the 15, so it could never have been a distinct build however it was wired.
@@ -250,21 +267,37 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
     c3.caption("Playing **Bench Boost**? Use **All-round** — under the chip all 15 score, so "
                "\"maximise the XI\" and \"maximise all 15\" become the same question." if mode.startswith("All-round")
                else "Playing **Bench Boost** this week? Switch to **All-round** — under the chip all 15 score.")
-    include_unavailable = c3.checkbox("Include injured/suspended", value=False,
-                                      help="Also consider flagged players (off by default).")
 
-    a1, a2, a3 = st.columns(3)
-    cheap = a1.number_input("Low-cost (≤£4.5m)", min_value=0, max_value=8, value=0,
-                            help="Require at least this many budget (≤£4.5m) players.")
-    premium = a2.number_input("Premium (≥£9m)", min_value=0, max_value=5, value=0,
-                              help="Require at least this many premium (≥£9m) players.")
-    differential = a3.number_input("Differentials (≤5% owned)", min_value=0, max_value=5, value=0,
-                                   help="Require at least this many low-owned (≤5%) picks.")
-
-    include = _ids(st.multiselect("Must include", labels, help="Force these players into the squad."))
-    exclude = _ids(st.multiselect("Must exclude", labels, help="Never pick these players."))
-    declared_bench = _ids(st.multiselect("Declare bench (up to 4)", labels,
-                                         help="Pins these to the bench; leave empty to auto-derive the XI."))
+    # ADR-180 — the eight constraints fold away. Owner: *"lot of real estate used in Lab when new build."*
+    #
+    # ⚠️ **The line is not "advanced-looking", it is checkable: every one of these defaults to NO
+    # constraint** (`0`, `[]`, `False`), so on the default path they provably did not affect the squad
+    # rendered below them. Eight controls' worth of height above an answer they had no part in.
+    #
+    # The count in the label is what makes hiding them safe rather than merely tidy: a constraint that is set
+    # can never be silently in force, which is the failure mode an expander invites.
+    _set = _constraint_count()
+    with st.expander(f"⚙ Constraints (optional){f' — {_set} set' if _set else ''}", expanded=bool(_set)):
+        x1, x2 = st.columns(2)
+        no_xmins = x1.checkbox("Ignore expected minutes (--no-xmins)", value=False, key="lab_no_xmins",
+                               disabled=objective != "xp", help="xp objective only.")
+        include_unavailable = x2.checkbox("Include injured/suspended", value=False, key="lab_unavailable",
+                                          help="Also consider flagged players (off by default).")
+        a1, a2, a3 = st.columns(3)
+        cheap = a1.number_input("Low-cost (≤£4.5m)", min_value=0, max_value=8, value=0, key="lab_cheap",
+                                help="Require at least this many budget (≤£4.5m) players.")
+        premium = a2.number_input("Premium (≥£9m)", min_value=0, max_value=5, value=0, key="lab_premium",
+                                  help="Require at least this many premium (≥£9m) players.")
+        differential = a3.number_input("Differentials (≤5% owned)", min_value=0, max_value=5, value=0,
+                                       key="lab_differential",
+                                       help="Require at least this many low-owned (≤5%) picks.")
+        include = _ids(st.multiselect("Must include", labels, key="lab_include",
+                                      help="Force these players into the squad."))
+        exclude = _ids(st.multiselect("Must exclude", labels, key="lab_exclude",
+                                      help="Never pick these players."))
+        declared_bench = _ids(st.multiselect("Declare bench (up to 4)", labels, key="lab_bench",
+                                             help="Pins these to the bench; leave empty to auto-derive "
+                                                  "the XI."))
 
     weekly = mode == "Strong XI (cheap bench)"
     warnings = []
@@ -1325,7 +1358,10 @@ def _apply_the_transfer(result, squad, players) -> None:
     # Name both players on the button. The block above is a wall of text on a phone, and a bare "Apply" at
     # the end of it is a control whose effect you have to scroll back up to remember.
     _apply = st.container(key="ms_week_apply")   # ADR-175 rev — a CSS hook so the primary action reads primary
-    if _apply.button(f"🔄 Apply: {out_n} → {in_n}", key="ms_week_apply_btn",
+    # ADR-180 — `type="primary"` rather than a hard-coded fill in `nav_css`. Streamlit paints a primary
+    # button with the theme's accent, so it is purple in **both** themes and follows the one declaration in
+    # config.toml; the CSS hook now only makes it full width.
+    if _apply.button(f"🔄 Apply: {out_n} → {in_n}", key="ms_week_apply_btn", type="primary",
                  help="Applies this exact swap to your squad. Explore alternatives on the Transfer tab."):
         ok, issues, warning, new = apply_transfer(squad, tr["out"]["id"], tr["in"]["id"], players)
         if not ok:

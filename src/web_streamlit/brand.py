@@ -105,15 +105,21 @@ def mark_html(badge_px: int = 15, font_px: int = 12, purple: str = PURPLE) -> st
 
 
 def nav_css(key: str, *, primary_button: str | None = None) -> str:
-    """CSS for the app's main selector — purple, full width, equal segments (ADR-176).
+    """CSS for the app's main selector — **full width, equal segments** (ADR-176, narrowed by ADR-180).
 
     Returns a `<style>` block scoped to `st.container(key=…)`, which Streamlit renders with a `.st-key-{key}`
     class. Pass the same key you gave the container.
 
-    **Why CSS and not a theme.** ADR-114 tried `primaryColor` in `config.toml` and reverted it: **any**
-    `[theme]` block *pins* the theme — `base` defaults to light — which removes the viewer's Light/Dark/System
-    toggle. Theme-following beats a brand accent, so the purple lives where we control it directly. This is
-    that rule applied to a widget instead of markup.
+    ⚠️ **This carries NO colour, deliberately.** It used to paint the active segment purple, because ADR-114
+    had found that any `[theme]` block pinned the theme and removed the viewer's Light/Dark/System toggle.
+    Re-measured on Streamlit 1.61 (ADR-180), that is no longer true — per-mode `[theme.light]`/`[theme.dark]`
+    sections leave the top-level theme message empty — so the accent is declared once in `config.toml` and
+    reaches **every** widget, including ones this file has never heard of.
+
+    Keeping a colour here as well would **visibly clash in dark mode**: this file could only hard-code one
+    shade, and the theme gives dark mode `PURPLE_LT`. The segmented controls would be a different purple from
+    everything around them. So the primitive keeps the half the platform cannot do — the layout — and hands
+    back the half it can.
 
     **Why one function and not five copies.** This began inline in `1_My_Squad.py` (ADR-175). Pasting it into
     each page is *"one rule written twice always drifts"* (ADR-140) — the failure this project has since paid
@@ -138,16 +144,12 @@ def nav_css(key: str, *, primary_button: str | None = None) -> str:
             white-space: nowrap; }}
         .st-key-{key} div[data-testid="stButtonGroup"] button p {{
             overflow: hidden; text-overflow: ellipsis; }}
-        .st-key-{key} button[aria-checked="true"],
-        .st-key-{key} button[kind="segmented_controlActive"] {{
-            background: {PURPLE} !important; border-color: {PURPLE} !important; color: #fff !important; }}
     """
     if primary_button:
+        # Width and weight only — the fill comes from `type="primary"` on the button itself, which the
+        # theme colours (ADR-180). Painting it here would pin one shade across both themes.
         css += f"""
-        .st-key-{primary_button} button {{
-            width: 100%; background: {PURPLE}; border-color: {PURPLE}; color: #fff; font-weight: 600; }}
-        .st-key-{primary_button} button:hover {{
-            background: {PURPLE_LT}; border-color: {PURPLE_LT}; color: #fff; }}
+        .st-key-{primary_button} button {{ width: 100%; font-weight: 600; }}
     """
     return f"<style>{css}</style>"
 

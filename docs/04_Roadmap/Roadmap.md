@@ -447,6 +447,17 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **The accent belongs to the theme** (ADR-180, Sprint 241, 2026-09-03) — *owner, in dark mode:* **"lots
+  of inconsistency with colours vs the style guide, should be purple."** He was right, and the cause was
+  structural: the purple was painted **one widget at a time** on five containers, so every control we had not
+  hand-styled fell back to Streamlit's red. ⭐ **Re-measured ADR-114 and its blocker is gone** — Streamlit 1.61
+  added **per-mode `[theme.light]`/`[theme.dark]` sections** that did not exist when it was written, so the
+  top-level theme message (which carries `base`) stays empty and nothing pins the viewer's Light/Dark/System
+  toggle. **Two config lines now do what five stylesheets did, in both themes.** ADR-114's *reasoning* is
+  preserved and its **finding is now a test**. Also: the Tool nav joins the primitive, `nav_css` keeps layout
+  and hands back colour, and the Lab's **eight always-inert constraints** fold into one expander with a count
+  so a set one cannot hide. ⏳ That the accent *renders* on Cloud is owner-verified; the one-line fallback is
+  recorded.
 - ✅ **One week on the pitch, every week in the Lab** (ADR-179, Sprint 240, 2026-09-03) — *owner.*
   🔴 First, a **crash**: he reported the vice-captain missing in the Lab, and `render_pitch` had **no
   `vice_captain_id` parameter at all** — so ADR-133's degrade path forwarded it into a function that could

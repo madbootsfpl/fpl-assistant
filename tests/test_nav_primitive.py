@@ -68,3 +68,56 @@ def test_signals_is_not_behind_a_selector():
     ordered = [h for h in heads if re.match(r"^\d ·", h or "")]
     assert ordered == sorted(ordered), "the four sections must still read top to bottom, in order"
     assert len(ordered) >= 4, f"all four evidence tiers should be on the page at once, found {ordered}"
+
+
+# ---- ADR-180: the primitive keeps the layout and hands back the colour -------------------------
+
+def test_the_primitive_carries_no_colour():
+    """ADR-180. `nav_css` used to paint the active segment purple, because ADR-114 had found that any
+    `[theme]` block pinned the theme and removed the viewer's Light/Dark/System toggle. Re-measured on
+    Streamlit 1.61 that is no longer true, so the accent is declared once in `config.toml`.
+
+    ⚠️ **Keeping a colour here as well would visibly clash in dark mode.** This file can only hard-code one
+    shade; the theme gives dark mode `PURPLE_LT`. The segmented controls would be a different purple from
+    every control around them — which is worse than either choice alone, and is exactly what someone would
+    re-introduce to fix a page that "looks wrong".
+    """
+    from src.web_streamlit import brand
+
+    css = brand.nav_css("demo", primary_button="demo_btn")
+    for banned in (brand.PURPLE, brand.PURPLE_LT, "background:", "background "):
+        assert banned.lower() not in css.lower(), \
+            f"the primitive must not paint anything — the theme owns colour now ({banned!r})"
+    # …and it still does the half the platform cannot.
+    assert "flex: 1 1 0" in css and "width: 100%" in css
+
+
+def test_the_accent_is_declared_for_both_themes_and_pins_neither():
+    """The measurement ADR-180 rests on, asserted so a later edit cannot quietly undo it.
+
+    A bare `[theme] primaryColor` would set the accent for light mode only and leave dark mode on
+    Streamlit's default red — the very thing the owner reported. Worse, adding `base` would pin the theme
+    and take away the viewer's toggle, which is ADR-114's original finding and still stands.
+    """
+    import tomllib
+
+    cfg = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text())
+    theme = cfg.get("theme", {})
+    assert theme.get("light", {}).get("primaryColor") == "#8B2FC9", "light mode gets the brand purple"
+    assert theme.get("dark", {}).get("primaryColor") == "#B45CF0", \
+        "dark mode gets the lighter one — #8B2FC9 is dim on a near-black ground"
+    assert "base" not in theme, "setting `base` pins the theme and removes the Light/Dark/System toggle"
+    assert "primaryColor" not in theme, \
+        "a top-level primaryColor would colour one mode and leave the other on Streamlit's red"
+
+
+def test_the_top_nav_uses_the_primitive_like_every_other_selector():
+    """ADR-180 — the one selector ADR-176 never wrapped, which is why it rendered narrower than every other
+    row on the app and, in dark mode, in Streamlit's default red."""
+    src = (PAGES / "1_My_Squad.py").read_text()
+    assert 'st.container(key="ms_tool_nav")' in src
+    assert 'nav_css("ms_tool_nav")' in src
+    at = AppTest.from_file(str(PAGES / "1_My_Squad.py"), default_timeout=90).run()
+    assert not at.exception, at.exception
+    assert next((c for c in at.segmented_control if c.key == "ms_tool"), None) is not None, \
+        "wrapping it in a container must not change the widget's own key"

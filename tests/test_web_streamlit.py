@@ -4386,3 +4386,52 @@ def test_a_nav_segment_is_not_squeezed_until_its_label_truncates():
     assert "padding-left: 0.35rem" in css and "padding-right: 0.35rem" in css, \
         "the label needs those characters back"
     assert "white-space: nowrap" in css, "a wrapped label makes the whole row taller"
+
+
+def test_the_lab_only_hides_constraints_that_cannot_change_the_answer():
+    """ADR-180, owner: *"lot of real estate used in Lab when new build."*
+
+    Eight controls sat above the squad. **The line for folding them away is not "they look advanced" — it is
+    that every one defaults to no constraint**, so on the default path they provably did not affect the
+    fifteen rendered beneath them. This asserts that claim rather than trusting it: if a control behind the
+    expander ever gains a default that *does* bite, hiding it stops being honest and this fails.
+
+    The count in the expander's label is the other half. Folding controls away is only safe if a **set** one
+    cannot hide, which is the failure mode an expander invites.
+    """
+    from src.web_streamlit.views.squads import LAB_CONSTRAINTS, _constraint_count
+
+    assert set(LAB_CONSTRAINTS) == {"lab_no_xmins", "lab_unavailable", "lab_cheap", "lab_premium",
+                                    "lab_differential", "lab_include", "lab_exclude", "lab_bench"}
+    for key, inert in LAB_CONSTRAINTS.items():
+        assert inert in (0, False, []), f"{key} defaults to {inert!r}, which is not 'no constraint'"
+
+    # Structural, via the AST — the eight keyed widgets must sit **inside** the expander's body, and the
+    # essentials must not. Grepping for the strings would pass with every control still at the top level.
+    import ast
+
+    src = (_ROOT / "src" / "web_streamlit" / "views" / "squads.py").read_text()
+    build = next(n for n in ast.walk(ast.parse(src))
+                 if isinstance(n, ast.FunctionDef) and n.name == "render_build")
+    expander = next(n for n in ast.walk(build)
+                    if isinstance(n, ast.With)
+                    and "Constraints (optional)" in ast.dump(n.items[0].context_expr))
+
+    def _keys(node):
+        return {kw.value.value for n in ast.walk(node) if isinstance(n, ast.Call)
+                for kw in n.keywords
+                if kw.arg == "key" and isinstance(kw.value, ast.Constant)}
+
+    inside = _keys(expander)
+    assert set(LAB_CONSTRAINTS) <= inside, \
+        f"every optional constraint belongs behind the expander; missing {set(LAB_CONSTRAINTS) - inside}"
+
+    # …and the decisions that actually shape the build stay in the open, so a squad can be built without
+    # opening anything at all.
+    body_outside = [n for n in build.body if n is not expander]
+    outside_src = "\n".join(ast.unparse(n) for n in body_outside)
+    for essential in ("Budget (£m)", "Objective", "Build mode", "Name this squad", "Start from"):
+        assert essential in outside_src, f"{essential} must stay visible — it is not optional"
+
+    # The count only speaks when something is set, so an untouched Lab shows a plain label.
+    assert _constraint_count() == 0
