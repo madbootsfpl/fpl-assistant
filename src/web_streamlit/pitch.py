@@ -11,7 +11,7 @@ import html
 
 import streamlit as st
 
-from src.analytics.crowd import SET_PIECES, set_piece_glyphs
+from src.analytics.crowd import CROWD_KEY, SET_PIECES, crowd_glyphs, set_piece_glyphs
 from src.web_streamlit.player_card import CARD_CSS, card_body
 
 _ROWS = ("GK", "DEF", "MID", "FWD")
@@ -53,7 +53,8 @@ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fpl-pitch .xp{display:inline-block;margin-top:2px;padding:0 7px;border-radius:9px;background:#fff;
 color:#0a7a34;font-weight:700;font-size:.72rem;box-shadow:0 1px 2px rgba(0,0,0,.25);}
 .fpl-pitch .meta{font-size:.64rem;opacity:.92;text-shadow:0 1px 2px rgba(0,0,0,.5);margin-top:2px;}
-.fpl-pitch .flags{font-size:.66rem;margin-top:2px;line-height:1.2;}
+.fpl-pitch .flags{font-size:.8rem;margin-top:2px;line-height:1.45;letter-spacing:1px;}
+.fpl-pitch .weeks{font-size:.62rem;margin-top:2px;color:#2b6a3f;font-variant-numeric:tabular-nums;}
 .fpl-pitch .bench-label{color:#eafff0;font-size:.72rem;letter-spacing:.12em;text-align:center;
 margin:18px 0 2px;opacity:.85;text-transform:uppercase;}
 .fpl-pitch .bench{background:rgba(0,0,0,.16);border-radius:12px;padding:10px 6px;margin-top:2px;}
@@ -105,8 +106,11 @@ text-decoration:none!important;color:inherit!important;display:block;}
 """
 
 
+_SHIRT_WEEKS = 3          # per-gameweek figures that fit under a 104px kit card (ADR-179)
+
+
 def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None, sub_role=None,
-              vice_captain_id=None,
+              vice_captain_id=None, market=False, per_gw_xp=None,
               fixtures_by_id=None, kits=None, clickable=False, selected=False) -> str:
     """One player's kit card (ADR-084) — image (with a **C** captain armband + a **sub-number** badge overlaid)
     · name · xP chip · £ · next opponent · crowd/set-piece flags. A 👕 placeholder if even the shirt is missing.
@@ -141,11 +145,24 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     # could not say *why*. Set pieces stay because they describe the player's **role**, not the market.
     #
     # The meaning rides as a `title` (a desktop hover), and `render_pitch` prints the key underneath for phones.
-    glyphs = set_piece_glyphs(player)
+    # ADR-179 — `market=True` adds the crowd glyphs (the Lab). My Squad stays role-only: the flags left it
+    # because it is read on a phone minutes before a deadline, and none of that is true of a page you sit with
+    # while choosing players. Same rule — glyphs plus a key — different set, because the pages differ in
+    # purpose. (ADR-178 generalised that justification into a rule about widget type, one level too high.)
+    glyphs = (crowd_glyphs(player) if market else []) + set_piece_glyphs(player)
     flags_html = ""
     if glyphs:
         spans = "".join(f'<span title="{e(meaning)}">{glyph}</span>' for glyph, meaning in glyphs)
         flags_html = f'<div class="flags">{spans}</div>'
+
+    # ADR-179 — up to three per-gameweek figures under the chip, where the caller asks for them (the Lab).
+    # **Three because the card is 104px wide** and a fourth wraps — the table alongside carries five, since a
+    # table scrolls. One cap per surface, each from that surface's real limit rather than one number for both.
+    weeks_html = ""
+    if per_gw_xp:
+        weeks = [per_gw_xp.get(gw) for gw in sorted(per_gw_xp)][:_SHIRT_WEEKS]
+        shown = " · ".join("—" if v is None else f"{v:.1f}" for v in weeks)
+        weeks_html = f'<div class="weeks" title="Projected points, gameweek by gameweek">{e(shown)}</div>'
 
     # On hover: a compact player card (US-344). Reuses the card renderer (CSS is on the page once). ADR-109: when a
     # per-GW `fixtures_by_id` is supplied, the popover carries the **per-GW row** (xP over fixture, up to 3 GWs) —
@@ -171,7 +188,7 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
     pop_html = f'<div class="kit-pop">{pop}</div>' if pop and (not clickable or selected) else ""
     body = (f'<div class="pic">{pic}</div>'
             f'<div class="name">{e(player["web_name"])}</div>'
-            f'<div class="xp">{xp}</div>'
+            f'<div class="xp">{xp}</div>{weeks_html}'
             f'<div class="meta">{meta}</div>{flags_html}{pop_html}')
     if not clickable:
         return f'<div class="kit">{body}</div>'
@@ -191,7 +208,7 @@ def _kit_html(player, *, captain_id, xp_by_id, photos, next_opp, team_names=None
 
 
 def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
-               vice_captain_id=None,
+               vice_captain_id=None, market=False, per_gw_by_id=None,
                fixtures_by_id=None, kits=None, clickable=False, selected_id=None) -> str:
     """Build the pitch markup (ADR-084) — see `render_pitch` for the arguments.
 
@@ -201,12 +218,13 @@ def pitch_html(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=
 
     `selected_id` outlines one card, so it is visible which player the picker below refers to.
     """
-    kw = dict(captain_id=captain_id, vice_captain_id=vice_captain_id,
+    kw = dict(captain_id=captain_id, vice_captain_id=vice_captain_id, market=market,
               xp_by_id=xp_by_id, photos=photos, next_opp=next_opp, team_names=team_names,
               fixtures_by_id=fixtures_by_id, kits=kits, clickable=clickable)
 
     def _kit(p, **extra):
-        return _kit_html(p, selected=(selected_id is not None and p["id"] == selected_id), **kw, **extra)
+        return _kit_html(p, selected=(selected_id is not None and p["id"] == selected_id),
+                         per_gw_xp=(per_gw_by_id or {}).get(p["id"]), **kw, **extra)
     parts = [_PITCH_CSS, CARD_CSS, '<div class="fpl-pitch">']    # the card CSS once, for the per-kit hover popovers
     if clickable:
         # Behind everything, so it only receives taps that missed a shirt (US-444 rev).
@@ -254,8 +272,27 @@ def set_piece_key(players) -> str:
             + " — shown for the **first-choice** taker (blank = not on set pieces).")
 
 
+def pitch_key(players, *, market=False) -> str:
+    """The key beneath a pitch — the set-piece line, plus the market lines when the pitch shows them.
+
+    ADR-179 splits the *set* by page while keeping the *rule* the same: both pitches render bare glyphs and
+    explain them underneath. My Squad gets the role line; the Lab gets ownership and momentum as well.
+
+    ⚠️ **Ownership is written as an ordered scale — `💎 → ⭐ → 🟦 → 👑` — and that is the point.** ADR-178
+    argued against these as glyphs precisely because four tiers drawn as four unrelated pictures teach
+    nothing; as a scale the key teaches the ranking, which is the part that could not be learned. It is why
+    the Lab can afford twelve symbols where My Squad could not afford seven.
+    """
+    role = set_piece_key(players)
+    if not market:
+        return role
+    # The market lines are unconditional on a market pitch: unlike set pieces, every player carries an
+    # ownership tier, so there is no "nobody is flagged" case for them to be noise in.
+    return f"{CROWD_KEY}  \n{role}" if role else CROWD_KEY
+
+
 def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_names=None, bench_roles=None,
-                 vice_captain_id=None,
+                 vice_captain_id=None, market=False, per_gw_by_id=None,
                  fixtures_by_id=None, kits=None) -> None:
     """Lay out the XI by formation rows + a bench strip, each player a kit card (ADR-084).
 
@@ -274,8 +311,9 @@ def render_pitch(xi, bench, *, captain_id, xp_by_id, photos, next_opp, team_name
     self-contained HTML/CSS block (no JS) — display-only; the edit controls live on the page.
     """
     st.markdown(pitch_html(xi, bench, captain_id=captain_id, vice_captain_id=vice_captain_id,
+                           market=market, per_gw_by_id=per_gw_by_id,
                            xp_by_id=xp_by_id, photos=photos,
                            next_opp=next_opp, team_names=team_names, bench_roles=bench_roles,
                            fixtures_by_id=fixtures_by_id, kits=kits), unsafe_allow_html=True)
-    if key := set_piece_key(list(xi) + list(bench)):
+    if key := pitch_key(list(xi) + list(bench), market=market):
         st.caption(key)

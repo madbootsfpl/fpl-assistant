@@ -1302,15 +1302,16 @@ def test_my_squad_shows_a_quick_stats_summary():
     for folded in ("Unavailable", "Doubtful"):
         assert folded not in strip                     # folded into the availability line (US-404)
 
-    # ADR-175 — the pitch offers GW1 · GW1–3, not 1/2/3/4/5/10. Nobody reads a five-week projection off an
-    # active squad; that question belongs to the Lab, which kept the long range.
-    gw = [c for c in at.segmented_control if c.key == "gw_pitch"][0]
-    assert list(gw.options) == ["GW1", "GW1–3"], "the pitch offers this week or the short run, nothing longer"
-    gw.set_value(3).run()
+    # ADR-179 — there is no horizon on this page any more. ADR-175 cut it to GW1 · GW1–3; the owner then
+    # removed it outright, because the multi-week read belongs to the Lab and the GW1–3 XI was measured as
+    # costing 0.32 xP in the week you actually play it (ADR-178).
+    assert not [c for c in at.segmented_control if c.key == "gw_pitch"], \
+        "My Squad answers one question — what do I do this week"
     strip = _strip_text(at)
-    # US-449 rev: the horizon moved out of the label into the strip's `sub` line, because a long label is
-    # what forces a column wide — so assert the two parts, not the old combined string.
-    assert "Projected XI" in strip and "3 GW" in strip
+    # US-449 rev: the window moved out of the label into the strip's `sub` line, because a long label is
+    # what forces a column wide — so assert the two parts, not the old combined string. ADR-179 fixed that
+    # window at one gameweek, so the sub now reads "next GW" rather than a count.
+    assert "Projected XI" in strip and "next GW" in strip
 
 
 def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
@@ -1326,8 +1327,11 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     if not sq or not players:
         return
     by_id = {p["id"]: p for p in players}
+    # ADR-179 — the page is fixed at the next gameweek, so the expectation is computed at the same window.
+    # It used to run at 3 to exercise the horizon control; with that gone, a 3-GW expectation would simply be
+    # a different number from the one the page shows, and the test would be asserting the wrong sum.
     ranked = decision_xp(players, store.get_upcoming_fixtures(), store.get_history_by_code(),
-                         horizon=3, gw_history_by_code=store.get_gw_history_by_code())   # a multi-GW horizon (see below)
+                         horizon=1, gw_history_by_code=store.get_gw_history_by_code())
     store.close()
     xp = {r["id"]: r["xp"] for r in ranked}
     by_gw = {r["id"]: r["by_gameweek"] for r in ranked}
@@ -1341,15 +1345,13 @@ def test_my_squad_projected_xi_includes_the_captain_next_gw_double():
     at.session_state["squad"] = {**sq, "captain_id": cap, "name": "RoboTS"}
     at.run()
     at.segmented_control[0].set_value("My Squad").run()
-    # US-374 defaulted My Squad to 1 GW; ADR-175 narrowed the pitch to **GW1 · GW1–3**, so the multi-GW case
-    # this test is about is now 3, not 5. The subject is unchanged — the captain's double counts for the next
-    # gameweek only, and the caption saying so is moot (and hidden) at a horizon of 1.
-    next(c for c in at.segmented_control if c.key == "gw_pitch").set_value(3).run()
+    # ADR-179 — no horizon to set: the page is fixed at the next gameweek. The subject survives the control
+    # that used to frame it — the strip is the XI **plus the captain's double** — and the "the ×2 is a
+    # one-week thing" caption is gone with the longer window it existed to disambiguate.
     assert not at.exception
     strip = _strip_text(at)
     assert "Projected XI" in strip
     assert f"{expected:.1f} xP" in strip                   # XI + captain's next-GW double
-    assert any("next gameweek only" in c.value for c in at.caption)   # the honest one-GW note
 
 
 def test_my_squad_pitch_cards_show_set_piece_attributes():
@@ -2404,19 +2406,20 @@ def test_my_squad_per_gw_card_is_horizon_independent():
     squad = {"name": "HzTest", "player_ids": ids, "bench_ids": bench, "cost": 100.0}
     target = mids[0]
 
-    def pergw(hz):
-        at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
-        at.session_state["squad"] = squad
-        at.run()
-        at.segmented_control[0].set_value("My Squad").run()
-        next(s for s in at.segmented_control if s.label == "Gameweeks ahead").set_value(hz).run()
-        next(s for s in at.selectbox if s.label == "Select a player") \
-            .set_value(f"{target['web_name']} · {target['team']}").run()
-        card = next((m.value for m in at.markdown if "Player Card" in m.value), "")   # the panel full card
-        return re.findall(r'plc-gwxp">([0-9.]+)<', card)
-
-    v1, v5 = pergw(1), pergw(5)
-    assert len(v1) == 3 and v1 == v5                 # 3 GWs, identical regardless of "Gameweeks ahead"
+    # ADR-179 — this used to prove the card was independent of a horizon control. That control is gone, and
+    # the requirement it protected is now **the reason removing it was safe**: with the page fixed at one
+    # gameweek, the card under a shirt still shows **three**. If that ever regressed, taking GW1–3 away would
+    # have cost the multi-week read rather than moved it.
+    at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30)
+    at.session_state["squad"] = squad
+    at.run()
+    at.segmented_control[0].set_value("My Squad").run()
+    assert not [c for c in at.segmented_control if c.key == "gw_pitch"], "no horizon on this page (ADR-179)"
+    next(s for s in at.selectbox if s.label == "Select a player") \
+        .set_value(f"{target['web_name']} · {target['team']}").run()
+    card = next((m.value for m in at.markdown if "Player Card" in m.value), "")   # the panel full card
+    assert len(re.findall(r'plc-gwxp">([0-9.]+)<', card)) == 3, \
+        "the card carries 3 gameweeks at a one-gameweek page horizon — sized per team, so a blank leaves no hole"
 
 
 def test_my_squad_panel_boot_battle_compares_squad_players():
@@ -3804,10 +3807,19 @@ def test_the_squad_switcher_is_not_duplicated_by_the_banner():
     assert "if len(labels) == 1:" in src, "one squad needs no picker at all"
 
 
-def test_the_pitch_offers_this_week_or_the_short_run_only():
+def test_my_squad_has_no_horizon_control_at_all():
+    """ADR-179, owner: *"let's remove GW1-3 from My Squad."* Replaces a guard that asserted the control's
+    options — ADR-175 had cut it from 1/2/3/4/5/10 to GW1 · GW1–3, and the owner then removed it outright.
+
+    **Two controls go, not one.** The *Projected xP* Cumulative / GW-only switch (US-422) only rendered above
+    a horizon of 1, so it leaves with it — and at a fixed one-week window its two readings are the same
+    number anyway.
+    """
     at = _squads_view("My Squad")
-    gw = next(c for c in at.segmented_control if c.key == "gw_pitch")
-    assert list(gw.options) == ["GW1", "GW1–3"] and gw.value == 1
+    assert not [c for c in at.segmented_control if c.key == "gw_pitch"], \
+        "the multi-week read belongs to the Lab, which has offered 1-10 since US-374"
+    assert not [c for c in at.segmented_control if c.key == "myteam_xp_view"], \
+        "and the switch that only existed to disentangle a longer horizon goes with it"
 
 
 def test_the_lab_keeps_the_long_window_it_actually_uses():
@@ -4021,15 +4033,22 @@ def test_the_pitch_prints_the_key_only_when_a_shirt_carries_a_glyph():
     # calls, so the golden page was the one pitch with no key.
     assert any(c.value.startswith("Set pieces:") for c in at.caption), \
         "the pitch must print its own key on BOTH render paths — neither page should have to remember to"
+    assert not any("Ownership:" in c.value for c in at.caption), \
+        "My Squad stays role-only — the market glyphs are a Lab thing (ADR-179)"
 
     # …and the Lab's pitch, which goes through `render_pitch` rather than the component. Asserted separately
     # because it IS a separate path: a mutation deleting the caption from `render_pitch` alone left the
     # My-Squad assertion above perfectly green. Two render paths need two assertions, or one of them is
     # protected by nothing.
+    # The Lab's pitch goes through `render_pitch` and carries the FULL set (ADR-179), so its key is the
+    # composed one: ownership as an ordered scale, momentum, then set pieces.
     lab = _squads_view("Build")
     if lab.code:                                           # a squad was built (skipped when there is no data)
-        assert any(c.value.startswith("Set pieces:") for c in lab.caption), \
-            "the Lab's pitch needs the same key — it shows the same glyphs"
+        key = next((c.value for c in lab.caption if "Set pieces:" in c.value), "")
+        assert key, "the Lab's pitch needs a key too — it shows the same glyphs and more"
+        assert "Ownership:" in key and "💎 differential → ⭐ popular" in key, \
+            "ownership is written as an ORDERED SCALE — four unrelated pictures teach nothing (ADR-178)"
+        assert "Momentum:" in key
 
 
 def test_the_glyph_and_the_word_come_from_one_table():
@@ -4227,3 +4246,86 @@ def test_the_lab_shows_the_vice_captain_of_the_squad_it_is_planning(monkeypatch)
     # version of this assertion passed with the fix reverted. A selector is not a rendered element.
     assert 'class="v-badge"' in blob, \
         "planning a squad must show who takes over if your captain doesn't play"
+
+
+def test_the_lab_pitch_carries_the_market_glyphs_and_my_squad_does_not():
+    """ADR-179, owner: *"Lab should show all Emojis, not just Set Pieces."*
+
+    ⚠️ **This narrows ADR-178 one day on, and the correction is the point.** That ADR concluded *"the pitch
+    is a team sheet, the table is a reference"* and applied it to **both** pitches — but its justification was
+    about **page purpose**: My Squad is read on a phone, minutes before a deadline, where anything not about
+    this gameweek competes with something that is. None of that is true of the Lab, where you are choosing
+    players and differential-vs-template is the question. Same evidence, different page, different answer.
+
+    The rule restated where it holds: **both pitches render glyphs with a key; which glyphs depends on what
+    the page is for.**
+    """
+    from src.web_streamlit.pitch import _kit_html
+
+    # ⚠ `selected_by`, not `selected_by_percent`. Written with the wrong key the fixture produced **no
+    # ownership tier at all**, so the glyph this test is about could not have appeared however the code
+    # behaved — a fixture that cannot express the thing under test (ADR-178's recurring root cause).
+    loud = {"id": 1, "web_name": "Szoboszlai", "team": "LIV", "position": "MID", "price": 7.0,
+            "penalties_order": 1, "corners_order": 1, "freekicks_order": 1,
+            "selected_by": 25.0, "transfers_in_event": 900_000,
+            "cost_change_event": 1, "form": 6.0}
+    common = {"captain_id": None, "xp_by_id": {1: 5.1}, "photos": {}, "next_opp": {}}
+
+    squad_kit = _kit_html(loud, **common)
+    lab_kit = _kit_html(loud, market=True, **common)
+    assert "🔥" not in squad_kit and "📈" not in squad_kit, "My Squad's shirts stay role-only"
+    assert "🔥" in lab_kit and "📈" in lab_kit and "🟦" in lab_kit, "the Lab's carry the market signals"
+    assert "⚽" in squad_kit and "⚽" in lab_kit, "set pieces are on both — they describe the role"
+    # Still glyphs, on both. The words live in the table.
+    import re
+    for kit in (squad_kit, lab_kit):
+        flags = kit[kit.index('<div class="flags"'):]
+        flags = flags[:flags.index("</div>") + 6]
+        for shown in re.findall(r"<span[^>]*>([^<]*)</span>", flags):
+            assert not re.search(r"[A-Za-z]", shown), f"glyph alone, got {shown!r}"
+    # …and every glyph can still explain itself on hover, including the two that carry no word of their own.
+    assert 'title="price rising"' in lab_kit, "💰↑ has no word in its flag — it must not title itself"
+
+
+def test_the_shirt_shows_at_most_three_gameweeks_and_a_blank_stays_blank():
+    """ADR-179, owner: *"Lab should show all GW scores rather than totaling, maybe limit 3 — not sure how you
+    would do that."*
+
+    **Three because the card is 104px wide** and a fourth figure wraps; the table alongside carries five,
+    because a table scrolls. Two surfaces, two caps, each from that surface's own limit — one number applied
+    to both would have been arbitrary for at least one of them.
+    """
+    from src.web_streamlit.pitch import _SHIRT_WEEKS, _kit_html
+
+    p = {"id": 1, "web_name": "B.Fernandes", "team": "MUN", "position": "MID", "price": 12.0}
+    common = {"captain_id": None, "xp_by_id": {1: 17.3}, "photos": {}, "next_opp": {}}
+
+    assert _SHIRT_WEEKS == 3
+    five = _kit_html(p, per_gw_xp={3: 6.0, 4: 5.4, 5: 6.0, 6: 5.1, 7: 4.9}, **common)
+    weeks = five[five.index('<div class="weeks"'):]
+    weeks = weeks[:weeks.index("</div>")]
+    assert weeks.count("·") == _SHIRT_WEEKS - 1, f"at most three figures on a shirt: {weeks}"
+    assert "6.0 · 5.4 · 6.0" in weeks, "and they are the FIRST three, in gameweek order"
+
+    # A blank gameweek renders as an em dash, not 0.0 — "not projected", not "projected to score nothing".
+    blanked = _kit_html(p, per_gw_xp={3: 6.0, 4: None, 5: 6.0}, **common)
+    assert "6.0 · — · 6.0" in blanked
+
+    # No per-GW data at all → no line, rather than an empty one.
+    assert 'class="weeks"' not in _kit_html(p, **common)
+
+
+def test_my_squad_copy_does_not_point_at_a_control_it_no_longer_has():
+    """ADR-179's copy sweep. The Captain panel read *"…the **Gameweeks ahead** selector doesn't change it"* —
+    a reassurance about a widget this page no longer carries, so it sent the reader looking for something
+    that isn't there.
+
+    ⚠️ **Deliberately not handled through `RETIRED`.** That list is for phrases retired *everywhere*, and
+    "Gameweeks ahead" is still the live label of the **Lab's** horizon control. Blanket-retiring it would
+    have failed on a page where it is correct — so this guard is scoped to the page whose claim changed.
+    """
+    at = _squads_view("Captain")
+    captions = " ".join(c.value for c in at.main.caption)
+    assert "next gameweek" in captions.lower(), "the fact is still true and still worth saying"
+    assert "Gameweeks ahead" not in captions, \
+        "My Squad has no horizon selector — copy must not send the reader looking for one"

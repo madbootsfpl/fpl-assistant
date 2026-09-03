@@ -179,8 +179,14 @@ def render_plan(squad_name, squad, players, upcoming, history, gw_history, photo
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in owned}}
     kits = shirt_url_by_id(owned, teams)
     bench_roles = {p["id"]: role for role, p in bench_order(bench_players, xp_by_id)}
+    # ADR-179 — the Lab pitch carries the market glyphs and a per-gameweek line. `per_gw_by_id` is the same
+    # `by_gameweek` the table below decomposes (ADR-032), trimmed to the breakout window, so the shirt and
+    # the table can never disagree about a week.
     render_pitch(xi_players, bench_players, captain_id=squad.get("captain_id"),
                  vice_captain_id=squad.get("vice_captain_id"), xp_by_id=xp_by_id,
+                 market=True, per_gw_by_id={p["id"]: {g: (bg.get(p["id"], {}).get(g)
+                                                          if g in played.get(p["team"], set()) else None)
+                                                      for g in gws} for p in owned},
                  photos=photos, next_opp=next_opp, bench_roles=bench_roles, kits=kits)
 
     render_player_table([{
@@ -327,13 +333,17 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
     bench_roles = {p["id"]: role for role, p in bench_order(bench_players, display_xp)}
     next_opp = {t: (team_schedule(upcoming, t) or [None])[0] for t in {p["team"] for p in selected}}
     kits = shirt_url_by_id(selected, teams)     # the pitch shows the live club kit (ADR-084 rev), not the mugshot
+    _bg = {r["id"]: r["by_gameweek"] for r in ranked}
+    _gws = _breakout_gameweeks(ranked)
+    _played = _fixture_gameweeks(upcoming, set(_gws))
     render_pitch(xi_players, bench_players, captain_id=None, xp_by_id=display_xp, photos=photos,
+                 market=True, per_gw_by_id={p["id"]: {g: (_bg.get(p["id"], {}).get(g)
+                                                          if g in _played.get(p["team"], set()) else None)
+                                                      for g in _gws} for p in selected},
                  next_opp=next_opp, bench_roles=bench_roles, kits=kits)
 
     # ADR-178 — a score per gameweek, not one total. The Trends/Set columns keep their **words**: this is the
     # reference surface the pitch's glyphs point at, and it is why the pitch needs no market flags of its own.
-    _bg = {r["id"]: r["by_gameweek"] for r in ranked}
-    _gws, _played = _breakout_gameweeks(ranked), _fixture_gameweeks(upcoming, _breakout_gameweeks(ranked))
     render_player_table([{
         "photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
         "Pos": p["position"], "Player": p["web_name"], "Team": p["team"],
@@ -482,13 +492,20 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # ADR-175 rev — the horizon shares this row rather than taking one of its own. The preview overlaid it on
     # the pitch; Streamlit cannot put a live widget on top of an HTML block, and a column beside the facts it
     # qualifies is the same idea at the same cost — **one line for three things**, where the build had three.
-    _c1, _c2 = st.columns([5, 2])
-    _c1.caption(f"{deadline + '  ·  ' if deadline else ''}{_legal}")
-    horizon = _c2.segmented_control(
-        "Gameweeks ahead", [1, 3], default=horizon if horizon in (1, 3) else 1, key="gw_pitch",
-        format_func=lambda n: "GW1" if n == 1 else "GW1–3", label_visibility="collapsed",
-        help="This gameweek, or the short run. A longer view is a Lab question — a wildcard is a multi-week "
-             "bet and an active squad is not.") or 1
+    st.caption(f"{deadline + '  ·  ' if deadline else ''}{_legal}")
+    # ADR-179 — **this page answers one question: what do I do this week.** The `GW1 | GW1–3` control that
+    # ADR-175 introduced (itself a cut from 1/2/3/4/5/10) is gone at the owner's call, and the *Cumulative /
+    # GW-only* switch goes with it, since that only rendered above a horizon of 1. Two controls, not one.
+    #
+    # Measured before agreeing (ADR-178): the GW1–3 view changes the suggested XI in **63.7%** of squads but
+    # costs **0.32 xP** in the week you actually play it — an order of magnitude inside ADR-161's sd 3.51. It
+    # changed the answer constantly and the outcome essentially never.
+    #
+    # Nothing is lost that this page still needs: the **player card** under a shirt shows 3 gameweeks anyway
+    # (sized per team, so a blank leaves no hole), ADR-173's *"Longer view: +X over the next 5 GWs"* fires
+    # whenever the horizon is under 5 — so at a fixed week it now fires **always** — and the multi-week read
+    # lives in the Lab, which has offered 1-10 since US-374.
+    horizon = 1
     if _issues:
         st.error("Not a legal 15: " + "; ".join(_issues))
 
@@ -558,19 +575,11 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # US-422 (ADR-121): a per-GW xP toggle — show the cumulative horizon (as today) OR just the horizon's last
     # gameweek, from the already-computed by_gameweek (ADR-032). Display-only: the XI/captain SELECTION above stays
     # cumulative; only the shown numbers + the pitch chips switch. Offered only when the horizon spans >1 GW.
-    gws = ranked[0]["gameweeks"] if ranked and ranked[0]["gameweeks"] else []
-    target_gw = gws[-1] if gws else None
-    per_gw = False
-    if horizon > 1 and target_gw is not None:
-        _opts = [f"GW{gws[0]}–{target_gw} (cumulative)", f"GW{target_gw} only"]
-        per_gw = st.segmented_control(
-            "Projected xP", _opts, default=_opts[0], key="myteam_xp_view",
-            help="Cumulative = total xP over the horizon; 'GW only' = just that gameweek — for last-minute, "
-                 "GW-by-GW planning as transfers roll in.") == _opts[1]
-    display_xp = ({p["id"]: by_gameweek_by_id.get(p["id"], {}).get(target_gw, 0.0) for p in owned}
-                  if per_gw else xp_by_id)
-    cap_gw = target_gw if per_gw else next_gw
-    gw_label = f"GW{target_gw}" if per_gw else ("next GW" if horizon == 1 else f"{horizon} GW")
+    # US-422 (ADR-121) offered *Cumulative / GW-only* — it existed only to disentangle a multi-gameweek
+    # horizon, and with the horizon fixed at one week the two readings are the same number (ADR-179).
+    display_xp = xp_by_id
+    cap_gw = next_gw
+    gw_label = "next GW"
 
     xi_xp = sum(display_xp.get(i, 0) for i in xi_ids)
     bench_xp = sum(display_xp.get(p["id"], 0) for p in owned if p["id"] not in xi_ids)
@@ -594,14 +603,9 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
          "help": "Your bench's projected points (bench strength)."},
     ])
     # Be explicit that the ×2 is a one-week thing when a longer horizon is selected (owner steer, ADR-083).
-    cap_name = by_id[captain_id]["web_name"] if captain_id in by_id else None
-    if cap_next and per_gw:
-        st.caption(f"⚡ Showing **GW{target_gw}** only — captain **{cap_name}**'s double is applied to that "
-                   "gameweek (captaincy is re-picked weekly).")
-    elif cap_next and horizon > 1:
-        st.caption(f"⚡ Captain **{cap_name}** is doubled for the **next gameweek only** (+{cap_next:.1f} xP); "
-                   f"the other {horizon - 1} GW count once — captaincy is re-picked each week.")
-    elif captain_benched:
+    # The two "the ×2 is a one-week thing" captions went with the horizon (ADR-179): at a fixed next-gameweek
+    # window there is no longer window for the double to be misread against.
+    if captain_benched:
         st.caption("⚡ Your captain is on the **bench** — not doubled in the projected XI (FPL would auto-sub "
                    "to your vice).")
 
@@ -1234,8 +1238,10 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
 # ---- Captain (who to (vice-)captain; ADR-029) ------------------------------------------------------
 
 def render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names=None):
-    st.caption("Captaincy is always the **next gameweek** (a one-week decision) — the *Gameweeks ahead* "
-               "selector doesn't change it.")
+    # ADR-179 — this used to end *"the Gameweeks ahead selector doesn't change it"*. There is no such
+    # selector on this page any more, so the sentence pointed at a control the reader cannot find. The fact
+    # it was making is still true and still worth saying; only the reassurance about a vanished widget went.
+    st.caption("Captaincy is always the **next gameweek** — a one-week decision, re-picked every week.")
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to captain.")

@@ -64,7 +64,9 @@ view = st.segmented_control(
 # window nobody chose.
 #
 # Three modes, three keys, because one control fed five consumers and they do not want the same thing:
-#   * the **pitch** — this week, or the short run: GW1 · GW1–3.
+#   * the **pitch** — **no control at all** (ADR-179): My Squad is fixed at the next gameweek. ADR-175 had
+#     cut it to GW1 · GW1–3; the owner then removed it, because the multi-week read belongs to the Lab and
+#     the GW1–3 XI was measured as costing 0.32 xP in the week you actually play it (ADR-178).
 #   * the **Lab** — a wildcard is a multi-week bet, so it keeps its long range (US-374, unchanged).
 #   * **DNA / Leagues** — occasional analysis, where a five-week read is defensible and was never the
 #     complaint. Transfer moved under the pitch (see the selector below) and reads the pitch's window.

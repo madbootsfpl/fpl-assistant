@@ -447,6 +447,17 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **One week on the pitch, every week in the Lab** (ADR-179, Sprint 240, 2026-09-03) — *owner.*
+  🔴 First, a **crash**: he reported the vice-captain missing in the Lab, and `render_pitch` had **no
+  `vice_captain_id` parameter at all** — so ADR-133's degrade path forwarded it into a function that could
+  not take it, and **My Squad raised instead of degrading** without the click-detector component. Shipped
+  alone. Then: **GW1–3 comes off My Squad** (two controls, since Cumulative/GW-only only rendered above a
+  horizon of 1) — closing ADR-178's gate; the **Lab pitch carries every glyph** with a grouped key, ownership
+  written as an ordered scale **💎 → ⭐ → 🟦 → 👑**; and the Lab's shirts show **3** per-gameweek figures while
+  its tables keep **5** — two surfaces, two caps, each from its own limit. 🧭 Corrects ADR-178, one day old:
+  *"the pitch is a team sheet, the table is a reference"* was **the justification generalised into a rule
+  about widget type** — the flags left My Squad because of what that page is *for*, and the Lab is for
+  something else.
 - ✅ **Plan in the Lab, play on the pitch** (ADR-178, Sprint 239, 2026-09-03) — *owner UX feedback.* Three
   changes. The pitch carries **set-piece glyphs only** (⚽🚩🎯, no words) with **one key beneath it on both
   pages** — every player used to carry at least one flag (the ownership tier always fires) and the six-flag

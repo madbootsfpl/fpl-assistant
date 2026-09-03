@@ -126,6 +126,36 @@ def crowd_flags(player) -> list:
     return flags
 
 
+
+# ADR-179 — the market signals as **bare glyphs**, for a pitch that wants them (the Lab). `crowd_flags` keeps
+# the worded form for tables. Ownership is deliberately kept as ONE entry per player, because it is a
+# four-point **scale** (💎 → ⭐ → 🟦 → 👑) rather than four independent facts — the key writes it as a scale
+# for the same reason.
+_WORDLESS = {"💰↑": "price rising", "💸↓": "price falling"}
+
+
+def crowd_glyphs(player) -> list:
+    """`[(glyph, meaning)]` for the market signals — ownership tier, momentum, price, form.
+
+    ADR-178 argued *against* these as glyphs, and was right about **My Squad**: a phone, minutes before a
+    deadline, where 💰↑ and 💸↓ are near-identical at 10px. It was wrong to generalise that to the Lab, where
+    you are choosing players and differential-vs-template is the question (ADR-179). Same evidence, different
+    page, different answer.
+    """
+    out = []
+    for flag in crowd_flags(player):
+        glyph, _, word = flag.partition(" ")
+        # The price flags are the only ones whose worded form carries no word (`💰↑` / `💸↓` stand alone), so
+        # without this their hover title would be the glyph explaining itself.
+        out.append((glyph, word or _WORDLESS.get(glyph, glyph)))
+    return out
+
+
+CROWD_KEY = (
+    "**Ownership:** 💎 differential → ⭐ popular → 🟦 template → 👑 essential  \n"
+    "**Momentum:** 🔥 transferred in · ❄️ out · 💰↑ price rising · 💸↓ falling · 📈 in form"
+)
+
 # FPL status codes → a compact availability flag (ADR-074). Chosen distinct from the rating circles
 # (🟢🟡🟠🔴) so a player's availability and their quality rating don't blur. "a" (available) → no flag.
 _AVAILABILITY_FLAG = {"i": "🚑", "s": "🚫", "u": "⛔", "n": "⛔", "d": "❓"}

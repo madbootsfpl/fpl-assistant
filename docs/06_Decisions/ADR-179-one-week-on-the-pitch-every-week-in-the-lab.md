@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-179
 **Date:** 2026-09-03
-**Status:** 📋 **Proposed** — one defect fix that should land on its own, plus three changes
+**Status:** ✅ **Accepted — built** (Sprint 240, 2026-09-03). **1722 → 1725 tests, ruff clean.**
+The defect fix shipped **on its own** (`e32a56b`) ahead of the three changes, as planned.
 **Superseded By / Replaces:** **Closes [ADR-178](./ADR-178-plan-in-the-lab-play-on-the-pitch.md)'s gate** and
 **reverses [ADR-175](./ADR-175-value-above-the-fold.md)'s `GW1 | GW1–3` control** — which ADR-175 itself
 introduced as a compromise, cutting the pitch from `1/2/3/4/5/10`. **No `decision_xp` change.**
@@ -146,6 +147,58 @@ One number applied to both would have been arbitrary for at least one of them.
 
 ---
 
+### 🔬 Found at build time
+
+**1. Four tests pinned the removed control**, and each was rewritten to assert the requirement rather than
+the widget:
+
+| test | what it pinned | what it asserts now |
+|---|---|---|
+| `…quick_stats_summary` | the control's options are `GW1 · GW1–3` | there is **no** `gw_pitch` control |
+| `…captain_next_gw_double` | set the horizon to 3, expect the *"next gameweek only"* caption | the strip is XI **+ the captain's double**, computed at the same one-week window the page uses |
+| `…per_gw_card_is_horizon_independent` | the card is the same at horizons 1 and 5 | **the card shows 3 gameweeks at a one-gameweek page horizon** — which is now *the evidence that removing the control was safe* |
+| `…offers_this_week_or_the_short_run_only` | the options and the default | renamed `…has_no_horizon_control_at_all`, and asserts **both** controls are gone |
+
+The second is worth spelling out: its expectation was computed at `horizon=3`, so left alone it would have
+compared the page's number against a **different window's** sum. Realigning it was not cosmetic.
+
+**2. A caption pointed at a control that no longer exists.** The Captain panel read *"…the **Gameweeks
+ahead** selector doesn't change it"* — a reassurance about a widget this page no longer carries, sending the
+reader to look for something that is not there.
+
+⚠️ **Deliberately not handled through `RETIRED`.** That list is for phrases retired *everywhere*, and
+*"Gameweeks ahead"* is still the live label of the **Lab's** horizon control. A blanket entry would have
+failed on a page where the phrase is correct — so the guard is scoped to the page whose *claim* changed.
+**The mechanism has to match the scope of the change; a global list cannot express a page-local retirement.**
+
+**3. A fixture could not express the thing under test — again.** The new Lab-glyph guard was written with
+`selected_by_percent`; `ownership_tier` reads **`selected_by`**. With the wrong key the fixture produced *no
+ownership tier at all*, so the glyph the test is named after could not have appeared however the code
+behaved. Fifth occurrence of this root cause; it is now the single most common way a guard here goes blind.
+
+#### ✅ Mutation results — nine guards, each reverted alone, restore verified between every run
+
+| mutation | caught |
+|---|---|
+| the Lab loses its market glyphs | ✅ |
+| My Squad **gains** the market glyphs | ✅ |
+| the shirt cap widens from 3 to 5 | ✅ |
+| a blank week on the shirt reads as `0.0` | ✅ |
+| the price glyph titles itself (`💰↑` explaining `💰↑`) | ✅ |
+| the Lab key drops the ownership/momentum lines | ✅ |
+| **ownership stops being an ordered scale** (`→` becomes `·`) | ✅ |
+| the horizon control returns to My Squad | ✅ *(two tests)* |
+| the stale *"Gameweeks ahead selector"* caption returns | ✅ |
+
+Plus the two from the defect fix, one of which **was wrong first**: asserting `"v-badge" in blob` also
+matched the **CSS block** every pitch emits, so it passed with the fix reverted. **A selector is not a
+rendered element.**
+
+⚠️ Per ADR-178's harness lesson, the sweep re-ran the clean suite after every restore and compared it to a
+recorded baseline, rather than trusting the copy-back.
+
+---
+
 ### ⚖️ Consequences & Trade-offs
 
 * **Positive Impact:**
@@ -168,32 +221,33 @@ One number applied to both would have been arbitrary for at least one of them.
 ### 🛠 Implementation & Migration
 * **Components Affected:** Code (`pitch.py`, `views/squads.py`, `pages/1_My_Squad.py`), Tests, Docs
 * **Action Items — change 1, landing first:**
-  - [ ] `render_pitch` accepts and forwards `vice_captain_id`
-  - [ ] `render_plan` passes the squad's vice-captain
-  - [ ] Guard: the **ADR-133 degrade path with a vice-captain set** renders instead of raising
-  - [ ] Guard: a vice-captain reaches the badge on a plain `render_pitch`, not only the tappable one
+  - [x] `render_pitch` accepts and forwards `vice_captain_id`
+  - [x] `render_plan` passes the squad's vice-captain
+  - [x] Guard: the **ADR-133 degrade path with a vice-captain set** renders instead of raising
+  - [x] Guard: a vice-captain reaches the badge on a plain `render_pitch`, not only the tappable one
 * **Action Items — changes 2-4:**
-  - [ ] Remove the `GW1 | GW1–3` control; My Squad's horizon is fixed at the next gameweek
-  - [ ] Guard: no horizon control on My Squad, and the *Cumulative / GW-only* switch goes with it
-  - [ ] Guard: the answer panels still read a one-week window, and ADR-173's *Longer view* line still appears
-  - [ ] The Lab pitch renders market **and** role glyphs; My Squad still role-only
-  - [ ] A grouped key for the Lab, ownership written as an ordered scale
-  - [ ] Up to 3 per-gameweek figures on the Lab's shirts; table stays at 5
-  - [ ] Guard: the shirt breakout is capped at 3 and the table's at 5 — **two caps, asserted separately**
-  - [ ] **Mutation-test every new guard**, and re-run the clean suite between mutants (ADR-178's harness bug)
-  - [ ] Preview → owner sign-off before build
+  - [x] Remove the `GW1 | GW1–3` control; My Squad's horizon is fixed at the next gameweek
+  - [x] Guard: no horizon control on My Squad, and the *Cumulative / GW-only* switch goes with it
+  - [x] Guard: the answer panels still read a one-week window, and ADR-173's *Longer view* line still appears
+  - [x] The Lab pitch renders market **and** role glyphs; My Squad still role-only
+  - [x] A grouped key for the Lab, ownership written as an ordered scale
+  - [x] Up to 3 per-gameweek figures on the Lab's shirts; table stays at 5
+  - [x] Guard: the shirt breakout is capped at 3 and the table's at 5 — **two caps, asserted separately**
+  - [x] **Mutation-test every new guard**, and re-run the clean suite between mutants (ADR-178's harness bug)
+  - [x] Preview → owner sign-off before build
 
 #### ✅ Always
-- [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
+- [x] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
 
 #### 🧭 If this ADR renames/moves/merges/retires a user-facing surface
 **A control is retired**: My Squad's *"Gameweeks ahead"* (`GW1 | GW1–3`) and the *Projected xP*
 *Cumulative / GW-only* switch.
-- [ ] Grep `src/web_streamlit` for copy promising a multi-week view **on My Squad** — Home, Help, and the
-      pitch's own help text (*"This gameweek, or the short run"*)
-- [ ] Add the retired phrasing to `RETIRED` in `tests/test_navigation_copy.py` **in the same commit**
-- [ ] Check `docs/08_Marketing/Video_Scripts.md` — **not swept by the guard**
-- [ ] Check no test pins the old control
+- [x] Swept — **one hit**, the Captain panel's *"the Gameweeks ahead selector doesn't change it"*, now
+      corrected and guarded. Home and Help make no multi-week promise about My Squad.
+- [x] **Nothing added to `RETIRED`** — *"Gameweeks ahead"* is still the Lab's live control label, so a
+      global entry would fail where the phrase is correct. Scoped guard instead; reasoning in §Found at build time.
+- [x] Checked `docs/08_Marketing/Video_Scripts.md` — no mention of the horizon control.
+- [x] Four did. All four rewritten to assert the requirement — table in §Found at build time.
 
 ---
 
