@@ -491,8 +491,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   ✅ **Mini-league H2H — built** (ADR-161, Sprint 216, 2026-08-27): a rival picker on Leagues, and the gap
   **decomposed** rather than totalled — the players you both start cancel, so the head-to-head is the
   differential set priced by xP. Identical elevens with different captains are correctly *not* identical (the
-  captain's extra copy is its own differential); FPL's `multiplier` is taken at face value so Bench Boost and
-  Triple Captain score right.
+  captain's extra copy is its own differential).
+  🔧 **Corrected (ADR-177, Sprint 238, 2026-09-03)** — owner: *"you are showing MICKA at 59.9 and TS at 70, he
+  is above me in the league?"* He was, by 23 points. ADR-161 read FPL's `multiplier` at face value, which is
+  right for reconstructing what a squad **scored** and wrong for projecting the week **still to come**: a
+  spent Bench Boost was carried forward, pricing him on **15** players against a rival's **11**. The XI is now
+  derived from `position` + `is_captain` — **a no-op for an unchipped squad**, so it can only change a chipped
+  week. Free Hit reverts, so GW−1's picks are read instead. The card also now states the **season standing**
+  above the projection, because that is the comparison the owner was making. *Right reasoning, wrong question.*
   ⏳ **Win-probability sim — GATED, recommended against** (ADR-161). Measured on GW1 returns: one starter's
   points have **sd 3.51** (mean 3.99, median 2, max 17), so a 3-differential head-to-head has a gap **sd ≈ 8.6**
   against typical projected margins of **2-5 points** — a probability would say *"roughly a coin flip"* every

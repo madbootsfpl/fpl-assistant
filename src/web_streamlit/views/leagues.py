@@ -20,7 +20,7 @@ import streamlit as st
 
 from src import config
 from src.analytics import decision_xp
-from src.analytics.h2h import catch_up_note, h2h_gap
+from src.analytics.h2h import catch_up_note, chip_name, h2h_gap, reverts_next_gameweek
 from src.analytics.league import (
     captain_split,
     chip_usage,
@@ -342,6 +342,30 @@ def render_leagues():
     else:
         _rival_label = st.selectbox("Compare against", list(_rivals), key="lg_h2h")
         _rival = _rivals[_rival_label]
+        _rival_short = _rival_label.split(" · ")[0][:14]
+
+        def _forward_squad(payload, entry, who):
+            """The squad they will actually own next gameweek, and a line saying so (ADR-177).
+
+            Bench Boost and Triple Captain change how the *same* fifteen were scored, so the projection
+            simply drops the chip and nothing needs fetching. **Free Hit is the exception**: that squad is
+            discarded at the deadline and the previous one returns, so the honest read is the gameweek before
+            — one extra call, only in the week it applies.
+            """
+            _chip = (payload or {}).get("active_chip")
+            if reverts_next_gameweek(payload):
+                _prior = _picks((entry,), last_gw - 1).get(entry) if last_gw > 1 else None
+                if _prior:
+                    return _prior, (f"{who} played **Free Hit** in GW{last_gw}. That squad is discarded at "
+                                    f"the deadline, so this reads the **GW{last_gw - 1}** squad it reverts to.")
+                return None, (f"{who} played **Free Hit** in GW{last_gw}. That squad is discarded at the "
+                              "deadline and FPL does not publish the one it reverts to — so this comparison "
+                              "cannot honestly be made. Try another rival.")
+            if _chip:
+                return payload, (f"{who} played **{chip_name(_chip)}** in GW{last_gw} — that is spent, so "
+                                 "this projects the eleven, not the chipped side.")
+            return payload, None
+
         # My own picks may sit outside the standings page we read, so fetch them if they aren't already in hand.
         _mine = picks.get(_my_entry) or _picks((_my_entry,), last_gw).get(_my_entry)
         _theirs = picks.get(_rival)
@@ -350,48 +374,74 @@ def render_leagues():
         elif not _theirs:
             st.warning("Couldn't read that rival's squad — try another, or reload.")
         else:
-            _st2 = Storage()
-            try:
-                _ranked = decision_xp(players, _st2.get_upcoming_fixtures(), _st2.get_history_by_code(),
-                                      horizon=1, gw_history_by_code=_st2.get_gw_history_by_code())
-            finally:
-                _st2.close()
-            _xp = {r["id"]: r["xp"] for r in _ranked}
-            _gap = h2h_gap(_mine, _theirs, _xp, players)
+            # ADR-177: what each side will actually OWN next gameweek, which is not always what they fielded.
+            _mine, _my_note = _forward_squad(_mine, _my_entry, "You")
+            _theirs, _their_note = _forward_squad(_theirs, _rival, _rival_short)
+            _chip_notes = [n for n in (_my_note, _their_note) if n]
 
-            render_stat_strip([
-                {"label": "You", "value": f"{_gap['mine']['xp']:.1f}"},
-                {"label": _rival_label.split(" · ")[0][:14], "value": f"{_gap['theirs']['xp']:.1f}"},
-                {"label": "Gap", "value": f"{_gap['gap']:+.1f}",
-                 "tone": "up" if _gap["gap"] >= 0 else "down",
-                 "help": "Positive means you are ahead on projection."},
-            ])
-            st.caption(catch_up_note(_gap, my_name="you", their_name="they"))
+            # The season standing, before the projection — the two were read as one number by the owner, and
+            # the card is the half that does not say which it is (ADR-177).
+            _totals = {r["entry"]: r["total"] for r in shown}
+            _my_total, _their_total = _totals.get(_my_entry), _totals.get(_rival)
+            if _my_total is not None and _their_total is not None:
+                _season = _my_total - _their_total
+                _lead = (f"you are **{_season} points ahead**" if _season > 0 else
+                         f"**{_rival_short} is {-_season} points ahead**" if _season < 0 else
+                         "**you are level**")
+                # Both totals are labelled by name. "(165 v 188)" after "Micka is 23 points ahead" reads as
+                # though the 165 is theirs — the sentence's subject and the bracket's order disagreed.
+                st.caption(f"On the season so far, {_lead} — you **{_my_total}**, "
+                           f"{_rival_short} **{_their_total}**. "
+                           f"Everything below is **GW{last_gw + 1} only** — a projection, not the table.")
 
-            d1, d2 = st.columns(2)
-            for _col, _rows, _title, _why in (
-                    (d1, _gap["their_edge"], "What they have that you don't",
-                     "Catching them runs through these."),
-                    (d2, _gap["my_edge"], "What you have that they don't",
-                     "This is your lead, such as it is.")):
-                with _col:
-                    st.markdown(f"**{_title}**")
-                    if not _rows:
-                        st.caption("Nothing — identical on this side.")
-                        continue
-                    st.dataframe(
-                        [{"photo": photos.get(r["id"], ""), "Player": r["web_name"], "Team": r["team"],
-                          "Pos": r["position"], "xP": r["xp"],
-                          "": "©" if r["multiplier"] > 1 else ""} for r in _rows],
-                        hide_index=True, width="stretch",
-                        column_config={"photo": st.column_config.ImageColumn("", width="small"),
-                                       "xP": st.column_config.NumberColumn("xP", format="%.1f"),
-                                       "": st.column_config.TextColumn("", width="small",
-                                                                       help="A captain's extra copy.")})
-                    st.caption(_why)
+            for _note in _chip_notes:
+                st.caption(_note)
 
-            st.caption(f"⚠️ These are **GW{last_gw} squads** — FPL only publishes picks after a deadline, so this "
-                       "projects the team they had, not the one they will field. They can still transfer and "
-                       "change their captain. xP is the same projection every other page decides with; it is an "
-                       "average, "
-                       "**not a win probability** — a 2-point projected lead is not a 2-point certainty.")
+            if _mine and _theirs:                     # a declined Free Hit has already said why above
+                _st2 = Storage()
+                try:
+                    _ranked = decision_xp(players, _st2.get_upcoming_fixtures(), _st2.get_history_by_code(),
+                                          horizon=1, gw_history_by_code=_st2.get_gw_history_by_code())
+                finally:
+                    _st2.close()
+                _xp = {r["id"]: r["xp"] for r in _ranked}
+                _gap = h2h_gap(_mine, _theirs, _xp, players)
+
+                render_stat_strip([
+                    {"label": "You", "value": f"{_gap['mine']['xp']:.1f}"},
+                    {"label": _rival_short, "value": f"{_gap['theirs']['xp']:.1f}"},
+                    {"label": "Gap", "value": f"{_gap['gap']:+.1f}",
+                     "tone": "up" if _gap["gap"] >= 0 else "down",
+                     "help": "Positive means you are ahead on projection."},
+                ])
+                st.caption(catch_up_note(_gap, my_name="you", their_name="they"))
+
+                d1, d2 = st.columns(2)
+                for _col, _rows, _title, _why in (
+                        (d1, _gap["their_edge"], "What they have that you don't",
+                         "Catching them runs through these."),
+                        (d2, _gap["my_edge"], "What you have that they don't",
+                         "This is your lead, such as it is.")):
+                    with _col:
+                        st.markdown(f"**{_title}**")
+                        if not _rows:
+                            st.caption("Nothing — identical on this side.")
+                            continue
+                        st.dataframe(
+                            [{"photo": photos.get(r["id"], ""), "Player": r["web_name"], "Team": r["team"],
+                              "Pos": r["position"], "xP": r["xp"],
+                              "": "©" if r["multiplier"] > 1 else ""} for r in _rows],
+                            hide_index=True, width="stretch",
+                            column_config={"photo": st.column_config.ImageColumn("", width="small"),
+                                           "xP": st.column_config.NumberColumn("xP", format="%.1f"),
+                                           "": st.column_config.TextColumn("", width="small",
+                                                                           help="A captain's extra copy.")})
+                        st.caption(_why)
+
+                st.caption(f"⚠️ These are **GW{last_gw} squads** — FPL only publishes picks after a deadline, "
+                           f"so this reads the team they had and projects GW{last_gw + 1}. They can still "
+                           "transfer and change their captain. A chip played in "
+                           f"GW{last_gw} is **not** projected forward: it is spent, so the eleven is derived "
+                           "from the bench order, not from how last week was scored. xP is the same "
+                           "projection every other page decides with; it is an average, **not a win "
+                           "probability** — a 2-point projected lead is not a 2-point certainty.")

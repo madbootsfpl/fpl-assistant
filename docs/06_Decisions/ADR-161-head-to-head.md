@@ -40,6 +40,14 @@ pin it.
 and — the one that matters — **Bench Boost**, where all fifteen count. Re-deriving it from `is_captain` and the
 1-11/12-15 split would have silently mis-scored every chipped gameweek.
 
+> ⚠️ **AMENDED by [ADR-177](./ADR-177-project-the-team-they-will-field.md) (2026-09-03).** The reasoning above
+> is sound about the question it was written for — *what did this squad **score** last week* — and this module
+> asks a different one: *what will it score **next** week*, when the chip is spent. Read forward it priced a
+> bench-boosted manager on **fifteen** players against a rival's eleven, and because the fault is asymmetric it
+> never looked like an error; it looked like a ten-point lead. The eleven is now derived from `position` and
+> `is_captain` — which reproduces these multipliers **exactly** for an unchipped squad, so it can only change a
+> week that was chipped. Found by the owner, reading the card against the league table above it.
+
 **4. Rivals are projected with the same `decision_xp` map you are.** No second recipe (ADR-041). A parallel
 projection for rivals would compare two models rather than two squads.
 

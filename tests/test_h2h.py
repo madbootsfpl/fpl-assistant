@@ -5,7 +5,14 @@ that the cancellation is done right, especially in the case that decides most re
 elevens with different captains. Offline, plain dicts; no network, no Storage.
 """
 
-from src.analytics.h2h import catch_up_note, h2h_gap, manager_projection
+from src.analytics.h2h import (
+    catch_up_note,
+    chip_name,
+    h2h_gap,
+    manager_projection,
+    reverts_next_gameweek,
+)
+from src.analytics.league import _BENCH_FROM
 
 XP = {i: 4.0 for i in range(1, 20)}
 XP[9], XP[10], XP[11], XP[12] = 8.0, 6.0, 2.0, 5.0
@@ -13,13 +20,23 @@ PLAYERS = [{"id": i, "web_name": f"P{i}", "team": "AAA", "position": "MID"} for 
 
 
 def _picks(ids, captain=None, bench=(), chip=None, multipliers=None):
+    """A picks payload, with **FPL's position numbering**: starters 1-11, the bench from 12.
+
+    That numbering used to be faked — every pick was handed `position = i`, so a "benched" player sat at
+    position 4 and was only benched because the fixture also wrote `multiplier = 0`. It modelled less than
+    reality, and it hid ADR-177: the payload it produced could not tell a bench from an XI by the field FPL
+    actually uses for it.
+    """
+    starters = [p for p in ids if p not in bench]
+    benched = [p for p in ids if p in bench]
     out = []
-    for i, pid in enumerate(ids, start=1):
+    for pos, pid in enumerate(starters + benched, start=1):
+        pos = pos if pid not in bench else max(pos, _BENCH_FROM)
         if multipliers and pid in multipliers:
             mult = multipliers[pid]
         else:
             mult = 0 if pid in bench else (2 if pid == captain else 1)
-        out.append({"element": pid, "position": i, "is_captain": pid == captain, "multiplier": mult})
+        out.append({"element": pid, "position": pos, "is_captain": pid == captain, "multiplier": mult})
     return {"picks": out, "active_chip": chip}
 
 
@@ -29,14 +46,93 @@ def test_a_projection_doubles_the_captain_and_ignores_the_bench():
     assert proj["captain"] == 9
 
 
-def test_the_multiplier_is_taken_at_face_value_so_chips_are_not_re_derived():
-    """Bench Boost makes all fifteen count and Triple Captain makes one count three times. Re-deriving the
-    multiplier from `is_captain` and the 1-11/12-15 split would silently get every chipped week wrong."""
-    boosted = _picks([1, 2, 3], multipliers={1: 1, 2: 1, 3: 1}, chip="bboost")
-    assert manager_projection(boosted, XP)["xp"] == 12.0
-    tripled = _picks([9, 1], captain=9, multipliers={9: 3, 1: 1})
-    assert manager_projection(tripled, XP)["xp"] == 24.0 + 4.0
-    assert manager_projection(tripled, XP)["chip"] is None or True
+def _fifteen(captain=None, chip=None, boosted=False):
+    """A realistic fifteen — eleven starters and a four-man bench — optionally bench-boosted.
+
+    `boosted=True` writes the payload FPL actually returns for a Bench Boost week: **multiplier 1 on all
+    fifteen**, positions unchanged. That is the input that broke the head-to-head.
+    """
+    ids = list(range(1, 16))
+    picks = []
+    for pos, pid in enumerate(ids, start=1):
+        starting = pos < _BENCH_FROM
+        mult = (2 if pid == captain else 1) if (starting or boosted) else 0
+        picks.append({"element": pid, "position": pos, "is_captain": pid == captain, "multiplier": mult})
+    return {"picks": picks, "active_chip": chip}
+
+
+def test_a_chip_played_last_week_does_not_change_next_weeks_projection():
+    """ADR-177, owner-reported: *"you are showing MICKA at 59.9 and TS at 70, he is above me in the league?"*
+
+    He was — by 23 points. The card is a projection of the gameweek **still to come**, and it was pricing his
+    bench-boosted squad on **fifteen** players against a rival's eleven. The chip is spent; next week the
+    bench is a bench again.
+
+    This replaces a test that asserted the opposite (*"the multiplier is taken at face value so chips are not
+    re-derived"*). That test was right about the question ADR-161 asked — reconstructing what a squad
+    **scored** — and it defended the bug the moment the same code was used to project forward. A test that
+    fails when you fix a bug is defending the error, so it asserts the requirement now instead of the
+    mechanism.
+    """
+    plain = manager_projection(_fifteen(captain=9), XP)
+    boosted = manager_projection(_fifteen(captain=9, chip="bboost", boosted=True), XP)
+    assert boosted["xp"] == plain["xp"], "the same fifteen, projected the same, chip or no chip"
+    assert boosted["chip"] == "bboost", "and the chip is still reported, so a surface can say it happened"
+
+
+def test_two_identical_squads_are_a_dead_heat_even_when_one_of_them_chipped():
+    """The reproduction, end to end. Before the fix these two projected 16 points apart on a flat xP map —
+    a lead made entirely of four bench players, on a surface whose only claim is the gap between two totals.
+    """
+    gap = h2h_gap(_fifteen(captain=9, chip="bboost", boosted=True), _fifteen(captain=9), XP, PLAYERS)
+    assert gap["gap"] == 0.0
+    assert gap["my_edge"] == [] and gap["their_edge"] == []
+
+
+def test_an_unchipped_squad_projects_exactly_as_it_did_before():
+    """The no-op claim, pinned — and it is what makes the fix safe to apply unconditionally rather than
+    behind a chip check. For a normal week, `position` + `is_captain` reproduce FPL's own multipliers, so
+    every unchipped head-to-head in the league is byte-identical to what shipped before ADR-177."""
+    payload = _fifteen(captain=9)
+    from_multipliers = {pk["element"]: pk["multiplier"] for pk in payload["picks"] if pk["multiplier"]}
+    assert dict(manager_projection(payload, XP)["starters"]) == from_multipliers
+
+
+def test_a_triple_captain_projects_as_a_captain():
+    """Same fault, smaller: the third copy is spent too. Reading multiplier 3 forward would have handed the
+    captain an extra 8.0 he cannot score next week."""
+    tripled = _fifteen(captain=9)
+    for pk in tripled["picks"]:
+        if pk["is_captain"]:
+            pk["multiplier"] = 3
+    tripled["active_chip"] = "3xc"
+    assert manager_projection(tripled, XP)["xp"] == manager_projection(_fifteen(captain=9), XP)["xp"]
+
+
+def test_a_payload_without_positions_falls_back_to_the_multiplier():
+    """The degradation, and it is deliberate: a slightly wrong comparison beats no comparison, and this is
+    exactly the behaviour that shipped before ADR-177 — strictly no worse than what it replaces."""
+    payload = {"picks": [{"element": 1, "multiplier": 1, "is_captain": False},
+                         {"element": 9, "multiplier": 2, "is_captain": True},
+                         {"element": 11, "multiplier": 0, "is_captain": False}]}
+    assert manager_projection(payload, XP)["xp"] == 4.0 + 16.0
+
+
+def test_only_free_hit_says_the_squad_will_not_exist_next_week():
+    """The one chip a different count cannot repair. Bench Boost and Triple Captain change how the *same*
+    fifteen are scored; a Free Hit squad is discarded wholesale at the deadline and the previous one returns.
+    Projecting it forward would price a team nobody will own."""
+    assert reverts_next_gameweek(_fifteen(chip="freehit")) is True
+    for still_yours in (None, "bboost", "3xc", "wildcard"):
+        assert reverts_next_gameweek(_fifteen(chip=still_yours)) is False, still_yours
+    assert reverts_next_gameweek({}) is False
+
+
+def test_a_chip_is_named_for_a_reader_not_shown_as_a_code():
+    assert chip_name("bboost") == "Bench Boost"
+    assert chip_name("3xc") == "Triple Captain"
+    assert chip_name(None) == ""
+    assert chip_name("some_new_chip") == "some_new_chip", "an unknown code is odd, not invisible"
 
 
 def test_shared_starters_cancel_and_only_the_differentials_decide_it():

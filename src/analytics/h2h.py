@@ -17,32 +17,79 @@ Pure and offline: picks payloads and an xP map in, numbers out. The fetching liv
 `league.py`.
 
 ⚠️ **A picks payload is the last completed gameweek's**, because FPL only makes picks public after a deadline.
-So this projects *the squad they had*, not the one they will field — they can transfer, and they can change
-their captain. That limit is real, it is stated on the surface that renders this, and it does not make the
-read useless: most managers make 0-1 transfers a week, and the differential set is stable across one of them.
+So this reads *the squad they had* and projects the gameweek **still to come** — they can still transfer, and
+they can change their captain. That limit is real, it is stated on the surface that renders this, and it does
+not make the read useless: most managers make 0-1 transfers a week, and the differential set is stable across
+one of them.
+
+⚠️ **Because the projection points forward, a chip played last week must not be projected into next week**
+(ADR-177). The eleven is therefore derived from `position` and `is_captain` rather than from FPL's stored
+`multiplier`, which records how the *completed* gameweek was scored. Free Hit is the one case counting
+differently cannot fix — see `reverts_next_gameweek`.
 """
 
 from src.analytics.league import _BENCH_FROM, _get
 
 
 def _starters(payload):
-    """`[(player_id, multiplier)]` for the players who actually score this gameweek.
+    """`[(player_id, multiplier)]` for the eleven they will field **next** gameweek.
 
-    `multiplier` is FPL's own field and is taken at face value rather than re-derived: it already encodes the
-    captain (2), the triple captain (3), a benched player (0) and — crucially — **Bench Boost**, which makes
-    all fifteen count. Re-deriving it from `is_captain` and the 1-11/12-15 split would silently get every
-    chipped gameweek wrong.
+    Derived from `position` (1-11 start, 12-15 sit) and `is_captain` (×2) — deliberately **not** from FPL's
+    stored `multiplier` (ADR-177).
+
+    ADR-161 read that multiplier at face value, on the grounds that it already encodes Bench Boost and the
+    triple captain, and that re-deriving it *"would silently get every chipped gameweek wrong"*. That is true
+    of the question it was written about — **what did this squad score last week** — and this module asks a
+    different one: **what will it score next week**, when the chip is spent, the bench is a bench again and a
+    triple captain is a captain.
+
+    Read forward, it priced a bench-boosted manager on **fifteen** players against a rival's eleven. The
+    failure is asymmetric, so it never looked like an error; it looked like a ten-point lead.
+
+    For an unchipped squad this reproduces FPL's multipliers **exactly** — which is why it is applied
+    unconditionally rather than behind a chip check. It can only change a week that was chipped.
     """
+    picks = _get(payload, "picks", []) or []
+    if picks and all(_get(pk, "position") is not None for pk in picks):
+        out = []
+        for pk in picks:
+            pid = _get(pk, "element")
+            if pid is not None and _get(pk, "position") < _BENCH_FROM:
+                out.append((pid, 2 if _get(pk, "is_captain") else 1))
+        return out
+
+    # No usable positions — fall back to the stored multiplier, which is exactly what shipped before ADR-177.
+    # A slightly wrong comparison beats no comparison, and this is strictly no worse than the old behaviour.
     out = []
-    for pk in _get(payload, "picks", []) or []:
+    for pk in picks:
         pid, mult = _get(pk, "element"), _get(pk, "multiplier")
-        if pid is None:
-            continue
-        if mult is None:                      # a payload without the field: fall back to the position split
-            mult = 2 if _get(pk, "is_captain") else (1 if (_get(pk, "position", 99) or 99) < _BENCH_FROM else 0)
-        if mult:
+        if pid is not None and mult:
             out.append((pid, mult))
     return out
+
+
+CHIP_NAMES = {"bboost": "Bench Boost", "3xc": "Triple Captain",
+              "freehit": "Free Hit", "wildcard": "Wildcard"}
+
+
+def chip_name(code) -> str:
+    """A chip's display name. An unknown code is returned as-is rather than hidden — if FPL adds one, the
+    surface should say something odd rather than say nothing."""
+    return CHIP_NAMES.get(code, code or "")
+
+
+def reverts_next_gameweek(payload) -> bool:
+    """True when the squad in this payload **will not exist** next gameweek.
+
+    Free Hit is the one chip a different count cannot repair. Bench Boost and Triple Captain change how the
+    *same* fifteen are scored, so dropping the chip projects them correctly; a Free Hit squad is discarded
+    wholesale at the deadline and the previous squad comes back. Projecting it forward would price a team
+    nobody will own.
+
+    FPL does not publish the reverted squad — but it published it the week before, which is what the caller
+    reads instead.
+    """
+    return (_get(payload, "active_chip") or "") == "freehit"
 
 
 def captain_of(payload):
@@ -55,7 +102,10 @@ def captain_of(payload):
 
 
 def manager_projection(payload, xp_by_id) -> dict:
-    """One manager's projected points: `{"xp", "captain", "starters", "chip"}`.
+    """One manager's projected points for the **next** gameweek: `{"xp", "captain", "starters", "chip"}`.
+
+    `chip` is what they played in the *completed* gameweek, and it is reported rather than applied — it is
+    spent, so it changes nothing about next week except that a surface should say it happened (ADR-177).
 
     Reuses the caller's `xp_by_id` — the same `decision_xp` map every other surface decides with (ADR-041).
     There is deliberately no second projection recipe here; a rival's squad is projected exactly the way your

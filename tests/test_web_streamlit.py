@@ -3852,3 +3852,83 @@ def test_the_answers_are_one_selector_not_a_stack():
     assert list(sel.options) == ["This week", "Captain", "Transfer", "Chips"]
     # only ONE answer renders at a time — the stacked version put all three on the page at once
     assert not any("Chip strategy" in c.value for c in at.code)
+
+
+def test_the_head_to_head_drops_a_spent_chip_and_leads_with_the_season_gap(monkeypatch):
+    """ADR-177, end to end on the page — owner: *"you are showing MICKA at 59.9 and TS at 70, he is above me
+    in the league?"*
+
+    The unit tests pin the projection; this pins the **surface**, which is where both faults actually lived.
+    Two managers hold the **identical fifteen**; one bench-boosted last week. Before ADR-177 the page put him
+    ahead by his whole bench and called it a lead, under a table that had him second.
+
+    It drives the real path — manager id → league → the N-calls button → the rival picker — because the block
+    it covers is control flow, and control flow is exactly what a pure-function test cannot reach. The one
+    thing stubbed is `last_completed_gameweek`: it is derived from live fixtures, so leaving it real would tie
+    this test to the point in the season it was written.
+    """
+    import streamlit as st
+
+    from src.api import client as client_mod
+    from src.storage import Storage
+    from src.web_streamlit.views import leagues as leagues_view
+
+    st.cache_data.clear()
+    monkeypatch.setattr(leagues_view, "last_completed_gameweek", lambda _upcoming: 2)
+
+    store = Storage()
+    try:
+        squad = [p["id"] for p in store.get_players()[:15]]     # real ids, so decision_xp prices them
+    finally:
+        store.close()
+
+    def _payload(*, boosted):
+        picks = []
+        for pos, pid in enumerate(squad, start=1):
+            starting = pos < 12
+            mult = (2 if pos == 1 else 1) if (starting or boosted) else 0
+            picks.append({"element": pid, "position": pos, "is_captain": pos == 1, "multiplier": mult})
+        return {"picks": picks, "active_chip": "bboost" if boosted else None}
+
+    ME, RIVAL = 7654322, 424242
+
+    class FakeClient:
+        def get_entry(self, entry_id):
+            return {"name": "Test Manager", "leagues": {"classic": [
+                {"id": 4242, "name": "A League of Our Own", "rank_count": 2, "entry_rank": 2,
+                 "league_type": "x"}]}}
+
+        def get_league_standings(self, league_id, page=1):
+            return {"league": {"name": "A League of Our Own"},
+                    "standings": {"has_next": False, "results": [
+                        {"entry": RIVAL, "player_name": "Michael Sheridan", "entry_name": "Micka",
+                         "rank": 1, "last_rank": 2, "event_total": 128, "total": 188},
+                        {"entry": ME, "player_name": "Tony Sheridan", "entry_name": "TS",
+                         "rank": 2, "last_rank": 16, "event_total": 127, "total": 165}]}}
+
+        def get_entry_picks(self, entry_id, gameweek):
+            return _payload(boosted=(entry_id == ME))       # I chipped; the rival did not
+
+    monkeypatch.setattr(client_mod, "FplClient", FakeClient)
+
+    at = _squads_view("Leagues")
+    next(t for t in at.text_input if t.label == "Your FPL manager id").set_value(str(ME)).run()
+    next(b for b in at.button if b.key == "lg_load").click().run()
+    if at.exception:
+        raise AssertionError(at.exception)
+
+    captions = [c.value for c in at.caption]
+
+    # 1. The season standing, stated before the projection — the comparison the owner was actually making.
+    assert any("Micka is 23 points ahead" in c and "you **165**" in c and "Micka **188**" in c
+               for c in captions), \
+        f"the card must say where the season sits, not leave it to the table above: {captions}"
+    # Both totals carry a name. Written first as "(165 v 188)" after "Micka is 23 points ahead", where the
+    # sentence's subject and the bracket's order disagreed and the reader had to guess which was whose.
+    assert any("GW3 only" in c for c in captions), "and say the projection is one gameweek"
+
+    # 2. The chip is named, and — the bug — it is NOT projected forward. Identical fifteens must tie.
+    assert any("Bench Boost" in c and "spent" in c for c in captions), \
+        f"a chip played last week has to be said out loud: {captions}"
+    assert any("cannot separate you" in c for c in captions), \
+        f"identical squads must project level; a spent chip carried forward is what made them differ: {captions}"
