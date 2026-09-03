@@ -2,7 +2,8 @@
 
 **Dates:** 2026-09-03
 **Status:** ✅ Complete — ADR-180. **1727 → 1731 tests, ruff clean.**
-⏳ One thing stays owner-verified: **that the accent actually renders on Cloud.**
+✅ **Owner-verified same day: the accent renders** — purple on the Tool nav and the answer selector, in
+dark mode, from his own screenshots.
 
 > **Owner**, on the deployed app **in dark mode**, with four screenshots: *"Lot of real estate used in Lab
 > when new build. Lots of inconsistency with colours vs the style guide, should be purple. Can't really see
@@ -85,3 +86,22 @@ A colour rule creeping back into the primitive · dark mode left on Streamlit re
 biting default · a constraint lifted out of the expander.
 
 The clean suite was re-run against a recorded baseline after every restore.
+
+
+---
+
+### 🔁 A follow-up, same day: the truncation fix was not enough
+
+`8284b3e` trimmed the segment padding. The owner came back with it still broken — **My … | DNA | Lea… | Lab**
+— because trimming padding left `flex: 1 1 0` and `min-width: 0` in place, and a segment could still be
+squeezed below its own text.
+
+> **Equal width and legible labels are not both achievable at phone width, and I optimised the wrong one.**
+
+The floor is now `min-width: max-content`: segments still grow to fill the row, they cannot shrink past their
+label, and when four will not fit the row **wraps**. A taller nav is worse than a shorter one and better than
+an unreadable one — which is the trade the first attempt got backwards, and said so in its own comment.
+
+⭐ **The first fix treated a symptom (too little space); the defect was a rule (a segment may be narrower than
+its own label).** Buying characters works until the next label or the next screen width. A floor holds for
+both. Three mutations, all caught.

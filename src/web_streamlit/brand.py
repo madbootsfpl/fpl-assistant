@@ -134,16 +134,21 @@ def nav_css(key: str, *, primary_button: str | None = None) -> str:
     """
     css = f"""
         .st-key-{key} div[data-testid="stButtonGroup"] {{ width: 100%; }}
-        .st-key-{key} div[data-testid="stButtonGroup"] > div {{ width: 100%; display: flex; gap: 4px; }}
-        /* `min-width: 0` lets a segment shrink below its label, and Streamlit's own ~1rem of horizontal
-           padding then pushed "This week" and "Transfer" into "This …" / "Trans…" on a phone. Trimming
-           the padding buys the characters back; `nowrap` keeps a segment one line if it still runs
-           short, because a wrapped label makes the whole row taller. (Owner, 2026-09-03.) */
+        .st-key-{key} div[data-testid="stButtonGroup"] > div {{
+            width: 100%; display: flex; gap: 4px; flex-wrap: wrap; }}
+        /* ⚠️ **A segment may never be narrower than its own label.** `flex: 1 1 0` with `min-width: 0` gave
+           every segment an equal share of the row and let it shrink below its text, so "My Squad" and
+           "Leagues" became "My …" and "Lea…". Trimming the padding was tried first and was not enough —
+           equal width is simply incompatible with these labels on a phone.
+           `min-width: max-content` is the floor: segments still GROW to fill the row (`flex: 1 1 auto`),
+           they just cannot be squeezed past legibility. When they will not fit, the row **wraps** — a
+           taller nav is worse than a shorter one and better than an unreadable one, which is the trade
+           the first attempt got backwards. (Owner, twice, 2026-09-03.) */
         .st-key-{key} div[data-testid="stButtonGroup"] button {{
-            flex: 1 1 0; min-width: 0; padding-left: 0.35rem; padding-right: 0.35rem;
-            white-space: nowrap; }}
+            flex: 1 1 auto; min-width: max-content;
+            padding-left: 0.5rem; padding-right: 0.5rem; white-space: nowrap; }}
         .st-key-{key} div[data-testid="stButtonGroup"] button p {{
-            overflow: hidden; text-overflow: ellipsis; }}
+            overflow: visible; text-overflow: clip; }}
     """
     if primary_button:
         # Width and weight only — the fill comes from `type="primary"` on the button itself, which the

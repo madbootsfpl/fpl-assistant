@@ -3,7 +3,8 @@
 **Decision ID:** ADR-180
 **Date:** 2026-09-03
 **Status:** ✅ **Accepted — built** (Sprint 241, 2026-09-03). **1727 → 1731 tests, ruff clean.**
-⏳ **One thing remains owner-verified: that the accent actually renders on Cloud.** No browser here.
+✅ **Owner-verified same day** — his screenshots show the Tool nav and the answer selector rendering in
+**purple in dark mode**, which was the one claim this environment could not check.
 **Superseded By / Replaces:** **Reverses [ADR-114](./ADR-114-brand-token-foundation.md)'s removal of the `[theme]`
 block** on re-measurement, and **narrows [ADR-176](./ADR-176-one-navigation-primitive.md)**: `nav_css` keeps
 the layout it invented and hands the colour back to the platform.
@@ -143,6 +144,11 @@ eight controls' worth of height above an answer they did not affect. The essenti
 
 ### 🔬 Found at build time
 
+**0. ✅ The accent renders.** The one thing no test here could reach — *"the radio is actually purple"* —
+came back from the owner's screenshots the same day, in **dark mode**, on the Tool nav and the answer
+selector. The three-level measurement (config → wire format → local run) predicted it correctly, and the
+fallback recorded in the risk register is not needed.
+
 **1. The *Apply this transfer* button would have lost its fill.** `nav_css`'s `primary_button` block painted
 it purple, and stripping colour from the primitive took that with it. Fixed properly rather than
 re-exempted: the button is now `type="primary"`, which Streamlit colours **from the theme** — so it follows
@@ -160,6 +166,20 @@ the source would have passed with every control still at the top level, which th
 > **A hedge is not a weaker assertion; it is the absence of one.** Four of the last five sprints have turned
 > up a guard that passed while protecting nothing, and this is the most brazen form of it — visible in the
 > diff, written by me, in a file whose whole subject is guards that do not work.
+
+**3. The truncation fix shipped in `8284b3e` was not enough, and the reason is worth keeping.** Trimming the
+padding left `flex: 1 1 0` with `min-width: 0` in place, so a segment could still be squeezed below its own
+text — the owner reported it again: *"we are still truncating some of the selectors"* (**My … | DNA | Lea… |
+Lab**).
+
+> **Equal width and legible labels are not both achievable on a phone, and I optimised the wrong one.** The
+> floor is now `min-width: max-content`: segments still *grow* to fill the row but cannot shrink past their
+> label, and when four will not fit the row **wraps**. A taller nav is worse than a shorter one and better
+> than an unreadable one — the trade the first attempt got backwards.
+
+⭐ **The first fix treated a symptom (too little space) when the defect was a rule (a segment may be narrower
+than its own label).** Trimming padding buys characters until the next label or the next screen width; a
+floor holds for both.
 
 #### ✅ Mutation results — seven, each reverted alone, restore verified against a recorded baseline
 
@@ -212,7 +232,7 @@ circumstance that produced it.
   - [x] Fold the eight inert Lab controls into **⚙ Constraints (optional)**
   - [x] Guard: every control in the expander is inert by default, so the default path is unaffected
   - [x] **Mutation-test every new guard**, clean suite re-run between mutants
-  - [ ] Owner reboot → confirm the accent renders (the one thing not verifiable here)
+  - [x] Owner reboot → **confirmed**: purple on the Tool nav and the answer selector, in dark mode
 
 #### ✅ Always
 - [x] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**

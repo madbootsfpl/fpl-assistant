@@ -4371,21 +4371,34 @@ def test_pitch_text_inherits_the_pitch_colour_unless_it_sits_on_its_own_backgrou
     assert "text-shadow" in weeks
 
 
-def test_a_nav_segment_is_not_squeezed_until_its_label_truncates():
-    """Owner, 2026-09-03, with a screenshot: *"some truncation across the tabs"* — the answer selector read
-    **This … | Captain | Trans… | Chips**.
+def test_a_nav_segment_is_never_narrower_than_its_own_label():
+    """Owner, twice, with screenshots: *"some truncation across the tabs"*, then *"we are still truncating
+    some of the selectors"* — **My … | DNA | Lea… | Lab** and **This … | Captain | Trans… | Chips**.
 
-    `flex: 1 1 0` with `min-width: 0` lets each segment shrink below its label, and Streamlit's own ~1rem of
-    horizontal padding then ate the characters. The equal-width fill is wanted (ADR-176); the padding is not.
-    Fixed in the **primitive**, so all five pages that call it are fixed at once.
+    The first attempt trimmed the padding and kept `flex: 1 1 0` with `min-width: 0`, which still lets a
+    segment be squeezed below its own text. Equal width is simply incompatible with these labels on a phone,
+    so the floor is now the label itself:
+
+    > **A segment may never be narrower than the word it contains.** It still *grows* to fill the row; it
+    > just cannot shrink past legibility, and when the four will not fit the row wraps.
+
+    A taller nav is worse than a shorter one and **better than an unreadable one** — the trade the first fix
+    got backwards. Fixed in the primitive, so all six callers are fixed together.
     """
+    import re
+
     from src.web_streamlit import brand
 
-    css = brand.nav_css("demo")
-    assert "flex: 1 1 0" in css, "equal segments across the row is the point of the primitive (ADR-176)"
-    assert "padding-left: 0.35rem" in css and "padding-right: 0.35rem" in css, \
-        "the label needs those characters back"
-    assert "white-space: nowrap" in css, "a wrapped label makes the whole row taller"
+    rules = re.sub(r"/\*.*?\*/", "", brand.nav_css("demo"), flags=re.S)   # comments are not behaviour
+
+    assert "min-width: max-content" in rules, "the label is the floor — this is the whole fix"
+    assert "flex: 1 1 auto" in rules, "segments still grow to fill the row"
+    assert "flex-wrap: wrap" in rules, "when they will not fit, wrap rather than truncate"
+    assert "text-overflow: clip" in rules, "and never render an ellipsis"
+
+    assert "flex: 1 1 0" not in rules, "an equal share of the row is what squeezed the labels"
+    assert "min-width: 0" not in rules, "…and this is what let it squeeze past the text"
+    assert "text-overflow: ellipsis" not in rules
 
 
 def test_the_lab_only_hides_constraints_that_cannot_change_the_answer():
