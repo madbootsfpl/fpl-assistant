@@ -109,7 +109,21 @@ a triple captain does not change.
 
 ---
 
-### 🧭 Still owner-verified
+### ✅ Owner-verified, same day
 
-The pre-registered expectation — that the +10.1 collapses to roughly a dead heat — is checked on **his** data
-at the reboot. The live analogue moved −8.7, which lands at the shallow end of the predicted band.
+> *"Rebooted, gap is now +1.4."*
+
+```
+before:  you 70.0  ·  Micka 59.9  ·  gap +10.1
+after :  you 61.3  ·  Micka 59.9  ·  gap  +1.4
+correction: -8.7 xP — four bench players
+```
+
+The expectation was **pre-registered in the ADR before the code was written** — *"a dead heat or a small
+deficit"* — then narrowed to *"a point or two"* once the live analogue was measured. It came in at a point or
+two, and the fix is confirmed on the data that reported the fault.
+
+⚠️ **The decimal match is a coincidence, and saying so is the point.** The analogue's −8.7 came from a
+*different* manager's bench; two benches happening to be worth the same is luck. **The band was the
+prediction. Claiming the decimal would be reading precision into a method that has none** — and this project
+has been caught once already pitching a sprint on a remembered number that turned out to be wrong (ADR-157).

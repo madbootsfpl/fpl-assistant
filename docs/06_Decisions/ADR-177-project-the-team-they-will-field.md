@@ -203,12 +203,28 @@ end** of the predicted band — enough to turn the owner's +10.1 into roughly a 
 dead heat rather than the small deficit that was also allowed for. ⚠️ **This is an analogous squad, not his**
 — his own number is confirmed at the manual smoke test, and the prediction stands or falls on that.
 
-**3. The sweep came back clean.** The risk register asked whether any other surface prices a completed
+**3. ✅ CONFIRMED ON THE OWNER'S OWN DATA (2026-09-03, post-reboot).** *"Gap is now +1.4."*
+
+```
+before:  you 70.0  ·  Micka 59.9  ·  gap +10.1
+after :  you 61.3  ·  Micka 59.9  ·  gap  +1.4        (Micka did not chip, so 59.9 is unchanged)
+correction: -8.7 xP — four bench players
+```
+
+The pre-registration held: *"a dead heat or a small deficit"*, narrowed after the live analogue to *"a point
+or two"*. It came in at a point or two.
+
+⚠️ **The decimal match is luck, not precision.** The analogue measured −8.7 on a **different** manager's
+bench-boosted squad; landing on −8.7 again here is a coincidence of two benches being worth the same. What
+was predicted, and what should be read as confirmed, is the **band** — nothing in the method supports
+forecasting a specific squad's bench to 0.1 xP.
+
+**4. The sweep came back clean.** The risk register asked whether any other surface prices a completed
 gameweek's picks forward. It does not: `effective_ownership` already reads `position < _BENCH_FROM` and never
 touches the multiplier, and `captain_split` reads `is_captain`, which a triple captain does not change.
 **Recorded as a negative result** — the next person to ask this question should not have to re-run it.
 
-**4. Every new guard was mutation-tested** — reverted one at a time, confirmed red:
+**5. Every new guard was mutation-tested** — reverted one at a time, confirmed red:
 
 | Mutation | Caught by |
 |---|---|
@@ -230,7 +246,7 @@ identical squads, which is the bug in one sentence.
 (165 v 188)"* — the sentence names Micka and the bracket leads with **my** total. Both are labelled by name
 now. The mutation output is what surfaced it; nothing asserted it.
 
-**5. One fixture was found modelling less than reality**, and it is the reason the bug could hide. The test
+**6. One fixture was found modelling less than reality**, and it is the reason the bug could hide. The test
 helper handed every pick `position = i`, so a "benched" player sat at position 4 and was benched *only*
 because the fixture also wrote `multiplier = 0`. The payload it produced could not tell a bench from an XI by
 the field FPL actually uses for it — so no test could have caught this, however many were written. Bench
@@ -277,7 +293,7 @@ players now sit at 12+, the way FPL numbers them.
   - [x] Sweep `effective_ownership` / `captain_split` for the same forward-projection assumption
   - [x] Page-level guard: the real path, two identical fifteens, one bench-boosted
   - [x] **Mutation-test every new guard** — revert each one at a time, confirm red
-  - [ ] Manual smoke on the owner's own league; check the outcome against the pre-registered expectation
+  - [x] Manual smoke on the owner's own league — **done 2026-09-03, outcome below**
   - [x] Update ADR-161 with a pointer to this amendment; update PROJECT_STATUS and the Roadmap
 
 #### ✅ Always
