@@ -179,7 +179,7 @@ Lab**).
 
 ⭐ **The first fix treated a symptom (too little space) when the defect was a rule (a segment may be narrower
 than its own label).** Trimming padding buys characters until the next label or the next screen width; a
-floor holds for both.
+floor holds for both. ✅ **Owner-verified on reboot (2026-09-04): *"all looking good now."***
 
 #### ✅ Mutation results — seven, each reverted alone, restore verified against a recorded baseline
 

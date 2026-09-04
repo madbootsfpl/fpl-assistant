@@ -104,4 +104,5 @@ an unreadable one — which is the trade the first attempt got backwards, and sa
 
 ⭐ **The first fix treated a symptom (too little space); the defect was a rule (a segment may be narrower than
 its own label).** Buying characters works until the next label or the next screen width. A floor holds for
-both. Three mutations, all caught.
+both. Three mutations, all caught — and **owner-verified on reboot the next morning: *"all looking good
+now."*** All six selectors read in full.
