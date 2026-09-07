@@ -1270,7 +1270,8 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
 
 # ---- Captain (who to (vice-)captain; ADR-029) ------------------------------------------------------
 
-def render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names=None):
+def render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names=None,
+                   gw_history=None):
     # ADR-179 — this used to end *"the Gameweeks ahead selector doesn't change it"*. There is no such
     # selector on this page any more, so the sentence pointed at a control the reader cannot find. The fact
     # it was making is still true and still worth saying; only the reassurance about a vanished widget went.
@@ -1280,7 +1281,13 @@ def render_captain(squad_name, squad, players, upcoming, history, photos, badges
         st.info(f"Squad '{squad_name}' has no current players to captain.")
         return
     baseline_by_code = {code: baseline_rate(rows) for code, rows in history.items()}
-    minutes_weight = minutes_weight_from_history(history)
+    # ⚠️ **`gw_history` is not optional in practice — omitting it silently prices a different player** (bug,
+    # owner-reported 2026-09-07: *"different recommendations from My Squad 'what should I do this week' and
+    # captaincy"*). ADR-173 made the minutes weight prefer the minutes a player has **actually played this
+    # season** over last season's share, and it reads that from the per-gameweek history. Every other caller
+    # passes it; this one never did, so the two surfaces answered the same question from two different models
+    # — the exact drift ADR-041's *one xP recipe* exists to prevent.
+    minutes_weight = minutes_weight_from_history(history, gw_history)
     picks = captain_picks(owned, upcoming, baseline_by_code=baseline_by_code,
                           minutes_weight=minutes_weight, history_by_code=history)
     owned_by_id = {p["id"]: p for p in owned}

@@ -447,6 +447,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **One recipe means every caller** (ADR-181, Sprint 242, 2026-09-07) — *owner:* **"different
+  recommendations from My Squad 'what should I do this week' and captaincy."** Two surfaces on one page named
+  different captains, because `render_captain` called `minutes_weight_from_history(history)` **without
+  `gw_history`** — it had been running the **pre-ADR-173 model** while every other caller ran the current one.
+  Invisible for four days because the argument is optional: omitting it silently prices a different player.
+  ⭐ **"One recipe" (ADR-041) is a claim about every call site, not about the function** — a sweep guard now
+  fails any single-argument call by filename. Same shape as ADR-151→156, and again found by the owner using
+  the product.
 - ✅ **The accent belongs to the theme** (ADR-180, Sprint 241, 2026-09-03) — *owner, in dark mode:* **"lots
   of inconsistency with colours vs the style guide, should be purple."** He was right, and the cause was
   structural: the purple was painted **one widget at a time** on five containers, so every control we had not

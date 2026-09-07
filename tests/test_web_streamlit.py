@@ -4448,3 +4448,76 @@ def test_the_lab_only_hides_constraints_that_cannot_change_the_answer():
 
     # The count only speaks when something is set, so an untouched Lab shows a plain label.
     assert _constraint_count() == 0
+
+
+def test_the_captain_tab_and_the_weeks_answer_name_the_same_captain():
+    """Owner-reported bug, 2026-09-07: *"different recommendations from My Squad 'what should I do this week'
+    and captaincy."*
+
+    `render_captain` called `minutes_weight_from_history(history)` — **without `gw_history`**. ADR-173 made
+    the minutes weight prefer the minutes a player has *actually played this season* over last season's
+    share, and it reads that from the per-gameweek history. Every other caller passed it (`ask` twice, the
+    CLI, `decision_xp`); this one never did, so the two surfaces answered the same question from two
+    different models and named different players.
+
+    ⚠️ **This drives the real page and reads the rendered card.** Written first as a comparison of two
+    *recomputed* results, it passed with the bug restored — because recomputing the Captain tab's picks with
+    the right arguments does not touch the code that was getting them wrong. **A test that rebuilds the thing
+    under test is testing the test.**
+
+    ⚠️ And it compares the two surfaces rather than pinning either. A pinned name fails whenever the data
+    moves and still says nothing about agreement, which is the actual requirement (ADR-041: *one xP recipe*).
+    """
+    from src.ask import _decide_gameweek
+    from src.storage import Storage
+
+    store = Storage()
+    try:
+        answer = _decide_gameweek(store, "RoboTS")
+    finally:
+        store.close()
+    if not answer or not answer.get("plan", {}).get("captain"):
+        return                                             # no data in this environment
+    week = answer["plan"]["captain"]
+
+    at = _squads_view("Captain")
+    if at.exception:
+        raise AssertionError(at.exception)
+    card = " ".join(m.value for m in at.markdown)
+    if "Captain Pick" not in card:
+        return                                             # the tab did not render a card (no squad)
+    assert week["web_name"] in card, (
+        f"the Captain tab does not name {week['web_name']}, who the week's answer captains — "
+        "the two surfaces are pricing the squad differently")
+
+    # …and the same player must carry the same number, not merely appear somewhere on the card.
+    import re
+    shown = re.search(rf"{re.escape(week['web_name'])}.*?([0-9]+\.[0-9])\s*pts", card, re.S)
+    assert shown, f"{week['web_name']} appears on the card without a projection"
+    assert abs(float(shown.group(1)) - week["xp"]) < 0.05, \
+        f"same player, different xP: card says {shown.group(1)}, the answer says {week['xp']}"
+
+
+
+def test_every_minutes_weight_caller_passes_the_in_season_history():
+    """The sweep, kept as a guard because this is a **one fact, many surfaces** bug.
+
+    This project has paid for that shape before: the reported-departure signal needed teaching to six
+    surfaces one at a time (ADR-151→156), every one found by the owner using the product. `gw_history` is the
+    same shape of fact — ADR-173's in-season minutes — and a caller that omits it does not fail, it quietly
+    prices a different player.
+
+    So the argument is treated as **mandatory at every call site**, and a new surface that forgets it fails
+    here rather than in the owner's hands.
+    """
+    import re
+
+    src_root = _ROOT / "src"
+    offenders = []
+    for path in src_root.rglob("*.py"):
+        for call in re.findall(r"minutes_weight_from_history\(([^)]*)\)", path.read_text(), re.S):
+            if call.strip() and "," not in call:                       # one argument = history only
+                offenders.append(f"{path.relative_to(_ROOT)}: minutes_weight_from_history({call.strip()})")
+    assert not offenders, (
+        "these call sites drop the in-season minutes (ADR-173) and will disagree with every surface that "
+        f"keeps them: {offenders}")

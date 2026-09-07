@@ -140,7 +140,8 @@ else:
         if answer == "This week":
             views.render_this_week(squad_name, squad, horizon=horizon, players=players)
         elif answer == "Captain":
-            views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names)
+            views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names,
+                                 gw_history=gw_history)
         elif answer == "Transfer":
             views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
                                   horizon=horizon)
