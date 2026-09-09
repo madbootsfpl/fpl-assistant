@@ -499,6 +499,23 @@ secondary mark, not the presenter.
 
 ---
 
+## 📸 Shot list → **see `Screenshot_Capture_List.md`** *(2026-09-09)*
+
+The clip library below was written for **screen recordings**. The intro (§0) shipped as **stills + Maddie
+PiP** instead, and that is now the format for the series: Streamlit reruns the whole script on every
+interaction, so filming it means editing around spinners, while a still captures the app at its best and
+crops to the number the voiceover names.
+
+**[`Screenshot_Capture_List.md`](./Screenshot_Capture_List.md)** replaces the list below for production — 38
+stills, one session, with the page, the state to set up and the crop for each, verified against the app at
+2026-09-09. The clip library is kept for the two or three beats that genuinely want motion (Boot Battle's
+pick → compare, the Lab's build → fifteen).
+
+⚠️ **Its central rule, learned from §0:** *one panel per beat.* The intro's 1:02 frame shows one page and
+reads perfectly; its 0:26 frame shows four panels and none of them can be read.
+
+---
+
 ## Shot lists — record a clip **library** once, reuse across videos
 
 Same UI moments recur, so record ~15 clips **once** (5–8s each, the **live** app, slow deliberate actions, freshly
