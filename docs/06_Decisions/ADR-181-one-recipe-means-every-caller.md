@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-181
 **Date:** 2026-09-07
-**Status:** ✅ **Accepted — built** (Sprint 242, 2026-09-07). **1731 → 1733 tests, ruff clean.**
+**Status:** ✅ **Accepted — built & owner-verified** (Sprint 242, 2026-09-07; confirmed in the app
+2026-09-09 — *"both tabs agree now"*). **1731 → 1733 tests, ruff clean.**
 **Superseded By / Replaces:** Repairs a gap left by [ADR-173](./ADR-173-minutes-you-have-actually-played.md);
 enforces [ADR-041](./ADR-041-one-xp-metric-and-squad-build-intent.md)'s *one xP recipe* at the **call site**.
 **No `decision_xp` change** — the recipe was already right; one surface was not using it.
@@ -117,7 +118,7 @@ behaviour, standing in for the code that was wrong.**
   - [x] Guard: no call site drops the in-season history
   - [x] Mutation-test both, at both layers (the view, and the page that feeds it)
   - [x] Sweep every other `minutes_weight_from_history` call — `ask` ×2, CLI, `decision_xp` all correct
-  - [ ] Owner reboot → confirm the two surfaces agree in the app
+  - [x] Owner reboot → **confirmed 2026-09-09: *"both tabs agree now."***
 
 #### ✅ Always
 - [x] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**

@@ -2,6 +2,7 @@
 
 **Dates:** 2026-09-07
 **Status:** ✅ Complete — ADR-181. **1731 → 1733 tests, ruff clean.**
+✅ **Owner-verified in the app (2026-09-09): *"both tabs agree now."***
 
 > **Owner:** *"Bug: different recommendations from My Squad 'what should I do this week' and captaincy."*
 
