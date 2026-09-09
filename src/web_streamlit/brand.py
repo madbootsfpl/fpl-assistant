@@ -51,15 +51,28 @@ RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_PILL = 10, 14, 18, 999
 
 # The canonical throughline — one wording, referenced everywhere (was ~4 variants).
 #
-# ⚠️ **Changed 2026-08-29 (ADR-168): it used to say "The AI explains."** That was a promise the deployed app
-# could not keep — there is no Ollama on Streamlit Cloud, so for every tester the narration simply is not
-# there (Help said so; the mantra did not). madboots.com had already quietly dropped the clause, running
-# "The analytics decide; you stay in control" — so the in-app wording was the last place still claiming it.
+# ⚠️ **Rewritten twice, and the second time is the one to read (ADR-182, 2026-09-09).**
 #
-# What replaced it is the thing the app actually does, on Cloud, today: every answer carries its evidence —
-# the ✓/⚠ trust line, the named outlet behind a departure, the reasons under a Scout pick. "Ask it anything"
-# is what everyone claims; showing the working is what almost nobody does.
-MANTRA = "The analytics decide. Every answer shows its working. You make the call."
+# It said **"The AI explains"** until ADR-168. That was a promise the deployed app could not keep: there is no
+# Ollama on Streamlit Cloud and Ask is behind `FPL_ADMIN_KEY`, so **no tester has ever seen AI output**.
+#
+# It then said **"Every answer shows its working"**, which was true and unreadable. Testers asked what it
+# meant. Two faults: *"show your working"* is a **British schoolroom idiom** for a maths-homework instruction,
+# and — the one that decides it — **spoken aloud it is indistinguishable from "shows it's working"**, which a
+# listener reaches first and which claims only that the app functions. The mantra is the spoken close of all
+# ten marketing videos, so the most distinctive line in the product was being delivered in a form whose
+# default hearing is banal.
+#
+# What it says now **names the two halves of the system, in the order they run**: `decision_xp` decides
+# (ADR-041, one recipe) and `explain.py` explains (ADR-089, the Edge · Risk · Confidence block). It is a
+# description of the architecture rather than a metaphor about it — which is why it cannot drift from the
+# truth the way both predecessors did. And "logic" is the honest word for what produces those strings: plain
+# rule-based Python, no model, identical on Cloud and on a dev box.
+MANTRA = "Analytics decide. Logic explains. You make the call."
+
+# The one-line answer to *"what is this?"* — the same two halves in a sentence. Used for the site's meta
+# description and anywhere a descriptor is wanted rather than a slogan.
+DESCRIPTOR = "The FPL assistant where analytics decide and logic explains."
 # NOTE: a `token_css_vars()` CSS-variable helper was tried (S165) to single-source the card hexes, but prepending a
 # 2nd `<style>` block broke Streamlit's markdown rendering of the cards (the banner rendered unstyled). Reverted —
 # the shared brand hexes stay inline in the card CSS. Not worth a 2nd style block; revisit only with a safer route.

@@ -2789,11 +2789,11 @@ def test_help_watch_view_renders_videos_and_coming_soon(monkeypatch):
 def test_brand_tokens_and_mantra_are_defined():
     # ADR-114: brand.py is the token source of truth — semantic pairs, the FDR scale, and one canonical mantra.
     from src.web_streamlit import brand
-    # ADR-168 — the mantra stopped promising narration the deployed app cannot produce. It said "The AI
-    # explains"; there is no Ollama on Cloud, so for every tester that clause was simply untrue. What replaced
-    # it is what the app does do everywhere, including Cloud: it shows its working.
-    assert brand.MANTRA == "The analytics decide. Every answer shows its working. You make the call."
-    assert "AI explains" not in brand.MANTRA
+    # ADR-168 → ADR-182 — the mantra has been rewritten twice, so this asserts the **requirements** rather
+    # than the sentence. Pinning the exact string is what made the last rewrite touch a test that had no
+    # opinion about anything except the wording.
+    assert brand.MANTRA == "Analytics decide. Logic explains. You make the call."
+    assert "AI explains" not in brand.MANTRA   # ADR-168: no tester has ever seen AI output
     for name in ("GOOD", "GOOD_TINT", "GOOD_FG", "WARN", "WARN_TINT", "BAD", "BAD_TINT", "ACCENT_TEAL"):
         assert getattr(brand, name).startswith("#")
     assert set(brand.FDR_STYLE) == {1, 2, 3, 4, 5}
@@ -3552,7 +3552,20 @@ def test_the_app_does_not_promise_narration_it_cannot_deliver():
     from src.web_streamlit import brand
 
     assert "AI explains" not in brand.MANTRA
-    assert "shows its working" in brand.MANTRA
+
+    # ADR-182 — the middle beat must name **what explains**, and must not be the retired idiom. "Shows its
+    # working" was true and unreadable: a British schoolroom phrase whose spoken form is identical to "shows
+    # it's working", which claims only that the app functions. The mantra is the spoken close of all ten
+    # videos, so a line that mis-hears as banal is a line that fails ten times.
+    assert "working" not in brand.MANTRA, \
+        "'shows its working' mis-hears as 'shows it's working' — testers asked what it meant"
+    assert "explains" in brand.MANTRA, "the middle beat says what explains, not that something is explained"
+    assert brand.MANTRA.count(".") == 3, "three beats: decide · explain · you choose"
+
+    # The descriptor answers "what is this?" in one sentence, and carries the same two halves.
+    assert "analytics decide" in brand.DESCRIPTOR and "logic explains" in brand.DESCRIPTOR
+    assert "working" not in brand.DESCRIPTOR
+
     for page in ("7_Help.py",):
         src = (_PAGES / page).read_text()
         assert "The AI explains. You make the call." not in src, f"{page} hard-codes the retired promise"

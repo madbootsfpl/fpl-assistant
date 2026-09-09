@@ -96,11 +96,11 @@ the count is free and the seventh reflows rather than stranding itself.
 
 The competitive read (Roadmap): fplapex is the solver, aceanalyst the visualiser, FFH the card-and-menu.
 **Nobody else is doing Signals** — press and crowd agreeing that a player is leaving the league, sourced and
-dated. **Nobody else shows its working** the way the ✓/⚠ trust line does.
+dated. **Nobody else shows you why** the way the ✓/⚠ trust line does.
 
 *"Ask it anything"* is what every tool claims. **"Here is the number, here is why, and here is what we don't
 know"** is what almost none of them do — and it is now the app's actual mantra:
-*"The analytics decide. Every answer shows its working. You make the call."*
+*"Analytics decide. Logic explains. You make the call."*
 
 ---
 

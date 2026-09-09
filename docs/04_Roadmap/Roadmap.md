@@ -447,6 +447,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **Name the two halves** (ADR-182, Sprint 243, 2026-09-09) — *owner, relaying testers:* **"they're asking
+  what this means; when you explain it it's OK, but that should not be necessary."** *"Shows its working"* is
+  a British schoolroom idiom, *"working"* is a noun almost nobody uses, and — decisively — **spoken aloud it
+  is identical to "shows it's working"**, which claims only that the app functions. It is the spoken close of
+  all ten videos. The owner's replacement, **"Analytics decide. Logic explains. You make the call."**,
+  ⭐ **names the two halves of the system in the order they run** (`decision_xp` decides, `explain.py`
+  explains) — a description of the architecture rather than a metaphor about it, which is why it cannot drift
+  the way *"The AI explains"* and *"shows its working"* both did. Also checked and rejected the return of
+  *"AI explains"*: no tester has ever seen AI output (Cloud has no Ollama; Ask is admin-gated).
 - ✅ **One recipe means every caller** (ADR-181, Sprint 242, 2026-09-07) — *owner:* **"different
   recommendations from My Squad 'what should I do this week' and captaincy."** Two surfaces on one page named
   different captains, because `render_captain` called `minutes_weight_from_history(history)` **without

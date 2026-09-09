@@ -5,7 +5,7 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 ## Brand & production notes (apply to every script)
 
 - **Name:** always **MADBOOTS** (all-caps, one word). Never "MadBoots" / "Mad Boots".
-- **Throughline / sign-off:** *"The analytics decide. **Every answer shows its working.** You make the call."*
+- **Throughline / sign-off:** *"Analytics decide. Logic explains. You make the call."*
   ⚠️ **Changed by ADR-168 (2026-08-29) and this file did not follow until 2026-08-31.** The old middle clause
   was *"The AI explains"* — a three-part promise the deployed app kept two thirds of, because there is no
   Ollama on Streamlit Cloud. `brand.MANTRA` is the source of truth; **§§1-2 and 4-9 below still close on the
@@ -17,7 +17,7 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
   every video** — consistency is where the brand compounds. *Series plan: one 60-sec explainer per topic, hosted by
   Maddie.*
 - **The moat is trust — lead with it.** Position *against* the "AI that guesses" / paid black-box crowd:
-  **"Most FPL AI just guesses. MADBOOTS shows its working."** Every claim is checked against the data (✓/⚠).
+  **"Most FPL AI just guesses. MADBOOTS shows you why."** Every claim is checked against the data (✓/⚠).
 - **❌ Never mention Ollama / "run it locally".** The live app is **data-only**; naming a local dev tool confuses
   viewers and undercuts the honest-analytics story. Frame explanation as the **Edge · Risk · Confidence** + the ✓/⚠
   that everyone sees.
@@ -70,14 +70,24 @@ A living home for the AI-video scripts + the series plan. Draft here, refine, th
 
 ---
 
-## 0 · Maddie's intro — ~85s  *(**RE-RECORDED 2026-09-02** — the revised script below is the one that shipped)*
+## 0 · Maddie's intro — ~85s  *(**RE-RECORDED 2026-09-02**; script updated 2026-09-09 for ADR-182 — ⚠️ **the
+rendered video still says the old line**)*
+
+> ⚠️ **This script and the shipped video now differ, deliberately.** ADR-182 replaced *"shows its working"*
+> after testers asked what it meant, and §0 is the one video already rendered — so its **opening line and its
+> close both speak the retired wording**. The script below is the version to re-record from.
+>
+> **Do not re-render §0 for this alone.** Its stills also show a UI that ADR-175→181 has moved past, so the
+> re-cut is one job: new stills, new mantra, Maddie's studio bookends re-voiced. Sequence it **after** the
+> other nine, once the app has settled (see `Screenshot_Capture_List.md`).
 
 The only script here that has been rendered — it fronts the madboots.com hero lightbox and seeds the in-app
 **Maddie Explains** hub. **⚠ Screens marked "NEW SHOT" changed under it** (ADR-166 folded Squad Lab into
 My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 
 > **[0:00 — Open · the MADBOOTS mark]**
-> Hi — I'm Maddie. Welcome to MADBOOTS, the Fantasy Premier League assistant that shows its working.
+> Hi — I'm Maddie. Welcome to MADBOOTS — the Fantasy Premier League assistant where analytics decide and logic
+> explains.
 >
 > **[0:09 — Build or import · ⚠ NEW SHOT: My Squad ▸ Lab, not a sidebar page]**
 > In My Squad, open the Lab: set your budget, what to optimise for, and how strong you want your bench — and
@@ -99,7 +109,7 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 > your picks against your rivals'.
 >
 > **[1:28 — Close · the ✓ trust line, then the mark]**
-> The analytics decide. Every answer shows its working. And you make the call. MADBOOTS — free at
+> Analytics decide. Logic explains. And you make the call. MADBOOTS — free at
 > **madboots.com**.
 
 *176 words ≈ **89s** at Maddie's measured pace (~119 wpm, derived from the produced 80s cut). To land nearer
@@ -109,6 +119,7 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 
 | was | now | why |
 |---|---|---|
+| "shows its working" (all ten closes + §0's opening line) | *"Analytics decide. Logic explains. You make the call."* — **the two halves of the system, in the order they run** (`decision_xp` decides, `explain.py` explains) | ADR-182 | ✅ scripts updated; §0's **rendered video** still speaks the old line |
 | "**AI** clarifies the data" | "shows its working" · "every answer shows its working" | **The deployed app has no AI.** ADR-168 removed this exact clause from `brand.MANTRA` for this exact reason. An honesty brand whose *first sentence* over-promises is the worst possible place for it |
 | "MadBoots" | **MADBOOTS** | this file's own first brand rule |
 | "your **ultimate** FPL assistant" | "the FPL assistant that shows its working" | *"never FPL-bro hype"* — and an unfalsifiable superlative is a strange opener for a tool whose pitch is that every claim is checkable |
@@ -125,7 +136,7 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 ## 1 · The explainer — hero cut, ~2:27  *(drafted 2026-08-13; **re-cut 2026-08-31** for ADR-166/168/171)*
 
 > **[Hook – 0:00]** Fantasy Premier League is drowning in hot takes and AI that just… guesses. MADBOOTS is
-> different: **the analytics decide — and every answer shows its working**, so you always know what to trust.
+> different: **analytics decide — and logic explains**, so you always know what to trust.
 > *(UI: the ✓/⚠ trust line.)*
 >
 > **[0:18 – Build or import]** Getting started takes seconds. In **My Squad**, open the **Lab**: set your
@@ -150,8 +161,7 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 > split, and a head-to-head that prices only the players you *don't* share — because the ones you both own
 > cancel out.
 >
-> **[2:18 – Close + CTA]** No paid black boxes. No AI guessing. Just honest analytics you can check. **The
-> analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at
+> **[2:18 – Close + CTA]** No paid black boxes. No AI guessing. Just honest analytics you can check. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at
 > **madboots.com**.
 
 **Accuracy anchors:** the Lab is a My Squad tab (ADR-166); *This week* leads the golden page (ADR-171); Scout
@@ -171,7 +181,7 @@ decided.
 ## 2 · The explainer — 60-second social cut  *(drafted 2026-08-13; **re-cut 2026-08-31**)*
 
 > **[0:00 – Hook]** Fantasy Premier League, minus the guesswork. MADBOOTS is the FPL assistant where **the
-> analytics decide** — and every answer shows its working. *(UI: the ✓/⚠ line.)*
+> analytics decide** — and **logic explains**. *(UI: the ✓/⚠ line.)*
 >
 > **[0:12 – Build / import]** Build your optimal squad in **My Squad ▸ Lab** — or **import your real team**
 > with your manager ID. One tap and it's live.
@@ -262,7 +272,7 @@ un-scripted candidates — both shipped, both differentiators, neither mentioned
 > *lean, not a lock* — and the ⚠ risk is right there. Every figure traces back to the data, with a ✓ when it's
 > verified. No paid black box. No guessing.
 >
-> **[1:20 – Close + CTA]** Expected Points you can actually trust. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[1:20 – Close + CTA]** Expected Points you can actually trust. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors (all true to the app):** xP = one honest number from `decision_xp` (minutes-weighted · xGI ·
 fixtures · form), ADR-041's one-xP-metric. Confidence · Edge · Risk = the explainability block (ADR-089) — a
@@ -292,7 +302,7 @@ the risk." Everyone else projects false certainty; the honest confidence score i
 > **[1:09 – The edge]** Because a differential's only an edge if the numbers back it. MADBOOTS shows you the ones that
 > are low-owned *and* genuinely good — a real edge, not a punt.
 >
-> **[1:25 – Close + CTA]** Find your edge. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS
+> **[1:25 – Close + CTA]** Find your edge. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS
 > **free** at **madboots.com**.
 
 **Accuracy anchors:** 💎 = low ownership (`ownership_tier`); **Scout** = five boards behind a *worth a look*
@@ -322,7 +332,7 @@ grounded xP supports. ⚠ Scout is *worth a look*, **not** *worth points*: say t
 >
 > **[0:49 – Use it]** Love it? **Use this squad →** and it's your active team. Or download it as a backup.
 >
-> **[0:58 – Close + CTA]** Your perfect squad, built on the data. **The analytics decide. Every answer shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:58 – Close + CTA]** Your perfect squad, built on the data. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the ILP optimiser (ADR-008); the **objective** toggle xP/Points/Value/xGI (ADR-011);
 **archetypes** cheap/premium/differential; include/exclude must-haves (ADR-009); **Use this squad →** +
@@ -345,8 +355,7 @@ so the money goes into the XI. Playing Bench Boost? That is **All-round**, not a
 > **[0:35 – Transfers]** Going further? MADBOOTS ranks every transfer by how much it **improves your starting
 > XI** — set your bank, get a coordinated two- or three-move plan, and **apply it in one tap**.
 >
-> **[0:52 – Close + CTA]** Your sharpest gameweek, sorted. **The analytics decide. Every answer shows its
-> working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:52 – Close + CTA]** Your sharpest gameweek, sorted. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the gameweek plan (ADR-070); Edge · Risk · Confidence (ADR-089) + ✓/⚠ grounding
 (ADR-037); transfers ranked by **XI improvement**, the bank slider, a coordinated 2–3 plan + **Apply this
@@ -419,8 +428,7 @@ true either way, which is the safer option if you want it sooner.
 > points. Two of those signals aren't in our projection at all, so Scout points you somewhere; it doesn't
 > pretend to rank the answer.
 >
-> **[0:42 – Close + CTA]** Five boards, one shortlist. **The analytics decide. Every answer shows its working.
-> You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:42 – Close + CTA]** Five boards, one shortlist. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the five boards are **Set pieces · Over/under · DefCon · Clean sheets · xG · xA**
 (ADR-167); the shortlist is convergence — standing out on **two or more**, never a score; the counterweight
@@ -472,8 +480,7 @@ because an empty axis looks broken; ours leaves the gap and says why.
 > **[0:28 – Where]** Compare anyone — your own squad, the whole league, or a specific club — right from any player
 > card.
 >
-> **[0:38 – Close + CTA]** Stop guessing. Let the stats fight it out. **The analytics decide. Every answer
-> shows its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:38 – Close + CTA]** Stop guessing. Let the stats fight it out. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the same-position compare card (ADR-110), winner-tinted per stat (`_BETTER` direction map),
 from any Player Card on **Players + My Squad**; the **pool selector** My team / All / By club (ADR-111, US-380).
@@ -601,12 +608,13 @@ independently, before ADR-168 did. It now matches `brand.MANTRA` in both places 
 been invisible in every search result. Rewritten to **168 chars with the mantra inside the first 155**, and it
 now leads with *free* and carries both "Fantasy Premier League" and "FPL" for search:
 
-> MADBOOTS is a free Fantasy Premier League (FPL) assistant: the analytics decide, every answer shows its
+> MADBOOTS is a free Fantasy Premier League (FPL) assistant: analytics decide, logic explains,
 > working, you make the call. Captain, transfers, fixtures, squad.
 
 *Backup at `index.html.bak-2026-09-01` — the site is not a git repo, so there is no other undo.*
 
-**✅ Done and DEPLOYED — verified live on madboots.com, 2026-09-02.** The page serves the new tagline (*"The analytics decide. Every answer shows its working…"*) and the new clip (`99CATSFHBAA`), matching the local source exactly. The intro no longer opens on the AI claim, so the app, the site and the video finally say the same thing.
+**✅ Done and DEPLOYED — verified live on madboots.com, 2026-09-02.** The page serves the then-current tagline (*"The analytics decide. Every answer shows its working…"*
+— **superseded 2026-09-09 by ADR-182**, see the meta-description change below) and the new clip (`99CATSFHBAA`), matching the local source exactly. The intro no longer opens on the AI claim, so the app, the site and the video finally say the same thing.
 
 *(Historic — what the wait was for:)* The live clip opens *"analytics guide your decisions, AI clarifies
 the data"*, the clause ADR-168 removed because Cloud has no model. Revised script is §0 above, with the three
