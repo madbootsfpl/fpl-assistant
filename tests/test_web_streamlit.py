@@ -4534,3 +4534,52 @@ def test_every_minutes_weight_caller_passes_the_in_season_history():
     assert not offenders, (
         "these call sites drop the in-season minutes (ADR-173) and will disagree with every surface that "
         f"keeps them: {offenders}")
+
+
+def test_the_lab_prices_the_build_mode_instead_of_leaving_it_silent():
+    """ADR-183, owner: *"when toggling between Build mode, there are no changes to the team."*
+
+    The cause was solver nondeterminism (fixed in `optimizer.py`), but the surface fault was that the toggle
+    said **nothing** either way. It now prices the choice against the alternative build — which answers the
+    question the control actually raises: not *"is it different?"* but *"is it worth it?"*
+
+    ⚠️ Asserts the **shape** of the sentence, not its numbers. The figures move with the data every week; the
+    requirement is that the page states what the mode bought, in both directions.
+    """
+    import re
+
+    at = _squads_view("Build")
+    if not at.code:                                        # no data in this environment
+        return
+    line = next((c.value for c in at.caption if c.value.startswith("⚖️")), None)
+    assert line, "the build mode must say what it did — silence is what got reported as a bug"
+    if "same 15" in line:
+        # The alarm branch: legitimate, but it should be rare on stable data. ADR-137 shipped a mode that
+        # could NEVER differ and nobody noticed for weeks, so this must speak rather than render nothing.
+        assert "no trade-off" in line
+        return
+    assert re.search(r"\d+\.\d+ xP (more|less) in your starting XI", line), line
+    assert re.search(r"£\d+\.\d+m (less|more) on the bench", line), line
+
+
+def test_toggling_build_mode_changes_the_squad():
+    """The owner's report, asserted end to end: the two modes must not return the same fifteen.
+
+    ⚠️ This would have **passed while broken**, because the collision was intermittent — the solver returned
+    one of two tied optima at random, and only sometimes the one Strong XI picks. It is a real guard now
+    *because* the optimiser is deterministic; before ADR-183 it would have been a coin flip in CI, which is
+    worse than no test.
+    """
+    def fifteen(mode):
+        at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=200).run()
+        next(c for c in at.segmented_control if c.label == "Tool").set_value("Lab").run()
+        at = next(r for r in at.radio if r.label == "Build mode").set_value(mode).run()
+        assert not at.exception, at.exception
+        frames = [df.value for df in at.dataframe if "Player" in getattr(df.value, "columns", [])]
+        return tuple(sorted(frames[0]["Player"])) if frames else None
+
+    a = fifteen("All-round (strong bench)")
+    if a is None:
+        return
+    b = fifteen("Strong XI (cheap bench)")
+    assert a != b, "the two build modes returned an identical squad — the toggle does nothing"

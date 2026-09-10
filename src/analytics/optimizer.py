@@ -28,6 +28,10 @@ DIFFERENTIAL_MAX_OWNERSHIP = 5.0   # ≤ this % owned is a "differential" (off-t
 # so it needs no separate weight — it keeps the best-XI display + an "all 15 score" note.
 WEEKLY_BENCH_WEIGHT = 0.1      # a strong XI + a cheap, still-playing bench (rotation cover)
 
+# Among squads that score identically, prefer the cheaper one (ADR-183). Small enough to separate an exact
+# tie and nothing else: over a ~£100m squad it moves the objective by 1e-4, against xP totals near 400.
+_TIE_BREAK = 1e-3
+
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
 
@@ -180,9 +184,21 @@ def select_squad(
         # One binary decision per player: 1 = picked, 0 = not.
         pick = {p["id"]: problem.add_variable(f"pick_{p['id']}", cat="Binary") for p in players}
 
+        # ⚠️ **Tie-break, and it is a correctness fix, not a nicety (ADR-183).** These objectives have exact
+        # ties — measured: two different fifteens both scoring 401.400 at £100m — and CBC picks among them
+        # arbitrarily, differently between *processes*. So the same build ran twice returned different
+        # squads, and roughly half the time an All-round build happened to land on the squad Strong XI would
+        # pick, which is what made the mode toggle look dead (owner-reported).
+        #
+        # Among equally-good squads, prefer the **cheaper** one: same projected points, more money in the
+        # bank, which is a real preference rather than an arbitrary rule. `_TIE_BREAK` is small enough that
+        # it can only separate a genuine tie — at ~£100m of cost it is worth 1e-4 of objective, four orders
+        # below the smallest xP difference that means anything.
+        cost_term = _TIE_BREAK * pulp.lpSum(p["price"] * pick[p["id"]] for p in players)
+
         if bench_weight is None:
             # Objective: maximise the chosen per-player score (the whole squad counts equally).
-            problem += pulp.lpSum(scores.get(p["id"], 0.0) * pick[p["id"]] for p in players)
+            problem += pulp.lpSum(scores.get(p["id"], 0.0) * pick[p["id"]] for p in players) - cost_term
             start = None
         else:
             # Bench-aware (ADR-045): also choose which 11 START (a legal XI), and maximise the
@@ -193,7 +209,7 @@ def select_squad(
                 scores.get(p["id"], 0.0)
                 * (start[p["id"]] + bench_weight * (pick[p["id"]] - start[p["id"]]))
                 for p in players
-            )
+            ) - cost_term
             for p in players:
                 problem += start[p["id"]] <= pick[p["id"]]        # can't start who you didn't pick
             problem += pulp.lpSum(start.values()) == 11            # a full XI

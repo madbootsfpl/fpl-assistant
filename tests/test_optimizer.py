@@ -871,3 +871,132 @@ def test_the_bench_boost_note_does_not_argue_with_the_bench_wont_score_note():
 
     assert "won't score" in plain, "the ordinary week still needs the warning"
     assert "all 15 score this week" in boosted and "won't score" not in boosted
+
+
+# ---- ADR-183: the same build, twice, is the same squad -----------------------------------------
+
+def _tie_pool():
+    """A pool whose optimum contains **exactly one** genuine either/or: two defenders, equal score, one
+    cheaper. Only one of them fits, so the solver must choose — and nothing but price can separate them.
+
+    ⚠️ **Every other player carries a distinct score, deliberately.** The first version scored every player
+    in a position identically, making the whole pool one enormous tie — so the fixture was itself
+    nondeterministic and the test built on it was flaky in both directions. **A fixture for a tie-break must
+    contain the tie under test and no others.**
+    """
+    players, scores = [], {}
+    pid = 0
+
+    def add(position, score, price):
+        nonlocal pid
+        pid += 1
+        players.append({"id": pid, "web_name": f"{position}{pid}", "position": position,
+                        "team": f"T{pid % 6}", "price": price, "total_points": 0,
+                        "status": "a", "chance": None})
+        scores[pid] = score
+        return pid
+
+    for i in range(3):                                  # GK: 2 needed, 3 offered, all distinct
+        add("GK", 4.0 + i * 0.31, 4.5)
+    for i in range(5):                                  # FWD: 3 of 5, distinct
+        add("FWD", 7.0 + i * 0.23, 6.5)
+
+    for i in range(4):                                  # DEF: four clear starters…
+        add("DEF", 20.0 + i * 0.41, 5.0)
+    for i in range(3):                                  # …three no-hopers…
+        add("DEF", 1.0 + i * 0.17, 4.0)
+    # …and two EQUAL candidates for the fifth and last DEF slot. The price gap is **£0.2m**, matching the
+    # real data's — a wider gap would let a far smaller epsilon resolve the tie, and the guard would then
+    # pass for a constant that does not work in production (1e-6 was tried and failed there).
+    tie_cheap = add("DEF", 10.0, 4.0)
+    tie_dear = add("DEF", 10.0, 4.2)
+
+    for i in range(4):                                  # MID: four clear starters…
+        add("MID", 50.0 + i * 0.6, 5.5)
+    for i in range(3):                                  # …three no-hopers…
+        add("MID", 6.0 + i * 0.29, 5.0)
+    # …and a fifth slot contested by a genuinely BETTER but DEARER player against a cheaper one. The
+    # tie-break must never prefer him away: separating a tie and buying a worse squad are different things.
+    add("MID", 30.0, 5.0)
+    better_dear = add("MID", 30.5, 7.0)
+
+    return players, scores, tie_cheap, tie_dear, better_dear
+
+
+def test_the_same_build_twice_returns_the_same_squad():
+    """ADR-183 — the defect underneath the owner's report, and the worse of the two.
+
+    The objective has **exact ties** and CBC picked among them arbitrarily: six identical runs of one build
+    returned two different fifteens, both scoring 401.400. A user who rebuilt got a different team with no
+    change of input and no explanation.
+
+    ⚠️ **This runs the solve in SEPARATE PROCESSES, and that is the whole test.** Written first as five
+    solves in one process it **passed with the fix reverted** — because the instability was never
+    within a process, it was between them (CBC's choice among tied optima varied run to run). A guard that
+    cannot reach the failure mode is not a guard, however well it reads.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    script = (
+        "from src.analytics.optimizer import SQUAD_15, select_squad\n"
+        "from tests.test_optimizer import _tie_pool\n"
+        "players, scores, *_ = _tie_pool()\n"
+        "sel = select_squad(players, budget=100.0, formation=SQUAD_15, size=15, scores=scores)['selected']\n"
+        "print(sorted(p['id'] for p in sel))\n"
+    )
+    runs = set()
+    for _ in range(4):
+        out = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, cwd=root)
+        assert out.returncode == 0, out.stderr[-600:]
+        runs.add(out.stdout.strip().splitlines()[-1])
+    assert len(runs) == 1, f"the same inputs returned {len(runs)} different squads across processes: {runs}"
+
+
+def test_a_tie_resolves_to_the_cheaper_squad():
+    """The tie-break is a real preference, not a coin flip: at equal projected points, keep the money.
+
+    ⚠️ `_TIE_BREAK` was **1e-6 first and did not work** — the gap it creates between squads £0.2m apart is
+    2e-7, under CBC's own tolerance, so the solver still could not separate them. The magnitude is measured,
+    not chosen for looking small.
+    """
+    players, scores, cheap, dear, _better = _tie_pool()
+    picked = {p["id"] for p in select_squad(players, budget=100.0, formation=SQUAD_15, size=15,
+                                            scores=scores)["selected"]}
+    assert cheap in picked and dear not in picked, \
+        "at equal score the cheaper player must win — same points, more in the bank"
+
+
+def test_the_tie_break_never_costs_a_point():
+    """The safety property, and the reason the tie-break is defensible at all.
+
+    It may separate **exact** ties and nothing else. Measured on live data across 5 budgets × 2 build modes
+    when this shipped: **0.000 xP** given up. Here it is asserted structurally, so a future dataset that
+    breaks it fails in CI rather than quietly buying a worse squad.
+    """
+    import src.analytics.optimizer as opt
+
+    players, scores, _cheap, _dear, better_dear = _tie_pool()
+
+    def best(eps):
+        original = opt._TIE_BREAK
+        opt._TIE_BREAK = eps
+        try:
+            sel = opt.select_squad(players, budget=100.0, formation=SQUAD_15, size=15,
+                                   scores=scores)["selected"]
+            return round(sum(scores.get(p["id"], 0.0) for p in sel), 6)
+        finally:
+            opt._TIE_BREAK = original
+
+    assert best(opt._TIE_BREAK) == best(0.0), \
+        "the tie-break lowered the primary objective — it is outranking a genuinely better squad"
+
+    # …and concretely: the better-but-dearer midfielder must still be bought. An epsilon large enough to
+    # separate a tie is not automatically small enough to leave a real preference alone, so both halves
+    # are asserted — that is the whole safety property.
+    picked = {p["id"] for p in opt.select_squad(players, budget=100.0, formation=SQUAD_15, size=15,
+                                                scores=scores)["selected"]}
+    assert better_dear in picked, \
+        "the tie-break outranked a genuinely better player because he cost more — epsilon is too large"

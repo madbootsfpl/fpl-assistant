@@ -158,6 +158,40 @@ def _constraint_count() -> int:
                if st.session_state.get(key, inert) not in (inert, None))
 
 
+def compare_build_modes(result, other, scores) -> dict:
+    """What the *other* build mode would have given you (ADR-183) — `{same, xi_gain, bench_freed}`.
+
+    Owner-reported: *"when toggling between Build mode, there are no changes to the team."* True, and the
+    modes were wired correctly the whole time — at a **full £100m budget there is nothing to trade**, so the
+    money reaches the best XI *and* a decent bench and both objectives land on the same fifteen. Squeeze the
+    budget and they separate at once (measured: +12.8 XI xP for £5.4m less bench at £85m).
+
+    ⚠️ **It cannot be predicted from the budget, which is why this measures instead of guessing.** The
+    collision depends on the objective and the horizon: xP over 1 and 5 gameweeks collides at £100m, xP over
+    10 does not, and *points* collides at £95m while differing at £100m — the opposite way round. A caption
+    saying *"£100m does nothing"* would be false about half the time.
+
+    `xi_gain` and `bench_freed` are signed **from the caller's point of view**: positive means the mode you
+    are looking at buys that much more XI xP, and frees that much bench spend, versus the alternative.
+    """
+    if not result or not other:
+        return {"same": None, "xi_gain": None, "bench_freed": None}
+    mine, theirs = result.get("selected") or [], other.get("selected") or []
+    if {p["id"] for p in mine} == {p["id"] for p in theirs}:
+        return {"same": True, "xi_gain": 0.0, "bench_freed": 0.0}
+
+    def split(sel):
+        xi = best_legal_xi(sel, scores)
+        return (round(sum(scores.get(i, 0.0) for i in xi), 1),
+                round(sum(p["price"] for p in sel if p["id"] not in xi), 1))
+
+    my_xi, my_bench = split(mine)
+    their_xi, their_bench = split(theirs)
+    return {"same": False,
+            "xi_gain": round(my_xi - their_xi, 1),
+            "bench_freed": round(their_bench - my_bench, 1)}
+
+
 def render_plan(squad_name, squad, players, upcoming, history, gw_history, photos, badges, *,
                 teams=None, horizon=5):
     """Plan an **existing** squad over the gameweeks ahead — the Lab's second mode (ADR-178).
@@ -339,6 +373,19 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
                  "(archetypes / include / budget) and try again.")
         return
 
+    # ADR-183 — solve the OTHER mode too, so the page can say what this one bought you, or say plainly that
+    # it bought you nothing. Owner-reported: toggling appeared to do nothing, because at a full budget there
+    # is no trade to make — and silence is indistinguishable from a bug. Measured at **0.08s** a solve, which
+    # is what makes a second one affordable rather than clever.
+    with analytics.timed("analysis", page="Squads"):
+        _other = select_squad(
+            pool, budget=budget, formation=SQUAD_15, size=15,
+            include_ids=include, exclude_ids=exclude, bench_ids=declared_bench,
+            scores=scores, band_minimums=bands, min_differentials=differential or None,
+            bench_weight=None if weekly else WEEKLY_BENCH_WEIGHT,
+        )
+    _cmp = compare_build_modes(result, _other if _other["status"] == "Optimal" else None, scores)
+
     selected = result["selected"]
     _flag_unavailable(selected)                      # ⛔ US-421: a forced-in player who can't play (Must include)
     if declared_bench:
@@ -374,6 +421,19 @@ def render_build(players, upcoming, history, gw_history, photos, badges, *, team
                                                           if g in _played.get(p["team"], set()) else None)
                                                       for g in _gws} for p in selected},
                  next_opp=next_opp, bench_roles=bench_roles, kits=kits)
+
+    # ADR-183 — say what the build mode did, including when it did nothing.
+    _other_name = "All-round" if weekly else "Strong XI"
+    if _cmp["same"]:
+        st.caption(f"⚖️ **Both build modes give the same 15 at £{budget:.1f}m** — there's enough money for a "
+                   "strong XI *and* a strong bench, so there's no trade-off to make here. Lower the budget "
+                   "and they separate.")
+    elif _cmp["same"] is False:
+        _gain, _freed = _cmp["xi_gain"], _cmp["bench_freed"]
+        _dir = "more" if _gain >= 0 else "less"
+        st.caption(f"⚖️ **{mode.split(' (')[0]}** — {abs(_gain):.1f} xP {_dir} in your starting XI than "
+                   f"**{_other_name}** would give, with £{abs(_freed):.1f}m "
+                   f"{'less' if _freed >= 0 else 'more'} on the bench.")
 
     # ADR-178 — a score per gameweek, not one total. The Trends/Set columns keep their **words**: this is the
     # reference surface the pitch's glyphs point at, and it is why the pitch needs no market flags of its own.

@@ -447,6 +447,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **The same build, twice, is the same squad** (ADR-183, Sprint 244, 2026-09-10) — *owner:* **"when
+  toggling between Build mode there are no changes to the team."** The reported bug hid a worse one: the
+  optimiser's objective has **exact ties** and CBC picked among them arbitrarily between processes, so **the
+  same build run twice returned different squads** (both scoring 401.400). The toggle looked dead because one
+  tied optimum happens to be the squad Strong XI picks. Fixed by breaking ties toward the **cheaper** squad —
+  measured to give up **0.000 xP**. ⭐ The ADR was **first written with the wrong diagnosis**, on a table
+  where every cell was one sample of a coin flip: **a measurement of a nondeterministic process is not a
+  measurement**.
 - ✅ **Name the two halves** (ADR-182, Sprint 243, 2026-09-09) — *owner, relaying testers:* **"they're asking
   what this means; when you explain it it's OK, but that should not be necessary."** *"Shows its working"* is
   a British schoolroom idiom, *"working"* is a noun almost nobody uses, and — decisively — **spoken aloud it
