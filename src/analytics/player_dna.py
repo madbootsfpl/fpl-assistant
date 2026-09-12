@@ -180,8 +180,9 @@ def player_dna_this_or_last(target, players, last_rows=None, season_name=None, *
 
 
 # Plain-English, GROUNDED observations synthesised from the DNA percentiles + the player row + crowd tier — the
-# "the AI explains" panel. Every bullet traces to a value (a percentile, a set-piece order, an ownership tier, a
-# price); nothing is invented. Display-only; no `decision_xp`.
+# "logic explains" panel (ADR-182/184 — it was never AI; it is this module). Every bullet traces to a value
+# (a percentile, a set-piece order, an ownership tier, a price); nothing is invented. Display-only; no
+# `decision_xp`.
 
 _POS_WORD = {"GK": "goalkeepers", "DEF": "defenders", "MID": "midfielders", "FWD": "forwards"}
 # Skill axes for the "top strengths" lines — Set Pieces is excluded on purpose: it gets its own dedicated ⚡ line

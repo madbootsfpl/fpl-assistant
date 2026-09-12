@@ -447,6 +447,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- ✅ **Sweep for the claim** (ADR-184, Sprint 245, 2026-09-12) — *owner, reading the Lab:* **"note the model
+  note: 'the recommendation is data-driven; **AI explains the reasoning**'."** The claim ADR-168 retired in
+  August, still rendering from `MODEL_NOTE` on **six** surfaces, false for every tester. ⭐ Both earlier guards
+  checked the same two files rather than sweeping for the claim — **a guard against a claim must sweep for the
+  claim, not check the places you thought of**. The sweep now permits a mention only where the copy names the
+  condition (Help's local-run caveat earns its exemption by scoping, not by filename).
 - ✅ **The same build, twice, is the same squad** (ADR-183, Sprint 244, 2026-09-10) — *owner:* **"when
   toggling between Build mode there are no changes to the team."** The reported bug hid a worse one: the
   optimiser's objective has **exact ties** and CBC picked among them arbitrarily between processes, so **the

@@ -3541,6 +3541,67 @@ def test_help_carries_the_fpl_rules_ask_was_the_only_route_to():
     assert len(RULES) >= 20, "the curated rule set is what this page renders"
 
 
+def test_no_surface_anywhere_claims_an_AI_explains(monkeypatch=None):
+    """ADR-184 — the sweep that ADR-168 and ADR-182 both needed and neither had.
+
+    Owner, reading the Lab: *"note the model note: 'The recommendation is data-driven; **AI explains the
+    reasoning**.'"* That is the claim ADR-168 retired in August. It had been sitting in `MODEL_NOTE` the
+    whole time, rendering on **six** surfaces — the Lab, captain, chips, the gameweek plan and three `ask`
+    intents — while two separate ADRs removed it from the mantra and rewrote its successor.
+
+    ⚠️ **Both earlier guards checked the two files their author remembered** (`brand.MANTRA`, `7_Help.py`).
+    Neither looked for the *claim*. So this one sweeps `src/` and fails on the phrase wherever it appears.
+
+    > **A guard against a claim must sweep for the claim, not check the places you thought of.**
+
+    The one legitimate mention is **scoped and honest**: Help's *"Local AI"* bullet, which says a local Ollama
+    model can narrate *"available when you run it yourself"* and that *"the hosted app runs data-only"*. It is
+    allowed **because it names the condition** — the test requires that scoping rather than exempting a file.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "src"
+    claim = re.compile(r"\bAI\s+(explains?|clarifies|decides|narrates|tells|writes)\b", re.I)
+
+    offenders = []
+    for path in sorted(root.rglob("*.py")):
+        text = path.read_text()
+        for n, line in enumerate(text.splitlines(), start=1):
+            if not claim.search(line):
+                continue
+            # ⚠️ A **comment** may say it — that is how the history is recorded. A **string** may not,
+            # unless the copy around it says WHEN it is true (the local-run caveat), because a string is
+            # what a reader sees.
+            #
+            # The first version exempted any line with an ADR number within ±5 lines, which let an
+            # unconditional claim in Help pass because an unrelated `ADR-168` comment happened to sit four
+            # lines below it. **An escape hatch keyed on proximity exempts whatever is nearby.**
+            if line.lstrip().startswith("#"):
+                continue
+            window = "\n".join(text.splitlines()[max(0, n - 6):n + 5])
+            if "run it yourself" in window or "data-only" in window:
+                continue                                   # scoped to a local run, and says so
+            offenders.append(f"{path.relative_to(root.parent)}:{n}: {line.strip()[:90]}")
+
+    assert not offenders, (
+        "these claim an AI explains something. There is no Ollama on Cloud and Ask is admin-gated, so no "
+        "tester has ever seen AI output (ADR-168/182/184):\n  " + "\n  ".join(offenders))
+
+
+def test_the_model_note_says_what_actually_explains():
+    """The specific line the owner found, pinned to its requirement rather than its wording.
+
+    `MODEL_NOTE` annotates the **Edge / Risk / Confidence** block, which is rule-based Python — so it must
+    name logic, not a model, and it must keep the heuristic caveat that is the honest half of the brand.
+    """
+    from src.ui.explain import MODEL_NOTE
+
+    assert "AI" not in MODEL_NOTE, "the block this annotates is rule-based; no model is involved"
+    assert "logic explains" in MODEL_NOTE, "say what does explain (ADR-182's mantra, same two halves)"
+    assert "not a probability" in MODEL_NOTE, "the heuristic caveat is the honest half — never drop it"
+
+
 def test_the_app_does_not_promise_narration_it_cannot_deliver():
     """ADR-168 — the mantra said *"The AI explains"*, and there is no Ollama on Streamlit Cloud, so for every
     tester that clause was untrue. `docs/DEPLOY.md` had documented the gap; the brand line had not caught up,
