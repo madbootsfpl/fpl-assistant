@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-186
 **Date:** 2026-09-13
-**Status:** ✅ **Accepted — built** (Sprint 248, 2026-09-13). **1746 → 1751 tests, ruff clean.**
+**Status:** ✅ **Accepted — built** (Sprint 248, 2026-09-13). **1746 → 1753 tests, ruff clean.**
+🔧 **Amended same day** — the line never appeared; see §The window, not the threshold.
 **Superseded By / Replaces:** Extends [ADR-132](./ADR-132-transfer-timing.md)'s `bank_or_use`. **No
 `decision_xp` change.** Second of three gaps from the owner's A/B; see ADR-185 and ADR-187.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -138,7 +139,42 @@ then on `points_per_game` — because `gameweek_plan` also picks a captain, whic
 
 ---
 
-### ⚖️ Consequences & Trade-offs
+### 🔧 The window, not the threshold — amended the day it shipped
+
+The owner rebooted and **the line was not there.**
+
+`affordability_cliff` was priced against `xp_by_id`, which on My Squad is **a single gameweek** — ADR-179
+fixed that page's horizon at 1 four days earlier. On his squad the best move was **+1.7 over one week** and
+**+7.4 over five**, so a 2.0 xP threshold could essentially never be cleared. **The cliff existed in the
+window I measured it in and was invisible in the window it rendered on.**
+
+> ⭐ **I tuned the thresholds against a five-gameweek measurement and shipped onto a one-gameweek page.**
+
+Every number in this ADR — the £1.5m, the +6.4 uplift, the thresholds themselves — came from a `horizon=5`
+console session. The page it was destined for had a different window, and nothing connected the two.
+
+**The fix is the window, not the threshold.** Raising the reach or lowering the minimum would have made the
+notice fire on noise; the real error is that *"is it worth waiting a fortnight?"* is a multi-week question
+being scored on one week. It is now priced over `horizon_xp` — the same wider span ADR-173 already computes
+for the *Longer view* line — so the two answer the same question over the same number of weeks:
+
+```
+Transfer: Watkins (AVL) → Havertz (ARS)  (+1.7 XI xP next GW)
+          Longer view: +24.3 XI xP and still ahead over the next 5 GWs
+          Worth saving for: £1.5m more makes this Watkins → Isak
+                            (+13.8 XI xP over 5 GWs, +6.4 on the move above)
+```
+
+**The span is named on the line**, because the headline above it is priced over the page's horizon. Two
+numbers on adjacent lines with different yardsticks and no labels is how a reader concludes the app
+contradicts itself.
+
+⚠️ **And the tests could not have caught it**, which is the part worth keeping. Every guard drove
+`gameweek_plan` directly with an xP map *I* supplied — so the horizon the **page** passes was never in the
+picture. A guard now asserts which map reaches the cliff. **A test that chooses its own inputs cannot catch
+a caller passing the wrong ones.**
+
+
 
 * **Positive Impact:** the answer stops silently foreclosing better moves; a real lever the owner uses by
   instinct becomes visible; no new model.

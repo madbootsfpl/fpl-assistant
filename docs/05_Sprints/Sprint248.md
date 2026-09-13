@@ -81,3 +81,32 @@ persistent test defect.
 **+5**, all mutation-checked: a better move just out of budget is reported · the **cheapest** unlocking
 budget is the one named · silence in all three no-cliff cases · the immediate move is never replaced · and
 `gameweek_plan` actually makes the call, with the real bank.
+
+---
+
+### 🔧 Amended the same day: the line never appeared
+
+The owner rebooted and it was not there.
+
+`affordability_cliff` was priced against `xp_by_id` — which on My Squad is **one gameweek**, since ADR-179
+fixed that page's horizon four days earlier. On his squad the best move is **+1.7 over one week** and **+7.4
+over five**, so a 2.0 xP threshold could essentially never be cleared. The cliff existed in the window I
+measured it in and was invisible in the window it rendered on.
+
+> ⭐ **I tuned the thresholds against a five-gameweek measurement and shipped onto a one-gameweek page.**
+
+Every number in the ADR — the £1.5m, the +6.4, the thresholds — came from a `horizon=5` console session. The
+page had a different window and nothing connected the two.
+
+**The fix is the window, not the threshold.** Raising the reach or lowering the minimum would have made the
+notice fire on noise. *"Is it worth waiting a fortnight?"* is a multi-week question being scored on one week,
+so it is now priced over `horizon_xp` — the span ADR-173 already computes for *Longer view* — and the line
+names its span, because the headline above it uses a shorter one.
+
+⚠️ **And no test could have caught this.** Every guard drove `gameweek_plan` with an xP map I supplied, so
+the horizon the **page** passes was never in the picture.
+
+> **A test that chooses its own inputs cannot catch a caller passing the wrong ones.**
+
+That is a different failure from the three before it — those guards were wrong *about the code*; this one was
+correct about the code and blind to the call site. A guard now asserts which xP map reaches the cliff.

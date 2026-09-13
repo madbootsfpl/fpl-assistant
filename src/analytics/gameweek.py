@@ -42,7 +42,8 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
       second move worth having is coming. Always present, so a caller cannot forget the alternative exists.
     - **cliff** — a materially better transfer just out of budget (`affordability_cliff`, ADR-186), or None.
       Answers *"bank the money?"* where `timing` answers *"bank the transfer?"* — two different questions
-      that shared one word.
+      that shared one word. **Priced over `horizon_xp`'s wider window when one is supplied**: waiting a
+      fortnight is a multi-week question and a one-week gain is the wrong yardstick for it.
     - **horizon_gain** — the same swap's gain over `horizon_xp`'s wider window, or None when not supplied.
       A one-week number reads as a season verdict when it stands alone (ADR-173).
     - **replacements** — one move per **dead slot**: a squad place that cannot score for the whole horizon
@@ -104,7 +105,16 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # ADR-186 — a materially better move just out of budget. `bank_or_use` above answers *"bank the
     # transfer?"*; this answers *"bank the money?"*, which nothing did. Measured on the owner's squad:
     # Watkins → Havertz +7.4 today, Watkins → Isak **+13.8** with £1.5m more.
-    cliff = affordability_cliff(owned, market, xp_by_id, bank=bank, suggest=suggest_transfers)
+    # ⚠️ **Priced over the WIDE window, not the page's horizon.** Shipped first against `xp_by_id`, which on
+    # My Squad is a single gameweek since ADR-179 — and a one-week gain can essentially never clear the
+    # threshold, so the line never appeared (owner-reported the day it shipped). The thresholds were sized
+    # against a five-gameweek measurement and rendered on a one-gameweek page: **I tuned against one window
+    # and shipped onto another.**
+    #
+    # The window is the fix, not the threshold. *"Is it worth waiting a fortnight for a better player?"* is a
+    # question about several gameweeks, so it must be measured over several — the same `horizon_xp` ADR-173
+    # already computes for the *Longer view* line, so the two numbers answer the same span.
+    cliff = affordability_cliff(owned, market, horizon_xp or xp_by_id, bank=bank, suggest=suggest_transfers)
 
     # The same swap over a longer window (ADR-173). A one-week gain reads as a verdict when it stands alone;
     # the owner rejected a transfer that was right for next week and wrong for his season. `horizon_xp` is an

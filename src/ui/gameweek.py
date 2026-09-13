@@ -109,9 +109,12 @@ def _timing_lines(plan, horizon) -> list:
     cliff = plan.get("cliff")
     if cliff:
         move = cliff["move"]
+        # The span is named, because the number is over the wider window while the headline transfer above
+        # it is priced over the page's horizon — unlabelled, the two would look like the same yardstick.
+        span = plan.get("horizon_gw", 5)
         out.append(f"            Worth saving for: £{cliff['extra']:.1f}m more makes this "
                    f"{move['out']['web_name']} → {move['in']['web_name']} "
-                   f"({cliff['gain']:+.1f} XI xP, {cliff['uplift']:+.1f} on the move above)")
+                   f"({cliff['gain']:+.1f} XI xP over {span} GWs, {cliff['uplift']:+.1f} on the move above)")
     return out
 
 

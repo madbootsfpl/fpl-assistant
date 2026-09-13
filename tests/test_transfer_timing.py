@@ -295,3 +295,63 @@ def test_the_gameweek_plan_actually_computes_a_cliff(monkeypatch):
     assert seen["bank"] == 1.25, "the squad's real bank must reach it, not a default"
     assert seen["suggest"] is not None, "the transfer search is injected, not re-implemented"
     assert "cliff" in plan, "and the result is carried on the plan"
+
+
+def test_the_cliff_is_priced_over_the_wider_window_not_the_page_horizon(monkeypatch):
+    """⚠️ **The bug the owner found the day ADR-186 shipped: the line never appeared.**
+
+    `affordability_cliff` was priced against `xp_by_id`, which on My Squad is **a single gameweek** since
+    ADR-179 fixed that page's horizon at 1. A one-week gain can essentially never clear a 2.0 xP threshold —
+    on his squad the best move was **+1.7 over one week** and **+7.4 over five**, so the cliff existed at the
+    window it was measured in and was invisible at the window it rendered on.
+
+    > **I tuned the thresholds against a five-gameweek measurement and shipped onto a one-gameweek page.**
+
+    **The window is the fix, not the threshold.** *"Is it worth waiting a fortnight for a better player?"* is
+    a question about several gameweeks; a one-week gain is the wrong yardstick for it. The plan already
+    computes `horizon_xp` over a wider span for ADR-173's *Longer view* line, so the two now answer the same
+    question over the same number of weeks.
+    """
+    from src.analytics import gameweek as gw_mod
+
+    seen = {}
+    real = gw_mod.affordability_cliff
+
+    def spy(owned, market, xp_by_id, **kw):
+        seen["xp"] = xp_by_id
+        return real(owned, market, xp_by_id, **kw)
+
+    monkeypatch.setattr(gw_mod, "affordability_cliff", spy)
+    monkeypatch.setattr(gw_mod, "suggest_transfers", _fake_suggest)
+
+    owned, market, xp = _cliff_market()
+    wide = {pid: v * 5 for pid, v in xp.items()}            # the same players over a longer window
+    gw_mod.gameweek_plan(owned, market, [], xp, bank=0.0, horizon_xp=wide)
+
+    assert seen["xp"] is wide, ("the cliff must be priced over the WIDE window — measured on the page's "
+                               "one-gameweek horizon it can never clear the threshold")
+
+    # …and with no wider window supplied it falls back rather than failing.
+    seen.clear()
+    gw_mod.gameweek_plan(owned, market, [], xp, bank=0.0)
+    assert seen["xp"] is xp, "no wide window → use what there is, never None"
+
+
+def test_the_cliffs_span_is_named_because_it_differs_from_the_line_above_it():
+    """The headline transfer is priced over the page's horizon; the cliff over the wider one. Unlabelled,
+    two numbers on adjacent lines would look like the same yardstick — which is how a reader concludes the
+    app contradicts itself."""
+    from src.ui.gameweek import render_gameweek_plan
+
+    plan = {"captain": None,
+            "lineup": {"start": [], "bench": [], "bring_in": [], "drop": [], "has_declared_bench": False},
+            "transfer": {"out": {"web_name": "Weak", "team": "T9"},
+                         "in": {"web_name": "Cheap", "team": "TA"}, "gain": 1.7},
+            "flags": [], "timing": {"action": "use"}, "horizon_gain": None, "horizon_gw": 5,
+            "cliff": {"extra": 1.5, "gain": 13.8, "uplift": 6.4,
+                      "move": {"out": {"web_name": "Weak", "team": "T9"},
+                               "in": {"web_name": "Dear", "team": "TB"}},
+                      "best_now": None, "gain_now": 7.4}}
+    out = render_gameweek_plan(plan, "S", horizon=1)
+    assert "+13.8 XI xP over 5 GWs" in out, out
+    assert "next GW" in out, "and the headline still says its own, shorter window"
