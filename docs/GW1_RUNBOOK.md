@@ -100,11 +100,14 @@ result far outside these is a reason to **check the harness before believing it*
 | `FORM_WEIGHT` | small positive, **≈ 0.05–0.20**. FPL's `form` is a 30-day mean — real signal, largely already inside `points_per_game`. | > 0.35 suggests the baseline rate is being under-used, not that form is magic. Inspect the tiers (ADR-028/124) first. |
 | `SET_PIECE_WEIGHT` | small positive, driven almost entirely by **penalties**; corners/FKs near zero. | A large gain with pens excluded means the proxy is picking up "good attacker", not set-piece duty. |
 | `DEFCON_MAGNIFIER_WEIGHT` | **genuinely unknown** — a new stat, one season of history. Coin-flip whether it clears the bar. | Any large effect deserves suspicion: check it is not just re-ranking defenders by minutes. |
+| `CLEAN_SHEET_WEIGHT` *(proposed, ADR-188)* | small positive, **≈ 0.05–0.15**, and quite possibly **zero** — much of a club's clean-sheet tendency is already inside a defender's own points-per-90. | **A large gain is a warning, not a win**: it most likely means the term is re-ranking defenders by *club quality*, which FDR and the baseline already carry. Check it is not simply reproducing the FDR ordering. |
 
 ### Stopping rule — so "re-run later" cannot become forever
 
 - **GW4:** first honest attempt. Expect at least one weight to fail on sample size alone.
-- **GW6:** the real sitting. Whatever clears the bar ships; whatever does not stays 0.
+- **GW6:** the real sitting. Whatever clears the bar ships; whatever does not stays 0. **ADR-188's
+  `CLEAN_SHEET_WEIGHT` joins here, not at GW4** — GW4 has one honest attempt in it and three weights already
+  queued; a fourth on the same thin sample is how a noise result gets shipped.
 - **GW10:** last look. Anything still failing is **closed as not supported** and the config comment says so —
   not left as a permanent "revisit later", which is how a dormant weight becomes furniture.
 

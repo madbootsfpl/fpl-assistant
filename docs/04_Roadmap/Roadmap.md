@@ -451,6 +451,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   *"weakest stretch · Confidence 42/100 · Low"* to *"**worth +99.6 xP**… you keep only 3 of 15; £14.1m cannot
   play · **Confidence 95/100 · High**"*. ⭐ *A recommendation that measures only WHEN will present itself as
   an answer to WHETHER.*
+- 📋 **A defender plays for a team** (ADR-188, proposed 2026-09-13) — *owner, on an ADR-186 suggestion:*
+  **"that is a transfer I would not make… I have a cheap Arsenal fullback, likelihood of clean sheets
+  probably >50%."** ⭐ The app already knows: Team DNA shows **Arsenal 75%** clean-sheet potential against
+  **Sunderland 25%** — and a defender's xP is his own points-per-90 × minutes × *opponent* difficulty, with
+  no term for his own team's defence. The model preferred selling Konsa by **1.7 xP** while blind to a signal
+  worth **~10**. Proposes `CLEAN_SHEET_WEIGHT`, gated at 0 and swept at the **GW6** sitting against §B0's
+  four criteria, with a prediction recorded first. ⭐ *A number the app displays and does not use is a claim
+  it is making to the reader and not to itself.*
 - ✅ **Bank to afford** (ADR-186, Sprint 248, 2026-09-13) — **built.** The week's answer now says
   *"Worth saving for: **£1.5m more** makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)"*, after
   the immediate move and never instead of it. ⭐ *"Bank" meant a spare transfer everywhere in the code and
