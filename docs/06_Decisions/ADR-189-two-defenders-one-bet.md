@@ -164,10 +164,31 @@ straddles one — so it cannot silently drift back into the easy case.
   - [x] Guard: a difference outside the band wins on merit
   - [x] Guard: outfield positions are ignored
   - [x] Mutation-tested — removed · band widened to 50 · positions widened · gate dropped
-  - [ ] Owner: confirm the Hume/Konsa case reads as expected in the app
+  - [x] Owner-verified 2026-09-13 — *"its picking another option which is fine"*; see the note below
 
 #### ✅ Always
 - [x] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
+
+---
+
+### 🔗 It composes with ADR-186, and changes what the cliff reports
+
+Owner-verified after the correction: the *Worth saving for* line now names a **different move at a different
+budget**. That is the two features interacting correctly, and it is not obvious, so it is recorded.
+
+```
+extra £    tie-break ON                 tie-break OFF
+   0.0     Konsa→Affengruber  +9.0      Konsa→Affengruber  +9.0
+   0.5     Hume→Ballard      +10.0      Konsa→Ballard     +11.4
+```
+
+At £0.5m the tie-break takes the diversified move, which gains **1.0 over the £0 baseline** rather than 2.4 —
+**below ADR-186's 2.0 minimum uplift**. So the cliff stops advertising £0.5m and sweeps on to a budget where
+waiting actually pays.
+
+**That is the right composition.** If the honest choice at £0.5m is only worth 1.0 more than acting now, then
+£0.5m is not worth saving for, and the cliff should say so by not mentioning it. A tie-break that quietly
+propped up a threshold it had just undercut would be the bug.
 
 ---
 

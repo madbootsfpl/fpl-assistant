@@ -120,3 +120,24 @@ notices changes to the path it *does* take.
 
 There is now a second guard whose gains straddle a bucket edge, with an assertion that they straddle one, so
 it cannot drift back into the easy case.
+
+---
+
+### ✅ Owner-verified — and it moved ADR-186's answer
+
+> *"Rebooted, it's picking another option which is fine."*
+
+The *Worth saving for* line now names a different move at a different budget, and that is the two features
+composing rather than fighting:
+
+```
+extra £    tie-break ON                 tie-break OFF
+   0.5     Hume→Ballard      +10.0      Konsa→Ballard     +11.4
+```
+
+At £0.5m the tie-break takes the diversified move, which gains **1.0 over the £0 baseline** instead of 2.4 —
+**below ADR-186's 2.0 minimum uplift**. The cliff therefore stops advertising £0.5m and sweeps on to a budget
+where waiting genuinely pays.
+
+**That is correct.** If the honest choice at £0.5m is only worth 1.0 more than acting today, then £0.5m is
+not worth saving for. A tie-break that propped up a threshold it had just undercut would be the defect.
