@@ -2,6 +2,7 @@
 
 **Dates:** 2026-09-13
 **Status:** ✅ Complete — ADR-185. **1742 → 1746 tests, ruff clean.**
+✅ **Owner-verified in the app the same day: *"chips tab does say wildcard"*.**
 First of the three gaps from the owner's two-team A/B (ADR-185/186/187).
 
 ---

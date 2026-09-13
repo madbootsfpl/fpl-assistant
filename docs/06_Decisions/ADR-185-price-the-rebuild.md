@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-185
 **Date:** 2026-09-13
-**Status:** ✅ **Accepted — built** (Sprint 247, 2026-09-13). **1742 → 1746 tests, ruff clean.**
+**Status:** ✅ **Accepted — built & owner-verified** (Sprint 247, 2026-09-13; confirmed in the app
+the same day — *"chips tab does say wildcard"*). **1742 → 1746 tests, ruff clean.**
 **Superseded By / Replaces:** Extends [ADR-082](./ADR-082-chip-strategy-advisor.md)'s chip advisor. **No
 `decision_xp` change.** One of three gaps opened by the owner's A/B experiment; see also ADR-186 and ADR-187.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
