@@ -163,3 +163,16 @@ POSITION_MAP = {
     3: "MID",
     4: "FWD",
 }
+
+# Club clean-sheet term for DEF/GK (ADR-188) — DORMANT (CLEAN_SHEET_WEIGHT = 0). A defender's xP is his own
+# pts/90 × minutes × OPPONENT difficulty; nothing prices the defence he plays behind. Team DNA has shown the
+# number for weeks (Arsenal 75% vs Sunderland 25% the day this was written) without the recommendation engine
+# using it — owner-reported, on a suggestion to sell the Arsenal defender for the Sunderland one.
+#
+# Applied as a DELTA against the league mean, because a player's own pts/90 already contains the clean sheets
+# he kept at his old rate; only the difference is new information (the same shape as ADR-097's DefCon term).
+#
+# ⚠️ Swept at the **GW6** sitting, not GW4: three weights are already queued there and a fourth on the same
+# thin sample is how a noise result ships. Prediction recorded in GW1_RUNBOOK §B0 *before* the sweep —
+# small positive ≈0.05-0.15, quite possibly zero, and **a large gain is a warning, not a win**.
+CLEAN_SHEET_WEIGHT = 0.0

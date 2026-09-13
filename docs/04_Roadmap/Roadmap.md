@@ -457,7 +457,8 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   multiplies that component's spread by √2, ~1.2 pts at worst against an XI spread of 11.6. The real defect
   was that the ranking separated the two candidate sells by **1.7 xP** against a weekly sd of **3.51**.
   ⭐ *A ranking that separates two options by less than its own noise is not ranking them — it is picking one.*
-- 📋 **A defender plays for a team** (ADR-188, proposed 2026-09-13) — *owner, on an ADR-186 suggestion:*
+- ✅ **A defender plays for a team** (ADR-188, Sprint 252, 2026-09-13) — **built dormant; the first sweep says
+  the weight should stay at 0.** — *owner, on an ADR-186 suggestion:*
   **"that is a transfer I would not make… I have a cheap Arsenal fullback, likelihood of clean sheets
   probably >50%."** ⭐ The app already knows: Team DNA shows **Arsenal 75%** clean-sheet potential against
   **Sunderland 25%** — and a defender's xP is his own points-per-90 × minutes × *opponent* difficulty, with
@@ -465,6 +466,14 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   worth **~10**. Proposes `CLEAN_SHEET_WEIGHT`, gated at 0 and swept at the **GW6** sitting against §B0's
   four criteria, with a prediction recorded first. ⭐ *A number the app displays and does not use is a claim
   it is making to the reader and not to itself.*
+  📉 **The exploratory GW4 read clears 0 of 4**: ρ **0.621 → 0.614, monotonically down** across 0→0.30, the
+  whole spread a *sixth of one SE*. The prediction's cautious half was right and for the reason it named — the
+  clean sheets are **already inside points-per-90**, so the term restates rather than adds. ⭐⭐ *A descending
+  curve and a flat curve do not say the same thing: flat is "no effect at this sample size" and gets re-asked;
+  descending is "it costs accuracy in proportion to how much you use", which more gameweeks will not fix.*
+  GW6 keeps the decision but inherits a **prior of zero with a mechanism**. **Likely end state: Option 3** —
+  the two clubs' clean-sheet rates as a **lens on the transfer screen**, which is where the owner's knowledge
+  actually enters, rather than a price.
 - ✅ **Bank to afford** (ADR-186, Sprint 248, 2026-09-13) — **built.** The week's answer now says
   *"Worth saving for: **£1.5m more** makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)"*, after
   the immediate move and never instead of it. ⭐ *"Bank" meant a spare transfer everywhere in the code and

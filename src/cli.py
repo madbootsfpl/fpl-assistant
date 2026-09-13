@@ -813,7 +813,9 @@ def cmd_filter(args) -> None:
 
 
 # The dormant weights the calibration backtest can tune (ADR-101), mapped to their config attribute.
-_CALIBRATE_WEIGHTS = {"form": "FORM_WEIGHT", "set_piece": "SET_PIECE_WEIGHT", "defcon": "DEFCON_MAGNIFIER_WEIGHT"}
+_CALIBRATE_WEIGHTS = {"form": "FORM_WEIGHT", "set_piece": "SET_PIECE_WEIGHT",
+                      "defcon": "DEFCON_MAGNIFIER_WEIGHT",
+                      "clean_sheet": "CLEAN_SHEET_WEIGHT"}   # ADR-188 — swept at the GW6 sitting
 
 
 def _parse_range(spec: str) -> list[float]:

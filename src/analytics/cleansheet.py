@@ -37,3 +37,39 @@ def defensive_solidity(players, min_minutes: int = MIN_MINUTES) -> list[dict]:
         })
     rows.sort(key=lambda r: r["xgc90"])   # ascending — lowest xGC/90 is best
     return rows
+
+
+# ADR-188 — a defender's points depend on his own club keeping a clean sheet, and `decision_xp` has never
+# priced that: a defender's xP is his own pts/90 × minutes × **opponent** difficulty, with no term for the
+# defence he plays behind. Team DNA has shown the number for weeks (Arsenal 75% against Sunderland 25% on the
+# day this was written) without the recommendation engine using it.
+CLEAN_SHEET_POINTS = 4          # FPL: a DEF/GK clean sheet is worth 4
+
+
+def clean_sheet_delta(player, team_rate, league_rate) -> float:
+    """Points per match a DEF/GK gains (or loses) from his club's clean-sheet rate vs the league's.
+
+    A **delta**, deliberately, and for the same reason ADR-097's DefCon magnifier is one: the player's own
+    historical pts/90 already contains the clean sheets he kept at his old rate. Adding an absolute
+    clean-sheet term would double-count them. What is *not* in the baseline is whether **this** club, **this**
+    season, keeps them more or less often than the average — so only the difference is priced.
+
+    Returns 0.0 for outfield players, and for any club with no played gameweeks yet: `team_clean_sheet_rate`
+    returns None there, and **an unknown rate must never read as a bad one** (the ADR-172 failure, where an
+    all-empty history was treated as "never plays").
+    """
+    if player["position"] not in CLEAN_SHEET_POSITIONS:
+        return 0.0
+    if team_rate is None or league_rate is None:
+        return 0.0
+    return CLEAN_SHEET_POINTS * (team_rate - league_rate)
+
+
+def league_clean_sheet_rate(rates) -> float | None:
+    """The mean clean-sheet rate across clubs that have one — the baseline a delta is measured against.
+
+    Clubs with no played gameweeks are excluded rather than counted as 0%, so the average is over what is
+    known. None when nothing is known at all.
+    """
+    known = [r for r in (rates or {}).values() if r is not None]
+    return sum(known) / len(known) if known else None

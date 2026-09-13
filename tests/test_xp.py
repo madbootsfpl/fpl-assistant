@@ -165,3 +165,97 @@ def test_render_xp_table_hides_fpl_over_a_multi_gw_horizon():
     assert "4.0" not in out            # FPL's next-GW number is not shown
     assert "not comparable" in out     # footer explains why
     assert "next 5 gameweeks" in out
+
+
+# ---- ADR-188: the club clean-sheet term, dormant until calibrated -------------------------------
+
+def test_the_clean_sheet_term_is_dormant_and_changes_nothing():
+    """⚠️ **The invariance every dormant weight is held to (ADR-041).** At `CLEAN_SHEET_WEIGHT = 0` the term
+    must leave every projection byte-identical, so shipping it costs nothing and the GW6 sitting is a config
+    change rather than a code change.
+
+    This is the guard that lets a weight be built early and decided late.
+    """
+    from src.analytics.xp import player_xp
+
+    players = _players_for_cs()
+    rates = {"ARS": 0.75, "SUN": 0.25}
+    off = {r["id"]: r["xp"] for r in player_xp(players, _fixtures_for_cs(), horizon=2)}
+    with_rates = {r["id"]: r["xp"] for r in player_xp(players, _fixtures_for_cs(), horizon=2,
+                                                      clean_sheet_weight=0.0, clean_sheet_rates=rates)}
+    assert off == with_rates, "at weight 0 the clean-sheet term must not move a single projection"
+
+
+def test_the_clean_sheet_term_is_a_delta_against_the_league_not_an_absolute():
+    """A defender's own points-per-90 **already contains** the clean sheets he kept at his old rate, so an
+    absolute clean-sheet term would double-count them. Only the difference between his club's rate and the
+    league's is new information — the same shape as ADR-097's DefCon magnifier.
+
+    So a club **at** the league average must get exactly nothing, however good its defence looks.
+    """
+    from src.analytics.cleansheet import clean_sheet_delta, league_clean_sheet_rate
+
+    rates = {"ARS": 0.75, "SUN": 0.25}
+    league = league_clean_sheet_rate(rates)
+    assert league == 0.5
+    assert clean_sheet_delta({"position": "DEF"}, 0.5, league) == 0.0, "average club, no adjustment"
+    assert clean_sheet_delta({"position": "DEF"}, 0.75, league) == 1.0     # 4 pts × +0.25
+    assert clean_sheet_delta({"position": "DEF"}, 0.25, league) == -1.0
+
+
+def test_the_clean_sheet_term_applies_only_to_defenders_and_keepers():
+    """Clean sheets are worth 4 points to DEF and GK and nothing to anyone else, so the term is scoped to
+    them. A midfielder at a mean defence must not be nudged by his club's back four."""
+    from src.analytics.cleansheet import clean_sheet_delta
+
+    for pos in ("MID", "FWD"):
+        assert clean_sheet_delta({"position": pos}, 0.75, 0.5) == 0.0, pos
+    for pos in ("DEF", "GK"):
+        assert clean_sheet_delta({"position": pos}, 0.75, 0.5) > 0, pos
+
+
+def test_an_unknown_clean_sheet_rate_is_never_read_as_a_bad_one():
+    """⚠️ **The ADR-172 failure, not repeated.** There, an all-empty history was read as *"never plays"* and
+    zeroed seven players who had played every game. `team_clean_sheet_rate` returns **None** for a club with
+    no completed gameweeks, and None must mean *no opinion* — not 0%.
+
+    A club excluded from the baseline for the same reason: averaging unknowns in as zeros would drag the
+    league mean down and quietly reward every club that *has* played.
+    """
+    from src.analytics.cleansheet import clean_sheet_delta, league_clean_sheet_rate
+
+    assert clean_sheet_delta({"position": "DEF"}, None, 0.5) == 0.0, "unknown club → no adjustment"
+    assert clean_sheet_delta({"position": "DEF"}, 0.75, None) == 0.0, "unknown league → no baseline, no term"
+    assert league_clean_sheet_rate({"A": 0.8, "B": None}) == 0.8, "an unknown club is excluded, not counted 0"
+    assert league_clean_sheet_rate({"A": None}) is None
+    assert league_clean_sheet_rate({}) is None
+
+
+def test_the_weight_is_registered_for_calibration_and_still_zero():
+    """It must be sweepable by ADR-101's harness — a weight that cannot be measured cannot be decided — and
+    it must still be **0**, because the sitting is GW6 and this is not it."""
+    from src import config
+    from src.cli import _CALIBRATE_WEIGHTS
+
+    assert config.CLEAN_SHEET_WEIGHT == 0.0, "the GW6 sitting decides this, not a commit"
+    assert _CALIBRATE_WEIGHTS.get("clean_sheet") == "CLEAN_SHEET_WEIGHT"
+
+
+def _players_for_cs():
+    def row(pid, pos, team, tid):
+        return {"id": pid, "web_name": f"P{pid}", "position": pos, "team": team, "team_id": tid,
+                "price": 5.0, "status": "a", "chance": None, "total_points": 20,
+                "points_per_game": 4.0, "minutes": 900, "form": 0.0, "ep_next": 0.0,
+                "code": pid, "selected_by": 5.0, "penalties_order": None, "corners_order": None,
+                "freekicks_order": None, "cost_change_event": 0, "transfers_in_event": 0,
+                "xgc": 1.0, "clean_sheets": 0}
+    return [row(1, "DEF", "ARS", 1), row(2, "DEF", "SUN", 2), row(3, "MID", "ARS", 1)]
+
+
+def _fixtures_for_cs():
+    return [{"event": 1, "team_h": 1, "team_a": 2, "team_h_difficulty": 3, "team_a_difficulty": 3,
+             "home": "ARS", "away": "SUN", "kickoff_time": None,
+             "home_team_strength": 3, "away_team_strength": 3},
+            {"event": 2, "team_h": 2, "team_a": 1, "team_h_difficulty": 3, "team_a_difficulty": 3,
+             "home": "SUN", "away": "ARS", "kickoff_time": None,
+             "home_team_strength": 3, "away_team_strength": 3}]

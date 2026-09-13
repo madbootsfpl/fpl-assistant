@@ -10,9 +10,11 @@ per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek)
 """
 
 from src import config
+from src.analytics.cleansheet import clean_sheet_delta, league_clean_sheet_rate
 from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
+from src.analytics.gw_form import team_clean_sheet_rate
 from src.analytics.minutes import minutes_weight_from_history
 from src.analytics.setpieces import set_piece_bonus
 
@@ -198,7 +200,7 @@ def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
     is_available=None, minutes_weight=None, history_by_code=None,
     form_by_code=None, form_weight: float = 0.0, set_piece_weight: float = 0.0,
-    defcon_weight: float = 0.0,
+    defcon_weight: float = 0.0, clean_sheet_weight: float = 0.0, clean_sheet_rates=None,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
 
@@ -224,6 +226,9 @@ def player_xp(
     history_by_code = history_by_code or {}
     form_by_code = form_by_code or {}
     is_available = is_available or _status_is_active
+    # ADR-188 — the league mean clean-sheet rate, computed once. Clubs with no played gameweeks are excluded
+    # rather than counted as 0%, so the baseline is over what is known.
+    league_cs = league_clean_sheet_rate(clean_sheet_rates)
 
     results = []
     for p in players:
@@ -278,6 +283,7 @@ def player_xp(
             xp = 0.0
             set_piece_xp = 0.0
             defcon_xp = 0.0
+            cs_xp = 0.0
         else:
             # Per-GW xP unrounded, so the total is exactly today's number (ADR-032);
             # per-GW cells are rounded only for display. The minutes weight scales both.
@@ -298,10 +304,20 @@ def player_xp(
                     * sum(defcon_magnifier(d) - 1.0 for d in gw_map.get(gw, []))
                 for gw in horizon_events
             }
-            unrounded = {gw: unrounded[gw] + defcon_by_gw[gw] for gw in horizon_events}
+            # Clean-sheet term (ADR-188) — a DELTA, like DefCon above and for the same reason: the player's
+            # own pts/90 already contains the clean sheets he kept at his old rate, so only the difference
+            # between **this** club's rate and the league's is new information. DORMANT at weight 0 → every
+            # cell 0 → xp unchanged (the ADR-041 invariant every dormant weight is held to).
+            cs_pm = clean_sheet_delta(p, (clean_sheet_rates or {}).get(p["team"]), league_cs)
+            cs_by_gw = {
+                gw: weight * clean_sheet_weight * cs_pm * len(gw_map.get(gw, []))
+                for gw in horizon_events
+            }
+            unrounded = {gw: unrounded[gw] + defcon_by_gw[gw] + cs_by_gw[gw] for gw in horizon_events}
             xp = round(sum(unrounded.values()), 1)
             by_gameweek = {gw: round(v, 1) for gw, v in unrounded.items()}
             defcon_xp = round(sum(defcon_by_gw.values()), 1)
+            cs_xp = round(sum(cs_by_gw.values()), 1)
 
         results.append({
             "id": p["id"],
@@ -319,6 +335,7 @@ def player_xp(
             "minutes_weight": round(applied_weight, 2),   # xMins v0 weight applied (1.0 without the hook)
             "set_piece_xp": set_piece_xp,             # ADR-096: the set-piece term's share of xp (0 dormant)
             "defcon_xp": defcon_xp,                   # ADR-097: the DefCon magnifier's net delta (0 dormant)
+            "clean_sheet_xp": cs_xp,                  # ADR-188: the club clean-sheet delta (0 dormant)
         })
 
     results.sort(key=lambda r: r["xp"], reverse=True)
@@ -357,4 +374,18 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
         form_by_code=form_by_code, form_weight=config.FORM_WEIGHT,
         set_piece_weight=config.SET_PIECE_WEIGHT,
         defcon_weight=config.DEFCON_MAGNIFIER_WEIGHT,
+        # ADR-188 — the club clean-sheet delta for DEF/GK. Rates are computed only when the weight is live,
+        # so a dormant term costs nothing: `team_clean_sheet_rate` is a scan per club and there is no reason
+        # to pay for it to multiply by zero.
+        clean_sheet_weight=config.CLEAN_SHEET_WEIGHT,
+        clean_sheet_rates=(_clean_sheet_rates(players, gw_history_by_code)
+                           if config.CLEAN_SHEET_WEIGHT else None),
     )
+
+
+def _clean_sheet_rates(players, gw_history_by_code) -> dict:
+    """`{team → clean-sheet rate}` from the per-GW history (ADR-188), or `{}` with nothing played yet."""
+    if not gw_history_by_code:
+        return {}
+    return {t: team_clean_sheet_rate(gw_history_by_code, players, t)
+            for t in {p["team"] for p in players}}

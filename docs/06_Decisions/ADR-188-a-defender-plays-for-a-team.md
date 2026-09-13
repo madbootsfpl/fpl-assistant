@@ -2,8 +2,10 @@
 
 **Decision ID:** ADR-188
 **Date:** 2026-09-13
-**Status:** 📋 **Proposed** — gate before building. **The gate is whether to open a fourth calibration
-slot**, not what the term looks like.
+**Status:** ✅ **Accepted — machinery built, weight held at 0** (Sprint 245, 2026-09-13).
+**1762 tests, ruff clean.** The term, the sweep entry and the invariance guard ship; **`CLEAN_SHEET_WEIGHT`
+stays `0.0`** and the decision belongs to the GW6 sitting. A first exploratory sweep is recorded below and it
+says *no* — see §📉.
 **Superseded By / Replaces:** Would add a fourth weight to [ADR-101](./ADR-101-calibration-methodology.md)'s
 harness and its §B0 bar. Uses data [ADR-119](./ADR-119-team-dna.md) already computes. **No change to
 `decision_xp`'s structure** — one more term, gated at 0 like the other three.
@@ -125,6 +127,49 @@ not quietly folded in, and so it does not get lost.
 
 ---
 
+### 📉 The first read — GW4, exploratory, and it says no
+
+Run once the machinery existed, **as an attempt rather than the sitting**. Recorded here because §B0 requires
+the result either way, and because a negative read is worth more before a weight ships than after.
+
+```
+Calibrating clean_sheet (CLEAN_SHEET_WEIGHT) over 4 gameweeks — walk-forward, rank correlation (ADR-101)
+
+   weight   ρ (rank)     MAE  hit@20      n   ±1 SE
+    0.000      0.621    1.22    0.19    626   0.040
+    0.050      0.618    1.22    0.19    626   0.040
+    0.100      0.618    1.22    0.19    626   0.040
+    0.150      0.618    1.23    0.19    626   0.040
+    0.200      0.617    1.23    0.19    626   0.040
+    0.250      0.615    1.23    0.20    626   0.040
+    0.300      0.614    1.23    0.20    626   0.040
+```
+
+**Against §B0's four criteria: 0 of 4.** ρ never beats weight-0 at any setting; it declines monotonically.
+MAE drifts the wrong way. hit@20 is flat then rises 0.01 at the two settings where ρ is worst, which is
+noise, not a signal — n is 626 and 1 SE is 0.040, so the entire spread of ρ across the sweep (0.007) is a
+**sixth of one standard error**.
+
+⚠️ **This is not the sitting and it does not close the question.** Four gameweeks is exactly the thin sample
+§B0's stopping rule was written for, and the ADR said so before the number existed. What it does establish:
+
+1. **The prediction was right, and right in its cautious half.** ADR-188 predicted *"small positive ≈
+   0.05–0.15, and quite possibly zero"*. It is zero. The stated reason — that a defender's clean-sheet points
+   are **already inside his own points-per-90** — is the reading the curve supports: adding the club rate on
+   top does not add information, it re-states information, and the slight decline is the double-count.
+2. **A large positive would have been the worrying outcome**, and it did not happen. The trap named in the
+   prediction table (the term re-ranking defenders by club quality, which FDR already carries) is not sprung.
+3. **The monotone shape matters more than the flat one.** A flat curve says *"no effect at this sample size"*.
+   A curve that only descends says *"the term costs accuracy in proportion to how much of it you use"* —
+   which is what double-counting looks like, and which will not be fixed by more gameweeks.
+
+So the GW6 sitting inherits a **prior of zero and a reason**, not an open question. If GW6 reproduces this
+shape, Option 3 is adopted — the rate becomes a **lens on the transfer surface**, naming both clubs'
+clean-sheet rates beside the swap, which is where the owner's knowledge actually enters. That is the likely
+end state, and it is a good one: the number stops being decorative without pretending to be predictive.
+
+---
+
 ### ⚖️ Consequences & Trade-offs
 
 * **Positive Impact:** the largest structural blind spot in defender pricing gets measured; a signal the app
@@ -142,15 +187,17 @@ not quietly folded in, and so it does not get lost.
 ---
 
 ### 🛠 Implementation & Migration
-* **Components Affected:** Code (`config.py`, `analytics/xp.py`, `analytics/backtest.py`), Docs
-* **Action Items — at the GW6 sitting, not before:**
-  - [ ] `CLEAN_SHEET_WEIGHT = 0.0` in `config.py`, with the dormancy comment the other three carry
-  - [ ] The term in `decision_xp`, DEF/GK only, from the club clean-sheet rate
-  - [ ] A fourth entry in `_CALIBRATE_WEIGHTS`, swept by the existing harness
-  - [ ] Guard: at weight 0 every projection is **byte-identical** — the invariance test the other three have
-  - [ ] Sweep at GW6 against §B0's four criteria; record the result **either way** in this ADR
+* **Components Affected:** Code (`config.py`, `analytics/cleansheet.py`, `analytics/xp.py`, `cli.py`), Docs
+* **Action Items** — the machinery is built; the **decision** is the one item left:
+  - [x] `CLEAN_SHEET_WEIGHT = 0.0` in `config.py`, with the dormancy comment the other three carry
+  - [x] The term in `decision_xp`, DEF/GK only, from the club clean-sheet rate — `analytics/cleansheet.py`
+  - [x] A fourth entry in `_CALIBRATE_WEIGHTS`, swept by the existing harness
+  - [x] Guard: at weight 0 every projection is **byte-identical** — the invariance test the other three have,
+        plus four more (delta-not-absolute, DEF/GK only, unknown rate ≠ bad rate, the weight is still 0).
+        All five mutation-tested.
+  - [ ] Sweep at **GW6** against §B0's four criteria; record the result either way (the GW4 read is in §📉)
   - [ ] **If it fails:** adopt Option 3 — a lens on the transfer surface naming both clubs' clean-sheet rates
-  - [ ] Update the GW1_RUNBOOK §B0 table with the fourth weight and its prediction
+  - [x] Update the GW1_RUNBOOK §B0 table with the fourth weight and its prediction
 
 #### ✅ Always
 - [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**

@@ -62,6 +62,10 @@ Run the backtest, read the table, and **only if it clearly helps**, commit the v
    - If the curve is flat / no clear signal → **leave it at 0** and re-run later.
 2. **Then set-piece:** `python app.py calibrate --weight set_piece` → same decision → set `config.SET_PIECE_WEIGHT`.
 3. **Then DefCon:** `python app.py calibrate --weight defcon` → set `config.DEFCON_MAGNIFIER_WEIGHT`.
+4. **Then clean sheet:** `python app.py calibrate --weight clean_sheet` → set `config.CLEAN_SHEET_WEIGHT`.
+   Its dormancy guard is `tests/test_xp.py::test_the_clean_sheet_term_is_dormant_and_changes_nothing`,
+   and `test_the_weight_is_registered_for_calibration_and_still_zero` asserts the 0 — **that one must be
+   updated deliberately when the weight flips**, which is the point of it.
 
 **One weight at a time** (interpretable, not confounded, ADR-101). After each flip: `ruff check .` + `python -m
 pytest -q` + a manual smoke that xP moved sensibly.
@@ -100,7 +104,7 @@ result far outside these is a reason to **check the harness before believing it*
 | `FORM_WEIGHT` | small positive, **≈ 0.05–0.20**. FPL's `form` is a 30-day mean — real signal, largely already inside `points_per_game`. | > 0.35 suggests the baseline rate is being under-used, not that form is magic. Inspect the tiers (ADR-028/124) first. |
 | `SET_PIECE_WEIGHT` | small positive, driven almost entirely by **penalties**; corners/FKs near zero. | A large gain with pens excluded means the proxy is picking up "good attacker", not set-piece duty. |
 | `DEFCON_MAGNIFIER_WEIGHT` | **genuinely unknown** — a new stat, one season of history. Coin-flip whether it clears the bar. | Any large effect deserves suspicion: check it is not just re-ranking defenders by minutes. |
-| `CLEAN_SHEET_WEIGHT` *(proposed, ADR-188)* | small positive, **≈ 0.05–0.15**, and quite possibly **zero** — much of a club's clean-sheet tendency is already inside a defender's own points-per-90. | **A large gain is a warning, not a win**: it most likely means the term is re-ranking defenders by *club quality*, which FDR and the baseline already carry. Check it is not simply reproducing the FDR ordering. |
+| `CLEAN_SHEET_WEIGHT` *(built + dormant, ADR-188)* | small positive, **≈ 0.05–0.15**, and quite possibly **zero** — much of a club's clean-sheet tendency is already inside a defender's own points-per-90. **GW4 read: zero, and the curve only descends** (ρ 0.621 → 0.614 across 0→0.30). | **A large gain is a warning, not a win**: it most likely means the term is re-ranking defenders by *club quality*, which FDR and the baseline already carry. Check it is not simply reproducing the FDR ordering. |
 
 ### Stopping rule — so "re-run later" cannot become forever
 
@@ -108,6 +112,9 @@ result far outside these is a reason to **check the harness before believing it*
 - **GW6:** the real sitting. Whatever clears the bar ships; whatever does not stays 0. **ADR-188's
   `CLEAN_SHEET_WEIGHT` joins here, not at GW4** — GW4 has one honest attempt in it and three weights already
   queued; a fourth on the same thin sample is how a noise result gets shipped.
+  ⚠️ *One exploratory clean-sheet sweep was run at GW4 anyway, once the machinery existed, and recorded in
+  ADR-188 §📉. It clears **0 of 4** criteria. That does not spend the GW6 slot — but it means GW6 starts from a
+  prior of zero **with a mechanism** (double-counting against points-per-90), not from an open question.*
 - **GW10:** last look. Anything still failing is **closed as not supported** and the config comment says so —
   not left as a permanent "revisit later", which is how a dormant weight becomes furniture.
 
