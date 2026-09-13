@@ -16,7 +16,6 @@ from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
 from src.analytics.gw_form import team_clean_sheet_rate
 from src.analytics.minutes import minutes_weight_from_history
-from src.analytics.setpieces import set_piece_bonus
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
 _BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
@@ -199,7 +198,7 @@ def _status_is_active(p) -> bool:
 def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
     is_available=None, minutes_weight=None, history_by_code=None,
-    form_by_code=None, form_weight: float = 0.0, set_piece_weight: float = 0.0,
+    form_by_code=None, form_weight: float = 0.0,
     defcon_weight: float = 0.0, clean_sheet_weight: float = 0.0, clean_sheet_rates=None,
 ) -> list[dict]:
     """Compute each player's expected points over the next `horizon` gameweeks.
@@ -267,12 +266,9 @@ def player_xp(
         fr = form_by_code.get(code)
         if fr is not None and form_weight and rate is not None:
             rate = blend_form(rate, fr[0], fr[1], form_weight)
-        # Set-piece term (ADR-096) — a per-90 rate bonus for dead-ball takers, but ONLY where the rate
-        # isn't the trusted historical baseline (which already prices an established taker's pens →
-        # double-counting). DORMANT at set_piece_weight 0 → applied_sp 0 → rate unchanged (ADR-041 invariant).
-        applied_sp = (set_piece_weight * set_piece_bonus(p)
-                      if (set_piece_weight and rate is not None and rate_source != "hist") else 0.0)
-        rate = rate + applied_sp if rate is not None else rate
+        # 🚫 A set-piece rate bonus sat here (ADR-096) and was removed as unmeasurable (ADR-190). It could
+        # only ever apply off the `hist` tier — 9 players, fixed for the season — which is both why it was
+        # correct and why no whole-board metric could ever score it. Duty is still *shown* (crowd.SET_PIECES).
         available = is_available(p)
         gw_map = diff_by_team_gw.get(p["team_id"], {})
         # Fixtures flattened in gameweek order (for `games` and the next-fixture difficulty).
@@ -281,7 +277,6 @@ def player_xp(
         if rate is None or not available:
             by_gameweek = {gw: 0.0 for gw in horizon_events}
             xp = 0.0
-            set_piece_xp = 0.0
             defcon_xp = 0.0
             cs_xp = 0.0
         else:
@@ -291,10 +286,6 @@ def player_xp(
                 gw: weight * rate * sum(_multiplier(d) for d in gw_map.get(gw, []))
                 for gw in horizon_events
             }
-            # The set-piece term's share of xp (US-314): the applied rate bonus × mins × horizon
-            # multipliers. 0 when dormant — so a pick can be shown/grounded with its set-piece edge.
-            total_mult = sum(sum(_multiplier(d) for d in gw_map.get(gw, [])) for gw in horizon_events)
-            set_piece_xp = round(weight * applied_sp * total_mult, 1)
             # DefCon fixture magnifier (ADR-097) — a DELTA that re-weights the DefCon points already in the
             # baseline: 2·P(clear) · Σ(magnifier(d) − 1) per GW, minutes-weighted. 0 at weight 0 → xp
             # unchanged (invariance), no double-count. Folded into by_gameweek so it still sums to xp (ADR-032).
@@ -333,7 +324,6 @@ def player_xp(
             "by_gameweek": by_gameweek,               # ADR-032: {gw → xP}, sums to `xp`
             "gameweeks": list(horizon_events),
             "minutes_weight": round(applied_weight, 2),   # xMins v0 weight applied (1.0 without the hook)
-            "set_piece_xp": set_piece_xp,             # ADR-096: the set-piece term's share of xp (0 dormant)
             "defcon_xp": defcon_xp,                   # ADR-097: the DefCon magnifier's net delta (0 dormant)
             "clean_sheet_xp": cs_xp,                  # ADR-188: the club clean-sheet delta (0 dormant)
         })
@@ -372,7 +362,6 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
         players, upcoming, source=source, horizon=horizon,
         baseline_by_code=baseline_by_code, minutes_weight=weight, history_by_code=history_by_code,
         form_by_code=form_by_code, form_weight=config.FORM_WEIGHT,
-        set_piece_weight=config.SET_PIECE_WEIGHT,
         defcon_weight=config.DEFCON_MAGNIFIER_WEIGHT,
         # ADR-188 — the club clean-sheet delta for DEF/GK. Rates are computed only when the weight is live,
         # so a dormant term costs nothing: `team_clean_sheet_rate` is a scan per club and there is no reason

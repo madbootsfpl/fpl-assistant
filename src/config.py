@@ -109,12 +109,21 @@ MEDIA_FEED_LIMIT = 6         # headlines shown per source
 FORM_WEIGHT = 0.0
 FORM_GAMEWEEKS = 5
 
-# Set-piece xP term (ADR-096) — DORMANT (SET_PIECE_WEIGHT = 0). The one xP recipe adds a small per-90
-# rate bonus for set-piece takers (penalties > corners/free-kicks) — but ONLY on the fallback/current
-# rate tiers, NOT the trusted historical baseline (which already prices an established taker's pens →
-# double-counting). At 0 it's a no-op, so xP is unchanged today (an invariance test pins this). GW1:
-# raise the weight + backtest on real returns; start small.
-SET_PIECE_WEIGHT = 0.0
+# 🚫 There is no SET_PIECE_WEIGHT, and that is a decision (ADR-096 → CLOSED by ADR-190, 2026-09-13).
+# The term priced a per-90 bonus for dead-ball takers, on the fallback/cold-start tiers only — never on the
+# trusted historical baseline, which already contains an established taker's penalties.
+#
+# That exclusion is correct and it is also what made the term impossible to calibrate. Of 43 first-choice
+# duty-holders it could reach **9**; `history_by_code` holds only completed seasons, so those 9 are fixed for
+# the season. Nine players cannot shift a rank correlation over 626 — at weight 0.5 the term produced a
+# ranking **0.99998** correlated with the baseline's. §B0's bar was not unmet, it was **unreachable**, and it
+# would have stayed unreachable at GW6, at GW10 and at any n.
+#
+# So the weight is gone rather than left at 0 forever, which is the furniture ADR-101's stopping rule exists
+# to prevent. **Set-piece duty is still shown** — the ⚽/🚩/🎯 glyphs on the pitch (`crowd.SET_PIECES`) are
+# independent of this and always were. The app tells you who takes the penalties; it no longer claims to know
+# what that is worth. ⚠️ Re-adding a weight here needs a way to *measure* it first (ADR-190 Option 3: score a
+# scoped term on the population it scopes to), not just a plausible per-90 number.
 
 # DefCon fixture magnifier (ADR-097) — DORMANT (DEFCON_MAGNIFIER_WEIGHT = 0). The one xP recipe re-weights
 # the DefCon points ALREADY in the baseline by fixture — a delta `defcon_pts_per_match · (magnifier − 1)`

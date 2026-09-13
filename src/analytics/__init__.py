@@ -98,7 +98,6 @@ from src.analytics.price import (
     price_prediction,
     price_pressure,
 )
-from src.analytics.setpieces import set_piece_bonus
 from src.analytics.targets import target_by_fixtures
 from src.analytics.team_dna import TeamDNA, team_dna, team_dna_all, team_insights
 from src.analytics.transfer import (
@@ -198,7 +197,6 @@ __all__ = [
     "Axis",
     "Insight",
     "MIN_MINUTES",
-    "set_piece_bonus",
     "team_dna",
     "team_dna_all",
     "team_insights",

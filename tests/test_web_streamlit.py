@@ -3494,12 +3494,21 @@ def test_the_scout_view_leads_with_what_the_boards_agree_on():
 
 
 def test_the_scout_shortlist_never_promises_points():
-    """The design constraint, as a test. SET_PIECE_WEIGHT and DEFCON_MAGNIFIER_WEIGHT are both 0, so ranking
-    players on those signals would assert a confidence `decision_xp` has explicitly withheld — a second
-    opinion beside the one number the app decides with (ADR-041)."""
+    """The design constraint, as a test. Neither signal Scout ranks on is priced by `decision_xp`, so ranking
+    players on them as though they were points would assert a confidence the engine has explicitly withheld —
+    a second opinion beside the one number the app decides with (ADR-041).
+
+    ⚠️ **This asserts the requirement, not a pair of config values.** It used to read
+    `config.SET_PIECE_WEIGHT == 0.0`, which broke when ADR-190 **deleted** that weight rather than leaving it
+    at 0 — the strongest possible form of "not priced" made the guard error out. The lesson this repo keeps
+    re-learning: a test pinned to how a fact is currently *stored* fails when the fact gets more true.
+    """
     from src import config
-    assert config.SET_PIECE_WEIGHT == 0.0 and config.DEFCON_MAGNIFIER_WEIGHT == 0.0, \
-        "if these are live, the scout copy must change — it currently says this value is NOT in xP"
+
+    assert not hasattr(config, "SET_PIECE_WEIGHT"), \
+        "set-piece is closed, not dormant (ADR-190) — if a weight returns, the scout copy must be re-checked"
+    assert config.DEFCON_MAGNIFIER_WEIGHT == 0.0, \
+        "if this is live, the scout copy must change — it currently says this value is NOT in xP"
 
     at = _run(_PAGES / "5_Players.py")
     if not at.segmented_control:

@@ -5,8 +5,10 @@ xG·xA. Each is true and none is a decision. The owner, reading them: *"I am get
 could we call out a recommendation rather than just showing multiple tables of fact which none will use."*
 
 **The claim this module makes is deliberately narrow: `worth a look`, not `worth points`.** Two of the signals
-it reads — set-piece duty and DefCon — are ones the engine has explicitly decided *not* to price yet
-(`SET_PIECE_WEIGHT` and `DEFCON_MAGNIFIER_WEIGHT` are both **0**, pending the GW4-6 calibration). Ranking
+it reads — set-piece duty and DefCon — are ones the engine has explicitly decided *not* to price.
+`DEFCON_MAGNIFIER_WEIGHT` is **0** pending the GW6 sitting; **set-piece has no weight at all any more**, closed
+as unmeasurable at the GW4 sitting (ADR-190). Which makes this board the *only* place either fact reaches a
+reader — the narrow claim is not a caveat on the page, it is the page's whole job. Ranking
 players on them as though they were points would be the app asserting confidence it has withheld, and would
 put a second opinion beside `decision_xp` — which is the one thing ADR-041 exists to prevent.
 

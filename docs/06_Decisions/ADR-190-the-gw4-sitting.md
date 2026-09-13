@@ -161,7 +161,11 @@ and wants its own gate.
   - [x] Verify each term is live before reading its curve (the rank-correlation column)
   - [x] Re-measure the quartile constants at **two seeds**, ship `CLEAR` = 1.3 with a guard on the new band
   - [x] Record why `EXODUS_PRESSURE` cannot be re-measured as §B0 instructs
-  - [ ] **GATE:** close `SET_PIECE_WEIGHT` as unmeasurable, or adopt Option 3 and measure it on its 9
+  - [x] **CLOSED 2026-09-13 (owner's call): `SET_PIECE_WEIGHT` removed, not left at 0.** The weight, the
+        `player_xp` parameter, the rate branch, the `set_piece_xp` output, the `explain.py` clause, the
+        `_CALIBRATE_WEIGHTS` entry and `src/analytics/setpieces.py` are all gone. Verified byte-identical on
+        live data (**657 players, 0 projections changed**). ADR-096 carries the closure note. **Duty is still
+        shown** — the price went, the signal did not.
   - [ ] **GATE:** a live percentile for the exodus threshold, replacing the fixed constant
   - [ ] At GW6: re-sweep `FORM_WEIGHT` only — it is the one term that both re-ranks the board and points the
         right way. The other three have their answers.

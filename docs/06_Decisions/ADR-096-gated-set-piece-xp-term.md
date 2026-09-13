@@ -2,7 +2,11 @@
 
 **Decision ID:** ADR-096
 **Date:** 2026-08-27
-**Status:** Accepted
+**Status:** 🚫 **CLOSED — removed 2026-09-13 by [ADR-190](./ADR-190-the-gw4-sitting.md).** Accepted and built
+as designed; retired because it turned out to be **unmeasurable**, not because it was wrong. The weight, the
+term and `setpieces.py` are gone from the code — deleted rather than left dormant at 0, which is the furniture
+ADR-101's stopping rule exists to prevent. **Set-piece duty is still shown** (the ⚽/🚩/🎯 glyphs, the Scout
+board); only the *price* was withdrawn. Closure note at the end of this file.
 **Superseded By / Replaces:** extends the **one xP metric** (`decision_xp`/`player_xp`, ADR-041) and the
 **wired-dormant rate-term** pattern (form blend, ADR-060). A **modelling** change to the xP *rate* — a different
 category from the **lens** rule (ADR-057, "signals never touch `decision_xp`"), which still holds for
@@ -123,3 +127,43 @@ tier guard).
   role-changers.
 - **Deferred:** per-team penalty-rate/conversion modelling; a mid-season duty-change detector; auto-detecting
   "newly the taker" beyond the rate tier.
+
+
+---
+
+## 🚫 Closure — 2026-09-13, at the GW4 sitting (ADR-190)
+
+**This term could never have been calibrated, and the reason is the design decision this ADR is proudest of.**
+
+§4 restricted the bonus to the fallback/cold-start tiers, never the trusted historical baseline, because an
+established taker's ≥900-minute baseline already contains his penalties. That is correct, and it is fatal to
+the measurement:
+
+```
+players holding a #1 set-piece duty : 43
+...the term can reach               :  9      (the other 34 are on the 'hist' tier)
+```
+
+`history_by_code` holds only **completed** seasons, so the tier is fixed for the whole season — more
+gameweeks add actuals, never eligible players. Nine players cannot shift a rank correlation computed over
+626: at weight 0.5 the term produced a ranking **0.99998** correlated with the unweighted one, so §B0's
++0.040 bar was **unreachable**, not merely unmet, and would have stayed unreachable at GW6 and GW10.
+
+**What was removed:** `config.SET_PIECE_WEIGHT`, the `set_piece_weight` parameter on `player_xp`, the rate
+branch in `xp.py`, the `set_piece_xp` output field (US-314) and its `+X xP set-piece edge` clause in
+`explain.py`, the `set_piece` entry in `_CALIBRATE_WEIGHTS`, and `src/analytics/setpieces.py` entirely.
+Verified byte-identical on live data: **657 players, 0 projections changed** — it was genuinely inert, which
+is what a dormant weight is supposed to be.
+
+**What survives, deliberately:** the duty itself. `crowd.SET_PIECES` renders ⚽/🚩/🎯 on the pitch and never
+depended on this term, and the Scout board reads first-choice duty as a *"worth a look"* signal (ADR-167).
+The reason string still says **"Penalty taker"** — it just no longer offers a number after it.
+
+**The end state, said plainly: the app tells you who takes the penalties and declines to tell you what that
+is worth.** Which is [ADR-057](./ADR-057-crowd-signals-lens.md)'s rule arrived at from the other direction —
+that ADR says a signal may not enter `decision_xp` on assertion; this one tried to enter it on evidence, and
+the evidence could not be gathered. Same destination.
+
+⚠️ **Re-opening this needs a way to measure it, not a better per-90 number.** ADR-190 Option 3 — scoring a
+scoped term on the population it scopes to, rather than diluting it across the whole board — is the route,
+and it is unbuilt and gated.

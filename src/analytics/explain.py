@@ -65,13 +65,12 @@ def _get(row, key):
         return None
 
 
-def _penalty_reason(set_piece_xp) -> str:
-    """The penalty-taker ✓ reason (US-314/ADR-096). When the set-piece xP term is **active** and moved this
-    pick's xp (`set_piece_xp > 0`), name the grounded edge so a narrated figure verifies; otherwise the plain
-    display-lens phrasing (dormant → byte-identical). The number is real (it's the term's share of xp)."""
-    if set_piece_xp:
-        return f"Penalty taker (+{set_piece_xp} xP set-piece edge)"
-    return "Penalty taker"
+# The penalty-taker ✓ reason (US-314/ADR-096). It used to grow a "+X xP set-piece edge" clause whenever the
+# set-piece term was active — but that term was closed as unmeasurable (ADR-190), so the branch could never
+# fire again and the clause would have been a number the app could not justify. What is left is the fact
+# itself, which the app does know: **this player takes the penalties.** ⚠️ Do not re-attach a figure here
+# without a weight that has been measured; naming a duty is a lens, pricing it is a claim (ADR-057).
+PENALTY_REASON = "Penalty taker"
 
 
 def _defcon_reason(defcon_xp):
@@ -103,7 +102,7 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
     if xp is not None:
         reasons.append("Highest projected points")
     if top.get("penalty_taker"):
-        reasons.append(_penalty_reason(top.get("set_piece_xp")))
+        reasons.append(PENALTY_REASON)
     if _get(row, "freekicks_order") == 1 or _get(row, "corners_order") == 1:
         reasons.append("Set-piece involvement")
     defcon = _defcon_reason(top.get("defcon_xp"))
@@ -178,7 +177,7 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
         reasons.append(f"Higher projected points ({buy['xp']} vs {sell['xp']})")
     if _get(in_row, "penalties_order") == 1:
         # Grounded set-piece edge when the term moved the buy's xp (US-314); else the display-lens phrasing.
-        reasons.append(_penalty_reason(buy.get("set_piece_xp") or _get(in_row, "set_piece_xp")))
+        reasons.append(PENALTY_REASON)
     defcon = _defcon_reason(buy.get("defcon_xp") or _get(in_row, "defcon_xp"))
     if defcon:
         reasons.append(defcon)

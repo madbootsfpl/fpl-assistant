@@ -14,7 +14,7 @@ to verify the GW1-gated features. Nothing here changes a weight until the backte
 >
 > **Dry-run verified 2026-08-13 (~8 days out):** ✅ `calibrate --weight form|set_piece|defcon` all run and gate
 > correctly (*"Not enough gameweeks yet — have 0, need ≥4"*); ✅ `history --backfill [--limit N]` wired; ✅ `reseed`
-> present; ✅ `config.FORM_WEIGHT`/`SET_PIECE_WEIGHT`/`DEFCON_MAGNIFIER_WEIGHT` all `0.0`; ✅ invariance + activation
+> present; ✅ `config.FORM_WEIGHT`/~~`SET_PIECE_WEIGHT`~~/`DEFCON_MAGNIFIER_WEIGHT` all `0.0` (set-piece closed + removed 2026-09-13, ADR-190); ✅ invariance + activation
 > tests green (32). **What can only be checked once GW1 posts:** the gated features *lighting up* (a real manager-ID
 > squad loads · momentum/price/community-signals show live movement) and a real `--backfill` fetch. **Timing:** the
 > 21st is **§A** (backfill · reseed · verify features); the **weight flip is §B (~GW4–6)** once ≥4 GWs of returns
@@ -55,12 +55,15 @@ Run the backtest, read the table, and **only if it clearly helps**, commit the v
      currently proves "config default ⇒ no change"; once the default *is* the new weight, add a
      `monkeypatch.setattr(config, "<WEIGHT>", 0.0)` so it still tests the **dormancy property**, not the default:
      - form → `tests/test_form.py::test_decision_xp_invariant_while_dormant`
-     - set-piece → `tests/test_setpieces.py::test_decision_xp_invariant_while_set_piece_dormant`
+     - ~~set-piece~~ 🚫 gone — the weight was removed (ADR-190); `tests/test_setpieces_closed.py` now
+       guards that it *stays* gone, including that the ⚽ duty glyphs survive the removal
      - defcon → `tests/test_defcon_xp.py::test_decision_xp_invariant_while_defcon_dormant`
      The `*_unchanged_when_*_weight_zero` tests (explicit weight 0) and the `*_activates_*` tests (they monkeypatch a
      weight > 0) **stay green as-is** — only the "default = dormant" test changes.
    - If the curve is flat / no clear signal → **leave it at 0** and re-run later.
-2. **Then set-piece:** `python app.py calibrate --weight set_piece` → same decision → set `config.SET_PIECE_WEIGHT`.
+2. ~~**Then set-piece.**~~ 🚫 **Closed 2026-09-13 (ADR-190) — there is no set-piece weight any more.** It was
+   removed rather than left at 0, and `--weight set_piece` is no longer a valid choice: a closed question left
+   sweepable is an invitation to re-run it until it passes.
 3. **Then DefCon:** `python app.py calibrate --weight defcon` → set `config.DEFCON_MAGNIFIER_WEIGHT`.
 4. **Then clean sheet:** `python app.py calibrate --weight clean_sheet` → set `config.CLEAN_SHEET_WEIGHT`.
    Its dormancy guard is `tests/test_xp.py::test_the_clean_sheet_term_is_dormant_and_changes_nothing`,
@@ -102,7 +105,7 @@ result far outside these is a reason to **check the harness before believing it*
 | weight | expectation | if it comes back very differently |
 |---|---|---|
 | `FORM_WEIGHT` | small positive, **≈ 0.05–0.20**. FPL's `form` is a 30-day mean — real signal, largely already inside `points_per_game`. | > 0.35 suggests the baseline rate is being under-used, not that form is magic. Inspect the tiers (ADR-028/124) first. |
-| `SET_PIECE_WEIGHT` | small positive, driven almost entirely by **penalties**; corners/FKs near zero. | A large gain with pens excluded means the proxy is picking up "good attacker", not set-piece duty. |
+| ~~`SET_PIECE_WEIGHT`~~ 🚫 **CLOSED 2026-09-13** | ~~small positive, driven almost entirely by penalties~~ — never measurable: the term reaches **9 of 657** players (ADR-096's `hist`-tier exclusion), fixed for the season. | **Removed, not zeroed** (ADR-190). The prediction was never tested because the instrument could not resolve it. |
 | `DEFCON_MAGNIFIER_WEIGHT` | **genuinely unknown** — a new stat, one season of history. Coin-flip whether it clears the bar. | Any large effect deserves suspicion: check it is not just re-ranking defenders by minutes. |
 | `CLEAN_SHEET_WEIGHT` *(built + dormant, ADR-188)* | small positive, **≈ 0.05–0.15**, and quite possibly **zero** — much of a club's clean-sheet tendency is already inside a defender's own points-per-90. **GW4 read: zero, and the curve only descends** (ρ 0.621 → 0.614 across 0→0.30). | **A large gain is a warning, not a win**: it most likely means the term is re-ranking defenders by *club quality*, which FDR and the baseline already carry. Check it is not simply reproducing the FDR ordering. |
 
@@ -114,7 +117,7 @@ n=626 · **1 SE = 0.040**.
 | weight | ρ across the sweep | shape | **ρ(rank at 0, rank at w)** @0.5 | verdict |
 |---|---|---|---|---|
 | `FORM_WEIGHT` | 0.621 → 0.626 | ascending, **+0.005** | **0.987** — genuinely re-ranks | fails c1; **re-sweep at GW6** |
-| `SET_PIECE_WEIGHT` | 0.621 → 0.622 | flat | **0.99998** — barely moves the list | **unmeasurable, not unmeasured** |
+| `SET_PIECE_WEIGHT` | 0.621 → 0.622 | flat | **0.99998** — barely moves the list | 🚫 **CLOSED + REMOVED same day** |
 | `DEFCON_MAGNIFIER_WEIGHT` | 0.621 → 0.622 | flat | **0.99977** | **unmeasurable, not unmeasured** |
 | `CLEAN_SHEET_WEIGHT` | 0.621 → 0.614 | **descending**, −0.007 | **0.981** — genuinely re-ranks | fails c1; double-count (ADR-188) |
 
@@ -176,7 +179,8 @@ population they were measured on was big enough to mean anything.
 | `EXODUS_PRESSURE` (p10) · `EXODUS_OWNERSHIP_FLOOR` | GW1, 199 players ≥1% owned (ADR-146/150) | re-measured on ≥4 GWs it moves **< 20%** → keep. **≥ 20%** → the original was noise; take the new value and say so. |
 | captain-margin quartiles · concentration quartiles (ADR-143/145) | one gameweek | same 20% test. These gate *whether a message appears at all*, so a wrong quartile is a feature that fires on everyone or no one. |
 | ADR-125 in-season xMins share | deliberately deferred to this sitting | `c ≈ GWs/(GWs+k)` reaches a share worth having only when it changes a projection by **> 0.5 xP for ≥ 20 players**. Below that it is churn. |
-| Scout / Trending copy | — | ⚠️ **When any weight flips, `test_the_scout_shortlist_never_promises_points` fails by design** — the page says this value *is not in xP*, which stops being true. Rewrite the copy in the same commit as the flip. |
+| Scout / Trending copy | — | ⚠️ **The set-piece half of this row is now permanent** — the weight is gone (ADR-190), so that signal can never
+  become xP without a new ADR. **When any *remaining* weight flips, `test_the_scout_shortlist_never_promises_points` fails by design** — the page says this value *is not in xP*, which stops being true. Rewrite the copy in the same commit as the flip. |
 
 ### ⚠️ Verified while writing this, not assumed
 
@@ -187,8 +191,11 @@ weight and watching:
   this value is not in xP, and that stops being true at the flip.
 * **The set-piece dormancy test was blind below 0.2** — `weight × PENALTY_BONUS (0.3)` rounded away at 1dp, so
   at **0.05 / 0.10 / 0.15**, the exact range pre-registered above as *expected*, it stayed green while
-  guarding nothing. **Fixed** (2026-08-29): it now asserts `config.SET_PIECE_WEIGHT == 0.0` directly, so it
+  guarding nothing. **Fixed** (2026-08-29): it asserted `config.SET_PIECE_WEIGHT == 0.0` directly, so it
   fails at any non-zero value. Form and DefCon were checked the same way and already fail at every value.
+  🚫 **Moot since 2026-09-13** — the weight is removed, not zeroed (ADR-190), and the rounding blindness that
+  made this test hard to write turns out to have been the same fact that killed the term: a per-90 bonus
+  smaller than the display grid, on nine players, was never going to register in a whole-board metric either.
 
 The general point, since it has now caught three things this month: **a tripwire you have not fired is a
 tripwire you are assuming.**
