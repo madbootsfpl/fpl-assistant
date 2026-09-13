@@ -69,12 +69,23 @@ def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl",
 # How clear a captain lead is, calibrated against the **measured** distribution rather than invented (ADR-144).
 # Over 300 random legal squads on live data the gap between the top pick and the runner-up came out:
 #
-#     p25 0.20 · median 0.60 · p75 1.00 · max 2.80
+#     GW1 (ADR-144)  p25 0.20 · median 0.60 · p75 1.00 · max 2.80
+#     GW4 (ADR-190)  p25 0.30 · median 0.60 · p75 1.30 · max 4.30      ← re-measured at two seeds
 #
-# So the captain call is *usually close*: 44% of squads separate their top two by under half a point. These
-# thresholds are the quartiles, which is what makes "a clear pick" mean something — it is the top quarter of
-# real leads, not a number someone liked the look of.
-WHISKER, CLEAR = 0.3, 1.0
+# So the captain call is *usually close*: about half of squads separate their top two by under 0.7.
+# These thresholds are the quartiles, which is what makes "a clear pick" mean something — it is the top
+# quarter of real leads, not a number someone liked the look of.
+#
+# ⚠️ **`CLEAR` moved 1.0 → 1.3 at the GW4 sitting, and that was pre-registered, not chosen.** The runbook's
+# rule for a constant measured on one gameweek is: re-measure on ≥4, ship the new value if it moves ≥20%.
+# This moved **30%**. `WHISKER` re-measured at 0.30 — a 0% move — and stayed.
+#
+# The direction is the interesting part. Leads **widened** (max 2.80 → 4.30) as real returns replaced
+# preseason projections, so holding `CLEAR` at 1.0 would have quietly promoted the middle of the
+# distribution into "a clear pick" — the threshold would have kept its number and lost its meaning. A
+# quartile is a claim about a distribution, so when the distribution moves the constant has to move with it
+# or it stops being the thing it was defined as.
+WHISKER, CLEAR = 0.3, 1.3
 
 
 def captain_margin(picks) -> dict | None:

@@ -142,16 +142,24 @@ def _pick(name, xp):
 
 def test_the_verdict_thresholds_are_the_measured_quartiles_not_invented():
     """The whole point of the verdict. Measured over 300 random legal squads on live data, the gap between
-    the top captain pick and the runner-up came out **p25 0.20 · median 0.60 · p75 1.00 · max 2.80** — so the
-    captain call is usually close, and 44% of squads separate their top two by under half a point.
+    the top captain pick and the runner-up came out **p25 0.20 · median 0.60 · p75 1.00 · max 2.80** at GW1,
+    and **p25 0.30 · median 0.60 · p75 1.30 · max 4.30** re-measured at GW4 (ADR-190, two seeds).
 
     `WHISKER` and `CLEAR` are those quartiles. That is what makes "a clear pick" mean something: it is the top
     quarter of *real* leads, not a number someone liked the look of.
+
+    ⚠️ **`CLEAR` is 1.3, not 1.0, and the change was pre-registered** — `GW1_RUNBOOK` §B0 says a constant
+    measured on one gameweek ships its new value if a ≥4-gameweek re-measure moves it ≥20%. It moved 30%.
+    Leads **widened** as real returns replaced preseason projections, so leaving it at 1.0 would have kept the
+    number and lost the meaning: the middle of the distribution would have been promoted to "a clear pick".
     """
-    assert (WHISKER, CLEAR) == (0.3, 1.0)
+    assert (WHISKER, CLEAR) == (0.3, 1.3)
     assert captain_margin([_pick("A", 5.0), _pick("B", 4.9)])["verdict"] == "whisker"   # 0.1
     assert captain_margin([_pick("A", 5.0), _pick("B", 4.5)])["verdict"] == "narrow"    # 0.5
     assert captain_margin([_pick("A", 6.5), _pick("B", 5.0)])["verdict"] == "clear"     # 1.5
+    # ⚠️ The band the move created: 1.0-1.2 used to read "clear" and now reads "narrow". If this is ever
+    # reverted by eye rather than by a re-measure, this line is the one that fails.
+    assert captain_margin([_pick("A", 6.1), _pick("B", 5.0)])["verdict"] == "narrow"    # 1.1
 
 
 def test_a_whisker_says_it_is_too_close_to_call():
@@ -163,8 +171,12 @@ def test_a_whisker_says_it_is_too_close_to_call():
 
 
 def test_a_clear_lead_reads_as_one():
-    line = margin_line(captain_margin([_pick("Haaland", 7.4), _pick("Fernandes", 6.3)]))
-    assert line.startswith("A clear pick") and "1.1" in line and "Fernandes" in line
+    """⚠️ The gap here was **1.1** until the GW4 sitting (ADR-190) re-measured `CLEAR` from 1.0 to 1.3, at
+    which point 1.1 became a *narrow* lead and this test failed — correctly. It is the example that has to
+    move when the threshold moves, so it is worth saying why rather than just editing the number: leads
+    widened as real returns replaced preseason projections, and 1.1 is now inside the middle half of them."""
+    line = margin_line(captain_margin([_pick("Haaland", 7.8), _pick("Fernandes", 6.3)]))
+    assert line.startswith("A clear pick") and "1.5" in line and "Fernandes" in line
 
 
 def test_no_runner_up_means_no_margin_rather_than_a_huge_one():

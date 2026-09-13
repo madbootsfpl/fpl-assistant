@@ -106,9 +106,54 @@ result far outside these is a reason to **check the harness before believing it*
 | `DEFCON_MAGNIFIER_WEIGHT` | **genuinely unknown** — a new stat, one season of history. Coin-flip whether it clears the bar. | Any large effect deserves suspicion: check it is not just re-ranking defenders by minutes. |
 | `CLEAN_SHEET_WEIGHT` *(built + dormant, ADR-188)* | small positive, **≈ 0.05–0.15**, and quite possibly **zero** — much of a club's clean-sheet tendency is already inside a defender's own points-per-90. **GW4 read: zero, and the curve only descends** (ρ 0.621 → 0.614 across 0→0.30). | **A large gain is a warning, not a win**: it most likely means the term is re-ranking defenders by *club quality*, which FDR and the baseline already carry. Check it is not simply reproducing the FDR ordering. |
 
+### 📉 GW4 — the first checkpoint, held 2026-09-13 (ADR-190)
+
+**Nothing shipped. All four weights stay at 0.** Baseline everywhere: ρ 0.621 · MAE 1.22 · hit@20 0.19 ·
+n=626 · **1 SE = 0.040**.
+
+| weight | ρ across the sweep | shape | **ρ(rank at 0, rank at w)** @0.5 | verdict |
+|---|---|---|---|---|
+| `FORM_WEIGHT` | 0.621 → 0.626 | ascending, **+0.005** | **0.987** — genuinely re-ranks | fails c1; **re-sweep at GW6** |
+| `SET_PIECE_WEIGHT` | 0.621 → 0.622 | flat | **0.99998** — barely moves the list | **unmeasurable, not unmeasured** |
+| `DEFCON_MAGNIFIER_WEIGHT` | 0.621 → 0.622 | flat | **0.99977** | **unmeasurable, not unmeasured** |
+| `CLEAN_SHEET_WEIGHT` | 0.621 → 0.614 | **descending**, −0.007 | **0.981** — genuinely re-ranks | fails c1; double-count (ADR-188) |
+
+⚠️ **Read that fourth column before reading the third.** A flat ρ curve means *"no signal"* only if the term
+actually reaches the projection. Set-piece changes **5 players' xP of 657** and produces a ranking 0.99998
+correlated with the baseline's — which **cannot** change that ranking's correlation with reality by 0.040. The
+bar is not unmet, it is **unreachable**, and it stays unreachable at GW6, GW10 and any n.
+
+Why, for set-piece, and it is by design: the bonus applies **only off the `hist` tier** (ADR-096 — a trusted
+baseline already prices an established taker's pens). Of **43** #1 duty-holders the term reaches **9**, and
+`history_by_code` holds only *completed* seasons, so **that 9 is fixed for the season**. More gameweeks add
+actuals, not eligible players.
+
+**Constants re-measured the same day, at two seeds** (ADR-183 — one sample of a random process is not a
+measurement):
+
+| constant | GW1 | GW4 | move | outcome |
+|---|---|---|---|---|
+| `WHISKER` | 0.20 | 0.30 · 0.30 | 0% | keep **0.3** |
+| `CLEAR` | 1.00 | 1.30 · 1.30 | **+30%** | ⚠️ **shipped 1.3** — leads widened (max 2.80 → 4.30) |
+| `CONCENTRATED` | 0.35 | 0.374 · 0.370 | +6% | keep **0.35** |
+| `HEAVY` | 0.45 | 0.446 · 0.435 | −2% | keep **0.45** |
+| `EXODUS_PRESSURE` | −7,996 | −3,901 | +51% | ⚠️ **the rule cannot be run** — see below |
+
+⚠️ **`EXODUS_PRESSURE`'s re-measure instruction has no data to run on.** `price_pressure` reads
+`transfers_in_event`/`transfers_out_event` — *current-event* fields — and `player_history` stores no per-round
+transfer columns, so the app holds one week of this quantity at a time. *"Re-measure on ≥4 gameweeks"*
+produced a **second single-week sample**. Two samples 51% apart establish **that it varies**, not a new value.
+No constant was changed. The threshold flags **2 of 190** today against an intended worst-tenth — which is an
+argument for a **live percentile** rather than a fixed constant, gated in ADR-190.
+
 ### Stopping rule — so "re-run later" cannot become forever
 
 - **GW4:** first honest attempt. Expect at least one weight to fail on sample size alone.
+  ✅ **Held 2026-09-13 — see §📉 above. Nothing shipped.** Two of the four turned out to fail on something
+  other than sample size, which the rule below does not have a category for: **they are unmeasurable by a
+  whole-board rank metric**, permanently. ⭐ **§B0 checked whether its bar was strict enough and never whether
+  it was reachable** — pre-registration stops you choosing the answer after the fact; it does not stop you
+  asking a question the instrument cannot answer.
 - **GW6:** the real sitting. Whatever clears the bar ships; whatever does not stays 0. **ADR-188's
   `CLEAN_SHEET_WEIGHT` joins here, not at GW4** — GW4 has one honest attempt in it and three weights already
   queued; a fourth on the same thin sample is how a noise result gets shipped.
