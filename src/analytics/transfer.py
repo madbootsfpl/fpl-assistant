@@ -51,6 +51,33 @@ def _club_ok(out, candidate, club_counts, max_per_club) -> bool:
     return final <= max_per_club
 
 
+# ADR-189 — how close two gains must be before the tie-break may speak. ADR-161 measured **one starter's
+# single-gameweek points at sd 3.51**, so a gap of a few tenths per week is a coin flip dressed as a ranking.
+# 2.0 over a five-gameweek window is 0.4 a week — comfortably inside that noise, and deliberately small
+# enough that the tie-break can never overturn a difference worth having.
+TIE_NOISE = 2.0
+
+# Positions whose points depend on their club keeping a clean sheet, so two of them from one club succeed and
+# fail together.
+_DEFENSIVE = ("DEF", "GK")
+
+
+def _correlated_after(out, incoming, owned) -> int:
+    """How many **other** defensive assets from the incoming player's club you would hold after the swap.
+
+    Two defenders at one club are not two bets, they are one bet twice: the clean sheet arrives for both or
+    neither. Measured (ADR-189) that correlation **never moves expected points** — it multiplies the spread
+    of that component by exactly √2, worth ~1.2 points at worst — which is why this is a tie-break and not a
+    warning or a weight. It speaks only when the xP difference is already noise.
+    """
+    if incoming["position"] not in _DEFENSIVE:
+        return 0
+    return sum(1 for p in owned
+               if p["id"] != out["id"]
+               and p["position"] in _DEFENSIVE
+               and p["team"] == incoming["team"])
+
+
 def suggest_transfers(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, limit: int = 5, max_per_club: int = MAX_PER_CLUB,
@@ -111,7 +138,19 @@ def suggest_transfers(
                 if gain > 0:
                     pairs.append((gain, out, out_sum, c, in_sum))
 
-    pairs.sort(key=lambda t: t[0], reverse=True)
+    # ADR-189 — rank by gain, then break near-ties toward less correlated defensive exposure.
+    #
+    # The owner, on a suggestion to sell his Arsenal defender for a Sunderland one while already holding a
+    # Sunderland defender: *"he would be a better option to transfer to Ballard maybe."* He was right, and the
+    # model had picked the other sell on **1.7 xP over five gameweeks** — 0.34 a week against a per-player
+    # weekly sd of 3.51. It was a coin flip presented as a ranking.
+    #
+    # ⚠️ **Quantised, not subtracted.** Rounding the gain to the nearest `TIE_NOISE` and sorting on that keeps
+    # the primary ordering exactly intact for any real difference, and lets the structural preference decide
+    # only *within* a noise band. Subtracting a penalty instead would let it outrank a genuinely better move,
+    # which is the failure ADR-183's tie-break was sized to avoid.
+    pairs.sort(key=lambda t: (round(t[0] / TIE_NOISE), -_correlated_after(t[1], t[3], owned), t[0]),
+               reverse=True)
 
     used_out: set = set()
     used_in: set = set()

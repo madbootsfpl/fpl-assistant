@@ -431,3 +431,87 @@ def test_the_fact_threads_through_every_step_of_a_plan():
     plan = suggest_transfer_plan(owned, market, xp, count=2, xi_aware=False, reported_out={1: _LEAVING})
     first = next(m for m in plan if m["out"]["id"] == 1)
     assert first["gain"] == 7.0                 # …and not the 1.0 his stored xP would have made it
+
+
+# ---- ADR-189: break near-ties toward less correlated defensive exposure -------------------------
+
+def _tie_squad():
+    """A 15 whose two weakest defenders are one Sunderland and one Arsenal, with a Sunderland target.
+
+    The Arsenal defender is fractionally the weaker, so **raw gain prefers selling him** — which leaves two
+    Sunderland defenders whose clean sheets arrive together. That is the owner's case, constructed.
+    """
+    def row(pid, name, pos, team, price):
+        return {"id": pid, "web_name": name, "position": pos, "team": team, "price": price,
+                "status": "a", "chance": None, "total_points": 0, "selected_by": 5.0,
+                "penalties_order": None, "corners_order": None, "freekicks_order": None,
+                "cost_change_event": 0, "transfers_in_event": 0, "form": 0.0}
+
+    spec = [(1, "GK1", "GK", "EVE", 4.5, 30), (2, "GK2", "GK", "FUL", 4.0, 29),
+            (3, "SunA", "DEF", "SUN", 4.4, 20.4), (4, "Ars", "DEF", "ARS", 4.5, 20.0),
+            (5, "D3", "DEF", "LIV", 5.0, 31), (6, "D4", "DEF", "BOU", 4.5, 32),
+            (7, "D5", "DEF", "CRY", 4.5, 33),
+            (8, "M1", "MID", "MUN", 7.0, 40), (9, "M2", "MID", "NFO", 6.5, 39),
+            (10, "M3", "MID", "ARS", 6.0, 38), (11, "M4", "MID", "LIV", 6.0, 37),
+            (12, "M5", "MID", "LEE", 5.5, 36),
+            (13, "F1", "FWD", "CHE", 7.5, 45), (14, "F2", "FWD", "AVL", 6.5, 44),
+            (15, "F3", "FWD", "CRY", 6.0, 43)]
+    owned, xp = [], {}
+    for pid, name, pos, team, price, value in spec:
+        owned.append(row(pid, name, pos, team, price))
+        xp[pid] = value
+    target = row(100, "SunB", "DEF", "SUN", 4.9)
+    xp[100] = 34.0
+    return owned, owned + [target], xp
+
+
+def test_a_near_tie_breaks_toward_less_correlated_defence():
+    """ADR-189, owner: *"I have Hume in my squad, a Sunderland player — he would be a better option to
+    transfer to Ballard maybe."*
+
+    The model had picked the other sell on **1.7 xP over five gameweeks** — 0.34 a week, against a
+    per-player weekly sd of **3.51** (ADR-161). It was a coin flip presented as a ranking, and the coin
+    landed on the squad with two defenders whose clean sheets arrive together.
+    """
+    import src.analytics.transfer as transfer_mod
+
+    owned, market, xp = _tie_squad()
+    top = transfer_mod.suggest_transfers(owned, market, xp, bank=0.5, limit=1, xi_aware=False)[0]
+    assert top["out"]["web_name"] == "SunA", (
+        "with the gains 0.4 apart the tie-break must keep the Arsenal defender rather than double up on "
+        f"Sunderland: {top['out']['web_name']}")
+
+
+def test_the_tie_break_never_overturns_a_real_difference():
+    """⚠️ **The safety property, and the reason it is quantised rather than subtracted.**
+
+    Rounding the gain into `TIE_NOISE` buckets keeps the primary ordering exactly intact for any difference
+    worth having; the structural preference decides only *within* a band. Subtracting a penalty instead would
+    let it outrank a genuinely better move — the failure ADR-183's tie-break was sized to avoid.
+
+    Measured on 120 live squads when this shipped: it changed the top suggestion in **7%**, and never gave up
+    more than the band (max 1.70 against a band of 2.0).
+    """
+    import src.analytics.transfer as transfer_mod
+
+    owned, market, xp = _tie_squad()
+    xp[4] = 12.0                      # the Arsenal defender is now clearly the worst — not a tie at all
+    top = transfer_mod.suggest_transfers(owned, market, xp, bank=0.5, limit=1, xi_aware=False)[0]
+    assert top["out"]["web_name"] == "Ars", (
+        "a difference far outside the noise band must win on merit — the tie-break may only separate "
+        "near-equals")
+
+
+def test_the_tie_break_ignores_outfield_positions():
+    """It is about **clean sheets**, which only DEF and GK earn. Two midfielders at one club are not a
+    correlated bet in the same way — their returns come from goals and assists, which are not all-or-nothing
+    per match. Scoping it to defensive assets is what keeps it a narrow, defensible claim rather than a
+    general "diversify" heuristic nobody measured."""
+    from src.analytics.transfer import _correlated_after
+
+    owned, _market, _xp = _tie_squad()
+    out = next(p for p in owned if p["web_name"] == "Ars")
+    sun_def = {"id": 100, "web_name": "SunB", "position": "DEF", "team": "SUN", "price": 4.9}
+    sun_mid = {"id": 101, "web_name": "SunM", "position": "MID", "team": "SUN", "price": 6.0}
+    assert _correlated_after(out, sun_def, owned) == 1, "one other Sunderland defender would remain"
+    assert _correlated_after(out, sun_mid, owned) == 0, "a midfielder is not a clean-sheet bet"

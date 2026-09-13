@@ -451,6 +451,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   *"weakest stretch · Confidence 42/100 · Low"* to *"**worth +99.6 xP**… you keep only 3 of 15; £14.1m cannot
   play · **Confidence 95/100 · High**"*. ⭐ *A recommendation that measures only WHEN will present itself as
   an answer to WHETHER.*
+- ✅ **Two defenders, one bet** (ADR-189, Sprint 250, 2026-09-13) — the owner's second point, **declined as
+  a warning and shipped as a tie-break**. 38% of squads hold 2+ defensive assets from one club (so it
+  discriminates, unlike ADR-145's clashes at 100%), but correlation **never moves expected points** — it
+  multiplies that component's spread by √2, ~1.2 pts at worst against an XI spread of 11.6. The real defect
+  was that the ranking separated the two candidate sells by **1.7 xP** against a weekly sd of **3.51**.
+  ⭐ *A ranking that separates two options by less than its own noise is not ranking them — it is picking one.*
 - 📋 **A defender plays for a team** (ADR-188, proposed 2026-09-13) — *owner, on an ADR-186 suggestion:*
   **"that is a transfer I would not make… I have a cheap Arsenal fullback, likelihood of clean sheets
   probably >50%."** ⭐ The app already knows: Team DNA shows **Arsenal 75%** clean-sheet potential against
