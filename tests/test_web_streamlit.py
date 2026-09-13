@@ -4623,24 +4623,44 @@ def test_the_lab_prices_the_build_mode_instead_of_leaving_it_silent():
     assert re.search(r"£\d+\.\d+m (less|more) on the bench", line), line
 
 
-def test_toggling_build_mode_changes_the_squad():
-    """The owner's report, asserted end to end: the two modes must not return the same fifteen.
+def test_toggling_build_mode_is_never_silent():
+    """ADR-183, owner: *"when toggling between Build mode, there are no changes to the team."*
 
-    ⚠️ This would have **passed while broken**, because the collision was intermittent — the solver returned
-    one of two tied optima at random, and only sometimes the one Strong XI picks. It is a real guard now
-    *because* the optimiser is deterministic; before ADR-183 it would have been a coin flip in CI, which is
-    worse than no test.
+    The requirement is **not** that the modes always differ — sometimes they legitimately cannot. At a full
+    £100m the budget is not binding, so the money reaches the best XI *and* a decent bench and both
+    objectives land on the same fifteen. That is a true answer: *you are not constrained.*
+
+    The requirement is that the page **never leaves the toggle silent**: either the squad changes, or it says
+    why it did not.
+
+    ⚠️ **This was written as "the two modes must return different squads" and broke the moment the data
+    moved** — a history backfill brought four gameweeks in, the budget stopped binding at £100m, and a
+    correct collision was reported as a regression. **A test that asserts today's data reports a regression
+    when the season moves on** — the second time in one session (see the `calibrate` guard).
+
+    And it is the first time ADR-183's collision branch has fired on real data. It was described there as
+    *"an alarm that should never fire on stable data"*, which is exactly why it was worth building.
     """
-    def fifteen(mode):
+    def build(mode):
         at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=200).run()
         next(c for c in at.segmented_control if c.label == "Tool").set_value("Lab").run()
         at = next(r for r in at.radio if r.label == "Build mode").set_value(mode).run()
         assert not at.exception, at.exception
         frames = [df.value for df in at.dataframe if "Player" in getattr(df.value, "columns", [])]
-        return tuple(sorted(frames[0]["Player"])) if frames else None
+        squad = tuple(sorted(frames[0]["Player"])) if frames else None
+        note = next((c.value for c in at.caption if c.value.startswith("⚖️")), "")
+        return squad, note
 
-    a = fifteen("All-round (strong bench)")
+    a, note_a = build("All-round (strong bench)")
     if a is None:
+        return                                             # no data in this environment
+    b, note_b = build("Strong XI (cheap bench)")
+
+    if a != b:
+        for note in (note_a, note_b):
+            assert "xP" in note, f"a changed squad must be priced, not just shown: {note!r}"
         return
-    b = fifteen("Strong XI (cheap bench)")
-    assert a != b, "the two build modes returned an identical squad — the toggle does nothing"
+    for note in (note_a, note_b):
+        assert "same 15" in note and "no trade-off" in note, (
+            "the modes returned an identical squad and the page did not say so — which is exactly what was "
+            f"reported as a bug: {note!r}")

@@ -104,7 +104,12 @@ It separates exact ties and nothing else, across every case tried.
 This is the half of the original proposal that survives, and it answers the question the toggle actually
 raises — not *"is it different?"* but *"is it worth it?"*
 
-**3. Keep a collision notice as a guard, not as a feature.** If the two modes ever do return the same fifteen,
+**3. Keep a collision notice as a guard, not as a feature.**
+
+> ✅ **It fired for real on 2026-09-13**, four days later. A history backfill brought GW3-4 in, the budget
+> stopped binding at £100m, and both modes legitimately returned the same fifteen — exactly the case this
+> branch was built for and described as *"should never fire on stable data"*. Without it the toggle would
+> have gone silent again, which is what was reported as a bug in the first place. If the two modes ever do return the same fifteen,
 the page says so rather than rendering silence. On stable data that branch should never fire — which is
 precisely why it is worth having: it is the alarm that would have caught **ADR-137's** mode, which was
 structurally incapable of differing and went unnoticed until the owner reported it.
