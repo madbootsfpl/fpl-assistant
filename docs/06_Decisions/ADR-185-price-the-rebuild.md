@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-185
 **Date:** 2026-09-13
-**Status:** 📋 **Proposed** — gate before building
+**Status:** ✅ **Accepted — built** (Sprint 247, 2026-09-13). **1742 → 1746 tests, ruff clean.**
 **Superseded By / Replaces:** Extends [ADR-082](./ADR-082-chip-strategy-advisor.md)'s chip advisor. **No
 `decision_xp` change.** One of three gaps opened by the owner's A/B experiment; see also ADR-186 and ADR-187.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -106,6 +106,45 @@ reach it by any other route. **The label is the honesty.**
 
 ---
 
+### 🔬 Built — what it says now
+
+On the owner's squad, the same call that read *"Confidence 42/100 · Low"*:
+
+```
+Wildcard: worth +99.6 xP — a fresh build beats your squad over this window;
+          you keep only 3 of 15; £14.1m of your squad cannot play.
+          Your weakest stretch GW5–GW7 (avg XI 48.8 xP) — reset before it
+          · Confidence 95/100 · High
+```
+
+**42 → 95.** The fixture window survives and is demoted: it answers a real question, just not the first one.
+A closing line says the wildcard's confidence measures a different thing from the other three chips'.
+
+**`rebuild=None` leaves every existing caller byte-identical** — a squad that cannot be priced (a fixture
+without `price`, a partial snapshot) takes that path rather than failing the whole chip answer. The
+enhancement degrades; the answer does not.
+
+#### ⚠️ Two guards tested components and not the wiring
+
+Both survived their first mutation, and both for the same reason:
+
+| mutation | why it passed |
+|---|---|
+| confidence falls back to the fixture margin | the test called `rebuild_confidence` **directly**, so the branch in `explain_chips` that *selects* it was never executed |
+| `idle_spend` is never computed | the renderer test passed `idle_spend` as a **literal** in a hand-built dict, so `rebuild_value` never computed it |
+
+> ⭐ **Testing a component is not testing that anything uses it.**
+
+The same shape as ADR-181's *"a test that rebuilds the thing under test is testing the test"*, one level out:
+there the substitute was a re-implementation, here it is a hand-supplied input. Both leave the production
+path unexecuted while reading like coverage.
+
+Repaired by driving `explain_chips` end-to-end (with near-flat weeks, so the fixture margin *would* read Low
+if it were still in charge) and by computing `idle_spend` from data with two deliberately dead forwards.
+**Six mutations, all caught**, including a no-op control to prove the harness itself was live.
+
+---
+
 ### ⚖️ Consequences & Trade-offs
 
 * **Positive Impact:** the biggest call available to a manager stops being invisible; the advisor answers
@@ -123,17 +162,17 @@ reach it by any other route. **The label is the honesty.**
 ### 🛠 Implementation & Migration
 * **Components Affected:** Code (`analytics/chips.py`, the chip surfaces), Tests, Docs
 * **Action Items:**
-  - [ ] `chips.py` computes the rebuild gap at the current budget
-  - [ ] The wildcard entry reports gap · overlap · idle money · the transfer alternative
-  - [ ] Confidence keys on the **gap**, not the fixture margin
-  - [ ] Guard: a squad with two dead slots produces a **high**-confidence wildcard call
-  - [ ] Guard: a freshly-optimal squad produces a small gap and advises against
-  - [ ] Guard: the number is labelled as the wildcard's value, never as a squad score
-  - [ ] **Mutation-test every guard**; clean suite re-run between mutants
-  - [ ] Preview → owner sign-off
+  - [x] `chips.py` computes the rebuild gap at the current budget
+  - [x] The wildcard entry reports gap · overlap · idle money · the transfer alternative
+  - [x] Confidence keys on the **gap**, not the fixture margin
+  - [x] Guard: a squad with two dead slots produces a **high**-confidence wildcard call
+  - [x] Guard: a freshly-optimal squad produces a small gap and advises against
+  - [x] Guard: the number is labelled as the wildcard's value, never as a squad score
+  - [x] **Mutation-test every guard**; clean suite re-run between mutants
+  - [x] Built directly on the owner's *"build ADR-185"* — the ADR carried the measurements a preview would have shown
 
 #### ✅ Always
-- [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
+- [x] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
 
 ---
 

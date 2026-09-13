@@ -25,9 +25,26 @@ def _fh_line(fh) -> str:
 
 
 def _wc_line(wc) -> str:
+    """The wildcard line — **what it is worth**, then when to play it (ADR-185).
+
+    The window comes first historically and second now, deliberately. *"Your weakest stretch"* answers
+    *when*; a manager sitting on a broken squad is asking *whether*, and the old line let the fixture answer
+    stand in for the squad answer. The gain leads because it is the bigger fact.
+    """
     a, b = wc["window"]
     span = f"GW{a}" if a == b else f"GW{a}–GW{b}"
-    return f"{span} — your weakest stretch (avg XI {wc['avg_xi']} xP); reset before it"
+    when = f"weakest stretch {span} (avg XI {wc['avg_xi']} xP) — reset before it"
+    gain = wc.get("gain")
+    if gain is None:
+        return f"{span} — your weakest stretch (avg XI {wc['avg_xi']} xP); reset before it"
+    if gain <= 0:
+        return f"not worth it — a rebuild projects no better than your squad. Your {when}"
+    bits = [f"worth +{gain} xP — a fresh build beats your squad over this window"]
+    if wc.get("overlap") is not None and wc.get("squad_size"):
+        bits.append(f"you keep only {wc['overlap']} of {wc['squad_size']}")
+    if wc.get("idle_spend"):
+        bits.append(f"£{wc['idle_spend']}m of your squad cannot play")
+    return f"{'; '.join(bits)}. Your {when}"
 
 
 def _moved(chip) -> str:
@@ -72,6 +89,9 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
         "  Confidence = how clearly that gameweek beats the alternatives (a heuristic; low when the weeks are",
         "  close). Based on your fixture run + projected points — double/blank gameweeks and mini-league",
         "  position sharpen this in-season (live from GW1).",
+        # ADR-185 — the wildcard's confidence measures a different thing from the others', so it says so.
+        *(["  The Wildcard's confidence is how far a rebuild beats your squad, not how clearly one week wins."]
+          if (advice.get("wildcard") or {}).get("gain") is not None else []),
     ]
     if confidences:                       # the honest attribution closing an explained answer (US-278)
         lines += ["", MODEL_NOTE]

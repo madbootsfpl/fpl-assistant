@@ -419,6 +419,19 @@ def chip_confidence(margin, value) -> int:
     return max(1, min(99, round(40 + 55 * clear)))
 
 
+# A rebuild worth this fraction of your current projection is an unarguable wildcard. 25% is deliberately
+# high: at £100m over five gameweeks it means a quarter of your season's projected points is being left on
+# the table, which is not a marginal call. Provisional — re-measure once several squads have been checked.
+_CLEAR_REBUILD = 0.25
+
+
+def rebuild_confidence(gain, current) -> int:
+    """How clearly a wildcard is worth playing (ADR-185), 1-99 — the rebuild's gain relative to the squad's
+    own projection. A healthy squad measures a few xP and reads Low, which is the correct advice: *don't*."""
+    rel = (max(0.0, gain or 0.0) / current) if current else 0.0
+    return max(1, min(99, round(40 + 55 * min(1.0, rel / _CLEAR_REBUILD))))
+
+
 def explain_chips(advice) -> dict | None:
     """Per-chip confidence for a `chip_advisor` result (ADR-089): `{chip: {confidence, band}}`, from each
     chip's `margin` (best vs next-best gameweek) relative to its value. None if there's no advice."""
@@ -428,6 +441,13 @@ def explain_chips(advice) -> dict | None:
     for chip, value_key in _CHIP_VALUE_KEY.items():
         rec = advice.get(chip) or {}
         conf = chip_confidence(rec.get("margin"), rec.get(value_key))
+        # ⚠️ **The wildcard's confidence was answering the wrong question (ADR-185).** `margin` measures how
+        # clearly one *window* beats another — genuinely low when the weeks are close — but the decision is
+        # not *"which week"*, it is *"is a rebuild worth it"*. Owner-reported: a **+99.6 xP** rebuild
+        # rendered as *"Confidence 42/100 · Low"*, so the advisor was least confident exactly when the case
+        # was overwhelming. Two different questions were sharing one number.
+        if chip == "wildcard" and rec.get("gain") is not None:
+            conf = rebuild_confidence(rec["gain"], rec.get("current"))
         out[chip] = {"confidence": conf, "band": confidence_band(conf)}
     return out
 

@@ -87,7 +87,53 @@ def _one_per_gameweek(*chips, ranks) -> None:
         taken.add(alternative[0])
 
 
-def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
+def rebuild_value(owned, market, xp_by_id, *, budget, select=None) -> dict | None:
+    """What a **wildcard** is worth: your squad against the best one the same money can buy (ADR-185).
+
+    Owner-reported, from a two-team A/B he was 40 points ahead in: the advisor said *"Wildcard GW5-7, your
+    weakest stretch · Confidence 42/100 · Low"* while his squad overlapped an optimal build by **3 of 15**
+    and carried **£14.1m that could not play**. It was answering *when are your fixtures worst* and nothing
+    else — a fixture question standing in for a squad question.
+
+    > **A recommendation that measures only *when* will present itself as an answer to *whether*.**
+
+    Returns ``{current, rebuilt, gain, overlap, squad_size, idle_spend}``, or None when no build is possible.
+
+    ⚠️ **`gain` is what a WILDCARD is worth, not a squad-quality score.** The rebuild is unconstrained by
+    transfers, which is exactly right for a chip that lifts that constraint and would overstate anything
+    else — most squads cannot reach it by any other route. Callers must label it as the chip's value; the
+    surface copy pairs it with what free transfers recover instead.
+
+    `select` is injectable so this stays testable without the solver.
+    """
+    if not owned or not market:
+        return None
+    from src.analytics.optimizer import SQUAD_15, available_players, select_squad
+
+    solve = select or select_squad
+    pool = available_players(market, keep_ids={p["id"] for p in owned})[0]
+    result = solve(pool, budget=budget, formation=SQUAD_15, size=len(owned), scores=xp_by_id)
+    if not result or result.get("status") != "Optimal":
+        return None
+
+    rebuilt = result["selected"]
+    owned_ids, new_ids = {p["id"] for p in owned}, {p["id"] for p in rebuilt}
+    current = round(sum(xp_by_id.get(p["id"], 0.0) for p in owned), 1)
+    total = round(sum(xp_by_id.get(p["id"], 0.0) for p in rebuilt), 1)
+    # Money tied up in players the projection says cannot contribute — the concrete half of the gap, and the
+    # part a reader can verify by looking at their own pitch.
+    idle = round(sum(p["price"] for p in owned if xp_by_id.get(p["id"], 0.0) <= 0), 1)
+    return {
+        "current": current,
+        "rebuilt": total,
+        "gain": round(total - current, 1),
+        "overlap": len(owned_ids & new_ids),
+        "squad_size": len(owned),
+        "idle_spend": idle,
+    }
+
+
+def chip_advisor(owned, by_gameweek_by_id, gameweeks, *, rebuild=None) -> dict | None:
     """Recommend the best gameweek (or window) for each chip, from the squad's per-GW xP.
 
     `owned` are the squad's 15 player rows; `by_gameweek_by_id` is `{id → {gw → xP}}` (from
@@ -95,6 +141,11 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
     ``{triple_captain, bench_boost, free_hit, wildcard}`` (each a dict), or None if there's nothing to
     reduce (no players / no gameweeks). Each reduction is a decomposition of `by_gameweek` + the best
     legal XI that GW — so it agrees with the lineup/captain tools by construction.
+
+    `rebuild` is an optional `rebuild_value(...)` result (ADR-185). Supplied, the wildcard entry carries what
+    the chip is **worth** as well as when to play it — the difference between answering *whether* and only
+    answering *when*. Absent, the wildcard reads exactly as it did before, so every existing caller is
+    unaffected.
     """
     if not owned or not gameweeks:
         return None
@@ -166,6 +217,10 @@ def chip_advisor(owned, by_gameweek_by_id, gameweeks) -> dict | None:
         "avg_xi": win_avgs[best_start],
         "margin": _gap(win_avgs, largest=False),
     }
+    # ADR-185 — the fixture window says *when*; the rebuild says *whether*, and it is the bigger question.
+    if rebuild:
+        wildcard.update({k: rebuild[k]
+                         for k in ("gain", "current", "rebuilt", "overlap", "squad_size", "idle_spend")})
 
     # **One chip per gameweek** (ADR-143). Each chip above was chosen independently, so nothing stopped two of
     # them naming the same week — measured at **28% of squads** over an 8-GW horizon, and the app was then

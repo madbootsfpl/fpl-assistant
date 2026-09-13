@@ -44,6 +44,7 @@ from src.analytics import (
     player_history,
     price_prediction,
     price_pressure,
+    rebuild_value,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
@@ -816,6 +817,22 @@ def _chips_facts(advice: dict) -> dict:
     }
 
 
+def _price_a_rebuild(owned, players, xp_by_id, squad):
+    """`rebuild_value` for this squad, or **None** when it cannot be priced (ADR-185).
+
+    The budget a wildcard has is the squad's selling value plus the bank. A player row without a `price` —
+    a hand-built fixture, a partial snapshot — makes that unanswerable, and the right response is to skip
+    the valuation rather than fail the whole chip answer: `chip_advisor` treats `rebuild=None` as "say only
+    when", which is exactly the advice that shipped before this ADR. **The enhancement degrades; the answer
+    does not.**
+    """
+    try:
+        budget = round(sum(p["price"] for p in owned) + (squad.get("bank") or 0.0), 1)
+    except (KeyError, IndexError, TypeError):
+        return None
+    return rebuild_value(owned, players, xp_by_id, budget=budget)
+
+
 def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
                   *, horizon=_HORIZON) -> dict | None:
     """Analytics DECIDE when to play each chip (ADR-082): Triple Captain · Bench Boost · Free Hit · Wildcard.
@@ -827,11 +844,15 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
     data = _squad_xp(store, squad_name, active_squad, horizon=horizon)
     if data is None:
         return None
-    squad, _players, owned, _xp_by_id, by_gameweek_by_id, gameweeks, _weight = data
+    squad, players, owned, xp_by_id, by_gameweek_by_id, gameweeks, _weight = data
     if not owned:
         return None
 
-    advice = chip_advisor(owned, by_gameweek_by_id, gameweeks)
+    # ADR-185 — price the rebuild, so the wildcard can answer *whether* and not only *when*. The budget is
+    # what this squad is actually worth: its selling value plus the bank, which is what a wildcard has to
+    # spend. One extra solve (~0.08s, ADR-183).
+    rebuild = _price_a_rebuild(owned, players, xp_by_id, squad)
+    advice = chip_advisor(owned, by_gameweek_by_id, gameweeks, rebuild=rebuild)
     if advice is None:
         return None
     confidences = explain_chips(advice)   # a per-chip confidence (ADR-089) — Low preseason (near-flat weeks)

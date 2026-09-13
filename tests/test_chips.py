@@ -193,3 +193,112 @@ def test_the_margins_are_compared_as_a_SHARE_not_raw(monkeypatch):
     assert a["triple_captain"]["gameweek"] == 2, \
         "TC gives up ~80% of its value by moving; BB gives up almost nothing — TC must keep the week"
     assert a["bench_boost"]["gameweek"] != 2 and "moved_from" in a["bench_boost"]
+
+
+# ---- ADR-185: the wildcard answers *whether*, not only *when* ----------------------------------
+
+def _squad(n=15, xp=20.0, price=6.0):
+    pos = ["GK"] * 2 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+    return [{"id": i, "web_name": f"P{i}", "position": pos[i % len(pos)], "team": f"T{i % 6}",
+             "price": price, "status": "a", "chance": None, "total_points": 0} for i in range(n)]
+
+
+def test_the_wildcard_reports_what_a_rebuild_is_worth():
+    """ADR-185, owner-reported from a two-team A/B he was 40 points ahead in: the advisor said *"Wildcard
+    GW5-7, your weakest stretch · Confidence 42/100 · Low"* while his squad overlapped an optimal build by
+    **3 of 15** and carried **£14.1m that could not play**.
+
+    `chips.py` chose the week by the lowest rolling window of best-XI xP — *when are your fixtures worst* and
+    nothing else. **It never asked what a wildcard would gain.**
+
+    > A recommendation that measures only *when* will present itself as an answer to *whether*.
+    """
+    from src.analytics.chips import chip_advisor, rebuild_value
+
+    owned = _squad()
+    market = owned + [{**p, "id": 100 + p["id"], "web_name": f"Better{p['id']}"} for p in owned]
+    xp = {p["id"]: 10.0 for p in owned} | {100 + p["id"]: 30.0 for p in owned}
+
+    reb = rebuild_value(owned, market, xp, budget=200.0)
+    assert reb["gain"] > 0 and reb["overlap"] == 0, reb
+    assert reb["current"] == 150.0 and reb["rebuilt"] == 450.0    # 15 × 10 vs 15 × 30
+
+    # ⚠️ `idle_spend` computed from the data, not handed in. The renderer test passes a literal, so it never
+    # exercised this — a mutation hard-coding it to 0.0 passed. Two forwards priced at 6.0 projecting nothing
+    # is £12.0m tied up, which is the concrete half of the gap and the part a reader can check on their pitch.
+    dead = [p for p in owned if p["position"] == "FWD"][:2]
+    xp_dead = {**xp, **{p["id"]: 0.0 for p in dead}}
+    assert rebuild_value(owned, market, xp_dead, budget=200.0)["idle_spend"] == 12.0
+    assert rebuild_value(owned, market, xp, budget=200.0)["idle_spend"] == 0.0, \
+        "a squad where everyone contributes has no idle money"
+
+    by_gw = {p["id"]: {1: 1.0, 2: 1.0, 3: 1.0} for p in market}
+    advice = chip_advisor(owned, by_gw, [1, 2, 3], rebuild=reb)
+    wc = advice["wildcard"]
+    assert wc["gain"] == reb["gain"] and wc["overlap"] == 0 and wc["squad_size"] == 15
+    assert wc["window"], "it must still say WHEN — the fixture answer is not replaced, it is demoted"
+
+
+def test_the_wildcard_reads_exactly_as_before_without_a_rebuild():
+    """The compatibility contract. `rebuild=None` must leave every existing caller untouched — the
+    enhancement degrades, the answer does not. A squad that cannot be priced (no `price` on the rows) takes
+    this path rather than failing the whole chip answer."""
+    from src.analytics.chips import chip_advisor
+
+    owned = _squad()
+    by_gw = {p["id"]: {1: 5.0, 2: 1.0, 3: 1.0} for p in owned}
+    wc = chip_advisor(owned, by_gw, [1, 2, 3])["wildcard"]
+    for key in ("gain", "overlap", "idle_spend"):
+        assert key not in wc, f"{key} must be absent when no rebuild was priced"
+    assert "window" in wc and "avg_xi" in wc
+
+
+def test_the_wildcard_confidence_measures_the_gap_not_the_fixture_margin():
+    """⚠️ **Two different questions were sharing one number.** `margin` is how clearly one *window* beats
+    another — genuinely low when the weeks are close, which they usually are. But the decision is not *"which
+    week"*, it is *"is a rebuild worth it"*, and on the owner's squad a **+99.6 xP** rebuild rendered as
+    *Confidence 42/100 · Low* — least confident exactly when the case was overwhelming.
+    """
+    from src.analytics.explain import rebuild_confidence
+
+    assert rebuild_confidence(99.6, 275.3) >= 90, "an overwhelming rebuild must read High"
+    assert rebuild_confidence(5.0, 300.0) <= 50, "a healthy squad must read Low — the advice is *don't*"
+    assert rebuild_confidence(0.0, 300.0) <= 45
+    assert rebuild_confidence(None, None) >= 1, "empty-safe"
+    # Monotonic: a bigger gap can never read as less confident.
+    ladder = [rebuild_confidence(g, 300.0) for g in (0, 10, 25, 50, 100)]
+    assert ladder == sorted(ladder), ladder
+
+    # ⚠️ …and the WIRING, through `explain_chips`. Calling `rebuild_confidence` alone left the branch that
+    # selects it untested: a mutation disabling it (falling back to the fixture margin) passed everything
+    # above. **Testing a component is not testing that anything uses it.**
+    from src.analytics.chips import chip_advisor
+    from src.analytics.explain import explain_chips
+
+    owned = _squad()
+    by_gw = {p["id"]: {1: 5.0, 2: 4.9, 3: 4.8} for p in owned}      # near-flat weeks → a tiny fixture margin
+    reb = {"current": 100.0, "rebuilt": 199.6, "gain": 99.6, "overlap": 3,
+           "squad_size": 15, "idle_spend": 14.1}
+    with_reb = explain_chips(chip_advisor(owned, by_gw, [1, 2, 3], rebuild=reb))["wildcard"]
+    without = explain_chips(chip_advisor(owned, by_gw, [1, 2, 3]))["wildcard"]
+    assert with_reb["confidence"] >= 90 and with_reb["band"] == "High", with_reb
+    assert without["confidence"] < 60, ("with no rebuild it must fall back to the fixture margin, which on "
+                                        f"near-flat weeks is Low: {without}")
+
+
+def test_the_rebuild_gain_is_labelled_as_the_chips_value_not_a_squad_score():
+    """⚠️ The rebuild is unconstrained by transfers — right for a chip that lifts that constraint, and an
+    overstatement of anything else. The copy must say what a **wildcard** is worth, and must not imply the
+    squad is reachable by other means."""
+    from src.ui.chips import render_chip_advice
+
+    owned = _squad()
+    by_gw = {p["id"]: {1: 5.0, 2: 1.0, 3: 1.0} for p in owned}
+    reb = {"current": 100.0, "rebuilt": 199.6, "gain": 99.6, "overlap": 3,
+           "squad_size": 15, "idle_spend": 14.1}
+    from src.analytics.chips import chip_advisor
+    out = render_chip_advice(chip_advisor(owned, by_gw, [1, 2, 3], rebuild=reb), "S", horizon=3)
+    assert "worth +99.6 xP" in out, out
+    assert "you keep only 3 of 15" in out
+    assert "£14.1m of your squad cannot play" in out
+    assert "weakest stretch" in out, "the fixture window survives — it answers a real question, just not the first"

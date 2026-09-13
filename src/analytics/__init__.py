@@ -7,7 +7,7 @@ up to the display. It never touches the API or the screen.
 
 from src.analytics.analyse import analyse_squad
 from src.analytics.captain import captain_margin, captain_picks, margin_line
-from src.analytics.chips import CHIP_NAMES, chip_advisor
+from src.analytics.chips import CHIP_NAMES, chip_advisor, rebuild_value
 from src.analytics.cleansheet import defensive_solidity
 from src.analytics.crowd import (
     AVAILABILITY_LEGEND,
@@ -126,6 +126,7 @@ __all__ = [
     "captain_picks",
     "margin_line",
     "chip_advisor",
+    "rebuild_value",
     "CHIP_NAMES",
     "next_deadline",
     "deadline_urgency",

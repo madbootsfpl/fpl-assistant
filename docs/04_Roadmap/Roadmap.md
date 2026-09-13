@@ -447,7 +447,11 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
-- 📋 **Three gaps from the owner's two-team A/B** (ADR-185/186/187, proposed 2026-09-13) — he runs one team
+- ✅ **Price the rebuild** (ADR-185, Sprint 247, 2026-09-13) — **built.** The wildcard call went from
+  *"weakest stretch · Confidence 42/100 · Low"* to *"**worth +99.6 xP**… you keep only 3 of 15; £14.1m cannot
+  play · **Confidence 95/100 · High**"*. ⭐ *A recommendation that measures only WHEN will present itself as
+  an answer to WHETHER.*
+- 📋 **The other two gaps from the owner's A/B** (ADR-186/187, proposed 2026-09-13) — he runs one team
   on MADBOOTS and one on his own judgement, and is **40 points ahead after four gameweeks**. All three of the
   gaps he named check out. **ADR-185** — the wildcard advisor measures only *when your fixtures are worst* and
   never asks what a rebuild is worth (**+102.3 xP**, 3/15 overlap, £14.1m that cannot play — reported at
