@@ -76,14 +76,37 @@ def test_core_never_imports_a_web_edge():
     """The core imports **neither** edge — `src/web` (FastAPI) nor `src/web_streamlit` (Streamlit).
 
     Both edge packages start with `src.web`, so a single prefix check covers both (ADR-050/052).
+
+    ⚠️ **This checks real imports via the AST, not a substring.** It was a bare text scan, which failed on a
+    *comment* in `cli.py` that merely mentioned `src/web_streamlit` while explaining an entry-point fix.
+
+    ⚠️⚠️ **And the first repair silently broke it.** Stripping comments by tokenizing and re-joining with
+    newlines split `src.web_streamlit` into three separate lines, so the substring could never match again —
+    a real illegal import passed. Caught only by mutation-testing the "fixed" guard. **A guard you have just
+    improved is exactly the guard you have to re-break.**
     """
+    import ast
+
+    def edge_imports(text):
+        """Modules this file actually imports whose path starts with `src.web` — the rule, precisely."""
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            return ["<unparseable>"]                       # fail loud rather than pass quietly
+        hits = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                hits += [a.name for a in node.names if a.name.startswith("src.web")]
+            elif isinstance(node, ast.ImportFrom) and (node.module or "").startswith("src.web"):
+                hits.append(node.module)
+        return hits
+
     root = pathlib.Path(__file__).resolve().parent.parent
     offenders = []
     for entry in _CORE:
         p = root / entry
         files = p.rglob("*.py") if p.is_dir() else [p]
         for f in files:
-            text = f.read_text()
-            if "src.web" in text or "src/web" in text:   # matches src/web AND src/web_streamlit
-                offenders.append(str(f.relative_to(root)))
+            for mod in edge_imports(f.read_text()):
+                offenders.append(f"{f.relative_to(root)} imports {mod}")
     assert not offenders, f"the core must not import a web edge (one-way flow): {offenders}"

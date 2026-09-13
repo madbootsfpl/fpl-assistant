@@ -54,11 +54,50 @@ def test_parse_range_is_inclusive():
     assert _parse_range("0,0.5,0.25") == [0.0, 0.25, 0.5]
 
 
-def test_calibrate_reports_insufficient_preseason(capsys):
-    # ADR-101: no per-GW returns yet (seed DB) → the harness says "not enough gameweeks", never a crash / a flip.
+def test_calibrate_refuses_when_there_are_too_few_gameweeks(capsys, monkeypatch):
+    """ADR-101 — with fewer than `MIN_GWS` played, the harness must refuse and say so, never flip a weight
+    on noise.
+
+    ⚠️ **This used to run against the live DB and assert the preseason answer.** It passed for a month and
+    then failed on 2026-09-13 — not because anything broke, but because a history backfill brought the data
+    to **four** gameweeks and the calibration legitimately ran. The test was pinning *the state of the
+    database*, so the arrival of the milestone it was waiting for looked like a regression.
+
+    It now stubs the history, so it tests the **refusal rule** at any point in the season.
+    """
+    from src.analytics import backtest
+
+    # Stub the *count of played gameweeks*, which is what the guard reads — not the sweep, which never runs.
+    monkeypatch.setattr(backtest, "rounds_with_actuals", lambda _gwh: {1})
     cmd_calibrate(SimpleNamespace(weight="form", range=None))
     out = capsys.readouterr().out
-    assert "Not enough gameweeks" in out and "GW4" in out
+    assert "Not enough gameweeks" in out, out[:300]
+    assert f"need ≥{backtest.MIN_GWS}" in out, "say how many are needed, not just that there are too few"
+
+
+def test_calibrate_runs_once_there_are_enough_gameweeks(capsys):
+    """The other side of the same rule, and the reason the test above was rewritten: with enough gameweeks
+    the harness must actually evaluate rather than keep refusing.
+
+    Skips cleanly when the local DB is still short — the point is that *having* the data produces a result,
+    not that this machine has it."""
+    from src.analytics import backtest
+    from src.storage import Storage
+
+    store = Storage()
+    try:
+        gwh = store.get_gw_history_by_code()
+    finally:
+        store.close()
+    played = {r["round"] for rows in gwh.values() for r in (dict(x) for x in rows)
+              if r.get("team_h_score") is not None}
+    if len(played) < backtest.MIN_GWS:
+        return
+
+    cmd_calibrate(SimpleNamespace(weight="form", range=None))
+    out = capsys.readouterr().out
+    assert "Not enough gameweeks" not in out, "there is enough data — it must evaluate"
+    assert "ρ (rank)" in out, out[:300]
 
 
 def test_ask_remembers_the_last_turn_across_runs(capsys, monkeypatch, tmp_path):
@@ -568,3 +607,31 @@ def test_no_xmins_flag_defaults_off_and_parses(command):
     base = [command] + ([] if command == "captain" else ["--squad", "TS"])
     assert build_parser().parse_args(base).no_xmins is False
     assert build_parser().parse_args(base + ["--no-xmins"]).no_xmins is True
+
+
+def test_the_module_entry_point_actually_runs_the_cli():
+    """A CLI that exits 0 and does nothing is the worst failure mode there is — it looks like success.
+
+    Found 2026-09-13: `python -m src.cli history --backfill` printed nothing, returned **0**, and left the
+    data untouched. `src/cli.py` had no `if __name__ == "__main__"` block, so the module was imported,
+    every definition ran, and the process exited cleanly without reaching `main()`.
+
+    ⚠️ **Asserted through a real subprocess**, because that is the only way to exercise a `__main__` block —
+    importing the module is precisely the path that was broken.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    out = subprocess.run([sys.executable, "-m", "src.cli", "--help"],
+                         capture_output=True, text=True, cwd=root)
+    assert out.returncode == 0, out.stderr[-400:]
+    assert "history" in out.stdout, \
+        "`python -m src.cli` produced no help — the module exits without calling main()"
+
+    # …and the documented entry point stays equivalent, so neither form silently diverges (ADR-003).
+    via_app = subprocess.run([sys.executable, "app.py", "--help"],
+                             capture_output=True, text=True, cwd=root)
+    assert via_app.returncode == 0
+    assert via_app.stdout == out.stdout, "the two entry points must show the same CLI"

@@ -1270,3 +1270,12 @@ def main(argv=None) -> None:
         return
 
     args.handler(args)
+
+
+# ⚠️ **Without this, `python -m src.cli <anything>` imports the module and exits 0, doing nothing.** Found
+# 2026-09-13 while backfilling history: the command printed no output, returned success, and the data was
+# unchanged — a silent no-op that looks exactly like a completed job. `app.py` is the documented entry point
+# (ADR-003) and `src/web_streamlit` already has a `__main__.py`; this makes the obvious third form work too,
+# rather than lie.
+if __name__ == "__main__":       # pragma: no cover - exercised by the subprocess guard, not by import
+    main()

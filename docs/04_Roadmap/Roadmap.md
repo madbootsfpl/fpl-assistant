@@ -447,6 +447,15 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
   into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
   Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
+- 📋 **Three gaps from the owner's two-team A/B** (ADR-185/186/187, proposed 2026-09-13) — he runs one team
+  on MADBOOTS and one on his own judgement, and is **40 points ahead after four gameweeks**. All three of the
+  gaps he named check out. **ADR-185** — the wildcard advisor measures only *when your fixtures are worst* and
+  never asks what a rebuild is worth (**+102.3 xP**, 3/15 overlap, £14.1m that cannot play — reported at
+  *Confidence 42/100 · Low*). **ADR-186** — nothing in the codebase asks what a larger budget would afford;
+  **£1.5m is worth +6.4 xP** on his squad today. **ADR-187** — reopens ADR-132's decline of multi-GW planning,
+  whose *"tree with one branch"* was measured preseason on a model since corrected twice; re-run, there are
+  five branches and the ranking reorders with the horizon. ⭐ **A decline needs a re-measure date, the same as
+  a feature needs a review date.**
 - ✅ **Sweep for the claim** (ADR-184, Sprint 245, 2026-09-12) — *owner, reading the Lab:* **"note the model
   note: 'the recommendation is data-driven; **AI explains the reasoning**'."** The claim ADR-168 retired in
   August, still rendering from `MODEL_NOTE` on **six** surfaces, false for every tester. ⭐ Both earlier guards
