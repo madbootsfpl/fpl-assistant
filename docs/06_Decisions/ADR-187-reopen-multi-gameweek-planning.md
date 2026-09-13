@@ -2,8 +2,9 @@
 
 **Decision ID:** ADR-187
 **Date:** 2026-09-13
-**Status:** 📋 **Proposed** — gate before building. **Reopens a decision, so the gate is whether the new
-evidence is sufficient, not what to build.**
+**Status:** ✅ **Resolved — CLOSED, the decline stands** (Sprint 251, 2026-09-13). The measurement ran; it
+says no. **ADR-132's conclusion is re-grounded on current data**, and the reopening was worth it for that
+alone.
 **Superseded By / Replaces:** **Reopens [ADR-132](./ADR-132-transfer-timing.md)'s decline** of the roadmap's
 multi-GW transfer-path planner, on re-measurement. Third of three gaps from the owner's A/B; see ADR-185 and
 ADR-186.
@@ -86,7 +87,85 @@ question is narrower: **is a short, budget-aware sequence better than the greedy
 
 ---
 
-### ⚖️ Consequences & Trade-offs
+### 🔬 The measurement — and it says no
+
+`spikes/187-transfer-paths/measure.py`. Both strategies get **the same budget**: three transfers, one per
+gameweek, no hits, money carried between moves. The only difference is foresight.
+
+- **greedy** — each gameweek, take the best single move for the remaining horizon, then move on.
+- **planned** — choose the moves **and their timing** together, over the whole window.
+
+24 random legal squads, 6 gameweeks:
+
+```
+              mean over 24 squads
+  do nothing        178.8
+  greedy            220.1     +41.3   ← what transferring at all is worth
+  planned           222.0      +1.9   ← what FORESIGHT adds on top
+
+  greedy captures 96% of the available gain. Planning adds 4%.
+```
+
+| | |
+|---|---|
+| squads where planning added **nothing at all** | **13 of 24 (54%)** |
+| median gain | **+0.0** |
+| p75 / p90 / max | +2.5 / +6.2 / **+14.3** |
+| mean | +1.9 over six gameweeks (**+0.32/GW**) |
+
+**More than half the time, foresight changes nothing whatsoever** — planned and greedy select the identical
+sequence. That is ADR-132's original finding, stated in its own words and now true of the corrected model:
+
+> *"The gain moves; the decision does not."*
+
+⚠️ **The tail is real and is recorded rather than averaged away.** 12% of squads gained ≥5 points and one
+gained **+14.3**. The answer is not *"planning is worthless"*; it is *"planning is worth nothing for the
+median squad and occasionally worth a lot, and we cannot tell in advance which squad is which"* — which is
+not a feature, it is a lottery ticket with a 6-gameweek search attached.
+
+#### ⚠️ Two design faults in the measurement itself, both of which gave a confident wrong answer first
+
+**1. The two strategies had different budgets.** Greedy made one move per gameweek (**six**) while planned was
+capped at **three**. The first run reported planning *losing* by 12 points a squad — which was not a finding
+about foresight at all, but a finding that six transfers beat three.
+
+> **A comparison in which the two strategies get different budgets measures the budget.**
+
+**2. Planned could lose to greedy, which is impossible if the search is sound.** It drew from a shortlist
+computed **once** against the opening squad, while greedy re-scanned the whole market after every move. So it
+measured shortlist size, not planning. Seeding the search with greedy's own answer makes `planned ≥ greedy`
+hold by construction, and the reported gain becomes exactly what it should be — **what foresight adds on top
+of greedy**.
+
+Both faults produced plausible, tabulated, wrong numbers. **The tell in each case was a result that should
+have been structurally impossible** (a strictly larger search space losing), which is the only reason they
+were caught.
+
+#### The honest limit on this result
+
+The search is bounded: a shortlist of 10 candidate pairs, at most 3 moves, timing chosen from combinations of
+gameweeks. **+1.9 is therefore a lower bound** — a better planner might find more. What the measurement
+establishes is narrower and sufficient: **the easy wins are not there.** A modest search over a correctly
+priced market recovers 4% on top of greedy, and nothing for the median squad.
+
+---
+
+### ✅ Resolution
+
+**Closed. ADR-132's decline stands, now on current data.**
+
+Per ADR-101's stopping-rule discipline — *"not left as a permanent revisit-later, which is how a dormant
+weight becomes furniture"* — this is **closed as not supported**, not deferred again.
+
+**What would legitimately reopen it**, recorded so the next person does not re-derive it:
+
+- **A double or blank gameweek inside the horizon.** Every squad here faced six normal gameweeks. A blank is
+  exactly the structural event foresight exists for, and none of this measures it.
+- **Chips.** Planning transfers *into* a Bench Boost or Free Hit is a different problem with a real deadline.
+- **A materially larger search** finding more than +1.9 on the same squads — the bound above is the thing to
+  beat, and it is now written down.
+
+
 
 * **Positive Impact:** the largest strategic gap the owner named gets tested rather than cited; either it
   ships or the decline is re-grounded on current data — both are worth having.
@@ -103,11 +182,11 @@ question is narrower: **is a short, budget-aware sequence better than the greedy
 ### 🛠 Implementation & Migration
 * **Components Affected:** measurement first; code only if it passes
 * **Action Items:**
-  - [ ] Prototype: greedy path vs best 2-3 move sequence over 6 GWs, several squads
-  - [ ] Constrain by budget carry-over, 1 free transfer/week, −4 for extras
-  - [ ] Record the result **either way**, in this ADR, with the squads and date
-  - [ ] Gate on the number — build only if the sequence materially beats greedy
-  - [ ] If it closes: update ADR-132 with the re-measurement so nobody re-opens it from memory
+  - [x] Prototype: greedy path vs best 2-3 move sequence over 6 GWs, 24 squads
+  - [x] Constrain by budget carry-over and one free transfer per week (no hits — both sides alike)
+  - [x] Record the result **either way** — done above, with the spike committed
+  - [x] Gate on the number — **+1.9 mean, +0.0 median: it does not clear**
+  - [x] Update ADR-132 with the re-measurement so nobody re-opens it from memory
 
 #### ✅ Always
 - [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**

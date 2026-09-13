@@ -49,6 +49,19 @@ this squad:
 Gibbs-White → Cunha   +3.00      ← the only beneficial single transfer over six gameweeks
 ```
 
+> ✅ **RE-MEASURED 2026-09-13 (ADR-187), and this decline stands.** The evidence above was gathered
+> **preseason**, on an xP model ADR-172 and ADR-173 have since corrected across 186 players — so it was
+> reopened on the owner's feedback that the app never plans a fixture run. Re-run on current data with 24
+> squads over six gameweeks, both strategies given three transfers: **greedy captures 96% of the available
+> gain and planning adds 4%** — median **+0.0**, and **54% of squads see foresight change nothing at all**.
+> The wording above turns out to be the durable part: *the gain moves; the decision does not.*
+>
+> ⚠️ A tail exists (12% of squads gained ≥5, one +14.3) and a double or blank gameweek would be a genuinely
+> different test — see ADR-187 for what would reopen it.
+
+```
+```
+
 The existing greedy planner stops after it, because there is no second move to make. A tree search needs
 branches; this tree has one.
 

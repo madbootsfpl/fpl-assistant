@@ -470,7 +470,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   the immediate move and never instead of it. ⭐ *"Bank" meant a spare transfer everywhere in the code and
   money to the user — a term that means one thing in the code and two to the user hides the half you did not
   build.* Ships the arithmetic, refuses the forecast.
-- 📋 **The last gap from the owner's A/B** (ADR-187, proposed 2026-09-13) — he runs one team
+- ✅ **Multi-gameweek planning — measured and CLOSED** (ADR-187, Sprint 251, 2026-09-13). Reopened on the
+  owner's feedback because ADR-132's decline was measured preseason on a model since corrected twice. Re-run
+  on 24 squads with both strategies given the same three transfers: **greedy captures 96% of the available
+  gain, planning adds 4%** — median **+0.0**, and **54% of squads see foresight change nothing at all**.
+  ADR-132's wording holds: *the gain moves; the decision does not.* Closed rather than deferred, with a
+  double/blank gameweek, chips, or a search beating +1.9 recorded as what would reopen it. — he runs one team
   on MADBOOTS and one on his own judgement, and is **40 points ahead after four gameweeks**. All three of the
   gaps he named check out. **ADR-185** — the wildcard advisor measures only *when your fixtures are worst* and
   never asks what a rebuild is worth (**+102.3 xP**, 3/15 overlap, £14.1m that cannot play — reported at
