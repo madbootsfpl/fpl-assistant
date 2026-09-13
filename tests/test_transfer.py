@@ -515,3 +515,30 @@ def test_the_tie_break_ignores_outfield_positions():
     sun_mid = {"id": 101, "web_name": "SunM", "position": "MID", "team": "SUN", "price": 6.0}
     assert _correlated_after(out, sun_def, owned) == 1, "one other Sunderland defender would remain"
     assert _correlated_after(out, sun_mid, owned) == 0, "a midfielder is not a clean-sheet bet"
+
+
+def test_a_near_tie_is_a_band_around_the_leader_not_a_bucket():
+    """⚠️ **The bug that reached the owner.** The tie-break shipped as `round(gain / TIE_NOISE)` in a sort
+    key, and it did not fire on his squad: the two candidate moves were **11.4 and 9.7** — 1.7 apart, inside
+    a band of 2.0 — but round to **6 and 5**, so they never shared a bucket and the preference never spoke.
+
+    > **Quantising is not the same as "within noise of each other."** Bucket edges fall where they fall, and
+    > two near-equal values can land either side of one.
+
+    The synthetic fixture above hid it, because its two gains (14.0 and 13.6) happened to round into the same
+    bucket. **A fixture that only exercises the lucky case will confirm a broken mechanism** — so this pins
+    the gains at values that straddle a bucket edge, which is exactly where the first version failed.
+    """
+    import src.analytics.transfer as transfer_mod
+
+    owned, market, xp = _tie_squad()
+    # Straddle a TIE_NOISE boundary: with a band of 2.0 these land in buckets 6 and 5.
+    xp[4] = 22.6                                  # Ars — selling him gains 11.4
+    xp[3] = 24.3                                  # SunA — selling him gains 9.7
+    assert round(11.4 / transfer_mod.TIE_NOISE) != round(9.7 / transfer_mod.TIE_NOISE), \
+        "the fixture must straddle a bucket edge, or it cannot catch the bug it exists for"
+
+    top = transfer_mod.suggest_transfers(owned, market, xp, bank=0.5, limit=1, xi_aware=False)[0]
+    assert top["out"]["web_name"] == "SunA", (
+        "1.7 apart is inside the 2.0 band, so the diversified sell must win however the numbers happen to "
+        f"round: {top['out']['web_name']}")

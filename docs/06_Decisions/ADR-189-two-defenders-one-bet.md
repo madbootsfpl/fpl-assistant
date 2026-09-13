@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-189
 **Date:** 2026-09-13
-**Status:** ✅ **Accepted — built** (Sprint 250, 2026-09-13). **1753 → 1756 tests, ruff clean.**
+**Status:** ✅ **Accepted — built** (Sprint 250, 2026-09-13). **1753 → 1757 tests, ruff clean.**
+🔧 **Corrected same day** — the first implementation did not fire. See §Quantising is not a band.
 ⚠️ **The warning is DECLINED on evidence; a tie-break ships instead.**
 **Superseded By / Replaces:** Takes up the correlated-risk item [ADR-188](./ADR-188-a-defender-plays-for-a-team.md)
 scoped out. Extends [ADR-046](./ADR-046-xi-aware-transfers.md)'s ranking with a tie-break, in the shape
@@ -88,10 +89,10 @@ TIE_NOISE = 2.0
 pairs.sort(key=lambda t: (round(t[0] / TIE_NOISE), -_correlated_after(...), t[0]), reverse=True)
 ```
 
-⚠️ **Quantised, not subtracted — and that is the whole safety argument.** Rounding the gain into `TIE_NOISE`
-buckets leaves the primary ordering exactly intact for any real difference; the structural preference decides
-only *within* a band. Subtracting a penalty would let it outrank a genuinely better move, which is precisely
-the failure ADR-183's tie-break was sized to avoid.
+⚠️ **A band around the leader, not a subtraction and not a bucket.** Only moves within `TIE_NOISE` of the
+best are considered, and among those the least correlated wins. Subtracting a penalty would let it outrank a
+genuinely better move — the failure ADR-183's tie-break was sized to avoid. Bucketing fails differently, and
+did; see below.
 
 **3. Scoped to DEF/GK, because the claim is about clean sheets.** Two midfielders at one club are not
 all-or-nothing together — their returns come from goals and assists. Widening it would make this a general
@@ -109,7 +110,36 @@ It speaks rarely, and never costs more than the noise it was sized against.
 
 ---
 
-### ⚖️ Consequences & Trade-offs
+### 🔧 Quantising is not a band — the first implementation did not fire
+
+Shipped as a sort key: `round(gain / TIE_NOISE)`, then correlation, then gain. The reasoning was that
+bucketing keeps the primary ordering intact while letting the preference decide inside a bucket. **It does
+not work**, and the owner found it within the hour: the app still recommended selling his Arsenal defender.
+
+His two candidate moves gained **11.4** and **9.7** — **1.7 apart, comfortably inside a band of 2.0**. But:
+
+```
+round(11.4 / 2.0) = 6
+round( 9.7 / 2.0) = 5      ← different buckets, so the tie-break never engaged
+```
+
+> ⭐ **Quantising is not the same as "within noise of each other."** Bucket edges fall where they fall, and
+> two near-equal values can land either side of one. A band is a statement about *the distance between two
+> numbers*; a bucket is a statement about *where each number sits on a grid*. They are not the same thing,
+> and only one of them is what "these are too close to call" means.
+
+Replaced with the direct form: take the best remaining gain, keep every move within `TIE_NOISE` of it, and
+pick the least correlated. No edges.
+
+⚠️ **And the test passed the whole time**, which is the part worth keeping. Its fixture gained **14.0** and
+**13.6** — which happen to round into the same bucket, so the mechanism appeared to work.
+
+> **A fixture that only exercises the lucky case will confirm a broken mechanism.**
+
+There is now a second guard pinning gains that *straddle a bucket edge*, with an assertion that the fixture
+straddles one — so it cannot silently drift back into the easy case.
+
+
 
 * **Positive Impact:** a decision previously made by coin-flip now has a reason; no new surface; the declined
   warning is recorded with its evidence so the question is closed rather than recurring.

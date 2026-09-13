@@ -138,26 +138,32 @@ def suggest_transfers(
                 if gain > 0:
                     pairs.append((gain, out, out_sum, c, in_sum))
 
-    # ADR-189 — rank by gain, then break near-ties toward less correlated defensive exposure.
-    #
-    # The owner, on a suggestion to sell his Arsenal defender for a Sunderland one while already holding a
-    # Sunderland defender: *"he would be a better option to transfer to Ballard maybe."* He was right, and the
-    # model had picked the other sell on **1.7 xP over five gameweeks** — 0.34 a week against a per-player
-    # weekly sd of 3.51. It was a coin flip presented as a ranking.
-    #
-    # ⚠️ **Quantised, not subtracted.** Rounding the gain to the nearest `TIE_NOISE` and sorting on that keeps
-    # the primary ordering exactly intact for any real difference, and lets the structural preference decide
-    # only *within* a noise band. Subtracting a penalty instead would let it outrank a genuinely better move,
-    # which is the failure ADR-183's tie-break was sized to avoid.
-    pairs.sort(key=lambda t: (round(t[0] / TIE_NOISE), -_correlated_after(t[1], t[3], owned), t[0]),
-               reverse=True)
+    pairs.sort(key=lambda t: t[0], reverse=True)
 
     used_out: set = set()
     used_in: set = set()
     suggestions = []
-    for gain, out, out_sum, c, in_sum in pairs:
-        if out["id"] in used_out or c["id"] in used_in:   # each sell + each buy at most once
-            continue
+    while len(suggestions) < limit:
+        eligible = [t for t in pairs if t[1]["id"] not in used_out and t[3]["id"] not in used_in]
+        if not eligible:
+            break
+        # ADR-189 — among moves the model cannot tell apart, prefer the one leaving less correlated defence.
+        #
+        # The owner, on a suggestion to sell his Arsenal defender for a Sunderland one while already holding
+        # a Sunderland defender: *"he would be a better option to transfer to Ballard maybe."* He was right,
+        # and the model had chosen on **1.7 xP over five gameweeks** — 0.34 a week against a per-player
+        # weekly sd of 3.51 (ADR-161). A coin flip presented as a ranking.
+        #
+        # ⚠️ **A band around the leader, not a bucket.** This shipped first as `round(gain / TIE_NOISE)` in a
+        # sort key, and **it did not work**: 11.4 and 9.7 are 1.7 apart — inside the band — yet round to 6 and
+        # 5, so the tie-break never engaged. **Quantising is not the same as "within noise of each other"**;
+        # bucket edges fall where they fall, and two near-equal values can land either side of one. Comparing
+        # each candidate against the current leader has no edges.
+        #
+        # Still never overrides a real difference: only moves within `TIE_NOISE` of the best are considered.
+        best_gain = eligible[0][0]
+        close = [t for t in eligible if best_gain - t[0] <= TIE_NOISE]
+        gain, out, out_sum, c, in_sum = min(close, key=lambda t: (_correlated_after(t[1], t[3], owned), -t[0]))
         used_out.add(out["id"])
         used_in.add(c["id"])
         suggestions.append({
@@ -167,8 +173,6 @@ def suggest_transfers(
             "gain": gain,
             "out_on_bench": out["id"] in bench,
         })
-        if len(suggestions) >= limit:
-            break
     return suggestions
 
 

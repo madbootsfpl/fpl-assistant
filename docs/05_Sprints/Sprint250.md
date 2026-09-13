@@ -83,3 +83,40 @@ wins on merit · outfield positions are ignored. Mutations killed: the tie-break
 
 The fixture is deliberately built so **raw gain prefers the correlated move** — otherwise the test would pass
 without the feature, which is the trap three of the last five sprints fell into.
+
+---
+
+### 🔧 Corrected the same day: quantising is not a band
+
+The tie-break shipped as a sort key — `round(gain / TIE_NOISE)`, then correlation, then gain — and **it never
+fired.** The owner rebooted, reseeded, rebooted again, and the app still sold his Arsenal defender.
+
+His two candidate moves gained **11.4** and **9.7**. That is 1.7 apart, comfortably inside a band of 2.0. But:
+
+```
+round(11.4 / 2.0) = 6
+round( 9.7 / 2.0) = 5     ← different buckets, so the preference never spoke
+```
+
+> ⭐ **Quantising is not the same as "within noise of each other."** A band is a statement about *the distance
+> between two numbers*. A bucket is a statement about *where each number sits on a grid*. Only one of those
+> means "too close to call", and I implemented the other one.
+
+Replaced with the direct form: take the best remaining gain, keep every move within `TIE_NOISE` of it, pick
+the least correlated. No edges to fall either side of.
+
+### ⚠️ And the test passed the whole time
+
+Its fixture gained **14.0** and **13.6** — which happen to round into the *same* bucket, so the mechanism
+looked like it worked. Every mutation I ran against it died correctly, on a fixture that could not reach the
+defect.
+
+> **A fixture that only exercises the lucky case will confirm a broken mechanism.**
+
+This is a different failure from the recent run of them. Those guards did not execute the code, or skipped,
+or rebuilt it. This one executed the real code, on real inputs, and the inputs happened to sit inside one
+bucket. **Mutation-testing cannot save a fixture that never reaches the fault** — it only proves the test
+notices changes to the path it *does* take.
+
+There is now a second guard whose gains straddle a bucket edge, with an assertion that they straddle one, so
+it cannot drift back into the easy case.
