@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-186
 **Date:** 2026-09-13
-**Status:** 📋 **Proposed** — gate before building
+**Status:** ✅ **Accepted — built** (Sprint 248, 2026-09-13). **1746 → 1751 tests, ruff clean.**
 **Superseded By / Replaces:** Extends [ADR-132](./ADR-132-transfer-timing.md)'s `bank_or_use`. **No
 `decision_xp` change.** Second of three gaps from the owner's A/B; see ADR-185 and ADR-187.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -98,6 +98,46 @@ against — recorded here so the next person tunes them against data rather than
 
 ---
 
+### 🔬 Built — what the answer says now
+
+On the owner's squad, beneath the recommended transfer:
+
+```
+Transfer: Watkins (AVL) → Havertz (ARS)  (+7.4 XI xP over 5 GW)  · Confidence 95/100 · High
+          Worth saving for: £1.5m more makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)
+```
+
+The move you can make today stays the headline. The cliff is a reason you *might* wait, placed after it and
+never instead of it — a manager who cannot raise the money must still be told what to do now.
+
+`gameweek_plan` gains a `cliff` key, always present, `None` when there is nothing worth saying — which is
+most weeks, and the reason this is safe to add to a page ADR-180 has just been decluttering.
+
+#### ⚠️ The wiring test skipped instead of failing — twice over
+
+The first attempt at a wiring guard asserted `"cliff" in plan` and then **returned early when the value was
+`None`** — which is precisely what the mutation produces. It skipped exactly when it should have failed.
+
+> **A test that skips is not a test that passes** (ADR-178), and this is the third sprint running in which
+> the guard I wrote for a new feature protected nothing on its first attempt.
+
+Rewritten to assert **the call**: `gameweek_plan` must ask `affordability_cliff`, with this squad, this
+market and **this bank** — which holds whether or not today's data happens to contain a cliff. Two mutations
+now die there: dropping the call, and passing a hard-coded `bank=0.0` instead of the squad's real bank.
+
+#### 🔬 And the fixture had to grow twice
+
+It reached `affordability_cliff` fine, then failed on `team` (the renderer prints it), then on `status`,
+then on `points_per_game` — because `gameweek_plan` also picks a captain, which prices players through
+`decision_xp`.
+
+> **A fixture aimed at one function has to satisfy every function on the path to it.** Each failure was the
+> same shape: modelling less than the payload, which is this repo's most persistent test defect.
+
+**Five mutations, all caught.**
+
+---
+
 ### ⚖️ Consequences & Trade-offs
 
 * **Positive Impact:** the answer stops silently foreclosing better moves; a real lever the owner uses by
@@ -114,16 +154,16 @@ against — recorded here so the next person tunes them against data rather than
 ### 🛠 Implementation & Migration
 * **Components Affected:** Code (`analytics/transfer_timing.py`, the gameweek answer), Tests, Docs
 * **Action Items:**
-  - [ ] `affordability_cliff(owned, market, xp, bank, *, steps, min_gain)` — pure, no I/O
-  - [ ] Surface it on the week's answer, beneath the recommended transfer
-  - [ ] Guard: RoboTS's £0 → £1.5m case reports the Isak cliff
-  - [ ] Guard: a squad with no cliff reports **nothing** — silence is the common case
-  - [ ] Guard: the immediate move remains the headline; the cliff never replaces it
-  - [ ] **Mutation-test every guard**; clean suite re-run between mutants
-  - [ ] Record the two thresholds as provisional, with a GW10 re-measure
+  - [x] `affordability_cliff(owned, market, xp, bank, *, steps, min_gain)` — pure, no I/O
+  - [x] Surface it on the week's answer, beneath the recommended transfer
+  - [x] Guard: RoboTS's £0 → £1.5m case reports the Isak cliff
+  - [x] Guard: a squad with no cliff reports **nothing** — silence is the common case
+  - [x] Guard: the immediate move remains the headline; the cliff never replaces it
+  - [x] **Mutation-test every guard**; clean suite re-run between mutants
+  - [x] Record the two thresholds as provisional, with a GW10 re-measure
 
 #### ✅ Always
-- [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
+- [x] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
 
 ---
 

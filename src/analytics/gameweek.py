@@ -14,7 +14,7 @@ from src.analytics.crowd import crowd_exodus
 from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
 from src.analytics.transfer import replace_dead, suggest_transfers
-from src.analytics.transfer_timing import bank_or_use
+from src.analytics.transfer_timing import affordability_cliff, bank_or_use
 
 # FPL status codes → a human word for a flag (mirrors the CLI's availability messages, ADR-023).
 # "d" (doubtful) is handled separately — it's a warning, not an unavailability.
@@ -40,6 +40,9 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     - **transfer** — the single best positive-gain upgrade (a `suggest_transfers` dict), or None.
     - **timing** — `bank_or_use`'s verdict (ADR-132/173): spend the free transfer now, or bank it because a
       second move worth having is coming. Always present, so a caller cannot forget the alternative exists.
+    - **cliff** — a materially better transfer just out of budget (`affordability_cliff`, ADR-186), or None.
+      Answers *"bank the money?"* where `timing` answers *"bank the transfer?"* — two different questions
+      that shared one word.
     - **horizon_gain** — the same swap's gain over `horizon_xp`'s wider window, or None when not supplied.
       A one-week number reads as a season verdict when it stands alone (ADR-173).
     - **replacements** — one move per **dead slot**: a squad place that cannot score for the whole horizon
@@ -98,6 +101,11 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # which is worth only the hit it saves — and costs the gain skipped by waiting a week.
     timing = bank_or_use(moves, transfer["gain"] if transfer else None, free=free)
 
+    # ADR-186 — a materially better move just out of budget. `bank_or_use` above answers *"bank the
+    # transfer?"*; this answers *"bank the money?"*, which nothing did. Measured on the owner's squad:
+    # Watkins → Havertz +7.4 today, Watkins → Isak **+13.8** with £1.5m more.
+    cliff = affordability_cliff(owned, market, xp_by_id, bank=bank, suggest=suggest_transfers)
+
     # The same swap over a longer window (ADR-173). A one-week gain reads as a verdict when it stands alone;
     # the owner rejected a transfer that was right for next week and wrong for his season. `horizon_xp` is an
     # xP map over a wider horizon — the *same* players, priced over more gameweeks — so this compares like
@@ -145,4 +153,4 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
 
     return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
             "transfer": transfer, "replacements": replacements, "flags": flags,
-            "timing": timing, "horizon_gain": horizon_gain}
+            "timing": timing, "horizon_gain": horizon_gain, "cliff": cliff}

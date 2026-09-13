@@ -167,3 +167,61 @@ def _headline(moves, decision, take_hit, horizon, has_second=False) -> str:
     if has_second:
         return f"Use your free transfer on {move}. Don't take a hit for a second."
     return f"Use your free transfer on {move}."
+
+# ADR-186 — how far above today's bank to look, and how much better a move must be before it is worth
+# mentioning. **Both provisional**: chosen so the notice stays rare on a healthy squad, not calibrated. The
+# owner's case cleared them comfortably (£1.5m for +6.4 xP). Re-measure once several squads have been checked.
+CLIFF_REACH = 2.0     # £m above the current bank worth exploring — roughly one price rise plus a small sale
+CLIFF_MIN_GAIN = 2.0  # xP the better move must add before it is worth saying anything
+
+
+def affordability_cliff(owned, market, xp_by_id, *, bank: float, suggest,
+                        reach: float = CLIFF_REACH, min_gain: float = CLIFF_MIN_GAIN,
+                        step: float = 0.5) -> dict | None:
+    """A materially better transfer that is **just out of budget** — or None (ADR-186).
+
+    Owner-reported: *"you are not suggesting to hold on making transfers for a couple of weeks to buy a more
+    expensive player than you can afford with current budget."* Measured on his squad at £0.0m bank, the best
+    move was **Watkins → Havertz +7.4**; with **£1.5m more** it becomes **Watkins → Isak +13.8**. The cliff is
+    steep and the app could not see it, because every move is evaluated against today's bank and the best one
+    is reported as *the* answer.
+
+    ⚠️ **`bank_or_use` does not cover this and never did.** It asks whether to bank a *transfer* to make a
+    second move next week. Nothing in the codebase asked what a **larger budget** would afford — the word
+    "bank" means a spare transfer throughout the code and money to a manager, and the second meaning was
+    simply unimplemented.
+
+    Returns ``{extra, move, gain, best_now, gain_now, uplift}`` for the **cheapest** budget that unlocks a
+    materially better move, so the answer is *"£1.5m more"* rather than *"£2m more"* when £1.5m suffices.
+
+    ⚠️ **This reports a fact about today's market, and deliberately does not model the climb.** Predicting the
+    price rises that would fund it stacks the unverified price predictor (ADR-092) on top of a heuristic —
+    the same line ADR-161 drew when it shipped the H2H decomposition and gated the win-probability sim.
+
+    `suggest` is injected (normally `suggest_transfers`) so this stays a pure arithmetic helper.
+    """
+    if not owned or not market or reach <= 0:
+        return None
+
+    def best(at_bank):
+        moves = [m for m in (suggest(owned, market, xp_by_id, bank=at_bank, limit=1) or [])
+                 if (m.get("gain") or 0) > 0]
+        return moves[0] if moves else None
+
+    now = best(bank)
+    gain_now = (now or {}).get("gain") or 0.0
+
+    extra = step
+    while extra <= reach + 1e-9:
+        candidate = best(bank + extra)
+        if candidate and (candidate.get("gain") or 0.0) - gain_now >= min_gain:
+            return {
+                "extra": round(extra, 1),
+                "move": candidate,
+                "gain": round(candidate["gain"], 1),
+                "best_now": now,
+                "gain_now": round(gain_now, 1),
+                "uplift": round(candidate["gain"] - gain_now, 1),
+            }
+        extra = round(extra + step, 1)
+    return None

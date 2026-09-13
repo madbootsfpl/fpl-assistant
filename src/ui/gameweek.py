@@ -103,6 +103,15 @@ def _timing_lines(plan, horizon) -> list:
     timing = plan.get("timing") or {}
     if timing.get("action") == "bank":
         out.append(f"            Or bank it: {timing.get('reason', '')}".rstrip())
+
+    # ADR-186 — the better move just out of reach. Placed after the immediate advice, never instead of it:
+    # the move you can make today stays the headline, and this is the reason you might not want to.
+    cliff = plan.get("cliff")
+    if cliff:
+        move = cliff["move"]
+        out.append(f"            Worth saving for: £{cliff['extra']:.1f}m more makes this "
+                   f"{move['out']['web_name']} → {move['in']['web_name']} "
+                   f"({cliff['gain']:+.1f} XI xP, {cliff['uplift']:+.1f} on the move above)")
     return out
 
 

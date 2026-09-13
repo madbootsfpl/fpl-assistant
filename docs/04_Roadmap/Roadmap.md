@@ -451,7 +451,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   *"weakest stretch · Confidence 42/100 · Low"* to *"**worth +99.6 xP**… you keep only 3 of 15; £14.1m cannot
   play · **Confidence 95/100 · High**"*. ⭐ *A recommendation that measures only WHEN will present itself as
   an answer to WHETHER.*
-- 📋 **The other two gaps from the owner's A/B** (ADR-186/187, proposed 2026-09-13) — he runs one team
+- ✅ **Bank to afford** (ADR-186, Sprint 248, 2026-09-13) — **built.** The week's answer now says
+  *"Worth saving for: **£1.5m more** makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)"*, after
+  the immediate move and never instead of it. ⭐ *"Bank" meant a spare transfer everywhere in the code and
+  money to the user — a term that means one thing in the code and two to the user hides the half you did not
+  build.* Ships the arithmetic, refuses the forecast.
+- 📋 **The last gap from the owner's A/B** (ADR-187, proposed 2026-09-13) — he runs one team
   on MADBOOTS and one on his own judgement, and is **40 points ahead after four gameweeks**. All three of the
   gaps he named check out. **ADR-185** — the wildcard advisor measures only *when your fixtures are worst* and
   never asks what a rebuild is worth (**+102.3 xP**, 3/15 overlap, £14.1m that cannot play — reported at

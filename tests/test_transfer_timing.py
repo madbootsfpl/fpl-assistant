@@ -150,3 +150,148 @@ def test_the_two_gains_are_never_compared_as_numbers():
     t = transfer_timing([_mv("Gibbs-White", "Cunha", 9.9)], free=1, horizon=6,
                         dead=[_dead(gain=1.1)])
     assert "Watkins → Welbeck" in t["headline"]
+
+
+# ---- ADR-186: bank to afford, not only to stack ------------------------------------------------
+
+def _cliff_market():
+    """A squad with one clear weak slot, and two replacements: one affordable now, one better and dearer."""
+    # ⚠ `status`/`chance` included: `gameweek_plan` filters on availability before it reaches the transfer
+    # search, so a row without them cannot get that far. The recurring failure here is a fixture that models
+    # less than the payload — this one has to satisfy the whole assembly, not just `affordability_cliff`.
+    def row(pid, name, pos, team, price):
+        return {"id": pid, "web_name": name, "position": pos, "team": team, "price": price,
+                "status": "a", "chance": None, "total_points": 0, "code": pid,
+                # `gameweek_plan` also picks a captain, which prices players through `decision_xp` — so the
+                # row has to satisfy that too. Modelling less than the payload is how a fixture stops being
+                # able to reach the code it is aimed at.
+                "points_per_game": 0.0, "minutes": 0, "form": 0.0, "ep_next": 0.0, "team_id": 1,
+                "selected_by": 5.0, "penalties_order": None, "corners_order": None,
+                "freekicks_order": None, "cost_change_event": 0, "transfers_in_event": 0}
+
+    owned = [row(i, f"P{i}", "MID", f"T{i}", 6.0) for i in range(1, 15)]
+    owned.append(row(99, "Weak", "FWD", "T9", 6.0))
+    cheap = row(200, "Cheap", "FWD", "TA", 6.0)
+    dear = row(201, "Dear", "FWD", "TB", 7.5)
+    xp = {p["id"]: 10.0 for p in owned} | {99: 1.0, 200: 8.4, 201: 14.8}
+    return owned, owned + [cheap, dear], xp
+
+
+def _fake_suggest(owned, market, xp, *, bank=0.0, limit=1, **kw):
+    """A stand-in for `suggest_transfers`: the best affordable swap for the weakest owned player."""
+    out = min(owned, key=lambda p: xp.get(p["id"], 0.0))
+    budget = out["price"] + bank
+    cands = [p for p in market if p["id"] not in {o["id"] for o in owned}
+             and p["position"] == out["position"] and p["price"] <= budget + 1e-9]
+    if not cands:
+        return []
+    best = max(cands, key=lambda p: xp.get(p["id"], 0.0))
+    gain = xp.get(best["id"], 0.0) - xp.get(out["id"], 0.0)
+    return [{"out": out, "in": best, "gain": round(gain, 2)}][:limit]
+
+
+def test_a_better_move_just_out_of_budget_is_reported():
+    """ADR-186, owner: *"you are not suggesting to hold on making transfers for a couple of weeks to buy a
+    more expensive player than you can afford."*
+
+    Measured on his squad at £0.0m bank: **Watkins → Havertz +7.4** today, **Watkins → Isak +13.8** with
+    **£1.5m** more. The cliff is steep and was invisible — every move is priced against today's bank and the
+    best one is reported as *the* answer.
+    """
+    from src.analytics.transfer_timing import affordability_cliff
+
+    owned, market, xp = _cliff_market()
+    cliff = affordability_cliff(owned, market, xp, bank=0.0, suggest=_fake_suggest)
+    assert cliff, "a +6.4 uplift for £1.5m must be reported"
+    assert cliff["move"]["in"]["web_name"] == "Dear"
+    assert cliff["best_now"]["in"]["web_name"] == "Cheap", "the affordable move is still named"
+    assert cliff["uplift"] == round(14.8 - 8.4, 1)
+
+
+def test_it_reports_the_cheapest_budget_that_unlocks_the_move():
+    """*"£1.5m more"* is actionable; *"£2m more"* when £1.5m suffices is wrong in the direction that costs
+    the manager money. The sweep stops at the first budget that clears the bar."""
+    from src.analytics.transfer_timing import affordability_cliff
+
+    owned, market, xp = _cliff_market()
+    cliff = affordability_cliff(owned, market, xp, bank=0.0, suggest=_fake_suggest, step=0.5)
+    assert cliff["extra"] == 1.5, f"Dear costs 7.5 against a 6.0 sale — exactly £1.5m: {cliff['extra']}"
+
+
+def test_no_cliff_is_reported_when_there_is_nothing_worth_waiting_for():
+    """Silence is the common case and the whole reason this is safe to add. Three ways it must stay quiet:
+    the money is already there, nothing better exists, and the uplift is too small to mention."""
+    from src.analytics.transfer_timing import affordability_cliff
+
+    owned, market, xp = _cliff_market()
+    assert affordability_cliff(owned, market, xp, bank=5.0, suggest=_fake_suggest) is None, \
+        "with the money already in the bank there is nothing to wait for"
+    assert affordability_cliff(owned, owned, xp, bank=0.0, suggest=_fake_suggest) is None, \
+        "no market means no better move"
+
+    xp_flat = {**xp, 201: 8.9}                      # the dearer option is only +0.5 better
+    assert affordability_cliff(owned, market, xp_flat, bank=0.0, suggest=_fake_suggest) is None, \
+        "a trivial uplift must not be dressed up as a reason to wait"
+
+
+def test_the_cliff_never_replaces_the_move_you_can_make_today():
+    """The immediate advice stays the headline. This is a *reason you might wait*, not a recommendation to
+    do nothing — and a manager who cannot raise the money must still be told what to do now."""
+    from src.analytics.gameweek import gameweek_plan
+    from src.ui.gameweek import render_gameweek_plan
+
+    plan = {"captain": None, "lineup": {"start": [], "bench": [], "bring_in": [], "drop": [],
+                                        "has_declared_bench": False},
+            # ⚠ `team` included: the renderer prints "(TEAM)" beside each name, so a fixture without it
+            # cannot reach the code under test — it KeyErrors first. The recurring failure in this repo is a
+            # fixture that models less than the payload.
+            "transfer": {"out": {"web_name": "Weak", "team": "T9"},
+                         "in": {"web_name": "Cheap", "team": "TA"}, "gain": 7.4},
+            "flags": [], "timing": {"action": "use"}, "horizon_gain": None,
+            "cliff": {"extra": 1.5, "gain": 13.8, "uplift": 6.4,
+                      "move": {"out": {"web_name": "Weak", "team": "T9"},
+                               "in": {"web_name": "Dear", "team": "TB"}},
+                      "best_now": None, "gain_now": 7.4}}
+    out = render_gameweek_plan(plan, "S", horizon=5)
+    assert "Weak" in out and "Cheap" in out, "the move you can make today is still named first"
+    assert "Worth saving for: £1.5m more" in out, out
+    assert "+13.8" in out and "+6.4" in out
+    assert gameweek_plan is not None
+
+
+def test_the_gameweek_plan_actually_computes_a_cliff(monkeypatch):
+    """⚠️ **The wiring, not the component.** Every test above either calls `affordability_cliff` directly or
+    hands `render_gameweek_plan` a pre-built dict — so a mutation setting `cliff = None` inside
+    `gameweek_plan` passed all of them. ADR-185's lesson, one sprint later: **testing a component is not
+    testing that anything uses it.**
+
+    ⚠️⚠️ **And the first version of *this* test skipped instead of failing.** It asserted `"cliff" in plan`
+    then returned early when the value was None — which is exactly what the mutation produces. **A test that
+    skips is not a test that passes** (ADR-178), and the skip is invisible in a green run.
+
+    So it asserts the **call**: `gameweek_plan` must ask `affordability_cliff`, with this squad, this market
+    and this bank. That holds whether or not today's data happens to contain a cliff.
+    """
+    from src.analytics import gameweek as gw_mod
+
+    seen = {}
+    real = gw_mod.affordability_cliff
+
+    def spy(owned, market, xp_by_id, **kw):
+        seen.update(n_owned=len(owned), n_market=len(market), bank=kw.get("bank"),
+                    suggest=kw.get("suggest"))
+        return real(owned, market, xp_by_id, **kw)
+
+    monkeypatch.setattr(gw_mod, "affordability_cliff", spy)
+    # The transfer search is stubbed so this exercises the **assembly**, not `decision_xp`'s internals —
+    # which need a fuller player row than this fixture, and are covered by their own tests.
+    monkeypatch.setattr(gw_mod, "suggest_transfers", _fake_suggest)
+
+    owned, market, xp = _cliff_market()
+    plan = gw_mod.gameweek_plan(owned, market, [], xp, bank=1.25)
+
+    assert seen, "gameweek_plan must ask what a bigger budget would afford (ADR-186)"
+    assert seen["n_owned"] == len(owned) and seen["n_market"] == len(market)
+    assert seen["bank"] == 1.25, "the squad's real bank must reach it, not a default"
+    assert seen["suggest"] is not None, "the transfer search is injected, not re-implemented"
+    assert "cliff" in plan, "and the result is carried on the plan"
