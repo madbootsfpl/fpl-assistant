@@ -119,6 +119,28 @@ transfer"*. Three things came out of chasing it, none of which is yet confirmed 
 £0–2.5m, and the chain from widget to answer has one call site each with no cache and no fragment between
 them. The diagnostic line is what will settle it: the next report says which number arrived.
 
+### …and still reported, so the page now states what it read
+
+The next report came back **`Assumes 1 free transfer and £0.0m in the bank`** with the Bank slider visibly on
+£1.00m — the two ends of the chain disagreeing, which is more information than either end alone.
+
+Source was verified correct at every hop (one call site each, no cache, no fragment between widget and
+answer), and `AppTest` proves the widget propagates: `set_value(2)` flips the page's own statement of what it
+read. So rather than keep deducing, the page now **says what it read, where it read it**:
+
+```
+Every answer below uses **2 free transfers** and **£1.5m** in the bank.
+```
+
+⚠️ **This is not debug output, and it is not temporary.** It earns its place twice over: these controls sit
+*above* a selector and feed **every** panel below it, which a reader otherwise has to take on trust — and two
+statements of the same fact at opposite ends of the chain turn *"it doesn't work"* into *"it breaks between
+here and there"*. ⭐ **A value that travels through four layers should be stated at both ends, not just at the
+end that consumes it.**
+
+A test now drives the real widget and asserts that statement changes — the one step no amount of reading the
+source could confirm, and the step **both** bugs lived in.
+
 ---
 
 ## 💡 The lesson

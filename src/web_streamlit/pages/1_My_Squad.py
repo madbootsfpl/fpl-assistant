@@ -145,6 +145,17 @@ else:
                                         "**This week** plans this many moves.")
         _bank = _pos2.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5, key="ms_bank",
                              help="Spare money on top of selling a player. Used by every answer below.")
+        # ⚠️ **The page says what it read, right where it read it.** Not decoration: the owner reported the
+        # controls having no effect, and with the position stated only *inside* the answer there was no way to
+        # tell whether the widget, the page or the analytics had dropped it. Two statements of the same fact
+        # at opposite ends of the chain turn "it doesn't work" into "it breaks between here and there".
+        #
+        # It earns its place afterwards too — these controls sit above a selector and feed **every** panel
+        # below, which is exactly the kind of scope a reader has to take on trust otherwise.
+        _held = int(_free if _free is not None else 1)
+        _money = float(_bank if _bank is not None else 0.0)
+        st.caption(f"Every answer below uses **{_held} free transfer{'s' if _held != 1 else ''}** and "
+                   f"**£{_money:.1f}m** in the bank.")
 
         st.markdown(brand.nav_css("ms_answer_nav", primary_button="ms_week_apply"), unsafe_allow_html=True)
         _nav = st.container(key="ms_answer_nav")
@@ -160,15 +171,13 @@ else:
             # transfers is a real position with a real answer (any move costs a hit), and silently
             # promoting it to one is the same species of substitution as the defaults bug above.
             views.render_this_week(squad_name, squad, horizon=horizon, players=players,
-                                   free=int(_free if _free is not None else 1),
-                                   bank=float(_bank if _bank is not None else 0.0))
+                                   free=_held, bank=_money)
         elif answer == "Captain":
             views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names,
                                  gw_history=gw_history)
         elif answer == "Transfer":
             views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
-                                  horizon=horizon, free=int(_free if _free is not None else 1),
-                                  bank=float(_bank if _bank is not None else 0.0))
+                                  horizon=horizon, free=_held, bank=_money)
         else:
             # Chips stays a click inside its own panel, and still not for latency: a chip expires at the end
             # of the half-season, so asking every time someone opens the panel answers a question nobody was

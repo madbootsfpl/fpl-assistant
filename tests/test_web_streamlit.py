@@ -4673,3 +4673,33 @@ def test_toggling_build_mode_is_never_silent():
         assert "same 15" in note and "no trade-off" in note, (
             "the modes returned an identical squad and the page did not say so — which is exactly what was "
             f"reported as a bug: {note!r}")
+
+
+def test_the_position_controls_reach_every_answer_below_them(monkeypatch):
+    """⚠️ **ADR-191 — the widget → page chain, pinned end to end, because it failed twice.**
+
+    First the controls lived on the Transfer panel and the week's answer read them out of session state: those
+    panels are a `segmented_control`, so only the chosen one runs, and Streamlit discards state for widgets a
+    run does not render. ⭐ *Session state between two branches of a selector is not shared state, it is no
+    state.* Then a route was found that dropped the arguments entirely.
+
+    So this drives the actual widget and asserts the page's own statement of what it read **changes** — the
+    one step that no amount of reading the source could confirm, and the step both bugs lived in.
+    """
+    at = _run(_PAGES / "1_My_Squad.py")
+    free = next((w for w in at.number_input if w.key == "ms_free"), None)
+    if free is None:
+        return                              # no squad loaded in this environment
+    bank = next((w for w in at.slider if w.key == "ms_bank"), None)
+    assert bank is not None, "the bank control must sit beside it, above the selector, not inside a panel"
+
+    def stated(app):
+        return next((c.value for c in app.caption if "free transfer" in c.value), "")
+
+    assert "**1 free transfer**" in stated(at) and "**£0.0m**" in stated(at)
+
+    after = free.set_value(2).run()
+    assert "**2 free transfers**" in stated(after), \
+        "changing the control must change what the page says it will use"
+    after = next(w for w in after.slider if w.key == "ms_bank").set_value(1.5).run()
+    assert "**£1.5m**" in stated(after), "the bank must travel the same path as the transfer count"
