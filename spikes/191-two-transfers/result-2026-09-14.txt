@@ -1,0 +1,42 @@
+Owner, 2026-09-14, on "Worth saving for: £1.0m more makes this M.Sangaré → Rayan (+12.2 XI xP over 5 GWs)":
+  "I have £1.0m in the bank, I have 2 free transfers... is this advice the best or most effective?
+   Should we not be triangulating number of available transfers, spending the money on the starting 11,
+   looking at budget and then making a decision?"
+
+A = the single best move (what the app recommends today)
+B = A, then the best move from the resulting squad with the remaining money (following the app twice)
+C = the best PAIR chosen together, sharing one budget
+All scored as the lift to the best legal XI over 5 GWs. Bank £1.0m throughout.
+
+--- 30 random legal squads, two seeds -------------------------------------------------------------
+                                  seed 5        seed 11
+  A  one move                     +21.7         +22.2
+  B  two moves, greedy            +40.1         +40.6      (+18.5 / +18.4 for the 2nd transfer)
+  C  two moves, planned           +40.6         +40.9      (+0.4  / +0.3  for planning the pair)
+  squads where C > B                8/30          8/30     (biggest gap +3.4 in both)
+  A's buy makes the XI            30/30         30/30      — the model is not buying a 12th man
+
+--- two real saved squads (stale: Aug 3 / Aug 5 — directional only) --------------------------------
+RoboTS   XI base 244.2
+  A  +7.9    Hume → Ballard
+  B  +12.4   (+4.5 for the 2nd transfer)
+  C  +18.3   (+5.9 for planning the pair)   Mukiele → Ballard  +  Watkins → Isak
+
+TS       XI base 231.1
+  A  +12.6   Ampadu → Rayan
+  B  +22.6   (+10.0 for the 2nd transfer)
+  C  +22.6   (+0.0 for planning the pair)   Ampadu → Rayan  +  Senesi → Ballard
+
+--- what it says ----------------------------------------------------------------------------------
+1. The SECOND TRANSFER is the big missing number, not the better single one. It is worth roughly as
+   much again as the first (+18.4 mean; +4.5 and +10.0 on the two real squads), and the app never
+   shows it — `week_plan` computes a 2nd move and uses it ONLY to answer "bank or use", never to
+   recommend.
+2. Planning the pair jointly is usually small (+0.4 mean, 8/30 squads) but occasionally large:
+   RoboTS +5.9, because greedy routes Ballard in through the WRONG sale (Hume) and that blocks the
+   pair that wanted Ballard via Mukiele so the money could also fund Watkins → Isak.
+   ⚠️ n=2 on real squads. This gap needs a proper measurement on realistic squads before it justifies
+   a joint search — random squads systematically understate it (they have so much headroom that any
+   two moves gain a lot, so the ORDER matters less).
+3. The app does not know how many free transfers you hold, except on the Transfer tab's own
+   number_input, which feeds "bank or use" and nothing else.
