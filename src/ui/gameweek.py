@@ -96,17 +96,40 @@ def _extra_move_lines(plan, horizon: int = 5) -> list:
     believed.
     """
     moves = plan.get("transfers") or []
-    if len(moves) < 2:
-        return []                      # one transfer held → byte-identical to what this always printed
+    if not moves:
+        return []
+    free = plan.get("free", len(moves))
     window = f"over {horizon} GW" if horizon != 1 else "next GW"
+
+    if len(moves) < 2:
+        # ⚠️ **The silent default, which is the case that needed saying most.** This returned nothing at one
+        # free transfer, on the reasoning that one move renders as it always did. But `free` **defaults to 1**
+        # — so the only time the plan said what it assumed was when the manager had already told it, and the
+        # one time it stayed quiet was the one time the number was a guess.
+        #
+        # The owner read a one-move answer while holding two transfers and had no way to see which of those
+        # the app believed. ⭐ *An assumption is worth stating in inverse proportion to how sure of it you are.*
+        return [f"            Assumes {free} free transfer{'s' if free != 1 else ''} — "
+                f"change it above if that is wrong"] if plan.get("transfer") else []
+
     out = []
     for n, m in enumerate(moves[1:], start=2):
         o, i = m["out"], m["in"]
         out.append(f"            then #{n}: {o['web_name']} ({o['team']}) → {i['web_name']} ({i['team']})  "
                    f"(+{m['gain']} XI xP {window})")
     total = round(sum(m["gain"] for m in moves), 1)
-    out.append(f"            Using all {plan.get('free', len(moves))} free transfers: "
-               f"+{total} XI xP {window} — each move priced after the one above it")
+    # ⚠️ **"All" is a claim, and it is often false.** The plan stops when no positive-gain move is left, so a
+    # well-built squad regularly has fewer moves worth making than transfers in hand. Reporting
+    # `len(moves)` as though it were the manager's holding would quietly redefine "all your transfers" as
+    # "the ones we found" — and the unused one is *information*: it says the squad is close to right, and it
+    # rolls over. (Found by a mutant that swapped the two and no test noticed, because every fixture had
+    # them equal.)
+    if len(moves) < free:
+        out.append(f"            Using {len(moves)} of your {free} free transfers: "
+                   f"+{total} XI xP {window} — no further move gains anything, so the rest keeps")
+    else:
+        out.append(f"            Using all {free} free transfers: "
+                   f"+{total} XI xP {window} — each move priced after the one above it")
     return out
 
 

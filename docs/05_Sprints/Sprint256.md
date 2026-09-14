@@ -72,6 +72,34 @@ still rendered. It now asserts the whole block is absent rather than the part th
 
 ---
 
+## ⚠️ Reported broken the same hour, and fixed
+
+The owner rebooted and got a **one-move** answer with the cliff still showing, while holding two transfers.
+The wiring could never have worked, and the tests could never have caught it:
+
+**The control was behind the selector it was meant to inform.** `tr_free`/`tr_bank` were widgets on the
+**Transfer** panel, read from session state by **This week**. Those panels are a `segmented_control`, not tabs
+— **only the chosen one executes**, and Streamlit discards state for widgets a run does not render. They are
+mutually exclusive by construction (ADR-175/176), so the week's answer read the defaults every single time.
+
+⭐ **Session state between two branches of a selector is not shared state, it is no state.** Both panels were
+individually correct; the bug lived entirely in the fact that they never coexist, which is not a place a unit
+test looks. Fixed by hoisting both inputs **above** the selector — they describe *the manager*, not a panel —
+and passing them down as arguments, so there is no session-state round-trip left to break.
+
+**And the assumption was stated only when it was not a guess.** The extra-move lines returned nothing at
+`free=1`. But `free` **defaults to 1**, so the plan announced its assumption precisely when the manager had
+already corrected it, and went quiet the one time the number was invented. ⭐ *An assumption is worth stating
+in inverse proportion to how sure of it you are.*
+
+Re-sweeping the mutants afterwards caught a third: `free = len(moves)` survived, because **every fixture had
+as many worthwhile moves as transfers held**. They differ constantly on a real squad, and reporting one as the
+other redefines *"all your transfers"* as *"the ones we found"*. Now: *"Using 2 of your 3 free transfers … so
+the rest keeps"* — an unspent transfer is information. ⭐ *Two variables that are equal in every fixture are
+one variable as far as the suite is concerned.*
+
+---
+
 ## 💡 The lesson
 
 > **A primitive can be correct everywhere and still be missing from the one place people read.**

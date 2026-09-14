@@ -170,6 +170,35 @@ were hard-coded in `ask.py` — one transfer, no money — while the Transfer ta
 tabs away. The recommendation was being computed for a position its reader was not in, and nothing said so.
 Both widgets are now keyed (`tr_free`, `tr_bank`) and are the app's single record of that position.
 
+#### ⚠️ Shipped broken, reported the same hour — the wiring could never have worked
+
+The owner rebooted and read a **one-move** answer with the cliff still showing, while holding two transfers.
+Two faults, both mine:
+
+**1. The control was behind the selector it was meant to inform.** `tr_free`/`tr_bank` were keyed widgets on
+the **Transfer** panel, read from session state by the **This week** panel. But those panels are a
+`segmented_control` (ADR-175/176), not tabs: **only the chosen one executes**, and Streamlit discards the
+state of widgets a run does not render. The two are mutually exclusive by construction, so the week's answer
+saw the defaults — one transfer, no money — *every time*.
+
+⭐ **Session state between two branches of a selector is not shared state, it is no state.** The tests could
+not have caught this: both panels are correct in isolation, and the bug lives in the fact that they never
+coexist. Fixed by hoisting both inputs **above** the selector, where they describe *the manager* rather than a
+panel, and passing them down as arguments — no session-state round-trip at all.
+
+**2. The assumption was stated only when it was not a guess.** `_extra_move_lines` returned nothing at
+`free=1`, on the reasoning that one move should render as it always did. But `free` **defaults to 1** — so
+the plan announced its assumption exactly when the manager had already corrected it, and stayed silent the one
+time the number was invented. ⭐ **An assumption is worth stating in inverse proportion to how sure of it you
+are.** It now always says what it assumed, and where to change it.
+
+A third thing fell out of re-sweeping the mutants afterwards: `free = len(moves)` survived, because **every
+fixture had as many worthwhile moves as transfers held.** On a good squad they differ constantly, and
+reporting the move count as the transfer count silently redefines *"all your transfers"* as *"the ones we
+found"*. The plan now distinguishes them — *"Using 2 of your 3 free transfers … so the rest keeps"* — because
+an unspent transfer is information, not an absence. ⭐ *Two variables that are equal in every fixture are one
+variable as far as the suite is concerned.*
+
 #### ⚠️ Two guards passed while the code was broken
 
 Six mutants; **two survived the first sweep**, and both were fixture faults rather than assertion faults:

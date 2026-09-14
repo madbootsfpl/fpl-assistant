@@ -1109,16 +1109,18 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
 
 # ---- Transfer (best XI-aware swaps; ADR-046) -------------------------------------------------------
 
-def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5):
-    col1, col2 = st.columns(2)
-    # ⚠️ **ADR-191 — keyed, because this is now the app's only record of the manager's position.** The
-    # week's answer on the first tab used to hard-code £0.0m and one free transfer while these two widgets
-    # collected the real numbers three tabs away. Two surfaces, two different assumptions, no way to notice.
-    bank = col1.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5, key="tr_bank",
-                       help="Spare money you can add on top of selling a player. "
-                            "Also used by *What should I do this week*.")
-    count = col2.slider("Transfers (a coordinated plan)", 1, 3, 1,
-                        help="How many swaps to plan together (they share the bank).")
+def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5,
+                    free: int = 1, bank: float = 0.0):
+    """⚠️ **ADR-191 — `bank` and `free` are passed in, not collected here.**
+
+    This panel used to own a Bank slider, and the week's answer read it out of session state. That could never
+    work: these panels are a **segmented control**, so only the chosen one runs, and Streamlit discards the
+    state of widgets a run does not render. The two answers are mutually exclusive by construction, so the
+    week's answer always saw the default. The control now lives above the selector, where both can see it.
+    """
+    count = st.slider("Transfers (a coordinated plan)", 1, 3, max(1, min(int(free or 1), 3)),
+                      help="How many swaps to plan together (they share the bank). Defaults to the free "
+                           "transfers you hold, above — raise it to see what a hit would buy.")
 
     owned = [p for p in players if p["id"] in set(squad["player_ids"])]
     if not owned:
@@ -1168,9 +1170,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     if _plan and _next_gw is not None:
         _delay = round(_bg.get(_plan[0]["in"]["id"], {}).get(_next_gw, 0.0)
                        - _bg.get(_plan[0]["out"]["id"], {}).get(_next_gw, 0.0), 2)
-    _free = st.number_input("Free transfers you hold", 0, 5, 1, key="tr_free",
-                            help="FPL gives one a week and rolls unused ones up to five. "
-                                 "*What should I do this week* now plans this many moves.")
+    _free = free                       # ADR-191 — the count comes from above the selector now
     # ADR-156 — the same `dead` list the ⛔ banner above is built from, so the two cannot say different things.
     _timing = transfer_timing(_plan, free=_free, next_gw_gain=_delay, horizon=horizon, dead=dead)
     st.info(_timing["headline"])
@@ -1445,7 +1445,7 @@ def _apply_the_transfer(result, squad, players) -> None:
             st.rerun()
 
 
-def render_this_week(squad_name, squad, *, horizon=5, players=None):
+def render_this_week(squad_name, squad, *, horizon=5, players=None, free: int = 1, bank: float = 0.0):
     """① of the merged golden page — the week's answer, eager when it is cheap (ADR-171).
 
     **Eager when cheap, a click when a narrator is attached.** On Cloud that is 123 ms and the user simply
@@ -1460,7 +1460,8 @@ def render_this_week(squad_name, squad, *, horizon=5, players=None):
         # probe that guessed wrong would render eagerly AND narrate, producing the exact 49-second landing
         # this design exists to prevent. Passing `narrator=None` closes that gap: having judged the answer
         # cheap, we render the cheap answer, and the two can no longer disagree.
-        _apply_the_transfer(render_ai_tips(squad_name, squad, horizon=horizon, narrator=None), squad, players)
+        _apply_the_transfer(render_ai_tips(squad_name, squad, horizon=horizon, narrator=None,
+                                           free=free, bank=bank), squad, players)
         return
     if st.button("Work out my week →", key="ms_week",
                  help="A language model is attached to this instance, so the written answer takes ~30s."):
@@ -1474,7 +1475,8 @@ def render_this_week(squad_name, squad, *, horizon=5, players=None):
 
 
 # ---- AI Tips (a grounded gameweek plan; ADR-070, labelled "AI Tips" per US-226) ---------------------
-def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR):
+def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR,
+                   free: int = 1, bank: float = 0.0):
     """A grounded gameweek recommendation for the picked squad — captain · lineup · a transfer · flags.
 
     Section ① of the merged golden page (ADR-171; was the **AI Tips** tab). Routes through `ask.answer`
@@ -1494,9 +1496,7 @@ def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR):
     # transfer, no money) until the Transfer tab has been visited, and the rendered plan says which it used,
     # so an untouched default is visible rather than silent.
     result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon,
-                        free=int(st.session_state.get("tr_free", 1) or 1),
-                        bank=float(st.session_state.get("tr_bank", 0.0) or 0.0),
-                        **_kw)
+                        free=free, bank=bank, **_kw)
     st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users
     return result                      # ADR-174: the caller acts on the plan this just rendered
 

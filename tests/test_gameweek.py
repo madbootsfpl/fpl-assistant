@@ -389,10 +389,16 @@ def test_two_free_transfers_get_two_moves_and_the_gains_actually_add(monkeypatch
         "the stated gains must sum to the real lift of making every move — a menu's would not"
 
 
-def test_one_free_transfer_is_exactly_what_it_always_was(monkeypatch):
-    """The default does not move. `free` is manager-entered and defaults to 1, so the overwhelmingly common
-    case has to be byte-identical to the answer this surface has always given — otherwise a fix for the
-    two-transfer manager is a regression for everyone else."""
+def test_one_free_transfer_changes_no_advice_but_does_state_the_assumption(monkeypatch):
+    """The default must not move the **advice** — `free` defaults to 1, so the common case has to recommend
+    exactly what this surface always recommended, or a fix for the two-transfer manager is a regression for
+    everyone else. No extra move, no total, no plan lines.
+
+    ⚠️ **But it does gain one line, deliberately.** This first shipped rendering nothing at all at one free
+    transfer, and the owner promptly read a one-move answer while holding two — with no way to tell whether
+    the app knew. The assumption was stated only when he had already corrected it, and silent exactly when it
+    was a guess. ⭐ *An assumption is worth stating in inverse proportion to how sure of it you are.*
+    """
     _only_transfers(monkeypatch)
     owned = _legal15()
     market = owned + _market_upgrades()
@@ -402,12 +408,14 @@ def test_one_free_transfer_is_exactly_what_it_always_was(monkeypatch):
     plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=1)
     assert plan["transfers"] == [plan["transfer"]]
     assert plan["free"] == 1
+
     text = render_gameweek_plan(plan, "S", horizon=5)
-    # ⚠️ Checking for "then #2" alone was not enough: with the guard mutated the *total* line still rendered
-    # ("Using all 1 free transfers"), which is noise at best and, on a squad with one move, a restatement
-    # dressed as a plan. Assert the whole block is absent, not the part that was easiest to name.
+    # ⚠️ Checking for "then #2" alone was not enough when this returned early: with the guard mutated the
+    # *total* line still rendered. Assert the whole plan block is absent, not the part easiest to name.
     for leak in ("then #", "Using all", "priced after the one above it"):
-        assert leak not in text, f"one transfer held must render no extra-move lines at all — found {leak!r}"
+        assert leak not in text, f"one transfer held must recommend one move and no plan — found {leak!r}"
+    assert "Assumes 1 free transfer — change it above if that is wrong" in text, \
+        "the default is a guess, and a guess has to be visible to be correctable"
 
 
 def test_the_second_move_is_priced_after_the_first_not_beside_it(monkeypatch):
@@ -456,6 +464,35 @@ def test_the_plan_says_how_many_transfers_it_assumed(monkeypatch):
     assert "Using all 2 free transfers" in text
     assert "each move priced after the one above it" in text, \
         "the total is only honest if it says the moves were priced in sequence"
+
+
+def test_holding_more_transfers_than_there_are_moves_says_so(monkeypatch):
+    """⚠️ **"Using all 3 free transfers" is a claim, and on a good squad it is usually false.**
+
+    The plan stops when no positive-gain move remains, so a manager holding three transfers is often offered
+    two. Reporting the count of *moves* as the count of *transfers* would redefine "all your transfers" as
+    "the ones we found" — and the unused one is information: the squad is close to right, and the transfer
+    rolls over.
+
+    Found by a mutant (`free = len(moves)`) that **no test caught**, because every fixture had a squad with at
+    least as many worthwhile moves as transfers held. ⭐ *Two variables that are equal in every fixture are one
+    variable as far as the suite is concerned.*
+    """
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    ups = [{"id": 300 + k, "web_name": f"M{300 + k}", "position": pos, "team": f"W{k}",
+            "price": 5.0, "status": "a"} for k, pos in enumerate(("MID", "FWD"))]
+    market = owned + ups
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({300: 9.0, 301: 9.0})          # exactly two upgrades exist…
+
+    plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=3)   # …while three transfers are held
+    assert len(plan["transfers"]) == 2 and plan["free"] == 3
+
+    text = render_gameweek_plan(plan, "S", horizon=5)
+    assert "Using 2 of your 3 free transfers" in text
+    assert "the rest keeps" in text, "an unspent transfer rolls over — say so rather than ignoring it"
+    assert "Using all" not in text, "it is not all of them, and claiming so is the bug this pins"
 
 
 def test_the_cliff_must_beat_the_second_transfer_to_be_shown(monkeypatch):

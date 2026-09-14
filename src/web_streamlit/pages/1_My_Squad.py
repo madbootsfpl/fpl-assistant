@@ -128,6 +128,24 @@ else:
         # ADR-176 — the selector's look is a shared primitive now, not CSS living in this file. It began
         # here (ADR-175) and four other pages want the same control; five copies of one rule is the drift
         # this project keeps paying for (ADR-140).
+        # ⚠️ **ADR-191 — your POSITION lives above the selector, not inside one panel.**
+        #
+        # These two shipped on the Transfer panel, and the week's answer read them from session state. That
+        # could never work: the panels below are a **segmented control**, not tabs, so only the chosen one
+        # executes — and Streamlit discards widget state for widgets a run does not render. *This week* and
+        # *Transfer* are mutually exclusive by construction (ADR-175/176), so the reader was permanently
+        # getting the defaults: **one free transfer and no money**, silently.
+        #
+        # They belong here because they describe **the manager**, not a panel: how many transfers he holds and
+        # what he can spend change *This week*'s advice and *Transfer*'s alike. One control, rendered every
+        # run, so the two answers cannot disagree and the value survives switching between them.
+        _pos1, _pos2 = st.columns(2)
+        _free = _pos1.number_input("Free transfers you hold", 0, 5, 1, key="ms_free",
+                                   help="FPL gives one a week and rolls unused ones up to five. "
+                                        "**This week** plans this many moves.")
+        _bank = _pos2.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5, key="ms_bank",
+                             help="Spare money on top of selling a player. Used by every answer below.")
+
         st.markdown(brand.nav_css("ms_answer_nav", primary_button="ms_week_apply"), unsafe_allow_html=True)
         _nav = st.container(key="ms_answer_nav")
         answer = _nav.segmented_control(
@@ -138,13 +156,14 @@ else:
         ) or "This week"
 
         if answer == "This week":
-            views.render_this_week(squad_name, squad, horizon=horizon, players=players)
+            views.render_this_week(squad_name, squad, horizon=horizon, players=players,
+                                   free=int(_free or 1), bank=float(_bank or 0.0))
         elif answer == "Captain":
             views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names,
                                  gw_history=gw_history)
         elif answer == "Transfer":
             views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
-                                  horizon=horizon)
+                                  horizon=horizon, free=int(_free or 1), bank=float(_bank or 0.0))
         else:
             # Chips stays a click inside its own panel, and still not for latency: a chip expires at the end
             # of the half-season, so asking every time someone opens the panel answers a question nobody was
