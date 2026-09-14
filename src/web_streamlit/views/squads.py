@@ -1467,7 +1467,12 @@ def render_this_week(squad_name, squad, *, horizon=5, players=None, free: int = 
                  help="A language model is attached to this instance, so the written answer takes ~30s."):
         st.session_state["ms_week_on"] = True
     if st.session_state.get("ms_week_on"):
-        _apply_the_transfer(render_ai_tips(squad_name, squad, horizon=horizon), squad, players)
+        # ⚠️ This branch dropped `free`/`bank` in the first cut — the eager path passed them and the narrated
+        # path did not, so the same page gave two different answers depending on whether a model was
+        # attached. **A parameter added to a function with two call sites is added to one of them by
+        # default**; the guard below now calls both.
+        _apply_the_transfer(render_ai_tips(squad_name, squad, horizon=horizon, free=free, bank=bank),
+                            squad, players)
     else:
         st.caption("A language model is attached to this instance, so narrating the answer takes about "
                    "**half a minute** — which is why it is a click here and automatic on the deployed app, "

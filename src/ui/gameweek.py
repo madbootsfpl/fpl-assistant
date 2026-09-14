@@ -109,8 +109,16 @@ def _extra_move_lines(plan, horizon: int = 5) -> list:
         #
         # The owner read a one-move answer while holding two transfers and had no way to see which of those
         # the app believed. ⭐ *An assumption is worth stating in inverse proportion to how sure of it you are.*
-        return [f"            Assumes {free} free transfer{'s' if free != 1 else ''} — "
-                f"change it above if that is wrong"] if plan.get("transfer") else []
+        # ⚠️ **Both numbers, because either can be the wrong one.** This named only the transfer count, and
+        # when the owner reported the advice not responding there was no way to tell from the output whether
+        # `free` or `bank` had failed to arrive. A line stating an assumption should let a reader diagnose it,
+        # not just be reassured that one exists.
+        if not plan.get("transfer"):
+            return []
+        if free <= 0:
+            return ["            Assumes you hold no free transfer — this move would cost a 4-point hit"]
+        return [f"            Assumes {free} free transfer{'s' if free != 1 else ''} and "
+                f"£{plan.get('bank', 0.0):.1f}m in the bank — change these above if that is wrong"]
 
     out = []
     for n, m in enumerate(moves[1:], start=2):
@@ -125,10 +133,11 @@ def _extra_move_lines(plan, horizon: int = 5) -> list:
     # rolls over. (Found by a mutant that swapped the two and no test noticed, because every fixture had
     # them equal.)
     if len(moves) < free:
-        out.append(f"            Using {len(moves)} of your {free} free transfers: "
+        out.append(f"            Using {len(moves)} of your {free} free transfers "
+               f"(£{plan.get('bank', 0.0):.1f}m banked): "
                    f"+{total} XI xP {window} — no further move gains anything, so the rest keeps")
     else:
-        out.append(f"            Using all {free} free transfers: "
+        out.append(f"            Using all {free} free transfers (£{plan.get('bank', 0.0):.1f}m banked): "
                    f"+{total} XI xP {window} — each move priced after the one above it")
     return out
 

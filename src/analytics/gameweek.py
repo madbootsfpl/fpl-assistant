@@ -112,7 +112,10 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     #
     # `count` is at least 2 whatever the manager holds: move 2 is the *recommendation* when he holds two
     # transfers, and the *value of banking* when he holds one (ADR-132's arithmetic). Same number, two uses.
-    held = max(int(free or 1), 1)
+    # ⚠️ **`free` is reported as given and planned as at-least-one.** Holding zero free transfers is a real
+    # position — every move then costs a 4-point hit — so the best move is still worth naming, but the plan
+    # must not silently claim he holds one. `held` drives the search; the returned `free` is the truth.
+    held = max(int(free if free is not None else 1), 1)
     moves = suggest_transfer_plan(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank,
                                   count=max(held, 2), reported_out=reported_out)
     # What we actually advise him to do this week: as many moves as he holds transfers for.
@@ -202,6 +205,6 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                       "reason": reason, "chance": p["chance"]})
 
     return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
-            "transfer": transfer, "transfers": transfers, "free": held,
+            "transfer": transfer, "transfers": transfers, "free": int(free if free is not None else 1), "bank": bank,
             "replacements": replacements, "flags": flags,
             "timing": timing, "horizon_gain": horizon_gain, "cliff": cliff}

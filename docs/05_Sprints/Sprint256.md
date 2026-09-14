@@ -98,6 +98,27 @@ other redefines *"all your transfers"* as *"the ones we found"*. Now: *"Using 2 
 the rest keeps"* — an unspent transfer is information. ⭐ *Two variables that are equal in every fixture are
 one variable as far as the suite is concerned.*
 
+### …and reported again after that
+
+The control appeared and the **assumption line** appeared — but the answer still read *"Assumes 1 free
+transfer"*. Three things came out of chasing it, none of which is yet confirmed as the owner's cause:
+
+1. **One of the two routes to the week's answer dropped both arguments.** `render_this_week` renders eagerly
+   with no model attached and behind a button with one; both end at `render_ai_tips`, and only the eager path
+   was passing `free`/`bank`. ⭐ *A parameter added to a function with two call sites is added to one of them
+   by default.* Guarded now by an AST check that **every** call inside `render_this_week` carries both —
+   deliberately a claim about all of them, not about one (ADR-178's union-vs-all trap).
+2. **The line named only the transfer count**, so a reader could not tell *which* number had failed to
+   arrive. It now names both: *"Assumes 1 free transfer and £0.0m in the bank"*. ⭐ *A stated assumption should
+   let a reader debug it, not just confirm that one was made.*
+3. **`int(_free or 1)` turned a real 0 into 1.** The control's minimum is 0 and holding no free transfer is a
+   real position — the move still exists, it costs a 4-point hit. The count is now reported as given and
+   planned as at-least-one, and the line says so.
+
+⚠️ **The owner's symptom is not reproduced.** The analytics path is verified correct at `free` 1–3 and `bank`
+£0–2.5m, and the chain from widget to answer has one call site each with no cache and no fragment between
+them. The diagnostic line is what will settle it: the next report says which number arrived.
+
 ---
 
 ## 💡 The lesson

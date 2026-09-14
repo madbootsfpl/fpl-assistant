@@ -156,14 +156,19 @@ else:
         ) or "This week"
 
         if answer == "This week":
+            # ⚠️ Not `_free or 1`: the control's minimum is **0**, and `0 or 1` is 1. Holding no free
+            # transfers is a real position with a real answer (any move costs a hit), and silently
+            # promoting it to one is the same species of substitution as the defaults bug above.
             views.render_this_week(squad_name, squad, horizon=horizon, players=players,
-                                   free=int(_free or 1), bank=float(_bank or 0.0))
+                                   free=int(_free if _free is not None else 1),
+                                   bank=float(_bank if _bank is not None else 0.0))
         elif answer == "Captain":
             views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names,
                                  gw_history=gw_history)
         elif answer == "Transfer":
             views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
-                                  horizon=horizon, free=int(_free or 1), bank=float(_bank or 0.0))
+                                  horizon=horizon, free=int(_free if _free is not None else 1),
+                                  bank=float(_bank if _bank is not None else 0.0))
         else:
             # Chips stays a click inside its own panel, and still not for latency: a chip expires at the end
             # of the half-season, so asking every time someone opens the panel answers a question nobody was

@@ -414,8 +414,29 @@ def test_one_free_transfer_changes_no_advice_but_does_state_the_assumption(monke
     # *total* line still rendered. Assert the whole plan block is absent, not the part easiest to name.
     for leak in ("then #", "Using all", "priced after the one above it"):
         assert leak not in text, f"one transfer held must recommend one move and no plan — found {leak!r}"
-    assert "Assumes 1 free transfer — change it above if that is wrong" in text, \
+    assert "Assumes 1 free transfer and £0.0m in the bank — change these above if that is wrong" in text, \
         "the default is a guess, and a guess has to be visible to be correctable"
+
+
+def test_the_assumption_line_names_both_numbers_so_a_reader_can_diagnose_it(monkeypatch):
+    """⚠️ **Why this line carries the bank as well as the transfer count.**
+
+    It first named only `free`. When the owner reported that changing the control made no difference, the
+    output could not say *which* of the two numbers had failed to arrive — the line was reassuring rather than
+    diagnostic. ⭐ *A stated assumption should let a reader debug it, not just confirm that one was made.*
+    """
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
+
+    text = render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=1.5, free=1), "S", horizon=5)
+    assert "Assumes 1 free transfer and £1.5m in the bank" in text, \
+        "the bank the answer used must be visible in the answer"
+
+    two = render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=2.5, free=2), "S", horizon=5)
+    assert "£2.5m banked" in two, "the multi-move total must name the money it was computed with"
 
 
 def test_the_second_move_is_priced_after_the_first_not_beside_it(monkeypatch):
@@ -526,3 +547,58 @@ def test_the_cliff_must_beat_the_second_transfer_to_be_shown(monkeypatch):
 
     # …and with one transfer held there is no second move to compete, so the cliff stands as it always did.
     assert gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=1)["cliff"] is not None
+
+
+def test_every_route_to_the_weeks_answer_carries_the_managers_position():
+    """⚠️ **A parameter added to a function with two call sites gets added to one of them by default.**
+
+    `render_this_week` renders eagerly when no model is attached and behind a button when one is. Both end at
+    `render_ai_tips`. The first cut passed `free`/`bank` down the eager path and **not** the narrated one, so
+    the same page would advise a different position depending on whether Ollama happened to be running — and
+    the one that was wrong is the one nobody on Cloud would ever see.
+
+    This reads the source rather than the behaviour on purpose: exercising the narrated branch needs a live
+    model, which is exactly why that branch is the one that rots. ⚠️ A source scan asserts code was *written*,
+    not that it runs (ADR-178) — so it is deliberately narrow: **every** call of `render_ai_tips` inside
+    `render_this_week` must carry both arguments, which is a claim about all of them and not about one.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    from src.web_streamlit.views import squads
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(squads.render_this_week)))
+    calls = [n for n in ast.walk(tree)
+             if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "render_ai_tips"]
+    assert calls, "render_this_week must still route through render_ai_tips"
+    for call in calls:
+        passed = {kw.arg for kw in call.keywords}
+        assert {"free", "bank"} <= passed, (
+            "every route to the week's answer must carry the manager's position — "
+            f"one call passes only {sorted(passed)}")
+
+
+def test_holding_zero_free_transfers_is_not_quietly_promoted_to_one(monkeypatch):
+    """⚠️ **The control's minimum is 0, so 0 is a reachable value — and `int(_free or 1)` turns it into 1.**
+
+    Holding no free transfer is a real position with a real answer: the best move still exists, it just costs
+    a 4-point hit. Reporting it as *"assumes 1 free transfer"* would be the same silent substitution that made
+    the original defaults bug invisible — a number the reader never chose, presented as one they did.
+
+    The search still plans at least one move (there is always something worth naming); the *reported* count is
+    the truth.
+    """
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
+
+    plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=0)
+    assert plan["free"] == 0, "0 must survive to the answer, not be promoted to 1"
+    assert plan["transfer"] is not None, "a move worth making is worth naming even on a hit"
+
+    text = render_gameweek_plan(plan, "S", horizon=5)
+    assert "no free transfer — this move would cost a 4-point hit" in text
+    assert "Assumes 1 free transfer" not in text
