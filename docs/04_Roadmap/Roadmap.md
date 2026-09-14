@@ -479,6 +479,21 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   GW6 keeps the decision but inherits a **prior of zero with a mechanism**. **Likely end state: Option 3** —
   the two clubs' clean-sheet rates as a **lens on the transfer screen**, which is where the owner's knowledge
   actually enters, rather than a price.
+- 📋 **Spend the transfers you hold** (ADR-191, proposed 2026-09-14) — *owner, on an ADR-186 line:* **"I
+  have £1.0m in the bank, I have 2 free transfers… is this advice the best or most effective? Should we not be
+  triangulating number of available transfers, spending the money on the starting 11, looking at budget?"**
+  ✅ The half that was unfounded, checked first: the buy is **not** a 12th man — `xi_aware=True` means the gain
+  *is* the XI lift, and the recommended buy made the XI **60/60** runs. The fault is not which player, it is
+  **how many**. 📊 Measured (`spikes/191-two-transfers/`): one move +21.7/+22.2, two greedy +40.1/+40.6, two
+  planned +40.6/+40.9 — **the second transfer is worth roughly as much again as the first**, and
+  `gameweek.py` **already computes it and spends it on "bank or use"**. ⭐ *A number computed for one question
+  and discarded is invisible in a way a missing number is not.* Also: the app doesn't know you hold 2 FTs; the
+  cliff's *"wait"* is never weighed against *"use your second transfer"*; and the shortlist is a **menu, not a
+  plan** — its gains don't add. **§1 to build** (N moves priced sequentially, the cliff must compete).
+  **§2 joint pairs gated** — +0.4 mean but **+5.9 on RoboTS**, where greedy routed Ballard through the wrong
+  sale and blocked a better pair; ambiguous, wants a measurement on realistic squads. **§3 target-driven
+  planning gated** (*"what would it take to field Haaland?"*). ⚠️ Does **not** reopen ADR-187, which measured
+  planning *across* gameweeks — this is two free transfers *within* one.
 - ✅ **Bank to afford** (ADR-186, Sprint 248, 2026-09-13) — **built.** The week's answer now says
   *"Worth saving for: **£1.5m more** makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)"*, after
   the immediate move and never instead of it. ⭐ *"Bank" meant a spare transfer everywhere in the code and
