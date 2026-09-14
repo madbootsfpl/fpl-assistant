@@ -1111,8 +1111,12 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
 
 def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5):
     col1, col2 = st.columns(2)
-    bank = col1.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5,
-                       help="Spare money you can add on top of selling a player.")
+    # ⚠️ **ADR-191 — keyed, because this is now the app's only record of the manager's position.** The
+    # week's answer on the first tab used to hard-code £0.0m and one free transfer while these two widgets
+    # collected the real numbers three tabs away. Two surfaces, two different assumptions, no way to notice.
+    bank = col1.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5, key="tr_bank",
+                       help="Spare money you can add on top of selling a player. "
+                            "Also used by *What should I do this week*.")
     count = col2.slider("Transfers (a coordinated plan)", 1, 3, 1,
                         help="How many swaps to plan together (they share the bank).")
 
@@ -1164,8 +1168,9 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     if _plan and _next_gw is not None:
         _delay = round(_bg.get(_plan[0]["in"]["id"], {}).get(_next_gw, 0.0)
                        - _bg.get(_plan[0]["out"]["id"], {}).get(_next_gw, 0.0), 2)
-    _free = st.number_input("Free transfers you hold", 0, 5, 1,
-                            help="FPL gives one a week and rolls unused ones up to five.")
+    _free = st.number_input("Free transfers you hold", 0, 5, 1, key="tr_free",
+                            help="FPL gives one a week and rolls unused ones up to five. "
+                                 "*What should I do this week* now plans this many moves.")
     # ADR-156 — the same `dead` list the ⛔ banner above is built from, so the two cannot say different things.
     _timing = transfer_timing(_plan, free=_free, next_gw_gain=_delay, horizon=horizon, dead=dead)
     st.info(_timing["headline"])
@@ -1485,7 +1490,12 @@ def render_ai_tips(squad_name, squad, *, horizon=5, narrator=_DEFAULT_NARRATOR):
                "to consider, and any **flagged** players. The analytics decide; the answer is checked "
                "against the data (✓/⚠).")
     _kw = {} if narrator is _DEFAULT_NARRATOR else {"narrator": narrator or (lambda *a, **k: None)}
+    # ADR-191 — answer the position the manager is actually in. These default to today's behaviour (one
+    # transfer, no money) until the Transfer tab has been visited, and the rendered plan says which it used,
+    # so an untouched default is visible rather than silent.
     result = ask.answer(f"what should I do this week for {squad_name}?", active_squad=squad, horizon=horizon,
+                        free=int(st.session_state.get("tr_free", 1) or 1),
+                        bank=float(st.session_state.get("tr_bank", 0.0) or 0.0),
                         **_kw)
     st.code(render_ask(result, ollama_hint=False), language=None)   # US-375: no "Start Ollama" hint for web users
     return result                      # ADR-174: the caller acts on the plan this just rendered

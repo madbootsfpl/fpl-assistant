@@ -23,11 +23,15 @@ def test_gameweek_plan_assembles_captain_lineup_transfer_and_flags(monkeypatch):
 
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [{"web_name": "A", "xp": 5.0}])
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1, 2, 3})       # optimal XI = 1,2,3
-    # ADR-173: a real `suggest_transfers` move always carries `gain` (and `in`), and the plan now reads both
-    # for the bank-or-use verdict. The fake was under-specified — it modelled less than the real thing ever
-    # returns, so it passed only while nobody looked at those keys.
-    monkeypatch.setattr(gw, "suggest_transfers",
-                        lambda *a, **k: [{"out": {"id": 4}, "in": {"id": 9}, "gain": 2.0}])
+    # ADR-173: a real move always carries `gain` (and `in`), and the plan reads both for the bank-or-use
+    # verdict. The fake was under-specified — it modelled less than the real thing ever returns, so it passed
+    # only while nobody looked at those keys.
+    # ⚠️ ADR-191: the assembler now asks `suggest_transfer_plan` (a plan whose gains add) rather than
+    # `suggest_transfers` (a menu of alternatives whose gains do not). Stubbing the old name left the REAL
+    # planner running underneath, which is how these fakes failed — loudly, which is the good outcome.
+    monkeypatch.setattr(gw, "suggest_transfer_plan",
+                        lambda *a, **k: [{"out": {"id": 4}, "in": {"id": 9}, "gain": 2.0, "bank_after": 0.0}])
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
 
     plan = gw.gameweek_plan(owned, owned, [], xp, bench_ids=[3])           # declared bench = P3
 
@@ -36,7 +40,11 @@ def test_gameweek_plan_assembles_captain_lineup_transfer_and_flags(monkeypatch):
     assert {p["id"] for p in plan["lineup"]["bring_in"]} == {3}
     assert {p["id"] for p in plan["lineup"]["drop"]} == {4}
     assert plan["lineup"]["has_declared_bench"] is True
-    assert plan["transfer"] == {"out": {"id": 4}, "in": {"id": 9}, "gain": 2.0}
+    assert plan["transfer"] == {"out": {"id": 4}, "in": {"id": 9}, "gain": 2.0, "bank_after": 0.0}
+    # ADR-191 — `transfers` is the week's actual advice and `free` the assumption behind it. At one free
+    # transfer they say exactly what `transfer` always said, which is the point: the default does not move.
+    assert plan["transfers"] == [plan["transfer"]]
+    assert plan["free"] == 1
     # only the unavailable/doubtful players are flagged, with the right reason (A, B are fine)
     assert {f["web_name"]: f["reason"] for f in plan["flags"]} == {"C": "doubtful", "D": "injured"}
 
@@ -45,7 +53,8 @@ def test_gameweek_plan_handles_no_captain_no_transfer_and_no_declared_bench(monk
     owned = [_p(1, "A", "AAA"), _p(2, "B", "BBB")]
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])           # nobody eligible
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1, 2})
-    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])       # no positive-gain move
+    monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])       # no positive-gain move
 
     plan = gw.gameweek_plan(owned, owned, [], {1: 1.0, 2: 1.0})           # no bench_ids
 
@@ -114,6 +123,7 @@ def test_the_plan_keeps_dead_slots_in_their_own_key(monkeypatch):
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1})
     monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [{"out": {"web_name": "Destan"}}])
 
     plan = gw.gameweek_plan(owned, owned, [], {1: 5.0, 2: 0.0})
@@ -160,6 +170,7 @@ def test_an_unexplained_exodus_reaches_the_gameweek_flags(monkeypatch):
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: {1})
     monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
     flags = gw.gameweek_plan(owned, owned, [], {1: 5.0, 2: 4.0})["flags"]
@@ -176,6 +187,7 @@ def test_a_real_status_always_wins_over_the_crowd(monkeypatch):
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: set())
     monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
     (flag,) = gw.gameweek_plan([injured], [injured], [], {2: 4.0})["flags"]
@@ -207,6 +219,7 @@ def test_a_reported_leaver_is_benched_and_never_captained_while_the_window_is_op
     monkeypatch.setattr(gw, "captain_picks", fake_captain)
     monkeypatch.setattr(gw, "best_legal_xi", fake_xi)
     monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
     from datetime import date
@@ -238,6 +251,7 @@ def test_outside_a_transfer_window_he_is_treated_completely_normally(monkeypatch
     monkeypatch.setattr(gw, "captain_picks", fake_captain)
     monkeypatch.setattr(gw, "best_legal_xi", fake_xi)
     monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
     from datetime import date
@@ -304,7 +318,174 @@ def test_the_plan_always_carries_a_timing_verdict(monkeypatch):
     monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
     monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: set())
     monkeypatch.setattr(gw, "suggest_transfers", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
     plan = gw.gameweek_plan([], [], [], {}, bench_ids=[])
     assert plan["timing"]["action"] == "bank"          # nothing worth doing → hold it
     assert plan["horizon_gain"] is None
+
+
+# ---- ADR-191: the week's answer spends the transfers the manager actually holds -----------------
+
+def _legal15(prices=None):
+    """A legal 15 (2 GK · 5 DEF · 5 MID · 3 FWD), ≤3 per club, so `best_xi_points` has a real shape to
+    solve. Positions and clubs are what the transfer rules read; the ids double as xP keys below."""
+    prices = prices or {}
+    rows, pid = [], 1
+    for pos, n in (("GK", 2), ("DEF", 5), ("MID", 5), ("FWD", 3)):
+        for i in range(n):
+            rows.append({"id": pid, "web_name": f"O{pid}", "position": pos,
+                         "team": f"T{pid % 6}", "price": prices.get(pid, 5.0), "status": "a"})
+            pid += 1
+    return rows
+
+
+def _market_upgrades():
+    """Four buyable upgrades in different positions and clubs, so two moves can be made without the
+    club cap or the position rules deciding the answer for us."""
+    return [{"id": 100 + k, "web_name": f"M{100 + k}", "position": pos, "team": f"U{k}",
+             "price": 5.0, "status": "a"}
+            for k, pos in enumerate(("MID", "FWD", "DEF", "MID"))]
+
+
+def _only_transfers(monkeypatch):
+    """Stub the captain and the lineup so an ADR-191 test is about the transfer half and nothing else.
+    Both are separately tested; leaving them live here would only mean feeding them full player rows."""
+    monkeypatch.setattr(gw, "captain_picks", lambda *a, **k: [])
+    monkeypatch.setattr(gw, "best_legal_xi", lambda o, s: set())
+
+
+def test_two_free_transfers_get_two_moves_and_the_gains_actually_add(monkeypatch):
+    """⚠️ **The claim the rendered total makes, pinned against a real XI computation.**
+
+    The week's answer used to call `suggest_transfers(limit=2)` — two *disjoint alternatives*, each priced
+    against the **same** squad and the **same** bank. Printing both and summing them would have promised a
+    number no manager could get, because the second was never priced on what the first leaves.
+
+    So the test is not "two moves appear". It is: **the sum of the stated gains equals the actual lift of
+    making both moves**, computed independently by `best_xi_points`. If the assembler ever goes back to a
+    menu, this fails.
+    """
+    _only_transfers(monkeypatch)
+    from src.analytics.optimizer import best_xi_points
+
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})     # four clear upgrades
+
+    plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2)
+
+    assert len(plan["transfers"]) == 2, "two free transfers should buy two moves"
+    assert plan["free"] == 2
+
+    before = best_xi_points(owned, xp)
+    after = list(owned)
+    for m in plan["transfers"]:
+        by_id = {p["id"]: p for p in market}
+        after = [p for p in after if p["id"] != m["out"]["id"]] + [by_id[m["in"]["id"]]]
+    stated = round(sum(m["gain"] for m in plan["transfers"]), 1)
+    assert stated == round(best_xi_points(after, xp) - before, 1), \
+        "the stated gains must sum to the real lift of making every move — a menu's would not"
+
+
+def test_one_free_transfer_is_exactly_what_it_always_was(monkeypatch):
+    """The default does not move. `free` is manager-entered and defaults to 1, so the overwhelmingly common
+    case has to be byte-identical to the answer this surface has always given — otherwise a fix for the
+    two-transfer manager is a regression for everyone else."""
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
+
+    plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=1)
+    assert plan["transfers"] == [plan["transfer"]]
+    assert plan["free"] == 1
+    text = render_gameweek_plan(plan, "S", horizon=5)
+    # ⚠️ Checking for "then #2" alone was not enough: with the guard mutated the *total* line still rendered
+    # ("Using all 1 free transfers"), which is noise at best and, on a squad with one move, a restatement
+    # dressed as a plan. Assert the whole block is absent, not the part that was easiest to name.
+    for leak in ("then #", "Using all", "priced after the one above it"):
+        assert leak not in text, f"one transfer held must render no extra-move lines at all — found {leak!r}"
+
+
+def test_the_second_move_is_priced_after_the_first_not_beside_it(monkeypatch):
+    """⚠️ **The difference between a plan and a menu, as an assertion — and the fixture is the whole test.**
+
+    A first attempt here used two equal upgrades in different positions and asserted the second gain was no
+    larger than the first. **It passed while the code was mutated back to a menu**, because a menu sorts by
+    gain descending and so satisfies that too, and because with equal upgrades in free positions the two
+    answers genuinely coincide. ⭐ *A fixture that only exercises the lucky case will confirm a broken
+    mechanism* — the mutation test caught it, the assertion never would have.
+
+    So this fixture makes the two mechanisms **disagree**, using the thing a menu cannot model: **the bank
+    threads**. Both upgrades cost £6.0m against £5.0m players with £1.0m in the bank, so each is affordable on
+    its own — a menu, pricing both against the *original* bank, offers both. A plan spends the money on the
+    first and finds the second unaffordable. One answer is reachable and the other is fiction.
+    """
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    ups = [{"id": 200 + k, "web_name": f"M{200 + k}", "position": "MID", "team": f"V{k}",
+            "price": 6.0, "status": "a"} for k in range(2)]
+    market = owned + ups
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({200: 9.0, 201: 9.0})
+
+    plan = gw.gameweek_plan(owned, market, [], xp, bank=1.0, free=2)
+
+    # A menu would hand back both £6.0m buys, because it prices each against the untouched £1.0m bank.
+    assert len(plan["transfers"]) == 1, (
+        "the money was spent on the first move, so there is no second — a menu would offer one anyway: "
+        f"{[(m['out']['web_name'], m['in']['web_name']) for m in plan['transfers']]}")
+    # …and the one move it does advise is genuinely affordable.
+    assert plan["transfers"][0]["bank_after"] >= 0.0
+
+
+def test_the_plan_says_how_many_transfers_it_assumed(monkeypatch):
+    """The count is entered by the manager and defaults to 1, so the advice rests on something that can be
+    wrong. ⭐ A stated assumption gets corrected; a silent one gets believed — which is how the week's answer
+    spent weeks advising a position its reader was not in."""
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
+
+    text = render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2), "S", horizon=5)
+    assert "Using all 2 free transfers" in text
+    assert "each move priced after the one above it" in text, \
+        "the total is only honest if it says the moves were priced in sequence"
+
+
+def test_the_cliff_must_beat_the_second_transfer_to_be_shown(monkeypatch):
+    """⚠️ **Two correct answers to competing questions, made to compete (ADR-186 + ADR-191).**
+
+    *"Save £1.0m for a better player"* and *"use the second transfer you already hold"* were both computed and
+    **neither was compared to the other** — the reader got whichever happened to render. On the owner's squad
+    the app suggested saving for +3.3 while a transfer he already held was worth several times that.
+
+    Shown when it wins, suppressed when it loses. Nothing else about the plan changes.
+    """
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
+
+    def cliff_worth(uplift):
+        return lambda *a, **k: {"extra": 1.0, "uplift": uplift, "gain": 20.0,
+                                "move": {"out": {"web_name": "X"}, "in": {"web_name": "Y"}}}
+
+    second = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2)["transfers"][1]["gain"]
+
+    monkeypatch.setattr(gw, "affordability_cliff", cliff_worth(second + 1.0))
+    assert gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2)["cliff"] is not None, \
+        "a cliff worth more than the second transfer still deserves saying"
+
+    monkeypatch.setattr(gw, "affordability_cliff", cliff_worth(second - 0.1))
+    assert gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2)["cliff"] is None, \
+        "don't tell someone to save up for less than the move they can already make"
+
+    # …and with one transfer held there is no second move to compete, so the cliff stands as it always did.
+    assert gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=1)["cliff"] is not None

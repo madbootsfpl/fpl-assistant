@@ -13,7 +13,7 @@ from src.analytics.captain import captain_picks
 from src.analytics.crowd import crowd_exodus
 from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
-from src.analytics.transfer import replace_dead, suggest_transfers
+from src.analytics.transfer import replace_dead, suggest_transfer_plan, suggest_transfers
 from src.analytics.transfer_timing import affordability_cliff, bank_or_use
 
 # FPL status codes → a human word for a flag (mirrors the CLI's availability messages, ADR-023).
@@ -37,7 +37,13 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     - **captain** — the top next-GW pick (a `captain_picks` dict), or None if none is eligible.
     - **lineup** — ``{start, bench, bring_in, drop, has_declared_bench}``: the best legal XI (rows)
       and its bench, plus who to bring in / drop vs the declared XI (empty when already optimal).
-    - **transfer** — the single best positive-gain upgrade (a `suggest_transfers` dict), or None.
+    - **transfer** — the first recommended move (a `suggest_transfer_plan` dict), or None. Kept as its own
+      key because every existing consumer reads it.
+    - **transfers** — the week's actual advice: **as many moves as `free` transfers held**, each priced
+      against the squad and the bank the previous one leaves, so **the gains add up** (ADR-191). At `free=1`
+      this is `[transfer]` and nothing downstream changes.
+    - **free** — how many free transfers the plan assumed. Stated rather than implied: the count is
+      manager-entered, and a stated assumption can be corrected where a silent one cannot.
     - **timing** — `bank_or_use`'s verdict (ADR-132/173): spend the free transfer now, or bank it because a
       second move worth having is coming. Always present, so a caller cannot forget the alternative exists.
     - **cliff** — a materially better transfer just out of budget (`affordability_cliff`, ADR-186), or None.
@@ -94,9 +100,24 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # question the owner asked ("is there value in letting transfers build up?"), which turns entirely on
     # whether a *second* move worth having exists. Asking for one move made that unanswerable here, which is
     # why the arithmetic has lived on the Transfer tab since ADR-132 and never reached the week's answer.
-    moves = suggest_transfers(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank, limit=2,
-                              reported_out=reported_out)
-    transfer = moves[0] if moves else None
+    # ⚠️ **ADR-191 — a PLAN, not a menu.** This used to call `suggest_transfers(limit=2)`, which returns two
+    # *disjoint alternatives*, each priced against the **same** squad and the **same** bank. That is right for
+    # a shortlist and wrong here: their gains do not add, because the second is not priced on the squad or the
+    # money the first one leaves.
+    #
+    # `suggest_transfer_plan` has done this correctly since ADR-035 — the bank threads, the squad evolves, and
+    # each move's gain is its true marginal lift. The CLI, `ask` and the Transfer tab all use it. **The week's
+    # answer was the one caller that did not**, so the surface a manager actually reads was the one getting
+    # the menu. The fix is to call the function that already existed.
+    #
+    # `count` is at least 2 whatever the manager holds: move 2 is the *recommendation* when he holds two
+    # transfers, and the *value of banking* when he holds one (ADR-132's arithmetic). Same number, two uses.
+    held = max(int(free or 1), 1)
+    moves = suggest_transfer_plan(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank,
+                                  count=max(held, 2), reported_out=reported_out)
+    # What we actually advise him to do this week: as many moves as he holds transfers for.
+    transfers = moves[:held]
+    transfer = transfers[0] if transfers else None
 
     # Bank or use it (ADR-132, surfaced here by ADR-173). Banking buys a second free transfer next week,
     # which is worth only the hit it saves — and costs the gain skipped by waiting a week.
@@ -115,6 +136,25 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # question about several gameweeks, so it must be measured over several — the same `horizon_xp` ADR-173
     # already computes for the *Longer view* line, so the two numbers answer the same span.
     cliff = affordability_cliff(owned, market, horizon_xp or xp_by_id, bank=bank, suggest=suggest_transfers)
+
+    # ⚠️ **ADR-191 — the cliff has to COMPETE, not merely coexist.** It answers *"is a better player one
+    # price-rise away?"*; a second free transfer answers *"is there another move worth making today?"* Both
+    # were computed and **neither was compared to the other**, so the reader got whichever happened to render.
+    # On the owner's squad *"save £1.0m for +3.3"* was being shown while a second transfer he already held was
+    # worth several times that. Two correct answers to competing questions, and no argument between them.
+    #
+    # ⚠️ **Compared over the cliff's own window, never the page's.** The cliff is priced on `horizon_xp` (five
+    # gameweeks) while `xp_by_id` on My Squad is a single one (ADR-179). Comparing those two numbers would
+    # repeat ADR-186's original mistake exactly — a threshold sized against one window applied to another —
+    # so the rival move is re-priced over the same map before the two are weighed.
+    if cliff and held >= 2:
+        wide = horizon_xp or xp_by_id
+        rival = (suggest_transfer_plan(owned, market, wide, bench_ids=bench_ids, bank=bank,
+                                       count=2, reported_out=reported_out)
+                 if horizon_xp else moves)
+        second = rival[1]["gain"] if len(rival) > 1 else 0.0
+        if second >= (cliff.get("uplift") or 0.0):
+            cliff = None            # you do not need to save up for it — you can move twice today
 
     # The same swap over a longer window (ADR-173). A one-week gain reads as a verdict when it stands alone;
     # the owner rejected a transfer that was right for next week and wrong for his season. `horizon_xp` is an
@@ -162,5 +202,6 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                       "reason": reason, "chance": p["chance"]})
 
     return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
-            "transfer": transfer, "replacements": replacements, "flags": flags,
+            "transfer": transfer, "transfers": transfers, "free": held,
+            "replacements": replacements, "flags": flags,
             "timing": timing, "horizon_gain": horizon_gain, "cliff": cliff}

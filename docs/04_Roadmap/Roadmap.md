@@ -479,7 +479,7 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   GW6 keeps the decision but inherits a **prior of zero with a mechanism**. **Likely end state: Option 3** —
   the two clubs' clean-sheet rates as a **lens on the transfer screen**, which is where the owner's knowledge
   actually enters, rather than a price.
-- 📋 **Spend the transfers you hold** (ADR-191, proposed 2026-09-14) — *owner, on an ADR-186 line:* **"I
+- ✅ **Spend the transfers you hold** (ADR-191 §1, Sprint 256, 2026-09-14) — **§1 built; §2/§3 gated.** — *owner, on an ADR-186 line:* **"I
   have £1.0m in the bank, I have 2 free transfers… is this advice the best or most effective? Should we not be
   triangulating number of available transfers, spending the money on the starting 11, looking at budget?"**
   ✅ The half that was unfounded, checked first: the buy is **not** a 12th man — `xi_aware=True` means the gain
@@ -492,7 +492,12 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   plan** — its gains don't add. **§1 to build** (N moves priced sequentially, the cliff must compete).
   **§2 joint pairs gated** — +0.4 mean but **+5.9 on RoboTS**, where greedy routed Ballard through the wrong
   sale and blocked a better pair; ambiguous, wants a measurement on realistic squads. **§3 target-driven
-  planning gated** (*"what would it take to field Haaland?"*). ⚠️ Does **not** reopen ADR-187, which measured
+  planning gated** (*"what would it take to field Haaland?"*).
+  ✅ **Built:** the week's answer now plans as many moves as you hold, the gains add, the cliff competes (it
+  vanishes when a second transfer beats it), and `free`/`bank` reach that surface **at all** — both had been
+  hard-coded to 1 and £0.0m while the Transfer tab collected the real numbers. ⭐ *A primitive can be correct
+  everywhere and still be missing from the one place people read* — `suggest_transfer_plan` was right and had
+  four correct callers since ADR-035; the most-read surface was not one of them. ⚠️ Does **not** reopen ADR-187, which measured
   planning *across* gameweeks — this is two free transfers *within* one.
 - ✅ **Bank to afford** (ADR-186, Sprint 248, 2026-09-13) — **built.** The week's answer now says
   *"Worth saving for: **£1.5m more** makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)"*, after

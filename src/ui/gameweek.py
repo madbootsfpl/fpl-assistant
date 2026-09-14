@@ -78,6 +78,38 @@ def _conf(explanation) -> str:
     return f"  · Confidence {explanation.confidence}/100 · {explanation.band}" if explanation else ""
 
 
+def _extra_move_lines(plan, horizon: int = 5) -> list:
+    """The moves beyond the first, when the manager holds more than one free transfer (ADR-191).
+
+    Owner: *"I have £1.0m in the bank, I have 2 free transfers… is this advice the best or most effective?"*
+    It was not. The second transfer is worth roughly as much again as the first, and the week's answer showed
+    one move because it asked for a **menu** of alternatives and printed the top of it.
+
+    ⚠️ **Each gain here is a MARGINAL gain, and that is why a total is printed.** `suggest_transfer_plan`
+    prices every move against the squad and the bank the previous one leaves, so these numbers genuinely add —
+    unlike the shortlist they replaced, whose entries were each priced against the original squad and would
+    have summed to a figure nobody could actually get. The total is the claim; showing it makes the claim
+    checkable.
+
+    ⚠️ **The free-transfer count is stated, not implied.** It is entered by the manager and defaults to 1, so
+    the advice rests on something that can be wrong. A stated assumption gets corrected; a silent one gets
+    believed.
+    """
+    moves = plan.get("transfers") or []
+    if len(moves) < 2:
+        return []                      # one transfer held → byte-identical to what this always printed
+    window = f"over {horizon} GW" if horizon != 1 else "next GW"
+    out = []
+    for n, m in enumerate(moves[1:], start=2):
+        o, i = m["out"], m["in"]
+        out.append(f"            then #{n}: {o['web_name']} ({o['team']}) → {i['web_name']} ({i['team']})  "
+                   f"(+{m['gain']} XI xP {window})")
+    total = round(sum(m["gain"] for m in moves), 1)
+    out.append(f"            Using all {plan.get('free', len(moves))} free transfers: "
+               f"+{total} XI xP {window} — each move priced after the one above it")
+    return out
+
+
 def _timing_lines(plan, horizon) -> list:
     """The two lines ADR-173 added: what the swap is worth further out, and whether to bank instead.
 
@@ -143,6 +175,7 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
                  f"{_conf(tr_ex)}")
     if tr_ex and tr_ex.reasons:
         lines.append("            Edge: " + " · ".join(tr_ex.reasons[:2]))
+    lines += _extra_move_lines(plan, horizon)
     lines += _timing_lines(plan, horizon)
 
     lines.append(f"  Flags:    {_flags_line(plan['flags'])}")

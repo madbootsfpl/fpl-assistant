@@ -2,8 +2,11 @@
 
 **Decision ID:** ADR-191
 **Date:** 2026-09-14
-**Status:** 📋 **Proposed** — gate before building. **Three gaps, deliberately split**, because their evidence
-is at very different strengths: §1 is measured and certain, §2 is measured and ambiguous, §3 is unmeasured.
+**Status:** ✅ **§1 Accepted — built** (Sprint 256, 2026-09-14). **1758 → 1763 tests, ruff clean.**
+**§2 and §3 remain gated.** Three gaps deliberately split, because their evidence is at very different
+strengths: §1 measured and certain, §2 measured and ambiguous, §3 unmeasured.
+
+⭐ **The build was smaller than the proposal, and for an instructive reason — see §🛠.**
 **Superseded By / Replaces:** Extends [ADR-186](./ADR-186-bank-to-afford.md)'s affordability cliff and
 [ADR-173](./ADR-173-minutes-you-have-actually-played.md)'s week-plan answer. **Does not reopen [ADR-187](./ADR-187-reopen-multi-gameweek-planning.md)**
 — that measured planning *across gameweeks*; this is about the transfers you hold *this* gameweek. **No
@@ -148,16 +151,54 @@ the same gameweek, both free, sharing one budget.** The first is about *when*; t
 
 ---
 
-### 🛠 Implementation & Migration
-* **Components Affected:** `analytics/gameweek.py`, `analytics/transfer.py` (sequential pricing),
-  `analytics/transfer_timing.py` (the cliff comparison), `ui/gameweek.py`, `web_streamlit` squad views, Docs
+### 🛠 Implementation — and the part that was already built
+
+**The sequential planner has existed since ADR-035.** `suggest_transfer_plan` threads the bank, evolves the
+squad and prices every move as a true marginal gain. The CLI (`transfer --count`), `ask`'s transfer intent and
+the Transfer tab all use it.
+
+**The week's answer was the one caller that did not.** `gameweek.py` asked `suggest_transfers(limit=2)` — a
+menu — showed the top of it, and spent the second entry on *"bank or use"*. So §1 was not *"build a planner"*;
+it was **call the planner we already have**. One line, plus the honesty around it.
+
+⚠️ That makes the diagnosis sharper than the ADR first stated it. The gap was not missing capability. It was
+**the most-read surface being the one wired to the older primitive**, which nothing surfaces: every other
+caller was correct, so a grep for the planner looked healthy.
+
+And one more thing fell out of the wiring: `free` and `bank` did not reach the week's answer *at all*. Both
+were hard-coded in `ask.py` — one transfer, no money — while the Transfer tab collected the real values three
+tabs away. The recommendation was being computed for a position its reader was not in, and nothing said so.
+Both widgets are now keyed (`tr_free`, `tr_bank`) and are the app's single record of that position.
+
+#### ⚠️ Two guards passed while the code was broken
+
+Six mutants; **two survived the first sweep**, and both were fixture faults rather than assertion faults:
+
+1. **Reverting to the menu was not caught.** The headline guard — *"the gains must sum to the real XI lift"* —
+   used equal upgrades in different positions, where a menu and a plan **genuinely agree**. The assertion was
+   right and the fixture never reached the fault. ⭐ *A fixture that only exercises the lucky case will
+   confirm a broken mechanism.* Rebuilt around the thing a menu cannot model — **the bank threading**: two
+   £6.0m buys against £5.0m players with £1.0m banked, where a menu offers both and a plan can afford one.
+2. **The `free=1` guard checked for `"then #2"`** and missed that the *total* line still rendered. Now it
+   asserts the whole block is absent rather than the part that was easiest to name.
+
+---
+
+### 🛠 Components & remaining items
+* **Components Affected:** `analytics/gameweek.py` (the planner call + the cliff comparison),
+  `ui/gameweek.py` (the extra-move lines + the stated assumption), `ask.py` (`free`/`bank` threaded through
+  `answer` → `_fresh` → `_dispatch` → `_decide_gameweek`), `web_streamlit/views/squads.py` (keyed widgets),
+  `tests/test_gameweek.py`. **`analytics/transfer.py` unchanged** — `suggest_transfer_plan` was already right.
 * **Action Items (§1):**
-  - [ ] `week_plan` recommends `free` moves, each priced against the squad + bank the previous one leaves
-  - [ ] The affordability cliff renders only when it beats the next available transfer's marginal gain
-  - [ ] The recommendation states how many free transfers it assumed
-  - [ ] Guards: two moves' stated gains **sum to the stated total**; a second move is priced on the
-        post-first squad (mutate the base and watch it fail); `free=1` reproduces today's answer byte-identically
-  - [ ] Mutation-test every guard
+  - [x] `week_plan` recommends `free` moves, each priced against the squad + bank the previous one leaves
+  - [x] The affordability cliff renders only when it beats the next available transfer's marginal gain
+  - [x] The recommendation states how many free transfers it assumed
+  - [x] Guards: gains **sum to the real XI lift**; a second move is priced on the post-first squad;
+        `free=1` renders exactly what it always did
+  - [x] Mutation-test every guard — **six mutants, two of which survived the first attempt** (see §🛠)
+  - [x] **Unplanned, found while wiring:** `free` **and `bank`** now reach the week's answer at all. Both
+        were hard-coded (1 and £0.0m) in `ask.py` while the Transfer tab collected the real numbers three
+        tabs away.
 * **Action Items (gated):**
   - [ ] **§2** re-measure joint pairs on realistic squads before building any search
   - [ ] **§3** design target-driven planning (*"what would it take to field X?"*)

@@ -708,7 +708,7 @@ def _gameweek_facts(plan: dict) -> dict:
 
 
 def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
-                     *, horizon=_HORIZON, question=None) -> dict | None:
+                     *, horizon=_HORIZON, question=None, free: int = 1, bank: float = 0.0) -> dict | None:
     """Analytics DECIDE a one-gameweek plan (ADR-070): captain · lineup · a transfer · flags.
 
     An assembly of the existing primitives (via `gameweek_plan`), humanised for narration and
@@ -743,6 +743,11 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         bench_ids=squad.get("bench_ids") or [],
         events_by_id=events_by_id,
         horizon_xp=horizon_xp,
+        # ADR-191 — the manager's ACTUAL position, not a default. `free` decides how many moves the week's
+        # answer recommends; `bank` decides what they can afford and whether ADR-186's cliff is real.
+        # Both had been hard-coded here (1 and £0.0m) while the Transfer tab collected them three tabs away,
+        # so the surface a manager reads was advising a position he was not in.
+        free=free, bank=bank,
     )
     plan["horizon_gw"] = _WIDE
     cap, tr = plan["captain"], plan["transfer"]
@@ -1673,7 +1678,8 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
 
 
 def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
-              *, count: int = 1, rank: int = 0, active_squad=None, horizon=_HORIZON) -> dict | None:
+              *, count: int = 1, rank: int = 0, active_squad=None, horizon=_HORIZON,
+              free: int = 1, bank: float = 0.0) -> dict | None:
     """Run the decision engine for `intent` (shared by `answer` and `converse`).
 
     `count`/`rank` are threaded so a conversational follow-up can ask for an N-transfer plan or
@@ -1689,7 +1695,7 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "gameweek":
         return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon,
-                                question=question)
+                                question=question, free=free, bank=bank)
     if intent == "chips":
         return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon)
     if intent == "rules":
@@ -1746,7 +1752,7 @@ def _resolve_pronoun(question: str, context: "Context | None") -> str:
 
 
 def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None,
-           horizon=_HORIZON):
+           horizon=_HORIZON, free: int = 1, bank: float = 0.0):
     """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
 
     A successful answer becomes the new context; a fallback/soft-failure leaves the running
@@ -1772,7 +1778,7 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
 
     count = _transfer_count(question)
     decision = _dispatch(intent, store, question, squad, count=count, active_squad=active_squad,
-                         horizon=horizon)
+                         horizon=horizon, free=free, bank=bank)
     known = [p["web_name"] for p in store.get_players()] if decision else ()
     result = assemble(question, intent, decision, narrator, known_names=known)
     new_context = context
@@ -1850,7 +1856,7 @@ def converse(question: str, context: "Context | None", *, store: Storage,
 
 
 def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
-           active_squad=None, horizon=_HORIZON) -> AskResult:
+           active_squad=None, horizon=_HORIZON, free: int = 1, bank: float = 0.0) -> AskResult:
     """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional.
 
     The one-shot entry point: a single `converse` turn with no prior context (so a follow-up-only
@@ -1862,7 +1868,8 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
     own_store = store is None
     store = store or Storage()
     try:
-        result, _context = _fresh(question, None, store, narrator, active_squad, horizon=horizon)
+        result, _context = _fresh(question, None, store, narrator, active_squad, horizon=horizon,
+                                  free=free, bank=bank)
         return result
     finally:
         if own_store:
