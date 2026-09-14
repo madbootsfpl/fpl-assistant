@@ -121,10 +121,15 @@ def _extra_move_lines(plan, horizon: int = 5) -> list:
                 f"£{plan.get('bank', 0.0):.1f}m in the bank — change these above if that is wrong"]
 
     out = []
+    span = plan.get("horizon_gw", 5)
     for n, m in enumerate(moves[1:], start=2):
         o, i = m["out"], m["in"]
+        # The longer view travels with the move, because a later move is exactly as likely to be right for
+        # next week and wrong for the season — and on this page the gain above it is a single gameweek.
+        wide = m.get("horizon_gain")
+        tail = "" if wide is None else f", {wide:+.1f} over {span} GWs"
         out.append(f"            then #{n}: {o['web_name']} ({o['team']}) → {i['web_name']} ({i['team']})  "
-                   f"(+{m['gain']} XI xP {window})")
+                   f"(+{m['gain']} XI xP {window}{tail})")
     total = round(sum(m["gain"] for m in moves), 1)
     # ⚠️ **"All" is a claim, and it is often false.** The plan stops when no positive-gain move is left, so a
     # well-built squad regularly has fewer moves worth making than transfers in hand. Reporting

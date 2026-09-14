@@ -9,6 +9,7 @@ needn't run — `ask` degrades to the decision + facts.
 import pathlib
 import re
 
+import pytest
 import requests
 from streamlit.testing.v1 import AppTest
 
@@ -4703,3 +4704,27 @@ def test_the_position_controls_reach_every_answer_below_them(monkeypatch):
         "changing the control must change what the page says it will use"
     after = next(w for w in after.slider if w.key == "ms_bank").set_value(1.5).run()
     assert "**£1.5m**" in stated(after), "the bank must travel the same path as the transfer count"
+
+
+def test_the_bank_control_can_express_a_real_bank():
+    """⚠️ FPL prices players in tenths of a million, so a bank of **£1.2m** is an ordinary position.
+
+    This shipped with `step=0.5` and the owner reported he could not enter his. A control that cannot express
+    the real value does not fail loudly — it silently rounds the manager's position, and **every answer below
+    it is computed from that number**. ⭐ *A control's step is a claim about what values exist.*
+    """
+    at = _run(_PAGES / "1_My_Squad.py")
+    bank = next((w for w in at.slider if w.key == "ms_bank"), None)
+    if bank is None:
+        return                                   # no squad loaded in this environment
+
+    # ⚠️ **Assert the step, not a set_value.** The obvious test — set 1.2 and read it back — **passed with the
+    # broken £0.5m step**, because `AppTest` writes the value straight into session state and never enforces
+    # the widget's own granularity. It asserted something the harness cannot constrain, which is the shape of
+    # a guard that guards nothing (ADR-178). The constraint IS the step, so the step is what to assert.
+    assert bank.proto.step == pytest.approx(0.1), (
+        "FPL prices in tenths, so the bank control must too — at £0.5m the owner could not enter his "
+        f"actual £1.2m bank, got step {bank.proto.step}")
+    after = bank.set_value(1.2).run()
+    stated = next((c.value for c in after.caption if "free transfer" in c.value), "")
+    assert "**£1.2m**" in stated, f"a £1.2m bank must survive the control, got: {stated!r}"

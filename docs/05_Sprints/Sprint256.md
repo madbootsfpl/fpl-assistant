@@ -141,6 +141,34 @@ end that consumes it.**
 A test now drives the real widget and asserts that statement changes — the one step no amount of reading the
 source could confirm, and the step **both** bugs lived in.
 
+### Owner-verified, and two tweaks from using it
+
+**It works**: caption and answer agree, two moves are recommended, and the cliff correctly disappears when the
+second transfer beats it. Two things came back from actually using it:
+
+**1. *"I can't select £1.2m."*** The bank slider shipped with `step=0.5`. FPL prices players in **tenths**, so
+£1.2m is an ordinary bank — and a control that cannot express the real value does not fail loudly, it
+**silently rounds the manager's position**, from which every answer below it is computed. ⭐ *A control's step
+is a claim about what values exist.* Now £0.1m.
+
+⚠️ **The obvious guard for it passed while the bug was in place.** `set_value(1.2)` then reading it back works
+fine at `step=0.5`, because `AppTest` writes the value into session state and never enforces the widget's
+granularity — a test asserting something the harness cannot constrain. The constraint **is** the step, so the
+step is what the test asserts now. (Caught by mutation; it is the ADR-178 shape again.)
+
+**2. *"Not sure I'd make the Konsa call."*** The second move was `Konsa (ARS) → Affengruber (FUL)` at **+1.4
+XI xP over one gameweek** — and it carried **no longer view at all**, on a page whose window is a single
+gameweek (ADR-179).
+
+That is ADR-173's exact finding, unlearned. It added the *Longer view* line because *"a one-week number reads
+as a verdict when it stands alone"*, after the owner rejected a transfer that was right for next week and
+wrong for his season. I then shipped a second move without one. And it matters most there: against a
+per-player weekly sd of **3.51** (ADR-161), a +1.4 one-week edge is inside its own noise, so a plan step was
+being presented on a margin the model cannot resolve. **Every move now carries its own five-gameweek figure.**
+
+⭐ *A number that decides something needs its window stated wherever it is shown, not only the first time it
+is shown.*
+
 ---
 
 ## 💡 The lesson

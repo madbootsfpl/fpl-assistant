@@ -167,6 +167,22 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     if transfer and horizon_xp:
         horizon_gain = round(horizon_xp.get(transfer["in"]["id"], 0)
                              - horizon_xp.get(transfer["out"]["id"], 0), 1)
+    # ⚠️ **ADR-191 — EVERY move gets the longer view, not just the first.**
+    #
+    # ADR-173 added the *Longer view* line because a one-week number reads as a season verdict when it stands
+    # alone, and the owner had rejected a transfer that was right for next week and wrong for his season. I
+    # then shipped a second move with **no longer view at all** — on My Squad, whose window is a single
+    # gameweek (ADR-179).
+    #
+    # That matters most for exactly the move it was reported on. A **+1.4 one-week** XI gain sits against a
+    # per-player weekly sd of **3.51** (ADR-161) — a swap's week-to-week spread is wider still — so a second
+    # move can be presented as a plan step on a margin smaller than its own noise. The five-gameweek number is
+    # what says whether it is a decision or a coin flip, and it was missing from the only place a manager
+    # could have used it.
+    if horizon_xp:
+        for m in transfers:
+            m["horizon_gain"] = round(horizon_xp.get(m["in"]["id"], 0)
+                                      - horizon_xp.get(m["out"]["id"], 0), 1)
 
     # Replacements — the slots that cannot score at all (ADR-136). A dead player on the bench is invisible to
     # the XI-gain ranking above (it moves the XI by zero), so "hold" was the advice on a squad with a hole in

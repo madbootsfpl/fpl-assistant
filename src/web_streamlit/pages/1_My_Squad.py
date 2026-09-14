@@ -143,7 +143,11 @@ else:
         _free = _pos1.number_input("Free transfers you hold", 0, 5, 1, key="ms_free",
                                    help="FPL gives one a week and rolls unused ones up to five. "
                                         "**This week** plans this many moves.")
-        _bank = _pos2.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.5, key="ms_bank",
+        # ⚠️ **£0.1m steps, because that is the unit FPL prices in.** This shipped on £0.5m and the owner
+        # could not enter his actual bank of £1.2m — a control that cannot express the real value silently
+        # rounds the manager's position, and every answer below is computed from it. Player prices move in
+        # tenths, so a half-million step is not a simplification, it is a different squad's budget.
+        _bank = _pos2.slider("Bank (£m)", 0.0, 10.0, 0.0, step=0.1, key="ms_bank",
                              help="Spare money on top of selling a player. Used by every answer below.")
         # ⚠️ **The page says what it read, right where it read it.** Not decoration: the owner reported the
         # controls having no effect, and with the position stated only *inside* the answer there was no way to

@@ -602,3 +602,45 @@ def test_holding_zero_free_transfers_is_not_quietly_promoted_to_one(monkeypatch)
     text = render_gameweek_plan(plan, "S", horizon=5)
     assert "no free transfer — this move would cost a 4-point hit" in text
     assert "Assumes 1 free transfer" not in text
+
+
+def test_every_move_in_the_plan_carries_its_longer_view(monkeypatch):
+    """⚠️ **ADR-173's finding, applied to the moves it was not applied to.**
+
+    That ADR added the *Longer view* line because a one-week number reads as a season verdict when it stands
+    alone — the owner had rejected a transfer that was right for next week and wrong for his season. The
+    second move then shipped with **no longer view at all**, on a page whose window is a single gameweek
+    (ADR-179).
+
+    It matters most on exactly the move it was reported on: a **+1.4** one-week XI gain sits against a
+    per-player weekly sd of **3.51** (ADR-161), so a plan step can be presented on a margin smaller than its
+    own noise. ⭐ *A number that decides something needs its window stated wherever it is shown, not only the
+    first time.*
+    """
+    _only_transfers(monkeypatch)
+    owned = _legal15()
+    market = owned + _market_upgrades()
+    xp = {p["id"]: 2.0 for p in owned}
+    xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
+    # The wide window disagrees with the near one: the second buy is a one-week flash and a five-week drop.
+    wide = {p["id"]: 10.0 for p in owned}
+    wide.update({100: 40.0, 101: 1.0, 102: 1.0, 103: 1.0})
+
+    plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2, horizon_xp=wide)
+    plan["horizon_gw"] = 5
+    assert all("horizon_gain" in m for m in plan["transfers"]), \
+        "a later move needs the same window check as the first"
+
+    text = render_gameweek_plan(plan, "S", horizon=1)
+    line = next(ln for ln in text.splitlines() if "then #2" in ln)
+    assert "over 5 GWs" in line, f"the second move must state its longer view too: {line!r}"
+
+    # ⚠️ Don't assert *which* upgrade lands second — the fixture would then be pinning the optimiser's choice
+    # rather than the renderer's honesty, and a first draft did exactly that and failed. Assert the number
+    # shown is the real five-week difference for whatever move was chosen.
+    second = plan["transfers"][1]
+    expected = round(wide[second["in"]["id"]] - wide[second["out"]["id"]], 1)
+    assert f"{expected:+.1f} over 5 GWs" in line, \
+        f"the longer view must be this move's real figure ({expected:+.1f}), not the first move's: {line!r}"
+    assert expected != second["gain"], \
+        "this fixture is only meaningful while the two windows disagree — otherwise it proves nothing"
