@@ -1,0 +1,29 @@
+MADBOOTS — a Fantasy Premier League assistant
+Copyright (C) 2026 Tony Sheridan
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero
+General Public License as published by the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version. See LICENSE.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+
+WHAT IS **NOT** COVERED BY THE LICENCE
+--------------------------------------
+The AGPL covers the **code**. It does not grant any right to the MADBOOTS **brand**, which is a separate asset
+(ADR-103):
+
+  * the name **MADBOOTS**
+  * the two-tone MAD/BOOTS wordmark and the MB badge (`src/web_streamlit/assets/`)
+  * the madboots.com domain, and the Maddie presenter likeness and videos
+
+You may run, fork and modify this software freely under the AGPL. Please run your fork under **your own name**,
+not this one — partly so nobody is misled about who stands behind an answer, and mostly because this project's
+whole claim is that its recommendations are checkable, and a name is the thing a reader checks first.
+
+
+NOT AFFILIATED
+--------------
+MADBOOTS is not affiliated with the Premier League or the official Fantasy Premier League game. It reads FPL's
+public endpoints; it is not endorsed by them, and anyone running a fork takes their own view of that.
