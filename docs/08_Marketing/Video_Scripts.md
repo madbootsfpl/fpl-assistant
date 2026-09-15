@@ -332,6 +332,7 @@ the two educational ones are **~90s YouTube pieces** (searched for, so they comp
 | F | **Boot Battle** ⚔️ | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
 | G | **Scout — worth a look** | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | **drafted (§G)** ⚠ shoot after ~GW10, or keep the voiceover off "this season" |
 | H | **Team DNA** | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar), and the refuses-to-draw guard is the brand in one shot. | **drafted (§H)** |
+| L | **Trending — what the crowd is doing** | *The other half of §J.* ADR-170's reader, not a fifth board: the patterns live **between** the four leaderboards — in form yet under-owned, a bandwagon forming, the template breaking up. Honesty beat: **a quiet week is a finding, not a gap**. ✅ **No new stills** — `G1`/`G2` already shot. | **drafted (§L)** |
 | K | **Chips — not when, whether** | *The least-covered real differentiator.* Every tool says **when**; ADR-185's wildcard advisor says **whether** — worth +X xP, you keep N of 15, £Xm cannot play. Strongest brand beat in the library: the page states that its two *Confidence* columns **measure different things**. ⚠️ Needs one new still (`K1`), and the spoken figures must match the squad filmed. | **drafted (§K)** |
 | J | **Signals — how much to believe it** | *The second name clash, and a real differentiator.* Four tiers of news stacked **most reliable first**, each caption stating its own limit — and **Trending vs Signals** (doing vs saying) settled at last. ⚠️ Shoot the **structure, never the stories**: this page's content dates within days. | **drafted (§J)** — stills `G3`/`G4` already captured |
 | I | **Orientation — where everything is** | *Not a feature piece.* Wayfinding: the page you live in, the four answers under the pitch, the three tools across the top, and the **DNA vs Team DNA** clash no feature video can explain. Onboarding first (Help ▸ Watch), marketing second. | **drafted (§I)** — the dynamic cut: screen motion + per-beat avatar framing |
@@ -795,6 +796,65 @@ behind it is worse than no figure*, and this is the one script where the payload
   so *"which week should I play this?"* only means anything across the weeks that remain.
 - ⚠️ **Never say a chip is guaranteed value.** Three of the four are explicitly low-confidence; the video's
   whole claim is that it tells you *how sure it is*, which is only true while the Low ones are shown too.
+
+---
+
+## L · Trending — what the crowd is doing — short, **runs ~1:04 (trim to 45s)**  *(**new 2026-09-15**)*
+
+**Why this exists.** It is the other half of §J. Signals is what is being **said**; Trending is what managers
+are **doing** — and the app cross-links the two in both directions, which is the tell that the pair belongs
+together.
+
+⭐ **The idea worth the video is [ADR-170](../06_Decisions/ADR-170-worth-noticing.md)'s:** with four
+leaderboards already on the page, the answer was **a reader, not a fifth board**. The patterns it names only
+exist *between* the boards — in form **and** under-owned; being bought heavily **and** newly popular; heavily
+owned **and** being dumped. No single board can show any of them, which is exactly why they are worth naming.
+
+> **[Hook – 0:00]** Most owned. Most transferred in. Most transferred out. In form. Four leaderboards — and the
+> interesting players are the ones **between** them. *(UI: the board selector — `G2`.)*
+>
+> **[0:13 – Worth noticing]** So Trending **reads them for you**. *In form, still under-owned.* *A bandwagon
+> forming.* *The template breaking up.* None of those is a board; all of them are a pattern. *(UI: `G1`, the
+> 👀 Worth noticing strip.)*
+>
+> **[0:30 – What it is not]** This is what other managers are **doing**. Not a points projection, and not a
+> reason — for **why** a player is moving, that is **Signals**.
+>
+> **[0:44 – The quiet week]** And in a quiet week it says so. No bandwagon, nothing under-owned in form,
+> nothing being dumped. **A quiet week is a finding, not a gap.**
+>
+> **[1:00 – Close]** **Analytics decide. Logic explains. You make the call.**
+
+**Timing, computed not estimated:** 108 spoken words ÷ **119 wpm** = **54s of speech**, +2.5s air per beat =
+**~1:04**, trimming to 45s like §G/§H/§J/§K.
+
+### Stills — **nothing new needed**
+
+`G1` (the 👀 Worth noticing strip) and `G2` (one crowd board, not four) are already captured, and between them
+they cover every beat. ⭐ **This is the only remaining script that can be produced from the existing set.**
+
+### ⚠️ Name the patterns, never the players or the count
+
+The three pattern labels are **constants** (`crowd_watch._LABEL`) and do not change: *In form, still
+under-owned* · *A bandwagon forming* · *The template breaking up*. The **players inside them, and how many,
+change every gameweek** — the note above the strip reads *"**12 players** the four boards below only show
+between them"*, and that 12 is this week's.
+
+So the voiceover names the three patterns and no numbers at all. Same discipline as §J's *shoot the structure,
+not the stories*, and it is why this script has no figure in it.
+
+**Accuracy anchors** *(checked against live data 2026-09-15 — all three patterns populated, 12 players)*:
+- Page caption: *"Free FPL crowd data — ownership · transfers · form. **A community lens, not a prediction.**
+  For what people are *saying* … see 📡 Signals."* The script's *"not a projection, not a reason"* is that
+  sentence, shortened.
+- The four boards, verbatim: **Most owned · Most transferred in · Most transferred out · In form**.
+- `watch_note` says the shortlist is *"what other managers are **doing** — not a points projection, and not a
+  reason"*. Quote it; do not upgrade it.
+- ⚠️ **The quiet-week line is real, not a flourish.** `watch_note` returns *"Nothing unusual in the crowd
+  numbers this gameweek … **A quiet week is a finding, not a gap.**"* when nothing qualifies. ⭐ It is the best
+  sentence on the page and the hardest to film — it needs a genuinely quiet week, so **grab that screenshot
+  opportunistically whenever you see it**, the way `F5`'s unrankable radar was hunted.
+- ⚠️ Crowd signals are a **lens** and never enter `decision_xp` (ADR-057). Nothing here predicts points.
 
 ---
 
