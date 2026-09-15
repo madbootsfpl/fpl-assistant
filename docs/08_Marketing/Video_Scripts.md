@@ -83,7 +83,22 @@ rendered video still says the old line**)*
 
 The only script here that has been rendered — it fronts the madboots.com hero lightbox and seeds the in-app
 **Maddie Explains** hub. **⚠ Screens marked "NEW SHOT" changed under it** (ADR-166 folded Squad Lab into
-My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
+My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad — **and ADR-175 moved it back below the
+pitch**, see the order note below).
+
+> ### ⚠️ The My Squad order — checked 2026-09-15, and it has moved three times
+>
+> **What the page does today:** the **strip and the pitch first**, then a divider, then the answer selector
+> (*This week* · Captain · Transfer · Chips) defaulting to **This week**. ADR-191 added **Free transfers /
+> Bank** controls between the divider and the selector.
+>
+> *This week* still renders **eagerly on load** (123 ms on Cloud) — that half of ADR-171 stands. What changed
+> is only its **position**: ADR-171 put it at the top, [ADR-175](../06_Decisions/ADR-175-value-above-the-fold.md)
+> put value above the fold and moved it below the pitch.
+>
+> ⭐ **Any line that says the answer is "at the top of My Squad" is stale.** Lines saying it renders on load,
+> or without being asked, are still true. The two claims travelled together in the old copy and only one of
+> them expired — which is why they have to be separated by hand here.
 
 > **[0:00 — Open · the MADBOOTS mark]**
 > Hi — I'm Maddie. Welcome to MADBOOTS — the Fantasy Premier League assistant where analytics decide and logic
@@ -96,7 +111,7 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 > **[0:30 — Adopt it · the *Use this squad* button]**
 > Happy with it? Tap *Use this squad*, and it's your active team.
 >
-> **[0:37 — ⚠ NEW SHOT: the top of My Squad — the *This week* block]**
+> **[0:37 — ⚠ NEW SHOT: the *This week* block — ⚠️ it is now BELOW the pitch, not the top (ADR-175)]**
 > My Squad then gives you the whole week on one screen: who to captain, any lineup change, and the one
 > transfer worth making — each with the edge for it, the risk against, and a confidence score.
 >
@@ -133,7 +148,71 @@ My Squad ▸ Lab; ADR-171 put the week's answer at the top of My Squad).
 
 ---
 
-## 1 · The explainer — hero cut, ~2:27  *(drafted 2026-08-13; **re-cut 2026-08-31** for ADR-166/168/171)*
+## 1 · The explainer — hero cut, **runs ~1:31**  *(drafted 2026-08-13; re-cut 2026-08-31; **re-cut again
+2026-09-15** — shortened for the hero slot, and the beat order corrected for ADR-175)*
+
+> **[Hook – 0:00]** Fantasy Premier League is drowning in hot takes and AI that just… guesses. MADBOOTS is
+> different: **analytics decide — and logic explains**, so you always know what to trust.
+> *(UI: the ✓/⚠ trust line.)*
+>
+> **[0:17 – Build or import]** Getting started takes seconds. In **My Squad**, open the **Lab**: set your
+> budget and strategy, and MADBOOTS builds your optimal 15. Already play FPL? **Import your real team with
+> your manager ID.**
+>
+> **[0:37 – Your team, live]** My Squad opens on **your team**: a live pitch where you set your captain, make
+> subs and fill your bench — legality checked as you go. Tap any player for form, expected points and
+> fixtures. *(UI: the strip + pitch, which is what the page opens on.)*
+>
+> **[0:57 – Your week, answered]** Below it, **the answer**: who to captain, any lineup change, the one
+> transfer worth making, and the players to watch — each with the **Edge** for it, the **Risk** against, and a
+> confidence score. *(UI: the* This week *panel under the pitch.)*
+>
+> **[1:18 – Close + CTA]** No paid black boxes. No AI guessing. Just honest analytics you can check.
+> **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+
+**Timing, computed not estimated:** 153 spoken words ÷ **119 wpm** (Maddie's measured rate) = **77s of
+speech**, plus ~3.5s of air per beat = **~1:31**. Every timecode above is that arithmetic, not a guess.
+
+### ⚠️ Why this was re-cut — the app moved under the script, again
+
+The 2026-08-31 cut said *"My Squad opens on the answer"* and put the pitch **after** it. That was **correct
+when written**: ADR-171 had merged the golden page and led with *This week*, and that re-cut specifically
+fixed the opposite error in the 2026-08-13 draft.
+
+**[ADR-175](../06_Decisions/ADR-175-value-above-the-fold.md) then reversed the page.** The strip and pitch come first
+now, with the answer below a divider — *"ten blocks preceded the first useful thing"* was the finding, and the
+ordering it introduced was itself a judgement that got revisited. So the script has now chased this nav
+**three times**, and each version was accurate on the day it was written.
+
+⭐ **A script is a snapshot of a UI, and nothing tells it when the UI moves.** The only defence available is
+to re-read the beats against the running app immediately before the shoot — which is why the accuracy anchors
+below name the ADR each claim rests on, so a changed ADR is a changed line rather than a surprise on camera.
+
+### Why it lost 56 seconds
+
+The 2:27 cut is not wrong; it is a **tour**, and its Research and Leagues beats re-tell what **§G Scout**,
+**§H Team DNA** and **§8 Leagues & Head-to-Head** already cover in full — all of which are now shot. A hero's
+job is narrower: *what is it, why trust it, what do I do next*. The deep material is one click away rather
+than 42 seconds of the first impression.
+
+**It is kept below as §1b**, so nothing is lost if the long tour is wanted for YouTube.
+
+**Accuracy anchors:** the Lab is a My Squad tab (ADR-166); the **pitch leads and the answer sits below it**
+(ADR-175 — *not* ADR-171's ordering); Edge · Risk · Confidence is ADR-089; the mantra is `brand.MANTRA`
+(ADR-182) and must match the app verbatim; **no AI claim anywhere** — there is no model on Cloud (ADR-168).
+
+**📸 Capture note:** shoot the pitch and *This week* in one scroll from the top of My Squad, so the order on
+screen matches the voiceover. The **Free transfers / Bank** controls now sit between them (ADR-191) — they are
+not mentioned in the VO, so either scroll past them or set them before recording, but do not leave them
+half-set on camera.
+
+---
+
+## 1b · The explainer — full tour, ~2:27  *(the 2026-08-31 hero cut, demoted 2026-09-15)*
+
+⚠️ **Not the hero.** Kept for a YouTube long-form slot. **Its 0:39 and 0:59 beats are in the pre-ADR-175
+order** and must be swapped before this is ever shot — the pitch comes first in the app now. The §1 hero above
+has the corrected wording to copy from.
 
 > **[Hook – 0:00]** Fantasy Premier League is drowning in hot takes and AI that just… guesses. MADBOOTS is
 > different: **analytics decide — and logic explains**, so you always know what to trust.
@@ -186,9 +265,15 @@ decided.
 > **[0:12 – Build / import]** Build your optimal squad in **My Squad ▸ Lab** — or **import your real team**
 > with your manager ID. One tap and it's live.
 >
-> **[0:25 – Your week, answered]** Short on time? **My Squad opens on the answer**: who to captain, the
+> **[0:25 – Your week, answered]** Short on time? **My Squad answers your week**: who to captain, the
 > transfer worth making, the players to watch — each with the **Edge** for it, the **Risk** against, and a
 > confidence score.
+>
+> ⚠️ **This line was *"My Squad opens on the answer"* and is ALREADY SHOT.** ADR-175 moved the answer below
+> the pitch, so the recorded VO now overstates the position. The wording above is the fix for a re-record;
+> whether that is worth a re-shoot is the owner's call — the claim is *wrong about placement*, not about
+> what the app does, and the visual still shows the answer. **Do not re-cut the other beats to match; only
+> this sentence moved.**
 >
 > **[0:44 – Boot Battle]** Torn between two players? **Boot Battle** puts them head-to-head and highlights the
 > winner, stat by stat. *(UI: the two-player compare card.)*
@@ -358,13 +443,19 @@ so the money goes into the XI. Playing Bench Boost? That is **All-round**, not a
 > **[0:52 – Close + CTA]** Your sharpest gameweek, sorted. **Analytics decide. Logic explains. You make the call.** Try MADBOOTS **free** at **madboots.com**.
 
 **Accuracy anchors:** the gameweek plan (ADR-070); Edge · Risk · Confidence (ADR-089) + ✓/⚠ grounding
-(ADR-037); transfers ranked by **XI improvement**, the bank slider, a coordinated 2–3 plan + **Apply this
-plan →** (ADR-055/046).
+(ADR-037); transfers ranked by **XI improvement**, a coordinated 2–3 plan + **Apply this plan →**
+(ADR-055/046). ⚠️ **The bank slider is no longer on the Transfer panel** — ADR-191 moved Bank **and** Free
+transfers above the answer selector, where they feed every panel; the caption under them states what the
+answers will use.
 
 **What changed:** the old cut said *"One tap gives your full gameweek plan"* and treated **AI Tips** as a
-destination. ADR-171 moved it to the top of My Squad and it renders **on load** — 123 ms on the deployed app,
-because there is no model to wait for. *"Before you ask"* is now literally true, and it is a better hook than
-the tap it replaced.
+destination. ADR-171 folded it into My Squad and it renders **on load** — 123 ms on the deployed app, because
+there is no model to wait for. *"Before you ask"* is now literally true, and it is a better hook than the tap
+it replaced.
+
+⚠️ **Position, 2026-09-15:** ADR-171 also put it at the *top* of the page and **ADR-175 moved it below the
+pitch**. The hook is unaffected — *renders on load* and *sits at the top* were two claims in one sentence, and
+only the second expired. Say *"answers your week"*, never *"opens on the answer"*.
 
 ---
 
@@ -381,8 +472,12 @@ the tap it replaced.
 > cancel.** MADBOOTS prices only the ones you *don't* share — so you can see exactly where the gap will
 > actually come from. *(UI: the H2H differential set.)*
 >
-> **[0:45 – Close + CTA]** Know your rivals, not just your team. **The analytics decide. Every answer shows
-> its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:45 – Close + CTA]** Know your rivals, not just your team. **Analytics decide. Logic explains. You make
+> the call.** Try MADBOOTS **free** at **madboots.com**.
+>
+> ⚠️ **Corrected 2026-09-15 — and this one is ALREADY SHOT.** The close read *"The analytics decide. Every
+> answer shows its working."*, the mantra **ADR-182 retired**, and it survived the 2026-08-31 sweep that
+> replaced it everywhere else. The rendered video speaks the retired line.
 
 **Accuracy anchors:** league import + effective ownership / captain split / transfer flow (ADR-141); the H2H
 **decomposition** — the shared players cancel, the differential set is priced (ADR-161); tap-a-row to select
@@ -455,8 +550,10 @@ what it is *not* worth. The honesty beat is the differentiator, so do not cut it
 > **[0:40 – The honest bit]** And when a club can't be ranked on an axis yet, it says so — instead of drawing
 > a shape that looks like knowledge.
 >
-> **[0:50 – Close + CTA]** Know the team before you buy the player. **The analytics decide. Every answer shows
-> its working. You make the call.** Try MADBOOTS **free** at **madboots.com**.
+> **[0:50 – Close + CTA]** Know the team before you buy the player. **Analytics decide. Logic explains. You
+> make the call.** Try MADBOOTS **free** at **madboots.com**.
+>
+> ⚠️ **Corrected 2026-09-15 — ALREADY SHOT**, same as §8: the close spoke ADR-182's retired mantra.
 
 **Accuracy anchors:** the eight axes in radar order are **Attacking Threat · Chance Creation · Defensive
 Strength · Clean-Sheet Potential · Fixture Strength · Set-Piece Threat · FPL Output · Squad Depth**
@@ -608,8 +705,13 @@ independently, before ADR-168 did. It now matches `brand.MANTRA` in both places 
 been invisible in every search result. Rewritten to **168 chars with the mantra inside the first 155**, and it
 now leads with *free* and carries both "Fantasy Premier League" and "FPL" for search:
 
-> MADBOOTS is a free Fantasy Premier League (FPL) assistant: analytics decide, logic explains,
-> working, you make the call. Captain, transfers, fixtures, squad.
+> MADBOOTS is a free Fantasy Premier League (FPL) assistant where analytics decide and logic explains.
+> Captain, transfers, fixtures, squad — you make the call.
+
+⚠️ **The line above was wrong in this file until 2026-09-15** — it read *"analytics decide, logic explains,
+working, you make the call"*, a half-deleted splice of the retired mantra. **`~/madboots-site/index.html` is
+correct and always was**, so nothing shipped broken; the risk was the other way round, that someone would
+"restore" the garbled version from these notes. Verified against the live file, not from memory.
 
 *Backup at `index.html.bak-2026-09-01` — the site is not a git repo, so there is no other undo.*
 
