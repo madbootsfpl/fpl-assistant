@@ -332,6 +332,7 @@ the two educational ones are **~90s YouTube pieces** (searched for, so they comp
 | F | **Boot Battle** ⚔️ | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
 | G | **Scout — worth a look** | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | **drafted (§G)** ⚠ shoot after ~GW10, or keep the voiceover off "this season" |
 | H | **Team DNA** | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar), and the refuses-to-draw guard is the brand in one shot. | **drafted (§H)** |
+| K | **Chips — not when, whether** | *The least-covered real differentiator.* Every tool says **when**; ADR-185's wildcard advisor says **whether** — worth +X xP, you keep N of 15, £Xm cannot play. Strongest brand beat in the library: the page states that its two *Confidence* columns **measure different things**. ⚠️ Needs one new still (`K1`), and the spoken figures must match the squad filmed. | **drafted (§K)** |
 | J | **Signals — how much to believe it** | *The second name clash, and a real differentiator.* Four tiers of news stacked **most reliable first**, each caption stating its own limit — and **Trending vs Signals** (doing vs saying) settled at last. ⚠️ Shoot the **structure, never the stories**: this page's content dates within days. | **drafted (§J)** — stills `G3`/`G4` already captured |
 | I | **Orientation — where everything is** | *Not a feature piece.* Wayfinding: the page you live in, the four answers under the pitch, the three tools across the top, and the **DNA vs Team DNA** clash no feature video can explain. Onboarding first (Help ▸ Watch), marketing second. | **drafted (§I)** — the dynamic cut: screen motion + per-beat avatar framing |
 
@@ -732,6 +733,68 @@ beat that carries the whole idea.
   That is true, it is unusual, and it is worth saying on camera.
 - ⚠️ **Never claim Signals predicts anything.** It is a lens, not a projection — signals never enter
   `decision_xp` on assertion (ADR-057). *"How much to believe it"* is the whole claim.
+
+---
+
+## K · Chips — not when, whether — short, **runs ~1:06 (trim to 45s)**  *(**new 2026-09-15**)*
+
+**Why this exists.** Every FPL tool will tell you *when* to play a chip. [ADR-185](../06_Decisions/ADR-185-price-the-rebuild.md)
+rebuilt the wildcard advisor to answer *whether* — it runs the optimiser and reports what a rebuild is **worth**
+before you burn the chip. That is the one genuinely uncommon thing on the page, and no script has ever said it.
+
+⭐ **And the strongest beat is the app contradicting its own label.** Two rows both say *Confidence*, and they
+measure different things — one is *how clearly this week wins*, the other is *how far a rebuild beats your
+squad*. The page says so, in its own footer, unprompted. A product volunteering that its own metric is
+inconsistent between rows is a thing almost nobody else will do on camera.
+
+> **[Hook – 0:00]** Four chips. One shot each, all season. Most tools tell you **when**. This one tells you
+> **whether**.
+>
+> **[0:11 – The three timing chips]** Triple Captain, Bench Boost, Free Hit — each gets its best week, and a
+> **confidence score**. Often it is **Low**, because the weeks really are that close.
+>
+> **[0:26 – The wildcard]** The Wildcard answers a different question: **what it is worth**. A fresh build
+> beats your squad by ninety-seven points; you keep only **two of fifteen**; **fourteen million** of your squad
+> cannot play.
+>
+> **[0:45 – The honest bit]** And it tells you those two confidences **do not mean the same thing**. One is how
+> clearly a week wins. The other is how far a rebuild beats you.
+>
+> **[1:02 – Close]** **Analytics decide. Logic explains. You make the call.**
+
+**Timing, computed not estimated:** 112 spoken words ÷ **119 wpm** = **56s of speech**, +2.5s air per beat =
+**~1:06**, trimming to 45s like §G/§H/§J. The *honest bit* is the beat to shorten if it will not fit — never
+the wildcard one.
+
+### 📸 Stills — one new capture needed
+
+⚠️ **There is no chips shot in the 38.** One frame is needed, and it is the whole video:
+
+| id | where | what's in frame |
+|---|---|---|
+| **K1** | My Squad ▸ **Chips** | The **four chip lines together**, each with its confidence — *and the footer note beneath them*: *"The Wildcard's confidence is how far a rebuild beats your squad, not how clearly one week wins."* That sentence is beat 4 and must be legible. |
+| **K2** *(optional)* | Same | A tight crop of the **Wildcard line alone** — the *worth +X xP · keep N of 15 · £Xm cannot play* trio, for beat 3 |
+
+### ⚠️ The numbers in the voiceover are a squad's, not a fact
+
+*"Ninety-seven points, two of fifteen, fourteen million"* are **RoboTS' figures**, and they move every week.
+Read the numbers **off whatever squad you film** and re-record that beat to match — or say *"by nearly a
+hundred points"* and let the screen carry the precision. ⭐ *A spoken figure that disagrees with the frame
+behind it is worse than no figure*, and this is the one script where the payload is numeric.
+
+**Accuracy anchors** *(checked 2026-09-15)*:
+- The wildcard line leads with **worth**, then *when* — deliberately reordered by ADR-185, because *"your
+  weakest stretch"* answers *when* while a manager sitting on a broken squad is asking *whether*.
+- Its three facts are `gain` · `overlap` (you keep N of 15) · `idle_spend` (£Xm cannot play) — `chips.py`'s
+  `rebuild_value`. All three are optimiser output, not heuristics.
+- The other three chips' confidence is **how clearly that gameweek beats the alternatives** — a heuristic, and
+  routinely **Low**, which the page states rather than hides.
+- The footer note is rendered only when the wildcard has a `gain` (`ui/chips.py`), so it is present whenever
+  beat 4 is filmable. If it is missing, the shot is wrong.
+- ⚠️ The window is **the chip's deadline**, not the page horizon (ADR-166) — chips expire at the half-season,
+  so *"which week should I play this?"* only means anything across the weeks that remain.
+- ⚠️ **Never say a chip is guaranteed value.** Three of the four are explicitly low-confidence; the video's
+  whole claim is that it tells you *how sure it is*, which is only true while the Low ones are shown too.
 
 ---
 
