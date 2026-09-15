@@ -59,20 +59,27 @@ def gate() -> None:
     **Signed in + on the allow-list** (`beta_users`) → mark the session passed (`_OK`/`_EMAIL`) and return.
     **Signed in but not invited** → add to the waitlist + a *"not on the list yet"* screen with Log out (stops)."""
     from src.web_streamlit import brand, user_store, waitlist
-    from src.web_streamlit.access import _EMAIL, _OK, secret
+    from src.web_streamlit.access import _EMAIL, _OK, _user_cap, secret
 
     email = current_email()
     if not email:                                  # not signed in → the login screen
         st.image(brand.badge_path(), width=68)
-        st.title(f"🔒 {brand.NAME} — private beta")
-        st.caption(f"**{brand.TAGLINE}** · sign in to get your squad synced across your devices.")
+        # ⚠️ **ADR-193 — the copy had to move with the posture.** While there is room under the cap this is
+        # open-until-full, not invite-only, and a screen still saying *private beta · invite list* would be
+        # describing a gate that no longer exists. ⭐ *Access copy is a claim about who can get in; it expires
+        # the moment the rule does.*
+        st.title(f"🔒 {brand.NAME} — beta")
+        st.caption(f"**{brand.TAGLINE}** · sign in to get your squad synced across your devices. "
+                   "Places are limited — if there is room you are in straight away.")
         st.login()                                 # "Sign in with Google" — the single provider under [auth] (ADR-106)
         st.caption("We store your Google **email** to admit you + sync your squad — nothing else. "
                    "*Remove me* = we delete your rows.")
         st.caption(brand.DISCLAIMER)
         st.stop()
 
-    if user_store.is_registered(email):            # on the allow-list → admitted
+    def _admit():
+        """Mark the session passed and restore this user's squad — the same three steps whether they were
+        already on the list or have just been auto-admitted, so the two routes cannot drift apart."""
         st.session_state[_OK] = True
         st.session_state[_EMAIL] = user_store.clean_email(email)
         # ADR-142: stamp the sign-in. Once per session, here, because this is the one place we know someone
@@ -81,13 +88,39 @@ def gate() -> None:
         user_store.touch_last_seen(email)
         from src.web_streamlit import squads
         squads.link_and_restore(user_key(email))   # US-362: link + restore the per-user squad (cross-device/reconnect)
+
+    if user_store.is_registered(email):            # on the allow-list → admitted
+        _admit()
         return
 
-    waitlist.add(email, "not_listed")              # signed in but not invited → capture + hold (ADR-102)
+    # ⚠️ **ADR-193 — admit up to the cap, THEN waitlist.** Owner: *"people are getting stuck in the waitlist;
+    # we need to auto-allow access up to the max number and then enter the waitlist."*
+    #
+    # Everyone not already on the list used to land on the waitlist and stay there until the owner added them
+    # by hand, which made the cap decorative and the queue permanent. `user_store.register` has done exactly
+    # this since ADR-098 — admit under the cap, report `"full"` at it — and the Google gate simply never
+    # called it. **The machinery existed; only this branch was missing.**
+    #
+    # ⚠️ Best-effort by design: a store failure must land someone on the waitlist, never on a stack trace, so
+    # the only path to `_admit()` here is an explicit `"in"`.
+    cap = _user_cap()
+    if cap is not None and user_store.is_configured():
+        try:
+            if user_store.register(email, cap) == "in":
+                _admit()
+                return
+        except Exception:                          # noqa: BLE001 — unconfigured, malformed, or the store is down
+            pass
+
+    waitlist.add(email, "not_listed")              # cap reached (or no cap set) → capture + hold (ADR-102)
     st.image(brand.badge_path(), width=68)
-    st.title(f"🔒 {brand.NAME} — private beta")
-    st.warning(f"**{user_store.clean_email(email)}** isn't on the invite list yet — you're on the waitlist. "
-               "We'll be in touch as spots open.")
+    st.title(f"🔒 {brand.NAME} — beta")
+    # ⚠️ *"We'll be in touch as spots open"* was a promise that needed a person to keep it, and nobody was
+    # keeping it — which is how the queue became permanent. What is true now: a place frees automatically, and
+    # the next sign-in takes it. Say the true thing, which also needs nobody.
+    st.warning(f"**{user_store.clean_email(email)}** — the beta is **full** right now, so you're on the "
+               "waitlist. Places free up as testers leave; **sign in again any time** and you'll be let "
+               "straight in if one has.")
     if signup := secret("FPL_SIGNUP_URL"):
         st.link_button("✋ Join the waitlist", signup)
     if st.button("Log out", key="_auth_logout_denied"):

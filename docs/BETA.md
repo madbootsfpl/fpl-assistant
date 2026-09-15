@@ -18,7 +18,7 @@ FPL_FEEDBACK_ORIGIN  = "https://madboots.streamlit.app"           # the app URL 
 FPL_FEEDBACK_KEY     = "your-web3forms-access-key"                 # only if you use Web3Forms as the relay (§1B)
 FPL_FEEDBACK_EMAIL   = "hello@madboots.com"                   # the mailto fallback address (default: this)
 FPL_SIGNUP_URL       = "https://forms.gle/your-signup-form"        # the founding-tester email-capture form / waitlist
-FPL_USER_CAP         = "10"                                        # cap registered testers (§4); unset = shared code only
+FPL_USER_CAP         = "10"                                        # cap registered testers (§4). ⚠️ ADR-193: now governs **Google-auth mode too** — under the cap a new sign-in is admitted automatically; at it, the waitlist. Unset = invite-only, unchanged
 FPL_ANALYTICS        = "1"                                         # anonymous usage/perf analytics (ADR-100); unset = off
 FPL_ADMIN_KEY        = "a-long-password"                           # unlocks the 📊 Admin analytics tab for you; unset = inert
 ```
@@ -212,14 +212,23 @@ turned away. Turn on the **waitlist** to **record their email** so you can invit
    create policy "anon waitlist update" on beta_waitlist for update using (true) with check (true);
    ```
    *(The app **writes** but never reads the list back — you read it in the dashboard.)*
-2. **It's automatic once the table exists.** With **Google auth** (`[auth]`, ADR-106), a signed-in email **not** on
-   `beta_users` lands a row with **`reason='not_listed'`** — the table existing is the only requirement (no
-   `FPL_USER_CAP` needed). With the older code-gate + `FPL_USER_CAP`, an over-cap or wrong-code attempt records
-   `'full'`/`'bad_code'`. Best-effort either way — a store hiccup never blocks the gate; **no table → no write** (the
+2. **It's automatic once the table exists.** With **Google auth** (`[auth]`, ADR-106), a signed-in email **not**
+   on `beta_users` is now **auto-admitted while there is room under `FPL_USER_CAP`** (ADR-193) and only lands a
+   waitlist row with **`reason='not_listed'`** once the cap is reached — or if the cap is unset, in which case
+   the gate stays invite-only exactly as before. With the older code-gate + `FPL_USER_CAP`, an over-cap or
+   wrong-code attempt records `'full'`/`'bad_code'`.
+
+   ⚠️ **`FPL_USER_CAP` now governs both modes.** It used to be read only by the shared-code gate, which is why
+   the line above said *"no `FPL_USER_CAP` needed"* — true until 2026-09-15, and the reason new testers queued
+   behind a manual allow-list edit. Best-effort either way — a store hiccup never blocks the gate; **no table → no write** (the
    capture is silently skipped, which is why an absent table means nothing is stored).
 3. **Invite from it:** Supabase → **Table editor → beta_waitlist**. `reason='full'` = wanted in but the cap was full;
    `reason='bad_code'` = mistyped the code (could be a typo or a random). Free a seat (delete a `beta_users` row or
    raise `FPL_USER_CAP`), send them the code, then **delete the waitlist row**.
+
+   ⭐ **In Google-auth mode freeing a seat is now enough on its own** — the next time that person signs in they
+   are admitted automatically, and the app's waitlist screen tells them to try again for exactly this reason.
+   No email required, which is what makes the queue finally drain.
 
 > **Privacy (ADR-102).** This holds emails of people you **didn't** admit — including wrong-code attempts. It's
 > minimal (email + reason + time), owner-only, and *"remove me" = delete the row*. You're opting into the wrong-code
