@@ -53,8 +53,10 @@ other half of the clash) · `F6` (FDR) · `G3` (Signals) · `G1` (Trending) · `
 | **J2** | 2–3 · pitch → the answer | tall crop: pitch, the ADR-191 controls, the four-answer selector | ⚠️ **Crop the last caption** — *"a language model is attached to this instance"* is **local-only** and contradicts the script's *no AI guessing*; the deployed app never shows it |
 | **J3** | 4 · three more tools | My Squad top: wordmark, top nav, squad banner, projected XI | ✅ — note **⚠ £0.8m over** is legible in the deadline line |
 | **J4** | 4–5 · squad DNA | My Squad ▸ DNA: Risk Monitor + **SQUAD DNA … vs the whole pool** | ✅ the clash beat's payload — cut straight from here to `F4` |
-| **J5** | 7 · the glossary | Help ▸ Read | ❌ **caught the wrong expander** (steps 1 & 2). Needs **8 · MADBOOTS Explainer → a plain-English glossary**, which is what the VO names |
+| **J5** | 7 · the glossary | Help ▸ Read ▸ **8 · MADBOOTS Explainer** | ✅ **re-shot and now the strongest close available.** On screen: *"A plain-English guide to the terms, stats and tools in MADBOOTS"* — near-verbatim what Maddie says over it — and the visible entries are **Confidence (a heuristic, not a probability)** · **Edge ✓** · **Risk ⚠**. The last frame before the mantra is the app defining its own honesty terms |
 | ~~J6~~ | — | — | ✅ **not needed — `J2` covers it**, and better: it shows the pitch and the answer in one frame, which is the vertical order the script describes |
+
+✅ **The §I set is complete** — J1–J5 supplied, J1 and J2 needing only a crop, J6 unnecessary.
 
 ⚠️ **`J1` settles a question the script deliberately dodged: the sidebar shows TEN items, Admin included.**
 The VO names no count, which is why it survives — ⭐ *a count is a claim that expires on the next page added;
