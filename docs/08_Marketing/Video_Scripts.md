@@ -332,6 +332,7 @@ the two educational ones are **~90s YouTube pieces** (searched for, so they comp
 | F | **Boot Battle** ⚔️ | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
 | G | **Scout — worth a look** | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | **drafted (§G)** ⚠ shoot after ~GW10, or keep the voiceover off "this season" |
 | H | **Team DNA** | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar), and the refuses-to-draw guard is the brand in one shot. | **drafted (§H)** |
+| I | **Orientation — where everything is** | *Not a feature piece.* Wayfinding: the page you live in, the four answers under the pitch, the three tools across the top, and the **DNA vs Team DNA** clash no feature video can explain. Onboarding first (Help ▸ Watch), marketing second. | **drafted (§I)** — the dynamic cut: screen motion + per-beat avatar framing |
 
 **Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C, then the two YouTube pieces
 D → E. The shorts come first because they are cheaper to cut and feed the algorithm; the educational pair
@@ -563,6 +564,92 @@ defence · fixtures · output). Team DNA is its **own page** since ADR-169 — d
 **The honesty beat is real, not a flourish:** the radar refuses to draw an axis it cannot rank (ADR-133's
 guard). That is the most filmable version of the whole brand — a competitor's radar always draws eight points
 because an empty axis looks broken; ours leaves the gap and says why.
+
+---
+
+## I · Orientation — "where everything is", **runs ~1:22**  *(**new 2026-09-15** — the tenth video, and the
+only one that is not about a feature)*
+
+**Why this exists.** Nine videos answer *what it does*. None answers *where am I*. A manager who has just
+landed does not need a feature explained — they need the **shape of the place**: which page they will live in,
+what is one tap away, and what the other doors are for. ⭐ *An orientation is wayfinding, not a tour of
+features* — the test of every line below is whether it helps someone find something, not whether it sells it.
+
+> **[0:00 – Where you land]** This is MADBOOTS. You land on **Home**; everything else is down the left.
+> Honestly? You'll live in **My Squad**.
+>
+> **[0:12 – My Squad]** My Squad is your team on a pitch: set your captain, your subs, your bench. Scroll down,
+> and there's your week — answered.
+>
+> **[0:25 – Four answers]** Under the pitch, four answers to four questions: **this week**, your **captain**,
+> your **transfers**, your **chips**.
+>
+> **[0:36 – Three more tools]** Along the top, three more. **DNA** is your squad's health. **Leagues** is your
+> rivals. **Lab** builds a team from scratch.
+>
+> **[0:48 – The name clash]** Worth knowing: **DNA** up here is *your squad*. **Team DNA**, down the side, is
+> *every club in the league*.
+>
+> **[1:00 – The research shelf]** The rest of the sidebar is the research shelf — **FDR**, **Signals**,
+> **Players**, **Trending**. That's for digging, not deciding.
+>
+> **[1:12 – Close]** Stuck on a number? **Help** has a plain-English glossary for every one.
+> **Analytics decide. Logic explains. You make the call.**
+
+**Timing, computed not estimated:** 134 spoken words ÷ **119 wpm** = **68s of speech**, +2.5s air per beat =
+**~1:22**. Dropping *The research shelf* brings it to ~1:10.
+
+### 🎬 Staging — what makes it dynamic, and what that costs
+
+The brief was *"Maddie moving, showing you around"*. **HeyGen avatars do not walk through a UI**, so the
+movement has to come from the cut. Four devices, and **three of them cost no credits at all**:
+
+| device | what it does | credits |
+|---|---|---|
+| **The app moves, not stills** | one continuous screen recording — scroll My Squad top to bottom, flick the four answer tabs, cross the top nav — instead of the 38 stills the other nine use | none (screen capture) |
+| **Half-body, not a PiP circle** | she needs hands to point with | none (framing) |
+| **She changes position per beat** | left for the sidebar, right for the pitch, centre for the close — cutting her framing is what reads as *moving through a space* | **yes — one render per beat** |
+| **What she names lights up** | zoom/highlight synced to the word | none (edit) |
+
+⭐ **Spend the credits on the third row.** Render each beat as its **own clip**, several takes each, rather
+than one continuous talking head — that is the only part of this that cannot be done in the edit, and it is
+what gives the cut somewhere to move to.
+
+### 📸 Shot list — one continuous capture, in this order
+
+1. **Home**, then a slow pan down the sidebar (do **not** count the items on camera — see the anchors).
+2. **My Squad**: the strip, the pitch, a captain set, a sub made — then **scroll to the answer**.
+3. The **answer selector**, clicking through all four panels.
+4. The **top nav**: My Squad → DNA → Leagues → Lab, one click each.
+5. **Team DNA** in the sidebar (a club radar) — cut straight from My Squad ▸ DNA, so the clash is *shown*.
+6. **FDR**, **Signals**, **Players**, **Trending** — two seconds each, fast.
+7. **Help** ▸ the glossary expander.
+
+**Accuracy anchors** *(checked against the running app 2026-09-15)*:
+- The entry page is **Home** — `src/web_streamlit/Home.py`, whose filename *is* the sidebar label.
+- Sidebar pages, in order: **My Squad · FDR · Signals · Team DNA · Players · Trending · Help · Feedback**
+  (ADR-166 ordered by frequency; ADR-169 split FDR from Team DNA), plus **Admin**, which is owner-gated.
+- ⚠️ **Never say a number of sidebar items.** `Home.py`'s own docstring records that its written tour *"goes
+  stale on any rename or addition"* — it still said *Fixtures* and *News* long after ADR-134/149 renamed them.
+  A count is a claim that expires on the next page added; the shape does not.
+- ⚠️ **The page is `📅 FDR`, not "Fixtures".** Clip 12 said *Fixtures* after ADR-169 had split the page —
+  this is the same trap, and the reason the VO names FDR.
+- My Squad's top nav is **My Squad · DNA · Leagues · Lab** (ADR-166 folded Squad Lab and Leagues in).
+- The answer selector is **This week · Captain · Transfer · Chips**, defaulting to *This week*, and it sits
+  **below the pitch** (ADR-175 — *not* ADR-171's ordering; see the order note at the top of this file).
+- **My Squad ▸ DNA** renders `render_health` — *your squad*. The sidebar's **Team DNA** is the per-club
+  fingerprint. ⭐ **The clash is the single most useful sentence in the video**, and no feature video can carry
+  it, because it is not a feature — it is a place.
+- **Help** is `🧭 Help` and carries *"a plain-English glossary"* in its Explainer expander.
+- ⚠️ ADR-191 put **Free transfers / Bank** between the pitch and the answer selector. Not in the VO — set them
+  before recording so they are not caught half-filled on the scroll.
+
+### Where it belongs
+
+**Stronger as onboarding than as marketing.** It answers *where am I*, which is a question someone asks
+**after** arriving — so its home is **Help ▸ Watch** and a first-run slot, with the site's *"See how it works"*
+as a secondary use. §0 remains the piece that sells; this is the piece that orients. ⚠️ Keep that line clean:
+two overlapping intros is worse than either.
 
 ---
 
