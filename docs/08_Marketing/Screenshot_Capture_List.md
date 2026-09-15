@@ -38,6 +38,41 @@ headshot, the pitch kits) must come from the **live app**, not the hero-shots pa
 
 ---
 
+## 🎥 Screen **recording** — for §I Orientation  *(added 2026-09-15)*
+
+The nine feature videos are stills. §I is the one that has to **move**, so it needs footage rather than PNGs.
+**Everything above still applies** — same 1440px width, same 125% zoom, same dark theme, same reseeded data,
+same loaded squad. A video shot to different settings would not cut against the stills.
+
+⚠️ **Correction to the §I shot list: do NOT attempt one unbroken take.** *Continuous* there meant *motion
+instead of stills*, not *one nerve-wracking run*. Record **one take per beat**, seven takes, each 2–3× longer
+than the beat needs. A fluffed click then costs one take, not the whole video, and the editor gets room to
+trim into the pause rather than onto the word.
+
+| | |
+|---|---|
+| **Tool** | macOS `⌘⇧5` → *Record Selected Portion*, or QuickTime ▸ New Screen Recording. Both are fine; nothing else is needed. |
+| **Region** | A **16:9** selection around the browser window. Drag it once and leave it — a region that moves between takes cannot be cut together. |
+| **Audio** | **Off.** Maddie is the voice; a room tone under her is the giveaway of a screen capture. |
+| **Cursor** | Keep it — it is the pointing device. Move in slow, deliberate arcs and **rest on a target for a beat before clicking**, so the edit can land the highlight on the word. |
+| **Scrolling** | Trackpad, slow and smooth. A scroll-wheel jump reads as a cut and cannot be slowed down later. |
+| **Screen hygiene** | Do Not Disturb on; hide the bookmarks bar, extra tabs, the Dock and desktop icons. One clean window. |
+| **Composition** | Maddie is keyed at half-body over roughly a **third of the frame**. Keep the thing being named in the **opposite two thirds** — beats 1 and 6 she is on the left, so the sidebar must not be under her. |
+| **Length** | Aim for ~3 minutes of usable footage for a 1:22 cut. Over-record; trimming is free and re-shooting is not. |
+
+**Before you hit record** — the state, not the settings:
+- **Reseed**, so no stale deadline or finished gameweek is on screen.
+- Load a real squad (**RoboTS** or your own), never an empty state.
+- ⚠️ Set **Free transfers** and **Bank** on My Squad — ADR-191 put them between the pitch and the answer, and
+  a half-filled control is the thing the eye goes to on a slow scroll past.
+- Check the deadline countdown is not mid-flip, and that no error or *"refreshing"* banner is showing.
+
+⭐ **The rule above still decides everything: one panel per beat.** The §I voiceover names exactly one thing
+at a time, and the recording should show exactly that thing — the temptation with video is to keep moving
+through the app while she talks, which is the four-panels-at-0:26 mistake in motion.
+
+---
+
 ## The capture list
 
 Each row: what to open → what to set up → what to crop to. **Bold** is the thing the voiceover names, so the
