@@ -332,6 +332,7 @@ the two educational ones are **~90s YouTube pieces** (searched for, so they comp
 | F | **Boot Battle** ⚔️ | The most visual + shareable: two same-position players head-to-head, the better stat tinted. My-team / All / By-club. | **drafted (§9)** |
 | G | **Scout — worth a look** | Five stat boards become one shortlist. The honest hook is the counterweight: *worth a look, **not** worth points* — two signals are unpriced. | **drafted (§G)** ⚠ shoot after ~GW10, or keep the voiceover off "this season" |
 | H | **Team DNA** | Every club graded at both ends on an eight-axis fingerprint, and the players to target there. Highly visual (the radar), and the refuses-to-draw guard is the brand in one shot. | **drafted (§H)** |
+| J | **Signals — how much to believe it** | *The second name clash, and a real differentiator.* Four tiers of news stacked **most reliable first**, each caption stating its own limit — and **Trending vs Signals** (doing vs saying) settled at last. ⚠️ Shoot the **structure, never the stories**: this page's content dates within days. | **drafted (§J)** — stills `G3`/`G4` already captured |
 | I | **Orientation — where everything is** | *Not a feature piece.* Wayfinding: the page you live in, the four answers under the pitch, the three tools across the top, and the **DNA vs Team DNA** clash no feature video can explain. Onboarding first (Help ▸ Watch), marketing second. | **drafted (§I)** — the dynamic cut: screen motion + per-beat avatar framing |
 
 **Suggested order to shoot:** F (most visual, easy win) → B (the "wow") → A → C, then the two YouTube pieces
@@ -667,6 +668,70 @@ visit, gone once dismissed, and *"it stays in Help ▸ Watch if you want it agai
 US-398 consolidated three nudges into that hero and re-fragmenting it for a video would undo the decision.
 ⚠️ **It renders nothing until the row exists**, because a first impression reading *"coming soon"* is worse
 than no first impression.
+
+---
+
+## J · Signals — how much to believe it — short, **runs ~1:02 (trim to 45s)**  *(**new 2026-09-15**)*
+
+**Why this exists.** Signals is named once, in one clause of §1's research beat, and never explained. It is
+also the **second name clash** in the product: §I settles *DNA vs Team DNA*; nothing settles **Trending vs
+Signals**, which is the same species of confusion — one is what the crowd is **doing**, the other is what is
+being **said**.
+
+⭐ **And the page writes its own script.** The tiers are numbered on screen in order of how much to trust them,
+and each caption states its own limit. The video mostly reads the interface aloud, which is the strongest
+possible position for a product whose pitch is that every claim is checkable.
+
+> **[Hook – 0:00]** Every FPL feed mixes hard news with hot air. **Signals** doesn't — it stacks them, **most
+> reliable first**. *(UI: the page head + the four numbered sections in one frame — `G4`.)*
+>
+> **[0:11 – The ladder]** One: **official FPL news**, the only fact on the page. Two: players being **sold
+> heavily when nothing is wrong**. Three: **headlines**. Four: **community chatter**.
+>
+> **[0:25 – The honest bit]** And it says so. Chatter is labelled **a mention count, not a prediction** — the
+> least reliable thing here, which is why it sits last. *(UI: section 4's caption, tight.)*
+>
+> **[0:40 – Right now]** At the top, **Right now**: where the **press and the crowd agree**. Two independent
+> signals pointing the same way. *(UI: `G3`.)*
+>
+> **[0:52 – Close]** **Trending** is what the crowd is *doing*. **Signals** is what is being *said*.
+> **Analytics decide. Logic explains. You make the call.**
+
+**Timing, computed not estimated:** 105 spoken words ÷ **119 wpm** = **53s of speech**, +2.5s air per beat =
+**~1:02**, trimming to 45s the same way §G and §H do.
+
+### ⚠️ Shoot the structure, never the stories
+
+**This is the one surface whose content is ephemeral by design.** Any headline or player name in frame dates
+the video within days — an injury resolves, a transfer story dies, a sell-off reverses. The **four-tier stack**
+is permanent; the names inside it are not.
+
+So `G4` (the four sections in order) is the money shot, not any individual section, and every tight crop should
+favour a **caption** over a row. If a player must appear, pick the section-2 exodus case: *"sold heavily while
+nothing is wrong"* is a shape that recurs all season even when the specific name does not.
+
+### Stills
+
+Both already captured: **`G3`** (*Right now* — headline + sell-off together) and **`G4`** (the four sections in
+order, showing the ladder itself). A tight crop of **section 4's caption** is the only new frame, and it is the
+beat that carries the whole idea.
+
+**Accuracy anchors** *(checked against the running app 2026-09-15)*:
+- The page is **📡 Signals**, and its own caption reads *"Everything that tells you something the table
+  doesn't — **most reliable first**"*. The script's claim is the page's claim.
+- The four sections, verbatim: **1 · Official FPL news** · **2 · An exodus we can't explain** ·
+  **3 · Headlines — FPL analysis & football news** · **4 · Community chatter** (ADR-149/150; Reddit is ADR-059).
+- Section 2's caption says *"**Not a fact** but…"* and section 4's says *"a mention count, **not sentiment and
+  not a prediction** — the least reliable source on this page, which is why it sits last."* ⭐ **Quote these
+  rather than paraphrasing them** — a paraphrase is a claim the app has not made.
+- **🔴 Right now** is the convergence case: *"Where the press and the crowd agree… two independent signals
+  pointing the same way is the strongest thing on this page."*
+- ⚠️ **The ordering is load-bearing, not cosmetic.** `tests/test_nav_primitive.py::test_signals_is_not_behind_a_selector`
+  fails if anyone puts this page behind tabs, because behind a selector a reader could open *crowd chatter*
+  without ever seeing it sits **below** *official news* — the stacking **is** the risk warning (ADR-150/176).
+  That is true, it is unusual, and it is worth saying on camera.
+- ⚠️ **Never claim Signals predicts anything.** It is a lens, not a projection — signals never enter
+  `decision_xp` on assertion (ADR-057). *"How much to believe it"* is the whole claim.
 
 ---
 
