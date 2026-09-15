@@ -6,6 +6,7 @@ analytics assembled (`chip_advisor`). It shows with or without the LLM (the pros
 web's Squads → Chips view.
 """
 
+from ._wrap import wrap_block
 from .explain import MODEL_NOTE
 
 
@@ -95,4 +96,7 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
     ]
     if confidences:                       # the honest attribution closing an explained answer (US-278)
         lines += ["", MODEL_NOTE]
-    return "\n".join(lines)
+    # ADR-191 — the dynamic lines have outgrown the block. The wildcard's runs past 230 characters, which
+    # a terminal breaks at column 0 and `st.code` does not break at all. `wrap_block` continues each one
+    # under its own text, so the label column stays a column.
+    return wrap_block("\n".join(lines))

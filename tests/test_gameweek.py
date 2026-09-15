@@ -348,6 +348,17 @@ def _market_upgrades():
             for k, pos in enumerate(("MID", "FWD", "DEF", "MID"))]
 
 
+def _flat(text):
+    """The rendered block with its line breaks collapsed.
+
+    ⚠️ **Assert what the answer SAYS, not where it wraps.** ADR-191 wraps long lines under their own content,
+    so a sentence a test looked for by substring can now straddle a break — which failed a guard whose claim
+    ("the total says the moves were priced in sequence") was still perfectly true. Line positions are the
+    wrapper's business and are pinned in its own tests; these tests are about the words.
+    """
+    return " ".join(text.split())
+
+
 def _only_transfers(monkeypatch):
     """Stub the captain and the lineup so an ADR-191 test is about the transfer half and nothing else.
     Both are separately tested; leaving them live here would only mean feeding them full player rows."""
@@ -409,7 +420,7 @@ def test_one_free_transfer_changes_no_advice_but_does_state_the_assumption(monke
     assert plan["transfers"] == [plan["transfer"]]
     assert plan["free"] == 1
 
-    text = render_gameweek_plan(plan, "S", horizon=5)
+    text = _flat(render_gameweek_plan(plan, "S", horizon=5))
     # ⚠️ Checking for "then #2" alone was not enough when this returned early: with the guard mutated the
     # *total* line still rendered. Assert the whole plan block is absent, not the part easiest to name.
     for leak in ("then #", "Using all", "priced after the one above it"):
@@ -431,11 +442,11 @@ def test_the_assumption_line_names_both_numbers_so_a_reader_can_diagnose_it(monk
     xp = {p["id"]: 2.0 for p in owned}
     xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
 
-    text = render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=1.5, free=1), "S", horizon=5)
+    text = _flat(render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=1.5, free=1), "S", horizon=5))
     assert "Assumes 1 free transfer and £1.5m in the bank" in text, \
         "the bank the answer used must be visible in the answer"
 
-    two = render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=2.5, free=2), "S", horizon=5)
+    two = _flat(render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=2.5, free=2), "S", horizon=5))
     assert "£2.5m banked" in two, "the multi-move total must name the money it was computed with"
 
 
@@ -481,7 +492,7 @@ def test_the_plan_says_how_many_transfers_it_assumed(monkeypatch):
     xp = {p["id"]: 2.0 for p in owned}
     xp.update({100: 9.0, 101: 9.0, 102: 9.0, 103: 9.0})
 
-    text = render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2), "S", horizon=5)
+    text = _flat(render_gameweek_plan(gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=2), "S", horizon=5))
     assert "Using all 2 free transfers" in text
     assert "each move priced after the one above it" in text, \
         "the total is only honest if it says the moves were priced in sequence"
@@ -510,7 +521,7 @@ def test_holding_more_transfers_than_there_are_moves_says_so(monkeypatch):
     plan = gw.gameweek_plan(owned, market, [], xp, bank=0.0, free=3)   # …while three transfers are held
     assert len(plan["transfers"]) == 2 and plan["free"] == 3
 
-    text = render_gameweek_plan(plan, "S", horizon=5)
+    text = _flat(render_gameweek_plan(plan, "S", horizon=5))
     assert "Using 2 of your 3 free transfers" in text
     assert "the rest keeps" in text, "an unspent transfer rolls over — say so rather than ignoring it"
     assert "Using all" not in text, "it is not all of them, and claiming so is the bug this pins"
@@ -599,7 +610,7 @@ def test_holding_zero_free_transfers_is_not_quietly_promoted_to_one(monkeypatch)
     assert plan["free"] == 0, "0 must survive to the answer, not be promoted to 1"
     assert plan["transfer"] is not None, "a move worth making is worth naming even on a hit"
 
-    text = render_gameweek_plan(plan, "S", horizon=5)
+    text = _flat(render_gameweek_plan(plan, "S", horizon=5))
     assert "no free transfer — this move would cost a 4-point hit" in text
     assert "Assumes 1 free transfer" not in text
 
@@ -631,8 +642,10 @@ def test_every_move_in_the_plan_carries_its_longer_view(monkeypatch):
     assert all("horizon_gain" in m for m in plan["transfers"]), \
         "a later move needs the same window check as the first"
 
-    text = render_gameweek_plan(plan, "S", horizon=1)
-    line = next(ln for ln in text.splitlines() if "then #2" in ln)
+    # The move and its longer view may now wrap onto two lines, so take the whole "then #2: …" clause out of
+    # the flattened block rather than one physical line.
+    text = _flat(render_gameweek_plan(plan, "S", horizon=1))
+    line = text[text.index("then #2"):]
     assert "over 5 GWs" in line, f"the second move must state its longer view too: {line!r}"
 
     # ⚠️ Don't assert *which* upgrade lands second — the fixture would then be pinning the optimiser's choice

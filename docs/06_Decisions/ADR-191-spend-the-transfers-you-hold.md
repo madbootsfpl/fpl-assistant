@@ -225,6 +225,11 @@ Six mutants; **two survived the first sweep**, and both were fixture faults rath
   - [x] Guards: gains **sum to the real XI lift**; a second move is priced on the post-first squad;
         `free=1` renders exactly what it always did
   - [x] Mutation-test every guard — **six mutants, two of which survived the first attempt** (see §🛠)
+  - [x] **Wrap the answer blocks** (owner: *"could you get the screen to wrap?"*). The wildcard line had
+        reached ~230 characters — a terminal breaks it at column 0, `st.code` not at all. `ui/_wrap.py` hangs
+        each continuation under its own text, never splits a hyphenated name, and **welds the
+        `· Confidence 40/100 · Low` suffix** so the band word cannot be orphaned. ⭐ *When a wrap keeps
+        producing the same ugly break, say what may not be broken rather than moving the boundary.*
   - [x] **Unplanned, found while wiring:** `free` **and `bank`** now reach the week's answer at all. Both
         were hard-coded (1 and £0.0m) in `ask.py` while the Transfer tab collected the real numbers three
         tabs away.

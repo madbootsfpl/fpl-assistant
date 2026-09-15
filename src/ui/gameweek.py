@@ -6,6 +6,7 @@ assembled (`gameweek_plan`). It shows with or without the LLM (the prose is a bo
 `render_ask`, in the web's Squads → AI Tips view.
 """
 
+from ._wrap import wrap_block
 from .explain import MODEL_NOTE, render_explanation
 
 
@@ -218,4 +219,6 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
     lines.append(f"  Flags:    {_flags_line(plan['flags'])}")
     if explanation:                       # the honest attribution closing an explained plan (US-278)
         lines += ["", MODEL_NOTE]
-    return "\n".join(lines)
+    # ADR-191 — same reason as the chip block: these lines now carry a move, a window, a longer view and a
+    # confidence, and the ones that overflow were being scrolled to rather than read.
+    return wrap_block("\n".join(lines))
