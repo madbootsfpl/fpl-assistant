@@ -119,6 +119,14 @@ The top of the board also stops being strange: Haaland, Isak, Foden, B.Fernandes
 - **Lower the bar to "played in at least one gameweek".** Rejected: that is the crater case. One appearance
   says nothing about the next.
 
+  > ⚠️ **Right, and incomplete — see [ADR-192](./ADR-192-no-opinion-is-not-full-confidence.md) (2026-09-15).**
+  > This refused to **promote** a one-appearance player into the trusted set. It never **demoted** him, because
+  > the default was already **1.0** — so the principle above, *"full weight where there is no doubt, no opinion
+  > where there is"*, has **both branches landing on the same number**. The crater named here stayed open, and
+  > four gameweeks later it put **Affengruber (one career appearance, 22.4 xP)** above **Konsa (seven seasons,
+  > 13.1)** in a headline recommendation. ⭐ *A default is an opinion, and the neutral value of a multiplier is
+  > not neutral — it is the maximum.*
+
 ---
 
 ### 🧭 Consequences
