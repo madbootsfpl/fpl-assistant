@@ -644,12 +644,29 @@ what gives the cut somewhere to move to.
 - ⚠️ ADR-191 put **Free transfers / Bank** between the pitch and the answer selector. Not in the VO — set them
   before recording so they are not caught half-filled on the scroll.
 
-### Where it belongs
+### Where it belongs — ✅ **wired 2026-09-15** (owner: *"agreed, put it in Help ▸ Watch and first-run"*)
 
 **Stronger as onboarding than as marketing.** It answers *where am I*, which is a question someone asks
-**after** arriving — so its home is **Help ▸ Watch** and a first-run slot, with the site's *"See how it works"*
-as a secondary use. §0 remains the piece that sells; this is the piece that orients. ⚠️ Keep that line clean:
+**after** arriving. §0 remains the piece that sells; this is the piece that orients. ⚠️ Keep that line clean:
 two overlapping intros is worse than either.
+
+#### 🎬 To publish it — two dashboard actions, no deploy
+
+1. **Help ▸ Watch** — add a row to the Supabase `maddie_videos` table: `topic` = **`Orientation`** (matched
+   case-insensitively), a `blurb`, the `youtube_url`, a `sort_order`, `published` = true. The hub is curated
+   from the dashboard by design (ADR-112), so this needs **no code change and no redeploy** — it appears
+   within the page's ~10-minute cache, or instantly on *Reboot app*.
+2. **First run** — the same row drives it. Add a **`seen_orientation`** column (text) to the `user_prefs`
+   table so a dismissal can persist across devices. ⚠️ **Until that column exists the tour still works** — the
+   dismissal is simply session-only, and `prefs._save` returns the refusal rather than failing. The read was
+   decoupled from the column list in the same commit precisely so this ordering cannot break the prefs that
+   already ship.
+
+**What the app does with it:** on **Home**, under the existing hero, one collapsible block — open on a first
+visit, gone once dismissed, and *"it stays in Help ▸ Watch if you want it again"*. ⚠️ **Not a fourth callout:**
+US-398 consolidated three nudges into that hero and re-fragmenting it for a video would undo the decision.
+⚠️ **It renders nothing until the row exists**, because a first impression reading *"coming soon"* is worse
+than no first impression.
 
 ---
 

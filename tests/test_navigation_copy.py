@@ -124,6 +124,7 @@ RETIRED = {
     "Team DNA & FDR": "split into two pages (ADR-169)",
     "the **Ask** tab": "Ask was retired (ADR-168)",
     "· Chips · ": "Chips is a section of My Squad, not a sub-tab (ADR-166/171)",
+    "AI Tips": "ADR-171 folded it into My Squad as **This week** — and ADR-168 removed the AI it named",
 }
 
 
@@ -182,3 +183,51 @@ def test_every_my_squad_pointer_names_a_real_sub_tab():
         named = set(re.findall(r"My Squad ▸ (\w+)", " ".join(_visible_strings(f))))
         bad += [f"{f.relative_to(ROOT)}: {sorted(named - real)}" for _ in [0] if named - real]
     assert not bad, f"pointers at My Squad sub-tabs that do not exist (real: {sorted(real)}):\n  " + "\n  ".join(bad)
+
+
+def test_the_first_run_tour_is_absent_until_there_is_something_to_play():
+    """⚠️ **A first impression that says "coming soon" is worse than no first impression.**
+
+    The orientation video (§I) is a curated Supabase row, so the app ships before the clip exists. The hub can
+    render a *coming soon* caption for an unpublished row — fine in a list of videos, wrong as the first thing
+    a new arrival sees. `maddie.orientation` therefore requires a **URL**, not just a matching topic.
+    """
+    from src.web_streamlit import maddie
+
+    playable = {"topic": maddie.ORIENTATION_TOPIC, "blurb": "b", "youtube_url": "https://y/1"}
+    assert maddie.orientation([playable]) == playable
+    assert maddie.orientation([{**playable, "youtube_url": None}]) is None, "a row with no clip is not a tour"
+    assert maddie.orientation([{**playable, "youtube_url": ""}]) is None
+    assert maddie.orientation([{"topic": "Boot Battle", "youtube_url": "https://y/2"}]) is None
+    assert maddie.orientation([]) is None and maddie.orientation(None) is None
+    # The dashboard is a text field typed by a human, so the match must survive case and stray spaces.
+    assert maddie.orientation([{**playable, "topic": "  orientation "}]) == {**playable, "topic": "  orientation "}
+
+
+def test_adding_a_pref_cannot_break_the_prefs_that_already_work():
+    """⚠️ **The regression this file exists to stop, one layer down.**
+
+    `_load` used to ask PostgREST for exactly the columns in `_FIELDS`. Adding a field whose column did not
+    exist yet made the read a **400** → `_load` returns None → every user's stored league silently stopped
+    restoring, from a deploy that only meant to add something. Ordering between a code push and a dashboard
+    migration should never be load-bearing for a feature that already shipped.
+
+    The read now asks for `*` and narrows to `_FIELDS` in Python, so an unknown field simply never comes back.
+    """
+    import inspect
+
+    from src.web_streamlit import prefs
+
+    src = inspect.getsource(prefs._load)
+    assert '"select": "*"' in src, \
+        "the prefs read must not name its columns — a new field would 400 the read and drop the old ones"
+    assert "seen_orientation" in prefs._FIELDS
+
+
+def test_home_does_not_name_a_retired_section():
+    """`AI Tips` was a destination until ADR-171 folded it into My Squad as **This week**. Home's sidebar
+    guide still called it that — user-facing copy, on the landing page, naming a section that no longer
+    exists. ⭐ *The retired-phrase list is only as good as its most recent entry*, which is why the phrase
+    joins `RETIRED` in the same commit that fixes it."""
+    home = (WEB / "Home.py").read_text()
+    assert "AI Tips" not in " ".join(_visible_strings(WEB / "Home.py")), home[:0] or "Home still says 'AI Tips'"

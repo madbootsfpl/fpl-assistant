@@ -27,6 +27,25 @@ _FALLBACK = [{
 }]
 
 
+# The curated row that is also the **first-run** tour (§I of `docs/08_Marketing/Video_Scripts.md`). Matched on
+# `topic`, because that is the one field the owner controls from the Supabase dashboard — so the video can be
+# published, replaced or pulled without a deploy, exactly like every other row in the hub.
+#
+# ⚠️ **A row with no URL does not count.** The hub renders a "coming soon" caption for an unpublished clip,
+# which is fine in a list and wrong as a first impression: a new user would be greeted by a promise. Until
+# there is something to play, first-run shows nothing at all.
+ORIENTATION_TOPIC = "Orientation"
+
+
+def orientation(rows) -> dict | None:
+    """The orientation video from a `videos()` list, or None — pure, so the first-run decision is testable
+    without a network, a store, or Streamlit."""
+    for row in rows or []:
+        if (row.get("topic") or "").strip().lower() == ORIENTATION_TOPIC.lower() and row.get("youtube_url"):
+            return row
+    return None
+
+
 def _endpoint():
     """`(url, key)` for the `maddie_videos` table — derived from `FPL_STORE_URL`'s base (same project as squads),
     or `(None, None)` when the store isn't configured."""

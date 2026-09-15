@@ -25,7 +25,16 @@ from src.web_streamlit.access import secret
 _TIMEOUT = 6
 _KEY = "_prefs"                 # session_state: the current {manager_id, league_id}
 _RESTORED = "_prefs_restored"   # guard: pulled from the cloud once per session
-_FIELDS = ("manager_id", "league_id")
+# ⚠️ **Adding a field here used to be able to break the ones already here.** `_load` asked PostgREST for
+# exactly these columns, so a field whose column did not exist yet turned the read into a 400 → `_load`
+# returns None → every user's stored league quietly stopped restoring, on a deploy that only meant to add
+# something new. The read now asks for `*` and filters down to this tuple, so an unknown field simply never
+# comes back and the shipped ones keep working. **Order of operations stopped being load-bearing.**
+#
+# `seen_orientation` (ADR-191/§I): the first-run tour has been dismissed. Writing it needs the column to
+# exist; until it does, `_save` reports the refusal and the dismissal is session-only — which is the correct
+# degraded behaviour, not a failure.
+_FIELDS = ("manager_id", "league_id", "seen_orientation")
 
 
 def _endpoint():
@@ -63,7 +72,7 @@ def _load(uk):
         return None
 
     def _get():
-        r = requests.get(url, params={"select": ",".join(_FIELDS), "user_key": f"eq.{uk}"},
+        r = requests.get(url, params={"select": "*", "user_key": f"eq.{uk}"},
                          headers=_headers(key), timeout=_TIMEOUT)
         r.raise_for_status()
         return r

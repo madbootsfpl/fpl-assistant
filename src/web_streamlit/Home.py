@@ -20,7 +20,7 @@ import streamlit as st
 
 from src.storage import Storage
 from src.ui.deadline import deadline_line
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, maddie, prefs
 from src.web_streamlit.access import require_access, secret
 from src.web_streamlit.countdown import render_countdown
 from src.web_streamlit.status import render_data_status
@@ -69,6 +69,35 @@ st.markdown(
     '<a class="ext" href="https://github.com/madbootsfpl/fpl-assistant/issues/new">open a GitHub issue</a>.'
     '</div></div>', unsafe_allow_html=True)
 
+# ---- First run: the orientation tour (§I), once (ADR-191 follow-up, owner 2026-09-15) ------------------
+#
+# **Where am I** is the question a new arrival actually has, and the nine feature videos all answer *what does
+# it do*. §I is the wayfinding one, so it plays here — once — and then lives in Help ▸ Watch like the rest.
+#
+# ⚠️ **Deliberately not a fourth callout.** US-398 consolidated three separate nudges into the single hero
+# above, and re-fragmenting it would undo that for the sake of a video. This is one collapsible block directly
+# beneath it, open on a first visit and gone afterwards.
+#
+# ⚠️ **It renders nothing until the video is published.** No store, no row, or a row with no URL → no block:
+# a first impression that says *"coming soon"* is worse than no first impression. Nothing here needs a deploy
+# when the clip lands; it is a Supabase row like every other video.
+_seen_key = "seen_orientation"
+try:
+    _tour = maddie.orientation(maddie.videos()) if maddie.is_configured() else None
+except Exception:                                  # noqa: BLE001 — a video is never worth a broken landing
+    _tour = None
+if _tour and not prefs.recall().get(_seen_key):
+    with st.expander("👋 **New here? A one-minute tour of where everything is**", expanded=True):
+        st.video(_tour["youtube_url"])
+        if _tour.get("blurb"):
+            st.caption(_tour["blurb"])
+        # Dismissing is a preference, so it follows you across devices when signed in and lasts the session
+        # when not — the same degradation every other pref has (ADR-147).
+        if st.button("Got it — don't show this again", key="home_tour_done"):
+            prefs.remember(**{_seen_key: "yes"})
+            st.rerun()
+        st.caption("It stays in **Help ▸ Watch** if you want it again.")
+
 # The list is in **sidebar order**, which is the order the pages are numbered — My Squad · FDR · Signals ·
 # Team DNA · Players · Trending · Help · Feedback. That order is itself a decision (ADR-166/169: ordered by
 # how often you need it), so a Home page listing them in some other sequence teaches a nav that does not
@@ -77,7 +106,7 @@ st.markdown(
     """
 **Explore the sidebar:**
 
-- 🧩 **My Squad** — your XI, transfers, captain and chips, with **AI Tips**, your squad's **DNA**, your
+- 🧩 **My Squad** — your XI, transfers, captain and chips, with **This week**, your squad's **DNA**, your
   🏆 **Leagues** (effective ownership · captain split · transfer flow · head-to-head), and the **Lab** for
   building a fresh 15 (season start · wildcard · revamp).
 - 📅 **FDR** — every club's next few gameweeks, shaded by difficulty; easiest run first.
