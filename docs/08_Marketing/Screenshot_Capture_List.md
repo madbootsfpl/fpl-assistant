@@ -38,6 +38,30 @@ headshot, the pitch kits) must come from the **live app**, not the hero-shots pa
 
 ---
 
+## §I Orientation — the stills  *(added 2026-09-15; supplied by the owner the same day)*
+
+§I was scoped as the one video that **moves**. When the shoot ran out of time it was re-planned in the
+house still format — ⭐ *the wayfinding content is what makes it worth having, not the motion*, and it
+survives the format change intact.
+
+**Reused from above:** `B1` (the pitch) · `B4` (captain/substitute controls) · `F4` (Team DNA radar — the
+other half of the clash) · `F6` (FDR) · `G3` (Signals) · `G1` (Trending) · `F1`/`G5` (Players).
+
+| id | beat | state | ✅ / ⚠ |
+|---|---|---|---|
+| **J1** | 1 · where you land | Home, sidebar the subject | ⚠️ **Crop below the divider** — *"Signed in as …"* puts a real email address in a public video |
+| **J2** | 2–3 · pitch → the answer | tall crop: pitch, the ADR-191 controls, the four-answer selector | ⚠️ **Crop the last caption** — *"a language model is attached to this instance"* is **local-only** and contradicts the script's *no AI guessing*; the deployed app never shows it |
+| **J3** | 4 · three more tools | My Squad top: wordmark, top nav, squad banner, projected XI | ✅ — note **⚠ £0.8m over** is legible in the deadline line |
+| **J4** | 4–5 · squad DNA | My Squad ▸ DNA: Risk Monitor + **SQUAD DNA … vs the whole pool** | ✅ the clash beat's payload — cut straight from here to `F4` |
+| **J5** | 7 · the glossary | Help ▸ Read | ❌ **caught the wrong expander** (steps 1 & 2). Needs **8 · MADBOOTS Explainer → a plain-English glossary**, which is what the VO names |
+| ~~J6~~ | — | — | ✅ **not needed — `J2` covers it**, and better: it shows the pitch and the answer in one frame, which is the vertical order the script describes |
+
+⚠️ **`J1` settles a question the script deliberately dodged: the sidebar shows TEN items, Admin included.**
+The VO names no count, which is why it survives — ⭐ *a count is a claim that expires on the next page added;
+the shape is not.*
+
+---
+
 ## 🎥 Screen **recording** — for §I Orientation  *(added 2026-09-15)*
 
 The nine feature videos are stills. §I is the one that has to **move**, so it needs footage rather than PNGs.
