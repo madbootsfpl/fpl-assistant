@@ -168,6 +168,45 @@ shape, Option 3 is adopted — the rate becomes a **lens on the transfer surface
 clean-sheet rates beside the swap, which is where the owner's knowledge actually enters. That is the likely
 end state, and it is a good one: the number stops being decorative without pretending to be predictive.
 
+#### 🔬 Re-scored on DEF/GK alone (2026-09-15) — and the defence of the term fails
+
+[ADR-190](./ADR-190-the-gw4-sitting.md) found that a whole-board rank metric **cannot evaluate a term scoped
+to a sub-population**, and closed `SET_PIECE_WEIGHT` on that reasoning. The obvious worry follows: this term
+applies to **DEF/GK only** and was scored across all **626** players with actuals, three quarters of whom it
+can never touch. So the decline above might be dilution rather than signal — and the owner, twice, has
+distrusted a recommendation to sell a cheap Arsenal defender.
+
+Measured (`spikes/192-defender-only-calibration/`). **It is not dilution.**
+
+| | whole board (n=626) | **DEF/GK only (n=277, 1 SE = 0.060)** |
+|---|---|---|
+| ρ at weight 0 | 0.619 | **0.546** |
+| ρ at weight 0.50 | 0.605 | **0.520** |
+| decline across the sweep | −0.014 | **−0.026** |
+| MAE | 1.22 → 1.24 | **1.33 → 1.38** |
+
+Restricted to the players it was built for, the term looks **worse**, not better — nearly twice the decline on
+half the sample. That is this ADR's own double-count reasoning confirmed from a second direction: a defender's
+points-per-90 already contains the clean sheets he kept, and re-adding his club's rate does the most damage
+exactly where it is applied, by over-rating defenders at good clubs relative to their own record.
+
+⚠️ **One number moves the other way, and it is recorded rather than used.** `hit@10` among DEF/GK rises
+**0.15 → 0.23** at weights 0.15–0.30 — the *top* of the defender board improving while the overall ordering
+worsens. That is tempting, because a transfer recommendation cares about the top of the board and not about
+the rank correlation of 277 defenders most of whom nobody owns.
+
+It is **three players**: 6.0 → 9.2 correct picks out of 40 across four gameweeks. It is a **secondary**
+criterion under §B0 while the **primary** one declines on the same rows. Treating it as the answer would be
+**choosing the metric after seeing the curve**, which is the single thing pre-registration exists to prevent.
+If it survives at GW6 on more gameweeks, the question worth asking is not *"does clean sheet work after
+all?"* but *"does a top-of-board metric belong in §B0 at all?"* — which is a change to the method, argued on
+its own merits, in advance.
+
+**Conclusion: `CLEAN_SHEET_WEIGHT` stays 0 for a stronger reason than before.** And the owner's discomfort
+with selling his Arsenal defender is **not** explained by this missing term — adding it would have ranked
+defenders worse. The real cause was a second transfer priced on **one gameweek** with no longer view, against
+a weekly per-player sd of 3.51 (ADR-161), fixed under ADR-191.
+
 ---
 
 ### ⚖️ Consequences & Trade-offs

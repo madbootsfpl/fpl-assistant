@@ -166,6 +166,12 @@ and wants its own gate.
         `_CALIBRATE_WEIGHTS` entry and `src/analytics/setpieces.py` are all gone. Verified byte-identical on
         live data (**657 players, 0 projections changed**). ADR-096 carries the closure note. **Duty is still
         shown** — the price went, the signal did not.
+  - [x] **Option 3 tried once (2026-09-15):** re-scored ADR-188's clean-sheet term on **DEF/GK only**
+        (`spikes/192-defender-only-calibration/`). **The hypothesis was refuted** — restricted to the 277 rows
+        it applies to the term declines *more* steeply (ρ −0.026 vs −0.014 whole-board, MAE 1.33 → 1.38).
+        ⭐ Worth doing anyway: *a whole-board decline and a sub-population decline are different facts, and
+        only one of them was on the record.* Option 3 remains the right method; it just does not rescue this
+        term.
   - [ ] **GATE:** a live percentile for the exodus threshold, replacing the fixed constant
   - [ ] At GW6: re-sweep `FORM_WEIGHT` only — it is the one term that both re-ranks the board and points the
         right way. The other three have their answers.
