@@ -679,17 +679,19 @@ before starting**: the model was not the first problem. Four phases, each with i
     on the instrument. The settled reading: a **ceiling** of +0.206 ρ on what the app ranks, of which +0.061
     is information rather than appearance-point arithmetic.
 
-- ⏳ **Phase 1 — a minutes model. Now gated on a cheap test, not on a hunch.** ADR-202 put a ceiling on it, so
-  the question is no longer *"would better minutes help?"* (yes, up to +0.206 ρ) but *"can a real model reach
-  enough of that?"*. **The gate:** build a minutes forecaster that is better **board-wide** — not just on owned
-  players, which is where the first attempt's false negative came from — and re-score the ranking. If a
-  genuinely better forecaster still buys under **+1 SE**, the ceiling is unreachable in practice and Phase 1 is
-  declined, having trained nothing. The weak part is already identified: the **historical fallback**, not the
-  in-season term.
+- ⏳ **Phase 1 — the gate is RUN (ADR-204, 2026-09-17), and the answer is "not yet".** The candidate is
+  **shrinkage** — `share = (n·this_season + k·last_season)/(n+k)`, replacing ADR-173's all-or-nothing switch —
+  and it **clears the board-wide accuracy gate** (MAE 24.5 → 20.9, start calls 73.5% → 78.8%). Scored on the
+  ranking it gains **+0.4 SE against §B0's +1 SE bar**, so it is **not shipped**.
+  - ⭐⭐ **Recorded and not acted on:** hit@20 **0.17 → 0.26** (+2.1 SE) and top-20 mean return **4.11 → 4.94**
+    — *93% of the oracle's top-of-board gain on 8% of its ρ gain.* **Better minutes is worth far more at the
+    top of the board than across it**, and the top is the only part a recommendation reads.
+  - ⚠️ It is **worse on owned players**. ⭐ *"More accurate" is a claim about a population* — neither candidate
+    dominates.
+  - 📅 **The GW8 rule is pre-registered in ADR-204, written before the data exists.** If neither clause is met,
+    **Phase 1 is declined for the season.**
   - ⚠️ **The 11-season community archive is GATED ON LICENSING.** `vaastav/Fantasy-Premier-League` reads
-    **NOASSERTION** — the absence of a grant, not a permissive one. That mattered before; it matters more now
-    the repo is **AGPL-3.0** with a donations question open. **Needs the owner, or a maintainer's reply.**
-  - Otherwise it accrues at one gameweek a week, and the gate is *"enough rows"*, measured not guessed.
+    **NOASSERTION** — the absence of a grant, not a permissive one. **Needs the owner, or a maintainer's reply.**
 
 - ✅ **Availability is now recorded (ADR-203, done 2026-09-17).** ADR-202's one uncloseable leak — the model
   scored with **today's** injury news applied retrospectively, 195 of 659 players flagged — is closed for every
@@ -731,10 +733,10 @@ is the first point at which a walk-forward split has enough on both sides of it 
    **once in 80 slots**, and n = 1 is not a rate. Eight gameweeks give ~160 slots. Decide it there.
 3. **Has the licensing question been answered** (archive in, or archive permanently out)? This decides
    whether Phase 1 is *"train on 11 seasons"* or *"wait for GW20"*, and they are different projects.
-4. **Did the board-wide forecaster clear +1 SE?** That is Phase 1's gate, and it can be run before the
-   review rather than at it. Asked openly — ADR-202 got three different answers to this question from
-   three instruments, so ⭐ *a measurement can fail because the thing is absent or because the instrument
-   cannot see it*, and the first answer is not the answer.
+4. **Apply ADR-204's pre-registered rule to the blend.** The gate was run on 2026-09-17 and came back
+   **+0.4 SE against a +1 SE bar**, with hit@20 up +2.1 SE. Re-fit `k` on the 8 gameweeks — never carry the
+   old one over — then ship if ρ ≥ +1 SE, or hit@20 ≥ +2 SE with ρ not falling. **If neither, Phase 1 is
+   declined for the season.** ⭐ *A decline needs a date the same way a feature does.*
 
 ⚠️ **The review may conclude "not yet" — but it may not conclude it twice without changing something.** If
 GW8 says wait, the next review sets a *different* gate, or the ML track is parked with a trigger like anything
