@@ -834,6 +834,19 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
                         a_photo=photos.get(picked["id"]), b_photo=photos.get(bb["id"]),
                         a_fixtures=_pergw_fixtures(picked), b_fixtures=_pergw_fixtures(bb),
                         a_xp=xp_by_id.get(picked["id"]), b_xp=xp_by_id.get(bb["id"]))
+                    # 🧬 DNA compare (ADR-197) — the two questions Boot Battle cannot answer: what *shape* is
+                    # each player, and which way is each one *going*. Behind an expander because the stat card
+                    # above is the answer most taps want, and this panel has been cut for density twice.
+                    # ⚠️ No second verdict, by decision — two side by side would read as a ranking the model
+                    # has not earned (ADR-118's verdict never enters `decision_xp`).
+                    with st.expander("🧬 Compare their DNA & form"):
+                        from src.analytics import last_season_name, last_season_rows
+                        from src.web_streamlit.player_dna_view import render_dna_compare
+                        # ADR-126, same as the single-player card: the peer pool needs 450 minutes, so rank
+                        # against last season until this one can answer for itself.
+                        render_dna_compare(picked, bb, players, gw_history=gw_history,
+                                           last_rows=last_season_rows(players, history),
+                                           season_name=last_season_name(history))
                 elif _comparing:
                     # The stored comparison no longer resolves — usually because the selection moved to another
                     # position, so the remembered opponent isn't in this pool. Without this the card was skipped above

@@ -165,3 +165,90 @@ def render_dna_card(dna) -> None:
     if dna is None:
         return
     st.markdown(dna_card_html(dna), unsafe_allow_html=True)
+
+
+# ── Compare: two fingerprints on one radar (ADR-197) ─────────────────────────────────────────────────
+#
+# Owner: *"could we do a compare DNA for both Team & a Player. For Player it's an extension of Boot Battle and
+# should include Performance trend too."*
+#
+# ⚠️ **Two polygons, one octagon — not two radars side by side.** The whole value of a fingerprint comparison
+# is the *shape difference*, and two separate charts make the reader do the overlay in their head, which is
+# exactly the work Boot Battle already does for them stat by stat.
+#
+# ⚠️ **And deliberately NO verdict** (owner-agreed). Each player has one on their own DNA page; putting two
+# side by side would read as a ranking the model has not earned — the same overclaim ADR-194 had just removed
+# from the lineup. The shapes compare; the reader concludes.
+_A_STROKE, _B_STROKE = brand.PURPLE_LT, brand.ACCENT_TEAL
+
+
+def _poly_points(axes, cx, cy, R, n):
+    out = []
+    for i, ax in enumerate(axes):
+        theta = -math.pi / 2 + i * 2 * math.pi / n
+        frac = 0.5 if ax.percentile is None else ax.percentile / 100.0
+        out.append(_pt(cx, cy, R * frac, theta))
+    return out
+
+
+def radar_compare_svg(a_axes, b_axes, *, a_label: str, b_label: str, size: int = 380) -> str:
+    """Two percentile fingerprints overlaid on one octagon, with a legend. Player **or** Team — same builder as
+    `radar_svg`, same axis order, same unranked rule.
+
+    ⚠️ **An axis either side may be unranked, and they need not be the same axis.** A single radar sits an
+    unranked axis on the mid ring with a hollow dot (*absent evidence is not a zero*); with two shapes that
+    would silently imply they were level there. Each unranked vertex is instead drawn hollow **in its own
+    colour**, so a reader can see which of the two is missing evidence — the case that does not arise on a
+    single radar and would otherwise be discovered on screen.
+    """
+    if min(sum(1 for a in ax if a.percentile is not None) for ax in (a_axes, b_axes)) < 3:
+        return ('<div class="dna-unranked">Not enough games played to compare these two yet — a fingerprint '
+                'needs a pool of peers on both sides.</div>')
+    n = len(a_axes)
+    cx = cy = size / 2
+    R = size / 2 - 78
+    parts = [f'<svg class="dna-svg" viewBox="0 0 {size} {size}" role="img" '
+             f'aria-label="percentile radar comparing {_esc(a_label)} and {_esc(b_label)}">']
+
+    def ring(frac):
+        pts = " ".join(f"{x:.1f},{y:.1f}" for i in range(n)
+                       for x, y in [_pt(cx, cy, R * frac, -math.pi / 2 + i * 2 * math.pi / n)])
+        return f'<polygon points="{pts}" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
+
+    parts += [ring(f) for f in (0.25, 0.5, 0.75, 1.0)]
+    for i, ax in enumerate(a_axes):
+        theta = -math.pi / 2 + i * 2 * math.pi / n
+        ex, ey = _pt(cx, cy, R, theta)
+        parts.append(f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" '
+                     'stroke="rgba(255,255,255,.10)" stroke-width="1"/>')
+        lx, ly = _pt(cx, cy, R + 20, theta)
+        cos, sin = math.cos(theta), math.sin(theta)
+        anchor = "middle" if abs(cos) < 0.3 else ("start" if cos > 0 else "end")
+        dy = 4 if abs(sin) < 0.3 else (14 if sin > 0 else -6)
+        parts.append(f'<text x="{lx:.1f}" y="{ly + dy:.1f}" text-anchor="{anchor}" fill="#cdd6e2" '
+                     f'font-size="11" font-weight="700" font-family="sans-serif">{_esc(ax.label)}</text>')
+
+    for axes, stroke in ((a_axes, _A_STROKE), (b_axes, _B_STROKE)):
+        poly = _poly_points(axes, cx, cy, R, n)
+        pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in poly)
+        parts.append(f'<polygon points="{pts}" fill="{stroke}" fill-opacity="0.16" stroke="{stroke}" '
+                     'stroke-width="2.5" stroke-linejoin="round"/>')
+        for (x, y), ax in zip(poly, axes):
+            if ax.percentile is None:
+                parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.6" fill="none" stroke="{stroke}" '
+                             'stroke-width="1.5" stroke-dasharray="2 2"/>')
+            else:
+                parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.4" fill="{stroke}" '
+                             'stroke="#0c121a" stroke-width="1.4"/>')
+    parts.append("</svg>")
+    legend = (f'<div class="dna-legend">'
+              f'<span><i style="background:{_A_STROKE}"></i>{_esc(a_label)}</span>'
+              f'<span><i style="background:{_B_STROKE}"></i>{_esc(b_label)}</span></div>')
+    return "".join(parts) + legend
+
+
+COMPARE_CSS = (
+    "<style>.dna-legend{display:flex;gap:18px;justify-content:center;margin-top:-6px;font-size:.8rem;"
+    "color:#cdd6e2;font-weight:700;}"
+    ".dna-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;"
+    "vertical-align:-1px;}</style>")

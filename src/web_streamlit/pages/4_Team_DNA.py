@@ -120,3 +120,14 @@ else:
                 players, _picked, _last_rows, last_season_name(history))
             render_team_dna(_all_dna[_picked], fixtures=_fx, key_players=_kp, key_players_season=_kp_season,
                             form=team_form(gw_history, players, _picked))
+
+            # ── Compare (ADR-197) ────────────────────────────────────────────────────────────────────
+            # Owner: *"could we do a compare DNA for both Team & a Player."* Behind an expander, because the
+            # single-club view is what most visits want and ADR-134 fought to keep this page a scan first.
+            _others = [n for n in _labels if _labels[n] != _picked]
+            with st.expander(f"🧬 Compare {_names.get(_picked, _picked)} with another club"):
+                _vs = _labels.get(st.selectbox("Compare with", _others, key="team_dna_vs",
+                                               help="Both fingerprints on one radar."))
+                if _vs:
+                    from src.web_streamlit.team_dna_card import render_team_compare
+                    render_team_compare(_all_dna[_picked], _all_dna.get(_vs))

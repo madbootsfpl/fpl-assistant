@@ -14,7 +14,7 @@ from src.analytics.form import form_windows
 from src.analytics.gw_form import form_dots, stat_series
 from src.analytics.player_dna import player_dna_this_or_last
 from src.analytics.price import PRICE_DOWN, PRICE_UP, price_move, price_series
-from src.web_streamlit.dna_card import render_dna_card
+from src.web_streamlit.dna_card import COMPARE_CSS, radar_compare_svg, render_dna_card
 from src.web_streamlit.insights_card import render_insights_card
 from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
 
@@ -290,3 +290,50 @@ def render_player_dna(player, players, xp_by_id, *, gw_history=None, owned=None,
                                         "move": price_move(player),
                                         "price": player["price"]}),
                 unsafe_allow_html=True)
+
+
+def render_dna_compare(a, b, players, *, gw_history=None, last_rows=None, season_name=None) -> None:
+    """Two players' fingerprints on one radar, then each one's performance trend (ADR-197).
+
+    ⚠️ Named `render_dna_compare`, not `render_player_compare` — that name is already Boot Battle's stat card
+    (`compare_card.py`), and this renders *underneath* it. Two functions called the same thing on one panel is
+    how the wrong one gets called in six months.
+
+    The owner's brief: *"For Player it's an extension of Boot Battle and should include Performance trend
+    too."* Boot Battle already answers *which is better at each stat*; this answers the two questions it
+    cannot — **what shape is each player**, and **which way is each one going**.
+
+    ⚠️ **No verdict, and that was the design decision.** Each player has one on his own DNA page. Two side by
+    side would read as a ranking, and the model has not earned one: a verdict is a heuristic 0–99 built from
+    signals that are deliberately *never* fed into `decision_xp` (ADR-118). Putting two next to each other
+    invites a subtraction nobody measured — the same overclaim ADR-194 removed from the lineup a day earlier.
+    **The shapes compare; the reader concludes.**
+    """
+    if not (a and b):
+        return
+    dna_a, season_a = player_dna_this_or_last(a, players, last_rows, season_name)
+    dna_b, season_b = player_dna_this_or_last(b, players, last_rows, season_name)
+    if dna_a is None or dna_b is None:
+        st.caption("🧬 Not enough games played to compare these two yet — a fingerprint needs a pool of peers "
+                   "on both sides.")
+        return
+
+    st.markdown(COMPARE_CSS + radar_compare_svg(dna_a.axes, dna_b.axes,
+                                                a_label=a["web_name"], b_label=b["web_name"]),
+                unsafe_allow_html=True)
+    if season_a or season_b:
+        st.caption(f"🧬 DNA percentiles are **{season_a or season_b}** — ranking needs ~5 matches, so this "
+                   "season's fingerprint draws from about GW5.")
+
+    # Performance trend, one per player — the half Boot Battle has never been able to show.
+    gwh = gw_history or {}
+    for p in (a, b):
+        code = _code(p)
+        st.markdown(f"**{p['web_name']}**")
+        by_stat = {"Points": stat_series(gwh, code, "total_points"),
+                   "BPS": stat_series(gwh, code, "bps"),
+                   "xG": stat_series(gwh, code, "xg"),
+                   "xA": stat_series(gwh, code, "xa")}
+        st.markdown(trend_panel_html(player_gw_points(gwh, code), form_dots(gwh, code), by_stat,
+                                     windows=form_windows((gwh or {}).get(code) or [])),
+                    unsafe_allow_html=True)
