@@ -76,3 +76,61 @@ def test_the_player_compare_carries_the_performance_trend():
     assert "trend_panel_html" in src
     assert "player_gw_points" in src
     assert src.count("for p in (a, b)") == 1, "one trend per player, not one for the pair"
+
+
+def test_the_compare_supplies_its_own_dark_ground():
+    """⚠️ **The phone bug, reported with a screenshot.**
+
+    The radar's furniture is hard-coded for a dark ground — `rgba(255,255,255,.10)` rings, `#cdd6e2` labels,
+    `#0c121a` dot outlines. The single card supplies that ground itself (`.dna-card`); the compare rendered the
+    **bare `<svg>`**, so on a light-themed phone it sat on white with near-invisible labels while everything
+    around it stayed dark.
+
+    ⭐ *A component that hard-codes one theme's colours is not portable to a container that does not supply
+    them* — and it looks fine on the developer's machine, because the developer is in dark mode.
+    """
+    from src.web_streamlit.dna_card import compare_card_html
+
+    html = compare_card_html(_axes(80, 70, 60, 50, 40, 30, 20, 10),
+                             _axes(10, 20, 30, 40, 50, 60, 70, 80),
+                             a_label="Man City", b_label="Aston Villa",
+                             title="🧬 Team DNA — compare", caption="Percentile rank against every club")
+    assert 'class="dna-card"' in html, "the compare must carry the same dark card the single radar does"
+    assert ".dna-card{background:" in html, "…and ship the CSS that paints it"
+    assert html.index('class="dna-card"') < html.index("<svg"), "the ground must wrap the chart"
+    # …including when it declines to draw, or the refusal renders on white too.
+    thin = _axes(70, None, None, None, None, None, None, None)
+    declined = compare_card_html(thin, _axes(10, 20, 30, 40, 50, 60, 70, 80), a_label="A", b_label="B",
+                                 title="t", caption="c")
+    assert 'class="dna-card"' in declined and "Not enough games" in declined
+
+
+def test_the_axes_are_chips_not_a_table():
+    """Owner: *"rather than a table could we use the legend as used in single club with the comparing club data
+    alongside it."* The table was a second reading order for the eight facts the chart already showed, and on
+    a phone every cell wrapped onto three lines. One chip per axis, two values, tinted by **shape colour** —
+    in a comparison the question is *whose is this*; the radar answers *how good* by position on the ring."""
+    from src.web_streamlit.dna_card import compare_card_html
+
+    html = compare_card_html(_axes(89, 100, 60, 50, 40, 30, 20, 10),
+                             _axes(0, 16, 30, 40, 50, 60, 70, 80),
+                             a_label="Man City", b_label="Aston Villa", title="t", caption="c")
+    assert html.count('class="dna-chip"') == 8, "one chip per axis"
+    assert html.count('class="dna-p2"') == 16, "two values per chip"
+    assert "| Axis |" not in html and "|---|" not in html, "no markdown table"
+    assert ">89<" in html and ">0<" in html, "both sides' percentiles are present"
+
+
+def test_the_compare_radar_matches_the_single_one():
+    """Owner: *"same size and thickness as the original single club radar."* Two charts of the same thing at
+    different scales read as two different charts — and the compare sits one expander below the single view,
+    so the mismatch was directly visible."""
+    import inspect
+
+    from src.web_streamlit import dna_card
+
+    src = inspect.getsource(dna_card.radar_compare_svg)
+    single = inspect.getsource(dna_card.radar_svg)
+    assert "size: int = 360" in src and "size: int = 360" in single
+    assert "R = size / 2 - 74" in src and "R = size / 2 - 74" in single
+    assert 'stroke-width="2"' in src, "the data polygon matches the single radar's weight"

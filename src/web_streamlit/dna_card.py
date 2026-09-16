@@ -191,7 +191,7 @@ def _poly_points(axes, cx, cy, R, n):
     return out
 
 
-def radar_compare_svg(a_axes, b_axes, *, a_label: str, b_label: str, size: int = 380) -> str:
+def radar_compare_svg(a_axes, b_axes, *, a_label: str, b_label: str, size: int = 360) -> str:
     """Two percentile fingerprints overlaid on one octagon, with a legend. Player **or** Team — same builder as
     `radar_svg`, same axis order, same unranked rule.
 
@@ -206,7 +206,9 @@ def radar_compare_svg(a_axes, b_axes, *, a_label: str, b_label: str, size: int =
                 'needs a pool of peers on both sides.</div>')
     n = len(a_axes)
     cx = cy = size / 2
-    R = size / 2 - 78
+    R = size / 2 - 74                      # ⚠️ identical to `radar_svg` — owner: *"same size and thickness as
+                                           # the original single club radar"*. Two charts of the same thing at
+                                           # different scales read as two different charts.
     parts = [f'<svg class="dna-svg" viewBox="0 0 {size} {size}" role="img" '
              f'aria-label="percentile radar comparing {_esc(a_label)} and {_esc(b_label)}">']
 
@@ -227,28 +229,75 @@ def radar_compare_svg(a_axes, b_axes, *, a_label: str, b_label: str, size: int =
         dy = 4 if abs(sin) < 0.3 else (14 if sin > 0 else -6)
         parts.append(f'<text x="{lx:.1f}" y="{ly + dy:.1f}" text-anchor="{anchor}" fill="#cdd6e2" '
                      f'font-size="11" font-weight="700" font-family="sans-serif">{_esc(ax.label)}</text>')
+        parts.append(f'<text x="{lx:.1f}" y="{ly + dy + 12:.1f}" text-anchor="{anchor}" fill="#7c8899" '
+                     f'font-size="9" font-family="sans-serif">{_esc(ax.sublabel)}</text>')
 
     for axes, stroke in ((a_axes, _A_STROKE), (b_axes, _B_STROKE)):
         poly = _poly_points(axes, cx, cy, R, n)
         pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in poly)
         parts.append(f'<polygon points="{pts}" fill="{stroke}" fill-opacity="0.16" stroke="{stroke}" '
-                     'stroke-width="2.5" stroke-linejoin="round"/>')
+                     'stroke-width="2" stroke-linejoin="round"/>')
         for (x, y), ax in zip(poly, axes):
             if ax.percentile is None:
                 parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.6" fill="none" stroke="{stroke}" '
                              'stroke-width="1.5" stroke-dasharray="2 2"/>')
             else:
-                parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.4" fill="{stroke}" '
-                             'stroke="#0c121a" stroke-width="1.4"/>')
+                parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.6" fill="{stroke}" '
+                             'stroke="#0c121a" stroke-width="1.5"/>')
     parts.append("</svg>")
-    legend = (f'<div class="dna-legend">'
-              f'<span><i style="background:{_A_STROKE}"></i>{_esc(a_label)}</span>'
-              f'<span><i style="background:{_B_STROKE}"></i>{_esc(b_label)}</span></div>')
-    return "".join(parts) + legend
+    return "".join(parts)
 
 
 COMPARE_CSS = (
-    "<style>.dna-legend{display:flex;gap:18px;justify-content:center;margin-top:-6px;font-size:.8rem;"
-    "color:#cdd6e2;font-weight:700;}"
-    ".dna-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;"
-    "vertical-align:-1px;}</style>")
+    "<style>.dna-card .dna-legend{display:flex;gap:18px;justify-content:center;margin:-2px 0 8px;"
+    "font-size:.8rem;color:#cdd6e2;font-weight:700;}"
+    ".dna-card .dna-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;"
+    "vertical-align:-1px;}"
+    # Two percentiles per chip, in the two shape colours, sharing one axis label — the single card's chip with
+    # a second value rather than a table beside the chart (owner, 2026-09-16).
+    ".dna-card .dna-cv2{display:flex;align-items:center;gap:10px;margin-top:4px;}"
+    ".dna-card .dna-p2{font-size:.72rem;font-weight:800;border-radius:6px;padding:1px 7px;"
+    "font-variant-numeric:tabular-nums;color:#0c121a;}</style>")
+
+
+def _compare_chip(ax_a, ax_b) -> str:
+    """One axis, both clubs — the single card's chip carrying two values instead of one.
+
+    ⚠️ **This replaced a markdown table beside the radar** (owner: *"rather than a table could we use the
+    legend as used in single club with the comparing club data alongside it"*). The table was a second reading
+    order for the same eight facts the chart already showed, and on a phone it wrapped every cell onto three
+    lines. The chip grid is the layout this page already uses, so a compare now looks like the thing it
+    compares.
+
+    The values are tinted by **shape colour, not by band** — in a comparison the question is *whose is this*,
+    and the radar answers *how good* with position on the ring.
+    """
+    a = "—" if ax_a.percentile is None else f"{ax_a.percentile}"
+    b = "—" if ax_b.percentile is None else f"{ax_b.percentile}"
+    return (f'<div class="dna-chip"><div class="dna-cl">{_esc(ax_a.label)}'
+            f'<br><span class="dna-cs">{_esc(ax_a.sublabel)}</span></div>'
+            f'<div class="dna-cv2">'
+            f'<span class="dna-p2" style="background:{_A_STROKE}">{a}</span>'
+            f'<span class="dna-p2" style="background:{_B_STROKE}">{b}</span></div></div>')
+
+
+def compare_card_html(a_axes, b_axes, *, a_label: str, b_label: str, title: str, caption: str) -> str:
+    """The whole compare, inside the **same dark card** the single radar uses.
+
+    ⚠️ **This is the phone bug, and it was a real one.** The radar's furniture is hard-coded for a dark ground
+    — `rgba(255,255,255,.10)` rings, `#cdd6e2` labels, `#0c121a` dot outlines. The single card supplies that
+    ground itself (`.dna-card`); the compare rendered the bare `<svg>`, so on a light-themed phone it sat on
+    white with near-invisible labels while everything around it stayed dark (owner's screenshot, 2026-09-16).
+    ⭐ *A component that hard-codes one theme's colours is not portable to a container that does not supply it.*
+    """
+    body = radar_compare_svg(a_axes, b_axes, a_label=a_label, b_label=b_label)
+    if "dna-unranked" in body:                       # too thin to draw — the message carries the card itself
+        return DNA_CSS + COMPARE_CSS + f'<div class="dna-card">{body}</div>'
+    legend = (f'<div class="dna-legend">'
+              f'<span><i style="background:{_A_STROKE}"></i>{_esc(a_label)}</span>'
+              f'<span><i style="background:{_B_STROKE}"></i>{_esc(b_label)}</span></div>')
+    chips = "".join(_compare_chip(x, y) for x, y in zip(a_axes, b_axes))
+    return (DNA_CSS + COMPARE_CSS + '<div class="dna-card">'
+            f'<div class="dna-band"><span class="dna-ttl">{_esc(title)}</span>'
+            f'<span class="dna-cap">{_esc(caption)}</span></div>'
+            f'{body}{legend}<div class="dna-chips">{chips}</div></div>')

@@ -92,6 +92,30 @@ taken at the gate rather than discovered on camera, which is what the gate is fo
 #### ✅ Always
 - [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
 
+### 🔧 Owner feedback, same day — three fixes
+
+**1. The radar did not match the one above it.** Shipped at size 380 / `R−78` / 2.5px stroke against the
+single card's 360 / `R−74` / 2px. The compare sits one expander below the single view, so the mismatch was
+directly visible. ⭐ *Two charts of the same thing at different scales read as two different charts.* Now
+identical, with a test that compares both sources rather than pinning numbers in one place.
+
+**2. The table became chips.** Owner: *"rather than a table could we use the legend as used in single club
+with the comparing club data alongside it."* The markdown table was a **second reading order for the eight
+facts the chart had already shown**, and on a phone every cell wrapped onto three lines. It is now the single
+card's chip grid carrying **two values per axis**, tinted by **shape colour** rather than by band — in a
+comparison the question is *whose is this*, and the radar already answers *how good* by position on the ring.
+
+**3. ⚠️ The phone bug, and it was a real one.** The radar's furniture is hard-coded for a dark ground —
+`rgba(255,255,255,.10)` rings, `#cdd6e2` labels, `#0c121a` dot outlines. The single card supplies that ground
+itself via `.dna-card`; **the compare rendered the bare `<svg>`**, so on a light-themed phone it sat on white
+with near-invisible axis labels while everything around it stayed dark.
+
+⭐ **A component that hard-codes one theme's colours is not portable to a container that does not supply
+them** — and it looks perfect on the developer's machine, because the developer is in dark mode. The same
+trap the theme work hit in ADR-180, one layer down: there it was a colour the theme should own, here it is a
+*ground* the component assumed. Both compares now render inside the same card, including when they decline to
+draw — otherwise the refusal renders on white too.
+
 ---
 
 ### 💡 The lesson

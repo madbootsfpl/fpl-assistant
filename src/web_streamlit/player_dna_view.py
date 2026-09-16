@@ -14,7 +14,7 @@ from src.analytics.form import form_windows
 from src.analytics.gw_form import form_dots, stat_series
 from src.analytics.player_dna import player_dna_this_or_last
 from src.analytics.price import PRICE_DOWN, PRICE_UP, price_move, price_series
-from src.web_streamlit.dna_card import COMPARE_CSS, radar_compare_svg, render_dna_card
+from src.web_streamlit.dna_card import compare_card_html, render_dna_card
 from src.web_streamlit.insights_card import render_insights_card
 from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
 
@@ -318,8 +318,10 @@ def render_dna_compare(a, b, players, *, gw_history=None, last_rows=None, season
                    "on both sides.")
         return
 
-    st.markdown(COMPARE_CSS + radar_compare_svg(dna_a.axes, dna_b.axes,
-                                                a_label=a["web_name"], b_label=b["web_name"]),
+    st.markdown(compare_card_html(dna_a.axes, dna_b.axes,
+                                  a_label=a["web_name"], b_label=b["web_name"],
+                                  title="🧬 Player DNA — compare",
+                                  caption=f"Percentile rank among {a['position']}s"),
                 unsafe_allow_html=True)
     if season_a or season_b:
         st.caption(f"🧬 DNA percentiles are **{season_a or season_b}** — ranking needs ~5 matches, so this "

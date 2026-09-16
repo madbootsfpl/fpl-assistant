@@ -364,18 +364,11 @@ def render_team_compare(dna_a, dna_b) -> None:
     if dna_a is None or dna_b is None:
         st.caption("🧬 Pick two clubs to compare.")
         return
-    from src.web_streamlit.dna_card import COMPARE_CSS, radar_compare_svg
-    st.markdown(COMPARE_CSS + radar_compare_svg(dna_a.axes, dna_b.axes,
-                                                a_label=dna_a.name, b_label=dna_b.name),
+    from src.web_streamlit.dna_card import compare_card_html
+    st.markdown(compare_card_html(dna_a.axes, dna_b.axes, a_label=dna_a.name, b_label=dna_b.name,
+                                  title="🧬 Team DNA — compare",
+                                  caption="Percentile rank against every club"),
                 unsafe_allow_html=True)
     # No grade badge and no verdict, for the same reason the player compare has none: two grades side by side
-    # read as a league table of two, which is a ranking neither number was built to support.
-    rows = []
-    for ax_a, ax_b in zip(dna_a.axes, dna_b.axes):
-        a, b = ax_a.percentile, ax_b.percentile
-        lead = "—" if a is None or b is None else (dna_a.name if a > b else (dna_b.name if b > a else "level"))
-        rows.append(f"| {_esc(ax_a.label)} | {'—' if a is None else a} | {'—' if b is None else b} | {lead} |")
-    st.markdown("\n".join([f"| Axis | {_esc(dna_a.name)} | {_esc(dna_b.name)} | Ahead |",
-                           "|---|---:|---:|---|", *rows]))
-    st.caption("Percentiles are **against every club**, so both sides can be strong. An **—** means that club "
-               "cannot be ranked on that axis yet, not that it scored zero.")
+    # read as a league table of two, which is a ranking neither number was built to support (ADR-197).
+    st.caption("An **—** means that club cannot be ranked on that axis yet, not that it scored zero.")
