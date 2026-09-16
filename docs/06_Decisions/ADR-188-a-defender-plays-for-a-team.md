@@ -202,6 +202,13 @@ If it survives at GW6 on more gameweeks, the question worth asking is not *"does
 all?"* but *"does a top-of-board metric belong in §B0 at all?"* — which is a change to the method, argued on
 its own merits, in advance.
 
+> ⚠️⚠️ **REOPENED 2026-09-16 by [ADR-195](./ADR-195-team-defence-is-xgc-not-clean-sheets.md) — the
+> instrument was wrong, not the question.** Both nulls above tested a club's **clean-sheet rate**, which over
+> four gameweeks is a five-valued statistic derived from a coin flip. Measured as **xGC/90** — continuous,
+> minutes-normalised, spreading 3× between best and worst club — the association with defenders' actual points
+> is **+0.216 at 4.2 SE**. ⭐ *A null is a statement about the instrument as much as about the world*, and the
+> owner was right three times while these measurements said otherwise.
+
 **Conclusion: `CLEAN_SHEET_WEIGHT` stays 0 for a stronger reason than before.** And the owner's discomfort
 with selling his Arsenal defender is **not** explained by this missing term — adding it would have ranked
 defenders worse. The real cause was a second transfer priced on **one gameweek** with no longer view, against

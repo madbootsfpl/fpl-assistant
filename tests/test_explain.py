@@ -264,3 +264,69 @@ def test_explain_gameweek_reuses_captain_transfer_and_adds_lineup():
     assert "Sick" in " ".join(ex["overall"].risks)          # the flagged player is the week's risk
     assert ex["overall"].confidence == gameweek_confidence(ex["captain"].confidence, 1)
     assert explain_gameweek(None, {}, {}) is None            # empty-safe
+
+
+# ---- ADR-194: a start/bench call gets a margin, like every other call -------------------------------
+
+def _lineup(bring, drop):
+    return {"bring_in": [{"id": 1, "web_name": bring}], "drop": [{"id": 2, "web_name": drop}]}
+
+
+def test_a_toss_up_is_reported_as_one_not_as_an_instruction():
+    """⚠️ **The owner's report, three times.** *"Start Thomas over Konsa (2.7 vs 2.6)"* — **"not a chance"**:
+    Coventry had shipped five that week, Arsenal are first in the league for expected goals conceded.
+
+    He was right, and the deeper fault is that **0.1 xP is not a recommendation**. A player's weekly points
+    have a standard deviation of **3.51** (ADR-161), so a swap's own spread is wider still. The model cannot
+    separate those two, and was saying so in the same voice it uses when it can.
+
+    ⭐ *Handing the call back is the honest answer, and it is literally the mantra: **you make the call.***
+    """
+    from src.analytics.explain import _lineup_reasons
+
+    said = _lineup_reasons(_lineup("Thomas", "Konsa"), {1: 2.7, 2: 2.6})[0]
+    assert "too close to call" in said and "your call" in said
+    assert "Thomas" in said and "Konsa" in said, "a toss-up must still name both — the manager decides"
+    assert not said.startswith("Start "), "…and must not be phrased as an instruction"
+
+
+def test_a_real_gap_is_still_stated_plainly():
+    """The fix must not mute the advice. The median real swap is **1.8 xP** — most lineup calls carry genuine
+    information, and turning them all into shrugs would be the opposite error."""
+    from src.analytics.explain import _lineup_reasons
+
+    said = _lineup_reasons(_lineup("Haaland", "Bench"), {1: 6.0, 2: 2.0})[0]
+    assert said.startswith("Start Haaland over Bench")
+    assert "a clear gap" in said, "a 4.0 gap is above the measured p75 and should say so"
+    mid = _lineup_reasons(_lineup("A", "B"), {1: 4.0, 2: 2.2})[0]      # 1.8 = the median swap
+    assert mid.startswith("Start A over B") and "clear gap" not in mid
+
+
+def test_the_bands_are_the_measured_quartiles_not_invented():
+    """⭐ ADR-144's idiom: a threshold is a quartile of the real distribution, not a number someone liked.
+
+    500 random squads at two seeds, each with an arbitrary legal declared XI: **p25 1.0 · median 1.8 · p75
+    2.8**, and **one swap in ten inside 0.3**. If these constants are ever changed by eye rather than by a
+    re-measure, this is the line that should stop it (`spikes/194-lineup-margin/`).
+    """
+    from src.analytics.explain import LINEUP_CLEAR, LINEUP_TOO_CLOSE, lineup_verdict
+
+    assert (LINEUP_TOO_CLOSE, LINEUP_CLEAR) == (1.0, 2.8)
+    assert lineup_verdict(0.1) == "toss-up"
+    assert lineup_verdict(0.99) == "toss-up"
+    assert lineup_verdict(1.0) == "swap"
+    assert lineup_verdict(2.79) == "swap"
+    assert lineup_verdict(2.8) == "clear"
+
+
+def test_a_toss_up_is_not_counted_as_edge():
+    """⚠️ *"2 lineup tweaks to bank more points"* counted two coin flips as an **edge** — the same overclaim
+    one level up. A number in the Edge block is a claim the model knows something."""
+    from src.analytics.explain import _lineup_edge_count
+
+    both_close = {"bring_in": [{"id": 1, "web_name": "A"}, {"id": 3, "web_name": "C"}],
+                  "drop": [{"id": 2, "web_name": "B"}, {"id": 4, "web_name": "D"}]}
+    xp = {1: 2.7, 2: 2.6, 3: 2.6, 4: 2.3}                    # gaps of 0.1 and 0.3 — both inside the noise
+    assert _lineup_edge_count(both_close, xp) == 0
+    xp_real = {1: 5.0, 2: 2.6, 3: 2.6, 4: 2.3}               # one real gap, one toss-up
+    assert _lineup_edge_count(both_close, xp_real) == 1

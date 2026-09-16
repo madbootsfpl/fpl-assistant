@@ -453,13 +453,65 @@ def explain_chips(advice) -> dict | None:
 
 # ── Gameweek plan (US-273/274, extends ADR-089) ───────────────────────────────
 
+# ⚠️ **ADR-194 — the start/bench call gets a margin, like every other call (ADR-144's idiom).**
+#
+# Measured over 500 random squads at two seeds, each with an arbitrary legal declared XI: a swap the plan
+# would actually print is worth **p25 1.0 · median 1.8 · p75 2.8** xP. So most lineup advice carries real
+# information — and **one swap in ten is inside 0.3**, which was being stated in exactly the same voice.
+#
+# The owner, on *"Start Thomas over Konsa (2.7 vs 2.6)"*: **"not a chance"** — Coventry had shipped five that
+# week and Arsenal are first in the league for expected goals conceded. He was right, and the deeper problem
+# is that **0.1 xP is not a recommendation**: a player's weekly points have a standard deviation of 3.51
+# (ADR-161), so a swap's own spread is wider still. The model cannot separate those two players, and said so
+# in the voice it uses when it can.
+#
+# ⭐ **Handing the call back is not a weaker answer, it is the honest one — and it is literally the mantra.**
+# *Analytics decide. Logic explains. **You make the call.*** On a gap this size the manager's own knowledge
+# (who is fit, who is rotated, who shipped five last week) is better evidence than the model's, and the
+# product's own slogan says so.
+LINEUP_TOO_CLOSE = 1.0   # ≈ p25 of real swaps — below this the model cannot tell them apart
+LINEUP_CLEAR = 2.8       # ≈ p75 — at or above this the swap is worth stating plainly
+
+
+def lineup_verdict(gap: float) -> str:
+    """`"toss-up"` · `"swap"` · `"clear"` for an xP gap — the measured bands above."""
+    if gap < LINEUP_TOO_CLOSE:
+        return "toss-up"
+    return "clear" if gap >= LINEUP_CLEAR else "swap"
+
+
 def _lineup_reasons(lineup, xp_by_id) -> list:
-    """Short grounded 'why' for each start/bench change — 'start {in} over {out} (higher projected xP)'."""
+    """Short grounded 'why' for each start/bench change, **banded by how big the gap actually is**.
+
+    A toss-up is reported as one, and it names both players rather than instructing — the plan still puts the
+    higher-xP player in the XI (it has to field someone), but it stops claiming that choice is knowledge.
+    """
     reasons = []
     for bring, drop in zip(lineup.get("bring_in", []), lineup.get("drop", [])):
+        a = round(xp_by_id.get(bring["id"], 0), 1)
+        b = round(xp_by_id.get(drop["id"], 0), 1)
+        if lineup_verdict(a - b) == "toss-up":
+            reasons.append(f"{bring['web_name']} or {drop['web_name']} — too close to call "
+                           f"({a} vs {b}); your call")
+            continue
+        clear = " — a clear gap" if lineup_verdict(a - b) == "clear" else ""
         reasons.append(f"Start {bring['web_name']} over {drop['web_name']} (higher projected xP: "
-                       f"{round(xp_by_id.get(bring['id'], 0), 1)} vs {round(xp_by_id.get(drop['id'], 0), 1)})")
+                       f"{a} vs {b}){clear}")
     return reasons
+
+
+def _lineup_edge_count(lineup, xp_by_id) -> int:
+    """How many swaps are worth calling **Edge** — the toss-ups are not.
+
+    ⚠️ They were: *"2 lineup tweaks to bank more points"* counted two coin flips as an edge, which is the same
+    overclaim one level up. A number in the Edge block is a claim that the model knows something.
+    """
+    n = 0
+    for bring, drop in zip(lineup.get("bring_in", []), lineup.get("drop", [])):
+        gap = round(xp_by_id.get(bring["id"], 0), 1) - round(xp_by_id.get(drop["id"], 0), 1)
+        if lineup_verdict(gap) != "toss-up":
+            n += 1
+    return n
 
 
 def gameweek_confidence(captain_confidence_score, n_flags: int) -> int:
@@ -491,8 +543,8 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
         reasons.append(f"A positive-gain upgrade available (+{move['gain']} XI xP)")
     elif not lineup:
         reasons.append("No changes needed — your XI is already optimal")
-    if lineup:
-        reasons.append(f"{len(lineup)} lineup tweak{'s' if len(lineup) != 1 else ''} to bank more points")
+    if (n_edge := _lineup_edge_count(plan.get("lineup") or {}, xp_by_id)):
+        reasons.append(f"{n_edge} lineup tweak{'s' if n_edge != 1 else ''} to bank more points")
     if flags:
         risks.append(", ".join(f"{f['web_name']} ({f['reason']}"
                                + (f", {f['chance']}%" if f.get("chance") is not None else "") + ")"
