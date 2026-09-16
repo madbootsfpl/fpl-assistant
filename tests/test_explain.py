@@ -412,10 +412,8 @@ def test_the_explanation_sits_under_the_confidence_line_it_explains():
 #: Thresholds that are **not** measured, each with the reason it cannot be yet. A constant may live here or
 #: have a distribution behind it — it may not simply exist.
 UNMEASURED = {
-    "_CLEAR_GAIN": "wrong population — random squads have far more headroom than real ones (spike 191), so "
-                   "their best-transfer gains are inflated. Needs optimiser-built or imported squads.",
-    "_CLEAR_REBUILD": "same population problem: a rebuild beats a random squad by ~1.3× its own projection "
-                      "and a real one by ~0.4×.",
+    # `_CLEAR_GAIN` and `_CLEAR_REBUILD` left this map in ADR-200, measured on a population shaped like a
+    # real squad rather than a random one (`spikes/200-realistic-squads/`).
     "FLAG_COST": "not a margin at all, so the p75 rule does not apply — what a flagged player actually costs "
                  "a gameweek is a backtest against outcomes, not a distribution of margins.",
 }
@@ -472,8 +470,31 @@ def test_no_confidence_threshold_exists_without_a_provenance():
     names = [n for n in dir(explain)
              if re.fullmatch(r"_?CLEAR[_A-Z]*|FLAG_COST|LINEUP_(TOO_CLOSE|CLEAR)", n)]
     assert names, "expected to find the confidence thresholds"
-    measured = {"_CLEAR_LEAD", "_CLEAR_CHIP_MARGIN", "LINEUP_TOO_CLOSE", "LINEUP_CLEAR"}
+    measured = {"_CLEAR_LEAD", "_CLEAR_CHIP_MARGIN", "LINEUP_TOO_CLOSE", "LINEUP_CLEAR",
+                "_CLEAR_GAIN", "_CLEAR_REBUILD"}          # the last two measured in ADR-200
     for n in names:
         assert n in measured or n in UNMEASURED, (
             f"{n} has no recorded provenance — measure it, or list it in UNMEASURED with the reason "
             f"it cannot be measured yet")
+
+
+def test_the_two_gated_thresholds_were_measured_on_a_real_shaped_population():
+    """⚠️ **ADR-199 gated these two because the population was wrong; ADR-200 measured them properly.**
+
+    Random squads score **121 XI xP** against a real squad's **238**, so everything looks improvable. And
+    quality alone was not enough either: perturbing the *optimum* to 227 XI xP gave a transfer p75 of **2.88**
+    while the *template* at 226.6 gave **1.60** — the same quality, very different improvability, because
+    perturbation creates repairable holes and a template is uniformly mediocre.
+
+    ⭐ **The population had to be shaped like a real squad, not merely scored like one.** Measured by
+    perturbing the template: transfer p75 **2.3**, rebuild p75 **0.46**, stable across two seeds and
+    consistent with the owner's own two squads (1.77 · 0.42).
+    """
+    from src.analytics.explain import _CLEAR_GAIN, _CLEAR_REBUILD, rebuild_confidence
+
+    assert _CLEAR_GAIN == 2.3
+    assert _CLEAR_REBUILD == 0.46
+    # At 0.25 every real squad (0.40–0.48) saturated, so the wildcard read 95/High for all of them.
+    # ⭐ *A number that never varies is not a confidence, it is a constant with a gauge drawn round it.*
+    assert rebuild_confidence(0.42 * 300, 300) < 95, "a typical real squad must no longer max the gauge"
+    assert rebuild_confidence(0.60 * 300, 300) >= 95, "…and a genuinely exceptional one still should"

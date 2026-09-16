@@ -259,9 +259,15 @@ def test_the_wildcard_confidence_measures_the_gap_not_the_fixture_margin():
     week"*, it is *"is a rebuild worth it"*, and on the owner's squad a **+99.6 xP** rebuild rendered as
     *Confidence 42/100 · Low* — least confident exactly when the case was overwhelming.
     """
-    from src.analytics.explain import rebuild_confidence
-
-    assert rebuild_confidence(99.6, 275.3) >= 90, "an overwhelming rebuild must read High"
+    # ⚠️ **Assert the band, not a magic number.** This read `>= 90`, which silently pinned the old
+    # `_CLEAR_REBUILD = 0.25`. Measured (ADR-200), a real squad's rebuild gains **0.40–0.48** of its own
+    # projection — and this case is **99.6 / 275.3 = 0.36**, *below* that. What ADR-185 called overwhelming
+    # turns out to be an ordinary rebuild, which is exactly the point of the recalibration: at 0.25 every
+    # real squad saturated and the wildcard read 95/High for all of them. It still reads **High** (83).
+    # ⭐ *A test pinned to how confident a number happens to be pins the calibration behind it.*
+    from src.analytics.explain import confidence_band, rebuild_confidence
+    assert confidence_band(rebuild_confidence(99.6, 275.3)) == "High", "a big rebuild must still read High"
+    assert rebuild_confidence(180.0, 300.0) >= 90, "…and a genuinely overwhelming one (0.6×) maxes out"
     assert rebuild_confidence(5.0, 300.0) <= 50, "a healthy squad must read Low — the advice is *don't*"
     assert rebuild_confidence(0.0, 300.0) <= 45
     assert rebuild_confidence(None, None) >= 1, "empty-safe"

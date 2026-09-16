@@ -156,7 +156,15 @@ def explain_captain(picks, players_by_id) -> Explanation | None:
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
 
 
-_CLEAR_GAIN = 3.0   # an XI-xP gain of this over the horizon reads as a "clear" upgrade
+# ⚠️ **Measured on a population shaped like a real squad (ADR-200), not on random ones.**
+#
+# ADR-199 gated this: random squads score **121 XI xP** against a real squad's **238**, so their best
+# available transfer is enormous and the threshold measured from them means nothing. Perturbing the
+# *template* squad (most-owned within budget) gives a distribution at real-squad quality **and real-squad
+# shape**; its p75 is **2.3** across two seeds, against observed 1.6 (template) and 1.77 (the owner's two).
+#
+# At 3.0 a typical real best-transfer (~1.8) scored **73**; the house rule puts a p75 move at 95.
+_CLEAR_GAIN = 2.3   # ≈ p75 of the best available transfer for a real-quality squad, over ONE gameweek
 
 
 def transfer_confidence(gain, *, doubtful_in=False, chance_in=None) -> int:
@@ -439,10 +447,16 @@ def chip_confidence(margin, value) -> int:
     return max(1, min(99, round(40 + 55 * clear)))
 
 
-# A rebuild worth this fraction of your current projection is an unarguable wildcard. 25% is deliberately
-# high: at £100m over five gameweeks it means a quarter of your season's projected points is being left on
-# the table, which is not a marginal call. Provisional — re-measure once several squads have been checked.
-_CLEAR_REBUILD = 0.25
+# What fraction of your own projection a rebuild must beat to be an unarguable wildcard.
+#
+# ⚠️ **25% was "deliberately high" and was in fact below every real squad (ADR-200).** Measured, a real-quality
+# squad's rebuild gains **0.40–0.48** of its own projection — so *every* real squad cleared 0.25 and the
+# wildcard confidence read **95/High for all of them**. A number that never varies is not a confidence, it is
+# a constant with a gauge drawn round it.
+#
+# ⭐ The original comment's reasoning was sound and its premise was untested: a quarter of your season being
+# left on the table *is* a lot — it is simply not rare.
+_CLEAR_REBUILD = 0.46   # ≈ p75 of rebuild gain ÷ own projection, real-quality squads, two seeds
 
 
 def rebuild_confidence(gain, current) -> int:
