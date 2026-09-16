@@ -1,0 +1,48 @@
+The population ADR-199 gated two thresholds on, and the two thresholds it unblocked.
+
+WHY RANDOM SQUADS WERE THE WRONG POPULATION - the number that settles it:
+
+    random legal squad   121.3 XI xP over 5 GWs
+    optimiser's own 15   291.1
+    template (most-owned within budget)  226.6
+    the owner's TS       231.1
+    the owner's RoboTS   244.2
+
+A random squad is not a bad squad, it is barely a squad. Everything looks improvable against it.
+
+THE QUALITY LADDER (optimal, perturbed by k legal swaps)
+    k=0  291.1     k=4  274.2     k=9   227.0
+    k=2  283.5     k=6  263.3     k=12  208.1
+
+...AND WHY QUALITY ALONE WAS NOT ENOUGH:
+
+    k=9       XI 227.0   best transfer p75  2.88
+    template  XI 226.6   best transfer p75  1.60
+
+Same quality, very different improvability. Perturbing the optimum creates REPAIRABLE HOLES - a few
+specific bad players, each individually replaceable. A template squad is UNIFORMLY MEDIOCRE: no single
+glaring weakness to fix. Real squads behave like the template, not like a perturbed optimum.
+
+*** The population had to be shaped like a real squad, not merely scored like one. ***
+
+THE MEASUREMENT - perturbing the TEMPLATE (n=25 per cell, two seeds)
+    k  XI xP   transfer p50  p75   wildcard p50  p75
+    1  218-221    1.80-2.00  2.30     0.44-0.47  0.46-0.48
+    2  212-214    2.30       2.40     0.50       0.54-0.55
+    3  205-209    2.30-2.50  2.60-2.80  0.53-0.56  0.60
+
+    cross-check, observed: template 1.60 / 0.40 · owner's two squads 1.77 / 0.42
+
+SET
+    _CLEAR_GAIN     3.0  -> 2.3    p75 at real-squad quality and shape.
+                                   At 3.0 a typical real best-transfer (~1.8) scored 73.
+    _CLEAR_REBUILD  0.25 -> 0.46   Real squads gain 0.40-0.48 of their own projection, so EVERY real
+                                   squad cleared 0.25 and the wildcard read 95/High for all of them.
+                                   A number that never varies is not a confidence.
+
+The original _CLEAR_REBUILD comment called 25% "deliberately high" - sound reasoning, untested premise.
+A quarter of your season left on the table IS a lot. It is simply not rare.
+
+STILL GATED
+    FLAG_COST 8 - not a margin, so the p75 rule does not apply. What a flagged player actually costs a
+    gameweek is a backtest against outcomes, and belongs with the §B0 machinery.
