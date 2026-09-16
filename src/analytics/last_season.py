@@ -104,3 +104,24 @@ def last_season_rows(players, history_by_code) -> list[dict]:
             "freekicks_order": _get(p, "freekicks_order"),
         })
     return out
+
+
+def season_from_kickoff(kickoff_time) -> str | None:
+    """The season a fixture belongs to, as `2026/27`, from its kickoff timestamp (ADR-201).
+
+    A Premier League season runs August→May, so the label is taken from the **August** it started in: a match
+    in January 2027 belongs to `2026/27`, not `2027/28`.
+
+    ⚠️ **Derived from the data, never hardcoded and never "now".** A constant would need editing every August —
+    and the one August nobody remembers is the one that writes a whole season under the wrong label. Using the
+    clock instead would be worse: it would re-stamp historical rows with today's season the moment anything
+    re-read them. ⭐ *A row's season is a property of the match, not of when the row was written.*
+    """
+    if not kickoff_time:
+        return None
+    try:
+        year, month = int(str(kickoff_time)[:4]), int(str(kickoff_time)[5:7])
+    except (ValueError, TypeError):
+        return None
+    start = year if month >= 7 else year - 1       # July onward starts a season; Jan–June closes the last one
+    return f"{start}/{str(start + 1)[-2:]}"

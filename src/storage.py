@@ -39,6 +39,8 @@ _MIGRATIONS = {
     # Per-GW columns added in Sprint 179 (ADR-128): the season aggregates on `players` are a running total,
     # so a trend line and a W-D-L dot need the *week itself*. Existing databases gain them without a reseed.
     "player_history": {
+        # ADR-201 — the column an older cache gains before `_rekey_history` folds it into the key.
+        "season": "TEXT NOT NULL DEFAULT ''",
         "team_h_score": "INTEGER",
         "team_a_score": "INTEGER",
         "goals_scored": "INTEGER",
@@ -201,11 +203,18 @@ CREATE TABLE IF NOT EXISTS player_history (
     threat         REAL,
     defcon         INTEGER,
     value          INTEGER,
+    -- ⚠️ **`season` is part of the identity (ADR-201), and without it this table could only ever hold one.**
+    -- FPL restarts `fixture` ids at 1 every August, so `(element_code, fixture)` silently collided across
+    -- seasons: GW1 of the new season would overwrite GW1 of the old, row for row, with no error. The
+    -- per-match record is unrecoverable once gone — `element-summary` serves per-match detail for the
+    -- CURRENT season only; past seasons come back as one aggregate row per player. Every rollover was
+    -- destroying a season of training data that FPL will not sell back.
+    season         TEXT NOT NULL DEFAULT '',
     -- Keyed by the FIXTURE, not the gameweek (ADR-129). FPL's `element-summary` sends one entry per match, so
     -- in a double gameweek a player has two rows sharing a `round` — keying on the round made the second
     -- silently overwrite the first, turning a 20-point double into a 12-point single. `round` stays a column
     -- because grouping by gameweek is what the analytics want; it just isn't an identity.
-    PRIMARY KEY (element_code, fixture)
+    PRIMARY KEY (element_code, season, fixture)
 )
 """
 
@@ -338,11 +347,11 @@ ON CONFLICT(element_code, season_name) DO UPDATE SET
 
 UPSERT_HISTORY = """
 INSERT INTO player_history
-    (element_code, round, minutes, total_points, was_home, opponent_team, fixture, kickoff_time, team_h_score,
-     team_a_score, goals_scored, assists, clean_sheets, goals_conceded, saves, bonus, bps, xg, xa, xgi, xgc,
-     ict_index, influence, creativity, threat, defcon, value)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(element_code, fixture) DO UPDATE SET
+    (element_code, season, round, minutes, total_points, was_home, opponent_team, fixture, kickoff_time,
+     team_h_score, team_a_score, goals_scored, assists, clean_sheets, goals_conceded, saves, bonus, bps, xg,
+     xa, xgi, xgc, ict_index, influence, creativity, threat, defcon, value)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(element_code, season, fixture) DO UPDATE SET
     minutes        = excluded.minutes,
     total_points   = excluded.total_points,
     was_home       = excluded.was_home,
@@ -440,9 +449,28 @@ class Storage:
         Rows with no `fixture` cannot be keyed and are not copied; FPL always sends one, so this is theoretical
         (verified: 0 such rows across the live database).
         """
-        pk = [row[1] for row in self.conn.execute("PRAGMA table_info(player_history)") if row[5]]
-        if pk == ["element_code", "fixture"]:
+        # ⚠️ **Compare as a SET.** `PRAGMA table_info` lists columns in *table* order and this filters to the
+        # primary-key ones, so the result is ordered by position, not by key ordinal — `season` was appended to
+        # the table, so it reads `[element_code, fixture, season]` however the key was declared. An equality
+        # test against the declared order never matched, and the table was dropped and rebuilt on **every
+        # open**: a silent, permanent migration loop that leaves the data correct and the cost invisible.
+        pk = {row[1] for row in self.conn.execute("PRAGMA table_info(player_history)") if row[5]}
+        if pk == {"element_code", "season", "fixture"}:
             return
+        # ⚠️ **Backfill `season` BEFORE it joins the key (ADR-201).** Rows written before this migration carry
+        # `''`, and folding a blank into the primary key would merge every season's GW1 into one row — the
+        # exact loss the column exists to prevent, performed once, during the fix.
+        self.conn.execute(
+            "UPDATE player_history SET season = substr(kickoff_time, 1, 4) || '/' || "
+            "substr(cast(cast(substr(kickoff_time, 1, 4) as integer) + 1 as text), 3, 2) "
+            "WHERE (season IS NULL OR season = '') AND kickoff_time IS NOT NULL "
+            "AND cast(substr(kickoff_time, 6, 2) as integer) >= 7")
+        self.conn.execute(
+            "UPDATE player_history SET season = "
+            "cast(cast(substr(kickoff_time, 1, 4) as integer) - 1 as text) || '/' || "
+            "substr(substr(kickoff_time, 1, 4), 3, 2) "
+            "WHERE (season IS NULL OR season = '') AND kickoff_time IS NOT NULL "
+            "AND cast(substr(kickoff_time, 6, 2) as integer) < 7")
         cols = [row[1] for row in self.conn.execute("PRAGMA table_info(player_history)")]
         names = ", ".join(cols)
         self.conn.execute(CREATE_HISTORY.replace("player_history", "player_history_rekeyed"))
@@ -496,8 +524,13 @@ class Storage:
 
     def save_history(self, rows: list[PlayerGameweek]) -> None:
         """Upsert per-GW history rows (ADR-060). Idempotent on (element_code, round)."""
+        # ADR-201 — stamp each row with the season its MATCH belongs to, from the kickoff. Not the clock: a
+        # re-read of an old row must not relabel it with today's season. A row with no kickoff gets '' and is
+        # still stored (it simply cannot be attributed), which keeps the write total-safe.
+        from src.analytics.last_season import season_from_kickoff
         values = [
-            (r.element_code, r.round, r.minutes, r.total_points, r.was_home, r.opponent_team, r.fixture,
+            (r.element_code, season_from_kickoff(r.kickoff_time) or "", r.round, r.minutes, r.total_points,
+             r.was_home, r.opponent_team, r.fixture,
              r.kickoff_time, r.team_h_score, r.team_a_score, r.goals_scored, r.assists, r.clean_sheets,
              r.goals_conceded, r.saves, r.bonus, r.bps, r.xg, r.xa, r.xgi, r.xgc, r.ict_index,
              r.influence, r.creativity, r.threat, r.defcon, r.value)

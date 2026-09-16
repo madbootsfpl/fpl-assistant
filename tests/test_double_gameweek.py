@@ -74,14 +74,20 @@ def _old_schema_db(path):
 
 
 def _pk(store):
-    return [r[1] for r in store.conn.execute("PRAGMA table_info(player_history)") if r[5]]
+    """The primary-key columns, as a **set**. `PRAGMA table_info` returns them in *table* order rather than
+    key order, so a list comparison pins column positions rather than the key itself — and broke the moment
+    ADR-201 appended `season`."""
+    return {r[1] for r in store.conn.execute("PRAGMA table_info(player_history)") if r[5]}
 
 
 def test_an_old_database_is_rekeyed_without_losing_rows(tmp_path):
     path = tmp_path / "old.db"
     _old_schema_db(path)
     store = Storage(db_path=str(path))
-    assert _pk(store) == ["element_code", "fixture"]
+    # ADR-201 added `season` to the key. **ADR-129's claim is untouched** — a double gameweek's two rows both
+    # survive, which is what the next two lines actually test; the key simply grew a third column so that a
+    # *second season's* fixture 1 cannot overwrite this one either.
+    assert _pk(store) == {"element_code", "fixture", "season"}
     assert store.count_history() == 2                       # both rows carried across
     assert {r["round"] for r in store.get_history(999)} == {1, 2}
     store.close()
@@ -92,7 +98,7 @@ def test_the_rekey_is_idempotent(tmp_path):
     _old_schema_db(path)
     Storage(db_path=str(path)).close()
     store = Storage(db_path=str(path))                      # second open must be a no-op
-    assert _pk(store) == ["element_code", "fixture"] and store.count_history() == 2
+    assert _pk(store) == {"element_code", "fixture", "season"} and store.count_history() == 2
     store.close()
 
 

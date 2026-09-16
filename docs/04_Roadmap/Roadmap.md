@@ -72,6 +72,8 @@ list on sight, not on suspicion.
 | ~~**Squad Lab icon**~~ | ✅ **ALREADY DONE — 2026-08-12, commit `0898efc`** *("Squad Lab: lab-motif icon (🧪)")*. The header has read **🧪 Squad Lab** for three weeks; `🥾` appears nowhere in `src/`. ⚠️ **It never needed the art it was listed as blocked on** — 🧪 is an emoji, not a PNG — so this sat on *"Needs you"* for **21 days** waiting for something nobody had to make. Found 2026-09-02 when the owner asked to build it. |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
 | The **3** uncommitted files in your tree | 2 sprint lesson docs (Sprint57, Sprint62) + `spikes/015-soccerdata/compare_npxg.py`, kept out of every commit deliberately. **Was 6** — `Sprint61_Lessons_Learnt.md` and the two `.jpeg`s it embeds were committed 2026-09-02, because the images were the owner's own design references and untracked, so git held no copy and the doc's links pointed at files on one machine. ⚠️ An earlier version of this row called them *"mentioned nowhere"* — inferred from filenames that look like camera output, never grepped for. |
+| ⚠️ **Resolve the community archive's licence** *(blocks ML Phase 1)* | `vaastav/Fantasy-Premier-League` — 11 seasons of per-match FPL data — reads **NOASSERTION**, which is the *absence* of a grant, not a permissive one. I cannot resolve it: it needs you to either open an issue asking the maintainer to state a licence, or decide the project proceeds without it. ⚠️ **It matters more than it did** — the repo is now **AGPL-3.0** and there is an open question about taking donations, so importing data with no stated terms is no longer a private choice. Until it is answered, ML Phase 1 trains only on what we have stored since [ADR-201](../06_Decisions/ADR-201-a-season-is-part-of-the-identity.md) — one season, accruing at one gameweek a week. |
+
 
 ## 🟢 Buildable now — nothing blocking
 
@@ -652,6 +654,66 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   the only item that tells us whether any of the above actually helped.
 
 ---
+
+## 🤖 Learned prediction — the ML track  *(agreed 2026-09-16)*
+
+The plan the owner brought in (a LightGBM stack over FPL + understat features) was validated and **re-ordered
+before starting**: the model was not the first problem. Four phases, each with its own gate.
+
+- ✅ **Phase 0a — retention (ADR-201, done 2026-09-16).** `season` joined the `player_history` key. This was
+  moved to the front of the queue because the August rollover would have **silently overwritten** the only
+  per-match data we have, and FPL sells back the aggregate but never the detail (`player_history_past`:
+  **2,097 rows for twenty seasons**, one per player per season). ⭐ *A model can be built next winter; the
+  gameweek you failed to store cannot.*
+
+- ⬜ **Phase 0b — the baseline (next).** Walk-forward error of the **current** minutes model over the stored
+  gameweeks, reusing `backtest.pairs`. Two jobs: it supplies the number [ADR-192](../06_Decisions/ADR-192-no-opinion-is-not-full-confidence.md)'s
+  cold-start constant needs, and it is **the number any learned model has to beat**. ⭐ *A model with no
+  baseline is not an improvement, it is a replacement.*
+
+- ⏳ **Phase 1 — a minutes model, gated on data.** Minutes first, not points: it is the term with the widest
+  spread, the clearest label, and — per ADR-192 — the one currently defaulting to the most optimistic value
+  available. One stored season is not a training set. Two ways forward, and the first is not ours to decide:
+  - ⚠️ **The 11-season community archive is GATED ON LICENSING.** `vaastav/Fantasy-Premier-League` reads
+    **NOASSERTION** — the absence of a grant, not a permissive one. That mattered before; it matters more now
+    the repo is **AGPL-3.0** with a donations question open. **Needs the owner, or a maintainer's reply.**
+  - Otherwise it accrues at one gameweek a week, and the gate is *"enough rows"*, measured not guessed.
+
+- ⏳ **Phase 2 — points, only if minutes pays.** Deliberately last. If a learned minutes model cannot beat
+  0b's baseline, a learned points model on the same data will not either, and we will have found that out for
+  the price of the smaller question.
+
+**Standing constraint:** the deployed app has **no model** ([ADR-168](../06_Decisions/ADR-168-retire-ask-and-the-promise-with-it.md)),
+so anything learned must ship as **numbers computed offline and stored**, not as inference at request time.
+And whatever ships keeps the ADR-199 rule: ⭐ *a constant is measured, or declared unmeasured with a reason.*
+
+### 📅 The scheduled review — **once GW8 is played: on or after 2026-10-26**
+
+Written down with its criteria now, because ⭐ *a plan with no review date is a plan that gets followed past
+the point it stopped being right* — and this one has a standing reason to drift: **every week that passes
+adds a gameweek**, so "not enough data yet" is always true and never actionable.
+
+**The trigger is a date, not a feeling** — and the date is read off the fixture list, not estimated: GW8's
+last match kicks off **2026-10-25T16:30Z**. By then the cache holds ~8 gameweeks (~5,100 player-gameweeks at
+the current 637 rows a week), which
+is the first point at which a walk-forward split has enough on both sides of it to mean anything.
+
+**What the review must answer — all four, in writing:**
+1. **What did 0b measure, and has it moved?** Re-run the baseline. A baseline taken once is a snapshot; the
+   ML case rests on the gap between it and a model, so it needs to be a line.
+2. **Did ADR-192's cold-start constant get set, and on what?** It was the reason 0b exists.
+3. **Has the licensing question been answered** (archive in, or archive permanently out)? This decides
+   whether Phase 1 is *"train on 11 seasons"* or *"wait for GW20"*, and they are different projects.
+4. **Is a learned minutes model still the right first model?** Asked openly — ADR-190's lesson is that a
+   term can be unreachable rather than merely unproven, and ⭐ *a measurement can fail because the thing is
+   absent or because the instrument cannot see it.*
+
+⚠️ **The review may conclude "not yet" — but it may not conclude it twice without changing something.** If
+GW8 says wait, the next review sets a *different* gate, or the ML track is parked with a trigger like anything
+else in this document.
+
+---
+
 
 ## 🗣 Crowd, signals & the language layer
 
