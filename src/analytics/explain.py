@@ -8,10 +8,22 @@ heuristic** (documented in ADR-089), not a calibrated probability.
 
 from dataclasses import dataclass, field
 
+from src.analytics.captain import CLEAR as CAPTAIN_CLEAR
 from src.analytics.crowd import DIFFERENTIAL_OWN, FORM_MIN, ownership_label
 
 _START_MINUTES = 0.7   # xMins weight ≥ this → "expected to start"; below → a rotation risk
-_CLEAR_LEAD = 0.8      # an xP lead of this over the runner-up reads as a "clear" pick
+# ⚠️ **Measured, not chosen — and it needed no new measurement (ADR-199).**
+#
+# This and `captain.CLEAR` are **the same quantity on the same distribution**: how clear a captain's lead over
+# the runner-up is. `CLEAR` was measured over 300 random squads (ADR-144) and re-measured at GW4 when leads
+# widened (ADR-190). This one was typed as 0.8, and it is the copy that sits inside the confidence score.
+#
+# They disagreed, and the consequence was concrete: **42–47% of captain calls sat at or above 0.8**, so
+# clearness maxed out at the *median* lead and a genuinely clear pick (the measured p75, 1.30–1.42) scored
+# identically to a middling one. Confidence stopped distinguishing exactly where real leads start to.
+#
+# ⭐ *Two constants describing one quantity is one constant and a bug waiting for someone to notice.*
+_CLEAR_LEAD = CAPTAIN_CLEAR      # = 1.3, the measured p75 of real captain margins
 
 
 def _ownership_signal(row):
@@ -401,7 +413,15 @@ def explain_squad(selected, xp_by_id, weight_by_id, *, budget, xi_ids, horizon=5
 
 # ── Chips (US-272, extends ADR-089) ───────────────────────────────────────────
 
-_CLEAR_CHIP_MARGIN = 0.15   # a recommended chip GW that beats the next-best by ≥15% (relative) is "clear"
+# ⚠️ **Measured (ADR-199): the p75 of real chip margins is 0.04, and this was 0.15 — roughly 4× too high,
+# so "clear" was effectively unreachable.** A typical margin scored 55 where the house rule puts it at 95.
+#
+# This page already says chips *"honestly read Low/Medium and sharpen in-season"* because preseason gameweeks
+# are near-uniform. That was true and incomplete: **some of the Low was the threshold, not the football.**
+#
+# The random-squad population is valid here in a way it is not for the transfer and rebuild thresholds — a
+# chip margin is a property of the **fixture list**, not of how good the squad is.
+_CLEAR_CHIP_MARGIN = 0.04   # ≈ p75 of real chip margins (best GW vs next-best, relative to its own scale)
 
 # chip → the field holding the recommended gameweek's headline value (to normalise the margin against).
 _CHIP_VALUE_KEY = {

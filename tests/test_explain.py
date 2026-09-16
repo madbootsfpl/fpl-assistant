@@ -405,3 +405,75 @@ def test_the_explanation_sits_under_the_confidence_line_it_explains():
     why = next(i for i, ln in enumerate(out) if "Why 78?" in ln)
     edge = next(i for i, ln in enumerate(out) if ln.strip() == "Edge")
     assert conf < why < edge, f"the why-line belongs between Confidence and Edge: {out[conf:edge + 1]}"
+
+
+# ---- ADR-199: every confidence threshold declares where it came from -------------------------------
+
+#: Thresholds that are **not** measured, each with the reason it cannot be yet. A constant may live here or
+#: have a distribution behind it — it may not simply exist.
+UNMEASURED = {
+    "_CLEAR_GAIN": "wrong population — random squads have far more headroom than real ones (spike 191), so "
+                   "their best-transfer gains are inflated. Needs optimiser-built or imported squads.",
+    "_CLEAR_REBUILD": "same population problem: a rebuild beats a random squad by ~1.3× its own projection "
+                      "and a real one by ~0.4×.",
+    "FLAG_COST": "not a margin at all, so the p75 rule does not apply — what a flagged player actually costs "
+                 "a gameweek is a backtest against outcomes, not a distribution of margins.",
+}
+
+
+def test_the_captain_lead_threshold_is_the_measured_one():
+    """⚠️ **Two constants were describing one quantity, and only one of them had been measured.**
+
+    `_CLEAR_LEAD` and `captain.CLEAR` are both *how clear a captain's lead over the runner-up is*, on the same
+    distribution. `CLEAR` was measured over 300 squads (ADR-144) and re-measured when leads widened at GW4
+    (ADR-190). `_CLEAR_LEAD` was typed as **0.8** — and it is the copy inside the confidence score.
+
+    The consequence was concrete: **42–47% of captain calls sat at or above 0.8**, so clearness maxed out at
+    the *median* lead and a genuinely clear pick scored the same as a middling one.
+
+    ⭐ *Two constants describing one quantity is one constant and a bug waiting for someone to notice.*
+    """
+    from src.analytics.captain import CLEAR
+    from src.analytics.explain import _CLEAR_LEAD
+
+    assert _CLEAR_LEAD == CLEAR, "the confidence threshold must BE the measured one, not a copy of its value"
+    assert _CLEAR_LEAD == 1.3
+
+
+def test_the_chip_margin_threshold_is_the_measured_p75():
+    """Measured at **0.04** (spike 199) against a chosen 0.15 — roughly 4× too high, so *"clear"* was
+    effectively unreachable and a typical margin scored 55 where the house rule puts it at 95.
+
+    The page already said chips *"honestly read Low/Medium and sharpen in-season"*. True and incomplete:
+    ⭐ *some of the Low was the threshold, not the football.*
+    """
+    from src.analytics.explain import _CLEAR_CHIP_MARGIN, chip_confidence
+
+    assert _CLEAR_CHIP_MARGIN == 0.04
+    assert chip_confidence(4.0, 100) == 95, "a p75 margin should read as clear"
+    assert chip_confidence(1.0, 100) < 70, "…and a small one still should not"
+
+
+def test_no_confidence_threshold_exists_without_a_provenance():
+    """⚠️ **The guard that would have caught all of this, and the reason it did not exist.**
+
+    Changing `_CLEAR_LEAD` and `_CLEAR_CHIP_MARGIN` broke **no test at all** — the two constants most
+    responsible for what a user reads had nothing pinning them. That is exactly how one drifted from its
+    measured twin without anyone noticing.
+
+    So: a threshold must either be **measured** (equal to a constant with a distribution behind it, or pinned
+    by its own test above) or be **declared unmeasured with a reason**. It may not simply exist. ⭐ *A
+    calibration constant with no provenance is an opinion wearing a number.*
+    """
+    import re
+
+    from src.analytics import explain
+
+    names = [n for n in dir(explain)
+             if re.fullmatch(r"_?CLEAR[_A-Z]*|FLAG_COST|LINEUP_(TOO_CLOSE|CLEAR)", n)]
+    assert names, "expected to find the confidence thresholds"
+    measured = {"_CLEAR_LEAD", "_CLEAR_CHIP_MARGIN", "LINEUP_TOO_CLOSE", "LINEUP_CLEAR"}
+    for n in names:
+        assert n in measured or n in UNMEASURED, (
+            f"{n} has no recorded provenance — measure it, or list it in UNMEASURED with the reason "
+            f"it cannot be measured yet")
