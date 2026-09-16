@@ -1,0 +1,58 @@
+Owner, on the "Why 73?" explainer: "is this more of a discussion rather than an empirical result... they're
+more like hunches or punts - tell me if I'm wrong."
+
+Right about the layer, wrong about the level. The FORMULAS invert exactly (73 = 81 - 8 is checkable). The
+CONSTANTS they invert over were mostly typed.
+
+PROVENANCE AUDIT
+  measured   WHISKER 0.3 / CLEAR 1.3    captain margin      ADR-144, re-measured ADR-190
+  measured   LINEUP_TOO_CLOSE 1.0 / 2.8 start-bench gap     ADR-194
+  CHOSEN     _CLEAR_LEAD        0.8
+  CHOSEN     _CLEAR_GAIN        3.0
+  CHOSEN     _CLEAR_CHIP_MARGIN 0.15
+  CHOSEN     _CLEAR_REBUILD     0.25    ("Provisional - re-measure" in its own comment)
+  CHOSEN     FLAG_COST          8       (not a margin at all - see below)
+
+MEASURED DISTRIBUTIONS (200 random legal squads per seed, two seeds)
+                              p25     median   p75      p90     chosen
+  captain lead (next GW)      0.30    0.65-0.80  1.30-1.42  2.01-2.11   0.8
+  transfer gain (1 GW)        3.08    3.50     3.80-3.90  4.01        3.0
+  chip margin (relative)      0.00    0.01-0.02  0.04     0.08        0.15
+  wildcard gain / own proj    1.10    1.30-1.34  1.78-1.80  2.02-2.16   0.25
+
+House rule, used twice already (ADR-144, ADR-194): "clear" = the p75 of the real distribution.
+
+--- SET: _CLEAR_LEAD 0.8 -> 1.3 -----------------------------------------------------------------------
+Needs NO new measurement. _CLEAR_LEAD and the captain's CLEAR are the SAME QUANTITY on the SAME
+DISTRIBUTION - how clear a captain lead is. One was measured over 300 squads and re-measured at GW4; the
+other was typed. They disagree, and the typed one is the one inside the confidence score.
+
+  42-47% of captain calls currently sit at or above 0.8, so clearness maxes out at the MEDIAN lead.
+
+  lead   now  after      A median lead (0.65) and a genuinely clear one (1.30) both
+  0.30    66     60      score 91 today. After, they score 71 and 91.
+  0.65    83     71
+  0.80    91     75
+  1.30    91     91
+
+--- SET: _CLEAR_CHIP_MARGIN 0.15 -> 0.04 ---------------------------------------------------------------
+Chip margins are a property of the FIXTURE LIST, not of squad quality, so the random-squad population is
+valid here. p75 is 0.04; 0.15 is ~4x that, so "clear" is effectively unreachable.
+
+  rel margin   now  after     The page says chips "honestly read Low/Medium and sharpen
+        0.02    47     68     in-season". Some of that Low is the threshold, not the football.
+        0.04    55     95
+
+--- GATED: _CLEAR_GAIN and _CLEAR_REBUILD --------------------------------------------------------------
+WRONG POPULATION, and spike 191 already found why: random squads have far more headroom than real ones.
+The owner's actual squad's best move was +1.8 against a random squad's +3.5; his real wildcard read 0.40
+of his own projection against a random squad's 1.30.
+
+Setting either from this distribution would repeat the clean-sheet-rate mistake exactly: a confident
+number from an instrument pointed at the wrong thing. They need a realistic-squad population first
+(optimiser-built or imported), which is its own measurement.
+
+--- GATED: FLAG_COST 8 ---------------------------------------------------------------------------------
+Not a margin, so the p75 rule does not apply. The honest question is different: how much does a flagged
+player actually cost a gameweek's return? That is a backtest against real outcomes, not a distribution of
+margins, and it belongs with the §B0 machinery rather than here.
