@@ -7,6 +7,7 @@ the CLI dispatches, the ingestion does the work.
 """
 
 import time
+from datetime import datetime, timezone
 
 from src import config
 from src.api.client import FplApiError, FplClient
@@ -24,6 +25,7 @@ def refresh(
     store: Storage,
     client: FplClient | None = None,
     elo_client: EloClient | None = None,
+    now: str | None = None,
 ) -> tuple[int, int, int, int]:
     """Fetch the latest data and store it locally.
 
@@ -43,6 +45,11 @@ def refresh(
     store.save_teams(teams)
     store.save_players(players)
     store.save_fixtures(fixtures)
+    # ADR-203 — `players` holds only the CURRENT status/chance/news, so every refresh overwrites the last
+    # answer to "was he fit that week?". The observation has to be recorded as it passes or it is not
+    # recoverable: FPL serves availability as a *now* field and keeps no history of it. ADR-201's lesson,
+    # in the one other place the app was letting data expire.
+    store.save_availability(players, now or datetime.now(timezone.utc).isoformat(timespec="seconds"))
 
     n_elo = _refresh_elo(store, data.get("teams", []), elo_client)
 

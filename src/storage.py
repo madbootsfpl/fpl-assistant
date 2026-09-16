@@ -242,6 +242,23 @@ ON CONFLICT(element_id, title) DO UPDATE SET
     seen_at = excluded.seen_at
 """
 
+CREATE_AVAILABILITY = """
+CREATE TABLE IF NOT EXISTS player_availability (
+    element_code INTEGER NOT NULL,
+    -- ⚠️ **`observed_at`, not `changed_at`, and the distinction is the whole honesty of this table.**
+    -- ADR-201 stamps a match with its own kickoff, because a match HAS a time. Availability does not:
+    -- FPL serves `status` / `chance` / `news` as a *now* field with no "as of", so the only timestamp
+    -- that exists is when we looked. Calling it `changed_at` would claim knowledge of a moment nobody
+    -- recorded — the flag may have gone up hours before the refresh that first saw it.
+    observed_at  TEXT    NOT NULL,   -- when this value was first SEEN
+    last_seen_at TEXT    NOT NULL,   -- when it was last CONFIRMED still true
+    status       TEXT,
+    chance       INTEGER,
+    news         TEXT,
+    PRIMARY KEY (element_code, observed_at)
+)
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -418,6 +435,7 @@ class Storage:
             self.conn.execute(CREATE_HISTORY_PAST)
             self.conn.execute(CREATE_HISTORY)
             self.conn.execute(CREATE_HEADLINE_EVENTS)
+            self.conn.execute(CREATE_AVAILABILITY)
             self._migrate()
             self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
 
@@ -508,6 +526,65 @@ class Storage:
         ]
         with self.conn:
             self.conn.executemany(UPSERT_PLAYER, rows)
+
+    def save_availability(self, players, now: str) -> int:
+        """Record each player's availability, **only when it changes** (ADR-203). Returns rows inserted.
+
+        ⚠️ **A change log, not a poll log.** A row per player per refresh is ~480k rows a season and says
+        nothing a change log does not; availability actually changes a few dozen times a week league-wide.
+
+        ⭐ **But a change log cannot tell "unchanged" from "not observed"** — three silent weeks and three
+        weeks of a stable squad produce identical tables, and that ambiguity would land squarely on the
+        measurement this exists for. So each row is an **interval**: `observed_at` when the value first
+        appeared, `last_seen_at` every time a refresh confirmed it still held. A reader can then ask both
+        *"what did we know before this deadline"* and *"how stale was it"* — and the second question is the
+        one that decides whether the answer is evidence.
+
+        `now` is passed in rather than read here, so a caller (and a test) fixes the clock.
+        """
+        inserted = 0
+        with self.conn:
+            for p in players:
+                # ⭐ **The failure path of a recorder must not take down the thing it observes.** `refresh` is
+                # the app's lifeline — everything downstream degrades to stale data if it dies — and this is a
+                # side-record, not the payload. A player FPL sends without a `code` cannot be keyed, so he is
+                # skipped and the refresh completes.
+                if getattr(p, "code", None) is None:
+                    continue
+                latest = self.conn.execute(
+                    "SELECT observed_at, status, chance, news FROM player_availability "
+                    "WHERE element_code = ? ORDER BY observed_at DESC LIMIT 1", (p.code,)).fetchone()
+                current = (p.status, p.chance, p.news)
+                if latest is not None and (latest["status"], latest["chance"], latest["news"]) == current:
+                    self.conn.execute(
+                        "UPDATE player_availability SET last_seen_at = ? "
+                        "WHERE element_code = ? AND observed_at = ?", (now, p.code, latest["observed_at"]))
+                    continue
+                # A second change inside one refresh timestamp would collide on the key; ON CONFLICT keeps
+                # the write total rather than raising mid-refresh, and the later value is the current one.
+                self.conn.execute(
+                    "INSERT INTO player_availability "
+                    "(element_code, observed_at, last_seen_at, status, chance, news) VALUES (?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT(element_code, observed_at) DO UPDATE SET "
+                    "last_seen_at = excluded.last_seen_at, status = excluded.status, "
+                    "chance = excluded.chance, news = excluded.news",
+                    (p.code, now, now, p.status, p.chance, p.news))
+                inserted += 1
+        return inserted
+
+    def availability_as_of(self, when: str) -> dict:
+        """`element_code → (status, chance, news, observed_at, last_seen_at)` as known at `when` (ADR-203).
+
+        The row whose observation window starts at or before `when` and is the latest such — i.e. what the app
+        would have believed at that moment. Returns the staleness columns with the value **deliberately**: a
+        status last confirmed three weeks ago is not the same evidence as one confirmed this morning, and a
+        caller that cannot see the difference will treat them alike.
+        """
+        rows = self.conn.execute(
+            "SELECT element_code, status, chance, news, observed_at, last_seen_at "
+            "FROM player_availability WHERE observed_at <= ? ORDER BY element_code, observed_at", (when,))
+        return {r["element_code"]: (r["status"], r["chance"], r["news"], r["observed_at"], r["last_seen_at"])
+                for r in rows}
 
     def save_history_past(self, seasons: list[PlayerSeason]) -> None:
         """Upsert past-season history rows (ADR-027). Idempotent on (code, season)."""

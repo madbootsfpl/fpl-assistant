@@ -691,10 +691,13 @@ before starting**: the model was not the first problem. Four phases, each with i
     the repo is **AGPL-3.0** with a donations question open. **Needs the owner, or a maintainer's reply.**
   - Otherwise it accrues at one gameweek a week, and the gate is *"enough rows"*, measured not guessed.
 
-- 🔧 **Before the GW8 review: snapshot `status` / `chance` on every refresh.** ADR-202's one leak — the model
-  is scored with **today's** injury news applied retrospectively, because FPL serves availability as a *now*
-  field and we store no history of it. 195 of 659 players carry a flag today. Small, mechanical, and it is the
-  difference between the next baseline being clean and carrying the same asterisk.
+- ✅ **Availability is now recorded (ADR-203, done 2026-09-17).** ADR-202's one uncloseable leak — the model
+  scored with **today's** injury news applied retrospectively, 195 of 659 players flagged — is closed for every
+  future baseline. A **change log with intervals** (`observed_at` / `last_seen_at`), written on every refresh,
+  because ⭐ *a change log alone cannot tell "unchanged" from "not observed"*. ⚠️ **It fixes the future, not the
+  past**: rounds 1–4 have no observations and never will, ADR-202's numbers keep their asterisk permanently,
+  and the GW8 review must say which baseline it is quoting. **It starts filling on the owner's next
+  `python app.py refresh`.**
 
 - ⏳ **Phase 2 — points, only if minutes pays.** Deliberately last. If a learned minutes model cannot beat
   0b's baseline, a learned points model on the same data will not either, and we will have found that out for
@@ -717,6 +720,9 @@ is the first point at which a walk-forward split has enough on both sides of it 
 
 **What the review must answer — all four, in writing:**
 1. **Has the baseline moved?** Re-run ADR-202 on 8 gameweeks (ρ 0.605 · MAE 24.0 · start call 70.1%).
+   ⚠️ **Score it both ways**: with today's availability (comparable to ADR-202, leak and all) and with
+   ADR-203's log (correct, but a different measurement). ⭐ *Two numbers that measure different things must
+   not be plotted as one line.*
    A baseline taken once is a snapshot; the ML case rests on the gap between it and a model, so it needs
    to be a line. ⚠️ GW4 was anomalous for every forecaster — four rounds cannot tell that apart from noise.
 2. **ADR-192's cold-start constant — still not set.** ADR-202 confirmed the direction (**+39.1 minutes**
