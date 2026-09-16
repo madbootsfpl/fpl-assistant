@@ -330,3 +330,78 @@ def test_a_toss_up_is_not_counted_as_edge():
     assert _lineup_edge_count(both_close, xp) == 0
     xp_real = {1: 5.0, 2: 2.6, 3: 2.6, 4: 2.3}               # one real gap, one toss-up
     assert _lineup_edge_count(both_close, xp_real) == 1
+
+
+# ---- ADR-198: "why 73?" — the confidence, inverted -------------------------------------------------
+
+def test_the_confidence_inverts_exactly():
+    """⚠️ **The whole reason this can exist.** Owner: *"how can I move the confidence to 80 or 90?"*
+
+    `gameweek_confidence` is `captain − 8 × flags`, a heuristic over known inputs, so the answer is
+    **arithmetic, not advice** — and needs no model, which matters on a deployment that has none (ADR-168).
+    """
+    from src.analytics.explain import confidence_levers, gameweek_confidence
+
+    lv = confidence_levers(86, [{"web_name": "Senesi"}])
+    assert lv["score"] == gameweek_confidence(86, 1) == 78
+    assert lv["ceiling"] == 86
+    assert [x["worth"] for x in lv["levers"]] == [8]
+    assert "Senesi" in lv["levers"][0]["what"]
+
+
+def test_only_things_you_can_act_on_are_listed_as_levers():
+    """⚠️ **The distinction the feature exists for.** A flagged player is a *choice* — bench him, sell him. An
+    away fixture is not: it costs the captain term a flat 6 and no decision of yours changes it.
+
+    A list that mixed them would read as *things you could do*, most of which are facts about the week.
+    ⭐ *Telling someone what they cannot change is as useful as telling them what they can — it is the
+    difference between a low number and a bad week.*
+    """
+    from src.analytics.explain import confidence_levers
+
+    clean = confidence_levers(86, [])
+    assert clean["levers"] == [], "nothing actionable when nothing is flagged"
+    assert clean["score"] == clean["ceiling"] == 86
+    assert "captain" in clean["fixed"], "…and the ceiling is still explained, not left implicit"
+
+
+def test_it_never_promises_a_better_outcome_only_a_clearer_one():
+    """⚠️ Confidence is a heuristic, **not a probability** (`MODEL_NOTE`). Raising it does not make you more
+    likely to be right; it means the week is less ambiguous. A *"get to 90"* interface invites exactly that
+    conflation, so the copy may not use the vocabulary of likelihood."""
+    from src.analytics.explain import confidence_levers
+    from src.ui.gameweek import _levers_lines
+
+    text = " ".join(_levers_lines(confidence_levers(86, [{"web_name": "Senesi"}]))).lower()
+    for banned in ("more likely", "probability", "chance of", "odds", "guarantee"):
+        assert banned not in text, f"confidence copy must not imply likelihood — found {banned!r}"
+
+
+def test_there_is_no_dial_only_an_explanation():
+    """⚠️ **An explainer, never a control.** Someone who learns that benching a flagged player adds 8 will
+    bench a player who is fine, because the number went up — optimising the heuristic instead of the week.
+    ⭐ *A visible score plus a way to move it is an invitation to game it*, so nothing here is interactive."""
+    import inspect
+
+    from src.ui import gameweek as ui_gw
+
+    src = inspect.getsource(ui_gw._levers_lines)
+    for widget in ("st.slider", "st.number_input", "st.button", "st.select"):
+        assert widget not in src, f"the levers block must render text only — found {widget}"
+
+
+def test_the_explanation_sits_under_the_confidence_line_it_explains():
+    """It explained the Confidence line while rendering after Risk, three blocks away, where it read as a
+    footnote to something else."""
+    from src.analytics.explain import Explanation, confidence_levers
+    from src.ui.gameweek import render_gameweek_plan
+
+    plan = {"captain": None, "flags": [], "transfer": None,
+            "lineup": {"start": [], "bench": [], "bring_in": [], "drop": [], "has_declared_bench": False}}
+    ex = {"overall": Explanation(reasons=["r"], risks=["x"], confidence=78, band="High"),
+          "levers": confidence_levers(86, [{"web_name": "Senesi"}])}
+    out = render_gameweek_plan(plan, "S", horizon=5, explanation=ex).split("\n")
+    conf = next(i for i, ln in enumerate(out) if ln.startswith("Confidence:"))
+    why = next(i for i, ln in enumerate(out) if "Why 78?" in ln)
+    edge = next(i for i, ln in enumerate(out) if ln.strip() == "Edge")
+    assert conf < why < edge, f"the why-line belongs between Confidence and Edge: {out[conf:edge + 1]}"

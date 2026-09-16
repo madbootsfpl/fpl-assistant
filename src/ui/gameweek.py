@@ -188,6 +188,30 @@ def _timing_lines(plan, horizon) -> list:
     return out
 
 
+def _levers_lines(levers) -> list:
+    """*"Why 73?"* — the sum behind the week's confidence, and which parts you can act on (ADR-198).
+
+    Owner: *"how can I move the confidence to 80 or 90?"* Because the score is a heuristic over known inputs
+    it inverts exactly, so the answer is arithmetic rather than advice.
+
+    ⚠️ **An explainer, never a dial.** Someone who learns that benching a flagged player adds 8 will bench a
+    player who is fine, because the number went up — optimising the heuristic instead of the week. So this
+    shows *what the number is made of* and stops: there is no control to drag, and the wording says
+    **clearer**, never *more likely* (it is not a probability).
+    """
+    if not levers:
+        return []
+    ceiling, score, acts = levers["ceiling"], levers["score"], levers["levers"]
+    if score >= ceiling:
+        return [f"  Why {score}? Nothing is holding it down — the ceiling is {levers['fixed']}."]
+    gap = ceiling - score
+    out = [f"  Why {score}? {ceiling} for your captain, minus {gap} for "
+           f"{len(acts)} flagged player{'s' if len(acts) != 1 else ''}."]
+    out += [f"    · Worth {lv['worth']}: {lv['what']}" for lv in acts]
+    out.append(f"    Ceiling this week is {ceiling} — {levers['fixed']}.")
+    return out
+
+
 def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -> str:
     """The one-gameweek plan as a readable block (ADR-070). `horizon` labels the transfer's window
     (ADR-077); the captain + lineup are inherently about the immediate week. `explanation`
@@ -197,7 +221,10 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
     lines = [f"This week — squad '{squad_name}'", ""]
 
     if ex.get("overall"):   # the plan-level Confidence · Edge · Risk summary (US-274, ADR-089)
-        lines += [render_explanation(ex["overall"]), ""]
+        # ADR-198 — the levers explain the Confidence line, so they sit directly under it rather than
+        # after Risk, where they read as a footnote to something three blocks away.
+        _block = render_explanation(ex["overall"]).split("\n")
+        lines += [_block[0], *_levers_lines(ex.get("levers")), *_block[1:], ""]
 
     lines.append(f"  Captain:  {_captain_line(plan['captain'])}{_conf(cap_ex)}")
     if cap_ex and cap_ex.reasons:

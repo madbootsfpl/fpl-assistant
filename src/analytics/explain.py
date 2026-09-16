@@ -521,6 +521,48 @@ def gameweek_confidence(captain_confidence_score, n_flags: int) -> int:
     return max(1, min(99, round((captain_confidence_score or 50) - 8 * max(0, n_flags))))
 
 
+FLAG_COST = 8      # what one flagged player takes off the week's confidence (`gameweek_confidence`)
+
+
+def confidence_levers(captain_score, flags) -> dict | None:
+    """What is holding this week's confidence down, and which parts you can do something about (ADR-198).
+
+    Owner: *"When the tool provides a confidence level, how can one interact with the tool to say — how can I
+    move the confidence to 80 or 90?"*
+
+    ⭐ **Because the score is a heuristic with known inputs, it inverts exactly.** `gameweek_confidence` is
+    `captain − 8 × flags`, so *"how do I get to 81?"* has an arithmetic answer rather than an opinion:
+    resolve one flag. No model, no guessing — the same sum run backwards, which is the only way this could
+    exist at all on a deployment with no AI (ADR-168).
+
+    Returns ``{score, ceiling, levers, fixed}``; `levers` are **actions you can take this week**, `fixed` says
+    what the rest of the number is made of.
+
+    ⚠️ **Actionable and fixed are separated on purpose, and it is the whole point.** A flagged player is a
+    choice — bench him, sell him. An away fixture is not: it costs the captain term a flat 6 and no decision
+    of yours changes it. A list that mixed them would read as *six things you could do*, and four of them are
+    facts about the week. ⭐ *Telling someone what they cannot change is as useful as telling them what they
+    can — it is the difference between a low number and a bad week.*
+
+    ⚠️ **And it says "clearer", never "more likely".** Confidence is a heuristic, not a probability
+    (`MODEL_NOTE`). Raising it does not make you more likely to be right; it means the week is less
+    ambiguous. A *"get to 90"* framing invites exactly that conflation, which is why nothing here is a dial.
+    """
+    if captain_score is None:
+        return None
+    flags = list(flags or [])
+    score = gameweek_confidence(captain_score, len(flags))
+    levers = [{"what": f"{f['web_name']} is flagged — bench or replace him",
+               "worth": FLAG_COST, "kind": "action"} for f in flags]
+    return {
+        "score": score,
+        "ceiling": int(captain_score),
+        "levers": levers,
+        "fixed": (f"your captain's own number ({int(captain_score)}/100); lifting it means a different "
+                  "captain, not a different week"),
+    }
+
+
 def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None:
     """Explain a gameweek plan (ADR-089): reuse the captain + transfer explanations, add a lineup rationale,
     and give the week an overall Confidence · Edge · Risk. Returns `{captain, transfer, lineup, overall}` (each
@@ -555,4 +597,7 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
 
     score = gameweek_confidence(cap_ex.confidence if cap_ex else None, len(flags))
     overall = Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
-    return {"captain": cap_ex, "transfer": tr_ex, "lineup": lineup, "overall": overall}
+    return {"captain": cap_ex, "transfer": tr_ex, "lineup": lineup, "overall": overall,
+            # ADR-198 — the same sum, run backwards: what is holding the week's number down, and which of it
+            # you can actually act on. Computed here because both inputs are already in scope.
+            "levers": confidence_levers(cap_ex.confidence if cap_ex else None, flags)}
