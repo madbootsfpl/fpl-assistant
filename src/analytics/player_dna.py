@@ -151,7 +151,7 @@ def player_dna(target, players, *, min_minutes: int = MIN_MINUTES, skip_axes=())
                      min_minutes=min_minutes, axes=axes)
 
 
-# ── AI Insights (Sprint 170, ADR-118) ─────────────────────────────────────────
+# ── MADBOOTS Insights (Sprint 170, ADR-118; renamed from "AI Insights" by ADR-196) ───────────────
 # ICT index is the one DNA input FPL does not keep in a player's season history, so a last-season pool has no
 # honest way to rank Bonus Potential. Dropping the axis is the honest answer — an axis every player scores 0 on
 # would rank them all identically and read as real.

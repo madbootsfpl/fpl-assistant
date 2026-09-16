@@ -448,7 +448,7 @@ def test_players_pool_offers_my_squad_only_when_a_squad_is_loaded():
 
 
 def test_players_card_view_renders_the_player_dna_section():
-    # ADR-118 (S168–S171): the Card view shows AI Verdict → radar → insights → trend for the selected player.
+    # ADR-118 (S168–S171): the Card view shows MADBOOTS Verdict → radar → insights → trend (renamed ADR-196).
     at = AppTest.from_file(str(_PAGES / "5_Players.py"), default_timeout=30).run()
     if at.exception:
         return
@@ -460,7 +460,7 @@ def test_players_card_view_renders_the_player_dna_section():
     md = " ".join(m.value or "" for m in at.markdown)
     if "Player DNA" not in md:                 # no player data in this environment
         return
-    assert "AI Verdict" in md and "Performance trend" in md
+    assert "MADBOOTS Verdict" in md and "Performance trend" in md
 
 
 def test_my_squad_lineup_shows_owned_player_dna_with_hold_sell_framing():
@@ -474,7 +474,7 @@ def test_my_squad_lineup_shows_owned_player_dna_with_hold_sell_framing():
     pick.set_value(pick.options[1]).run()      # options[0] is "—"; pick the first owned player
     assert not at.exception
     md = " ".join(m.value or "" for m in at.markdown)
-    assert "AI Verdict" in md and "Player DNA" in md
+    assert "MADBOOTS Verdict" in md and "Player DNA" in md
     assert any(word in md for word in ("Strong Hold", "Hold", "Sell"))   # owned framing, not browse words
 
 

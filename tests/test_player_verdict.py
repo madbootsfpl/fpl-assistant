@@ -1,4 +1,4 @@
-"""Tests for the Player DNA AI Verdict heuristic (Sprint 169, US-412, ADR-118)."""
+"""Tests for the Player DNA Verdict heuristic (Sprint 169, US-412, ADR-118; card renamed by ADR-196)."""
 
 import sqlite3
 

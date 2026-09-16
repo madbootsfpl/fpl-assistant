@@ -1,4 +1,4 @@
-"""Tests for the AI Verdict card renderer (Sprint 169, US-413, ADR-118)."""
+"""Tests for the MADBOOTS Verdict card renderer (Sprint 169, US-413, ADR-118; renamed by ADR-196)."""
 
 from src.analytics import player_dna
 from src.analytics.explain import Verdict
@@ -29,7 +29,10 @@ def test_card_html_shows_label_score_and_grounded_lines():
                 risk=["Premium price (£15.5m ties up budget)"])
     html = verdict_card_html(v)
     assert "Strong pick" in html and ">87<" in html
-    assert "AI Verdict" in html
+    # ADR-196: see `test_no_output_is_attributed_to_ai` — the verdict is produced by rule-based Python in
+    # `explain.py`, and there is no model on the deployed app at all.
+    assert "MADBOOTS Verdict" in html
+    assert "AI Verdict" not in html
     assert "Edge" in html and "Penalty taker" in html
     assert "Risk" in html and "Premium price" in html.replace("&amp;", "&")
 

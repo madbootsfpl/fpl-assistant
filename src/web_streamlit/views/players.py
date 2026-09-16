@@ -438,7 +438,7 @@ def render_card(rows, sel, teams, photos, badges):
                            photo_url=photos.get(player["id"]), badge_url=badges.get(short),
                            fixtures=fixtures, projected_xp=xp.get(player["id"]))
 
-        # 🧬 Player DNA (ADR-118) — the reusable section: AI Verdict → radar → insights → trend. Reuses the
+        # 🧬 Player DNA (ADR-118) — the reusable section: MADBOOTS Verdict → radar → insights → trend. Reuses the
         # decision_xp + gw_history already loaded; display-only (no new store read, no decision_xp change).
         from src.analytics import last_season_name, last_season_rows
         from src.web_streamlit.player_dna_view import render_player_dna

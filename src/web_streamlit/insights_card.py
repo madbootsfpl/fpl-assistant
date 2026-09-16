@@ -1,4 +1,5 @@
-"""The AI Insights card — grounded, plain-English observations under the radar (Sprint 170, US-415, ADR-118).
+"""The MADBOOTS Insights card — grounded, plain-English observations under the radar (Sprint 170,
+US-415, ADR-118). Renamed from "AI Insights" by ADR-196: there is no model on the deployed app.
 
 Renders `analytics.player_insights` as a self-contained dark card: a bulleted list, each with a kind icon
 (✓ strength · ⚡ set-piece · ℹ info · ⚠ caution). Display-only; reuses the `PlayerDNA` the Card view already
@@ -36,13 +37,13 @@ def _esc(s) -> str:
 
 
 def insights_card_html(insights) -> str:
-    """The full AI Insights card: a titled list of grounded bullets (icon + text)."""
+    """The full MADBOOTS Insights card: a titled list of grounded bullets (icon + text)."""
     rows = ""
     for i in insights:
         icon, bg, fg = _KIND.get(i.kind, _KIND["info"])
         rows += (f'<div class="ins-row"><span class="ins-ic" style="background:{bg};color:{fg}">{icon}</span>'
                  f'<span>{_esc(i.text)}</span></div>')
-    return (INS_CSS + '<div class="ins-card"><div class="ins-ttl">✦ AI Insights</div>'
+    return (INS_CSS + '<div class="ins-card"><div class="ins-ttl">✦ MADBOOTS Insights</div>'
             f'{rows}</div>')
 
 

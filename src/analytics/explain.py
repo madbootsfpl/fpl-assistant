@@ -270,7 +270,8 @@ def explain_worth(row, *, value, median, rank, n_peers, xp, horizon: int = 5) ->
 
 
 # ── Player verdict (Sprint 169, ADR-118) ──────────────────────────────────────
-# A headline "AI Verdict" for one player: a one-word call + a 0–99 score + grounded Edge/Risk. The score is a
+# A headline "MADBOOTS Verdict" for one player (was "AI Verdict" until ADR-196): a one-word call + a
+# 0–99 score + grounded Edge/Risk. The score is a
 # TRANSPARENT DISPLAY heuristic (ADR-089), a composite of existing signals (projected-points standing, value,
 # minutes reliability, availability). It is NOT a probability and is NEVER fed into a decision — `decision_xp` is
 # the one metric (ADR-041); the verdict only summarises the DNA the card already shows.

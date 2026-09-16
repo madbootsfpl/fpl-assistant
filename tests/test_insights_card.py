@@ -1,4 +1,4 @@
-"""Tests for the AI Insights card renderer (Sprint 170, US-415, ADR-118)."""
+"""Tests for the MADBOOTS Insights card renderer (Sprint 170, US-415, ADR-118; renamed by ADR-196)."""
 
 from src.analytics.player_dna import Insight
 from src.web_streamlit.insights_card import insights_card_html, render_insights_card
@@ -9,7 +9,10 @@ def test_card_has_a_titled_bullet_per_insight():
            Insight("sp", "First-choice penalty taker — a steady points floor"),
            Insight("warn", "Premium at £15.5m — value only mid-pack")]
     html = insights_card_html(ins)
-    assert "AI Insights" in html
+    # ADR-196: the label is MADBOOTS Insights. It said "AI Insights" — an attribution to a model the
+    # deployed app does not have (ADR-168), on one of the most screenshot-shared cards in the product.
+    assert "MADBOOTS Insights" in html
+    assert "AI Insights" not in html
     assert html.count('class="ins-row"') == 3
     assert "Elite goal threat" in html and "penalty taker" in html
 

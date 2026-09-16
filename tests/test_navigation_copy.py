@@ -231,3 +231,28 @@ def test_home_does_not_name_a_retired_section():
     joins `RETIRED` in the same commit that fixes it."""
     home = (WEB / "Home.py").read_text()
     assert "AI Tips" not in " ".join(_visible_strings(WEB / "Home.py")), home[:0] or "Home still says 'AI Tips'"
+
+
+def test_no_output_is_attributed_to_ai():
+    """⚠️ **ADR-168 removed every AI claim, and two of them were still on screen 20 days later.**
+
+    The Player DNA page rendered **✦ AI Verdict** and **✦ AI Insights** — headline labels on the app's most
+    shareable cards, attributing to a model output that `explain.py` produces with plain rule-based Python.
+    There is no model on the deployed app at all. ADR-184 swept six surfaces for the retired mantra and missed
+    these two, because it swept for *the mantra* rather than for *the claim*.
+
+    ⚠️ **The rule is deliberately narrow: `AI` followed by a Capitalised word — an attribution label.** A
+    blanket ban on the token would flag Help's *"the answer is based on MADBOOTS' data, **not an AI guess**"*
+    and *"**Local AI** — … the hosted app runs data-only"*, which are **true, useful, and the opposite of the
+    problem**. ⭐ *A guard that would delete an honest explanation to satisfy a pattern is worse than the bug
+    it is chasing* — the same trap `_visible_strings` exists to avoid.
+    """
+    pat = re.compile(r"\bAI [A-Z]")
+    hits = []
+    for f in _sources():
+        for line in _visible_strings(f):
+            for m in pat.finditer(line):
+                hits.append(f"{f.relative_to(ROOT)}: …{line[max(0, m.start() - 40):m.start() + 30].strip()}…")
+    assert not hits, (
+        "output is being attributed to AI in user-visible copy — the deployed app has no model (ADR-168):\n  "
+        + "\n  ".join(hits))

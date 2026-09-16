@@ -1,4 +1,5 @@
-"""The AI Verdict card — a headline call + a gauge + grounded Edge/Risk (Sprint 169, US-413, ADR-118).
+"""The MADBOOTS Verdict card — a headline call + a gauge + grounded Edge/Risk (Sprint 169, US-413,
+ADR-118). Renamed from "AI Verdict" by ADR-196: there is no model on the deployed app.
 
 Renders `analytics.player_verdict` as a self-contained dark card with a **server-built SVG gauge** (the score arc)
 sitting above the DNA radar. `build_verdict` computes the verdict's inputs by **reusing what the Card view already
@@ -87,7 +88,7 @@ def verdict_card_html(verdict) -> str:
             f'<div class="vd-gauge">{gauge_svg(verdict.score, tone)}'
             f'<div class="vd-score"><span class="vd-num">{verdict.score}</span>'
             '<span class="vd-den">/100</span></div></div>'
-            '<div class="vd-body"><div class="vd-tag">✦ AI Verdict</div>'
+            '<div class="vd-body"><div class="vd-tag">✦ MADBOOTS Verdict</div>'
             f'<div class="vd-label" style="color:{tone}">{_esc(verdict.label)}</div>'
             f'{lines}</div></div>')
 

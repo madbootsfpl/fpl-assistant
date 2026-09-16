@@ -1,6 +1,7 @@
 """The Player DNA section — one reusable component, two doorways (Sprint 171, ADR-118).
 
-`render_player_dna` composes the four pieces in the approved order — **AI Verdict → DNA radar → AI Insights →
+`render_player_dna` composes the four pieces in the approved order — **MADBOOTS Verdict → DNA radar →
+**MADBOOTS Insights** →
 Performance trend** — so the Players tab and My Squad render the *same* thing (no drift). The trend is a per-GW
 **points** line that **auto-populates at GW1** (an honest "fills in from Gameweek 1" placeholder until then).
 Display-only: everything reuses the `decision_xp` the caller already computed; no `decision_xp` change.

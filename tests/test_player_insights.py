@@ -1,4 +1,4 @@
-"""Tests for the Player DNA AI Insights engine (Sprint 170, US-414, ADR-118)."""
+"""Tests for the Player DNA Insights engine (Sprint 170, US-414, ADR-118; card renamed by ADR-196)."""
 
 import sqlite3
 
