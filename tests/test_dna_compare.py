@@ -6,6 +6,7 @@ here because both are the kind that get "tidied" later.
 """
 
 import inspect
+import re
 
 from src.analytics.player_dna import Axis
 from src.web_streamlit.dna_card import radar_compare_svg
@@ -69,13 +70,20 @@ def test_neither_compare_renders_a_second_verdict():
     assert "gauge_svg" not in team_src, "nor a grade gauge, which reads as a league table of two"
 
 
-def test_the_player_compare_carries_the_performance_trend():
-    """The owner asked for it by name, and it is the half Boot Battle has never been able to show: the stat
-    card answers *who is better at each stat*, the trend answers *which way each one is going*."""
+def test_the_player_compare_carries_one_overlaid_performance_trend():
+    """The owner asked for the trend by name — it is the half Boot Battle has never been able to show: the
+    stat card answers *who is better at each stat*, the trend answers *which way each one is going*.
+
+    ⚠️ **It began as two stacked panels and is now one overlay** (owner, 2026-09-16): stacking made the reader
+    compare by memory across a scroll, which is the same argument that put both fingerprints on one octagon
+    rather than two charts. This asserts the *claim* — both players, one chart — rather than the mechanism,
+    because the mechanism has already changed once.
+    """
     src = inspect.getsource(__import__("src.web_streamlit.player_dna_view", fromlist=["x"]).render_dna_compare)
-    assert "trend_panel_html" in src
-    assert "player_gw_points" in src
-    assert src.count("for p in (a, b)") == 1, "one trend per player, not one for the pair"
+    assert src.count("perf_trend_compare_svg") == 1, "one chart, not one per player"
+    assert src.count("player_gw_points") == 2, "…fed a series for each player"
+    assert "trend_panel_html" not in src, "…and not the single-player panel, twice"
+    assert "for p in (a, b)" not in src
 
 
 def test_the_compare_supplies_its_own_dark_ground():
@@ -134,3 +142,61 @@ def test_the_compare_radar_matches_the_single_one():
     assert "size: int = 360" in src and "size: int = 360" in single
     assert "R = size / 2 - 74" in src and "R = size / 2 - 74" in single
     assert 'stroke-width="2"' in src, "the data polygon matches the single radar's weight"
+
+
+def _ys(svg):
+    return [float(m) for m in re.findall(r'<circle cx="[\d.]+" cy="([\d.]+)"', svg)]
+
+
+def test_both_trends_share_one_scale():
+    """⚠️ **The correctness point of overlaying two lines, and the easiest thing to get wrong.**
+
+    `perf_trend_svg` normalises each line to *that player's own* min..max — correct for a single chart, where
+    the question is *which way is he going*. For a comparison it is flatly wrong: a player returning 2,3,2 and
+    one returning 9,14,9 would draw the **same shape**, and the overlay would say they were level.
+
+    ⭐ *A chart that answers one question can be silently wrong for the neighbouring one.*
+    """
+    from src.web_streamlit.player_dna_view import perf_trend_compare_svg
+
+    svg = perf_trend_compare_svg([(1, 2), (2, 3), (3, 2)], [(1, 9), (2, 14), (3, 9)],
+                                 a_label="Low", b_label="High")
+    ys = _ys(svg)
+    low, high = ys[:3], ys[3:]
+    # smaller y = higher on the chart. The 9–14 returner must sit clear of the 2–3 one.
+    assert max(high) < min(low), f"the two lines must share a scale: {low} vs {high}"
+
+
+def test_a_missed_gameweek_breaks_the_line_rather_than_crossing_it():
+    """⚠️ **A first cut drew one polyline through whatever gameweeks a player had**, so a missed week was
+    crossed by a straight segment — a continuous line under a caption promising a gap. ⭐ *The break has to be
+    real, or the caption is a claim the chart does not support.* Same rule as the radar's unranked axis: a
+    blank is absent evidence, not a zero."""
+    from src.web_streamlit.player_dna_view import perf_trend_compare_svg
+
+    svg = perf_trend_compare_svg([(1, 2), (2, 3), (3, 2), (4, 4)],   # played every week
+                                 [(1, 9), (2, 14), (4, 9)],          # missed GW3
+                                 a_label="A", b_label="B")
+    assert svg.count("<polyline") == 2, "A's unbroken run, plus B's GW1–2 — B's lone GW4 point cannot join"
+    assert svg.count("<circle") == 7, "every appearance still gets a dot"
+    assert ">3<" in svg, "the missed gameweek still appears on the axis"
+
+
+def test_the_trend_uses_the_radar_colours():
+    """Owner: *"could they be overlayed with the same colour scheme as Player DNA."* Purple is the first
+    player and teal the second on both charts, so the eye carries one mapping down the card instead of
+    relearning it per chart."""
+    from src.web_streamlit.dna_card import _A_STROKE, _B_STROKE
+    from src.web_streamlit.player_dna_view import perf_trend_compare_svg
+
+    svg = perf_trend_compare_svg([(1, 2)], [(1, 9)], a_label="A", b_label="B")
+    assert _A_STROKE in svg and _B_STROKE in svg
+
+
+def test_an_empty_trend_renders_nothing_at_all():
+    """Preseason, or two players with no appearances between them. An empty chart frame is worse than no
+    chart — it looks like a result."""
+    from src.web_streamlit.player_dna_view import perf_trend_compare_svg
+
+    assert perf_trend_compare_svg([], [], a_label="A", b_label="B") == ""
+    assert perf_trend_compare_svg(None, None, a_label="A", b_label="B") == ""

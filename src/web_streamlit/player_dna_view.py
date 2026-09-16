@@ -14,7 +14,15 @@ from src.analytics.form import form_windows
 from src.analytics.gw_form import form_dots, stat_series
 from src.analytics.player_dna import player_dna_this_or_last
 from src.analytics.price import PRICE_DOWN, PRICE_UP, price_move, price_series
-from src.web_streamlit.dna_card import compare_card_html, render_dna_card
+from src.web_streamlit.dna_card import (
+    _A_STROKE,
+    _B_STROKE,
+    COMPARE_CSS,
+    DNA_CSS,
+    _esc,
+    compare_card_html,
+    render_dna_card,
+)
 from src.web_streamlit.insights_card import render_insights_card
 from src.web_streamlit.verdict_card import build_verdict, render_verdict_card
 
@@ -105,6 +113,67 @@ def perf_trend_svg(series, *, w: int = 460, h: int = 90) -> str:
         'stroke-linejoin="round" stroke-linecap="round"/>'
         f'{dots}<text x="{last_x - 4:.1f}" y="{last_y - 6:.1f}" text-anchor="end" fill="#f2f6fb" '
         f'font-size="11" font-weight="800" font-family="sans-serif">{ys[-1]}</text></svg>')
+
+
+def perf_trend_compare_svg(a_series, b_series, *, a_label: str, b_label: str,
+                           w: int = 460, h: int = 110) -> str:
+    """Two players' points-per-gameweek on **one** chart, in the radar's colours (ADR-197 rev).
+
+    Owner: *"For Performance Trend — could they be overlayed with the same colour scheme as Player DNA."*
+    Purple is the first player and teal the second, exactly as on the radar directly above it, so the eye
+    carries one mapping down the whole card instead of relearning it per chart.
+
+    ⚠️ **One shared scale, and this is the correctness point.** `perf_trend_svg` normalises each line to *that
+    player's own* min..max — right for a single chart, where the question is *which way is he going*, and
+    flatly wrong for a comparison: a player returning 2,3,2 and one returning 9,14,9 would draw the **same
+    shape**, and the overlay would say they are level. Both lines are scaled to the pair's combined range.
+
+    ⚠️ **A gameweek a player did not play is a gap, not a zero** — the line breaks rather than diving to the
+    floor, the same rule the radar uses for an unranked axis (ADR-118/126). A blank is absent evidence.
+    """
+    rounds = sorted({r for r, _ in (a_series or [])} | {r for r, _ in (b_series or [])})
+    if not rounds:
+        return ""
+    by = [{r: max(0, v) for r, v in (ser or [])} for ser in (a_series, b_series)]
+    vals = [v for d in by for v in d.values()]
+    lo, hi = min(vals), max(vals)
+    flat = hi == lo
+    pad = 10
+
+    def px(r):
+        i = rounds.index(r)
+        return pad + (i * (w - 2 * pad) / (len(rounds) - 1)) if len(rounds) > 1 else w / 2
+
+    def py(v):
+        return h / 2 if flat else h - pad - 14 - (v - lo) * (h - 2 * pad - 14) / (hi - lo)
+
+    parts = [f'<svg viewBox="0 0 {w} {h}" role="img" '
+             f'aria-label="points per gameweek, {_esc(a_label)} versus {_esc(b_label)}">']
+    for r in rounds:                                   # a faint gameweek label strip along the bottom
+        parts.append(f'<text x="{px(r):.1f}" y="{h - 2:.1f}" text-anchor="middle" fill="#6b7686" '
+                     f'font-size="9" font-family="sans-serif">{r}</text>')
+    for d, stroke in zip(by, (_A_STROKE, _B_STROKE)):
+        # ⚠️ **One polyline per *contiguous* run, not one through every point.** A first cut drew a single
+        # line through whatever gameweeks the player had, so a missed week was crossed by a straight segment —
+        # a continuous line, under a caption promising a gap. The break has to be real or the caption is a
+        # claim the chart does not support.
+        runs, run = [], []
+        for r in rounds:
+            if r in d:
+                run.append((px(r), py(d[r])))
+            elif run:
+                runs.append(run)
+                run = []
+        if run:
+            runs.append(run)
+        for seg in runs:
+            if len(seg) > 1:
+                line = " ".join(f"{x:.1f},{y:.1f}" for x, y in seg)
+                parts.append(f'<polyline points="{line}" fill="none" stroke="{stroke}" stroke-width="2" '
+                             'stroke-linejoin="round" stroke-linecap="round"/>')
+            parts += [f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.8" fill="{stroke}"/>' for x, y in seg]
+    parts.append("</svg>")
+    return "".join(parts)
 
 
 def form_dots_html(dots) -> str:
@@ -327,15 +396,19 @@ def render_dna_compare(a, b, players, *, gw_history=None, last_rows=None, season
         st.caption(f"🧬 DNA percentiles are **{season_a or season_b}** — ranking needs ~5 matches, so this "
                    "season's fingerprint draws from about GW5.")
 
-    # Performance trend, one per player — the half Boot Battle has never been able to show.
+    # Performance trend — **overlaid**, in the radar's colours (owner, 2026-09-16). Two stacked panels made
+    # the reader compare by memory across a scroll; one chart with a shared scale compares by looking, which
+    # is the same argument that put both fingerprints on one octagon rather than two.
     gwh = gw_history or {}
-    for p in (a, b):
-        code = _code(p)
-        st.markdown(f"**{p['web_name']}**")
-        by_stat = {"Points": stat_series(gwh, code, "total_points"),
-                   "BPS": stat_series(gwh, code, "bps"),
-                   "xG": stat_series(gwh, code, "xg"),
-                   "xA": stat_series(gwh, code, "xa")}
-        st.markdown(trend_panel_html(player_gw_points(gwh, code), form_dots(gwh, code), by_stat,
-                                     windows=form_windows((gwh or {}).get(code) or [])),
-                    unsafe_allow_html=True)
+    trend = perf_trend_compare_svg(player_gw_points(gwh, _code(a)), player_gw_points(gwh, _code(b)),
+                                   a_label=a["web_name"], b_label=b["web_name"])
+    if trend:
+        st.markdown(
+            DNA_CSS + COMPARE_CSS + '<div class="dna-card">'
+            '<div class="dna-band"><span class="dna-ttl">📈 Performance trend</span>'
+            '<span class="dna-cap">Points per gameweek · one shared scale</span></div>'
+            f'{trend}'
+            f'<div class="dna-legend"><span><i style="background:{_A_STROKE}"></i>{_esc(a["web_name"])}</span>'
+            f'<span><i style="background:{_B_STROKE}"></i>{_esc(b["web_name"])}</span></div></div>',
+            unsafe_allow_html=True)
+        st.caption("A gap means that player didn't feature that gameweek — not that he scored nothing.")

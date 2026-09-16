@@ -116,6 +116,22 @@ trap the theme work hit in ADR-180, one layer down: there it was a colour the th
 *ground* the component assumed. Both compares now render inside the same card, including when they decline to
 draw — otherwise the refusal renders on white too.
 
+**4. The performance trend became one overlay, in the radar's colours.** Owner: *"could they be overlayed
+with the same colour scheme as Player DNA."* Two stacked panels made the reader compare by memory across a
+scroll — the same argument that put both fingerprints on one octagon rather than two charts. Purple is the
+first player and teal the second on **both** charts, so the eye carries one mapping down the card.
+
+⚠️ **Two properties of that overlay are load-bearing, and neither is obvious:**
+
+- **One shared scale.** `perf_trend_svg` normalises each line to *that player's own* min..max — right for a
+  single chart, where the question is *which way is he going*, and flatly wrong here: a player returning
+  2,3,2 and one returning 9,14,9 would draw the **same shape** and the overlay would say they were level.
+  ⭐ *A chart that answers one question can be silently wrong for the neighbouring one.*
+- **A missed gameweek breaks the line.** The first cut drew one polyline through whatever weeks a player had,
+  so a blank was crossed by a straight segment — a continuous line under a caption promising a gap. It now
+  draws one polyline per *contiguous* run. ⭐ *The break has to be real, or the caption is a claim the chart
+  does not support* — the same rule the radar already applies to an unranked axis.
+
 ---
 
 ### 💡 The lesson
