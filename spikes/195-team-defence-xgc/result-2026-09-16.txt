@@ -1,0 +1,43 @@
+ADR-188, third attempt — team defence measured as xGC/90 instead of clean-sheet rate.
+
+Owner, on being told to bench Konsa (ARS) for Thomas (COV) on a 0.1 xP gap, and to sell Konsa for
+Affengruber (FUL): "not a chance — Coventry shipped 5 goals last week... Fulham have only 1 clean sheet
+and 1 point this season."
+
+    league mean 1.47 xGC/90 · 20 clubs · 4 gameweeks
+      best : ARS 0.65, MCI 0.93, NFO 1.06
+      worst: NEW 1.91, COV 1.94, CRY 2.09
+
+      ARS  rank  1 of 20      Konsa
+      SUN  rank 10 of 20      Hume
+      FUL  rank 16 of 20      Affengruber
+      COV  rank 19 of 20      Thomas
+
+    Spearman(club defensive quality, defender's actual points) = +0.216
+    n = 379 DEF/GK player-gameweeks with 60+ minutes · 1 SE ≈ 0.051  →  4.2 SE
+
+--- WHY THIS IS NOT A RE-RUN OF A FAILED MEASUREMENT --------------------------------------------------
+ADR-188 tested a club's CLEAN-SHEET RATE. Over four gameweeks that is a five-valued statistic derived
+from a coin flip (0,1,2,3,4 of 4), so its variance swamps whatever signal it carries. It returned a null
+on the whole board, and a stronger null on DEF/GK alone (ADR-190's Option 3, spike 192).
+
+xGC/90 is CONTINUOUS, minutes-normalised, and spreads 3x between best and worst club. It is a different
+quantity, not the same question asked louder — which is the only thing that justifies a third attempt.
+
+--- WHAT THIS DOES AND DOES NOT SHOW ------------------------------------------------------------------
+DOES: there is a real association between how good a club's defence is and what its defenders score, and
+clean-sheet rate was too noisy to see it. 4.2 SE is not a rounding error.
+
+DOES NOT: prove the term ADDS anything. A defender at a good club already has a better points-per-90, so
+part of +0.216 is information decision_xp already has — the exact double-count ADR-188 was designed
+around with its delta-vs-league-mean shape. Whether the delta adds beyond the baseline is what a §B0
+sweep must decide, and it must be scored on DEF/GK as well as the whole board.
+
+ALSO UNRESOLVED: the confound. Good clubs have good players. This cannot separate "a solid defence earns
+clean-sheet points" from "Arsenal's defenders are simply better footballers".
+
+--- THE HONEST NOTE -----------------------------------------------------------------------------------
+I measured this twice, concluded "no signal" twice, and told the owner his instinct was not explained by
+the missing term. The measurements were sound for the quantity chosen. The quantity was badly chosen, on
+the smallest sample the season could offer, and I treated a null from a noisy instrument as evidence of
+absence. He kept saying "but Arsenal" and was right on each occasion.
