@@ -666,18 +666,35 @@ before starting**: the model was not the first problem. Four phases, each with i
   **2,097 rows for twenty seasons**, one per player per season). ⭐ *A model can be built next winter; the
   gameweek you failed to store cannot.*
 
-- ⬜ **Phase 0b — the baseline (next).** Walk-forward error of the **current** minutes model over the stored
-  gameweeks, reusing `backtest.pairs`. Two jobs: it supplies the number [ADR-192](../06_Decisions/ADR-192-no-opinion-is-not-full-confidence.md)'s
-  cold-start constant needs, and it is **the number any learned model has to beat**. ⭐ *A model with no
-  baseline is not an improvement, it is a replacement.*
+- ✅ **Phase 0b — the baseline (ADR-202, done 2026-09-16).** Walk-forward, rounds 1–4. **The number to beat:**
+  minutes MAE **24.0** on owned ≥1% · start/bench call **70.1%** · points ranking **ρ 0.605** · hit@20 **0.17**
+  · 1 SE **0.040**. Three findings that changed what comes next:
+  - ⭐⭐ **The minutes model is beaten by "same as last week"** (20.5 MAE, 77.3%) at every ownership cut — and
+    above 3% by the constant 90. The weak part is the **historical fallback** (32.1 MAE against the in-season
+    term's 20.0, same players), which it reaches for 35–52 times per round.
+  - ⭐⭐ **And replacing it would have been wrong.** On the points ranking the app actually produces, the
+    weight is worth **+0.117 ρ (2.9 SE)** over not having it — the largest effect measured this season.
+    *A term can be a bad predictor of its own quantity and still be a good feature.*
+  - ⭐⭐⭐ ***"Is a better minutes model worth building?"* answered "nothing", "huge" and "marginal"** depending
+    on the instrument. The settled reading: a **ceiling** of +0.206 ρ on what the app ranks, of which +0.061
+    is information rather than appearance-point arithmetic.
 
-- ⏳ **Phase 1 — a minutes model, gated on data.** Minutes first, not points: it is the term with the widest
-  spread, the clearest label, and — per ADR-192 — the one currently defaulting to the most optimistic value
-  available. One stored season is not a training set. Two ways forward, and the first is not ours to decide:
+- ⏳ **Phase 1 — a minutes model. Now gated on a cheap test, not on a hunch.** ADR-202 put a ceiling on it, so
+  the question is no longer *"would better minutes help?"* (yes, up to +0.206 ρ) but *"can a real model reach
+  enough of that?"*. **The gate:** build a minutes forecaster that is better **board-wide** — not just on owned
+  players, which is where the first attempt's false negative came from — and re-score the ranking. If a
+  genuinely better forecaster still buys under **+1 SE**, the ceiling is unreachable in practice and Phase 1 is
+  declined, having trained nothing. The weak part is already identified: the **historical fallback**, not the
+  in-season term.
   - ⚠️ **The 11-season community archive is GATED ON LICENSING.** `vaastav/Fantasy-Premier-League` reads
     **NOASSERTION** — the absence of a grant, not a permissive one. That mattered before; it matters more now
     the repo is **AGPL-3.0** with a donations question open. **Needs the owner, or a maintainer's reply.**
   - Otherwise it accrues at one gameweek a week, and the gate is *"enough rows"*, measured not guessed.
+
+- 🔧 **Before the GW8 review: snapshot `status` / `chance` on every refresh.** ADR-202's one leak — the model
+  is scored with **today's** injury news applied retrospectively, because FPL serves availability as a *now*
+  field and we store no history of it. 195 of 659 players carry a flag today. Small, mechanical, and it is the
+  difference between the next baseline being clean and carrying the same asterisk.
 
 - ⏳ **Phase 2 — points, only if minutes pays.** Deliberately last. If a learned minutes model cannot beat
   0b's baseline, a learned points model on the same data will not either, and we will have found that out for
@@ -699,14 +716,19 @@ the current 637 rows a week), which
 is the first point at which a walk-forward split has enough on both sides of it to mean anything.
 
 **What the review must answer — all four, in writing:**
-1. **What did 0b measure, and has it moved?** Re-run the baseline. A baseline taken once is a snapshot; the
-   ML case rests on the gap between it and a model, so it needs to be a line.
-2. **Did ADR-192's cold-start constant get set, and on what?** It was the reason 0b exists.
+1. **Has the baseline moved?** Re-run ADR-202 on 8 gameweeks (ρ 0.605 · MAE 24.0 · start call 70.1%).
+   A baseline taken once is a snapshot; the ML case rests on the gap between it and a model, so it needs
+   to be a line. ⚠️ GW4 was anomalous for every forecaster — four rounds cannot tell that apart from noise.
+2. **ADR-192's cold-start constant — still not set.** ADR-202 confirmed the direction (**+39.1 minutes**
+   optimistic, start calls at **49.2%**) and found that correcting it makes the *ranking* worse at every
+   value. The one real harm — a no-history player in a top-20 recommendation, who scored 0 — happened
+   **once in 80 slots**, and n = 1 is not a rate. Eight gameweeks give ~160 slots. Decide it there.
 3. **Has the licensing question been answered** (archive in, or archive permanently out)? This decides
    whether Phase 1 is *"train on 11 seasons"* or *"wait for GW20"*, and they are different projects.
-4. **Is a learned minutes model still the right first model?** Asked openly — ADR-190's lesson is that a
-   term can be unreachable rather than merely unproven, and ⭐ *a measurement can fail because the thing is
-   absent or because the instrument cannot see it.*
+4. **Did the board-wide forecaster clear +1 SE?** That is Phase 1's gate, and it can be run before the
+   review rather than at it. Asked openly — ADR-202 got three different answers to this question from
+   three instruments, so ⭐ *a measurement can fail because the thing is absent or because the instrument
+   cannot see it*, and the first answer is not the answer.
 
 ⚠️ **The review may conclude "not yet" — but it may not conclude it twice without changing something.** If
 GW8 says wait, the next review sets a *different* gate, or the ML track is parked with a trigger like anything
