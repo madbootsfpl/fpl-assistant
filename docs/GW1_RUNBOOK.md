@@ -163,6 +163,17 @@ argument for a **live percentile** rather than a fixed constant, gated in ADR-19
   ⚠️ *One exploratory clean-sheet sweep was run at GW4 anyway, once the machinery existed, and recorded in
   ADR-188 §📉. It clears **0 of 4** criteria. That does not spend the GW6 slot — but it means GW6 starts from a
   prior of zero **with a mechanism** (double-counting against points-per-90), not from an open question.*
+
+  🔧 **2026-09-17 — `CLEAN_SHEET_WEIGHT` now sweeps a DIFFERENT INPUT (ADR-195, built).** The club rate is
+  **xGC/90 through a Poisson step**, not the clean-sheet rate. This is **not a re-run of a failed sweep** — it
+  is a different quantity, and the ADR said so before any sweep was run. The rate could not have shown the
+  effect if it existed: over four gameweeks it takes **5 distinct values across 20 clubs**, its `0.00` bucket
+  holds **six clubs spanning the 4th-best defence and the worst** (BOU 1.32 → CRY 2.04), and Arsenal and Hull
+  share `0.75` on xGC of 0.68 and 1.49. Spearman between the two instruments is **0.243** — they agree on 6%
+  of the ranking. ⭐⭐ *A null is a statement about the instrument as much as about the world.*
+  **Prediction stands unchanged and is recorded before the sweep: a small positive, ≈0.05–0.20, quite possibly
+  zero — and a large gain is a warning, not a win.** If xGC nulls too, the question **closes for the season**;
+  a fifth instrument would be exactly the mistake this correction accuses the third of.
 - **GW10:** last look. Anything still failing is **closed as not supported** and the config comment says so —
   not left as a permanent "revisit later", which is how a dormant weight becomes furniture.
 

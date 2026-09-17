@@ -10,11 +10,11 @@ per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek)
 """
 
 from src import config
-from src.analytics.cleansheet import clean_sheet_delta, league_clean_sheet_rate
+from src.analytics.cleansheet import clean_sheet_delta, clean_sheet_prob, league_clean_sheet_rate
 from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
-from src.analytics.gw_form import team_clean_sheet_rate
+from src.analytics.gw_form import team_xgc90
 from src.analytics.minutes import minutes_weight_from_history
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
@@ -373,8 +373,24 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
 
 
 def _clean_sheet_rates(players, gw_history_by_code) -> dict:
-    """`{team → clean-sheet rate}` from the per-GW history (ADR-188), or `{}` with nothing played yet."""
+    """`{team → clean-sheet probability}` from the per-GW history, or `{}` with nothing played yet.
+
+    ⭐ **ADR-195 changed only this function.** `clean_sheet_delta`, `league_clean_sheet_rate` and the call
+    site above are untouched, along with ADR-188's five mutation-tested guards — which is the whole point:
+    the term's *shape* was never what was wrong, its *input* was.
+
+    ADR-188 measured a club's **clean-sheet rate**, and over four gameweeks that is a five-valued statistic
+    derived from a coin flip. It read a null. So did a second look at it (ADR-190 Option 3), and I told the
+    owner twice that his instinct was not supported. ⭐⭐ *A null is a statement about the instrument as much
+    as about the world* — xGC/90 is continuous and minutes-normalised, spreads 3x across the league on the
+    same four gameweeks, and correlates with defenders' actual points at **4.2 SE** where the rate showed
+    nothing.
+
+    The Poisson step (`clean_sheet_prob`) is what keeps the output a probability, so the `x CLEAN_SHEET_POINTS`
+    downstream still means points. **The weight is still 0**; this changes what would be swept at GW6, not
+    what ships today.
+    """
     if not gw_history_by_code:
         return {}
-    return {t: team_clean_sheet_rate(gw_history_by_code, players, t)
+    return {t: clean_sheet_prob(team_xgc90(gw_history_by_code, players, t))
             for t in {p["team"] for p in players}}

@@ -2,7 +2,8 @@
 
 **Decision ID:** ADR-195
 **Date:** 2026-09-16
-**Status:** 📋 **Proposed** — gate before building. Reopens [ADR-188](./ADR-188-a-defender-plays-for-a-team.md)
+**Status:** ✅ **BUILT 2026-09-17 — the input is swapped; the weight is still 0 and sweeps at GW6.**
+**1832 → 1842 tests, ruff clean. 9 mutants, all red.** Originally 📋 Proposed — gate before building. Reopens [ADR-188](./ADR-188-a-defender-plays-for-a-team.md)
 with a **different instrument**, not a re-run.
 **Superseded By / Replaces:** Would change `cleansheet.py`'s **input** and leave its shape, its guards and its
 dormancy intact. Uses [ADR-190](./ADR-190-the-gw4-sitting.md)'s Option 3 for scoring.
@@ -137,3 +138,81 @@ made of before trusting it again.** Three nulls from the same instrument is one 
 - **The related report, same week:** [ADR-194](./ADR-194-a-start-bench-call-gets-a-margin.md) — the other half
   of *"start Thomas over Konsa"*
 - **Found by:** the owner, three times, on the same two players
+
+
+---
+
+## 🔨 Built — 2026-09-17
+
+**The swap is one function.** `_clean_sheet_rates` in `xp.py` now returns
+`clean_sheet_prob(team_xgc90(...))` instead of `team_clean_sheet_rate(...)`. `clean_sheet_delta`,
+`league_clean_sheet_rate`, the call site and **all five of ADR-188's mutation-tested guards are untouched** —
+which was the point: the term's *shape* was never what was wrong, its *input* was.
+
+### ⚠️ The proposal above had a units bug, and it would have shipped quietly
+
+This ADR says *"swapping clean-sheet rate for xGC/90 delta is a change to one function's argument."* It is
+not. `clean_sheet_delta` multiplies by `CLEAN_SHEET_POINTS`, and **that only yields points when the delta is
+a probability**. A raw goals-per-90 difference would have produced "4 × goals" — a quantity in no unit at all,
+with a plausible sign and magnitude to hide behind.
+
+⭐⭐ **A SWAPPED INPUT HAS TO ARRIVE IN THE UNITS THE CONSUMER ALREADY ASSUMES** — and the assumption lived in
+a `× 4` three lines away from the change, in a function this ADR explicitly promised not to touch.
+
+Resolved with the standard Poisson form: goals conceded ~ Poisson(xGC), so `P(clean sheet) = e^-xGC`. It also
+⭐ **fixes the sign for free**, which matters more than it sounds: for clean-sheet *rate* higher is better, for
+xGC **lower** is better, and a raw swap would have **inverted the term** — pricing Coventry's defenders above
+Arsenal's — while every existing guard stayed green, because they all test `team − league` and none of them
+says which direction "good" points in.
+
+⚠️ Poisson assumes independent chances, which shot quality violates. It is an approximation, and a good one
+at the precision a gated term needs.
+
+### 📊 What the live data says about the old instrument
+
+This is the thesis, on the real cache, and it is starker than the ADR argued:
+
+| | clean-sheet rate | xGC/90 |
+|---|---|---|
+| distinct values across 20 clubs | **5** | **20** |
+
+Spearman between the two rankings is **0.243** — they agree on **6%** of the variance. And the collisions are
+not marginal:
+
+- **Arsenal and Hull share a rate of 0.75** — equal-best in the league — on xGC of **0.68** and **1.49**.
+- **The `0.00` bucket holds six clubs**, spanning **BOU 1.32 (4th-best defence)** to **CRY 2.04 (the worst)**.
+
+⭐⭐ **A TERM WHOSE INPUT PUTS THE FOURTH-BEST AND THE WORST DEFENCE IN THE LEAGUE IN THE SAME BUCKET CANNOT
+CORRELATE WITH ANYTHING CONTINUOUS.** ADR-188's null was never evidence about football.
+
+Resulting deltas at weight 1.0, for scale only: **ARS +1.07** to **CRY −0.44** points per match, a spread of
+**1.51** against a per-player weekly sd of 3.51 (ADR-161).
+
+### ⚠️ Two guards that passed while the mechanism was broken
+
+Nine mutants, and **two survived the first sweep — both my fixtures, neither the code**:
+
+1. **The benched-keeper guard was masked by the one-row-per-round guard.** With the benched keeper listed
+   *second*, the round had already been claimed by the keeper who played, so his rows were dropped for a
+   reason unrelated to being benched. Listed **first**, he claims the round with 0 minutes and the club falls
+   below the floor. ⭐ *A fixture that only exercises the lucky ordering will confirm a broken mechanism* —
+   third sighting this month, after ADR-189 and ADR-191 §1.
+2. **Nothing tested a match in flight.** `not _played(r)` and `minutes <= 0` look redundant and are not: a
+   live gameweek has **minutes but no scoreline** (the ADR-125 trap), and counting it would price half a match
+   the club is losing as a full observation, moving the recommendation mid-fixture.
+
+### ✅ Action items
+
+- [x] `team_xgc90()` + the delta, reusing ADR-188's shape and guards
+- [x] Guard: invariance at weight 0 stays byte-identical; unknown club = no opinion, not 0
+- [x] ⚠️ **New guards driving the term at a non-zero weight** — the suite could not see this change at all
+      otherwise: `decision_xp` does not even call the rate builder at weight 0, so every ADR-188 guard stayed
+      green through a change to the input's units, source **and** sign. ⭐ *A dormant term is not covered, it
+      is merely quiet.*
+- [ ] **Sweep at GW6** on both populations; record the result either way
+- [ ] If it nulls: **close the question for the season** and adopt ADR-188's Option 3
+
+**`TEAM_XGC_MIN_MINUTES = 180`** is a **stated floor, not a measured one** (ADR-199's rule, declared rather
+than hidden): two matches, so one freak afternoon cannot define a club. It cannot be measured yet — the
+quantity it would be measured against is the thing being gated — and it binds only in the opening fortnight;
+by GW6 every club is at ~540 minutes. All 20 clubs clear it today.

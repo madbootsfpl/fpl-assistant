@@ -115,6 +115,42 @@ def team_form(gw_history, players, team, *, last: int = 5) -> list[tuple]:
     return best
 
 
+TEAM_XGC_MIN_MINUTES = 180      # two full matches of keeper minutes
+
+
+def team_xgc90(gw_history, players, team, min_minutes: int = TEAM_XGC_MIN_MINUTES) -> float | None:
+    """`team`'s expected goals conceded per 90, or None below `min_minutes` (ADR-195).
+
+    **Taken from the goalkeepers**, exactly as `team_clean_sheet_rate` is and for the same reason: a keeper is
+    on the pitch for the whole match, so his `xgc` is the team's, while an outfielder who came on at 80
+    minutes carries an `xgc` for ten minutes of it.
+
+    ⭐ **This is the instrument ADR-195 exists for.** Over four gameweeks a club's *clean-sheet rate* is a
+    five-valued statistic derived from a coin flip, and ADR-188 and ADR-192 both read a null off it. xGC/90 is
+    continuous and minutes-normalised, and the same four gameweeks spread it 3× across the league.
+
+    ⚠️ `min_minutes` is a **stated floor, not a measured one** (ADR-199's rule, declared rather than hidden):
+    two matches, so a single freak afternoon cannot define a club. It cannot be measured yet — the quantity it
+    would be measured against is the thing being gated. It binds only in the opening fortnight of a season;
+    by GW6 every club is at ~540 minutes.
+    """
+    minutes = xgc = 0.0
+    seen: set = set()
+    for gk in (p for p in players if _get(p, "team") == team and _get(p, "position") == "GK"):
+        for r in (gw_history or {}).get(_get(gk, "code")) or []:
+            rnd, mins = _get(r, "round"), _get(r, "minutes") or 0
+            # One row per round: two keepers can share a match (a red card, an injury), and counting both
+            # would double the denominator against a single match's xGC.
+            if not _played(r) or mins <= 0 or rnd is None or rnd in seen or _get(r, "xgc") is None:
+                continue
+            seen.add(rnd)
+            minutes += mins
+            xgc += _get(r, "xgc")
+    if minutes < min_minutes:
+        return None              # unknown stays *no opinion* — never 0, which would read as a perfect defence
+    return xgc * 90 / minutes
+
+
 def team_clean_sheet_rate(gw_history, players, team) -> float | None:
     """The share of played gameweeks in which `team` kept a clean sheet, 0.0-1.0 (ADR-119 follow-up).
 

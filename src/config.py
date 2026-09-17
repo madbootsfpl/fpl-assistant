@@ -181,7 +181,16 @@ POSITION_MAP = {
 # Applied as a DELTA against the league mean, because a player's own pts/90 already contains the clean sheets
 # he kept at his old rate; only the difference is new information (the same shape as ADR-097's DefCon term).
 #
+# ⚠️ **The INPUT changed 2026-09-17 (ADR-195): the club rate is now xGC/90 through a Poisson step, not the
+# clean-sheet rate.** ADR-188 measured the rate, read a null, and a second look (ADR-190 Option 3) read a null
+# too — so the owner was told twice his instinct was unsupported. The rate is the reason: over four gameweeks
+# it takes **5 distinct values across 20 clubs**, and its 0.00 bucket holds **six clubs spanning the 4th-best
+# defence and the worst**. Arsenal and Hull share a rate of 0.75 on xGC of 0.68 and 1.49.
+# ⭐⭐ A NULL IS A STATEMENT ABOUT THE INSTRUMENT AS MUCH AS ABOUT THE WORLD.
+#
 # ⚠️ Swept at the **GW6** sitting, not GW4: three weights are already queued there and a fourth on the same
 # thin sample is how a noise result ships. Prediction recorded in GW1_RUNBOOK §B0 *before* the sweep —
-# small positive ≈0.05-0.15, quite possibly zero, and **a large gain is a warning, not a win**.
+# small positive ≈0.05-0.20, quite possibly zero, and **a large gain is a warning, not a win** (it would mean
+# the term is re-ranking by club quality rather than adding defensive information — that caveat survives the
+# instrument change, because it was never the thing that was wrong).
 CLEAN_SHEET_WEIGHT = 0.0

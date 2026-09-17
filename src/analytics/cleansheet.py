@@ -6,6 +6,8 @@ clean-sheet probability. xGC/90 is computed from the stored `xgc` + `minutes` (i
 FPL's own `expected_goals_conceded_per_90`). Note this is a *team* signal shown per player.
 """
 
+import math
+
 CLEAN_SHEET_POSITIONS = ("DEF", "GK")   # earn 4 pts for a clean sheet
 MIN_MINUTES = 900   # ~10 matches — a per-90 rate off a tiny sample is noise
 
@@ -63,6 +65,31 @@ def clean_sheet_delta(player, team_rate, league_rate) -> float:
     if team_rate is None or league_rate is None:
         return 0.0
     return CLEAN_SHEET_POINTS * (team_rate - league_rate)
+
+
+def clean_sheet_prob(xgc90) -> float | None:
+    """A club's xGC/90 as a clean-sheet **probability** — `P(0 conceded) = e^-xGC` (ADR-195).
+
+    ⚠️ **This step is not in ADR-195, and without it the proposal has a units bug.** That ADR says *"swap
+    clean-sheet rate for xGC/90 delta, a change to one function's argument"* — but `clean_sheet_delta`
+    multiplies by `CLEAN_SHEET_POINTS`, which only means *points* when the delta is a **probability**. Handing
+    it a difference in goals-per-90 would produce "4 x goals", a number in no unit at all, and it would have
+    looked plausible because the sign and rough magnitude survive.
+
+    ⭐ **A swapped input has to arrive in the units the consumer already assumes**, and the assumption lived in
+    the `x 4`, three lines away from the change.
+
+    The Poisson form is the standard one for goals in football: goals conceded ~ Poisson(xGC), so a clean
+    sheet is `P(k=0) = e^-xGC`. It also **fixes the sign for free** — lower xGC gives higher probability, so
+    the existing `team - league` convention still reads "better than average is positive", with no flip to
+    remember. ⚠️ Poisson assumes independent chances, which shot quality violates; it is an approximation, and
+    a good one at the accuracy this term is gated at.
+
+    None in, None out — an unknown club stays *no opinion* all the way through (ADR-172).
+    """
+    if xgc90 is None:
+        return None
+    return math.exp(-max(0.0, xgc90))
 
 
 def league_clean_sheet_rate(rates) -> float | None:
