@@ -56,10 +56,42 @@ def _club_ok(out, candidate, club_counts, max_per_club) -> bool:
 # 2.0 over a five-gameweek window is 0.4 a week — comfortably inside that noise, and deliberately small
 # enough that the tie-break can never overturn a difference worth having.
 TIE_NOISE = 2.0
+TIE_NOISE_WINDOW = 5      # …and THAT is the window it was sized against (ADR-209)
+
+# ⚠️ **`TIE_NOISE` is a band for a FIVE-gameweek window, and it was being applied to every window.** This
+# function is called with a one-gameweek xP map (My Squad's "This week" narrows the horizon toward the
+# deadline) and with a five-gameweek one, and both got a band of 2.0 — five times too wide on the short
+# window, where it could overturn a real difference rather than break a tie.
+#
+# ⭐ **This is the mistake the file already warns about**, three functions away in `gameweek.py`: *"a threshold
+# sized against one window applied to another"* (ADR-186). It was written about the affordability cliff, and
+# the tie-break beside it was doing the same thing unnoticed. ⭐ *A lesson recorded about one number does not
+# check the others.*
+#
+# Scaled by **√window, not window**: the error in an N-gameweek total grows as √N if weekly errors are
+# roughly independent, so a band that stays the same *fraction of the noise* scales the same way. ⚠️ That
+# independence is an approximation — a run of hard fixtures correlates — and it is the reason this is derived
+# rather than measured. It reduces to exactly 2.0 at the five-gameweek window, so **no existing caller moves**.
+
+
+def tie_noise(window: int) -> float:
+    """The tie-break band for an `window`-gameweek xP map (ADR-209). 2.0 at five, ~0.9 at one."""
+    return TIE_NOISE * (max(1, int(window or 1)) / TIE_NOISE_WINDOW) ** 0.5
 
 # Positions whose points depend on their club keeping a clean sheet, so two of them from one club succeed and
 # fail together.
 _DEFENSIVE = ("DEF", "GK")
+
+
+def _horizon_gain(out, incoming, horizon_xp) -> float:
+    """The same swap's gain over a wider window, or 0.0 when no wider map was supplied (ADR-209).
+
+    ⭐ **0.0 for everyone is a tie, so an absent map disables this cleanly** rather than half-applying it —
+    the sort falls straight through to the correlation rule that was there before.
+    """
+    if not horizon_xp:
+        return 0.0
+    return horizon_xp.get(incoming["id"], 0.0) - horizon_xp.get(out["id"], 0.0)
 
 
 def _correlated_after(out, incoming, owned) -> int:
@@ -81,9 +113,13 @@ def _correlated_after(out, incoming, owned) -> int:
 def suggest_transfers(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, limit: int = 5, max_per_club: int = MAX_PER_CLUB,
-    xi_aware: bool = True, reported_out=None,
+    xi_aware: bool = True, reported_out=None, window: int = TIE_NOISE_WINDOW, horizon_xp=None,
 ) -> list[dict]:
     """Rank the best single transfers for a squad (ADR-030/046).
+
+    `window` is **how many gameweeks `xp_by_id` covers** — it sizes the tie-break band and nothing else
+    (ADR-209). It defaults to five, which is what the band was always sized for, so an un-updated caller keeps
+    exactly today's behaviour. `horizon_xp` is an optional wider map that lets the longer view break a tie.
 
     `owned` are the squad's player rows; `players` is the whole market; `xp_by_id`
     maps player id → xP over the chosen horizon (the caller computes it). For each owned
@@ -160,10 +196,25 @@ def suggest_transfers(
         # bucket edges fall where they fall, and two near-equal values can land either side of one. Comparing
         # each candidate against the current leader has no edges.
         #
-        # Still never overrides a real difference: only moves within `TIE_NOISE` of the best are considered.
+        # Still never overrides a real difference: only moves within the band are considered — and the band
+        # is now sized for the **window this xP map covers** (ADR-209), not always five gameweeks.
+        #
+        # ⭐⭐ **AND THE LONGER VIEW GETS TO SPEAK FIRST (ADR-209).** The owner's week offered two moves at
+        # **+1.2 XI xP** apiece — a dead heat on the number this ranks by — and the app took the one worth
+        # **−1.5 over five gameweeks** over the one worth **+3.1**. It had that number: it computes the longer
+        # view and *prints* it, and never let it choose. ⭐ *A number computed for one question and discarded
+        # is invisible in a way a missing number is not* (ADR-191).
+        #
+        # ⚠️ **Ordered ahead of the correlation tie-break deliberately.** ADR-189 established that correlated
+        # defence *never moves expected points* — it widens that component's spread by √2, ~1.2 points at
+        # worst. The longer view moves **expected points**, by 4.6 in the case that prompted this.
+        # ⭐ *A tie-break on expected points strictly dominates one on spread, so it must be asked first.*
         best_gain = eligible[0][0]
-        close = [t for t in eligible if best_gain - t[0] <= TIE_NOISE]
-        gain, out, out_sum, c, in_sum = min(close, key=lambda t: (_correlated_after(t[1], t[3], owned), -t[0]))
+        band = tie_noise(window)
+        close = [t for t in eligible if best_gain - t[0] <= band]
+        gain, out, out_sum, c, in_sum = min(
+            close, key=lambda t: (-_horizon_gain(t[1], t[3], horizon_xp),
+                                  _correlated_after(t[1], t[3], owned), -t[0]))
         used_out.add(out["id"])
         used_in.add(c["id"])
         suggestions.append({
@@ -179,9 +230,12 @@ def suggest_transfers(
 def suggest_transfer_plan(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, count: int = 1, max_per_club: int = MAX_PER_CLUB,
-    xi_aware: bool = True, reported_out=None,
+    xi_aware: bool = True, reported_out=None, window: int = TIE_NOISE_WINDOW, horizon_xp=None,
 ) -> list[dict]:
     """A coordinated, greedy plan of up to `count` transfers (ADR-035).
+
+    `window` and `horizon_xp` thread straight through to every step (ADR-209), for the same reason
+    `reported_out` does: a tie on move 2 deserves the same longer view as a tie on move 1.
 
     Repeatedly takes the **best legal single transfer given the running state** and applies
     it: the shared **bank threads** (a later move can spend what an earlier sale freed), club
@@ -202,6 +256,7 @@ def suggest_transfer_plan(
         moves = suggest_transfers(
             owned, market, xp_by_id, bench_ids=bench_ids, bank=running_bank,
             limit=1, max_per_club=max_per_club, xi_aware=xi_aware, reported_out=reported_out,
+            window=window, horizon_xp=horizon_xp,
         )
         if not moves:
             break

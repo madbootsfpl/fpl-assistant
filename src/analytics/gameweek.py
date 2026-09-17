@@ -154,7 +154,11 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # position — every move then costs a 4-point hit — so the best move is still worth naming, but the plan
     # must not silently claim he holds one. `held` drives the search; the returned `free` is the truth.
     held = max(int(free if free is not None else 1), 1)
-    moves = suggest_transfer_plan(owned, market, xp_by_id, bench_ids=bench_ids, bank=bank,
+    # ADR-209 — the plan knows both things `suggest_transfers` cannot: how wide `xp_by_id` is, and what the
+    # wider map says. Without them the tie-break sizes its band for five gameweeks whatever it was handed,
+    # and the longer view it already prints is never allowed to choose.
+    moves = suggest_transfer_plan(owned, market, xp_by_id, window=horizon, horizon_xp=horizon_xp,
+                                  bench_ids=bench_ids, bank=bank,
                                   count=max(held, 2), reported_out=reported_out)
     # What we actually advise him to do this week: as many moves as he holds transfers for.
     transfers = moves[:held]
