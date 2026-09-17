@@ -15,7 +15,7 @@ from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
 from src.analytics.gw_form import team_xgc90
-from src.analytics.minutes import minutes_weight_from_history
+from src.analytics.minutes import is_unavailable, minutes_weight_from_history
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
 _BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
@@ -191,8 +191,28 @@ def _difficulties_by_team_gw(upcoming, source: str, horizon_events) -> dict:
 
 
 def _status_is_active(p) -> bool:
-    """Default availability: only a fully-fit player (status 'a') scores (ADR-006)."""
-    return p["status"] == "a"
+    """Can this player feature at all? (ADR-206, replacing ADR-006's binary)
+
+    ⚠️ **This was `p["status"] == "a"`, and it zeroed every DOUBTFUL player outright.** `chance_factor`
+    (ADR-038) already computed the right multiplier — 0.75 for a 75% doubt — and never got the chance to
+    apply it, because this ran first and returned False. A 75% doubt and a 25% doubt priced identically, at
+    exactly zero: 23 players on the day this was found, including the joint-highest-scoring forward in the
+    game at 74.5% ownership, whose 5-gameweek projection read `{0.0, 0.0, 0.0, 0.0, 0.0}`.
+
+    ⭐⭐ **TWO MECHANISMS MODELLED THE SAME THING AND THE CRUDER ONE RAN FIRST**, so the finer one was dead
+    code for exactly the population it was written for.
+
+    ⭐ **ADR-006's reasoning had expired, not been wrong.** It justified the binary with *"`chance_of_playing`
+    is barely populated, so `status` is the signal"* — true in preseason, when the column was empty. FPL now
+    populates it (25/50/75), and nothing re-checked the premise. *A constraint recorded in an ADR is a fact
+    about a version, not a law* (ADR-180).
+
+    The split is now clean: **this answers "can he play?", `chance_factor` answers "how likely is he to?"**
+    With `--no-xmins` a doubtful player scores his full rate, which is correct and deliberate — that view is
+    documented as *"assumes they play"*, and for a player who genuinely cannot, the assumption is not
+    counterfactual but meaningless, so `i`/`s`/`u`/`n` stay zeroed in both.
+    """
+    return not is_unavailable(p)
 
 
 def player_xp(

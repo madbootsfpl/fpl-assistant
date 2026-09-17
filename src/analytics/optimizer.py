@@ -9,6 +9,8 @@ import warnings
 
 import pulp
 
+from src.analytics.minutes import UNAVAILABLE
+from src.analytics.minutes import is_unavailable as _minutes_is_unavailable
 from src.analytics.value import points_per_million
 from src.analytics.xp import player_xp
 
@@ -104,12 +106,18 @@ def squad_15_issues(players, max_per_club: int = MAX_PER_CLUB) -> list:
 
 # FPL status codes for players who cannot play (all have chance 0). 'a' = available,
 # 'd' = doubtful (might play — kept, but flagged). ADR-023.
-UNAVAILABLE_STATUS = frozenset({"i", "s", "u", "n"})
+# ADR-206 — re-exported from `minutes`, which is now the single definition. Kept under this name because
+# sixteen modules import `is_unavailable` from here, and moving them would be a rename pretending to be a fix.
+UNAVAILABLE_STATUS = UNAVAILABLE
 
 
 def is_unavailable(player) -> bool:
-    """True if the player can't play next round (injured / suspended / gone) — ADR-023."""
-    return player["status"] in UNAVAILABLE_STATUS
+    """True if the player can't play next round (injured / suspended / gone) — ADR-023, ADR-206.
+
+    ⭐ Delegates to `minutes.is_unavailable`: *one* definition of who cannot play, so a fix in one place is a
+    fix everywhere. It used to be three, and the one in `xp` disagreed with both.
+    """
+    return _minutes_is_unavailable(player)
 
 
 def _selected_by(player):

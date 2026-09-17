@@ -16,7 +16,16 @@ below nailed-on starters. The raw `xp` view stays a pure "assumes they play" num
 full probabilistic model (congestion, rotation profiles, in-season minutes) is Phase 5.
 """
 
-_UNAVAILABLE = frozenset({"i", "s", "u"})   # injured / suspended / unavailable → won't feature
+# ⭐ **The single definition of "cannot play at all"** (ADR-206). It lived in three places that disagreed:
+# here without `"n"`, in `optimizer.UNAVAILABLE_STATUS` with it, and — crudest and most damaging — in
+# `xp._status_is_active`, which counted **only** `"a"` and so zeroed every doubtful player outright.
+# `optimizer` re-exports this, so its sixteen call sites are untouched.
+#
+# ⚠️ `"n"` (not in the squad) is now included here, which it was not before: without it `chance_factor`
+# returned **1.0** for an unregistered player, because his `chance` is None and None means "no news, assume
+# available". No `"n"` rows exist today, so this closes a hole rather than changing a number.
+UNAVAILABLE = frozenset({"i", "s", "u", "n"})   # injured / suspended / unavailable / not in squad
+
 _MINUTES_SEASONS = 3                         # recent seasons to gauge a typical minutes share
 _FULL_SEASON_MINUTES = 38 * 90               # a full Premier League season of minutes
 _FULL_GAME_MINUTES = 90                      # one match, for the in-season share (ADR-173)
@@ -30,6 +39,16 @@ def _field(row, key):
         return None
 
 
+def is_unavailable(player) -> bool:
+    """True when the player cannot feature at all — a different question from *how likely* he is to (ADR-206).
+
+    ⭐ **The gate answers "can he play?"; `chance_factor` answers "how likely is he to play?"** Keeping those
+    two separate is the whole of ADR-206: they had been collapsed into one binary in `xp`, and the binary won —
+    so a 75% doubt and a 25% doubt both priced at exactly zero.
+    """
+    return _field(player, "status") in UNAVAILABLE
+
+
 def chance_factor(player) -> float:
     """How available a player is next round, in [0, 1] (ADR-038).
 
@@ -37,7 +56,7 @@ def chance_factor(player) -> float:
     injured/suspended/unavailable are zeroed by *status*. Otherwise `chance% / 100`, and a
     `None` chance (FPL's "no news") means assume available.
     """
-    if _field(player, "status") in _UNAVAILABLE:
+    if is_unavailable(player):
         return 0.0
     chance = _field(player, "chance")
     if chance is None:

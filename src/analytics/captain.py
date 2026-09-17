@@ -44,7 +44,6 @@ def captain_picks(players, upcoming, baseline_by_code=None, source: str = "fpl",
     ranked = player_xp(
         candidates, upcoming, source=source, horizon=1,
         baseline_by_code=baseline_by_code,
-        is_available=lambda p: not is_unavailable(p),   # count doubtful, not only 'a'
         minutes_weight=minutes_weight, history_by_code=history_by_code,
         defcon_weight=config.DEFCON_MAGNIFIER_WEIGHT,   # ADR-097: reflect the DefCon magnifier (dormant → no-op)
     )
