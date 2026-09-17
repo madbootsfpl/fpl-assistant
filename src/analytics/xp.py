@@ -9,13 +9,15 @@ or 0 if the player isn't available. Over a horizon of the next N gameweeks, we s
 per-fixture xP (ADR-007) — so a double gameweek (two fixtures in one gameweek) adds up.
 """
 
+from datetime import datetime, timezone
+
 from src import config
 from src.analytics.cleansheet import clean_sheet_delta, clean_sheet_prob, league_clean_sheet_rate
 from src.analytics.defcon_xp import defcon_magnifier, defcon_points_per_match
 from src.analytics.fdr import _view
 from src.analytics.form import blend_form, form_rate
 from src.analytics.gw_form import team_xgc90
-from src.analytics.minutes import is_unavailable, minutes_weight_from_history
+from src.analytics.minutes import chance_factor, is_unavailable, minutes_weight_from_history
 
 _K = 0.10   # fixture weighting: ±20% at the extremes (ADR-006)
 _BASELINE_SEASONS = 3    # multi-season look-back for the xP baseline (ADR-028)
@@ -190,6 +192,87 @@ def _difficulties_by_team_gw(upcoming, source: str, horizon_events) -> dict:
     return by_team_gw
 
 
+def _first_kickoff_by_gw(upcoming) -> dict:
+    """`{gameweek → earliest kickoff}` as an aware datetime, skipping fixtures with no time yet."""
+    out: dict = {}
+    for f in upcoming or []:
+        ev, raw = _get(f, "event"), _get(f, "kickoff_time")
+        if ev is None or not raw:
+            continue
+        try:
+            when = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        if ev not in out or when < out[ev]:
+            out[ev] = when
+    return out
+
+
+def _flag_reach(gw_kickoff, now, days):
+    """`reach(gw) → bool`: is this gameweek close enough for an availability flag to be evidence about it?
+
+    ⭐ **Measured in days, which is the whole of ADR-206 §3.** An international break needs no concept of its
+    own — GW6 kicks off 19 days after GW5, so it simply falls outside the window.
+
+    ⚠️ **Unknown kickoff → True (still in reach).** A fixture with no time yet is most often the *next* one,
+    and reading "we don't know when" as "far away" would quietly un-flag a player before a match that might be
+    tomorrow. ⭐ *When a guard's input is missing, fail toward the cautious reading, not the convenient one.*
+    """
+    now = now or datetime.now(timezone.utc)
+    if isinstance(now, str):
+        now = datetime.fromisoformat(now.replace("Z", "+00:00"))
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    def reach(gw) -> bool:
+        when = gw_kickoff.get(gw)
+        return True if when is None else (when - now).days <= days
+    return reach
+
+
+def _rate_tier(p, ppg, code, weight, baseline_by_code, history_by_code, form_by_code, form_weight):
+    """`(rate, weight, applied_weight, rate_source)` for one player at one minutes-weight regime.
+
+    Extracted from `player_xp`'s loop so it can be evaluated **twice** — once with the availability discount
+    and once without (ADR-206 §2). Doing it this way rather than scaling the finished number is not fussiness:
+    the `cold_start` tier carries the weight *inside* its rate, non-linearly, so dividing the output by the
+    chance factor would be wrong for exactly the players who have least evidence.
+
+    Rate tiers (ADR-028/040/124): a trusted ≥900-min baseline, else a low-evidence shrunk fallback (so a cameo
+    can't project like a star), else the cold-start blend.
+    """
+    applied_weight = weight
+    baseline = baseline_by_code.get(code)
+    if baseline is not None:
+        rate, rate_source = baseline, "hist"
+    else:
+        fb = fallback_rate(history_by_code.get(code, []))
+        if fb is not None:
+            rate, rate_source = fb, "fallback"
+        else:
+            # No history at all: shrink this season's points-per-game toward FPL's `ep_next` by how many
+            # minutes back it (ADR-124). The blend carries the minutes weight on its `ppg` term, so the
+            # outer weight must not apply it a second time — same guard ADR-104 already used for the
+            # zero-evidence end of this curve, which this branch subsumes.
+            _mins, _ep = _get(p, "minutes"), _get(p, "ep_next")
+            rate = cold_start_rate(ppg, _ep, _mins, weight)
+            rate_source = "cold_start"
+            # Report the weight that actually landed: the blend discounts its `ppg` term only, so the
+            # effective discount is weighted ÷ unweighted (1.0 when there is nothing to discount). Both
+            # ends still read as they did before — 1.0 at zero evidence (ADR-104), `weight` at full.
+            _unweighted = cold_start_rate(ppg, _ep, _mins, 1.0)
+            applied_weight = (rate / _unweighted) if _unweighted else 1.0
+            weight = 1.0                 # the weight is inside `rate` now — don't apply it twice
+    # In-season form blend (ADR-060) — DORMANT: form_weight 0 (default) or no per-GW form for this player
+    # ⇒ rate unchanged, so xP is identical today (the ADR-041 invariant holds).
+    fr = form_by_code.get(code)
+    if fr is not None and form_weight and rate is not None:
+        rate = blend_form(rate, fr[0], fr[1], form_weight)
+    return rate, weight, applied_weight, rate_source
+
+
 def _status_is_active(p) -> bool:
     """Can this player feature at all? (ADR-206, replacing ADR-006's binary)
 
@@ -217,7 +300,8 @@ def _status_is_active(p) -> bool:
 
 def player_xp(
     players, upcoming, source: str = "fpl", horizon: int = 1, baseline_by_code=None,
-    is_available=None, minutes_weight=None, history_by_code=None,
+    is_available=None, minutes_weight=None, history_by_code=None, now=None,
+    flag_horizon_days: int = config.FLAG_HORIZON_DAYS,
     form_by_code=None, form_weight: float = 0.0,
     defcon_weight: float = 0.0, clean_sheet_weight: float = 0.0, clean_sheet_rates=None,
 ) -> list[dict]:
@@ -240,6 +324,9 @@ def player_xp(
     absent (the raw `xp` view), xP is unchanged; the decision layer passes it default-on.
     """
     horizon_events = _horizon_gameweeks(upcoming, horizon)
+    # ADR-206 §3 — earliest kickoff per gameweek, so a flag's reach is measured in days.
+    gw_kickoff = _first_kickoff_by_gw(upcoming)
+    reach = _flag_reach(gw_kickoff, now, flag_horizon_days)
     diff_by_team_gw = _difficulties_by_team_gw(upcoming, source, horizon_events)
     baseline_by_code = baseline_by_code or {}
     history_by_code = history_by_code or {}
@@ -256,36 +343,16 @@ def player_xp(
         # xMins v0 (ADR-038): scale by expected playing time; 1.0 (unchanged) without the hook. Computed up here
         # because the cold-start blend needs it for one of its two terms (ADR-124).
         weight = minutes_weight(p) if minutes_weight is not None else 1.0
-        applied_weight = weight          # what actually landed on the rate, for display (see the blend below)
-        # Rate tiers (ADR-028/040/124): a trusted ≥900-min baseline, else a low-evidence shrunk
-        # fallback (so a cameo can't project like a star), else the cold-start blend.
-        baseline = baseline_by_code.get(code)
-        if baseline is not None:
-            rate, rate_source = baseline, "hist"
-        else:
-            fb = fallback_rate(history_by_code.get(code, []))
-            if fb is not None:
-                rate, rate_source = fb, "fallback"
-            else:
-                # No history at all: shrink this season's points-per-game toward FPL's `ep_next` by how many
-                # minutes back it (ADR-124). The blend carries the minutes weight on its `ppg` term, so the
-                # outer weight below must not apply it a second time — same guard ADR-104 already used for the
-                # zero-evidence end of this curve, which this branch subsumes.
-                _mins, _ep = _get(p, "minutes"), _get(p, "ep_next")
-                rate = cold_start_rate(ppg, _ep, _mins, weight)
-                rate_source = "cold_start"
-                # Report the weight that actually landed: the blend discounts its `ppg` term only, so the
-                # effective discount is weighted ÷ unweighted (1.0 when there is nothing to discount). Both
-                # ends still read as they did before — 1.0 at zero evidence (ADR-104), `weight` at full.
-                _unweighted = cold_start_rate(ppg, _ep, _mins, 1.0)
-                applied_weight = (rate / _unweighted) if _unweighted else 1.0
-                weight = 1.0                 # the weight is inside `rate` now — don't apply it twice
-        # In-season form blend (ADR-060) — DORMANT: form_weight 0 (default) or no per-GW form for
-        # this player ⇒ rate unchanged, so xP is identical today (the ADR-041 invariant holds). At
-        # GW1, form_by_code is populated and form_weight > 0 nudges the rate toward recent form.
-        fr = form_by_code.get(code)
-        if fr is not None and form_weight and rate is not None:
-            rate = blend_form(rate, fr[0], fr[1], form_weight)
+        rate, weight, applied_weight, rate_source = _rate_tier(
+            p, ppg, code, weight, baseline_by_code, history_by_code, form_by_code, form_weight)
+
+        # ADR-206 §2/§3 — a doubt is evidence about the matches it was published for, not about November.
+        # `far` is the same projection with the availability discount removed, used for gameweeks the flag
+        # cannot reach. Identical to `near` for everyone unflagged, so this is a no-op for 636 of 659 players.
+        far = None
+        if minutes_weight is not None and 0.0 < chance_factor(p) < 1.0:
+            far = _rate_tier(p, ppg, code, minutes_weight(p) / chance_factor(p),
+                             baseline_by_code, history_by_code, form_by_code, form_weight)
         # 🚫 A set-piece rate bonus sat here (ADR-096) and was removed as unmeasurable (ADR-190). It could
         # only ever apply off the `hist` tier — 9 players, fixed for the season — which is both why it was
         # correct and why no whole-board metric could ever score it. Duty is still *shown* (crowd.SET_PIECES).
@@ -302,8 +369,16 @@ def player_xp(
         else:
             # Per-GW xP unrounded, so the total is exactly today's number (ADR-032);
             # per-GW cells are rounded only for display. The minutes weight scales both.
+            # ADR-206 §2/§3 — pick the regime per gameweek: discounted where the flag is evidence,
+            # undiscounted beyond its reach. `far is None` for everyone unflagged → `regime` is constant →
+            # byte-identical to before (the invariance every guarded change here is held to).
+            def regime(gw, _rate=rate, _weight=weight, _far=far):
+                if _far is not None and not reach(gw):
+                    return _far[0], _far[1]
+                return _rate, _weight
+
             unrounded = {
-                gw: weight * rate * sum(_multiplier(d) for d in gw_map.get(gw, []))
+                gw: regime(gw)[1] * regime(gw)[0] * sum(_multiplier(d) for d in gw_map.get(gw, []))
                 for gw in horizon_events
             }
             # DefCon fixture magnifier (ADR-097) — a DELTA that re-weights the DefCon points already in the
@@ -311,7 +386,7 @@ def player_xp(
             # unchanged (invariance), no double-count. Folded into by_gameweek so it still sums to xp (ADR-032).
             defcon_pm = defcon_points_per_match(p)
             defcon_by_gw = {
-                gw: weight * defcon_weight * defcon_pm
+                gw: regime(gw)[1] * defcon_weight * defcon_pm
                     * sum(defcon_magnifier(d) - 1.0 for d in gw_map.get(gw, []))
                 for gw in horizon_events
             }
@@ -321,7 +396,7 @@ def player_xp(
             # cell 0 → xp unchanged (the ADR-041 invariant every dormant weight is held to).
             cs_pm = clean_sheet_delta(p, (clean_sheet_rates or {}).get(p["team"]), league_cs)
             cs_by_gw = {
-                gw: weight * clean_sheet_weight * cs_pm * len(gw_map.get(gw, []))
+                gw: regime(gw)[1] * clean_sheet_weight * cs_pm * len(gw_map.get(gw, []))
                 for gw in horizon_events
             }
             unrounded = {gw: unrounded[gw] + defcon_by_gw[gw] + cs_by_gw[gw] for gw in horizon_events}
@@ -353,7 +428,7 @@ def player_xp(
 
 
 def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", horizon: int = 5,
-                minutes_weighted: bool = True, gw_history_by_code=None) -> list[dict]:
+                minutes_weighted: bool = True, gw_history_by_code=None, now=None) -> list[dict]:
     """The single "decision xP" recipe shared by squad / analyse / transfer / ask (ADR-041).
 
     Assembles the *full* xP the tool acts on: the multi-season historical baseline + the
@@ -379,7 +454,7 @@ def decision_xp(players, upcoming, history_by_code, *, source: str = "fpl", hori
         if (fr := form_rate(rows, k_gameweeks=config.FORM_GAMEWEEKS))[0] is not None
     }
     return player_xp(
-        players, upcoming, source=source, horizon=horizon,
+        players, upcoming, source=source, horizon=horizon, now=now,
         baseline_by_code=baseline_by_code, minutes_weight=weight, history_by_code=history_by_code,
         form_by_code=form_by_code, form_weight=config.FORM_WEIGHT,
         defcon_weight=config.DEFCON_MAGNIFIER_WEIGHT,

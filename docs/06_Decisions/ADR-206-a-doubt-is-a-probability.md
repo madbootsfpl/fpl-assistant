@@ -2,8 +2,8 @@
 
 **Decision ID:** ADR-206
 **Date:** 2026-09-17
-**Status:** ✅ **§1 Accepted — built. §2 and §3 Proposed, deliberately not built.**
-**1842 → 1849 tests, ruff clean. 5 mutants, all red.**
+**Status:** ✅ **§1, §2 and §3 all Accepted — built 2026-09-17.**
+**1842 → 1857 tests, ruff clean. 12 mutants, 11 red + 1 recorded equivalent.**
 **Superseded By / Replaces:** Replaces [ADR-006](./ADR-006-expected-points-v0.md)'s binary availability gate.
 Completes [ADR-038](./ADR-038-expected-minutes-v0.md), whose chance factor has never once been applied.
 Mirror image of [ADR-192](./ADR-192-no-opinion-is-not-full-confidence.md).
@@ -147,18 +147,55 @@ is never neutral.
 
 ---
 
-### 📋 §2 and §3 — Proposed, and not built
+### ✅ §2 and §3 — built the same day, and the curve turned out not to be needed
 
-**§2 — a flag is a fact about now, priced as a fact about the whole horizon.** Even corrected, João Pedro's
-0.75 applies to **GW9 in November**. A doubt about tomorrow should decay toward fit as the horizon extends.
-⚠️ Needs a decay shape **measured, not invented** — ADR-199's rule, and there is no measurement yet.
+**The problem §1 left.** Even corrected, João Pedro's 0.75 applied to **GW9 in November**. A knock reported
+today was pricing a fixture seven weeks away.
 
-**§3 — fixture gaps are information.** The owner's own point: GW5 kicks off tomorrow and **GW6 is 19 days
-later** (2026-10-10). A knock before a three-week break is a different thing from a knock before a Saturday.
+**The approach changed, and this is the useful part.** The plan was a measured decay curve — and it could not
+be measured: it would need a history of flags against what players went on to do, and ADR-203 only began
+recording that **on the day this was written**. Waiting would have meant a month of known-wrong projections.
 
-⭐ **§3 falls out of §2 for free, if the decay is measured in *days until kickoff* rather than *gameweeks
-ahead*.** Then an international break needs no concept of its own — a 19-day gap simply gives the flag 19 days
-to decay. **Gated on the owner's call**, and on a measurement that does not exist yet.
+⭐⭐ **THE QUESTION WAS NOT "HOW FAST DOES A DOUBT DECAY" BUT "WHAT IS A DOUBT EVIDENCE ABOUT"** — and the
+second one needs no curve at all. FPL publishes `chance_of_playing` about the **upcoming** match; it is a
+*now* field with no "as of" (ADR-203). Applying it five weeks out **states something the source never said**.
+So the discount holds inside the window the flag is evidence for, and beyond it the player reverts to his
+ordinary minutes weight. A declared scope, not an invented decay.
+
+⭐ **§3 then costs nothing, because the reach is measured in DAYS rather than gameweeks.** An international
+break needs no concept of its own: GW6 kicks off **19 days** after GW5, so a flag raised today cannot reach
+it. The same mechanism covers a cup week, a postponement or a rescheduled fixture — none of which anyone has
+to enumerate. ⭐ *A rule expressed in the unit the world actually varies in does not need a special case for
+each way it varies.*
+
+`FLAG_HORIZON_DAYS = 8` — **declared, not measured** (ADR-199's rule, stated rather than hidden), one fixture
+cycle, **with a re-measure date at the GW8 review** when ADR-203's log has a month in it.
+
+#### ⚠️ Why the rate tier is computed twice rather than the answer divided
+
+The obvious implementation is to scale the finished gameweek by `1 / chance`. It is wrong for the
+`cold_start` tier, which carries the minutes weight **inside** its rate and non-linearly (ADR-124) — so the
+naive rescale would be wrong for precisely the players with the least evidence to spare. The tier block was
+extracted into `_rate_tier` and is evaluated under both regimes. A guard pins the non-linearity by asserting
+the far gameweek is **not** the naive rescale.
+
+#### 📊 What it does
+
+| João Pedro, 5 gameweeks | |
+|---|---|
+| before §1 | `{0.0, 0.0, 0.0, 0.0, 0.0}` |
+| after §1 | `{4.3, 4.3, 4.3, 4.3, 3.9}` |
+| **after §2/§3** | **`{4.3, 5.7, 5.7, 5.7, 5.2}`** |
+
+**The recommendation now reads honestly in both directions:** +0.6 over one gameweek, **−2.4 over five.**
+Selling him gains a rounding error this week and costs real points across the horizon — which is what the
+owner said in the first place, and what the model can now say for itself.
+
+The unflagged control is untouched: Havertz `{4.9, 5.3, 4.9, 4.9, 4.4}`, identical before and after.
+
+⚪ **One mutant recorded as equivalent rather than papered over:** widening the flag test from `< 1.0` to
+`<= 1.0` gives unflagged players a "far" regime too — but `weight / 1.0` is byte-identical, so it costs a
+wasted computation for 636 players and changes no number.
 
 ---
 
@@ -169,8 +206,10 @@ they are to play rather than by a binary; the captain picker's workaround become
 of one concept become one.
 
 **Costs / limits:**
-- ⚠️ **This corrects the level and not the shape.** A doubt still applies flatly across five gameweeks, which
-  is §2, and is left visibly open rather than half-solved.
+- ⚠️ **The window is declared, not measured**, and re-measuring it is now a dated item at the GW8 review.
+- ⚠️ **The gate is still not decayed.** An injured player stays 0 for the whole horizon — too pessimistic in
+  its own way, since FPL's return dates live only in free-text `news`. Deliberately out of scope rather than
+  half-fixed, and guarded so the lift cannot leak to him.
 - FPL's `chance_of_playing` is a coarse signal (25/50/75) refreshed at the provider's discretion, and
   ADR-203's log only started today — so its own accuracy is unmeasured. It is better than a binary, which is
   a different claim from being right.

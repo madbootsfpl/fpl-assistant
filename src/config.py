@@ -194,3 +194,18 @@ POSITION_MAP = {
 # the term is re-ranking by club quality rather than adding defensive information — that caveat survives the
 # instrument change, because it was never the thing that was wrong).
 CLEAN_SHEET_WEIGHT = 0.0
+
+# How far forward an availability flag is evidence (ADR-206 §2/§3). FPL publishes `chance_of_playing` about
+# the UPCOMING match — it is a *now* field with no "as of" (ADR-203) — so applying it to a fixture five weeks
+# out states something the source never said. Beyond this window a flagged player reverts to his ordinary
+# minutes weight; within it he keeps the discount.
+#
+# ⚠️ **DECLARED, NOT MEASURED** (ADR-199's rule, stated rather than hidden). It cannot be measured yet: it
+# would need a history of flags against what players went on to do, and ADR-203 only began recording that on
+# 2026-09-17. 8 days is one fixture cycle — the flag covers the match it was published for and the one that
+# may follow in the same week, and nothing further. **Re-measure at the GW8 review**, when the availability log
+# has a month in it.
+#
+# ⭐ Measured in DAYS, not gameweeks, which is what makes an international break need no concept of its own:
+# GW6 kicks off 19 days after GW5, so a flag raised today simply cannot reach it.
+FLAG_HORIZON_DAYS = 8

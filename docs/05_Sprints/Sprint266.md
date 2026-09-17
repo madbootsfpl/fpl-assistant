@@ -119,3 +119,73 @@ shape that must be **measured, not invented**.
 - ✅ **Docs** — ADR-206 + index row, PROJECT_STATUS, this sprint doc
 
 **Next:** the owner's call on §2/§3.
+
+---
+
+# Part 2: §2 and §3, same day — and the curve was never needed
+
+**1849 → 1857 tests. 12 mutants, 11 red + 1 recorded equivalent.**
+
+## The approach changed, and that is the useful part
+
+The plan was a **measured decay curve**. It could not be measured: that needs a history of flags against what
+players went on to do, and ADR-203 only began recording it **on the day this was written**. Waiting meant a
+month of projections known to be wrong.
+
+⭐⭐ **The question was not "how fast does a doubt decay" but "what is a doubt evidence about".** The second
+needs no curve at all. FPL publishes `chance_of_playing` about the **upcoming** match — a *now* field with no
+"as of". Applying it five weeks out **states something the source never said.**
+
+So the discount holds inside the window the flag is evidence for, and beyond it the player reverts to his
+ordinary minutes weight. **A declared scope, not an invented decay.**
+
+## §3 then costs nothing
+
+⭐ **Because the reach is measured in days rather than gameweeks, an international break needs no concept of
+its own.** GW6 kicks off **19 days** after GW5, so a flag raised today cannot reach it. The same mechanism
+handles a cup week, a postponement or a rescheduled fixture — none of which anyone has to enumerate.
+
+⭐ *A rule expressed in the unit the world actually varies in needs no special case for each way it varies.*
+
+`FLAG_HORIZON_DAYS = 8` — one fixture cycle, **declared not measured** (ADR-199's rule), **with a re-measure
+date at the GW8 review** when the availability log has a month in it.
+
+## ⚠️ Why the rate tier is computed twice rather than the answer divided
+
+The obvious implementation scales the finished gameweek by `1 / chance`. It is **wrong for the `cold_start`
+tier**, which carries the minutes weight *inside* its rate and non-linearly (ADR-124) — so the naive rescale
+would be wrong for exactly the players with the least evidence to spare. `_rate_tier` was extracted and is
+evaluated under both regimes, and a guard pins the non-linearity by asserting the far gameweek is **not** the
+rescale.
+
+⚠️ A first version of the headline guard asserted the exact `1 / 0.75` ratio and **failed** — because it had
+landed in `cold_start` by default. The failure was correct behaviour. It now asserts against an **unflagged
+twin**, which says what was actually meant.
+
+## What it does
+
+| João Pedro, 5 gameweeks | |
+|---|---|
+| before §1 | `{0.0, 0.0, 0.0, 0.0, 0.0}` |
+| after §1 | `{4.3, 4.3, 4.3, 4.3, 3.9}` |
+| **after §2/§3** | **`{4.3, 5.7, 5.7, 5.7, 5.2}`** |
+
+**The recommendation now reads honestly in both directions: +0.6 over one gameweek, −2.4 over five.** Selling
+him gains a rounding error this week and costs real points across the horizon — which is what the owner said,
+and what the model can now say for itself.
+
+Unflagged control untouched: Havertz `{4.9, 5.3, 4.9, 4.9, 4.4}`, identical before and after.
+
+⚪ One mutant **recorded as equivalent**: widening the flag test from `< 1.0` to `<= 1.0` gives unflagged
+players a "far" regime too, but `weight / 1.0` is byte-identical — a wasted computation for 636 players and
+no changed number.
+
+## Definition of Done
+
+- ✅ **Tests** — 8 more (`tests/test_flag_horizon.py`); **1857 passed**, ruff clean; 12 mutants, 11 red
+- ✅ **Manual smoke** — live cache at a fixed clock: the discount holds for GW5 (kickoff tomorrow) and lifts
+  for GW6–9 (past the 19-day break); unflagged players byte-identical
+- ✅ **Docs** — ADR-206 updated, index row, `config.py`, PROJECT_STATUS, this sprint doc
+
+**Still open, deliberately:** the *gate* is undecayed — an injured player stays 0 across the horizon, since
+FPL's return dates live only in free-text `news`. Guarded so the lift cannot leak to him.
