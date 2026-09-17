@@ -11,8 +11,12 @@ from src.analytics.transfer_timing import bank_or_use
 from src.ui.gameweek import render_gameweek_plan
 
 
-def _p(pid, name, team, status="a", chance=None):
-    return {"id": pid, "web_name": name, "team": team, "status": status, "chance": chance}
+def _p(pid, name, team, status="a", chance=None, position="MID"):
+    # ⚠️ `position` was missing entirely until ADR-208, because `best_legal_xi` is stubbed in these tests and
+    # nothing else read it — so the fixture modelled less than any real row ever does. The fifth time this
+    # shape has bitten in a month: ⭐ *ask which FIELD the code reads, and whether the fixture can express it.*
+    return {"id": pid, "web_name": name, "team": team, "status": status, "chance": chance,
+            "position": position}
 
 
 def test_gameweek_plan_assembles_captain_lineup_transfer_and_flags(monkeypatch):

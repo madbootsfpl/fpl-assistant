@@ -558,6 +558,31 @@ def gameweek_confidence(captain_confidence_score, n_flags: int) -> int:
 FLAG_COST = 8      # what one flagged player takes off the week's confidence (`gameweek_confidence`)
 
 
+def _flag_action(flag) -> str:
+    """*"Bench or replace him"* — but only when there is a bench worth using (ADR-208).
+
+    ⭐ **The advice assumed an option it never checked.** FPL auto-substitutes a starter who plays 0 minutes
+    with the first legal bench player in his position, so *"bench him"* is only good advice if that player is
+    worth fielding. On the owner's own squad it was **Walle Egeli at 0.2 xP** — benching a doubtful 4.3 to
+    field a 0.2 is not a mitigation, it is the loss.
+
+    ⭐ *An instruction is only as good as the option it assumes you have* — so the option is now stated and
+    the reader decides, rather than the app recommending a door it has not looked behind (ADR-194's posture).
+
+    Three cases, deliberately worded apart:
+    * **not in the XI** → he is already benched; there is nothing to say.
+    * **no same-position cover at all** → "no cover on your bench", which is a *different* problem from a
+      weak one and must not be flattened into it.
+    * **cover exists** → name him and his number, and let the gap speak.
+    """
+    if not flag.get("starting", True):
+        return "already on your bench"
+    cover = flag.get("cover")
+    if cover is None:
+        return "replace him — you have no cover on your bench"
+    return f"bench or replace him — benching him fields {cover['name']} ({cover['xp']} xP)"
+
+
 def confidence_levers(captain_score, flags) -> dict | None:
     """What is holding this week's confidence down, and which parts you can do something about (ADR-198).
 
@@ -586,7 +611,7 @@ def confidence_levers(captain_score, flags) -> dict | None:
         return None
     flags = list(flags or [])
     score = gameweek_confidence(captain_score, len(flags))
-    levers = [{"what": f"{f['web_name']} is flagged — bench or replace him",
+    levers = [{"what": f"{f['web_name']} is flagged — {_flag_action(f)}",
                "worth": FLAG_COST, "kind": "action"} for f in flags]
     return {
         "score": score,

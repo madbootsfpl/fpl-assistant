@@ -21,6 +21,44 @@ from src.analytics.transfer_timing import affordability_cliff, bank_or_use
 _STATUS_WORD = {"i": "injured", "s": "suspended", "u": "unavailable", "n": "unavailable"}
 
 
+def auto_sub_cover(player, bench, xp_by_id):
+    """Who actually comes on if `player` blanks, and what he is worth (ADR-208).
+
+    ⭐ **The advice *"bench or replace him"* assumes a bench worth using**, and never checked. FPL
+    auto-substitutes a starter who plays 0 minutes with the first legal bench player, so a flagged starter's
+    real exposure is not his own doubt — it is **the doubt times the drop to whoever replaces him**.
+
+    On the owner's own squad the answer was **0.2 xP**: a doubtful forward covered by a forward who projects
+    nothing, so *"bench him"* was advice to field a blank. ⭐ *An instruction is only as good as the option it
+    assumes you have.*
+
+    ⚠️ Same position only, because FPL's auto-sub must keep the formation legal and an XI needs at least one
+    forward and a goalkeeper. A midfielder on the bench is not cover for a forward, however good he is.
+
+    Returns `{"name", "xp"}` for the best same-position bench player, or **None when there is nobody** — which
+    is a different sentence from a poor option and must not be flattened into one.
+    """
+    def pos(row):
+        """A row's position, or None — a `sqlite3.Row` has no `.get`, and a thin row must not crash a plan."""
+        try:
+            return row["position"]
+        except (KeyError, IndexError):
+            return None
+
+    if (want := pos(player)) is None:
+        return None            # ⚠️ unknown position → say nothing. Matching None to None would make every
+                               # bench player "cover", which is worse than silence.
+    # ⚠️ **Cover must be able to play.** FPL's auto-sub skips a bench player who also records 0 minutes, so
+    # an injured or suspended substitute is not cover — he is a second hole. Found by the first smoke run on
+    # the owner's real squad, which reported *"benching E.Le Fée fields Foden (0.0 xP)"* about a **suspended**
+    # player. ⭐ *A fallback that shares the failure it is covering for is not a fallback.*
+    same = [p for p in bench if pos(p) == want and not is_unavailable(p)]
+    if not same:
+        return None
+    best = max(same, key=lambda p: xp_by_id.get(p["id"], 0.0))
+    return {"name": best["web_name"], "xp": round(xp_by_id.get(best["id"], 0.0), 1)}
+
+
 def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                   baseline_by_code=None, minutes_weight=None, history_by_code=None,
                   bench_ids=(), bank: float = 0.0, horizon: int = 5, today=None, events_by_id=None,
@@ -213,12 +251,20 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                        else "nothing in the data says why")
             flags.append({"web_name": p["web_name"], "team": p["team"],
                           "reason": f"{abs(exodus['net']):,} sold him this week — {because}",
-                          "chance": None})
+                          "chance": None,
+                          "cover": (auto_sub_cover(p, lineup["bench"], lineup_xp)
+                                    if p["id"] in optimal else None),
+                          "starting": p["id"] in optimal})
             continue
         else:
             continue
+        # ADR-208 — what benching him actually gets you. Only for a starter: a flagged player already on
+        # the bench costs the XI nothing, so "your cover is…" would be answering a question nobody has.
         flags.append({"web_name": p["web_name"], "team": p["team"],
-                      "reason": reason, "chance": p["chance"]})
+                      "reason": reason, "chance": p["chance"],
+                      "cover": (auto_sub_cover(p, lineup["bench"], lineup_xp)
+                                if p["id"] in optimal else None),
+                      "starting": p["id"] in optimal})
 
     return {"captain": captain, "captain_ranked": picks, "lineup": lineup,
             "transfer": transfer, "transfers": transfers, "free": int(free if free is not None else 1), "bank": bank,
