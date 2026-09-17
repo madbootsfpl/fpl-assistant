@@ -97,3 +97,28 @@ out to be 13-vs-13, not 16-vs-7) and ADR-184 (a retired claim surviving on six s
   consequences, the Roadmap's owner-blocker row, the Roadmap's Phase 1 gate), PROJECT_STATUS, this sprint doc
 
 **Next:** unchanged — nothing on the ML track until GW8. The archive is now available when Phase 1 needs it.
+
+---
+
+## ⏸️ Same day: donations parked
+
+The owner's call — *"let's pause on donations, we can hold to see if it becomes a reality."*
+
+**Checked before parking that nothing was already live**: no `FUNDING.yml`, no sponsor or donate link in the
+app or at `~/madboots-site`. (The one grep hit was the word *stripes* in the pitch CSS — ⭐ *a word-match is
+not a fact-match*, the same shape as ADR-184's sweep.)
+
+**The trigger is the actual cause, not a date.** The original framing was funding *for scale*, and scale
+currently costs nothing: Streamlit Community Cloud's free tier, a 50-user cap, no paid dependency.
+⭐ **A funding question with no cost behind it is a question about identity, not about money** — and those get
+answered better by the thing happening than by deciding in advance. It re-opens when running the app stops
+being free, or when someone offers unprompted.
+
+**What does not unwind:** AGPL-3.0, `NOTICE` and `CONTRIBUTING`. Those are about the code being shared back
+and about how people contribute — neither was a money decision, and neither becomes wrong if no money ever
+arrives.
+
+**What it does change:** the FPL-terms question from ADR-205 was **elevated** by donations, not created by
+them. Parking returns it to the posture it has always had — a personal project reading a public API, which is
+what every refresh has done since day one. ⭐ *It goes back to being a thing to know rather than a thing to
+resolve*, and re-opens automatically with the trigger.

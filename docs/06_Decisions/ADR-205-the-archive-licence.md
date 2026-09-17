@@ -93,6 +93,12 @@ I am not qualified to answer that, and it is worth a view from someone who is if
 can say is what it is *not*: it is not a blocker on the archive specifically, and treating it as one confuses
 a decision about the project with a decision about a dependency.
 
+🔧 **Updated the same day — the owner parked donations** (*"we can hold to see if it becomes a reality"*), with
+a trigger recorded in the Roadmap. That settles this paragraph too: the FPL-terms question was **elevated** by
+donations, not created by them, so parking returns it to the posture it has always had — a personal project
+reading a public API, exactly as every refresh has done since day one. ⭐ *It goes back to being a thing to
+know rather than a thing to resolve*, and it re-opens automatically if the donations trigger fires.
+
 ---
 
 ### 📊 Consequences
