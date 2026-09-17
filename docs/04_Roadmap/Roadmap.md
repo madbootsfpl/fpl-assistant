@@ -72,7 +72,7 @@ list on sight, not on suspicion.
 | ~~**Squad Lab icon**~~ | ✅ **ALREADY DONE — 2026-08-12, commit `0898efc`** *("Squad Lab: lab-motif icon (🧪)")*. The header has read **🧪 Squad Lab** for three weeks; `🥾` appears nowhere in `src/`. ⚠️ **It never needed the art it was listed as blocked on** — 🧪 is an emoji, not a PNG — so this sat on *"Needs you"* for **21 days** waiting for something nobody had to make. Found 2026-09-02 when the owner asked to build it. |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
 | The **3** uncommitted files in your tree | 2 sprint lesson docs (Sprint57, Sprint62) + `spikes/015-soccerdata/compare_npxg.py`, kept out of every commit deliberately. **Was 6** — `Sprint61_Lessons_Learnt.md` and the two `.jpeg`s it embeds were committed 2026-09-02, because the images were the owner's own design references and untracked, so git held no copy and the doc's links pointed at files on one machine. ⚠️ An earlier version of this row called them *"mentioned nowhere"* — inferred from filenames that look like camera output, never grepped for. |
-| ⚠️ **Resolve the community archive's licence** *(blocks ML Phase 1)* | `vaastav/Fantasy-Premier-League` — 11 seasons of per-match FPL data — reads **NOASSERTION**, which is the *absence* of a grant, not a permissive one. I cannot resolve it: it needs you to either open an issue asking the maintainer to state a licence, or decide the project proceeds without it. ⚠️ **It matters more than it did** — the repo is now **AGPL-3.0** and there is an open question about taking donations, so importing data with no stated terms is no longer a private choice. Until it is answered, ML Phase 1 trains only on what we have stored since [ADR-201](../06_Decisions/ADR-201-a-season-is-part-of-the-identity.md) — one season, accruing at one gameweek a week. |
+| ~~⚠️ **Resolve the community archive's licence**~~ | ✅ **RESOLVED 2026-09-17 by reading the file — ADR-205.** The repo **is MIT-licensed**; GitHub reports `NOASSERTION` only because two sentences about data ownership are appended to the template, which breaks its auto-detector. ⭐⭐ **I READ A DETECTOR'S FAILURE TO CLASSIFY AS THE AUTHOR'S FAILURE TO GRANT** — `NOASSERTION` means *"this tool could not determine a licence"*, not *"no licence was asserted"*, and the word looks like it means the second thing. It blocked Phase 1 for **a month** and cost **one HTTP request** to dissolve. The real question — Vaastav cannot license data he does not own — splits cleanly: **FPL-derived files are the same source the live app already calls every refresh** (the archive changes the *age* of the data, not its provenance), and **Understat is quarantined in `data/<season>/understat/`** and simply not imported. ⚠️ The obvious leak was tested, not assumed: `expected_*` appears only from **2022-23**, exactly when FPL's own API began serving expected stats — *the column that would have been the leak is the column that proves there isn't one.* **Nothing to ask anyone.** ⚠️ What remains is **FPL's own terms**, which already apply to the live app and are a question about the project's posture under AGPL + donations, not about this dependency |
 
 
 ## 🟢 Buildable now — nothing blocking
@@ -690,8 +690,13 @@ before starting**: the model was not the first problem. Four phases, each with i
     dominates.
   - 📅 **The GW8 rule is pre-registered in ADR-204, written before the data exists.** If neither clause is met,
     **Phase 1 is declined for the season.**
-  - ⚠️ **The 11-season community archive is GATED ON LICENSING.** `vaastav/Fantasy-Premier-League` reads
-    **NOASSERTION** — the absence of a grant, not a permissive one. **Needs the owner, or a maintainer's reply.**
+  - ✅ **The 11-season community archive is CLEARED (ADR-205)** — the repo is **MIT**, and `NOASSERTION` was a
+    detector failing to classify, not an author failing to grant. Scoped to the FPL-derived files
+    (`gws/merged_gw.csv` + `player_idlist.csv`, **2016-17 → 2026-27**), whose columns are a near-exact match for
+    `player_history`. ⚠️ **Not identical to our own data**: the maintainer flags `xP` as scraped after the
+    gameweek on an undocumented cadence, pre-2022/23 seasons carry **no expected stats at all**, and
+    ⭐ *eleven seasons of data is not eleven seasons of the same game* — FPL's scoring rules changed across it.
+    Cross-check the overlap against our stored 2026/27 rows before trusting either.
 
 - ✅ **Availability is now recorded (ADR-203, done 2026-09-17).** ADR-202's one uncloseable leak — the model
   scored with **today's** injury news applied retrospectively, 195 of 659 players flagged — is closed for every

@@ -109,9 +109,12 @@ training set Phase 1 needs. Existing caches migrate on next open with no manual 
 **Costs / limits:**
 - ⚠️ **This preserves the future, not the past.** Whatever earlier seasons were overwritten before today
   are gone; the only per-match data that exists is from GW1 2026/27 forward.
-- The archive import (11 seasons of community-collected per-match data) is still **gated on licensing** —
-  `vaastav/Fantasy-Premier-League` reads **NOASSERTION**, which is not a grant of rights, and that matters
-  more now the project is AGPL with a donations question open.
+- ~~The archive import (11 seasons of community-collected per-match data) is still **gated on licensing** —
+  `vaastav/Fantasy-Premier-League` reads **NOASSERTION**, which is not a grant of rights.~~
+  🔧 **WRONG, corrected 2026-09-17 by [ADR-205](./ADR-205-the-archive-licence.md).** The repo **is MIT**;
+  `NOASSERTION` is GitHub's detector failing to classify a template with two extra sentences appended, not the
+  author failing to grant. ⭐ *A metadata field about a document is not the document* — reading the file took
+  one HTTP request and this claim blocked Phase 1 for a month.
 - One season of stored history is not a training set. Phase 0b (the minutes baseline) is next, and it
   measures the model we already have so that anything learned later has a number to beat.
 
