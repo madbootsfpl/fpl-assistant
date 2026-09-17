@@ -41,6 +41,7 @@ from src.analytics import (
     rank_players,
     replace_dead,
     resolve_players,
+    route_to_player,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
@@ -697,6 +698,77 @@ def cmd_chips(args) -> None:
         store.close()
 
 
+def cmd_route(args) -> None:
+    """*"What would it take to field X?"* — the routes to a named player (ADR-207).
+
+    The mirror of `transfer`: that one asks *"who should I sell?"*, this one fixes the player you want and
+    solves for **which of your fifteen to sell**. Two different questions, and the app only answered one.
+    """
+    store = Storage()
+    try:
+        squad = SquadStore().load(args.squad)
+        if squad is None:
+            names = SquadStore().names()
+            hint = f" Saved: {', '.join(names)}." if names else " None saved yet."
+            print(f"No saved squad '{args.squad}'.{hint}")
+            return
+
+        players = store.get_players()
+        if not players:
+            print("No players — run `refresh` first.")
+            return
+        matches = [p for p in players if args.player.lower() in (p["web_name"] or "").lower()]
+        if not matches:
+            print(f"No player matching '{args.player}'.")
+            return
+        if len(matches) > 1:
+            exact = [p for p in matches if (p["web_name"] or "").lower() == args.player.lower()]
+            if len(exact) != 1:
+                print(f"'{args.player}' matches {len(matches)}: "
+                      f"{', '.join(p['web_name'] for p in matches[:8])}. Be more specific.")
+                return
+            matches = exact
+        target = matches[0]
+
+        owned_ids = set(squad["player_ids"])
+        owned = [p for p in players if p["id"] in owned_ids]
+        if not owned:
+            print(f"Squad '{args.squad}' has no current players.")
+            return
+
+        ranked = decision_xp(
+            players, store.get_upcoming_fixtures(), store.get_history_by_code(),
+            horizon=args.next, gw_history_by_code=store.get_gw_history_by_code(),
+        )
+        xp_by_id = {r["id"]: r["xp"] for r in ranked}
+        res = route_to_player(target, owned, xp_by_id, bank=args.bank)
+
+        head = (f"{target['web_name']} ({target['team']}, {target['position']}) — £{target['price']}m, "
+                f"xP {xp_by_id.get(target['id'], 0.0)} over {args.next} GWs")
+        print(f"\nWhat would it take to field {head}?\n")
+        if res["owned"]:
+            print(f"  You already own him in '{args.squad}'.")
+            return
+        if not res["routes"] and not res["blocked"]:
+            print(f"  No legal route — you hold no {target['position']} you could sell, "
+                  f"or the 3-per-club limit blocks it.")
+        for r in res["routes"]:
+            out = r["out"]
+            sign = "costs" if r["gain"] < 0 else "gains"
+            print(f"  sell {out['web_name']:<18} £{out['price']:<5}  →  {sign} "
+                  f"{abs(r['gain']):>5} XI xP over {args.next} GWs · £{r['bank_after']}m left")
+        # ⚠️ A blocked route is information (ADR-186's "worth saving for"), not an absence — printing only
+        # what cleared tells the reader about one option and hides the near-misses.
+        for b in res["blocked"]:
+            print(f"  ✗    {b['out']['web_name']:<18} £{b['out']['price']:<5}  —  short by "
+                  f"£{b['short_by']}m")
+        if res["routes"] and res["routes"][0]["gain"] < 0:
+            print("\n  Every route costs you points. That is the answer to the question, not a refusal — "
+                  "you can field him, and this is the price.")
+    finally:
+        store.close()
+
+
 def cmd_transfer(args) -> None:
     """Suggest the best single transfers for a saved squad (ADR-030)."""
     store = Storage()
@@ -1074,6 +1146,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Don't weight xP by expected minutes (xMins v0) — show the raw 'assumes 90' number",
     )
     p_transfer.set_defaults(handler=cmd_transfer)
+
+    p_route = sub.add_parser(
+        "route", help='"What would it take to field X?" — the routes to a named player',
+    )
+    p_route.add_argument("player", help="The player you want (part of his name is enough)")
+    p_route.add_argument("--squad", required=True, help="The saved squad to route from")
+    p_route.add_argument("--bank", type=float, default=0.0, help="Money in the bank, £m (default 0)")
+    p_route.add_argument("--next", type=int, default=5,
+                         help="Horizon: compare xP over the next N gameweeks (default 5)")
+    p_route.set_defaults(handler=cmd_route)
 
     p_analyse = sub.add_parser(
         "analyse", help="Grade a saved squad's health over the next N gameweeks"

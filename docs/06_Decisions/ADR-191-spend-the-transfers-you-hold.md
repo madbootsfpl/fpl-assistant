@@ -3,7 +3,7 @@
 **Decision ID:** ADR-191
 **Date:** 2026-09-14
 **Status:** ✅ **§1 Accepted — built** (Sprint 256, 2026-09-14). **1758 → 1763 tests, ruff clean.**
-**§2 and §3 remain gated.** Three gaps deliberately split, because their evidence is at very different
+**§3 BUILT 2026-09-17 ([ADR-207](./ADR-207-what-would-it-take.md)) — §2 remains gated.** Three gaps deliberately split, because their evidence is at very different
 strengths: §1 measured and certain, §2 measured and ambiguous, §3 unmeasured.
 
 ⭐ **The build was smaller than the proposal, and for an instructive reason — see §🛠.**
@@ -235,7 +235,7 @@ Six mutants; **two survived the first sweep**, and both were fixture faults rath
         tabs away.
 * **Action Items (gated):**
   - [ ] **§2** re-measure joint pairs on realistic squads before building any search
-  - [ ] **§3** design target-driven planning (*"what would it take to field X?"*)
+  - [x] **§3** design target-driven planning — **built as [ADR-207](./ADR-207-what-would-it-take.md)**, after the owner asked for it a *second* time unprompted (*"get another forward in that is scoring rather than replacing with Havertz"*, 2026-09-17). ⭐ *In this project a repeated unprompted request has been a reliable signal.*
 
 #### ✅ Always
 - [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**

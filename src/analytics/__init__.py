@@ -102,6 +102,7 @@ from src.analytics.targets import target_by_fixtures
 from src.analytics.team_dna import TeamDNA, team_dna, team_dna_all, team_insights
 from src.analytics.transfer import (
     replace_dead,
+    route_to_player,
     suggest_transfer_plan,
     suggest_transfers,
 )
@@ -210,6 +211,7 @@ __all__ = [
     "suggest_transfer_plan",
     "dead_slots",
     "replace_dead",
+    "route_to_player",
     "suggest_transfers",
     "team_fdr",
     "team_schedule",

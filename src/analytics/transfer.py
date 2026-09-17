@@ -294,3 +294,69 @@ def replace_dead(
             "reported": leaving,
         })
     return out_rows
+
+
+def route_to_player(target, owned, xp_by_id, *, bank: float = 0.0, max_per_club: int = MAX_PER_CLUB,
+                    reported_out=None) -> dict:
+    """*"What would it take to field X?"* — every legal one-transfer route to owning `target` (ADR-207).
+
+    ⭐ **The inversion is the feature.** `suggest_transfers` above iterates the players you **own** and finds
+    each one's best replacement, so a *named* incoming player can only be reached by luck. This fixes the
+    incoming player and searches the **route** — which of your fifteen you sell. Two different questions, and
+    the owner has asked the second one twice unprompted:
+
+    > *"Is Haaland a better option than Bruno and figure the moves needed to select him."*
+    > *"I would use my transfers to see if I can get another forward in that is scoring."*
+
+    FPL transfers are one-for-one and same-position, so the candidates are your players in `target`'s
+    position. They differ in two ways that both matter: **what they were contributing**, and **what selling
+    them leaves in the bank**.
+
+    ⭐ **Ranked by the effect on the starting XI, never by which sale is cheapest.** ADR-191 §2 measured the
+    cost of getting that wrong from the other direction: on a real squad the best pair routed *the same
+    incoming player through a different sale*, because that was the sale that left enough money for a second
+    move.
+
+    ⭐ **A blocked route is information, not an absence.** *"Sell João Pedro and you are £0.6m short"* is
+    exactly ADR-186's *worth saving for*, and dropping it silently would tell the reader only about the route
+    that happened to clear.
+
+    Returns `{"owned", "routes", "blocked", "shortfall"}`. **`routes` includes negative-gain routes**,
+    least-bad first: a target-driven question is one the reader has already half-answered, so the job is to
+    **price** the wish, not to grant or refuse it. ⭐ *Telling someone what their idea costs is more use than
+    telling them it is a bad idea* (ADR-194's handing-back, in a new place).
+    """
+    reported_out = reported_out or {}
+    rank_xp = _selection_xp(xp_by_id, reported_out)
+    if any(p["id"] == target["id"] for p in owned):
+        return {"owned": True, "routes": [], "blocked": [], "shortfall": None}
+
+    club_counts: dict = {}
+    for p in owned:
+        club_counts[p["team"]] = club_counts.get(p["team"], 0) + 1
+
+    base = best_xi_points(owned, rank_xp)
+    routes, blocked = [], []
+    for out in owned:
+        if out["position"] != target["position"] or out["id"] == target["id"]:
+            continue
+        # The club limit is checked AFTER the swap: selling a clubmate of the target frees a slot, so this is
+        # not a property of the squad as it stands.
+        after = dict(club_counts)
+        after[out["team"]] = after[out["team"]] - 1
+        if after.get(target["team"], 0) + 1 > max_per_club:
+            continue
+        budget = round(out["price"] + bank, 1)
+        if budget < target["price"]:
+            blocked.append({"out": out, "short_by": round(target["price"] - budget, 1)})
+            continue
+        after_squad = [p for p in owned if p["id"] != out["id"]] + [target]
+        routes.append({
+            "out": out,
+            "gain": round(best_xi_points(after_squad, rank_xp) - base, 1),
+            "bank_after": round(budget - target["price"], 1),
+        })
+    routes.sort(key=lambda r: -r["gain"])
+    blocked.sort(key=lambda b: b["short_by"])
+    return {"owned": False, "routes": routes, "blocked": blocked,
+            "shortfall": blocked[0]["short_by"] if blocked else None}
