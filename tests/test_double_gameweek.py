@@ -1,3 +1,4 @@
+
 """A double gameweek, end to end (ADR-129).
 
 `element-summary` sends one entry per **fixture**, so in a double gameweek a player has two entries sharing a
@@ -7,6 +8,8 @@ double rather than after it; these keep it fixed.
 """
 
 import sqlite3
+
+import pytest
 
 from src.analytics.gw_form import form_dots, stat_series
 from src.models import PlayerGameweek
@@ -80,6 +83,7 @@ def _pk(store):
     return {r[1] for r in store.conn.execute("PRAGMA table_info(player_history)") if r[5]}
 
 
+@pytest.mark.sqlite_only
 def test_an_old_database_is_rekeyed_without_losing_rows(tmp_path):
     path = tmp_path / "old.db"
     _old_schema_db(path)
@@ -93,6 +97,7 @@ def test_an_old_database_is_rekeyed_without_losing_rows(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_the_rekey_is_idempotent(tmp_path):
     path = tmp_path / "old.db"
     _old_schema_db(path)
@@ -102,6 +107,7 @@ def test_the_rekey_is_idempotent(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_the_rekey_preserves_the_widened_columns(tmp_path):
     """_rekey_history runs after _migrate, so the copy sees every column the old table just gained."""
     path = tmp_path / "old.db"

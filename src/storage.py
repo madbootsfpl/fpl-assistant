@@ -1,4 +1,4 @@
-"""Local SQLite storage for FPL data.
+"""Storage for FPL data — SQLite locally, Postgres for the autonomous pipeline (ADR-211).
 
 This is the project's storage layer. It knows about the database but nothing
 about HTTP or how data is displayed (Architecture §3, §6). Rows are upserted on
@@ -10,7 +10,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src import config
+from src import config, db
 from src.fpl_rules import DEADLINE_LEAD
 from src.models import Fixture, Player, PlayerGameweek, PlayerSeason, Team
 
@@ -438,19 +438,25 @@ ON CONFLICT(id) DO UPDATE SET
 
 
 class Storage:
-    """A thin wrapper around the SQLite database."""
+    """The storage layer — SQLite by default, Postgres when handed a DSN (ADR-211).
+
+    One body of SQL, two backends. `db_path` takes either a file path or a `postgresql://…` URL; `src/db.py`
+    is the only module that knows which is which. Nothing above this class changes, because the DSN travels in
+    the argument every call site already passes.
+    """
 
     def __init__(self, db_path: str = config.DB_PATH):
-        # Make sure the parent folder exists (e.g. data/) before connecting.
-        if db_path != ":memory:":
+        # Make sure the parent folder exists (e.g. data/) before connecting — a file path only.
+        if not db.is_postgres(db_path) and db_path != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self.conn = sqlite3.connect(db_path)
-        # SQLite has foreign keys OFF by default, per connection — turn them on so
-        # a player/fixture can't reference a team that doesn't exist.
-        self.conn.execute("PRAGMA foreign_keys = ON")
-        # Return rows that can be indexed by column name, e.g. row["web_name"].
-        self.conn.row_factory = sqlite3.Row
+        self.conn = db.connect(db_path)
+        # ⭐ **Ask the CONNECTION what it is, not the path.** The first version read the path string, and the
+        # Postgres test harness broke it immediately: the suite asks for `:memory:` while `db.connect` is
+        # patched to hand back Postgres, so path and connection disagreed and the SQLite-only migrations ran
+        # against Postgres. ⭐ *A derived fact should be read from the thing it describes* — the path is a
+        # request, the connection is the answer.
+        self.is_postgres = isinstance(self.conn, db.PgConnection)
         self._init_schema()
 
     def _init_schema(self) -> None:
@@ -463,8 +469,18 @@ class Storage:
             self.conn.execute(CREATE_HEADLINE_EVENTS)
             self.conn.execute(CREATE_AVAILABILITY)
             self.conn.execute(CREATE_TRANSFER_FLOW)
-            self._migrate()
-            self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
+            # ⭐ **The two migrations below repair OLD SQLITE FILES, and a Postgres database has no old files.**
+            # `_migrate` adds columns that post-date a table, and `_rekey_history` rebuilds a primary key that
+            # changed in ADR-129 — both exist because a cache on someone's laptop may have been created in
+            # July. A Postgres database is created here, now, from the statements above, so there is no earlier
+            # schema for either to converge from and running them would be answering a question nobody asked.
+            #
+            # ⚠️ **Stated so it is not mistaken for coverage: this is "not applicable", not "handled".** The day
+            # a column is added *after* Postgres is carrying real data, that needs a real migration — and this
+            # skip is where someone will look for one. See ADR-211's staging.
+            if not self.is_postgres:
+                self._migrate()
+                self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
 
     def _migrate(self) -> None:
         """Add any columns missing from an older database, table by table.
@@ -801,7 +817,13 @@ class Storage:
         clauses: list[str] = []
         params: list = []
         if name:
-            clauses.append("p.web_name LIKE ?")  # LIKE is case-insensitive for names
+            # ⚠️ **`LIKE` is case-insensitive in SQLite and case-SENSITIVE in Postgres.** The old comment
+            # here said "LIKE is case-insensitive for names" — true of the engine it was written against, and
+            # stated as though it were a property of SQL. On Postgres the same line silently made player
+            # search case-sensitive, so `search haaland` found nobody. ⭐ *Second time today a
+            # case-sensitivity assumption crossed an engine boundary* (see docs/SUPABASE_RLS.md on
+            # `beta_users`). `LOWER()` on both sides is exact on either backend.
+            clauses.append("LOWER(p.web_name) LIKE LOWER(?)")
             params.append(f"%{name}%")
         if position:
             clauses.append("p.position = ?")
@@ -948,7 +970,7 @@ class Storage:
         sql += " ORDER BY seen_at DESC"
         try:
             return list(self.conn.execute(sql, args).fetchall())
-        except sqlite3.OperationalError:      # a snapshot older than this table — degrade, never raise
+        except db.MISSING_TABLE:              # a snapshot older than this table — degrade, never raise
             return []
 
 

@@ -1,3 +1,4 @@
+
 """Per-match history survives a season rollover (ADR-201).
 
 ⚠️ **The bug this prevents is silent, total and unrecoverable.** `player_history` was keyed on
@@ -11,6 +12,8 @@ any model did: ⭐ *a model can be built next winter; the gameweek you failed to
 """
 
 import sqlite3
+
+import pytest
 
 import src.storage as storage_module
 from src.analytics.last_season import season_from_kickoff
@@ -48,6 +51,7 @@ def test_the_season_comes_from_the_match_not_the_clock():
         assert season_from_kickoff(junk) is None, f"{junk!r} must not guess a season"
 
 
+@pytest.mark.sqlite_only
 def test_an_old_database_is_migrated_without_losing_a_row(tmp_path):
     """⚠️ **The backfill has to happen BEFORE `season` joins the key.** Rows written before this migration
     carry `''`, and folding a blank into the primary key would merge every season's GW1 into one row — the

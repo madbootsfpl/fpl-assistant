@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from src import db
 from src.models import Fixture, Player, Team
 from src.storage import Storage
 
@@ -181,6 +182,7 @@ def test_save_teams_stores_and_returns_the_code(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_strength_columns_to_an_old_teams_table(tmp_path):
     db = str(tmp_path / "old.db")
 
@@ -260,6 +262,7 @@ def test_save_players_stores_scout_news_link(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_crowd_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
     # A pre-Sprint-060 database: players table without the crowd-signal columns.
@@ -280,6 +283,7 @@ def test_migration_adds_crowd_columns_to_an_old_players_table(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_xp_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
 
@@ -311,6 +315,7 @@ def test_save_players_stores_expected_goals(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_expected_goals_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
 
@@ -341,6 +346,7 @@ def test_save_players_stores_actual_returns(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_actual_return_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
 
@@ -373,6 +379,7 @@ def test_save_players_stores_defensive_contribution(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_defcon_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
 
@@ -403,6 +410,7 @@ def test_save_players_stores_availability(tmp_path):
     store.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_adds_availability_columns_to_an_old_players_table(tmp_path):
     db = str(tmp_path / "old.db")
 
@@ -426,7 +434,7 @@ def test_migration_adds_availability_columns_to_an_old_players_table(tmp_path):
 def test_foreign_keys_are_enforced(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     # No teams saved, so this player references a team (999) that doesn't exist.
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(db.INTEGRITY_ERROR):
         store.save_players([make_player(id=1, team_id=999)])
     store.close()
 
@@ -444,7 +452,7 @@ def test_fixture_foreign_key_is_enforced(tmp_path):
     store = Storage(db_path=str(tmp_path / "test.db"))
     store.save_teams([make_team()])   # only team 1 exists
     # team_a = 999 doesn't exist, so the fixture's FK is violated.
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(db.INTEGRITY_ERROR):
         store.save_fixtures([make_fixture(id=1, team_h=1, team_a=999)])
     store.close()
 

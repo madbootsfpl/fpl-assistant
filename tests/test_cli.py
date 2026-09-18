@@ -189,6 +189,7 @@ def test_reseed_command_routes_to_its_handler():
     assert args.command == "reseed" and args.handler is cmd_reseed
 
 
+@pytest.mark.sqlite_only
 def test_reseed_refreshes_the_live_cache_then_copies_it_to_the_seed(tmp_path, monkeypatch, capsys):
     # US-219: `reseed` = refresh into fpl.db, then copy fpl.db → seed.db (the one-command deploy update).
     from src import cli, config
@@ -207,6 +208,7 @@ def test_reseed_refreshes_the_live_cache_then_copies_it_to_the_seed(tmp_path, mo
     assert "20 Elo ratings (ClubElo)" in out                     # US-293: reseed reports ClubElo again
 
 
+@pytest.mark.sqlite_only
 def test_reseed_reports_clubelo_kept_last_known_on_a_zero_elo_refresh(tmp_path, monkeypatch, capsys):
     # US-293: when ClubElo is unavailable, refresh returns n_elo=0 → reseed says it kept the last-known Elo.
     from src import cli, config

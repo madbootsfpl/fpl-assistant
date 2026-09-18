@@ -24,6 +24,11 @@ fastapi       # the read-only FastAPI edge over the analytics
 uvicorn       # local dev server (127.0.0.1)
 jinja2        # server-side templates
 
+# Postgres — the autonomous pipeline's destination (ADR-211, Phase 2a). OPTIONAL: `src/db.py` imports it
+# lazily and the error tuples degrade without it, so the CLI, CI and the SQLite path all run with it absent.
+# Installed here because the pipeline and the Postgres half of the test suite need it.
+psycopg[binary]
+
 # Development / testing
 pytest
 httpx         # FastAPI TestClient (web-edge tests; ADR-050)
