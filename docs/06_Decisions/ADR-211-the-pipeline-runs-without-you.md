@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-211
 **Date:** 2026-09-18
-**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stages 2a, 2b and 2c built** — see below. 2d–2f open.
+**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stages 2a–2d built** — see below. 2e (headlines, decided: manual) and 2f (retire the manual path) open.
 **Superseded By / Replaces:** Replaces the manual `reseed` → commit → redeploy path (ADR-053/056) as the way
 data reaches users. Does **not** change any analytics.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -198,7 +198,7 @@ and a live gameweek.**
   - [x] **2a — Postgres `Storage`; SQLite unchanged. 1,905 green on SQLite, 1,892 + 13 skipped on Postgres 17.2, and 0 of 659 xP values differ between backends**
   - [x] **2b — flagged cutover (`FPL_DATABASE_URL`), `seed.db` retained; the app renders on Postgres and `refresh` writes to it. 1,914 green on SQLite, 1,901 + 13 skipped on Postgres**
   - [x] **2c — scheduled refresh (`data.yml`, 15-min tick) + validation + `data_status`. ✅ Refusal proven on real Postgres: 662 players held, a 3-player payload refused, nothing written, `refreshed_at` unmoved. 11 mutants, 11 red**
-  - [ ] 2d — per-GW backfill
+  - [x] **2d — per-GW backfill (`backfill.yml`, hourly, gated on a completed gameweek missing history). ✅ Verified live; `_migrate` now portable, closing 2a's stated gap. 17 mutants red**
   - [ ] 2e — headline model decision, recorded
   - [ ] 2f — retire the manual deploy path
   - [ ] Mutation-test the validation guards
@@ -425,6 +425,72 @@ pre-deadline window is ignored", and the `--no-headlines` bug itself.
 dominate, so the workflow caches pip and the tick itself is 3.6 s. 📅 If this repo is private, check the
 minutes after a week — the mitigation is a smaller requirements set for the pipeline, not a coarser cadence,
 because the pre-deadline window is the part that must not slip.
+
+---
+
+### ✅ Stage 2d — built 2026-09-18
+
+**A gameweek's history lands with no human.** `app.py pipeline --backfill`, driven by
+`.github/workflows/backfill.yml` on an hourly tick — a different job on a different clock from the core
+refresh: ~659 throttled requests (3–5 minutes) once per gameweek, against the refresh's 3.6 seconds every few
+minutes. Its own workflow, because a five-minute job has no business holding the 15-minute tick's concurrency
+group.
+
+| | tests |
+|---|---|
+| SQLite | **1,941 passed · 1 skipped** |
+| Postgres 17.2 | **1,929 passed · 13 skipped** |
+
+#### ✅ Demonstrated end to end on real Postgres
+
+```text
+1. core refresh, empty database  → Published 662 players, 20 teams, 380 fixtures
+2. is a gameweek missing?        → due=True — no stored history for GW[1, 2, 3, 4]
+3. a real throttled backfill     → 5 players · 24 past seasons · 25 gameweek rows · 0 failures
+                                   rounds now carrying a scoreline: [1, 2, 3, 4, 5]
+4. data_status                   → backfilled_at set, backfilled_event 5
+                                   core refresh verdict untouched (ok=1, refreshed_at unchanged)
+```
+
+#### ⭐⭐ "Done" is asked with the analytics' own definition
+
+`backfill_due` calls **`minutes.completed_gameweeks`** — the same function `in_season_share`, the backtest and
+ADR-203's availability log use. A round counts as held only when its rows carry a **scoreline**.
+
+⚠️ Had the pipeline invented its own test — *"are there rows for round N?"* — it would have passed, and been
+wrong: FPL writes a player's per-gameweek row when the fixture is merely **scheduled** (ADR-125/129), so the
+pipeline would have found rows, concluded the work was done, and left the analytics with a gameweek they
+cannot see. ⭐ **The pipeline's "done" has to be the consumer's "have".**
+
+A gameweek also counts as complete only when **all** its fixtures have finished — a Saturday round with a
+Monday night game still to come is not ready.
+
+#### ⭐ The migration gap, closed rather than deferred again
+
+2a said plainly: *"Postgres has no migration story… that stops being fine the first time a column is added
+while it holds real data."* 2d adds two columns to `data_status`, so it stopped being fine.
+
+`_migrate` now runs on **both** backends. The only part that was ever SQLite-specific was asking a table for
+its columns (`PRAGMA table_info` vs `information_schema`), which `db.columns` answers on either. Verified on a
+Postgres table created in the old shape: the columns appear and **the row survives** — it adds, never
+rebuilds. ⚠️ `_rekey_history` stays SQLite-only, and correctly: a Postgres database has never held the old
+primary key it repairs.
+
+#### 🐛 Three things caught, two of them by mutation
+
+* ⚠️ **`COALESCE` on `note` broke clearing.** Giving the backfill its own stamps meant `set_data_status` had
+  to merge rather than overwrite — and merging `note` meant a **successful refresh could no longer clear a
+  previous failure's reason**, so the app would have gone on showing yesterday's refusal. ⭐ *A field cleared
+  by writing None cannot be merged with COALESCE.* The note now follows the verdict: a write carrying `ok`
+  owns it, a write without one leaves it.
+* ⚠️ **A guard that could not reach its own case.** The test protecting the refresh's note from the backfill
+  set `note=None` first — so a mutation that let the backfill clobber it with None destroyed nothing and
+  stayed green. ⭐ *A guard only tests the case its fixture can reach.* It now starts from a live refusal.
+* ⚠️ **The Postgres migration was proved by a script I ran by hand, and disabling it broke no test.**
+  ⭐ *Verifying something once is not testing it.* There is now a real test, skipped without a Postgres and
+  always run by CI's postgres job.
+
+**17 mutants, 17 red** across 2c and 2d.
 
 ### 💡 The lesson (provisional — this is a proposal)
 

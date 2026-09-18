@@ -240,3 +240,166 @@ def test_headlines_are_absent_from_the_scheduled_path_by_construction():
 
     assert "enrich_headlines" not in inspect.getsource(pipeline)
     assert "enrich_headlines" not in inspect.getsource(ingest.refresh)
+
+
+def test_a_successful_refresh_CLEARS_the_previous_failure_note(tmp_path):
+    """⚠️ Found by writing the backfill, not by a failing test: making `note` COALESCE — so the backfill could
+    write its own stamps without clobbering the refresh's verdict — quietly stopped a healthy run from
+    clearing a stale failure reason. The app would have gone on showing yesterday's refusal.
+
+    ⭐ *A field that is cleared by writing None cannot be merged with COALESCE.* The note follows the verdict:
+    a write carrying `ok` owns it, a write without one leaves it alone.
+    """
+    store = Storage(str(tmp_path / "p.db"), ensure_schema=True)
+    try:
+        good = _good_payload()
+        broken = ([_player(i) for i in range(1, 4)], good[1], good[2])
+        pipeline.run(store, now=datetime(2026, 9, 18, 10, tzinfo=UTC),
+                     client=_FakeClient(*broken), elo_client=None, force=True)
+        assert store.data_status()["note"], "the refusal recorded a reason"
+
+        pipeline.run(store, now=datetime(2026, 9, 18, 11, tzinfo=UTC),
+                     client=_FakeClient(*good), elo_client=None, force=True)
+        row = store.data_status()
+        assert row["ok"] and row["note"] is None, "a healthy run must clear the stale reason"
+    finally:
+        store.close()
+
+
+def test_a_backfill_stamp_does_not_disturb_the_refresh_verdict(tmp_path):
+    """The other half of the same rule: the backfill is a different job on a different clock, so writing its
+    stamp must not make a healthy refresh look broken — or a broken one look healthy."""
+    store = Storage(str(tmp_path / "p.db"), ensure_schema=True)
+    try:
+        # ⚠️ **A live refusal, not a clean slate.** The first version of this test set `note=None` before
+        # backfilling, so a mutation that let the backfill clobber the note with None was invisible — the
+        # value it destroyed was already None. ⭐ *A guard only tests the case its fixture can reach.*
+        store.set_data_status(refreshed_at="2026-09-18T10:00:00Z", attempted_at="2026-09-18T11:00:00Z",
+                              ok=False, note="rejected: player count collapsed")
+        store.set_data_status(backfilled_at="2026-09-18T12:00:00Z", backfilled_event=5)
+        row = store.data_status()
+        assert row["ok"] == 0 and row["note"] == "rejected: player count collapsed", \
+            "the backfill must not erase the core refresh's verdict or its reason"
+        assert row["refreshed_at"] == "2026-09-18T10:00:00Z"
+        assert row["backfilled_at"] == "2026-09-18T12:00:00Z" and row["backfilled_event"] == 5
+    finally:
+        store.close()
+
+
+# ── the per-gameweek backfill ─────────────────────────────────────────────────────────────────────────────
+
+def _gw_row(round_no, *, scored=True):
+    """A per-GW history row as `get_gw_history_by_code` returns it — a **row**, not a `PlayerGameweek`.
+
+    ⚠️ Written with the dataclass first, which `completed_gameweeks` cannot index (`TypeError`), because the
+    real path never sees one. ⭐ *A fixture that models less than reality will confirm a broken mechanism* —
+    here it would have failed loudly, but the same slip the other way round is how a guard passes on a shape
+    production never produces.
+    """
+    return {"element_code": 1, "round": round_no, "minutes": 90 if scored else 0,
+            "total_points": 5 if scored else 0, "fixture": round_no * 10,
+            "kickoff_time": f"2026-09-{round_no:02d}T14:00:00Z",
+            "team_h_score": 1 if scored else None, "team_a_score": 0 if scored else None}
+
+
+def test_a_completed_gameweek_with_no_history_is_due():
+    fixtures = [{"event": 1, "finished": True}, {"event": 2, "finished": True}]
+    due, why, rounds = pipeline.backfill_due(fixtures, {})
+    assert due and rounds == {1, 2} and "GW[1, 2]" in why
+
+
+def test_a_gameweek_still_in_progress_is_not_due():
+    """⭐ *All* of a gameweek's fixtures must have finished. A Saturday 3pm round with a Monday night game
+    still to come is not a gameweek whose history is worth fetching."""
+    fixtures = [{"event": 5, "finished": True}, {"event": 5, "finished": False}]
+    due, _, rounds = pipeline.backfill_due(fixtures, {})
+    assert not due and rounds == set()
+
+
+def test_done_is_asked_with_the_ANALYTICS_definition_not_a_second_one(tmp_path):
+    """⭐⭐ The trap this avoids. FPL writes a player's per-gameweek row when the fixture is merely
+    **scheduled** (ADR-125/129), so a pipeline asking *"are there rows for round N?"* would find them,
+    conclude the work was done, and leave the analytics with a gameweek they cannot see.
+
+    `minutes.completed_gameweeks` — what `in_season_share`, the backtest and the availability log all use —
+    counts a round only when its rows carry a **scoreline**. ⭐ *The pipeline's "done" has to be the
+    consumer's "have".*
+    """
+    fixtures = [{"event": 3, "finished": True}]
+    scheduled_only = {1: [_gw_row(3, scored=False)]}
+    due, _, rounds = pipeline.backfill_due(fixtures, scheduled_only)
+    assert due and rounds == {3}, "rows exist, but none carry a scoreline — the work is NOT done"
+
+    played = {1: [_gw_row(3)]}
+    assert pipeline.backfill_due(fixtures, played)[0] is False
+
+
+def test_the_backfill_records_its_own_stamp_and_leaves_the_refresh_verdict_alone(tmp_path):
+    store = Storage(str(tmp_path / "p.db"), ensure_schema=True)
+    calls = {"n": 0}
+
+    def fake_backfill(_store, **kwargs):
+        calls["n"] += 1
+        return (659, 0, 120, 0)
+
+    try:
+        store.set_data_status(refreshed_at="2026-09-18T10:00:00Z", attempted_at="2026-09-18T10:00:00Z",
+                              ok=True, note=None)
+        import src.pipeline as pipeline_module
+        original = pipeline_module.ingest.backfill_history
+        pipeline_module.ingest.backfill_history = fake_backfill
+        try:
+            out = pipeline.run_backfill(store, now=datetime(2026, 9, 18, 12, tzinfo=UTC), force=True)
+        finally:
+            pipeline_module.ingest.backfill_history = original
+
+        assert calls["n"] == 1 and out["ran"] and out["ok"]
+        row = store.data_status()
+        assert row["backfilled_at"].startswith("2026-09-18T12")
+        assert row["ok"] and row["refreshed_at"] == "2026-09-18T10:00:00Z", \
+            "a backfill must not disturb the core refresh's verdict"
+    finally:
+        store.close()
+
+
+def test_the_backfill_does_not_walk_659_players_when_nothing_is_missing(tmp_path):
+    """⚠️ The gate is the whole point — this is ~659 throttled requests. A job that ran it on a clock rather
+    than on need would hammer FPL hourly for nothing."""
+    store = Storage(str(tmp_path / "p.db"), ensure_schema=True)
+    called = {"n": 0}
+
+    def fake_backfill(_store, **kwargs):
+        called["n"] += 1
+        return (659, 0, 0, 0)
+
+    try:
+        import src.pipeline as pipeline_module
+        original = pipeline_module.ingest.backfill_history
+        pipeline_module.ingest.backfill_history = fake_backfill
+        try:
+            out = pipeline.run_backfill(store, now=datetime(2026, 9, 18, 12, tzinfo=UTC))
+        finally:
+            pipeline_module.ingest.backfill_history = original
+        assert not out["ran"] and called["n"] == 0
+    finally:
+        store.close()
+
+
+def test_the_backfill_workflow_runs_a_command_the_cli_accepts():
+    """The same guard as the refresh workflow, for the same reason: ⭐ *a workflow file is code no test runs
+    by default*, and the last one shipped a flag that did not exist."""
+    import shlex
+    from pathlib import Path
+
+    import yaml
+
+    from src.cli import build_parser
+
+    workflow = yaml.safe_load((Path(__file__).resolve().parents[1]
+                               / ".github/workflows/backfill.yml").read_text())
+    step = next(s for s in workflow["jobs"]["backfill"]["steps"]
+                if s.get("name", "").startswith("Backfill"))
+    line = step["run"].strip().replace("${{ inputs.force && '--force' || '' }}", "").strip()
+    for variant in (shlex.split(line)[2:], shlex.split(line)[2:] + ["--force"]):
+        parsed = build_parser().parse_args(variant)
+        assert parsed.handler.__name__ == "cmd_pipeline" and parsed.backfill

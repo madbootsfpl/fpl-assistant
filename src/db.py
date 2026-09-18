@@ -208,6 +208,20 @@ MISSING_TABLE = (sqlite3.OperationalError,) + _optional_pg_errors("UndefinedTabl
 INTEGRITY_ERROR = (sqlite3.IntegrityError,) + _optional_pg_errors("IntegrityError")
 
 
+def columns(conn, table: str) -> set:
+    """The column names of `table` — the one introspection question `Storage._migrate` asks.
+
+    ⚠️ SQLite answers with `PRAGMA table_info`, Postgres with `information_schema`. Nothing else in the
+    storage layer needs to know which, so the fork lives here with the other two differences.
+    """
+    if isinstance(conn, PgConnection):
+        rows = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = ? AND table_schema = ANY(current_schemas(false))", (table,)).fetchall()
+        return {r["column_name"] for r in rows}
+    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}    # noqa: S608 — fixed constants
+
+
 def connect(target: str):
     """Open `target` — a Postgres DSN or a SQLite path — as a connection `Storage` can use unchanged."""
     if is_postgres(target):

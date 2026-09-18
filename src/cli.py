@@ -118,7 +118,10 @@ def cmd_pipeline(args) -> None:
 
     store = Storage(ensure_schema=True)
     try:
-        print(pipeline.describe(pipeline.run(store, force=args.force)))
+        if args.backfill:
+            print(pipeline.describe_backfill(pipeline.run_backfill(store, force=args.force)))
+        else:
+            print(pipeline.describe(pipeline.run(store, force=args.force)))
     finally:
         store.close()
 
@@ -1050,6 +1053,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_pipeline.add_argument("--force", action="store_true",
                             help="Run even when the cadence says it is not due yet")
+    p_pipeline.add_argument("--backfill", action="store_true",
+                            help="The per-gameweek history walk instead of the core refresh (ADR-211 2d) — "
+                                 "~659 throttled requests, run once a gameweek after the results post")
     p_pipeline.set_defaults(handler=cmd_pipeline)
 
     p_reseed = sub.add_parser(

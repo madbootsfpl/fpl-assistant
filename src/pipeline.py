@@ -142,3 +142,85 @@ def describe(outcome: dict) -> str:
         return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo "
                 f"({outcome['reason']}).")
     return f"REFUSED — {outcome['reason']}. The last good data still stands."
+
+
+# ── The per-gameweek history backfill ─────────────────────────────────────────────────────────────────────
+#
+# A different job on a different clock: ~659 throttled requests (≈3–5 minutes) once per gameweek, after the
+# results post — against the core refresh's 3.6 seconds every few minutes. Its own workflow, its own stamp.
+
+def _completed_rounds(fixtures) -> set:
+    """Gameweeks whose fixtures have **all** finished — the rounds whose history is worth fetching."""
+    played, pending = set(), set()
+    for f in fixtures or []:
+        try:
+            event, finished = f["event"], f["finished"]
+        except (KeyError, IndexError, TypeError):
+            continue
+        if event is None:
+            continue
+        (played if finished else pending).add(event)
+    return played - pending
+
+
+def backfill_due(fixtures, gw_history_by_code) -> tuple[bool, str, set]:
+    """Which completed gameweeks have no stored history yet — `(due, why, rounds)`.
+
+    ⭐⭐ **"We have this gameweek" is asked with the analytics' own definition, not a second one.**
+    `minutes.completed_gameweeks` is what `in_season_share`, the backtest and ADR-203's availability log all
+    use: a round counts as held only when its rows carry a **scoreline**, never on row presence and never on
+    `minutes == 0` — because FPL writes a player's per-gameweek row when the fixture is merely *scheduled*
+    (ADR-125/129).
+
+    ⚠️ Had the pipeline invented its own test — "are there rows for round N?" — it would have found the
+    scheduled-but-unplayed rows, concluded the work was done, and left the analytics with a gameweek they
+    cannot see. ⭐ *The pipeline's "done" has to be the consumer's "have".*
+    """
+    from src.analytics.minutes import completed_gameweeks
+
+    finished = _completed_rounds(fixtures)
+    held = completed_gameweeks(gw_history_by_code)
+    missing = finished - held
+    if not missing:
+        return False, f"history held for every completed gameweek ({sorted(held) or 'none played'})", set()
+    return True, f"no stored history for GW{sorted(missing)}", missing
+
+
+def run_backfill(store: Storage, *, now=None, force: bool = False, client=None, sleep=None) -> dict:
+    """Fetch per-gameweek history when a completed gameweek is missing it (ADR-211 2d).
+
+    ⚠️ **Expensive and deliberately rare.** One request per player, throttled — so this is gated on a
+    gameweek actually being missing rather than run on a clock. It is idempotent and resumable already
+    (upsert on code+round), so a partial run simply completes next time.
+
+    Never raises: like `run`, an unattended job that dies tells nobody anything.
+    """
+    now = now or datetime.now(UTC)
+    stamp = now.isoformat(timespec="seconds")
+    due, why, rounds = backfill_due(store.get_all_fixtures(), store.get_gw_history_by_code())
+    if not due and not force:
+        return {"ran": False, "ok": None, "reason": why, "rounds": []}
+
+    try:
+        kwargs = {"client": client} if client is not None else {}
+        if sleep is not None:
+            kwargs["sleep"] = sleep
+        players, seasons, gameweeks, failures = ingest.backfill_history(store, **kwargs)
+    except FplApiError as exc:
+        store.set_data_status(backfilled_at=stamp)
+        return {"ran": True, "ok": False, "reason": f"backfill failed: {exc}", "rounds": sorted(rounds)}
+
+    store.set_data_status(backfilled_at=stamp, backfilled_event=max(rounds) if rounds else None)
+    return {"ran": True, "ok": failures == 0, "reason": why, "rounds": sorted(rounds),
+            "counts": (players, seasons, gameweeks, failures)}
+
+
+def describe_backfill(outcome: dict) -> str:
+    """One line for the CLI and the Actions log."""
+    if not outcome["ran"]:
+        return f"Nothing to do — {outcome['reason']}."
+    if outcome.get("counts") is None:
+        return f"FAILED — {outcome['reason']}."
+    players, _seasons, gameweeks, failures = outcome["counts"]
+    tail = f" ⚠ {failures} player(s) failed and will be retried" if failures else ""
+    return (f"Backfilled GW{outcome['rounds']}: {gameweeks} gameweek rows from {players} players{tail}.")

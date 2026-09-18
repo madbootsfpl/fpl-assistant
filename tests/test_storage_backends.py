@@ -11,6 +11,7 @@ which is the part that can rot silently. The behavioural proof is the whole suit
     MADBOOTS_TEST_DSN=postgresql://… pytest                         # Postgres
 """
 
+import os
 import re
 import sqlite3
 from pathlib import Path
@@ -132,3 +133,34 @@ def test_the_sqlite_only_marker_is_used_only_where_postgres_has_no_equivalent():
     # 7 column migrations + 3 rekey + 1 history-retention + 2 reseed. Pinned so the list cannot grow
     # quietly; changing it should mean deciding that something new genuinely has no Postgres form.
     assert len(marked) == 13, f"expected 13 opt-outs, found {len(marked)}: {sorted(marked)}"
+
+
+@pytest.mark.skipif(not os.environ.get("MADBOOTS_TEST_DSN"),
+                    reason="needs a real Postgres — set MADBOOTS_TEST_DSN (CI's postgres job always does)")
+def test_a_column_added_later_migrates_onto_an_existing_POSTGRES_table():
+    """⭐ The gap ADR-211 2a flagged, closed in 2d and now actually tested.
+
+    2a skipped `_migrate` on Postgres and said so plainly: *"its schema is created fresh, which is why
+    `_migrate` is skipped rather than ported — that stops being fine the first time a column is added while
+    Postgres holds real data."* 2d added two columns to `data_status`, so it stopped being fine.
+
+    ⚠️ Written because a mutation survived: disabling the Postgres migration broke nothing, since the only
+    proof it worked was a throwaway script I ran by hand. ⭐ *Verifying something once is not testing it.*
+    """
+    from src import db, storage
+
+    # An old-shaped `teams`: the table as it was before the strength columns existed, holding a row.
+    first = storage.Storage(":memory:")
+    conn = first.conn
+    conn.execute("DROP TABLE IF EXISTS teams CASCADE")
+    conn.execute("CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, short_name TEXT)")
+    conn.execute("INSERT INTO teams (id, name, short_name) VALUES (1, 'Arsenal', 'ARS')")
+    assert "strength_overall_home" not in db.columns(conn, "teams")
+
+    storage.Storage(":memory:")            # opening again must bring it up to the current schema
+    after = db.columns(conn, "teams")
+    for column in ("strength_overall_home", "strength_overall_away", "elo", "code"):
+        assert column in after, f"{column} was not migrated onto the existing Postgres table"
+    assert conn.execute("SELECT name FROM teams WHERE id = 1").fetchone()["name"] == "Arsenal", \
+        "the migration must add columns, never rebuild the table (ADR-129's lesson)"
+    first.close()

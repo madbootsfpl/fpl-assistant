@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS teams (
 # CREATE TABLE IF NOT EXISTS leaves old tables untouched, so we add any missing
 # columns with a light migration (see _migrate). Keyed by table name.
 _MIGRATIONS = {
+    # ADR-211 2d — added after `data_status` shipped in 2b, and the first columns this project has ever had to
+    # migrate onto a *Postgres* database. `_migrate` gained that ability in the same stage; see its note.
+    "data_status": {
+        "backfilled_at": "TEXT",
+        "backfilled_event": "INTEGER",
+    },
     "teams": {
         "strength_overall_home": "INTEGER",
         "strength_overall_away": "INTEGER",
@@ -296,7 +302,12 @@ CREATE TABLE IF NOT EXISTS data_status (
     attempted_at  TEXT,      -- when a refresh last RAN, successful or not
     event         INTEGER,   -- the gameweek the data describes
     ok            INTEGER,   -- did the last attempt pass validation?
-    note          TEXT       -- why not, when it did not
+    note          TEXT,      -- why not, when it did not
+    -- The per-gameweek history walk is a different job on a different clock (ADR-211 2d): ~659 throttled
+    -- requests, once per gameweek, after the results post. Its own stamp so a slow or failed backfill is
+    -- visible without being mistaken for a stale core refresh.
+    backfilled_at    TEXT,
+    backfilled_event INTEGER
 )
 """
 
@@ -568,8 +579,8 @@ class Storage:
             # ⚠️ **Stated so it is not mistaken for coverage: this is "not applicable", not "handled".** The day
             # a column is added *after* Postgres is carrying real data, that needs a real migration — and this
             # skip is where someone will look for one. See ADR-211's staging.
+            self._migrate()                # ⭐ both backends since ADR-211 2d — see the note in `_migrate`
             if not self.is_postgres:
-                self._migrate()
                 self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
 
     def _migrate(self) -> None:
@@ -578,10 +589,18 @@ class Storage:
         CREATE TABLE IF NOT EXISTS won't alter a table that already exists, so we
         bring older caches up to the current schema by adding missing columns.
         Idempotent: only columns not already present are added.
+
+        ⭐ **Now runs on Postgres too, and that gap was flagged before it bit** (ADR-211 2a said *"Postgres has
+        no migration story — that stops being fine the first time a column is added while it holds real
+        data"*, and 2d is the stage that adds two). The only part that was ever SQLite-specific was asking a
+        table for its columns, which `db.columns` now answers on either backend.
+
+        ⚠️ What this still cannot do is change a **primary key** — `_rekey_history` remains SQLite-only,
+        because a Postgres database has never held the old key it repairs.
         """
-        for table, columns in _MIGRATIONS.items():
-            existing = {row[1] for row in self.conn.execute(f"PRAGMA table_info({table})")}
-            for column, col_type in columns.items():
+        for table, cols in _MIGRATIONS.items():
+            existing = db.columns(self.conn, table)
+            for column, col_type in cols.items():
                 if column not in existing:
                     # table/column/type are fixed constants, never user input.
                     self.conn.execute(
@@ -785,7 +804,8 @@ class Storage:
         except db.MISSING_TABLE:
             return None
 
-    def set_data_status(self, *, refreshed_at=None, attempted_at=None, event=None, ok=None, note=None) -> None:
+    def set_data_status(self, *, refreshed_at=None, attempted_at=None, event=None, ok=None, note=None,
+                        backfilled_at=None, backfilled_event=None) -> None:
         """Record the outcome of a refresh attempt — **including a failed one** (ADR-211 2b).
 
         ⭐ *Recording only successes would make a dead pipeline indistinguishable from a quiet one*, which is
@@ -794,14 +814,25 @@ class Storage:
         """
         with self.conn:
             self.conn.execute(
-                "INSERT INTO data_status (id, refreshed_at, attempted_at, event, ok, note) "
-                "VALUES (1, ?, ?, ?, ?, ?) "
+                "INSERT INTO data_status "
+                "(id, refreshed_at, attempted_at, event, ok, note, backfilled_at, backfilled_event) "
+                "VALUES (1, ?, ?, ?, ?, ?, ?, ?) "
                 "ON CONFLICT(id) DO UPDATE SET "
                 "refreshed_at = COALESCE(excluded.refreshed_at, data_status.refreshed_at), "
                 "attempted_at = COALESCE(excluded.attempted_at, data_status.attempted_at), "
                 "event = COALESCE(excluded.event, data_status.event), "
-                "ok = excluded.ok, note = excluded.note",
-                (refreshed_at, attempted_at, event, None if ok is None else int(ok), note))
+                # ⚠️ `ok`/`note` are the CORE refresh's verdict and are overwritten deliberately; the backfill
+                # never touches them, so a failed backfill cannot make a healthy refresh look broken.
+                "ok = COALESCE(excluded.ok, data_status.ok), "
+                # ⚠️ **`note` follows `ok`, and COALESCE would be wrong here.** A successful refresh reports
+                # `note=None` *to clear* the previous failure's reason — under COALESCE that None would mean
+                # "leave it", so the app would keep showing a stale failure after a healthy run. So: when this
+                # write carries a verdict, it owns the note; when it does not (a backfill), it leaves both.
+                "note = CASE WHEN excluded.ok IS NULL THEN data_status.note ELSE excluded.note END, "
+                "backfilled_at = COALESCE(excluded.backfilled_at, data_status.backfilled_at), "
+                "backfilled_event = COALESCE(excluded.backfilled_event, data_status.backfilled_event)",
+                (refreshed_at, attempted_at, event, None if ok is None else int(ok), note,
+                 backfilled_at, backfilled_event))
 
     def save_history_past(self, seasons: list[PlayerSeason]) -> None:
         """Upsert past-season history rows (ADR-027). Idempotent on (code, season)."""
