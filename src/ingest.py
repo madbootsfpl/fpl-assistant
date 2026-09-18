@@ -21,6 +21,60 @@ from src.api.clubelo import (
 from src.models import Fixture, Player, PlayerGameweek, PlayerSeason, Team
 from src.storage import Storage
 
+# ── Validation ────────────────────────────────────────────────────────────────────────────────────────────
+#
+# ⚠️ **These are a smoke alarm, not a thermostat, and that is the whole of their provenance** (ADR-199 asks
+# where a threshold comes from, and the honest answer here is *declared, not measured*). They exist to catch a
+# catastrophic payload — an empty response, a truncated one, a wholesale zeroing — **not** to police ordinary
+# movement. Every bound below is therefore deliberately loose: a check that fires on a real January transfer
+# window would block good data, which is worse than storing slightly odd data.
+#
+# 📅 Re-visit if one ever fires on a payload that turns out to have been fine — that, not a calendar date, is
+# the evidence that a bound is wrong.
+MIN_PLAYERS = 300               # a real Premier League season carries ~600-700; half that is a broken fetch
+EXPECTED_TEAMS = 20             # not a guess — the competition has twenty clubs
+MIN_SHARE_OF_PREVIOUS = 0.70    # windows add and remove players; losing a third in one fetch is not a window
+MIN_SHARE_PRICED = 0.90         # every listed player has a price; a mass of zeros is a mangled payload
+
+
+class PayloadRejected(Exception):
+    """FPL's response did not pass validation, so **nothing was stored** and the last good data still stands.
+
+    ⭐ Raised rather than returned, and raised *before* the first write, because the alternative — checking
+    after storing — is not a check at all once storing is publishing.
+    """
+
+    def __init__(self, reasons):
+        self.reasons = list(reasons)
+        super().__init__("; ".join(self.reasons))
+
+
+def validate(players, teams, fixtures, *, previous_players: int | None = None) -> list[str]:
+    """Reasons to refuse this payload — empty when it is safe to publish.
+
+    ⭐ **Checks what FPL sent, not what we stored.** The failure this guards against is a bad *response*, and
+    by the time it is in the database the last good copy is already gone.
+
+    `previous_players` is how many the database currently holds, so a collapse can be seen; `None` (a first
+    run) skips that one comparison rather than inventing a baseline.
+    """
+    reasons = []
+    if len(players) < MIN_PLAYERS:
+        reasons.append(f"only {len(players)} players (expected at least {MIN_PLAYERS})")
+    if len(teams) != EXPECTED_TEAMS:
+        reasons.append(f"{len(teams)} teams (expected {EXPECTED_TEAMS})")
+    if not fixtures:
+        reasons.append("no fixtures at all")
+    if previous_players and len(players) < previous_players * MIN_SHARE_OF_PREVIOUS:
+        reasons.append(
+            f"player count collapsed {previous_players} → {len(players)} "
+            f"(below {MIN_SHARE_OF_PREVIOUS:.0%} of the last good fetch)")
+    if players:
+        priced = sum(1 for p in players if (getattr(p, "price", 0) or 0) > 0)
+        if priced < len(players) * MIN_SHARE_PRICED:
+            reasons.append(f"only {priced} of {len(players)} players carry a price")
+    return reasons
+
 
 def _record_transfer_flow(store: Storage, players, fixtures, stamped: str) -> int:
     """Log this refresh's transfer counters against the gameweek they are accumulating toward (ADR-210).
@@ -72,6 +126,17 @@ def refresh(
     teams = [Team.from_api(t) for t in data.get("teams", [])]
     players = [Player.from_api(e) for e in data.get("elements", [])]
     fixtures = [Fixture.from_api(f) for f in fixtures_raw]
+
+    # ⭐⭐ **Check before the first write, and for every caller** (ADR-211 2c). Once storing *is* publishing,
+    # a check that runs afterwards is not a check — the last good copy is already gone. And it is deliberately
+    # **not** an optional argument: an opt-out on a shared helper is how one call site ends up behaving
+    # differently from every other (ADR-181), and the call site that forgot would be the manual refresh, run
+    # by a person, on the database everything else reads.
+    #
+    # ⚠️ Locally the blast radius of a bad payload is one laptop. Server-side it is every user at once, which
+    # is what makes this worth raising rather than warning about.
+    if reasons := validate(players, teams, fixtures, previous_players=store.count_players()):
+        raise PayloadRejected(reasons)
 
     # Teams first: both players and fixtures reference them (FK enforcement is on).
     store.save_teams(teams)

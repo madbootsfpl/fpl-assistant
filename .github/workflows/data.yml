@@ -1,0 +1,72 @@
+name: Data pipeline
+
+# The scheduled refresh (ADR-211, Phase 2c) — what replaces a person running `reseed` and committing a
+# binary. Ticks every 15 minutes and lets `app.py pipeline` decide whether anything is due.
+#
+# ⭐ **The schedule lives in Python, not in this cron line, because the thing it depends on moves every week.**
+# GitHub cannot know when Saturday's deadline is; the fixtures can. So the tick is dumb and frequent, and the
+# policy (live gameweek → 10 min · the hour before a deadline → 15 min · ordinary → 1 h · overnight → 6 h)
+# is testable code in `src/pipeline.py`. A tick with nothing to do exits in well under a second and makes no
+# FPL request at all.
+#
+# ⚠️ **Inert until configured**, the same shape as `mirror.yml`: with no FPL_DATABASE_URL secret this does
+# nothing, so a fork — and this repo before the cutover — never sees a failing run.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Refresh even if the cadence says it is not due"
+        type: boolean
+        default: false
+
+# Never let two ticks write at once; a slow run should be skipped, not queued into a pile-up.
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Is the pipeline configured?
+        id: gate
+        env:
+          FPL_DATABASE_URL: ${{ secrets.FPL_DATABASE_URL }}
+        run: |
+          if [ -z "$FPL_DATABASE_URL" ]; then
+            echo "No FPL_DATABASE_URL secret — nothing to do."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.configured == 'true'
+
+      - name: Set up Python
+        if: steps.gate.outputs.configured == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # ⚠️ Not a nicety: this job runs ~96 times a day, and an uncached install of the full requirements
+          # would dominate both the wall-clock and the Actions minutes. The refresh itself takes 3.6 seconds.
+          cache: pip
+
+      - name: Install dependencies
+        if: steps.gate.outputs.configured == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Tick
+        if: steps.gate.outputs.configured == 'true'
+        env:
+          FPL_DATABASE_URL: ${{ secrets.FPL_DATABASE_URL }}
+        # ⭐ Headlines are absent by construction, not by flag: `pipeline.run` calls `ingest.refresh`, and
+        # `enrich_headlines` is a separate step only `cmd_refresh` takes. Extraction needs a local model and
+        # this runner has none — the ADR-211 gate keeps it manual.
+        run: |
+          python app.py pipeline ${{ inputs.force && '--force' || '' }}

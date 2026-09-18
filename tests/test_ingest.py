@@ -49,12 +49,35 @@ class FailingEloClient:
         raise ClubEloError("ClubElo down")
 
 
+# ⭐ **The sample payload holds 2 players and 2 teams, and a real FPL response never could.** ADR-211 2c
+# added validation to `refresh` — unconditionally, because an opt-out on a shared helper is how one call site
+# ends up behaving differently from every other (ADR-181) — and these tests promptly failed, which is the
+# validation working: they had been exercising the ingest path on a payload production cannot produce.
+#
+# ⚠️ **The fixture is padded, not the check loosened.** The named players and teams the tests assert on are
+# kept exactly as they were and the rest is filler, so every assertion below still means what it meant —
+# the payload merely stops being one validation would (correctly) refuse.
+# ⭐ *A fixture that models less than reality will confirm a broken mechanism.*
+def _realistic(bootstrap: dict) -> dict:
+    """The sample payload, padded to a plausible size: 20 teams and 650 players."""
+    teams = list(bootstrap["teams"])
+    for i in range(len(teams) + 1, 21):
+        teams.append({"id": i, "name": f"Club {i}", "short_name": f"C{i:02d}"})
+    elements = list(bootstrap["elements"])
+    next_id = max(e["id"] for e in elements) + 1
+    for i in range(len(elements), 650):
+        elements.append({"id": next_id + i, "first_name": "Filler", "second_name": f"Player {i}",
+                         "web_name": f"Filler{i}", "team": 1, "element_type": 3,
+                         "now_cost": 45, "total_points": 0})
+    return {**bootstrap, "teams": teams, "elements": elements}
+
+
 def _fpl():
-    return FakeClient(json.loads(BOOTSTRAP.read_text()), json.loads(FIXTURES.read_text()))
+    return FakeClient(_realistic(json.loads(BOOTSTRAP.read_text())), json.loads(FIXTURES.read_text()))
 
 
 def test_refresh_maps_and_stores_including_elo(tmp_path):
-    bootstrap = json.loads(BOOTSTRAP.read_text())
+    bootstrap = _realistic(json.loads(BOOTSTRAP.read_text()))
     fixtures = json.loads(FIXTURES.read_text())
     store = Storage(db_path=str(tmp_path / "test.db"))
 
@@ -93,7 +116,7 @@ def _fpl_with_codes():
     into decoration.* Real payloads always carry `code` (0 nulls in 659 live rows), so the fixture is the thing
     that is wrong here, not the expectation.
     """
-    bootstrap = json.loads(BOOTSTRAP.read_text())
+    bootstrap = _realistic(json.loads(BOOTSTRAP.read_text()))
     for i, element in enumerate(bootstrap["elements"], start=1):
         element["code"] = 100000 + i
     return FakeClient(bootstrap, json.loads(FIXTURES.read_text())), len(bootstrap["elements"])

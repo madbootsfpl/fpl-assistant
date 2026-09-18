@@ -1030,6 +1030,16 @@ class Storage:
         """
         return self.conn.execute(sql, params).fetchall()
 
+    def get_all_fixtures(self) -> list:
+        """Every stored fixture, in kickoff order — **including ones already played** (ADR-211 2c).
+
+        ⚠️ Deliberately not `get_upcoming_fixtures`, which filters to gameweeks you can still act on. The
+        pipeline's cadence has to ask *"is a match in play right now?"*, and an in-play match is precisely the
+        one "upcoming" has already excluded.
+        """
+        return self.conn.execute(
+            "SELECT * FROM fixtures ORDER BY kickoff_time").fetchall()
+
     def get_fixtures_by_event(self, event: int) -> list[sqlite3.Row]:
         """All fixtures for one gameweek (finished or not), same shape as `get_upcoming_fixtures`.
 

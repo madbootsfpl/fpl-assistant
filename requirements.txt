@@ -33,5 +33,8 @@ psycopg[binary]
 pytest
 httpx         # FastAPI TestClient (web-edge tests; ADR-050)
 ruff          # linter (CI + pre-commit; config in ruff.toml) — ADR none, US-079
+pyyaml        # a test parses .github/workflows/data.yml and puts its command through the real
+              # CLI parser (ADR-211 2c). It arrived transitively via pre-commit; a test that
+              # leans on someone else's dependency fails for an unrelated reason one day.
 pre-commit    # optional local hooks (.pre-commit-config.yaml); run `pre-commit install`
 st-click-detector==0.1.3   # ADR-133 — tap a shirt on the pitch to select a player (pre-built frontend, no npm)

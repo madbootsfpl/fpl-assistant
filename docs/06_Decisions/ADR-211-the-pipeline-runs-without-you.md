@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-211
 **Date:** 2026-09-18
-**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stages 2a + 2b built** — see below. 2c–2f open.
+**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stages 2a, 2b and 2c built** — see below. 2d–2f open.
 **Superseded By / Replaces:** Replaces the manual `reseed` → commit → redeploy path (ADR-053/056) as the way
 data reaches users. Does **not** change any analytics.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -197,7 +197,7 @@ and a live gameweek.**
   - [x] **GATE agreed 2026-09-18** — Postgres · GitHub Actions · headlines stay manual (option b)
   - [x] **2a — Postgres `Storage`; SQLite unchanged. 1,905 green on SQLite, 1,892 + 13 skipped on Postgres 17.2, and 0 of 659 xP values differ between backends**
   - [x] **2b — flagged cutover (`FPL_DATABASE_URL`), `seed.db` retained; the app renders on Postgres and `refresh` writes to it. 1,914 green on SQLite, 1,901 + 13 skipped on Postgres**
-  - [ ] 2c — scheduled refresh + validation + `data_status`; ⚠️ **prove the refusal path by feeding it a bad payload**
+  - [x] **2c — scheduled refresh (`data.yml`, 15-min tick) + validation + `data_status`. ✅ Refusal proven on real Postgres: 662 players held, a 3-player payload refused, nothing written, `refreshed_at` unmoved. 11 mutants, 11 red**
   - [ ] 2d — per-GW backfill
   - [ ] 2e — headline model decision, recorded
   - [ ] 2f — retire the manual deploy path
@@ -355,6 +355,76 @@ most. **Nothing writes it until 2c**; readers degrade to "unknown".
 The obvious mitigation — caching the connection in `st.cache_resource` — is **deliberately not built**, because
 it would be infrastructure for a latency nobody has measured. 📅 **Trigger: on the first Supabase deploy,
 compare page timings against the seed; if the added cost exceeds ~200 ms per rerun, cache the connection.**
+
+---
+
+### ✅ Stage 2c — built 2026-09-18
+
+**The pipeline runs, decides, and refuses.** `app.py pipeline` is one tick; `.github/workflows/data.yml` runs
+it every 15 minutes, inert until `FPL_DATABASE_URL` is set.
+
+| | tests |
+|---|---|
+| SQLite | **1,933 passed** |
+| Postgres 17.2 | **1,920 passed · 13 skipped** |
+
+#### ✅ The exit criterion, demonstrated on real Postgres
+
+```text
+1. first tick, empty database   → Published 662 players, 20 teams, 380 fixtures (bootstrapping)
+2. immediately again            → Nothing to do — ordinary hours — next due in 0:59:57
+3. FPL "returns" three players  → REFUSED — only 3 players; count collapsed 662 → 3.
+                                  The last good data still stands.
+   players before 662 · after 662   ← nothing was written
+4. refreshed_at did NOT move · attempted_at did · ok=0 · note carries the reason
+```
+
+#### ⭐ Three judgements a person made implicitly, now written down
+
+**When.** ⭐ *The schedule is Python, not cron, because the thing it depends on moves every week.* GitHub
+cannot know when Saturday's deadline is; the fixtures can. So the workflow ticks dumbly every 15 minutes and
+`cadence()` decides: a gameweek in play → 10 min · **the hour before a deadline → 15 min** (four chances, the
+redundancy that makes cron's drift survivable, because ADR-210's counters reset at that deadline and the
+reading before it cannot be recovered) · ordinary → 1 h · overnight → 6 h. A tick with nothing to do costs
+**0.19 s** and makes no FPL request.
+
+**Whether.** ⚠️ `validate()` runs **before the first write, for every caller** — once storing *is* publishing,
+a check that runs afterwards is not a check, and the last good copy is already gone. Deliberately **not** an
+optional argument: an opt-out on a shared helper is how one call site behaves differently from every other
+(ADR-181), and the caller that would have forgotten is the manual refresh, run by a person, against the
+database everything else reads.
+
+⚠️ **The bounds are a smoke alarm, not a thermostat, and that is their whole provenance** (ADR-199 asks; the
+honest answer is *declared, not measured*). They catch an empty, truncated or zeroed payload — **not**
+ordinary movement. A real January window must pass, because a check that blocks good data is worse than one
+that stores slightly odd data. 📅 Revisit if one ever fires on a payload that turns out to have been fine —
+that, not a date, is the evidence a bound is wrong.
+
+**Saying so.** `data_status` on every attempt: `refreshed_at` moves only on a publish, `attempted_at` on every
+run. ⭐ *Recording only successes would make a dead pipeline indistinguishable from a quiet one.*
+
+#### 🐛 Two things the build caught
+
+* ⚠️ **I shipped `--no-headlines` in the workflow for a flag that does not exist.** The YAML was valid, the
+  command was not, and nothing would have failed until the first scheduled tick — in production, unattended.
+  ⭐ *A workflow file is code that no test runs by default.* There is now a test that parses the command out
+  of the YAML and puts it through the real argument parser; mutation-tested by restoring the bug.
+  (Headlines are absent from this path **by construction**, not by flag — `pipeline.run` never reaches
+  `enrich_headlines`, so there is nothing to remember to pass.)
+* ⚠️ **Five existing ingest tests failed the moment validation went in — on 2-player payloads.** That is the
+  validation working: they had been exercising the ingest path on a response production cannot produce. The
+  **fixture was padded, not the check loosened** — ⭐ *a fixture that models less than reality will confirm a
+  broken mechanism*, and this is the seventh time that has cost something this month.
+
+**11 mutants, 11 red** — including "validation never refuses", "a refusal moves `refreshed_at`", "the
+pre-deadline window is ignored", and the `--no-headlines` bug itself.
+
+#### ⚠️ Cost, stated
+
+96 ticks a day. Fine on a public repo (free Actions minutes); on a **private** one an uncached install would
+dominate, so the workflow caches pip and the tick itself is 3.6 s. 📅 If this repo is private, check the
+minutes after a week — the mitigation is a smaller requirements set for the pipeline, not a coarser cadence,
+because the pre-deadline window is the part that must not slip.
 
 ### 💡 The lesson (provisional — this is a proposal)
 

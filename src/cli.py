@@ -106,6 +106,23 @@ def cmd_refresh(args) -> None:
         store.close()
 
 
+def cmd_pipeline(args) -> None:
+    """One tick of the autonomous pipeline (ADR-211 2c) — the command the scheduler runs.
+
+    Decides whether a refresh is due from the fixtures, fetches, validates, and publishes or refuses. Prints
+    one line and **exits 0 even on a refusal**: a refused payload is the pipeline working, not failing, and a
+    scheduler that treats it as a crash would page someone about a correct outcome. A genuinely broken run —
+    an unreachable database — still raises.
+    """
+    from src import pipeline
+
+    store = Storage(ensure_schema=True)
+    try:
+        print(pipeline.describe(pipeline.run(store, force=args.force)))
+    finally:
+        store.close()
+
+
 def cmd_reseed(args) -> None:
     """Refresh the live cache, then copy it to the committed seed so the deployed app can be updated.
 
@@ -1026,6 +1043,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip reading news headlines into events (ADR-151) — faster, and needs no local model",
     )
     p_refresh.set_defaults(handler=cmd_refresh)
+
+    p_pipeline = sub.add_parser(
+        "pipeline",
+        help="One scheduled pipeline tick: refresh if due, validate, publish or refuse (ADR-211)",
+    )
+    p_pipeline.add_argument("--force", action="store_true",
+                            help="Run even when the cadence says it is not due yet")
+    p_pipeline.set_defaults(handler=cmd_pipeline)
 
     p_reseed = sub.add_parser(
         "reseed",
