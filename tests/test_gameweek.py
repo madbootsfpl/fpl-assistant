@@ -11,6 +11,14 @@ from src.analytics.transfer_timing import bank_or_use
 from src.ui.gameweek import render_gameweek_plan
 
 
+# ADR-210 — the exodus threshold is now a percentile of the LIVE board, and these tests run two-player squads.
+# So they bind an explicit cut point: they are about the flag **reaching the plan**, not about where the cut
+# falls (that has its own tests in `test_crowd.py`). ⭐ Passing it explicitly is also the point of the change —
+# the plan cannot invent a threshold from fifteen players, so the caller has to supply one.
+def _exodus_at(threshold=-8_000):
+    from src.analytics.crowd import crowd_exodus
+    return lambda p: crowd_exodus(p, threshold)
+
 def _p(pid, name, team, status="a", chance=None, position="MID"):
     # ⚠️ `position` was missing entirely until ADR-208, because `best_legal_xi` is stubbed in these tests and
     # nothing else read it — so the fixture modelled less than any real row ever does. The fifth time this
@@ -177,7 +185,7 @@ def test_an_unexplained_exodus_reaches_the_gameweek_flags(monkeypatch):
     monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
-    flags = gw.gameweek_plan(owned, owned, [], {1: 5.0, 2: 4.0})["flags"]
+    flags = gw.gameweek_plan(owned, owned, [], {1: 5.0, 2: 4.0}, exodus_for=_exodus_at())["flags"]
     assert [f["web_name"] for f in flags] == ["Watkins"]
     assert "96,095 sold him" in flags[0]["reason"] and "nothing in the data says why" in flags[0]["reason"]
 
@@ -194,7 +202,7 @@ def test_a_real_status_always_wins_over_the_crowd(monkeypatch):
     monkeypatch.setattr(gw, "suggest_transfer_plan", lambda *a, **k: [])
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
-    (flag,) = gw.gameweek_plan([injured], [injured], [], {2: 4.0})["flags"]
+    (flag,) = gw.gameweek_plan([injured], [injured], [], {2: 4.0}, exodus_for=_exodus_at())["flags"]
     assert flag["reason"] == "doubtful" and "sold him" not in flag["reason"]
 
 
@@ -227,7 +235,8 @@ def test_a_reported_leaver_is_benched_and_never_captained_while_the_window_is_op
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
     from datetime import date
-    gw.gameweek_plan(owned, owned, [], {1: 3.0, 2: 9.0, 3: 4.0}, events_by_id=events, today=date(2026, 8, 27))
+    gw.gameweek_plan(owned, owned, [], {1: 3.0, 2: 9.0, 3: 4.0}, events_by_id=events,
+                     today=date(2026, 8, 27), exodus_for=_exodus_at())
 
     assert seen["scores"][2] == 0.0, "ranked as if he scores nothing — because he will"
     assert seen["scores"][1] == 3.0 and seen["scores"][3] == 4.0, "nobody else is touched"
@@ -259,7 +268,8 @@ def test_outside_a_transfer_window_he_is_treated_completely_normally(monkeypatch
     monkeypatch.setattr(gw, "replace_dead", lambda *a, **k: [])
 
     from datetime import date
-    gw.gameweek_plan(owned, owned, [], {1: 3.0, 2: 9.0}, events_by_id=events, today=date(2026, 10, 15))
+    gw.gameweek_plan(owned, owned, [], {1: 3.0, 2: 9.0}, events_by_id=events,
+                     today=date(2026, 10, 15), exodus_for=_exodus_at())
 
     assert seen["scores"][2] == 9.0, "his xP stands — he is not going anywhere until January"
     assert 2 in seen["pool"], "and he is a perfectly good captain"

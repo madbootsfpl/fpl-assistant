@@ -4,6 +4,8 @@
 **display lens only** — they must never change the grounded xP (`decision_xp`).
 """
 
+import pytest
+
 from src.analytics import (
     availability_flag,
     crowd_flags,
@@ -17,12 +19,15 @@ from src.analytics import (
 from src.analytics.crowd import (
     DIFFERENTIAL_OWN,
     ESSENTIAL_OWN,
-    EXODUS_PRESSURE,
     FORM_MIN,
+    MIN_EXODUS_POPULATION,
     TEMPLATE_OWN,
     TRENDING_NET,
     crowd_exodus,
+    exodus_detector,
     exodus_note,
+    exodus_population,
+    exodus_threshold,
 )
 from src.storage import Storage
 
@@ -182,6 +187,13 @@ def _pl(**kw):
     return {**base, **kw}
 
 
+# A FIXED threshold for the tests below, which are about the **discrepancy rule** and the per-1% scale — not
+# about where the cut falls. ADR-210 moved the cut onto the live distribution; these tests deliberately pin it
+# so that a change in the league's transfer volume cannot turn a test of "we flag the unexplained ones" red.
+# ⭐ The calibration has its own tests, further down, and they assert the *definition* rather than a number.
+_T = -8_000
+
+
 def test_a_heavy_unexplained_sell_off_is_flagged():
     """The reported gap. Watkins: **103,678 out vs 7,583 in — net −96,095** — while `status` was `a`, `news`
     empty and `chance` None. FPL's feed carries injuries and suspensions; it carries nothing about a transfer
@@ -189,7 +201,7 @@ def test_a_heavy_unexplained_sell_off_is_flagged():
     numbers within hours, and the app had that data and used it nowhere.
     """
     watkins = _pl(web_name="Watkins", selected_by=9.5, transfers_in_event=7_583, transfers_out_event=103_678)
-    ex = crowd_exodus(watkins)
+    ex = crowd_exodus(watkins, _T)
     assert ex is not None and ex["net"] == -96_095
     note = exodus_note(watkins, ex)
     assert "96,095" in note and "Watkins" in note and "nothing in the data explains it" in note
@@ -201,8 +213,8 @@ def test_an_exodus_our_data_DOES_explain_is_not_flagged():
     the three players nobody could account for."""
     porro = _pl(web_name="Pedro Porro", status="d", news="Lack of match fitness - 75% chance of playing",
                 selected_by=14.3, transfers_out_event=230_000, transfers_in_event=2_229)
-    assert crowd_exodus(porro) is None
-    assert crowd_exodus(_pl(status="i", transfers_out_event=200_000)) is None
+    assert crowd_exodus(porro, _T) is None
+    assert crowd_exodus(_pl(status="i", transfers_out_event=200_000), _T) is None
 
 
 def test_it_is_measured_per_one_percent_owned_so_template_players_are_not_flagged_for_being_popular():
@@ -210,13 +222,13 @@ def test_it_is_measured_per_one_percent_owned_so_template_players_are_not_flagge
     which is why the threshold is a pressure and not a raw count."""
     template = _pl(selected_by=50.0, transfers_out_event=90_000, transfers_in_event=0)   # −1,800 per 1%
     niche = _pl(selected_by=2.0, transfers_out_event=40_000, transfers_in_event=0)       # −20,000 per 1%
-    assert crowd_exodus(template) is None
-    assert crowd_exodus(niche) is not None
+    assert crowd_exodus(template, _T) is None
+    assert crowd_exodus(niche, _T) is not None
 
 
 def test_players_being_bought_are_not_an_exodus():
-    assert crowd_exodus(_pl(transfers_in_event=200_000, transfers_out_event=0)) is None
-    assert crowd_exodus(_pl(transfers_in_event=0, transfers_out_event=0)) is None
+    assert crowd_exodus(_pl(transfers_in_event=200_000, transfers_out_event=0), _T) is None
+    assert crowd_exodus(_pl(transfers_in_event=0, transfers_out_event=0), _T) is None
 
 
 def test_the_note_does_not_claim_to_know_WHAT_the_news_is():
@@ -232,8 +244,130 @@ def test_the_note_does_not_claim_to_know_WHAT_the_news_is():
     assert "can't see" in note or "cannot see" in note
 
 
-def test_the_threshold_is_the_measured_tenth_percentile():
-    """Calibrated on live GW1 data: across the 199 players owned by ≥1%, `price_pressure` runs
-    p10 −7,996 · median −969 · p90 +11,104. `EXODUS_PRESSURE` is that p10 — the worst tenth — so this speaks
-    about as often as it should rather than whenever someone is unpopular."""
-    assert EXODUS_PRESSURE == -8_000
+def test_the_threshold_is_the_worst_tenth_of_the_LIVE_board_not_a_stored_number():
+    """ADR-210. The claim ADR-146 made was *"the worst tenth"*; the thing it shipped was **−8,000**, the value
+    that happened to be the worst tenth in one hour of GW1.
+
+    ⚠️ Those are not the same claim, because `price_pressure` is built from `transfers_in_event` /
+    `transfers_out_event` — **a counter that resets at each deadline and fills up across the week**. Read one
+    day after a deadline the p10 was −3,901 and −8,000 flagged **2 of 190**; read five days later with the
+    next deadline imminent it was −14,992 and −8,000 flagged **50 of 188**. A fixed number on an accumulating
+    counter encodes the hour it was measured, not a severity.
+
+    So the test is the definition: build a board whose worst tenth sits in a known place, and assert the
+    threshold lands there — at any scale. The same distribution scaled up ten times (a deadline-day read of
+    the same week) must move the threshold with it, which is the whole point.
+    """
+    def board(scale):
+        # 100 players owned 10% each: pressures 0, -scale, -2*scale … -99*scale (per 1% owned).
+        return [_pl(selected_by=10.0, transfers_out_event=i * scale * 10, transfers_in_event=0)
+                for i in range(100)]
+
+    quiet = exodus_threshold(board(100))
+    busy = exodus_threshold(board(1_000))
+    assert quiet is not None and busy is not None
+    # p10 of 0 … -9,900 in steps of -100 → the 10th-from-worst value, -8,910.
+    assert quiet == pytest.approx(-8_910)
+    assert busy == pytest.approx(-89_100)
+    # ⭐ The number is NOT stable across the week; the FRACTION it flags is. That inversion is the fix.
+    for b, t in ((board(100), quiet), (board(1_000), busy)):
+        flagged = sum(1 for p in b if crowd_exodus(p, t) is not None)
+        assert flagged == 10, f"the worst tenth should be a tenth, got {flagged}"
+
+
+def test_a_week_with_no_selling_has_no_worst_tenth_even_though_a_percentile_always_exists():
+    """⭐ The failure a bare percentile would introduce, guarded. Every distribution has a bottom 10%, so a
+    percentile alone would report an exodus in a week when the whole board was being **bought** — and
+    preseason, when every counter is flat zero, it would flag a tenth of the league for nothing.
+
+    The percentile decides *how severe*; the sign decides *whether there is anything to be severe about*."""
+    buying = [_pl(selected_by=10.0, transfers_in_event=(i + 1) * 1_000, transfers_out_event=0)
+              for i in range(100)]
+    assert exodus_threshold(buying) is None
+    preseason = [_pl(selected_by=10.0, transfers_in_event=0, transfers_out_event=0) for _ in range(100)]
+    assert exodus_threshold(preseason) is None
+
+
+def test_too_small_a_population_has_no_distribution_to_take_a_tenth_of():
+    """A tenth of nine players is not a tenth of anything. Below the floor the flag declines to fire rather
+    than describing one member as a population (ADR-199 — a threshold needs a provenance)."""
+    small = [_pl(selected_by=10.0, transfers_out_event=(i + 1) * 50_000, transfers_in_event=0)
+             for i in range(MIN_EXODUS_POPULATION - 1)]
+    assert exodus_threshold(small) is None
+    enough = small + [_pl(selected_by=10.0, transfers_out_event=1, transfers_in_event=0)]
+    assert exodus_threshold(enough) is not None
+
+
+def test_the_ownership_floor_decides_WHO_THE_PERCENTILE_IS_TAKEN_OVER_not_just_who_is_listed():
+    """ADR-150 put the 1% floor on the *displayed list*. ADR-210 makes it do a second job that is easy to miss:
+    it is also the population the cut point is computed from, and the two must be the same set.
+
+    ⚠️ Why it matters: `price_pressure` divides by ownership, so a 0.1%-owned player shedding a few thousand
+    reads as −50,000 per 1%. Let those into the population and they occupy the whole bottom tenth — the cut
+    point runs away to an extreme nobody real can reach, and the flag goes **silent** for the template players
+    it exists to warn about. ⭐ *A threshold quietly measured on a different distribution than the one it is
+    applied to is how a good number turns into noise* — in this direction it fails silent, not loud.
+
+    ⚠️ Found by mutation: disabling the floor inside `exodus_population` left every test green, because the
+    only floor test asserted the **list** was filtered, not the **population**."""
+    real = [_pl(web_name=f"R{i}", selected_by=10.0, transfers_out_event=(i + 1) * 10_000, transfers_in_event=0)
+            for i in range(40)]
+    # Nobody owns these, and each is worth −500,000 per 1% — an order of magnitude past anything above.
+    micro = [_pl(web_name=f"M{i}", selected_by=0.1, transfers_out_event=50_000, transfers_in_event=0)
+             for i in range(40)]
+
+    assert len(exodus_population(real + micro)) == 40, "only players above the floor define the distribution"
+    assert exodus_threshold(real + micro) == exodus_threshold(real), \
+        "the micro-owned tail must not move the cut point"
+
+    detect = exodus_detector(real + micro)
+    assert sum(1 for p in real if detect(p)) == 4, \
+        "the worst tenth of the eligible board is still flagged — the tail has not silenced it"
+
+
+def test_when_the_threshold_cannot_be_computed_the_detector_says_nothing_rather_than_raising():
+    """⭐ The end-to-end of "no opinion". `exodus_threshold` returns `None` on a board too small to have a
+    distribution, or on a week where nobody is being sold — and `exodus_detector` hands that `None` straight
+    to `crowd_exodus`, which must decline rather than compare a number against nothing.
+
+    ⚠️ Found by mutation: deleting the `threshold is None` guard left all 26 tests green, because nothing
+    exercised the path. A guard nothing reaches is not a guard. **A heavily-sold player is used deliberately
+    — the one who *would* be flagged if the cut existed.**"""
+    dumped = _pl(web_name="Sold", selected_by=10.0, transfers_out_event=900_000, transfers_in_event=0)
+
+    tiny = exodus_detector([dumped] * (MIN_EXODUS_POPULATION - 1))
+    assert tiny(dumped) is None, "too small a population to have a worst tenth"
+
+    buying = exodus_detector([_pl(selected_by=10.0, transfers_in_event=(i + 1) * 1_000) for i in range(100)])
+    assert buying(dumped) is None, "nobody is being sold — there is no exodus to be in the worst tenth of"
+
+    assert crowd_exodus(dumped, None) is None, "and the same holds if a threshold of None arrives directly"
+
+
+def test_the_percentile_is_taken_over_the_LEAGUE_not_over_the_list_on_screen():
+    """⚠️ The trap this design walks past, made a test. A percentile taken over whatever list is at hand
+    manufactures a worst tenth **inside every filter** — narrow the Signals page to one club and that club
+    reports an exodus every week of the season, forever, by construction.
+
+    Here: a board where one club is being sold heavily and another is not. Bound to the league, only the
+    first club's players are flagged. Bound to the quiet club's own rows, the quiet club invents one."""
+    heavy = [_pl(web_name=f"H{i}", selected_by=10.0, transfers_out_event=900_000, transfers_in_event=0)
+             for i in range(20)]
+    quiet = [_pl(web_name=f"Q{i}", selected_by=10.0, transfers_out_event=(i + 1) * 100, transfers_in_event=0)
+             for i in range(20)]
+
+    league = exodus_detector(heavy + quiet)
+    assert sum(1 for p in quiet if league(p)) == 0, "a quiet club must not be flagged by the league threshold"
+    assert sum(1 for p in heavy if league(p)) > 0
+
+    on_screen = exodus_detector(quiet)               # the mistake, made deliberately
+    assert sum(1 for p in quiet if on_screen(p)) > 0, \
+        "this is what filtering the population does — the guard above is what stops it reaching a reader"
+
+
+def test_a_call_site_that_forgets_the_threshold_RAISES_rather_than_using_a_stale_one():
+    """⭐ ADR-181's lesson, applied at the signature. The old bug was reachable precisely *because* the
+    threshold had a default: any call site that did not think about it silently got a number measured in
+    August. A required argument turns that into a loud failure at the one moment it can still be fixed."""
+    with pytest.raises(TypeError):
+        crowd_exodus(_pl(transfers_out_event=900_000))       # noqa: PLE1120 — that is the assertion

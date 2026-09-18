@@ -41,3 +41,22 @@ def percentile_rank(value, values, *, invert: bool = False) -> int | None:
     equal = sum(1 for v in vals if v == value)
     avg_rank = below + (equal + 1) / 2
     return max(0, min(100, round(100 * (avg_rank - 1) / (len(vals) - 1))))
+
+
+def percentile_value(values, pct: float):
+    """The **cut point** at `pct` (0–100) — the inverse question to `percentile_rank`, and `None` when empty.
+
+    `percentile_rank` asks *"where does this value sit?"*; this asks *"what value sits there?"*. A threshold
+    needs the second one: *"the worst tenth"* is a claim about a cut point, not about a member.
+
+    Linear interpolation between the two neighbouring order statistics, so the answer moves continuously as
+    the distribution does rather than stepping between observed values. Unsorted input is fine (it sorts), and
+    `None`s are dropped — a missing reading is not a zero.
+    """
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return None
+    k = (len(vals) - 1) * pct / 100.0
+    lo = int(k)
+    hi = min(lo + 1, len(vals) - 1)
+    return vals[lo] * (1 - (k - lo)) + vals[hi] * (k - lo)

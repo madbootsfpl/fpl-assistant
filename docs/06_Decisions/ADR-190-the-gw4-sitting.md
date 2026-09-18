@@ -172,7 +172,13 @@ and wants its own gate.
         ⭐ Worth doing anyway: *a whole-board decline and a sub-population decline are different facts, and
         only one of them was on the record.* Option 3 remains the right method; it just does not rescue this
         term.
-  - [ ] **GATE:** a live percentile for the exodus threshold, replacing the fixed constant
+  - [x] **GATE CLOSED 2026-09-18 — [ADR-210](./ADR-210-a-threshold-reads-the-distribution-it-describes.md).**
+        A live percentile replaces the fixed constant. ⭐ And it supplies the mechanism this ADR stopped one
+        line short of: the two samples 51% apart are not noise, they are **two points on a ramp** —
+        `transfers_*_event` is a counter that resets at each deadline and fills up across the week, so the
+        reading is a function of how far into the cycle you look (−3,901 at ~1 day, −14,992 at ~5 days).
+        ⭐ *Before concluding a quantity is noisy, check whether the two samples sit at the same point in
+        whatever cycle it lives in.*
   - [ ] At GW6: re-sweep `FORM_WEIGHT` only — it is the one term that both re-ranks the board and points the
         right way. The other three have their answers.
 

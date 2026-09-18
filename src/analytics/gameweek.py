@@ -10,7 +10,6 @@ it's unit-tested with a fake squad offline. The `ask` layer humanises + verifies
 from datetime import UTC, datetime
 
 from src.analytics.captain import captain_picks
-from src.analytics.crowd import crowd_exodus
 from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
 from src.analytics.transfer import replace_dead, suggest_transfer_plan, suggest_transfers
@@ -62,7 +61,7 @@ def auto_sub_cover(player, bench, xp_by_id):
 def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                   baseline_by_code=None, minutes_weight=None, history_by_code=None,
                   bench_ids=(), bank: float = 0.0, horizon: int = 5, today=None, events_by_id=None,
-                  free: int = 1, horizon_xp=None) -> dict:
+                  free: int = 1, horizon_xp=None, exodus_for=None) -> dict:
     """Assemble this gameweek's plan for a squad from the existing primitives.
 
     `owned` are the squad's player rows; `market` is the whole player pool (for the transfer);
@@ -102,7 +101,12 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # January move must change nothing about this gameweek.
     events_by_id = events_by_id or {}
     as_of = today or datetime.now(UTC).date()
-    reported_out = leavers(owned, events_by_id, crowd_exodus, today=as_of)
+    # ADR-210 — `exodus_for` is bound to the whole board by the caller (`crowd.exodus_detector`), because the
+    # threshold is a percentile of the live league and this function only ever sees fifteen players.
+    # ⭐ **No detector means no exodus flag, never a stale one.** The old module-level default was a constant
+    # measured in one hour of GW1, and a caller that forgot it got that hour applied to today.
+    exodus_for = exodus_for or (lambda _p: None)
+    reported_out = leavers(owned, events_by_id, exodus_for, today=as_of)
 
     # Captain — the next-GW pick from the owned, XI-eligible players (ADR-029). `limit=3` so the runner-up is
     # available for the captain explanation's lead-margin (ADR-089); the pick is still picks[0].
@@ -242,7 +246,7 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # if FPL says he is injured, say *that*, not "the crowd is nervous".
     flags = []
     for p in owned:
-        exodus = crowd_exodus(p)
+        exodus = exodus_for(p)
         if is_unavailable(p):
             reason = _STATUS_WORD.get(p["status"], "unavailable")
         elif p["status"] == "d":

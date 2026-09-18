@@ -3229,17 +3229,20 @@ def test_the_exodus_list_is_scoped_to_players_people_actually_own():
 
     The floor is not a taste — it is the population the p10 threshold was measured on.
     """
-    from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, crowd_exodus
+    from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, exodus_detector
     from src.storage import Storage
 
     assert EXODUS_OWNERSHIP_FLOOR == 1.0
     store = Storage()
     players = store.get_players()
     store.close()
+    # ADR-210 — bound to the whole board once, which is also what the page does. The threshold is the worst
+    # tenth of the league; deriving it from the listed subset would move the cut with the filter.
+    detect = exodus_detector(players)
     listed = [p for p in players
-              if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and crowd_exodus(p)]
+              if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and detect(p)]
     assert all((p["selected_by"] or 0) >= 1.0 for p in listed)
-    unfiltered = [p for p in players if crowd_exodus(p)]
+    unfiltered = [p for p in players if detect(p)]
     assert len(listed) <= len(unfiltered), "the floor may only ever narrow the list"
 
 
@@ -3254,7 +3257,7 @@ def test_health_shows_a_reported_departure_the_fpl_status_still_calls_available(
 
     seen = {}
 
-    def fake(owned):
+    def fake(owned, players):
         if not owned:
             return {}
         seen["id"] = owned[0]["id"]
@@ -3278,7 +3281,7 @@ def test_transfer_view_puts_a_reported_departure_ahead_of_an_upgrade(monkeypatch
 
     seen = {}
 
-    def fake(owned):
+    def fake(owned, players):
         if not owned:
             return {}
         seen["name"] = owned[0]["web_name"]

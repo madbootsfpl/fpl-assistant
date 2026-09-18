@@ -182,13 +182,16 @@ def recent_events(limit: int = 2000):
 
 
 def _percentile(sorted_vals, pct):
-    """A linear-interpolation percentile of an already-sorted list (empty → None). Pure."""
-    if not sorted_vals:
-        return None
-    k = (len(sorted_vals) - 1) * pct / 100.0
-    lo = int(k)
-    hi = min(lo + 1, len(sorted_vals) - 1)
-    return round(sorted_vals[lo] * (1 - (k - lo)) + sorted_vals[hi] * (k - lo))
+    """A linear-interpolation percentile of a list, rounded to a whole millisecond (empty → None). Pure.
+
+    ⭐ The arithmetic lives in `ranking.percentile_value` — the same cut point the exodus threshold reads
+    (ADR-210). This module held a second copy of it, which is precisely how `DEADLINE_LEAD` drifted
+    (ADR-123) and how both DNA modules ended up sharing one bug (ADR-127). The rounding stays here because
+    it is a *display* choice about milliseconds, not part of the definition.
+    """
+    from src.analytics.ranking import percentile_value
+    value = percentile_value(sorted_vals, pct)
+    return None if value is None else round(value)
 
 
 def summarise(rows):

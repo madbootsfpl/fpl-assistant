@@ -259,6 +259,32 @@ CREATE TABLE IF NOT EXISTS player_availability (
 )
 """
 
+CREATE_TRANSFER_FLOW = """
+CREATE TABLE IF NOT EXISTS player_transfer_flow (
+    element_code INTEGER NOT NULL,
+    -- The gameweek the counter is accumulating TOWARD — i.e. the next deadline at the moment we looked, not
+    -- the gameweek being played. FPL resets `transfers_in_event` / `transfers_out_event` at every deadline,
+    -- so this column is what makes two readings comparable at all: without it the table is a pile of numbers
+    -- from different weeks that look like one series.
+    event        INTEGER NOT NULL,
+    observed_at  TEXT    NOT NULL,   -- when we looked (never "when it changed" — ADR-203's distinction)
+    -- ⭐⭐ **The phase, and it is the whole reason this table exists.** These counters are an ACCUMULATION:
+    -- they start at zero after a deadline and climb all week. A reading is therefore meaningless without
+    -- knowing how far through the cycle it was taken — the same week's data gives p10 −3,901 on day one and
+    -- −14,992 on day five (ADR-210). Storing the value without the phase would build a series that cannot be
+    -- compared with itself, which is the fault ADR-190 hit when it tried to re-measure the constant.
+    hours_to_deadline REAL,
+    transfers_in      INTEGER,
+    transfers_out     INTEGER,
+    selected_by       REAL,          -- the divisor: `price_pressure` is net transfers per 1% owned (ADR-092)
+    -- One row per player per event, upserted. So the row for event N settles on the LAST reading taken
+    -- before N's deadline — the end-of-cycle total, which is the one point in the week that is comparable
+    -- across weeks. Intermediate readings are deliberately not kept: the live threshold no longer needs the
+    -- ramp (ADR-210), and a row per refresh is ~330k a season to describe a curve nothing reads.
+    PRIMARY KEY (element_code, event)
+)
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -436,6 +462,7 @@ class Storage:
             self.conn.execute(CREATE_HISTORY)
             self.conn.execute(CREATE_HEADLINE_EVENTS)
             self.conn.execute(CREATE_AVAILABILITY)
+            self.conn.execute(CREATE_TRANSFER_FLOW)
             self._migrate()
             self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
 
@@ -585,6 +612,60 @@ class Storage:
             "FROM player_availability WHERE observed_at <= ? ORDER BY element_code, observed_at", (when,))
         return {r["element_code"]: (r["status"], r["chance"], r["news"], r["observed_at"], r["last_seen_at"])
                 for r in rows}
+
+    def save_transfer_flow(self, players, event, observed_at: str, hours_to_deadline=None) -> int:
+        """Record this week's transfer counters per player, keyed by the event they accumulate toward.
+
+        ⭐ **ADR-203's lesson, in the one other place the app was letting data expire** (ADR-210).
+        `transfers_in_event` / `transfers_out_event` / `selected_by` live on the single mutable `players` row,
+        FPL resets them at every deadline, and there is no history endpoint — so every refresh destroyed the
+        only copy of last week's answer. ADR-190 discovered this the hard way: its instruction to *"re-measure
+        `EXODUS_PRESSURE` on ≥4 gameweeks"* had no data to run on, and produced a second single-week sample.
+
+        ⚠️ **`event` is the gameweek the counter is climbing toward, not the one being played.** Pass the next
+        deadline's gameweek. Getting this wrong does not raise — it silently files a reading under the wrong
+        week, which is the one error this table cannot survive.
+
+        `observed_at` and `hours_to_deadline` are passed in rather than read here, so a caller (and a test)
+        fixes the clock — the same contract as `save_availability`.
+
+        Returns the number of rows written. **Never raises on a malformed player**: this is a side-record and
+        `refresh` is the app's lifeline, so a player FPL sends without a `code` is skipped (ADR-203).
+        """
+        if event is None:
+            return 0                     # no next deadline (season over, or no fixtures) — nothing to key on
+        rows = 0
+        with self.conn:
+            for p in players:
+                code = getattr(p, "code", None)
+                if code is None:
+                    continue
+                self.conn.execute(
+                    "INSERT INTO player_transfer_flow "
+                    "(element_code, event, observed_at, hours_to_deadline, transfers_in, transfers_out, "
+                    " selected_by) VALUES (?, ?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT(element_code, event) DO UPDATE SET "
+                    "observed_at = excluded.observed_at, hours_to_deadline = excluded.hours_to_deadline, "
+                    "transfers_in = excluded.transfers_in, transfers_out = excluded.transfers_out, "
+                    "selected_by = excluded.selected_by",
+                    (code, event, observed_at, hours_to_deadline,
+                     getattr(p, "transfers_in_event", None), getattr(p, "transfers_out_event", None),
+                     getattr(p, "selected_by", None)))
+                rows += 1
+        return rows
+
+    def transfer_flow(self, event=None) -> list:
+        """Stored transfer-flow rows, for one `event` or every one (oldest first). Read-only (ADR-210).
+
+        Returns the staleness columns with the values **deliberately**, exactly as `availability_as_of` does:
+        a reading taken four days from the deadline and one taken four hours from it are not the same
+        evidence, and a caller that cannot see which it has will average them as though they were.
+        """
+        if event is None:
+            return self.conn.execute(
+                "SELECT * FROM player_transfer_flow ORDER BY event, element_code").fetchall()
+        return self.conn.execute(
+            "SELECT * FROM player_transfer_flow WHERE event = ? ORDER BY element_code", (event,)).fetchall()
 
     def save_history_past(self, seasons: list[PlayerSeason]) -> None:
         """Upsert past-season history rows (ADR-027). Idempotent on (code, season)."""

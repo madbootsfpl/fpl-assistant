@@ -48,7 +48,7 @@ from src.analytics import (
     team_fdr,
     team_schedule,
 )
-from src.analytics.crowd import crowd_exodus
+from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
 from src.api.client import FplApiError
 from src.squads import SquadStore
@@ -644,7 +644,10 @@ def cmd_analyse(args) -> None:
                   else best_legal_xi(owned, xp_by_id))
 
         # ADR-155 — Health must know about a reported departure too; FPL still calls him available.
-        _leaving = leavers(owned, store.headline_events_by_id(), crowd_exodus, today=datetime.now(UTC).date())
+        # ADR-210 — the exodus threshold is the worst tenth of the LIVE board, so it is bound to `players`
+        # (everyone) and not to `owned` (fifteen). A tenth of fifteen is a player, not a distribution.
+        _leaving = leavers(owned, store.headline_events_by_id(), exodus_detector(players),
+                           today=datetime.now(UTC).date())
         analysis = analyse_squad(
             owned, xi_ids, xp_by_id, horizon=args.next, sort=args.sort,
             by_gameweek_by_id=by_gameweek_by_id, gameweeks=gameweeks, weight_by_id=weight_by_id,
@@ -808,7 +811,7 @@ def cmd_transfer(args) -> None:
         # ADR-153/156 — and a player the press says is leaving is a dead slot FPL hasn't caught up with.
         # Computed once: it changes the banner AND the ranking below, and deriving it twice is how the two
         # end up disagreeing on the same page.
-        leaving = leavers(owned, store.headline_events_by_id(), crowd_exodus,
+        leaving = leavers(owned, store.headline_events_by_id(), exodus_detector(players),
                           today=datetime.now(UTC).date())
         banner = render_dead_slots(
             replace_dead(owned, players, xp_by_id, upcoming, bench_ids=bench_ids, bank=args.bank,

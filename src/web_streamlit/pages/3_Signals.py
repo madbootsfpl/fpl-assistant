@@ -107,7 +107,11 @@ if _squad_only:
 _lede = []
 if players:
     from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR as _FLOOR
-    from src.analytics.crowd import crowd_exodus as _exodus
+    from src.analytics.crowd import exodus_detector
+    # ⚠️ **Bound to `players`, not to `apply_filter(players, sel)`** (ADR-210). The threshold is the worst
+    # tenth of the *league*; taken over the filtered view it would manufacture a worst tenth inside every
+    # filter, so narrowing to one club would report an exodus at that club every week of the season.
+    _exodus = exodus_detector(players)
     _lede = [(p, e, _ev[p["id"]]) for p in apply_filter(players, sel)
              if p["id"] in _ev and (p["selected_by"] or 0) >= _FLOOR and (e := _exodus(p))]
 if _lede:
@@ -163,9 +167,10 @@ st.caption("Players being sold heavily while FPL's own `news` and `status` say n
            "about the player** — a fact about what other managers are doing, which is our only route to news "
            "the feed doesn't carry (a move abroad, a row, a press conference).")
 if players:
-    from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, crowd_exodus
+    from src.analytics.crowd import EXODUS_OWNERSHIP_FLOOR, exodus_detector
+    _detect = exodus_detector(players)           # the whole board, never the filtered view (ADR-210)
     _ex = [(p, e) for p in apply_filter(players, sel)
-           if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and (e := crowd_exodus(p))]
+           if (p["selected_by"] or 0) >= EXODUS_OWNERSHIP_FLOOR and (e := _detect(p))]
     # ADR-151 — a sell-off with a headline behind it is no longer "unexplained"; it is *explained by the
     # press*, so it belongs in the lede at the top rather than in this list. US-443/ADR-163 moved it there;
     # repeating it here would have the same fact appear twice on one page, which reads as two findings.

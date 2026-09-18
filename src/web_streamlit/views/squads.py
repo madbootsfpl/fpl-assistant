@@ -1010,21 +1010,25 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
 
 # ---- Health (analyse the squad over the next 5 GW; ADR-031) ----------------------------------------
 
-def _reported_leavers(owned) -> dict:
+def _reported_leavers(owned, players) -> dict:
     """`{id: event}` for owned players the press says are leaving the league (ADR-153/155).
 
     Wrapped in a try/except because it is a bonus on top of the snapshot: a database built before the events
     table existed, or without a model to read headlines, must render Health exactly as it did before.
+
+    ⚠️ `players` is the **whole board**, not the squad: the exodus threshold is the worst tenth of the live
+    league distribution (ADR-210), and a tenth of fifteen owned players would flag somebody every week.
     """
     try:
         from datetime import UTC, datetime
 
-        from src.analytics.crowd import crowd_exodus
+        from src.analytics.crowd import exodus_detector
         from src.analytics.headlines import leavers
         from src.storage import Storage
         store = Storage()
         try:
-            return leavers(owned, store.headline_events_by_id(), crowd_exodus, today=datetime.now(UTC).date())
+            return leavers(owned, store.headline_events_by_id(), exodus_detector(players),
+                           today=datetime.now(UTC).date())
         finally:
             store.close()
     except Exception:                                    # noqa: BLE001 — never load-bearing
@@ -1044,7 +1048,7 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
               else best_legal_xi(owned, xp_by_id))
     # ADR-155 — Health reads the same reported-departure fact as AI Tips and the Risk Monitor. It was the one
     # squad surface that didn't, so it counted a player with an agreed move as fully available.
-    leaving = _reported_leavers(owned)
+    leaving = _reported_leavers(owned, players)
     analysis = analyse_squad(
         owned, xi_ids, xp_by_id, horizon=horizon,
         by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
@@ -1061,6 +1065,7 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     # grade + attack/defence/fixture read + your players, drilling into the full Team DNA. Reuses players/upcoming.
     st.divider()
     from src.analytics import last_season_name, last_season_rows
+    from src.analytics.crowd import exodus_detector
     from src.analytics.forward_plan import forward_plan
     from src.analytics.player_dna import player_dna_this_or_last
     from src.analytics.squad_risk import squad_dna, squad_risk_rows
@@ -1076,7 +1081,8 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     # together. Both reuse existing engines (xMins · Player DNA · Team DNA); no new analytics.
     _last = last_season_rows(players, history)
     _name = last_season_name(history)
-    render_risk_monitor(squad_risk_rows(owned, upcoming, gw_history=gw_history, history=history), badges)
+    render_risk_monitor(squad_risk_rows(owned, upcoming, gw_history=gw_history, history=history,
+                                        exodus_for=exodus_detector(players)), badges)
     _dna_by_id = {p["id"]: player_dna_this_or_last(p, players, _last, _name)[0] for p in owned}
     _tdna = team_dna_all(players, upcoming, gw_history=gw_history, last_rows=_last)
     render_squad_dna(squad_dna(owned, _dna_by_id, _tdna))
@@ -1152,7 +1158,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     from src.analytics.transfer import replace_dead
     # ADR-153/156 — one lookup for the whole view: it drives the ⛔ banner, the timing call and the ranking,
     # and three separate lookups is how one page ends up contradicting itself.
-    leaving = _reported_leavers(owned)
+    leaving = _reported_leavers(owned, players)
     dead = replace_dead(owned, players, xp_by_id, upcoming, bench_ids=bench_ids, bank=bank,
                         horizon=horizon, today=datetime.now(UTC).date(), reported_out=leaving)
     for i, d in enumerate(dead):

@@ -10,6 +10,7 @@ import time
 from datetime import datetime, timezone
 
 from src import config
+from src.analytics.deadline import next_deadline
 from src.api.client import FplApiError, FplClient
 from src.api.clubelo import (
     ClubEloError,
@@ -19,6 +20,37 @@ from src.api.clubelo import (
 )
 from src.models import Fixture, Player, PlayerGameweek, PlayerSeason, Team
 from src.storage import Storage
+
+
+def _record_transfer_flow(store: Storage, players, fixtures, stamped: str) -> int:
+    """Log this refresh's transfer counters against the gameweek they are accumulating toward (ADR-210).
+
+    ⭐ **The same fault as ADR-203, in the one other place it was still happening.** `transfers_in_event` /
+    `transfers_out_event` / `selected_by` are *now* fields on the mutable `players` row: FPL resets the
+    counters at every deadline, publishes no history for them, and every refresh overwrote the only copy of
+    last week's answer. ADR-190 found this by instruction-failure — its own rule, *"re-measure the exodus
+    threshold on ≥4 gameweeks"*, had nothing to run on and quietly produced a second one-week sample instead.
+
+    ⭐ Stamped with the event it climbs toward **and how far off that deadline was**, because the counter is an
+    *accumulation*: one week's reading is not comparable with another's unless both sit at the same point in
+    the cycle. That is the column ADR-190's attempted re-measurement did not have and could not reconstruct.
+
+    ⚠️ `next_deadline` indexes its rows (`f["event"]`) because every other caller hands it `sqlite3.Row`s;
+    `refresh` holds `Fixture` **dataclasses**, which are not subscriptable. So they are converted here rather
+    than loosening a helper six other call sites depend on.
+
+    Returns rows written — 0 when there is no next deadline (season over, nothing to key a reading on).
+    """
+    when = datetime.fromisoformat(stamped)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)      # a naive stamp is UTC here; `next_deadline` needs aware
+    upcoming = next_deadline([{"event": f.event, "kickoff_time": f.kickoff_time} for f in fixtures], when)
+    if upcoming is None:
+        return 0
+    gameweek, deadline = upcoming
+    return store.save_transfer_flow(
+        players, gameweek, stamped,
+        hours_to_deadline=(deadline - when).total_seconds() / 3600.0)
 
 
 def refresh(
@@ -50,6 +82,11 @@ def refresh(
     # recoverable: FPL serves availability as a *now* field and keeps no history of it. ADR-201's lesson,
     # in the one other place the app was letting data expire.
     store.save_availability(players, now or datetime.now(timezone.utc).isoformat(timespec="seconds"))
+
+    # ADR-210 — the other *now* field. See `_record_transfer_flow`: FPL resets the transfer counters at
+    # every deadline and keeps no history, so a reading not recorded as it passes is gone.
+    _record_transfer_flow(store, players, fixtures,
+                          now or datetime.now(timezone.utc).isoformat(timespec="seconds"))
 
     n_elo = _refresh_elo(store, data.get("teams", []), elo_client)
 

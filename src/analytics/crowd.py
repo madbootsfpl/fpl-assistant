@@ -240,23 +240,115 @@ def fit_flag(player) -> str:
     return availability_flag(player) or "✅"
 
 
-# An exodus this severe, measured **per 1% of ownership** so a 50%-owned player isn't flagged just for being
-# popular. Calibrated on live GW1 data (ADR-146): across players owned by ≥1%, `price_pressure` runs
-# p10 −7,996 · median −969 · p90 +11,104. This is p10 — the worst tenth.
-EXODUS_PRESSURE = -8_000
+# ⭐⭐ **The worst tenth is the definition; the number is not.** ADR-146 calibrated `EXODUS_PRESSURE = -8,000`
+# on live GW1 data (p10 across players owned ≥1%) and pinned it. ADR-190 tried to re-measure it, got −3,901,
+# and recorded *"it varies"* — correctly, but without the mechanism.
+#
+# ⚠️ **The mechanism is that `transfers_in_event` / `transfers_out_event` are a counter that resets at every
+# deadline and fills up across the week.** So `price_pressure` is not a quantity with a stable scale — it is an
+# *accumulation*, and its distribution is a function of **how far into the gameweek you look**:
+#
+# | read | p10 | what −8,000 flags |
+# |---|---|---|
+# | GW1 calibration (ADR-146) | −7,996 | ~10% — by construction, that day |
+# | 2026-09-13, ~1 day after the GW4 deadline (ADR-190) | −3,901 | **2 of 190** |
+# | 2026-09-17, ~5 days in, GW5 deadline imminent (ADR-210) | −**14,992** | **50 of 188** |
+#
+# A fixed threshold on an accumulating counter does not encode a severity. It encodes **the hour of the week
+# the calibration happened to run** — and it then reports a quarter of the board as a stampede on deadline day
+# and almost nobody on a Sunday. ⭐ *Two samples 51% apart were not noise; they were two points on a ramp.*
+#
+# So the constant is gone and the **definition** stays: the worst tenth of selling pressure, read from the
+# distribution that exists when the question is asked. A percentile is immune to the ramp by construction,
+# because it re-reads the population every time.
+EXODUS_PERCENTILE = 10.0
 
-# …and only for players enough people own to have an opinion about (ADR-150). `EXODUS_PRESSURE` is net
+# …and only for players enough people own to have an opinion about (ADR-150). `price_pressure` is net
 # transfers **per 1% owned**, which is the right scale for comparing a template player with a niche one — but
 # it divides by a small number for a 0.1%-owned player, so a few thousand sales read as a stampede. On a
 # per-squad warning that never mattered: you only ever see your own players, and you own them. On a *browse*
 # list it does, and it filled the page with names nobody holds.
 #
-# 1% is not a taste: it is the population the p10 threshold was measured on. Applying a threshold to a
-# different distribution than the one it was calibrated against is how a good number turns into noise.
+# 1% is not a taste: it **defines the population the percentile is taken over**. Under ADR-146 it had to match
+# the population the constant was calibrated on; under ADR-210 it does the same job at both ends at once — it
+# is the filter applied before the cut point is computed, and the filter applied before a player is tested
+# against it. Those two must be the same set, or the threshold describes a distribution nobody is measured in.
 EXODUS_OWNERSHIP_FLOOR = 1.0
 
+# Below this there is no distribution to take a tenth of. Not tuned — it is the point at which "the worst
+# tenth" stops naming more than a couple of players, and a threshold that can only ever describe one member
+# is describing that member rather than a population.
+MIN_EXODUS_POPULATION = 20
 
-def crowd_exodus(player) -> dict | None:
+
+def exodus_population(players) -> list:
+    """The pressures the threshold is taken over: everyone owned by at least `EXODUS_OWNERSHIP_FLOOR`%.
+
+    Separate from `exodus_threshold` so a test can assert the *population* directly, and so the one place
+    that decides who counts cannot drift from the one place that decides where the cut falls (ADR-150/210).
+    """
+    from src.analytics.price import price_pressure
+
+    out = []
+    for p in players or []:
+        if (_get(p, "selected_by") or 0) < EXODUS_OWNERSHIP_FLOOR:
+            continue
+        pressure = price_pressure(p)
+        if pressure is not None:
+            out.append(pressure)
+    return out
+
+
+def exodus_threshold(players):
+    """The selling pressure that counts as an exodus **right now**, or `None` when nothing does (ADR-210).
+
+    The worst `EXODUS_PERCENTILE`% of the live distribution — the definition ADR-146 wrote down, evaluated
+    against today's board instead of against GW1's.
+
+    ⚠️ **`players` must be the whole board, never the list on screen.** The percentile is a claim about the
+    league; taken over a filtered view it manufactures a worst tenth *inside every filter*, so choosing one
+    club in the Signals filter would report an exodus at that club every week of the season. `exodus_detector`
+    exists so a caller binds the population once, deliberately, rather than passing whichever list is nearest.
+
+    **`None` in two cases, and both mean "the flag cannot fire":**
+
+    * **Too few players to have a distribution.** A tenth of nine players is not a tenth of anything.
+    * **The cut point is not negative** — preseason, or any week where the worst tenth is still net *buying*.
+      ⭐ A percentile always *has* a bottom tenth, so on its own it would report an exodus in a week when
+      nobody was being sold at all. The percentile decides **how severe**; the sign decides **whether there
+      is anything to be severe about**, and only the second one is able to answer "no".
+
+    ⭐ Returning `None` rather than a permissive number is ADR-192's direction applied deliberately: where the
+    instrument cannot answer, it declines to, instead of defaulting to the value that flags everybody.
+    """
+    from src.analytics.ranking import percentile_value
+
+    pressures = exodus_population(players)
+    if len(pressures) < MIN_EXODUS_POPULATION:
+        return None
+    cut = percentile_value(pressures, EXODUS_PERCENTILE)
+    return cut if cut is not None and cut < 0 else None
+
+
+def exodus_detector(players):
+    """Bind the live threshold to the whole board, returning the `player -> dict | None` test (ADR-210).
+
+    ⭐ **One recipe, bound once** — the shape ADR-181 argued for after an optional argument on a shared helper
+    let a single call site price a player differently from every other. `crowd_exodus` takes its threshold as
+    a **required** argument for the same reason: a call site that forgets it raises, rather than quietly
+    falling back to a number measured in August.
+
+    `leavers`, `squad_risk_rows` and `gameweek_plan` all take a `player -> exodus` callable already, so this
+    drops straight into the slot `crowd_exodus` itself used to occupy.
+    """
+    threshold = exodus_threshold(players)
+
+    def detect(player):
+        return crowd_exodus(player, threshold)
+    return detect
+
+
+def crowd_exodus(player, threshold) -> dict | None:
     """The crowd is dumping this player **and our own data cannot say why** — or `None` (ADR-146).
 
     This is the app's only route to news it cannot read. FPL's feed carries injuries and suspensions, and
@@ -275,13 +367,20 @@ def crowd_exodus(player) -> dict | None:
 
     Scale is `price_pressure` (net transfers per 1% owned, ADR-092), so a template player is not flagged
     merely for having big absolute numbers.
+
+    `threshold` is the pressure at or below which a sell-off counts, from `exodus_threshold` — **required**,
+    and `None` means the flag cannot fire at all (ADR-210). It used to default to the module constant
+    `EXODUS_PRESSURE`, and that default was the whole bug: a number measured at one point in one gameweek's
+    transfer cycle, applied at every other point of every other week.
     """
     from src.analytics.price import price_pressure
 
     if _get(player, "status") != "a" or (_get(player, "news") or "").strip():
         return None                      # our own data *does* explain it — the flag would be noise
     pressure = price_pressure(player)
-    if pressure is None or pressure > EXODUS_PRESSURE:
+    if threshold is None:
+        return None                      # no live distribution to judge against — say nothing (ADR-210)
+    if pressure is None or pressure > threshold:
         return None
     net = net_transfers(player)
     if net is None or net >= 0:

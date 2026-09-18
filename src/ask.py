@@ -53,7 +53,7 @@ from src.analytics import (
     trending,
 )
 from src.analytics.captain import _next_opponent
-from src.analytics.crowd import crowd_exodus
+from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
 from src.fpl_rules import match_rules
 from src.squads import SquadStore
@@ -530,7 +530,7 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
         return None
     bench_ids = squad.get("bench_ids") or []
     # ADR-156 — the transfer ranking values a reported leaver at zero, like the lineup does (ADR-154).
-    reported_out = leavers(owned, store.headline_events_by_id(), crowd_exodus,
+    reported_out = leavers(owned, store.headline_events_by_id(), exodus_detector(players),
                            today=datetime.now(UTC).date())
 
     if count > 1:
@@ -743,6 +743,8 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         bench_ids=squad.get("bench_ids") or [],
         events_by_id=events_by_id,
         horizon_xp=horizon_xp,
+        # ADR-210 — bound to the whole board (`players`), not the fifteen the plan is about.
+        exodus_for=exodus_detector(players),
         # ADR-191 — the manager's ACTUAL position, not a default. `free` decides how many moves the week's
         # answer recommends; `bank` decides what they can afford and whether ADR-186's cliff is real.
         # Both had been hard-coded here (1 and £0.0m) while the Transfer tab collected them three tabs away,

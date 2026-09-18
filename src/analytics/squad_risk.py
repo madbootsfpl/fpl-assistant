@@ -13,7 +13,6 @@ enough of one, otherwise from how often he *started* last season. Where there is
 do not know, and saying so is the whole point.
 """
 
-from src.analytics.crowd import crowd_exodus
 from src.analytics.fdr import team_fdr
 from src.analytics.minutes import chance_factor
 from src.analytics.ranking import percentile_rank
@@ -89,7 +88,8 @@ def fixture_risk_by_team(upcoming, *, next_n: int = 5) -> dict:
             for r in ranked if r["avg_difficulty"] is not None}
 
 
-def squad_risk_rows(owned, upcoming, *, gw_history=None, history=None, next_n: int = 5) -> list[dict]:
+def squad_risk_rows(owned, upcoming, *, gw_history=None, history=None, next_n: int = 5,
+                    exodus_for=None) -> list[dict]:
     """One row per owned player, **most in need of attention first** (ADR-130).
 
     Sorted by how much you might regret holding him, not by how good he is — a triage list, not a ranking. Each
@@ -99,6 +99,9 @@ def squad_risk_rows(owned, upcoming, *, gw_history=None, history=None, next_n: i
     fixtures alone and `minutes_basis` is None, so the caller can mark him unassessed.
     """
     fixt = fixture_risk_by_team(upcoming, next_n=next_n)
+    # ADR-210 — bound to the whole board by the caller (`crowd.exodus_detector`); the threshold is a
+    # percentile of the live league, and this function is handed fifteen players. No detector → no flag.
+    exodus_for = exodus_for or (lambda _p: None)
     rows = []
     for p in owned:
         mins, basis = minutes_risk(p, gw_history, history)
@@ -118,7 +121,7 @@ def squad_risk_rows(owned, upcoming, *, gw_history=None, history=None, next_n: i
         # nothing about a Saudi transfer or a training-ground row, but a hundred thousand sales show up within
         # hours. It does not enter `attention` — it is not a probability and averaging it with one would be the
         # units mistake ADR-143 made — but it *promotes* the row, because a manager should see it first.
-        exodus = crowd_exodus(p)
+        exodus = exodus_for(p)
         rows.append({
             "id": _get(p, "id"), "web_name": _get(p, "web_name"), "team": _get(p, "team"),
             "position": _get(p, "position"),

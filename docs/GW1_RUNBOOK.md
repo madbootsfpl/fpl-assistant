@@ -140,7 +140,7 @@ measurement):
 | `CLEAR` | 1.00 | 1.30 · 1.30 | **+30%** | ⚠️ **shipped 1.3** — leads widened (max 2.80 → 4.30) |
 | `CONCENTRATED` | 0.35 | 0.374 · 0.370 | +6% | keep **0.35** |
 | `HEAVY` | 0.45 | 0.446 · 0.435 | −2% | keep **0.45** |
-| `EXODUS_PRESSURE` | −7,996 | −3,901 | +51% | ⚠️ **the rule cannot be run** — see below |
+| `EXODUS_PRESSURE` | −7,996 | −3,901 | +51% | ⚠️ **the rule cannot be run** — see below. 🔧 **RETIRED 2026-09-18 (ADR-210)**: replaced by a live percentile |
 
 ⚠️ **`EXODUS_PRESSURE`'s re-measure instruction has no data to run on.** `price_pressure` reads
 `transfers_in_event`/`transfers_out_event` — *current-event* fields — and `player_history` stores no per-round
@@ -148,6 +148,14 @@ transfer columns, so the app holds one week of this quantity at a time. *"Re-mea
 produced a **second single-week sample**. Two samples 51% apart establish **that it varies**, not a new value.
 No constant was changed. The threshold flags **2 of 190** today against an intended worst-tenth — which is an
 argument for a **live percentile** rather than a fixed constant, gated in ADR-190.
+
+🔧 **2026-09-18 — BUILT, and the diagnosis above was incomplete (ADR-210).** The quantity does not merely
+vary: `transfers_in_event`/`transfers_out_event` are a **counter that resets at every deadline and fills up
+across the week**, so the two samples are two points on a **ramp**, not two draws from a distribution. The
+same constant flagged **2 of 190** one day after a deadline and **50 of 188** five days later. The threshold
+is now the worst tenth of the **live** board, and `player_transfer_flow` records each event's end-of-cycle
+reading **with `hours_to_deadline`** — the column whose absence is why this re-measure could not be run.
+⭐ *A measurement of an accumulation is not a measurement of a level.*
 
 ### Stopping rule — so "re-run later" cannot become forever
 
@@ -187,7 +195,7 @@ population they were measured on was big enough to mean anything.
 
 | constant | measured on | ships if |
 |---|---|---|
-| `EXODUS_PRESSURE` (p10) · `EXODUS_OWNERSHIP_FLOOR` | GW1, 199 players ≥1% owned (ADR-146/150) | re-measured on ≥4 GWs it moves **< 20%** → keep. **≥ 20%** → the original was noise; take the new value and say so. |
+| ~~`EXODUS_PRESSURE` (p10)~~ · `EXODUS_OWNERSHIP_FLOOR` | GW1, 199 players ≥1% owned (ADR-146/150) | 🔧 **The constant is RETIRED (ADR-210)** — the threshold is now a live percentile, so there is no stored number to re-measure and this rule no longer applies to it. What replaces it: 📅 **at the GW8 review (on/after 2026-10-26), re-ask whether the worst *tenth* is the right tenth**, against ≥4 events of `player_transfer_flow` read at a comparable point in the cycle. The ownership floor is unchanged. |
 | captain-margin quartiles · concentration quartiles (ADR-143/145) | one gameweek | same 20% test. These gate *whether a message appears at all*, so a wrong quartile is a feature that fires on everyone or no one. |
 | ADR-125 in-season xMins share | deliberately deferred to this sitting | `c ≈ GWs/(GWs+k)` reaches a share worth having only when it changes a projection by **> 0.5 xP for ≥ 20 players**. Below that it is churn. |
 | Scout / Trending copy | — | ⚠️ **The set-piece half of this row is now permanent** — the weight is gone (ADR-190), so that signal can never
