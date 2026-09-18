@@ -159,8 +159,20 @@ ago, about a constant three functions away from this one.
 
 ---
 
-## 📌 Follow-up for the owner
+## 📡 Post-ship — the ramp, caught at both ends in one day
 
-⏳ **A `refresh` before 17:30Z today writes the first `player_transfer_flow` rows for GW5** (659 players,
-~6h from the deadline). After the deadline the counters reset and this week's totals are gone for good —
-*the observer has to be in place before the thing it observes.*
+The refresh came **after** the 17:30Z deadline, so **GW5's end-of-cycle reading is lost** — the cleanest
+possible demonstration of why the log exists. The first rows are **659 players against GW6**, 517.7 h out.
+
+The accident bought a second reading at the opposite end of the cycle, nine hours after the first:
+
+| read (same day) | position in cycle | live threshold | Signals lists | fixed −8,000 lists |
+|---|---|---|---|---|
+| ~11:00Z | **6 h before** the GW5 deadline | **−14,992** | **7** | **33** |
+| ~20:15Z | **3 h after** it, counters reset | **−263** | **8** | **0** |
+
+⭐⭐ **The threshold moved 57× in nine hours. The fraction it flags did not move.** The claim of this sprint,
+observed rather than argued — and the old constant failing in *both* directions on one day's reality: a page
+of 33 names in the afternoon, total silence in the evening, because FPL zeroed a counter.
+
+⚠️ **The lost GW5 row is the price of the observer arriving a day late** — ADR-203's lesson, repeated.

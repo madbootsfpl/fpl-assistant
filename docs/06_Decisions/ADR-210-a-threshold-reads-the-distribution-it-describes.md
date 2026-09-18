@@ -154,6 +154,34 @@ open is closed, and the quantity behind it stops being destroyed weekly.
 
 ---
 
+---
+
+### 📡 Post-ship observation, 2026-09-18 evening — the ramp, caught at both ends in one day
+
+The GW5 deadline (17:30Z) passed before a refresh could capture it, so **GW5's end-of-cycle reading is lost** —
+exactly as this ADR said it would be, and the cleanest possible demonstration of why the log exists. FPL reset
+the counters at the deadline; the first `player_transfer_flow` rows are **659 players against GW6**, stamped
+**517.7 hours** from its deadline (the international break).
+
+That accident produced a **second reading at the opposite end of the cycle, nine hours after the first** — and
+it is stronger evidence than anything in the build:
+
+| read (same day) | position in cycle | live threshold | Signals lists | fixed −8,000 lists |
+|---|---|---|---|---|
+| ~11:00Z | **6 h before** the GW5 deadline | **−14,992** | **7** | **33** |
+| ~20:15Z | **3 h after** it, counters reset | **−263** | **8** | **0** |
+
+⭐⭐ **The threshold moved by a factor of 57 in nine hours. The fraction it flags did not move at all.**
+
+That is the whole claim of this ADR, observed rather than argued. And it shows the old constant failing in
+**both** directions on the same day's reality: −8,000 would have published a page of 33 names in the
+afternoon and then gone **completely silent** in the evening — not because the crowd stopped selling, but
+because FPL zeroed a counter.
+
+⚠️ **The lost GW5 row is the cost of the observer arriving one day late**, which is the lesson ADR-203 recorded
+and this ADR repeated: *every refresh that runs while the recorder is unwritten is an observation that does
+not exist.* GW6's row will be the first complete one.
+
 ### 🛠 Implementation & Migration
 
 * **Components Affected:** `analytics/crowd.py` · `analytics/ranking.py` (new `percentile_value`) ·
