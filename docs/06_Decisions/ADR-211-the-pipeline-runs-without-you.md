@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-211
 **Date:** 2026-09-18
-**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stage 2a built** — see below. 2b–2f open.
+**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stages 2a + 2b built** — see below. 2c–2f open.
 **Superseded By / Replaces:** Replaces the manual `reseed` → commit → redeploy path (ADR-053/056) as the way
 data reaches users. Does **not** change any analytics.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -196,7 +196,7 @@ and a live gameweek.**
 * **Action Items:**
   - [x] **GATE agreed 2026-09-18** — Postgres · GitHub Actions · headlines stay manual (option b)
   - [x] **2a — Postgres `Storage`; SQLite unchanged. 1,905 green on SQLite, 1,892 + 13 skipped on Postgres 17.2, and 0 of 659 xP values differ between backends**
-  - [ ] 2b — flagged cutover, `seed.db` fallback retained
+  - [x] **2b — flagged cutover (`FPL_DATABASE_URL`), `seed.db` retained; the app renders on Postgres and `refresh` writes to it. 1,914 green on SQLite, 1,901 + 13 skipped on Postgres**
   - [ ] 2c — scheduled refresh + validation + `data_status`; ⚠️ **prove the refusal path by feeding it a bad payload**
   - [ ] 2d — per-GW backfill
   - [ ] 2e — headline model decision, recorded
@@ -277,6 +277,84 @@ CI now runs **both**, so the dual-backend claim is swept rather than asserted (A
 from the current DDL, which is why `_migrate` / `_rekey_history` are skipped rather than ported. That is fine
 until the first column is added while Postgres holds real data — **which will happen inside this phase**, and
 is the first thing 2b must decide.
+
+---
+
+### ✅ Stage 2b — built 2026-09-18
+
+**One environment variable moves the whole app onto Postgres.** `FPL_DATABASE_URL` sets `config.DATABASE_URL`,
+which feeds `config.DB_PATH` — and since `src/db.py` already decides the backend from that string, all
+**eighteen** `Storage()` call sites in the web app follow without one of them being edited.
+
+| | tests |
+|---|---|
+| SQLite (unset — unchanged) | **1,914 passed** |
+| Postgres 17.2 | **1,901 passed · 13 skipped** |
+
+**Verified end-to-end, not just in tests:**
+
+* Six pages rendered against Postgres with **no exception and `fallback_reason()` of None** — it genuinely
+  read Postgres, not the seed.
+* `FPL_DATABASE_URL=… python app.py refresh` wrote a live FPL fetch **straight into a fresh Postgres**:
+  662 players · 380 fixtures · 662 availability rows · 662 ADR-210 transfer-flow rows, schema created from
+  nothing. The pipeline's write path exists.
+
+#### ⭐ The variable *is* the fallback
+
+Unset it and the app is byte-for-byte what it was. That is deliberately simpler than an automatic runtime
+failover — ⭐ *a failover that silently serves last month's snapshot while the pipeline is dead is the failure
+this phase exists to remove.* Where a **configured** Postgres cannot be used, the app still renders from the
+seed, and the sidebar shows a **warning** (not a caption — the freshness line is already a caption, and a
+caption reads as routine) naming the reason.
+
+Two failures are told apart and both land there: unreachable, and *reachable but holding no MadBoots schema*
+— a DSN pointing at the wrong database.
+
+#### ⭐⭐ Two asymmetries that turned out to be the design
+
+**A reader never creates the schema.** On SQLite the database *is* the app's own cache and bootstrapping it is
+right; on Postgres it is a shared database the pipeline owns. A reader running `CREATE TABLE IF NOT EXISTS`
+against an unexpected DSN would build eight empty tables and render *"no data"* — **reporting an empty league
+instead of a misconfiguration.** So a reader probes (one query, not eight DDL round trips) and declines to
+invent a schema; `ensure_schema=True` is how the pipeline says it means to.
+
+**A reader may degrade; a writer must not.** ⚠️ Caught while wiring `cmd_refresh`, not by a failing test: the
+reader path was written first and inheriting it for writers looked obviously right. It is not — **the fallback
+target is the committed `data/seed.db`**, so a degrading `refresh` would write live FPL data *into the
+repository's snapshot* and print success. Writers now raise. ⭐ *The safe direction to fail differs by what the
+caller is for.*
+
+#### 🐛 And the guard that swept for the wrong construct
+
+`translate` rewrites `?` → `%s`. `test_storage_backends.py` guarded that by looking for a `?` inside a
+**quoted literal** — the failure I imagined. The real one was a `?` inside a **SQL comment**: the new
+`CREATE TABLE data_status` carried *"did the last attempt pass validation?"*, translation turned it into a
+bind, and psycopg refused the statement — *"1 placeholders but 0 parameters were passed"* — so the schema
+would not build.
+
+⚠️ **I wrote that comment twenty minutes after writing the guard meant to catch exactly this.**
+⭐⭐ *A guard against a claim must sweep for the claim, not for the version of it you thought of* (ADR-184,
+third time). The guard now asserts what actually matters — **every `?` surviving translation is a real bind
+parameter** — and was mutation-tested by restoring the naive translation, which turns it red.
+
+#### `data_status` — freshness as a value
+
+The sidebar read the SQLite file's **mtime**, and a Postgres table has no mtime. More than that, an mtime
+records when something *wrote*, never whether the write was any good — which is the distinction an unattended
+pipeline turns on. So a one-row `data_status` table carries `refreshed_at` (last **successful** publish),
+`attempted_at` (last run, success or not), `ok` and `note`. ⭐ *Recording only successes would make a dead
+pipeline indistinguishable from a quiet one* — ADR-203's `last_seen_at` reasoning, in the place it matters
+most. **Nothing writes it until 2c**; readers degrade to "unknown".
+
+#### ⚠️ The open question, stated rather than guessed
+
+**Performance against a real Supabase is unmeasured.** Against a *local* Postgres the overhead is about
+**35 ms per page** fixed (two connections plus a schema probe), with the data-heavy Players board costing more
+(5.8 s against 4.4 s). Over the network to Supabase each connection is plausibly far dearer.
+
+The obvious mitigation — caching the connection in `st.cache_resource` — is **deliberately not built**, because
+it would be infrastructure for a latency nobody has measured. 📅 **Trigger: on the first Supabase deploy,
+compare page timings against the seed; if the added cost exceeds ~200 ms per rerun, cache the connection.**
 
 ### 💡 The lesson (provisional — this is a proposal)
 

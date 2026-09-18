@@ -134,7 +134,18 @@ class PgConnection:
         The `?` → `%s` half is exact only while no SQL contains a quoted `?`; `tests/test_storage_backends.py`
         asserts that rather than trusting it.
         """
-        return sql.replace("%", "%%").replace("?", "%s")
+        out = []
+        for line in sql.split("\n"):
+            # ⚠️ **A `?` inside a SQL comment is prose, not a placeholder.** `CREATE TABLE data_status` carried
+            # the comment *"did the last attempt pass validation?"*, and rewriting that `?` produced a query
+            # psycopg counted a parameter for — *"1 placeholders but 0 parameters were passed"* — so the
+            # schema would not build. ⭐⭐ The guard test for this swept for a `?` inside a **quoted literal**,
+            # which was the failure I imagined; the real one was a comment, and I wrote it myself twenty
+            # minutes later. *A guard against a claim must sweep for the claim, not for the version of it you
+            # thought of* (ADR-184, again).
+            code, sep, comment = line.partition("--")
+            out.append(code.replace("%", "%%").replace("?", "%s") + sep + comment.replace("%", "%%"))
+        return "\n".join(out)
 
     def execute(self, sql, params=()):
         # ⚠️ **A failed statement must be rolled back, and this has no SQLite equivalent.** Postgres marks the

@@ -23,24 +23,41 @@ SQL_CONSTANTS = [name for name in dir(storage)
                  if name.isupper() and isinstance(getattr(storage, name), str)]
 
 
-def test_no_sql_contains_a_quoted_question_mark():
-    """⭐ The assumption `?` → `%s` rests on, made into a test rather than trusted.
+def test_a_question_mark_that_is_not_a_placeholder_is_never_rewritten():
+    """⭐⭐ **The guard that swept for the wrong construct, corrected.**
 
-    `PgConnection.translate` rewrites every `?` in a statement. That is exact **only** while no `?` appears
-    inside a string literal — the day one does, the translation would corrupt the query rather than fail, and
-    the symptom would surface far from the cause.
+    The first version of this test looked for a `?` inside a **quoted literal** — the failure I imagined. The
+    real one was a `?` inside a **SQL comment**: `CREATE TABLE data_status` carried *"did the last attempt
+    pass validation?"*, `translate` rewrote it as a placeholder, and psycopg refused the statement with *"1
+    placeholders but 0 parameters were passed"* so the schema would not build. I wrote that comment twenty
+    minutes after writing the guard meant to protect against exactly this.
+
+    ⭐ *A guard against a claim must sweep for the claim, not for the version of it you thought of* (ADR-184).
+    So this now checks what actually matters: **every `?` surviving translation is a real bind parameter**,
+    whatever kind of prose it was sitting in.
     """
     offenders = []
     for name in SQL_CONSTANTS:
-        for literal in re.findall(r"'[^']*'", getattr(storage, name)):
-            if "?" in literal:
-                offenders.append(f"{name}: {literal}")
-    # The whole file, not just the constants — inline SQL is built in several methods.
-    source = Path(storage.__file__).read_text()
-    for literal in re.findall(r'"[^"\n]*\?[^"\n]*"', source):
-        if re.search(r"'[^']*\?[^']*'", literal):
-            offenders.append(literal)
-    assert not offenders, "a quoted '?' would be rewritten as a placeholder:\n" + "\n".join(offenders)
+        sql = getattr(storage, name)
+        translated = db.PgConnection.translate(sql)
+        # A placeholder sits alone between delimiters; prose has a letter or punctuation before it.
+        for match in re.finditer(r"%s", translated):
+            before = translated[:match.start()].rstrip()
+            if before and before[-1] not in "(,= <>":
+                offenders.append(f"{name}: …{translated[max(0, match.start() - 45):match.end() + 5]}…")
+    assert not offenders, (
+        "these '?' were prose, not parameters, and translation turned them into binds:\n"
+        + "\n".join(offenders))
+
+
+def test_the_comment_case_specifically_because_it_is_the_one_that_got_through():
+    """A regression pinned to the exact shape that broke: a `?` after a word, inside a `--` comment."""
+    sql = "CREATE TABLE t (\n  ok INTEGER   -- did it pass?\n)"
+    assert "%s" not in db.PgConnection.translate(sql)
+    # …while a real placeholder on a commented line still translates.
+    assert db.PgConnection.translate("SELECT ? -- why?").startswith("SELECT %s")
+    assert "did the last attempt pass validation?" in storage.CREATE_DATA_STATUS, \
+        "the comment that caused this stays, as the fixture"
 
 
 def test_a_literal_percent_is_escaped_before_placeholders_are_written():

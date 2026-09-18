@@ -162,7 +162,18 @@ SEED_DB_PATH = "data/seed.db"
 # The live cache written by `refresh` (gitignored). Named so `reseed` can target it explicitly —
 # even when it doesn't exist yet and DB_PATH has fallen back to the seed.
 LIVE_DB_PATH = "data/fpl.db"
-DB_PATH = LIVE_DB_PATH if os.path.exists(LIVE_DB_PATH) else SEED_DB_PATH
+# ⭐ **Postgres, when configured — and the DSN travels in the same variable as the path** (ADR-211 2b).
+# `src/db.py` already decides backend from the string, so setting this one environment variable points every
+# `Storage()` in the CLI and the web app at Postgres without a second parameter or a mode flag anywhere.
+#
+# ⭐ **This variable IS the fallback mechanism.** Unset it and the app is byte-for-byte what it was: the live
+# cache if one exists, else the committed seed. That is deliberately simpler — and safer — than an automatic
+# runtime failover, because a failover that silently serves last month's snapshot while the pipeline is dead
+# is the failure mode this phase exists to remove. Where a *configured* Postgres cannot be reached, `Storage`
+# falls back to the seed and says so loudly (`storage.fallback_reason()`), rather than quietly.
+DATABASE_URL = os.environ.get("FPL_DATABASE_URL") or None
+
+DB_PATH = DATABASE_URL or (LIVE_DB_PATH if os.path.exists(LIVE_DB_PATH) else SEED_DB_PATH)
 
 # FPL encodes a player's position as element_type 1-4. We store a readable
 # label instead of the magic number (mapped once, at ingestion).

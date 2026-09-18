@@ -66,6 +66,10 @@ def _postgres_backend(monkeypatch):
             _copy_snapshot_into(conn)
         return conn
 
+    # ⭐ Stashed so a test *about connection selection* can opt back into the real connector. Two of them
+    # assert what happens when the database is unreachable, and this harness guarantees a reachable one —
+    # patching them out would make the tests pass by not running the thing they test.
+    monkeypatch.setattr(db_module, "_unpatched_connect", db_module.connect, raising=False)
     monkeypatch.setattr(db_module, "connect", connect)
     yield
     admin.execute(f'DROP SCHEMA "{schema}" CASCADE')

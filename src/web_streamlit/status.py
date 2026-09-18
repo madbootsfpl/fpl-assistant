@@ -14,11 +14,30 @@ import sqlite3
 import streamlit as st
 
 from src import config, ingest
-from src.storage import Storage
+from src.storage import Storage, fallback_reason
 
 
 def _data_as_of() -> str:
-    """The DB file's date — the last refresh locally, or the deploy snapshot's date on the cloud."""
+    """When the data was last refreshed — a date, or "unknown".
+
+    ⭐ **Two sources, because the answer stopped being a file** (ADR-211 2b). Against SQLite this is the
+    snapshot's mtime, exactly as before. Against Postgres there is no file, and an mtime would be the wrong
+    question anyway: it records when something *wrote*, never whether the write was any good. So Postgres
+    reports `data_status.refreshed_at` — the last refresh that actually passed — and falls back to "unknown"
+    until the scheduled pipeline starts writing it in 2c.
+    """
+    if config.DATABASE_URL and not fallback_reason():
+        try:
+            store = Storage()
+            try:
+                row = store.data_status()
+            finally:
+                store.close()
+            if row and row["refreshed_at"]:
+                return str(row["refreshed_at"])[:10]
+        except Exception:                      # noqa: BLE001 — a caption must never take the page down
+            return "unknown"
+        return "unknown"
     try:
         return datetime.date.fromtimestamp(os.path.getmtime(config.DB_PATH)).isoformat()
     except OSError:
@@ -52,6 +71,15 @@ def render_data_status() -> None:
         count = _player_count()
         prefix = f"{count} players · " if count is not None else ""
         st.caption(f"📅 {prefix}data as of {_data_as_of()}")
+        # ⭐⭐ **A configured database we could not reach must never degrade quietly.** Serving the committed
+        # snapshot is the right thing to do — the app keeps working — but doing it *silently* would leave a
+        # dead pipeline looking exactly like a healthy one, which is the failure ADR-211 exists to remove.
+        # A caption is not enough for this one: it is a warning.
+        if (why := fallback_reason()):
+            st.warning(
+                "⚠️ **Showing the last snapshot.** The live database could not be read, so this data may be "
+                "out of date.", icon="⚠️")
+            st.caption(f"Reason: {why}")
         if not is_local():
             # The cloud serves the committed snapshot (ADR-053) — a local refresh never reaches it.
             st.caption("🌐 A data snapshot — updates when the app is redeployed.")

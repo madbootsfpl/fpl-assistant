@@ -285,6 +285,21 @@ CREATE TABLE IF NOT EXISTS player_transfer_flow (
 )
 """
 
+CREATE_DATA_STATUS = """
+CREATE TABLE IF NOT EXISTS data_status (
+    -- A single row. ⭐ **Freshness has to be a VALUE once the data stops being a file** (ADR-211 2b): the
+    -- Streamlit sidebar read the SQLite file's mtime, and a Postgres table has no mtime. More than that, an
+    -- mtime says when someone *wrote*, never whether the write succeeded — which is the distinction this
+    -- phase turns on, because an unattended pipeline can fail unattended.
+    id            INTEGER PRIMARY KEY,
+    refreshed_at  TEXT,      -- when the last SUCCESSFUL refresh completed
+    attempted_at  TEXT,      -- when a refresh last RAN, successful or not
+    event         INTEGER,   -- the gameweek the data describes
+    ok            INTEGER,   -- did the last attempt pass validation?
+    note          TEXT       -- why not, when it did not
+)
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -437,6 +452,42 @@ ON CONFLICT(id) DO UPDATE SET
 """
 
 
+# ⭐ **Why a reader never creates the schema** (ADR-211 2b). On SQLite the database *is* the app's own cache
+# and bootstrapping it is right. On Postgres it is a shared database the **pipeline** owns, and a reader that
+# runs `CREATE TABLE IF NOT EXISTS` against a DSN pointing somewhere unexpected would build eight empty tables
+# and then render "no data" — reporting an empty league instead of a misconfiguration. ⭐ *The thing that owns
+# a schema should be the only thing that creates it*, so the web app asks whether the schema is there and
+# declines to invent it.
+#
+# Set by `Storage` when a configured Postgres could not be used and the committed seed was served instead.
+# ⚠️ Module-level on purpose: every `Storage()` in the web app is short-lived, so the *instance* cannot carry
+# this to the sidebar that has to display it.
+_FALLBACK_REASON: str | None = None
+
+
+def _schema_present(conn) -> bool:
+    """Does this database already carry the MadBoots schema? One cheap query, not eight DDL round trips.
+
+    `players` stands in for all eight tables: they are created together in `_init_schema`, so a database with
+    that table and not the rest is not a state this app can produce.
+    """
+    try:
+        conn.execute("SELECT 1 FROM players LIMIT 1").fetchall()
+    except db.MISSING_TABLE:
+        return False
+    return True
+
+
+def fallback_reason() -> str | None:
+    """Why the app is serving the seed instead of the Postgres it was configured for — or None (ADR-211).
+
+    ⭐ **This exists so the degradation cannot be silent.** Serving a month-old snapshot while the pipeline is
+    dead, and looking healthy doing it, is precisely the failure this phase was created to remove — so the
+    sidebar renders this as a warning, and a test asserts that it does.
+    """
+    return _FALLBACK_REASON
+
+
 class Storage:
     """The storage layer — SQLite by default, Postgres when handed a DSN (ADR-211).
 
@@ -445,7 +496,45 @@ class Storage:
     the argument every call site already passes.
     """
 
-    def __init__(self, db_path: str = config.DB_PATH):
+    def __init__(self, db_path: str = config.DB_PATH, *, ensure_schema: bool | None = None):
+        """Open `db_path` — a SQLite file or a Postgres DSN.
+
+        `ensure_schema` decides whether this connection may **create** tables. It defaults to *yes* for SQLite
+        (the local cache has to bootstrap itself) and *no* for Postgres (the pipeline owns that schema, see the
+        note above). The pipeline passes `ensure_schema=True` explicitly, which is the one place the decision
+        is worth stating out loud.
+        """
+        global _FALLBACK_REASON
+
+        # ⭐ **A configured Postgres that cannot be used falls back to the seed — visibly.** Two failures are
+        # worth telling apart and both end here: the server is unreachable, or it is reachable and holds no
+        # MadBoots schema (a DSN pointing at the wrong database). Either way the app still renders, and
+        # `fallback_reason()` makes the sidebar say why.
+        if db.is_postgres(db_path):
+            # ⭐⭐ **A READER may degrade; a WRITER must not.** `ensure_schema=True` marks the pipeline, and a
+            # refresh that cannot reach Postgres has to **fail loudly** — because the fallback path is the
+            # committed `seed.db`, so degrading here would quietly write a live refresh into the repo's
+            # snapshot and report success. ⭐ *The safe direction to fail differs by what the caller is for.*
+            if ensure_schema:
+                self.conn = db.connect(db_path)
+                self.is_postgres = True
+                self._init_schema()
+                _FALLBACK_REASON = None
+                return
+            try:
+                conn = db.connect(db_path)
+                if not _schema_present(conn):
+                    conn.close()
+                    raise RuntimeError("no MadBoots schema in that database — has the pipeline run?")
+            except Exception as exc:                       # noqa: BLE001 — any failure degrades the same way
+                _FALLBACK_REASON = f"{type(exc).__name__}: {exc}"
+                db_path = config.SEED_DB_PATH
+            else:
+                _FALLBACK_REASON = None
+                self.conn = conn
+                self.is_postgres = True
+                return
+
         # Make sure the parent folder exists (e.g. data/) before connecting — a file path only.
         if not db.is_postgres(db_path) and db_path != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -469,6 +558,7 @@ class Storage:
             self.conn.execute(CREATE_HEADLINE_EVENTS)
             self.conn.execute(CREATE_AVAILABILITY)
             self.conn.execute(CREATE_TRANSFER_FLOW)
+            self.conn.execute(CREATE_DATA_STATUS)
             # ⭐ **The two migrations below repair OLD SQLITE FILES, and a Postgres database has no old files.**
             # `_migrate` adds columns that post-date a table, and `_rekey_history` rebuilds a primary key that
             # changed in ADR-129 — both exist because a cache on someone's laptop may have been created in
@@ -682,6 +772,36 @@ class Storage:
                 "SELECT * FROM player_transfer_flow ORDER BY event, element_code").fetchall()
         return self.conn.execute(
             "SELECT * FROM player_transfer_flow WHERE event = ? ORDER BY element_code", (event,)).fetchall()
+
+    def data_status(self):
+        """The one `data_status` row, or None when the table is absent or empty (ADR-211 2b).
+
+        ⚠️ **None is the normal state today**, not a failure: nothing writes this until the scheduled pipeline
+        lands in 2c, and a database that predates the table must still render. Callers degrade to what they
+        showed before.
+        """
+        try:
+            return self.conn.execute("SELECT * FROM data_status WHERE id = 1").fetchone()
+        except db.MISSING_TABLE:
+            return None
+
+    def set_data_status(self, *, refreshed_at=None, attempted_at=None, event=None, ok=None, note=None) -> None:
+        """Record the outcome of a refresh attempt — **including a failed one** (ADR-211 2b).
+
+        ⭐ *Recording only successes would make a dead pipeline indistinguishable from a quiet one*, which is
+        the exact ambiguity ADR-203 designed `last_seen_at` to remove for availability. `attempted_at` moves
+        every run; `refreshed_at` moves only when the data was actually published.
+        """
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO data_status (id, refreshed_at, attempted_at, event, ok, note) "
+                "VALUES (1, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET "
+                "refreshed_at = COALESCE(excluded.refreshed_at, data_status.refreshed_at), "
+                "attempted_at = COALESCE(excluded.attempted_at, data_status.attempted_at), "
+                "event = COALESCE(excluded.event, data_status.event), "
+                "ok = excluded.ok, note = excluded.note",
+                (refreshed_at, attempted_at, event, None if ok is None else int(ok), note))
 
     def save_history_past(self, seasons: list[PlayerSeason]) -> None:
         """Upsert past-season history rows (ADR-027). Idempotent on (code, season)."""

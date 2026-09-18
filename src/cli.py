@@ -83,8 +83,12 @@ def cmd_table(args) -> None:
 
 
 def cmd_refresh(args) -> None:
-    """Fetch the latest FPL data and store it locally."""
-    store = Storage()
+    """Fetch the latest FPL data and store it locally — or into Postgres when `FPL_DATABASE_URL` is set."""
+    # ⭐ `ensure_schema=True` says "this is a writer" (ADR-211 2b). It creates the schema when the target is a
+    # fresh Postgres, and — the part that matters — it makes an unreachable Postgres **raise** instead of
+    # falling back to the committed seed, which would write a live refresh into the repo's snapshot and
+    # report success.
+    store = Storage(ensure_schema=True)
     try:
         n_players, n_teams, n_fixtures, n_elo = ingest.refresh(store)
         print(
