@@ -306,6 +306,11 @@ dual-run period — which is why the audit puts it in Phase 3 rather than now.
 
 ## Recommended order
 
+> 🔴 **Superseded in one respect (2026-09-19): Stage A can no longer ship alone.** Revoking `DELETE` on
+> `beta_waitlist` breaks ADR-122's "Remove me", silently, and the fix (`forget_me`) lives in Stage B. The
+> order below still reflects *risk*; it no longer reflects *shippable units*.
+
+
 | | action | risk | code change | do it |
 |---|---|---|---|---|
 | **1** | **A1 — `beta_waitlist`** | none (never read) | ⚠️ **1 line** — drop the `Prefer` header in `waitlist.py`; see A1 | ✅ **today** |

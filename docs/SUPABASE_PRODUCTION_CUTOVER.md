@@ -1,5 +1,26 @@
 # Stage A — production cutover runbook
 
+> # 🔴 DO NOT RUN THIS AS WRITTEN — 2026-09-19
+>
+> **Stage A on its own breaks ADR-122's "Remove me".** Revoking `DELETE` on `beta_waitlist` turns a tester's
+> self-service deletion into `refused (HTTP 401)` — and the UI **ignores that result by design**, so nothing
+> surfaces. The table simply stops honouring the promise.
+>
+> ⚠️ **Confirmed on staging, after Stage A was applied there**: `remove_me` returned
+> `beta_waitlist: refused (HTTP 401)`. The original rehearsal checked that the waitlist *write* still worked
+> and stopped there — ⭐ *a permission you remove is a promise you may have removed with it.*
+>
+> **The fix exists** — `forget_me` in [`sql/stage_b.sql`](../sql/stage_b.sql), which performs the one deletion
+> a person is entitled to and reports a row count per table. It is built, tested against a real Postgres, and
+> on `master` (`e05f2d9`).
+>
+> **So Stage A and Stage B now ship together.** This runbook covers Stage A alone and needs rewriting to
+> cover both — including the new `FPL_ADMIN_STORE_KEY` secret, without which the Admin roster goes blank the
+> moment `beta_users` is revoked.
+>
+> 📋 **Everything below is still accurate for Stage A itself** — the ordering rule, the measurements, the
+> verification and the rollback. It is the *scope* that is wrong, not the steps.
+
 **What this applies:** [`SUPABASE_RLS.md`](SUPABASE_RLS.md) **Stage A** — closing `beta_waitlist` to reads and
 confirming `maddie_videos` is read-only. Rehearsed in full on staging on 2026-09-19; this is the same change
 against the live project.
