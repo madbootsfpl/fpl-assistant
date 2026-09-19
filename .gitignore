@@ -15,8 +15,11 @@ venv/
 # Logs
 *.log
 
-# Environment variables
+# Environment variables. ⚠️ The glob matters: `.env` alone matches ONLY that exact filename, so
+# `.env.staging` — the file the Supabase staging runbook asks you to create — was committable. On a PUBLIC
+# repo that is a credential leak one `git add -A` away (ADR-211 / docs/SUPABASE_STAGING.md).
 .env
+.env.*
 
 # ⚠️ Streamlit secrets — NEVER commit. The repo is PUBLIC (Streamlit Community Cloud requires it), and this
 # file is where the Supabase anon key and the Google `[auth]` client secret live when testing locally.

@@ -4,12 +4,18 @@
 **Source:** the Phase 1 audit, [`03_Architecture/Mobile_Platform_Audit.md`](03_Architecture/Mobile_Platform_Audit.md) §2.3
 **Supersedes the SQL in:** [`CLOUD_SQUADS.md`](CLOUD_SQUADS.md) §1 and [`BETA.md`](BETA.md) §4 — **once applied**.
 
+> **Naming, because three documents use the word "stage".** The work in *this* file is **Phase 1.5**, and its
+> parts are **Stage A / B / C** — letters, never numbers. **Stage 2a–2f** is something else entirely: the
+> autonomous data pipeline in [ADR-211](06_Decisions/ADR-211-the-pipeline-runs-without-you.md), which belongs
+> to Phase 2. ⚠️ An earlier draft of this file numbered its sections *as well as* lettering its stages, so
+> "Stage A" sat under a heading reading "2." — ⭐ *two numbering systems on one heading is one too many.*
+
 > Run nothing from this file until the staging is agreed. **Stage A is safe today. Stage B needs a code
 > change and will break the live app if applied without one.** That distinction is the whole document.
 
 ---
 
-## 0. The actual control surface — and why the current docs mislead
+## The actual control surface — and why the current docs mislead
 
 The existing setup SQL reaches for `alter table … disable row level security` as the "simplest alternative."
 ⚠️ **That is not a weaker lock, it is no lock.** And even with RLS *enabled*, `create policy … using (true)`
@@ -23,7 +29,7 @@ Both halves appear below, in that order.
 
 ---
 
-## 1. What the app actually does — measured, not assumed
+## What the app actually does — measured, not assumed
 
 Every policy below is derived from this table. It was built by reading the PostgREST calls in
 `src/web_streamlit/`, not from the docs.
@@ -54,7 +60,7 @@ deletes the workaround** — the security fix and the bug fix are the same chang
 
 ---
 
-## 2. Stage A — safe to apply today, no code change
+## Stage A — safe to apply today, no code change
 
 Two real wins, both on tables holding **personal data**.
 
@@ -125,7 +131,7 @@ create policy "events insert" on public.events
 
 ---
 
-## 3. 🔴 What Stage A **cannot** fix, and why
+## 🔴 What Stage A **cannot** fix, and why
 
 `squads`, `beta_users`, `user_prefs` and `player_watchlist` **cannot be secured by policy alone**, because
 there is no identity to scope a policy to. `using (auth.uid() = owner)` requires Supabase Auth to have issued
@@ -141,7 +147,7 @@ works **today, without auth**, and it is Stage B.
 
 ---
 
-## 4. Stage B — narrow functions, then revoke the tables
+## Stage B — narrow functions, then revoke the tables
 
 Needs a matching change in `src/web_streamlit/` (PostgREST table calls → `rpc/` calls). Roughly half a day.
 Two representative functions; the rest follow the identical pattern.
@@ -247,7 +253,7 @@ revoke all on public.squads, public.beta_users, public.user_prefs, public.player
 
 ---
 
-## 5. ⚠️ What this does and does not achieve
+## ⚠️ What this does and does not achieve
 
 **Stage B stops:** enumeration (dumping every squad or every tester email), mass deletion, and arbitrary
 overwrites of rows you have not identified. That is the difference between *"one request takes the whole
@@ -263,7 +269,7 @@ original design, and it splits in two:
 
 ---
 
-## 6. Stage C — real identity (Phase 3, with the mobile API)
+## Stage C — real identity (Phase 3, with the mobile API)
 
 Supabase Auth issues a `uid`; every user-data table gains an `owner uuid references auth.users`; policies
 become the real thing:
@@ -281,7 +287,7 @@ dual-run period — which is why the audit puts it in Phase 3 rather than now.
 
 ---
 
-## 7. Recommended order
+## Recommended order
 
 | | action | risk | code change | do it |
 |---|---|---|---|---|
