@@ -344,6 +344,18 @@ they're annotated inline above, not duplicated:
   ship the panel, watch the testers; if "I want to tap the shirt" stays the top ask, that's the green light.
 
 **New:**
+- 🩹 **The "Synced" pill reports availability, not the actual save** *(Web G1)* — the My Squad status card
+  shows **🔄 Synced across your devices** whenever `auth.is_configured()` is true
+  (`views/squads.py:605` → `synced=auth.is_configured()`). That is *"auto-sync is switched on"*, **not**
+  *"this squad has been written"*: a squad that has never saved, or whose save **failed**, shows the same
+  green pill. ⭐ **A claim the app makes to the reader and does not make to itself** — the same species as
+  ADR-188 (a number displayed but not used) and ADR-142 (an "Active" count that never measured activity).
+  In practice auth-mode auto-saves on change so it is usually true, which is exactly what makes the
+  failure quiet. **Fix shape:** drive the pill from the last successful write (the `squads.updated_at`
+  already returned by `link_and_restore`) and show **💾 This session** when there isn't one; a third state —
+  *"⚠️ not saved"* — is worth considering for a failed write. Small, display-only, no new storage. *(Found
+  2026-09-19 while walking the Supabase staging runbook: the pill was the tell that the owner was on the
+  deployed app rather than the local one — it was reporting truthfully about the wrong thing.)*
 - 🩹 **Homepage copy is stale — auth is live** *(Web F1)* — `madboots.com` still reads *"No login to look around ·
   your squad saves across devices by a handle."*, untrue since **Google auth went live (2026-08-12)**. Update to:
   **sign in with Google → the squad auto-saves to your account + syncs across devices** (drop "unique team name" — the

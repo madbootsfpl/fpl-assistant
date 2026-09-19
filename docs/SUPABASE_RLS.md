@@ -60,37 +60,69 @@ deletes the workaround** — the security fix and the bug fix are the same chang
 
 ---
 
-## Stage A — safe to apply today, no code change
+## Stage A — small and safe, but A1 needs one line of code
 
 Two real wins, both on tables holding **personal data**.
 
 ### A1. `beta_waitlist` — never read by the app, currently wide open 🔴
 
 It holds the email of everyone who tried to sign in and was refused. RLS is **disabled** on it today, so the
-anon key can read the lot. The app only ever upserts.
+anon key can read the lot — and **delete it**.
+
+#### ⚠️ Corrected 2026-09-19 — this needs a one-line code change, and the first draft was wrong
+
+The original A1 claimed *"safe to apply today, no code change"*. **It is not**, and the staging rehearsal is
+what found it. Measured across four variants on Postgres 17:
+
+| grants / policies | anon can read? | the app's upsert |
+|---|---|---|
+| `insert, update` + insert/update policies | ❌ denied ✅ | ❌ **permission denied** |
+| …plus `select` privilege, no select policy | ❌ 0 rows ✅ | ❌ **RLS violation** |
+| …plus a `select` policy `using (false)` | ❌ 0 rows ✅ | ❌ **RLS violation** |
+| …plus a `select` policy `using (true)` | 🔴 **everything** | ✅ works |
+
+⭐⭐ **`ON CONFLICT` — `DO UPDATE` *and* `DO NOTHING` — requires a permissive SELECT policy, because it has to
+read the conflicting row.** So the read exposure and the app's write are **coupled**: there is no combination
+of grants and policies that keeps one and removes the other.
+
+⚠️ **Had this gone to production as drafted, the waitlist would have silently stopped recording people.** The
+write is fail-silent (`except Exception: return`), so nobody would have seen an error — the table would just
+have stopped growing, and it would have looked like nobody was being refused.
+
+#### The fix: make it a plain INSERT
+
+`waitlist.py` sends `Prefer: resolution=merge-duplicates`, which is what makes it an upsert. Remove that
+header and it becomes a plain INSERT, which needs **only** the INSERT privilege.
+
+Verified against the live staging project:
+
+| request | status |
+|---|---|
+| duplicate email, **no** `Prefer` header | **409** — and `requests.post` does not raise on an HTTP error, so the app never even sees it |
+| duplicate email, with `merge-duplicates` | 200 |
+
+**What it costs:** a repeat refusal no longer updates `reason` (`not_listed` → `full`). The row still exists
+and the person is still on the waitlist; only the *most recent* reason is lost. ⭐ *The upsert's whole job was
+to avoid an error the app already ignores.*
 
 ```sql
--- Take back the default grants; PostgREST can then do nothing this file does not re-grant.
+-- A1 — beta_waitlist: emails go in, nothing comes out.
+-- ⚠️ Apply the one-line change in waitlist.py FIRST (drop the Prefer header), or repeat sign-ins will 409
+--    and — because the write is fail-silent — stop being recorded without saying so.
 revoke all on public.beta_waitlist from anon, authenticated;
-grant insert, update on public.beta_waitlist to anon;   -- the upsert's two halves, and nothing else
+grant insert on public.beta_waitlist to anon;
 
 alter table public.beta_waitlist enable row level security;
 
-drop policy if exists "waitlist insert" on public.beta_waitlist;
-drop policy if exists "waitlist upsert-update" on public.beta_waitlist;
+drop policy if exists "waitlist insert"        on public.beta_waitlist;
+drop policy if exists "waitlist upsert-update" on public.beta_waitlist;   -- from the superseded draft
 
 create policy "waitlist insert" on public.beta_waitlist
   for insert to anon with check (true);
-
--- ⚠️ Required, and not obvious: a PostgREST upsert is INSERT … ON CONFLICT DO UPDATE, so the conflict path
--- is an UPDATE and needs its own policy. Without it the write fails 42501 — and waitlist writes are
--- fail-silent, so it would fail invisibly. (BETA.md already records this trap; here it is deliberate.)
-create policy "waitlist upsert-update" on public.beta_waitlist
-  for update to anon using (true) with check (true);
 ```
 
-**Result:** emails can go in; nothing can read or delete them with the anon key. You read the list in the
-Supabase dashboard, which is how you already do it.
+**Verified as anon after applying:** `select` → *permission denied*; `delete` → *permission denied*;
+`insert` of a new email → succeeds; `insert` of a duplicate → unique violation, swallowed.
 
 ### A2. `maddie_videos` — read-only, confirm no write path
 
@@ -291,7 +323,7 @@ dual-run period — which is why the audit puts it in Phase 3 rather than now.
 
 | | action | risk | code change | do it |
 |---|---|---|---|---|
-| **1** | **A1 — `beta_waitlist`** | none (never read) | none | ✅ **today** |
+| **1** | **A1 — `beta_waitlist`** | none (never read) | ⚠️ **1 line** — drop the `Prefer` header in `waitlist.py`; see A1 | ✅ **today** |
 | **2** | **A2 — `maddie_videos`** | none | none | ✅ today |
 | **3** | Rotate `FPL_STORE_KEY` | low | 1 secret | ✅ after A1/A2 |
 | **4** | **B1/B2 — `beta_users` via RPC** | low, testable | ~1 file | 🔜 next sprint |
