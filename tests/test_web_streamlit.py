@@ -4731,3 +4731,17 @@ def test_the_bank_control_can_express_a_real_bank():
     after = bank.set_value(1.2).run()
     stated = next((c.value for c in after.caption if "free transfer" in c.value), "")
     assert "**£1.2m**" in stated, f"a £1.2m bank must survive the control, got: {stated!r}"
+
+
+def test_signals_says_when_the_media_headlines_were_last_read():
+    """ADR-211 2e — headline extraction needs a language model and the scheduled runner has none, so this is
+    the one signal on the page that does **not** refresh itself.
+
+    ⚠️ **Stale headlines do not look stale; they look like *no news*.** Every other freshness signal in the
+    pipeline phase is surfaced, and leaving the one manual input silent would be the exception that matters
+    most — so the date it was last read is printed, whether or not anything came of it."""
+    at = _run(_ROOT / "src/web_streamlit/pages/3_Signals.py")
+    assert not at.exception
+    captions = " ".join(c.value for c in at.caption)
+    assert "headlines last read" in captions.lower(), "the manual input must declare its own age"
+    assert "no fresh reading" in captions.lower(), "and say what an old date means"

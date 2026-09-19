@@ -44,13 +44,32 @@ the few-clicks part, which **you run** (Claude can't create the account).
 
 - **Update the app:** push to `master` → Community Cloud **auto-redeploys**. (Or **Reboot** in the app’s
   menu.)
-- **Refresh the data** (the deploy reads the committed snapshot). Two refresh stories:
-  - **Cloud** (what testers see): `python app.py reseed` (one command — refresh into `data/fpl.db`, then
-    copy it to `data/seed.db`), then **commit + push** (auto-redeploys, or Reboot). **Do this before GW1
-    (2026-08-21)** and whenever prices/injuries move enough to matter. The player count in the app's
-    freshness caption tells you whether the live snapshot is current.
-  - **Local** (your own run): no reseed needed — the sidebar **🔄 Refresh data** button updates `fpl.db`
-    in place, or just restart the app after a `python app.py refresh`.
+- **Refresh the data.** ⭐ **There are two eras here and the commands are the same in both** — what changes is
+  which one is load-bearing (ADR-211).
+
+  **Before the pipeline cutover** (no `FPL_DATABASE_URL` secret — this is the state today):
+  - **Cloud** (what testers see): `python app.py reseed` (refresh into `data/fpl.db`, then copy it to
+    `data/seed.db`), then **commit + push** (auto-redeploys, or Reboot). Do it whenever prices/injuries move
+    enough to matter. The player count in the app's freshness caption tells you whether the snapshot is
+    current. ⚠️ **This is the only route — nothing else updates what testers see.**
+  - **Local** (your own run): no reseed needed — the sidebar **🔄 Refresh data** button updates `fpl.db` in
+    place, or restart the app after `python app.py refresh`.
+
+  **After the cutover** (`FPL_DATABASE_URL` set on the app *and* as a repo secret):
+  - The app reads **Postgres**, and `.github/workflows/data.yml` refreshes it through the day — hourly when
+    quiet, every 15 minutes in the hour before a deadline, every 10 minutes during a live gameweek. **No
+    commit, no redeploy, no you.** `.github/workflows/backfill.yml` adds each gameweek's per-player history
+    once its results post.
+  - ⚠️ **`reseed` does not go away, and its job changes.** It maintains `data/seed.db`, which is now the
+    **fallback** the app shows if Postgres cannot be reached — so run it occasionally, because *a very stale
+    fallback is a poor fallback*. It no longer reaches users directly.
+  - 📰 **One thing still needs you: media headlines.** Extraction needs a language model and the scheduled
+    runner has none (ADR-211's gate kept it manual), so run
+    **`FPL_DATABASE_URL=… python app.py refresh`** on a machine with Ollama when you want them updated. That
+    writes players *and* headlines straight into Postgres. The Signals page prints the date they were last
+    read, because ⚠️ *stale headlines do not look stale — they look like no news*.
+  - The sidebar says which of the two it is doing, and raises a **warning** if a configured database could
+    not be read.
 - **Record the live URL** in the README’s “Live app” line.
 
 ---

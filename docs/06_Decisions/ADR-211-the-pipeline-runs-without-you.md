@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-211
 **Date:** 2026-09-18
-**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **Stages 2a–2d built** — see below. 2e (headlines, decided: manual) and 2f (retire the manual path) open.
+**Status:** ✅ **Gated and agreed 2026-09-18** (destination: Postgres · trigger: GitHub Actions · headlines: manual for now). **All six stages built (2a–2f).** ⏳ Outstanding is not code: a Supabase project, the Phase 1.5 RLS work, and the `FPL_DATABASE_URL` secret — until it exists both workflows are inert.
 **Superseded By / Replaces:** Replaces the manual `reseed` → commit → redeploy path (ADR-053/056) as the way
 data reaches users. Does **not** change any analytics.
 **Deciders / Participants:** Tony Sheridan (Owner), Claude Code (Implementation)
@@ -199,9 +199,9 @@ and a live gameweek.**
   - [x] **2b — flagged cutover (`FPL_DATABASE_URL`), `seed.db` retained; the app renders on Postgres and `refresh` writes to it. 1,914 green on SQLite, 1,901 + 13 skipped on Postgres**
   - [x] **2c — scheduled refresh (`data.yml`, 15-min tick) + validation + `data_status`. ✅ Refusal proven on real Postgres: 662 players held, a 3-player payload refused, nothing written, `refreshed_at` unmoved. 11 mutants, 11 red**
   - [x] **2d — per-GW backfill (`backfill.yml`, hourly, gated on a completed gameweek missing history). ✅ Verified live; `_migrate` now portable, closing 2a's stated gap. 17 mutants red**
-  - [ ] 2e — headline model decision, recorded
-  - [ ] 2f — retire the manual deploy path
-  - [ ] Mutation-test the validation guards
+  - [x] **2e — headlines stay manual (option b), and the path to Postgres pinned: `cmd_refresh` hands ONE store to `enrich_headlines`, so a local refresh with the DSN carries them. Signals prints when they were last read**
+  - [x] **2f — the manual route retired in code AND in copy: the sidebar no longer claims a redeploy is needed while reading Postgres; `reseed`'s help, docstring and DEPLOY.md state both eras**
+  - [x] **Mutation-tested: 21 mutants across 2c–2f, 21 red** (2 survived a first pass — both guards that could not reach the case they described)
 
 #### ✅ Always
 - [ ] **Add a row to `docs/06_Decisions/ADR-000-index.md`.**
@@ -492,7 +492,75 @@ primary key it repairs.
 
 **17 mutants, 17 red** across 2c and 2d.
 
-### 💡 The lesson (provisional — this is a proposal)
+---
+
+### ✅ Stages 2e + 2f — built 2026-09-19. **Phase 2 complete.**
+
+| | tests |
+|---|---|
+| SQLite | **1,946 passed · 1 skipped** |
+| Postgres 17.2 | **1,934 passed · 13 skipped** |
+
+#### 2e — the one manual input, and the gap in it
+
+The gate chose option (b): headline extraction stays manual, because it needs a language model and the
+scheduled runner has none. ⚠️ **But that decision had an unexamined hole**: extraction writes to whatever
+`Storage()` resolves to, and after the cutover the app reads Postgres — so events extracted on the owner's
+Mac would have landed in a local SQLite cache nobody reads.
+
+⭐ **It turned out to already work, for a reason worth pinning rather than rediscovering.** `cmd_refresh`
+opens **one** store and hands that same store to `enrich_headlines`, so
+**`FPL_DATABASE_URL=… python app.py refresh`** on a machine with Ollama writes players *and* headlines
+straight into Postgres. No separate push step, no second code path. A test now pins it, because 'tidying'
+the headline call onto its own `Storage()` would silently split the destination in two — and ⚠️ **the symptom
+would be *no news*, which looks exactly like *no news*.**
+
+**So the Signals page now prints when headlines were last read.** Every other freshness signal in this phase
+is surfaced; leaving the one manual input silent would be the exception that mattered most.
+⭐ *Stale headlines do not look stale.*
+
+#### 2f — retiring a path means retiring what the product says about it
+
+`reseed` does **not** go away. What changes is its job, and the app had a sentence about that job baked in:
+
+> *"🌐 A data snapshot — updates when the app is redeployed."*
+
+True before the cutover, **false after it** — the pipeline refreshes the database through the day. ⭐ *That is
+a sentence the app says about itself while behaving differently*, which is exactly the shape ADR-184 was
+written about. The sidebar now tells the truth in both states, and a test asserts both branches.
+
+`reseed`'s own help, its docstring and `DEPLOY.md` now state the two eras explicitly: before the cutover it
+**is** the deploy route and nothing else reaches testers; after it, it maintains the **fallback** the app
+shows when Postgres cannot be read — ⚠️ *a very stale fallback is a poor fallback*, so it stays worth running
+occasionally. It targets SQLite explicitly, so `FPL_DATABASE_URL` never redirects it.
+
+#### 🐛 And the sweep was wrong again, in the same way
+
+The guard for the retired claim required the word **"reseed" on the same line** as the claim — and missed the
+exact regression it exists for, because the `help=` string on `p_reseed` never contains that word; the
+*variable name* does. ⭐⭐ *Sweep for the claim, not for a word you expect to sit beside it.* **Second time in
+this ADR alone**, after the `?`-in-a-SQL-comment guard in 2b.
+
+**21 mutants across 2c–2f, 21 red** — 2 of them survived a first pass and both were guards that could not
+reach the case they described.
+
+---
+
+### 📋 Phase 2 status
+
+**Built:** 2a Postgres backend · 2b flagged cutover · 2c scheduled refresh + validation · 2d per-gameweek
+backfill · 2e headlines (decided manual, path pinned) · 2f manual route retired in code and copy.
+
+**⏳ Outstanding, and it is not code:** a Supabase project, the Phase 1.5 RLS work, and the
+`FPL_DATABASE_URL` secret. Until that secret exists **both workflows are inert and the app is byte-for-byte
+what it was** — so nothing shipped here changes today's deploy, and `reseed` → commit → push remains the way
+to update it.
+
+📅 **The exit criterion can only start once the secret is set: two weeks with no manual `reseed` needed,
+including a deadline and a live gameweek.** ⚠️ *"No reseed needed"* — not *"no reseed permitted"*. Needing one
+is the failure signal, not a rule broken.
+
+### 💡 The lesson
 
 > **An observer that has to be run by hand is not an observer, it is a habit.**
 

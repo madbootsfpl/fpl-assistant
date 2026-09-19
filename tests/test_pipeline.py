@@ -403,3 +403,98 @@ def test_the_backfill_workflow_runs_a_command_the_cli_accepts():
     for variant in (shlex.split(line)[2:], shlex.split(line)[2:] + ["--force"]):
         parsed = build_parser().parse_args(variant)
         assert parsed.handler.__name__ == "cmd_pipeline" and parsed.backfill
+
+
+# ── 2e: the one manual input ──────────────────────────────────────────────────────────────────────────────
+
+def test_a_local_refresh_carries_headlines_into_whatever_database_it_is_pointed_at():
+    """⭐ 2e's whole mechanism, and it is a property rather than a feature: `cmd_refresh` opens **one** store
+    and hands that same store to `enrich_headlines`.
+
+    So `FPL_DATABASE_URL=… app.py refresh` on a machine with Ollama writes players *and* headlines straight
+    into Postgres — there is no separate push step to remember, and no second code path to keep in step.
+
+    ⚠️ Pinned because it would be easy to 'tidy' the headline call onto its own `Storage()`, which would
+    silently keep writing events to the local SQLite cache while the app read Postgres — and the symptom
+    would be *no news*, which looks exactly like *no news*.
+    """
+    import inspect
+
+    from src import cli
+    source = inspect.getsource(cli.cmd_refresh)
+    assert "enrich_headlines(store)" in source, "headlines must use the same store as the player data"
+    assert source.count("Storage(") == 1, "a second store here would split the destination in two"
+
+
+def test_the_scheduled_pipeline_still_cannot_reach_the_model_path():
+    """The gate decided headlines stay manual (option b). That holds by construction — `pipeline.run` never
+    calls `enrich_headlines` — so there is no flag to forget and no way for the runner, which has no model,
+    to start failing on one."""
+    import inspect
+
+    assert "enrich_headlines" not in inspect.getsource(pipeline)
+
+
+# ── 2f: the app must not describe a deploy route it no longer uses ────────────────────────────────────────
+
+def test_the_sidebar_does_not_claim_a_redeploy_is_needed_while_reading_postgres(monkeypatch):
+    """⚠️ **A sentence the app says about itself while behaving differently.** Before the cutover *"updates
+    when the app is redeployed"* is true; after it the pipeline refreshes the database through the day and
+    the same caption is simply false.
+
+    ⭐ *Retiring a path means retiring what the product says about it* — the failure ADR-184 was written
+    about, where a claim outlived its mechanism on six surfaces for a fortnight.
+    """
+    from src import config as config_module
+    from src.web_streamlit import status as status_module
+
+    captions = []
+
+    class _Sidebar:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(status_module.st, "sidebar", _Sidebar())
+    monkeypatch.setattr(status_module.st, "caption", lambda msg, **k: captions.append(msg))
+    monkeypatch.setattr(status_module.st, "warning", lambda *a, **k: None)
+    monkeypatch.setattr(status_module.st, "button", lambda *a, **k: False)
+    monkeypatch.setattr(status_module, "_player_count", lambda: 659)
+    monkeypatch.setattr(status_module, "is_local", lambda: False)
+    monkeypatch.setattr(status_module, "fallback_reason", lambda: None)
+    monkeypatch.setattr(status_module, "_data_as_of", lambda: "2026-09-19")
+
+    monkeypatch.setattr(config_module, "DATABASE_URL", None)
+    status_module.render_data_status()
+    assert any("redeployed" in c for c in captions), "before the cutover the snapshot line is correct"
+
+    captions.clear()
+    monkeypatch.setattr(config_module, "DATABASE_URL", "postgresql://u@h/db")
+    status_module.render_data_status()
+    assert not any("redeployed" in c for c in captions), "after it, that sentence is false"
+    assert any("automatically" in c for c in captions)
+
+
+def test_nothing_in_the_app_still_calls_reseed_the_way_to_update_the_deployed_app():
+    """⭐ ADR-184's discipline: when a claim is retired, **grep for it and make the grep the test**.
+
+    `reseed` keeps working and keeps its place — it maintains the fallback snapshot. What it stops being,
+    once the pipeline is on, is *how data reaches users*. Any copy still saying otherwise would send the
+    owner down a route that no longer does the thing.
+    """
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    offenders = []
+    for path in list((root / "src").rglob("*.py")) + [root / "docs/DEPLOY.md"]:
+        if "__pycache__" in path.parts:
+            continue
+        for i, line in enumerate(path.read_text().splitlines(), start=1):
+            # ⚠️ **Do not require "reseed" on the same line.** The first version did, and missed the exact
+            # regression it exists for: the `help=` string on `p_reseed` never contains the word — the
+            # variable name does. ⭐ *Sweep for the CLAIM, not for a word you expect to sit beside it*
+            # (ADR-184, and the second time in this ADR alone).
+            if "updates the deployed app" in line.lower():
+                offenders.append(f"{path.relative_to(root)}:{i}: {line.strip()}")
+    assert not offenders, (
+        "reseed maintains the fallback once the pipeline is on; it is not the deploy route:\n"
+        + "\n".join(offenders))

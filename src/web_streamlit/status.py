@@ -1,7 +1,9 @@
 """Data-status controls for the Streamlit edge (ADR-056), shown in the sidebar on every tab.
 
 A **"N players · data as of <date>"** freshness caption (always — the player count makes a stale snapshot
-obvious, US-219). On the **cloud** a second caption notes it's a snapshot (updates on redeploy). Plus —
+obvious, US-219). On the **cloud** a second caption says how the data gets there: a committed snapshot that
+moves on redeploy, or — once `FPL_DATABASE_URL` is set — the pipeline refreshing it through the day
+(ADR-211 2f). ⚠️ A third appears as a **warning** when a configured database could not be read. Plus —
 **only when running locally** (the `python -m src.web_streamlit` runner sets `FPL_LOCAL=1`; the read-only
 cloud doesn't) and against a real writable cache (not the committed seed) — a **"🔄 Refresh data"** button
 that reuses the CLI's `ingest.refresh`. The cloud shows the captions only; it never writes.
@@ -81,8 +83,14 @@ def render_data_status() -> None:
                 "out of date.", icon="⚠️")
             st.caption(f"Reason: {why}")
         if not is_local():
-            # The cloud serves the committed snapshot (ADR-053) — a local refresh never reaches it.
-            st.caption("🌐 A data snapshot — updates when the app is redeployed.")
+            # ⭐ **Tell the truth in both states** (ADR-211 2f). Before the cutover the cloud serves the
+            # committed snapshot and only a redeploy moves it (ADR-053). After it, the pipeline refreshes the
+            # database every few minutes and *"updates when the app is redeployed"* is simply false — a
+            # sentence the app would still be saying about itself while behaving differently.
+            if config.DATABASE_URL and not fallback_reason():
+                st.caption("🔄 Updated automatically — the data pipeline refreshes this through the day.")
+            else:
+                st.caption("🌐 A data snapshot — updates when the app is redeployed.")
         if is_local() and st.button("🔄 Refresh data"):
             try:
                 with st.spinner("Fetching the latest FPL data…"):

@@ -127,12 +127,23 @@ def cmd_pipeline(args) -> None:
 
 
 def cmd_reseed(args) -> None:
-    """Refresh the live cache, then copy it to the committed seed so the deployed app can be updated.
+    """Refresh the live cache, then copy it to the committed seed.
 
-    The one-command version of the documented deploy workflow (ADR-053): `refresh` into the live
-    cache (fpl.db), then copy fpl.db → seed.db. The **cloud** serves the committed seed, so updating
-    the live app is: `reseed` → commit → push → reboot. A **local** run never needs this — the sidebar
-    🔄 button (or a restart after `refresh`) reads fpl.db directly.
+    The one-command version of the documented deploy workflow (ADR-053): `refresh` into the live cache
+    (fpl.db), then copy fpl.db → seed.db. A **local** run never needs this — the sidebar 🔄 button (or a
+    restart after `refresh`) reads fpl.db directly.
+
+    ⭐ **What this is for changes at the pipeline cutover** (ADR-211 2f), and the command does not:
+
+    * **Before** `FPL_DATABASE_URL` is set — the cloud serves the committed seed, so this *is* the deploy
+      route: `reseed` → commit → push → reboot.
+    * **After** — the app reads Postgres, refreshed through the day by the scheduled pipeline, and the seed
+      becomes the **fallback** the app shows if that database cannot be reached. Still worth running
+      occasionally, for exactly that reason: ⚠️ *a very stale fallback is a poor fallback.* It is no longer
+      how data reaches anyone.
+
+    ⚠️ It targets SQLite explicitly (`LIVE_DB_PATH`), so `FPL_DATABASE_URL` does not redirect it — a reseed
+    always maintains the snapshot, never the live database.
     """
     store = Storage(db_path=config.LIVE_DB_PATH)
     try:
@@ -1016,7 +1027,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Examples:\n"
             "  python app.py refresh\n"
-            "  python app.py reseed                       refresh + update the deployed app's seed\n"
+            "  python app.py reseed                       refresh + update the fallback snapshot\n"
+            "  python app.py pipeline                     one scheduled pipeline tick (ADR-211)\n"
             "  python app.py table --sort value          rank players by value (points per £m)\n"
             "  python app.py search haaland\n"
             "  python app.py filter --pos DEF --max-price 6\n"
@@ -1060,7 +1072,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_reseed = sub.add_parser(
         "reseed",
-        help="Refresh the live cache and copy it to the committed seed (updates the deployed app)",
+        help="Refresh the live cache and copy it to the committed seed (the fallback snapshot; before the "
+             "pipeline cutover this is also how the deployed app is updated — ADR-211)",
     )
     p_reseed.set_defaults(handler=cmd_reseed)
 
