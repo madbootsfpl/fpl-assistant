@@ -23,11 +23,62 @@ the useful half, not the whole fix.*
 code reached production ahead of its functions, via a push to `master` that Streamlit Cloud auto-deployed.
 *"On master but not applied to production"* is not the same as *"not deployed"*.
 
+### 🔴 Incident, 2026-09-19 — read this before Step 1
+
+**The cutover was run against an app still serving OLD code, and sign-in crashed.** Rolled back in under a
+minute; nothing lost.
+
+**What happened:** the Stage B code was pushed to `master` hours earlier, so it was assumed deployed. It was
+not — Streamlit Cloud was still serving the previous build. The revoke took `beta_users` away from `anon`,
+the old `is_registered` still read that table directly, and every sign-in hit
+`requests.exceptions.HTTPError`.
+
+⭐⭐ **`git log` tells you what is on master. It does not tell you what Cloud is serving.** That distinction
+was assumed twice in one evening — once producing a *false* alarm (a hotfix for a break that had not
+happened, because the old code was working fine against the open table) and once producing a *real* one.
+
+⚠️ **This runbook already said "confirm the deployed commit" and it was not enough**, because a step that can
+be satisfied by glancing at a git log will be. So the check below is now **behavioural**: the app has to
+demonstrate which code it is running, not be assumed to.
+
+### The check that cannot be fudged
+
+⭐ **Revoking SELECT is itself the test**, and it is reversible in one statement. Old code reads the table and
+breaks; new code calls a function and does not.
+
+```sql
+-- 1. Take ONLY the read, from ONLY this table.
+revoke select on public.beta_users from anon;
+```
+
+**Now sign in to the live app.**
+
+| what you see | what it means | next |
+|---|---|---|
+| **Admitted normally** | ✅ the new code is live — it used the RPC | run the cutover |
+| **A crash / `HTTPError`** | 🔴 old code still deployed | restore, then Reboot Cloud and retry |
+
+```sql
+-- 2. Restore, whichever way it went.
+grant select on public.beta_users to anon;
+```
+
+⚠️ **Do this at a quiet moment**: during the window, a tester signing in on old code gets an error page. It
+lasts as long as it takes you to sign in and run one statement.
+
+**If it fails:** Streamlit Cloud can serve a stale or half-synced checkout. **Manage app → ⋮ → Reboot app**,
+wait for it to come back, and run the check again. Sometimes it needs a second reboot.
+
 ### Where production already is (2026-09-19)
 
-✅ **All the code is deployed**, and ✅ **the Stage B functions are applied**
-([`sql/stage_b_functions_only.sql`](../sql/stage_b_functions_only.sql), the additive hotfix).
-So the SQL-before-code hazard is **already behind you** — what remains is the part that *removes* access.
+✅ **The Stage B functions are applied** — [`sql/stage_b_functions_only.sql`](../sql/stage_b_functions_only.sql),
+confirmed by the pre-flight query returning `functions = 4`.
+
+🔴 **The Stage B code is NOT deployed** — proven by the incident above, where the revoke crashed sign-in on
+the old `is_registered`. It is on `master`; Streamlit Cloud has not picked it up.
+
+⚠️ **So the SQL-before-code hazard is NOT behind you** — an earlier draft of this section said it was, on the
+assumption that a push equals a deploy. **Run the behavioural check above and get a green before Step 1.**
 
 ---
 
