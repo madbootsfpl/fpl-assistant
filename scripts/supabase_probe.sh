@@ -14,7 +14,13 @@
 # Reads SUPA_URL and SUPA_KEY from the environment, or from .env.staging if present.
 set -uo pipefail
 
-[ -f .env.staging ] && set -a && . ./.env.staging && set +a
+# ⚠️ **Explicit environment wins over the file.** The first version sourced .env.staging unconditionally, so
+# `SUPA_URL=<production> ./scripts/supabase_probe.sh` would have silently probed STAGING and reported it as
+# production — the worst possible failure for a script whose whole job is telling you which is which.
+if [ -z "${SUPA_URL:-}" ] && [ -f .env.staging ]; then
+  set -a; . ./.env.staging; set +a
+  echo "(credentials from .env.staging)"
+fi
 
 : "${SUPA_URL:?set SUPA_URL (https://<ref>.supabase.co) in .env.staging or the environment}"
 : "${SUPA_KEY:?set SUPA_KEY (the anon / publishable key — NEVER the service_role key)}"
