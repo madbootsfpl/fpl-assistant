@@ -34,7 +34,21 @@ def is_configured() -> bool:
 def add(email, reason: str = "full") -> None:
     """Best-effort: record `email` + `reason` (`"full"` at the cap · `"bad_code"` on a wrong invite code) on a
     **failed** registration (ADR-102). A **no-op** when the store isn't configured, the email is malformed, or the
-    write fails — it must **never** raise or block the gate. Upserts on the email PK (idempotent on retries)."""
+    write fails — it must **never** raise or block the gate.
+
+    ⭐ **A plain INSERT, not an upsert, and that is a security decision** (docs/SUPABASE_RLS.md A1). This table
+    holds the address of everyone who was **refused**, and the goal is that emails go in and nothing comes
+    out. Measured on Postgres 17: `ON CONFLICT` — `DO UPDATE` **and** `DO NOTHING` — requires a permissive
+    `SELECT` policy, because it must read the conflicting row. So an upsert and a locked-down read are
+    **mutually exclusive**: keeping `Prefer: resolution=merge-duplicates` would have forced `using (true)`
+    on select, which *is* the exposure.
+
+    ⚠️ **A repeat refusal now returns 409 and is ignored**, which is the intended behaviour and not a
+    degradation worth fixing: the row already exists, so the person is already on the waitlist. What is lost
+    is only the *latest* `reason` (`not_listed` → `full`). ⭐ *The upsert's whole job was to avoid an error
+    this function already swallows* — `requests.post` does not raise on an HTTP status, so the 409 never even
+    reaches the `except`.
+    """
     try:
         url, key = _endpoint()
         if not url:
@@ -42,8 +56,7 @@ def add(email, reason: str = "full") -> None:
         e = clean_email(email)
         if not e:
             return
-        headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json",
-                   "Prefer": "resolution=merge-duplicates"}     # upsert on the email primary key
+        headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
         requests.post(url, json={"email": e, "reason": reason}, headers=headers, timeout=_TIMEOUT)
     except Exception:
         return
