@@ -1114,16 +1114,24 @@ def test_feedback_payload_adds_the_web3forms_key_when_configured(monkeypatch):
 # --- the capped registration gate (ADR-098, US-324) ---------------------------------------------
 
 def _fake_user_store(monkeypatch, rows):
-    """A tiny in-memory beta_users on the Supabase REST shape: GET filters/counts, POST appends."""
+    """A tiny in-memory beta_users: the table GET the admin reads still use, and the two Stage B **RPCs**.
+
+    ⚠️ The RPCs here answer the protocol, not the logic — case-insensitive matching and the locked cap live in
+    SQL and are covered in `tests/test_stage_b_sql.py` against a real Postgres."""
     def fake_get(url, params=None, headers=None, timeout=None):
-        if params and "email" in params:
-            e = params["email"].split("eq.", 1)[1]
-            return _StoreResp([{"email": e}] if e in rows else [])
         return _StoreResp([{"email": e} for e in rows])
 
     def fake_post(url, json=None, headers=None, timeout=None):
-        if url.endswith("/beta_users"):                      # only a registration insert records a user (ADR-098);
-            rows.append(json["email"])                       # a beta_waitlist write (ADR-102) goes to another table
+        if url.endswith("/rpc/is_allow_listed"):
+            return _StoreResp(json["p_email"] in rows)
+        if url.endswith("/rpc/register_beta_user"):
+            e = json["p_email"]
+            if e in rows:
+                return _StoreResp("in")
+            if json["p_cap"] is not None and len(rows) >= json["p_cap"]:
+                return _StoreResp("full")
+            rows.append(e)                                   # ADR-098: only a registration records a user;
+            return _StoreResp("in")                          # a beta_waitlist write (ADR-102) is another table
         return _StoreResp()
 
     monkeypatch.setattr("requests.get", fake_get)

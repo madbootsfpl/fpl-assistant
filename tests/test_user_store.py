@@ -27,16 +27,32 @@ def configured(monkeypatch):
 
 
 def _fake_store(monkeypatch, rows):
-    """A tiny in-memory Supabase: GET filters/counts, POST appends."""
+    """A tiny in-memory Supabase: the table GET for the admin reads, and the two Stage B **RPCs**.
+
+    ⚠️ **The fake implements the protocol, not the logic.** `is_allow_listed` matches case-insensitively and
+    `register_beta_user` enforces the cap under a lock — *in SQL*. A fake reimplementing that would be testing
+    itself (⭐ *ask "if I deleted the thing under test, would this still pass?"*). The real behaviour is covered
+    against a live Postgres in `tests/test_stage_b_sql.py`; what is checked here is that the app calls the
+    right endpoint with the right payload and respects the answer.
+    """
     def fake_get(url, params=None, headers=None, timeout=None):
-        assert url.endswith("/rest/v1/beta_users")                 # derived from the squads base
-        if params and "email" in params:                          # is_registered
-            e = params["email"].split("eq.", 1)[1]
-            return _Resp([{"email": e}] if e in rows else [])
-        return _Resp([{"email": e} for e in rows])                # count
+        assert url.endswith("/rest/v1/beta_users")                 # the admin reads still use the table
+        return _Resp([{"email": e} for e in rows])
     monkeypatch.setattr("requests.get", fake_get)
-    monkeypatch.setattr("requests.post",
-                        lambda url, json=None, headers=None, timeout=None: rows.append(json["email"]) or _Resp())
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        if url.endswith("/rpc/is_allow_listed"):
+            return _Resp(json["p_email"] in rows)
+        if url.endswith("/rpc/register_beta_user"):
+            e = json["p_email"]
+            if e in rows:
+                return _Resp("in")
+            if json["p_cap"] is not None and len(rows) >= json["p_cap"]:
+                return _Resp("full")
+            rows.append(e)
+            return _Resp("in")
+        raise AssertionError(f"unexpected POST to {url}")           # a direct table write would be a regression
+    monkeypatch.setattr("requests.post", fake_post)
 
 
 # ---- config + endpoint + email hygiene -------------------------------------
@@ -91,11 +107,25 @@ def test_is_registered_reflects_the_row(configured, monkeypatch):
     assert user_store.is_registered("z@z.com") is False
 
 
-def test_is_registered_is_case_and_space_insensitive(configured, monkeypatch):
-    # The allow-list bug (2026-08-13): a hand-typed `beta_users` row with capitals / stray spaces must still admit
-    # the (lower-cased) Google email — the PostgREST `eq.` filter is case-sensitive, so we normalise both sides.
-    _fake_store(monkeypatch, ["Colinbermingham@Live.ie", "  spaced@x.com  "])
-    assert user_store.is_registered("colinbermingham@live.ie") is True   # capital C in the stored row
-    assert user_store.is_registered("COLINBERMINGHAM@LIVE.IE") is True   # capitals in the query too
-    assert user_store.is_registered("spaced@x.com") is True              # stored row had stray spaces
-    assert user_store.is_registered("someone@else.com") is False
+def test_is_registered_asks_a_BOOLEAN_QUESTION_instead_of_fetching_the_list():
+    """⭐⭐ The Stage B change, pinned at the call site. This used to `GET /beta_users?select=email` — the whole
+    tester allow-list, on every gate check — because a PostgREST `eq.` filter is case-sensitive and a
+    hand-typed row like `Colin@x.ie` must admit `colin@x.ie`. The matching moved into SQL, so what crosses the
+    wire now is one address and one boolean.
+
+    ⚠️ The case-insensitivity itself is **no longer testable here**; it is covered against a real Postgres in
+    `tests/test_stage_b_sql.py`. What this guards is that nobody reinstates the table read."""
+    import inspect
+
+    src = inspect.getsource(user_store.is_registered)
+    assert '_rpc("is_allow_listed")' in src
+    assert "requests.get" not in src, "the allow-list must never be fetched to answer this"
+
+
+def test_the_gate_fails_CLOSED_when_the_store_is_unreachable(configured, monkeypatch):
+    """⚠️ The direction matters more than the failure: an unreachable store must **refuse** entry, not grant
+    it. The alternative is an outage that opens the beta to everyone."""
+    def boom(*a, **k):
+        raise OSError("network down")
+    monkeypatch.setattr("requests.post", boom)
+    assert user_store.is_registered("anyone@example.invalid") is False
