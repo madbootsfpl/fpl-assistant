@@ -5,7 +5,14 @@
 # so these two variables move the whole user-data layer. ⭐ No code changes, and closing the app puts you
 # straight back — nothing is written to a file.
 #
-#   ./scripts/run_app_staging.sh
+#   ./scripts/run_app_staging.sh            the app, open gate
+#   ./scripts/run_app_staging.sh --gate      + the registration gate, already AT CAP
+#
+# ⭐ `--gate` is how you test the waitlist write through the real UI without setting up Google OIDC. Three
+# paths call `waitlist.add()` and they hit the same table: `bad_code` (wrong invite code), `full` (at the
+# cap) and `not_listed` (Google sign-in, not allow-listed). The first two need no auth at all, so they
+# exercise the locked-down write end to end — and that write is **fail-silent**, which is exactly why it has
+# to be watched by hand rather than trusted.
 set -uo pipefail
 
 [ -f .env.staging ] || { echo "No .env.staging — copy .env.staging.example and fill it in."; exit 1; }
@@ -34,11 +41,20 @@ case "$seed" in
                 echo "    Continuing in 5s…"; sleep 5 ;;
 esac
 
+GATE_VARS=()
+if [ "${1:-}" = "--gate" ]; then
+  # The staging project was seeded with exactly 3 allow-listed users, so a cap of 3 is already full.
+  GATE_VARS=(FPL_ACCESS_CODE=stagingcode FPL_USER_CAP=3)
+  echo "🔒 Registration gate ON — invite code 'stagingcode', cap 3 (staging has 3 users, so it is AT CAP)."
+fi
+
 PY=venv/bin/python; [ -x "$PY" ] || PY=python3
 echo
 echo "Starting the app against staging. Ctrl-C to stop; nothing persists after that."
 echo
-FPL_STORE_URL="${SUPA_URL}/rest/v1/squads" \
-FPL_STORE_KEY="${SUPA_KEY}" \
-FPL_LOCAL=1 \
-exec "$PY" -m src.web_streamlit
+exec env \
+  FPL_STORE_URL="${SUPA_URL}/rest/v1/squads" \
+  FPL_STORE_KEY="${SUPA_KEY}" \
+  FPL_LOCAL=1 \
+  "${GATE_VARS[@]}" \
+  "$PY" -m src.web_streamlit
