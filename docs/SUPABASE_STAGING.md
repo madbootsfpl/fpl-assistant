@@ -289,12 +289,31 @@ staging** by checking the `.invalid` seed rows from Step 3 are present.
 *(The long form, if you prefer it explicit: `FPL_STORE_URL="$SUPA_URL/rest/v1/squads"
 FPL_STORE_KEY="$SUPA_KEY" FPL_LOCAL=1 python -m src.web_streamlit`.)*
 
+### ⚠️ First: make sure you are looking at the right app
+
+The local and deployed apps are visually identical, and a tab you already had open is almost certainly the
+deployed one. Writes from it go to **production**.
+
+| | local (staging) | deployed |
+|---|---|---|
+| URL | **`http://localhost:8501`** | `madboots.streamlit.app` |
+| the "Your team" pill | **💾 This session** | 🔄 Synced across your devices |
+| sidebar | **has ☁ Save / Load across devices** | does not — auth mode retires it (ADR-113) |
+
+⭐ **The sidebar is the quickest tell.** The pill is driven by `auth.is_configured()`, which is false locally
+and true on the deploy, so *"Synced across your devices"* means you are on the wrong one — and the ☁ panel
+you are about to use will not even be there.
+
 **Verify, in the browser:**
 
 1. **My Squad** → the sidebar shows **☁ Save / Load across devices**.
-2. Save a squad under a new handle, e.g. `STAGINGCHECK`.
-3. Back in Supabase → **Table Editor** → **squads** → the row is there.
-4. Reload the app and load it back.
+2. ⚠️ **Get a squad into the session first** — build one in the Lab, or import by Manager ID. The **Save**
+   button is `disabled=not (clean and squad)`, so with an empty squad it stays greyed out and clicking it
+   does nothing at all: no row, and no error either, because nothing ran.
+3. Save under a new handle, e.g. `STAGINGCHECK`. ⚠️ Handles are **lowercased** (`clean_handle`), so look for
+   `stagingcheck` in the Table Editor — and refresh it, it does not live-update.
+4. Back in Supabase → **Table Editor** → **squads** → the row is there.
+5. Reload the app and load it back.
 
 ⭐ **The check that matters is #3**: it proves the write reached *staging*. If the row appears in production
 instead, stop — something is overriding your environment.
