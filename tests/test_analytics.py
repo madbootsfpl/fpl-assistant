@@ -303,6 +303,9 @@ def test_summarise_is_empty_safe():
 def test_recent_events_reads_or_degrades(monkeypatch):
     monkeypatch.setenv("FPL_STORE_URL", "https://p.supabase.co/rest/v1/squads")
     monkeypatch.setenv("FPL_STORE_KEY", "k")
+    # Stage B: the owner's read of the event stream uses the service-role key, because `anon` keeps only
+    # INSERT on this table. Writing an event still uses the anon key — two credentials, one table.
+    monkeypatch.setenv("FPL_ADMIN_STORE_KEY", "service-role-k")
 
     class _R:
         def raise_for_status(self):
@@ -344,3 +347,28 @@ def test_admin_locked_until_the_right_key(monkeypatch):
     monkeypatch.setattr(analytics, "recent_events", lambda: _SAMPLE)
     at.run()
     assert at.metric and any(m.label == "Sessions" for m in at.metric)
+
+
+def test_the_admin_read_and_the_event_write_use_DIFFERENT_credentials(monkeypatch):
+    """⭐⭐ Stage B's separation, pinned. Writing an event happens in every visitor's session and uses the
+    **anon** key against an insert-only policy. Reading the stream is the owner's Admin view, and after the
+    revoke `anon` has no SELECT — so it uses the **service-role** key.
+
+    ⚠️ That key bypasses RLS entirely. It is safe here only because Streamlit renders server-side, and that
+    reason does not transfer to a mobile client.
+    """
+    monkeypatch.setenv("FPL_STORE_URL", "https://p.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "anon-k")
+    monkeypatch.setenv("FPL_ADMIN_STORE_KEY", "service-role-k")
+
+    assert analytics._events_endpoint()[1] == "anon-k"
+    assert analytics._events_endpoint(admin=True)[1] == "service-role-k"
+
+
+def test_the_admin_read_degrades_when_no_service_key_is_set(monkeypatch):
+    """⚠️ Fail to *empty*, never to the anon key. Silently falling back would look like it worked — right up
+    until the revoke, when the roster would simply go blank with no explanation."""
+    monkeypatch.setenv("FPL_STORE_URL", "https://p.supabase.co/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "anon-k")
+    monkeypatch.delenv("FPL_ADMIN_STORE_KEY", raising=False)
+    assert analytics._events_endpoint(admin=True) == (None, None)

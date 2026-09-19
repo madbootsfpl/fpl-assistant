@@ -8,7 +8,6 @@ failures raise so the gate can surface the real cause via `cloud_store.store_err
 """
 
 import re
-from datetime import datetime, timezone
 
 import requests
 
@@ -56,6 +55,25 @@ def is_configured() -> bool:
     return bool(url and key)
 
 
+def _admin_endpoint():
+    """`(url, key)` for the **owner's** reads of `beta_users`, using a service-role key (Stage B).
+
+    ⚠️⚠️ **`FPL_ADMIN_STORE_KEY` is a service-role key and it bypasses RLS completely.** It exists because
+    Stage B revokes `anon`'s access to this table, and the Admin roster genuinely needs the whole list — a
+    need no narrow function can serve, because "every address" *is* the question.
+
+    ⭐ **Safe here for one specific reason: Streamlit renders server-side**, so this key never leaves the
+    server. That reason does **not** transfer — it must never be compiled into a mobile client, where it
+    would hand every reader unrestricted access to every table.
+
+    `(None, None)` when unset, so the roster degrades to empty rather than breaking the page.
+    """
+    url, key = secret("FPL_STORE_URL"), secret("FPL_ADMIN_STORE_KEY")
+    if not (url and key):
+        return None, None
+    return f"{url.rsplit('/', 1)[0]}/beta_users", key
+
+
 def _headers(key):
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
@@ -99,7 +117,7 @@ def all_emails() -> list[str]:
     Deliberately *not* an analytics field: the anonymity invariant (ADR-100) stays intact because the roster is
     a **separate join** the owner performs over their own allow-list, never a de-anonymisation of an event.
     Empty when unconfigured, like every other read here."""
-    url, key = _endpoint()
+    url, key = _admin_endpoint()
     if not (url and key):
         return []
 
@@ -181,59 +199,27 @@ def touch_last_seen(email: str) -> str:
     Called once per session at admit, not per page view — a page-view stamp would be a write on every
     navigation for no extra signal, since the roster only asks *which day* someone was last here.
 
-    **It returns a status because the first version did not, and that made it undiagnosable.** Silent
-    best-effort is right for a tester's page — nobody should see an error because an admin panel wants a nicer
-    number — but it left the owner staring at a column of NULLs with no way to learn whether the write was
-    never attempted, never matched, or refused by a row-level-security policy. The caller at admit ignores this
-    return; the Admin page shows it. **Same code path either way**: a diagnostic that exercises a *different*
-    path proves nothing.
+    **It returns a status because the first version did not, and that made it undiagnosable.** The caller at
+    admit ignores this return; the Admin page shows it. **Same code path either way** — a diagnostic that
+    exercises a *different* path proves nothing.
 
-    **The lookup is case-insensitive, the hard way.** A PostgREST `eq.` filter is case-*sensitive*, and the
-    allow-list is hand-maintained — it currently holds both `markcondron88@gmail.com` and
-    `Markcondron88@gmail.com`. `eq.<cleaned>` silently matches **no row** for the capitalised one, which is the
-    exact trap `is_registered` above documents. So we read the stored spelling first and patch *that*. One
-    extra read per session, at the one moment we already do several.
+    ⭐ **Stage B turned this from three round trips into one.** It used to read the whole allow-list to find
+    the stored spelling (a PostgREST `eq.` filter is case-sensitive and the list is hand-maintained), then
+    PATCH that exact row. The RPC does the `lower(trim(…))` match inside the database — so the case problem,
+    the extra read, and `anon`'s access to the table all go at once.
     """
-    url, key = _endpoint()
+    url, key = _rpc("touch_last_seen")
     e = clean_email(email or "")
     if not (url and key):
         return "store not configured"
     if not e:
         return "no email"
     try:
-        got = requests.get(url, params={"select": "email"}, headers=_headers(key), timeout=_TIMEOUT)
-        got.raise_for_status()
-        stored = next((row["email"] for row in got.json()
-                       if clean_email(row.get("email", "")) == e), None)
-    except Exception as exc:                             # noqa: BLE001
-        return f"couldn't read the allow-list: {exc}"
-    if stored is None:
-        return f"{e} isn't on the allow-list"
-
-    try:
-        r = requests.patch(url, params={"email": f"eq.{stored}"},
-                           json={"last_seen": datetime.now(timezone.utc).isoformat()},
-                           headers={**_headers(key), "Prefer": "return=representation"}, timeout=_TIMEOUT)
-    except Exception as exc:                             # noqa: BLE001
-        return f"write failed: {exc}"
-    if r.status_code >= 400:
-        # A hard refusal means the *role* lacks the table privilege — a GRANT problem.
-        return f"refused by the store (HTTP {r.status_code}): {r.text[:160]}"
-    try:
-        if not r.json():
-            # HTTP 200 and **zero rows** — and we only got here because the GET above found this exact row a
-            # moment ago. A filter that matches for SELECT and not for UPDATE is the signature of **RLS with
-            # no UPDATE policy**: Postgres does not raise for that, it just narrows the update to nothing.
-            #
-            # Worth being exact, because the two failures look nothing alike and have different fixes:
-            #   missing GRANT        -> PostgREST rejects outright, 401/403
-            #   RLS, no UPDATE policy -> 200 OK, zero rows, no error anywhere
-            # The second is the quieter and therefore the more dangerous one to guess at.
-            return ("the row exists but the update reached no rows — `beta_users` has row-level security with "
-                    "no UPDATE policy (a SELECT policy alone lets it be read, never written)")
-    except Exception:                                    # noqa: BLE001 — a 204 with no body is a fine success
-        pass
-    return "ok"
+        r = requests.post(url, json={"p_email": e}, headers=_headers(key), timeout=_TIMEOUT)
+        r.raise_for_status()
+    except Exception as exc:                             # noqa: BLE001 — never raise at admit
+        return f"couldn't stamp last_seen: {exc}"
+    return "stamped" if r.json() else f"{e} isn't on the allow-list"
 
 
 def last_seen_by_email(emails=None) -> dict:
@@ -242,7 +228,7 @@ def last_seen_by_email(emails=None) -> dict:
     An empty dict is also what you get before the column exists, which is exactly what the Admin page needs to
     say "this signal isn't on yet" rather than quietly showing everyone as never-seen.
     """
-    url, key = _endpoint()
+    url, key = _admin_endpoint()   # owner-only: the whole roster (Stage B)
     if not (url and key):
         return {}
     try:

@@ -50,6 +50,14 @@ def _headers(key):
     return {"apikey": key, "Authorization": f"Bearer {key}"}
 
 
+def _rpc(name: str):
+    """`(url, key)` for a Postgres function over PostgREST — a sibling of the table endpoints (Stage B)."""
+    base, _squads, key = _base_and_key()
+    if not (base and key):
+        return None, None
+    return f"{base}/rpc/{name}", key
+
+
 def _delete(endpoint, params, key) -> str:
     """One best-effort `DELETE ?<col>=eq.<val>`. Never raises; returns what happened.
 
@@ -74,25 +82,33 @@ def remove_me(email, user_key: str | None = None) -> dict:
     """Best-effort, fail-silent: delete a person's rows across the store (ADR-122).
 
     - **by email** (when it's a valid address): `beta_waitlist` + `beta_users`;
-    - **by user_key** (when given — a signed-in tester): `squads` (`handle`) + `player_watchlist` +
-      `user_prefs` (ADR-147's cross-device preferences — added here because the promise has to cover every
-      row we create, and a new table is exactly the thing an old promise silently stops covering).
+    - **by user_key** (a signed-in tester): `squads` · `player_watchlist` · `user_prefs`.
 
     Returns `{table: status}` so a caller or a test can verify the promise was kept; the UI ignores it. A
     **no-op** (`{}`) when the store isn't configured. **Never raises** — the caller signs the user out
-    regardless. `beta_users` needs a DELETE policy for its delete to take effect (BETA.md), and so does
-    `user_prefs`, which ships with RLS enabled (ADR-147/148)."""
-    base, squads_url, key = _base_and_key()
-    if not (base and key):
+    regardless.
+
+    ⚠️⚠️ **Stage A broke this and nothing said so.** Revoking DELETE on `beta_waitlist` turned the first line
+    of the promise into `refused (HTTP 401)`, and because the UI ignores the result it surfaced nowhere — found
+    only by running `remove_me` against staging *after* the hardening, which the original rehearsal did not do
+    (it checked that the waitlist WRITE still worked). ⭐ *A permission you remove is a promise you may have
+    removed with it.*
+
+    The fix is not to hand DELETE back to `anon` — it is `forget_me`, a `security definer` function that
+    performs the one deletion a person is entitled to and **reports the row count per table**, which is
+    strictly better than the old DELETE's inability to tell "no such row" from "no policy".
+    """
+    url, key = _rpc("forget_me")
+    if not (url and key):
         return {}
-    out = {}
     e = clean_email(email)
-    if e:
-        out["beta_waitlist"] = _delete(f"{base}/beta_waitlist", {"email": f"eq.{e}"}, key)
-        out["beta_users"] = _delete(f"{base}/beta_users", {"email": f"eq.{e}"}, key)
-    if user_key:
-        # the per-user squad (handle = the user_key hash)
-        out["squads"] = _delete(squads_url, {"handle": f"eq.{user_key}"}, key)
-        out["player_watchlist"] = _delete(f"{base}/player_watchlist", {"user_key": f"eq.{user_key}"}, key)
-        out["user_prefs"] = _delete(f"{base}/user_prefs", {"user_key": f"eq.{user_key}"}, key)
-    return out
+    if not (e or user_key):
+        return {}
+    try:
+        r = requests.post(url, json={"p_email": e or None, "p_user_key": user_key},
+                          headers=_headers(key), timeout=_TIMEOUT)
+        r.raise_for_status()
+        counts = r.json() or {}
+    except Exception as exc:                             # noqa: BLE001 — fail-silent at the edge, by design
+        return {"forget_me": f"failed: {exc}"}
+    return {table: ("deleted" if n else "nothing matched") for table, n in counts.items()}

@@ -217,96 +217,48 @@ works **today, without auth**, and it is Stage B.
 Needs a matching change in `src/web_streamlit/` (PostgREST table calls → `rpc/` calls). Roughly half a day.
 Two representative functions; the rest follow the identical pattern.
 
-### B1. The `beta_users` gate — the biggest single win
+### ✅ B1–B4 — built 2026-09-19, SQL in [`sql/stage_b.sql`](../sql/stage_b.sql)
 
-```sql
--- security definer: runs as the owner, so it can read a table `anon` cannot.
--- ⚠️ `set search_path = ''` is mandatory hardening on any definer function — without it a caller-controlled
--- search_path can resolve `beta_users` to a table of their own choosing. Every function below sets it.
-create or replace function public.is_allow_listed(p_email text)
-returns boolean
-language sql
-security definer
-set search_path = ''
-stable
-as $$
-  -- ⭐ The case-insensitive match moves into SQL, which is what `user_store.is_registered()` was pulling the
-  -- whole table into Python to do. The exposure and the workaround are removed by the same line.
-  select exists (
-    select 1 from public.beta_users
-    where lower(email) = lower(trim(p_email))
-  );
-$$;
+⭐ **One definition, loaded by both this runbook and the tests.** `tests/test_stage_b_sql.py` runs that exact
+file against a real Postgres, because the behaviour left Python and a mock would only test itself.
 
-revoke execute on function public.is_allow_listed(text) from public;
-grant  execute on function public.is_allow_listed(text) to anon;
-```
+| function | who calls it | replaces |
+|---|---|---|
+| `is_allow_listed(email) → bool` | every gate check | **reading the whole allow-list** to match case-insensitively in Python |
+| `register_beta_user(email, cap) → text` | the registration gate | check + count + insert, three round trips |
+| `touch_last_seen(email) → bool` | every admit | read-the-list-then-PATCH, two round trips |
+| `forget_me(email, user_key) → jsonb` | a tester leaving | five separate DELETEs |
 
-⭐ **It returns a boolean, not a row.** Even a correct guess leaks nothing but *"that address is on the list"*.
+**Then** `revoke all on public.beta_users from anon, authenticated`.
 
-### B2. Registration, with the cap enforced atomically
+#### ⚠️⚠️ Two things this stage found the hard way
 
-```sql
-create or replace function public.register_beta_user(p_email text, p_cap int)
-returns text                                   -- 'admitted' | 'at_cap' | 'already'
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare n int;
-begin
-  if exists (select 1 from public.beta_users where lower(email) = lower(trim(p_email))) then
-    return 'already';
-  end if;
-  -- ⚠️ This also closes a race the app has today: `count()` then `insert` are two round trips, so two
-  -- simultaneous registrations can both read n = cap-1 and both be admitted. Here the check and the
-  -- insert are one statement in one transaction.
-  select count(*) into n from public.beta_users;
-  if n >= p_cap then
-    return 'at_cap';
-  end if;
-  insert into public.beta_users (email) values (lower(trim(p_email)));
-  return 'admitted';
-end;
-$$;
+**1. "One function" is not the same as "atomic."** `register_beta_user` was written to close the race the old
+code conceded in its own docstring. The first version moved check-count-insert into a function and **the cap
+still broke** — four concurrent calls against a cap of 5 admitted **6**, because `select count(*)` takes no
+lock. It now takes `share row exclusive` first, and the same test admits exactly 5. ⭐ *Measured, twice,
+rather than reasoned about.*
 
-revoke execute on function public.register_beta_user(text, int) from public;
-grant  execute on function public.register_beta_user(text, int) to anon;
-```
+**2. 🔴 Stage A had already broken "Remove me", and nothing said so.** Revoking DELETE on `beta_waitlist`
+turned ADR-122's promise into `refused (HTTP 401)` — and because the UI ignores that result by design, it
+surfaced nowhere. Found only by running `remove_me` against staging **after** the hardening; the original
+rehearsal checked that the waitlist *write* still worked and stopped there.
 
-### B3. Squads by exact key
+⭐ **A permission you remove is a promise you may have removed with it.** The fix is not to hand DELETE back —
+it is `forget_me`, which performs the one deletion a person is entitled to and **reports a row count per
+table**, which is strictly better than the old DELETE's inability to tell *"no such row"* from *"no policy"*.
 
-```sql
-create or replace function public.get_squad(p_handle text)
-returns jsonb
-language sql
-security definer
-set search_path = ''
-stable
-as $$
-  select data from public.squads where handle = p_handle;
-$$;
+#### The owner's reads need a different credential, not a function
 
-create or replace function public.save_squad(p_handle text, p_data jsonb)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  insert into public.squads (handle, data, updated_at)
-  values (p_handle, p_data, now())
-  on conflict (handle) do update set data = excluded.data, updated_at = now();
-$$;
+`all_emails()`, `last_seen_by_email()` and `recent_events()` are owner-only **by intent** and were anon **by
+credential** — the Admin page is gated by a password, so the page was protected and the data path was not.
+No narrow function helps here: *"every address"* **is** the question.
 
-revoke execute on function public.get_squad(text)         from public;
-revoke execute on function public.save_squad(text, jsonb) from public;
-grant  execute on function public.get_squad(text)         to anon;
-grant  execute on function public.save_squad(text, jsonb) to anon;
-```
-
-**Also needed, same pattern:** `delete_squad`, `updated_at_for_handles`, `touch_last_seen`, `remove_me`,
-`get_prefs` / `save_prefs`, `get_watchlist` / `save_watchlist`, and an admin roster function behind a
-service key.
+They now use **`FPL_ADMIN_STORE_KEY`**, a service-role key. ⚠️ It bypasses RLS completely, and is safe here
+for one specific reason — **Streamlit renders server-side, so it never leaves the machine**. ⭐ *That reason
+does not transfer*: it must never be compiled into a mobile client. Unset, the roster degrades to empty
+rather than falling back to the anon key, because a silent fallback would look like it worked right up until
+the revoke.
 
 ### B4. Then, and only then, close the tables
 

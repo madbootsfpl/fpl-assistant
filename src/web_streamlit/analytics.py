@@ -67,11 +67,16 @@ def is_enabled() -> bool:
     return cloud_store.is_configured()
 
 
-def _events_endpoint():
-    """`(url, key)` for the `events` table — derived from `FPL_STORE_URL`'s base (same project as squads), reusing
-    `FPL_STORE_KEY`; `(None, None)` when unset. No new secret."""
+def _events_endpoint(admin: bool = False):
+    """`(url, key)` for the `events` table — `(None, None)` when unset.
+
+    ⭐ **Two credentials, one table** (Stage B). Writing an event is something every visitor's session does, so
+    it uses the anon key and an insert-only policy. *Reading* the stream is the owner's Admin view, and after
+    Stage B `anon` has no SELECT — so that read passes `admin=True` and uses the service-role key.
+    ⚠️ Server-side only; see `user_store._admin_endpoint`.
+    """
     url = secret("FPL_STORE_URL")
-    key = secret("FPL_STORE_KEY")
+    key = secret("FPL_ADMIN_STORE_KEY") if admin else secret("FPL_STORE_KEY")
     if not (url and key):
         return None, None
     base = url.rsplit("/", 1)[0]        # .../rest/v1/events  (sibling of squads / beta_users)
@@ -169,7 +174,7 @@ def recent_events(limit: int = 2000):
     """Read the most recent events (the **first analytics READ**, US-337 — for the admin view only). Best-effort:
     a list of row dicts, or ``None`` on failure. Needs an **anon SELECT policy** on `events` (docs/ANALYTICS.md);
     the anon key is server-side (Streamlit secrets), never sent to a browser, and events are anonymous."""
-    url, key = _events_endpoint()
+    url, key = _events_endpoint(admin=True)
     if not url:
         return None
     try:

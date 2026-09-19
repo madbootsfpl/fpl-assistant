@@ -38,15 +38,38 @@ class _Deleted:
 
 
 @pytest.fixture
-def capture_deletes(monkeypatch):
-    """Record every `requests.delete(url, params=…)` call as `(url, params)`."""
+def capture_forget(monkeypatch):
+    """Record the `forget_me` RPC call and answer it like the real function does.
+
+    ⚠️ **Stage B replaced five DELETEs with one function call.** These tests used to assert five separate
+    `requests.delete` URLs; there is now one POST, and *which tables it clears* is decided in SQL — covered
+    against a real Postgres in `tests/test_stage_b_sql.py`. What is asserted here is the payload the app
+    sends and how it reports the answer.
+    """
     calls = []
 
-    def fake(url, params=None, headers=None, timeout=None):
-        calls.append((url, params))
-        return _Deleted()
+    class _Resp:
+        status_code = 200
 
-    monkeypatch.setattr("requests.delete", fake)
+        def __init__(self, body):
+            self._body = body
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self._body
+
+    def fake(url, json=None, headers=None, timeout=None):
+        calls.append((url, json))
+        body = {}
+        if json.get("p_email"):
+            body |= {"beta_waitlist": 1, "beta_users": 1}
+        if json.get("p_user_key"):
+            body |= {"squads": 1, "player_watchlist": 1, "user_prefs": 1}
+        return _Resp(body)
+
+    monkeypatch.setattr("requests.post", fake)
     return calls
 
 
@@ -57,33 +80,31 @@ def test_endpoints_derive_the_sibling_tables(configured):
     assert key == "anon-key"
 
 
-def test_remove_me_by_email_deletes_waitlist_and_beta_users(configured, capture_deletes):
-    unsubscribe.remove_me("  Late@Example.com ")                           # no user_key → email tables only
-    urls = {u for u, _ in capture_deletes}
-    assert urls == {"https://proj.supabase.co/rest/v1/beta_waitlist",
-                    "https://proj.supabase.co/rest/v1/beta_users"}
-    for _, params in capture_deletes:
-        assert params == {"email": "eq.late@example.com"}                  # cleaned (lower-cased + trimmed) + eq. filter
+def test_remove_me_by_email_clears_the_email_tables(configured, capture_forget):
+    report = unsubscribe.remove_me("  Late@Example.com ")                  # no user_key → email tables only
+    (url, payload), = capture_forget
+    assert url == "https://proj.supabase.co/rest/v1/rpc/forget_me"
+    assert payload == {"p_email": "late@example.com", "p_user_key": None}  # cleaned: lower-cased + trimmed
+    assert report == {"beta_waitlist": "deleted", "beta_users": "deleted"}
 
 
-def test_remove_me_with_user_key_also_deletes_squad_and_watchlist(configured, capture_deletes):
-    unsubscribe.remove_me("me@x.com", user_key="abc123")
-    targets = {(u.rsplit("/", 1)[1], tuple(p.items())) for u, p in capture_deletes}
-    assert ("beta_waitlist", (("email", "eq.me@x.com"),)) in targets
-    assert ("beta_users", (("email", "eq.me@x.com"),)) in targets
-    assert ("squads", (("handle", "eq.abc123"),)) in targets               # per-user squad (handle = user_key hash)
-    assert ("player_watchlist", (("user_key", "eq.abc123"),)) in targets
+def test_remove_me_with_user_key_also_clears_the_keyed_data(configured, capture_forget):
+    report = unsubscribe.remove_me("me@x.com", user_key="abc123")
+    (_url, payload), = capture_forget
+    assert payload == {"p_email": "me@x.com", "p_user_key": "abc123"}
     # ADR-148: cross-device preferences (ADR-147) are a row we create, so the promise has to cover them. A new
-    # table is precisely the thing an old promise silently stops covering.
-    assert ("user_prefs", (("user_key", "eq.abc123"),)) in targets
+    # table is precisely the thing an old promise silently stops covering — and it is now `forget_me`'s job
+    # to include it, asserted against a real Postgres in tests/test_stage_b_sql.py.
+    assert set(report) == {"beta_waitlist", "beta_users", "squads", "player_watchlist", "user_prefs"}
 
 
-def test_user_key_only_when_email_is_missing_or_malformed(configured, capture_deletes):
-    """A signed-in tester whose email we can't validate still gets their keyed data removed (no email deletes)."""
-    unsubscribe.remove_me("not-an-email", user_key="uk9")
-    urls = [u.rsplit("/", 1)[1] for u, _ in capture_deletes]
-    assert "beta_users" not in urls and "beta_waitlist" not in urls        # bad email → skip the email tables
-    assert set(urls) == {"squads", "player_watchlist", "user_prefs"}       # but the keyed data still goes
+def test_user_key_only_when_email_is_missing_or_malformed(configured, capture_forget):
+    """A signed-in tester whose email we can't validate still gets their keyed data removed."""
+    report = unsubscribe.remove_me("not-an-email", user_key="uk9")
+    (_url, payload), = capture_forget
+    assert payload["p_email"] is None                                      # bad email → skip the email tables
+    assert payload["p_user_key"] == "uk9"                                  # but the keyed data still goes
+    assert set(report) == {"squads", "player_watchlist", "user_prefs"}
 
 
 def test_remove_me_is_a_noop_without_the_store(monkeypatch):
@@ -140,34 +161,49 @@ def test_a_delete_that_matched_nothing_is_reported_not_swallowed(configured, mon
     class _NothingMatched:
         status_code = 200
 
+        def raise_for_status(self):
+            return None
+
         def json(self):
-            return []
+            return {"beta_waitlist": 0, "beta_users": 0, "squads": 0,
+                    "player_watchlist": 0, "user_prefs": 0}
 
-    monkeypatch.setattr("requests.delete", lambda *a, **k: _NothingMatched())
+    monkeypatch.setattr("requests.post", lambda *a, **k: _NothingMatched())
     out = unsubscribe.remove_me("me@x.com", user_key="uk")
-    assert out["user_prefs"] == "nothing matched (no row, or no DELETE policy)"
-    assert all("nothing matched" in v for v in out.values())
+    assert out["user_prefs"] == "nothing matched"
+    assert all(v == "nothing matched" for v in out.values())
 
 
-def test_every_table_reports_and_a_refusal_is_named(configured, monkeypatch):
+def test_a_refusal_is_named_rather_than_reported_as_success(configured, monkeypatch):
+    """⚠️ **The report shape changed with Stage B, and the change is worth stating.** Five DELETEs could each
+    be refused separately, so the old report named five outcomes. One RPC either runs or does not — so a
+    refusal is a single entry, and it must not look like five successes."""
+    import requests as _rq
+
     class _Refused:
         status_code = 401
 
-        def json(self):
-            return []
+        def raise_for_status(self):
+            raise _rq.HTTPError("401 Client Error")
 
-    monkeypatch.setattr("requests.delete", lambda *a, **k: _Refused())
+        def json(self):
+            return {}
+
+    monkeypatch.setattr("requests.post", lambda *a, **k: _Refused())
     out = unsubscribe.remove_me("me@x.com", user_key="uk")
-    assert set(out) == {"beta_waitlist", "beta_users", "squads", "player_watchlist", "user_prefs"}
-    assert all(v == "refused (HTTP 401)" for v in out.values())
+    assert list(out) == ["forget_me"] and out["forget_me"].startswith("failed:")
 
 
 def test_a_network_failure_still_never_raises(configured, monkeypatch):
     """Fail-silent at the edge is correct — a crash mid-unsubscribe is worse than a retry, and nobody leaving
-    should be shown a stack trace. The status is how it stays *diagnosable* without becoming loud."""
+    should be shown a stack trace. The status is how it stays *diagnosable* without becoming loud.
+
+    ⚠️ This previously patched `requests.delete`, which Stage B stopped using — so it passed while making a
+    **real network call** to a domain that does not resolve. ⭐ *A test that passes for the wrong reason is
+    indistinguishable from one that passes*, until the reason changes."""
     import requests as _rq
 
-    monkeypatch.setattr("requests.delete",
+    monkeypatch.setattr("requests.post",
                         lambda *a, **k: (_ for _ in ()).throw(_rq.ConnectionError("down")))
     out = unsubscribe.remove_me("me@x.com", user_key="uk")
     assert all(v.startswith("failed:") for v in out.values())
