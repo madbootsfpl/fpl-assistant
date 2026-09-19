@@ -196,6 +196,32 @@ create policy "events insert" on public.events
 
 ---
 
+### ✅ Stage B verified on staging — 2026-09-19
+
+| check | before | after |
+|---|---|---|
+| `beta_users` direct read | 200, **3 addresses** | **HTTP 401** |
+| `beta_waitlist` direct read | 200, 2 addresses | **HTTP 401** |
+| `is_allow_listed` — wrong case, stray spaces | *(fetched the whole list)* | `true` |
+| `is_allow_listed` — not listed | — | `false` |
+| `touch_last_seen` | read-the-list-then-PATCH | `true` / `false` |
+| **"Remove me" on the waitlist** | 🔴 **`refused (HTTP 401)`** | ✅ **`deleted`** |
+| registration | — | `in` · `in` (idempotent) · `full` (at cap) |
+| `squads`, `maddie_videos` | 200 | 200 — **unchanged** |
+
+⭐ **Both email tables are now closed** and the gate still works — it asks a question instead of downloading
+the answer. And ADR-122's promise is back, an hour after Stage A quietly removed it.
+
+**The Admin roster, with `FPL_ADMIN_STORE_KEY` set:** `all_emails()` → 3 addresses; `last_seen_by_email()` →
+1 stamp, the one written by the `touch_last_seen` RPC minutes earlier. ⭐ *That single stamp proves the whole
+chain — the anon RPC wrote it and the service key read it back.*
+
+⚠️ **With the key unset it returns `[]`, not a crash and not a fallback.** A silent fall back to the anon key
+would 401 anyway, but it would read as *"the roster is broken"* rather than *"the key is missing"* — and the
+second is the one you can act on.
+
+---
+
 ## 🔴 What Stage A **cannot** fix, and why
 
 `squads`, `beta_users`, `user_prefs` and `player_watchlist` **cannot be secured by policy alone**, because

@@ -41,6 +41,15 @@ case "$seed" in
                 echo "    Continuing in 5s…"; sleep 5 ;;
 esac
 
+ADMIN_VARS=()
+if [ -n "${SUPA_SERVICE_KEY:-}" ]; then
+  # ⚠️ The Admin roster needs this after Stage B revokes anon's access to beta_users. Server-side only.
+  ADMIN_VARS=(FPL_ADMIN_STORE_KEY="${SUPA_SERVICE_KEY}")
+  echo "🔑 Admin service-role key present — the roster will render."
+else
+  echo "ℹ️  No SUPA_SERVICE_KEY — the Admin roster will be EMPTY (expected after Stage B)."
+fi
+
 GATE_VARS=()
 if [ "${1:-}" = "--gate" ]; then
   # The staging project was seeded with exactly 3 allow-listed users, so a cap of 3 is already full.
@@ -69,4 +78,5 @@ exec env \
   FPL_STORE_KEY="${SUPA_KEY}" \
   FPL_LOCAL=1 \
   "${GATE_VARS[@]}" \
+  "${ADMIN_VARS[@]}" \
   "$PY" -m src.web_streamlit
