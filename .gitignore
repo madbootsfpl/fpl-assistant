@@ -20,6 +20,8 @@ venv/
 # repo that is a credential leak one `git add -A` away (ADR-211 / docs/SUPABASE_STAGING.md).
 .env
 .env.*
+# …but the template must be committable — it holds placeholders, not credentials.
+!.env.*.example
 
 # ⚠️ Streamlit secrets — NEVER commit. The repo is PUBLIC (Streamlit Community Cloud requires it), and this
 # file is where the Supabase anon key and the Google `[auth]` client secret live when testing locally.

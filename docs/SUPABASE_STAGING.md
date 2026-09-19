@@ -238,6 +238,29 @@ return **real tester emails today**. Do not run them there to find out; the stag
 
 ---
 
+### 📌 The recorded baseline — staging, 2026-09-19, before any hardening
+
+Run with `scripts/supabase_probe.sh` against the staging project, using the **anon** key:
+
+| probe | result | HTTP |
+|---|---|---|
+| `beta_users` — the allow-list | **all 3 addresses returned** | 200 |
+| `beta_waitlist` — people **refused** | **all 2 addresses + reasons returned** | 200 |
+| `squads` — every saved squad | **both handles enumerated**, no handle needed | 200 |
+| `maddie_videos` — marketing copy | `[]` (nothing seeded) | 200 |
+
+⚠️ **This is with the key that ships inside every browser that loads the app.** Not a stolen credential — the
+one the page is built to hand out. In production those first two lists are real tester addresses, and the
+third is every squad anyone has saved.
+
+⭐ `maddie_videos` returning `[]` is correct and not a failure: nothing was seeded into it, and its public
+read is the one permission in the set that *should* stay open.
+
+**After Stage A, row 2 must change and rows 1, 3 and 4 must not.** That asymmetry is the test — a change
+everywhere would mean the app had broken, and a change nowhere would mean the fix had not landed.
+
+---
+
 ## Step 5 — Point local MadBoots at staging
 
 Every one of the seven tables derives its endpoint from **`FPL_STORE_URL`'s base** plus **`FPL_STORE_KEY`**,
