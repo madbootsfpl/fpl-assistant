@@ -275,14 +275,19 @@ staging. There is no such file in this checkout today — confirm it is still tr
 ls .streamlit/secrets.toml 2>/dev/null && echo "⚠️ this file WINS over the env vars — check what is in it"
 ```
 
-Then run the app against staging:
+Then run the app against staging — the script reads `.env.staging`, so there is nothing to retype:
 
 ```bash
-FPL_STORE_URL="$SUPA_URL/rest/v1/squads" \
-FPL_STORE_KEY="$SUPA_KEY" \
-FPL_LOCAL=1 \
-python -m src.web_streamlit
+./scripts/run_app_staging.sh
 ```
+
+It does three things before launching: **refuses outright** if `.streamlit/secrets.toml` sets
+`FPL_STORE_URL` (see the warning above — that file beats the environment, so the run would silently hit
+production while every screen said it was fine), prints the target host, and **positively identifies
+staging** by checking the `.invalid` seed rows from Step 3 are present.
+
+*(The long form, if you prefer it explicit: `FPL_STORE_URL="$SUPA_URL/rest/v1/squads"
+FPL_STORE_KEY="$SUPA_KEY" FPL_LOCAL=1 python -m src.web_streamlit`.)*
 
 **Verify, in the browser:**
 
