@@ -124,6 +124,39 @@ create policy "waitlist insert" on public.beta_waitlist
 **Verified as anon after applying:** `select` → *permission denied*; `delete` → *permission denied*;
 `insert` of a new email → succeeds; `insert` of a duplicate → unique violation, swallowed.
 
+#### ✅ Verified on staging — 2026-09-19
+
+**The probe, before and after** (`scripts/supabase_probe.sh`, anon key):
+
+| probe | before | after | |
+|---|---|---|---|
+| `beta_users` | 3 emails, 200 | 3 emails, 200 | unchanged ✅ |
+| **`beta_waitlist`** | **2 emails + reasons, 200** | **HTTP 401, permission denied** | **the win** ✅ |
+| `squads` | handles listed, 200 | handles listed, 200 | unchanged ✅ |
+| `maddie_videos` | `[]`, 200 | `[]`, 200 | unchanged ✅ |
+
+⭐ **One probe changed and three did not**, which is the shape that matters: a change everywhere would have
+meant the app broke, and a change nowhere would have meant the fix never landed.
+
+**The write, end to end:** `201` for a new address · `409` for a repeat · `401` reading it back. Write-only,
+as designed — the app can record a refusal and then cannot read it, or anyone else's, back.
+
+⚠️ **And the fail-silent path was tested by hand, through the real gate**, because it is the one that cannot
+report its own failure. With the registration gate on (`./scripts/run_app_staging.sh --gate`), both
+no-auth paths that call `waitlist.add()`:
+
+| path | message shown | row written |
+|---|---|---|
+| wrong invite code → `bad_code` | ✅ *"That invite code isn't right"* | ✅ |
+| at the cap → `full` | ✅ *"The beta is full right now (3 testers)"* | ✅ |
+
+⭐ **"Message shown" and "row written" are two separate observations on purpose.** The failure this guards
+against shows the message and writes nothing — a gate that looks perfectly healthy while recording nobody,
+discovered weeks later by an empty waitlist. Checking only the message would have passed.
+
+*(The third path, `not_listed` via Google sign-in, is the same `waitlist.add()` call and the same table; only
+its trigger differs. It needs OIDC credentials with a `localhost` redirect to exercise locally.)*
+
 ### A2. `maddie_videos` — read-only, confirm no write path
 
 Public marketing content, no personal data. Public read is correct; it should not be writable.
