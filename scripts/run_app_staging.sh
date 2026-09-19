@@ -48,6 +48,18 @@ if [ "${1:-}" = "--gate" ]; then
   echo "🔒 Registration gate ON — invite code 'stagingcode', cap 3 (staging has 3 users, so it is AT CAP)."
 fi
 
+# ⚠️ **Streamlit silently moves to the next free port**, so a forgotten instance on 8501 means this run lands
+# on 8502 while the browser tab you open out of habit shows the OLD one — which may have different settings
+# (no gate, a different database) and will look like "nothing happened". ⭐ *A process you forgot is still a
+# process that answers.*
+if lsof -iTCP:8501 -sTCP:LISTEN -P >/dev/null 2>&1; then
+  echo
+  echo "⚠️  Port 8501 is already in use, so this run will start on 8502 or higher."
+  echo "    Watch the 'Local URL' line below — and consider stopping the old one first:"
+  lsof -iTCP:8501 -sTCP:LISTEN -P 2>/dev/null | awk 'NR>1 {print "      kill " $2 "   # " $1}'
+  echo
+fi
+
 PY=venv/bin/python; [ -x "$PY" ] || PY=python3
 echo
 echo "Starting the app against staging. Ctrl-C to stop; nothing persists after that."
