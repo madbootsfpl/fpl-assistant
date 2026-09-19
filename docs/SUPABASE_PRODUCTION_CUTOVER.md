@@ -119,9 +119,30 @@ The lock is half of it. Three paths must still work, and **none of them reports 
 **a. The gate admits an allow-listed tester.** Sign in to the live app with your own account. You should be
 admitted as normal — not shown the waitlist message.
 
-**b. A refusal still reaches the waitlist.** Hardest to test without a spare Google account; if you have one,
-sign in with it and confirm a new row appears in `beta_waitlist` (SQL Editor — the anon key cannot read it
-any more, which is the point).
+**b. A refusal still reaches the waitlist.** ⭐ **This is the one that cannot report its own failure**, so it
+is worth the five minutes.
+
+⚠️ **A second Google account is not enough on its own.** Under the cap, ADR-193 *admits* a new address rather
+than waitlisting it — so the `not_listed` path is unreachable until the beta is full. You have to close the
+gap deliberately:
+
+1. **SQL Editor:** `select count(*) from beta_users;` — note the number, call it **N**.
+2. **Streamlit Cloud → Settings → Secrets:** set `FPL_USER_CAP = N`. The beta is now exactly full.
+3. Sign in with a **second Google account** that is not on the allow-list.
+   ✅ Expect the *"the beta is **full** right now, so you're on the waitlist"* message.
+4. **SQL Editor:** `select email, reason from beta_waitlist order by created_at desc limit 3;`
+   ✅ Expect that address with `reason = 'not_listed'`.
+5. **Put the cap back** to whatever it was, and tidy up:
+   ```sql
+   delete from beta_waitlist where email = '<the second account>';
+   ```
+
+⚠️ **While the cap is lowered, a genuinely new tester signing in would be waitlisted too.** The window is
+minutes and it is self-healing — ADR-193's message tells them to sign in again, and they are admitted the
+moment the cap is restored — but do it at a quiet hour rather than a deadline.
+
+⭐ **Check the message and the row separately.** The failure this exists for shows the message and writes
+nothing: a gate that looks perfectly healthy while recording nobody.
 
 **c. The Admin roster renders.** Open the Admin page. It should list your testers. Blank means Step 2's
 secret did not take.
