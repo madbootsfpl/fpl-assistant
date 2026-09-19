@@ -249,9 +249,22 @@ Run with `scripts/supabase_probe.sh` against the staging project, using the **an
 | `squads` — every saved squad | **both handles enumerated**, no handle needed | 200 |
 | `maddie_videos` — marketing copy | `[]` (nothing seeded) | 200 |
 
-⚠️ **This is with the key that ships inside every browser that loads the app.** Not a stolen credential — the
-one the page is built to hand out. In production those first two lists are real tester addresses, and the
-third is every squad anyone has saved.
+⚠️ **Corrected 2026-09-19.** An earlier draft said this was *"the key that ships inside every browser that
+loads the app"*. **That is not true of the Streamlit app**, and overstating it was my error. Streamlit renders
+server-side: every `requests` call carrying `FPL_STORE_KEY` runs on the server, and no module both holds the
+key and emits client-side HTML — verified by grep, not assumed.
+
+**What is actually true, which is still enough to act on:**
+
+* **Today** the key is a server-side secret. The exposure needs it to *leak* — a Streamlit Cloud
+  misconfiguration, a `secrets.toml` committed by accident, a screenshot.
+* **The moment a mobile client ships, it stops being a secret.** A Flutter app compiles the key into the
+  binary, where it is extractable from the IPA in minutes. That is the design Supabase expects — and it
+  expects **RLS** to be what protects the data.
+* ⭐ **Here RLS protects nothing, so the key is the only control.** One accident, or one app release, and
+  there is nothing behind it. That is the argument for Stage B — not that it is leaking today.
+
+In production those first two lists are real tester addresses, and the third is every squad anyone has saved.
 
 ⭐ `maddie_videos` returning `[]` is correct and not a failure: nothing was seeded into it, and its public
 read is the one permission in the set that *should* stay open.
