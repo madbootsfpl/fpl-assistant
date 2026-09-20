@@ -694,35 +694,54 @@ class Storage:
 
         `now` is passed in rather than read here, so a caller (and a test) fixes the clock.
         """
-        inserted = 0
+        # ⚠️⚠️ **Three round trips per player is free locally and costs three minutes over a network.**
+        # This ran a SELECT then a write for each of ~667 players — about 1,300 round trips. Against a local
+        # SQLite file that is microseconds; against Supabase from a GitHub runner it was **3m31s of a 3m44s
+        # job**, for a refresh that takes 3.6 seconds.
+        # ⭐ *A cost that is invisible on the developer's machine is not a small cost — it is an unmeasured
+        # one.* The audit timed every analytics call and never timed a write over a wire.
+        #
+        # Now: one query for every player's latest row, the comparison in Python (where it always was), and
+        # two `executemany` calls. Same semantics, ~3 round trips instead of ~1,300.
+        latest_by_code = {}
+        for row in self.conn.execute(
+                "SELECT a.element_code, a.observed_at, a.status, a.chance, a.news "
+                "FROM player_availability a "
+                "JOIN (SELECT element_code, MAX(observed_at) AS m FROM player_availability "
+                "      GROUP BY element_code) b "
+                "  ON a.element_code = b.element_code AND a.observed_at = b.m").fetchall():
+            latest_by_code[row["element_code"]] = row
+
+        touch, insert = [], []
+        for p in players:
+            # ⭐ **The failure path of a recorder must not take down the thing it observes.** `refresh` is the
+            # app's lifeline — everything downstream degrades to stale data if it dies — and this is a
+            # side-record, not the payload. A player FPL sends without a `code` cannot be keyed, so he is
+            # skipped and the refresh completes.
+            if getattr(p, "code", None) is None:
+                continue
+            latest = latest_by_code.get(p.code)
+            if latest is not None and (latest["status"], latest["chance"], latest["news"]) == (
+                    p.status, p.chance, p.news):
+                touch.append((now, p.code, latest["observed_at"]))
+            else:
+                insert.append((p.code, now, now, p.status, p.chance, p.news))
+
         with self.conn:
-            for p in players:
-                # ⭐ **The failure path of a recorder must not take down the thing it observes.** `refresh` is
-                # the app's lifeline — everything downstream degrades to stale data if it dies — and this is a
-                # side-record, not the payload. A player FPL sends without a `code` cannot be keyed, so he is
-                # skipped and the refresh completes.
-                if getattr(p, "code", None) is None:
-                    continue
-                latest = self.conn.execute(
-                    "SELECT observed_at, status, chance, news FROM player_availability "
-                    "WHERE element_code = ? ORDER BY observed_at DESC LIMIT 1", (p.code,)).fetchone()
-                current = (p.status, p.chance, p.news)
-                if latest is not None and (latest["status"], latest["chance"], latest["news"]) == current:
-                    self.conn.execute(
-                        "UPDATE player_availability SET last_seen_at = ? "
-                        "WHERE element_code = ? AND observed_at = ?", (now, p.code, latest["observed_at"]))
-                    continue
+            if touch:
+                self.conn.executemany(
+                    "UPDATE player_availability SET last_seen_at = ? "
+                    "WHERE element_code = ? AND observed_at = ?", touch)
+            if insert:
                 # A second change inside one refresh timestamp would collide on the key; ON CONFLICT keeps
                 # the write total rather than raising mid-refresh, and the later value is the current one.
-                self.conn.execute(
+                self.conn.executemany(
                     "INSERT INTO player_availability "
                     "(element_code, observed_at, last_seen_at, status, chance, news) VALUES (?, ?, ?, ?, ?, ?) "
                     "ON CONFLICT(element_code, observed_at) DO UPDATE SET "
                     "last_seen_at = excluded.last_seen_at, status = excluded.status, "
-                    "chance = excluded.chance, news = excluded.news",
-                    (p.code, now, now, p.status, p.chance, p.news))
-                inserted += 1
-        return inserted
+                    "chance = excluded.chance, news = excluded.news", insert)
+        return len(insert)
 
     def availability_as_of(self, when: str) -> dict:
         """`element_code → (status, chance, news, observed_at, last_seen_at)` as known at `when` (ADR-203).
@@ -759,25 +778,24 @@ class Storage:
         """
         if event is None:
             return 0                     # no next deadline (season over, or no fixtures) — nothing to key on
-        rows = 0
+        # ⚠️ **One `executemany`, not 667 round trips.** Same reason as `save_availability` above: a per-row
+        # write is free against a local file and was costing minutes against Supabase from a runner.
+        rows = [(code, event, observed_at, hours_to_deadline,
+                 getattr(p, "transfers_in_event", None), getattr(p, "transfers_out_event", None),
+                 getattr(p, "selected_by", None))
+                for p in players if (code := getattr(p, "code", None)) is not None]
+        if not rows:
+            return 0
         with self.conn:
-            for p in players:
-                code = getattr(p, "code", None)
-                if code is None:
-                    continue
-                self.conn.execute(
-                    "INSERT INTO player_transfer_flow "
-                    "(element_code, event, observed_at, hours_to_deadline, transfers_in, transfers_out, "
-                    " selected_by) VALUES (?, ?, ?, ?, ?, ?, ?) "
-                    "ON CONFLICT(element_code, event) DO UPDATE SET "
-                    "observed_at = excluded.observed_at, hours_to_deadline = excluded.hours_to_deadline, "
-                    "transfers_in = excluded.transfers_in, transfers_out = excluded.transfers_out, "
-                    "selected_by = excluded.selected_by",
-                    (code, event, observed_at, hours_to_deadline,
-                     getattr(p, "transfers_in_event", None), getattr(p, "transfers_out_event", None),
-                     getattr(p, "selected_by", None)))
-                rows += 1
-        return rows
+            self.conn.executemany(
+                "INSERT INTO player_transfer_flow "
+                "(element_code, event, observed_at, hours_to_deadline, transfers_in, transfers_out, "
+                " selected_by) VALUES (?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(element_code, event) DO UPDATE SET "
+                "observed_at = excluded.observed_at, hours_to_deadline = excluded.hours_to_deadline, "
+                "transfers_in = excluded.transfers_in, transfers_out = excluded.transfers_out, "
+                "selected_by = excluded.selected_by", rows)
+        return len(rows)
 
     def transfer_flow(self, event=None) -> list:
         """Stored transfer-flow rows, for one `event` or every one (oldest first). Read-only (ADR-210).

@@ -124,3 +124,76 @@ def test_refresh_records_the_flow_on_real_fixture_dataclasses():
                     finished=False, kickoff_time="2026-09-18T19:00:00Z")]
     assert _record_transfer_flow(db, [_P(1)], real, datetime(2026, 9, 14, 9, tzinfo=UTC).isoformat()) == 1
     db.close()
+
+
+def test_a_refresh_does_not_make_one_round_trip_per_player():
+    """⭐⭐ **The cost that was invisible locally and cost 3m31s of a 3m44s job.**
+
+    `save_availability` ran a SELECT then a write for each of ~667 players, and `save_transfer_flow` an
+    upsert each — about 2,000 round trips. Against a local SQLite file that is microseconds. Against Supabase
+    from a GitHub runner it was **three and a half minutes**, for a refresh that takes 3.6 seconds.
+
+    ⚠️ **Nothing in the test suite could see it**, because every test runs against a local database where a
+    round trip is free. ⭐ *A cost that is invisible on the developer's machine is not a small cost — it is an
+    unmeasured one.* So this counts the statements instead of timing them: the count is what scales with the
+    number of players, and the count is what a wire multiplies.
+    """
+    from src import db as db_module
+
+    calls = {"execute": 0, "executemany": 0}
+    real_connect = db_module.connect
+
+    class _Counting:
+        def __init__(self, inner):
+            self._inner = inner
+
+        def execute(self, sql, params=()):
+            calls["execute"] += 1
+            return self._inner.execute(sql, params)
+
+        def executemany(self, sql, seq):
+            calls["executemany"] += 1
+            return self._inner.executemany(sql, seq)
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+        def __enter__(self):
+            self._inner.__enter__()
+            return self
+
+        def __exit__(self, *a):
+            return self._inner.__exit__(*a)
+
+    db_module.connect = lambda target: _Counting(real_connect(target))
+    try:
+        from dataclasses import dataclass as _dc
+
+        @_dc
+        class _Full:
+            """⚠️ A player with **every** field both writers read. The first version reused this module's
+            `_P`, which carries only the transfer-flow columns — so it crashed in `save_availability` rather
+            than measuring it. ⭐ *A fixture that models less than reality cannot exercise the thing it is
+            pointed at.*"""
+            code: int
+            status: str = "a"
+            chance: int | None = None
+            news: str = ""
+            transfers_in_event: int = 0
+            transfers_out_event: int = 0
+            selected_by: float = 1.0
+
+        db = Storage(":memory:")
+        players = [_Full(code=i, transfers_out_event=i) for i in range(1, 301)]
+        calls["execute"] = calls["executemany"] = 0
+        db.save_availability(players, "2026-09-20T10:00:00+00:00")
+        _record_transfer_flow(db, players, FIXTURES, "2026-09-20T10:00:00+00:00")
+        db.close()
+    finally:
+        db_module.connect = real_connect
+
+    # 300 players. A per-row implementation would be ~900; a batched one is a handful.
+    assert calls["execute"] < 20, (
+        f"{calls['execute']} statements for 300 players — this scales per player, and each one is a "
+        "network round trip in production")
+    assert calls["executemany"] >= 2, "the bulk writes must be batched, not looped"
