@@ -42,5 +42,5 @@ def render_price_movers(risers, fallers) -> str:
     lines += ["", f"{PRICE_DOWN} Likely to fall:"]
     lines += _mover_rows(fallers) if fallers else ["  (none)"]
     lines += ["", "Net transfers per 1% ownership — a directional flag, not the exact price/timing; "
-              "sharpens in-season (live from GW1)."]
+              "and the bar moves with the week."]
     return "\n".join(lines)

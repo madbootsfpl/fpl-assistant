@@ -268,11 +268,20 @@ def test_routes_price_for_prediction_questions():
     assert route("who are the risers?", known_squads=[])[0] == "trends"
 
 
-def test_decide_price_is_a_preseason_message_when_flat():
-    # US-317: 0 net transfers (preseason) → no movers → a clear 'live at GW1' message
+def test_decide_price_says_so_plainly_when_there_is_nothing_to_report():
+    """⚠️ **Renamed, because the old name and assertion both encoded an expired promise.**
+
+    It was `..._is_a_preseason_message_when_flat` and asserted `"GW1" in message` — pinning copy that told
+    the reader the predictor would *"light up at GW1 (2026-08-21)"*. A month after that date the message was
+    still being shown, still being asserted, and the feature it promised was dead behind an unreachable
+    threshold (ADR-215). ⭐ *A test asserting stale copy makes the staleness load-bearing* — fixing the text
+    would have turned this red, which is precisely backwards.
+    """
     store = types.SimpleNamespace(get_players=lambda: [_pp(1, "Flat", 0, 0, 20)])
     d = _decide_price(store, "who's about to rise?")
-    assert "GW1" in d["message"] and "flat" in d["message"].lower()
+    assert "detail" not in d, "one flat player is no distribution — there is nothing to rank"
+    assert "GW1" not in d["message"], "the message must not still be waiting for a played gameweek"
+    assert "no clear price moves" in d["message"].lower()
 
 
 def test_decide_price_names_risers_and_fallers():
@@ -1212,11 +1221,14 @@ def test_decide_trends_most_owned_now():
     assert d["facts"]["top"][0].startswith("A")
 
 
-def test_decide_trends_momentum_is_preseason_gated():
-    players = [_trend_player(1, "A", "MID", 60, net_in=0, form=0.0)]   # momentum 0 (preseason)
+def test_decide_trends_says_so_when_nothing_has_moved():
+    players = [_trend_player(1, "A", "MID", 60, net_in=0, form=0.0)]   # nothing has moved this gameweek
     store = types.SimpleNamespace(get_players=lambda: players)
     d = ask._decide_trends(store, "who is most transferred in")
-    assert "GW1" in d["message"] and "detail" not in d              # a clear "live from GW1" message
+    # ⚠️ Was `assert "GW1" in d["message"]` — see the price test above for why that is backwards.
+    assert "detail" not in d, "no movement → no board"
+    assert "GW1" not in d["message"]
+    assert "nothing to report" in d["message"].lower() or "no transfer" in d["message"].lower()
 
 
 # --- the capability message describes the code, and is kept honest by a test -------------------------

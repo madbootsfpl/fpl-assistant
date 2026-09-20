@@ -76,14 +76,14 @@ PriceCuts = namedtuple("PriceCuts", "rise fall")
 PRICE_UP, PRICE_DOWN = "▲", "▼"
 
 PRICE_LEGEND = (f"Price: :green[{PRICE_UP}] likely to rise · :red[{PRICE_DOWN}] likely to fall (— = stable) — "
-                "directional pressure from net transfers this gameweek, a flag not the exact price/timing; "
-                "live from GW1.")
+                "directional pressure from net transfers this gameweek, a flag not the exact price "
+                "or timing.")
 
 # The same legend without Streamlit's colour markdown, for anywhere that renders literally (the CLI, and any
 # plain-text context). Kept beside its twin so they cannot drift apart unnoticed.
 PRICE_LEGEND_PLAIN = (f"Price: {PRICE_UP} likely to rise · {PRICE_DOWN} likely to fall (— = stable) — "
                       "directional pressure from net transfers this gameweek, a flag not the exact "
-                      "price/timing; live from GW1.")
+                      "price or timing.")
 
 
 def price_pressure(player):

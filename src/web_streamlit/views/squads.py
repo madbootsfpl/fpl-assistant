@@ -717,7 +717,10 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
         pbits.append(f":red[{PRICE_DOWN}] " + ", ".join(falling) + " may drop")
     if rising:
         pbits.append(f":green[{PRICE_UP}] " + ", ".join(rising) + " rising")
-    price = " · ".join(pbits) if pbits else "💷 no price moves (flat preseason)"
+    # ⚠️ **The old copy said "flat preseason" and it was wrong twice.** The season has been running for
+    # five gameweeks, and the silence was never about flat data anyway — the threshold was unreachable
+    # (ADR-215). ⭐ *Copy that explains an absence outlives the absence, and keeps sounding plausible.*
+    price = " · ".join(pbits) if pbits else "💷 none of your 15 under price pressure"
     st.caption(f"{avail}  ·  {price}")
 
     # Bench order (US-242/244/246) — the auto-sub priority (the stored order, ADR-079), reorderable (⬆/⬇).

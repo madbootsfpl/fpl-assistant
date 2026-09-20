@@ -850,7 +850,7 @@ def test_pool_shows_an_availability_fit_column():
 
 
 def test_pool_shows_the_price_prediction_column():
-    """US-286 (ADR-092): a forward-looking Price column + the honest live-GW1 caption.
+    """US-286 (ADR-092): a forward-looking Price column, explained by its legend.
 
     ADR-140 changed the glyphs to plain ▲/▼ so a Styler can paint them green-up / red-down. This also pins
     that the Styler does not break the frame the page reads back — the column must still be a real column of
@@ -865,7 +865,12 @@ def test_pool_shows_the_price_prediction_column():
     assert "Price" in df.columns
     assert set(df["Price"].astype(str)) <= {"", PRICE_UP, PRICE_DOWN}   # only the predictor's markers
     assert not (set(df["Price"].astype(str)) & {"🔺", "🔻"}), "the two-reds pair must be gone"
-    assert any("live from GW1" in c.value for c in at.caption)          # honest dormant-now note
+    # ⚠️ **This used to assert the caption said "live from GW1"** — so the test pinned a promise that had
+    # expired a month earlier, and would have failed if anyone fixed it. ⭐ *A test asserting stale copy
+    # makes the staleness load-bearing.* What matters is that the legend explains the glyphs.
+    legend = " ".join(c.value for c in at.caption)
+    assert PRICE_UP in legend and PRICE_DOWN in legend, "the column's glyphs must be explained somewhere"
+    assert "GW1" not in legend, "the legend must not still be waiting for a gameweek that has been played"
 
 
 def test_players_history_view_shows_a_season_table_for_a_known_player():

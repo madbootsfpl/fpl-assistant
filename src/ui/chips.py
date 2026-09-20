@@ -89,7 +89,7 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
         "",
         "  Confidence = how clearly that gameweek beats the alternatives (a heuristic; low when the weeks are",
         "  close). Based on your fixture run + projected points — double/blank gameweeks and mini-league",
-        "  position sharpen this in-season (live from GW1).",
+        "  position sharpen this as the season runs.",
         # ADR-185 — the wildcard's confidence measures a different thing from the others', so it says so.
         *(["  The Wildcard's confidence is how far a rebuild beats your squad, not how clearly one week wins."]
           if (advice.get("wildcard") or {}).get("gain") is not None else []),

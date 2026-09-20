@@ -72,7 +72,7 @@ def test_render_chip_advice_shows_every_chip_and_the_caption():
     for label in ("Triple Captain", "Bench Boost", "Free Hit", "Wildcard"):
         assert label in block
     assert "GW1" in block and "GW2" in block                        # the recommended weeks
-    assert "in-season" in block                                     # the honest what-sharpens-later note
+    assert "as the season runs" in block                                     # the honest what-sharpens-later note
 
 
 def test_render_chip_advice_handles_no_advice():

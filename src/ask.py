@@ -1346,7 +1346,7 @@ def _decide_trends(store: Storage, question: str) -> dict | None:
     label, header = TREND_BYS[by]
 
     if by in ("in", "out", "form") and all((r.get("trend") or 0) == 0 for r in rows):
-        return {"message": 'No transfer/form data yet — trending lights up at GW1 (2026-08-21). '
+        return {"message": 'No transfer or form movement to report this gameweek. '
                            'Try "most owned" meanwhile.'}
 
     scope = f"{position} " if position else ""
@@ -1383,9 +1383,12 @@ def _decide_price(store: Storage, question: str) -> dict | None:
     fallers = sorted((p for p in pool if predict(p) == "fall"),
                      key=lambda p: price_pressure(p) or 0)[:_PRICE_N]
     if not risers and not fallers:
-        return {"message": "No price movement predicted yet — net transfers are flat preseason. The price "
-                           f"predictor lights up at GW1 (2026-08-21), then flags likely risers {PRICE_UP} "
-                           f"/ fallers {PRICE_DOWN}."}
+        # ⚠️ This used to promise the predictor *"lights up at GW1 (2026-08-21)"* — a date a month past, for
+        # a feature that was in fact dead behind an unreachable threshold (ADR-215). ⭐ *A message that
+        # explains why there is nothing to show is a claim, and it expires like any other.*
+        return {"message": f"No clear price moves right now — nobody is far enough into the top or bottom of "
+                           f"the transfer-pressure board to call it. The predictor flags likely risers "
+                           f"{PRICE_UP} / fallers {PRICE_DOWN} when they appear."}
 
     def _disp(p):
         return {"web_name": p["web_name"], "team": p["team"], "position": p["position"],

@@ -111,3 +111,45 @@ def test_setup_sql_closes_every_table_it_creates():
     # maddie_videos is the deliberate exception: public marketing content, readable and never writable.
     assert "grant select on public.maddie_videos to anon" in sql
     assert not re.search(r"grant\s+(insert|update|delete|all)\s+on public\.maddie_videos", sql)
+
+
+# ---- copy that promises a date the season has passed (ADR-215/216) ----------------------
+
+def test_no_user_facing_copy_still_waits_for_gw1():
+    """⭐⭐ **A message explaining why there is nothing to show is a claim, and it expires like any other.**
+
+    Five strings promised the price predictor and the trending boards *"live from GW1"* / *"lights up at GW1
+    (2026-08-21)"* — a month after GW1, for a feature that was in fact dead behind an unreachable threshold
+    (ADR-215). Each read as reassurance, and each was wrong about the date **and** the reason.
+
+    ⚠️ **Parsed, not grepped.** A grep flagged ten places and six were docstrings — developer notes nobody
+    sees. A guard that fires on things which are not the problem gets ignored, and then it is ignored on the
+    day it is right (ADR-178). This walks the AST and looks only at string constants that are **not**
+    docstrings, which is the set a user can actually read.
+
+    ⭐ It sweeps all of `src/`, not the files someone remembered — ADR-184, where a retired claim survived on
+    six surfaces because two guards both checked the same two files.
+    """
+    import ast
+
+    banned = ("flat preseason", "lights up at gw1", "live from gw1", "live at gw1")
+    offenders = []
+
+    for path in sorted((ROOT / "src").rglob("*.py")):
+        tree = ast.parse(path.read_text())
+        # Every string that IS a docstring, by identity — so they can be excluded precisely.
+        docstrings = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                first = node.body[0] if node.body else None
+                if (isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)
+                        and isinstance(first.value.value, str)):
+                    docstrings.add(id(first.value))
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Constant) and isinstance(node.value, str)
+                    and id(node) not in docstrings
+                    and any(b in node.value.lower() for b in banned)):
+                offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}  {node.value.strip()[:70]}")
+
+    assert not offenders, (
+        "copy shown to a user still says the season has not started:\n  " + "\n  ".join(offenders))
