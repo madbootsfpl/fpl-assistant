@@ -10,13 +10,25 @@ Previous consolidations: 2026-08-05 (Sprint 050), kept current through Sprint 17
 
 ---
 
-## Where we are — 2026-08-25, GW1 played
+## Where we are — 2026-09-20, GW5 under way
 
 A mature FPL assistant: an analytics + optimisation core, a decision-support suite, a grounded
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**1285 tests · 134 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,035 tests · 212 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+
+⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
+page knowing three things:
+
+1. **The product is in a closed beta with real testers**, not a solo tool. Several entries below are written
+   as though the only user is the author.
+2. **The data refreshes itself** (ADR-211). Squad data is in **Postgres**; a scheduled GitHub Action keeps it
+   current. Any entry that assumes a manual `reseed` before a deadline is describing the old world.
+   📅 *Exit criterion running: two weeks with no manual reseed, including a deadline and a live gameweek.*
+3. **The next phase is mobile, and it is the first phase driven by user feedback rather than by what was
+   next in the plan.** People don't want a browser for FPL. See
+   [Mobile_Platform_Audit.md](../03_Architecture/Mobile_Platform_Audit.md).
 
 ---
 

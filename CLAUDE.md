@@ -72,10 +72,24 @@ Ollama:
 
 ## Current Phase
 
-Active build — sprint by sprint. Phases 1 (CLI Analytics MVP), 3 (Decision Support)
-and 4 (natural-language `ask`/`chat`) are complete. Next: a thin, read-only web UI
-(FastAPI + Jinja, reusing the analytics — the CLI stays the engine), then Data
-Hardening once the season starts.
+**All six build phases are complete.** The CLI is the engine; a Streamlit web app runs a **closed beta**.
+
+⚠️ The web UI shipped as **Streamlit**, not the thin FastAPI edge the older plan described — if you read that
+plan anywhere, it is history, not a pending task.
+
+**Just landed (September 2026), and both change how the project works day to day:**
+
+- **The data refreshes itself** (ADR-211). Squad data lives in **Postgres** (Supabase); a scheduled GitHub
+  Action keeps it current. ⚠️ `reseed` still exists but now only rebuilds the **SQLite test fixture** — it is
+  no longer a deploy step.
+- **The Supabase store is hardened.** Tables holding emails and saved squads are closed to the publishable
+  key; the app reaches them through twelve `security definer` functions. Setup is one file —
+  `sql/setup.sql` — explained in `docs/SUPABASE_RLS.md`. 🔴 **Never add a `using (true)` policy or
+  `disable row level security` to those tables**; that is the hole this closed, and `tests/test_setup_docs.py`
+  guards the docs against re-teaching it.
+
+**Next: a Flutter mobile app** — see `docs/03_Architecture/Mobile_Platform_Audit.md`. The driver is feedback,
+not architecture: people don't want a browser for FPL.
 
 For the live status and forward plan, see:
 - docs/00_Project/PROJECT_STATUS.md (the single live status)

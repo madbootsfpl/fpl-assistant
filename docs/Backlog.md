@@ -209,7 +209,7 @@ is correct (tooltips/caption already say so), the bare header can be misread (�
   (US-219).** A CLI `refresh` writes the local cache (`fpl.db` = 581); the **cloud serves the committed `seed.db`
   snapshot (573)** and a **reboot reloads that snapshot**, discarding the runtime refresh. The "N players" count exists
   precisely to make a stale snapshot obvious. The 8-player gap = **preseason roster churn** (FPL adds/removes players
-  daily); the committed seed is a few days old. **To sync the cloud:** `reseed` (fpl→seed) → commit/push → **Reboot**
+  daily); the committed seed is a few days old. ⚠️ **Superseded by ADR-211** — the cloud now feeds itself from Postgres via a scheduled Action; there is nothing to sync. (`reseed` still rebuilds the SQLite *test fixture*.)
   (the DEPLOY flow / runbook §A). *(Possible tiny UX: make the cloud snapshot caption clearer that it's the deployed
   snapshot — low priority.)*
 - **Reboot warning: "More than one requirements file detected … used uv with requirements.txt."** ✅ **Benign.**

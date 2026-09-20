@@ -16,34 +16,22 @@ one server-side write the app makes.
 
 1. Sign up at [supabase.com](https://supabase.com) (free tier) → **New project**. Note the project's **API URL**
    and **anon public** key (Project **Settings → API**).
-2. Open **SQL Editor** and run (idempotent — safe to re-run):
-   ```sql
-   create table if not exists squads (
-     handle      text primary key,
-     data        jsonb not null,
-     updated_at  timestamptz not null default now()
-   );
+2. Open the **SQL Editor** and run [`sql/setup.sql`](../sql/setup.sql). It creates all seven tables and the
+   twelve functions in their **hardened** form, and is safe to re-run.
 
-   -- Beta access with NO login: allow the anon key to read/write this one table.
-   alter table squads enable row level security;
-   drop policy if exists "anon squads read"   on squads;
-   drop policy if exists "anon squads write"  on squads;
-   drop policy if exists "anon squads update" on squads;
-   drop policy if exists "anon squads delete" on squads;
-   create policy "anon squads read"   on squads for select using (true);
-   create policy "anon squads write"  on squads for insert with check (true);
-   create policy "anon squads update" on squads for update using (true) with check (true);
-   create policy "anon squads delete" on squads for delete using (true);
-   ```
-   *(A handle isn't security — this is a hobby beta on public FPL data. Anyone who knows a handle can read or
-   overwrite it, by design, ADR-094.)*
+   🔴 **This page used to print permissive policies here** — `create policy ... using (true)` on `squads`, or
+   the one-line `disable row level security`. Both make every saved squad readable by anyone holding the
+   publishable key. Stage B3 closed that ([`SUPABASE_RLS.md`](SUPABASE_RLS.md)), and pasting the old SQL back
+   would undo it.
 
-   > **⚠️ #1 gotcha — Row-Level Security.** If a Save shows *"new row violates row-level security policy"*, the
-   > table has RLS **on** but no permissive policy. The block above fixes it (the `drop … if exists` lines make it
-   > safe to re-run — a raw `create policy` errors if it already exists, which can leave the batch half-applied).
-   > **Simplest alternative** for a hobby beta: `alter table squads disable row level security;` — the same
-   > anon-open access, one line. (Since a handle isn't security anyway, the permissive policies and no-RLS are
-   > functionally identical here.) SQL changes apply immediately — no reboot needed; just click Save again.
+   ⭐ **What replaced them:** four functions — `get_squad`, `save_squad`, `squad_exists`, `delete_squad`. Each
+   takes a handle and answers about *that one squad*. The table itself is unreadable, so the list of handles
+   cannot be pulled.
+
+   ⚠️ **A handle is still not security, and the functions do not make it one.** Anyone who knows or guesses a
+   handle can read or overwrite it, exactly as ADR-094 intended for a hobby beta. What changed is that they
+   can no longer **enumerate** — guessing one handle is now the only way in, rather than downloading all of
+   them. Real per-user ownership needs Supabase Auth (Stage C, Phase 3).
 
 ## 2. Wire the secrets (Streamlit)
 

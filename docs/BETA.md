@@ -152,26 +152,18 @@ on the **capped registration gate**: a visitor enters the **invite code + their 
 self-declared (no passwords/verification), the code gates *who can* register, the cap bounds *how many*. Reuses
 the cross-device-squads Supabase (§ `docs/CLOUD_SQUADS.md`) — **no new store secret**.
 
-1. **A users table** (same Supabase project as squads) — SQL Editor, idempotent:
-   ```sql
-   create table if not exists beta_users (
-     email       text primary key,
-     created_at  timestamptz not null default now()
-   );
-   alter table beta_users enable row level security;
-   drop policy if exists "anon users read"   on beta_users;
-   drop policy if exists "anon users write"  on beta_users;
-   drop policy if exists "anon users delete" on beta_users;
-   create policy "anon users read"   on beta_users for select using (true);
-   create policy "anon users write"  on beta_users for insert with check (true);
-   create policy "anon users delete" on beta_users for delete using (true);   -- self-service "Remove me" (ADR-122)
-   ```
-   *(Or `alter table beta_users disable row level security;` — same anon-open access, one line. This is the #1
-   gotcha, exactly like the squads table.)*
-   > **The `delete` policy matters (ADR-122):** without it, a tester's in-app **"Remove me"** silently can't drop
-   > their `beta_users` seat (`select`+`insert` only), so they'd stay allow-listed. `beta_waitlist` / `squads` /
-   > `player_watchlist` are RLS-off, so their deletes already work; this line completes the picture. (If you
-   > `disable row level security` above, delete works too — no separate policy needed.)
+1. **Create the tables.** Paste [`sql/setup.sql`](../sql/setup.sql) into the SQL Editor and run it. It creates all seven tables
+   and the twelve functions the app calls, in their **hardened** form, and is safe to re-run.
+
+   🔴 **Do not write your own policies for these tables.** Earlier versions of this page told you to add
+   `using (true)` policies, or to `disable row level security`. Both leave every email address in
+   `beta_users` readable by anyone holding the publishable key. Stages A/B/B3 closed that
+   ([`SUPABASE_RLS.md`](SUPABASE_RLS.md)); `setup.sql` is what closed it, and pasting older SQL over the top
+   would open it again.
+
+   ⭐ **The principle: the app asks questions, it does not read tables.** The gate calls
+   `is_allow_listed(email)` and gets back a boolean — it never fetches the list. So a stolen publishable key
+   can ask *"is this specific address allow-listed?"* and cannot ask *"who are your testers?"*
 2. **Turn it on:** set **`FPL_USER_CAP = 10`** in Streamlit secrets (keep `FPL_ACCESS_CODE` — it's the invite).
    The gate switches from the plain code prompt to **code + email**. Unset it → back to the code-only gate.
 3. **Run it:** raise the cap (`20`, `50`…) as performance holds — one edit. **See / manage testers** in Supabase
@@ -190,28 +182,12 @@ When registration is capped, someone who tries after the cap is full — **or** 
 turned away. Turn on the **waitlist** to **record their email** so you can invite them later. Same Supabase project,
 **no new secret** (it derives its endpoint from `FPL_STORE_URL`, like `beta_users`); **off until the table exists**.
 
-1. **A waitlist table** (same project) — SQL Editor, idempotent:
-   ```sql
-   create table if not exists beta_waitlist (
-     email       text primary key,
-     reason      text,               -- 'not_listed' (Google sign-in not on the allow-list) | 'full' (over the cap) | 'bad_code' (wrong invite code)
-     created_at  timestamptz not null default now()
-   );
-   alter table beta_waitlist disable row level security;   -- the app UPSERTS (merge-duplicates); simplest + reliable
-   ```
-   ⚠️ **The app writes with an UPSERT** (`Prefer: resolution=merge-duplicates`, idempotent on retries) — so a plain
-   **insert-only** RLS policy is **not enough** (the upsert's conflict path needs an *update* policy too, else you get
-   `42501 "new row violates row-level security policy"` — a **silent** drop, since the write is fail-silent). Two
-   working options: **(a)** the one-liner above — **disable RLS** (consistent with the store: `beta_users` already has
-   an open read policy, so the publishable key can already read/write); or **(b)** keep RLS on with **both** policies:
-   ```sql
-   alter table beta_waitlist enable row level security;
-   drop policy if exists "anon waitlist write"  on beta_waitlist;
-   drop policy if exists "anon waitlist update" on beta_waitlist;
-   create policy "anon waitlist write"  on beta_waitlist for insert with check (true);
-   create policy "anon waitlist update" on beta_waitlist for update using (true) with check (true);
-   ```
-   *(The app **writes** but never reads the list back — you read it in the dashboard.)*
+1. **Already created** by [`sql/setup.sql`](../sql/setup.sql) — there is no separate step.
+
+   ⚠️ **The app sends a plain INSERT, not an upsert, and that is deliberate.** An upsert's conflict path has
+   to *read* the row it collides with, which needs a permissive SELECT policy — and a readable waitlist is
+   the exposure itself. So emails go in and nothing comes out; a repeat address returns a harmless 409 that
+   the caller ignores. *(You read the list in the dashboard, with the service-role key.)*
 2. **It's automatic once the table exists.** With **Google auth** (`[auth]`, ADR-106), a signed-in email **not**
    on `beta_users` is now **auto-admitted while there is room under `FPL_USER_CAP`** (ADR-193) and only lands a
    waitlist row with **`reason='not_listed'`** once the cap is reached — or if the cap is unset, in which case
@@ -297,23 +273,8 @@ derived from `FPL_STORE_URL`, **no new secret**). You curate videos from the **d
 swap — **with no redeploy**. The app only **reads** the table, so — unlike the waitlist — **RLS stays on** with a
 simple public-**read** policy (no write path = none of the `42501` upsert pain).
 
-1. **Create the table** (SQL Editor, idempotent):
-   ```sql
-   create table if not exists public.maddie_videos (
-     id          bigint generated always as identity primary key,
-     topic       text    not null,
-     blurb       text,
-     youtube_url text,
-     sort_order  int     not null default 0,
-     published   boolean not null default false,
-     created_at  timestamptz not null default now()
-   );
-
-   alter table public.maddie_videos enable row level security;
-
-   create policy "maddie_videos public read"
-     on public.maddie_videos for select using (true);
-   ```
+1. **Already created** by [`sql/setup.sql`](../sql/setup.sql) — public marketing content, so it is the one table `anon` may read.
+   It is readable and never writable.
 2. **Add a video** — upload the clip **unlisted** to YouTube, then insert a row (or use the Table editor):
    ```sql
    insert into public.maddie_videos (topic, blurb, youtube_url, sort_order, published) values
@@ -337,17 +298,9 @@ Each signed-in user can ⭐ a shortlist of players (on **Players**) and view the
 persists per user in the *same* Supabase project (endpoint derived from `FPL_STORE_URL`, **no new secret**), like
 the saved squad. **Off until the table exists** (session-only fallback otherwise).
 
-1. **Create the table** (SQL Editor, idempotent). The app **upserts** it per user (like the squads table), so —
-   as with the squad store — either **disable RLS** (simplest, consistent with the store) or add insert+update
-   policies:
-   ```sql
-   create table if not exists public.player_watchlist (
-     user_key    text primary key,          -- a hash of the user's email (ADR-106), not the email itself
-     player_ids  jsonb not null default '[]'::jsonb,
-     updated_at  timestamptz not null default now()
-   );
-   alter table public.player_watchlist disable row level security;   -- the app upserts; simplest + reliable
-   ```
+1. **Already created** by [`sql/setup.sql`](../sql/setup.sql), along with `get_watchlist` / `save_watchlist`. The table is closed to
+   the publishable key; the app reaches it only through those two functions, keyed by a hash of the user's
+   email (ADR-106) rather than the address itself.
 2. **That's it** — signed-in users' watchlists now save/restore across devices; capped at **30** players.
 
 > No table (or not signed in) → the watchlist works **in-session only** (best-effort, ADR-117) and never errors.

@@ -6,7 +6,7 @@ and how that sits on the roadmap. For the live engineering status see
 plan see [../04_Roadmap/Roadmap.md](../04_Roadmap/Roadmap.md); for direction/strategy (multi-user, mobile,
 wider testing) see [DIRECTION.md](DIRECTION.md).
 
-**Status:** active build, sprint-by-sprint · **121 ADRs · 1091 tests · CI green** · **🚨 GW1 = 2026-08-21 (tomorrow)**.
+**Status — 2026-09-20:** active build, sprint-by-sprint · **212 ADRs · 2,039 tests · CI green** · **the season is under way (GW1–4 played, GW5 live)** · in **closed beta** with real testers.
 Two ways in: a **CLI** (the engine) and a **read-only Streamlit web app** (deployed, public). One principle
 throughout: **the analytics decide, the LLM only narrates, and every answer is checked against the data
 (✓/⚠).**
@@ -62,18 +62,38 @@ downloadable `squad.json` / manager-ID import is your save.)*
 
 ---
 
-## ⏳ Gated — lights up at GW1 (2026-08-21)
+## ⏳ Gated — and the gate has moved
 
-These are built (or prepped) but need live-season data, so they're quiet in preseason:
+⭐⭐ **The season started, so "waiting for data" stopped being the reason — but the table below still said it
+was.** That is the distinction worth keeping straight: a feature blocked because *the data does not exist* is
+waiting on the calendar, and one blocked because *nobody has run the calibration* is waiting on a person.
 
-| Feature | Why it's gated |
+**Now live** (the data arrived and these lit up on their own):
+
+| Feature | State |
 |---|---|
-| **Momentum / form boards** (transfers-in/out, in-form) | net transfers & form are 0 until games are played |
-| **Form-weighted xP** (Data Hardening) | wired **dormant** (ADR-060); GW1 = backfill + raise `FORM_WEIGHT` + calibrate |
-| **Price-change predictor** | needs live net-transfer momentum (dormant until GW1) |
-| **Import your real team by manager-ID** | picks are public only from the GW1 deadline |
-| **Chip timing — the DGW/BGW half** | double/blank gameweeks are announced in-season |
-| **Elite Manager Comparison** | needs the leagues API + per-manager picks (public from GW1) |
+| **Momentum / form boards** | ✅ live — real net transfers and form |
+| **Price-change predictor** | ✅ live — fed by real transfer momentum |
+| **Import your real team by manager-ID** | ✅ live — picks are public from each deadline |
+| **Elite Manager Comparison** | ✅ live — the leagues API is populated |
+
+**Still dormant, and now waiting on a decision rather than on a date** — all three xP terms are wired and
+sitting at weight `0.0`, so they change nothing until someone calibrates and raises them:
+
+| Term | Weight | What it needs |
+|---|---|---|
+| **Form-weighted xP** (ADR-060) | `FORM_WEIGHT = 0.0` | `calibrate --weight form` now runs (≥4 GWs exist). §B of [GW1_RUNBOOK](../GW1_RUNBOOK.md). |
+| **DefCon fixture magnifier** (ADR-097) | `DEFCON_MAGNIFIER_WEIGHT = 0.0` | the same calibration sitting |
+| **Club clean-sheet term** (ADR-188/195) | `CLEAN_SHEET_WEIGHT = 0.0` | 📅 sweep at the GW6 sitting, on/after 2026-10-12 |
+
+⚠️ **A dormant term is not a covered term, it is merely a quiet one** (ADR-195) — at weight 0 the code paths
+behind these barely run, so a change to them can pass the whole suite while being wrong.
+
+**Genuinely still on the calendar:**
+
+| Feature | Why |
+|---|---|
+| **Chip timing — the DGW/BGW half** | double/blank gameweeks are announced in-season, and none is scheduled yet |
 
 ---
 

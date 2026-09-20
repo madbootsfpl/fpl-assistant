@@ -16,36 +16,30 @@ FPL experience is not).
 
 ## 1. Create the `events` table (Supabase)
 
-**SQL Editor** → run (idempotent):
-```sql
-create table if not exists events (
-  id          bigint generated always as identity primary key,
-  ts          timestamptz not null default now(),
-  session_id  text,          -- a random per-session id (anonymous)
-  anon_id     text,          -- a random returning-user id (the fpl_anon cookie; anonymous)
-  version     text,          -- app version (config.APP_VERSION)
-  event       text,          -- session_started · page_viewed · analysis_run · squad_saved · … · error · perf
-  page        text,
-  duration_ms int,           -- for perf events
-  ok          boolean,
-  meta        jsonb          -- small structured context only (e.g. {"view":"Health","n":15})
-);
+Run [`sql/setup.sql`](../sql/setup.sql) in the **SQL Editor** — it creates `events` along with everything
+else, in its hardened form, and is safe to re-run.
 
--- Anonymous beta, no login: allow the anon key to INSERT events (reads are yours, via SQL / the admin view).
-alter table events enable row level security;
-drop policy if exists "anon events insert" on events;
-create policy "anon events insert" on events for insert with check (true);
+| column | what it holds |
+|---|---|
+| `ts` | set by the database, not the client |
+| `session_id` | a random per-session id — **anonymous** |
+| `anon_id` | a random returning-device id (the `fpl_anon` cookie) — **anonymous** |
+| `version` | app version (`config.APP_VERSION`) |
+| `event` | `session_started` · `page_viewed` · `analysis_run` · `squad_saved` · … · `error` · `perf` |
+| `page`, `duration_ms`, `ok` | context; `duration_ms` is for `perf` events |
+| `meta` | small structured context only, e.g. `{"view":"Health","n":15}` |
 
--- For the in-app Admin view (US-337): let the (server-side) anon key READ events too. The anon key lives in
--- Streamlit secrets and is never sent to a browser; events are anonymous — so this only lets your server read them.
-drop policy if exists "anon events read" on events;
-create policy "anon events read" on events for select using (true);
-```
-*(INSERT-only for the app: testers' browsers can add events but never read them back. You read via the Supabase
-SQL editor — the service role — or the admin view.)*
+**Insert-only for the app.** Testers' browsers add events and can never read them back.
 
-> **RLS gotcha** (same as squads): if events don't appear, the table has RLS **on** with no permissive policy — the
-> block above fixes it. Simplest alternative for a hobby beta: `alter table events disable row level security;`.
+🔴 **This page used to add a read policy too**, so the in-app Admin view could use the publishable key. That
+justification was wrong in a way worth naming: it argued the key is safe because *"it lives in Streamlit
+secrets and is never sent to a browser"* — true of the **key**, but the policy it created applies to
+**anyone holding that key**, wherever they got it. ⭐ *A permission is granted to a role, not to the place you
+happen to keep the credential.*
+
+**The Admin view now reads with the service-role key** (`FPL_ADMIN_STORE_KEY`) instead, which bypasses RLS
+entirely. ⚠️ That is safe **only** because Streamlit renders server-side — it must never be compiled into a
+mobile client.
 
 ## 2. Turn it on (Streamlit secrets)
 

@@ -8,6 +8,11 @@ branches + tags) is copied elsewhere automatically, plus a manual offline fallba
 > The **seed data** (`data/seed.db`, `data/seed_squads.json`) is committed to the repo, so it's backed up with
 > the code — no separate data backup is needed. The live cache (`data/fpl.db`) and local `squads.json` are
 > gitignored working state and are always rebuildable with `python app.py refresh` / `reseed`.
+>
+> ⚠️ **Since ADR-211, that sentence covers less than it used to.** The live app's data is in **Postgres**
+> (Supabase), not in any file in this repo — so "rebuildable from the repo" is true of the *test fixture* and
+> not of what testers see. Supabase's own backups are what cover the real data; `sql/setup.sql` rebuilds the
+> schema and functions from scratch.
 
 ---
 

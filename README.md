@@ -8,18 +8,30 @@ A personal Fantasy Premier League analytics assistant — a command-line tool yo
 *(The internal package/repo stays `fpl-assistant`; MADBOOTS is the product brand — ADR-103. Not affiliated with
 the Premier League or the official Fantasy Premier League game.)*
 
-**Status:** Phases 1 (*CLI Analytics MVP*), 3 (*decision support* — captain · transfer · squad analysis)
-and 4 (*natural language* — a grounded `ask` + a conversational `chat`) **complete**. A **read-only web UI**
-(Streamlit, deployable to Streamlit Community Cloud) is live, and **Phase 6 — Crowd & Community Signals**
-(ownership / transfer trends · an FPL news lens · import-your-team-by-manager-ID · Reddit buzz) is
-delivering — plus a grounded **"this week" gameweek recommendation** (captain · lineup · a transfer · flags).
-**121 ADRs · 1091 tests · CI green.** The app has since matured into **MADBOOTS**: **🧬 Player DNA** & **Team DNA**
-analysis, a ⭐ **Watchlist**, **Google sign-in** with cross-device squads (ADR-106), and a **My Squad / 🧪 Squad Lab**
-split (ADR-105). **🚨 GW1 = 2026-08-21 (tomorrow)** — the season lights up the gated features (momentum · price ·
-manager-ID import); the Data-Hardening flip is documented in **[GW1_RUNBOOK](docs/GW1_RUNBOOK.md)**.
-New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
-(features · what's gated until GW1 · backlog · roadmap) and **[Direction & options](docs/00_Project/DIRECTION.md)**
-(hobby vs multi-user/paid · mobile · wider testing). Running a beta? **[BETA.md](docs/BETA.md)**. Also the
+**Status — 2026-09-20, GW5 under way.** All six build phases are complete: the **CLI** (analytics ·
+optimisation · decision support · a grounded `ask`/`chat`) and a **web app** (Streamlit) running a **closed
+beta** on Streamlit Community Cloud, with Google sign-in, cross-device squads, a ⭐ watchlist and
+**🧬 Player / Team DNA**.
+
+Two things changed underneath it this month, and both are worth knowing before you read further:
+
+- **The data refreshes itself** (ADR-211). Squad data lives in **Postgres** (Supabase), not a committed SQLite
+  snapshot, and a scheduled GitHub Action keeps it current through the day. There is no longer a `reseed`
+  step in the deploy. *The SQLite snapshot in this repo is now the test fixture, not the live database.*
+- **The store is hardened.** The tables holding email addresses and saved squads are closed to the
+  publishable key; the app reaches them through twelve `security definer` functions. Setting up a project
+  means running one file — **[`sql/setup.sql`](sql/setup.sql)** — and **[SUPABASE_RLS.md](docs/SUPABASE_RLS.md)**
+  explains what it does and what it deliberately does not.
+
+**Next: a mobile app.** The consistent feedback is that people don't want to use a browser for FPL, and every
+comparable assistant is an app. The plan — Flutter, reusing the analytics rather than reimplementing them —
+is in **[Mobile_Platform_Audit.md](docs/03_Architecture/Mobile_Platform_Audit.md)**.
+
+**212 ADRs · 2,039 tests · CI green.**
+
+New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
+**[Direction & options](docs/00_Project/DIRECTION.md)**. Running a beta? **[BETA.md](docs/BETA.md)**. The live
+status is **[PROJECT_STATUS.md](docs/00_Project/PROJECT_STATUS.md)**; the forward plan is the
 [Roadmap](docs/04_Roadmap/Roadmap.md).
 
 ## What it does today
@@ -86,11 +98,17 @@ New here? See the **[Product overview](docs/00_Project/PRODUCT.md)**
 
 ## Planned (not yet built)
 
-- **Next — Data Hardening** (post-GW1, GW1 = 2026-08-21): per-gameweek history + in-season **form** blended
-  into xP; a full history backfill; the attack/defence FDR split.
+- **Next — a mobile app** (Flutter). The reason is feedback, not tech: people don't want a browser for FPL.
+  See **[Mobile_Platform_Audit.md](docs/03_Architecture/Mobile_Platform_Audit.md)**.
+- **Data Hardening** — per-gameweek history + in-season **form** blended into xP; a full history backfill;
+  the attack/defence FDR split. Partly unblocked now the season is running.
+- **Under review, on a date** — a learned expected-minutes model. Measured at the Phase 1 gate (ADR-204) and
+  **held**: 📅 reviewed again **on or after 2026-10-26**, once GW8 is played, against a rule written down
+  *before* the data existed. If neither clause is met it is declined for the season. ⭐ *A decline needs a
+  re-measure date, the same as a feature needs a review date.*
 - **Later:** chip optimisers; the full probabilistic xMins model (schedule / European congestion, rotation
-  profiles — post-GW1); keyed Reddit / pundit **sentiment** + a crowd-vs-xP **backtest**; evaluation &
-  feedback loops. *(xMins **v0** — chance% × historical minutes — is built; see above.)*
+  profiles); keyed Reddit / pundit **sentiment** + a crowd-vs-xP **backtest**; evaluation & feedback loops.
+  *(xMins **v0** — chance% × historical minutes — is built; see above.)*
 
 See the [Roadmap](docs/04_Roadmap/Roadmap.md).
 
@@ -137,7 +155,8 @@ The app is driven by subcommands (see ADR-003):
 
 ```bash
 python app.py refresh                          # fetch FPL data (players, teams, fixtures)
-python app.py reseed                           # refresh, then copy the cache to the committed seed (deploy)
+python app.py reseed                           # refresh + rewrite the committed SQLite snapshot (TESTS ONLY —
+                                               #   the live app is fed by the pipeline, ADR-211)
 python app.py history Haaland                  # a player's season-by-season record (past seasons + per-GW)
 python app.py history --backfill               # backfill past-season history (once per season)
 python app.py table --sort value --limit 20    # players, ranked by points or value (£m)

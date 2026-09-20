@@ -1,5 +1,21 @@
 # GW1 Data Hardening — the runbook
 
+> ## 📍 Read this first — 2026-09-20
+>
+> **§A is done and is now history. §B is live and is the reason to open this page.**
+>
+> GW1 was played on **2026-08-21**; GW1–4 are complete and **GW5 is under way**. Everything below written in
+> the future tense about "the 21st" has happened. The dated T-1 note is kept as the record of what was
+> prepared, not as a thing to do.
+>
+> **What is actually open:** **§B — the weight flip**, gated on ≥4 gameweeks of returns. That gate is now
+> **met** (`player_history` holds 4 played rounds and `calibrate` runs, re-audited 2026-09-13), so §B is
+> runnable for the first time. ⭐ *The gate moved while the page still said "waiting".*
+>
+> ⚠️ **One step in §A no longer exists.** `reseed` → `git push` → Reboot was how fresh data reached Cloud.
+> ADR-211 replaced it with a scheduled pipeline writing to **Postgres**; `reseed` now only rebuilds the
+> **SQLite test fixture**. Do not follow the deploy instructions below.
+
 **GW1 = 2026-08-21.** The season-start modelling (form / set-piece / DefCon) is wired **dormant** (weights = 0), so
 preseason xP is unchanged. This is the ordered checklist to turn it on **calibrated on real returns** (ADR-101) and
 to verify the GW1-gated features. Nothing here changes a weight until the backtest says so — the harness
