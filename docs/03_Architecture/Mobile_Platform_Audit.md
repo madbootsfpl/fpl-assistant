@@ -246,6 +246,22 @@ Board-wide values that are identical for every user, written by the pipeline onc
 
 **This is the majority of the app's read surface**, and it wants no API at all — PostgREST with RLS serves it.
 
+> ### 📍 Status, 2026-09-20 — one of these now exists
+>
+> ⚠️ **When this section was written, none of the derived boards were in the database.** They were computed
+> in Python at read time, which a Flutter client cannot do — so §4.1 described a read surface that was not
+> there. It read as a description and was a requirement.
+>
+> ✅ **Per-player xP is now published by the pipeline** (ADR-213): one row per player carrying a horizon-8
+> board with **unrounded** per-gameweek values, so any horizon 1–8 is derivable exactly. Validated before it
+> replaces the last good board, and pinned by a test that recomputes and compares.
+>
+> ⬜ **Still Python-only:** the stat boards, Player/Team DNA percentiles, and Signals. Deliberately deferred —
+> doing one end to end first proves the publish-validate-verify pattern before it is copied four times.
+>
+> ⚠️ A published board is anchored to the gameweeks it covers (`first_event`), because the window moves at
+> every deadline. A client that ignores that will misread it as current.
+
 ### 4.2 Flutter → FastAPI ✅
 
 Operations whose input is *this user's fifteen players*, which cannot be precomputed:

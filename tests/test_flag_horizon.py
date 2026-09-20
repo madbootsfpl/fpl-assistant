@@ -52,7 +52,16 @@ def test_the_discount_applies_near_and_lifts_beyond_the_window():
     fixtures = [_fx(5, "2026-09-18T19:00:00Z"), _fx(6, "2026-10-10T11:30:00Z")]
     base = {1: 0.06, 2: 0.06}
     out = _run([_p(1, status="d", chance=75), _p(2)], fixtures, baseline_by_code=base)
-    flagged, twin = out["P1"]["by_gameweek"], out["P2"]["by_gameweek"]
+    # ⚠️ **Asserted on the EXACT values, not the displayed ones, and the reason is worth stating.** ADR-213
+    # made `by_gameweek` apportioned so a player's cells sum to their total — which means a cell is no longer
+    # a pure function of that gameweek: a spare tenth lands wherever the largest fractional part is. Two
+    # players whose exact GW6 values are identical can therefore *display* 0.1 apart.
+    #
+    # ⭐ That is tolerable in general (measured: 4 of 2,141 equal-value groups on the real board, 0.2%) but it
+    # is guaranteed here, because this fixture uses a deliberately tiny baseline — 0.06 a gameweek, where one
+    # tenth is larger than the value itself. The claim being tested is about the **model**, so it belongs on
+    # the model's numbers; asserting it on a 1dp rendering would be testing the renderer.
+    flagged, twin = out["P1"]["by_gameweek_exact"], out["P2"]["by_gameweek_exact"]
     assert flagged[5] < twin[5], f"the near gameweek must carry the discount: {flagged} vs {twin}"
     assert flagged[6] == twin[6], (
         f"beyond the window he must be worth exactly what an unflagged twin is worth: {flagged} vs {twin}")

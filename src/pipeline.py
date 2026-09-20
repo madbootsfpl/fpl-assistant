@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta
 
 from src import ingest
 from src.analytics.deadline import next_deadline
+from src.analytics.xp import decision_xp
 from src.api.client import FplApiError
 from src.ingest import PayloadRejected
 from src.storage import Storage
@@ -98,6 +99,77 @@ def refresh_due(fixtures, now=None, last_attempt=None) -> tuple[bool, str]:
     return False, f"{why} — next due in {interval - waited}"
 
 
+# ── Publishing the analytics (ADR-213) ────────────────────────────────────────────────────────────────────
+
+XP_BOARD_HORIZON = 8        # the UI slider's maximum; one board answers every horizon 1..8
+
+class BoardRejected(Exception):
+    """A computed xP board failed its sanity checks, so nothing was published."""
+
+
+def validate_board(board, players) -> None:
+    """Check a board **before it replaces the last good one**.
+
+    ⭐ ADR-211's rule, applied to a second thing: *once storing is publishing, a check that runs afterwards is
+    not a check* — the previous board is already gone by then.
+
+    ⚠️ **A bad xP board is more dangerous than a stale one**, and that is why this exists at all. Stale data
+    announces itself through `data_status`; a board where every goalkeeper scores 40 announces nothing. It
+    would simply be wrong, confidently, on every screen.
+
+    ⚠️ These bounds are **declared, not measured** — the same honest caveat ADR-211 put on its payload
+    checks. They are a smoke alarm, not a thermostat: wide enough that a real January fixture pile-up passes,
+    because a check that blocks good data is worse than one that admits slightly odd data.
+    """
+    if not board:
+        raise BoardRejected("empty board")
+    if len(board) < len(players) * 0.9:
+        raise BoardRejected(f"only {len(board)} rows for {len(players)} players")
+    broken = [r["id"] for r in board if "by_gameweek_exact" not in r][:3]
+    if broken:
+        raise BoardRejected(f"rows with no breakdown field at all, e.g. {broken}")
+
+    # ⚠️ **An EMPTY breakdown is not a broken one**, and an earlier draft of this function conflated them.
+    # A player with no fixtures in the window legitimately has `{}` — end of season, or a club whose next
+    # game is beyond the horizon. The first version rejected that, which would have refused a perfectly good
+    # board; it was caught by an existing pipeline test, on a 650-player fixture with no upcoming games.
+    # ⭐ *A check that blocks good data is worse than one that admits slightly odd data* (ADR-211).
+    if not any(r.get("by_gameweek_exact") for r in board):
+        return                                       # no window at all — nothing to sanity-check
+
+    # ⭐ *The failure that produces a plausible-looking answer is the one worth a check.* A broken history
+    # load does not raise — it scores nobody, and every screen renders happily.
+    if not any(sum(r["by_gameweek_exact"].values()) > 0 for r in board):
+        raise BoardRejected("every player scores zero")
+    hottest = max(sum(r["by_gameweek_exact"].values()) for r in board)
+    if hottest > 200:
+        raise BoardRejected(f"implausible top score {hottest:.0f} over {XP_BOARD_HORIZON} gameweeks")
+
+
+def publish_board(store: Storage, *, computed_at: str) -> dict:
+    """Compute and publish the board-wide xP table. Returns `{"rows": n}` or raises `BoardRejected`.
+
+    ⭐⭐ **Calls the same `decision_xp` the CLI, the web app and `ask` call.** Not a copy, not a
+    pipeline-shaped variant — ADR-181 was written because an optional argument on a shared helper quietly
+    priced a different player at one call site, and this is the same helper serving a new consumer.
+    """
+    players = store.get_players()
+    upcoming = store.get_upcoming_fixtures()
+    board = decision_xp(players, upcoming, store.get_history_by_code(),
+                        horizon=XP_BOARD_HORIZON,
+                        gw_history_by_code=store.get_gw_history_by_code())
+    validate_board(board, players)
+    first_event = min((gw for r in board for gw in r["by_gameweek_exact"]), default=None)
+    if first_event is None:
+        # ⭐ **No upcoming fixtures is a fact about the season, not a failure.** Refusing here would fail an
+        # otherwise-healthy tick every day of the summer; publishing a board of zeros would be worse still,
+        # because it reads as "nobody scores" rather than "there is nothing to score in". So: skip, say so,
+        # and leave the last real board in place for anyone still looking at it.
+        return {"rows": 0, "first_event": None, "skipped": "no upcoming fixtures"}
+    rows = store.publish_xp_board(board, first_event=first_event, computed_at=computed_at)
+    return {"rows": rows, "first_event": first_event}
+
+
 # ── The run ───────────────────────────────────────────────────────────────────────────────────────────────
 
 def run(store: Storage, *, now=None, force: bool = False, client=None, elo_client=None) -> dict:
@@ -127,10 +199,32 @@ def run(store: Storage, *, now=None, force: bool = False, client=None, elo_clien
         store.set_data_status(attempted_at=stamp, ok=False, note=f"fetch failed: {exc}")
         return {"ran": True, "ok": False, "reason": f"fetch failed: {exc}", "counts": None}
 
+    # ⭐ **The analytics run AFTER the data is stored and BEFORE the run is called good.** The board is
+    # derived from what was just written, so it cannot be computed earlier; and a refresh that published
+    # players but not their xP would leave the two tables describing different moments (ADR-213).
     upcoming = next_deadline(store.get_all_fixtures(), now)
+    try:
+        published = publish_board(store, computed_at=stamp)
+    except BoardRejected as bad:
+        # ⭐⭐ **`refreshed_at` still moves, and that is not a slip.** By this point `ingest.refresh` has
+        # already written the players — the raw data genuinely did refresh, and the sidebar reads exactly
+        # this field to say so. Withholding it would make the app report **stale data that is actually
+        # fresh**: a false alarm, and one nobody could diagnose from the screen.
+        #
+        # ⭐ *Each artefact reports its own freshness.* `refreshed_at` is about the FPL data; the board's age
+        # is `xp_board.computed_at`, which stays where it was because the refused board never replaced it.
+        # `ok=False` plus the note is what says something went wrong, without lying about which thing.
+        store.set_data_status(refreshed_at=stamp, attempted_at=stamp,
+                              event=upcoming[0] if upcoming else None,
+                              ok=False, note=f"board rejected: {bad}")
+        return {"ran": True, "ok": False, "reason": f"board rejected: {bad}",
+                "counts": counts, "board": None}
+
     store.set_data_status(refreshed_at=stamp, attempted_at=stamp,
                           event=upcoming[0] if upcoming else None, ok=True, note=None)
-    return {"ran": True, "ok": True, "reason": why, "counts": counts}
+    # ⚠️ **The board count is its own key, not folded into `counts`.** `ingest.refresh` returns a 4-tuple
+    # that `describe()` unpacks positionally — appending to it would break the line a person actually reads.
+    return {"ran": True, "ok": True, "reason": why, "counts": counts, "board": published}
 
 
 def describe(outcome: dict) -> str:
@@ -139,7 +233,15 @@ def describe(outcome: dict) -> str:
         return f"Nothing to do — {outcome['reason']}."
     if outcome["ok"]:
         players, teams, fixtures, elo = outcome["counts"]
-        return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo "
+        # ⭐ **The board gets its own clause.** Every other thing this tick publishes is named here, and the
+        # one that is silent is the one nobody notices has stopped — the lesson ADR-211 landed on for
+        # headlines (*stale headlines do not look stale*). A skipped board says so rather than vanishing.
+        board = outcome.get("board") or {}
+        if board.get("skipped"):
+            xp = f", xP board skipped ({board['skipped']})"
+        else:
+            xp = f", xP board {board.get('rows', 0)} players from GW{board.get('first_event')}"
+        return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo{xp} "
                 f"({outcome['reason']}).")
     return f"REFUSED — {outcome['reason']}. The last good data still stands."
 

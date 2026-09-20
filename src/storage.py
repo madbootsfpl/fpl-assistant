@@ -6,6 +6,7 @@ the stable FPL id, so re-running the fetch refreshes existing rows instead of
 creating duplicates.
 """
 
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -311,6 +312,35 @@ CREATE TABLE IF NOT EXISTS data_status (
 )
 """
 
+CREATE_XP_BOARD = """
+CREATE TABLE IF NOT EXISTS xp_board (
+    -- ⭐ **One row per player, not one per player per horizon.** Measured on the real board (ADR-213): the
+    -- per-gameweek values are IDENTICAL whether computed at horizon 3, 5 or 8 — zero disagreements across
+    -- 662 players. The model is horizon-independent; the horizon only decides how many gameweeks are summed.
+    -- So a single horizon-8 board answers the whole 1-8 range the UI slider offers.
+    element_id    INTEGER PRIMARY KEY,
+    web_name      TEXT,
+    team          TEXT,
+    position      TEXT,
+    -- ⭐⭐ **UNROUNDED, and this is the load-bearing decision.** `xp` is `round(sum(unrounded), 1)` while a
+    -- displayed breakdown is rounded per cell — and a rounded sum is not a sum of rounded values. Publishing
+    -- the rounded numbers would mean a client deriving a shorter horizon inherits the drift, so the web app
+    -- and the mobile app would quote DIFFERENT xP for the same player. Full precision here; every client
+    -- rounds at display, which is where rounding belongs.
+    by_gameweek   TEXT NOT NULL,    -- JSON {gw: float}, full precision
+    rate          REAL,
+    rate_source   TEXT,
+    minutes_weight REAL,
+    ep_next       TEXT,
+    difficulty    INTEGER,          -- the NEXT fixture's difficulty (horizon-independent)
+    -- ⚠️ **The anchor, and a client that ignores it will misread the board.** `by_gameweek` is keyed by real
+    -- gameweek numbers, so the window shifts at every deadline: a board computed before GW6 covers 6-13, and
+    -- the same query after GW6's deadline covers 7-14. Without this a stale board looks like a current one.
+    first_event   INTEGER NOT NULL, -- the first gameweek in the window
+    computed_at   TEXT NOT NULL     -- when this board was built
+)
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -570,6 +600,7 @@ class Storage:
             self.conn.execute(CREATE_AVAILABILITY)
             self.conn.execute(CREATE_TRANSFER_FLOW)
             self.conn.execute(CREATE_DATA_STATUS)
+            self.conn.execute(CREATE_XP_BOARD)
             # ⭐ **The two migrations below repair OLD SQLITE FILES, and a Postgres database has no old files.**
             # `_migrate` adds columns that post-date a table, and `_rekey_history` rebuilds a primary key that
             # changed in ADR-129 — both exist because a cache on someone's laptop may have been created in
@@ -809,6 +840,53 @@ class Storage:
                 "SELECT * FROM player_transfer_flow ORDER BY event, element_code").fetchall()
         return self.conn.execute(
             "SELECT * FROM player_transfer_flow WHERE event = ? ORDER BY element_code", (event,)).fetchall()
+
+    def publish_xp_board(self, board, *, first_event: int, computed_at: str) -> int:
+        """Replace the published xP board in one transaction. Returns the row count written.
+
+        ⭐ **Replace, not merge.** A board is a snapshot of one moment: every row shares a window and a
+        computation. Merging would leave rows from two different anchors side by side, which is the failure
+        `first_event` exists to make visible — and a half-old board is harder to spot than an old one.
+
+        ⚠️ The caller validates **before** calling this (ADR-211's rule: *once storing is publishing, a check
+        that runs afterwards is not a check*). By the time we are here the decision to publish is made.
+        """
+        rows = [
+            (r["id"], r["web_name"], r["team"], r["position"],
+             json.dumps({str(gw): v for gw, v in r["by_gameweek_exact"].items()}),
+             r["rate"], r["rate_source"], r["minutes_weight"], r["ep_next"], r["difficulty"],
+             first_event, computed_at)
+            for r in board
+        ]
+        with self.conn:
+            self.conn.execute("DELETE FROM xp_board")
+            self.conn.executemany(
+                "INSERT INTO xp_board (element_id, web_name, team, position, by_gameweek, rate, "
+                "rate_source, minutes_weight, ep_next, difficulty, first_event, computed_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        return len(rows)
+
+    def get_xp_board(self):
+        """The published board as a list of dicts, `by_gameweek` decoded with integer gameweek keys.
+
+        Returns `[]` when nothing has been published — deliberately distinct from a board of zeros, so a
+        caller can tell *"the pipeline has not run"* from *"every player scores nothing"*.
+        """
+        out = []
+        for row in self.conn.execute(
+                "SELECT element_id, web_name, team, position, by_gameweek, rate, rate_source, "
+                "minutes_weight, ep_next, difficulty, first_event, computed_at "
+                "FROM xp_board ORDER BY element_id").fetchall():
+            out.append({
+                "id": row["element_id"], "web_name": row["web_name"], "team": row["team"],
+                "position": row["position"],
+                "by_gameweek": {int(gw): v for gw, v in json.loads(row["by_gameweek"]).items()},
+                "rate": row["rate"], "rate_source": row["rate_source"],
+                "minutes_weight": row["minutes_weight"], "ep_next": row["ep_next"],
+                "difficulty": row["difficulty"], "first_event": row["first_event"],
+                "computed_at": row["computed_at"],
+            })
+        return out
 
     def data_status(self):
         """The one `data_status` row, or None when the table is absent or empty (ADR-211 2b).

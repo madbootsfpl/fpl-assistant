@@ -161,6 +161,37 @@ def cold_start_rate(points_per_game, ep_next, minutes, weight: float = 1.0,
     return weight * ppg * c + ep * (1.0 - c)
 
 
+def apportion(unrounded: dict, total: float, places: int = 1) -> dict:
+    """Round each value so the parts **sum to `total` exactly** (largest-remainder / Hamilton).
+
+    ⭐⭐ **The obvious version is wrong, and shipped that way for months.** `by_gameweek` rounded each
+    gameweek independently while `xp` rounded the *sum* — and a rounded sum is not a sum of rounded values.
+    Measured on the real board at horizon 5: **253 of 662 players** disagreed with their own breakdown, by up
+    to **0.20 points**. The comment beside the field said *"sums to `xp`"*, which is the claim this restores
+    rather than a new promise.
+
+    ⚠️ It matters beyond display. ADR-213 publishes this board for clients that cannot run Python, and a
+    client summing a rounded breakdown to get a shorter horizon would inherit the drift — so the web app and
+    the mobile app would quote **different xP for the same player**.
+
+    The method: floor everything, then hand the spare tenths to the largest fractional parts (ties broken by
+    key, so the result is deterministic). No value moves more than one unit in the last place.
+    """
+    if not unrounded:
+        return {}
+    scale = 10 ** places
+    target = round(total * scale)
+    floors = {k: int(unrounded[k] * scale // 1) for k in unrounded}
+    short = target - sum(floors.values())
+    # Largest fractional part first; the key breaks ties so two runs never differ.
+    order = sorted(unrounded, key=lambda k: (-(unrounded[k] * scale - floors[k]), k))
+    for k in order[:max(short, 0)]:
+        floors[k] += 1
+    for k in order[len(order) + min(short, 0):]:      # short < 0 → take tenths back from the smallest
+        floors[k] -= 1
+    return {k: floors[k] / scale for k in unrounded}
+
+
 def _multiplier(difficulty) -> float:
     """Turn a 1-5 difficulty into a scoring multiplier (neutral at 3, or if unknown)."""
     if difficulty is None:
@@ -363,6 +394,7 @@ def player_xp(
 
         if rate is None or not available:
             by_gameweek = {gw: 0.0 for gw in horizon_events}
+            by_gameweek_exact = dict(by_gameweek)
             xp = 0.0
             defcon_xp = 0.0
             cs_xp = 0.0
@@ -401,7 +433,9 @@ def player_xp(
             }
             unrounded = {gw: unrounded[gw] + defcon_by_gw[gw] + cs_by_gw[gw] for gw in horizon_events}
             xp = round(sum(unrounded.values()), 1)
-            by_gameweek = {gw: round(v, 1) for gw, v in unrounded.items()}
+            # ADR-213: apportioned, not rounded independently — the parts must sum to `xp`.
+            by_gameweek = apportion(unrounded, xp)
+            by_gameweek_exact = dict(unrounded)
             defcon_xp = round(sum(defcon_by_gw.values()), 1)
             cs_xp = round(sum(cs_by_gw.values()), 1)
 
@@ -416,7 +450,13 @@ def player_xp(
             "difficulty": flat[0] if flat else None,  # next fixture (for N=1 display)
             "rate": round(rate, 2) if rate is not None else None,
             "rate_source": rate_source,
-            "by_gameweek": by_gameweek,               # ADR-032: {gw → xP}, sums to `xp`
+            "by_gameweek": by_gameweek,               # ADR-032/213: {gw → xP}, sums to `xp` exactly
+            # ⭐ **Unrounded, and emitted for EVERY caller rather than behind a flag** (ADR-213). This is what
+            # the pipeline publishes, because a client deriving a shorter horizon must sum exact values —
+            # summing the rounded ones drifts, and the web app and the mobile app would then disagree about
+            # the same player. ⚠️ ADR-181's lesson is why it is not an optional argument: an opt-in on a
+            # shared helper is a silent opt-out at every call site that forgets it.
+            "by_gameweek_exact": by_gameweek_exact,
             "gameweeks": list(horizon_events),
             "minutes_weight": round(applied_weight, 2),   # xMins v0 weight applied (1.0 without the hook)
             "defcon_xp": defcon_xp,                   # ADR-097: the DefCon magnifier's net delta (0 dormant)
