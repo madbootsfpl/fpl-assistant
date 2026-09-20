@@ -145,3 +145,50 @@ def _copy_snapshot_into(conn) -> None:
                 [tuple(r[c] for c in cols) for r in rows])
     finally:
         src.close()
+
+
+# --- The committed snapshot is a fixture, and a fixture nothing may write to -------------------------
+# ⭐⭐ **Two tests spent weeks quietly modifying `data/seed.db`.** Opening `Storage()` on the fallback path
+# runs `CREATE TABLE IF NOT EXISTS` for every table, and the snapshot predates `player_transfer_flow` and
+# `data_status` — so each run left two new (empty) tables in a **version-controlled binary**. No data was
+# wrong and nothing went red. The only symptom was a `git status` that was always dirty, which is easy to
+# read as "that file is just like that" — ⭐ *a signal that is always on carries no information.*
+#
+# ⚠️ It was found by `chmod 444` and seeing who complained, which is a fine way to find it once and no way to
+# keep it found. This is the version that runs every time.
+_SEED = "data/seed.db"
+_seed_digest_at_start = None
+
+
+def _digest(path):
+    import hashlib
+    from pathlib import Path
+    p = Path(path)
+    return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
+
+
+def pytest_sessionstart(session):
+    global _seed_digest_at_start
+    _seed_digest_at_start = _digest(_SEED)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Fail the run if the suite modified the committed snapshot.
+
+    ⚠️ Deliberately a **session-level failure**, not a per-test one: the write happens inside `Storage()`,
+    far from whichever test triggered it, so attributing it to a single test would be wrong more often than
+    right. The message says how to find the culprit instead.
+    """
+    if _seed_digest_at_start is None or exitstatus != 0:
+        return                                  # nothing to compare, or the run already failed for a reason
+    if _digest(_SEED) != _seed_digest_at_start:
+        session.exitstatus = 1
+        print(
+            f"\n\n🔴 The test suite modified {_SEED}, which is committed to git.\n"
+            f"   A test opened the real snapshot instead of a copy — most likely via the Postgres fallback\n"
+            f"   path, which resolves to `config.SEED_DB_PATH`.\n"
+            f"   To find it:  chmod 444 {_SEED} && pytest -q   (the writer fails loudly)\n"
+            f"   To fix it:   redirect the seed to a tmp_path copy — see `_redirect_the_seed` in\n"
+            f"                tests/test_postgres_cutover.py.\n"
+            f"   Then:        git checkout {_SEED}\n"
+        )

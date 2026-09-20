@@ -39,6 +39,31 @@ def _reloaded(monkeypatch, url):
     return storage_module
 
 
+def _redirect_the_seed(monkeypatch, tmp_path):
+    """Point the fallback at a **copy** of the committed snapshot, and return its path.
+
+    ⭐⭐ **Because opening `Storage()` on the real one writes to it.** `_init_schema` runs `CREATE TABLE IF
+    NOT EXISTS` for every table, and `data/seed.db` predates `player_transfer_flow` and `data_status` — so
+    each test that exercised the fallback left two new (empty) tables in a **version-controlled binary**.
+    Nothing was wrong with the data and nothing went red; it showed up only as a permanently dirty
+    `git status` that was easy to read as "the snapshot is just always like that".
+
+    ⚠️ **The test below warns about exactly this failure and was committing it one line above the warning** —
+    its docstring says a degrading writer would *"write into the repository's snapshot … so the next `git
+    status` would show a modified binary"*, while its own reader on the previous line did so. ⭐ *Describing
+    a hazard accurately is not the same as being outside it.*
+
+    ⚠️ Call it **after** `_reloaded`, which re-imports config and would undo the patch.
+    """
+    import shutil
+
+    copy = tmp_path / "seed.db"
+    shutil.copy(config_module.SEED_DB_PATH, copy)
+    copy.chmod(0o644)          # `shutil.copy` carries the source's mode across; the copy must be writable
+    monkeypatch.setattr(config_module, "SEED_DB_PATH", str(copy))
+    return copy
+
+
 @pytest.fixture(autouse=True)
 def _restore_modules():
     """Leave the imported modules exactly as they were — these tests reload them."""
@@ -63,9 +88,18 @@ def test_the_flag_points_every_call_site_at_postgres_without_touching_one(monkey
     assert mod.db.is_postgres(config_module.DB_PATH)
 
 
-def test_an_unreachable_database_falls_back_to_the_seed_and_records_why(monkeypatch):
-    """⚠️ The app must still render — but the reason must survive, because the sidebar has to show it."""
+def test_an_unreachable_database_falls_back_to_the_seed_and_records_why(monkeypatch, tmp_path):
+    """⚠️ The app must still render — but the reason must survive, because the sidebar has to show it.
+
+    ⭐ **The fallback target is a COPY of the seed, not the seed.** Opening `Storage()` runs `_migrate`, and
+    the committed snapshot predates `data_status` and `player_transfer_flow` — so the real path left two new
+    (empty) tables in a **version-controlled file**, dirtying `git status` after every test run. Nothing was
+    wrong with the data and no test failed, which is exactly why it went unnoticed; it was found by making
+    the file read-only and seeing who complained. ⭐ *A test that writes to a committed fixture is not
+    isolated, however harmless the write looks.*
+    """
     mod = _reloaded(monkeypatch, "postgresql://postgres:x@127.0.0.1:1/nothing")
+    _redirect_the_seed(monkeypatch, tmp_path)
     store = mod.Storage()
     try:
         assert store.count_players() > 0, "the seed still serves the app"
@@ -134,7 +168,7 @@ def test_data_status_records_a_FAILED_attempt_not_only_a_successful_one(tmp_path
         store.close()
 
 
-def test_a_WRITER_that_cannot_reach_postgres_raises_instead_of_writing_to_the_seed(monkeypatch):
+def test_a_WRITER_that_cannot_reach_postgres_raises_instead_of_writing_to_the_seed(monkeypatch, tmp_path):
     """⭐⭐ **A reader may degrade; a writer must not** — and the asymmetry is not stylistic.
 
     The fallback target is the committed `data/seed.db`. A `refresh` that quietly degraded would write live
@@ -145,6 +179,7 @@ def test_a_WRITER_that_cannot_reach_postgres_raises_instead_of_writing_to_the_se
     inheriting it for writers looked obviously right.
     """
     mod = _reloaded(monkeypatch, "postgresql://postgres:x@127.0.0.1:1/nothing")
+    _redirect_the_seed(monkeypatch, tmp_path)
 
     store = mod.Storage()                       # a reader: degrades
     try:

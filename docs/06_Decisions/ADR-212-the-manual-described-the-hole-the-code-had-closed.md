@@ -117,3 +117,39 @@ record of how the system got here; rewriting one to match today would destroy th
 
 **Still open, and unchanged by any of this:** the functions stop *enumeration*, not *guessing*. A known or
 guessed handle still reads a squad. Only real identity closes that — Supabase Auth, Stage C, Phase 3.
+
+---
+
+## Found along the way: the suite was writing to a committed file
+
+Restoring `data/seed.db` after a test run kept leaving it modified again. Two tests in
+`tests/test_postgres_cutover.py` exercise the Postgres **fallback**, which resolves to `config.SEED_DB_PATH`
+— the committed snapshot. Opening `Storage()` on it runs `CREATE TABLE IF NOT EXISTS` for every table, and
+the snapshot predates `player_transfer_flow` and `data_status`, so **every run added two empty tables to a
+version-controlled binary**.
+
+No data was wrong. Nothing went red. The only symptom was a `git status` that was always dirty — and ⭐ **a
+signal that is always on carries no information**: "seed.db is modified" had become background noise to be
+checked out, rather than a fact about what just ran.
+
+⭐⭐ **The sharper part: one of the two tests is named
+`test_a_WRITER_that_cannot_reach_postgres_raises_instead_of_writing_to_the_seed`, and its docstring warns
+that a degrading writer would *"write live FPL data into the repository's snapshot … so the next `git status`
+would show a modified binary"*.** Its own reader, one line above the warning, was doing precisely that.
+⭐ *Describing a hazard accurately is not the same as being outside it.*
+
+**Fixed** with `_redirect_the_seed`, which points the fallback at a `tmp_path` copy. ⚠️ Two details that each
+cost a wrong answer:
+
+- It must run **after** `_reloaded`, which re-imports config and would undo the patch.
+- `shutil.copy` **carries the source's permission bits**, which mattered because of how the culprit was
+  found: `chmod 444 data/seed.db && pytest` makes the writer fail loudly and name itself. The copy then
+  inherited mode 444 and refused writes too — so the fix looked broken while working correctly, and the
+  first reading of that was "the patch is not taking effect". ⭐ *A probe that alters the thing it measures
+  will produce a confident wrong diagnosis.*
+
+**Guarded** in `conftest.py` by `pytest_sessionstart`/`pytest_sessionfinish`, which hash the snapshot and
+fail the run if it moved. ⚠️ Deliberately a **session-level** failure rather than a per-test one: the write
+happens inside `Storage()`, far from whichever test triggered it, so blaming one test would be wrong more
+often than right. The message names the `chmod 444` trick instead — ⭐ *finding it once by hand is not the
+same as keeping it found.* Mutation-tested by restoring the bug: exit 1 with, exit 0 without.
