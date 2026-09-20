@@ -119,7 +119,15 @@ class PgConnection:
     def __init__(self, dsn: str):
         import psycopg  # imported here so the CLI runs without it installed
 
-        self._conn = psycopg.connect(dsn, row_factory=_row_factory)
+        # ⚠️ **`prepare_threshold=None` is what makes a connection pooler safe.** psycopg3 starts using
+        # server-side prepared statements after a few identical queries; PgBouncer in *transaction* mode —
+        # which is what Supabase's pooler runs, and the only connection GitHub Actions can reach on IPv4 —
+        # hands each statement a different backend, so the prepared statement is not there and the query
+        # fails with "prepared statement does not exist". It appears only after the app warms up, which
+        # makes it look intermittent.
+        # ⭐ *Disabling it costs a little planning time and removes a whole class of failure that would
+        # otherwise surface in production, on a schedule, at a moment nobody is watching.*
+        self._conn = psycopg.connect(dsn, row_factory=_row_factory, prepare_threshold=None)
         self._depth = 0
 
     @staticmethod
