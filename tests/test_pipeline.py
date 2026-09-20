@@ -7,6 +7,7 @@ of a bad payload is one laptop; server-side it is every user at once.**
 """
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -498,3 +499,56 @@ def test_nothing_in_the_app_still_calls_reseed_the_way_to_update_the_deployed_ap
     assert not offenders, (
         "reseed maintains the fallback once the pipeline is on; it is not the deploy route:\n"
         + "\n".join(offenders))
+
+
+def test_the_pipeline_does_not_import_the_apps_heavy_dependencies():
+    """⭐⭐ **The scheduled job installs its own, much smaller requirements set** (`requirements-pipeline.txt`),
+    because a cold run of the full one took **four minutes** to perform a **3.6-second** refresh — nearly all
+    of it installing Streamlit and its stack for a job that renders nothing.
+
+    ⚠️ **That saving is one stray import away from being undone, and the failure is invisible here.** A module
+    that imports Streamlit would work perfectly in the app and on a developer machine, and fail only on the
+    runner — on a schedule, with nobody watching. So this asserts the import graph rather than trusting it.
+
+    `pulp` is deliberately absent from the list: `app.py pipeline` goes through `src.cli`, which imports
+    `src.analytics`, whose `__init__` imports the optimiser. It is on the path whether the pipeline uses it
+    or not, so it stays in the requirements — measured, not assumed.
+    """
+    import subprocess
+    import sys
+
+    banned = ("streamlit", "fastapi", "uvicorn", "jinja2", "pandas", "pyarrow", "altair", "authlib")
+    # A subprocess, because this test process has the whole app imported already.
+    # ⚠️ **Import everything the COMMAND touches, not just the entry module.** The first version imported
+    # only `src.cli` and a mutation adding `import streamlit` to `src/pipeline.py` survived — because
+    # `cmd_pipeline` imports the pipeline *lazily, inside the function*, so the module never loaded.
+    # ⭐ *A guard on an import graph has to walk the graph the command actually walks.*
+    code = (
+        "import sys\n"
+        "import src.cli\n"                       # the entry point the workflow invokes
+        "import src.pipeline\n"                  # …which cmd_pipeline imports lazily when it runs
+        "import src.ingest\n"                    # …and which the refresh itself reaches
+        f"bad = sorted({{m.split('.')[0] for m in sys.modules}} & {set(banned)!r})\n"
+        "print(','.join(bad))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                         cwd=Path(__file__).resolve().parents[1])
+    assert out.returncode == 0, out.stderr
+    pulled = [m for m in out.stdout.strip().split(",") if m]
+    assert not pulled, (
+        f"`app.py pipeline` now imports {pulled}, which requirements-pipeline.txt does not install — "
+        "the scheduled run would fail on the runner while working everywhere else")
+
+
+def test_the_pipeline_requirements_cover_what_it_imports():
+    """⚠️ The other half: anything the pipeline *does* need must be in its own file, not only the app's."""
+    from pathlib import Path as _Path
+
+    root = _Path(__file__).resolve().parents[1]
+    pipeline_reqs = (root / "requirements-pipeline.txt").read_text().lower()
+    for needed in ("requests", "psycopg", "pulp", "-e ."):
+        assert needed in pipeline_reqs, f"{needed} is on the pipeline's import path and must be installed"
+
+    for workflow in ("data.yml", "backfill.yml"):
+        text = (root / ".github/workflows" / workflow).read_text()
+        assert "requirements-pipeline.txt" in text, f"{workflow} still installs the full app requirements"

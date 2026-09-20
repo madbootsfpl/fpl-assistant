@@ -1,0 +1,18 @@
+# The scheduled data pipeline's dependencies — deliberately NOT the app's (ADR-211 2c).
+#
+# ⭐ **A cold run of the full requirements took four minutes to perform a 3.6-second refresh**, nearly all of
+# it installing Streamlit and its stack (pandas, pyarrow, altair) for a job that renders nothing. At 96 ticks
+# a day that is hours of runner time for no purpose — free on a public repo, but waste is waste.
+#
+# ⚠️ **`pulp` stays, and it is not optional.** `app.py pipeline` goes through `src.cli`, which imports
+# `src.analytics`, whose `__init__` imports the optimiser. Dropping it fails at import, not at use — measured,
+# not assumed. Removing that dependency would mean moving `deadline.py` out of the analytics package, which
+# is a bigger change than this is worth.
+#
+# ⚠️ **If the pipeline ever needs something new, it goes HERE as well as in requirements.txt.** A module that
+# imports cleanly in the app and not on the runner fails at 3am, on a schedule, with nobody watching.
+
+-e .                  # so `import src` resolves (pyproject declares no runtime deps of its own)
+requests              # the FPL client
+psycopg[binary]       # Postgres — the pipeline's destination
+pulp                  # not used by the pipeline, but on its import path (see above)
