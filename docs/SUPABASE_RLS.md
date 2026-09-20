@@ -312,6 +312,37 @@ original design, and it splits in two:
 
 ---
 
+## ✅ LIVE ON PRODUCTION — 2026-09-20
+
+Stages A and B applied to the production project (`msdjmztujzonzgjjfbky`) and verified with the anon key:
+
+| probe | before | after |
+|---|---|---|
+| `beta_users` — the allow-list | 200, all 29 addresses | **HTTP 401** |
+| `beta_waitlist` — refused sign-ins | 200, addresses + reasons | **HTTP 401** |
+| `squads` | 200 | 200 — unchanged |
+| `maddie_videos` | 200 | 200 — unchanged |
+
+Sign-in admits normally; the Admin roster renders via `FPL_ADMIN_STORE_KEY`.
+**Neither table holding an email address can be read with the anon key any more.**
+
+### What it cost to get here, recorded because the lessons are the value
+
+* ⭐ **"No code change" was wrong.** `ON CONFLICT` — `DO UPDATE` *and* `DO NOTHING` — needs a permissive
+  SELECT policy, so the upsert and the locked read are mutually exclusive. A1 needed a one-line code change.
+* ⭐ **"One function" is not "atomic".** `register_beta_user` moved check-count-insert into a function and the
+  cap still broke: four concurrent calls against a cap of 5 admitted **6**. It needs an explicit table lock.
+* ⭐ **A permission you remove is a promise you may have removed with it.** Stage A silently broke ADR-122's
+  "Remove me"; found only by running it *after* the hardening.
+* ⭐⭐ **`git log` tells you what is on master, not what Cloud is serving.** Assumed twice in one evening —
+  once raising a false alarm, once causing a real outage. The deploy check is behavioural now.
+
+📋 **Follow-up, not urgent:** `beta_users` holds **29 rows for 26 distinct addresses** — about three differ
+only by capitalisation or whitespace (the ADR-120 problem). Harmless for admission now that matching is
+`lower(trim())` in SQL, but `register_beta_user` counts **rows**, so those duplicates consume cap places.
+
+---
+
 ## Stage C — real identity (Phase 3, with the mobile API)
 
 Supabase Auth issues a `uid`; every user-data table gains an `owner uuid references auth.users`; policies
