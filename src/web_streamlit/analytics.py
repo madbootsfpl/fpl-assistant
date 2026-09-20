@@ -171,9 +171,21 @@ def _post(url: str, key: str, payload: dict) -> None:
 
 
 def recent_events(limit: int = 2000):
-    """Read the most recent events (the **first analytics READ**, US-337 — for the admin view only). Best-effort:
-    a list of row dicts, or ``None`` on failure. Needs an **anon SELECT policy** on `events` (docs/ANALYTICS.md);
-    the anon key is server-side (Streamlit secrets), never sent to a browser, and events are anonymous."""
+    """Read the most recent events (US-337 — the admin view only). Best-effort: a list of row dicts, or
+    ``None`` on failure.
+
+    ⚠️ **The docstring here used to say this "needs an anon SELECT policy", and justified it with "the anon
+    key is server-side, never sent to a browser".** That is true of the **key** and irrelevant to the
+    **policy**, which applies to anyone holding that key from any source — ⭐ *a permission is granted to a
+    role, not to the place you keep the credential* (ADR-212).
+
+    The code was corrected to `admin=True` (service-role) and this sentence was not, so it went on telling
+    the next reader to create the policy ADR-216 then had to remove from production. ⭐ *A justification
+    outlives the line it justified.*
+
+    ⚠️ Degrades to **blank, not an error**, when `FPL_ADMIN_STORE_KEY` is unset — so an empty Admin view
+    reads as "no activity" rather than "no key".
+    """
     url, key = _events_endpoint(admin=True)
     if not url:
         return None
