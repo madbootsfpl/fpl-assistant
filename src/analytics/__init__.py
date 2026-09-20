@@ -94,9 +94,11 @@ from src.analytics.price import (
     PRICE_LEGEND,
     PRICE_LEGEND_PLAIN,
     PRICE_UP,
+    price_detector,
     price_flag,
     price_prediction,
     price_pressure,
+    price_thresholds,
 )
 from src.analytics.targets import target_by_fixtures
 from src.analytics.team_dna import TeamDNA, team_dna, team_dna_all, team_insights
@@ -167,6 +169,8 @@ __all__ = [
     "price_pressure",
     "price_prediction",
     "price_flag",
+    "price_detector",
+    "price_thresholds",
     "PRICE_DOWN",
     "PRICE_LEGEND",
     "PRICE_LEGEND_PLAIN",

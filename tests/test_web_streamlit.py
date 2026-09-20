@@ -902,9 +902,17 @@ def test_players_history_view_shows_a_season_table_for_a_known_player():
 
 
 def test_my_squad_price_nudge_lists_pressured_players(monkeypatch):
-    # US-286: My Squad names owned players under price pressure (forced here — net transfers are flat preseason).
+    # US-286: My Squad names owned players under price pressure.
+    #
+    # ⚠️ **Forced, but no longer for the reason the old comment gave.** It said *"net transfers are flat
+    # preseason"* — they are not, five gameweeks in, and since ADR-215 the rule genuinely fires on the live
+    # board. What is forced now is *determinism*: whether any of a fixed snapshot's fifteen players happens
+    # to sit in the worst 15% is a property of the snapshot, not of this view.
+    #
+    # ⭐ Patching the **detector**, not a per-player function — the view binds cuts to the whole board once
+    # (ADR-215), because a percentile over fifteen players would flag two of them every week forever.
     import src.web_streamlit.views.squads as sq
-    monkeypatch.setattr(sq, "price_prediction", lambda p: "fall")
+    monkeypatch.setattr(sq, "price_detector", lambda players: (lambda p: "fall"))
     at = AppTest.from_file(str(_PAGES / "1_My_Squad.py"), default_timeout=30).run()
     for control in at.segmented_control:
         try:

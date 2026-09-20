@@ -22,9 +22,12 @@ from src.analytics import (
     fit_flag,
     over_under,
     player_history,
-    price_flag,
+    price_thresholds,
     rank_players,
     set_piece_flags,
+)
+from src.analytics import (
+    price_flag as _price_flag,
 )
 from src.storage import Storage
 from src.web_streamlit.filters import apply as apply_filter
@@ -60,11 +63,14 @@ def render_pool(rows, sel, photos, badges):
     # ADR-116: one scrollable, fully-sorted grid (was paged) — so the native column-header sort is honest (it
     # orders the whole set, not just a page). The top-15 bar sits below.
     page = show_count(ranked)
+    # ⚠️ Bound to `rows` — the unfiltered board — not to `page`. Taken over the visible rows, choosing one
+    # club in the filter would report a riser at that club every week of the season (ADR-215).
+    _price_cuts = price_thresholds(rows)
     table = [{"photo": photos.get(p["id"], ""), "badge": badges.get(p["team"], ""),
               "Player": p["web_name"], "Team": p["team"], "Pos": p["position"],
               "Fit": fit_flag(p),
               "£m": p["price"], "Pts": p["total_points"], "Val/£m": p.get("value"),
-              "Own%": p["selected_by"], "Price": price_flag(p), "Form": p.get("form"),
+              "Own%": p["selected_by"], "Price": _price_flag(p, _price_cuts), "Form": p.get("form"),
               "ICT": p.get("ict_index"), "Set": " ".join(set_piece_flags(p)),
               "Trends": " ".join(crowd_flags(p))} for p in page]
     # ADR-140: the Price arrows are painted green-up / red-down via a Styler — the cell is the only unit

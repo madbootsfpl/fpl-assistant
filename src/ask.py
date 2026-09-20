@@ -42,7 +42,7 @@ from src.analytics import (
     is_unavailable,
     minutes_weight_from_history,
     player_history,
-    price_prediction,
+    price_detector,
     price_pressure,
     rebuild_value,
     select_squad,
@@ -1374,9 +1374,13 @@ def _decide_price(store: Storage, question: str) -> dict | None:
     if not players:
         return None
     pool = [p for p in players if not is_unavailable(p)]
-    risers = sorted((p for p in pool if price_prediction(p) == "rise"),
+    # ⚠️ Bound to the WHOLE board, then applied to the available pool. ADR-215: a percentile taken over the
+    # filtered list would manufacture a top 2% inside that filter — here, among the fit players only, which
+    # is a different question from "who is rising".
+    predict = price_detector(players)
+    risers = sorted((p for p in pool if predict(p) == "rise"),
                     key=lambda p: price_pressure(p) or 0, reverse=True)[:_PRICE_N]
-    fallers = sorted((p for p in pool if price_prediction(p) == "fall"),
+    fallers = sorted((p for p in pool if predict(p) == "fall"),
                      key=lambda p: price_pressure(p) or 0)[:_PRICE_N]
     if not risers and not fallers:
         return {"message": "No price movement predicted yet — net transfers are flat preseason. The price "

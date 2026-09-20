@@ -277,11 +277,20 @@ def test_decide_price_is_a_preseason_message_when_flat():
 
 def test_decide_price_names_risers_and_fallers():
     # US-317: a big +net/own → ▲ rise; a big −net/own → ▼ fall; the movers are named + grounded (ADR-140)
+    #
+    # ⚠️ **Padded to a real population, not loosened** (ADR-215). The cuts are percentiles of the live board,
+    # so three players have no distribution to take a percentile of and the rule correctly declines. The old
+    # three-row fixture passed only because the thresholds were constants — ⭐ *a fixture that models less
+    # than reality will confirm a broken mechanism*, and here it was hiding that the mechanism never fired.
+    # ⚠️ The middle must span BOTH directions. A first version made every padded player a net buy, so the
+    # 15th percentile was not negative and the fall cut correctly declined — ⭐ the sign check working as
+    # designed, on a board that did not resemble one.
+    board = [_pp(10 + i, f"Mid{i}", 1_000 + i * 100, 2_500, 5) for i in range(30)]  # some buying, some selling
     store = types.SimpleNamespace(get_players=lambda: [
-        _pp(1, "Riser", 120_000, 0, 5),        # pressure +24,000 ≥ threshold → rise
-        _pp(2, "Faller", 0, 120_000, 5),       # pressure −24,000 → fall
-        _pp(3, "Stable", 100, 100, 50),        # net 0 → stable
-    ])
+        _pp(1, "Riser", 120_000, 0, 5),        # far above the top of the distribution → rise
+        _pp(2, "Faller", 0, 120_000, 5),       # far below the bottom → fall
+        _pp(3, "Stable", 1_100, 1_000, 5),     # sits in the middle → stable
+    ] + board)
     d = _decide_price(store, "who's about to rise or fall?")
     assert "Riser" in d["subjects"] and "Faller" in d["subjects"] and "Stable" not in d["subjects"]
     assert any("Riser" in r for r in d["facts"]["likely_risers"])

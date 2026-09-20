@@ -33,7 +33,7 @@ from src.analytics import (
     legal_xi_issues,
     minutes_weight_from_history,
     objective_scores,
-    price_prediction,
+    price_detector,
     select_squad,
     set_piece_flags,
     squad_15_issues,
@@ -707,8 +707,11 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     flagged = [(p, availability_flag(p)) for p in owned if availability_flag(p)]
     avail = ("⚠ **Flagged:** " + " · ".join(f"{p['web_name']} {flag}" for p, flag in flagged) + " — see **News**"
              if flagged else "✓ All 15 available")
-    falling = [p["web_name"] for p in owned if price_prediction(p) == "fall"]
-    rising = [p["web_name"] for p in owned if price_prediction(p) == "rise"]
+    # ⚠️⚠️ **`owned` is fifteen players.** A percentile over those would flag your two worst every week,
+    # forever, regardless of whether anything is happening (ADR-215). The cuts come from the whole board.
+    _predict = price_detector(players)
+    falling = [p["web_name"] for p in owned if _predict(p) == "fall"]
+    rising = [p["web_name"] for p in owned if _predict(p) == "rise"]
     pbits = []
     if falling:
         pbits.append(f":red[{PRICE_DOWN}] " + ", ".join(falling) + " may drop")
