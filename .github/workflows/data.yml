@@ -54,6 +54,9 @@ jobs:
           # ⚠️ Not a nicety: this job runs ~96 times a day, and an uncached install of the full requirements
           # would dominate both the wall-clock and the Actions minutes. The refresh itself takes 3.6 seconds.
           cache: pip
+          # ⚠️ **Without this the cache never hits.** setup-python keys its pip cache on `**/requirements.txt`
+          # by default — a file this job no longer installs — so every run was a cold install.
+          cache-dependency-path: requirements-pipeline.txt
 
       - name: Install dependencies
         if: steps.gate.outputs.configured == 'true'

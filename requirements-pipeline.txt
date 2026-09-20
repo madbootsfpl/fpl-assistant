@@ -12,7 +12,11 @@
 # ⚠️ **If the pipeline ever needs something new, it goes HERE as well as in requirements.txt.** A module that
 # imports cleanly in the app and not on the runner fails at 3am, on a schedule, with nobody watching.
 
--e .                  # so `import src` resolves (pyproject declares no runtime deps of its own)
+# ⚠️ **No `-e .` here, deliberately.** The app's requirements need it so `import src` resolves under
+# `streamlit run` on Community Cloud, where the *script's* folder is on sys.path rather than the project root
+# (ADR-053). The pipeline runs `python app.py` **from the repo root**, so the root is already on sys.path —
+# and an editable install triggers a setuptools build on every cold run for no benefit. Verified in a clean
+# venv: `app.py pipeline` works without it.
 requests              # the FPL client
 psycopg[binary]       # Postgres — the pipeline's destination
 pulp                  # not used by the pipeline, but on its import path (see above)

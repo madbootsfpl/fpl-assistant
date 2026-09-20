@@ -546,8 +546,19 @@ def test_the_pipeline_requirements_cover_what_it_imports():
 
     root = _Path(__file__).resolve().parents[1]
     pipeline_reqs = (root / "requirements-pipeline.txt").read_text().lower()
-    for needed in ("requests", "psycopg", "pulp", "-e ."):
+    for needed in ("requests", "psycopg", "pulp"):
         assert needed in pipeline_reqs, f"{needed} is on the pipeline's import path and must be installed"
+    # ⭐ And `-e .` must NOT be here: the pipeline runs `python app.py` from the repo root, so the root is
+    # already on sys.path. An editable install only costs a setuptools build on every cold run. The app's
+    # requirements still need it — Community Cloud puts the *script's* folder on the path, not the root.
+    assert not any(line.strip() == "-e ." for line in pipeline_reqs.splitlines()), \
+        "the pipeline does not need an editable install, and it costs a build per cold run"
+
+    for workflow in ("data.yml", "backfill.yml"):
+        text = (root / ".github/workflows" / workflow).read_text()
+        assert "cache-dependency-path: requirements-pipeline.txt" in text, (
+            f"{workflow} caches on the default **/requirements.txt, which it no longer installs — "
+            "so the cache never hits and every run is cold")
 
     for workflow in ("data.yml", "backfill.yml"):
         text = (root / ".github/workflows" / workflow).read_text()
