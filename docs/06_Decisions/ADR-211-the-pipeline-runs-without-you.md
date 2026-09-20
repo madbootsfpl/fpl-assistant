@@ -582,9 +582,34 @@ different numbers say which database answered.
 straight after populating. The data is public information, so this is surface rather than secrecy, and the
 app reads it over the **direct Postgres connection**, never PostgREST.
 
-⚠️ **A first run took four minutes**, almost all of it installing Streamlit, PuLP and FastAPI — against a
-**3.6-second** refresh. Free on a public repo, but 96 ticks a day of that is waste, and the fix is the one
-already named: a smaller requirements set for the pipeline, not a coarser cadence.
+✅ **A scheduled run: 3m44s → 24s.** Measured in three rounds, two of which were wrong.
+
+| attempt | duration | what it actually was |
+|---|---|---|
+| before | **3m 44s** | — |
+| smaller requirements set | 3m 36s | ⚠️ barely moved |
+| + pip cache keyed correctly, no editable install | 3m 44s | ⚠️ **worse** |
+| + batched the per-player writes | **24s** | ✅ |
+
+⭐⭐ **The step timings answered in thirty seconds what two rounds of guessing did not:**
+`Install dependencies: 2s · Tick: 3m31s`. The requirements work was right, and irrelevant — the time was
+never there.
+
+**`save_availability` ran a SELECT then a write for each of ~667 players, and `save_transfer_flow` an upsert
+each — about 2,000 round trips.** Microseconds against a local SQLite file; at ~100ms each from a runner to
+Supabase, three and a half minutes. Both are now one query plus `executemany` — **~3 round trips instead of
+~1,300**. `save_players` already did this, which is why it was never the problem.
+
+⚠️⚠️ **Nothing in the suite could have seen it.** Every test runs against a local database where a round trip
+is free, and the Phase 1 audit timed every analytics call and never timed a **write over a wire**.
+⭐ *A cost that is invisible on the developer's machine is not a small cost — it is an unmeasured one.*
+So the guard **counts statements rather than timing them**: the count is what scales with the number of
+players, and the count is what a wire multiplies.
+
+**Kept from the wrong rounds anyway:** the pipeline installs `requirements-pipeline.txt` (ten packages, not
+Streamlit's stack); the pip cache is keyed on the file actually installed — it had defaulted to
+`**/requirements.txt`, which this job no longer installs, so ⚠️ **it never hit while appearing to**; and
+`-e .` is gone, since `python app.py` from the repo root needs no editable install. Install: **2s**.
 
 📅 **The exit criterion now starts: two weeks with no manual `reseed` needed, including a deadline and a live
 gameweek.** ⚠️ *Needed*, not *permitted* — needing one is the failure signal. GW6 is 2026-10-10, which makes
