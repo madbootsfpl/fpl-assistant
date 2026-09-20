@@ -82,6 +82,28 @@ assumption that a push equals a deploy. **Run the behavioural check above and ge
 
 ---
 
+## ⏭️ Stage B3 — apply the functions before Cloud deploys the code
+
+**Do this now, ahead of anything else.** Stage B3's code is on `master`, Streamlit Cloud auto-deploys from
+`master`, and that code calls eight functions production does not yet have. If the deploy lands first, every
+squad save and load 404s.
+
+⭐ **The additive file is safe to run at any moment**, because it only adds: it creates the eight functions
+and grants EXECUTE, and takes no permission away from anything. Verified on Postgres 17 that **both paths
+work at once** afterwards — old code still reads the tables, new code can call the functions.
+
+```bash
+pbcopy < sql/stage_b3_functions_only.sql
+```
+
+Paste into **production's** SQL Editor → Run → `Success. No rows returned.` It re-runs cleanly, so applying
+it twice is harmless.
+
+⚠️ **The three `revoke` lines that actually close the tables are NOT in that file** — they live in
+`sql/stage_b3.sql` and are run *after* the code is confirmed deployed, using the behavioural check below.
+
+---
+
 ## Step 1 — Confirm the starting state
 
 **SQL Editor** (you are the owner, so RLS does not apply to you — which is exactly why the counts belong here
