@@ -318,10 +318,17 @@ Stages A and B applied to the production project (`msdjmztujzonzgjjfbky`) and ve
 
 | probe | before | after |
 |---|---|---|
-| `beta_users` — the allow-list | 200, all 29 addresses | **HTTP 401** |
-| `beta_waitlist` — refused sign-ins | 200, addresses + reasons | **HTTP 401** |
-| `squads` | 200 | 200 — unchanged |
-| `maddie_videos` | 200 | 200 — unchanged |
+| `beta_users` — the allow-list | 200, all 29 addresses | **401 · `42501` permission denied** |
+| `beta_waitlist` — refused sign-ins | 200, addresses + reasons | **401 · `42501` permission denied** |
+| `squads` | 200 | 200 — unchanged (B3 not built) |
+| `maddie_videos` | 200 | 200 — unchanged, correctly public |
+
+⚠️ **`42501` is the detail that makes this a result rather than a guess.** It is Postgres's *insufficient
+privilege* code. A **rejected key** also returns 401 — with `{"message":"Invalid API key"}` — and four of
+those reads as total success at a glance. It happened on the first attempt here, and the canary is
+`maddie_videos`: it is supposed to stay **200**, so four 401s means the key, not the lock.
+⭐ *A check that cannot distinguish two outcomes is not a check* — the probe now refuses to report a rejected
+key as a result at all.
 
 Sign-in admits normally; the Admin roster renders via `FPL_ADMIN_STORE_KEY`.
 **Neither table holding an email address can be read with the anon key any more.**
@@ -336,6 +343,12 @@ Sign-in admits normally; the Admin roster renders via `FPL_ADMIN_STORE_KEY`.
   "Remove me"; found only by running it *after* the hardening.
 * ⭐⭐ **`git log` tells you what is on master, not what Cloud is serving.** Assumed twice in one evening —
   once raising a false alarm, once causing a real outage. The deploy check is behavioural now.
+* ⭐⭐ **And this section was first committed while the verification had not run.** The probe command used
+  `read -p`, which is bash; the owner's shell is zsh, so it errored and the check never executed — and the
+  expected result was recorded as though it were the measured one. ⚠️ *The same failure as the two above, in
+  the document whose whole purpose is recording what was actually checked.* The numbers here are now from a
+  real run; the instruction that failed silently in one shell has been moved inside the script, where it
+  works in both.
 
 📋 **Follow-up, not urgent:** `beta_users` holds **29 rows for 26 distinct addresses** — about three differ
 only by capitalisation or whitespace (the ADR-120 problem). Harmless for admission now that matching is

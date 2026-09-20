@@ -13,6 +13,7 @@
 #
 # Reads SUPA_URL and SUPA_KEY from the environment, or from .env.staging if present.
 set -uo pipefail
+BAD_KEY=0
 
 # ⚠️ **Explicit environment wins over the file.** The first version sourced .env.staging unconditionally, so
 # `SUPA_URL=<production> ./scripts/supabase_probe.sh` would have silently probed STAGING and reported it as
@@ -23,7 +24,19 @@ if [ -z "${SUPA_URL:-}" ] && [ -f .env.staging ]; then
 fi
 
 : "${SUPA_URL:?set SUPA_URL (https://<ref>.supabase.co) in .env.staging or the environment}"
-: "${SUPA_KEY:?set SUPA_KEY (the anon / publishable key — NEVER the service_role key)}"
+
+# ⚠️ **Prompt for the key rather than making the caller build a shell one-liner.** The first version of that
+# instruction used `read -s -p`, which is **bash**; the owner's shell is **zsh**, where `-p` means coprocess —
+# so the command errored and the check silently did not run. ⭐ *An instruction that only works in one shell
+# is a step that will sometimes be skipped without anyone noticing.* Doing it here works in both.
+if [ -z "${SUPA_KEY:-}" ]; then
+  printf 'Paste the anon / publishable key for %s
+(it will not be shown) > ' "$SUPA_URL"
+  stty -echo 2>/dev/null; IFS= read -r SUPA_KEY; stty echo 2>/dev/null; printf '
+
+'
+fi
+: "${SUPA_KEY:?no key given (the anon / publishable key — NEVER the service_role key)}"
 
 echo "Target: ${SUPA_URL}"
 echo "⚠️  Confirm that host is STAGING before reading anything below."
@@ -36,6 +49,17 @@ probe() {                       # probe <label> <path> <what a hardened system s
               -H "apikey: ${SUPA_KEY}" -H "Authorization: Bearer ${SUPA_KEY}")
   code=$(printf '%s' "$body" | tail -n1)
   body=$(printf '%s' "$body" | sed '$d')
+  # ⚠️⚠️ **"The lock works" and "the key is wrong" both return 401**, and four of the latter reads as total
+  # success at a glance. It happened: a mistyped key produced 401 on every probe, including `maddie_videos`
+  # which is supposed to stay readable. ⭐ *A check that cannot distinguish two outcomes is not a check* —
+  # so an invalid key is called out as a broken RUN, not reported as a result.
+  case "$body" in
+    *"Invalid API key"*|*"invalid JWT"*|*"JWSError"*)
+      printf '   🔴 HTTP %s — THE KEY WAS REJECTED. This is not a permission result.\n' "$code"
+      printf '      Nothing below can be trusted; fix the key and run again.\n\n'
+      BAD_KEY=1
+      return ;;
+  esac
   printf '   HTTP %s\n   %s\n   after Stage A, expect: %s\n\n' "$code" "${body:0:300}" "$3"
 }
 
@@ -55,4 +79,10 @@ probe "maddie_videos — public marketing content" \
       "maddie_videos?select=topic" \
       "unchanged — public read is correct here"
 
+if [ "${BAD_KEY:-0}" = "1" ]; then
+  echo "🔴 THE RUN IS INVALID — the API key was rejected, so every 401 above means 'bad key', not 'locked'."
+  echo "   Common causes: the surrounding quotes were copied from secrets.toml, the paste was truncated,"
+  echo "   or it is a key from the other project. Copy it from Project Settings → API, value only."
+  exit 1
+fi
 echo "⭐ Write these down. The fix is only visible as a difference."
