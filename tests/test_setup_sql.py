@@ -188,3 +188,62 @@ def test_re_running_it_is_safe_and_keeps_both_the_data_and_the_lock(db):
     assert _as_anon(db, "select public.get_squad('robots')") == {"picks": [1]}
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         _as_anon(db, "select count(*) from public.squads")
+
+
+# ---- the door later tables walk through (ADR-216) ---------------------------------------
+
+def test_a_table_created_after_setup_arrives_closed(db):
+    """⭐⭐ **Hardening the tables that exist does nothing about the ones that do not exist yet.**
+
+    A stock Supabase project grants `all on tables` to `anon` by default, so every table the data pipeline
+    creates — players, fixtures, the xP board — came out DELETE-able with the publishable key. Reproduced on
+    a real Postgres: eleven pipeline tables, all writable by `anon`.
+
+    ⚠️ The data is public, so this is vandalism rather than disclosure — but `truncate players` with a key
+    that ships inside a mobile binary takes the app down for every tester.
+    """
+    import psycopg
+
+    # Recreate the stock Supabase default this is defending against.
+    db.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+               "GRANT ALL ON TABLES TO anon, authenticated")
+    _apply(db)
+    db.execute("CREATE TABLE public.a_later_table (id int primary key, x text)")
+
+    grants = db.execute(
+        "select coalesce(string_agg(distinct privilege_type, ','), '') "
+        "from information_schema.role_table_grants "
+        "where grantee = 'anon' and table_name = 'a_later_table'").fetchone()[0]
+    assert grants == "", f"a table created after setup.sql came out with {grants!r} granted to anon"
+
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        _as_anon(db, "select count(*) from public.a_later_table")
+
+
+def test_the_lockdown_leaves_the_data_tables_readable(db):
+    """⭐ **Both halves, or neither is news.** Mobile reads these boards directly (audit §4.1), so a lockdown
+    that also stops `anon` reading them has broken the feature it was protecting."""
+    lock = (SETUP_SQL.parent / "lock_data_tables.sql").read_text()
+
+    # ⚠️⚠️ **The tables must be created ALREADY OPEN, which is production's situation and was not the first
+    # version of this test's.** Creating them after `setup.sql` means they arrive closed by default, so the
+    # lockdown's `revoke` does nothing and removing it changes nothing — the mutation passed. The whole point
+    # here is a table that has been writable for weeks. ⭐ *A fixture that models less than reality will
+    # confirm a broken mechanism.*
+    db.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated")
+    db.execute("CREATE TABLE public.players (id int primary key, web_name text)")
+    db.execute("CREATE TABLE public.xp_board (element_id int primary key)")
+    db.execute("INSERT INTO public.players VALUES (1, 'Saka')")
+    assert _as_anon(db, "select count(*) from public.players") == 1, "precondition: open before the lockdown"
+
+    _apply(db)
+    db.execute(lock)
+
+    assert _as_anon(db, "select count(*) from public.players") == 1, "the board must stay readable"
+
+    import psycopg
+    for stmt in ("delete from public.players",
+                 "truncate public.xp_board",
+                 "insert into public.players values (2, 'X')"):
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            _as_anon(db, stmt)

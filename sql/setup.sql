@@ -66,6 +66,17 @@ create table if not exists public.events (
   meta        jsonb
 );
 
+-- ── First: new tables must arrive CLOSED ──────────────────────────────────────────────────────────────────
+-- ⭐⭐ **The door every later table walks through.** A stock Supabase project sets
+-- `alter default privileges in schema public grant all on tables to anon, …`, so anything created afterwards
+-- — by a migration, by the data pipeline, by someone in the dashboard — comes out with DELETE, INSERT,
+-- TRUNCATE and UPDATE granted to the publishable key. Hardening the tables that exist does nothing about the
+-- ones that do not exist yet, which is how this file's own tables would have been re-opened one at a time.
+--
+-- ⚠️ Failing closed is the right direction: a new table the app cannot read is a visible bug on the first
+-- page load, where a new table the world can delete is an invisible one until someone deletes it.
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+
 -- ── Access: what `anon` may do directly ───────────────────────────────────────────────────────────────────
 -- ⭐ The principle: **the app asks questions, it does not read tables.** Everything below either grants a
 -- single verb or nothing at all; the reads happen through the functions further down.
