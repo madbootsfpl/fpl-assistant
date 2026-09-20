@@ -141,7 +141,13 @@ def test_a_refresh_does_not_make_one_round_trip_per_player():
     from src import db as db_module
 
     calls = {"execute": 0, "executemany": 0}
-    real_connect = db_module.connect
+    # ⚠️ **Pin this to SQLite**, and use the unpatched connector to do it. Two reasons: the question here is
+    # *how many statements*, which is backend-independent; and wrapping a `PgConnection` breaks
+    # `Storage`'s own backend detection (`isinstance(self.conn, db.PgConnection)`), so under the Postgres
+    # harness it would take the SQLite path and run `PRAGMA` against Postgres.
+    # ⭐ *A counting wrapper that changes what the thing under test believes it is, is measuring something
+    # else.*
+    real_connect = getattr(db_module, "_unpatched_connect", db_module.connect)
 
     class _Counting:
         def __init__(self, inner):
