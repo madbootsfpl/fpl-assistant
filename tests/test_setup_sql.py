@@ -247,3 +247,43 @@ def test_the_lockdown_leaves_the_data_tables_readable(db):
                  "insert into public.players values (2, 'X')"):
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             _as_anon(db, stmt)
+
+
+def test_events_accepts_analytics_and_gives_nothing_back(db):
+    """`events` was explicitly deferred at the 2026-09-19 cutover and stayed open (ADR-216).
+
+    ⭐ **Insert-only is the whole design**: a tester's browser adds a row and can never read one back; the
+    Admin view reads with the service-role key, which bypasses RLS entirely.
+
+    ⚠️ ANALYTICS.md used to justify a read policy here, and the reasoning was careful and wrong — it argued
+    the key is safe because *"it lives in Streamlit secrets and is never sent to a browser"*, which is true
+    of the **key** and irrelevant to the **policy**. ⭐ *A permission is granted to a role, not to the place
+    you keep the credential.*
+    """
+    import psycopg
+
+    lock = (SETUP_SQL.parent / "lock_events.sql").read_text()
+
+    # Created wide open, which is production's situation — not closed-by-default, or this proves nothing.
+    db.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated")
+    db.execute("CREATE TABLE public.events (id bigint generated always as identity primary key, "
+               "ts timestamptz default now(), event text, page text, meta jsonb)")
+    db.execute("INSERT INTO public.events (event, page) VALUES ('before', 'Home')")
+    assert _as_anon(db, "select count(*) from public.events") == 1, "precondition: open before the lockdown"
+
+    db.execute(lock)
+
+    # The one thing it must still do.
+    _as_anon(db, "insert into public.events (event, page) values ('after', 'Players')")
+    assert db.execute("select count(*) from public.events").fetchone()[0] == 2, (
+        "⚠️ analytics must still land — a lockdown that silently drops them is worse than an open table, "
+        "because the dashboard would simply go quiet")
+
+    # And the three it must not.
+    for stmt in ("select count(*) from public.events",
+                 "delete from public.events",
+                 "update public.events set page = 'x'"):
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            _as_anon(db, stmt)
+
+    assert db.execute("select count(*) from public.events").fetchone()[0] == 2, "nothing was destroyed"
