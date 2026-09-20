@@ -229,3 +229,69 @@ def test_the_log_line_names_the_board(store, monkeypatch):
                         lambda *a, **k: {"rows": 0, "first_event": None, "skipped": "no upcoming fixtures"})
     line = pipeline.describe(pipeline.run(store, now=datetime(2026, 9, 20, 19, 0, tzinfo=UTC)))
     assert "xP board skipped (no upcoming fixtures)" in line, line
+
+
+# ---- the Team DNA board (ADR-213, second board) -----------------------------------------
+
+def _profiles(store):
+    from src.analytics.team_dna import team_dna_all
+    return team_dna_all(store.get_players(), store.get_upcoming_fixtures(),
+                        gw_history=store.get_gw_history_by_code())
+
+
+def test_the_team_dna_board_matches_a_fresh_computation(store):
+    """⭐ Same one-recipe guard as the xP board: the pipeline calls `team_dna_all`, never its own version."""
+    pipeline.publish_team_dna(store, computed_at=STAMP)
+    stored = {r["team"]: r for r in store.get_team_dna_board()}
+    live = _profiles(store)
+
+    assert len(stored) == len(live) == 20, "twenty clubs on the real snapshot"
+    for code, profile in live.items():
+        row = stored[code]
+        assert row["grade"] == profile.grade and row["grade_score"] == profile.grade_score
+        assert [a["percentile"] for a in row["axes"]] == [a.percentile for a in profile.axes]
+        assert [a["label"] for a in row["axes"]] == [a.label for a in profile.axes], "axis order is display order"
+
+
+def test_the_published_percentiles_actually_discriminate(store):
+    """⚠️ **The check that matters for a percentile board.** A table where every club scores 50 is not a
+    ranking, it is the no-peers default — and it renders perfectly, which is why it needs asserting."""
+    pipeline.publish_team_dna(store, computed_at=STAMP)
+    pct = [a["percentile"] for r in store.get_team_dna_board() for a in r["axes"]]
+    assert len(set(pct)) > 5, f"only {len(set(pct))} distinct percentiles — the ranking did not run"
+    assert min(pct) >= 0 and max(pct) <= 100
+
+
+def test_a_missing_club_is_refused(store):
+    """The symptom on a phone would be *"my team is not there"*, never an error."""
+    profiles = _profiles(store)
+    profiles.pop(next(iter(profiles)))
+    with pytest.raises(pipeline.BoardRejected, match="team profiles for"):
+        pipeline.validate_team_dna(profiles, store.get_players())
+
+
+def test_a_flat_ranking_is_refused(store):
+    """⭐ *The failure that produces a plausible-looking answer is the one worth a check.*"""
+    profiles = _profiles(store)
+    for t in profiles.values():
+        for a in t.axes:
+            object.__setattr__(a, "percentile", 50) if hasattr(a, "__dataclass_fields__") else None
+    with pytest.raises(pipeline.BoardRejected, match="every percentile is 50"):
+        pipeline.validate_team_dna(profiles, store.get_players())
+
+
+def test_a_single_team_pool_is_allowed_to_be_flat(store):
+    """⚠️ The counter-case, and the reason the check above is conditional: with one club there are no peers,
+    so identical percentiles are the correct answer rather than a symptom. An earlier version rejected it,
+    and failed an existing pipeline fixture for being right."""
+    profiles = _profiles(store)
+    one = {k: profiles[k] for k in list(profiles)[:1]}
+    players = [p for p in store.get_players() if p["team"] == next(iter(one))]
+    pipeline.validate_team_dna(one, players)          # must not raise
+
+
+def test_the_log_line_names_the_team_dna_board(store, monkeypatch):
+    monkeypatch.setattr(pipeline, "refresh_due", lambda *a, **k: (True, "forced"))
+    monkeypatch.setattr(pipeline.ingest, "refresh", lambda *a, **k: (659, 20, 380, 20))
+    line = pipeline.describe(pipeline.run(store, now=datetime(2026, 9, 20, 18, 0, tzinfo=UTC)))
+    assert "Team DNA 20 teams" in line, line

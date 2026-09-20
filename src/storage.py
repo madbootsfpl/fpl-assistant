@@ -341,6 +341,20 @@ CREATE TABLE IF NOT EXISTS xp_board (
 )
 """
 
+CREATE_TEAM_DNA_BOARD = """
+CREATE TABLE IF NOT EXISTS team_dna_board (
+    -- ⭐ **Published because a client cannot compute it.** Every axis is a PERCENTILE against the other
+    -- nineteen clubs, so producing one row requires the whole population — which is exactly the shape of
+    -- thing that belongs in the database rather than in each client (ADR-213).
+    team        TEXT PRIMARY KEY,   -- the three-letter code (ARS, LIV, …)
+    name        TEXT,
+    grade       TEXT,               -- A+ … D, from grade_score
+    grade_score INTEGER,
+    axes        TEXT NOT NULL,      -- JSON [{label, sublabel, value, percentile}], in display order
+    computed_at TEXT NOT NULL
+)
+"""
+
 CREATE_FIXTURES = """
 CREATE TABLE IF NOT EXISTS fixtures (
     id                INTEGER PRIMARY KEY,
@@ -601,6 +615,7 @@ class Storage:
             self.conn.execute(CREATE_TRANSFER_FLOW)
             self.conn.execute(CREATE_DATA_STATUS)
             self.conn.execute(CREATE_XP_BOARD)
+            self.conn.execute(CREATE_TEAM_DNA_BOARD)
             # ⭐ **The two migrations below repair OLD SQLITE FILES, and a Postgres database has no old files.**
             # `_migrate` adds columns that post-date a table, and `_rekey_history` rebuilds a primary key that
             # changed in ADR-129 — both exist because a cache on someone's laptop may have been created in
@@ -887,6 +902,34 @@ class Storage:
                 "computed_at": row["computed_at"],
             })
         return out
+
+    def publish_team_dna_board(self, profiles, *, computed_at: str) -> int:
+        """Replace the published Team DNA board. `profiles` is `team_dna_all`'s dict of dataclasses."""
+        import dataclasses
+
+        rows = [
+            (t.team, t.name, t.grade, t.grade_score,
+             json.dumps([dataclasses.asdict(a) if dataclasses.is_dataclass(a) else dict(a) for a in t.axes]),
+             computed_at)
+            for t in profiles.values()
+        ]
+        with self.conn:
+            self.conn.execute("DELETE FROM team_dna_board")
+            self.conn.executemany(
+                "INSERT INTO team_dna_board (team, name, grade, grade_score, axes, computed_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)", rows)
+        return len(rows)
+
+    def get_team_dna_board(self):
+        """The published Team DNA board, newest first by grade. `[]` when nothing has been published."""
+        return [
+            {"team": r["team"], "name": r["name"], "grade": r["grade"],
+             "grade_score": r["grade_score"], "axes": json.loads(r["axes"]),
+             "computed_at": r["computed_at"]}
+            for r in self.conn.execute(
+                "SELECT team, name, grade, grade_score, axes, computed_at "
+                "FROM team_dna_board ORDER BY grade_score DESC, team").fetchall()
+        ]
 
     def data_status(self):
         """The one `data_status` row, or None when the table is absent or empty (ADR-211 2b).

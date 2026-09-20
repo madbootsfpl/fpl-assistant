@@ -256,8 +256,13 @@ Board-wide values that are identical for every user, written by the pipeline onc
 > board with **unrounded** per-gameweek values, so any horizon 1–8 is derivable exactly. Validated before it
 > replaces the last good board, and pinned by a test that recomputes and compares.
 >
-> ⬜ **Still Python-only:** the stat boards, Player/Team DNA percentiles, and Signals. Deliberately deferred —
-> doing one end to end first proves the publish-validate-verify pattern before it is copied four times.
+> ✅ **Team DNA is now published too** (ADR-214) — 20 clubs, eight percentile axes each.
+>
+> 🔴 **The rest are empty, not deferred.** Measured at GW5: over/under and DefCon reliability gate at 900
+> minutes and the board's maximum is **450**; worth-noticing returns nothing; Player DNA returns a profile
+> for every player whose peer pool is **one player or none**, so every percentile is the no-peers default.
+> 📅 Re-measured on or after **2026-11-01**. ⬜ `trending` is not published at all — it is `ORDER BY` on a
+> column the client already holds.
 >
 > ⚠️ A published board is anchored to the gameweeks it covers (`first_event`), because the window moves at
 > every deadline. A client that ignores that will misread it as current.

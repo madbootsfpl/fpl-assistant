@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta
 
 from src import ingest
 from src.analytics.deadline import next_deadline
+from src.analytics.team_dna import team_dna_all
 from src.analytics.xp import decision_xp
 from src.api.client import FplApiError
 from src.ingest import PayloadRejected
@@ -170,6 +171,45 @@ def publish_board(store: Storage, *, computed_at: str) -> dict:
     return {"rows": rows, "first_event": first_event}
 
 
+def validate_team_dna(profiles, players) -> None:
+    """Sanity-check a Team DNA board before it replaces the last good one.
+
+    ⚠️ **A missing club is the failure worth catching**, because the symptom on a phone is *"my team is not
+    there"* rather than an error.
+
+    ⭐ **Checked against the teams the PLAYERS belong to**, which took two wrong answers to get right.
+    Hardcoding 20 rejected an existing fixture that legitimately has one team; counting the `teams` table
+    rejected it too, because `team_dna_all` builds its pool from players, not from that table. *A check must
+    be expressed against the same population the thing under test derives from* — otherwise it is measuring a
+    different question and will be wrong on the edges.
+    """
+    pool = {p["team"] for p in players if p["team"]}
+    if len(profiles) != len(pool):
+        raise BoardRejected(f"{len(profiles)} team profiles for {len(pool)} teams in the player pool")
+    flat = [a for t in profiles.values() for a in t.axes]
+    if not flat:
+        raise BoardRejected("no axes on any team")
+    pct = [getattr(a, "percentile", None) for a in flat]
+    if any(p is None or not 0 <= p <= 100 for p in pct):
+        raise BoardRejected("a percentile outside 0-100")
+    # ⭐ **Percentiles that are ALL identical mean the ranking never ran** — the pool collapsed and every club
+    # came back with the no-peers default. It raises nothing upstream; it just grades everyone the same.
+    # ⚠️ Only meaningful with something to rank against: one club in the pool has no peers, and identical
+    # percentiles are then the correct answer rather than a symptom.
+    if len(pool) > 1 and len(set(pct)) == 1:
+        raise BoardRejected(f"every percentile is {pct[0]} — the ranking did not run")
+
+
+def publish_team_dna(store: Storage, *, computed_at: str) -> dict:
+    """Compute and publish the Team DNA board. ⭐ Calls the same `team_dna_all` the web app calls."""
+    profiles = team_dna_all(store.get_players(), store.get_upcoming_fixtures(),
+                            gw_history=store.get_gw_history_by_code())
+    if not profiles:
+        return {"rows": 0, "skipped": "no team profiles"}
+    validate_team_dna(profiles, store.get_players())
+    return {"rows": store.publish_team_dna_board(profiles, computed_at=computed_at)}
+
+
 # ── The run ───────────────────────────────────────────────────────────────────────────────────────────────
 
 def run(store: Storage, *, now=None, force: bool = False, client=None, elo_client=None) -> dict:
@@ -205,6 +245,7 @@ def run(store: Storage, *, now=None, force: bool = False, client=None, elo_clien
     upcoming = next_deadline(store.get_all_fixtures(), now)
     try:
         published = publish_board(store, computed_at=stamp)
+        team_dna = publish_team_dna(store, computed_at=stamp)
     except BoardRejected as bad:
         # ⭐⭐ **`refreshed_at` still moves, and that is not a slip.** By this point `ingest.refresh` has
         # already written the players — the raw data genuinely did refresh, and the sidebar reads exactly
@@ -218,13 +259,14 @@ def run(store: Storage, *, now=None, force: bool = False, client=None, elo_clien
                               event=upcoming[0] if upcoming else None,
                               ok=False, note=f"board rejected: {bad}")
         return {"ran": True, "ok": False, "reason": f"board rejected: {bad}",
-                "counts": counts, "board": None}
+                "counts": counts, "board": None, "team_dna": None}
 
     store.set_data_status(refreshed_at=stamp, attempted_at=stamp,
                           event=upcoming[0] if upcoming else None, ok=True, note=None)
     # ⚠️ **The board count is its own key, not folded into `counts`.** `ingest.refresh` returns a 4-tuple
     # that `describe()` unpacks positionally — appending to it would break the line a person actually reads.
-    return {"ran": True, "ok": True, "reason": why, "counts": counts, "board": published}
+    return {"ran": True, "ok": True, "reason": why, "counts": counts,
+            "board": published, "team_dna": team_dna}
 
 
 def describe(outcome: dict) -> str:
@@ -241,7 +283,10 @@ def describe(outcome: dict) -> str:
             xp = f", xP board skipped ({board['skipped']})"
         else:
             xp = f", xP board {board.get('rows', 0)} players from GW{board.get('first_event')}"
-        return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo{xp} "
+        dna = outcome.get("team_dna") or {}
+        tdna = (f", Team DNA skipped ({dna['skipped']})" if dna.get("skipped")
+                else f", Team DNA {dna.get('rows', 0)} teams")
+        return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo{xp}{tdna} "
                 f"({outcome['reason']}).")
     return f"REFUSED — {outcome['reason']}. The last good data still stands."
 
