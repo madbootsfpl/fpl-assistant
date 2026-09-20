@@ -31,6 +31,14 @@ def is_configured() -> bool:
     return bool(url and key)
 
 
+def _rpc(name: str):
+    """`(url, key)` for a Postgres function over PostgREST (Stage B3)."""
+    url, key = secret("FPL_STORE_URL"), secret("FPL_STORE_KEY")
+    if not (url and key):
+        return None, None
+    return f"{url.rsplit('/', 1)[0]}/rpc/{name}", key
+
+
 def _headers(key):
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
@@ -46,33 +54,31 @@ def _user_key():
 
 
 def _load(uk):
-    """The stored ids for a user, `[]` if none, or None on a failure (so the caller keeps the session list)."""
-    url, key = _endpoint()
+    """A user's watchlist ids, or `None` on failure so the caller keeps what it has."""
+    url, key = _rpc("get_watchlist")
     if not (url and key):
         return None
 
-    def _get():
-        r = requests.get(url, params={"select": "player_ids", "user_key": f"eq.{uk}"},
-                         headers=_headers(key), timeout=_TIMEOUT)
+    def _post():
+        r = requests.post(url, json={"p_user_key": uk}, headers=_headers(key), timeout=_TIMEOUT)
         r.raise_for_status()
         return r
 
     try:
-        rows = with_retry(_get, retries=1).json()
-        return [int(i) for i in rows[0]["player_ids"]] if rows and rows[0].get("player_ids") is not None else []
-    except Exception:
+        return with_retry(_post, retries=1).json() or []
+    except Exception:                                    # noqa: BLE001 — best-effort, like the rest
         return None
 
 
 def _save(uk, ids):
-    """Best-effort upsert of a user's watchlist — never raises (a lost sync is acceptable, a broken ⭐ is not)."""
-    url, key = _endpoint()
+    """Upsert a user's watchlist. Best-effort and silent — a watchlist is a convenience, not a promise."""
+    url, key = _rpc("save_watchlist")
     if not (url and key):
         return
     try:
-        headers = {**_headers(key), "Prefer": "resolution=merge-duplicates"}   # upsert on the user_key PK
-        requests.post(url, json={"user_key": uk, "player_ids": list(ids)}, headers=headers, timeout=_TIMEOUT)
-    except Exception:
+        requests.post(url, json={"p_user_key": uk, "p_player_ids": list(ids)},
+                      headers=_headers(key), timeout=_TIMEOUT)
+    except Exception:                                    # noqa: BLE001
         return
 
 

@@ -207,21 +207,34 @@ def test_the_first_run_tour_is_absent_until_there_is_something_to_play():
 def test_adding_a_pref_cannot_break_the_prefs_that_already_work():
     """⚠️ **The regression this file exists to stop, one layer down.**
 
-    `_load` used to ask PostgREST for exactly the columns in `_FIELDS`. Adding a field whose column did not
+    `_load` once asked PostgREST for exactly the columns in `_FIELDS`. Adding a field whose column did not
     exist yet made the read a **400** → `_load` returns None → every user's stored league silently stopped
     restoring, from a deploy that only meant to add something. Ordering between a code push and a dashboard
     migration should never be load-bearing for a feature that already shipped.
 
-    The read now asks for `*` and narrows to `_FIELDS` in Python, so an unknown field simply never comes back.
+    ⭐ **Stage B3 kept the property and moved the mechanism.** The read is now `get_prefs`, whose SQL returns
+    `to_jsonb(p) - 'user_key'` — the whole row, minus the key — and Python narrows to `_FIELDS`. Naming no
+    columns on either side is what makes an unknown field simply not come back, instead of failing the read.
+
+    ⚠️ So this checks both halves. A column list reappearing in *either* place would restore the bug.
     """
     import inspect
+    from pathlib import Path
 
     from src.web_streamlit import prefs
 
     src = inspect.getsource(prefs._load)
-    assert '"select": "*"' in src, \
-        "the prefs read must not name its columns — a new field would 400 the read and drop the old ones"
-    assert "seen_orientation" in prefs._FIELDS
+    assert '_rpc("get_prefs")' in src
+    assert "select" not in src.lower().replace("selector", ""), \
+        "the prefs read must not name columns — a new field would drop the old ones"
+
+    sql = (Path(__file__).resolve().parents[1] / "sql" / "stage_b3.sql").read_text()
+    body = sql[sql.index("function public.get_prefs"):sql.index("function public.save_prefs")]
+    assert "to_jsonb" in body, "get_prefs must return the whole row, not a column list"
+    for field in prefs._FIELDS:
+        assert f"select {field}" not in body.lower(), \
+            f"get_prefs names {field} — a new field would then need a matching SQL change to appear"
+
 
 
 def test_home_does_not_name_a_retired_section():

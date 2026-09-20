@@ -51,6 +51,14 @@ def is_configured() -> bool:
     return bool(url and key)
 
 
+def _rpc(name: str):
+    """`(url, key)` for a Postgres function over PostgREST (Stage B3)."""
+    url, key = secret("FPL_STORE_URL"), secret("FPL_STORE_KEY")
+    if not (url and key):
+        return None, None
+    return f"{url.rsplit('/', 1)[0]}/rpc/{name}", key
+
+
 def _headers(key):
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
@@ -67,21 +75,20 @@ def _user_key():
 
 def _load(uk):
     """A user's stored prefs, `{}` if none, or `None` on failure — so the caller keeps whatever it has."""
-    url, key = _endpoint()
+    url, key = _rpc("get_prefs")
     if not (url and key):
         return None
 
-    def _get():
-        r = requests.get(url, params={"select": "*", "user_key": f"eq.{uk}"},
-                         headers=_headers(key), timeout=_TIMEOUT)
+    def _post():
+        r = requests.post(url, json={"p_user_key": uk}, headers=_headers(key), timeout=_TIMEOUT)
         r.raise_for_status()
         return r
 
     try:
-        rows = with_retry(_get, retries=1).json()
-        if not rows:
+        row = with_retry(_post, retries=1).json()
+        if not row:
             return {}
-        return {f: rows[0].get(f) for f in _FIELDS if rows[0].get(f) is not None}
+        return {f: row.get(f) for f in _FIELDS if row.get(f) is not None}
     except Exception:                                    # noqa: BLE001
         return None
 
@@ -91,26 +98,24 @@ def _save(uk, values) -> str:
 
     The status exists because of ADR-142: an identical write failed silently for a day because a table had
     SELECT and INSERT policies and no UPDATE policy, and PostgREST reports that as `200 OK, zero rows`
-    rather than an error. Nothing in the app should show a tester an error over a stored preference, but the
-    operator needs to be able to find out *why* when nothing sticks.
+    rather than an error.
+
+    ⚠️ **`remember()` sets one preference at a time**, so the function must treat a null as *"leave it"*, not
+    *"clear it"* — otherwise saving a league id would forget the manager id. That `coalesce` lives in the SQL
+    (sql/stage_b3.sql) and is asserted in `tests/test_stage_b_sql.py`, because it is no longer visible here.
     """
-    url, key = _endpoint()
+    url, key = _rpc("save_prefs")
     if not (url and key):
         return "store not configured"
     try:
-        r = requests.post(url, json={"user_key": uk, **values},
-                          headers={**_headers(key), "Prefer": "resolution=merge-duplicates,return=representation"},
-                          timeout=_TIMEOUT)
+        r = requests.post(url, json={"p_user_key": uk,
+                                     "p_manager_id": values.get("manager_id"),
+                                     "p_league_id": values.get("league_id")},
+                          headers=_headers(key), timeout=_TIMEOUT)
     except Exception as exc:                             # noqa: BLE001
         return f"write failed: {exc}"
     if r.status_code >= 400:
         return f"refused by the store (HTTP {r.status_code}): {r.text[:160]}"
-    try:
-        if not r.json():
-            return ("the write reached no rows — `user_prefs` likely has row-level security with no "
-                    "INSERT/UPDATE policy (Postgres does not raise for that, it narrows the write to nothing)")
-    except Exception:                                    # noqa: BLE001 — a 204 with no body is a fine success
-        pass
     return "ok"
 
 

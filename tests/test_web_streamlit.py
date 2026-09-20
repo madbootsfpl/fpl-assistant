@@ -2044,9 +2044,9 @@ def _signed_in_squads(monkeypatch, stored=None):
     monkeypatch.setattr(auth, "is_configured", lambda: True)              # signed-in mode on
     monkeypatch.setattr(auth, "current_email", lambda: "tony@example.com")
     monkeypatch.setattr(user_store, "is_registered", lambda email: True)  # on the allow-list → admitted
-    rows = [{"data": stored}] if stored else []
-    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(rows))
-    monkeypatch.setattr("requests.post", lambda url, json=None, headers=None, timeout=None: _StoreResp())
+    # Stage B3: the restore reads through `get_squad`, so the fake has to route by RPC rather than answer
+    # every POST the same way.
+    _fake_store_rpcs(monkeypatch, squad=stored)
     return _run(_PAGES / "1_My_Squad.py")
 
 
@@ -2103,27 +2103,55 @@ def test_cloud_save_load_hidden_in_sidebar_without_secrets(monkeypatch):
     assert not any(t.label == "Your handle" for t in at.text_input)          # no cloud UI when unconfigured
 
 
+
+def _fake_store_rpcs(monkeypatch, *, squad=None, exists=False, prefs=None, watchlist=None):
+    """Route the Stage B3 RPCs by URL, and record what was sent.
+
+    ⚠️ **One `requests.post` lambda is no longer enough.** Before Stage B3 the squad store used GET to read
+    and POST to write, so a test could answer each with one stub. Now every operation is a POST to a
+    different `/rpc/…` endpoint, and a fake that ignores the URL answers `save_squad` with whatever
+    `get_squad` was supposed to return.
+
+    Returns the dict of what was posted, keyed by function name.
+    """
+    sent = {}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        name = url.rsplit("/", 1)[-1]
+        sent[name] = json
+        if name == "get_squad":
+            return _StoreResp(squad)
+        if name == "squad_exists":
+            return _StoreResp(exists)
+        if name == "delete_squad":
+            return _StoreResp(True)
+        if name == "get_prefs":
+            return _StoreResp(prefs)
+        if name == "get_watchlist":
+            return _StoreResp(watchlist if watchlist is not None else [])
+        return _StoreResp()                 # save_* and anything else: a plain OK
+
+    monkeypatch.setattr("requests.post", fake_post)
+    monkeypatch.setattr("requests.get",
+                        lambda url, params=None, headers=None, timeout=None: _StoreResp([]))
+    return sent
+
+
 def test_cloud_save_and_load_in_the_sidebar(monkeypatch):
     # US-331: the ☁ Save/Load lives in the Squads sidebar now → Save the active squad; Load adopts a stored one.
-    posted = {}
-    monkeypatch.setattr("requests.post",
-                        lambda url, json=None, headers=None, timeout=None: posted.update(body=json) or _StoreResp())
-    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
-        [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
+    sent = _fake_store_rpcs(monkeypatch, squad={"name": "Cloud XI", "player_ids": list(range(1, 16)),
+                                                "bench_ids": [], "cost": 100.0})
     at = _squads_with_active(monkeypatch)
     next(t for t in at.text_input if t.label == "Your handle").set_value("Tony17").run()
     next(b for b in at.button if b.label == "Save").click().run()
-    assert not at.exception and posted["body"]["handle"] == "tony17"        # cleaned + upserted
+    assert not at.exception and sent["save_squad"]["p_handle"] == "tony17"  # cleaned + saved via the RPC
     next(b for b in at.button if b.label == "Load").click().run()
     assert at.session_state["squad"]["name"] == "Cloud XI"                  # adopted into the session
 
 
 def test_cloud_save_in_sidebar_warns_when_the_handle_is_taken(monkeypatch):
     # US-321/331: exists() → True (a row comes back) → the Save reports an overwrite, not a plain "saved"
-    monkeypatch.setattr("requests.post",
-                        lambda url, json=None, headers=None, timeout=None: _StoreResp())
-    monkeypatch.setattr("requests.get",   # exists() sees a stored row for this handle
-                        lambda url, params=None, headers=None, timeout=None: _StoreResp([{"handle": "tony17"}]))
+    _fake_store_rpcs(monkeypatch, exists=True)     # squad_exists() → True → the Save reports an overwrite
     at = _squads_with_active(monkeypatch)
     next(t for t in at.text_input if t.label == "Your handle").set_value("tony17").run()
     next(b for b in at.button if b.label == "Save").click().run()
@@ -2158,10 +2186,8 @@ def test_squad_created_event_on_use_this_squad(monkeypatch):
 
 def test_squad_saved_and_loaded_events_carry_no_handle(monkeypatch):
     events = _capture_events(monkeypatch)
-    monkeypatch.setattr("requests.post",
-                        lambda url, json=None, headers=None, timeout=None: _StoreResp())
-    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
-        [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
+    _fake_store_rpcs(monkeypatch, squad={"name": "Cloud XI", "player_ids": list(range(1, 16)),
+                                         "bench_ids": [], "cost": 100.0})
     at = _squads_with_active(monkeypatch)
     next(t for t in at.text_input if t.label == "Your handle").set_value("tony17").run()
     next(b for b in at.button if b.label == "Save").click().run()
@@ -2201,10 +2227,8 @@ def test_squads_page_emits_data_load_and_analysis_perf(monkeypatch):
 
 def test_squad_save_and_load_emit_perf_events(monkeypatch):
     events = _capture_events(monkeypatch)
-    monkeypatch.setattr("requests.post",
-                        lambda url, json=None, headers=None, timeout=None: _StoreResp())
-    monkeypatch.setattr("requests.get", lambda url, params=None, headers=None, timeout=None: _StoreResp(
-        [{"data": {"name": "Cloud XI", "player_ids": list(range(1, 16)), "bench_ids": [], "cost": 100.0}}]))
+    _fake_store_rpcs(monkeypatch, squad={"name": "Cloud XI", "player_ids": list(range(1, 16)),
+                                         "bench_ids": [], "cost": 100.0})
     at = _squads_with_active(monkeypatch)
     next(t for t in at.text_input if t.label == "Your handle").set_value("tony17").run()
     next(b for b in at.button if b.label == "Save").click().run()

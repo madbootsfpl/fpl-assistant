@@ -53,7 +53,9 @@ def test_clean_handle_sanitises_and_bounds():
 
 # --- save / load / delete ----------------------------------------------------------------------
 
-def test_save_upserts_with_auth_and_the_handle_key(configured, monkeypatch):
+def test_save_posts_to_the_rpc_with_the_cleaned_handle(configured, monkeypatch):
+    """⭐ Stage B3: the app calls a function with the key, rather than upserting into a table it can also
+    enumerate. The `Prefer: resolution=merge-duplicates` header is gone — the upsert is inside the SQL."""
     seen = {}
 
     def fake_post(url, json=None, headers=None, timeout=None):
@@ -63,9 +65,9 @@ def test_save_upserts_with_auth_and_the_handle_key(configured, monkeypatch):
     monkeypatch.setattr("requests.post", fake_post)
     cloud_store.save_squad("Tony17", {"name": "My XI", "player_ids": [1, 2, 3]})
 
-    assert seen["url"].endswith("/rest/v1/squads")
-    assert seen["body"] == {"handle": "tony17", "data": {"name": "My XI", "player_ids": [1, 2, 3]}}
-    assert seen["headers"]["Prefer"] == "resolution=merge-duplicates"      # upsert
+    assert seen["url"].endswith("/rest/v1/rpc/save_squad")
+    assert seen["body"] == {"p_handle": "tony17", "p_data": {"name": "My XI", "player_ids": [1, 2, 3]}}
+    assert "Prefer" not in seen["headers"]
     assert seen["headers"]["Authorization"] == "Bearer anon-key-123"
 
 
@@ -76,10 +78,10 @@ def test_save_round_trips_the_captain(configured, monkeypatch):
                         lambda url, json=None, headers=None, timeout=None: seen.update(body=json) or _Resp())
     squad = {"name": "My XI", "player_ids": [1, 2, 3], "bench_ids": [3], "captain_id": 2}
     cloud_store.save_squad("tony17", squad)
-    assert seen["body"]["data"]["captain_id"] == 2             # the captain goes into the stored blob
+    assert seen["body"]["p_data"]["captain_id"] == 2
 
-    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp([{"data": squad}]))
-    assert cloud_store.load_squad("tony17")["captain_id"] == 2  # …and comes back on load
+    monkeypatch.setattr("requests.post", lambda *a, **k: _Resp(squad))
+    assert cloud_store.load_squad("tony17")["captain_id"] == 2
 
 
 def test_save_rejects_a_bad_handle(configured, monkeypatch):
@@ -88,29 +90,32 @@ def test_save_rejects_a_bad_handle(configured, monkeypatch):
         cloud_store.save_squad("!", {"name": "x"})             # cleans to '' → refuse (no write)
 
 
-def test_load_returns_the_row_data_or_none(configured, monkeypatch):
-    def fake_get(url, params=None, headers=None, timeout=None):
-        assert params["handle"] == "eq.tony17"                 # the eq. filter is built from the clean handle
-        return _Resp([{"data": {"name": "Loaded XI", "player_ids": [7]}}])
+def test_load_returns_the_squad_or_none(configured, monkeypatch):
+    """⭐ The function returns the squad itself, not a list of rows — there is no shape in the response a
+    caller could widen into "give me every handle"."""
+    def fake_post(url, json=None, headers=None, timeout=None):
+        assert url.endswith("/rpc/get_squad") and json == {"p_handle": "tony17"}
+        return _Resp({"name": "Loaded XI", "player_ids": [7]})
 
-    monkeypatch.setattr("requests.get", fake_get)
+    monkeypatch.setattr("requests.post", fake_post)
     assert cloud_store.load_squad("tony17") == {"name": "Loaded XI", "player_ids": [7]}
 
-    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp([]))   # nothing stored
+    monkeypatch.setattr("requests.post", lambda *a, **k: _Resp(None))
     assert cloud_store.load_squad("tony17") is None
 
 
 def test_exists_reflects_whether_a_row_is_stored(configured, monkeypatch):
-    # US-321: exists() → True when a row comes back, False when empty (a light select, just the key)
-    def fake_get(url, params=None, headers=None, timeout=None):
-        assert params == {"handle": "eq.tony17", "select": "handle"}     # a minimal existence check
-        return _Resp([{"handle": "tony17"}])
+    """US-321. ⭐ The database answers with a **boolean** — the question is "new or overwrite?", and
+    answering it used to need a select a caller could widen."""
+    def fake_post(url, json=None, headers=None, timeout=None):
+        assert url.endswith("/rpc/squad_exists") and json == {"p_handle": "tony17"}
+        return _Resp(True)
 
-    monkeypatch.setattr("requests.get", fake_get)
-    assert cloud_store.exists("Tony17") is True                          # cleaned + found
+    monkeypatch.setattr("requests.post", fake_post)
+    assert cloud_store.exists("Tony17") is True
 
-    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp([]))
-    assert cloud_store.exists("tony17") is False                         # nothing stored
+    monkeypatch.setattr("requests.post", lambda *a, **k: _Resp(False))
+    assert cloud_store.exists("tony17") is False
 
 
 def test_store_error_surfaces_the_supabase_message():
@@ -144,9 +149,10 @@ def test_exists_false_without_secrets(monkeypatch):
     assert cloud_store.exists("tony17") is False                         # unconfigured → no read
 
 
-def test_delete_targets_the_handle(configured, monkeypatch):
+def test_delete_calls_the_rpc_with_the_cleaned_handle(configured, monkeypatch):
     seen = {}
-    monkeypatch.setattr("requests.delete",
-                        lambda url, params=None, headers=None, timeout=None: seen.update(params=params) or _Resp())
-    cloud_store.delete_squad("tony17")
-    assert seen["params"] == {"handle": "eq.tony17"}
+    monkeypatch.setattr("requests.post",
+                        lambda url, json=None, headers=None, timeout=None:
+                        seen.update(url=url, body=json) or _Resp(True))
+    cloud_store.delete_squad("Tony17")
+    assert seen["url"].endswith("/rpc/delete_squad") and seen["body"] == {"p_handle": "tony17"}

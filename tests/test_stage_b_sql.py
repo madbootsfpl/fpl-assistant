@@ -125,3 +125,90 @@ def test_the_cap_survives_simultaneous_registrations(db):
     assert db.execute("SELECT count(*) FROM beta_users").fetchone()[0] == 5, \
         f"the cap must hold exactly, got {results}"
     assert results.count("in") == 2 and results.count("full") == 2, results
+
+
+# ── Stage B3 ──────────────────────────────────────────────────────────────────────────────────────────────
+
+B3_FILE = Path(__file__).resolve().parents[1] / "sql" / "stage_b3.sql"
+
+
+@pytest.fixture
+def db3():
+    """A throwaway schema with the squad/prefs/watchlist tables and Stage B3 applied."""
+    import psycopg
+
+    conn = psycopg.connect(DSN, autocommit=True)
+    schema = f"b3_{os.getpid()}"
+    conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+    conn.execute(f'CREATE SCHEMA "{schema}"')
+    conn.execute(f'SET search_path TO "{schema}"')
+    for role in ("anon", "authenticated"):
+        try:
+            conn.execute(f"CREATE ROLE {role} NOLOGIN")
+        except Exception:                            # noqa: BLE001
+            pass
+        conn.execute(f'GRANT USAGE ON SCHEMA "{schema}" TO {role}')
+    conn.execute("CREATE TABLE squads (handle text primary key, data jsonb not null,"
+                 " updated_at timestamptz default now())")
+    conn.execute("CREATE TABLE user_prefs (user_key text primary key, manager_id text, league_id bigint,"
+                 " updated_at timestamptz default now())")
+    conn.execute("CREATE TABLE player_watchlist (user_key text primary key,"
+                 " player_ids jsonb not null default '[]'::jsonb, updated_at timestamptz default now())")
+    conn.execute(B3_FILE.read_text().replace("public.", f'"{schema}".'))
+    yield conn
+    conn.execute(f'DROP SCHEMA "{schema}" CASCADE')
+    conn.close()
+
+
+def test_saving_one_preference_does_not_forget_the_others(db3):
+    """⭐⭐ **The silent data loss this nearly shipped with.** `prefs.remember()` sets **one** value at a
+    time — `remember(manager_id=…)` then later `remember(league_id=…)`. A plain upsert writes null into the
+    column it was not given, so saving a league would quietly forget the manager id.
+
+    The `coalesce` in `save_prefs` makes a null mean *"leave it"* rather than *"clear it"*. ⚠️ This is not
+    visible from Python any more, which is exactly why it is asserted here."""
+    db3.execute("SELECT save_prefs(%s, %s, %s)", ("uk1", "2885974", None))
+    db3.execute("SELECT save_prefs(%s, %s, %s)", ("uk1", None, 314159))
+    row = db3.execute("SELECT get_prefs(%s)", ("uk1",)).fetchone()[0]
+    assert row["manager_id"] == "2885974", "saving a league must not forget the manager id"
+    assert row["league_id"] == 314159
+
+
+def test_get_prefs_never_echoes_the_key_back(db3):
+    """The caller supplied the key; returning it adds nothing and puts it somewhere it need not be."""
+    db3.execute("SELECT save_prefs(%s, %s, %s)", ("uk1", "123", None))
+    assert "user_key" not in db3.execute("SELECT get_prefs(%s)", ("uk1",)).fetchone()[0]
+
+
+def test_get_prefs_names_no_columns_so_a_new_field_cannot_break_the_read(db3):
+    """⭐ The property `tests/test_navigation_copy.py` guards, asserted against the running function. A read
+    that listed its columns would 400 the moment a field was added ahead of its migration, dropping every
+    stored preference — so `get_prefs` returns the whole row via `to_jsonb`."""
+    db3.execute("ALTER TABLE user_prefs ADD COLUMN a_new_field text")
+    db3.execute("SELECT save_prefs(%s, %s, %s)", ("uk1", "123", None))
+    row = db3.execute("SELECT get_prefs(%s)", ("uk1",)).fetchone()[0]
+    assert row["manager_id"] == "123", "an unknown column must not break the read"
+    assert "a_new_field" in row, "to_jsonb returns whatever the table has, which is the point"
+
+
+def test_a_delete_that_matched_nothing_reports_false(db3):
+    """ADR-148: a delete that silently matched nothing must not read as success."""
+    db3.execute("SELECT save_squad(%s, %s)", ("ts", '{"player_ids":[1]}'))
+    assert db3.execute("SELECT delete_squad(%s)", ("ts",)).fetchone()[0] is True
+    assert db3.execute("SELECT delete_squad(%s)", ("ts",)).fetchone()[0] is False
+
+
+def test_the_tables_are_closed_to_anon_but_the_functions_are_not(db3):
+    """⭐ The whole point: enumeration stops, by-key access continues."""
+    schema = db3.execute("SELECT current_schema()").fetchone()[0]
+    db3.execute("SELECT save_squad(%s, %s)", ("ts", '{"player_ids":[1]}'))
+    db3.execute("SET ROLE anon")
+    try:
+        for table in ("squads", "user_prefs", "player_watchlist"):
+            with pytest.raises(Exception, match="permission denied"):
+                db3.execute(f'SELECT count(*) FROM "{schema}".{table}')  # noqa: S608 — name from a fixed tuple
+            db3.execute("ROLLBACK")
+        assert db3.execute("SELECT get_squad(%s)", ("ts",)).fetchone()[0] == {"player_ids": [1]}
+        assert db3.execute("SELECT squad_exists(%s)", ("ts",)).fetchone()[0] is True
+    finally:
+        db3.execute("RESET ROLE")
