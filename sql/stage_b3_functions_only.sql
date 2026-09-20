@@ -24,6 +24,21 @@
 -- ⚠️ `set search_path = ''` on every definer function: without it a caller-controlled search_path can
 -- resolve these tables to ones of their own choosing.
 
+-- ── The table the functions assume ───────────────────────────────────────────────────────────────────────
+-- ⚠️ **`player_watchlist` was documented in BETA.md and never created in production**, found when this file
+-- failed with *relation "public.player_watchlist" does not exist*. The app degrades silently — `_load`
+-- catches and returns None, `_save` swallows — so the watchlist has been working **within a session** via
+-- `session_state` and vanishing on refresh, on two surfaces (Players and My Squad).
+-- ⭐ *A feature that fails silently is a feature nobody reports.*
+--
+-- Created here with the exact DDL from BETA.md. `if not exists` means this is a no-op wherever it already
+-- exists, so the file stays safe to run anywhere.
+create table if not exists public.player_watchlist (
+  user_key    text primary key,          -- a hash of the user's email (ADR-106), not the email itself
+  player_ids  jsonb not null default '[]'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
 -- ── Squads ────────────────────────────────────────────────────────────────────────────────────────────────
 create or replace function public.get_squad(p_handle text)
 returns jsonb
