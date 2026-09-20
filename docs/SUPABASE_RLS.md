@@ -312,7 +312,7 @@ original design, and it splits in two:
 
 ---
 
-## ✅ LIVE ON PRODUCTION — 2026-09-20
+## ✅ LIVE ON PRODUCTION — Stages A, B and B3, 2026-09-20
 
 Stages A and B applied to the production project (`msdjmztujzonzgjjfbky`) and verified with the anon key:
 
@@ -320,7 +320,8 @@ Stages A and B applied to the production project (`msdjmztujzonzgjjfbky`) and ve
 |---|---|---|
 | `beta_users` — the allow-list | 200, all 29 addresses | **401 · `42501` permission denied** |
 | `beta_waitlist` — refused sign-ins | 200, addresses + reasons | **401 · `42501` permission denied** |
-| `squads` | 200 | 200 — unchanged (B3 not built) |
+| `squads` | 200, every handle listed | **401 · `42501`** (B3, same day) |
+| `user_prefs` · `player_watchlist` | readable | **401 · `42501`** |
 | `maddie_videos` | 200 | 200 — unchanged, correctly public |
 
 ⚠️ **`42501` is the detail that makes this a result rather than a guess.** It is Postgres's *insufficient
@@ -349,6 +350,15 @@ Sign-in admits normally; the Admin roster renders via `FPL_ADMIN_STORE_KEY`.
   the document whose whole purpose is recording what was actually checked.* The numbers here are now from a
   real run; the instruction that failed silently in one shell has been moved inside the script, where it
   works in both.
+
+⚠️ **What remains open, and it is not small:** a **guessed** handle still reads through `get_squad`. The
+`sha256(email)` keys are not guessable; the user-chosen ones from the no-login path — `ts`, `robots`,
+`tesheridan` were all visible in the pre-B3 probe — are. **Only Stage C closes that**, by replacing *knowing
+the key* with *being the user*.
+
+📋 **Also found on the way:** `player_watchlist` was documented in BETA.md and **never created in
+production**, so the watchlist had never persisted — it worked within a session and vanished on refresh, on
+two surfaces, silently. Created as part of B3, which switches the feature on.
 
 📋 **Follow-up, not urgent:** `beta_users` holds **29 rows for 26 distinct addresses** — about three differ
 only by capitalisation or whitespace (the ADR-120 problem). Harmless for admission now that matching is

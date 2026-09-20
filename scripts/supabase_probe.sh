@@ -65,19 +65,19 @@ probe() {                       # probe <label> <path> <what a hardened system s
 
 probe "beta_users — the allow-list (real tester emails in production)" \
       "beta_users?select=email" \
-      "unchanged for now; Stage B replaces the whole-table read with a boolean RPC"
+      "🔒 401 · 42501 — closed by Stage B; the gate asks is_allow_listed instead"
 
 probe "beta_waitlist — people who were REFUSED" \
       "beta_waitlist?select=email,reason" \
-      "🔴 an empty list or a permission error — this is Stage A's main win"
+      "🔒 401 · 42501 — closed by Stage A; writes still land, reads do not"
 
 probe "squads — enumerate every saved squad without knowing a handle" \
       "squads?select=handle" \
-      "unchanged for now; Stage B's RPCs are what stop enumeration"
+      "🔒 401 · 42501 — closed by Stage B3. ⚠️ A KNOWN handle still reads via get_squad; only Stage C fixes that"
 
 probe "maddie_videos — public marketing content" \
       "maddie_videos?select=topic" \
-      "unchanged — public read is correct here"
+      "200 — public read is correct, and it is the CANARY: if this is 401 too, the key is wrong"
 
 if [ "${BAD_KEY:-0}" = "1" ]; then
   echo "🔴 THE RUN IS INVALID — the API key was rejected, so every 401 above means 'bad key', not 'locked'."
