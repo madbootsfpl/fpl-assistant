@@ -560,6 +560,36 @@ to update it.
 including a deadline and a live gameweek.** ⚠️ *"No reseed needed"* — not *"no reseed permitted"*. Needing one
 is the failure signal, not a rule broken.
 
+---
+
+### ✅ LIVE ON PRODUCTION — 2026-09-20
+
+**The pipeline runs, and the app reads it.** `FPL_DATABASE_URL` is set as a GitHub Actions secret (the
+schedule) and a Streamlit secret (the app), both pointing at the Supabase **session pooler** — `pooler.
+supabase.com:5432`, IPv4, because ⚠️ *the direct connection is IPv6-only on most projects and GitHub Actions
+cannot reach it.*
+
+| check | result |
+|---|---|
+| a scheduled run reached the database | `data_status.ok = true`, attempted 3 minutes earlier |
+| the app is on Postgres, not the seed | sidebar reads **"🔄 Updated automatically"** |
+| and it is *really* Postgres | **667 players** in the app · **659** in `seed.db` |
+
+⭐ **That player count is the proof the caption alone is not.** A caption says what the code believes; two
+different numbers say which database answered.
+
+⚠️ **The nine FPL tables land in `public`, so PostgREST exposed them** — closed with `revoke all … from anon`
+straight after populating. The data is public information, so this is surface rather than secrecy, and the
+app reads it over the **direct Postgres connection**, never PostgREST.
+
+⚠️ **A first run took four minutes**, almost all of it installing Streamlit, PuLP and FastAPI — against a
+**3.6-second** refresh. Free on a public repo, but 96 ticks a day of that is waste, and the fix is the one
+already named: a smaller requirements set for the pipeline, not a coarser cadence.
+
+📅 **The exit criterion now starts: two weeks with no manual `reseed` needed, including a deadline and a live
+gameweek.** ⚠️ *Needed*, not *permitted* — needing one is the failure signal. GW6 is 2026-10-10, which makes
+the next three weeks a quiet window to find out.
+
 ### 💡 The lesson
 
 > **An observer that has to be run by hand is not an observer, it is a habit.**
