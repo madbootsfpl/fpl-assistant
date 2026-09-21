@@ -278,3 +278,49 @@ That 1.9 MB is **79% of the cold payload**, and two of the six connections.
 ⚠️ Not a clean swap: the history also feeds Player DNA percentiles, form curves and the minutes weighting, so
 what can be dropped needs establishing before anything is. But it attacks the one part a cache cannot — the
 first load — and the expensive half of it is already computed and sitting in a table.
+
+---
+
+# The login timings, and what they corrected (2026-09-21)
+
+| leg | samples | p50 | p90 | worst |
+|---|---|---|---|---|
+| `login_gate_check` | 2 | **768** | 966 | 1016 |
+| `login_touch` | 2 | **427** | 536 | 563 |
+| `analysis` | 4 | 142 | 199 | 199 |
+| `data_load` | 23 | **110** | **10,786** | 10,865 |
+
+## ⚠️ The 6 → 1 connection fix did nothing, and that is the finding
+
+| | predicted | observed |
+|---|---|---|
+| cold `data_load` after removing 5 handshakes at ~1,950 ms | ~3,000 ms | **10,786 ms — unchanged** |
+
+⭐⭐ **So handshakes were never the cost.** The arithmetic that blamed them — *4 extra connections ≈ 7,800 ms,
+therefore ~1,950 ms each* — fitted the numbers and was wrong, because two things changed between those
+measurements and only one was being counted.
+
+The real figure: **2.41 MB in 10.786 s = 0.22 MB/s, about 1.8 Mbps.** The cold load is the payload itself
+crossing a slow link, and always was.
+
+⭐ *A difference that fits an explanation is not evidence for it when something else changed too.*
+
+## What the login legs actually cost
+
+**~1.2 s** for the two timed legs. Real, and worth the shared `requests.Session` (~49 ms saved per call,
+measured) — but it is **not** the eleven seconds, and shipping it first would have been a third fix aimed at
+the wrong thing.
+
+⭐ The owner's *"much faster now"* is the warm path: `data_load` p50 **110 ms**. Cold is once per TTL, and
+whoever hits it waits.
+
+⚠️ **`login_restore_squad` recorded zero samples across two logins**, though the timer is wired identically
+to `login_touch`, which recorded both. Unexplained, and noted rather than guessed at.
+
+## So the remaining work is the one thing that transfers less
+
+**1.94 MB of the 2.41 MB — 81% — is history the app fetches only to recompute xP the pipeline already
+published.** Removing it leaves 0.47 MB, which at the measured throughput is **~2.1 s**.
+
+That is the xp_board work, and it is now the only lever left on the cold path: nothing about connections,
+caching or pooling can reduce a payload.
