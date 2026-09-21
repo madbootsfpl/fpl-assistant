@@ -363,7 +363,7 @@ learned the decisive fact before writing any Dart. ⭐ **Prove the thing that ca
 | **Navigation** | `go_router` | deep links (a shared player/squad link) fall out for free |
 | **Local cache** | **Drift** (SQLite) | ⭐ you already think in SQLite tables; the shapes map almost 1:1, and it gives real offline reads |
 | **Networking** | `dio` + generated models | interceptors for auth refresh and ETag handling (§10) |
-| **Models** | generate from the OpenAPI schema FastAPI already emits | one contract, no hand-written duplicates |
+| **Models** | ⚠️ **amended — see [ADR-221](../06_Decisions/ADR-221-hand-written-models-guarded-from-both-ends.md).** Codegen does not work: every route is typed `-> dict`, so the schema advertises each response as an untyped object and a generator emits `Map<String, dynamic>`. Hand-written instead, with the contract pinned from both ends | one contract, and drift fails in CI rather than on a phone |
 | **Responsive** | layout by breakpoint from day one, ship phone only | §11's architecture, §5's scope |
 
 ### 6.2 The product shape

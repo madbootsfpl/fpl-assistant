@@ -1,0 +1,144 @@
+/// The Dart models parse the **real** committed responses (ADR-221).
+///
+/// ⭐⭐ **This is the half that makes hand-written models defensible.** `tests/test_api_contract.py` guards
+/// the samples against the server drifting; this guards the models against the samples. Neither alone is
+/// enough: the Python test would stay green while a Dart model read the wrong key, and a Dart test against
+/// a hand-made fixture would stay green while the server changed underneath it.
+///
+/// ⚠️ **Fed from `../api-samples/`, never from a fixture written here.** A test that builds its own input
+/// is testing the test — ask *"if the server changed, would this fail?"* It would, because the samples are
+/// regenerated from the live service and shape-checked in CI.
+library;
+
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:board_slice/api/models.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+Map<String, dynamic> sample(String name) {
+  final file = File('../api-samples/$name.json');
+  if (!file.existsSync()) {
+    throw StateError('missing ${file.absolute.path} — run regenerate_samples.py');
+  }
+  return jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+}
+
+void main() {
+  group('analysis', () {
+    late SquadAnalysis answer;
+    setUp(() => answer = SquadAnalysis.fromJson(sample('analysis')));
+
+    test('parses a whole squad', () {
+      expect(answer.xi, hasLength(11));
+      expect(answer.bench, hasLength(4));
+      expect(answer.projectedXp, greaterThan(0));
+      expect(answer.gameweeks, hasLength(answer.horizon));
+    });
+
+    test('gameweek keys survive as integers, in order', () {
+      // ⚠️ The wire carries them as strings. Sorted as text, "10" precedes "6" — so a prefix sum over the
+      // next two gameweeks would answer for the wrong two.
+      final weeks = answer.xi.first.byGameweek.keys.toList()..sort();
+      expect(weeks, equals(answer.gameweeks));
+      expect(weeks, equals(List<int>.from(weeks)..sort()));
+    });
+
+    test('an unrounded per-gameweek sum is available to the client', () {
+      final player = answer.xi.first;
+      final total = player.byGameweek.values.fold<double>(0, (a, b) => a + b);
+      expect(total, closeTo(player.xp, 0.05));
+    });
+
+    test('a player carries availability as three separate facts', () {
+      // ⭐ status, chance and `leaving` are not derivable from one another — ADR-206 priced every doubt at
+      // zero by reading a flag as a verdict, and ADR-155 found FPL reporting an agreed transfer as `a`.
+      final player = answer.xi.first;
+      expect(player.status, isNotEmpty);
+      expect(player.minutesWeight, inInclusiveRange(0, 1));
+      expect(player.isLeaving, isFalse);
+    });
+  });
+
+  group('transfers', () {
+    late TransfersAnswer answer;
+    setUp(() => answer = TransfersAnswer.fromJson(sample('transfers')));
+
+    test('parses the ranked moves', () {
+      expect(answer.moves, isNotEmpty);
+      expect(answer.moves.first.incoming.name, isNotEmpty);
+      expect(answer.moves.first.out.name, isNotEmpty);
+    });
+
+    test('says whether the gains add up', () {
+      // ⭐ At count 1 these are alternatives; adding two of them double-counts the same bank.
+      expect(answer.coordinated, equals(answer.count > 1));
+    });
+
+    test('names the wider window a near-tie was broken on', () {
+      // ADR-209: at horizon 1 there must be a longer view; at 5 the ranking already is it.
+      expect(answer.longerWindow, answer.horizon < 5 ? isNotNull : isNull);
+    });
+  });
+
+  group('captain', () {
+    late CaptainAnswer answer;
+    setUp(() => answer = CaptainAnswer.fromJson(sample('captain')));
+
+    test('ranks candidates for a single gameweek', () {
+      expect(answer.gameweek, isNotNull);
+      expect(answer.picks, isNotEmpty);
+      final xps = answer.picks.map((p) => p.xp).toList();
+      expect(xps, equals(List<double>.from(xps)..sort((a, b) => b.compareTo(a))));
+    });
+
+    test('a doubtful pick is flagged, not dropped', () {
+      for (final pick in answer.picks) {
+        expect(pick.doubtful, isA<bool>());
+        expect(pick.xp, greaterThan(0));
+      }
+    });
+  });
+
+  group('route', () {
+    late RouteAnswer answer;
+    setUp(() => answer = RouteAnswer.fromJson(sample('route')));
+
+    test('names the target and answers the question either way', () {
+      expect(answer.target.name, isNotEmpty);
+      // ⭐ A blocked route is information. Silence would not be.
+      expect(answer.routes.isNotEmpty || answer.blocked.isNotEmpty, isTrue);
+    });
+
+    test('an unaffordable target reports how far short', () {
+      if (!answer.isAffordable) {
+        expect(answer.shortfall, isNotNull);
+        expect(answer.shortfall, greaterThan(0));
+      }
+    });
+  });
+
+  group('build', () {
+    late BuildAnswer answer;
+    setUp(() => answer = BuildAnswer.fromJson(sample('build')));
+
+    test('parses a legal fifteen within budget', () {
+      expect(answer.isOptimal, isTrue);
+      expect(answer.selected, hasLength(15));
+      expect(answer.totalCost, lessThanOrEqualTo(answer.budget));
+    });
+
+    test('the squad has the FPL position split', () {
+      final counts = <String, int>{};
+      for (final p in answer.selected) {
+        counts[p.position] = (counts[p.position] ?? 0) + 1;
+      }
+      expect(counts, equals({'GK': 2, 'DEF': 5, 'MID': 5, 'FWD': 3}));
+    });
+
+    test('the solver status is carried, not swallowed', () {
+      // ⚠️ A client that ignored this renders an empty pitch with no reason when the answer is Infeasible.
+      expect(answer.status, isNotEmpty);
+    });
+  });
+}

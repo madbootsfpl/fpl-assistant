@@ -64,7 +64,7 @@ user row. **That reason expires with Stage C**, the moment an answer depends on 
 
 ## 🤔 Decide these before building — they are gates, not details
 
-### 1. How the Dart models get written  🔴 *the one that shapes the morning*
+### 1. ~~How the Dart models get written~~ ✅ **DECIDED 2026-09-21 — [ADR-221](../06_Decisions/ADR-221-hand-written-models-guarded-from-both-ends.md), and built**
 
 The audit §5 says: *"generate from the OpenAPI schema FastAPI already emits — one contract, no hand-written
 duplicates."* **That does not work today.** Every route is typed `-> dict`, so the schema advertises each
@@ -79,10 +79,33 @@ Three ways out:
 | **Hand-write Dart models** from the samples | hours | ⚠️ nothing keeps them in step but the shape test |
 | **Hand-write, guarded** ← *what is set up* | done tonight | `tests/test_api_contract.py` fails when a response's **shape** moves, so a stale Dart model is caught in CI rather than on a phone |
 
-⭐ **Recommendation: the third, and revisit if it hurts.** The guard already catches a field disappearing,
-changing type, or becoming non-nullable — verified by breaking it four ways. Typing six nested responses
-before a single screen exists is optimising a problem nobody has measured yet, and it would install a second
-definition of every answer in a codebase whose last two ADRs were both about exactly that.
+✅ **Taken: the third, and the models are written.** `spikes/018-flutter-read-slice/app/lib/api/` holds
+`models.dart` and `client.dart` — `dart analyze` clean, **14 Dart tests green against the real committed
+responses**. Move them across with `board.dart` in step 3 below.
+
+⚠️ **The Dart half runs locally, not in CI** (Flutter is not installed there). ⭐ *A test nobody runs is
+not a guard* — wiring `flutter test` into the workflow belongs with creating the real app, and until then
+`tests/test_api_contract.py` is the half that actually gates a commit.
+
+### 1b. 🔴 Normalise the four player shapes — *recommended, not done*
+
+Writing the models found the API returns **four different player shapes**:
+
+| where | keys |
+|---|---|
+| `analysis` — xi · bench · issues · weakest · top_pick | **11**, curated |
+| `transfers.moves[].in` / `.out` | **5–6** |
+| `route.target` | **6** |
+| `route.blocked[].out`, `build.selected[]` | **42–45 raw database columns** |
+
+⚠️ **`build` ships 45 columns per player to a phone** — `cbi`, `corners_order`, `cost_change_event` —
+a 16.3 KB response where a curated one is ~3 KB, on the client whose architecture was justified by
+measuring payload. And it **makes the database schema part of the API contract**: rename a column and
+the mobile response changes, with nothing in between to notice.
+
+⭐ **Recommendation: normalise every endpoint on the curated summary** — a ~20-minute change to three
+endpoints, their samples and the models. Deliberately left for the morning: it is a contract change, and
+it deserves its own agreement rather than being folded into a models task at the end of a session.
 
 ### 2. Whether the first screens need auth at all
 
