@@ -41,6 +41,7 @@ from src.analytics import (
     suggest_transfers,
     team_schedule,
 )
+from src.analytics.board import ranked_for
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
 from src.ui.explain import MODEL_NOTE, render_explanation
@@ -557,12 +558,15 @@ def _card_horizon(upcoming, card_gws: int = _CARD_GWS) -> int:
     return max([card_gws, *reach])
 
 
-def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, teams=None, horizon=5,
-                    this_week=None, deadline=None):
+def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos, *, board,
+                    teams=None, horizon=5, this_week=None, deadline=None):
     """`this_week` (ADR-171): a zero-arg renderer dropped in **between the team banner and the xP strip** —
     the ① slot of the merged golden page. A callable rather than a flag because the answer needs `ask`, which
     this module's pitch/lineup half has no other reason to touch; passing the *rendering* in keeps the
     dependency at the page, where the composition decision is."""
+    # ⭐ The published board, sliced here rather than recomputed from 1.9 MB of history — falling back to
+    # the engine when nothing has been published (a fresh project, or the seed served after a fallback).
+    ranked = ranked_for(board, players, upcoming, history, gw_history, horizon=horizon)
     # US-423 (density): the "on the pitch — pick a player…" caption dropped (the pitch + ⚙ panel are discoverable)
     # so the pitch sits higher on mobile.
     # US-386: a brand status card so your team stands out + Save/backup is signposted. "Yours" = the shown squad is
@@ -606,7 +610,6 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     render_your_team(squad, is_yours=_is_yours)   # US-385/386: the one Your-team panel — import · back up (ADR-113)
     # the chosen horizon is returned so the answer panels below share the window the pitch is showing
     _flag_unavailable(owned)                         # ⛔ US-421: a member who can't play (injured/suspended/left)
-    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     team_names = {t["short_name"]: t["name"] for t in (teams or [])}   # short → friendly name (the card, US-344)
     by_gameweek_by_id = {r["id"]: r["by_gameweek"] for r in ranked}     # per-GW xP (ADR-032) for the captain
@@ -622,9 +625,16 @@ def render_my_squad(squad_name, squad, players, upcoming, history, gw_history, p
     # over 4 gameweeks, so a flat-3 horizon never computes the xP its third cell needs. Sizing the horizon by the
     # furthest gameweek any team's next-3 actually reaches keeps every cell populated.
     card_horizon = _card_horizon(upcoming)
+    # ⭐ The board again, at the card's own horizon. It is the same published rows re-summed over a longer
+    # prefix — no second fetch, and no recomputing 1.9 MB of history to answer a question the first call
+    # already had the numbers for.
+    # ⭐ **The board is sliced here, not handed in pre-sliced.** The card needs a LONGER horizon than the
+    # page (a blank gameweek spreads three fixtures over four weeks), and a list already cut to the page's
+    # horizon cannot be lengthened — it no longer holds the gameweeks. Passing the board keeps every horizon
+    # available, which is exactly the shape this had when it called `decision_xp` twice.
     card_bg_by_id = by_gameweek_by_id if horizon >= card_horizon else {
         r["id"]: r["by_gameweek"]
-        for r in decision_xp(players, upcoming, history, horizon=card_horizon, gw_history_by_code=gw_history)}
+        for r in ranked_for(board, players, upcoming, history, gw_history, horizon=card_horizon)}
 
     def _pergw_fixtures(p):
         """A player's next-≤3 **gameweeks** with the per-GW xP (ADR-109). Works for **any** player
@@ -1134,8 +1144,8 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
 
 # ---- Transfer (best XI-aware swaps; ADR-046) -------------------------------------------------------
 
-def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos, *, horizon=5,
-                    free: int = 1, bank: float = 0.0):
+def render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos, *, board,
+                    horizon=5, free: int = 1, bank: float = 0.0):
     """⚠️ **ADR-191 — `bank` and `free` are passed in, not collected here.**
 
     This panel used to own a Bank slider, and the week's answer read it out of session state. That could never
@@ -1143,6 +1153,9 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     state of widgets a run does not render. The two answers are mutually exclusive by construction, so the
     week's answer always saw the default. The control now lives above the selector, where both can see it.
     """
+    # ⭐ The published board, sliced here rather than recomputed from 1.9 MB of history — falling back to
+    # the engine when nothing has been published (a fresh project, or the seed served after a fallback).
+    ranked = ranked_for(board, players, upcoming, history, gw_history, horizon=horizon)
     count = st.slider("Transfers (a coordinated plan)", 1, 3, max(1, min(int(free or 1), 3)),
                       help="How many swaps to plan together (they share the bank). Defaults to the free "
                            "transfers you hold, above — raise it to see what a hit would buy.")
@@ -1151,7 +1164,6 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to improve.")
         return
-    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
     xp_by_id = {r["id"]: r["xp"] for r in ranked}
     bench_ids = squad.get("bench_ids", [])
 

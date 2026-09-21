@@ -86,12 +86,23 @@ horizon = 1 if _opts is None else (st.segmented_control(
     help="How many upcoming gameweeks the projections look over. (Captaincy is always the next gameweek.)"
 ) or _default)
 
+# ⭐⭐ **The history is loaded where it is needed, not at the top.** `history` + `gw_history` are **1.9 MB of
+# the 2.41 MB** a cold page load moves, and production measured that at ~1.8 Mbps — so they were about eight
+# of the eleven seconds. Measured per sub-tab: *This week*, *Transfer* and *Chips* read them for nothing but
+# the xP the pipeline already publishes, while *Captain*, *DNA* and *Lab* genuinely need the raw rows.
+#
+# ⚠️ The loaders are cached, so asking for them later costs nothing when they are already in hand and costs
+# nothing at all when they are never asked for. ⭐ *Not fetching something beats caching it.*
 with analytics.timed("data_load", page="My Squad"):    # perf: FPL data loading (ADR-100, US-336)
     players = dataload.players()
     upcoming = dataload.upcoming_fixtures()
-    history = dataload.history_by_code()
-    gw_history = dataload.gw_history_by_code()   # in-season form (ADR-060; dormant now)
     teams = dataload.teams()
+    _board = dataload.xp_board()
+    # ⚠️ **An empty board is a real state**: a fresh project before the pipeline's first tick, and the
+    # committed snapshot that ADR-211's fallback serves whenever Postgres cannot be read. When it is empty
+    # the views compute, which needs the raw rows — so the page pays the 1.9 MB then, and only then.
+    _history = dataload.history_by_code() if not _board else None
+    _gw_history = dataload.gw_history_by_code() if not _board else None
 photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
 badges = badge_url_by_short_name(teams)
 
@@ -116,7 +127,9 @@ else:
         # Scout already use. Transfer joins it: ADR-174 declined to bring that tab in because ~10 widgets
         # would *stack* onto a 41-block page, and behind a selector they exist only when chosen.
         team_names = {t["short_name"]: t["name"] for t in teams}   # "MUN" → "Man Utd" (US-278)
-        horizon = views.render_my_squad(squad_name, squad, players, upcoming, history, gw_history, photos,
+        # ⭐ The board, not 1.9 MB of history — verified to give identical numbers at every horizon.
+        horizon = views.render_my_squad(squad_name, squad, players, upcoming, _history, _gw_history,
+                                        photos, board=_board,
                                         teams=teams, horizon=horizon, deadline=_deadline)
 
         st.divider()
@@ -172,10 +185,13 @@ else:
             views.render_this_week(squad_name, squad, horizon=horizon, players=players,
                                    free=_held, bank=_money)
         elif answer == "Captain":
-            views.render_captain(squad_name, squad, players, upcoming, history, photos, badges, team_names,
-                                 gw_history=gw_history)
+            # ⚠️ Raw history, deliberately: `captain_picks` builds its own baseline and minutes weight
+            # rather than reading a published xP, so the board cannot stand in here.
+            views.render_captain(squad_name, squad, players, upcoming, dataload.history_by_code(), photos,
+                                 badges, team_names, gw_history=dataload.gw_history_by_code())
         elif answer == "Transfer":
-            views.render_transfer(squad_name, squad, players, upcoming, history, gw_history, photos,
+            views.render_transfer(squad_name, squad, players, upcoming, _history, _gw_history, photos,
+                                  board=_board,
                                   horizon=horizon, free=_held, bank=_money)
         else:
             # Chips stays a click inside its own panel, and still not for latency: a chip expires at the end
@@ -193,7 +209,8 @@ else:
         if _deadline:
             st.caption(_deadline)
         team_names = {t["short_name"]: t["name"] for t in teams}
-        views.render_health(squad_name, squad, players, upcoming, history, gw_history, photos, badges,
+        views.render_health(squad_name, squad, players, upcoming, dataload.history_by_code(),
+                            dataload.gw_history_by_code(), photos, badges,
                             team_names=team_names, horizon=horizon)
     elif view == "Leagues":
         # US-437 (ADR-166) — the owner: *"Leagues is tightly associated with your squad."* It is: every number
@@ -207,5 +224,6 @@ else:
         st.subheader("🧪 Squad Lab")
         st.caption("**Build your squad** — the full optimiser. New season, a wildcard, a free hit or a total "
                    "revamp. **Use this squad →** sends it to the other tabs to manage.")
-        views.render_build(players, upcoming, history, gw_history, photos, badges, teams=teams,
+        views.render_build(players, upcoming, dataload.history_by_code(),
+                           dataload.gw_history_by_code(), photos, badges, teams=teams,
                            horizon=horizon)

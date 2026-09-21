@@ -30,36 +30,21 @@ from src.storage import Storage
 TTL = 300
 
 
-# ⭐⭐ **One connection fills the cache, not six.** Each loader used to open its own `Storage`, which cost
-# nothing locally and **~1,950 ms per connection** from Streamlit Cloud — measured from production, after
-# ADR-217 priced the same trade at ~30 ms using a laptop. Six opens turned a 3-second cold load into an
-# 11-second one.
+# ⭐⭐ **Each loader fetches only itself, and that reverses a change made two hours earlier.**
 #
-# ⚠️ **The cost of bundling, stated:** a cold miss now fetches all 2.41 MB even if the visitor landed on
-# Signals or Trending, which need only 0.5 MB of it. That is ~1.5 s of transfer against ~7.8 s of
-# handshakes, once per TTL, and four of the six pages need the whole thing anyway.
+# A bundle was introduced so one connection filled the whole cache, on the reasoning that six connections at
+# ~1,950 ms each were the cold load. Production then showed the cold load **unchanged at 10.786 s** — so
+# handshakes were never the cost. The real figure is **2.41 MB at about 1.8 Mbps**, and a bundle cannot make
+# a payload smaller. What it *did* do was force every page to fetch everything, which is exactly what stops
+# a page from not fetching what it does not read.
 #
-# ⭐ The per-dataset functions below stay cached individually, so a **warm** call unpickles only its own
-# slice — `teams()` costs 2 KB, not 2.41 MB.
-@st.cache_data(ttl=TTL, show_spinner=False)
-def _everything() -> dict:
-    """Every board-wide read, over a single connection. The cold path, and the only thing that opens one."""
-    from src.web_streamlit import status
-
+# ⭐ *An optimisation that was never measured to work, and which blocks the one that does, is not a
+# trade-off — it is just in the way.*
+def _rows(fetch):
+    """Open one connection, fetch, close."""
     store = Storage()
     try:
-        return {
-            "players": [dict(r) for r in store.get_players()],
-            "teams": [dict(r) for r in store.get_teams()],
-            "upcoming_fixtures": [dict(r) for r in store.get_upcoming_fixtures()],
-            "all_fixtures": [dict(r) for r in store.get_all_fixtures()],
-            "history_by_code": {c: [dict(r) for r in rows]
-                                for c, rows in store.get_history_by_code().items()},
-            "gw_history_by_code": {c: [dict(r) for r in rows]
-                                   for c, rows in store.get_gw_history_by_code().items()},
-            "headline_events_by_id": {k: list(v) for k, v in store.headline_events_by_id().items()},
-            "freshness": status.freshness_from(store),
-        }
+        return fetch(store)
     finally:
         store.close()
 
@@ -67,43 +52,53 @@ def _everything() -> dict:
 @st.cache_data(ttl=TTL, show_spinner=False)
 def players() -> list[dict]:
     """Every player, with their club short name. ~518 KB."""
-    return _everything()["players"]
+    return _rows(lambda s: [dict(r) for r in s.get_players()])
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
 def teams() -> list[dict]:
     """The twenty clubs. ~2 KB."""
-    return _everything()["teams"]
+    return _rows(lambda s: [dict(r) for r in s.get_teams()])
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
 def upcoming_fixtures() -> list[dict]:
     """Fixtures still to be played. ~58 KB."""
-    return _everything()["upcoming_fixtures"]
+    return _rows(lambda s: [dict(r) for r in s.get_upcoming_fixtures()])
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
 def all_fixtures() -> list[dict]:
     """Every fixture, played and upcoming."""
-    return _everything()["all_fixtures"]
+    return _rows(lambda s: [dict(r) for r in s.get_all_fixtures()])
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
 def history_by_code() -> dict:
-    """Past-season history, keyed by player code. ~747 KB."""
-    return _everything()["history_by_code"]
+    """Past-season history, keyed by player code. **~747 KB** — ask for it only if you read it."""
+    return _rows(lambda s: {c: [dict(r) for r in rows] for c, rows in s.get_history_by_code().items()})
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
 def gw_history_by_code() -> dict:
-    """Per-gameweek history, keyed by player code. ~1.2 MB — the biggest single read."""
-    return _everything()["gw_history_by_code"]
+    """Per-gameweek history, keyed by player code. **~1.2 MB** — the biggest read in the app."""
+    return _rows(lambda s: {c: [dict(r) for r in rows] for c, rows in s.get_gw_history_by_code().items()})
+
+
+@st.cache_data(ttl=TTL, show_spinner=False)
+def xp_board() -> list[dict]:
+    """The published xP board — ~250 KB, against the 1.9 MB of history it replaces.
+
+    ⭐⭐ **The pipeline already computed this.** `analytics.board.ranked_from_board` reassembles
+    `decision_xp`'s row shape from it — verified field-for-field identical at every horizon 1–8.
+    """
+    return _rows(lambda s: s.get_xp_board())
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
 def headline_events_by_id() -> dict:
     """ADR-151's stored headline events, keyed by player id."""
-    return _everything()["headline_events_by_id"]
+    return _rows(lambda s: {k: list(v) for k, v in s.headline_events_by_id().items()})
 
 
 @st.cache_data(ttl=TTL, show_spinner=False)
@@ -111,15 +106,16 @@ def freshness() -> tuple[int | None, str]:
     """The sidebar caption's two values — cached **with the same TTL as the board, on purpose**.
 
     ⭐⭐ **A caption must describe what is on the screen.** Reading the timestamp live while serving a cached
-    board would let it announce a refresh whose data the reader cannot see — which is precisely the
-    "fresh-looking but stale" failure ADR-211 exists to prevent, arriving from the opposite direction.
+    board would let it announce a refresh whose data the reader cannot see — the *fresh-looking but stale*
+    failure ADR-211 exists to prevent, arriving from the opposite direction.
     """
-    return _everything()["freshness"]
+    from src.web_streamlit import status
+    return _rows(status.freshness_from)
 
 
 def clear() -> None:
     """Drop every cached read — for the local "🔄 Refresh data" button, which would otherwise refresh the
     database and then render the previous five minutes back at you."""
-    for fn in (_everything, players, teams, upcoming_fixtures, all_fixtures,
-               history_by_code, gw_history_by_code, headline_events_by_id, freshness):
+    for fn in (players, teams, upcoming_fixtures, all_fixtures, history_by_code,
+               gw_history_by_code, xp_board, headline_events_by_id, freshness):
         fn.clear()

@@ -69,3 +69,21 @@ def _scaled(total, used: int, of: int):
     if total is None or not of:
         return total
     return round(total * used / of, 1)
+
+
+def ranked_for(board, players, upcoming, history, gw_history, *, horizon: int = 5) -> list[dict]:
+    """The published board when there is one, a live computation when there is not.
+
+    ⚠️⚠️ **An empty board is a real state, not a test artefact.** The committed snapshot has never had one
+    published into it, a fresh project has none until the pipeline's first tick, and ADR-211's fallback
+    serves that snapshot whenever Postgres cannot be read. Without this, My Squad would show **zero xP with
+    nothing saying why** — the silent-degrade failure that whole ADR exists to prevent.
+
+    ⭐ *Declining is right when the instrument cannot answer; falling back is right when another instrument
+    can.* Here one can: the engine that produced the board in the first place.
+    """
+    if board:
+        return ranked_from_board(board, horizon=horizon)
+    from src.analytics.xp import decision_xp
+    return decision_xp(players, upcoming, history or {}, horizon=horizon,
+                       gw_history_by_code=gw_history or {})
