@@ -98,6 +98,20 @@ need to be able to edit squad once built
 need to be able to select captain
 need to be able to make transfers to your team
 
+### ⚠️ Provenance unknown — these notes were not written by the owner
+
+Committed on 2026-09-21 from an uncommitted working-tree change that was already present when the session
+began, so git cannot say who made it or when. **The owner confirms he did not write them**, and the sprint
+template leaves this section blank — Sprints 56, 58 and 100 all have an empty `### Notes _(for Tony)_`.
+Sprints 57 and 62 are the only two with content here.
+
+⚠️ **They were committed with a message asserting they were the owner's own words.** That was an inference
+from the content and the section heading, stated as fact and not checked with him. ⭐ *A heading that says
+who a section is for does not say who wrote it.*
+
+Kept rather than deleted, because the observations turned out to be accurate and checkable — which is the
+only thing about them that is established.
+
 ### ✅ Checked against the running app, 2026-09-21 — all five are done
 
 ⚠️ **These notes are dated 2026-08-05 and were still uncommitted seven weeks later**, so they read as open
