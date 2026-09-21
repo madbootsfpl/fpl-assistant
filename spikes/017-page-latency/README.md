@@ -77,3 +77,34 @@ step rather than being asserted. ⭐ *A claim about when something changed is we
 ⚠️ **Deliberately not done here.** The owner asked to measure before changing anything, and three separate
 things today turned out to be a fix scoped to what was visible at the time. Reading the production number
 first is what stops this becoming the fourth.
+
+---
+
+## Fixed, 2026-09-21
+
+`_player_count` and `_data_as_of` merged into **one `_freshness()`** that opens a single connection.
+
+| per page render | before | after |
+|---|---|---|
+| connections | **3** | **2** |
+| queries (Postgres) | 10 | **9** |
+| caption | `📅 667 players · data as of 2026-09-21` | unchanged |
+
+⭐ The date still comes from the right place on each backend: `data_status.refreshed_at` on Postgres — the
+last refresh that actually *passed* — and the snapshot's mtime on SQLite, which needs no query at all.
+
+**Guarded** by `tests/test_status_connections.py`, which counts **connections, not milliseconds**. ⚠️ A
+timing test against a local database would measure a latency the app never experiences and pass whatever the
+code did — the same trap as benchmarking Supabase from a laptop. Mutation-tested by splitting it back in two.
+
+⚠️ **One wrong turn:** the degradation test patched `Storage` to raise, left `DB_PATH` pointing at the real
+seed, and expected `"unknown"` — so it failed on **correct** behaviour, because falling back to the
+snapshot's date is right when the snapshot is what is being served. ⭐ *Check what the code actually falls
+back to before asserting what it should say.* There are now two tests: one for a broken database with a
+snapshot present, one for nothing readable at all.
+
+## Still open
+
+📅 **Read `sql/page_timings.sql` on production.** This change removes one of three connections; whether that
+is enough is a question about real Streamlit-Cloud-to-Supabase latency, and ADR-211's bar (~200 ms per
+rerun) has still not been read against real numbers. Connection caching remains undecided, deliberately.

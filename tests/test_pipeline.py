@@ -459,10 +459,11 @@ def test_the_sidebar_does_not_claim_a_redeploy_is_needed_while_reading_postgres(
     monkeypatch.setattr(status_module.st, "caption", lambda msg, **k: captions.append(msg))
     monkeypatch.setattr(status_module.st, "warning", lambda *a, **k: None)
     monkeypatch.setattr(status_module.st, "button", lambda *a, **k: False)
-    monkeypatch.setattr(status_module, "_player_count", lambda: 659)
+    # ⭐ One stub, because spike 017 merged the two helpers into `_freshness()` — the caption was opening a
+    # connection for the count and another for the date, on every page render.
+    monkeypatch.setattr(status_module, "_freshness", lambda: (659, "2026-09-19"))
     monkeypatch.setattr(status_module, "is_local", lambda: False)
     monkeypatch.setattr(status_module, "fallback_reason", lambda: None)
-    monkeypatch.setattr(status_module, "_data_as_of", lambda: "2026-09-19")
 
     monkeypatch.setattr(config_module, "DATABASE_URL", None)
     status_module.render_data_status()

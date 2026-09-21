@@ -11,7 +11,6 @@ that reuses the CLI's `ingest.refresh`. The cloud shows the captions only; it ne
 
 import datetime
 import os
-import sqlite3
 
 import streamlit as st
 
@@ -19,47 +18,47 @@ from src import config, ingest
 from src.storage import Storage, fallback_reason
 
 
-def _data_as_of() -> str:
-    """When the data was last refreshed — a date, or "unknown".
+def _freshness() -> tuple[int | None, str]:
+    """The caption's two values — the player count and the refresh date — from **one connection**.
 
-    ⭐ **Two sources, because the answer stopped being a file** (ADR-211 2b). Against SQLite this is the
-    snapshot's mtime, exactly as before. Against Postgres there is no file, and an mtime would be the wrong
-    question anyway: it records when something *wrote*, never whether the write was any good. So Postgres
-    reports `data_status.refreshed_at` — the last refresh that actually passed — and falls back to "unknown"
-    until the scheduled pipeline starts writing it in 2c.
+    ⭐⭐ **They used to open one each, and this line renders on every page.** `_player_count` opened a
+    `Storage`, counted, closed; `_data_as_of` opened another, read `data_status`, closed. Against a local
+    SQLite file that is free. Against Supabase each open is a DNS lookup, a TCP handshake and a TLS
+    handshake before any data moves — measured at **50-80 ms more than a warm connection** — and Streamlit
+    re-runs the whole script on every click.
+
+    ⚠️ Spike 017 traced three connections per page render and **two of them were this caption**. One line of
+    sidebar text was costing two thirds of the connection overhead of the entire page.
+
+    ⭐ The date still has two sources, because the answer stopped being a file (ADR-211 2b): against Postgres
+    it is `data_status.refreshed_at` — the last refresh that actually *passed* — and against SQLite it is the
+    snapshot's mtime. The SQLite path needs no query at all, so it still makes none.
     """
-    if config.DATABASE_URL and not fallback_reason():
-        try:
-            store = Storage()
-            try:
-                row = store.data_status()
-            finally:
-                store.close()
-            if row and row["refreshed_at"]:
-                return str(row["refreshed_at"])[:10]
-        except Exception:                      # noqa: BLE001 — a caption must never take the page down
-            return "unknown"
-        return "unknown"
-    try:
-        return datetime.date.fromtimestamp(os.path.getmtime(config.DB_PATH)).isoformat()
-    except OSError:
-        return "unknown"
+    count: int | None = None
+    as_of: str | None = None
+    from_db = bool(config.DATABASE_URL and not fallback_reason())
 
-
-def _player_count() -> int | None:
-    """How many players the current DB holds — shown so a stale snapshot is obvious (US-219).
-
-    A testers' seed can hold fewer players than a fresh CLI refresh; surfacing the count is what makes
-    "the app is on the snapshot, not your fresh cache" visible at a glance. Cheap (a COUNT), best-effort.
-    """
     try:
         store = Storage()
         try:
-            return store.count_players()
+            count = store.count_players()
+            if from_db:
+                row = store.data_status()
+                as_of = str(row["refreshed_at"])[:10] if row and row["refreshed_at"] else "unknown"
         finally:
             store.close()
-    except sqlite3.Error:
-        return None
+    except Exception:              # noqa: BLE001 — a caption must never take the page down
+        pass
+
+    if as_of is None:
+        # ⚠️ Not an error path. On SQLite this is the normal route, and an mtime needs no connection. On
+        # Postgres `DB_PATH` is a DSN, `getmtime` raises, and "unknown" is the honest answer.
+        try:
+            as_of = datetime.date.fromtimestamp(os.path.getmtime(config.DB_PATH)).isoformat()
+        except OSError:
+            as_of = "unknown"
+
+    return count, as_of
 
 
 def is_local() -> bool:
@@ -70,9 +69,9 @@ def is_local() -> bool:
 def render_data_status() -> None:
     """The sidebar data status: a freshness caption always; a local-only refresh button (ADR-056)."""
     with st.sidebar:
-        count = _player_count()
+        count, as_of = _freshness()
         prefix = f"{count} players · " if count is not None else ""
-        st.caption(f"📅 {prefix}data as of {_data_as_of()}")
+        st.caption(f"📅 {prefix}data as of {as_of}")
         # ⭐⭐ **A configured database we could not reach must never degrade quietly.** Serving the committed
         # snapshot is the right thing to do — the app keeps working — but doing it *silently* would leave a
         # dead pipeline looking exactly like a healthy one, which is the failure ADR-211 exists to remove.

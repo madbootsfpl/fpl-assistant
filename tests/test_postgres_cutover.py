@@ -140,7 +140,9 @@ def test_the_sidebar_turns_a_fallback_into_a_WARNING_not_a_caption(monkeypatch):
     monkeypatch.setattr(status_module.st, "warning", lambda msg, **k: calls["warning"].append(msg))
     monkeypatch.setattr(status_module.st, "caption", lambda msg, **k: calls["caption"].append(msg))
     monkeypatch.setattr(status_module.st, "button", lambda *a, **k: False)
-    monkeypatch.setattr(status_module, "_player_count", lambda: 659)
+    # ⭐ Spike 017 merged `_player_count` and `_data_as_of` into one `_freshness()` — the caption opened a
+    # connection each, on every page, and each open is a TLS handshake against Supabase.
+    monkeypatch.setattr(status_module, "_freshness", lambda: (659, "2026-09-19"))
     monkeypatch.setattr(status_module, "is_local", lambda: False)
 
     status_module.render_data_status()

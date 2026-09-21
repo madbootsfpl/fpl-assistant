@@ -81,7 +81,7 @@ def main():
     top_npxg = [r["web"] for r in sorted(rows, key=lambda r: -r["npxg"])[:10]]
     entered = [w for w in top_npxg if w not in top_fpl]
     dropped = [w for w in top_fpl if w not in top_npxg]
-    print(f"\nTop-10 by FPL xG vs by npXG:")
+    print("\nTop-10 by FPL xG vs by npXG:")
     print(f"  enters top-10 on npXG: {entered}")
     print(f"  drops out on npXG:     {dropped}")
     big = sorted(rows, key=lambda r: -r["pen_gap"])[:5]
