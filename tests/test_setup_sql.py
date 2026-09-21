@@ -287,3 +287,52 @@ def test_events_accepts_analytics_and_gives_nothing_back(db):
             _as_anon(db, stmt)
 
     assert db.execute("select count(*) from public.events").fetchone()[0] == 2, "nothing was destroyed"
+
+
+def test_the_pipeline_opens_its_own_tables_for_reading(db):
+    """⭐⭐ **The bug ADR-216's own fix introduced, one turn later.**
+
+    ADR-216 closed the project's default privileges so a new table arrives with no grants — correct, and it
+    left the pipeline's eleven tables unreadable. On a **fresh** project the effect is total: `setup.sql`
+    runs, the pipeline creates its tables, and a mobile client can read **none** of them. Production only
+    escaped it because its tables predated the change and a one-off migration granted them by hand.
+
+    ⚠️ *A one-off migration cannot cover a table that does not exist yet* — which is the exact fault ADR-216
+    was written about, committed by the fix for it. So the grant moved to the thing that creates the tables.
+    """
+    import psycopg
+
+    from src.storage import DATA_TABLES, Storage
+
+    _apply(db)                                    # setup.sql closes the defaults
+    db.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated")
+
+    # ⚠️ **Opt out of the suite's Postgres harness**, which patches `db.connect` to pin every connection to
+    # a throwaway *schema*. Left in place, `Storage(target)` would never reach the database this test built
+    # and the tables would be created somewhere else entirely — the same seam `test_postgres_cutover` takes
+    # for the same reason. ⭐ *A harness that guarantees a working connection is exactly wrong for a test
+    # about which database you land in.*
+    from src import db as db_module
+    real_connect = getattr(db_module, "_unpatched_connect", db_module.connect)
+    patched, db_module.connect = db_module.connect, real_connect
+
+    target = DSN.rsplit("/", 1)[0] + "/" + db.info.dbname
+    try:
+        store = Storage(target, ensure_schema=True)   # the pipeline's own path
+    finally:
+        db_module.connect = patched
+    try:
+        store.conn.execute("INSERT INTO teams (id, name, short_name) VALUES (1, 'Arsenal', 'ARS')")
+        store.conn.commit()
+    finally:
+        store.close()
+
+    for table in DATA_TABLES:
+        assert _as_anon(db, f"select count(*) from public.{table}") is not None, (
+            f"a client cannot read {table} — the mobile read surface (audit §4.1) is closed")
+
+    # ⭐ Readable, never writable — and the tables a person typed into stay shut regardless.
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        _as_anon(db, "delete from public.players")
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        _as_anon(db, "select count(*) from public.squads")

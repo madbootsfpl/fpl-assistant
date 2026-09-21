@@ -341,6 +341,15 @@ CREATE TABLE IF NOT EXISTS xp_board (
 )
 """
 
+# ⭐⭐ **Every table below is board-wide public football data, and a client reads it directly** (mobile audit
+# §4.1). They are listed once, here, because the pipeline has to hand each of them a read grant the moment it
+# creates them — see `_open_for_reading`.
+DATA_TABLES = (
+    "teams", "players", "fixtures", "player_history_past", "player_history",
+    "headline_events", "player_availability", "player_transfer_flow", "data_status",
+    "xp_board", "team_dna_board",
+)
+
 CREATE_TEAM_DNA_BOARD = """
 CREATE TABLE IF NOT EXISTS team_dna_board (
     -- ⭐ **Published because a client cannot compute it.** Every axis is a PERCENTILE against the other
@@ -625,9 +634,33 @@ class Storage:
             # ⚠️ **Stated so it is not mistaken for coverage: this is "not applicable", not "handled".** The day
             # a column is added *after* Postgres is carrying real data, that needs a real migration — and this
             # skip is where someone will look for one. See ADR-211's staging.
+            self._open_for_reading()
             self._migrate()                # ⭐ both backends since ADR-211 2d — see the note in `_migrate`
             if not self.is_postgres:
                 self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
+
+    def _open_for_reading(self) -> None:
+        """Let a client read the tables this just created. Postgres only; a no-op on SQLite.
+
+        ⭐⭐ **The thing that creates a table owns its access.** ADR-216 closed the project's default
+        privileges so a new table arrives with no grants — which is the right default, and it left the
+        pipeline's own tables unreadable. On a fresh project that is total: `setup.sql` runs, the pipeline
+        creates eleven tables, and a mobile client can read **none** of them. Production only escaped it
+        because its tables predated the change and a one-off migration granted them by hand.
+
+        ⚠️ **A one-off migration cannot cover a table that does not exist yet**, which is the same fault
+        ADR-216 was written about, one turn later and committed by the fix itself. Doing it here means the
+        twelfth table is right the day it is added, with nobody remembering anything.
+
+        ⭐ SELECT only, and only these tables. They hold public FPL data — the same numbers anyone can fetch
+        from the API — and nothing here is a table a person typed into. The seven that are (`squads`,
+        `beta_users`, …) are created by `sql/setup.sql`, never by this, and stay closed.
+        """
+        if not self.is_postgres:
+            return
+        for table in DATA_TABLES:
+            # Idempotent, and cheap: a re-grant of an existing grant is a no-op.
+            self.conn.execute(f'GRANT SELECT ON {table} TO anon, authenticated')
 
     def _migrate(self) -> None:
         """Add any columns missing from an older database, table by table.

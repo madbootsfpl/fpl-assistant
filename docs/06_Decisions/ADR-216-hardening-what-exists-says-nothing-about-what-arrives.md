@@ -105,3 +105,39 @@ currently has more is part of the same audit.
 
 ⏳ **Not yet applied to production.** The diagnostic runs first, because a fix applied without reading the
 answer is how the 2026-09-19 incident happened.
+
+---
+
+## 🐛 Follow-up, 2026-09-21 — this ADR's own fix had the fault it describes
+
+Found while checking whether the spent migration files could be deleted.
+
+`alter default privileges … revoke all` means a new table arrives with **no grants**. Correct, and it left
+the pipeline's eleven tables unreadable. On a **fresh** project the effect is total:
+
+```
+setup.sql → pipeline creates its tables → anon:  permission denied for table xp_board
+                                                 permission denied for table players
+                                                 permission denied for table team_dna_board
+```
+
+That is §4.1's entire read surface — the reason the boards are published at all — closed on every new
+project, and closed for any twelfth table added to production later.
+
+Production escaped only because its tables predated the change and `lock_data_tables.sql` granted them by
+hand. ⚠️ **A one-off migration cannot cover a table that does not exist yet** — which is *precisely* what
+this ADR is about, committed by the fix for it. ⭐ *The failure a document describes is not one it is immune
+to.*
+
+**Fixed at the source**: `Storage._open_for_reading()` grants `SELECT` on the tables it just created,
+Postgres only, idempotent. ⭐ *The thing that creates a table owns its access*, so the twelfth table is right
+the day it is added and nobody has to remember. The seven tables a person types into are created by
+`setup.sql`, never here, and stay closed.
+
+Verified on a fresh project: anon reads all three boards (667 · 667 · 20), every write refused, `squads` and
+`beta_users` still shut. Guarded in `tests/test_setup_sql.py`; mutation-tested by removing the grant and by
+widening it to `ALL`.
+
+⚠️ That guard needed to **opt out of the suite's Postgres harness**, which pins every connection to a
+throwaway schema — left in place, `Storage(target)` never reaches the database the test built. *A harness
+that guarantees a working connection is exactly wrong for a test about which database you land in.*
