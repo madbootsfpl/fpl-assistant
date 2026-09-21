@@ -72,3 +72,34 @@ into twice.
 📋 **So the slice's job includes this test**: render the list, compare its numbers against the web app's for
 the same horizon, and count the disagreements. If it is the predicted handful, publishing the totals is
 justified by evidence. ⭐ *The point of a slice is to learn, and this is the thing worth learning.*
+
+---
+
+# ✅ Run, 2026-09-21 — §4.1 holds
+
+```
+667 players · 162 KB · 511 ms
+```
+
+**Direct Flutter → Supabase works.** No API, no auth, no server in the middle. The claim the whole mobile
+plan rests on is no longer an assumption.
+
+| the same question — *"players ranked by xP"* | payload | time |
+|---|---|---|
+| the web app, cold | **2,468 KB** | 10,786 ms |
+| this slice | **162 KB** | 511 ms |
+
+⚠️ **Not a like-for-like race** — the slice ran from a Mac in Chrome, the web figure from Streamlit Cloud, and
+those are different network paths. What *is* comparable is the payload: **162 KB to fetch the answer against
+2,468 KB to ship the inputs and recompute it.** That is the architecture doing what it was designed to.
+
+⭐ **162 KB also beat the 250 KB estimate**, because the client asks for four columns —
+`select=web_name,team,position,by_gameweek`. The rest of the board never crosses the wire. PostgREST's column
+selection is doing real work, and the web app's `get_xp_board()` takes every column without needing them all.
+
+## What this does not yet answer
+
+- **A real device on mobile data.** Chrome on a Mac is a generous network. The device questions need Xcode.
+- **The rounding divergence.** Predicted at ~0.09% of values, with no Dart rounding mode able to fix it.
+  Comparing the slice's numbers against the live web app is still the outstanding test, and it is the one
+  that decides whether the server should publish the rounded totals.
