@@ -75,6 +75,9 @@ class BoardClient {
   final String projectUrl;
   final String publishableKey;
 
+  /// Bytes of the last response — the number §4.1 is judged on, so the client has to be able to say it.
+  int? lastBytes;
+
   Future<List<BoardRow>> fetchBoard() async {
     final uri = Uri.parse(
       '$projectUrl/rest/v1/xp_board'
@@ -87,6 +90,7 @@ class BoardClient {
     if (response.statusCode != 200) {
       throw Exception('board read failed: ${response.statusCode} ${response.body}');
     }
+    lastBytes = response.bodyBytes.length;
     final rows = jsonDecode(response.body) as List<dynamic>;
     return rows
         .map((r) => BoardRow.fromJson(r as Map<String, dynamic>))

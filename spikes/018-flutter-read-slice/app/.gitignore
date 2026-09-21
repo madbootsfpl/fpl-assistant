@@ -1,0 +1,4 @@
+# Build output and tool state — the source and the tests are what is worth keeping.
+build/
+.dart_tool/
+.flutter-plugins-dependencies
