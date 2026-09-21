@@ -229,3 +229,52 @@ fixture reaches the code path before believing its verdict* — otherwise a brok
 
 These three genuinely use the history they load, so trimming cannot help them. 📅 **The decision still open
 is caching** — and it is a freshness trade, so the TTL is the owner's call, not an implementation detail.
+
+---
+
+# Production, the morning after (2026-09-21)
+
+`data_load` p50, by the hour — the daily bucket was too coarse once the change landed mid-afternoon.
+⭐ *A bucket wider than the change you are looking for hides it.*
+
+| hour | p50 | fastest | worst |
+|---|---|---|---|
+| 20th 08:00–15:00 (SQLite seed) | **26–42 ms** | 24 | 125 |
+| 20th 16:00 → 21st 08:00 (Postgres, no cache) | **~3,000–3,260 ms** | 2,902 | 4,733 |
+| 21st 10:00 (deploy landing) | **1,535 ms** | **16** | 10,865 |
+| **21st 11:00 (cached)** | **23 ms** | **15** | 10,863 |
+
+✅ **The warm path is fixed.** p50 **23 ms**, level with the local-SQLite era. The owner's description
+matches exactly: *"once the initial login and squad is loaded takes a few seconds, the movement from tab to
+tab is quick."*
+
+## ⚠️ But the cold path regressed, and worse than ADR-217 priced it
+
+| | connections | payload | observed |
+|---|---|---|---|
+| before caching | 2 | 2.41 MB | **~3,000 ms** |
+| after caching | **6** | 2.41 MB | **~10,800 ms** |
+
+Four extra connections cost **~7,800 ms** → **~1,950 ms each**.
+
+ADR-217 accepted "six connections instead of two" as a deliberate trade, priced against the **~30 ms** TLS
+handshake measured **from a laptop**. From Streamlit Cloud it is **65× that**.
+
+⭐⭐ **That is spike 017's own warning, applied to my own trade-off**: *latency measured in the wrong place is
+not a measurement of the thing.* I wrote that about benchmarking the fix and then priced the cost of the fix
+the same wrong way.
+
+🔬 **What it is not:** the dict conversion and pickling that caching added total **~16 ms** on the largest
+read. Measured before blaming it.
+
+## The next lever, and it is already half-built
+
+**Nothing in the web app reads `xp_board`.** The pipeline computes and publishes the whole board every tick
+(ADR-213) — and the app then downloads **1.9 MB of raw history** (`gw_history` 1.2 MB + `history` 747 KB) to
+recompute the same numbers.
+
+That 1.9 MB is **79% of the cold payload**, and two of the six connections.
+
+⚠️ Not a clean swap: the history also feeds Player DNA percentiles, form curves and the minutes weighting, so
+what can be dropped needs establishing before anything is. But it attacks the one part a cache cannot — the
+first load — and the expensive half of it is already computed and sitting in a table.
