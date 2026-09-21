@@ -140,9 +140,11 @@ def test_the_sidebar_turns_a_fallback_into_a_WARNING_not_a_caption(monkeypatch):
     monkeypatch.setattr(status_module.st, "warning", lambda msg, **k: calls["warning"].append(msg))
     monkeypatch.setattr(status_module.st, "caption", lambda msg, **k: calls["caption"].append(msg))
     monkeypatch.setattr(status_module.st, "button", lambda *a, **k: False)
-    # ⭐ Spike 017 merged `_player_count` and `_data_as_of` into one `_freshness()` — the caption opened a
-    # connection each, on every page, and each open is a TLS handshake against Supabase.
-    monkeypatch.setattr(status_module, "_freshness", lambda: (659, "2026-09-19"))
+    # ⚠️ Patched on `dataload`, not on `status`, because the caption now reads through the cached loader
+    # (spike 017). These tests stub `st.sidebar` with a plain object, and `st.cache_data` needs a real
+    # runtime — so stubbing the cached function is what keeps them unit tests rather than app tests.
+    from src.web_streamlit import dataload as _dl
+    monkeypatch.setattr(_dl, "freshness", lambda: (659, "2026-09-19"))
     monkeypatch.setattr(status_module, "is_local", lambda: False)
 
     status_module.render_data_status()

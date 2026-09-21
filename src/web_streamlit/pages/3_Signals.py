@@ -27,8 +27,7 @@ from src.api.feeds import parse_feed
 from src.api.media import media_headlines
 from src.api.reddit import RedditError, RedditRssClient
 from src.community import community_buzz
-from src.storage import Storage
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, dataload
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
@@ -74,22 +73,17 @@ st.caption("Everything that tells you something the table doesn't — **most rel
            "news, then a sell-off we can't explain, then media headlines, then community chatter. "
            "**Trending** is the other half: what the crowd is *doing*, in numbers.")
 
-store = Storage()
-_headlines_seen = None
-try:
-    players = store.get_players()
-    teams = store.get_teams()
-    photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
-    badges = badge_url_by_short_name(teams)
-    _ev = store.headline_events_by_id()                # ADR-151's stored events, read once for the whole page
-    # ⭐ **The one thing on this page that does NOT refresh itself** (ADR-211 2e). Headline extraction needs a
-    # language model, the scheduled runner has none, and the gate kept it manual — so events arrive when the
-    # owner runs `refresh` on a machine with Ollama, and nowhere else. Everything else in this phase made
-    # freshness visible; leaving the one manual input silent would be the exception that matters most,
-    # because stale headlines do not look stale — they look like *no news*.
-    _headlines_seen = max((e["seen_at"] for rows in _ev.values() for e in rows if e["seen_at"]), default=None)
-finally:
-    store.close()
+players = dataload.players()
+teams = dataload.teams()
+photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
+badges = badge_url_by_short_name(teams)
+_ev = dataload.headline_events_by_id()            # ADR-151's stored events, read once for the whole page
+# ⭐ **The one thing on this page that does NOT refresh itself** (ADR-211 2e). Headline extraction needs a
+# language model, the scheduled runner has none, and the gate kept it manual — so events arrive when the
+# owner runs `refresh` on a machine with Ollama, and nowhere else. Everything else in this phase made
+# freshness visible; leaving the one manual input silent would be the exception that matters most,
+# because stale headlines do not look stale — they look like *no news*.
+_headlines_seen = max((e["seen_at"] for rows in _ev.values() for e in rows if e["seen_at"]), default=None)
 
 # --- The page-wide squad lens (US-442, ADR-164) --------------------------------------------------------------
 # Owner: *"Signals should have a global option for my squad only."* It was per-section — the filter lived

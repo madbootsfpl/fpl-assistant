@@ -8,8 +8,7 @@ xG, ADR-063). Only the selected view computes (lazy). Reuses the CLI analytics; 
 import streamlit as st
 
 from src.analytics import last_season_name, last_season_rows
-from src.storage import Storage
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, dataload
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import filter_controls
@@ -29,20 +28,16 @@ st.caption("Explore the full player pool and stats — filter, sort and see who'
 # option in the selector **directly beneath it**: chrome pointing at something already visible,
 # named, and one tap away.
 
-store = Storage()
-try:
-    with analytics.timed("data_load", page="Players"):     # perf: FPL data loading (ADR-100, US-336)
-        rows = store.get_players()
-        teams = store.get_teams()
-        # ADR-126: last season, for the three boards that need ~10 matches before they can answer.
-        history = store.get_history_by_code()
-        # ADR-134: the 🎯 Radar lives here now, and it ranks players by their team's upcoming run.
-        upcoming = store.get_upcoming_fixtures()
-        gw_history = store.get_gw_history_by_code()
-    badges = badge_url_by_short_name(teams)                 # {short_name: badge URL}
-    photos = photo_url_by_id(rows, teams)                   # {player id: photo, else the club shirt}
-finally:
-    store.close()
+with analytics.timed("data_load", page="Players"):     # perf: FPL data loading (ADR-100, US-336)
+    rows = dataload.players()
+    teams = dataload.teams()
+    # ADR-126: last season, for the three boards that need ~10 matches before they can answer.
+    history = dataload.history_by_code()
+    # ADR-134: the 🎯 Radar lives here now, and it ranks players by their team's upcoming run.
+    upcoming = dataload.upcoming_fixtures()
+    gw_history = dataload.gw_history_by_code()
+badges = badge_url_by_short_name(teams)                 # {short_name: badge URL}
+photos = photo_url_by_id(rows, teams)                   # {player id: photo, else the club shirt}
 
 if not rows:
     st.info("No data yet — it's refreshing; check back shortly.")

@@ -192,3 +192,20 @@ def pytest_sessionfinish(session, exitstatus):
             f"                tests/test_postgres_cutover.py.\n"
             f"   Then:        git checkout {_SEED}\n"
         )
+
+
+# --- The app's read cache must not leak between tests ------------------------------------------------
+# ⭐⭐ **`st.cache_data` is process-wide, and the suite is one process.** `dataload` caches the board for
+# five minutes; a suite that runs in two would let the first test that renders a page serve its data to
+# every test after it. Any test that monkeypatches `Storage` to return a fixture would then be silently
+# defeated by a cache filled before the patch existed — and it would *pass*, because the real snapshot is
+# usually close enough to whatever the fixture wanted.
+#
+# ⚠️ That is the shape this project keeps finding: a green test that never reached the code it names. So the
+# cache is emptied between tests, and ordering stops being able to matter.
+@pytest.fixture(autouse=True)
+def _clear_read_cache():
+    from src.web_streamlit import dataload
+    dataload.clear()
+    yield
+    dataload.clear()

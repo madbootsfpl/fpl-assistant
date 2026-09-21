@@ -13,8 +13,7 @@ frequent check behind the same click as an infrequent one — the same frequency
 
 import streamlit as st
 
-from src.storage import Storage
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, dataload
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name
 from src.web_streamlit.squads import active_squad
@@ -29,16 +28,12 @@ st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("How strong every club is, both ends — a percentile-vs-league fingerprint, its grade, fixtures "
            "and the players to target. For the week-by-week difficulty grid, see 📅 **FDR**.")
 
-store = Storage()
-try:
-    upcoming = store.get_upcoming_fixtures()
-    teams = store.get_teams()
-    badges = badge_url_by_short_name(teams)
-    players = store.get_players()
-    history = store.get_history_by_code()
-    gw_history = store.get_gw_history_by_code()
-finally:
-    store.close()
+upcoming = dataload.upcoming_fixtures()
+teams = dataload.teams()
+badges = badge_url_by_short_name(teams)
+players = dataload.players()
+history = dataload.history_by_code()
+gw_history = dataload.gw_history_by_code()
 
 if not upcoming:
     st.info("No fixtures yet — it's refreshing; check back shortly.")

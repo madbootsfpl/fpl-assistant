@@ -8,8 +8,7 @@ A display lens, never xP. Ownership works now; the momentum/form boards light up
 import streamlit as st
 
 from src.analytics import CROWD_LEGEND, crowd_flags, trending
-from src.storage import Storage
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, dataload
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.filters import apply as apply_filter
@@ -35,14 +34,10 @@ st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Free FPL crowd data — ownership · transfers · form. A community lens, not a prediction. "
            "For what people are *saying* — official news, headlines and Reddit chatter — see 📡 **Signals**.")
 
-store = Storage()
-try:
-    players = store.get_players()
-    teams = store.get_teams()
-    photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
-    badges = badge_url_by_short_name(teams)
-finally:
-    store.close()
+players = dataload.players()
+teams = dataload.teams()
+photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
+badges = badge_url_by_short_name(teams)
 
 if not players:
     st.info("No data yet — it's refreshing; check back shortly.")

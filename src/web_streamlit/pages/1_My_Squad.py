@@ -11,9 +11,8 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from src.storage import Storage
 from src.ui.deadline import deadline_line
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, dataload
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name, photo_url_by_id
 from src.web_streamlit.squads import active_squad, render_sidebar, squad_picker
@@ -87,18 +86,14 @@ horizon = 1 if _opts is None else (st.segmented_control(
     help="How many upcoming gameweeks the projections look over. (Captaincy is always the next gameweek.)"
 ) or _default)
 
-store = Storage()
-try:
-    with analytics.timed("data_load", page="My Squad"):    # perf: FPL data loading (ADR-100, US-336)
-        players = store.get_players()
-        upcoming = store.get_upcoming_fixtures()
-        history = store.get_history_by_code()
-        gw_history = store.get_gw_history_by_code()   # in-season form (ADR-060; dormant now)
-        teams = store.get_teams()
-    photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
-    badges = badge_url_by_short_name(teams)
-finally:
-    store.close()
+with analytics.timed("data_load", page="My Squad"):    # perf: FPL data loading (ADR-100, US-336)
+    players = dataload.players()
+    upcoming = dataload.upcoming_fixtures()
+    history = dataload.history_by_code()
+    gw_history = dataload.gw_history_by_code()   # in-season form (ADR-060; dormant now)
+    teams = dataload.teams()
+photos = photo_url_by_id(players, teams)          # photo, else the club shirt (US-255)
+badges = badge_url_by_short_name(teams)
 
 _line = deadline_line(upcoming, datetime.now(timezone.utc))    # the next FPL deadline (ADR-086/US-267)
 _deadline = _line[2] if _line else None

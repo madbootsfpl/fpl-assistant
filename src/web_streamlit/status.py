@@ -69,7 +69,12 @@ def is_local() -> bool:
 def render_data_status() -> None:
     """The sidebar data status: a freshness caption always; a local-only refresh button (ADR-056)."""
     with st.sidebar:
-        count, as_of = _freshness()
+        # ⭐⭐ **Cached with the same window as the board, on purpose.** Reading the timestamp live while
+        # serving a cached board would let this line announce a refresh whose data the reader cannot see —
+        # the "fresh-looking but stale" failure ADR-211 exists to prevent, arriving from the other direction.
+        # A caption describes what is on the screen or it is not a caption.
+        from src.web_streamlit import dataload
+        count, as_of = dataload.freshness()
         prefix = f"{count} players · " if count is not None else ""
         st.caption(f"📅 {prefix}data as of {as_of}")
         # ⭐⭐ **A configured database we could not reach must never degrade quietly.** Serving the committed
@@ -101,5 +106,9 @@ def render_data_status() -> None:
             except ingest.FplApiError as exc:
                 st.error(f"Couldn't refresh: {exc}")
             else:
+                # ⚠️ Without this the button refreshes the database and then renders the previous five
+                # minutes straight back at you — a button that appears to do nothing.
+                from src.web_streamlit import dataload
+                dataload.clear()
                 st.success(f"Refreshed {n_players} players, {n_teams} teams, {n_fixtures} fixtures.")
                 st.rerun()

@@ -459,9 +459,11 @@ def test_the_sidebar_does_not_claim_a_redeploy_is_needed_while_reading_postgres(
     monkeypatch.setattr(status_module.st, "caption", lambda msg, **k: captions.append(msg))
     monkeypatch.setattr(status_module.st, "warning", lambda *a, **k: None)
     monkeypatch.setattr(status_module.st, "button", lambda *a, **k: False)
-    # ⭐ One stub, because spike 017 merged the two helpers into `_freshness()` — the caption was opening a
-    # connection for the count and another for the date, on every page render.
-    monkeypatch.setattr(status_module, "_freshness", lambda: (659, "2026-09-19"))
+    # ⚠️ Patched on `dataload`, not on `status`, because the caption now reads through the cached loader
+    # (spike 017). These tests stub `st.sidebar` with a plain object, and `st.cache_data` needs a real
+    # runtime — so stubbing the cached function is what keeps them unit tests rather than app tests.
+    from src.web_streamlit import dataload as _dl
+    monkeypatch.setattr(_dl, "freshness", lambda: (659, "2026-09-19"))
     monkeypatch.setattr(status_module, "is_local", lambda: False)
     monkeypatch.setattr(status_module, "fallback_reason", lambda: None)
 

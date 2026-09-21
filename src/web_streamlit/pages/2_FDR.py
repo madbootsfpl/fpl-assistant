@@ -15,8 +15,7 @@ import pandas as pd
 import streamlit as st
 
 from src.analytics import fixture_ticker
-from src.storage import Storage
-from src.web_streamlit import analytics, brand
+from src.web_streamlit import analytics, brand, dataload
 from src.web_streamlit.access import require_access
 from src.web_streamlit.badges import badge_url_by_short_name
 from src.web_streamlit.squads import active_squad
@@ -41,12 +40,8 @@ st.caption("Every club's next few gameweeks, shaded by difficulty — easiest ru
 # ⚠️ Free on SQLite, which is where it was written. Since the app began reading Supabase (2026-09-20) every
 # byte crosses the Atlantic, on a framework that re-runs the whole script on every click — so this was
 # ~2.35 MB per slider drag for data the page had no use for. ⭐ *Not fetching something beats caching it.*
-store = Storage()
-try:
-    upcoming = store.get_upcoming_fixtures()
-    teams = store.get_teams()
-finally:
-    store.close()
+upcoming = dataload.upcoming_fixtures()
+teams = dataload.teams()
 badges = badge_url_by_short_name(teams)
 
 if not upcoming:
@@ -67,13 +62,10 @@ else:
         if not squad:
             st.caption("No squad loaded — build or import one on **My Squad**, then come back.")
         else:
-            # ⭐ Fetched *here*, because this is the only thing on the page that wants it. One extra
-            # connection when the lens is on beats half a megabyte on every render when it is off.
-            _store = Storage()
-            try:
-                by_id = {p["id"]: p for p in _store.get_players()}
-            finally:
-                _store.close()
+            # ⭐ Fetched *here*, because this is the only thing on the page that wants it — the grid
+            # itself needs clubs and fixtures and nothing else. Cached, so the lens costs a fetch once
+            # per window rather than half a megabyte on every render.
+            by_id = {p["id"]: p for p in dataload.players()}
             my_counts = Counter(by_id[i]["team"] for i in squad["player_ids"] if i in by_id)
 
     # The ticker already comes back easiest-run-first, which is the question it exists to answer. The second
