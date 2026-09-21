@@ -269,6 +269,14 @@ Board-wide values that are identical for every user, written by the pipeline onc
 
 ### 4.2 Flutter → FastAPI ✅
 
+> ⚠️ **Amended by [ADR-219](../06_Decisions/ADR-219-one-contract-two-transports.md), which built the first
+> of these.** The endpoints below are right; *"Streamlit migrates onto the same API"* is not. The contract
+> lives in `src/service/` as plain functions — FastAPI wraps them for Flutter, Streamlit imports them
+> in-process — because a separately-hosted service turns every squad analysis the web app renders into a
+> round trip, on the app spike 017 had just taken from 3,026 ms to 20 ms. ⭐ *A contract with one consumer
+> is still a guess; the guarantee is bought back with a test that the HTTP body equals the in-process
+> answer serialised.* **Built:** `POST /api/v1/squad/analysis`. The other five wait.
+
 Operations whose input is *this user's fifteen players*, which cannot be precomputed:
 
 | endpoint | engine call | measured |
@@ -452,10 +460,14 @@ database. **Streamlit cuts over to it first** — proving the pipeline against t
 users who will tell you when it breaks. Exit criterion: *two weeks with no manual `reseed`, including a
 deadline and a live gameweek.*
 
-**Phase 3 — API boundary**
-Supabase Auth + identity migration (risked, dual-run). FastAPI with the six squad endpoints and the DTO layer.
-Streamlit migrates onto the same API where it is sensible, so the contract is exercised by a real client
-before Flutter exists. ⭐ *A contract with one consumer is a guess.*
+**Phase 3 — API boundary** — 🟡 *in progress*
+Supabase Auth + identity migration (risked, dual-run) — **not started**. The six squad endpoints and the DTO
+layer: **one built** (`POST /api/v1/squad/analysis`, ADR-219), the rest deliberately held until the first has
+proved its shape.
+
+⚠️ Streamlit does **not** migrate onto the HTTP API — see the amendment at §4.2. It imports the same contract
+in-process, and Health is its first consumer, so the contract is exercised by a real client before Flutter
+exists. ⭐ *A contract with one consumer is a guess* — the principle stands; the transport changed.
 
 **Phase 4 — Flutter foundation** — auth, networking, Riverpod, Drift cache, navigation, theme, responsive
 scaffolding for all four form factors, phone-only rendering.

@@ -3297,18 +3297,24 @@ def test_health_shows_a_reported_departure_the_fpl_status_still_calls_available(
 
     The departure is stubbed rather than seeded: what is under test is that the view asks the question and
     renders the answer, not the extraction that produces it (covered in test_headlines).
+
+    ⚠️ **Stubbed at `headlines.leavers`, not at the view.** Health now asks through `src.service` (Phase 3),
+    so the view no longer owns the lookup — and this guard caught that refactor by failing with *"Health is
+    not asking the question at all"*, which is exactly what it was written to say. ⭐ The seam moved down to
+    the function that actually answers *who is leaving*, which both the view and the service route through,
+    so the next surface to adopt the contract does not break this test a second time.
     """
-    from src.web_streamlit.views import squads as squads_view
+    from src.analytics import headlines
 
     seen = {}
 
-    def fake(owned, players):
+    def fake(owned, store_events, exodus_for, *, today):
         if not owned:
             return {}
         seen["id"] = owned[0]["id"]
         return {owned[0]["id"]: {"kind": "transfer", "source": "Romano", "title": "Al Hilal, here we go!"}}
 
-    monkeypatch.setattr(squads_view, "_reported_leavers", fake)
+    monkeypatch.setattr(headlines, "leavers", fake)
     at = _squads_view("DNA")
     assert seen, "the stub was never called — Health is not asking the question at all"
     block = "\n".join(c.value for c in at.code)

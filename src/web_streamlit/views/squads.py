@@ -17,7 +17,6 @@ from src.analytics import (
     SET_PIECE_LEGEND,
     SQUAD_15,
     WEEKLY_BENCH_WEIGHT,
-    analyse_squad,
     archetype_bands,
     availability_flag,
     available_players,
@@ -42,12 +41,14 @@ from src.analytics import (
     team_schedule,
 )
 from src.analytics.board import ranked_for
+from src.service import SquadRequest
+from src.service import analysis as service_analysis
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
 from src.ui.explain import MODEL_NOTE, render_explanation
 from src.ui.squad import render_squad
 from src.ui.transfer import render_transfer_plan, render_transfers
-from src.web_streamlit import analytics
+from src.web_streamlit import analytics, dataload
 from src.web_streamlit.badges import shirt_url_by_id
 from src.web_streamlit.captain_card import render_captain_card
 from src.web_streamlit.pitch import render_pitch
@@ -1057,21 +1058,27 @@ def render_health(squad_name, squad, players, upcoming, history, gw_history, pho
     if not owned:
         st.info(f"Squad '{squad_name}' has no current players to analyse.")
         return
-    ranked = decision_xp(players, upcoming, history, horizon=horizon, gw_history_by_code=gw_history)
-    xp_by_id = {r["id"]: r["xp"] for r in ranked}
-    bench_ids = set(squad.get("bench_ids") or [])
-    xi_ids = ({p["id"] for p in owned if p["id"] not in bench_ids} if bench_ids
-              else best_legal_xi(owned, xp_by_id))
-    # ADR-155 — Health reads the same reported-departure fact as AI Tips and the Risk Monitor. It was the one
-    # squad surface that didn't, so it counted a player with an agreed move as fully available.
-    leaving = _reported_leavers(owned, players)
-    analysis = analyse_squad(
-        owned, xi_ids, xp_by_id, horizon=horizon,
-        by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
-        gameweeks=ranked[0]["gameweeks"] if ranked else [],
-        weight_by_id={r["id"]: r["minutes_weight"] for r in ranked},
-        reported_out=leaving,
+    # ⭐⭐ **The same function the phone calls** (Phase 3, mobile audit §4.2). Health is the web's consumer of
+    # `src.service`, so the contract has a real user before Flutter exists — *"a contract with one consumer
+    # is a guess."* It reads the published board rather than recomputing from history (ADR-218), through the
+    # cache rather than a fresh connection (spike 017), and it carries ADR-155's departure fact for free.
+    #
+    # ⚠️ **Stale ids are filtered here, not refused.** The service names an unknown id rather than dropping
+    # it — right for a client, wrong for a saved squad holding someone who has left the league, which must
+    # still render. The order is `players`' own, so the analysis is laid out exactly as it was before.
+    known = {p["id"] for p in players}
+    player_ids = [p["id"] for p in players if p["id"] in set(squad["player_ids"])]
+    bench_ids = {i for i in (squad.get("bench_ids") or []) if i in known}
+    analysis = service_analysis(
+        SquadRequest(player_ids=player_ids, bench_ids=sorted(bench_ids), horizon=horizon),
+        store=dataload.CachedStore(),
     )
+    xi_ids = {p["id"] for p in analysis["xi"]}
+    xp_by_id = {p["id"]: p["xp"] for p in analysis["xi"] + analysis["bench"]}
+    # ⭐ Read off the analysis rather than derived again. ADR-155's whole lesson is that the same fact
+    # recomputed per surface is how surfaces come to disagree — the table's ✈️ and the text below it now
+    # cannot, because there is one answer.
+    leaving = {p["id"] for p in analysis["xi"] + analysis["bench"] if p["leaving"]}
     captain_id = squad.get("captain_id")
     # US-436 (ADR-166) — **the fingerprint leads.** The owner: *"the Squad DNA is powerful, maybe rename Health
     # to DNA. Lead with that and have the health underneath as it's less informative."* Agreed, and the tab is

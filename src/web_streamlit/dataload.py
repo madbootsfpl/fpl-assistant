@@ -113,6 +113,32 @@ def freshness() -> tuple[int | None, str]:
     return _rows(status.freshness_from)
 
 
+class CachedStore:
+    """What `src.service` reads, served from the cache above instead of a connection.
+
+    ⭐⭐ **A duck, not a parameter.** The service takes `store=` and calls six read methods on it; handing it
+    this object means the web and the phone run *exactly the same function over exactly the same rows*, and
+    only the source of the rows differs. The alternative — an extra `rows=` argument so Streamlit could pass
+    its cached data in — would have given the two transports two code paths, which is the divergence the
+    contract exists to prevent.
+
+    ⚠️ **Without this, wiring Streamlit to the service would have undone spike 017.** The service opens its
+    own `Storage()` by default, so every rerun would fetch the board again — the 3,026 ms the cache was
+    built to remove, reintroduced by the refactor that was supposed to share code.
+    """
+
+    def get_players(self): return players()
+    def get_upcoming_fixtures(self): return upcoming_fixtures()
+    def get_xp_board(self): return xp_board()
+    def get_history_by_code(self): return history_by_code()
+    def get_gw_history_by_code(self): return gw_history_by_code()
+    def headline_events_by_id(self): return headline_events_by_id()
+
+    def close(self) -> None:
+        """Nothing to close — there was never a connection. ⭐ Present because the service closes only the
+        stores it opened itself, and a reader should be able to confirm that from here."""
+
+
 def clear() -> None:
     """Drop every cached read — for the local "🔄 Refresh data" button, which would otherwise refresh the
     database and then render the previous five minutes back at you."""
