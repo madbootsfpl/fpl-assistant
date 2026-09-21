@@ -37,6 +37,14 @@ _MIGRATIONS = {
         "backfilled_at": "TEXT",
         "backfilled_event": "INTEGER",
     },
+    # Spike 017 — the board became a faithful stand-in for `decision_xp` so the app could stop downloading
+    # 1.9 MB of history to recompute it. These three post-date the table's first version (ADR-213), and the
+    # committed test snapshot already carries one, so they migrate rather than appear.
+    "xp_board": {
+        "defcon_xp": "REAL",
+        "clean_sheet_xp": "REAL",
+        "games_by_gameweek": "TEXT",
+    },
     "teams": {
         "strength_overall_home": "INTEGER",
         "strength_overall_away": "INTEGER",
@@ -331,8 +339,17 @@ CREATE TABLE IF NOT EXISTS xp_board (
     rate          REAL,
     rate_source   TEXT,
     minutes_weight REAL,
-    ep_next       TEXT,
+    ep_next       REAL,
     difficulty    INTEGER,          -- the NEXT fixture's difficulty (horizon-independent)
+    -- ⚠️ **Stored even though both are 0 today.** `DEFCON_MAGNIFIER_WEIGHT` and `CLEAN_SHEET_WEIGHT` are
+    -- dormant (ADR-097/188), so a client could hardcode zero and be right — until the day someone raises a
+    -- weight, at which point the published board would silently disagree with the engine. ⭐ *A value that is
+    -- zero by configuration is not the same as a value that is always zero.*
+    defcon_xp      REAL,
+    clean_sheet_xp REAL,
+    -- Fixtures in the horizon, per gameweek — a double gameweek is one key with two games, so the count
+    -- cannot be derived from `by_gameweek` alone. JSON {gw: n}, summed over a prefix like the xP is.
+    games_by_gameweek TEXT,
     -- ⚠️ **The anchor, and a client that ignores it will misread the board.** `by_gameweek` is keyed by real
     -- gameweek numbers, so the window shifts at every deadline: a board computed before GW6 covers 6-13, and
     -- the same query after GW6's deadline covers 7-14. Without this a stale board looks like a current one.
@@ -922,6 +939,8 @@ class Storage:
             (r["id"], r["web_name"], r["team"], r["position"],
              json.dumps({str(gw): v for gw, v in r["by_gameweek_exact"].items()}),
              r["rate"], r["rate_source"], r["minutes_weight"], r["ep_next"], r["difficulty"],
+             r.get("defcon_xp"), r.get("clean_sheet_xp"),
+             json.dumps({str(gw): n for gw, n in (r.get("games_by_gameweek") or {}).items()}),
              first_event, computed_at)
             for r in board
         ]
@@ -929,8 +948,9 @@ class Storage:
             self.conn.execute("DELETE FROM xp_board")
             self.conn.executemany(
                 "INSERT INTO xp_board (element_id, web_name, team, position, by_gameweek, rate, "
-                "rate_source, minutes_weight, ep_next, difficulty, first_event, computed_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+                "rate_source, minutes_weight, ep_next, difficulty, defcon_xp, clean_sheet_xp, "
+                "games_by_gameweek, first_event, computed_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
         return len(rows)
 
     def get_xp_board(self):
@@ -942,16 +962,26 @@ class Storage:
         out = []
         for row in self.conn.execute(
                 "SELECT element_id, web_name, team, position, by_gameweek, rate, rate_source, "
-                "minutes_weight, ep_next, difficulty, first_event, computed_at "
-                "FROM xp_board ORDER BY element_id").fetchall():
+                "minutes_weight, ep_next, difficulty, defcon_xp, clean_sheet_xp, games_by_gameweek, "
+                "first_event, computed_at FROM xp_board ORDER BY element_id").fetchall():
             out.append({
                 "id": row["element_id"], "web_name": row["web_name"], "team": row["team"],
                 "position": row["position"],
                 "by_gameweek": {int(gw): v for gw, v in json.loads(row["by_gameweek"]).items()},
                 "rate": row["rate"], "rate_source": row["rate_source"],
-                "minutes_weight": row["minutes_weight"], "ep_next": row["ep_next"],
-                "difficulty": row["difficulty"], "first_event": row["first_event"],
-                "computed_at": row["computed_at"],
+                "minutes_weight": row["minutes_weight"],
+                # ⚠️ **Coerced, because a column type cannot be migrated.** `_migrate` adds missing columns
+                # and cannot change an existing one — so every database whose `xp_board` predates this
+                # (production's included, created a day earlier) keeps `ep_next TEXT` and hands back a `str`
+                # where the engine gives a `float`. Same number, different type, and enough to make a client
+                # comparing the two find a difference that is not one.
+                # ⭐ *Coerce at the boundary rather than depend on a declaration you cannot change.*
+                "ep_next": float(row["ep_next"]) if row["ep_next"] is not None else None,
+                "difficulty": row["difficulty"],
+                "defcon_xp": row["defcon_xp"], "clean_sheet_xp": row["clean_sheet_xp"],
+                "games_by_gameweek": {int(gw): n for gw, n in
+                                      json.loads(row["games_by_gameweek"] or "{}").items()},
+                "first_event": row["first_event"], "computed_at": row["computed_at"],
             })
         return out
 

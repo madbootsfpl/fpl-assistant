@@ -457,6 +457,10 @@ def player_xp(
             # the same player. ⚠️ ADR-181's lesson is why it is not an optional argument: an opt-in on a
             # shared helper is a silent opt-out at every call site that forgets it.
             "by_gameweek_exact": by_gameweek_exact,
+            # ⭐ Fixtures per gameweek. `games` is their sum over the horizon, but a **double gameweek is one
+            # key with two fixtures** — so a client holding only `by_gameweek` cannot recover the count.
+            # Published so the board is a faithful stand-in for this function rather than nearly one.
+            "games_by_gameweek": {gw: len(gw_map.get(gw, [])) for gw in horizon_events},
             "gameweeks": list(horizon_events),
             "minutes_weight": round(applied_weight, 2),   # xMins v0 weight applied (1.0 without the hook)
             "defcon_xp": defcon_xp,                   # ADR-097: the DefCon magnifier's net delta (0 dormant)
