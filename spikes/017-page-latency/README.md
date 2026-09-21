@@ -108,3 +108,57 @@ snapshot present, one for nothing readable at all.
 📅 **Read `sql/page_timings.sql` on production.** This change removes one of three connections; whether that
 is enough is a question about real Streamlit-Cloud-to-Supabase latency, and ADR-211's bar (~200 ms per
 rerun) has still not been read against real numbers. Connection caching remains undecided, deliberately.
+
+---
+
+# The production numbers — and they change the diagnosis
+
+**Read from `events` on production, 2026-09-21.** `data_load` p50:
+
+| | |
+|---|---|
+| oldest day recorded (SQLite era) | **16 ms** |
+| newest day (Postgres era) | **3,026 ms** |
+
+Added cost per rerun: **~3,010 ms**, against ADR-211's bar of ~200 ms. **Fifteen times over**, so the rule
+fires without ambiguity.
+
+## ⭐⭐ But the cause is not the one ADR-211 pre-registered
+
+ADR-211 wrote: *"if the added cost exceeds ~200 ms per rerun, **cache the connection**."* That names a
+remedy, and the remedy is aimed at the wrong mechanism.
+
+Nine round-trips at even 100 ms each is 900 ms, not 3,000. The gap is explained by **volume, not latency**:
+
+| query | rows | bytes |
+|---|---|---|
+| `get_gw_history_by_code()` | 2,547 | **1,197,474** |
+| `get_history_by_code()` | 2,097 | **746,950** |
+| `get_players()` | 662 | **517,835** |
+| `get_all_fixtures()` | 380 | 58,360 |
+| `get_teams()` | 20 | 1,696 |
+| **total** | | **2,522,315 — 2.41 MB** |
+
+**2.41 MB crosses the Atlantic on every page render**, on a framework that re-runs the whole script on every
+click. At ~8 Mbps that is ~2.4 s, which lands on the observed 3,026 ms.
+
+⭐ **A connection pool would save the handshakes and leave 2.4 MB still moving.** The pre-registered fix
+would have been built, measured, and found to barely help — after which the obvious conclusion would have
+been "Postgres is just slow", which is false.
+
+⭐⭐ **The decision rule was right and its proposed remedy was wrong, and only measuring could tell them
+apart.** *A rule that says "measure, then act" is worth more than the action it guesses at.*
+
+## What the fix probably is — not yet agreed, not yet built
+
+**Cache the data, not the connection.** Streamlit re-runs the script on every interaction; `st.cache_data`
+with a TTL matched to the pipeline's cadence would turn 2.4 MB per click into 2.4 MB per refresh window.
+
+⚠️ **It is a freshness trade and therefore a decision, not a detail.** ADR-211 exists because stale data that
+looks fresh is the failure this project most wants to avoid, and a cache is exactly that mechanism pointed
+the other way. The TTL has to be shorter than the pipeline's cadence, and the freshness caption has to keep
+telling the truth — it reads `data_status`, so it must not be cached with the same key as the board.
+
+⚠️ **Also worth asking before caching: why does every page load `get_gw_history_by_code()` at all?**
+1.2 MB — half the payload — for per-gameweek history. A page that does not draw a form curve may not need
+it, and not fetching something beats caching it.
