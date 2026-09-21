@@ -91,8 +91,15 @@ the squad dict; a committed demo seed populates the pages. The web never writes 
   page) were folded in up front, not retrofitted.
 
 ### Notes _(for Tony)_
+- Issues:
+On Building a team Build:  xP and xMins not being rendered
+Need to be able to name a squad
+need to be able to edit squad once built
+need to be able to select captain
+need to be able to make transfers to your team
 
----
+
+-
 
 # Decisions Made 📋
 

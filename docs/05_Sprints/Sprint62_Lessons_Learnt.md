@@ -83,7 +83,7 @@ gameweeks, colour-coded by difficulty, with a weeks selector) and a **My Squad p
 - The "robustness first" call resolved the one real fork (card-grid vs custom-CSS pitch) cleanly.
 
 ### Notes _(for Tony)_
-
+- Could we centre align the images on the mySquad view, currently they are left aligned.
 ---
 
 # Decisions Made 📋
