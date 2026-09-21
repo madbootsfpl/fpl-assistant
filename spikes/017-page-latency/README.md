@@ -1,0 +1,79 @@
+# Spike 017 — why the app is slow
+
+**Run:** 2026-09-21, after the owner reported slow loads and refreshes.
+**Status:** measured. **Nothing changed** — ADR-211 set a decision rule and it deserves reading before acting.
+
+---
+
+## The finding
+
+**Two of the three database connections a page opens are the sidebar's freshness caption.**
+
+```
+3 connections opened rendering Players:
+  1. status.py:73  render_data_status → _player_count   → Storage.__init__
+  2. status.py:75  render_data_status → _data_as_of     → Storage.__init__
+  3. 5_Players.py:32                                    → Storage.__init__
+```
+
+`render_data_status` draws one line — *"667 players · data as of 2026-09-20"* — and opens **two separate
+connections** to do it: one for a `COUNT(*)`, one for a timestamp. It renders on **every page**.
+
+Each connection to Supabase is a DNS lookup, a TCP handshake and a TLS handshake before a single byte of
+data moves. On a framework that re-runs the entire script on every interaction, that is paid on every click.
+
+## What a render actually costs
+
+| | SQLite (seed) | Postgres |
+|---|---|---|
+| queries | **40** | **10** |
+| connections | 3 | **3** |
+| of which schema probes | — | 3 × `SELECT 1 FROM players LIMIT 1` |
+
+⭐ **The query mix differs by backend, and measuring only SQLite would have produced the wrong diagnosis.**
+On SQLite, 22 of the 40 are `CREATE TABLE IF NOT EXISTS` — `_init_schema` running twice per render. On
+Postgres those do not happen at all, because ADR-211 made a reader **return early and probe instead of
+creating**. That design is working exactly as written; the cost has simply moved to connections.
+
+*Ask which path the code takes. Do not infer it from the one you measured.*
+
+## The network numbers
+
+Measured against Supabase eu-west-1, five samples:
+
+| | |
+|---|---|
+| new connection — TLS handshake | **~30 ms** |
+| new connection — full request | **65–95 ms** |
+| **reused** connection | **10–14 ms** |
+
+So a connection costs roughly **50–80 ms more than a warm one**, and the app opens three per render.
+
+⚠️⚠️ **These are from a laptop, and the number that matters is from Streamlit Cloud.** If Cloud runs in the
+US and Supabase is in eu-west-1, every figure above multiplies by something like 5–10×, and three
+handshakes plus ten queries become well over a second. ⭐ *Latency measured in the wrong place is not a
+measurement of the thing.*
+
+## Which is why the real answer is already in production
+
+`analytics.timed("data_load")` has been writing a `perf` event on My Squad and Players since US-336 —
+**from before the cutover and after it**. That is ADR-211's *"compare page timings against the seed"*, taken
+in the real environment, and it has been sitting in the `events` table the whole time.
+
+`sql/page_timings.sql` reads it, bucketed by day, with no date hard-coded — the cutover should appear as a
+step rather than being asserted. ⭐ *A claim about when something changed is weaker than a shape in the data.*
+
+## Recommendation — in order, and not yet acted on
+
+1. **Read `sql/page_timings.sql` on production.** ADR-211's bar is *"cache the connection if the added cost
+   exceeds ~200 ms per rerun"*, and nobody has read the number the rule applies to.
+2. **Stop the freshness caption opening two connections.** It is one line of UI costing two thirds of the
+   connection overhead on every page. This is true regardless of what step 1 says, and it is the cheapest
+   thing on the list.
+3. **Then, and only then, decide about connection caching.** It is real infrastructure — pooling, lifetime,
+   what happens when Supabase drops an idle connection — and ADR-211 declined to build it precisely because
+   nobody had measured the need.
+
+⚠️ **Deliberately not done here.** The owner asked to measure before changing anything, and three separate
+things today turned out to be a fix scoped to what was visible at the time. Reading the production number
+first is what stops this becoming the fourth.
