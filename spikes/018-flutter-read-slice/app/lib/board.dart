@@ -55,10 +55,19 @@ class BoardRow {
   /// meeting the case at all. *A sample that cannot contain the case cannot rule it out* — so the client
   /// finds the cases instead, and the comparison is aimed at them.
   bool atRoundingBoundary(int horizon) {
-    final scaled = xpOver(horizon) * 100;
-    final nearest = scaled.roundToDouble();
-    if ((scaled - nearest).abs() > 1e-6) return false;   // not on a hundredth at all
-    return nearest.toInt() % 10 == 5;
+    // ⚠️ **Decided on the shortest representation, not on a tolerance.** A first version allowed 1e-6 and
+    // flagged 7.249999999999998 — a value both platforms round to 7.2 without disagreeing about anything.
+    // It reported **16 boundaries where only 5 exist**, which would have sent someone comparing rows that
+    // could never differ. ⭐ *An instrument that is loose in the direction of alarm still tells you the
+    // wrong thing; it just feels safer while doing it.*
+    //
+    // `toString()` gives the shortest decimal that round-trips, which is the same basis Python's `repr`
+    // uses — so the two rules now ask the identical question: is this value *exactly* a half-hundredth?
+    final text = xpOver(horizon).toString();
+    final dot = text.indexOf('.');
+    if (dot < 0) return false;
+    final decimals = text.length - dot - 1;
+    return decimals == 2 && text.endsWith('5');
   }
 
   static BoardRow fromJson(Map<String, dynamic> json) {

@@ -63,4 +63,16 @@ void main() {
     );
     expect(row.atRoundingBoundary(2), isFalse);
   });
+
+  test('a near-boundary value is not flagged', () {
+    // ⚠️ The bug in the first detector. 7.249999999999998 is not ambiguous — both platforms round it to
+    // 7.2 — but a 1e-6 tolerance called it a boundary and turned 5 real cases into 16 reported ones.
+    final near = BoardRow(
+      name: 'Gomes', team: 'X', position: 'MID',
+      byGameweek: {6: 3.624999999999999, 7: 3.624999999999999},
+    );
+    expect(near.xpOver(2), closeTo(7.25, 1e-10));
+    expect(near.atRoundingBoundary(2), isFalse,
+        reason: 'a value whose shortest form is not exactly two decimals is not a boundary');
+  });
 }

@@ -103,3 +103,28 @@ selection is doing real work, and the web app's `get_xp_board()` takes every col
 - **The rounding divergence.** Predicted at ~0.09% of values, with no Dart rounding mode able to fix it.
   Comparing the slice's numbers against the live web app is still the outstanding test, and it is the one
   that decides whether the server should publish the rounded totals.
+
+## The rounding question, settled
+
+**Zero boundary players on production, at every horizon.**
+
+⚠️ **The owner's first check — "compared a few players, numbers match" — did not settle it, and saying so
+mattered.** At ~0.09%, three comparisons have about a **0.3% chance of meeting the case at all**. A sample
+that cannot contain the case cannot rule it out (ADR-195 · ADR-202 · ADR-208, the same shape a fourth time).
+
+So the client was made to find the cases instead. And the detector it was given was **wrong in a way that
+made the answer stronger**: its 1e-6 tolerance flagged `7.249999999999998`, a value both platforms round to
+7.2 in perfect agreement — **16 reported boundaries where only 5 exist.**
+
+⭐ Because that rule flags everything the exact rule does *and more*, finding **zero** with it means there is
+genuinely nothing to find. An over-permissive instrument returning empty is a real result.
+
+**Now fixed** to decide on the shortest round-tripping representation — the same basis Python's `repr` uses —
+so both platforms ask the identical question. ⭐ *An instrument loose in the direction of alarm still tells
+you the wrong thing; it just feels safer while doing it.*
+
+### What this means for the server publishing rounded totals
+
+📅 **Not justified today, and not dismissed.** The divergence is real in principle — 5 genuine cases exist on
+the test snapshot — and zero on production is a fact about **today's numbers**, which change every pipeline
+tick. The detector stays in the client so the question can be re-asked rather than re-argued.
