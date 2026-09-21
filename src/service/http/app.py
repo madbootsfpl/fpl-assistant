@@ -1,18 +1,25 @@
-"""`POST /api/v1/squad/*` — the squad-shaped questions, over HTTP (mobile audit §4.2).
+"""`/api/v1/squad/*` — the squad-shaped questions, over HTTP (mobile audit §4.2, ADR-219/220).
 
-⚠️ **Separate from `src/web`, deliberately.** That is ADR-050's read-only HTML edge, which renders text
-into a `<pre>` block for a browser. This returns JSON for a client that draws its own screens. Sharing an
-app object would make one of them the other's constraint.
+⚠️ **Separate from `src/web`, deliberately.** That is ADR-050's read-only HTML edge, which renders text into
+a `<pre>` block for a browser. This returns JSON for a client that draws its own screens. Sharing an app
+object would make one of them the other's constraint.
 
-⭐ **No auth, and that is a fact about these endpoints rather than an omission.** Every one takes *player
-ids in, analysis out* — there is no user row to protect. Owner-scoped data (your saved squad, your
-preferences) is Stage C and is not served from here.
+⭐ **No auth, and that is a fact about these endpoints rather than an omission.** Every one takes *player ids
+in, analysis out* — there is no user row to protect. Owner-scoped data (your saved squad, your preferences)
+is Stage C and is not served from here.
+
+⭐⭐ **Every route is four lines and none of them decides anything.** The moment a rule can only be found
+here, the in-process consumer and the HTTP consumer have different products — which is the failure this
+whole layer exists to prevent.
 """
+
+from collections.abc import Callable
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from src.service import SquadRequest, analysis
+from src import service
+from src.service.requests import DEFAULT_HORIZON, FPL_BUDGET, MAX_HORIZON, MAX_PLAN
 
 app = FastAPI(
     title="MADBOOTS service",
@@ -22,9 +29,14 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
 )
 
+_GAMEWEEK_KEYS = ("⚠️ `by_gameweek` arrives keyed by gameweek as a **string**, because JSON has no integer "
+                  "object keys — the same shape PostgREST already serves for the published board. ⭐ Parse "
+                  "them to integers before sorting: as text, `\"10\"` sorts before `\"6\"`, so a prefix sum "
+                  "over *the next two gameweeks* would quietly answer for the wrong two.")
+
 
 class SquadBody(BaseModel):
-    """What a client posts.
+    """A squad, by FPL element id.
 
     ⭐ Ids, not rows (audit §4.2). A client that uploaded player rows would be defining the engine's input,
     which is how one rule becomes two implementations.
@@ -33,31 +45,101 @@ class SquadBody(BaseModel):
     player_ids: list[int] = Field(..., min_length=1, description="The squad's players, by FPL element id.")
     bench_ids: list[int] = Field(default_factory=list,
                                  description="Optional. Omit and the best legal XI is derived.")
-    horizon: int = Field(5, ge=1, le=8, description="Gameweeks to look ahead.")
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to look ahead.")
+
+
+class TransfersBody(SquadBody):
+    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    count: int = Field(1, ge=1, le=MAX_PLAN,
+                       description="Moves to plan together. Above 1 they share the bank, so the gains add "
+                                   "up — a plan, not a menu of alternatives.")
+    limit: int = Field(5, ge=1, le=50, description="How many single swaps to rank when count is 1.")
+
+
+class CaptainBody(SquadBody):
+    limit: int = Field(5, ge=1, le=15, description="How many candidates to return.")
+
+
+class GameweekBody(SquadBody):
+    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    free: int = Field(1, ge=0, le=5,
+                      description="Free transfers held. The plan recommends this many moves, so sending the "
+                                  "wrong number advises a position the manager is not in.")
+
+
+class RouteBody(SquadBody):
+    target_id: int = Field(..., description="The player you want to field, by FPL element id.")
+    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+
+
+class BuildBody(BaseModel):
+    """⚠️ No `player_ids` — this is the one question that starts from nothing."""
+
+    budget: float = Field(FPL_BUDGET, gt=0, description="Total spend, in £m.")
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to optimise over.")
+    include_ids: list[int] = Field(default_factory=list, description="Players to force in.")
+    exclude_ids: list[int] = Field(default_factory=list, description="Players to rule out.")
+
+
+def _answer(fn: Callable, request) -> dict:
+    """Call one service function and translate its refusals.
+
+    ⭐ A bad squad is the caller's mistake, not a server fault — 400, with the reason. Returning 500 would
+    tell a client author to retry something that will never work.
+    """
+    try:
+        return fn(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/v1/health")
 def health() -> dict:
-    """Is the service up? Deliberately does not touch the database — a health check that fails when the
-    database is slow tells you about the database, not the service."""
+    """Is the service up? Deliberately does not touch the database — ⭐ a health check that fails when the
+    database is slow reports on the database, not the service, and would take the app out of rotation for a
+    dependency it can survive."""
     return {"ok": True}
 
 
-@app.post("/api/v1/squad/analysis")
+@app.post("/api/v1/squad/analysis", description=_GAMEWEEK_KEYS)
 def squad_analysis(body: SquadBody) -> dict:
-    """A squad's health over the horizon: projected XI xP, the bench, weak links, club concentration.
+    """A squad's health over the horizon: projected XI xP, the bench, weak links, club concentration."""
+    return _answer(service.analysis, service.SquadRequest(**body.model_dump()))
 
-    ⚠️ **`by_gameweek` arrives keyed by gameweek as a STRING**, because JSON has no integer object keys —
-    the same shape PostgREST already serves for the published board, so a client that reads one reads the
-    other. ⭐ *Parse them to integers before sorting.* As text, `"10"` sorts before `"6"`, so a prefix sum
-    over "the next two gameweeks" would quietly answer for the wrong two. Pair them with `gameweeks`, which
-    is returned in order.
+
+@app.post("/api/v1/squad/transfers")
+def squad_transfers(body: TransfersBody) -> dict:
+    """The best swaps for this squad — a coordinated plan when `count` > 1, a ranked menu when it is 1."""
+    return _answer(service.transfers, service.TransfersRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/captain")
+def squad_captain(body: CaptainBody) -> dict:
+    """Who to captain **this gameweek**. ⚠️ Always the next gameweek, whatever `horizon` is sent."""
+    return _answer(service.captain, service.CaptainRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/gameweek-plan")
+def squad_gameweek_plan(body: GameweekBody) -> dict:
+    """The whole week in one answer: captain · lineup · transfers · timing · flags."""
+    return _answer(service.gameweek, service.GameweekRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/route")
+def squad_route(body: RouteBody) -> dict:
+    """*"What would it take to field X?"* — every legal one-transfer route to owning the target.
+
+    ⭐ A blocked route is **information**: *"short by £0.6m"* answers the question, where an empty list looks
+    like the question was not understood.
     """
-    try:
-        return analysis(SquadRequest(player_ids=body.player_ids,
-                                     bench_ids=body.bench_ids,
-                                     horizon=body.horizon))
-    except ValueError as exc:
-        # ⭐ A bad squad is the caller's mistake, not a server fault — 400, with the reason. Returning 500
-        # would tell a client author to retry something that will never work.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _answer(service.route, service.RouteRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/build")
+def squad_build(body: BuildBody) -> dict:
+    """The best legal fifteen within a budget — the wildcard question.
+
+    ⚠️ Check `status`: the solver's own word. `Infeasible` means *nothing fits these constraints*, which is
+    an answer, not a failure.
+    """
+    return _answer(service.build, service.BuildRequest(**body.model_dump()))

@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from src.analytics.captain import captain_picks
 from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
-from src.analytics.transfer import replace_dead, suggest_transfer_plan, suggest_transfers
+from src.analytics.transfer import TIE_NOISE_WINDOW, replace_dead, suggest_transfer_plan, suggest_transfers
 from src.analytics.transfer_timing import affordability_cliff, bank_or_use
 
 # FPL status codes → a human word for a flag (mirrors the CLI's availability messages, ADR-023).
@@ -198,8 +198,14 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # so the rival move is re-priced over the same map before the two are weighed.
     if cliff and held >= 2:
         wide = horizon_xp or xp_by_id
+        # ⭐ **Stated, because here the default is right by coincidence** (ADR-220). This branch only runs
+        # when `horizon_xp` exists, and it ranks on that map — so the window is the wider one, and there is
+        # no *further* view left to break a tie with. ⚠️ `gameweek_plan` is handed `horizon_xp` without being
+        # told how wide it is; every caller builds it at five, which is `TIE_NOISE_WINDOW`. That assumption
+        # was already load-bearing and unwritten.
         rival = (suggest_transfer_plan(owned, market, wide, bench_ids=bench_ids, bank=bank,
-                                       count=2, reported_out=reported_out)
+                                       count=2, reported_out=reported_out,
+                                       window=TIE_NOISE_WINDOW, horizon_xp=None)
                  if horizon_xp else moves)
         second = rival[1]["gain"] if len(rival) > 1 else 0.0
         if second >= (cliff.get("uplift") or 0.0):

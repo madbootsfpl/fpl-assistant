@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,107 tests · 219 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,178 tests · 220 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
 page knowing three things:
@@ -30,8 +30,10 @@ page knowing three things:
    next in the plan.** People don't want a browser for FPL. See
    [Mobile_Platform_Audit.md](../03_Architecture/Mobile_Platform_Audit.md).
    **Phase 1 ✅** the read surface is proven (Flutter reads the published board straight from Supabase — 667
-   players, 162 KB, 511 ms). **Phase 2 ✅** the pipeline (ADR-211). **Phase 3 🟡 started:** the first squad
-   endpoint is live and Streamlit's Health tab is its consumer (ADR-219).
+   players, 162 KB, 511 ms). **Phase 2 ✅** the pipeline (ADR-211). **Phase 3 🟢 endpoints done:** all six
+   squad endpoints are built and smoke-tested (ADR-219 → ADR-220), with Streamlit's Health tab as the web's
+   in-process consumer. ⏳ **What remains of Phase 3 is auth** — Stage C, Supabase Auth and the identity
+   migration; the endpoints take *ids in, analysis out*, so a **saved squad** is the different question.
    ⚠️ **The audit's §4.2 was amended by building it** — Streamlit does *not* migrate onto the HTTP API; the
    contract is a Python module both transports share. ⭐ *A plan survives contact with the first endpoint,
    or it gets corrected in writing where the next reader will find it.*

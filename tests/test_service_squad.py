@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 
 from src import config, pipeline
 from src.service import SquadRequest, analysis
-from src.service import squad as service_squad
+from src.service import inputs as service_inputs
 from src.service.http import app
 from src.storage import Storage
 
@@ -177,9 +177,10 @@ def test_a_store_the_service_opened_is_closed(monkeypatch):
         def get_history_by_code(self): return {}
         def get_gw_history_by_code(self): return {}
         def get_upcoming_fixtures(self): return []
+        def headline_events_by_id(self): return {}
         def close(self): closed.append(True)
 
-    monkeypatch.setattr(service_squad, "Storage", _Store)
+    monkeypatch.setattr(service_inputs, "Storage", _Store)
     with pytest.raises(ValueError):                      # unknown ids — an empty store knows nobody
         analysis(SquadRequest(player_ids=[1]))
     assert closed == [True], "the store must be closed even when the analysis raises"
@@ -194,14 +195,14 @@ def client(store, monkeypatch):
     ⚠️ `Storage()`'s default argument was bound at import, so patching `config.DB_PATH` would do nothing —
     the seam has to be the name the service module actually calls.
     """
-    monkeypatch.setattr(service_squad, "Storage", lambda: Storage(config.SEED_DB_PATH))
+    monkeypatch.setattr(service_inputs, "Storage", lambda: Storage(config.SEED_DB_PATH))
     return TestClient(app)
 
 
 def test_health_answers_without_touching_the_database(client, monkeypatch):
     """⭐ A health check that fails when the database is slow reports on the database, not the service —
     and would take the app out of rotation for a dependency it can survive."""
-    monkeypatch.setattr(service_squad, "Storage", lambda: 1 / 0)
+    monkeypatch.setattr(service_inputs, "Storage", lambda: 1 / 0)
     assert client.get("/api/v1/health").json() == {"ok": True}
 
 
@@ -256,7 +257,7 @@ def test_a_malformed_body_is_refused_before_the_database_is_opened(client, monke
     """⚠️ Validation at the edge is not duplication of `SquadRequest.validate()` — it is what stops a
     garbage request costing a connection. The same checks live in the dataclass for the in-process caller,
     which never passes through here."""
-    monkeypatch.setattr(service_squad, "Storage", lambda: 1 / 0)
+    monkeypatch.setattr(service_inputs, "Storage", lambda: 1 / 0)
     assert client.post("/api/v1/squad/analysis", json=body).status_code == 422
 
 

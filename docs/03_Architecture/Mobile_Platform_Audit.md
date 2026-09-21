@@ -275,7 +275,10 @@ Board-wide values that are identical for every user, written by the pipeline onc
 > in-process — because a separately-hosted service turns every squad analysis the web app renders into a
 > round trip, on the app spike 017 had just taken from 3,026 ms to 20 ms. ⭐ *A contract with one consumer
 > is still a guess; the guarantee is bought back with a test that the HTTP body equals the in-process
-> answer serialised.* **Built:** `POST /api/v1/squad/analysis`. The other five wait.
+> answer serialised.* ✅ **All six are now built** — `analysis` (ADR-219), then `transfers`, `captain`,
+> `gameweek-plan`, `route` and `build` (ADR-220). ⚠️ Building the five found that ADR-209's transfer
+> tie-break had reached the engine and only four of its ten call sites, including the web app's own
+> Transfer tab.
 
 Operations whose input is *this user's fifteen players*, which cannot be precomputed:
 
@@ -460,10 +463,10 @@ database. **Streamlit cuts over to it first** — proving the pipeline against t
 users who will tell you when it breaks. Exit criterion: *two weeks with no manual `reseed`, including a
 deadline and a live gameweek.*
 
-**Phase 3 — API boundary** — 🟡 *in progress*
-Supabase Auth + identity migration (risked, dual-run) — **not started**. The six squad endpoints and the DTO
-layer: **one built** (`POST /api/v1/squad/analysis`, ADR-219), the rest deliberately held until the first has
-proved its shape.
+**Phase 3 — API boundary** — 🟢 *the endpoints are done; auth is not*
+✅ **All six squad endpoints and the DTO layer are built** (ADR-219 → ADR-220). ⏳ Supabase Auth + identity
+migration (risked, dual-run) — **not started**, and it is what remains of this phase. ⭐ These endpoints take
+*ids in, analysis out*, so there is no user row to protect; a **saved squad** is the different question.
 
 ⚠️ Streamlit does **not** migrate onto the HTTP API — see the amendment at §4.2. It imports the same contract
 in-process, and Health is its first consumer, so the contract is exercised by a real client before Flutter

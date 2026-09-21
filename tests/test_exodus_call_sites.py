@@ -22,7 +22,14 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 # The whole-board variable at every current call site. Not a style rule: it is the assertion. A future call
 # site that legitimately needs another name must come here and say so, which is the point — the population
 # this is bound to is the one decision that cannot be checked by reading the line it appears on.
-WHOLE_BOARD = {"players"}
+WHOLE_BOARD = {
+    "players",
+    # ⭐ The service layer's loader (ADR-219/220) reads `get_players()` unfiltered into `Loaded.players` and
+    # hands the whole thing on. Registered here rather than renamed at the call site, because **coming here
+    # to say so is the mechanism** — this guard caught the new endpoint on the day it was written, which is
+    # the pattern working exactly as ADR-210 intended.
+    "data.players",
+}
 
 
 def _src_files():

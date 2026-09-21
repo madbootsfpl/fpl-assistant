@@ -77,6 +77,13 @@ from src.ui.trending import render_trending
 
 _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 
+# ⭐ **Stated rather than defaulted (ADR-209/220).** `ask` always ranks over `_HORIZON`, which is already the
+# window the tie-break band was sized against — so this changes nothing today. ⚠️ *That is exactly why it is
+# worth writing down*: the band's default silently matches only while the horizon stays 5, and the next
+# person to make this configurable would inherit a mismatch with nothing to warn them.
+# `horizon_xp` is None because the ranking window **is** the wider one — there is no longer view to consult.
+_TIE_BREAK = {"window": _HORIZON, "horizon_xp": None}
+
 # Squad-scoped intents that default to the loaded squad when none is named (ADR-090); `analyse` is the router's
 # fallback intent. Deliberately excludes fixtures/compare/worth/etc. so a *global* question isn't scoped.
 _SQUAD_DEFAULT_INTENTS = frozenset({"captain", "transfer", "analyse", "start_bench", "gameweek", "chips"})
@@ -537,7 +544,7 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
         # A coordinated N-transfer plan (ADR-035), with a per-GW table as structured detail (ADR-036).
         plan = suggest_transfer_plan(
             owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, count=count,
-            reported_out=reported_out,
+            reported_out=reported_out, **_TIE_BREAK,
         )
         if not plan:
             return None
@@ -555,7 +562,7 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
 
     moves = suggest_transfers(
         owned, players, xp_by_id, bench_ids=bench_ids, bank=0.0, limit=rank + 1,
-        reported_out=reported_out,
+        reported_out=reported_out, **_TIE_BREAK,
     )
     if not moves:
         return None

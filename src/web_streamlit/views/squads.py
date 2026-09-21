@@ -43,6 +43,7 @@ from src.analytics import (
 from src.analytics.board import ranked_for
 from src.service import SquadRequest
 from src.service import analysis as service_analysis
+from src.service.inputs import WIDE
 from src.ui.analyse import render_squad_analysis
 from src.ui.ask import render_ask
 from src.ui.explain import MODEL_NOTE, render_explanation
@@ -1163,6 +1164,17 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     # ⭐ The published board, sliced here rather than recomputed from 1.9 MB of history — falling back to
     # the engine when nothing has been published (a fresh project, or the seed served after a fallback).
     ranked = ranked_for(board, players, upcoming, history, gw_history, horizon=horizon)
+    # ⭐⭐ **ADR-209, which this tab never received** (ADR-220). `window` tells the tie-break how many
+    # gameweeks `xp_by_id` covers — without it the band is the one sized for five, and under My Squad this
+    # tab runs at **horizon 1**, where ADR-209 measured the band as silently deciding every recommendation.
+    # `horizon_xp` is the half that moves expected points: two moves worth +1.2 apiece over one gameweek are
+    # a dead heat, and the app had the five-week number all along and never let it choose.
+    # ⚠️ Both are optional arguments, so omitting them was silent — the ranking returned either way and
+    # simply named a different player. Measured on 120 random legal squads: **89 of them changed pick.**
+    _wide = ({r["id"]: r["xp"] for r in
+              ranked_for(board, players, upcoming, history, gw_history, horizon=WIDE)}
+             if horizon < WIDE else None)
+    _tie = {"window": horizon, "horizon_xp": _wide}
     count = st.slider("Transfers (a coordinated plan)", 1, 3, max(1, min(int(free or 1), 3)),
                       help="How many swaps to plan together (they share the bank). Defaults to the free "
                            "transfers you hold, above — raise it to see what a hit would buy.")
@@ -1207,7 +1219,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
     # hit. Arithmetic over FPL's own rules, not a search — the roadmap's path/tree was scoped out on evidence.
     from src.analytics.transfer_timing import transfer_timing
     _plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=2,
-                                  reported_out=leaving)
+                                  reported_out=leaving, **_tie)
     _next_gw = ranked[0]["gameweeks"][0] if ranked and ranked[0]["gameweeks"] else None
     _bg = {r["id"]: r["by_gameweek"] for r in ranked}
     _delay = None
@@ -1250,7 +1262,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
 
     if count > 1:
         plan = suggest_transfer_plan(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, count=count,
-                                     reported_out=leaving)
+                                     reported_out=leaving, **_tie)
         st.code(render_transfer_plan(
             plan, squad_name, bank=bank, horizon=horizon,
             by_gameweek_by_id={r["id"]: r["by_gameweek"] for r in ranked},
@@ -1275,7 +1287,7 @@ def render_transfer(squad_name, squad, players, upcoming, history, gw_history, p
                     st.rerun()
     else:
         swaps = suggest_transfers(owned, players, xp_by_id, bench_ids=bench_ids, bank=bank, limit=5,
-                                  reported_out=leaving)
+                                  reported_out=leaving, **_tie)
         by_id = {p["id"]: p for p in players}
         render_player_table([{
             "out": photos.get(s["out"]["id"], ""), "Out": s["out"]["web_name"],

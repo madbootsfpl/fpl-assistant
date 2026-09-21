@@ -50,6 +50,7 @@ from src.analytics import (
 )
 from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
+from src.analytics.transfer import TIE_NOISE_WINDOW
 from src.api.client import FplApiError
 from src.squads import SquadStore
 from src.storage import Storage
@@ -838,6 +839,20 @@ def cmd_transfer(args) -> None:
             gw_history_by_code=store.get_gw_history_by_code(),   # in-season form (ADR-060; dormant now)
         )
         xp_by_id = {r["id"]: r["xp"] for r in ranked}
+        # ⭐⭐ **ADR-209 reached the engine and not this caller (ADR-220).** `--next` is the manager's choice,
+        # so `transfer --next 1` was ranking a one-gameweek map with a band sized for five — more than twice
+        # the width, on the window where ADR-209 measured the median best-vs-second gap at 0.20. ⚠️ Silent:
+        # the ranking returned either way and simply named a different player.
+        _wide = None
+        if args.next < TIE_NOISE_WINDOW:
+            # ⚠️ The same squad re-priced, never a second search (ADR-173) — re-running the search could name
+            # a different move, and then the two numbers would answer different questions.
+            _wide = {r["id"]: r["xp"] for r in decision_xp(
+                players, upcoming, store.get_history_by_code(),
+                source=args.type, horizon=TIE_NOISE_WINDOW, minutes_weighted=show_xmins,
+                gw_history_by_code=store.get_gw_history_by_code(),
+            )}
+        _tie = {"window": args.next, "horizon_xp": _wide}
         bench_ids = squad.get("bench_ids", [])
         xi_aware = not args.raw   # XI-gain ranking by default; --raw for the old raw-player-gain (ADR-046)
 
@@ -861,7 +876,7 @@ def cmd_transfer(args) -> None:
             # players' per-gameweek xP shown (ADR-036).
             plan = suggest_transfer_plan(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, count=args.count,
-                xi_aware=xi_aware, reported_out=leaving,
+                xi_aware=xi_aware, reported_out=leaving, **_tie,
             )
             print(render_transfer_plan(
                 plan, args.squad, bank=args.bank, horizon=args.next,
@@ -872,7 +887,7 @@ def cmd_transfer(args) -> None:
         else:
             suggestions = suggest_transfers(
                 owned, players, xp_by_id, bench_ids=bench_ids, bank=args.bank, limit=args.limit,
-                xi_aware=xi_aware, reported_out=leaving,
+                xi_aware=xi_aware, reported_out=leaving, **_tie,
             )
             print(render_transfers(
                 suggestions, args.squad, bank=args.bank, horizon=args.next, show_xmins=show_xmins,
