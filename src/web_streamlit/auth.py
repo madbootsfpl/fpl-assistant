@@ -58,7 +58,7 @@ def gate() -> None:
     """The Google-auth gate (ADR-106). **Not signed in** → the Sign-in-with-Google screen (stops the page).
     **Signed in + on the allow-list** (`beta_users`) → mark the session passed (`_OK`/`_EMAIL`) and return.
     **Signed in but not invited** → add to the waitlist + a *"not on the list yet"* screen with Log out (stops)."""
-    from src.web_streamlit import brand, user_store, waitlist
+    from src.web_streamlit import analytics, brand, user_store, waitlist
     from src.web_streamlit.access import _EMAIL, _OK, _user_cap, secret
 
     email = current_email()
@@ -85,11 +85,19 @@ def gate() -> None:
         # ADR-142: stamp the sign-in. Once per session, here, because this is the one place we know someone
         # has *arrived* — the Admin roster previously inferred activity from whether a squad had been saved,
         # which most people never do, so daily users read as "never". Best-effort and silent.
-        user_store.touch_last_seen(email)
+        with analytics.timed("login_touch", page="Gate"):
+            user_store.touch_last_seen(email)
         from src.web_streamlit import squads
-        squads.link_and_restore(user_key(email))   # US-362: link + restore the per-user squad (cross-device/reconnect)
+        with analytics.timed("login_restore_squad", page="Gate"):
+            squads.link_and_restore(user_key(email))   # US-362: link + restore (cross-device/reconnect)
 
-    if user_store.is_registered(email):            # on the allow-list → admitted
+    # ⭐⭐ **Timed, because the board load was and this was not — and the owner is reporting eleven seconds
+    # that `data_load` says is 23 ms.** Everything measured so far was the part that happened to carry a
+    # timer; the login and squad-restore legs each make their own HTTPS round trip to PostgREST and none of
+    # them was ever counted. *You optimise what you measure, so measure the thing being complained about.*
+    with analytics.timed("login_gate_check", page="Gate"):
+        _allowed = user_store.is_registered(email)
+    if _allowed:                                  # on the allow-list → admitted
         _admit()
         return
 
