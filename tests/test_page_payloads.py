@@ -16,28 +16,37 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from src.storage import Storage
-
 PAGES = Path(__file__).resolve().parents[1] / "src" / "web_streamlit" / "pages"
 
 # Roughly what each costs on the real board, so a failure says why it matters rather than just "changed".
-WEIGHT = {"get_gw_history_by_code": "1.2 MB", "get_history_by_code": "747 KB", "get_players": "518 KB"}
+WEIGHT = {"gw_history_by_code": "1.2 MB", "history_by_code": "747 KB", "players": "518 KB"}
 
 
 @pytest.fixture
 def calls(monkeypatch):
-    """Record which Storage reads a page performs."""
+    """Record which cached loaders a page asks for.
+
+    ⚠️ **Watches `dataload`, not `Storage`, and that moved deliberately.** Since the cold fill was bundled
+    into one connection (spike 017), `Storage.get_gw_history_by_code` runs on a cold miss whatever page
+    triggered it — so asserting on `Storage` would now fail on every page and measure the bundle rather than
+    the page.
+
+    ⭐ The page-level property still holds and still matters: a page that never asks for 1.9 MB never
+    unpickles it, on every warm render, which is every click.
+    """
+    from src.web_streamlit import dataload
+
     seen = []
     for name in WEIGHT:
-        real = getattr(Storage, name)
+        real = getattr(dataload, name)
 
         def make(n, r):
-            def f(self, *a, **k):
+            def f(*a, **k):
                 seen.append(n)
-                return r(self, *a, **k)
+                return r(*a, **k)
             return f
 
-        monkeypatch.setattr(Storage, name, make(name, real))
+        monkeypatch.setattr(dataload, name, make(name, real))
     return seen
 
 
@@ -52,7 +61,7 @@ def test_fdr_does_not_load_player_history_it_never_reads(calls):
     """
     at = AppTest.from_file(str(PAGES / "2_FDR.py"), default_timeout=90).run()
     assert not at.exception, at.exception
-    heavy = [c for c in calls if c in ("get_history_by_code", "get_gw_history_by_code")]
+    heavy = [c for c in calls if c in ("history_by_code", "gw_history_by_code")]
     assert not heavy, (
         f"FDR is fetching {heavy} again — "
         + " + ".join(WEIGHT[h] for h in set(heavy)) + " that the page does not read")
@@ -61,7 +70,7 @@ def test_fdr_does_not_load_player_history_it_never_reads(calls):
 def test_fdr_loads_players_only_when_the_squad_lens_is_on(calls):
     """0.5 MB, and the checkbox defaults to off. It is needed for the lens and nothing else."""
     at = AppTest.from_file(str(PAGES / "2_FDR.py"), default_timeout=90).run()
-    assert "get_players" not in calls, "the lens is off — the player board is not needed"
+    assert "players" not in calls, "the lens is off — the player board is not needed"
 
     calls.clear()
     box = next((c for c in at.checkbox if "squad" in (c.label or "").lower()), None)
@@ -77,11 +86,8 @@ def test_the_squad_lens_still_filters_the_ticker():
     ⭐ An earlier run of this check used the wrong session key, saw 20 rows, and looked like a regression. It
     was the test that was wrong. *Confirm the fixture reaches the code path before believing its verdict.*
     """
-    store = Storage()
-    try:
-        players = store.get_players()
-    finally:
-        store.close()
+    from src.web_streamlit import dataload
+    players = dataload.players()
     picked, per_club = [], {}
     for p in players:
         if per_club.get(p["team"], 0) < 5 and len(picked) < 15:

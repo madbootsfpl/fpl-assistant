@@ -18,35 +18,29 @@ from src import config, ingest
 from src.storage import Storage, fallback_reason
 
 
-def _freshness() -> tuple[int | None, str]:
-    """The caption's two values — the player count and the refresh date — from **one connection**.
+def freshness_from(store) -> tuple[int | None, str]:
+    """The caption's two values, from a store **the caller already opened**.
 
-    ⭐⭐ **They used to open one each, and this line renders on every page.** `_player_count` opened a
-    `Storage`, counted, closed; `_data_as_of` opened another, read `data_status`, closed. Against a local
-    SQLite file that is free. Against Supabase each open is a DNS lookup, a TCP handshake and a TLS
-    handshake before any data moves — measured at **50-80 ms more than a warm connection** — and Streamlit
-    re-runs the whole script on every click.
+    ⭐⭐ **It used to open its own — twice.** `_player_count` opened a `Storage`, counted and closed;
+    `_data_as_of` opened another. Against a local file that is free; from Streamlit Cloud each open measured
+    **~1,950 ms**, and this line renders on every page. Now `dataload._everything()` opens one connection for
+    the whole cold fill and hands it here.
 
-    ⚠️ Spike 017 traced three connections per page render and **two of them were this caption**. One line of
-    sidebar text was costing two thirds of the connection overhead of the entire page.
-
-    ⭐ The date still has two sources, because the answer stopped being a file (ADR-211 2b): against Postgres
-    it is `data_status.refreshed_at` — the last refresh that actually *passed* — and against SQLite it is the
-    snapshot's mtime. The SQLite path needs no query at all, so it still makes none.
+    ⭐ The date still comes from the right place on each backend (ADR-211 2b): `data_status.refreshed_at` on
+    Postgres — the last refresh that actually *passed* — and the snapshot's mtime on SQLite, which needs no
+    query at all.
     """
     count: int | None = None
     as_of: str | None = None
     from_db = bool(config.DATABASE_URL and not fallback_reason())
 
     try:
-        store = Storage()
-        try:
-            count = store.count_players()
-            if from_db:
-                row = store.data_status()
-                as_of = str(row["refreshed_at"])[:10] if row and row["refreshed_at"] else "unknown"
-        finally:
-            store.close()
+        if store is None:
+            raise RuntimeError("no store")     # fall straight through to the mtime below
+        count = store.count_players()
+        if from_db:
+            row = store.data_status()
+            as_of = str(row["refreshed_at"])[:10] if row and row["refreshed_at"] else "unknown"
     except Exception:              # noqa: BLE001 — a caption must never take the page down
         pass
 
@@ -59,6 +53,24 @@ def _freshness() -> tuple[int | None, str]:
             as_of = "unknown"
 
     return count, as_of
+
+
+def _freshness() -> tuple[int | None, str]:
+    """`freshness_from` with a store of its own — for callers outside the cached loader.
+
+    ⚠️ **A store that will not open must still produce a date.** The first version of this returned
+    `(None, "unknown")` the moment `Storage()` raised, skipping the snapshot-mtime fallback — so an app
+    serving the committed snapshot would have reported not knowing when it was from. Caught by the test that
+    exists for exactly that case.
+    """
+    try:
+        store = Storage()
+    except Exception:              # noqa: BLE001 — a caption must never take the page down
+        return freshness_from(None)
+    try:
+        return freshness_from(store)
+    finally:
+        store.close()
 
 
 def is_local() -> bool:

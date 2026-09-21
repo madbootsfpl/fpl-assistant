@@ -634,10 +634,15 @@ class Storage:
             # ⚠️ **Stated so it is not mistaken for coverage: this is "not applicable", not "handled".** The day
             # a column is added *after* Postgres is carrying real data, that needs a real migration — and this
             # skip is where someone will look for one. See ADR-211's staging.
-            self._open_for_reading()
             self._migrate()                # ⭐ both backends since ADR-211 2d — see the note in `_migrate`
             if not self.is_postgres:
                 self._rekey_history()      # after _migrate, so the copy sees every column (ADR-129)
+
+        # ⚠️ **Outside the transaction above, deliberately.** `PgConnection.execute` only rolls back a failed
+        # statement at depth 0 — inside a `with`, a failure leaves the whole transaction aborted and every
+        # later statement fails with *"current transaction is aborted"*. The grants do not belong in the same
+        # transaction as the creates, and putting them outside is what lets a missing role be survivable.
+        self._open_for_reading()
 
     def _open_for_reading(self) -> None:
         """Let a client read the tables this just created. Postgres only; a no-op on SQLite.
@@ -659,8 +664,22 @@ class Storage:
         if not self.is_postgres:
             return
         for table in DATA_TABLES:
-            # Idempotent, and cheap: a re-grant of an existing grant is a no-op.
-            self.conn.execute(f'GRANT SELECT ON {table} TO anon, authenticated')
+            try:
+                # Idempotent, and cheap: a re-grant of an existing grant is a no-op.
+                self.conn.execute(f'GRANT SELECT ON {table} TO anon, authenticated')
+            except Exception as exc:                  # noqa: BLE001 — see below
+                # ⚠️⚠️ **`anon` and `authenticated` are Supabase's roles, and a plain Postgres has neither.**
+                # The first version of this raised `UndefinedObject` and took the **whole pipeline** down on
+                # any non-Supabase database — a local Postgres, a CI service container, anyone else's
+                # deployment. It passed the suite because conftest creates those roles, so the one
+                # environment that could not reproduce it was the one being tested in.
+                #
+                # ⭐ *A grant is for the benefit of a client that may not exist.* Where there is no client
+                # role there is nothing to open the door for, and refusing to store the data over it would
+                # be the tail wagging the dog.
+                if "does not exist" not in str(exc):
+                    raise
+                return                                # no client role here — nothing to open the door for
 
     def _migrate(self) -> None:
         """Add any columns missing from an older database, table by table.

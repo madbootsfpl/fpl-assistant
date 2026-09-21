@@ -336,3 +336,71 @@ def test_the_pipeline_opens_its_own_tables_for_reading(db):
         _as_anon(db, "delete from public.players")
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         _as_anon(db, "select count(*) from public.squads")
+
+
+def test_a_grant_that_cannot_apply_does_not_kill_the_pipeline(db, monkeypatch):
+    """⚠️⚠️ **The crash the read-grant introduced, on every database that is not Supabase.**
+
+    `anon` and `authenticated` are Supabase's roles. The first version of `_open_for_reading` raised
+    `UndefinedObject` where they do not exist and took the **whole pipeline** down — a local Postgres, a CI
+    service container, anyone else's deployment.
+
+    ⭐⭐ It passed the suite, because `conftest` creates those roles for the Postgres harness. *The one
+    environment that could not reproduce the bug was the one being tested in.*
+
+    ⚠️ Roles are **cluster-wide**, so this cannot drop them — they hold privileges in the other test
+    databases and `DROP ROLE` refuses. It drives the identical `"does not exist"` branch by pointing the
+    grant at a table that is not there, and the real missing-role case was verified by hand against a plain
+    Postgres with no Supabase roles at all.
+
+    ⭐ *A grant is for the benefit of a client that may not exist.* Where there is nothing to open the door
+    for, refusing to store the data would be the tail wagging the dog.
+    """
+    from src import storage as storage_module
+    from src.storage import Storage
+
+    monkeypatch.setattr(storage_module, "DATA_TABLES", ("a_table_that_is_not_there",))
+
+    from src import db as db_module
+    real_connect = getattr(db_module, "_unpatched_connect", db_module.connect)
+    patched, db_module.connect = db_module.connect, real_connect
+    target = DSN.rsplit("/", 1)[0] + "/" + db.info.dbname
+    try:
+        store = Storage(target, ensure_schema=True)   # must not raise
+        try:
+            store.conn.execute("INSERT INTO teams (id, name, short_name) VALUES (1, 'Arsenal', 'ARS')")
+            store.conn.commit()
+            assert store.conn.execute("SELECT count(*) FROM teams").fetchone()[0] == 1, (
+                "the data must still be stored, and the connection must not be left in an aborted "
+                "transaction by the failed grant")
+        finally:
+            store.close()
+    finally:
+        db_module.connect = patched
+
+
+def test_a_grant_failing_for_any_OTHER_reason_still_raises(db, monkeypatch):
+    """⚠️ **The other half, and mutation-testing found it missing.**
+
+    Tolerating a missing role is right. Tolerating *everything* is not — a genuine permission failure, a
+    typo in a table name, a connection problem would all vanish silently and the boards would quietly stop
+    being readable with nothing to say so. ⭐ *A rule that swallows the error it was written for must still
+    raise the ones it was not.*
+    """
+    import psycopg
+
+    from src import storage as storage_module
+    from src.storage import Storage
+
+    # Not a missing object — a malformed identifier, which Postgres rejects as a syntax error.
+    monkeypatch.setattr(storage_module, "DATA_TABLES", ("1 not a valid name",))
+
+    from src import db as db_module
+    real_connect = getattr(db_module, "_unpatched_connect", db_module.connect)
+    patched, db_module.connect = db_module.connect, real_connect
+    target = DSN.rsplit("/", 1)[0] + "/" + db.info.dbname
+    try:
+        with pytest.raises(psycopg.Error):
+            Storage(target, ensure_schema=True)
+    finally:
+        db_module.connect = patched

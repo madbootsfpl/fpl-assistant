@@ -102,3 +102,61 @@ up to five minutes behind the pipeline. The caption says so honestly because it 
 
 **Not done:** connection caching. Still undecided, and now clearly secondary — with warm renders at zero
 queries there is nothing left for a pool to save except on the cold path.
+
+---
+
+## 🐛 Follow-up, 2026-09-21 — the cold path, and a crash off Supabase
+
+Production's hourly timings after the deploy:
+
+| | p50 | worst |
+|---|---|---|
+| SQLite seed (20th, before the cutover) | 26–42 ms | 125 |
+| Postgres, no cache | ~3,000–3,260 ms | 4,733 |
+| **Postgres, cached (21st 11:00)** | **23 ms** | 10,863 |
+
+✅ **The warm path is fixed** — level with the local-file era. The owner: *"once the initial login and squad
+is loaded takes a few seconds, the movement from tab to tab is quick."*
+
+### The cold path got 3.5× worse, and this ADR priced it wrong
+
+| | connections | observed |
+|---|---|---|
+| before | 2 | ~3,000 ms |
+| after | **6** | **~10,800 ms** |
+
+Four extra connections cost ~7,800 ms — **~1,950 ms each**. This ADR accepted "six connections instead of
+two" against the **~30 ms** TLS handshake measured **from a laptop**. From Streamlit Cloud it is **65×** that.
+
+⭐⭐ **That is spike 017's own warning turned on its author**: *latency measured in the wrong place is not a
+measurement of the thing.* Written about how to benchmark the fix, then used to price the fix's cost the
+same wrong way.
+
+🔬 Ruled out before blaming connections: the dict conversion and pickling caching added total **~16 ms** on
+the largest read.
+
+**Fixed:** one cached `_everything()` opens a **single** connection and the per-dataset loaders slice from
+it, each cached separately so a *warm* call still unpickles only its own slice (`teams()` costs 2 KB, not
+2.41 MB). Cold connections **6 → 1**.
+
+⚠️ **The cost, stated:** a cold miss now fetches all 2.41 MB even if the visitor landed on Signals or
+Trending, which need 0.5 MB of it. That is ~1.5 s of transfer against ~7.8 s of handshakes, once per TTL,
+and four of the six pages need the whole thing anyway.
+
+### And a crash on every database that is not Supabase
+
+ADR-216's read-grant used `anon` and `authenticated` — **Supabase's roles**. On a plain Postgres it raised
+`UndefinedObject` and took the whole pipeline down.
+
+⭐⭐ **It passed the suite, because `conftest` creates those roles** — *the one environment that could not
+reproduce the bug was the one being tested in.* Found by running the pipeline against a bare container while
+measuring something else.
+
+Now tolerated: a missing role means no client to open the door for, and refusing to store the data over it
+would be the tail wagging the dog. ⚠️ **Only** a missing object is tolerated — any other grant failure still
+raises, because a rule that swallows the error it was written for must still raise the ones it was not.
+Mutation-testing found that second half missing on the first attempt.
+
+⚠️ The grants also moved **outside** `_init_schema`'s transaction: `PgConnection.execute` only rolls back at
+depth 0, so inside a `with` a failed grant left the connection in an aborted transaction and every later
+statement failed.
