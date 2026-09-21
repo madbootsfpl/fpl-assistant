@@ -6,24 +6,41 @@ state.
 
 ---
 
-## 🌙 Do this tonight — it is the only thing with hours of wall-clock in it
+## 🌙 The overnight downloads
 
-**Start the Xcode download.** App Store → Xcode → install. It is several gigabytes and it is the one item
-that cannot be hurried in the morning.
+✅ **Xcode 27.0 — installed and selected** (2026-09-21). ✅ **CocoaPods 1.17.0 — installed.**
+
+⏳ **Still to fetch: the iOS simulator runtime.** Since Xcode 15 the runtime is a *separate* multi-gigabyte
+download from Xcode itself — `xcrun simctl list runtimes` comes back empty, which is why `flutter doctor`
+says *"Unable to get list of installed Simulator runtimes."*
 
 ```bash
-# once it has finished:
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-sudo xcodebuild -runFirstLaunch
-sudo gem install cocoapods
+sudo xcodebuild -downloadPlatform iOS      # or: Xcode ▸ Settings ▸ Components
 ```
 
-⚠️ **What it blocks is narrower than it looks.** Xcode blocks the **iOS simulator and a real device** — not
-starting. `flutter doctor` reports `Chrome ✓` and two connected devices, so the whole Phase 4 foundation
-(navigation, theme, Riverpod, Drift, networking) can be built and run tomorrow without it.
+⚠️ **`sudo gem install cocoapods` does not work on modern macOS, and this file said to run it.** The system
+Ruby is **2.6.10** — frozen by Apple years ago — and CocoaPods' `ffi` dependency needs ≥ 3.0, so it fails
+with a version error that reads as a CocoaPods problem rather than a Ruby one. ⭐ *The instruction was
+copied from the Flutter docs without checking it against the machine it was for* — the same species as §5's
+codegen plan two sections down, on the same evening.
 
-⭐ Which is why it is worth starting tonight rather than in the morning: nothing waits on it *until* the
-first device test, and by then it will be done.
+```bash
+brew install cocoapods     # ships its own Ruby, no sudo, leaves the system one alone
+```
+
+### What is actually blocked
+
+**Nothing needed to start.** `flutter devices` reports **macOS (desktop)** and **Chrome (web)**, and the
+whole Phase 4 foundation — navigation, theme, Riverpod, Drift, networking — builds and runs on either.
+
+⭐ **Prefer macOS desktop for the first day.** It runs the *real* Flutter engine rather than the web
+renderer, so widget behaviour, fonts and scrolling match iOS far more closely than Chrome does — and being
+a native HTTP client it involves no CORS at all, which removes a whole class of confusing failure while the
+first screens take shape. ⚠️ Keep testing Chrome too: the CORS support exists for it and only a browser run
+exercises it.
+
+The simulator runtime is what unlocks an **iPhone-shaped** window, and a physical device additionally needs
+an Apple Developer account for signing.
 
 ---
 
@@ -31,7 +48,7 @@ first device test, and by then it will be done.
 
 | thing | state |
 |---|---|
-| **Flutter** | 3.47.5 stable, `flutter doctor` green except iOS/Android toolchains |
+| **Flutter** | 3.47.5 stable · ✅ Xcode 27.0 · ✅ CocoaPods 1.17.0 · targets: **macOS desktop** and **Chrome** · ⏳ simulator runtime still downloading · Android not needed (the MVP is iPhone) |
 | **The six API endpoints** | built, smoke-tested over a real socket (ADR-219/220) |
 | **CORS** | ✅ added tonight — see below; without it every call from Chrome would have failed |
 | **Real response samples** | `spikes/018-flutter-read-slice/api-samples/*.json`, one per endpoint |
@@ -131,8 +148,10 @@ exploration layer.* Worth re-reading rather than re-deciding.
 
 ## 📍 A suggested first hour
 
-1. `flutter create` the app, run it on Chrome, confirm it builds.
-2. Point it at `http://localhost:8078/api/v1/health` — proves networking and CORS end to end in one call.
+1. `flutter create` the app and run it on **macOS desktop** (`flutter run -d macos`) — the real engine,
+   and no CORS in the way while the first screens take shape.
+2. Point it at `http://localhost:8078/api/v1/health` — one call proves networking end to end. Then run
+   the same build on **Chrome** (`flutter run -d chrome`), which is what exercises CORS.
 3. Move `board.dart` across from spike 018. It is verified against the live web app and it already handles
    ⚠️ **`by_gameweek` arriving keyed by strings** — parse to `int` *before* sorting, or a prefix sum for
    "the next two gameweeks" answers for the wrong two.
