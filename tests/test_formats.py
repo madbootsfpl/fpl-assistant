@@ -22,8 +22,10 @@ def test_numeric_columns_get_a_numbercolumn_with_the_right_format():
 
 def test_image_text_and_help_columns():
     cfg = column_config(["photo", "badge", "Player", "Rating"], help={"Rating": "vs peers"})
-    assert cfg["photo"] == st.column_config.ImageColumn("", width="small")
-    assert cfg["badge"] == st.column_config.ImageColumn("", width="small")
+    # ⭐ `alignment` is stated rather than inherited (ADR-180: a default is a fact about a version, not a
+    # law) — these thumbnails were reported left-aligned before Streamlit was pinned.
+    assert cfg["photo"] == st.column_config.ImageColumn("", width="small", alignment="center")
+    assert cfg["badge"] == st.column_config.ImageColumn("", width="small", alignment="center")
     assert "Player" not in cfg                                       # plain text, no help → default render
     assert cfg["Rating"] == st.column_config.Column("Rating", help="vs peers")   # text + help → Column
 

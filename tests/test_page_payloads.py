@@ -98,3 +98,22 @@ def test_the_squad_lens_still_filters_the_ticker():
     assert after.dataframe, "the ticker must still render"
     assert after.dataframe[0].value.shape[0] == len(per_club), (
         f"the lens must narrow 20 clubs to the {len(per_club)} the squad covers")
+
+
+def test_image_columns_state_their_alignment_rather_than_inheriting_it():
+    """⭐ *A default is a fact about a version, not a law* (ADR-180).
+
+    The photo and badge thumbnails were reported left-aligned on 2026-08-06 — two days before
+    `requirements.txt` pinned Streamlit, when Community Cloud installed whatever was current. 1.61 centres
+    image cells by default, so this is belt and braces; the point is that a future default cannot move them
+    back without this test noticing.
+    """
+    from src.web_streamlit.formats import IMAGE_COLS, column_config
+
+    cfg = column_config(list(IMAGE_COLS) + ["Player"])
+    assert cfg, "the config must actually contain the image columns, or this asserts nothing"
+    for label in IMAGE_COLS:
+        # ⚠️ `alignment` is a top-level key; `type_config` holds only `{"type": "image"}`. An earlier version
+        # of this test looked inside `type_config`, found nothing, and failed on correct code.
+        assert cfg[label].get("alignment") == "center", (
+            f"the {label!r} column relies on Streamlit's default alignment instead of stating it")

@@ -50,7 +50,11 @@ def column_config(labels, *, help=None, images=IMAGE_COLS) -> dict:
     config = {}
     for label in labels:
         if label in images:
-            config[label] = st.column_config.ImageColumn("", width="small")
+            # ⭐ **`alignment` is stated, not inherited.** Streamlit 1.61 centres image cells by default, but
+            # this was reported left-aligned on 2026-08-06 — two days before `requirements.txt` pinned the
+            # version, when Community Cloud installed whatever was current. ⚠️ *A default is a fact about a
+            # version, not a law* (ADR-180), and this is a visual property that has already drifted once.
+            config[label] = st.column_config.ImageColumn("", width="small", alignment="center")
         elif label in FORMATS or _GW_COLUMN.match(str(label)):
             config[label] = st.column_config.NumberColumn(
                 label, format=FORMATS.get(label, "%.1f"), help=help.get(label))

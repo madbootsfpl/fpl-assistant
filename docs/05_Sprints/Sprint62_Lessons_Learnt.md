@@ -84,6 +84,15 @@ gameweeks, colour-coded by difficulty, with a weeks selector) and a **My Squad p
 
 ### Notes _(for Tony)_
 - Could we centre align the images on the mySquad view, currently they are left aligned.
+
+  ✅ **Addressed 2026-09-21 — and it had most likely already fixed itself.** The `photo` and `badge`
+  thumbnails are `st.column_config.ImageColumn`, which Streamlit 1.61 **centres by default**. This note is
+  dated **2026-08-06**, two days before `requirements.txt` pinned Streamlit — until then Community Cloud
+  installed whatever was current, so the app's rendering could change without a commit.
+
+  ⭐ The alignment is now **stated rather than inherited** (`alignment="center"`). ADR-180's lesson is that
+  *a default is a fact about a version, not a law*, and this is a visual property that has already drifted
+  once. Pinned by a test, so a future Streamlit default cannot move it back quietly.
 ---
 
 # Decisions Made 📋
