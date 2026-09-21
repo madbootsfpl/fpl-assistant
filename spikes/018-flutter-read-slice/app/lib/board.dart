@@ -47,6 +47,20 @@ class BoardRow {
   /// making.
   String display(int horizon) => xpOver(horizon).toStringAsFixed(1);
 
+  /// True when this player's total sits **exactly on a half-tenth** at this horizon — the only place the
+  /// phone and the web can disagree.
+  ///
+  /// ⭐⭐ **This is how a rare divergence gets tested rather than sampled.** Checking a handful of players
+  /// and finding they match proves almost nothing at ~0.09%: three checks have about a 0.3% chance of
+  /// meeting the case at all. *A sample that cannot contain the case cannot rule it out* — so the client
+  /// finds the cases instead, and the comparison is aimed at them.
+  bool atRoundingBoundary(int horizon) {
+    final scaled = xpOver(horizon) * 100;
+    final nearest = scaled.roundToDouble();
+    if ((scaled - nearest).abs() > 1e-6) return false;   // not on a hundredth at all
+    return nearest.toInt() % 10 == 5;
+  }
+
   static BoardRow fromJson(Map<String, dynamic> json) {
     // PostgREST hands `by_gameweek` back as a JSON string, keyed by gameweek as text.
     final raw = json['by_gameweek'];

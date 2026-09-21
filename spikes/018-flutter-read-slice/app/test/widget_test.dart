@@ -38,4 +38,29 @@ void main() {
     expect(asString.byGameweek, asMap.byGameweek);
     expect(asString.xpOver(2), closeTo(4.0, 1e-9));
   });
+
+  test('a total sitting exactly on a half-tenth is flagged', () {
+    // ⭐ The only place Dart and Python can disagree. Python's answer on these is neither banker's nor
+    // half-up — 0.55 → 0.6, 1.95 → 1.9, 5.85 → 5.8, whichever binary float is nearest — so no Dart
+    // rounding mode reproduces it and the client has to find the cases instead of hoping to miss them.
+    final onBoundary = BoardRow(
+      name: 'A', team: 'X', position: 'MID', byGameweek: {6: 0.30, 7: 0.25},
+    );
+    expect(onBoundary.xpOver(2), closeTo(0.55, 1e-9));
+    expect(onBoundary.atRoundingBoundary(2), isTrue);
+
+    final safe = BoardRow(
+      name: 'B', team: 'X', position: 'MID', byGameweek: {6: 0.30, 7: 0.22},
+    );
+    expect(safe.atRoundingBoundary(2), isFalse);
+  });
+
+  test('a long decimal is not mistaken for a boundary', () {
+    // ⚠️ Real board values have many decimals (6.747, 5.5202). Only an exact half-hundredth counts;
+    // treating anything near one as risky would flag most of the board and mean nothing.
+    final row = BoardRow(
+      name: 'C', team: 'X', position: 'MID', byGameweek: {6: 6.747, 7: 6.1336},
+    );
+    expect(row.atRoundingBoundary(2), isFalse);
+  });
 }

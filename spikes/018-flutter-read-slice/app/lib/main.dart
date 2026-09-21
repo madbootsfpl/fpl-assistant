@@ -108,16 +108,39 @@ class _BoardScreenState extends State<BoardScreen> {
               children: [
                 // ⚠️ The measurement, not decoration: payload and wall-clock are the things §4.1 is being
                 // judged on. A slice that renders beautifully and cannot say what it cost has not answered.
-                Container(
-                  width: double.infinity,
-                  color: Colors.white10,
-                  padding: const EdgeInsets.all(10),
-                  child: Text(
-                    '${rows.length} players · ${_bytes != null ? "${(_bytes! / 1024).round()} KB" : "?"} '
-                    '· fetched in ${_took?.inMilliseconds ?? "?"} ms',
-                    style: const TextStyle(fontFamily: 'monospace'),
-                  ),
-                ),
+                Builder(builder: (_) {
+                  // ⭐ Name the players whose totals sit exactly on a half-tenth. Those are the only rows
+                  // where Dart and Python can disagree, so those are the rows worth comparing against the
+                  // web app — instead of picking a few at random and learning nothing.
+                  final risky = rows.where((r) => r.atRoundingBoundary(_horizon)).toList();
+                  return Container(
+                    width: double.infinity,
+                    color: Colors.white10,
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${rows.length} players · '
+                          '${_bytes != null ? "${(_bytes! / 1024).round()} KB" : "?"} '
+                          '· fetched in ${_took?.inMilliseconds ?? "?"} ms',
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          risky.isEmpty
+                              ? 'no rounding-boundary players at this horizon'
+                              : 'compare these against the web app — '
+                                  '${risky.map((r) => "${r.name} ${r.display(_horizon)}").join(" · ")}',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            color: risky.isEmpty ? Colors.white38 : Colors.amberAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
                 Expanded(
                   child: ListView.builder(
                     itemCount: rows.length,
