@@ -98,19 +98,21 @@ need to be able to edit squad once built
 need to be able to select captain
 need to be able to make transfers to your team
 
-### ⚠️ Provenance unknown — these notes were not written by the owner
+### 📍 Provenance — evidence points back to the owner after all
 
-Committed on 2026-09-21 from an uncommitted working-tree change that was already present when the session
-began, so git cannot say who made it or when. **The owner confirms he did not write them**, and the sprint
-template leaves this section blank — Sprints 56, 58 and 100 all have an empty `### Notes _(for Tony)_`.
-Sprints 57 and 62 are the only two with content here.
+Committed on 2026-09-21 from an uncommitted working-tree change already present when the session began, and
+described in the commit as "Tony's own words". Asked about it, the owner said he had never left a note in a
+sprint file. ⚠️ **That claim was made without evidence either way, which was the actual error** — it was
+inferred from the section heading and stated as fact.
 
-⚠️ **They were committed with a message asserting they were the owner's own words.** That was an inference
-from the content and the section heading, stated as fact and not checked with him. ⭐ *A heading that says
-who a section is for does not say who wrote it.*
+Looking properly afterwards, **3 of 161** sprint files have anything under a `_(for Tony)_` heading: 57, 61
+and 62 — **consecutive sprints, all dated 2026-08-05/06**. And Sprint 61's note is provably the owner's: it
+embeds two **iPhone screenshots** (`…_1_105_c.jpeg`, an Apple Photos export) with *"could we display like
+attached?"*, committed by him on 2026-08-06. No automated session produces those.
 
-Kept rather than deleted, because the observations turned out to be accurate and checkable — which is the
-only thing about them that is established.
+⭐ So the likeliest account is that all three were written in the same sitting seven weeks ago and forgotten
+— which is ordinary. ⚠️ It remains **evidence, not proof**, and it is recorded that way deliberately: the
+mistake here was never the conclusion, it was asserting one without looking.
 
 ### ✅ Checked against the running app, 2026-09-21 — all five are done
 
