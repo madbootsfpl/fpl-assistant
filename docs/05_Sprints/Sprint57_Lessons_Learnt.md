@@ -98,6 +98,23 @@ need to be able to edit squad once built
 need to be able to select captain
 need to be able to make transfers to your team
 
+### ✅ Checked against the running app, 2026-09-21 — all five are done
+
+⚠️ **These notes are dated 2026-08-05 and were still uncommitted seven weeks later**, so they read as open
+work when they are not. Verified by rendering the app, not by reading the code:
+
+| the note | state |
+|---|---|
+| xP and xMins not rendered | ✅ **both render, with real values** — the explanation block shows `Pos Player Team Price xMins xP` (Tzolakis 90 / 30.2, Saka 84 / 31.3), and the sortable table carries an `xP` column plus GW6–GW10. All 15 rows non-zero. |
+| name a squad | ✅ a **"Name this squad"** input on Lab |
+| edit once built | ✅ **"Use this squad →"** sets it active; My Squad owns the pitch and the edit |
+| select captain | ✅ the **Captain** sub-tab under My Squad |
+| make transfers | ✅ the **Transfer** sub-tab under My Squad |
+
+⭐ *Assume a list is stale before you assume the work is undone* — the Roadmap's own audit reached the same
+conclusion about itself on 2026-08-30, and three of its entries were already built too. A note with no
+completion date outlives its problem and keeps looking like a task.
+
 
 -
 
