@@ -461,7 +461,7 @@ happens next. Independent of mobile.
 Scheduled ingestion → validation → analytics → Postgres. FPL data moves from a committed `seed.db` to a live
 database. **Streamlit cuts over to it first** — proving the pipeline against the client you already have, with
 users who will tell you when it breaks. Exit criterion: *two weeks with no manual `reseed`, including a
-deadline and a live gameweek.*
+deadline and a live gameweek* — ✅ **live since 2026-09-19; the clock is met on or after 2026-10-03.**
 
 **Phase 3 — API boundary** — 🟢 *the endpoints are done; auth is not*
 ✅ **All six squad endpoints and the DTO layer are built** (ADR-219 → ADR-220). ⏳ Supabase Auth + identity

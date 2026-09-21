@@ -1,0 +1,109 @@
+{
+  "bank": 2.0,
+  "coordinated": false,
+  "count": 1,
+  "horizon": 1,
+  "longer_window": 5,
+  "moves": [
+    {
+      "gain": 2.8,
+      "in": {
+        "id": 532,
+        "price": 4.9,
+        "team": "SUN",
+        "web_name": "Ballard",
+        "xp": 5.4
+      },
+      "out": {
+        "id": 330,
+        "leaving": null,
+        "price": 4.6,
+        "team": "LEE",
+        "web_name": "Bogle",
+        "xp": 1.6
+      },
+      "out_on_bench": false,
+      "position": "DEF"
+    },
+    {
+      "gain": 1.9,
+      "in": {
+        "id": 286,
+        "price": 5.1,
+        "team": "HUL",
+        "web_name": "Belloumi",
+        "xp": 5.6
+      },
+      "out": {
+        "id": 124,
+        "leaving": null,
+        "price": 5.7,
+        "team": "BHA",
+        "web_name": "Gro\u00df",
+        "xp": 1.7
+      },
+      "out_on_bench": false,
+      "position": "MID"
+    },
+    {
+      "gain": 2.7,
+      "in": {
+        "id": 504,
+        "price": 5.0,
+        "team": "BHA",
+        "web_name": "Vuskovic",
+        "xp": 5.3
+      },
+      "out": {
+        "id": 115,
+        "leaving": null,
+        "price": 4.9,
+        "team": "BHA",
+        "web_name": "De Cuyper",
+        "xp": 2.2
+      },
+      "out_on_bench": false,
+      "position": "DEF"
+    },
+    {
+      "gain": 1.9,
+      "in": {
+        "id": 93,
+        "price": 4.5,
+        "team": "BRE",
+        "web_name": "Schuster",
+        "xp": 4.5
+      },
+      "out": {
+        "id": 391,
+        "leaving": null,
+        "price": 5.7,
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 2.6
+      },
+      "out_on_bench": false,
+      "position": "DEF"
+    },
+    {
+      "gain": 1.5,
+      "in": {
+        "id": 154,
+        "price": 9.7,
+        "team": "CHE",
+        "web_name": "Palmer",
+        "xp": 6.0
+      },
+      "out": {
+        "id": 40,
+        "leaving": null,
+        "price": 7.7,
+        "team": "CHE",
+        "web_name": "Rogers",
+        "xp": 4.5
+      },
+      "out_on_bench": false,
+      "position": "MID"
+    }
+  ]
+}

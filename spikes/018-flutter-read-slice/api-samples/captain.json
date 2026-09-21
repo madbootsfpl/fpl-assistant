@@ -1,0 +1,101 @@
+{
+  "gameweek": 6,
+  "picks": [
+    {
+      "by_gameweek": {
+        "6": 6.7
+      },
+      "by_gameweek_exact": {
+        "6": 6.74695945945946
+      },
+      "chance": null,
+      "clean_sheet_xp": 0.0,
+      "defcon_xp": 0.0,
+      "difficulty": 2,
+      "doubtful": false,
+      "ep_next": 6.0,
+      "games": 1,
+      "games_by_gameweek": {
+        "6": 1
+      },
+      "gameweeks": [
+        6
+      ],
+      "id": 12,
+      "minutes_weight": 0.93,
+      "opponent": "LEE",
+      "penalty_taker": true,
+      "position": "MID",
+      "rate": 6.57,
+      "rate_source": "hist",
+      "team": "ARS",
+      "venue": "H",
+      "web_name": "Saka",
+      "xp": 6.7
+    },
+    {
+      "by_gameweek": {
+        "6": 5.7
+      },
+      "by_gameweek_exact": {
+        "6": 5.7419262029777745
+      },
+      "chance": 75,
+      "clean_sheet_xp": 0.0,
+      "defcon_xp": 0.0,
+      "difficulty": 3,
+      "doubtful": true,
+      "ep_next": 4.9,
+      "games": 1,
+      "games_by_gameweek": {
+        "6": 1
+      },
+      "gameweeks": [
+        6
+      ],
+      "id": 165,
+      "minutes_weight": 0.75,
+      "opponent": "BOU",
+      "penalty_taker": false,
+      "position": "FWD",
+      "rate": 5.74,
+      "rate_source": "hist",
+      "team": "CHE",
+      "venue": "H",
+      "web_name": "Jo\u00e3o Pedro",
+      "xp": 5.7
+    },
+    {
+      "by_gameweek": {
+        "6": 5.6
+      },
+      "by_gameweek_exact": {
+        "6": 5.642952797202797
+      },
+      "chance": null,
+      "clean_sheet_xp": 0.0,
+      "defcon_xp": 0.0,
+      "difficulty": 4,
+      "doubtful": false,
+      "ep_next": 5.0,
+      "games": 1,
+      "games_by_gameweek": {
+        "6": 1
+      },
+      "gameweeks": [
+        6
+      ],
+      "id": 379,
+      "minutes_weight": 0.93,
+      "opponent": "MCI",
+      "penalty_taker": false,
+      "position": "FWD",
+      "rate": 6.78,
+      "rate_source": "hist",
+      "team": "LIV",
+      "venue": "H",
+      "web_name": "Isak",
+      "xp": 5.6
+    }
+  ]
+}

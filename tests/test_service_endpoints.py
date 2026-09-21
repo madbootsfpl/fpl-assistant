@@ -454,3 +454,47 @@ def test_an_unknown_player_is_the_callers_mistake_on_every_endpoint(client):
         response = client.post(f"/api/v1/squad/{path}", json={"player_ids": [999999], **body})
         assert response.status_code == 400, f"{path} should name the bad id, not fail"
         assert "999999" in response.json()["detail"]
+
+
+# ---- a browser has to be able to call this ----------------------------------------------
+
+def test_a_browser_can_call_the_api(client):
+    """⭐ **Flutter's first runnable target is the web one.** `flutter doctor` reports Chrome ✓ while Xcode
+    is still incomplete, so the first calls the mobile client makes will come from a browser — and without
+    CORS every one of them fails.
+
+    ⚠️ **The failure would not have read as CORS.** The browser reports an opaque network error and the
+    server logs a perfectly ordinary 200, so the obvious place to look is the client. This is cheap to pin
+    and expensive to diagnose.
+    """
+    preflight = client.options("/api/v1/squad/analysis", headers={
+        "Origin": "http://localhost:8080",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+    })
+    assert preflight.status_code == 200
+    assert preflight.headers.get("access-control-allow-origin") == "*"
+
+
+def test_any_port_is_allowed_because_flutter_picks_its_own(client, store):
+    """⚠️ `flutter run -d chrome` binds a **random** port unless told otherwise, so an origin allow-list
+    written today would break tomorrow with no code change. ⭐ Allowed because these endpoints serve *ids in,
+    analysis out* — nothing a hostile page could read that it could not read by calling the API itself."""
+    response = client.post("/api/v1/squad/analysis",
+                           json={"player_ids": _squad(store)},
+                           headers={"Origin": "http://localhost:59123"})
+    assert response.headers.get("access-control-allow-origin") == "*"
+
+
+def test_credentials_are_never_echoed(client, store):
+    """🔴 **The guard that outlives the reason.** `allow_credentials` with `*` is forbidden by the spec, and
+    Starlette enforces it by quietly refusing to echo the origin — so the failure mode is *an app that works
+    until someone adds a cookie*, which is exactly when nobody is looking at CORS.
+
+    ⭐ When Stage C makes an endpoint owner-scoped, this test should fail and be rewritten with a real
+    allow-list — it is the tripwire on the assumption, not decoration.
+    """
+    response = client.post("/api/v1/squad/analysis",
+                           json={"player_ids": _squad(store)},
+                           headers={"Origin": "http://localhost:8080"})
+    assert response.headers.get("access-control-allow-credentials") is None

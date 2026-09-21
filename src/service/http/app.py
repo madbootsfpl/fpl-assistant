@@ -16,6 +16,7 @@ whole layer exists to prevent.
 from collections.abc import Callable
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src import service
@@ -27,6 +28,26 @@ app = FastAPI(
     # The interactive docs are the contract a client author reads first, so they stay on.
     docs_url="/api/v1/docs",
     openapi_url="/api/v1/openapi.json",
+)
+
+# ⭐⭐ **Open to every origin, and that is the same fact as "no auth" above rather than a second decision.**
+# These endpoints take *player ids in, analysis out*. There is no session, no cookie, no user row and nothing
+# a hostile page could read that it could not read by calling the API itself — so an origin allow-list would
+# protect nothing and would silently break a Flutter web build on whatever port it happened to pick.
+#
+# ⚠️ **`allow_credentials` stays False, and must.** The spec forbids pairing it with `*`, and Starlette
+# enforces that by quietly refusing to echo the origin — ⭐ *the failure would be a working app that stops
+# working the day someone adds a cookie*, which is exactly when nobody is looking at CORS.
+#
+# 🔴 **Revisit the moment an endpoint becomes owner-scoped** (Stage C: a saved squad, preferences). The
+# reason this is safe is *what these endpoints serve*, not a judgement that CORS does not matter — and the
+# reason expires the day the answer depends on who is asking.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 _GAMEWEEK_KEYS = ("⚠️ `by_gameweek` arrives keyed by gameweek as a **string**, because JSON has no integer "
