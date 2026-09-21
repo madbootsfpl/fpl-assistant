@@ -162,3 +162,38 @@ telling the truth — it reads `data_status`, so it must not be cached with the 
 ⚠️ **Also worth asking before caching: why does every page load `get_gw_history_by_code()` at all?**
 1.2 MB — half the payload — for per-gameweek history. A page that does not draw a form curve may not need
 it, and not fetching something beats caching it.
+
+## Timeline: the owner's observation pins it to the hour
+
+> *"end of day Saturday speed was good on each page, end of day Sunday when I noticed it"*
+
+```
+Sun 20 17:17  a45f8f2  docs: the pipeline is live — GitHub writes it, the app reads it
+```
+
+Saturday the app read the local SQLite seed — **16 ms**. Sunday afternoon `FPL_DATABASE_URL` reached
+Streamlit, the app began reading Supabase, and by evening it was **3,026 ms**.
+
+⚠️ **I had called that step "the cutover" before checking when the cutover was**, and when the owner's
+timeline seemed not to fit I said it contradicted the diagnosis. It did not — the date was wrong, the cause
+was right. ⭐ *An observation that seems to contradict you is worth checking against the record before it
+changes your mind or is dismissed.*
+
+## Which pages pay it
+
+| page | gw_history | history | players | **MB** |
+|---|---|---|---|---|
+| My Squad | ×1 | ×1 | ×1 | **2.35** |
+| FDR | ×1 | ×1 | ×1 | **2.35** |
+| Team DNA | ×1 | ×1 | ×1 | **2.35** |
+| Players | ×1 | ×1 | ×1 | **2.35** |
+| Signals | · | · | ×1 | 0.50 |
+| Trending | · | · | ×1 | 0.50 |
+
+⭐ **FDR is the clearest waste**: it loads all 1.9 MB of player history *unconditionally at the top of the
+page*, for an optional "My squad only" checkbox that defaults to off. A fixture-difficulty grid does not
+need per-player gameweek history to draw itself.
+
+⭐⭐ **But per-page trimming is the smaller half.** The real multiplier is that **every rerun refetches
+everything** — Streamlit re-runs the whole script on every click, so moving a slider on Players costs another
+2.35 MB. Caching fixes all six pages and every interaction; trimming fixes one page once.
