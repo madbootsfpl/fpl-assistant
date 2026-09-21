@@ -31,16 +31,23 @@ st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 st.caption("Every club's next few gameweeks, shaded by difficulty — easiest run first. For how **good** "
            "those clubs actually are, see 🧬 **Team DNA**.")
 
+# ⭐⭐ **This page loads fixtures and clubs. It used to load 2.35 MB.**
+#
+# `get_history_by_code()` and `get_gw_history_by_code()` were fetched here and **never referenced again** —
+# 1.94 MB of per-player and per-season history, pulled on every render of a fixture-difficulty grid, and
+# read by nothing. `get_players()` (a further 0.5 MB) is genuinely needed, but only when the "My squad only"
+# lens is ticked, and it defaults to off.
+#
+# ⚠️ Free on SQLite, which is where it was written. Since the app began reading Supabase (2026-09-20) every
+# byte crosses the Atlantic, on a framework that re-runs the whole script on every click — so this was
+# ~2.35 MB per slider drag for data the page had no use for. ⭐ *Not fetching something beats caching it.*
 store = Storage()
 try:
     upcoming = store.get_upcoming_fixtures()
     teams = store.get_teams()
-    badges = badge_url_by_short_name(teams)
-    players = store.get_players()
-    history = store.get_history_by_code()
-    gw_history = store.get_gw_history_by_code()
 finally:
     store.close()
+badges = badge_url_by_short_name(teams)
 
 if not upcoming:
     st.info("No fixtures yet — it's refreshing; check back shortly.")
@@ -60,7 +67,13 @@ else:
         if not squad:
             st.caption("No squad loaded — build or import one on **My Squad**, then come back.")
         else:
-            by_id = {p["id"]: p for p in players}
+            # ⭐ Fetched *here*, because this is the only thing on the page that wants it. One extra
+            # connection when the lens is on beats half a megabyte on every render when it is off.
+            _store = Storage()
+            try:
+                by_id = {p["id"]: p for p in _store.get_players()}
+            finally:
+                _store.close()
             my_counts = Counter(by_id[i]["team"] for i in squad["player_ids"] if i in by_id)
 
     # The ticker already comes back easiest-run-first, which is the question it exists to answer. The second

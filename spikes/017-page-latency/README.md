@@ -197,3 +197,35 @@ need per-player gameweek history to draw itself.
 ⭐⭐ **But per-page trimming is the smaller half.** The real multiplier is that **every rerun refetches
 everything** — Streamlit re-runs the whole script on every click, so moving a slider on Players costs another
 2.35 MB. Caching fixes all six pages and every interaction; trimming fixes one page once.
+
+## Fixed (2), 2026-09-21 — FDR stops fetching what it never read
+
+| page | before | after |
+|---|---|---|
+| **2_FDR.py** | **2.35 MB** | **~0 MB** (clubs only, 1.7 KB) |
+
+`get_history_by_code()` and `get_gw_history_by_code()` were assigned at the top of the page and **never
+referenced again** — not "rarely used", never used. `get_players()` moved into the "My squad only" branch,
+which is the only thing that wants it and defaults to off.
+
+⭐ **No freshness trade at all**, which is what makes this the right thing to do before caching. *Not
+fetching something beats caching it.*
+
+Guarded in `tests/test_page_payloads.py` — **both halves**: that the waste stays gone, and that the lens
+still narrows the ticker. ⚠️ The second matters because the page renders identically either way, so a broken
+lens would say nothing. Mutation-tested in both directions.
+
+⚠️ **And the lens test was wrong before it was right**: it used the session key `_active_squad` instead of
+`squad`, saw 20 rows, and looked exactly like a regression in the code I had just changed. ⭐ *Confirm the
+fixture reaches the code path before believing its verdict* — otherwise a broken test reads as a broken fix.
+
+## Remaining
+
+| page | MB per render |
+|---|---|
+| My Squad · Team DNA · Players | **2.35** |
+| Signals · Trending | 0.50 |
+| FDR | ~0 |
+
+These three genuinely use the history they load, so trimming cannot help them. 📅 **The decision still open
+is caching** — and it is a freshness trade, so the TTL is the owner's call, not an implementation detail.
