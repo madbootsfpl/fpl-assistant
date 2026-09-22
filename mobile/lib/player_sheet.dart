@@ -27,6 +27,14 @@ class MakeVice extends PlayerAction {
   final int playerId;
 }
 
+/// Change two players' places in the XI — ⭐ free and reversible, unlike [ReplaceWith].
+class SwapWith extends PlayerAction {
+  const SwapWith(this.a, this.b);
+
+  final int a;
+  final int b;
+}
+
 class ReplaceWith extends PlayerAction {
   const ReplaceWith(this.outId, this.inId);
   final int outId;
@@ -66,6 +74,10 @@ class _PlayerSheet extends StatefulWidget {
 
 class _PlayerSheetState extends State<_PlayerSheet> {
   Future<ReplacementsAnswer>? _options;
+
+  /// ⭐ A second mode on the same sheet rather than a second sheet — you are still deciding about the same
+  /// player, and pushing a route would lose the context you opened it from.
+  bool _swapping = false;
 
   void _findReplacements() {
     final team = widget.team;
@@ -122,7 +134,7 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               style: const TextStyle(color: Colors.white54, fontSize: 12.5),
             ),
             const SizedBox(height: 14),
-            if (_options == null) ...[
+            if (_options == null && !_swapping) ...[
               _Action(
                 icon: Icons.star,
                 label: isCaptain ? 'Already your captain' : 'Make captain',
@@ -135,6 +147,18 @@ class _PlayerSheetState extends State<_PlayerSheet> {
                 enabled: !isVice,
                 onTap: () => Navigator.pop(context, MakeVice(p.id)),
               ),
+              // ⭐⭐ **Above Transfer, deliberately.** A substitution is free and reversible; a transfer
+              // costs points and cannot be undone. ⚠️ *Order on a list of actions is a recommendation,
+              // whether or not it was meant as one.*
+              if (widget.team.swapsFor(p.id).isNotEmpty)
+                _Action(
+                  icon: Icons.swap_vert,
+                  label: widget.team.benchedIds.contains(p.id)
+                      ? 'Bring him on…'
+                      : 'Bench him…',
+                  enabled: true,
+                  onTap: () => setState(() => _swapping = true),
+                ),
               _Action(
                 icon: Icons.swap_horiz,
                 // ⭐ **"Transfer", because that is the word FPL uses** (feedback item 1). "Replace him"
@@ -144,7 +168,11 @@ class _PlayerSheetState extends State<_PlayerSheet> {
                 enabled: true,
                 onTap: _findReplacements,
               ),
-            ] else
+            ] else if (_swapping)
+              Flexible(
+                child: _SwapOptions(team: widget.team, player: p),
+              )
+            else
               Flexible(
                 child: _Options(future: _options!, outId: p.id),
               ),
@@ -341,4 +369,75 @@ class _Options extends StatelessWidget {
       );
     },
   );
+}
+
+/// Who this player can change places with — ⭐ **the engine's list, not the client's** (ADR-246).
+///
+/// ⚠️⚠️ FPL's formation limits decide this, and they live in `XI_FLEX` on the server. A client that
+/// offered "any bench player" would propose squads FPL rejects — a keeper for a forward being the one
+/// everybody hits first.
+class _SwapOptions extends StatelessWidget {
+  const _SwapOptions({required this.team, required this.player});
+
+  final MyTeam team;
+  final PlayerSummary player;
+
+  @override
+  Widget build(BuildContext context) {
+    final benched = team.benchedIds.contains(player.id);
+    final ids = team.swapsFor(player.id);
+    final all = [...team.analysis.xi, ...team.analysis.bench];
+    final options = [for (final id in ids) ...all.where((p) => p.id == id)];
+    // ⭐ Best first — it is a lineup decision, and the number is the reason for it.
+    options.sort((a, b) => b.xp.compareTo(a.xp));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            benched
+                ? 'Bring ${player.name} on for…'
+                : 'Bench ${player.name} and start…',
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ),
+        // ⚠️ Only the legal ones are here at all. Showing the rest greyed out would invite a manager to
+        // wonder what he did wrong, when the answer is "nothing — FPL would not allow it".
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final other in options)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    other.name,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    '${other.position} · ${other.team} · '
+                    '${other.xp.toStringAsFixed(1)} xP',
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.swap_vert,
+                    size: 17,
+                    color: Brand.purpleLight,
+                  ),
+                  onTap: () =>
+                      Navigator.pop(context, SwapWith(player.id, other.id)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

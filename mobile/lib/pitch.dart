@@ -330,9 +330,21 @@ class _NextGw extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 2),
-      Text(
-        '£${player.price.toStringAsFixed(1)}m · ${fixture?.label ?? '—'}',
-        style: const TextStyle(color: Colors.white70, fontSize: 8.5),
+      // ⚠️⚠️ **One line, always** (feedback). `£12.0m · TOT (H)` under a long name wrapped onto a second
+      // line, which made that one card taller than its neighbours and pushed the whole row out of
+      // alignment. ⭐ *A card that changes height with its contents stops being a grid.*
+      //
+      // ⭐ Shrunk to fit rather than clipped: the price and the opponent are both the point of the line,
+      // and truncating either would answer a different question. `FittedBox` keeps the row's rhythm and
+      // loses nothing but a fraction of a point size on the longest names.
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          '£${player.price.toStringAsFixed(1)}m · ${fixture?.label ?? '—'}',
+          maxLines: 1,
+          softWrap: false,
+          style: const TextStyle(color: Colors.white70, fontSize: 8.5),
+        ),
       ),
     ],
   );

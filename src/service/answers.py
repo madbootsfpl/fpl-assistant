@@ -25,7 +25,7 @@ from src.analytics import (
 )
 from src.analytics.compare import compare_rows, stat_rows
 from src.analytics.gameweek import gameweek_plan
-from src.analytics.optimizer import DEFAULT_BUDGET
+from src.analytics.optimizer import DEFAULT_BUDGET, legal_xi_issues
 from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import shirt_url
@@ -331,6 +331,51 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+def _legal_swaps(owned, bench_ids) -> list[dict]:
+    """Who each player can legally change places with (ADR-246).
+
+    ⭐⭐⭐ **The rule stays on this side.** FPL's formation limits — one keeper, 3–5 defenders, 2–5
+    midfielders, 1–3 forwards — already live in `XI_FLEX` and are enforced by `legal_xi_issues`. Working
+    them out again in Dart would be *a second implementation of a rule the engine already owns*, and this
+    project has a whole run of ADRs (151→156) about one fact being re-taught to six surfaces one at a time.
+
+    ⚠️ **Keepers are the case that catches people**: a GK can only ever change places with the other GK, so
+    a client that offered "any bench player" would propose squads FPL rejects.
+
+    ⭐ Computed by **trying** each swap rather than by reasoning about it: eleven-ish candidates per player
+    and a list-length check is cheap, and a derived rule is the thing that drifts. *Ask the validator; do
+    not re-derive what it knows.*
+    """
+    declared = set(bench_ids or [])
+    if not declared:
+        return []
+    starters = [p for p in owned if p["id"] not in declared]
+    bench = [p for p in owned if p["id"] in declared]
+
+    out = []
+    for player in owned:
+        on_bench = player["id"] in declared
+        others = starters if on_bench else bench
+        legal = []
+        for other in others:
+            # ⚠️⚠️ **Whichever of the two is currently STARTING comes out; the other goes in.** The first
+            # version removed the wrong one and built a **twelve-man XI** — and `legal_xi_issues` checks
+            # position ranges, not the size of the list, so it validated happily. The visible result was a
+            # keeper offered a swap with a forward. ⭐ *A validator answers the question it was asked, and
+            # "is this eleven legal" was never asked.*
+            #
+            # ⚠️ A `len(after) == 11` guard was added here after that bug and then **removed**: with the
+            # line above correct, one out and one in makes eleven by construction, so the check could not
+            # fire — a mutation proved it. ⭐ *An unreachable guard is not defence in depth, it is a
+            # comment that looks like code.* The size is asserted in `test_legal_swaps.py`, where it can.
+            starting, coming = (other, player) if on_bench else (player, other)
+            after = [p for p in starters if p["id"] != starting["id"]] + [coming]
+            if not legal_xi_issues(after):
+                legal.append(other["id"])
+        out.append({"id": player["id"], "benched": on_bench, "with": legal})
+    return out
+
+
 def _suggested_lineup(owned, declared_bench_ids, xp_by_id, leaving) -> dict | None:
     """The best legal XI you could field **from the players you already own** (ADR-244).
 
@@ -564,6 +609,8 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "run": RUN,
         # ⭐ Null when your XI is already the best one — see `_suggested_lineup`.
         "suggested_lineup": suggested,
+        # ⭐ Who each player may change places with, decided by the engine's own formation rules.
+        "swaps": _legal_swaps(owned, bench_ids),
         # ⭐ A **list**, not a map keyed by player id. The docstring above explains why ids never become
         # JSON keys here; a list sidesteps the question rather than arguing with it.
         "run_xp": run_xp,

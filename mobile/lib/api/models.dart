@@ -444,6 +444,8 @@ class MyTeam {
     required this.run,
     required this.runXp,
     required this.suggestedLineup,
+    required this.swaps,
+    required this.benchedIds,
     required this.benchRoles,
   });
 
@@ -494,6 +496,17 @@ class MyTeam {
       // request's `horizon`, which is 1 because the headline is a this-week projection — so two of the
       // three columns always read "—". `run_xp` carries the window the card actually draws, computed
       // separately so the headline stays a one-week number.
+      swaps: {
+        for (final row in (json['swaps'] as List? ?? []))
+          (row as Map<String, dynamic>)['id'] as int: [
+            for (final i in (row['with'] as List? ?? [])) i as int,
+          ],
+      },
+      benchedIds: {
+        for (final row in (json['swaps'] as List? ?? []))
+          if ((row as Map<String, dynamic>)['benched'] == true)
+            row['id'] as int,
+      },
       suggestedLineup: json['suggested_lineup'] == null
           ? null
           : SuggestedLineup.fromJson(
@@ -561,6 +574,19 @@ class MyTeam {
   /// How many fixtures each club's list holds.
   final int run;
 
+  /// Player id → the players he may legally change places with (ADR-246).
+  ///
+  /// ⭐⭐ **Decided by the engine, not here.** FPL's formation limits live in `XI_FLEX` and are enforced by
+  /// `legal_xi_issues`; working them out again in Dart would be a second implementation of a rule the
+  /// server already owns. ⚠️ Keepers are the case that catches people — a GK may only ever change places
+  /// with the other GK.
+  final Map<int, List<int>> swaps;
+
+  /// Whether a player is currently on the bench, as the server declared it.
+  final Set<int> benchedIds;
+
+  List<int> swapsFor(int playerId) => swaps[playerId] ?? const [];
+
   /// The best legal XI from the players you already own, or null when yours already is it (ADR-244).
   final SuggestedLineup? suggestedLineup;
 
@@ -621,6 +647,8 @@ class MyTeam {
     run: run,
     runXp: runXp,
     suggestedLineup: suggestedLineup,
+    swaps: swaps,
+    benchedIds: benchedIds,
     benchRoles: benchRoles,
   );
 

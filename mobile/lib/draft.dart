@@ -178,6 +178,90 @@ class Draft {
     );
   }
 
+  /// Change two players' places — ⭐ a **lineup** change, the fifteen untouched (ADR-246).
+  ///
+  /// ⚠️ A named function rather than lines inside a widget, for the reason ADR-241 paid for: logic in a
+  /// `State` cannot be called by a test, so its test has to re-describe it, and a re-description drifts.
+  ///
+  /// ⭐ The incoming player takes the outgoing one's **place in the bench order**, rather than being
+  /// appended. FPL substitutes in bench order, so appending would quietly demote him to last — a change
+  /// the manager did not ask for, hidden inside one he did.
+  static Draft substitute({
+    required Draft? existing,
+    required int managerId,
+    required int gameweek,
+    required List<int> basePlayerIds,
+    required List<int> benchIds,
+    required int a,
+    required int b,
+    required DateTime savedAt,
+    int? teamCaptainId,
+    int? teamViceCaptainId,
+  }) {
+    final bench = List<int>.from(existing?.benchIds ?? benchIds);
+    // ⚠️ Exactly one of the two is on the bench — the server only offers legal partners, and a swap
+    // between two starters or two subs is not a substitution.
+    final leaving = bench.contains(a) ? a : b;
+    final arriving = leaving == a ? b : a;
+    final slot = bench.indexOf(leaving);
+    if (slot < 0) {
+      // ⚠️ Neither is on the bench, so this is not a substitution. Returning the plan unchanged is the
+      // honest answer — ⭐ *a no-op beats inventing a lineup nobody asked for.*
+      return existing ??
+          _fresh(
+            managerId,
+            gameweek,
+            basePlayerIds,
+            benchIds,
+            savedAt,
+            teamCaptainId,
+            teamViceCaptainId,
+          );
+    }
+    bench[slot] = arriving;
+
+    final carried =
+        existing ??
+        _fresh(
+          managerId,
+          gameweek,
+          basePlayerIds,
+          benchIds,
+          savedAt,
+          teamCaptainId,
+          teamViceCaptainId,
+        );
+    return Draft(
+      managerId: managerId,
+      gameweek: gameweek,
+      basePlayerIds: basePlayerIds,
+      playerIds: carried.playerIds,
+      benchIds: bench,
+      savedAt: savedAt,
+      captainId: carried.captainId,
+      viceCaptainId: carried.viceCaptainId,
+    );
+  }
+
+  static Draft _fresh(
+    int managerId,
+    int gameweek,
+    List<int> basePlayerIds,
+    List<int> benchIds,
+    DateTime savedAt,
+    int? captainId,
+    int? viceCaptainId,
+  ) => Draft(
+    managerId: managerId,
+    gameweek: gameweek,
+    basePlayerIds: basePlayerIds,
+    playerIds: basePlayerIds,
+    benchIds: benchIds,
+    savedAt: savedAt,
+    captainId: captainId,
+    viceCaptainId: viceCaptainId,
+  );
+
   /// The armbands after a squad change — ⭐ **an armband is only valid while the player is still yours.**
   ///
   /// ⚠️ A C left on a player you have transferred away is worse than no C: it survives into the pitch, the

@@ -241,6 +241,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         await _setArmband(team, captainId: playerId);
       case MakeVice(:final playerId):
         await _setArmband(team, viceCaptainId: playerId);
+      case SwapWith(:final a, :final b):
+        await _substitute(team, a, b);
       case ReplaceWith(:final outId, :final inId):
         await _planSwap(team, outId, inId);
     }
@@ -277,6 +279,29 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     setState(() {
       _draft = draft;
       _dropped = null;
+    });
+  }
+
+  /// Change two players' places — ⭐ **free and reversible**, unlike a transfer (ADR-246).
+  Future<void> _substitute(MyTeam team, int a, int b) async {
+    final draft = Draft.substitute(
+      existing: _draft,
+      managerId: _managerId,
+      gameweek: team.gameweek ?? 0,
+      basePlayerIds: team.fplPlayerIds,
+      benchIds: team.analysis.bench.map((p) => p.id).toList(),
+      a: a,
+      b: b,
+      savedAt: DateTime.now(),
+      teamCaptainId: team.captainId,
+      teamViceCaptainId: team.viceCaptainId,
+    );
+    await _drafts.save(draft);
+    if (!mounted) return;
+    setState(() {
+      _draft = draft;
+      _dropped = null;
+      _team = _load(_managerId);
     });
   }
 

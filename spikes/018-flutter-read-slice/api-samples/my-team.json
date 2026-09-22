@@ -339,7 +339,7 @@
   },
   "deadline": {
     "at": "2026-10-10T10:00:00+00:00",
-    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 17 days, 13h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
+    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 17 days, 12h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
     "urgency": "calm"
   },
   "draft": false,
@@ -872,5 +872,153 @@
       572,
       94
     ]
-  }
+  },
+  "swaps": [
+    {
+      "benched": false,
+      "id": 94,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": false,
+      "id": 330,
+      "with": [
+        229,
+        8
+      ]
+    },
+    {
+      "benched": false,
+      "id": 124,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": false,
+      "id": 165,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": false,
+      "id": 391,
+      "with": [
+        229,
+        8
+      ]
+    },
+    {
+      "benched": false,
+      "id": 411,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": false,
+      "id": 115,
+      "with": [
+        229,
+        8
+      ]
+    },
+    {
+      "benched": false,
+      "id": 12,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": false,
+      "id": 1,
+      "with": [
+        572
+      ]
+    },
+    {
+      "benched": false,
+      "id": 40,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": false,
+      "id": 68,
+      "with": [
+        229,
+        8,
+        379
+      ]
+    },
+    {
+      "benched": true,
+      "id": 229,
+      "with": [
+        94,
+        330,
+        124,
+        165,
+        391,
+        411,
+        115,
+        12,
+        40,
+        68
+      ]
+    },
+    {
+      "benched": true,
+      "id": 8,
+      "with": [
+        94,
+        330,
+        124,
+        165,
+        391,
+        411,
+        115,
+        12,
+        40,
+        68
+      ]
+    },
+    {
+      "benched": true,
+      "id": 572,
+      "with": [
+        1
+      ]
+    },
+    {
+      "benched": true,
+      "id": 379,
+      "with": [
+        94,
+        124,
+        165,
+        411,
+        12,
+        40,
+        68
+      ]
+    }
+  ]
 }
