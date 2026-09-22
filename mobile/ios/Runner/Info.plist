@@ -26,6 +26,13 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MADBOOTS talks to the analysis server running on your own computer over your Wi-Fi.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -46,23 +53,6 @@
 				</dict>
 			</array>
 		</dict>
-	</dict>
-	<!-- ADR-239: two keys, without which a LAN address fails in a way that reads as an app bug.
-
-	     NSLocalNetworkUsageDescription — iOS 14+ asks the user before an app may touch the local network,
-	     and refuses silently if the app has not said why. The string is what the system prompt shows.
-
-	     NSAppTransportSecurity — ATS blocks cleartext HTTP by default, so http://192.168.x.x is refused
-	     before it leaves the app. NSAllowsLocalNetworking permits it for LOCAL addresses ONLY: the public
-	     internet still requires HTTPS, which is the exception worth having rather than
-	     NSAllowsArbitraryLoads, which would turn the check off everywhere and follow us to the App
-	     Store. -->
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>MADBOOTS talks to the analysis server running on your own computer over your Wi-Fi.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>

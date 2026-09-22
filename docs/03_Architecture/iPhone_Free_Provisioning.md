@@ -18,7 +18,7 @@
 | Needs the Mac to re-install | every 7 days | no |
 
 🔴 **The seven days is the whole trade.** The certificate expires, and the app stops launching with a
-message about an untrusted developer. Re-running step 5 fixes it in two minutes, and you will have to do it
+message about an untrusted developer. Re-running step 4 fixes it in two minutes, and you will have to do it
 weekly for as long as you stay on this path.
 
 ⭐ **That is fine for what this is for** — deciding whether the app is worth paying Apple for, and finding
@@ -40,6 +40,7 @@ is a separate decision — see ADR-239 §Consequences.
 ---
 
 ## Step 1 — Start the API so the phone can see it
+
 
 ```bash
 scripts/serve_api.sh
@@ -65,6 +66,7 @@ this permanently, if it becomes annoying.)
 
 ## Step 2 — Plug the phone in and trust the Mac
 
+
 Cable, unlock the phone, **Trust This Computer** → **Trust**, enter the passcode.
 
 ```bash
@@ -80,6 +82,7 @@ The iPhone should be listed. If it is not, the usual cause is the phone being lo
 ---
 
 ## Step 3 — Sign in to Xcode with your Apple ID
+
 
 ```bash
 open mobile/ios/Runner.xcworkspace     # from the repo root
@@ -101,16 +104,11 @@ Xcode will register `com.madboots.fpl` to your personal team and create a provis
 
 ---
 
-## Step 4 — Trust the developer on the phone
+## Step 4 — Install it — and expect it to stop twice
 
-The first install will fail to launch with *"Untrusted Developer"*. That is expected and is a one-time
-thing per certificate.
 
-**On the phone:** Settings ▸ General ▸ VPN & Device Management ▸ your Apple ID ▸ **Trust**.
-
----
-
-## Step 5 — Install it
+⚠️ **Expect this one to fail the first time** — twice, in fact, and both are normal: Developer Mode
+(step 5) and then an untrusted certificate (step 6). Neither is a broken build.
 
 ```bash
 (cd mobile && flutter run --release -d <device-id>)
@@ -138,7 +136,40 @@ used whenever the lease changes.
 
 ---
 
-## Step 6 — Point the app at your Mac and prove it
+## Step 5 — Developer Mode
+
+
+⚠️⚠️ **iOS 16+ refuses to run a development build until Developer Mode is on**, and the first install
+stops with:
+
+```
+To use 'iPhone 17' for development, enable Developer Mode in Settings → Privacy & Security on the device.
+```
+
+**On the phone:** Settings ▸ **Privacy & Security** ▸ scroll to the bottom ▸ **Developer Mode** ▸ on. The
+phone restarts, and asks again **before you unlock** — tap **Turn On** and enter your passcode.
+
+⭐⭐ **This comes AFTER the install, and that is not an oversight in the ordering.** The Developer Mode
+entry **does not exist in Settings** until the phone has been asked to run a development build — so the
+failed install is what puts it there. ⚠️ *A step that can only be done after the step it blocks reads like
+a mistake in the runbook, which is why it says so here.*
+
+Then **re-run step 4**. It is the same command.
+
+---
+
+## Step 6 — Trust the developer on the phone
+
+
+The first install will fail to launch with *"Untrusted Developer"*. That is expected and is a one-time
+thing per certificate.
+
+**On the phone:** Settings ▸ General ▸ VPN & Device Management ▸ your Apple ID ▸ **Trust**.
+
+---
+
+## Step 7 — Point the app at your Mac and prove it
+
 
 **More ▸ Settings ▸ Server.** Type the address the script printed, press **Check and use**.
 
@@ -159,7 +190,7 @@ why `NSLocalNetworkUsageDescription` exists and why `tests/test_ios_networking.p
 
 | symptom | cause | fix |
 |---|---|---|
-| Will not launch, *"untrusted"* or nothing at all | 🔴 **the 7-day certificate expired** | re-run step 5 |
+| Will not launch, *"untrusted"* or nothing at all | 🔴 **the 7-day certificate expired** | re-run step 4 |
 | Every screen says nothing answered | Mac asleep, script not running, or phone off the Wi-Fi | start the script; check the phone's Wi-Fi |
 | Worked yesterday, refuses today, Mac is on | ⚠️ **the DHCP lease moved** | re-run the script, retype the new address |
 | Connected, but the squad will not load | the API is up and something else is wrong | read the message — it names the endpoint |

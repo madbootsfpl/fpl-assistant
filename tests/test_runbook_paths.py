@@ -90,3 +90,25 @@ def test_the_wifi_address_is_not_presented_as_a_fact(runbook):
             f"the runbook shows a LAN address without saying it {phrase!r} — "
             f"a reader will type this machine's lease and get an unexplained refusal"
         )
+
+
+def test_the_steps_are_numbered_in_order(runbook):
+    """⚠️ Inserting a step renumbers everything after it, and a heading out of sequence reads as a
+    missing step rather than an editing slip."""
+    numbers = [int(n) for n in re.findall(r"(?m)^## Step (\d+) —", runbook)]
+    assert numbers == list(range(1, len(numbers) + 1)), f"step headings run {numbers}"
+
+
+def test_every_step_referred_to_actually_exists(runbook):
+    """⭐⭐ **A cross-reference to a step number is a claim about the document**, and it is the first thing
+    to rot when a step is inserted — *"re-run step 5"* kept pointing at the install after the install
+    became step 4. ⚠️ Nothing about a stale number looks wrong; it just sends a reader to the wrong place.
+    """
+    headings = {int(n) for n in re.findall(r"(?m)^## Step (\d+) —", runbook)}
+    # ⚠️ Case-insensitively, because prose says "step 4" and headings say "Step 4".
+    referred = {int(n) for n in re.findall(r"(?i)\bstep (\d+)\b", runbook)}
+    dangling = sorted(referred - headings)
+    assert not dangling, (
+        f"the runbook sends the reader to step(s) {dangling}, which do not exist. "
+        f"It has steps {sorted(headings)}."
+    )
