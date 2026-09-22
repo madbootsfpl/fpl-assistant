@@ -47,6 +47,9 @@ scripts/serve_api.sh
 
 It prints the address to type into the phone. ⚠️ **Not `localhost`** — a phone's localhost is the phone.
 
+⭐ **If it says `✅ Already running`, that is success**, not a problem — you (or a previous session) already
+started it. Leave it and move on.
+
 ```
   This machine on the Wi-Fi:  http://192.168.1.35:8078
 ```
@@ -65,8 +68,12 @@ this permanently, if it becomes annoying.)
 Cable, unlock the phone, **Trust This Computer** → **Trust**, enter the passcode.
 
 ```bash
-cd mobile && flutter devices
+(cd mobile && flutter devices)
 ```
+
+⚠️ **The brackets matter.** Every command in this document runs from the repo root and leaves you there —
+a bare `cd mobile` would leave your shell inside `mobile/`, and the next step's path would then resolve to
+`mobile/mobile/ios/…` and fail. *(That is not hypothetical: it is why this note exists.)*
 
 The iPhone should be listed. If it is not, the usual cause is the phone being locked.
 
@@ -75,7 +82,7 @@ The iPhone should be listed. If it is not, the usual cause is the phone being lo
 ## Step 3 — Sign in to Xcode with your Apple ID
 
 ```bash
-open mobile/ios/Runner.xcworkspace
+open mobile/ios/Runner.xcworkspace     # from the repo root
 ```
 
 ⚠️ **`Runner.xcworkspace`, not `Runner.xcodeproj`** — the project on its own does not know about the
@@ -106,8 +113,11 @@ thing per certificate.
 ## Step 5 — Install it
 
 ```bash
-cd mobile && flutter run --release -d <device-id>
+(cd mobile && flutter run --release -d <device-id>)
 ```
+
+⭐ Your device id is the long string `flutter devices` printed next to the iPhone — for this Mac's phone,
+`00008150-000C30122178401C`.
 
 ⭐ **`--release`, not debug.** A debug build is materially slower on a phone, and judging the app's feel
 from one would be judging the wrong thing — the same species of error as measuring a payload from a
@@ -119,7 +129,8 @@ you re-run every seven days.**
 ### Optional: bake the address in
 
 ```bash
-flutter run --release --dart-define=MADBOOTS_API=http://192.168.1.35:8078 -d <device-id>
+(cd mobile && flutter run --release \
+  --dart-define=MADBOOTS_API=http://192.168.1.35:8078 -d <device-id>)
 ```
 
 ⭐ Saves typing it on the phone the first time. The Settings field still overrides it, and still has to be

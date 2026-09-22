@@ -27,6 +27,21 @@ fi
 echo "  Interactive docs:           http://localhost:${PORT}/api/v1/docs"
 echo
 
+# ⚠️⚠️ **"Address already in use" is not an error, it is an answer** — and uvicorn reports it as
+# `ERROR: [Errno 48]`, which reads as a failure and sent the owner looking for one. ⭐ *A second copy of a
+# server you already started is the most likely reason a port is busy, so say that before saying anything
+# else.* If it is something else on the port, that is worth knowing too, and the errno never said which.
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  if curl -fsS --max-time 3 "http://localhost:${PORT}/api/v1/health" 2>/dev/null | grep -q '"madboots"'; then
+    echo "  ✅ Already running on port ${PORT} — nothing to do. Leave this window alone and carry on."
+    exit 0
+  fi
+  echo "  🔴 Port ${PORT} is taken, but not by MADBOOTS. Whatever answers there is not this API:"
+  lsof -nP -iTCP:"$PORT" -sTCP:LISTEN | sed 's/^/     /'
+  echo "     Stop it, or run this script on another port:  scripts/serve_api.sh 8079"
+  exit 1
+fi
+
 # ⚠️ --reload, because a server that is silently serving yesterday's code produces 404s on endpoints that
 # exist, and three of those were chased as client bugs before the flag went in.
 exec venv/bin/python -m uvicorn src.service.http:app \
