@@ -74,10 +74,20 @@ class MoreView extends StatelessWidget {
                 'the next thing to port.',
           ),
 
+          const _Heading('Under review'),
+          const _Pending(
+            name: 'Signals',
+            why: 'What should I know? — official news, an unexplained transfer exodus, headlines, and '
+                'community chatter, ordered by how much each source actually knows. Arguably belongs '
+                'here: it is time-sensitive and actionable before a deadline, which is what a phone is '
+                'for. The app already carries its conclusions on your own players — the flags and the '
+                '✈ — but has no view of what CHANGED.',
+          ),
+
           const _Heading('On the web'),
           const _Note(
-            'madboots.streamlit.app carries the research surfaces: the fixture ticker, Signals, Team DNA, '
-            'the player pool and stat boards, and Trending.',
+            'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA, the '
+            'player pool and stat boards, and Trending.',
           ),
           const _Note(
             // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find

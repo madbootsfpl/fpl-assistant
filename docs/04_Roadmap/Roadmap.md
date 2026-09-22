@@ -37,6 +37,12 @@ page knowing three things:
    squad endpoints are built and smoke-tested (ADR-219 → ADR-220), with Streamlit's Health tab as the web's
    in-process consumer. ⏳ **What remains of Phase 3 is auth** — Stage C, Supabase Auth and the identity
    migration; the endpoints take *ids in, analysis out*, so a **saved squad** is the different question.
+   ⏳ **Under review:** *Signals on the phone* — owner-raised 2026-09-22 and deferred. ⭐ The question is
+   not "port Signals" but **"does the phone need a what-changed view?"**: the app already carries Signals'
+   *conclusions* on your own players (the flags, the ✈) and none of its *news*. Trigger, so it does not
+   sit indefinitely: **the first time anyone opens the web app on a phone to check news before a
+   deadline.** See `docs/03_Architecture/Flutter_Start_Checklist.md`.
+
    ⚠️ **The audit's §4.2 was amended by building it** — Streamlit does *not* migrate onto the HTTP API; the
    contract is a Python module both transports share. ⭐ *A plan survives contact with the first endpoint,
    or it gets corrected in writing where the next reader will find it.*

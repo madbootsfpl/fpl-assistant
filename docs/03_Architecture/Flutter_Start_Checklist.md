@@ -188,6 +188,33 @@ a screen asks for anything is a foundation built to a guess. `http` is the only 
 
 ---
 
+## ⏳ Under review — Signals on the phone
+
+**Raised 2026-09-22, deferred by the owner:** *"There may be a case for Signals in the app version, we can
+review that later."*
+
+⭐⭐ **The interesting part is that Signals may be on the wrong side of the audit's split.** §6 divides the
+product into a *decision layer* (phone) and an *exploration layer* (web), and ADR-228 filed Signals with the
+research surfaces. On reading it again that looks wrong: Signals answers **"what should I know?"** — FPL's
+own news, an unexplained transfer exodus, headlines, community chatter — which is time-sensitive and
+actionable **before a deadline**. That is exactly what a phone is for, unlike Team DNA, which is occasional
+research by its own description.
+
+⚠️ **And the phone already carries Signals' conclusions without its news.** A player's `status`, `chance`
+and `leaving` all reach the pitch (ADR-151→156, ADR-206) — so the app can already tell you *João Pedro is
+75%*. What it cannot tell you is **what changed since you last looked**, which is the question a manager
+actually opens an app to ask on a Friday night.
+
+⭐ So the question to review is not *"port Signals"* but ***"does the phone need a what-changed view?"*** —
+a different feature, smaller, and one the existing data already supports.
+
+📅 **Trigger, so this does not sit here indefinitely:** the first time the owner or a beta tester opens the
+**web app on a phone** to check news before a deadline. That is falsifiable and it is the exact moment the
+gap costs something. *A decline needs a re-measure date the same as a feature needs a review date*
+(ADR-185/186).
+
+---
+
 ## 🚫 Deliberately not done tonight, and why
 
 - **API hosting** — nothing needs it until a physical device does.
