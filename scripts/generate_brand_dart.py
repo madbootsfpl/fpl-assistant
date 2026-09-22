@@ -1,0 +1,118 @@
+"""Generate `mobile/lib/brand.dart` from `src/web_streamlit/brand.py`.
+
+⭐⭐ **Because the alternative is a second definition of the brand.** `brand.py` is the single source of
+truth (ADR-103/114) and says so in its own comment: *"consume these, don't re-type hexes."* A Dart theme
+holding `Color(0xFF8B2FC9)` would be that instruction ignored on a new surface — and this codebase has
+three ADRs about one rule with two implementations, plus two more from this week about a *contract* growing
+a second version of a fact.
+
+⚠️ **A generator alone would not be enough**, because nothing makes anyone run it. `tests/test_brand_dart.py`
+regenerates and compares, so a palette change that has not reached the phone **fails the Python suite** —
+which is the suite that actually gates a commit.
+
+Run: `venv/bin/python scripts/generate_brand_dart.py`
+"""
+
+import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+from src.web_streamlit import brand  # noqa: E402
+
+OUT = pathlib.Path(__file__).resolve().parents[1] / "mobile" / "lib" / "brand.dart"
+
+
+def _colour(hex_string: str) -> str:
+    """`#8B2FC9` → `Color(0xFF8B2FC9)`. ⚠️ Dart's Color wants ARGB, so the alpha is prepended."""
+    return f"Color(0xFF{hex_string.lstrip('#').upper()})"
+
+
+def _const(name: str, hex_string: str, comment: str = "") -> str:
+    note = f"\n  /// {comment}" if comment else ""
+    return f"{note}\n  static const Color {name} = {_colour(hex_string)};"
+
+
+def render() -> str:
+    fdr = "\n".join(
+        f"    {n}: (background: {_colour(bg)}, foreground: {_colour(fg)}),"
+        for n, (bg, fg) in sorted(brand.FDR_STYLE.items())
+    )
+    space = ", ".join(str(n) for n in brand.SPACE)
+    return f'''/// MADBOOTS brand tokens — **generated**, do not edit.
+///
+/// ⭐⭐ Written by `scripts/generate_brand_dart.py` from `src/web_streamlit/brand.py`, which is the single
+/// source of truth for the product's identity (ADR-103/114). Editing this file by hand puts a second
+/// definition of the brand in the codebase, and `tests/test_brand_dart.py` will fail on the next run.
+///
+/// To change a colour: change `brand.py`, then regenerate.
+library;
+
+import 'package:flutter/material.dart';
+
+/// An FDR band's colour pair — ⭐ always a **pair**, never a background alone, because white-on-mid-tint
+/// failed WCAG AA on the web app and the same contrast problem does not go away on a smaller screen.
+typedef FdrStyle = ({{Color background, Color foreground}});
+
+class Brand {{
+  Brand._();
+
+  static const String name = {brand.NAME!r};
+  static const String tagline = {brand.TAGLINE!r};
+
+  /// ⭐ Names the two halves of the system in the order they run — a description of the architecture rather
+  /// than a metaphor about it, which is why it cannot drift from the truth (ADR-182).
+  static const String mantra = {brand.MANTRA!r};
+  static const String descriptor = {brand.DESCRIPTOR!r};
+
+  /// Legal hygiene (ADR-103) — a named product on official FPL data.
+  static const String disclaimer = {brand.DISCLAIMER!r};
+{_const("purple", brand.PURPLE, "The primary.")}
+{_const("purpleLight", brand.PURPLE_LT, "Legible on the card band's dark ground.")}
+{_const("orange", brand.ORANGE)}
+{_const("ink", brand.INK)}
+
+  // Semantic state — ⚠️ each is a **triple**: a solid, a light tint for a chip background, and a foreground
+  // for text on that tint. The solids clear ~4.5:1 on white; a solid used as a chip background does not.
+{_const("good", brand.GOOD)}
+{_const("goodTint", brand.GOOD_TINT)}
+{_const("goodFg", brand.GOOD_FG)}
+{_const("warn", brand.WARN)}
+{_const("warnTint", brand.WARN_TINT)}
+{_const("warnFg", brand.WARN_FG)}
+{_const("bad", brand.BAD)}
+{_const("badTint", brand.BAD_TINT)}
+{_const("badFg", brand.BAD_FG)}
+{_const("accentTeal", brand.ACCENT_TEAL, "The single projected/winner highlight.")}
+
+  // Neutrals.
+{_const("text", brand.TEXT)}
+{_const("muted", brand.MUTED)}
+{_const("line", brand.LINE)}
+{_const("surface", brand.SURFACE)}
+{_const("surface2", brand.SURFACE_2)}
+
+  /// Fixture difficulty 1–5 — ⭐ mirrors the official FPL app deliberately, so it reads familiarly:
+  /// deep green → bright green → **grey, the neutral break** → red → maroon.
+  static const Map<int, FdrStyle> fdr = {{
+{fdr}
+  }};
+
+  /// Spacing rungs, so paddings stop being ad hoc.
+  static const List<double> space = [{space}];
+
+  static const double radiusSm = {brand.RADIUS_SM};
+  static const double radiusMd = {brand.RADIUS_MD};
+  static const double radiusLg = {brand.RADIUS_LG};
+  static const double radiusPill = {brand.RADIUS_PILL};
+}}
+'''
+
+
+def main() -> None:
+    OUT.write_text(render())
+    print(f"  wrote {OUT.relative_to(pathlib.Path.cwd())} ({OUT.stat().st_size} bytes)")
+
+
+if __name__ == "__main__":
+    main()

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
+import 'brand.dart';
 
 /// ⚠️ **Reaches the dev server from macOS desktop, the iOS simulator and Chrome** — all three share the
 /// host's network. A **physical device** cannot, and that is the point at which the API needs hosting.
@@ -25,10 +26,13 @@ class MadbootsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'MADBOOTS',
+        title: Brand.name,
         debugShowCheckedModeBanner: false,
+        // ⭐ Seeded from the brand's own purple, which is generated from `brand.py` — the web app's single
+        // source of truth (ADR-103/114). A hex typed here would be a second definition of the brand.
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B2FC9)),
+          colorScheme: ColorScheme.fromSeed(seedColor: Brand.purple),
+          scaffoldBackgroundColor: Brand.surface,
           useMaterial3: true,
         ),
         home: const SquadScreen(),
@@ -74,9 +78,9 @@ class _SquadScreenState extends State<SquadScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('MADBOOTS'),
-          backgroundColor: const Color(0xFF17131F),
-          foregroundColor: Colors.white,
+          title: const Text(Brand.name),
+          backgroundColor: Brand.ink,
+          foregroundColor: Brand.surface,
         ),
         body: FutureBuilder<SquadAnalysis>(
           future: _analysis,
@@ -120,7 +124,7 @@ class _Analysis extends StatelessWidget {
         ),
         Text(
           'bench ${analysis.benchXp.toStringAsFixed(1)} · squad value £${analysis.value.toStringAsFixed(1)}m',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Brand.muted),
         ),
         if (analysis.topPick != null) ...[
           const SizedBox(height: 16),
@@ -132,7 +136,7 @@ class _Analysis extends StatelessWidget {
           Text('Worth a look', style: Theme.of(context).textTheme.titleMedium),
           for (final p in analysis.issues)
             Text('  ${p.name} — ${_why(p)}',
-                style: const TextStyle(color: Color(0xFFD98C00))),
+                style: const TextStyle(color: Brand.warnFg)),
         ],
         const SizedBox(height: 24),
         Text('Starting XI', style: Theme.of(context).textTheme.titleMedium),
@@ -140,6 +144,9 @@ class _Analysis extends StatelessWidget {
         const SizedBox(height: 16),
         Text('Bench', style: Theme.of(context).textTheme.titleMedium),
         for (final p in analysis.bench) _PlayerRow(player: p),
+        const SizedBox(height: 24),
+        Text(Brand.mantra,
+            style: TextStyle(color: Brand.muted, fontSize: 12, fontStyle: FontStyle.italic)),
       ],
     );
   }
@@ -166,10 +173,10 @@ class _PlayerRow extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(width: 44, child: Text(player.position,
-                style: const TextStyle(color: Colors.black45, fontSize: 12))),
+                style: const TextStyle(color: Brand.muted, fontSize: 12))),
             Expanded(child: Text(player.name)),
             SizedBox(width: 52, child: Text(player.team,
-                style: const TextStyle(color: Colors.black45, fontSize: 12))),
+                style: const TextStyle(color: Brand.muted, fontSize: 12))),
             SizedBox(
               width: 56,
               child: Text(player.xp.toStringAsFixed(1), textAlign: TextAlign.right),

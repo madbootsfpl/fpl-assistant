@@ -146,7 +146,32 @@ exploration layer.* Worth re-reading rather than re-deciding.
 
 ---
 
-## 📍 A suggested first hour
+## ✅ Done — the first hour, 2026-09-22
+
+The app exists: **`mobile/`**, Dart package `madboots`, bundle `com.madboots.fpl`, targets macOS · iOS · web.
+It runs on macOS desktop and renders a real squad analysis from the live service.
+
+Two corrections the Flutter template needed, both worth knowing before the next `flutter create`:
+
+* ⚠️ **The bundle id came out `com.madboots.madboots`.** `flutter create` builds it from `--org` plus the
+  project name, so `--project-name madboots` became the last segment rather than `fpl`. Fixed in both Xcode
+  projects and the macOS xcconfig.
+* ⚠️⚠️ **macOS Flutter apps are sandboxed, and the template grants `network.server` but not
+  `network.client`.** The first is Flutter's own debug tooling; the second is *outgoing requests*. Without
+  it every call fails as a socket error — ⭐ *so it reads as a bug in the client, not a missing
+  entitlement.* Added to Debug **and** Release.
+
+**The theme is generated, not typed.** `brand.py` is the single source of truth (ADR-103/114) and says
+*"consume these, don't re-type hexes"* — so `scripts/generate_brand_dart.py` emits `mobile/lib/brand.dart`,
+and `tests/test_brand_dart.py` fails when the two drift. ⭐ *A generated file with no guard is a copy with
+extra steps*, so the guard is in the **Python** suite — the one CI actually runs.
+
+⭐ **Deliberately still absent: Riverpod, Drift, navigation.** They are on Phase 4's list; adding them before
+a screen asks for anything is a foundation built to a guess. `http` is the only dependency.
+
+---
+
+## 📍 The original first hour, for reference
 
 1. `flutter create` the app and run it on **macOS desktop** (`flutter run -d macos`) — the real engine,
    and no CORS in the way while the first screens take shape.
