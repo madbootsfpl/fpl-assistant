@@ -443,6 +443,7 @@ class MyTeam {
     required this.prices,
     required this.run,
     required this.runXp,
+    required this.suggestedLineup,
     required this.benchRoles,
   });
 
@@ -493,6 +494,11 @@ class MyTeam {
       // request's `horizon`, which is 1 because the headline is a this-week projection — so two of the
       // three columns always read "—". `run_xp` carries the window the card actually draws, computed
       // separately so the headline stays a one-week number.
+      suggestedLineup: json['suggested_lineup'] == null
+          ? null
+          : SuggestedLineup.fromJson(
+              json['suggested_lineup'] as Map<String, dynamic>,
+            ),
       runXp: {
         for (final row in (json['run_xp'] as List? ?? []))
           (row as Map<String, dynamic>)['id'] as int: {
@@ -555,6 +561,9 @@ class MyTeam {
   /// How many fixtures each club's list holds.
   final int run;
 
+  /// The best legal XI from the players you already own, or null when yours already is it (ADR-244).
+  final SuggestedLineup? suggestedLineup;
+
   /// Player id → gameweek → xP, across the **run** window rather than the request's horizon (ADR-242).
   final Map<int, Map<int, double>> runXp;
 
@@ -581,6 +590,16 @@ class MyTeam {
 
   PriceMove? priceFor(PlayerSummary p) => prices[p.id];
 
+  /// A player's name from his id — ⭐ so a suggestion that travels as ids can be spoken as names.
+  /// ⚠️ Empty, never a placeholder, for someone outside the squad: a strip reading "Start ???" is worse
+  /// than one that leaves him out.
+  String nameOf(int id) {
+    for (final p in [...analysis.xi, ...analysis.bench]) {
+      if (p.id == id) return p.name;
+    }
+    return '';
+  }
+
   /// A copy with different armbands — ⭐ for a **draft**, whose captain the server never sees because it
   /// changes nothing the server computes.
   MyTeam withArmbands({int? captainId, int? viceCaptainId}) => MyTeam(
@@ -601,6 +620,7 @@ class MyTeam {
     prices: prices,
     run: run,
     runXp: runXp,
+    suggestedLineup: suggestedLineup,
     benchRoles: benchRoles,
   );
 
@@ -813,4 +833,37 @@ class PlayerCard {
 
   final List<Appearance> recent;
   final List<Fixture> fixtures;
+}
+
+/// The lineup the engine would field, and what it is worth (ADR-244).
+///
+/// ⚠️ **Lineup only — never transfers.** Starting a player you already own is free and reversible; a
+/// transfer costs points and cannot be taken back. ⭐ *One button must not do both, whatever the xP says.*
+class SuggestedLineup {
+  SuggestedLineup({
+    required this.start,
+    required this.bench,
+    required this.bringIn,
+    required this.drop,
+    required this.gain,
+  });
+
+  factory SuggestedLineup.fromJson(Map<String, dynamic> json) =>
+      SuggestedLineup(
+        start: [for (final i in (json['start'] as List? ?? [])) i as int],
+        bench: [for (final i in (json['bench'] as List? ?? [])) i as int],
+        bringIn: [for (final i in (json['bring_in'] as List? ?? [])) i as int],
+        drop: [for (final i in (json['drop'] as List? ?? [])) i as int],
+        gain: (json['gain'] as num?)?.toDouble() ?? 0,
+      );
+
+  final List<int> start;
+  final List<int> bench;
+  final List<int> bringIn;
+  final List<int> drop;
+
+  /// Expected points, this gameweek, from making the swaps.
+  final double gain;
+
+  int get changes => bringIn.length;
 }

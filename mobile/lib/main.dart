@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
+import 'apply_plan.dart';
 import 'brand.dart';
 import 'chips_view.dart';
 import 'players_view.dart';
@@ -279,6 +280,35 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
+  /// Field the best XI you already own — ⚠️ **a lineup change, never a transfer** (ADR-244).
+  ///
+  /// ⭐ Goes through the same [Draft] as everything else, so it inherits the banner, the staleness check
+  /// and the way out. A second mechanism for "the squad you are looking at is not your FPL squad" is how
+  /// one of them ends up not saying so.
+  Future<void> _applyPlan(MyTeam team, SuggestedLineup plan) async {
+    final base =
+        _draft ??
+        Draft(
+          managerId: _managerId,
+          gameweek: team.gameweek ?? 0,
+          basePlayerIds: team.fplPlayerIds,
+          playerIds: team.fplPlayerIds,
+          benchIds: team.analysis.bench.map((p) => p.id).toList(),
+          savedAt: DateTime.now(),
+          captainId: team.captainId,
+          viceCaptainId: team.viceCaptainId,
+        );
+    // ⚠️ `playerIds` is untouched on purpose — the fifteen are the same fifteen. Only the bench moves.
+    final draft = base.copyWith(benchIds: plan.bench);
+    await _drafts.save(draft);
+    if (!mounted) return;
+    setState(() {
+      _draft = draft;
+      _dropped = null;
+      _team = _load(_managerId);
+    });
+  }
+
   /// Show the real team again, forgetting the plan.
   Future<void> _discardDraft() async {
     await _drafts.clear();
@@ -362,11 +392,25 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     return switch (_tab) {
       _Tab.myTeam => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-        child: PitchView(
-          team: team,
-          mode: _mode,
-          onMode: (m) => setState(() => _mode = m),
-          onTapPlayer: (p) => _openPlayer(team, p),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PitchView(
+              team: team,
+              mode: _mode,
+              onMode: (m) => setState(() => _mode = m),
+              onTapPlayer: (p) => _openPlayer(team, p),
+            ),
+            // ⭐⭐ **Below the bench, in what used to be dead space.** The owner asked for two things —
+            // *"optimise My Squad based on This Week"* and *"real estate is not maximised, see the gap at
+            // the bottom"* — and they are one thing: the most useful action on the screen, put where the
+            // screen had nothing. ⭐ *Filling a gap with the answer beats stretching the layout to hide
+            // it.*
+            ApplyPlanStrip(
+              team: team,
+              onApply: (plan) => _applyPlan(team, plan),
+            ),
+          ],
         ),
       ),
       _Tab.transfers => TransfersView(

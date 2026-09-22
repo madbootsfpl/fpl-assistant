@@ -30,7 +30,7 @@ from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import shirt_url
 from src.manager import fetch_manager_team
-from src.service.inputs import RUN, WIDE, load, opened
+from src.service.inputs import RUN, WIDE, load, opened, reported_leavers
 from src.service.requests import (
     DEFAULT_HORIZON,
     MAX_HORIZON,
@@ -331,6 +331,55 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+def _suggested_lineup(owned, declared_bench_ids, xp_by_id, leaving) -> dict | None:
+    """The best legal XI you could field **from the players you already own** (ADR-244).
+
+    ⭐⭐ **The pitch could already tell you the lineup was wrong and gave you no way to fix it.** This Week
+    said *"3 changes"* and named them; acting on it meant reading three lines, remembering them, and
+    tapping four shirts on another screen. ⭐ *An app that can compute the answer and makes you transcribe
+    it has stopped halfway.*
+
+    ⚠️ **Lineup only — never transfers.** Starting a player you own is free and reversible; a transfer
+    costs points and cannot be taken back. One button must not do both, whatever the xP says.
+
+    ⭐ Reuses `best_legal_xi` on the same `lineup_xp` convention as `gameweek_plan`: ADR-154's rule that a
+    player reported to be leaving is ranked as if he scores nothing **for selection only**. ⚠️ Deriving a
+    second, subtly different optimum here is how two screens start recommending different teams.
+
+    Returns None when there is nothing to do — ⭐ *the absence of a suggestion is the answer "your lineup is
+    already the best one", and a strip that said so on every visit would be noise.*
+    """
+    lineup_xp = dict(xp_by_id)
+    for pid in leaving or []:
+        lineup_xp[pid] = 0.0
+
+    optimal = best_legal_xi(owned, lineup_xp)
+    declared = set(declared_bench_ids or [])
+    declared_xi = {p["id"] for p in owned if p["id"] not in declared} if declared else set(optimal)
+    if not declared or set(optimal) == declared_xi:
+        return None
+
+    by_id = {p["id"]: p for p in owned}
+    benched = [by_id[i] for i in by_id if i not in optimal]
+    # ⭐ The bench in the order FPL will actually substitute, so applying the plan does not silently
+    # reorder it into something the auto-sub would disagree with.
+    ordered = [pid for _, pid in
+               ((role, p["id"]) for role, p in bench_order(benched, lineup_xp))] if benched else []
+
+    # ⚠️ Scored on the REAL xP, not `lineup_xp`. The zeroing above is a selection device; quoting a gain
+    # computed from it would credit the manager with points a fiction created.
+    def total(ids):
+        return sum(xp_by_id.get(i) or 0 for i in ids)
+
+    return {
+        "start": [i for i in optimal],
+        "bench": ordered,
+        "bring_in": sorted(set(optimal) - declared_xi),
+        "drop": sorted(declared_xi - set(optimal)),
+        "gain": round(total(optimal) - total(declared_xi), 1),
+    }
+
+
 def _recent_rows(rows, club_by_id) -> list[dict]:
     """The last few appearances — points, minutes, **and who it was against** (ADR-242).
 
@@ -421,6 +470,10 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # kit and a fixture. Deriving them from the FPL squad would leave the new signing shirtless.
         clubs = {p["team"] for p in owned}
         gameweek, at, label, urgency = deadline_line(upcoming, datetime.now(UTC))
+        # ⚠️ Inside the `try`, because it needs the store — and ⚠️ the **whole board**, not the squad:
+        # ADR-210's exodus threshold is the worst tenth of the live distribution, and a tenth of fifteen
+        # flags somebody every week.
+        leaving = reported_leavers(owned, players, store)
     finally:
         if ours:
             store.close()
@@ -467,6 +520,7 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         }
 
     xp_by_id = {p["id"]: p["xp"] for p in answer["xi"] + answer["bench"]}
+    suggested = _suggested_lineup(owned, bench_ids, xp_by_id, leaving)
     benched = [by_id[i] for i in bench_ids if i in by_id]
     # ⭐ Role → id, so the phone orders the bench the way FPL will actually substitute. Without it a client
     # invents an order, and the first auto-sub proves it wrong.
@@ -508,6 +562,8 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "prices": prices,
         # ⭐ How many fixtures each club's list holds, so a client sizes its row rather than guessing.
         "run": RUN,
+        # ⭐ Null when your XI is already the best one — see `_suggested_lineup`.
+        "suggested_lineup": suggested,
         # ⭐ A **list**, not a map keyed by player id. The docstring above explains why ids never become
         # JSON keys here; a list sidesteps the question rather than arguing with it.
         "run_xp": run_xp,
