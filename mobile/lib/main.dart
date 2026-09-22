@@ -363,7 +363,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     body: SafeArea(
       child: Column(
         children: [
-          const _TitleBar(),
+          // ⭐⭐ **On every tab except My Team**, where the pitch carries the wordmark itself (ADR-253).
+          // ⚠️ Deleting it outright would have stripped the branding from Players, Transfers and More,
+          // which have no green to put it on — *a row worth reclaiming on one screen is not a row worth
+          // reclaiming on all of them.*
+          if (_tab != _Tab.myTeam) const _TitleBar(),
           Expanded(
             child: FutureBuilder<MyTeam>(
               future: _team,
@@ -417,8 +421,12 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             viceCaptainId: _draft!.viceCaptainId ?? rawTeam.viceCaptainId,
           );
     return switch (_tab) {
-      _Tab.myTeam => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+      // ⭐⭐⭐ **No scroll view, and that is the change** (ADR-253). The pitch was 747px of a 1932px
+      // screen: chrome above it, the bench floating on the dark below it, and 140px of dead space under
+      // that. It now fills whatever is left after the header — ⚠️ *a screen whose main subject scrolls
+      // is a screen that has decided its main subject is not important enough to fit.*
+      _Tab.myTeam => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -427,20 +435,18 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             // it are wrong, and disappears when they are not. ⭐ *A warning that is always on is a
             // decoration.*
             if (team.data.behind) _StaleBanner(data: team.data),
-            PitchView(
-              team: team,
-              mode: _mode,
-              onMode: (m) => setState(() => _mode = m),
-              onTapPlayer: (p) => _openPlayer(team, p),
-            ),
-            // ⭐⭐ **Below the bench, in what used to be dead space.** The owner asked for two things —
-            // *"optimise My Squad based on This Week"* and *"real estate is not maximised, see the gap at
-            // the bottom"* — and they are one thing: the most useful action on the screen, put where the
-            // screen had nothing. ⭐ *Filling a gap with the answer beats stretching the layout to hide
-            // it.*
-            ApplyPlanStrip(
-              team: team,
-              onApply: (plan) => _applyPlan(team, plan),
+            Expanded(
+              child: PitchView(
+                team: team,
+                mode: _mode,
+                onMode: (m) => setState(() => _mode = m),
+                onTapPlayer: (p) => _openPlayer(team, p),
+                // ⭐ On the pitch, below the bench — the action where the thing it acts on is.
+                footer: ApplyPlanStrip(
+                  team: team,
+                  onApply: (plan) => _applyPlan(team, plan),
+                ),
+              ),
             ),
           ],
         ),

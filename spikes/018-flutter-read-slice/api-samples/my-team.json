@@ -345,8 +345,10 @@
   },
   "deadline": {
     "at": "2026-10-10T10:00:00+00:00",
-    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 17 days, 11h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
-    "urgency": "calm"
+    "countdown": "in 17 days, 10h",
+    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 17 days, 10h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
+    "urgency": "calm",
+    "when": "Sat 10 Oct, 11:00"
   },
   "draft": false,
   "fixtures": {

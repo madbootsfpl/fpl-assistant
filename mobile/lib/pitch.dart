@@ -40,6 +40,7 @@ class PitchView extends StatelessWidget {
     required this.onTapPlayer,
     required this.mode,
     required this.onMode,
+    this.footer,
     super.key,
   });
 
@@ -50,6 +51,10 @@ class PitchView extends StatelessWidget {
   /// ⭐ The pitch is the right surface for editing a squad — it is where a manager already looks to decide
   /// anything, and a tab called "Captain" would be a second place to do a thing that belongs here.
   final void Function(PlayerSummary) onTapPlayer;
+
+  /// ⭐ Anything that belongs **on the pitch** below the bench — today, the apply-the-plan strip. It is a
+  /// slot rather than a hard-coded child so the pitch does not have to know what a lineup plan is.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -62,42 +67,131 @@ class PitchView extends StatelessWidget {
       children: [
         _Header(team: team),
         _ModeBar(mode: mode, onMode: onMode),
-        ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(Brand.radiusMd),
-          ),
-          child: PitchMarkings(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+        // ⭐⭐⭐ **One green area, from the mode bar to the bottom** (ADR-253). The pitch was 747px of a
+        // 1932px screen with the bench floating on the dark background below it and 140px of dead space
+        // under that. The competitor gives its pitch **twice** the room by letting the green run behind
+        // everything — ⚠️ *a pitch that stops two thirds of the way down reads as a web page with a
+        // picture on it.*
+        Expanded(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(Brand.radiusMd),
+            ),
+            child: PitchMarkings(
               child: Column(
                 children: [
-                  for (final row in _rows)
-                    if (byRow[row]!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (final p in byRow[row]!)
-                              _Card(
-                                team: team,
-                                player: p,
-                                mode: mode,
-                                onTap: () => onTapPlayer(p),
+                  // ⭐ The wordmark, inside the pitch. It used to have a row of its own above the header
+                  // — 60px to say a name the reader already knows. On the green it is present and costs
+                  // nothing, which is the trick the competitor's corner chip is playing.
+                  const _PitchMark(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                      child: Column(
+                        children: [
+                          // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.**
+                          // With `spaceEvenly` the rows demanded their intrinsic height and overflowed by
+                          // 4px on a 760pt screen once the footer was added — and a smaller phone, or a
+                          // stale-data banner, would clip a whole row of shirts. ⭐ *A pitch that must be
+                          // given enough room is not a pitch that fills the room it is given.*
+                          for (final row in _rows)
+                            if (byRow[row]!.isNotEmpty)
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    for (final p in byRow[row]!)
+                                      _Card(
+                                        team: team,
+                                        player: p,
+                                        mode: mode,
+                                        onTap: () => onTapPlayer(p),
+                                      ),
+                                  ],
+                                ),
                               ),
-                          ],
-                        ),
+                        ],
                       ),
+                    ),
+                  ),
+                  // ⭐ On the green, not under it: a dark panel **sitting on** the pitch is integrated
+                  // and still plainly separate, which is what the bench is.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                    child: _Bench(
+                      team: team,
+                      mode: mode,
+                      onTapPlayer: onTapPlayer,
+                    ),
+                  ),
+                  if (footer != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                      child: footer!,
+                    ),
                 ],
               ),
             ),
           ),
         ),
-        _Bench(team: team, mode: mode, onTapPlayer: onTapPlayer),
       ],
     );
   }
+}
+
+/// The badge and wordmark, inside the pitch — ⭐ **present, and costing no row of its own** (ADR-253).
+class _PitchMark extends StatelessWidget {
+  const _PitchMark();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(10, 7, 10, 0),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(6, 3, 9, 3),
+          decoration: BoxDecoration(
+            // ⚠️ A dark chip, because a wordmark straight onto grass is unreadable at this size however
+            // it is coloured.
+            color: Brand.ink.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(Brand.radiusPill),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image(
+                image: AssetImage('assets/madboots-badge.png'),
+                width: 15,
+                height: 15,
+                filterQuality: FilterQuality.medium,
+              ),
+              SizedBox(width: 5),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'MAD',
+                      style: TextStyle(
+                        color: Brand.purpleLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'BOOTS',
+                      style: TextStyle(color: Brand.orange),
+                    ),
+                  ],
+                ),
+                style: TextStyle(fontSize: 10.5, letterSpacing: .3),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Header extends StatelessWidget {
@@ -112,35 +206,43 @@ class _Header extends StatelessWidget {
     // flatter every team by four players who are not playing.
     final xi = a.xi.fold<double>(0, (sum, p) => sum + p.xp);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 2, 14, 12),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ⭐⭐ **One line, where three were** (ADR-253). The web's banner is 96 characters and wrapped
+          // to three lines here — ~40pt of the screen's most valuable space spent on a match count and a
+          // first kick-off time that nobody acts on from the pitch.
+          //
+          // ⚠️ The **countdown stays**: near a deadline it is the only part of this line anyone reads.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                'Gameweek ${team.gameweek ?? '—'}',
+                'GW${team.gameweek ?? '—'}',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  team.deadlineWhen.isEmpty
+                      // ⚠️ Falls back to the prose line if the parts are absent — an older server must
+                      // not leave the header blank.
+                      ? team.deadlineLabel
+                      : '${team.deadlineWhen} · ${team.deadlineCountdown}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          // ⚠️ Rendered as given: it already carries the timezone and the countdown (ADR-086).
-          Text(
-            team.deadlineLabel,
-            maxLines: 2,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -184,7 +286,7 @@ class _Stat extends StatelessWidget {
         value,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -218,68 +320,79 @@ class _Card extends StatelessWidget {
       onTap: onTap,
       // ⚠️ `opaque` so the whole card is the target — the kit alone is well under a thumb's width.
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: width,
-        child: Column(
-          children: [
-            SizedBox(
-              height: 34,
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  if (kit.isEmpty)
-                    const Text('👕', style: TextStyle(fontSize: 22))
-                  else
-                    // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
-                    // number beside it is the point.
-                    Image.network(
-                      kit,
-                      height: 34,
-                      errorBuilder: (_, _, _) =>
-                          const Text('👕', style: TextStyle(fontSize: 22)),
-                    ),
-                  if (_armband != null)
-                    Positioned(
-                      top: -2,
-                      right: 6,
-                      child: _Armband(letter: _armband!),
-                    ),
-                ],
+      // ⚠️⚠️ **`scaleDown`, so a short screen shrinks the card instead of clipping it.** With the rows
+      // dividing the pitch's height, a card on a small phone can be given less than its intrinsic height,
+      // and the overflow lands on the fixture strip — the part the whole redesign was about making
+      // readable. ⭐ *Never up, only down: on a tall screen the card stays the size it was designed at.*
+      //
+      // ⚠️ The width box is **inside** the FittedBox, not outside it. A `FittedBox` hands its child
+      // unbounded width, and the run's `Expanded` cells cannot lay out against that — *a box that scales
+      // its child must still give it something to be a fraction of.*
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          width: width,
+          child: Column(
+            children: [
+              SizedBox(
+                height: 34,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (kit.isEmpty)
+                      const Text('👕', style: TextStyle(fontSize: 22))
+                    else
+                      // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
+                      // number beside it is the point.
+                      Image.network(
+                        kit,
+                        height: 34,
+                        errorBuilder: (_, _, _) =>
+                            const Text('👕', style: TextStyle(fontSize: 22)),
+                      ),
+                    if (_armband != null)
+                      Positioned(
+                        top: -2,
+                        right: 6,
+                        child: _Armband(letter: _armband!),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Text(
-                    player.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(height: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      player.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
+                  if (_flag != null) ...[const SizedBox(width: 3), _flag!],
+                ],
+              ),
+              const SizedBox(height: 2),
+              switch (mode) {
+                PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
+                PitchMode.run => _Run(
+                  fixtures: team.runFor(player),
+                  xpByGameweek: team.runXpFor(player),
                 ),
-                if (_flag != null) ...[const SizedBox(width: 3), _flag!],
-              ],
-            ),
-            const SizedBox(height: 2),
-            switch (mode) {
-              PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
-              PitchMode.run => _Run(
-                fixtures: team.runFor(player),
-                xpByGameweek: team.runXpFor(player),
-              ),
-              PitchMode.price => _Price(
-                move: team.priceFor(player),
-                player: player,
-              ),
-            },
-          ],
+                PitchMode.price => _Price(
+                  move: team.priceFor(player),
+                  player: player,
+                ),
+              },
+            ],
+          ),
         ),
       ),
     );
@@ -314,18 +427,23 @@ class _NextGw extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
+      // ⭐ The same difficulty tint as the run, so a reader learns one colour language rather than two.
+      // ⚠️ White pill kept where the fixture is unknown — the neutral case should not borrow the look of
+      // an average fixture, because "we do not know" and "it is a three" are different facts.
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
         decoration: BoxDecoration(
-          color: Brand.surface,
+          color: fixture?.difficulty == null
+              ? Brand.surface
+              : difficultyTint(fixture!.difficulty),
           borderRadius: BorderRadius.circular(Brand.radiusPill),
         ),
         child: Text(
           player.xp.toStringAsFixed(1),
-          style: const TextStyle(
-            fontSize: 11,
+          style: TextStyle(
+            fontSize: 11.5,
             fontWeight: FontWeight.w700,
-            color: Brand.text,
+            color: fixture?.difficulty == null ? Brand.text : Colors.white,
           ),
         ),
       ),
@@ -350,6 +468,22 @@ class _NextGw extends StatelessWidget {
   );
 }
 
+/// FDR as a colour — ⭐ **the app already knew this and was drawing the run in monochrome.**
+///
+/// ⚠️ **Null is neutral, never easy.** An unknown fixture is not a good one, and tinting it green would be
+/// the app making a claim the data did not.
+///
+/// ⭐ Muted on purpose: these sit on a green pitch behind white text, so the tint has to say *easier* or
+/// *harder* without competing with the number it is behind.
+Color difficultyTint(int? difficulty) => switch (difficulty) {
+  1 => Brand.good.withValues(alpha: 0.85),
+  2 => Brand.good.withValues(alpha: 0.55),
+  3 => Colors.black.withValues(alpha: 0.28),
+  4 => Brand.warn.withValues(alpha: 0.62),
+  5 => Brand.bad.withValues(alpha: 0.72),
+  _ => Colors.black.withValues(alpha: 0.28),
+};
+
 /// **Next 3** — ⭐ *a manager deciding whether to HOLD a player is asking about his run, not his Saturday.*
 ///
 /// ⚠️ The per-gameweek xP comes from `by_gameweek`, which the app has published since ADR-213 and threw
@@ -365,43 +499,52 @@ class _Run extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final weeks = xpByGameweek.keys.toList()..sort();
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < fixtures.length; i++)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: Column(
-                    children: [
-                      Text(
-                        // ⭐ Matched by **gameweek**, not by position in the list: a blank gameweek means
-                        // a club's third fixture is not the third week, and lining them up by index would
-                        // quietly show the wrong number against the wrong opponent.
-                        _xpFor(weeks, fixtures[i].gameweek),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        fixtures[i].opponent.toLowerCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 7.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        for (var i = 0; i < fixtures.length; i++)
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              decoration: BoxDecoration(
+                // ⭐⭐⭐ **Tinted by fixture difficulty**, which the app already knew and was throwing
+                // away. The run was drawn in monochrome, so reading it meant reading three numbers and
+                // three club abbreviations and holding all six in your head. ⚠️ *A colour is read before
+                // a number is*, and the whole point of the run is to be taken in at a glance.
+                color: difficultyTint(fixtures[i].difficulty),
+                borderRadius: BorderRadius.circular(3),
               ),
-          ],
-        ),
+              child: Column(
+                children: [
+                  Text(
+                    // ⭐ Matched by **gameweek**, not by position in the list: a blank gameweek means
+                    // a club's third fixture is not the third week, and lining them up by index would
+                    // quietly show the wrong number against the wrong opponent.
+                    _xpFor(weeks, fixtures[i].gameweek),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    // ⚠️ Upper case home, lower case away — the convention every other run in the app
+                    // uses, so a reader who has learned one has learned them all.
+                    fixtures[i].venue == 'H'
+                        ? fixtures[i].opponent.toUpperCase()
+                        : fixtures[i].opponent.toLowerCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 7.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -583,13 +726,11 @@ class _Bench extends StatelessWidget {
   Widget build(BuildContext context) {
     final roleOf = {for (final e in team.benchRoles.entries) e.value: e.key};
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xEB17131F),
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(Brand.radiusMd),
-        ),
+      decoration: BoxDecoration(
+        color: Brand.ink.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(Brand.radiusMd),
       ),
-      padding: const EdgeInsets.fromLTRB(4, 7, 4, 10),
+      padding: const EdgeInsets.fromLTRB(4, 5, 4, 7),
       child: Column(
         children: [
           const Text(

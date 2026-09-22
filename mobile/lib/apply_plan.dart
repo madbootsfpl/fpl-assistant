@@ -28,12 +28,17 @@ class ApplyPlanStrip extends StatelessWidget {
     // every visit would be noise; one that vanished entirely would leave a reader wondering whether the
     // app had checked. ⚠️ *Silence and reassurance are different answers and both are sometimes right.*
     if (plan == null || plan.changes == 0) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(14, 14, 14, 10),
-        child: Text(
-          '✓  Your XI is already the best eleven you own this week.',
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        decoration: BoxDecoration(
+          color: Brand.ink.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(Brand.radiusMd),
+        ),
+        child: const Text(
+          '✓  Your XI is already the best eleven you own',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white24, fontSize: 11.5),
+          style: TextStyle(color: Colors.white54, fontSize: 11),
         ),
       );
     }
@@ -42,62 +47,63 @@ class ApplyPlanStrip extends StatelessWidget {
         .where((n) => n.isNotEmpty)
         .toList();
 
+    // ⭐⭐ **One line, where three were** (ADR-253). The information stays — *what it is worth* and *who
+    // comes in* — because that is the reason to press it, and the competitor's equivalent button says
+    // nothing at all. ⚠️ What went is the **height**: a three-line card at the foot of the pitch cost
+    // ~100pt, and the pitch is the screen.
     return Container(
-      margin: const EdgeInsets.fromLTRB(10, 12, 10, 8),
-      padding: const EdgeInsets.fromLTRB(13, 11, 11, 11),
+      padding: const EdgeInsets.fromLTRB(11, 6, 6, 6),
       decoration: BoxDecoration(
-        color: Brand.purple.withValues(alpha: 0.18),
-        border: Border.all(color: Brand.purpleLight, width: 1.1),
+        color: Brand.purple.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(Brand.radiusMd),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  // ⭐ The gain first, because it is the reason. "2 changes" is a cost; "+5.5 points" is
-                  // what the cost buys, and a manager decides on the second.
-                  '+${plan.gain.toStringAsFixed(1)} xP from ${plan.changes} '
-                  'change${plan.changes == 1 ? '' : 's'}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (names.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      // ⚠️ Names, not a count. "2 changes" is a number you have to go and look up;
-                      // "Start Semenyo and Barry" is the thing itself.
-                      'Start ${_list(names)}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 11,
-                        height: 1.35,
-                      ),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    // ⭐ The gain first, because it is the reason. "2 changes" is a cost; "+1.6 xP" is
+                    // what the cost buys, and a manager decides on the second.
+                    text: '+${plan.gain.toStringAsFixed(1)} xP',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-              ],
+                  TextSpan(
+                    // ⚠️ Names, not a count — "2 changes" is a number you then have to go and look up.
+                    text: names.isEmpty
+                        ? '  from ${plan.changes} change'
+                              '${plan.changes == 1 ? '' : 's'}'
+                        : '  ·  start ${_list(names)}',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           TextButton(
             onPressed: () => onApply(plan),
             style: TextButton.styleFrom(
-              backgroundColor: Brand.purple,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              backgroundColor: Colors.white,
+              foregroundColor: Brand.purple,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              minimumSize: const Size(0, 30),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(Brand.radiusSm),
               ),
             ),
-            child: const Text('Field it', style: TextStyle(fontSize: 12.5)),
+            child: const Text(
+              'Field it',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),

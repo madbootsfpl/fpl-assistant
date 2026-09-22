@@ -340,6 +340,18 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+def _deadline_parts(at, now) -> tuple[str, str]:
+    """The deadline as two short facts: when it is, and how long is left.
+
+    ⭐ Reuses the web's own formatters so the phone cannot disagree with the banner about the same moment —
+    ⚠️ *two renderings of one timestamp is how a countdown and a date drift by an hour across a DST
+    boundary.*
+    """
+    from src.ui.deadline import _UK, _countdown
+
+    return at.astimezone(_UK).strftime("%a %-d %b, %H:%M"), _countdown(at - now)
+
+
 def _data_freshness(store) -> dict:
     """How old this data is, and whether a finished gameweek is missing from it (ADR-248).
 
@@ -558,6 +570,15 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # kit and a fixture. Deriving them from the FPL squad would leave the new signing shirtless.
         clubs = {p["team"] for p in owned}
         gameweek, at, label, urgency = deadline_line(upcoming, datetime.now(UTC))
+        # ⭐⭐ **The parts as well as the sentence** (ADR-253). `label` is a 96-character line built for a
+        # desktop banner; on a phone it wrapped to three, which is ~40pt of the screen's most valuable
+        # real estate spent on a match count nobody acts on from the pitch.
+        #
+        # ⚠️ The sentence stays — the web renders it and it is right there. ⭐ *A client too narrow for a
+        # prose line needs the facts, not a second prose line written for it* — so the phone composes its
+        # own from `when` and `countdown`, and the API does not acquire a `compact=True` flag that would
+        # make it responsible for someone else's layout.
+        _uk_when, _left = _deadline_parts(at, datetime.now(UTC))
         # ⚠️ Inside the `try`, because it needs the store — and ⚠️ the **whole board**, not the squad:
         # ADR-210's exodus threshold is the worst tenth of the live distribution, and a tenth of fifteen
         # flags somebody every week.
@@ -642,7 +663,9 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "gameweek": gameweek,
         # ⚠️ The label carries the timezone and the countdown already (ADR-086) — re-deriving "in 18 days"
         # on the client would be a second clock, and the two would disagree by however long the app was open.
-        "deadline": {"at": at.isoformat(), "label": label, "urgency": urgency},
+"deadline": {"at": at.isoformat(), "label": label, "urgency": urgency,
+                     # ⭐ Short enough for one line on a phone: "Sat 10 Oct, 11:00" · "in 17 days, 11h".
+                     "when": _uk_when, "countdown": _left},
         "analysis": answer,
         "kits": kit_by_club,
         "fixtures": fixtures,

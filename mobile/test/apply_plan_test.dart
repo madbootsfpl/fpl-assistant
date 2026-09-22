@@ -62,8 +62,12 @@ void main() {
       find.textContaining('+${plan.gain.toStringAsFixed(1)} xP'),
       findsOneWidget,
     );
-    // ⚠️ Names, not a count — "2 changes" is a number you then have to go and look up.
-    expect(find.textContaining('Start '), findsOneWidget);
+    // ⚠️ **Names, not a count** — "2 changes" is a number you then have to go and look up. Asserted on
+    // a **name** rather than on the word around it, so the next copy edit changes the sentence without
+    // breaking the claim. ⭐ *Pin the thing the test is about, not the wording it happens to sit in.*
+    final first = team.nameOf(plan.bringIn.first);
+    expect(first, isNotEmpty);
+    expect(find.textContaining(first), findsOneWidget);
   });
 
   testWidgets('nothing to do is said once, quietly, not shouted or hidden', (

@@ -435,6 +435,8 @@ class MyTeam {
     required this.activeChip,
     required this.gameweek,
     required this.deadlineLabel,
+    required this.deadlineWhen,
+    required this.deadlineCountdown,
     required this.captainId,
     required this.viceCaptainId,
     required this.analysis,
@@ -463,6 +465,8 @@ class MyTeam {
       activeChip: squad['active_chip'] as String?,
       gameweek: json['gameweek'] as int?,
       deadlineLabel: deadline['label'] as String? ?? '',
+      deadlineWhen: deadline['when'] as String? ?? '',
+      deadlineCountdown: deadline['countdown'] as String? ?? '',
       captainId: squad['captain_id'] as int?,
       viceCaptainId: squad['vice_captain_id'] as int?,
       analysis: SquadAnalysis.fromJson(
@@ -578,6 +582,13 @@ class MyTeam {
   /// How many fixtures each club's list holds.
   final int run;
 
+  /// The deadline as two short facts — ⭐ *"Sat 10 Oct, 11:00"* and *"in 17 days, 11h"* (ADR-253).
+  ///
+  /// ⚠️ [deadlineLabel] is the web's 96-character prose line; on a phone it wrapped to three, spending
+  /// ~40pt of the screen's most valuable space on a match count nobody acts on from the pitch.
+  final String deadlineWhen;
+  final String deadlineCountdown;
+
   /// How old this data is, and whether a finished gameweek is missing from it (ADR-248).
   final DataFreshness data;
 
@@ -645,6 +656,8 @@ class MyTeam {
     activeChip: activeChip,
     gameweek: gameweek,
     deadlineLabel: deadlineLabel,
+    deadlineWhen: deadlineWhen,
+    deadlineCountdown: deadlineCountdown,
     captainId: captainId ?? this.captainId,
     viceCaptainId: viceCaptainId ?? this.viceCaptainId,
     analysis: analysis,
