@@ -106,6 +106,14 @@ class _SettingsViewState extends State<SettingsView> {
           ),
         ),
 
+        _Fact(
+          label: 'Data refreshed',
+          value: team.data.age,
+          // ⭐ Always here, even when nothing is wrong. The pitch banner answers *"are these numbers
+          // safe?"* and only when they are not; this answers *"how old is this?"* whenever anyone asks.
+          note: team.data.behind ? 'behind a finished gameweek' : 'up to date',
+        ),
+
         const _Heading('Server'),
         _ServerRow(baseUrl: widget.baseUrl, onServer: widget.onServer),
 

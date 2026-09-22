@@ -166,14 +166,22 @@ def test_the_gain_never_counts_the_selection_fiction(store, owned):
     from src.service.answers import _suggested_lineup
 
     squad = [p for p in store.get_players() if p["id"] in set(owned)]
-    answer = as_manager(store, owned, owned[-4:])["analysis"]
+    bench = owned[-4:]
+    answer = as_manager(store, owned, bench)["analysis"]
     xp = {p["id"]: p["xp"] for p in answer["xi"] + answer["bench"]}
-    best = max(xp, key=lambda i: xp[i])
 
-    plan = _suggested_lineup(squad, owned[-4:], xp, {best: 5})
+    # ⚠️⚠️ **Chosen from the DECLARED XI, not from the whole squad.** Zeroing a player who is already
+    # benched changes neither total, so the two numbers agree and the test proves nothing.
+    #
+    # ⭐ The guard below caught exactly that when the board was refreshed and the top-xP player moved onto
+    # the bench — *a fixture derived from live data drifts with it, and an assertion that says so is worth
+    # more than one that quietly starts passing for free.*
+    best = max((i for i in owned if i not in set(bench)), key=lambda i: xp[i])
+
+    plan = _suggested_lineup(squad, bench, xp, {best: 5})
     assert plan is not None
 
-    declared_xi = [i for i in owned if i not in owned[-4:]]
+    declared_xi = [i for i in owned if i not in set(bench)]
     real = round(sum(xp[i] for i in plan["start"]) - sum(xp[i] for i in declared_xi), 1)
     fiction = dict(xp)
     fiction[best] = 0.0

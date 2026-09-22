@@ -444,6 +444,7 @@ class MyTeam {
     required this.run,
     required this.runXp,
     required this.suggestedLineup,
+    required this.data,
     required this.swaps,
     required this.benchedIds,
     required this.benchRoles,
@@ -496,6 +497,9 @@ class MyTeam {
       // request's `horizon`, which is 1 because the headline is a this-week projection — so two of the
       // three columns always read "—". `run_xp` carries the window the card actually draws, computed
       // separately so the headline stays a one-week number.
+      data: DataFreshness.fromJson(
+        (json['data'] as Map<String, dynamic>?) ?? const {},
+      ),
       swaps: {
         for (final row in (json['swaps'] as List? ?? []))
           (row as Map<String, dynamic>)['id'] as int: [
@@ -574,6 +578,9 @@ class MyTeam {
   /// How many fixtures each club's list holds.
   final int run;
 
+  /// How old this data is, and whether a finished gameweek is missing from it (ADR-248).
+  final DataFreshness data;
+
   /// Player id → the players he may legally change places with (ADR-246).
   ///
   /// ⭐⭐ **Decided by the engine, not here.** FPL's formation limits live in `XI_FLEX` and are enforced by
@@ -647,6 +654,7 @@ class MyTeam {
     run: run,
     runXp: runXp,
     suggestedLineup: suggestedLineup,
+    data: data,
     swaps: swaps,
     benchedIds: benchedIds,
     benchRoles: benchRoles,
@@ -959,4 +967,50 @@ class DnaAxis {
 
   /// ⚠️ Null means **unranked**, not zero — there was no pool to rank against.
   final int? percentile;
+}
+
+/// How old the board is — ⭐⭐ **the thing whose absence turned a stale database into a bug report**
+/// (ADR-248).
+///
+/// ⚠️ `refreshedAt` alone is not enough. *"Updated 20 hours ago"* is fine on a Tuesday and useless the
+/// evening a gameweek finishes — what matters is whether a **completed gameweek is missing**, which is a
+/// different question and the one the pipeline already knows how to answer.
+class DataFreshness {
+  DataFreshness({
+    required this.refreshedAt,
+    required this.missingGameweeks,
+    required this.behind,
+    required this.why,
+  });
+
+  factory DataFreshness.fromJson(Map<String, dynamic> json) => DataFreshness(
+    refreshedAt: DateTime.tryParse('${json['refreshed_at']}'),
+    missingGameweeks: [
+      for (final g in (json['missing_gameweeks'] as List? ?? [])) g as int,
+    ],
+    behind: json['behind'] as bool? ?? false,
+    why: json['why'] as String? ?? '',
+  );
+
+  final DateTime? refreshedAt;
+  final List<int> missingGameweeks;
+
+  /// True when a **finished** gameweek is not in the data.
+  final bool behind;
+  final String why;
+
+  /// ⭐ Named so a person can act: *"missing GW5"* beats *"stale"*, which is a mood.
+  String get warning => missingGameweeks.isEmpty
+      ? 'The board is behind — $why'
+      : 'Results for GW${missingGameweeks.join(", GW")} are missing, so points, '
+            'form and projections are out of date.';
+
+  String get age {
+    final at = refreshedAt;
+    if (at == null) return 'unknown';
+    final ago = DateTime.now().toUtc().difference(at.toUtc());
+    if (ago.inMinutes < 90) return '${ago.inMinutes} min ago';
+    if (ago.inHours < 36) return '${ago.inHours} hours ago';
+    return '${ago.inDays} days ago';
+  }
 }

@@ -3,7 +3,170 @@
     "bench": [
       {
         "by_gameweek": {
-          "6": 6.2
+          "6": 6.7
+        },
+        "chance": null,
+        "id": 12,
+        "leaving": null,
+        "minutes_weight": 0.92,
+        "position": "MID",
+        "price": 9.5,
+        "status": "a",
+        "team": "ARS",
+        "web_name": "Saka",
+        "xp": 6.7
+      },
+      {
+        "by_gameweek": {
+          "6": 6.4
+        },
+        "chance": null,
+        "id": 504,
+        "leaving": null,
+        "minutes_weight": 0.99,
+        "position": "DEF",
+        "price": 5.0,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Vuskovic",
+        "xp": 6.4
+      },
+      {
+        "by_gameweek": {
+          "6": 4.5
+        },
+        "chance": null,
+        "id": 1,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "GK",
+        "price": 6.1,
+        "status": "a",
+        "team": "ARS",
+        "web_name": "Raya",
+        "xp": 4.5
+      },
+      {
+        "by_gameweek": {
+          "6": 3.7
+        },
+        "chance": 100,
+        "id": 367,
+        "leaving": null,
+        "minutes_weight": 0.82,
+        "position": "MID",
+        "price": 7.2,
+        "status": "a",
+        "team": "LIV",
+        "web_name": "Gakpo",
+        "xp": 3.7
+      }
+    ],
+    "bench_xp": 21.3,
+    "club_counts": {
+      "ARS": 2,
+      "BHA": 3,
+      "BRE": 1,
+      "CHE": 1,
+      "EVE": 1,
+      "HUL": 1,
+      "LEE": 1,
+      "LIV": 2,
+      "MCI": 3
+    },
+    "concentrated_clubs": [
+      "BHA",
+      "MCI"
+    ],
+    "gameweeks": [
+      6
+    ],
+    "horizon": 1,
+    "issues": [
+      {
+        "by_gameweek": {
+          "6": 3.9
+        },
+        "chance": 75,
+        "id": 165,
+        "leaving": null,
+        "minutes_weight": 0.51,
+        "position": "FWD",
+        "price": 7.7,
+        "status": "d",
+        "team": "CHE",
+        "web_name": "Jo\u00e3o Pedro",
+        "xp": 3.9
+      }
+    ],
+    "projected_xp": 49.9,
+    "top_pick": {
+      "by_gameweek": {
+        "6": 6.4
+      },
+      "chance": null,
+      "id": 572,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 4.6,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "Tzolakis",
+      "xp": 6.4
+    },
+    "value": 105.9,
+    "weakest": [
+      {
+        "by_gameweek": {
+          "6": 1.8
+        },
+        "chance": null,
+        "id": 330,
+        "leaving": null,
+        "minutes_weight": 0.81,
+        "position": "DEF",
+        "price": 4.6,
+        "status": "a",
+        "team": "LEE",
+        "web_name": "Bogle",
+        "xp": 1.8
+      },
+      {
+        "by_gameweek": {
+          "6": 3.9
+        },
+        "chance": 75,
+        "id": 165,
+        "leaving": null,
+        "minutes_weight": 0.51,
+        "position": "FWD",
+        "price": 7.7,
+        "status": "d",
+        "team": "CHE",
+        "web_name": "Jo\u00e3o Pedro",
+        "xp": 3.9
+      },
+      {
+        "by_gameweek": {
+          "6": 4.0
+        },
+        "chance": null,
+        "id": 391,
+        "leaving": null,
+        "minutes_weight": 0.96,
+        "position": "DEF",
+        "price": 5.7,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 4.0
+      }
+    ],
+    "xi": [
+      {
+        "by_gameweek": {
+          "6": 6.4
         },
         "chance": null,
         "id": 572,
@@ -14,37 +177,22 @@
         "status": "a",
         "team": "HUL",
         "web_name": "Tzolakis",
-        "xp": 6.2
+        "xp": 6.4
       },
       {
         "by_gameweek": {
-          "6": 5.6
+          "6": 5.1
         },
         "chance": null,
-        "id": 379,
+        "id": 115,
         "leaving": null,
-        "minutes_weight": 0.93,
-        "position": "FWD",
-        "price": 9.1,
-        "status": "a",
-        "team": "LIV",
-        "web_name": "Isak",
-        "xp": 5.6
-      },
-      {
-        "by_gameweek": {
-          "6": 5.3
-        },
-        "chance": null,
-        "id": 8,
-        "leaving": null,
-        "minutes_weight": 0.91,
+        "minutes_weight": 0.94,
         "position": "DEF",
-        "price": 5.8,
+        "price": 4.9,
         "status": "a",
-        "team": "ARS",
-        "web_name": "Calafiori",
-        "xp": 5.3
+        "team": "BHA",
+        "web_name": "De Cuyper",
+        "xp": 5.1
       },
       {
         "by_gameweek": {
@@ -60,199 +208,51 @@
         "team": "EVE",
         "web_name": "Tarkowski",
         "xp": 4.3
-      }
-    ],
-    "bench_xp": 21.4,
-    "club_counts": {
-      "ARS": 3,
-      "BHA": 2,
-      "BOU": 1,
-      "BRE": 1,
-      "CHE": 2,
-      "EVE": 1,
-      "HUL": 1,
-      "LEE": 1,
-      "LIV": 1,
-      "MCI": 2
-    },
-    "concentrated_clubs": [
-      "ARS"
-    ],
-    "gameweeks": [
-      6
-    ],
-    "horizon": 1,
-    "issues": [
-      {
-        "by_gameweek": {
-          "6": 5.7
-        },
-        "chance": 75,
-        "id": 165,
-        "leaving": null,
-        "minutes_weight": 0.75,
-        "position": "FWD",
-        "price": 7.8,
-        "status": "d",
-        "team": "CHE",
-        "web_name": "Jo\u00e3o Pedro",
-        "xp": 5.7
-      }
-    ],
-    "projected_xp": 42.4,
-    "top_pick": {
-      "by_gameweek": {
-        "6": 6.7
-      },
-      "chance": null,
-      "id": 12,
-      "leaving": null,
-      "minutes_weight": 0.93,
-      "position": "MID",
-      "price": 9.5,
-      "status": "a",
-      "team": "ARS",
-      "web_name": "Saka",
-      "xp": 6.7
-    },
-    "value": 105.3,
-    "weakest": [
-      {
-        "by_gameweek": {
-          "6": 1.6
-        },
-        "chance": null,
-        "id": 330,
-        "leaving": null,
-        "minutes_weight": 0.73,
-        "position": "DEF",
-        "price": 4.6,
-        "status": "a",
-        "team": "LEE",
-        "web_name": "Bogle",
-        "xp": 1.6
       },
       {
         "by_gameweek": {
-          "6": 1.7
-        },
-        "chance": null,
-        "id": 124,
-        "leaving": null,
-        "minutes_weight": 0.39,
-        "position": "MID",
-        "price": 5.7,
-        "status": "a",
-        "team": "BHA",
-        "web_name": "Gro\u00df",
-        "xp": 1.7
-      },
-      {
-        "by_gameweek": {
-          "6": 2.2
-        },
-        "chance": null,
-        "id": 115,
-        "leaving": null,
-        "minutes_weight": 0.41,
-        "position": "DEF",
-        "price": 4.9,
-        "status": "a",
-        "team": "BHA",
-        "web_name": "De Cuyper",
-        "xp": 2.2
-      }
-    ],
-    "xi": [
-      {
-        "by_gameweek": {
-          "6": 4.5
-        },
-        "chance": null,
-        "id": 1,
-        "leaving": null,
-        "minutes_weight": 1.0,
-        "position": "GK",
-        "price": 6.0,
-        "status": "a",
-        "team": "ARS",
-        "web_name": "Raya",
-        "xp": 4.5
-      },
-      {
-        "by_gameweek": {
-          "6": 2.6
+          "6": 4.0
         },
         "chance": null,
         "id": 391,
         "leaving": null,
-        "minutes_weight": 0.63,
+        "minutes_weight": 0.96,
         "position": "DEF",
         "price": 5.7,
         "status": "a",
         "team": "MCI",
         "web_name": "Gvardiol",
-        "xp": 2.6
+        "xp": 4.0
       },
       {
         "by_gameweek": {
-          "6": 2.2
-        },
-        "chance": null,
-        "id": 115,
-        "leaving": null,
-        "minutes_weight": 0.41,
-        "position": "DEF",
-        "price": 4.9,
-        "status": "a",
-        "team": "BHA",
-        "web_name": "De Cuyper",
-        "xp": 2.2
-      },
-      {
-        "by_gameweek": {
-          "6": 1.6
+          "6": 1.8
         },
         "chance": null,
         "id": 330,
         "leaving": null,
-        "minutes_weight": 0.73,
+        "minutes_weight": 0.81,
         "position": "DEF",
         "price": 4.6,
         "status": "a",
         "team": "LEE",
         "web_name": "Bogle",
-        "xp": 1.6
+        "xp": 1.8
       },
       {
         "by_gameweek": {
-          "6": 6.7
+          "6": 4.4
         },
         "chance": null,
-        "id": 12,
+        "id": 124,
         "leaving": null,
-        "minutes_weight": 0.93,
+        "minutes_weight": 1.0,
         "position": "MID",
-        "price": 9.5,
+        "price": 5.8,
         "status": "a",
-        "team": "ARS",
-        "web_name": "Saka",
-        "xp": 6.7
-      },
-      {
-        "by_gameweek": {
-          "6": 4.5
-        },
-        "chance": null,
-        "id": 40,
-        "leaving": null,
-        "minutes_weight": 0.96,
-        "position": "MID",
-        "price": 7.7,
-        "status": "a",
-        "team": "CHE",
-        "web_name": "Rogers",
-        "xp": 4.5
+        "team": "BHA",
+        "web_name": "Gro\u00df",
+        "xp": 4.4
       },
       {
         "by_gameweek": {
@@ -263,7 +263,7 @@
         "leaving": null,
         "minutes_weight": 0.99,
         "position": "MID",
-        "price": 6.1,
+        "price": 6.2,
         "status": "a",
         "team": "BRE",
         "web_name": "Schade",
@@ -271,71 +271,77 @@
       },
       {
         "by_gameweek": {
-          "6": 3.7
+          "6": 4.1
         },
         "chance": null,
-        "id": 68,
+        "id": 399,
         "leaving": null,
-        "minutes_weight": 0.97,
+        "minutes_weight": 0.67,
         "position": "MID",
-        "price": 6.1,
-        "status": "a",
-        "team": "BOU",
-        "web_name": "Tavernier",
-        "xp": 3.7
-      },
-      {
-        "by_gameweek": {
-          "6": 1.7
-        },
-        "chance": null,
-        "id": 124,
-        "leaving": null,
-        "minutes_weight": 0.39,
-        "position": "MID",
-        "price": 5.7,
-        "status": "a",
-        "team": "BHA",
-        "web_name": "Gro\u00df",
-        "xp": 1.7
-      },
-      {
-        "by_gameweek": {
-          "6": 5.7
-        },
-        "chance": 75,
-        "id": 165,
-        "leaving": null,
-        "minutes_weight": 0.75,
-        "position": "FWD",
         "price": 7.8,
-        "status": "d",
-        "team": "CHE",
-        "web_name": "Jo\u00e3o Pedro",
-        "xp": 5.7
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Cherki",
+        "xp": 4.1
       },
       {
         "by_gameweek": {
-          "6": 5.1
+          "6": 6.2
         },
         "chance": null,
         "id": 411,
         "leaving": null,
-        "minutes_weight": 0.82,
+        "minutes_weight": 1.0,
         "position": "FWD",
         "price": 15.6,
         "status": "a",
         "team": "MCI",
         "web_name": "Haaland",
-        "xp": 5.1
+        "xp": 6.2
+      },
+      {
+        "by_gameweek": {
+          "6": 5.6
+        },
+        "chance": null,
+        "id": 379,
+        "leaving": null,
+        "minutes_weight": 0.92,
+        "position": "FWD",
+        "price": 9.1,
+        "status": "a",
+        "team": "LIV",
+        "web_name": "Isak",
+        "xp": 5.6
+      },
+      {
+        "by_gameweek": {
+          "6": 3.9
+        },
+        "chance": 75,
+        "id": 165,
+        "leaving": null,
+        "minutes_weight": 0.51,
+        "position": "FWD",
+        "price": 7.7,
+        "status": "d",
+        "team": "CHE",
+        "web_name": "Jo\u00e3o Pedro",
+        "xp": 3.9
       }
     ]
   },
   "bench_roles": {
-    "1st": 379,
-    "2nd": 8,
-    "3rd": 229,
-    "GK": 572
+    "1st": 12,
+    "2nd": 504,
+    "3rd": 367,
+    "GK": 1
+  },
+  "data": {
+    "behind": false,
+    "missing_gameweeks": [],
+    "refreshed_at": "2026-09-18T22:07:24+00:00",
+    "why": "history held for every completed gameweek ([1, 2, 3, 4, 5])"
   },
   "deadline": {
     "at": "2026-10-10T10:00:00+00:00",
@@ -381,26 +387,6 @@
         "difficulty": 4,
         "gameweek": 8,
         "opponent": "LIV",
-        "venue": "A"
-      }
-    ],
-    "BOU": [
-      {
-        "difficulty": 4,
-        "gameweek": 6,
-        "opponent": "CHE",
-        "venue": "A"
-      },
-      {
-        "difficulty": 2,
-        "gameweek": 7,
-        "opponent": "SUN",
-        "venue": "H"
-      },
-      {
-        "difficulty": 4,
-        "gameweek": 8,
-        "opponent": "MUN",
         "venue": "A"
       }
     ],
@@ -546,21 +532,21 @@
     ]
   },
   "fpl_player_ids": [
-    94,
-    330,
     124,
-    165,
-    391,
+    229,
+    330,
+    94,
     411,
     115,
-    12,
-    1,
-    40,
-    68,
-    229,
-    8,
+    391,
+    399,
     572,
-    379
+    165,
+    379,
+    12,
+    367,
+    504,
+    1
   ],
   "free_transfers": 1,
   "gameweek": 6,
@@ -572,10 +558,6 @@
     "BHA": {
       "gk": "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_36_1-66.png",
       "outfield": "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_36-66.png"
-    },
-    "BOU": {
-      "gk": "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_91_1-66.png",
-      "outfield": "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_91-66.png"
     },
     "BRE": {
       "gk": "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_94_1-66.png",
@@ -609,130 +591,122 @@
   "manager_id": 1,
   "prices": {
     "1": {
-      "changed_this_gameweek": 0.0,
+      "changed_this_gameweek": 0.1,
       "direction": "stable",
-      "net_transfers": 9666
+      "net_transfers": 70310
     },
     "115": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 9941
+      "net_transfers": 218319
     },
     "12": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 5391
+      "net_transfers": 40625
     },
     "124": {
-      "changed_this_gameweek": 0.0,
-      "direction": "stable",
-      "net_transfers": 18943
+      "changed_this_gameweek": 0.1,
+      "direction": "rise",
+      "net_transfers": 660754
     },
     "165": {
-      "changed_this_gameweek": 0.0,
-      "direction": "fall",
-      "net_transfers": -24903
+      "changed_this_gameweek": -0.1,
+      "direction": "stable",
+      "net_transfers": -281131
     },
     "229": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 1583
+      "net_transfers": 157715
     },
     "330": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 5608
+      "net_transfers": 77765
+    },
+    "367": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": -23231
     },
     "379": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": -1160
+      "net_transfers": 33888
     },
     "391": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 7994
+      "net_transfers": 77915
     },
-    "40": {
+    "399": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 8468
+      "net_transfers": 16225
     },
     "411": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 2588
+      "net_transfers": 44730
+    },
+    "504": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 33491
     },
     "572": {
       "changed_this_gameweek": 0.0,
       "direction": "stable",
-      "net_transfers": 2772
-    },
-    "68": {
-      "changed_this_gameweek": 0.0,
-      "direction": "stable",
-      "net_transfers": 6848
-    },
-    "8": {
-      "changed_this_gameweek": 0.0,
-      "direction": "stable",
-      "net_transfers": 2855
+      "net_transfers": 75095
     },
     "94": {
-      "changed_this_gameweek": 0.0,
-      "direction": "stable",
-      "net_transfers": 18241
+      "changed_this_gameweek": 0.1,
+      "direction": "rise",
+      "net_transfers": 302415
     }
   },
   "run": 3,
   "run_xp": [
     {
       "by_gameweek": {
-        "6": 4.6,
-        "7": 4.1,
-        "8": 4.1
+        "6": 6.4,
+        "7": 6.4,
+        "8": 6.4
       },
-      "id": 1
+      "id": 572
     },
     {
       "by_gameweek": {
-        "6": 2.7,
-        "7": 3.2,
-        "8": 2.6
-      },
-      "id": 391
-    },
-    {
-      "by_gameweek": {
-        "6": 2.2,
-        "7": 2.2,
-        "8": 2.0
+        "6": 5.1,
+        "7": 5.1,
+        "8": 4.5
       },
       "id": 115
     },
     {
       "by_gameweek": {
-        "6": 1.6,
-        "7": 1.8,
-        "8": 2.0
+        "6": 4.0,
+        "7": 4.9,
+        "8": 4.0
+      },
+      "id": 391
+    },
+    {
+      "by_gameweek": {
+        "6": 4.3,
+        "7": 3.5,
+        "8": 3.2
+      },
+      "id": 229
+    },
+    {
+      "by_gameweek": {
+        "6": 1.7,
+        "7": 2.0,
+        "8": 2.2
       },
       "id": 330
-    },
-    {
-      "by_gameweek": {
-        "6": 6.8,
-        "7": 6.1,
-        "8": 6.1
-      },
-      "id": 12
-    },
-    {
-      "by_gameweek": {
-        "6": 4.5,
-        "7": 4.5,
-        "8": 4.4
-      },
-      "id": 40
     },
     {
       "by_gameweek": {
@@ -744,130 +718,134 @@
     },
     {
       "by_gameweek": {
-        "6": 3.8,
-        "7": 4.6,
-        "8": 3.7
+        "6": 4.1,
+        "7": 5.1,
+        "8": 4.1
       },
-      "id": 68
+      "id": 399
     },
     {
       "by_gameweek": {
-        "6": 1.7,
-        "7": 1.7,
-        "8": 1.6
+        "6": 4.4,
+        "7": 4.4,
+        "8": 3.9
       },
       "id": 124
     },
     {
       "by_gameweek": {
-        "6": 5.8,
-        "7": 5.7,
-        "8": 5.7
-      },
-      "id": 165
-    },
-    {
-      "by_gameweek": {
-        "6": 5.1,
-        "7": 6.3,
-        "8": 5.1
+        "6": 6.2,
+        "7": 7.6,
+        "8": 6.2
       },
       "id": 411
     },
     {
       "by_gameweek": {
         "6": 5.6,
-        "7": 6.3,
+        "7": 6.2,
         "8": 6.9
       },
       "id": 379
     },
     {
       "by_gameweek": {
-        "6": 6.2,
-        "7": 6.2,
-        "8": 6.1
+        "6": 3.9,
+        "7": 3.9,
+        "8": 3.9
       },
-      "id": 572
+      "id": 165
     },
     {
       "by_gameweek": {
-        "6": 5.3,
-        "7": 4.8,
-        "8": 4.8
+        "6": 6.7,
+        "7": 6.1,
+        "8": 6.0
       },
-      "id": 8
+      "id": 12
     },
     {
       "by_gameweek": {
-        "6": 4.3,
-        "7": 3.5,
-        "8": 3.2
+        "6": 6.4,
+        "7": 6.3,
+        "8": 5.7
       },
-      "id": 229
+      "id": 504
+    },
+    {
+      "by_gameweek": {
+        "6": 4.6,
+        "7": 4.1,
+        "8": 4.1
+      },
+      "id": 1
+    },
+    {
+      "by_gameweek": {
+        "6": 3.6,
+        "7": 4.1,
+        "8": 4.5
+      },
+      "id": 367
     }
   ],
   "squad": {
     "active_chip": null,
     "bank": null,
     "bench_ids": [
-      229,
-      8,
-      572,
-      379
+      12,
+      367,
+      504,
+      1
     ],
-    "captain_id": 94,
+    "captain_id": 124,
     "cost": null,
     "name": "Sample XI",
     "player_ids": [
-      94,
-      330,
       124,
-      165,
-      391,
+      229,
+      330,
+      94,
       411,
       115,
-      12,
-      1,
-      40,
-      68,
-      229,
-      8,
+      391,
+      399,
       572,
-      379
+      165,
+      379,
+      12,
+      367,
+      504,
+      1
     ],
     "value": null,
-    "vice_captain_id": 330
+    "vice_captain_id": 229
   },
   "suggested_lineup": {
     "bench": [
-      115,
-      124,
+      165,
+      367,
       330,
       1
     ],
     "bring_in": [
-      8,
-      229,
-      379,
-      572
+      12,
+      504
     ],
     "drop": [
-      1,
-      115,
-      124,
+      165,
       330
     ],
-    "gain": 11.4,
+    "gain": 7.4,
     "start": [
-      68,
       229,
-      165,
       391,
-      8,
-      40,
       12,
+      399,
+      124,
+      115,
       379,
+      504,
       411,
       572,
       94
@@ -876,148 +854,154 @@
   "swaps": [
     {
       "benched": false,
-      "id": 94,
+      "id": 124,
       "with": [
-        229,
-        8,
-        379
+        12,
+        367,
+        504
+      ]
+    },
+    {
+      "benched": false,
+      "id": 229,
+      "with": [
+        12,
+        367,
+        504
       ]
     },
     {
       "benched": false,
       "id": 330,
       "with": [
-        229,
-        8
+        12,
+        367,
+        504
       ]
     },
     {
       "benched": false,
-      "id": 124,
+      "id": 94,
       "with": [
-        229,
-        8,
-        379
-      ]
-    },
-    {
-      "benched": false,
-      "id": 165,
-      "with": [
-        229,
-        8,
-        379
-      ]
-    },
-    {
-      "benched": false,
-      "id": 391,
-      "with": [
-        229,
-        8
+        12,
+        367,
+        504
       ]
     },
     {
       "benched": false,
       "id": 411,
       "with": [
-        229,
-        8,
-        379
+        12,
+        367,
+        504
       ]
     },
     {
       "benched": false,
       "id": 115,
       "with": [
-        229,
-        8
-      ]
-    },
-    {
-      "benched": false,
-      "id": 12,
-      "with": [
-        229,
-        8,
-        379
-      ]
-    },
-    {
-      "benched": false,
-      "id": 1,
-      "with": [
-        572
-      ]
-    },
-    {
-      "benched": false,
-      "id": 40,
-      "with": [
-        229,
-        8,
-        379
-      ]
-    },
-    {
-      "benched": false,
-      "id": 68,
-      "with": [
-        229,
-        8,
-        379
-      ]
-    },
-    {
-      "benched": true,
-      "id": 229,
-      "with": [
-        94,
-        330,
-        124,
-        165,
-        391,
-        411,
-        115,
         12,
-        40,
-        68
+        367,
+        504
       ]
     },
     {
-      "benched": true,
-      "id": 8,
+      "benched": false,
+      "id": 391,
       "with": [
-        94,
-        330,
-        124,
-        165,
-        391,
-        411,
-        115,
         12,
-        40,
-        68
+        367,
+        504
       ]
     },
     {
-      "benched": true,
+      "benched": false,
+      "id": 399,
+      "with": [
+        12,
+        367,
+        504
+      ]
+    },
+    {
+      "benched": false,
       "id": 572,
       "with": [
         1
       ]
     },
     {
-      "benched": true,
+      "benched": false,
+      "id": 165,
+      "with": [
+        12,
+        367,
+        504
+      ]
+    },
+    {
+      "benched": false,
       "id": 379,
       "with": [
-        94,
-        124,
-        165,
-        411,
         12,
-        40,
-        68
+        367,
+        504
+      ]
+    },
+    {
+      "benched": true,
+      "id": 12,
+      "with": [
+        124,
+        229,
+        330,
+        94,
+        411,
+        115,
+        391,
+        399,
+        165,
+        379
+      ]
+    },
+    {
+      "benched": true,
+      "id": 367,
+      "with": [
+        124,
+        229,
+        330,
+        94,
+        411,
+        115,
+        391,
+        399,
+        165,
+        379
+      ]
+    },
+    {
+      "benched": true,
+      "id": 504,
+      "with": [
+        124,
+        229,
+        330,
+        94,
+        411,
+        115,
+        391,
+        399,
+        165,
+        379
+      ]
+    },
+    {
+      "benched": true,
+      "id": 1,
+      "with": [
+        572
       ]
     }
   ]

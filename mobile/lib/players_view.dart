@@ -563,9 +563,16 @@ class _Card extends StatelessWidget {
             ),
             if (card.recent.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'LAST 5',
-                style: TextStyle(
+              Text(
+                // ⚠️⚠️ **It said "LAST 5" over four boxes** and the owner reasonably read that as a
+                // missing gameweek. It was not — early in a season, or for a player who joined late,
+                // there simply are not five. ⭐ *A heading that names a number it is not showing turns a
+                // correct screen into a bug report* — and it hid a real one underneath, because the fifth
+                // gameweek genuinely was missing from the database.
+                card.recent.length >= 5
+                    ? 'LAST 5'
+                    : 'LAST ${card.recent.length}',
+                style: const TextStyle(
                   color: Colors.white24,
                   fontSize: 9,
                   letterSpacing: 1,

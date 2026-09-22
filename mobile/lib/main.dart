@@ -421,6 +421,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ⚠️⚠️ **Only when a FINISHED gameweek is missing** (ADR-248). A permanent "last updated"
+            // strip would be read once and then never again; this appears exactly when the numbers below
+            // it are wrong, and disappears when they are not. ⭐ *A warning that is always on is a
+            // decoration.*
+            if (team.data.behind) _StaleBanner(data: team.data),
             PitchView(
               team: team,
               mode: _mode,
@@ -661,6 +666,48 @@ class _DroppedBanner extends StatelessWidget {
         DraftStaleness.fresh => '',
       },
       style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),
+    ),
+  );
+}
+
+/// The board is behind a finished gameweek — ⭐⭐ **the message whose absence made a stale database look
+/// like a broken engine** (ADR-248).
+///
+/// The owner checked a player's last five, saw a blank against Coventry and no Arsenal game at all, and
+/// asked why the app was not reflecting reality. It was: *a reality from the previous afternoon.*
+class _StaleBanner extends StatelessWidget {
+  const _StaleBanner({required this.data});
+
+  final DataFreshness data;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+    padding: const EdgeInsets.fromLTRB(11, 8, 11, 9),
+    decoration: BoxDecoration(
+      color: Brand.warn.withValues(alpha: 0.18),
+      border: Border.all(color: Brand.warn, width: 1),
+      borderRadius: BorderRadius.circular(Brand.radiusSm),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.history_toggle_off, size: 15, color: Brand.warn),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            // ⭐ Names the gameweek, because *"missing GW5"* is a fact someone can act on and "stale" is
+            // a mood. And says what it costs, because a warning without a consequence gets dismissed.
+            '${data.warning}  Last refreshed ${data.age}.',
+            style: const TextStyle(
+              color: Brand.warn,
+              fontSize: 11,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

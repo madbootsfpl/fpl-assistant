@@ -2,23 +2,8 @@
   "budget": 100.0,
   "default_budget": 80.0,
   "horizon": 5,
-  "projected_xp": 399.7,
+  "projected_xp": 423.0,
   "selected": [
-    {
-      "bench": false,
-      "by_gameweek": {},
-      "chance": null,
-      "forced": false,
-      "id": 1,
-      "leaving": null,
-      "minutes_weight": 1.0,
-      "position": "GK",
-      "price": 6.0,
-      "status": "a",
-      "team": "ARS",
-      "web_name": "Raya",
-      "xp": 21.1
-    },
     {
       "bench": false,
       "by_gameweek": {},
@@ -32,22 +17,22 @@
       "status": "a",
       "team": "HUL",
       "web_name": "Tzolakis",
-      "xp": 30.2
+      "xp": 31.4
     },
     {
       "bench": false,
       "by_gameweek": {},
       "chance": null,
       "forced": false,
-      "id": 4,
+      "id": 1,
       "leaving": null,
       "minutes_weight": 1.0,
-      "position": "DEF",
-      "price": 8.0,
+      "position": "GK",
+      "price": 6.1,
       "status": "a",
       "team": "ARS",
-      "web_name": "Gabriel",
-      "xp": 28.9
+      "web_name": "Raya",
+      "xp": 21.1
     },
     {
       "bench": false,
@@ -62,7 +47,37 @@
       "status": "a",
       "team": "BHA",
       "web_name": "Vuskovic",
-      "xp": 24.7
+      "xp": 29.9
+    },
+    {
+      "bench": false,
+      "by_gameweek": {},
+      "chance": null,
+      "forced": false,
+      "id": 173,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.0,
+      "status": "a",
+      "team": "COV",
+      "web_name": "Thomas",
+      "xp": 26.2
+    },
+    {
+      "bench": false,
+      "by_gameweek": {},
+      "chance": 100,
+      "forced": false,
+      "id": 362,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.0,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Jacquet",
+      "xp": 25.3
     },
     {
       "bench": false,
@@ -77,7 +92,7 @@
       "status": "a",
       "team": "BRE",
       "web_name": "Schuster",
-      "xp": 24.4
+      "xp": 28.0
     },
     {
       "bench": false,
@@ -99,21 +114,6 @@
       "by_gameweek": {},
       "chance": null,
       "forced": false,
-      "id": 60,
-      "leaving": null,
-      "minutes_weight": 1.0,
-      "position": "DEF",
-      "price": 5.5,
-      "status": "a",
-      "team": "BOU",
-      "web_name": "Hill",
-      "xp": 24.0
-    },
-    {
-      "bench": false,
-      "by_gameweek": {},
-      "chance": null,
-      "forced": false,
       "id": 12,
       "leaving": null,
       "minutes_weight": 1.0,
@@ -122,22 +122,7 @@
       "status": "a",
       "team": "ARS",
       "web_name": "Saka",
-      "xp": 31.3
-    },
-    {
-      "bench": false,
-      "by_gameweek": {},
-      "chance": 100,
-      "forced": false,
-      "id": 154,
-      "leaving": null,
-      "minutes_weight": 1.0,
-      "position": "MID",
-      "price": 9.7,
-      "status": "a",
-      "team": "CHE",
-      "web_name": "Palmer",
-      "xp": 29.4
+      "xp": 31.0
     },
     {
       "bench": false,
@@ -152,22 +137,37 @@
       "status": "a",
       "team": "HUL",
       "web_name": "Belloumi",
+      "xp": 30.9
+    },
+    {
+      "bench": false,
+      "by_gameweek": {},
+      "chance": null,
+      "forced": false,
+      "id": 453,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 6.1,
+      "status": "a",
+      "team": "NEW",
+      "web_name": "Barnes",
       "xp": 27.3
     },
     {
       "bench": false,
       "by_gameweek": {},
-      "chance": 100,
+      "chance": null,
       "forced": false,
-      "id": 480,
+      "id": 427,
       "leaving": null,
       "minutes_weight": 1.0,
       "position": "MID",
-      "price": 8.0,
+      "price": 7.9,
       "status": "a",
-      "team": "NFO",
-      "web_name": "Gibbs-White",
-      "xp": 24.7
+      "team": "MUN",
+      "web_name": "Mbeumo",
+      "xp": 27.7
     },
     {
       "bench": false,
@@ -178,7 +178,7 @@
       "leaving": null,
       "minutes_weight": 1.0,
       "position": "MID",
-      "price": 6.4,
+      "price": 6.3,
       "status": "a",
       "team": "BOU",
       "web_name": "Rayan",
@@ -187,17 +187,17 @@
     {
       "bench": false,
       "by_gameweek": {},
-      "chance": 75,
+      "chance": null,
       "forced": false,
-      "id": 165,
+      "id": 411,
       "leaving": null,
       "minutes_weight": 1.0,
       "position": "FWD",
-      "price": 7.8,
-      "status": "d",
-      "team": "CHE",
-      "web_name": "Jo\u00e3o Pedro",
-      "xp": 28.1
+      "price": 15.6,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Haaland",
+      "xp": 34.5
     },
     {
       "bench": false,
@@ -212,25 +212,25 @@
       "status": "a",
       "team": "LIV",
       "web_name": "Isak",
-      "xp": 30.7
+      "xp": 30.5
     },
     {
       "bench": false,
       "by_gameweek": {},
-      "chance": 100,
+      "chance": null,
       "forced": false,
-      "id": 316,
+      "id": 464,
       "leaving": null,
       "minutes_weight": 1.0,
       "position": "FWD",
-      "price": 5.5,
+      "price": 6.2,
       "status": "a",
-      "team": "IPS",
-      "web_name": "Emersonn",
-      "xp": 22.9
+      "team": "NEW",
+      "web_name": "Wissa",
+      "xp": 27.2
     }
   ],
   "status": "Optimal",
-  "total_cost": 99.6,
-  "unavailable_excluded": 181
+  "total_cost": 99.9,
+  "unavailable_excluded": 180
 }

@@ -37,72 +37,71 @@
     },
     {
       "by_gameweek": {},
-      "chance": 75,
+      "chance": null,
       "difficulty": 3,
-      "id": 165,
+      "id": 504,
       "leaving": null,
       "minutes_weight": 1.0,
-      "opponent": "BOU",
+      "opponent": "SUN",
       "penalty_taker": false,
-      "position": "FWD",
-      "price": 7.8,
-      "status": "d",
-      "team": "CHE",
-      "venue": "H",
-      "web_name": "Jo\u00e3o Pedro",
-      "xp": 5.7
+      "position": "DEF",
+      "price": 5.0,
+      "status": "a",
+      "team": "BHA",
+      "venue": "A",
+      "web_name": "Vuskovic",
+      "xp": 6.4
     },
     {
       "by_gameweek": {},
       "chance": null,
       "difficulty": 4,
-      "id": 379,
+      "id": 411,
       "leaving": null,
       "minutes_weight": 1.0,
-      "opponent": "MCI",
-      "penalty_taker": false,
+      "opponent": "LIV",
+      "penalty_taker": true,
       "position": "FWD",
-      "price": 9.1,
+      "price": 15.6,
       "status": "a",
-      "team": "LIV",
-      "venue": "H",
-      "web_name": "Isak",
-      "xp": 5.6
+      "team": "MCI",
+      "venue": "A",
+      "web_name": "Haaland",
+      "xp": 6.2
     }
   ],
   "cliff": null,
   "explanation": {
     "captain": {
-      "band": "High",
-      "confidence": 95,
+      "band": "Medium",
+      "confidence": 73,
       "reasons": [
         "Highest projected points",
         "Penalty taker",
         "Expected ~90 mins",
-        "Strong fixture vs LEE",
-        "In form (6.0)"
+        "Strong fixture vs LEE"
       ],
       "risks": []
     },
     "levers": {
-      "ceiling": 95,
-      "fixed": "your captain's own number (95/100); lifting it means a different captain, not a different week",
+      "ceiling": 73,
+      "fixed": "your captain's own number (73/100); lifting it means a different captain, not a different week",
       "levers": [
         {
-          "kind": "action",
-          "what": "Jo\u00e3o Pedro is flagged \u2014 replace him \u2014 you have no cover on your bench",
-          "worth": 8
+          "kind": "noted",
+          "what": "Jo\u00e3o Pedro is flagged \u2014 already on your bench",
+          "worth": 0
         }
       ],
-      "score": 87
+      "score": 73
     },
     "lineup": [],
     "overall": {
-      "band": "High",
-      "confidence": 87,
+      "band": "Medium",
+      "confidence": 73,
       "reasons": [
-        "Clear captain: Saka (95/100 \u00b7 High)",
-        "A positive-gain upgrade available (+2.8 XI xP)"
+        "Clear captain: Saka (73/100 \u00b7 Medium)",
+        "A positive-gain upgrade available (+2.3 XI xP)"
       ],
       "risks": [
         "Jo\u00e3o Pedro (doubtful, 75%)"
@@ -112,13 +111,14 @@
       "band": "High",
       "confidence": 95,
       "reasons": [
-        "+2.8 to your starting XI over 1 GW",
-        "Higher projected points (5.4 vs 1.6)"
+        "+2.3 to your starting XI over 1 GW",
+        "Higher projected points (6.3 vs 3.7)",
+        "Frees \u00a32.1m",
+        "In form (7.0)"
       ],
       "risks": [
-        "Costs \u00a30.3m from your bank",
-        "Selling Bogle (1.6 xP)",
-        "Differential (3% owned)"
+        "Selling Gakpo (3.7 xP)",
+        "Differential (5% owned)"
       ]
     }
   },
@@ -127,13 +127,13 @@
       "chance": 75,
       "cover": null,
       "reason": "doubtful",
-      "starting": true,
+      "starting": false,
       "team": "CHE",
       "web_name": "Jo\u00e3o Pedro"
     }
   ],
   "free": 1,
-  "horizon_gain": 16.0,
+  "horizon_gain": 10.9,
   "horizon_gw": 5,
   "lineup": {
     "bench": [
@@ -148,33 +148,33 @@
         "status": "a",
         "team": "LEE",
         "web_name": "Bogle",
-        "xp": 1.6
+        "xp": 1.8
       },
       {
         "by_gameweek": {},
-        "chance": null,
-        "id": 124,
+        "chance": 75,
+        "id": 165,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "FWD",
+        "price": 7.7,
+        "status": "d",
+        "team": "CHE",
+        "web_name": "Jo\u00e3o Pedro",
+        "xp": 3.9
+      },
+      {
+        "by_gameweek": {},
+        "chance": 100,
+        "id": 367,
         "leaving": null,
         "minutes_weight": 1.0,
         "position": "MID",
-        "price": 5.7,
+        "price": 7.2,
         "status": "a",
-        "team": "BHA",
-        "web_name": "Gro\u00df",
-        "xp": 1.7
-      },
-      {
-        "by_gameweek": {},
-        "chance": null,
-        "id": 115,
-        "leaving": null,
-        "minutes_weight": 1.0,
-        "position": "DEF",
-        "price": 4.9,
-        "status": "a",
-        "team": "BHA",
-        "web_name": "De Cuyper",
-        "xp": 2.2
+        "team": "LIV",
+        "web_name": "Gakpo",
+        "xp": 3.7
       },
       {
         "by_gameweek": {},
@@ -183,7 +183,7 @@
         "leaving": null,
         "minutes_weight": 1.0,
         "position": "GK",
-        "price": 6.0,
+        "price": 6.1,
         "status": "a",
         "team": "ARS",
         "web_name": "Raya",
@@ -194,19 +194,6 @@
     "drop": [],
     "has_declared_bench": false,
     "start": [
-      {
-        "by_gameweek": {},
-        "chance": null,
-        "id": 68,
-        "leaving": null,
-        "minutes_weight": 1.0,
-        "position": "MID",
-        "price": 6.1,
-        "status": "a",
-        "team": "BOU",
-        "web_name": "Tavernier",
-        "xp": 3.7
-      },
       {
         "by_gameweek": {},
         "chance": null,
@@ -222,19 +209,6 @@
       },
       {
         "by_gameweek": {},
-        "chance": 75,
-        "id": 165,
-        "leaving": null,
-        "minutes_weight": 1.0,
-        "position": "FWD",
-        "price": 7.8,
-        "status": "d",
-        "team": "CHE",
-        "web_name": "Jo\u00e3o Pedro",
-        "xp": 5.7
-      },
-      {
-        "by_gameweek": {},
         "chance": null,
         "id": 391,
         "leaving": null,
@@ -244,33 +218,7 @@
         "status": "a",
         "team": "MCI",
         "web_name": "Gvardiol",
-        "xp": 2.6
-      },
-      {
-        "by_gameweek": {},
-        "chance": null,
-        "id": 8,
-        "leaving": null,
-        "minutes_weight": 1.0,
-        "position": "DEF",
-        "price": 5.8,
-        "status": "a",
-        "team": "ARS",
-        "web_name": "Calafiori",
-        "xp": 5.3
-      },
-      {
-        "by_gameweek": {},
-        "chance": null,
-        "id": 40,
-        "leaving": null,
-        "minutes_weight": 1.0,
-        "position": "MID",
-        "price": 7.7,
-        "status": "a",
-        "team": "CHE",
-        "web_name": "Rogers",
-        "xp": 4.5
+        "xp": 4.0
       },
       {
         "by_gameweek": {},
@@ -288,6 +236,45 @@
       {
         "by_gameweek": {},
         "chance": null,
+        "id": 399,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 7.8,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Cherki",
+        "xp": 4.1
+      },
+      {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 124,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 5.8,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Gro\u00df",
+        "xp": 4.4
+      },
+      {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 115,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 4.9,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "De Cuyper",
+        "xp": 5.1
+      },
+      {
+        "by_gameweek": {},
+        "chance": null,
         "id": 379,
         "leaving": null,
         "minutes_weight": 1.0,
@@ -301,6 +288,19 @@
       {
         "by_gameweek": {},
         "chance": null,
+        "id": 504,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.0,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Vuskovic",
+        "xp": 6.4
+      },
+      {
+        "by_gameweek": {},
+        "chance": null,
         "id": 411,
         "leaving": null,
         "minutes_weight": 1.0,
@@ -309,7 +309,7 @@
         "status": "a",
         "team": "MCI",
         "web_name": "Haaland",
-        "xp": 5.1
+        "xp": 6.2
       },
       {
         "by_gameweek": {},
@@ -322,7 +322,7 @@
         "status": "a",
         "team": "HUL",
         "web_name": "Tzolakis",
-        "xp": 6.2
+        "xp": 6.4
       },
       {
         "by_gameweek": {},
@@ -331,7 +331,7 @@
         "leaving": null,
         "minutes_weight": 1.0,
         "position": "MID",
-        "price": 6.1,
+        "price": 6.2,
         "status": "a",
         "team": "BRE",
         "web_name": "Schade",
@@ -342,77 +342,77 @@
   "replacements": [],
   "timing": {
     "action": "use",
-    "cost": 2.8,
-    "reason": "Waiting costs 2.8 and saves only 1.9",
-    "second_gain": 1.9,
-    "value": 1.9
+    "cost": 2.3,
+    "reason": "Waiting costs 2.3 and saves only 2.1",
+    "second_gain": 2.1,
+    "value": 2.1
   },
   "transfer": {
-    "bank_after": 1.7,
-    "gain": 2.8,
-    "horizon_gain": 16.0,
+    "bank_after": 4.1,
+    "gain": 2.3,
+    "horizon_gain": 10.9,
     "in": {
       "by_gameweek": {},
       "chance": null,
-      "id": 532,
+      "id": 286,
       "leaving": null,
       "minutes_weight": 1.0,
-      "position": "DEF",
-      "price": 4.9,
+      "position": "MID",
+      "price": 5.1,
       "status": "a",
-      "team": "SUN",
-      "web_name": "Ballard",
-      "xp": 5.4
+      "team": "HUL",
+      "web_name": "Belloumi",
+      "xp": 6.3
     },
     "out": {
       "by_gameweek": {},
-      "chance": null,
-      "id": 330,
+      "chance": 100,
+      "id": 367,
       "leaving": null,
       "minutes_weight": 1.0,
-      "position": "DEF",
-      "price": 4.6,
+      "position": "MID",
+      "price": 7.2,
       "status": "a",
-      "team": "LEE",
-      "web_name": "Bogle",
-      "xp": 1.6
+      "team": "LIV",
+      "web_name": "Gakpo",
+      "xp": 3.7
     },
     "out_on_bench": false,
-    "position": "DEF"
+    "position": "MID"
   },
   "transfers": [
     {
-      "bank_after": 1.7,
-      "gain": 2.8,
-      "horizon_gain": 16.0,
+      "bank_after": 4.1,
+      "gain": 2.3,
+      "horizon_gain": 10.9,
       "in": {
         "by_gameweek": {},
         "chance": null,
-        "id": 532,
+        "id": 286,
         "leaving": null,
         "minutes_weight": 1.0,
-        "position": "DEF",
-        "price": 4.9,
+        "position": "MID",
+        "price": 5.1,
         "status": "a",
-        "team": "SUN",
-        "web_name": "Ballard",
-        "xp": 5.4
+        "team": "HUL",
+        "web_name": "Belloumi",
+        "xp": 6.3
       },
       "out": {
         "by_gameweek": {},
-        "chance": null,
-        "id": 330,
+        "chance": 100,
+        "id": 367,
         "leaving": null,
         "minutes_weight": 1.0,
-        "position": "DEF",
-        "price": 4.6,
+        "position": "MID",
+        "price": 7.2,
         "status": "a",
-        "team": "LEE",
-        "web_name": "Bogle",
-        "xp": 1.6
+        "team": "LIV",
+        "web_name": "Gakpo",
+        "xp": 3.7
       },
       "out_on_bench": false,
-      "position": "DEF"
+      "position": "MID"
     }
   ]
 }

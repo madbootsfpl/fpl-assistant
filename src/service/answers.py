@@ -334,6 +334,40 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+def _data_freshness(store) -> dict:
+    """How old this data is, and whether a finished gameweek is missing from it (ADR-248).
+
+    ⭐⭐⭐ **The app had no way to say how old its numbers were, so a stale board looked like a wrong
+    engine.** The owner checked a player's last five, saw a blank against Coventry and no Arsenal game at
+    all, and reasonably asked why the app was not reflecting reality. It was reflecting reality — *a
+    reality from the previous afternoon.*
+
+    ⚠️ **`refreshed_at` alone is not the answer.** "Updated 20 hours ago" is fine on a Tuesday and useless
+    the evening a gameweek finishes. What matters is whether a **completed gameweek is missing**, which is
+    exactly what `backfill_due` already computes — ⭐ *so this asks the pipeline's own question rather than
+    inventing a second definition of "behind".*
+    """
+    from src.pipeline import backfill_due
+
+    # ⚠️ `backfilled_at` is deliberately NOT returned. It was, briefly — and it made the contract sample
+    # unstable, because it is a string in a backfilled database and null in the committed test fixture.
+    # ⭐ *A field nobody reads is a field that can only cause drift*, and the client answers "is the board
+    # behind?" from `behind`, which is computed rather than stamped.
+    status = dict(store.data_status() or {})
+    try:
+        behind, why, rounds = backfill_due(store.get_all_fixtures(), store.get_gw_history_by_code())
+    except Exception:  # pragma: no cover - a freshness check must never take a screen down
+        behind, why, rounds = False, "could not be checked", set()
+
+    return {
+        "refreshed_at": status.get("refreshed_at"),
+        # ⭐ The rounds, not just a flag: *"missing GW5"* is a fact someone can act on; *"stale"* is a mood.
+        "missing_gameweeks": sorted(rounds),
+        "behind": bool(behind),
+        "why": why,
+    }
+
+
 def _legal_swaps(owned, bench_ids) -> list[dict]:
     """Who each player can legally change places with (ADR-246).
 
@@ -522,6 +556,7 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # ADR-210's exodus threshold is the worst tenth of the live distribution, and a tenth of fifteen
         # flags somebody every week.
         leaving = reported_leavers(owned, players, store)
+        freshness = _data_freshness(store)
     finally:
         if ours:
             store.close()
@@ -614,6 +649,10 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "suggested_lineup": suggested,
         # ⭐ Who each player may change places with, decided by the engine's own formation rules.
         "swaps": _legal_swaps(owned, bench_ids),
+        # ⚠️ **On the screen a manager actually opens.** A freshness field on `/health` would be read by
+        # monitoring and by nobody else — ⭐ *the place to say "these numbers are from yesterday" is beside
+        # the numbers.*
+        "data": freshness,
         # ⭐ A **list**, not a map keyed by player id. The docstring above explains why ids never become
         # JSON keys here; a list sidesteps the question rather than arguing with it.
         "run_xp": run_xp,
