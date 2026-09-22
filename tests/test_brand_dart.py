@@ -99,3 +99,35 @@ def test_the_generated_file_is_stable_under_dart_format():
     assert lines.index(marker) < next(i for i, ln in enumerate(lines) if ln.startswith("import ")), (
         "the marker sits after the imports, so the code above it is still formatted"
     )
+
+
+def test_the_app_wordmark_is_the_brands_wordmark():
+    """⚠️⚠️ **MAD purple · BOOTS orange** — `brand.py`'s `wordmark_html` is the rule, and the phone had
+    been rendering BOOTS in **white** since the app was built.
+
+    ⭐⭐ Nobody decided that. The palette is generated into `brand.dart`, but the *wordmark* — which colour
+    goes on which half — was retyped in Dart, so it drifted. **A generated palette does not stop a
+    hand-written rule from disagreeing with it**, and the owner spotted it on a phone screen before any
+    test did.
+
+    ⚠️ The purple is deliberately the **light** shade on the app's dark ground — `brand.py` itself says a
+    caller should *"pick a shade legible on the surface (e.g. `PURPLE_LT` on a dark band)"*. So this
+    asserts the *orange* exactly and the purple as one of the sanctioned two.
+    """
+    import re
+    import sys
+
+    sys.path.insert(0, str(ROOT))
+    from src.web_streamlit import brand
+
+    dart = (ROOT / "mobile" / "lib" / "main.dart").read_text()
+    block = re.search(r"text: 'MAD'.*?text: 'BOOTS'.*?color: ([\w.]+)", dart, re.S)
+    assert block, "the wordmark in main.dart no longer looks like MAD + BOOTS — update this guard with it"
+    boots = block.group(1)
+    assert boots == "Brand.orange", (
+        f"BOOTS renders in {boots}; brand.py's wordmark_html puts it in {brand.ORANGE}. "
+        f"The two-tone split is the brand, not a style choice."
+    )
+
+    mad = re.search(r"text: 'MAD'.*?color: ([\w.]+)", dart, re.S).group(1)
+    assert mad in {"Brand.purple", "Brand.purpleLight"}, f"MAD renders in {mad}"

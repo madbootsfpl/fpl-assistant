@@ -14,6 +14,7 @@ import 'server.dart';
 
 import 'api/models.dart';
 import 'brand.dart';
+import 'help_dot.dart';
 
 /// ⚠️⚠️ **Stateful because it is a pushed route**, and a pushed route is built from values captured at the
 /// moment it was pushed. Owning [_freeTransfers] locally was not a style choice: with the parent's value
@@ -243,12 +244,12 @@ class _FreeTransfersRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Expanded(
-              child: Text(
-                'Free transfers',
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
+            const Text(
+              'Free transfers',
+              style: TextStyle(color: Colors.white, fontSize: 14),
             ),
+            const HelpDot('free_transfers', size: 13),
+            const Spacer(),
             for (var n = 0; n <= 5; n++)
               GestureDetector(
                 onTap: () => onChanged(n),

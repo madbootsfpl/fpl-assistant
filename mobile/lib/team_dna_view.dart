@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'help_dot.dart';
 
 class TeamDnaView extends StatefulWidget {
   const TeamDnaView({required this.client, required this.team, super.key});
@@ -64,10 +65,21 @@ class _TeamDnaViewState extends State<TeamDnaView> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  '${all.length} clubs, best first · '
-                  '${all.where((c) => c.yours).length} you hold players from',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '${all.length} clubs by percentile rank',
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    // ⭐ "Percentile" is the word that makes every bar on this screen readable, and it
+                    // is also the one a reader is most likely to take as a score.
+                    const HelpDot('percentile', size: 12),
+                  ],
                 ),
               ),
               GestureDetector(

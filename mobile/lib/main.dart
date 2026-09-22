@@ -449,7 +449,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         team: team,
         onPlan: (outId, inId) => _planSwap(team, outId, inId),
       ),
-      _Tab.thisWeek => ThisWeekView(client: _client, team: team),
+      _Tab.thisWeek => ThisWeekView(
+        client: _client,
+        team: team,
+        onApply: (plan) => _applyPlan(team, plan),
+      ),
       _Tab.players => PlayersView(
         client: _client,
         owned: {
@@ -534,9 +538,16 @@ class _TitleBar extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              // ⚠️⚠️ **Orange, because the brand says so** — `brand.py`'s `wordmark_html`: *"MAD purple ·
+              // BOOTS orange, the colour split doing the word-break"*. The app rendered it white, which
+              // was not a decision anybody took: the wordmark was **retyped here** instead of derived,
+              // so it drifted from the one source of truth ADR-103/114 exists to keep.
+              //
+              // ⭐ `tests/test_brand_dart.py` now compares these two colours against `brand.py`. *A
+              // generated palette does not stop a hand-written rule from disagreeing with it.*
               TextSpan(
                 text: 'BOOTS',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Brand.orange),
               ),
             ],
           ),

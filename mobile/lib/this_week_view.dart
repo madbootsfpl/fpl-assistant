@@ -8,14 +8,29 @@ library;
 import 'package:flutter/material.dart';
 
 import 'api/client.dart';
+import 'apply_plan.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'help_dot.dart';
 
 class ThisWeekView extends StatefulWidget {
-  const ThisWeekView({required this.client, required this.team, super.key});
+  const ThisWeekView({
+    required this.client,
+    required this.team,
+    required this.onApply,
+    super.key,
+  });
 
   final ServiceClient client;
   final MyTeam team;
+
+  /// ⭐⭐ **Act where you read the reason** (ADR-249). The owner asked whether the optimise button should
+  /// be on My Team *or* in This Week; the answer is both, because they are different moments. On the
+  /// pitch it is a shortcut for someone who already trusts it; here it sits directly under the
+  /// **per-swap justification** — *"higher projected xP: 4.8 vs 3.3"* — for someone who wants to check
+  /// first. ⚠️ *Making a reader remember a recommendation and go elsewhere to apply it is the transcription
+  /// problem ADR-244 removed, reintroduced one screen along.*
+  final Future<void> Function(SuggestedLineup) onApply;
 
   @override
   State<ThisWeekView> createState() => _ThisWeekViewState();
@@ -100,6 +115,10 @@ class _ThisWeekViewState extends State<ThisWeekView> {
                 ...lineupWhy.map((r) => '$r'),
               ].join('\n'),
             ),
+          // ⚠️ Only when the server's own suggestion agrees there is something to do. A button offered
+          // beside "No change" would be a button that does nothing.
+          if (widget.team.suggestedLineup != null)
+            ApplyPlanStrip(team: widget.team, onApply: widget.onApply),
           if (moves.isEmpty)
             const _Card(
               label: 'Transfer',
@@ -183,13 +202,20 @@ class _Confidence extends StatelessWidget {
           // top-RIGHT corner, so the screen's first card was the one card that read differently from all
           // the others. ⚠️ *A layout that is unique for no reason reads as a mistake, whatever it looks
           // like on its own.*
-          const Text(
-            'CONFIDENCE',
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 10,
-              letterSpacing: 1,
-            ),
+          // ⭐ Beside the label, not the number: the question is *what is this?*, and the label is the
+          // part a reader is already looking at when they wonder.
+          Row(
+            children: [
+              const Text(
+                'CONFIDENCE',
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  letterSpacing: 1,
+                ),
+              ),
+              const HelpDot('confidence', size: 12),
+            ],
           ),
           const SizedBox(height: 3),
           Row(
@@ -305,13 +331,18 @@ class _Lines extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white38,
-            fontSize: 10,
-            letterSpacing: 1,
-          ),
+        Row(
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white38,
+                fontSize: 10,
+                letterSpacing: 1,
+              ),
+            ),
+            HelpDot(label.toLowerCase(), size: 12),
+          ],
         ),
         const SizedBox(height: 4),
         for (final line in lines)
