@@ -84,6 +84,14 @@ class ServiceClient {
   Future<Map<String, dynamic>> signals(List<int> playerIds) =>
       _post('squad/signals', {'player_ids': playerIds, 'horizon': 1});
 
+  /// **Boot Battle** — two same-position players side by side.
+  Future<BootBattle> compare(int aId, int bId, {int horizon = 5}) async =>
+      BootBattle.fromJson(await _post('compare', {
+        'a_id': aId,
+        'b_id': bId,
+        'horizon': horizon,
+      }));
+
   /// Send a note to the owner.
   ///
   /// ⚠️ **Check `sent`.** It is the relay's own verdict — `false` with a `reason` is a real outcome, and a

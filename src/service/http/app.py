@@ -99,6 +99,15 @@ class RouteBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m.")
 
 
+class CompareBody(BaseModel):
+    """⚠️ No squad — a comparison is about two players, and requiring the fifteen would stop the transfer
+    screen asking about someone you do not own, which is the only interesting case."""
+
+    a_id: int = Field(..., ge=1)
+    b_id: int = Field(..., ge=1)
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON)
+
+
 class FeedbackBody(BaseModel):
     """A note from a tester. ⚠️ Free text, so it is capped — and relayed verbatim, never interpreted."""
 
@@ -219,6 +228,17 @@ def squad_route(body: RouteBody) -> dict:
     like the question was not understood.
     """
     return _answer(service.route, service.RouteRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/compare")
+def compare_players(body: CompareBody) -> dict:
+    """**Boot Battle** — two players side by side: the stat grid with a winner per row, each one's last five
+    gameweeks, and both projected runs.
+
+    ⚠️ **Same position only.** The stats are ordered by what matters for a position, so comparing a keeper
+    with a midfielder gives rows that are individually true and jointly meaningless.
+    """
+    return _answer(service.compare, service.CompareRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/feedback")

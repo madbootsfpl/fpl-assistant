@@ -292,3 +292,25 @@ class SignalsRequest(SquadRequest):
     exploration layer and the decision layer. A manager checking a phone before a deadline is asking about
     the fifteen he owns.
     """
+
+
+@dataclass(frozen=True)
+class CompareRequest:
+    """**Boot Battle** — two players, side by side (ADR-110/236).
+
+    ⚠️ **No squad.** A comparison is about two players, and requiring the fifteen would stop the transfer
+    screen asking it about a player you do not own — which is the only interesting case.
+    """
+
+    a_id: int | None = None
+    b_id: int | None = None
+    horizon: int = DEFAULT_HORIZON
+
+    def validate(self) -> None:
+        _check_horizon(self.horizon)
+        if not self.a_id or not self.b_id:
+            raise ValueError("two player ids are needed")
+        if self.a_id == self.b_id:
+            # ⚠️ Every row would tie and every winner would be None — a page that looks broken rather than
+            # one that says "you asked the same question twice".
+            raise ValueError("a player cannot be compared with himself")

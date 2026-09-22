@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
+import 'boot_battle.dart';
 import 'brand.dart';
 
 class TransfersView extends StatefulWidget {
@@ -82,6 +83,7 @@ class _TransfersViewState extends State<TransfersView> {
                   _Move(
                     move: m,
                     lead: i == 0,
+                    client: widget.client,
                     onPlan: () => widget.onPlan(m.out.id, m.incoming.id),
                   ),
               const SizedBox(height: 14),
@@ -130,10 +132,18 @@ class _CountPicker extends StatelessWidget {
       );
 }
 
-class _Move extends StatelessWidget {
-  const _Move({required this.move, required this.lead, required this.onPlan});
+/// ⭐⭐ A move **and the working behind it**. Expanding is lazy: a comparison is fetched only when someone
+/// asks for one, so a list of five suggestions costs five requests it never makes.
+class _Move extends StatefulWidget {
+  const _Move({
+    required this.move,
+    required this.lead,
+    required this.client,
+    required this.onPlan,
+  });
 
   final TransferMove move;
+  final ServiceClient client;
   final VoidCallback onPlan;
 
   /// ⭐ The first move is the recommendation; the rest are context. Styling them identically would make a
@@ -141,8 +151,26 @@ class _Move extends StatelessWidget {
   final bool lead;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onPlan,
+  State<_Move> createState() => _MoveState();
+}
+
+class _MoveState extends State<_Move> {
+  Future<BootBattle>? _battle;
+
+  void _toggle() {
+    setState(() {
+      _battle = _battle == null
+          ? widget.client.compare(widget.move.out.id, widget.move.incoming.id, horizon: 5)
+          : null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final move = widget.move;
+    final lead = widget.lead;
+    return GestureDetector(
+        onTap: widget.onPlan,
         behavior: HitTestBehavior.opaque,
         child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -202,14 +230,39 @@ class _Move extends StatelessWidget {
                   style: TextStyle(color: Brand.warn, fontSize: 10.5, height: 1.4),
                 ),
               ),
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text('Tap to see your pitch with this move',
-                  style: TextStyle(color: Colors.white38, fontSize: 10)),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Tap to see your pitch with this move',
+                        style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  ),
+                  GestureDetector(
+                    // ⚠️ Its own target, because the card's tap already *plans* the move. Two actions on
+                    // one surface need two places to put a thumb.
+                    onTap: _toggle,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        children: [
+                          Text(_battle == null ? 'Compare' : 'Hide',
+                              style: const TextStyle(color: Brand.purpleLight, fontSize: 10.5)),
+                          Icon(_battle == null ? Icons.expand_more : Icons.expand_less,
+                              size: 14, color: Brand.purpleLight),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            if (_battle != null) BootBattleView(future: _battle!),
           ],
         ),
       ));
+  }
 }
 
 class _Message extends StatelessWidget {

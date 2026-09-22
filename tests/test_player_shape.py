@@ -38,6 +38,7 @@ ALLOWED_EXTRAS = {
     "bench", "forced",                      # the solver decided one, the caller asked for the other
     "affordable", "over_by",                # a replacement's price against *your* budget
     "opponent", "venue", "difficulty", "penalty_taker",   # facts about the fixture, not the player
+    "recent",                               # a comparison's last-five form: an answer, not a stored field
 }
 
 
@@ -82,8 +83,15 @@ def _players_in(value, path="", found=None):
 
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
-COVERED = {"analysis", "chips", "transfers", "captain", "gameweek", "route", "build",
+COVERED = {"analysis", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
            "replacements", "players", "signals"}
+
+
+def _compare_two(store):
+    """Two same-position players, whoever they are — the sweep cares about shape, not who wins."""
+    mids = [p for p in store.get_players() if p["position"] == "MID"][:2]
+    return service.compare(
+        service.CompareRequest(a_id=mids[0]["id"], b_id=mids[1]["id"], horizon=1), store=store)
 
 
 def _answers(store):
@@ -94,6 +102,7 @@ def _answers(store):
         "analysis": service.analysis(service.SquadRequest(player_ids=ids, horizon=1), store=store),
         "chips": service.chips(service.ChipsRequest(player_ids=ids, bank=2.0), store=store),
         "players": service.players(service.PlayersRequest(horizon=1, limit=5), store=store),
+        "compare": _compare_two(store),
         "signals": service.signals(service.SignalsRequest(player_ids=ids, horizon=1), store=store),
         "transfers": service.transfers(
             service.TransfersRequest(player_ids=ids, horizon=1, bank=3.0), store=store),

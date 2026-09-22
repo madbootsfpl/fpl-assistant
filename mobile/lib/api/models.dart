@@ -634,3 +634,87 @@ class ReplacementsAnswer {
 
   final List<Replacement> candidates;
 }
+
+
+/// One gameweek a player has already played.
+class Appearance {
+  Appearance({required this.gameweek, required this.points, required this.minutes});
+
+  factory Appearance.fromJson(Map<String, dynamic> json) => Appearance(
+        gameweek: json['gameweek'] as int?,
+        points: json['points'] as int? ?? 0,
+        minutes: json['minutes'] as int? ?? 0,
+      );
+
+  final int? gameweek;
+  final int points;
+
+  /// ⭐ Shown because **ten points off the bench is not ten points from a starter** — a form line without
+  /// minutes flatters a player who came on for the last twenty.
+  final int minutes;
+
+  bool get played => minutes > 0;
+}
+
+/// One side of a **Boot Battle**.
+class Contender {
+  Contender({required this.player, required this.recent});
+
+  factory Contender.fromJson(Map<String, dynamic> json) => Contender(
+        player: PlayerSummary.fromJson(json),
+        recent: ((json['recent'] as List?) ?? const [])
+            .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
+            .toList(),
+      );
+
+  final PlayerSummary player;
+
+  /// His last five gameweeks, oldest first.
+  final List<Appearance> recent;
+}
+
+/// One row of the stat grid — ⭐ `winner` is decided by the engine, which knows that a **lower** expected
+/// goals-conceded is the better number.
+class CompareRow {
+  CompareRow({required this.label, required this.a, required this.b, required this.winner});
+
+  factory CompareRow.fromJson(Map<String, dynamic> json) => CompareRow(
+        label: json['label'] as String,
+        a: json['a'] as String,
+        b: json['b'] as String,
+        winner: json['winner'] as String?,
+      );
+
+  final String label;
+  final String a;
+  final String b;
+
+  /// `a` · `b` · null for a tie, a missing value, or a stat with no better direction (ownership).
+  final String? winner;
+}
+
+/// `POST /api/v1/compare` — Boot Battle.
+class BootBattle {
+  BootBattle({required this.a, required this.b, required this.rows, required this.gameweeks});
+
+  factory BootBattle.fromJson(Map<String, dynamic> json) => BootBattle(
+        a: Contender.fromJson(json['a'] as Map<String, dynamic>),
+        b: Contender.fromJson(json['b'] as Map<String, dynamic>),
+        rows: ((json['rows'] as List?) ?? const [])
+            .map((r) => CompareRow.fromJson((r as Map).cast<String, dynamic>()))
+            .toList(),
+        gameweeks: ((json['gameweeks'] as List?) ?? const []).cast<int>(),
+      );
+
+  final Contender a;
+  final Contender b;
+  final List<CompareRow> rows;
+  final List<int> gameweeks;
+
+  /// How many rows each side wins. ⭐ A headline, not a verdict — ADR-197 gave the DNA comparison **no**
+  /// verdict on purpose, and the same reasoning holds: a count of stats is not a recommendation.
+  (int, int) get tally => (
+        rows.where((r) => r.winner == 'a').length,
+        rows.where((r) => r.winner == 'b').length,
+      );
+}

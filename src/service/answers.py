@@ -23,6 +23,7 @@ from src.analytics import (
     suggest_transfers,
     team_schedule,
 )
+from src.analytics.compare import compare_rows
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.optimizer import DEFAULT_BUDGET
 from src.analytics.transfer import replacements_for, route_to_player
@@ -36,6 +37,7 @@ from src.service.requests import (
     BuildRequest,
     CaptainRequest,
     ChipsRequest,
+    CompareRequest,
     FeedbackRequest,
     GameweekRequest,
     MyTeamRequest,
@@ -775,3 +777,68 @@ def _chip_status(manager_id, gameweek) -> dict:
         return chips_available(history.get("chips"), gameweek)
     except Exception:                                    # noqa: BLE001 — advice survives a failed lookup
         return unknown
+
+
+#: How many recent gameweeks a comparison shows. ⭐ Five, because that is the window a manager means by
+#: "form" and the one FPL's own `form` field averages over.
+RECENT = 5
+
+
+def compare(request: CompareRequest, *, store: Storage | None = None) -> dict:
+    """Two players, side by side — **Boot Battle** (ADR-110/236).
+
+    ⭐⭐ **Offered here so the comparison can sit where the decision is.** The web app has had this since
+    ADR-110, on the Players page, as a destination you navigate to. A transfer screen that suggests
+    `Groß → Belloumi` and cannot show you the two of them side by side is sending you to another room to
+    answer the question it just raised.
+
+    Three things, because the Hub's version showed two we lacked:
+
+    * **the stat grid** — ours already, with the better value marked per row
+    * **recent form** — the last five gameweeks, points and minutes
+    * **the projected run** — per-gameweek xP for both, so the lines can be drawn against each other
+
+    ⚠️ Same-position only. `compare_rows` orders the stats by what matters for a position, so comparing a
+    keeper with a midfielder would produce rows that are individually true and jointly meaningless.
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        data = load([request.a_id, request.b_id], request.horizon, store, need_history=True)
+        gw_history = data.gw_history or {}
+    finally:
+        if ours:
+            store.close()
+
+    a, b = data.by_id[request.a_id], data.by_id[request.b_id]
+    if a["position"] != b["position"]:
+        raise ValueError(f"{a['web_name']} is a {a['position']} and {b['web_name']} is a {b['position']} — "
+                         f"a comparison across positions ranks them on stats that do not mean the same thing")
+
+    by_gameweek = {r["id"]: r["by_gameweek"] for r in data.ranked}
+
+    def side(player):
+        # ⭐ Keyed by the player's **code**, not id: `code` is stable across seasons, which is why the
+        # history is stored under it (FPL restarts element ids each August).
+        rows = list(gw_history.get(player["code"]) or [])[-RECENT:]
+        return {
+            **player_summary(player, data.xp_by_id, by_gameweek, reported_out=data.leaving),
+            "recent": [
+                {"gameweek": dict(r).get("round"), "points": dict(r).get("total_points"),
+                 "minutes": dict(r).get("minutes")}
+                for r in rows
+            ],
+        }
+
+    return {
+        "horizon": request.horizon,
+        "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
+        "a": side(a),
+        "b": side(b),
+        # ⭐ `(label, a, b, winner)` — the winner decided by `_BETTER`, which knows that a lower expected
+        # goals-conceded is the better number. ⚠️ A naive `max()` would crown the worse defence.
+        "rows": [
+            {"label": label, "a": fa, "b": fb, "winner": winner}
+            for label, fa, fb, winner in compare_rows(a, b)
+        ],
+    }

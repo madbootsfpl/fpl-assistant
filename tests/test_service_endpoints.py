@@ -21,6 +21,7 @@ from src.service import (
     BuildRequest,
     CaptainRequest,
     ChipsRequest,
+    CompareRequest,
     FeedbackRequest,
     GameweekRequest,
     MyTeamRequest,
@@ -1407,3 +1408,89 @@ def test_the_price_call_is_bound_to_the_whole_board(store, team, monkeypatch):
 
     svc.my_team(MyTeamRequest(manager_id=1), store=store)
     assert seen and min(seen) > 15, f"the detector saw {seen} players — the squad is 15"
+
+
+# ---- Boot Battle, where the decision is (ADR-236) ----------------------------------------
+
+def _two_mids(store):
+    mids = [p for p in store.get_players() if p["position"] == "MID"]
+    return mids[0]["id"], mids[1]["id"]
+
+
+def test_a_comparison_marks_a_winner_per_row(store):
+    """⭐ The grid is the point: *which of these two is better, at what*. A comparison with no winners is
+    two lists printed next to each other."""
+    a, b = _two_mids(store)
+    answer = svc.compare(CompareRequest(a_id=a, b_id=b, horizon=5), store=store)
+
+    assert answer["rows"], "a comparison with no rows compares nothing"
+    assert any(row["winner"] in {"a", "b"} for row in answer["rows"]), (
+        "no row has a winner — two players never tie on everything"
+    )
+    assert all(row["winner"] in {"a", "b", None} for row in answer["rows"])
+
+
+def test_lower_is_better_where_lower_is_better(store):
+    """⚠️⚠️ **`_BETTER` is what knows that a lower expected goals-conceded is the better number.** ⭐ A
+    naive `max()` would confidently crown the worse defence — and it would be wrong on exactly the stat a
+    defender is bought for.
+
+    ⚠️ Constructed, because whether the seed happens to contain two defenders whose xGC differs is an
+    accident of the snapshot.
+    """
+    from src.analytics.compare import compare_rows
+
+    mean = {"position": "DEF", "price": 5.0, "total_points": 40, "points_per_game": 4.0,
+            "minutes": 450, "selected_by": 10.0, "goals_scored": 1, "assists": 1,
+            "xg": 0.5, "xa": 0.5, "xgi": 1.0, "defcon_per90": 1.0, "cbi": 10,
+            "tackles": 5, "recoveries": 20}
+    tight = {**mean, "xgc": 2.0}     # concedes less
+    leaky = {**mean, "xgc": 9.0}
+
+    row = next(r for r in compare_rows(tight, leaky) if "Expected GC" in r[0])
+    assert row[3] == "a", f"the tighter defence must win the xGC row, got winner={row[3]}"
+
+
+def test_a_comparison_carries_recent_form_and_the_run(store):
+    """⭐ The two things the Hub showed that we did not: **what he has just done**, and **what he is
+    projected to do**. The stat grid alone is a season average, which is the least time-sensitive way to
+    answer a question asked before a deadline."""
+    a, b = _two_mids(store)
+    answer = svc.compare(CompareRequest(a_id=a, b_id=b, horizon=5), store=store)
+
+    for side in ("a", "b"):
+        assert answer[side]["by_gameweek"], f"{side} has no projected run to draw"
+        recent = answer[side]["recent"]
+        assert recent, f"{side} has no recent form"
+        weeks = [r["gameweek"] for r in recent]
+        assert weeks == sorted(weeks), "form reads left to right; out of order is a lie about a trend"
+
+
+def test_comparing_across_positions_is_refused(store):
+    """⚠️ `compare_rows` orders stats by what matters for a position. A keeper against a midfielder gives
+    rows that are **individually true and jointly meaningless** — clean sheets against expected assists."""
+    keeper = next(p["id"] for p in store.get_players() if p["position"] == "GK")
+    mid, _ = _two_mids(store)
+    with pytest.raises(ValueError, match="do not mean the same thing"):
+        svc.compare(CompareRequest(a_id=keeper, b_id=mid), store=store)
+
+
+def test_a_player_cannot_fight_himself(store):
+    """⚠️ Every row would tie and every winner would be None — ⭐ *a page that looks broken, rather than one
+    that says you asked the same question twice*."""
+    a, _ = _two_mids(store)
+    with pytest.raises(ValueError, match="compared with himself"):
+        CompareRequest(a_id=a, b_id=a).validate()
+
+
+def test_form_is_keyed_by_code_not_id(store):
+    """⚠️⚠️ **FPL restarts element ids every August**, which is why per-gameweek history is stored under a
+    player's `code`. ⭐ Looking it up by `id` would return another player's season — silently, and only
+    wrongly after a summer."""
+    a, b = _two_mids(store)
+    answer = svc.compare(CompareRequest(a_id=a, b_id=b, horizon=1), store=store)
+    by_code = store.get_gw_history_by_code()
+    player = next(p for p in store.get_players() if p["id"] == a)
+
+    expected = [dict(r).get("total_points") for r in list(by_code.get(player["code"]) or [])[-5:]]
+    assert [r["points"] for r in answer["a"]["recent"]] == expected
