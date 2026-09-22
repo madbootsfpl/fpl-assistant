@@ -286,12 +286,26 @@ class FeedbackRequest:
 
 @dataclass(frozen=True)
 class SignalsRequest(SquadRequest):
-    """*"What should I know?"* — about **your** players (ADR-150/232).
+    """*"What should I know?"* — about **your** players, or about the market (ADR-150/232/245).
 
-    ⭐ The web page browses the whole market; this is squad-scoped, which is the difference between the
-    exploration layer and the decision layer. A manager checking a phone before a deadline is asking about
-    the fifteen he owns.
+    ⭐ Squad scope is the decision layer: a manager checking a phone before a deadline is asking about the
+    fifteen he owns. ⭐ **Global** is the exploration layer, and it is here because the alternative was a
+    separate Trending screen saying the same things in a different shape.
+
+    ⚠️ `scope` defaults to `"squad"` — the narrower, cheaper answer. *A default that widens the question is
+    a default that surprises somebody.*
     """
+
+    # ⭐ Optional here, unlike every other squad-shaped request: a global sweep has no squad to give.
+    player_ids: list[int] = field(default_factory=list)
+    scope: str = "squad"
+
+    def validate(self) -> None:
+        # ⚠️ Global needs no squad, so the parent's "give me fifteen ids" rule cannot apply to it.
+        if self.scope not in ("squad", "global"):
+            raise ValueError(f"scope must be 'squad' or 'global', not {self.scope!r}")
+        if self.scope == "squad":
+            super().validate()
 
 
 @dataclass(frozen=True)

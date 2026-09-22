@@ -84,8 +84,17 @@ class ServiceClient {
   }
 
   /// What a manager should know about his own fifteen, strongest evidence first.
-  Future<Map<String, dynamic>> signals(List<int> playerIds) =>
-      _post('squad/signals', {'player_ids': playerIds, 'horizon': 1});
+  /// ⭐ `scope` is `squad` or `global` (ADR-245). ⚠️ The squad ids are sent **either way**: in global
+  /// they do not narrow the sweep, they only let each signal come back flagged `owned`, so a market list
+  /// can say *"you have him"* without the client matching ids itself.
+  Future<Map<String, dynamic>> signals(
+    List<int> playerIds, {
+    String scope = 'squad',
+  }) => _post('squad/signals', {
+    'player_ids': playerIds,
+    'horizon': 1,
+    'scope': scope,
+  });
 
   /// One player in full — the card behind a row.
   ///

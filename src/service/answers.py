@@ -788,7 +788,20 @@ _TIERS = {
     "departure": 2,    # the press and the crowd agreeing a player is leaving the league (ADR-153/155).
     "exodus": 3,       # our own inference: a sell-off our fields cannot explain (ADR-146).
     "headline": 4,     # reported by a named outlet (ADR-093).
+    # ⚠️ Last, and deliberately: what the crowd is **buying** is the weakest evidence here. It is a fact
+    # about other managers, not about the player — ⭐ *"lots of people did this" is the reason a template
+    # forms, and it is not on its own a reason to join one.*
+    "trending": 5,
 }
+
+#: ⭐⭐ **The share of the board that anyone actually considers**, read from the live distribution rather
+#: than typed (ADR-210/215). Measured on 2026-09-22: ownership has a **median of 0.2%**, so a plain sweep
+#: of the market surfaced **194 news items**, nearly all of them about players almost nobody holds.
+#:
+#: ⚠️ At the 75th percentile (**1.2% owned**) the same sweep gives **22 signals** — a list a person reads.
+#: The number is not a judgement about 1.2%; it is *"the quarter of the board most managers consider"*, and
+#: it moves when the league does.
+GLOBAL_OWNERSHIP_PERCENTILE = 75
 
 
 def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
@@ -816,13 +829,27 @@ def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
         if ours:
             store.close()
 
-    from src.analytics.crowd import exodus_detector
+    from src.analytics.crowd import exodus_detector, trending
 
     # ⚠️ Bound to the whole board, never the fifteen — ADR-210: a tenth of fifteen flags somebody weekly.
     exodus_for = exodus_detector(data.players)
 
+    owned_ids = {p["id"] for p in data.owned}
+    if request.scope == "global":
+        subjects, cut = _market_subjects(data.players)
+    else:
+        subjects, cut = list(data.owned), None
+
+    # ⭐ Only in global, and only for players the reader does not already hold: *"lots of managers are
+    # buying him"* is news about the market. About your own player it is not news at all.
+    buying = {}
+    if request.scope == "global":
+        for row in trending(subjects, by="in", limit=8):
+            if row["id"] not in owned_ids:
+                buying[row["id"]] = row["trend"]
+
     found = []
-    for player in data.owned:
+    for player in subjects:
         summary = player_summary(player, data.xp_by_id, reported_out=data.leaving)
         news = (player["news"] or "").strip() if "news" in player.keys() else ""
 
@@ -849,6 +876,14 @@ def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
                           # knows something and we do not — true, checkable, and the most the data supports.
                           "detail": "Nothing in his status or news explains it."})
 
+        if (net_in := buying.get(player["id"])) is not None:
+            found.append({"kind": "trending", "key": f"trending:{player['id']}",
+                          "player": summary,
+                          "headline": f"{abs(int(net_in)):,} managers bought him this week",
+                          # ⭐ Says what it is and stops. The app does not know *why* they bought him, and
+                          # a confident guess would be the thing ADR-150 was written to remove.
+                          "detail": "A crowd movement, not a projection. He may already be priced in."})
+
         for event in events.get(player["id"], []):
             row = dict(event)
             found.append({"kind": "headline", "key": f"headline:{player['id']}:{row.get('seen_at')}",
@@ -857,11 +892,35 @@ def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
                           "at": row.get("seen_at")})
 
     found.sort(key=lambda s: (_TIERS[s["kind"]], s["player"]["web_name"]))
+    for signal in found:
+        # ⭐ So a global list can say *"you own him"* without the client holding a second copy of the squad.
+        signal["owned"] = signal["player"]["id"] in owned_ids
     return {
         "signals": found,
+        "scope": request.scope,
         # ⭐ So a quiet week reads as *"nothing to report"* rather than as a screen that failed to load.
-        "checked": len(data.owned),
+        "checked": len(subjects),
+        # ⚠️ **What "global" actually means, stated.** A market view that silently drops four fifths of the
+        # board is a view that lies by omission — ⭐ *a filter the reader cannot see is a filter he will
+        # eventually be surprised by* (ADR-215).
+        "ownership_floor": cut,
     }
+
+
+def _market_subjects(players):
+    """The slice of the board worth sweeping, and the cut that produced it (ADR-245).
+
+    ⭐⭐ **Read from the live distribution, never typed.** Measured on the real board: ownership has a
+    **median of 0.2%**, so an unbounded market sweep returned **194 news items**, nearly all about players
+    almost nobody holds — ⚠️ *a list that long is not more information, it is a screen a person stops
+    reading.* At the 75th percentile the same sweep gives about **22**.
+    """
+    rows = [dict(p) for p in players]
+    shares = sorted((p.get("selected_by") or 0) for p in rows)
+    if not shares:
+        return [], None
+    cut = shares[min(len(shares) - 1, int(len(shares) * GLOBAL_OWNERSHIP_PERCENTILE / 100))]
+    return [p for p in rows if (p.get("selected_by") or 0) >= cut], round(cut, 1)
 
 
 def _chip_status(manager_id, gameweek) -> dict:

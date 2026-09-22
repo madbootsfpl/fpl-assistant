@@ -55,8 +55,8 @@ class MoreView extends StatelessWidget {
         icon: Icons.campaign_outlined,
         name: 'Signals',
         why:
-            'FPL news, reported moves, and sell-offs the data cannot explain — about your fifteen, '
-            'strongest evidence first. Marks what is new since you last looked.',
+            'FPL news, reported moves, sell-offs the data cannot explain, and what the crowd is '
+            'buying — your fifteen or the whole market, strongest evidence first. Marks what is new.',
         onTap: onOpenSignals,
       ),
       _Row(

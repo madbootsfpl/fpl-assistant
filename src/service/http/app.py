@@ -302,13 +302,35 @@ def all_players(body: PlayersBody) -> dict:
     return _answer(service.players, service.PlayersRequest(**body.model_dump()))
 
 
-@app.post("/api/v1/squad/signals")
-def squad_signals(body: SquadBody) -> dict:
-    """What a manager should know about his own fifteen, **strongest evidence first**.
+class SignalsBody(BaseModel):
+    """A squad and a scope — ⚠️ **the one squad-shaped body where the squad is optional** (ADR-245).
 
-    ⭐ Each signal carries a `kind` — `official` · `departure` · `exodus` · `headline` — because they are
-    not equally reliable, and an unexplained sell-off is not the same claim as an injury FPL confirmed.
-    ⚠️ *Rendering them as one undifferentiated list is the page ADR-150 was written to replace.*
+    ⭐ A global sweep has no squad to give. Sending one anyway is still worth it: every signal comes back
+    with `owned`, so a market list can say *"you have him"* without the client holding a second copy of the
+    fifteen and matching ids itself.
+    """
+
+    player_ids: list[int] = Field(default_factory=list,
+                                  description="Your squad. Required for scope=squad; optional for global, "
+                                              "where it only marks which signals are about players you own.")
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to look ahead.")
+    scope: str = Field("squad", pattern="^(squad|global)$",
+                       description="squad = your fifteen · global = the market, above a live ownership cut.")
+
+
+@app.post("/api/v1/squad/signals")
+def squad_signals(body: SignalsBody) -> dict:
+    """What a manager should know — about his own fifteen, or about the market.
+
+    ⭐ Each signal carries a `kind` — `official` · `departure` · `exodus` · `headline` · `trending` —
+    because they are not equally reliable, and an unexplained sell-off is not the same claim as an injury
+    FPL confirmed. ⚠️ *Rendering them as one undifferentiated list is the page ADR-150 was written to
+    replace.*
+
+    ⭐ **`scope=global` folds in what Trending used to be a separate screen for.** It answers above a
+    **live ownership percentile**, not a typed threshold, and reports the cut it used as
+    `ownership_floor` — ⚠️ *a market view that silently drops four fifths of the board is a view that lies
+    by omission.*
 
     ⭐ Every signal has a stable `key`, so a client can remember which it has already shown.
     """
