@@ -15,6 +15,7 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'dna_bars.dart';
+import 'dna_radar.dart';
 import 'help_dot.dart';
 
 class PlayerDnaView extends StatefulWidget {
@@ -206,6 +207,13 @@ class _Fingerprint extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 12),
+        // ⭐ The same pairing as the club page: the radar for the shape, the bars for the numbers.
+        DnaRadar(
+          series: [
+            (label: dna.player.name, colour: Brand.purpleLight, axes: dna.axes),
+          ],
+        ),
+        const SizedBox(height: 8),
         DnaBars(axes: dna.axes),
         if (dna.insights.isNotEmpty) ...[
           const SizedBox(height: 12),

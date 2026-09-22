@@ -15,6 +15,8 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'dna_bars.dart';
+import 'dna_radar.dart';
+import 'grade_ring.dart';
 import 'help_dot.dart';
 
 class TeamDnaView extends StatefulWidget {
@@ -38,6 +40,10 @@ class _TeamDnaViewState extends State<TeamDnaView> {
   /// ⭐ Off by default. *A default that narrows the answer is a default that hides something* — the table
   /// is the league, and yours is a lens over it.
   bool _mineOnly = false;
+
+  /// ⭐ One comparison at a time, held here rather than in each row — two rows each comparing against
+  /// something else would be two answers to one question.
+  ClubDna? _against;
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<ClubDna>>(
@@ -107,7 +113,13 @@ class _TeamDnaViewState extends State<TeamDnaView> {
             ],
           ),
           const SizedBox(height: 10),
-          for (final club in shown) _Club(club: club),
+          for (final club in shown)
+            _Club(
+              club: club,
+              others: all.where((o) => o.team != club.team).toList(),
+              against: _against?.team == club.team ? null : _against,
+              onCompare: (other) => setState(() => _against = other),
+            ),
         ],
       );
     },
@@ -115,9 +127,22 @@ class _TeamDnaViewState extends State<TeamDnaView> {
 }
 
 class _Club extends StatefulWidget {
-  const _Club({required this.club});
+  const _Club({
+    required this.club,
+    required this.others,
+    required this.against,
+    required this.onCompare,
+  });
 
   final ClubDna club;
+
+  /// Everyone else, for the compare picker. ⭐ No new endpoint: all twenty clubs already arrived.
+  final List<ClubDna> others;
+
+  /// The club being compared against, or null. ⚠️ Held by the parent so opening a second club does not
+  /// leave two comparisons running against each other.
+  final ClubDna? against;
+  final void Function(ClubDna?) onCompare;
 
   @override
   State<_Club> createState() => _ClubState();
@@ -221,6 +246,32 @@ class _ClubState extends State<_Club> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: GradeRing(grade: c.grade, score: c.score),
+                  ),
+                  const SizedBox(height: 6),
+                  // ⭐⭐ **Radar AND bars**, as the web does. A radar answers *is this a balanced side or
+                  // a lopsided one?* at a glance and cannot tell you 74; the bars can and cannot show you
+                  // the shape. ⚠️ *Picking one would answer half the question and look like a decision.*
+                  DnaRadar(
+                    series: [
+                      (label: c.name, colour: Brand.purpleLight, axes: c.axes),
+                      if (widget.against != null)
+                        (
+                          label: widget.against!.name,
+                          colour: Brand.accentTeal,
+                          axes: widget.against!.axes,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _CompareBar(
+                    club: c,
+                    others: widget.others,
+                    against: widget.against,
+                    onPick: widget.onCompare,
+                  ),
+                  const SizedBox(height: 8),
                   DnaBars(axes: c.axes),
                   if (c.fixtures.isNotEmpty) ...[
                     const SizedBox(height: 10),
@@ -481,5 +532,101 @@ class _Stat extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// Compare this club with another — ⭐ **no new endpoint**: all twenty arrived in the first fetch, so the
+/// comparison is a choice rather than a request (ADR-252).
+class _CompareBar extends StatelessWidget {
+  const _CompareBar({
+    required this.club,
+    required this.others,
+    required this.against,
+    required this.onPick,
+  });
+
+  final ClubDna club;
+  final List<ClubDna> others;
+  final ClubDna? against;
+  final void Function(ClubDna?) onPick;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          against == null
+              ? 'Compare with…'
+              : '${club.name} vs ${against!.name}',
+          style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+        ),
+      ),
+      if (against != null)
+        TextButton(
+          onPressed: () => onPick(null),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white38,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(0, 28),
+          ),
+          child: const Text('Clear', style: TextStyle(fontSize: 11.5)),
+        ),
+      TextButton(
+        onPressed: () async {
+          final picked = await showModalBottomSheet<ClubDna>(
+            context: context,
+            backgroundColor: Brand.ink,
+            isScrollControlled: true,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            builder: (sheet) => SafeArea(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 6),
+                    child: Text(
+                      'Compare with',
+                      style: TextStyle(color: Colors.white, fontSize: 14.5),
+                    ),
+                  ),
+                  for (final other in others)
+                    ListTile(
+                      dense: true,
+                      // ⭐ The grade travels into the picker: choosing who to compare against is itself a
+                      // judgement, and a bare list of twenty names gives a reader nothing to make it with.
+                      leading: GradeRing(
+                        grade: other.grade,
+                        score: other.score,
+                        size: 34,
+                      ),
+                      title: Text(
+                        other.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                      onTap: () => Navigator.of(sheet).pop(other),
+                    ),
+                ],
+              ),
+            ),
+          );
+          if (picked != null) onPick(picked);
+        },
+        style: TextButton.styleFrom(
+          backgroundColor: Brand.purple,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          minimumSize: const Size(0, 30),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Brand.radiusSm),
+          ),
+        ),
+        child: const Text('Pick', style: TextStyle(fontSize: 11.5)),
+      ),
+    ],
   );
 }
