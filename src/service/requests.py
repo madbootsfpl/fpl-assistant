@@ -104,9 +104,16 @@ class RouteRequest(SquadRequest):
     target_id: int | None = None
     bank: float = 0.0
 
+    # ⭐ **Optional, and its absence changes the answer rather than being ignored.** With a manager id the
+    # endpoint knows which chips have been **spent**; without one it says *unknown* — ⚠️ never *available*,
+    # because recommending a wildcard someone played in GW4 is a wrong answer delivered confidently.
+    manager_id: int | None = None
+
     def validate(self) -> None:
         super().validate()
         _check_money("bank", self.bank)
+        if self.manager_id is not None and self.manager_id < 1:
+            raise ValueError("no manager id given")
         if not self.target_id:
             raise ValueError("no target player given")
 
@@ -219,9 +226,17 @@ class ChipsRequest(SquadRequest):
 
     bank: float = 0.0
 
+    # ⭐ **Optional, and its absence changes the answer rather than being ignored.** With a manager id the
+    # endpoint knows which chips have been **spent**; without one it reports *unknown* — ⚠️ never
+    # *available*, because recommending a wildcard someone played in GW4 is a wrong answer delivered
+    # confidently.
+    manager_id: int | None = None
+
     def validate(self) -> None:
         super().validate()
         _check_money("bank", self.bank)
+        if self.manager_id is not None and self.manager_id < 1:
+            raise ValueError("no manager id given")
 
 
 @dataclass(frozen=True)

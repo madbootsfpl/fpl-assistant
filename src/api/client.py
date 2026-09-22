@@ -95,6 +95,15 @@ class FplClient:
         """
         return self._get_json(config.ENTRY_TRANSFERS_PATH.format(entry_id))
 
+    def get_entry_history(self, entry_id: int) -> dict:
+        """A manager's season history — ⭐ **`chips` is the list of chips already PLAYED**, with the
+        gameweek each was used in (ADR-234).
+
+        ⚠️ Without it, a chip advisor recommends a wildcard that has already been spent — which is not a
+        rough edge, it is a wrong answer delivered confidently.
+        """
+        return self._get_json(config.ENTRY_HISTORY_PATH.format(entry_id))
+
     def get_league_standings(self, league_id: int, page: int = 1) -> dict:
         """A classic league's standings page (ADR-141) — 50 rows, newest ranks.
 

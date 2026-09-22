@@ -117,12 +117,14 @@ class ServiceClient {
   /// When to play each chip, and what a wildcard is worth.
   ///
   /// ⚠️ There is no `horizon`: a chip's window is its **deadline**, decided by the server (ADR-166).
+  /// ⚠️ Pass [managerId] or each chip's `available` comes back **null** — *unknown*, never *true*.
   Future<Map<String, dynamic>> chips(List<int> playerIds,
-          {List<int> benchIds = const [], double bank = 0.0}) =>
+          {List<int> benchIds = const [], double bank = 0.0, int? managerId}) =>
       _post('squad/chips', {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'bank': bank,
+        'manager_id': ?managerId,
       });
 
   /// Everything the **My Team** pitch draws, in one call.

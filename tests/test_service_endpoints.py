@@ -1234,3 +1234,96 @@ def test_a_quiet_week_is_an_answer_not_an_empty_screen(store, monkeypatch):
 
     answer = svc.signals(SignalsRequest(player_ids=_squad(store), horizon=1), store=store)
     assert answer["checked"] == 15
+
+
+# ---- chips you have actually still got (ADR-234) -----------------------------------------
+
+def test_a_spent_chip_is_marked_unavailable(store, monkeypatch):
+    """⚠️⚠️ **Recommending a wildcard someone played in GW4 is not a rough edge — it is a wrong answer
+    delivered confidently.** The advisor had no idea which chips were left.
+
+    ⭐ Constructed, because the owner has played none: a seed where nothing has been spent cannot show that
+    spending is noticed.
+    """
+    from src.service import answers
+
+    monkeypatch.setattr(answers, "_chip_status",
+                        lambda manager_id, gw: {"wildcard": {"available": False, "played_in": 4},
+                                                "bboost": {"available": True, "played_in": None},
+                                                "3xc": {"available": True, "played_in": None},
+                                                "freehit": {"available": True, "played_in": None}})
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store), manager_id=1), store=store)
+
+    assert answer["chips"]["wildcard"]["available"] is False
+    assert answer["chips"]["wildcard"]["played_in"] == 4, (
+        "⭐ 'unavailable' without 'you played it in GW4' invites a manager to think it is a bug"
+    )
+    assert answer["chips"]["bench_boost"]["available"] is True
+
+
+def test_a_spent_chip_keeps_its_timing_advice(store, monkeypatch):
+    """⭐ The card is **marked, not removed**. *When it would have been best* is still true, and hiding the
+    chip entirely would leave a manager wondering whether the app knew about it at all — the
+    recommendation simply stops being an instruction."""
+    from src.service import answers
+
+    monkeypatch.setattr(answers, "_chip_status",
+                        lambda manager_id, gw: {"wildcard": {"available": False, "played_in": 2},
+                                                "bboost": {"available": None, "played_in": None},
+                                                "3xc": {"available": None, "played_in": None},
+                                                "freehit": {"available": None, "played_in": None}})
+    wildcard = svc.chips(ChipsRequest(player_ids=_squad(store), manager_id=1),
+                         store=store)["chips"]["wildcard"]
+    assert wildcard["gameweeks"], "the window survives being unavailable"
+    assert "gain" in wildcard
+
+
+def test_unknown_is_not_available(store):
+    """⭐⭐ **`None` is not `True`.** *"We could not check"* and *"you still have it"* are different facts,
+    and only one of them is safe to act on. ⚠️ Defaulting an unchecked chip to available is how an app
+    tells you to spend something you spent in August."""
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store)), store=store)
+    assert answer["chips_checked"] is False
+    for chip in answer["chips"].values():
+        assert chip["available"] is None, "no manager id means unknown, never available"
+
+
+def test_a_failed_lookup_leaves_the_advice_standing(store, monkeypatch):
+    """⚠️ FPL is sometimes simply unreachable. ⭐ The timing advice needs no network — losing the chip
+    status must not lose the answer with it."""
+    from src.api import client as fpl
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("FPL is down")
+
+    monkeypatch.setattr(fpl.FplClient, "get_entry_history", _boom)
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store), manager_id=1), store=store)
+    assert answer["chips"]["wildcard"]["available"] is None
+    assert answer["chips"]["wildcard"]["gameweeks"], "the advice survives"
+
+
+@pytest.mark.parametrize("played, gameweek, expected", [
+    ([], 6, True),
+    ([{"name": "wildcard", "event": 4}], 6, False),
+    # ⭐⭐ The half-season rule: chips come in two sets, so a first-half wildcard leaves the second alone.
+    ([{"name": "wildcard", "event": 4}], 25, True),
+    ([{"name": "wildcard", "event": 22}], 25, False),
+    ([{"name": "wildcard", "event": 22}], 6, True),
+])
+def test_availability_is_per_half_season_not_per_season(played, gameweek, expected):
+    """⚠️ *"Have I used my wildcard?"* is meaningless without saying **which** wildcard. Treating it as a
+    season-long question would tell a manager in January that he has nothing left."""
+    from src.fpl_rules import chips_available
+
+    answer = chips_available(played, gameweek)["wildcard"]
+    assert answer["available"] is expected
+
+    # ⚠️ **And WHICH gameweek it went in.** A first version asserted only `available`, and a mutation that
+    # dropped `played_in` survived — because the endpoint tests stub `_chip_status` wholesale and never
+    # reach the real function. ⭐ *A stub bypasses exactly the thing it stands in for.*
+    if not expected:
+        assert answer["played_in"] == played[0]["event"], (
+            "'unavailable' without 'you played it in GW4' invites a manager to think it is a bug"
+        )
+    else:
+        assert answer["played_in"] is None

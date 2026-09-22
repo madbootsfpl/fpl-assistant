@@ -349,7 +349,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
               _freeTransfers = n;
               _team = _load(_managerId);
             }),
-            onOpenChips: () => _open('Chips', ChipsView(client: _client, team: team)),
+            onOpenChips: () => _open('Chips', ChipsView(client: _client, team: team, managerId: _managerId)),
             onOpenSignals: () =>
                 _open('Signals', SignalsView(client: _client, team: team)),
           ),

@@ -29,6 +29,8 @@ ELEMENT_SUMMARY_PATH = "/element-summary/{}/"
 ENTRY_PATH = "/entry/{}/"
 ENTRY_PICKS_PATH = "/entry/{}/event/{}/picks/"
 ENTRY_TRANSFERS_PATH = "/entry/{}/transfers/"
+# A manager's season history — `chips` lists what has been PLAYED and when (ADR-234).
+ENTRY_HISTORY_PATH = "/entry/{}/history/"
 
 # A classic league's standings (ADR-141). Public for classic leagues; H2H is a different endpoint and is not
 # used. One page is 50 rows and carries `rank`, `last_rank`, `total` and `event_total` — so the league table

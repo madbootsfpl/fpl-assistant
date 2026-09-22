@@ -241,6 +241,50 @@ def transfer_window_open(today) -> bool:
 CHIP_HALVES = (19, 38)
 
 
+#: FPL's own names for the chips, as they appear in a manager's history. ⭐ Mapped once, here, because the
+#: API's `3xc` and `bboost` are not what anyone calls them and two places translating is two places to differ.
+CHIP_NAMES = {
+    "wildcard": "Wildcard",
+    "bboost": "Bench Boost",
+    "3xc": "Triple Captain",
+    "freehit": "Free Hit",
+}
+
+
+def chip_half(gameweek) -> int:
+    """Which half-season `gameweek` belongs to — ⭐ the unit a chip is actually spent in.
+
+    ⚠️ **A chip played in GW2 does not block the second-half one.** Chips come in two sets, the second
+    unlocking around GW20, so *"have I used my wildcard?"* is meaningless without saying **which** wildcard.
+    """
+    for index, last in enumerate(CHIP_HALVES):
+        if gameweek is not None and gameweek <= last:
+            return index
+    return len(CHIP_HALVES) - 1
+
+
+def chips_available(played, gameweek) -> dict:
+    """`{fpl name: {"played_in": gw|None, "available": bool}}` for the half `gameweek` sits in (ADR-234).
+
+    `played` is a manager history's `chips` list — `[{"name": "wildcard", "event": 4}, …]`.
+
+    ⚠️ **Availability is per HALF, not per season.** A wildcard used in GW4 leaves the second-half wildcard
+    untouched, so this answers only for the half being asked about — and says which gameweek it went in,
+    because *"unavailable"* without *"you played it in GW4"* invites a manager to think it is a bug.
+    """
+    half = chip_half(gameweek)
+    used = {}
+    for entry in played or []:
+        name = entry.get("name") if hasattr(entry, "get") else None
+        event = entry.get("event") if hasattr(entry, "get") else None
+        if name in CHIP_NAMES and chip_half(event) == half:
+            used[name] = event
+    return {
+        name: {"played_in": used.get(name), "available": name not in used}
+        for name in CHIP_NAMES
+    }
+
+
 def chip_deadline(gameweek) -> int:
     """The last gameweek the current set of chips can be played in (ADR-166).
 

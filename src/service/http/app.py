@@ -119,6 +119,11 @@ class PlayersBody(BaseModel):
 
 class ChipsBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m — a wildcard is priced against it.")
+    manager_id: int | None = Field(
+        None, ge=1,
+        description="⭐ **Supply it and the answer knows which chips you have already spent.** Without it "
+                    "each chip's `available` is `null` — ⚠️ *unknown*, never *true*: recommending a "
+                    "wildcard someone played in GW4 is a wrong answer delivered confidently.")
 
 
 class MyTeamBody(BaseModel):

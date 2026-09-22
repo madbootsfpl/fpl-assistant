@@ -18,10 +18,18 @@ import 'api/models.dart';
 import 'brand.dart';
 
 class ChipsView extends StatefulWidget {
-  const ChipsView({required this.client, required this.team, super.key});
+  const ChipsView({
+    required this.client,
+    required this.team,
+    required this.managerId,
+    super.key,
+  });
 
   final ServiceClient client;
   final MyTeam team;
+
+  /// ⚠️ Without it the server cannot tell which chips are spent, and says so rather than guessing.
+  final int managerId;
 
   @override
   State<ChipsView> createState() => _ChipsViewState();
@@ -35,6 +43,7 @@ class _ChipsViewState extends State<ChipsView> {
     ],
     benchIds: widget.team.analysis.bench.map((p) => p.id).toList(),
     bank: widget.team.bank ?? 0.0,
+    managerId: widget.managerId,
   );
 
   @override
@@ -77,6 +86,15 @@ class _ChipsViewState extends State<ChipsView> {
                   padding: const EdgeInsets.only(top: 3),
                   child: Text('These chips expire after GW${answer['expires_after']}.',
                       style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                ),
+              if (answer['chips_checked'] != true)
+                const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(
+                    // ⚠️ Said out loud. Silence here would read as "you have all four".
+                    'Could not check which chips you have already played, so none are marked.',
+                    style: TextStyle(color: Brand.warn, fontSize: 11, height: 1.45),
+                  ),
                 ),
               const SizedBox(height: 14),
               _Wildcard(data: chips['wildcard'] as Map<String, dynamic>?),
@@ -122,8 +140,10 @@ class _Wildcard extends StatelessWidget {
     final size = d['squad_size'] as int?;
 
     return _Card(
-      name: 'Wildcard',
+      name: '${d['name'] ?? 'Wildcard'}',
       when: weeks.isEmpty ? '—' : 'GW${weeks.first}–${weeks.last}',
+      available: d['available'] as bool?,
+      playedIn: d['played_in'] as int?,
       children: [
         if (gain != null && overlap != null && size != null) ...[
           Text(
@@ -164,8 +184,10 @@ class _TripleCaptain extends StatelessWidget {
     final extra = (d['extra_points'] as num?)?.toDouble();
 
     return _Card(
-      name: 'Triple Captain',
+      name: '${d['name'] ?? 'Triple Captain'}',
       when: d['gameweek'] == null ? '—' : 'GW${d['gameweek']}',
+      available: d['available'] as bool?,
+      playedIn: d['played_in'] as int?,
       children: [
         Text(
           player == null
@@ -201,8 +223,10 @@ class _Simple extends StatelessWidget {
     final d = data;
     if (d == null) return const SizedBox.shrink();
     return _Card(
-      name: name,
+      name: '${d['name'] ?? name}',
       when: d['gameweek'] == null ? '—' : 'GW${d['gameweek']}',
+      available: d['available'] as bool?,
+      playedIn: d['played_in'] as int?,
       children: [
         Text(detail(d),
             style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.5)),
@@ -223,11 +247,22 @@ class _Simple extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.name, required this.when, required this.children});
+  const _Card({
+    required this.name,
+    required this.when,
+    required this.children,
+    this.available,
+    this.playedIn,
+  });
 
   final String name;
   final String when;
   final List<Widget> children;
+
+  /// ⭐ **Three states, not two.** `true` in hand · `false` spent · `null` **we could not check** — and
+  /// the third must never render as the first.
+  final bool? available;
+  final int? playedIn;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -244,9 +279,15 @@ class _Card extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(name,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          // ⚠️ A spent chip is dimmed, not hidden: *when it would have been best* is still
+                          // true, and removing the card leaves a manager wondering if the app knew.
+                          color: available == false ? Colors.white54 : Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700)),
                 ),
+                if (available != null) _StatusPill(available: available!, playedIn: playedIn),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
                   decoration: BoxDecoration(
@@ -264,6 +305,35 @@ class _Card extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// ⭐ The Hub's own convention, and a good one: the chip's state sits beside its name, not buried in the
+/// body. *"Played GW2"* is the first thing you need to know about a chip.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.available, required this.playedIn});
+
+  final bool available;
+  final int? playedIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final spent = !available;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: spent ? Colors.white12 : Brand.goodTint,
+        borderRadius: BorderRadius.circular(Brand.radiusPill),
+      ),
+      child: Text(
+        // ⭐ Naming the gameweek matters: "unavailable" alone invites a manager to think it is a bug.
+        spent ? (playedIn == null ? 'Played' : 'Played GW$playedIn') : 'Available',
+        style: TextStyle(
+            color: spent ? Colors.white54 : Brand.goodFg,
+            fontSize: 10,
+            fontWeight: FontWeight.w600),
+      ),
+    );
+  }
 }
 
 class _Message extends StatelessWidget {

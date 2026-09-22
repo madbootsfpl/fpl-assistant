@@ -26,6 +26,7 @@ from src.analytics import (
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.optimizer import DEFAULT_BUDGET
 from src.analytics.transfer import replacements_for, route_to_player
+from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import shirt_url
 from src.manager import fetch_manager_team
 from src.service.inputs import WIDE, load, opened
@@ -503,6 +504,14 @@ def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
         if ours:
             store.close()
 
+    # ⭐⭐ **Which chips are actually left** (ADR-234). Fetched only here, and only when a manager id is
+    # given: the landing screen does not need it, and ADR-217/218 spent a day making that screen fast.
+    #
+    # ⚠️ **Never load-bearing, and never optimistic.** If the fetch fails the advice still stands — but the
+    # status reads *unknown*, not *available*, because *"we could not check"* and *"you still have it"* are
+    # different facts and only one of them is safe to act on.
+    status = _chip_status(request.manager_id, first)
+
     advice = chip_advisor(
         data.owned,
         {r["id"]: r["by_gameweek"] for r in data.ranked},
@@ -520,10 +529,23 @@ def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
             advice["triple_captain"]["player"] = player_summary(
                 pick, data.xp_by_id, reported_out=data.leaving)
 
+    # ⚠️ A spent chip keeps its timing advice — *when it would have been best* is still true, and hiding
+    # the card entirely would leave a manager wondering whether the app knew about the chip at all.
+    # ⭐ The card is marked, not removed: **the recommendation stops being an instruction.**
+    for fpl_name, display in CHIP_NAMES.items():
+        key = {"wildcard": "wildcard", "bboost": "bench_boost",
+               "3xc": "triple_captain", "freehit": "free_hit"}[fpl_name]
+        if advice and isinstance(advice.get(key), dict):
+            advice[key].update(status.get(fpl_name, {"available": None, "played_in": None}))
+            advice[key]["name"] = display
+
     return {
         # ⭐ Stated, because it is NOT what the caller asked for and a client showing "next 8 GWs" over a
         # 3-gameweek window would be describing someone else's answer.
         "window": window,
+        # ⭐ So a client can say "we could not check" rather than implying every chip is in hand.
+        "chips_checked": request.manager_id is not None and any(
+            v.get("available") is not None for v in status.values()),
         "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
         "expires_after": chip_deadline(first) if first else None,
         "chips": advice,
@@ -705,3 +727,22 @@ def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
         # ⭐ So a quiet week reads as *"nothing to report"* rather than as a screen that failed to load.
         "checked": len(data.owned),
     }
+
+
+def _chip_status(manager_id, gameweek) -> dict:
+    """Which chips are still in hand for this half-season (ADR-234).
+
+    ⚠️ **`available: None` means *we do not know*.** No manager id, or a failed fetch, must not read as
+    *"you still have it"* — ⭐ *"we could not check" and "you have it" are different facts, and only one of
+    them is safe to act on.*
+    """
+    unknown = {name: {"available": None, "played_in": None} for name in CHIP_NAMES}
+    if not manager_id or gameweek is None:
+        return unknown
+    try:
+        from src.api.client import FplClient
+
+        history = FplClient().get_entry_history(manager_id)
+        return chips_available(history.get("chips"), gameweek)
+    except Exception:                                    # noqa: BLE001 — advice survives a failed lookup
+        return unknown
