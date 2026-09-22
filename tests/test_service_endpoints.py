@@ -21,6 +21,7 @@ from src.service import (
     BuildRequest,
     CaptainRequest,
     ChipsRequest,
+    FeedbackRequest,
     GameweekRequest,
     MyTeamRequest,
     PlayersRequest,
@@ -1052,5 +1053,108 @@ def test_the_whole_market_fits_in_one_sensible_payload(store):
     (PlayersRequest(limit=0), "limit must be at least 1"),
 ])
 def test_a_bad_market_request_is_refused(request_, expected):
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()
+
+
+# ---- feedback: the server holds the secret, and never lies about sending (ADR-231) -------
+
+def test_an_unconfigured_sink_is_reported_not_faked(monkeypatch):
+    """⭐⭐ **`relay_result` exists because a blind "sent" was a real bug** — the web form said *sent* while
+    the relay silently refused, because the target address had never been activated. ⚠️ *A success message
+    that cannot fail is not a success message.*
+
+    With no webhook there is nothing to send to, and that is an outcome, not a success.
+    """
+    monkeypatch.delenv("FPL_FEEDBACK_WEBHOOK", raising=False)
+    answer = svc.feedback(FeedbackRequest(message="the pitch looks great"))
+    assert answer["sent"] is False
+    assert "configured" in answer["reason"]
+    # ⭐ An honest failure with a way through: the client can offer an email instead.
+    assert "@" in answer["email"]
+
+
+def test_the_relays_own_verdict_is_passed_through(monkeypatch):
+    """⚠️ A relay can answer **HTTP 200** and still refuse — FormSubmit replies `{"success": false}` when
+    the target address is unactivated. ⭐ Reporting the status code alone would call that a success."""
+    import requests
+
+    class _Refused:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"success": False, "message": "address not activated"}
+
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.invalid/hook")
+    monkeypatch.setattr(requests, "post", lambda *a, **kw: _Refused())
+
+    answer = svc.feedback(FeedbackRequest(message="something broke"))
+    assert answer["sent"] is False
+    assert "not activated" in answer["reason"], "the relay's own words must survive"
+
+
+def test_a_successful_relay_says_so(monkeypatch):
+    import requests
+
+    class _Accepted:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"success": "true"}
+
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.invalid/hook")
+    monkeypatch.setattr(requests, "post", lambda *a, **kw: _Accepted())
+    assert svc.feedback(FeedbackRequest(message="looks good"))["sent"] is True
+
+
+def test_an_unreachable_sink_does_not_raise(monkeypatch):
+    """⭐ A tester reporting a bug must not hit a second one. The failure is reported and the email
+    fallback comes back with it."""
+    import requests
+
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.invalid/hook")
+
+    def _boom(*args, **kwargs):
+        raise requests.ConnectionError("no route")
+
+    monkeypatch.setattr(requests, "post", _boom)
+    answer = svc.feedback(FeedbackRequest(message="offline test"))
+    assert answer["sent"] is False
+    assert "could not reach" in answer["reason"]
+
+
+def test_the_note_reaches_the_sink_unaltered(monkeypatch):
+    """⚠️ Relayed **verbatim**. A server that trimmed, reformatted or interpreted a bug report would be
+    editing the evidence."""
+    import requests
+
+    sent = {}
+
+    class _Ok:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"success": "true"}
+
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.invalid/hook")
+    monkeypatch.setattr(requests, "post",
+                        lambda url, json=None, **kw: (sent.update(json or {}), _Ok())[1])
+
+    svc.feedback(FeedbackRequest(message="  the bench order looks wrong  ", screen="My team",
+                                 contact="me@example.com", version="0.0.1"))
+    assert sent["message"] == "the bench order looks wrong"
+    assert sent["page"] == "My team"
+    assert sent["source"] == "madboots-mobile", "the owner must be able to tell a phone report from a web one"
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (FeedbackRequest(message="   "), "no message given"),
+    (FeedbackRequest(message="x" * 5000), "longer than"),
+    (FeedbackRequest(message="ok", contact="x" * 300), "contact is too long"),
+])
+def test_a_feedback_request_that_cannot_be_relayed_is_refused(request_, expected):
     with pytest.raises(ValueError, match=expected):
         request_.validate()

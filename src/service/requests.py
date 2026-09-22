@@ -240,3 +240,30 @@ class PlayersRequest:
         _check_horizon(self.horizon)
         if self.limit < 1:
             raise ValueError("limit must be at least 1")
+
+
+#: ⚠️ A cap, because this endpoint relays to the owner's own sink. It is not a general abuse defence —
+#: see `answers.feedback` — it is the difference between a bug report and a payload.
+MAX_FEEDBACK = 4000
+
+
+@dataclass(frozen=True)
+class FeedbackRequest:
+    """A note from a tester (ADR-231).
+
+    ⚠️ **The one request that carries free text**, which is why it is capped and why the server never
+    interprets it — it is relayed verbatim to a sink the owner controls.
+    """
+
+    message: str = ""
+    contact: str = ""
+    screen: str = ""
+    version: str = ""
+
+    def validate(self) -> None:
+        if not self.message.strip():
+            raise ValueError("no message given")
+        if len(self.message) > MAX_FEEDBACK:
+            raise ValueError(f"message is longer than {MAX_FEEDBACK} characters")
+        if len(self.contact) > 200:
+            raise ValueError("contact is too long")

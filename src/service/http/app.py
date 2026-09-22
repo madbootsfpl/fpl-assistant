@@ -20,7 +20,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src import service
-from src.service.requests import DEFAULT_HORIZON, FPL_BUDGET, MAX_HORIZON, MAX_PLAN
+from src.service.requests import (
+    DEFAULT_HORIZON,
+    FPL_BUDGET,
+    MAX_FEEDBACK,
+    MAX_HORIZON,
+    MAX_PLAN,
+)
 
 app = FastAPI(
     title="MADBOOTS service",
@@ -91,6 +97,15 @@ class GameweekBody(SquadBody):
 class RouteBody(SquadBody):
     target_id: int = Field(..., description="The player you want to field, by FPL element id.")
     bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+
+
+class FeedbackBody(BaseModel):
+    """A note from a tester. ⚠️ Free text, so it is capped — and relayed verbatim, never interpreted."""
+
+    message: str = Field(..., min_length=1, max_length=MAX_FEEDBACK)
+    contact: str = Field("", max_length=200, description="Optional — how to reply.")
+    screen: str = Field("", max_length=60, description="Which screen this is about.")
+    version: str = Field("", max_length=40)
 
 
 class PlayersBody(BaseModel):
@@ -199,6 +214,20 @@ def squad_route(body: RouteBody) -> dict:
     like the question was not understood.
     """
     return _answer(service.route, service.RouteRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/feedback")
+def send_feedback(body: FeedbackBody) -> dict:
+    """Relay a tester's note to the owner's sink.
+
+    ⭐ **The server holds the webhook so the client never has to** — a secret in a mobile binary is a
+    secret every tester has.
+
+    ⚠️⚠️ **Check `sent`.** It reports the relay's *own* verdict, and `false` with a `reason` is a real
+    outcome — an unconfigured sink, an unreachable one, or a relay that refused. A blind *"thanks, sent!"*
+    is the bug this exists to avoid.
+    """
+    return _answer(service.feedback, service.FeedbackRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/players")

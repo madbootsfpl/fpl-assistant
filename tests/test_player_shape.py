@@ -109,7 +109,10 @@ def _answers(store):
 
 
 #: Functions whose answers contain no players, so the sweep has nothing to check in them.
-NO_PLAYERS = {"my_team"}      # composes `analysis`, which is swept in its own right
+NO_PLAYERS = {
+    "my_team",      # composes `analysis`, which is swept in its own right
+    "feedback",     # relays a tester's note; there is no player in it
+}
 
 
 def test_the_sweep_covers_every_endpoint():

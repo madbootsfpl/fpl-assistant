@@ -324,6 +324,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             },
           ),
         _Tab.more => MoreView(
+            client: _client,
             team: team,
             managerId: _managerId,
             freeTransfers: _freeTransfers,

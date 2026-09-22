@@ -51,6 +51,23 @@ class ServiceClient {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// Send a note to the owner.
+  ///
+  /// ⚠️ **Check `sent`.** It is the relay's own verdict — `false` with a `reason` is a real outcome, and a
+  /// blind "thanks, sent!" is the bug the server side exists to avoid.
+  Future<Map<String, dynamic>> feedback({
+    required String message,
+    String contact = '',
+    String screen = '',
+    String version = '',
+  }) =>
+      _post('feedback', {
+        'message': message,
+        'contact': contact,
+        'screen': screen,
+        'version': version,
+      });
+
   /// Every available player, ranked by xP.
   ///
   /// ⭐ Fetched **once** and filtered on the device: the whole market is ~110 KB, and searching 481 rows

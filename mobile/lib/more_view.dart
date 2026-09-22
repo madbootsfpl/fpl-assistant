@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 
@@ -24,6 +25,7 @@ class MoreView extends StatelessWidget {
     required this.onManagerId,
     required this.onFreeTransfers,
     required this.onOpenChips,
+    required this.client,
     super.key,
   });
 
@@ -36,6 +38,7 @@ class MoreView extends StatelessWidget {
   /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
   /// *Working earns a place; frequency earns a slot.*
   final VoidCallback onOpenChips;
+  final ServiceClient client;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -97,6 +100,9 @@ class MoreView extends StatelessWidget {
             'move is worth. The web app stays the exploration layer, where a bigger screen earns its keep.',
             muted: true,
           ),
+
+          const _Heading('Tell us something'),
+          _Feedback(client: client),
 
           const _Heading('About'),
           const _Note(Brand.mantra, italic: true),
@@ -325,6 +331,111 @@ class _Link extends StatelessWidget {
             ],
           ),
         ),
+      );
+}
+
+/// ⭐⭐ **A tester on a phone is more likely to notice something and less likely to be near a laptop** —
+/// which is why this is here and not only on the web.
+///
+/// ⚠️ **It never says "sent" unless the relay said so.** `relay_result` exists because the web form once
+/// reported success while a relay silently refused — *a success message that cannot fail is not a success
+/// message* — so the server's verdict is what this renders, failures included.
+class _Feedback extends StatefulWidget {
+  const _Feedback({required this.client});
+
+  final ServiceClient client;
+
+  @override
+  State<_Feedback> createState() => _FeedbackState();
+}
+
+class _FeedbackState extends State<_Feedback> {
+  final TextEditingController _message = TextEditingController();
+  bool _sending = false;
+  String? _outcome;
+  bool _ok = false;
+
+  @override
+  void dispose() {
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _message.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() {
+      _sending = true;
+      _outcome = null;
+    });
+    try {
+      final result = await widget.client.feedback(message: text, screen: 'mobile', version: '0.0.1');
+      final sent = result['sent'] == true;
+      setState(() {
+        _ok = sent;
+        _outcome = sent
+            ? 'Thanks — that reached us.'
+            // ⭐ The real reason, and the way through. "Something went wrong" tells a tester nothing and
+            // loses the report.
+            : 'Not sent — ${result['reason'] ?? 'the service refused it'}. '
+                'Email ${result['email'] ?? 'us'} instead and it will not be lost.';
+        if (sent) _message.clear();
+      });
+    } catch (e) {
+      setState(() {
+        _ok = false;
+        _outcome = 'Not sent — $e';
+      });
+    } finally {
+      setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _message,
+            maxLines: 3,
+            maxLength: 4000,
+            style: const TextStyle(color: Colors.white, fontSize: 13.5),
+            decoration: InputDecoration(
+              hintText: 'What worked? What broke? What would you add?',
+              hintStyle: const TextStyle(color: Colors.white38, fontSize: 12.5),
+              counterStyle: const TextStyle(color: Colors.white24, fontSize: 10),
+              filled: true,
+              fillColor: Colors.white10,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Brand.radiusSm),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _sending ? null : _send,
+              style: TextButton.styleFrom(
+                backgroundColor: Brand.purple,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.white10,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Brand.radiusSm)),
+              ),
+              child: Text(_sending ? 'Sending…' : 'Send', style: const TextStyle(fontSize: 13)),
+            ),
+          ),
+          if (_outcome != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(_outcome!,
+                  style: TextStyle(
+                      color: _ok ? Brand.good : Brand.warn, fontSize: 11.5, height: 1.45)),
+            ),
+        ],
       );
 }
 
