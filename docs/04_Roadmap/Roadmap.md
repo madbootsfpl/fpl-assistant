@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,312 tests · 237 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,318 tests · 238 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
 page knowing three things:
@@ -40,6 +40,19 @@ page knowing three things:
    ✅ **Signals shipped 2026-09-22** (ADR-232), squad-scoped and ordered by evidentiary strength. ⭐ The
    *what-changed* view needed **no new data**: every signal carries a stable key and the **device** is the
    thing with a memory of this user.
+
+   ✅ **The competitor-review pass is complete** (ADR-234 → ADR-238), run because the testers benchmark
+   against Fantasy Football Hub and will phrase their feedback in its terms — ⭐ *getting ahead of the
+   comparison is cheaper than answering it one report at a time.* Five changes: chip status from FPL's own
+   history (234), the pitch reading three ways from one fetch (235), Boot Battle inside the transfer flow
+   (236), player rows that expand into a card (237), and More as a directory with a value-showing filter
+   (238). ⭐⭐ **What was NOT copied is the point**: no "AI" label — their AI-transfers feature is our Boot
+   Battle and Player DNA under a fashionable name — and their help/feedback, which sends you back to a
+   desktop, became a destination that sends from the phone.
+
+   📌 **Still owed from that review:** tap two Players rows to Boot Battle them; the progressive-disclosure
+   *"Add filter"* dropdown the owner liked in their custom transfers; and a **pitch badge for new signals**
+   — ⚠️ held because *being told beats going to look* costs a round trip, and that has not been measured.
 
    ⚠️ **The audit's §4.2 was amended by building it** — Streamlit does *not* migrate onto the HTTP API; the
    contract is a Python module both transports share. ⭐ *A plan survives contact with the first endpoint,

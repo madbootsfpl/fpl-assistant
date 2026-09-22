@@ -49,7 +49,8 @@ def shape(value, depth=0):
     return type(value).__name__
 
 
-ENDPOINTS = ["analysis", "transfers", "captain", "gameweek-plan", "route", "build", "my-team"]
+ENDPOINTS = ["analysis", "transfers", "captain", "gameweek-plan", "route", "build", "my-team",
+             "players"]
 
 
 @pytest.fixture(scope="module")
@@ -119,3 +120,54 @@ def test_a_sample_carries_no_integer_keys(name):
                 f"{key!r} is not a gameweek number. ⭐ A client parses these to int before sorting, "
                 f"because as text \"10\" comes before \"6\"."
             )
+
+
+# ⭐⭐ **A number written in prose is an untested claim** (ADR-212, learned on a README that said "121 ADRs"
+# while the repo held 212). `players_view.dart` tells a reader the board is fetched once because it is
+# small enough to be — a claim about a **payload**, made in a **comment**, three thousand lines from the
+# payload. So the payload asserts it.
+#
+# ⚠️ The threshold is a **ceiling with room**, not today's figure: a test pinned to the exact size fails
+# every time a player is added and teaches people to re-run it without reading. It fires when the response
+# has changed *kind*, not when the league has changed.
+PAYLOAD_CEILING_KB = 150
+
+
+def _wire_kb(name):
+    """What the client downloads — ⚠️ **not** `stat().st_size`.
+
+    ⭐⭐ The committed sample is indented and key-sorted for a human to read, which makes it **76% larger
+    than the response it documents** (169 KB on disk, 96 KB on the wire). Measuring the file and calling it
+    the payload is how this test's first draft talked me into "correcting" a comment that had been right —
+    *a measurement of the wrong artefact is confidently wrong, not noisily wrong.*
+    """
+    compact = json.dumps(json.loads((SAMPLES / f"{name}.json").read_text()), separators=(",", ":"))
+    return len(compact.encode()) / 1024
+
+
+def test_the_players_board_is_small_enough_to_fetch_whole():
+    kb = _wire_kb("players")
+    assert kb < PAYLOAD_CEILING_KB, (
+        f"players.json is {kb:.0f} KB, over the {PAYLOAD_CEILING_KB} KB ceiling. The app downloads this "
+        f"board in one go and filters on the device (ADR-236) — past a certain size that stops being the "
+        f"right design, and the comment saying it is becomes wrong."
+    )
+
+
+def test_the_comment_quotes_the_size_the_payload_actually_is():
+    """⭐ The claim and the thing it describes, compared — not two numbers that agree by luck.
+
+    ⚠️ `players.json` is indented and sorted for a human reader; the wire carries neither. Comparing the
+    file's size to a comment about the *download* would be comparing the wrong number, so this measures
+    the compact encoding the client actually receives.
+    """
+    import re
+
+    wire_kb = _wire_kb("players")
+    text = (ROOT / "mobile" / "lib" / "players_view.dart").read_text()
+    claimed = re.search(r"market is ~(\d+) ?KB", text)
+    assert claimed, "players_view.dart no longer states the payload size — say it, or drop this test"
+    stated = int(claimed.group(1))
+    assert abs(stated - wire_kb) <= 20, (
+        f"the comment says ~{stated} KB; the wire carries {wire_kb:.0f} KB. Update whichever is wrong."
+    )

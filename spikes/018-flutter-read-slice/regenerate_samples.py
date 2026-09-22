@@ -61,6 +61,10 @@ def responses(store) -> dict:
         # that compares against it would pass or fail on someone else's uptime. ⭐ The *composition* is what
         # the sample documents — the fetch has its own coverage.
         "my-team": _my_team(store, ids),
+        # ⭐ The whole ranked board, because that is literally what the endpoint returns and the app
+        # downloads it in one go (ADR-236). A trimmed sample would hide the only thing worth knowing
+        # about this response — its size.
+        "players": service.players(service.PlayersRequest(horizon=5), store=store),
     }
 
 

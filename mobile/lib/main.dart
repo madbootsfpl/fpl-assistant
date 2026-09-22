@@ -12,8 +12,10 @@ import 'api/models.dart';
 import 'brand.dart';
 import 'chips_view.dart';
 import 'players_view.dart';
+import 'settings_view.dart';
 import 'signals_view.dart';
 import 'draft.dart';
+import 'feedback_view.dart';
 import 'more_view.dart';
 import 'pitch.dart';
 import 'player_sheet.dart';
@@ -346,21 +348,28 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             },
           ),
         _Tab.more => MoreView(
-            client: _client,
-            team: team,
             managerId: _managerId,
             freeTransfers: _freeTransfers,
-            onManagerId: (id) {
-              _id.text = '$id';
-              setState(() => _team = _load(id));
-            },
-            onFreeTransfers: (n) => setState(() {
-              _freeTransfers = n;
-              _team = _load(_managerId);
-            }),
             onOpenChips: () => _open('Chips', ChipsView(client: _client, team: team, managerId: _managerId)),
             onOpenSignals: () =>
                 _open('Signals', SignalsView(client: _client, team: team)),
+            onOpenFeedback: () => _open('Tell us something', FeedbackView(client: _client)),
+            onOpenSettings: () => _open(
+              'Settings',
+              SettingsView(
+                team: team,
+                managerId: _managerId,
+                freeTransfers: _freeTransfers,
+                onManagerId: (id) {
+                  _id.text = '$id';
+                  setState(() => _team = _load(id));
+                },
+                onFreeTransfers: (n) => setState(() {
+                  _freeTransfers = n;
+                  _team = _load(_managerId);
+                }),
+              ),
+            ),
           ),
       };
   }

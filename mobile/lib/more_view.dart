@@ -1,4 +1,4 @@
-/// More — the app's own housekeeping (ADR-228).
+/// More — a **directory**, not a drawer (ADR-228, restructured ADR-238).
 ///
 /// ⭐⭐ **Not a drawer for everything the web app can do.** The mobile audit §6 is explicit: *the mobile app
 /// is the decision layer; the web app stays the exploration layer.* A "More" list that grew to eight items
@@ -6,91 +6,81 @@
 /// round, when ADR-166 cut the web sidebar from twelve to nine **ordered by frequency** and ADR-167/170
 /// answered "we need another board" with a reader instead.
 ///
-/// ⚠️ **So this exists because the app had nowhere to put a setting**, not because there is spare room in
-/// the bar. Free transfers were hard-coded to 1 with no control — ADR-191's exact failure, the app advising
-/// a position the manager is not in, reintroduced on a phone.
+/// ⭐⭐⭐ **What makes a directory hold more than a menu is the one-line description.** Every row here says
+/// what is behind it, so the screen can grow without becoming a junk drawer: you read four descriptions
+/// instead of guessing four nouns. That is the whole trick, and it costs nothing but the sentences.
+///
+/// ⚠️ **So the controls left.** This screen used to mix destinations with a text field, a stepper and a
+/// feedback box — and a row you *change* reads nothing like a row you *enter*. They are in
+/// [SettingsView] and [FeedbackView] now, each one tap deeper. ⭐ *Frequency decides depth* (ADR-230): free
+/// transfers change weekly at most, and the screens they affect are opened daily.
 library;
 
 import 'package:flutter/material.dart';
 
-import 'api/client.dart';
-import 'api/models.dart';
 import 'brand.dart';
 
 class MoreView extends StatelessWidget {
   const MoreView({
-    required this.team,
     required this.managerId,
     required this.freeTransfers,
-    required this.onManagerId,
-    required this.onFreeTransfers,
     required this.onOpenChips,
     required this.onOpenSignals,
-    required this.client,
+    required this.onOpenSettings,
+    required this.onOpenFeedback,
     super.key,
   });
 
-  final MyTeam team;
   final int managerId;
   final int freeTransfers;
-  final ValueChanged<int> onManagerId;
-  final ValueChanged<int> onFreeTransfers;
-
-  /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
-  /// *Working earns a place; frequency earns a slot.*
-  final VoidCallback onOpenChips;
 
   /// ⭐ Signals is time-sensitive and squad-scoped — decision layer, not research. It is here rather than
   /// in the bar because the audit's first release does not include it, and *frequency earns a slot*
   /// (ADR-230). ⚠️ The better answer is probably a badge on the pitch: **being told beats going to look**,
   /// which is the whole reason a phone suits this.
   final VoidCallback onOpenSignals;
-  final ServiceClient client;
+
+  /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
+  /// *Working earns a place; frequency earns a slot.*
+  final VoidCallback onOpenChips;
+
+  final VoidCallback onOpenSettings;
+  final VoidCallback onOpenFeedback;
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
-          const _Heading('Your team'),
-          _ManagerIdRow(managerId: managerId, onChanged: onManagerId),
-          _FreeTransfersRow(value: freeTransfers, onChanged: onFreeTransfers),
-
-          const _Heading('This gameweek'),
-          _Fact(label: 'Gameweek', value: '${team.gameweek ?? '—'}'),
-          _Fact(
-            label: 'In the bank',
-            value: team.bank == null ? '—' : '£${team.bank!.toStringAsFixed(1)}m',
-            // ⭐ Where each number comes from, because two of the three on the header are FPL's and one is
-            // yours — and a reader cannot tell by looking.
-            note: 'from FPL',
-          ),
-          _Fact(
-            label: 'Squad value',
-            value: team.value == null ? '—' : '£${team.value!.toStringAsFixed(1)}m',
-            note: 'from FPL · includes the bank',
-          ),
-          if (team.activeChip != null)
-            _Fact(label: 'Chip in play', value: team.activeChip!, note: 'from FPL'),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(team.deadlineLabel,
-                style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.45)),
-          ),
-
-          const _Heading('What should I know?'),
-          _Link(
+          _Row(
+            icon: Icons.campaign_outlined,
             name: 'Signals',
             why: 'FPL news, reported moves, and sell-offs the data cannot explain — about your fifteen, '
                 'strongest evidence first. Marks what is new since you last looked.',
             onTap: onOpenSignals,
           ),
-
-          const _Heading('Season decisions'),
-          _Link(
+          _Row(
+            icon: Icons.style_outlined,
             name: 'Chips',
             why: 'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
                 'left, not the next one.',
             onTap: onOpenChips,
+          ),
+          _Row(
+            icon: Icons.chat_bubble_outline,
+            name: 'Tell us something',
+            why: 'What worked, what broke, what you would add. It reaches us from here — you do not have '
+                'to go and find a laptop.',
+            onTap: onOpenFeedback,
+          ),
+          _Row(
+            icon: Icons.tune,
+            name: 'Settings',
+            // ⭐⭐ **The row states its own current value**, the same idea as the filter chips: a directory
+            // entry that says `Manager 2885974 · 2 free transfers` has already answered the question most
+            // people open it to check. *Showing the state beats offering the options.*
+            why: 'Manager $managerId · $freeTransfers free transfer${freeTransfers == 1 ? '' : 's'} · '
+                'this gameweek’s numbers, and where they come from.',
+            onTap: onOpenSettings,
           ),
 
           const _Heading('On the web'),
@@ -105,14 +95,64 @@ class MoreView extends StatelessWidget {
             'move is worth. The web app stays the exploration layer, where a bigger screen earns its keep.',
             muted: true,
           ),
-
-          const _Heading('Tell us something'),
-          _Feedback(client: client),
-
-          const _Heading('About'),
-          const _Note(Brand.mantra, italic: true),
-          const _Note(Brand.disclaimer, muted: true),
+          const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: _Note(Brand.mantra, italic: true),
+          ),
         ],
+      );
+}
+
+/// One directory entry: icon, name, and **the line that makes the directory work**.
+class _Row extends StatelessWidget {
+  const _Row({
+    required this.icon,
+    required this.name,
+    required this.why,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String name;
+  final String why;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Brand.radiusSm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 1, right: 12),
+                child: Icon(icon, size: 19, color: Brand.purpleLight),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600)),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(why,
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 11.5, height: 1.45)),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 2, left: 8),
+                child: Icon(Icons.chevron_right, size: 18, color: Colors.white24),
+              ),
+            ],
+          ),
+        ),
       );
 }
 
@@ -123,300 +163,9 @@ class _Heading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 6),
+        padding: const EdgeInsets.only(top: 26, bottom: 8),
         child: Text(text.toUpperCase(),
             style: const TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 1.2)),
-      );
-}
-
-class _ManagerIdRow extends StatefulWidget {
-  const _ManagerIdRow({required this.managerId, required this.onChanged});
-
-  final int managerId;
-  final ValueChanged<int> onChanged;
-
-  @override
-  State<_ManagerIdRow> createState() => _ManagerIdRowState();
-}
-
-class _ManagerIdRowState extends State<_ManagerIdRow> {
-  late final TextEditingController _controller =
-      TextEditingController(text: '${widget.managerId}');
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final id = int.tryParse(_controller.text.trim());
-    if (id != null && id > 0) widget.onChanged(id);
-  }
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Text('FPL manager id',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
-            ),
-            SizedBox(
-              width: 110,
-              height: 34,
-              child: TextField(
-                controller: _controller,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.end,
-                onSubmitted: (_) => _submit(),
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  filled: true,
-                  fillColor: Colors.white10,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(Brand.radiusSm),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
-            IconButton(
-              onPressed: _submit,
-              icon: const Icon(Icons.check, size: 18, color: Colors.white54),
-              tooltip: 'Load this team',
-            ),
-          ],
-        ),
-      );
-}
-
-/// ⚠️⚠️ **The one number FPL will not tell us**, and it changes the advice.
-///
-/// ADR-191: the app once hard-coded this to 1 while the Transfer tab collected it three tabs away, so the
-/// surface a manager read was advising a position he was not in. ⭐ It was hard-coded again on the phone —
-/// because until now there was nowhere to put it.
-class _FreeTransfersRow extends StatelessWidget {
-  const _FreeTransfersRow({required this.value, required this.onChanged});
-
-  final int value;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text('Free transfers',
-                      style: TextStyle(color: Colors.white, fontSize: 14)),
-                ),
-                for (var n = 0; n <= 5; n++)
-                  GestureDetector(
-                    onTap: () => onChanged(n),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      margin: const EdgeInsets.only(left: 4),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: n == value ? Brand.purple : Colors.white10,
-                        borderRadius: BorderRadius.circular(Brand.radiusSm),
-                      ),
-                      child: Text('$n',
-                          style: TextStyle(
-                              color: n == value ? Colors.white : Colors.white54, fontSize: 12.5)),
-                    ),
-                  ),
-              ],
-            ),
-            const Padding(
-              padding: EdgeInsets.only(top: 5),
-              child: Text(
-                'FPL does not publish this, so the app has to ask. The week’s plan recommends this many '
-                'moves.',
-                style: TextStyle(color: Colors.white38, fontSize: 10.5, height: 1.45),
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _Fact extends StatelessWidget {
-  const _Fact({required this.label, required this.value, this.note});
-
-  final String label;
-  final String value;
-  final String? note;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
-            ),
-            if (note != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Text(note!,
-                    style: const TextStyle(color: Colors.white24, fontSize: 10.5)),
-              ),
-            Text(value,
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 13.5, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
-}
-
-/// A row that goes somewhere, with a back button when it gets there.
-class _Link extends StatelessWidget {
-  const _Link({required this.name, required this.why, required this.onTap});
-
-  final String name;
-  final String why;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(why,
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 11, height: 1.45)),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, size: 18, color: Colors.white38),
-            ],
-          ),
-        ),
-      );
-}
-
-/// ⭐⭐ **A tester on a phone is more likely to notice something and less likely to be near a laptop** —
-/// which is why this is here and not only on the web.
-///
-/// ⚠️ **It never says "sent" unless the relay said so.** `relay_result` exists because the web form once
-/// reported success while a relay silently refused — *a success message that cannot fail is not a success
-/// message* — so the server's verdict is what this renders, failures included.
-class _Feedback extends StatefulWidget {
-  const _Feedback({required this.client});
-
-  final ServiceClient client;
-
-  @override
-  State<_Feedback> createState() => _FeedbackState();
-}
-
-class _FeedbackState extends State<_Feedback> {
-  final TextEditingController _message = TextEditingController();
-  bool _sending = false;
-  String? _outcome;
-  bool _ok = false;
-
-  @override
-  void dispose() {
-    _message.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final text = _message.text.trim();
-    if (text.isEmpty || _sending) return;
-    setState(() {
-      _sending = true;
-      _outcome = null;
-    });
-    try {
-      final result = await widget.client.feedback(message: text, screen: 'mobile', version: '0.0.1');
-      final sent = result['sent'] == true;
-      setState(() {
-        _ok = sent;
-        _outcome = sent
-            ? 'Thanks — that reached us.'
-            // ⭐ The real reason, and the way through. "Something went wrong" tells a tester nothing and
-            // loses the report.
-            : 'Not sent — ${result['reason'] ?? 'the service refused it'}. '
-                'Email ${result['email'] ?? 'us'} instead and it will not be lost.';
-        if (sent) _message.clear();
-      });
-    } catch (e) {
-      setState(() {
-        _ok = false;
-        _outcome = 'Not sent — $e';
-      });
-    } finally {
-      setState(() => _sending = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _message,
-            maxLines: 3,
-            maxLength: 4000,
-            style: const TextStyle(color: Colors.white, fontSize: 13.5),
-            decoration: InputDecoration(
-              hintText: 'What worked? What broke? What would you add?',
-              hintStyle: const TextStyle(color: Colors.white38, fontSize: 12.5),
-              counterStyle: const TextStyle(color: Colors.white24, fontSize: 10),
-              filled: true,
-              fillColor: Colors.white10,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Brand.radiusSm),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _sending ? null : _send,
-              style: TextButton.styleFrom(
-                backgroundColor: Brand.purple,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.white10,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(Brand.radiusSm)),
-              ),
-              child: Text(_sending ? 'Sending…' : 'Send', style: const TextStyle(fontSize: 13)),
-            ),
-          ),
-          if (_outcome != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(_outcome!,
-                  style: TextStyle(
-                      color: _ok ? Brand.good : Brand.warn, fontSize: 11.5, height: 1.45)),
-            ),
-        ],
       );
 }
 
