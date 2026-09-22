@@ -16,6 +16,7 @@ from src.analytics import (
     best_legal_xi,
     captain_picks,
     minutes_weight_from_history,
+    player_summary,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
@@ -124,7 +125,27 @@ def captain(request: CaptainRequest, *, store: Storage | None = None) -> dict:
         minutes_weight=minutes_weight_from_history(data.history, data.gw_history),
         history_by_code=data.history,
     )
-    return {"gameweek": data.ranked[0]["gameweeks"][0] if data.ranked else None, "picks": picks}
+    # ⭐⭐ **Summarised, and the xP decomposition dropped** (ADR-227). `captain_picks` returns `player_xp`'s
+    # rows, so every pick carried `rate`, `rate_source`, `ep_next`, `defcon_xp`, `clean_sheet_xp`,
+    # `by_gameweek_exact` and more — the **model's working**, not the answer.
+    #
+    # ⚠️ That is the raw-row problem wearing different clothes: internals in the contract mean a change to
+    # how xP is computed changes what a phone receives. ⭐ *If a screen ever wants "why this xP", that is an
+    # explanation-shaped answer, not fields riding along on every pick.*
+    #
+    # ⚠️ `doubtful` is dropped too, deliberately: it is `status == "d"` said twice, and two representations
+    # of one fact are two things that can disagree.
+    by_id = {p["id"]: p for p in data.owned}
+    shaped = [
+        {**player_summary(by_id[pick["id"]], {pick["id"]: pick.get("xp", 0)},
+                          reported_out=data.leaving),
+         "opponent": pick.get("opponent"),
+         "venue": pick.get("venue"),
+         "difficulty": pick.get("difficulty"),
+         "penalty_taker": pick.get("penalty_taker", False)}
+        for pick in picks if pick["id"] in by_id
+    ]
+    return {"gameweek": data.ranked[0]["gameweeks"][0] if data.ranked else None, "picks": shaped}
 
 
 def gameweek(request: GameweekRequest, *, store: Storage | None = None) -> dict:
@@ -216,9 +237,7 @@ def route(request: RouteRequest, *, store: Storage | None = None) -> dict:
                              reported_out=data.leaving)
     return {
         "horizon": request.horizon,
-        "target": {"id": target["id"], "web_name": target["web_name"], "team": target["team"],
-                   "position": target["position"], "price": target["price"],
-                   "xp": data.xp_by_id.get(target["id"], 0.0)},
+        "target": player_summary(target, data.xp_by_id, reported_out=data.leaving),
         **answer,
     }
 
@@ -241,15 +260,27 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
         pool, budget=request.budget, formation=SQUAD_15, scores=data.xp_by_id,
         include_ids=request.include_ids, exclude_ids=request.exclude_ids,
     )
-    for p in result["selected"]:
-        p["xp"] = data.xp_by_id.get(p["id"], 0)
+    # ⭐⭐ **Summarised, not the raw solver output** (ADR-227). `select_squad` returns the database rows it
+    # was given, so this endpoint was shipping **45 columns per player** — `cbi`, `cost_change_event`,
+    # `scout_news_link` — 12 KB where 3 will do, on the client whose architecture was justified by
+    # measuring payload. ⚠️ It also made the database schema part of the API contract: rename a column and
+    # the mobile response changes, with nothing in between to notice.
+    #
+    # ⭐ `bench` and `forced` survive because they are **answers, not raw data**: the solver decided one and
+    # the caller asked for the other, and neither exists on a player row.
+    selected = [
+        {**player_summary(p, data.xp_by_id),
+         "bench": bool(p.get("bench")),
+         "forced": bool(p.get("forced"))}
+        for p in result["selected"]
+    ]
     return {
         "horizon": request.horizon,
         "budget": request.budget,
         # ⭐ The solver's own word, surfaced. "Infeasible" is an answer — *nothing fits these constraints* —
         # and swallowing it would leave a client showing an empty squad with no reason.
         "status": result["status"],
-        "selected": result["selected"],
+        "selected": selected,
         "total_cost": result["total_cost"],
         "projected_xp": round(sum(data.xp_by_id.get(p["id"], 0) for p in result["selected"]), 1),
         "unavailable_excluded": len(excluded),
@@ -390,9 +421,7 @@ def replacements(request: ReplacementsRequest, *, store: Storage | None = None) 
                             bank=request.bank, reported_out=data.leaving, limit=request.limit)
     return {
         "horizon": request.horizon,
-        "out": {"id": out["id"], "web_name": out["web_name"], "team": out["team"],
-                "position": out["position"], "price": out["price"],
-                "xp": data.xp_by_id.get(out["id"], 0.0)},
+        "out": player_summary(out, data.xp_by_id, reported_out=data.leaving),
         # ⭐ Stated so a screen can show *"£8.5m to spend"* rather than making the reader do the addition
         # of a sale price and a bank they are looking at on another row.
         "budget": budget,

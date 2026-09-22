@@ -104,7 +104,10 @@ responses**. Move them across with `board.dart` in step 3 below.
 not a guard* — wiring `flutter test` into the workflow belongs with creating the real app, and until then
 `tests/test_api_contract.py` is the half that actually gates a commit.
 
-### 1b. 🔴 Normalise the four player shapes — *recommended, not done*
+### 1b. ~~Normalise the four player shapes~~ ✅ **DONE 2026-09-22 — [ADR-227](../06_Decisions/ADR-227-one-shape-for-a-player.md)**
+
+⚠️ There were **five**, not four — the sweep found `captain.picks`, which no inventory had listed. `build` went 16.3 → 4.7 KB, `route` 5.9 → 1.9 KB, and the Dart client lost a whole class.
+
 
 Writing the models found the API returns **four different player shapes**:
 

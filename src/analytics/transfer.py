@@ -12,19 +12,19 @@ formats the result. It respects FPL's rules (same position, ≤3/club, budget) s
 suggestion is always a move you could actually make.
 """
 
+from src.analytics.analyse import player_summary
 from src.analytics.dead_slot import dead_slots
 from src.analytics.optimizer import MAX_PER_CLUB, best_xi_points, is_unavailable
 
 
 def _summary(player, xp_by_id) -> dict:
-    """The display fields for one player + their xP over the horizon."""
-    return {
-        "id": player["id"],
-        "web_name": player["web_name"],
-        "team": player["team"],
-        "price": player["price"],
-        "xp": round(xp_by_id.get(player["id"], 0), 1),
-    }
+    """The display fields for one player + their xP — ⭐ **the same shape every other answer uses**.
+
+    ⚠️ This used to return five keys of its own. A transfer's `in` had no `position`, so a card could not
+    show a position chip, and no `status`, so a manual-transfer list **could not flag a doubtful player**
+    (ADR-226). ⭐ *One shape, one function* — ADR-227.
+    """
+    return player_summary(player, xp_by_id)
 
 
 def _selection_xp(xp_by_id, reported_out):
@@ -37,14 +37,6 @@ def _selection_xp(xp_by_id, reported_out):
     if not reported_out:
         return xp_by_id
     return {k: (0.0 if k in reported_out else v) for k, v in xp_by_id.items()}
-
-
-def _get(row, key):
-    """A field from a dict **or** a `sqlite3.Row`, absent-safe."""
-    try:
-        return row[key]
-    except (KeyError, IndexError):
-        return None
 
 
 def _club_counts(owned) -> dict:
@@ -174,14 +166,12 @@ def replacements_for(out, players, owned, *, xp_by_id, bank=0.0, reported_out=No
             continue
         over = round(c["price"] - budget, 1)
         rows.append({
+            # ⭐ `_summary` is now the shared `player_summary` (ADR-227), so availability travels with
+            # every candidate for free. ⚠️ These three were set explicitly here when it did not — and
+            # leaving them would have **masked the shared function**: a fault in `player_summary` could not
+            # reach this list, so the guard on it could not fire. *A redundant override is a test's blind
+            # spot wearing the costume of safety.*
             **_summary(c, xp_by_id),
-            # ⚠️⚠️ **Availability travels with the candidate, and it must.** `_summary` here is the minimal
-            # five-key shape the transfer ranking uses, which carries no `status` — so a list built from it
-            # alone would offer a 25%-chance player with nothing to say he is doubtful. ⭐ *That is ADR-206
-            # exactly: a doubt is a probability, and hiding it prices it at certainty.*
-            "position": c["position"],
-            "status": c["status"],
-            "chance": _get(c, "chance"),
             "affordable": over <= 0,
             # ⭐ 0.0 rather than None when affordable: a screen reads one type, and "how far over" is a
             # number whose zero is meaningful.
@@ -479,11 +469,14 @@ def route_to_player(target, owned, xp_by_id, *, bank: float = 0.0, max_per_club:
             continue
         budget = round(out["price"] + bank, 1)
         if budget < target["price"]:
-            blocked.append({"out": out, "short_by": round(target["price"] - budget, 1)})
+            # ⚠️ Summarised, not the raw row: this used to ship 45 database columns per
+            # blocked route, which put the schema in the contract (ADR-227).
+            blocked.append({"out": _summary(out, rank_xp),
+                            "short_by": round(target["price"] - budget, 1)})
             continue
         after_squad = [p for p in owned if p["id"] != out["id"]] + [target]
         routes.append({
-            "out": out,
+            "out": _summary(out, rank_xp),
             "gain": round(best_xi_points(after_squad, rank_xp) - base, 1),
             "bank_after": round(budget - target["price"], 1),
         })

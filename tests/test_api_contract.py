@@ -88,11 +88,34 @@ def test_the_sample_still_matches_what_the_endpoint_returns(name, live):
 @pytest.mark.parametrize("name", ENDPOINTS)
 def test_a_sample_carries_no_integer_keys(name):
     """⭐ The samples are dumped through JSON exactly as the wire carries them, so `by_gameweek` appears
-    keyed `"6"` — the shape a Dart author must actually parse (ADR-219). ⚠️ If these were written from the
-    Python dicts directly they would show integer keys, and the model written from them would be wrong in
-    the one place this project has already had to write down twice."""
+    keyed `"6"` — the shape a Dart author must actually parse (ADR-219).
+
+    ⚠️⚠️ **An earlier version of this test asserted nothing.** It read
+    `'"by_gameweek"' not in text or '": {\n' in text` — a hedge that happened to pass, and that went red
+    only when a legitimately empty `by_gameweek` appeared. ⭐ *A hedge is not a weaker assertion, it is the
+    absence of one* (ADR-180) — so this now walks the decoded structure and checks the keys themselves.
+    """
+    def gameweek_maps(value, found=None):
+        found = [] if found is None else found
+        if isinstance(value, dict):
+            for key, inner in value.items():
+                if key in {"by_gameweek", "by_gameweek_exact", "games_by_gameweek"} \
+                        and isinstance(inner, dict):
+                    found.append(inner)
+                gameweek_maps(inner, found)
+        elif isinstance(value, list):
+            for inner in value:
+                gameweek_maps(inner, found)
+        return found
+
     text = (SAMPLES / f"{name}.json").read_text()
-    assert '"by_gameweek"' not in text or '": {\n' in text
-    # A JSON object key is always a string; this asserts the file parses, i.e. nothing hand-edited it into
-    # something Dart's `jsonDecode` would reject.
-    json.loads(text)
+    # ⚠️ Parses at all — nothing hand-edited it into something Dart's `jsonDecode` would reject.
+    decoded = json.loads(text)
+
+    for weeks in gameweek_maps(decoded):
+        for key in weeks:
+            assert isinstance(key, str), f"{key!r} is a {type(key).__name__}, and JSON has no such key"
+            assert key.isdigit(), (
+                f"{key!r} is not a gameweek number. ⭐ A client parses these to int before sorting, "
+                f"because as text \"10\" comes before \"6\"."
+            )

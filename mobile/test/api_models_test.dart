@@ -96,6 +96,7 @@ void main() {
     test('a doubtful pick is flagged, not dropped', () {
       for (final pick in answer.picks) {
         expect(pick.doubtful, isA<bool>());
+        expect(pick.player.status, isNotEmpty);
         expect(pick.xp, greaterThan(0));
       }
     });

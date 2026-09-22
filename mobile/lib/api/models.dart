@@ -32,57 +32,11 @@ Map<int, double> _gameweeks(dynamic raw) {
 
 double _double(dynamic v) => (v as num?)?.toDouble() ?? 0.0;
 
-/// ⚠️⚠️ **The API returns FOUR different player shapes, and this is the smallest.**
+/// **The** shape a player takes in every answer (ADR-227).
 ///
-/// | where | keys |
-/// |---|---|
-/// | `analysis` (xi · bench · issues · weakest · top_pick) | 11, curated → [PlayerSummary] |
-/// | `transfers.moves[].in` / `.out` | **5–6** → this class |
-/// | `route.target` | 6 → this class |
-/// | `route.blocked[].out`, `build.selected[]` | **42–45 raw database columns** |
-///
-/// ⭐ **Found by writing these models against the real payloads**, not by reading the server: `in` carries
-/// no `position`, so a transfer card cannot show a position chip without a second lookup, and `out` carries
-/// `leaving` while `in` does not — correct, since only a player you hold can be reported as going.
-///
-/// 🔴 **Normalising the API on one player shape is the recommendation, and it is a server change**, noted
-/// in `docs/03_Architecture/Flutter_Start_Checklist.md`. Until then these classes describe what is actually
-/// on the wire — ⭐ *a model that flatters the contract is how a client discovers the truth at runtime.*
-class PlayerRef {
-  PlayerRef({
-    required this.id,
-    required this.name,
-    required this.team,
-    required this.price,
-    required this.xp,
-    required this.position,
-    required this.leaving,
-  });
-
-  factory PlayerRef.fromJson(Map<String, dynamic> json) => PlayerRef(
-        id: json['id'] as int,
-        name: json['web_name'] as String,
-        team: json['team'] as String,
-        price: _double(json['price']),
-        xp: _double(json['xp']),
-        // ⚠️ Absent on a transfer's `in`/`out`; present on `route.target`. Nullable, so the gap is visible
-        // to the screen rather than defaulted into a wrong-looking chip.
-        position: json['position'] as String?,
-        leaving: json['leaving'] as Map<String, dynamic>?,
-      );
-
-  final int id;
-  final String name;
-  final String team;
-  final double price;
-  final double xp;
-  final String? position;
-  final Map<String, dynamic>? leaving;
-
-  bool get isLeaving => leaving != null;
-}
-
-/// A player as the analysis surfaces describe them — the curated summary, not the database row.
+/// ⭐⭐ There used to be five, and a separate `PlayerRef` class to cope with the smallest of them. The API
+/// now describes a player one way everywhere, so the client needs one class and one widget — ⚠️ *a model
+/// that needed two classes was telling you the contract had two answers to one question.*
 class PlayerSummary {
   PlayerSummary({
     required this.id,
@@ -219,16 +173,16 @@ class TransferMove {
 
   factory TransferMove.fromJson(Map<String, dynamic> json) => TransferMove(
         position: json['position'] as String,
-        out: PlayerRef.fromJson(json['out'] as Map<String, dynamic>),
+        out: PlayerSummary.fromJson(json['out'] as Map<String, dynamic>),
         // ⚠️ `in` is a Dart keyword, so the field cannot share the wire's name.
-        incoming: PlayerRef.fromJson(json['in'] as Map<String, dynamic>),
+        incoming: PlayerSummary.fromJson(json['in'] as Map<String, dynamic>),
         gain: _double(json['gain']),
         outOnBench: json['out_on_bench'] as bool? ?? false,
       );
 
   final String position;
-  final PlayerRef out;
-  final PlayerRef incoming;
+  final PlayerSummary out;
+  final PlayerSummary incoming;
 
   /// Expected points gained **by the starting XI** over the request's horizon.
   final double gain;
@@ -273,49 +227,42 @@ class TransfersAnswer {
 }
 
 /// One captaincy candidate for the coming gameweek.
+///
+/// ⭐ A [PlayerSummary] plus the facts about the **fixture** — which is the only thing a pick adds to a
+/// player. ⚠️ The xP decomposition (`rate`, `ep_next`, `defcon_xp`) used to ride along and no longer does:
+/// that is the model's working, not the answer.
 class CaptainPick {
   CaptainPick({
-    required this.id,
-    required this.name,
-    required this.team,
-    required this.xp,
+    required this.player,
     required this.opponent,
     required this.venue,
+    required this.difficulty,
     required this.penaltyTaker,
-    required this.doubtful,
-    required this.chance,
-    required this.minutesWeight,
   });
 
   factory CaptainPick.fromJson(Map<String, dynamic> json) => CaptainPick(
-        id: json['id'] as int,
-        name: json['web_name'] as String,
-        team: json['team'] as String,
-        xp: _double(json['xp']),
+        player: PlayerSummary.fromJson(json),
         opponent: json['opponent'] as String?,
         venue: json['venue'] as String?,
+        difficulty: json['difficulty'] as int?,
         penaltyTaker: json['penalty_taker'] as bool? ?? false,
-        doubtful: json['doubtful'] as bool? ?? false,
-        chance: json['chance'] as int?,
-        minutesWeight: (json['minutes_weight'] as num?)?.toDouble() ?? 1.0,
       );
 
-  final int id;
-  final String name;
-  final String team;
-
-  /// ⚠️ **Next gameweek only**, whatever horizon was requested — captaincy is a one-week bet.
-  final double xp;
+  final PlayerSummary player;
   final String? opponent;
 
   /// `H` or `A`. Null when the fixture is unknown.
   final String? venue;
+  final int? difficulty;
   final bool penaltyTaker;
 
-  /// ⭐ Included and flagged, never zeroed — a doubtful player may still be the right captain.
-  final bool doubtful;
-  final int? chance;
-  final double minutesWeight;
+  /// ⚠️ **Next gameweek only**, whatever horizon was requested — captaincy is a one-week bet.
+  double get xp => player.xp;
+  String get name => player.name;
+
+  /// ⭐ Read from the shared shape rather than a separate `doubtful` flag — *two representations of one
+  /// fact are two things that can disagree*.
+  bool get doubtful => player.isDoubtful;
 }
 
 /// `POST /api/v1/squad/captain`
@@ -346,7 +293,7 @@ class RouteAnswer {
 
   factory RouteAnswer.fromJson(Map<String, dynamic> json) => RouteAnswer(
         horizon: json['horizon'] as int,
-        target: PlayerRef.fromJson(json['target'] as Map<String, dynamic>),
+        target: PlayerSummary.fromJson(json['target'] as Map<String, dynamic>),
         owned: json['owned'] as bool? ?? false,
         routes: ((json['routes'] as List?) ?? []).cast<Map<String, dynamic>>(),
         blocked: ((json['blocked'] as List?) ?? []).cast<Map<String, dynamic>>(),
@@ -354,7 +301,7 @@ class RouteAnswer {
       );
 
   final int horizon;
-  final PlayerRef target;
+  final PlayerSummary target;
 
   /// ⭐ *"You already own him"* is an answer to the question, not an empty result.
   final bool owned;
@@ -608,14 +555,14 @@ class ReplacementsAnswer {
   });
 
   factory ReplacementsAnswer.fromJson(Map<String, dynamic> json) => ReplacementsAnswer(
-        out: PlayerRef.fromJson(json['out'] as Map<String, dynamic>),
+        out: PlayerSummary.fromJson(json['out'] as Map<String, dynamic>),
         budget: (json['budget'] as num).toDouble(),
         candidates: ((json['candidates'] as List?) ?? [])
             .map((c) => Replacement.fromJson(c as Map<String, dynamic>))
             .toList(),
       );
 
-  final PlayerRef out;
+  final PlayerSummary out;
 
   /// ⭐ Sale price **plus** bank, stated so a screen need not make the reader add two numbers that appear
   /// on different rows.

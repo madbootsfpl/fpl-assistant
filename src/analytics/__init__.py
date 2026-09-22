@@ -5,7 +5,7 @@ It reads player data (via the caller, from storage), computes, and hands results
 up to the display. It never touches the API or the screen.
 """
 
-from src.analytics.analyse import analyse_squad
+from src.analytics.analyse import analyse_squad, player_summary
 from src.analytics.captain import captain_margin, captain_picks, margin_line
 from src.analytics.chips import CHIP_NAMES, chip_advisor, rebuild_value
 from src.analytics.cleansheet import defensive_solidity
@@ -118,6 +118,7 @@ __all__ = [
     "WEEKLY_BENCH_WEIGHT",
     "XI_FLEX",
     "analyse_squad",
+    "player_summary",
     "archetype_bands",
     "availability_weight",
     "available_players",

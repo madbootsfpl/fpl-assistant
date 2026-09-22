@@ -8,16 +8,27 @@
     {
       "gain": 2.8,
       "in": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 532,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
         "price": 4.9,
+        "status": "a",
         "team": "SUN",
         "web_name": "Ballard",
         "xp": 5.4
       },
       "out": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 330,
         "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
         "price": 4.6,
+        "status": "a",
         "team": "LEE",
         "web_name": "Bogle",
         "xp": 1.6
@@ -28,16 +39,27 @@
     {
       "gain": 1.9,
       "in": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 286,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
         "price": 5.1,
+        "status": "a",
         "team": "HUL",
         "web_name": "Belloumi",
         "xp": 5.6
       },
       "out": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 124,
         "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
         "price": 5.7,
+        "status": "a",
         "team": "BHA",
         "web_name": "Gro\u00df",
         "xp": 1.7
@@ -48,16 +70,27 @@
     {
       "gain": 2.7,
       "in": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 504,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
         "price": 5.0,
+        "status": "a",
         "team": "BHA",
         "web_name": "Vuskovic",
         "xp": 5.3
       },
       "out": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 115,
         "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
         "price": 4.9,
+        "status": "a",
         "team": "BHA",
         "web_name": "De Cuyper",
         "xp": 2.2
@@ -68,16 +101,27 @@
     {
       "gain": 1.9,
       "in": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 93,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
         "price": 4.5,
+        "status": "a",
         "team": "BRE",
         "web_name": "Schuster",
         "xp": 4.5
       },
       "out": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 391,
         "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
         "price": 5.7,
+        "status": "a",
         "team": "MCI",
         "web_name": "Gvardiol",
         "xp": 2.6
@@ -88,16 +132,27 @@
     {
       "gain": 1.5,
       "in": {
+        "by_gameweek": {},
+        "chance": 100,
         "id": 154,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
         "price": 9.7,
+        "status": "a",
         "team": "CHE",
         "web_name": "Palmer",
         "xp": 6.0
       },
       "out": {
+        "by_gameweek": {},
+        "chance": null,
         "id": 40,
         "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
         "price": 7.7,
+        "status": "a",
         "team": "CHE",
         "web_name": "Rogers",
         "xp": 4.5

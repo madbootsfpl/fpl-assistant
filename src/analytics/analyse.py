@@ -12,7 +12,23 @@ from src.analytics.optimizer import MAX_PER_CLUB, is_unavailable
 _POS_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
 
-def _summary(player, xp_by_id, by_gameweek_by_id, weight_by_id, reported_out=None) -> dict:
+def player_summary(player, xp_by_id, by_gameweek_by_id=None, weight_by_id=None,
+                   reported_out=None) -> dict:
+    """**The** shape a player takes in every answer this API gives (ADR-227).
+
+    ⭐⭐ **One function because there were four shapes.** `analysis` returned eleven curated keys,
+    `transfers` five, `route.target` six, and `build`/`route.blocked` the **whole database row** — 45
+    columns of `cbi`, `cost_change_event` and `scout_news_link`, shipped to a phone.
+
+    That is not untidiness. It made the database schema part of the API contract, it cost 12 KB where 3
+    would do, and — the one that bit — ⚠️ *the five-key shape carries no `status`, so a candidate list
+    built from it could not flag a doubtful player* (ADR-226). A client could not reuse one widget, because
+    it could not rely on any field being there.
+
+    ⭐ The three maps are optional so every caller can use this, supplying what it has. **Absent is not
+    wrong**: no per-gameweek map means `{}`, no weights means 1.0 — the same values those callers were
+    already producing by omission.
+    """
     # ADR-155 — a player the press and the crowd both say is leaving (ADR-153/154). Carried on the summary so
     # every consumer of `analyse_squad` inherits it rather than each learning separately: the console table,
     # the web card and anything built later all read the same field.
@@ -26,10 +42,13 @@ def _summary(player, xp_by_id, by_gameweek_by_id, weight_by_id, reported_out=Non
         "xp": round(xp_by_id.get(player["id"], 0), 1),
         "status": player["status"],
         "chance": player["chance"] if "chance" in player.keys() else None,
-        "by_gameweek": by_gameweek_by_id.get(player["id"], {}),   # ADR-032; {} when absent
-        "minutes_weight": weight_by_id.get(player["id"], 1.0),    # xMins v0 (ADR-038); 1.0 if absent
+        "by_gameweek": (by_gameweek_by_id or {}).get(player["id"], {}),   # ADR-032; {} when absent
+        "minutes_weight": (weight_by_id or {}).get(player["id"], 1.0),   # xMins v0 (ADR-038); 1.0 if absent
         "leaving": leaving,                                       # the headline event, or None (ADR-155)
     }
+
+
+_summary = player_summary
 
 
 def _has_issue(player, reported_out=None) -> bool:
