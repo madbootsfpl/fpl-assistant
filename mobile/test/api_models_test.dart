@@ -213,13 +213,18 @@ void _unreachableTests() {
         fail('a refused connection must not look like an answer');
       } on ApiException catch (e) {
         expect(e.unreachable, isTrue);
-        expect(e.detail, contains('not answering'));
-        // ⚠️ The address AND the command. "Cannot connect" without either tells a reader only that they
-        // are stuck.
+        // ⚠️ The address, always. "Cannot connect" without it tells a reader only that they are stuck.
         expect(e.detail, contains('localhost:1'));
-        expect(e.detail, contains('uvicorn'));
-        // ⭐ And no errno text — the thing this replaced.
+        // ⭐ And no errno text — the thing ADR-233 replaced.
         expect(e.detail, isNot(contains('errno')));
+        // ⚠️⚠️ **This used to assert the message named `uvicorn`, and ADR-239 deliberately removed it.**
+        // That advice was written for the machine the developer sits at: on a phone you cannot run the
+        // command, and the server it tells you to start is usually already running. ⭐ The test was right
+        // to pin the wording — it caught the change — so it now pins what the wording is *for*: the
+        // causes, in the order worth checking on a handset.
+        for (final cause in ['Local Network', 'same Wi-Fi', 'awake']) {
+          expect(e.detail, contains(cause));
+        }
       } finally {
         client.close();
       }

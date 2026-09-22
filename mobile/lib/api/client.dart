@@ -42,7 +42,7 @@ String friendlyError(Object? error) =>
 
 class ServiceClient {
   ServiceClient({required this.baseUrl, http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   /// ⚠️ `http://localhost:8078` reaches the dev server from **Chrome and the iOS simulator**, which share
   /// the host's network. A **physical device** cannot, and that is the point at which the API needs hosting
@@ -53,7 +53,10 @@ class ServiceClient {
   /// ⚠️ `path` is everything after `/api/v1/`, **including** the `squad/` prefix where there is
   /// one. It used to assume that prefix, which made the market endpoint — the one thing that is
   /// not squad-shaped — reachable only by a `../` that depended on URL normalisation.
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     late final http.Response response;
     try {
       response = await _client.post(
@@ -89,18 +92,15 @@ class ServiceClient {
   /// ⭐ Called when a row is **expanded**, not with the list: the market is 481 players and carrying every
   /// stat for all of them so that one can be opened is the opposite of the trade the list was built on.
   Future<PlayerCard> player(int playerId, {int horizon = 5}) async =>
-      PlayerCard.fromJson(await _post('player', {
-        'player_id': playerId,
-        'horizon': horizon,
-      }));
+      PlayerCard.fromJson(
+        await _post('player', {'player_id': playerId, 'horizon': horizon}),
+      );
 
   /// **Boot Battle** — two same-position players side by side.
   Future<BootBattle> compare(int aId, int bId, {int horizon = 5}) async =>
-      BootBattle.fromJson(await _post('compare', {
-        'a_id': aId,
-        'b_id': bId,
-        'horizon': horizon,
-      }));
+      BootBattle.fromJson(
+        await _post('compare', {'a_id': aId, 'b_id': bId, 'horizon': horizon}),
+      );
 
   /// Send a note to the owner.
   ///
@@ -111,13 +111,12 @@ class ServiceClient {
     String contact = '',
     String screen = '',
     String version = '',
-  }) =>
-      _post('feedback', {
-        'message': message,
-        'contact': contact,
-        'screen': screen,
-        'version': version,
-      });
+  }) => _post('feedback', {
+    'message': message,
+    'contact': contact,
+    'screen': screen,
+    'version': version,
+  });
 
   /// Every available player, ranked by xP.
   ///
@@ -136,14 +135,17 @@ class ServiceClient {
   ///
   /// ⚠️ There is no `horizon`: a chip's window is its **deadline**, decided by the server (ADR-166).
   /// ⚠️ Pass [managerId] or each chip's `available` comes back **null** — *unknown*, never *true*.
-  Future<Map<String, dynamic>> chips(List<int> playerIds,
-          {List<int> benchIds = const [], double bank = 0.0, int? managerId}) =>
-      _post('squad/chips', {
-        'player_ids': playerIds,
-        'bench_ids': benchIds,
-        'bank': bank,
-        'manager_id': ?managerId,
-      });
+  Future<Map<String, dynamic>> chips(
+    List<int> playerIds, {
+    List<int> benchIds = const [],
+    double bank = 0.0,
+    int? managerId,
+  }) => _post('squad/chips', {
+    'player_ids': playerIds,
+    'bench_ids': benchIds,
+    'bank': bank,
+    'manager_id': ?managerId,
+  });
 
   /// Everything the **My Team** pitch draws, in one call.
   ///
@@ -158,14 +160,15 @@ class ServiceClient {
     int freeTransfers = 1,
     List<int> draftPlayerIds = const [],
     List<int> draftBenchIds = const [],
-  }) async =>
-      MyTeam.fromJson(await _post('squad/my-team', {
-        'manager_id': managerId,
-        'horizon': horizon,
-        'free_transfers': freeTransfers,
-        'draft_player_ids': draftPlayerIds,
-        'draft_bench_ids': draftBenchIds,
-      }));
+  }) async => MyTeam.fromJson(
+    await _post('squad/my-team', {
+      'manager_id': managerId,
+      'horizon': horizon,
+      'free_transfers': freeTransfers,
+      'draft_player_ids': draftPlayerIds,
+      'draft_bench_ids': draftBenchIds,
+    }),
+  );
 
   Future<bool> healthy() async {
     try {
@@ -178,67 +181,83 @@ class ServiceClient {
 
   /// ⭐ One string, one place. It names the address **and** the command, because "cannot connect" without
   /// either is a message that tells you only that you are stuck.
-  String get _notRunning =>
-      'The service is not answering on $baseUrl.\n\n'
-      'Start it with:\n'
-      '  venv/bin/python -m uvicorn src.service.http:app --port 8078 --reload --reload-dir src';
+  /// ⚠️⚠️ **This message used to tell you to start uvicorn, and on a phone that is wrong twice over**:
+  /// you cannot run it on the device you are holding, and the server it tells you to start is usually
+  /// already running. ⭐⭐ *Advice written for the machine the developer is sitting at stops being advice
+  /// the moment the client is a handset* — the same species as binding to `127.0.0.1` (ADR-239).
+  ///
+  /// ⭐ So it names the causes instead, and names them in the order they actually occur on a phone. The
+  /// wording is [refusedMessage], shared with **More ▸ Settings ▸ Server** so the two cannot drift.
+  String get _notRunning => refusedMessage(baseUrl);
 
-  Future<SquadAnalysis> analysis(List<int> playerIds,
-          {List<int> benchIds = const [], int horizon = 5}) async =>
-      SquadAnalysis.fromJson(await _post('squad/analysis', {
-        'player_ids': playerIds,
-        'bench_ids': benchIds,
-        'horizon': horizon,
-      }));
+  Future<SquadAnalysis> analysis(
+    List<int> playerIds, {
+    List<int> benchIds = const [],
+    int horizon = 5,
+  }) async => SquadAnalysis.fromJson(
+    await _post('squad/analysis', {
+      'player_ids': playerIds,
+      'bench_ids': benchIds,
+      'horizon': horizon,
+    }),
+  );
 
   /// [count] above 1 asks for a **coordinated plan** whose moves share the bank, not a menu.
-  Future<TransfersAnswer> transfers(List<int> playerIds,
-          {List<int> benchIds = const [],
-          int horizon = 5,
-          double bank = 0.0,
-          int count = 1,
-          int limit = 5}) async =>
-      TransfersAnswer.fromJson(await _post('squad/transfers', {
-        'player_ids': playerIds,
-        'bench_ids': benchIds,
-        'horizon': horizon,
-        'bank': bank,
-        'count': count,
-        'limit': limit,
-      }));
+  Future<TransfersAnswer> transfers(
+    List<int> playerIds, {
+    List<int> benchIds = const [],
+    int horizon = 5,
+    double bank = 0.0,
+    int count = 1,
+    int limit = 5,
+  }) async => TransfersAnswer.fromJson(
+    await _post('squad/transfers', {
+      'player_ids': playerIds,
+      'bench_ids': benchIds,
+      'horizon': horizon,
+      'bank': bank,
+      'count': count,
+      'limit': limit,
+    }),
+  );
 
   /// ⚠️ Always the **next** gameweek, whatever horizon is sent.
   Future<CaptainAnswer> captain(List<int> playerIds, {int limit = 5}) async =>
-      CaptainAnswer.fromJson(await _post('squad/captain', {
-        'player_ids': playerIds,
-        'limit': limit,
-      }));
+      CaptainAnswer.fromJson(
+        await _post('squad/captain', {'player_ids': playerIds, 'limit': limit}),
+      );
 
   /// The whole week: captain · lineup · transfers · timing · flags.
   ///
   /// ⚠️ **Returned raw**, deliberately. It is the richest answer and the one most likely to change shape as
   /// the first screens decide what they need — modelling it before a screen exists would be guessing.
-  Future<Map<String, dynamic>> gameweekPlan(List<int> playerIds,
-          {List<int> benchIds = const [],
-          int horizon = 5,
-          double bank = 0.0,
-          int free = 1}) =>
-      _post('squad/gameweek-plan', {
-        'player_ids': playerIds,
-        'bench_ids': benchIds,
-        'horizon': horizon,
-        'bank': bank,
-        'free': free,
-      });
+  Future<Map<String, dynamic>> gameweekPlan(
+    List<int> playerIds, {
+    List<int> benchIds = const [],
+    int horizon = 5,
+    double bank = 0.0,
+    int free = 1,
+  }) => _post('squad/gameweek-plan', {
+    'player_ids': playerIds,
+    'bench_ids': benchIds,
+    'horizon': horizon,
+    'bank': bank,
+    'free': free,
+  });
 
-  Future<RouteAnswer> route(List<int> playerIds, int targetId,
-          {int horizon = 5, double bank = 0.0}) async =>
-      RouteAnswer.fromJson(await _post('squad/route', {
-        'player_ids': playerIds,
-        'target_id': targetId,
-        'horizon': horizon,
-        'bank': bank,
-      }));
+  Future<RouteAnswer> route(
+    List<int> playerIds,
+    int targetId, {
+    int horizon = 5,
+    double bank = 0.0,
+  }) async => RouteAnswer.fromJson(
+    await _post('squad/route', {
+      'player_ids': playerIds,
+      'target_id': targetId,
+      'horizon': horizon,
+      'bank': bank,
+    }),
+  );
 
   /// Who could replace [outId] — ⚠️ **including players you cannot afford**, flagged rather than hidden.
   Future<ReplacementsAnswer> replacements(
@@ -248,27 +267,46 @@ class ServiceClient {
     int horizon = 1,
     double bank = 0.0,
     int limit = 40,
-  }) async =>
-      ReplacementsAnswer.fromJson(await _post('squad/replacements', {
-        'player_ids': playerIds,
-        'bench_ids': benchIds,
-        'out_id': outId,
-        'horizon': horizon,
-        'bank': bank,
-        'limit': limit,
-      }));
+  }) async => ReplacementsAnswer.fromJson(
+    await _post('squad/replacements', {
+      'player_ids': playerIds,
+      'bench_ids': benchIds,
+      'out_id': outId,
+      'horizon': horizon,
+      'bank': bank,
+      'limit': limit,
+    }),
+  );
 
-  Future<BuildAnswer> build(
-          {double budget = 100.0,
-          int horizon = 5,
-          List<int> includeIds = const [],
-          List<int> excludeIds = const []}) async =>
-      BuildAnswer.fromJson(await _post('squad/build', {
-        'budget': budget,
-        'horizon': horizon,
-        'include_ids': includeIds,
-        'exclude_ids': excludeIds,
-      }));
+  Future<BuildAnswer> build({
+    double budget = 100.0,
+    int horizon = 5,
+    List<int> includeIds = const [],
+    List<int> excludeIds = const [],
+  }) async => BuildAnswer.fromJson(
+    await _post('squad/build', {
+      'budget': budget,
+      'horizon': horizon,
+      'include_ids': includeIds,
+      'exclude_ids': excludeIds,
+    }),
+  );
 
   void close() => _client.close();
 }
+
+/// Why nothing answered — ⭐ **one wording, used by every call and by the Settings check.**
+///
+/// ⭐⭐ **All of these produce an identical silence from the app's side**, and only one of them is a
+/// problem with the app. A bare "connection refused" sends someone hunting through code for a phone that
+/// is on 4G. ⚠️ Two of the five are *permissions a person has to grant*, and neither announces itself
+/// afterwards: iOS asks once for the local network, macOS asks once for incoming connections, and a
+/// "Don't Allow" on either is remembered silently.
+String refusedMessage(String baseUrl) =>
+    'Nothing answered at $baseUrl.\n\n'
+    'On a phone, in the order worth checking:\n'
+    '  • Settings ▸ Privacy & Security ▸ Local Network — is MADBOOTS allowed?\n'
+    '  • Is the phone on the same Wi-Fi as the computer, not mobile data?\n'
+    '  • Is the computer awake, with scripts/serve_api.sh running?\n'
+    '  • Did the computer\'s address change? It is a Wi-Fi lease and it moves.\n\n'
+    'Change the address under More ▸ Settings ▸ Server.';

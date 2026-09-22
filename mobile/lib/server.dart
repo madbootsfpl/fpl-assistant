@@ -20,13 +20,18 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+
+import 'api/client.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String _key = 'server_base_url';
 
 /// ⭐ `--dart-define=MADBOOTS_API=https://api.example.com` at build time; localhost when nobody says.
-const String kDefaultBaseUrl =
-    String.fromEnvironment('MADBOOTS_API', defaultValue: 'http://localhost:8078');
+const String kDefaultBaseUrl = String.fromEnvironment(
+  'MADBOOTS_API',
+  defaultValue: 'http://localhost:8078',
+);
 
 class Server {
   /// The address to use, stored value first.
@@ -111,26 +116,37 @@ Future<ReachResult> reach(String raw, {http.Client? client}) async {
         .timeout(const Duration(seconds: 6));
 
     if (response.statusCode != 200) {
-      return ReachResult(Reach.wrongService,
-          'Something answered at $base, but with HTTP ${response.statusCode} — that is not the API.');
+      return ReachResult(
+        Reach.wrongService,
+        'Something answered at $base, but with HTTP ${response.statusCode} — that is not the API.',
+      );
     }
     Map<String, dynamic> body;
     try {
       body = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
       // ⚠️ A router admin page or a captive portal answers 200 with HTML.
-      return ReachResult(Reach.wrongService,
-          'Something answered at $base, but not with JSON — check the address and port.');
+      return ReachResult(
+        Reach.wrongService,
+        'Something answered at $base, but not with JSON — check the address and port.',
+      );
     }
     if (body['service'] != 'madboots') {
-      return ReachResult(Reach.wrongService,
-          'Something is running at $base, but it is not MADBOOTS. Check the port.');
+      return ReachResult(
+        Reach.wrongService,
+        'Something is running at $base, but it is not MADBOOTS. Check the port.',
+      );
     }
-    return ReachResult(Reach.ok, 'Connected — MADBOOTS ${body['version'] ?? ''}'.trim());
+    return ReachResult(
+      Reach.ok,
+      'Connected — MADBOOTS ${body['version'] ?? ''}'.trim(),
+    );
   } on TimeoutException {
-    return ReachResult(Reach.refused,
-        'No answer from $base within six seconds. If that is your Mac, check it is awake and on the '
-        'same Wi-Fi.');
+    return ReachResult(
+      Reach.refused,
+      'No answer from $base within six seconds. If that is your Mac, check it is awake and on the '
+      'same Wi-Fi.',
+    );
   } on SocketException {
     return ReachResult(Reach.refused, _refused(base));
   } on http.ClientException {
@@ -143,9 +159,7 @@ Future<ReachResult> reach(String raw, {http.Client? client}) async {
   }
 }
 
-/// ⭐⭐ **On a phone this message has to name the three causes, because they are indistinguishable from
-/// the app's side** and two of them are not the app's fault. A bare "connection refused" sends someone
-/// hunting through the code for a bug that is a sleeping laptop.
-String _refused(String base) =>
-    'Nothing answered at $base. Three usual causes: the API is not running; it is bound to localhost '
-    'instead of 0.0.0.0, so it refuses anything off the machine; or the phone is on a different network.';
+/// ⭐ One wording, defined in `client.dart` and used by both — ⚠️ *two doors to one room drift apart*
+/// (ADR-184), and a Settings check that explained the failure differently from the screen that hit it
+/// would be exactly that.
+String _refused(String base) => refusedMessage(base);

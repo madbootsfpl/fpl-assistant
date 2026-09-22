@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:madboots/api/client.dart';
 import 'package:madboots/server.dart';
 
 /// ⭐ The real `/api/v1/health` body, copied from what the route returns — see
@@ -115,12 +116,33 @@ void main() {
       final r = await reach('http://host:8078',
           client: MockClient((_) async => throw http.ClientException('refused')));
       expect(r.reach, Reach.refused);
-      // ⚠️ Two of the three are not the app's fault, and a bare "connection refused" sends someone
-      // hunting through the code for a sleeping laptop.
-      for (final cause in ['not running', '0.0.0.0', 'different network']) {
+      // ⚠️ Most of these are not the app's fault, and two are permissions a person has to grant that
+      // never announce themselves again once denied. A bare "connection refused" sends someone hunting
+      // through the code for a phone that is on 4G.
+      for (final cause in ['Local Network', 'same Wi-Fi', 'awake', 'address change']) {
         expect(r.message, contains(cause), reason: 'the message drops "$cause"');
       }
     });
+  });
+
+  test('the refusal never tells a phone to run a server command', () {
+    // ⚠️⚠️ **The message this replaced said `venv/bin/python -m uvicorn …`** — a command you cannot run
+    // on the device you are holding, for a server that was already running. ⭐ *Advice written for the
+    // machine the developer sits at stops being advice once the client is a handset.*
+    final message = refusedMessage('http://192.168.1.35:8078');
+    for (final desktopism in ['venv/', 'uvicorn', 'python']) {
+      expect(message.toLowerCase(), isNot(contains(desktopism)),
+          reason: 'the message tells a phone to run "$desktopism"');
+    }
+    expect(message, contains('Settings'), reason: 'it has to say where the address is changed');
+  });
+
+  test('the Settings check and a failed call explain it the same way', () async {
+    // ⭐ Two doors to one room drift apart (ADR-184). The check would be worthless if it disagreed with
+    // the screen that sent you to it.
+    final fromCheck = await reach('http://host:8078',
+        client: MockClient((_) async => throw http.ClientException('refused')));
+    expect(fromCheck.message, refusedMessage('http://host:8078'));
   });
 
   test('the default is a compile-time default, overridable at build time', () {

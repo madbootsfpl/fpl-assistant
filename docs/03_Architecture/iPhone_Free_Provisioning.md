@@ -160,6 +160,32 @@ Then **re-run step 4**. It is the same command.
 
 ## Step 6 — Trust the developer on the phone
 
+⚠️⚠️ **Flutter reports this as a BUILD failure, and it is not one.** What you get is:
+
+```
+Xcode build done.                                           53.2s
+Could not run build/ios/iphoneos/Runner.app on 00008150-…
+Installing and launching...
+Error running application on iPhone 17.
+```
+
+⭐⭐ **The app is already on the phone at this point.** The build succeeded, the install succeeded, and
+only the *launch* was refused — but "Error running application" reads as none of those. ⚠️ *The tempting
+next move is to re-run the command, and it will fail identically every time, because nothing about it is
+wrong.*
+
+Two ways to see what actually happened, neither of which Flutter tells you:
+
+```bash
+# Is it installed? (it is)
+xcrun devicectl device info apps --device <device-id> | grep -i madboots
+
+# Why won't it start?
+xcrun devicectl device process launch --device <device-id> com.madboots.fpl
+```
+
+The second prints the real reason: *"…or its profile has not been explicitly trusted by the user."*
+
 
 The first install will fail to launch with *"Untrusted Developer"*. That is expected and is a one-time
 thing per certificate.
@@ -194,6 +220,7 @@ why `NSLocalNetworkUsageDescription` exists and why `tests/test_ios_networking.p
 | Every screen says nothing answered | Mac asleep, script not running, or phone off the Wi-Fi | start the script; check the phone's Wi-Fi |
 | Worked yesterday, refuses today, Mac is on | ⚠️ **the DHCP lease moved** | re-run the script, retype the new address |
 | Connected, but the squad will not load | the API is up and something else is wrong | read the message — it names the endpoint |
+| `Error running application on iPhone` right after a **successful** build | ⚠️ not a build failure — the app installed and the **launch** was refused | step 6: trust the certificate, then open it from the home screen |
 
 ---
 
