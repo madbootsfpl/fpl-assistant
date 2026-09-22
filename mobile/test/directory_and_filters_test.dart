@@ -66,6 +66,7 @@ void _moreIsADirectory() {
         freeTransfers: freeTransfers,
         onOpenChips: () {},
         onOpenTeamDna: () {},
+        onOpenPlayerDna: () {},
         onOpenSignals: () {},
         onOpenSettings: () {},
         onOpenFeedback: () {},
@@ -80,6 +81,7 @@ void _moreIsADirectory() {
       // replaced.
       for (final name in [
         'Signals',
+        'Player DNA',
         'Team DNA',
         'Chips',
         'Tell us something',
@@ -120,6 +122,7 @@ void _moreIsADirectory() {
             freeTransfers: 1,
             onOpenChips: () => opened.add('Chips'),
             onOpenTeamDna: () => opened.add('Team DNA'),
+            onOpenPlayerDna: () => opened.add('Player DNA'),
             onOpenSignals: () => opened.add('Signals'),
             onOpenSettings: () => opened.add('Settings'),
             onOpenFeedback: () => opened.add('Tell us something'),
@@ -129,6 +132,7 @@ void _moreIsADirectory() {
 
       for (final name in [
         'Signals',
+        'Player DNA',
         'Team DNA',
         'Chips',
         'Tell us something',
@@ -140,6 +144,7 @@ void _moreIsADirectory() {
       // ⚠️ A directory whose rows all fire the *same* callback would satisfy "every row is tappable".
       expect(opened, [
         'Signals',
+        'Player DNA',
         'Team DNA',
         'Chips',
         'Tell us something',

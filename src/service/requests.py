@@ -309,6 +309,24 @@ class SignalsRequest(SquadRequest):
 
 
 @dataclass(frozen=True)
+class PlayerDnaRequest:
+    """One player's eight-axis fingerprint, ranked **within his position** (ADR-118, ADR-250).
+
+    ⭐ Within position, not across the league: a defender's attacking threat and a forward's are not the
+    same question, and ranking them together would make every defender look poor at a thing defenders are
+    not asked to do.
+    """
+
+    player_id: int
+    horizon: int = DEFAULT_HORIZON
+
+    def validate(self) -> None:
+        if not self.player_id:
+            raise ValueError("no player given")
+        _check_horizon(self.horizon)
+
+
+@dataclass(frozen=True)
 class TeamDnaRequest:
     """Every club's eight-axis fingerprint, ranked across the league (ADR-118, ADR-247).
 

@@ -26,6 +26,7 @@ class MoreView extends StatelessWidget {
     required this.freeTransfers,
     required this.onOpenChips,
     required this.onOpenTeamDna,
+    required this.onOpenPlayerDna,
     required this.onOpenSignals,
     required this.onOpenSettings,
     required this.onOpenFeedback,
@@ -46,6 +47,10 @@ class MoreView extends StatelessWidget {
   /// whether it pulls the phone the wrong way.
   final VoidCallback onOpenTeamDna;
 
+  /// ⭐ Beside Team DNA, because they answer the two halves of the same question: *what kind of player is
+  /// he* and *what kind of side is he in.*
+  final VoidCallback onOpenPlayerDna;
+
   /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
   /// *Working earns a place; frequency earns a slot.*
   final VoidCallback onOpenChips;
@@ -64,6 +69,14 @@ class MoreView extends StatelessWidget {
             'FPL news, reported moves, sell-offs the data cannot explain, and what the crowd is '
             'buying — your fifteen or the whole market, strongest evidence first. Marks what is new.',
         onTap: onOpenSignals,
+      ),
+      _Row(
+        icon: Icons.fingerprint,
+        name: 'Player DNA',
+        why:
+            'What kind of player he is — goal threat, creativity, set pieces, minutes — ranked against '
+            'others in his position, not against the whole league.',
+        onTap: onOpenPlayerDna,
       ),
       _Row(
         icon: Icons.insights_outlined,

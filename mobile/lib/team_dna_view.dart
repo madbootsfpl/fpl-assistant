@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'dna_bars.dart';
 import 'help_dot.dart';
 
 class TeamDnaView extends StatefulWidget {
@@ -220,15 +221,15 @@ class _ClubState extends State<_Club> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final axis in c.axes) _Bar(axis: axis),
+                  DnaBars(axes: c.axes),
                   if (c.insights.length > 1) const SizedBox(height: 6),
                   for (final insight in c.insights.skip(1))
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
                       child: Text(
-                        '${_mark(insight.kind)}  ${insight.text}',
+                        '${dnaMark(insight.kind)}  ${insight.text}',
                         style: TextStyle(
-                          color: _colour(insight.kind),
+                          color: dnaColour(insight.kind),
                           fontSize: 11.5,
                           height: 1.4,
                         ),
@@ -241,22 +242,6 @@ class _ClubState extends State<_Club> {
       ),
     );
   }
-
-  /// ⚠️ The same four kinds the web uses (ADR-118) — good ✓ · set-piece ⚡ · info ℹ · warning ⚠. A fifth
-  /// mark invented here would be a second vocabulary for one idea.
-  static String _mark(String kind) => switch (kind) {
-    'good' => '✓',
-    'sp' => '⚡',
-    'warn' => '⚠',
-    _ => 'ℹ',
-  };
-
-  static Color _colour(String kind) => switch (kind) {
-    'good' => Brand.accentTeal,
-    'sp' => Brand.orange,
-    'warn' => Brand.warn,
-    _ => Colors.white54,
-  };
 }
 
 /// A letter in a box — ⭐ the grade FPL managers already speak in, not a number they would have to learn.
@@ -288,67 +273,4 @@ class _Grade extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// One axis as a bar — ⭐ **percentile, so eight different units share one scale.**
-class _Bar extends StatelessWidget {
-  const _Bar({required this.axis});
-
-  final DnaAxis axis;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = axis.percentile;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 108,
-            child: Text(
-              axis.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white60, fontSize: 10.5),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              height: 7,
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                // ⚠️ **Null is unranked, not zero.** An empty bar for "we could not rank this" reads as
-                // "this club is the worst in the league at it", which is a different and wrong claim.
-                widthFactor: (p ?? 0) / 100,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: p == null
-                        ? Colors.transparent
-                        : p >= 75
-                        ? Brand.good
-                        : p >= 40
-                        ? Brand.purpleLight
-                        : Brand.warn,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 32,
-            child: Text(
-              p == null ? '—' : '$p',
-              textAlign: TextAlign.right,
-              style: const TextStyle(color: Colors.white70, fontSize: 10.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

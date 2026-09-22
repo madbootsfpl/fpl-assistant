@@ -1014,3 +1014,57 @@ class DataFreshness {
     return '${ago.inDays} days ago';
   }
 }
+
+/// One player's fingerprint (ADR-250).
+///
+/// ⭐⭐ **[poolSize] is not decoration.** A percentile is only as meaningful as the field it was measured
+/// in — *"84th of 31 midfielders"* is a fact, *"84th"* alone invites over-reading. Early in a season the
+/// pool can be ten players, and a reader has to be able to see that.
+class PlayerDna {
+  PlayerDna({
+    required this.player,
+    required this.axes,
+    required this.insights,
+    required this.poolSize,
+    required this.lowMinutes,
+    required this.minMinutes,
+    required this.recent,
+    required this.unranked,
+  });
+
+  factory PlayerDna.fromJson(Map<String, dynamic> json) => PlayerDna(
+    player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    axes: [
+      for (final a in (json['axes'] as List? ?? []))
+        DnaAxis.fromJson(a as Map<String, dynamic>),
+    ],
+    insights: [
+      for (final i in (json['insights'] as List? ?? []))
+        (kind: '${(i as Map<String, dynamic>)['kind']}', text: '${i['text']}'),
+    ],
+    poolSize: json['pool_size'] as int? ?? 0,
+    lowMinutes: json['low_minutes'] as bool? ?? false,
+    minMinutes: json['min_minutes'] as int? ?? 0,
+    recent: [
+      for (final r in (json['recent'] as List? ?? []))
+        Appearance.fromJson(r as Map<String, dynamic>),
+    ],
+    unranked: json['unranked'] as String?,
+  );
+
+  final PlayerSummary player;
+  final List<DnaAxis> axes;
+  final List<({String kind, String text})> insights;
+
+  /// Same-position peers past the minutes floor — the field he was ranked in.
+  final int poolSize;
+
+  /// ⚠️ He is **below** the floor himself: ranked anyway, but read the shape with care (ADR-118).
+  final bool lowMinutes;
+  final int minMinutes;
+  final List<Appearance> recent;
+
+  /// Why there is no fingerprint, when there is none. ⭐ Saying so beats an empty radar, which reads as
+  /// "this player is bad at everything".
+  final String? unranked;
+}

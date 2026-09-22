@@ -28,6 +28,8 @@ from src.analytics import (
 from src.analytics.compare import compare_rows, stat_rows
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.optimizer import DEFAULT_BUDGET, legal_xi_issues
+from src.analytics.player_dna import player_dna as analytics_player_dna
+from src.analytics.player_dna import player_insights
 from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import shirt_url
@@ -43,6 +45,7 @@ from src.service.requests import (
     FeedbackRequest,
     GameweekRequest,
     MyTeamRequest,
+    PlayerDnaRequest,
     PlayerRequest,
     PlayersRequest,
     ReplacementsRequest,
@@ -1010,6 +1013,59 @@ def _market_subjects(players):
         return [], None
     cut = shares[min(len(shares) - 1, int(len(shares) * GLOBAL_OWNERSHIP_PERCENTILE / 100))]
     return [p for p in rows if (p.get("selected_by") or 0) >= cut], round(cut, 1)
+
+
+def player_dna(request: PlayerDnaRequest, *, store: Storage | None = None) -> dict:
+    """One player's fingerprint, ranked **within his position** (ADR-250).
+
+    ⭐⭐ **Within position, not across the league.** A defender's attacking threat and a forward's are not
+    the same question — ranked together, every defender would look poor at a thing defenders are not asked
+    to do. ⚠️ *A single scale across incomparable roles is a ranking that flatters and punishes by
+    position.*
+
+    ⭐ **`pool_size` and `low_minutes` travel with it**, and the client shows both. A percentile is only as
+    meaningful as the field it was measured in: *"84th of 31 midfielders"* is a fact, *"84th"* alone is an
+    invitation to over-read it — and a player below the minutes floor is ranked anyway, with a caption,
+    rather than silently excluded (ADR-118).
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        players = store.get_players()
+        target = next((p for p in players if p["id"] == request.player_id), None)
+        if target is None:
+            raise ValueError(f"no player with id {request.player_id}")
+        dna = analytics_player_dna(target, players)
+        insights = player_insights(target, dna) if dna else []
+        data = load([request.player_id], request.horizon, store, need_history=True)
+        summary = player_summary(target, data.xp_by_id,
+                                 {r["id"]: r["by_gameweek"] for r in data.ranked},
+                                 reported_out=data.leaving)
+        club_by_id = {t["id"]: t["short_name"] for t in store.get_teams()}
+        recent = list((data.gw_history or {}).get(target["code"]) or [])[-RECENT:]
+    finally:
+        if ours:
+            store.close()
+
+    if dna is None:
+        # ⚠️ A player with no position cannot be ranked. ⭐ Saying so beats an empty radar, which reads as
+        # "this player is bad at everything".
+        return {"player": summary, "axes": [], "insights": [], "pool_size": 0,
+                "low_minutes": True, "min_minutes": 0, "recent": _recent_rows(recent, club_by_id),
+                "unranked": "no position on record"}
+
+    return {
+        "player": summary,
+        "axes": [{"label": a.label, "sublabel": a.sublabel, "value": a.value,
+                  "percentile": a.percentile} for a in dna.axes],
+        "insights": [{"kind": i.kind, "text": i.text} for i in insights],
+        # ⭐ The field he was ranked in, not just his place in it.
+        "pool_size": dna.pool_size,
+        "low_minutes": dna.low_minutes,
+        "min_minutes": dna.min_minutes,
+        "recent": _recent_rows(recent, club_by_id),
+        "unranked": None,
+    }
 
 
 def team_dna(request: TeamDnaRequest, *, store: Storage | None = None) -> dict:

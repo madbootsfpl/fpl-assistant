@@ -140,6 +140,11 @@ class ServiceClient {
         .toList();
   }
 
+  /// One player's fingerprint, ranked **within his position** (ADR-250).
+  Future<PlayerDna> playerDna(int playerId) async => PlayerDna.fromJson(
+    await _post('player-dna', {'player_id': playerId, 'horizon': 5}),
+  );
+
   /// Every club's eight-axis fingerprint, ranked across the league (ADR-247).
   ///
   /// ⚠️ Not under `/squad/` — this is the league, not your team. [playerIds] filters nothing; it only

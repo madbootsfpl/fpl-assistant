@@ -84,7 +84,7 @@ def _players_in(value, path="", found=None):
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
 COVERED = {"analysis", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
-           "replacements", "players", "player", "signals"}
+           "replacements", "players", "player", "player_dna", "signals"}
 
 
 def _compare_two(store):
@@ -105,6 +105,10 @@ def _answers(store):
         "compare": _compare_two(store),
         "player": service.player(
             service.PlayerRequest(player_id=ids[0], horizon=1), store=store),
+        # ⭐ In the sweep proper, not in NO_PLAYERS: a fingerprint comes **with its player**, and that
+        # summary is exactly the kind of field a raw database row leaks through.
+        "player_dna": service.player_dna(
+            service.PlayerDnaRequest(player_id=ids[0], horizon=1), store=store),
         "signals": service.signals(service.SignalsRequest(player_ids=ids, horizon=1), store=store),
         "transfers": service.transfers(
             service.TransfersRequest(player_ids=ids, horizon=1, bank=3.0), store=store),

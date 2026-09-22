@@ -326,6 +326,24 @@ class TeamDnaBody(BaseModel):
     horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to look ahead.")
 
 
+class PlayerDnaBody(BaseModel):
+    player_id: int = Field(..., description="The player, by FPL element id.")
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to look ahead.")
+
+
+@app.post("/api/v1/player-dna")
+def player_dna(body: PlayerDnaBody) -> dict:
+    """One player's eight-axis fingerprint, ranked **within his position**.
+
+    ⭐⭐ Within position, not across the league: a defender's attacking threat and a forward's are not the
+    same question, and one scale across incomparable roles flatters and punishes by position.
+
+    ⭐ `pool_size` and `low_minutes` come with it. *A percentile is only as meaningful as the field it was
+    measured in* — "84th of 31 midfielders" is a fact; "84th" alone invites over-reading.
+    """
+    return _answer(service.player_dna, service.PlayerDnaRequest(**body.model_dump()))
+
+
 @app.post("/api/v1/team-dna")
 def team_dna(body: TeamDnaBody) -> dict:
     """Every club's eight-axis fingerprint, ranked across the league, best first.
