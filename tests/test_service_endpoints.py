@@ -25,6 +25,7 @@ from src.service import (
     FeedbackRequest,
     GameweekRequest,
     MyTeamRequest,
+    PlayerRequest,
     PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
@@ -1494,3 +1495,93 @@ def test_form_is_keyed_by_code_not_id(store):
 
     expected = [dict(r).get("total_points") for r in list(by_code.get(player["code"]) or [])[-5:]]
     assert [r["points"] for r in answer["a"]["recent"]] == expected
+
+
+# ---- the card behind a row (ADR-237) -----------------------------------------------------
+
+def test_the_card_orders_stats_for_the_position(store):
+    """⭐⭐ **A defender leads with expected goals conceded; a forward with goals.** ⚠️ *The same twelve
+    numbers in the same order for everyone is a table, not a card* — and it buries the one a reader opened
+    the row for.
+
+    ⚠️ Constructed by position rather than sampled: whether the first two players in the seed happen to
+    differ in position is an accident.
+    """
+    market = store.get_players()
+    defender = next(p["id"] for p in market if p["position"] == "DEF" and p["total_points"] > 10)
+    forward = next(p["id"] for p in market if p["position"] == "FWD" and p["total_points"] > 10)
+
+    def labels(player_id):
+        card = svc.player(PlayerRequest(player_id=player_id, horizon=5), store=store)
+        return [row["label"] for row in card["stats"]]
+
+    back, front = labels(defender), labels(forward)
+    assert "Expected GC" in back[:4], f"a defender's card leads with: {back[:4]}"
+    assert "Goals" in front[:4], f"a forward's card leads with: {front[:4]}"
+    assert back != front, "two positions cannot have the same card"
+
+
+def test_the_card_shows_the_run_with_its_difficulty(store):
+    """⭐ The question a card is opened to answer is *"is he good, or is this an easy month?"* — and the
+    projection alone cannot tell you which."""
+    market = store.get_players()
+    card = svc.player(PlayerRequest(player_id=market[0]["id"], horizon=5), store=store)
+
+    assert card["fixtures"], "a card with no fixtures cannot answer that"
+    for fixture in card["fixtures"]:
+        assert fixture["difficulty"] is not None, f"{fixture['opponent']} has no difficulty"
+        assert fixture["venue"] in {"H", "A"}
+    weeks = [f["gameweek"] for f in card["fixtures"]]
+    assert weeks == sorted(weeks)
+
+
+def test_the_card_carries_form_with_minutes(store):
+    """⚠️ Ten points off the bench is not ten points from a starter."""
+    market = store.get_players()
+    played = next(p["id"] for p in market if p["minutes"] > 200)
+    card = svc.player(PlayerRequest(player_id=played, horizon=1), store=store)
+
+    assert card["recent"], "a player with 200+ minutes has appearances"
+    for game in card["recent"]:
+        assert "minutes" in game and "points" in game
+
+
+def test_a_cards_stats_skip_what_is_missing_rather_than_showing_blanks():
+    """⭐ A stat with no value is dropped. ⚠️ A card of dashes reads as broken data rather than as a player
+    who has not done that thing.
+
+    ⚠️⚠️ **Tested directly, because the endpoint cannot reach this branch.** Measured: **no stat is missing
+    for any player in the snapshot** — the store fills every numeric column — so a mutation removing the
+    filter was behaviourally identical through the API and survived.
+
+    ⭐ *An unreachable branch is not a safe branch; it is an untested one.* It is not dead code either —
+    FPL returns nulls for a player who has yet to play, and this snapshot simply has none.
+    """
+    from src.analytics.compare import stat_rows
+
+    complete = {"position": "MID", "price": 6.0, "total_points": 30, "points_per_game": 5.0,
+                "minutes": 400, "selected_by": 8.0, "goals_scored": 2, "assists": 1,
+                "xg": 1.5, "xa": 0.8, "xgi": 2.3, "defcon_per90": 1.2, "recoveries": 15,
+                "ict_index": 40.0}
+    blank = {**complete, "goals_scored": None, "assists": None}
+
+    full_labels = [label for label, _ in stat_rows(complete)]
+    thin_labels = [label for label, _ in stat_rows(blank)]
+
+    assert "Goals" in full_labels
+    assert "Goals" not in thin_labels, "a missing stat must be dropped, not rendered as a dash"
+    assert all(value is not None for _, value in stat_rows(blank))
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (PlayerRequest(), "no player given"),
+    (PlayerRequest(player_id=1, horizon=0), "outside 1-8"),
+])
+def test_a_card_request_that_cannot_be_answered_is_refused(request_, expected):
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()
+
+
+def test_an_unknown_player_is_named(store):
+    with pytest.raises(ValueError, match=r"unknown player ids: \[999999\]"):
+        svc.player(PlayerRequest(player_id=999999), store=store)

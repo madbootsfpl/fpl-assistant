@@ -23,7 +23,7 @@ from src.analytics import (
     suggest_transfers,
     team_schedule,
 )
-from src.analytics.compare import compare_rows
+from src.analytics.compare import compare_rows, stat_rows
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.optimizer import DEFAULT_BUDGET
 from src.analytics.transfer import replacements_for, route_to_player
@@ -41,6 +41,7 @@ from src.service.requests import (
     FeedbackRequest,
     GameweekRequest,
     MyTeamRequest,
+    PlayerRequest,
     PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
@@ -840,5 +841,48 @@ def compare(request: CompareRequest, *, store: Storage | None = None) -> dict:
         "rows": [
             {"label": label, "a": fa, "b": fb, "winner": winner}
             for label, fa, fb, winner in compare_rows(a, b)
+        ],
+    }
+
+
+def player(request: PlayerRequest, *, store: Storage | None = None) -> dict:
+    """One player in full — the card behind a row (ADR-109/237).
+
+    ⭐ **The stats are ordered by POSITION, not by a fixed list.** A defender leads with expected goals
+    conceded and DefCon; a forward with goals and xG involvement. ⚠️ *The same twelve numbers in the same
+    order for everyone is a table, not a card* — and it buries the one a reader opened the row for.
+
+    Three blocks, matching what a comparison shows for two: the season stats, the last five gameweeks with
+    minutes, and the projected run with its fixtures.
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        data = load([request.player_id], request.horizon, store, need_history=True)
+        gw_history = data.gw_history or {}
+        upcoming = data.upcoming
+    finally:
+        if ours:
+            store.close()
+
+    row = data.by_id[request.player_id]
+    by_gameweek = {r["id"]: r["by_gameweek"] for r in data.ranked}
+    recent = list(gw_history.get(row["code"]) or [])[-RECENT:]
+
+    return {
+        "horizon": request.horizon,
+        "player": player_summary(row, data.xp_by_id, by_gameweek, reported_out=data.leaving),
+        "stats": [{"label": label, "value": value} for label, value in stat_rows(row)],
+        "recent": [
+            {"gameweek": dict(r).get("round"), "points": dict(r).get("total_points"),
+             "minutes": dict(r).get("minutes")}
+            for r in recent
+        ],
+        # ⭐ The run **with difficulty**, so a reader can see whether a high projection is a good player or
+        # an easy month — which is the question a card is opened to answer.
+        "fixtures": [
+            {"gameweek": cell.get("event"), "opponent": cell["opponent"],
+             "venue": cell["venue"], "difficulty": cell.get("difficulty")}
+            for cell in (team_schedule(upcoming, row["team"]) or [])[:request.horizon]
         ],
     }

@@ -718,3 +718,39 @@ class BootBattle {
         rows.where((r) => r.winner == 'b').length,
       );
 }
+
+
+/// `POST /api/v1/player` — one player in full, the card behind a row (ADR-237).
+class PlayerCard {
+  PlayerCard({
+    required this.player,
+    required this.stats,
+    required this.recent,
+    required this.fixtures,
+  });
+
+  factory PlayerCard.fromJson(Map<String, dynamic> json) => PlayerCard(
+        player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+        stats: ((json['stats'] as List?) ?? const [])
+            .map((r) => (
+                  label: (r as Map)['label'] as String,
+                  value: '${r['value']}',
+                ))
+            .toList(),
+        recent: ((json['recent'] as List?) ?? const [])
+            .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
+            .toList(),
+        fixtures: ((json['fixtures'] as List?) ?? const [])
+            .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
+            .toList(),
+      );
+
+  final PlayerSummary player;
+
+  /// ⭐ **Already ordered for his position** by the server — a defender's card leads with expected goals
+  /// conceded, a forward's with goals. ⚠️ Re-sorting these on the client would throw that away.
+  final List<({String label, String value})> stats;
+
+  final List<Appearance> recent;
+  final List<Fixture> fixtures;
+}

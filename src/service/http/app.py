@@ -117,6 +117,13 @@ class FeedbackBody(BaseModel):
     version: str = Field("", max_length=40)
 
 
+class PlayerBody(BaseModel):
+    """One player, in full — the card behind a row."""
+
+    player_id: int = Field(..., ge=1)
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON)
+
+
 class PlayersBody(BaseModel):
     """⚠️ No squad — this is the market, not your team."""
 
@@ -253,6 +260,17 @@ def send_feedback(body: FeedbackBody) -> dict:
     is the bug this exists to avoid.
     """
     return _answer(service.feedback, service.FeedbackRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/player")
+def one_player(body: PlayerBody) -> dict:
+    """One player in full: season stats **ordered for his position**, his last five gameweeks with minutes,
+    and the projected run with fixture difficulty.
+
+    ⭐ Fetched when a row is expanded, not with the list — the market is 481 players, and carrying every
+    stat for all of them so that one can be opened is the opposite of the trade the list was built on.
+    """
+    return _answer(service.player, service.PlayerRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/players")

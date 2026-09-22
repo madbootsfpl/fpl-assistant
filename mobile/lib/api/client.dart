@@ -84,6 +84,16 @@ class ServiceClient {
   Future<Map<String, dynamic>> signals(List<int> playerIds) =>
       _post('squad/signals', {'player_ids': playerIds, 'horizon': 1});
 
+  /// One player in full — the card behind a row.
+  ///
+  /// ⭐ Called when a row is **expanded**, not with the list: the market is 481 players and carrying every
+  /// stat for all of them so that one can be opened is the opposite of the trade the list was built on.
+  Future<PlayerCard> player(int playerId, {int horizon = 5}) async =>
+      PlayerCard.fromJson(await _post('player', {
+        'player_id': playerId,
+        'horizon': horizon,
+      }));
+
   /// **Boot Battle** — two same-position players side by side.
   Future<BootBattle> compare(int aId, int bId, {int horizon = 5}) async =>
       BootBattle.fromJson(await _post('compare', {

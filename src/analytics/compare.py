@@ -81,6 +81,11 @@ def _stat_rows(player, *, compact=False):
     return [(cat[k][0], cat[k][2]) for k in order if cat[k][2] is not None]
 
 
+#: ⭐ Public name for the same function. `_stat_rows` stays as the card module's existing import, because
+#: renaming it there would be churn in a file this change has no other business touching.
+stat_rows = _stat_rows
+
+
 def _winner(key, ra, rb):
     """"a"/"b"/None — which raw value wins for stat `key` (ADR-110 `_BETTER` direction). None on tie/missing/neutral."""
     d = _BETTER.get(key)

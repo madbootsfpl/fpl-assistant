@@ -137,8 +137,11 @@ class _PlayersViewState extends State<PlayersView> {
                             style: TextStyle(color: Colors.white38)))
                     : ListView.builder(
                         itemCount: shown.length,
-                        itemBuilder: (_, i) =>
-                            _Row(player: shown[i], owned: widget.owned.contains(shown[i].id)),
+                        itemBuilder: (_, i) => _Row(
+                          player: shown[i],
+                          owned: widget.owned.contains(shown[i].id),
+                          client: widget.client,
+                        ),
                       ),
               ),
             ],
@@ -175,19 +178,44 @@ class _Chip extends StatelessWidget {
       );
 }
 
-class _Row extends StatelessWidget {
-  const _Row({required this.player, required this.owned});
+/// ⭐⭐ **The card opens where the row is.** The Hub does this and it is the right shape: a list you can
+/// interrogate without leaving it beats a list that sends you somewhere and loses your place in it.
+///
+/// ⚠️ The detail is fetched **on expand**, never with the list.
+class _Row extends StatefulWidget {
+  const _Row({required this.player, required this.owned, required this.client});
 
   final PlayerSummary player;
   final bool owned;
+  final ServiceClient client;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(16, 9, 16, 9),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.white10)),
-        ),
-        child: Row(
+  State<_Row> createState() => _RowState();
+}
+
+class _RowState extends State<_Row> {
+  Future<PlayerCard>? _card;
+
+  void _toggle() => setState(() {
+        _card = _card == null ? widget.client.player(widget.player.id, horizon: 5) : null;
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    final player = widget.player;
+    final owned = widget.owned;
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.white10)),
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _toggle,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 9, 16, 9),
+              child: Row(
           children: [
             SizedBox(
               width: 34,
@@ -247,7 +275,145 @@ class _Row extends StatelessWidget {
                   style: const TextStyle(
                       color: Brand.accentTeal, fontSize: 13.5, fontWeight: FontWeight.w700)),
             ),
+            Icon(_card == null ? Icons.expand_more : Icons.expand_less,
+                size: 16, color: Colors.white24),
           ],
         ),
+      ),
+    ),
+    if (_card != null) _Card(future: _card!),
+  ],
+  ),
+);
+  }
+}
+
+/// The expanded detail. ⭐ Three blocks — the season, the recent past, the projected run — because those
+/// are the three different questions a reader has about a name on a list.
+class _Card extends StatelessWidget {
+  const _Card({required this.future});
+
+  final Future<PlayerCard> future;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<PlayerCard>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: SizedBox(
+                    width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+            );
+          }
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(friendlyError(snapshot.error),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.45)),
+            );
+          }
+          final card = snapshot.data!;
+          return Container(
+            width: double.infinity,
+            color: Colors.white.withValues(alpha: 0.03),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ⭐ The run first: a reader opening a row is usually asking *"is he good, or is this an
+                // easy month?"*, and the fixtures are half that answer.
+                const Text('NEXT', style: TextStyle(color: Colors.white24, fontSize: 9, letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    for (final f in card.fixtures)
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 3),
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            // ⭐ Difficulty colours the FIXTURE, not the player — which is the distinction
+                            // ADR-179 protects: a hue about the opponent, beside a number about the player.
+                            color: Brand.fdr[f.difficulty]?.background ?? Colors.white10,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('${f.opponent} (${f.venue})',
+                              style: TextStyle(
+                                  color: Brand.fdr[f.difficulty]?.foreground ?? Colors.white54,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                  ],
+                ),
+                if (card.recent.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Text('LAST 5',
+                      style: TextStyle(color: Colors.white24, fontSize: 9, letterSpacing: 1)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      for (final g in card.recent)
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 3),
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.white10,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Column(
+                              children: [
+                                Text('${g.points}',
+                                    style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700)),
+                                Text("${g.minutes}'",
+                                    style:
+                                        const TextStyle(color: Colors.white24, fontSize: 7.5)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 10),
+                // ⭐ Two columns, because twelve stats in one list is a wall a reader scrolls past.
+                Wrap(
+                  spacing: 18,
+                  runSpacing: 3,
+                  children: [
+                    for (final stat in card.stats)
+                      SizedBox(
+                        width: 150,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(stat.label,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white38, fontSize: 10.5)),
+                            ),
+                            Text(stat.value,
+                                style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       );
 }

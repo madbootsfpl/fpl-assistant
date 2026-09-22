@@ -314,3 +314,20 @@ class CompareRequest:
             # ⚠️ Every row would tie and every winner would be None — a page that looks broken rather than
             # one that says "you asked the same question twice".
             raise ValueError("a player cannot be compared with himself")
+
+
+@dataclass(frozen=True)
+class PlayerRequest:
+    """One player, in full — the **card** (ADR-109/237).
+
+    ⭐ Fetched when a row is expanded, not with the list. The market is 481 players; carrying every stat
+    for all of them so that one can be opened is the opposite of the trade the list was built on.
+    """
+
+    player_id: int | None = None
+    horizon: int = DEFAULT_HORIZON
+
+    def validate(self) -> None:
+        _check_horizon(self.horizon)
+        if not self.player_id:
+            raise ValueError("no player given")
