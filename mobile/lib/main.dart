@@ -1,8 +1,8 @@
-/// MADBOOTS — the first slice: prove the app can ask the engine a question and render the answer.
+/// MADBOOTS — My Team, as a pitch (ADR-222).
 ///
-/// ⭐ **Deliberately one screen and no state management.** The audit's Phase 4 lists Riverpod, Drift,
-/// navigation and a theme; adding them before a screen asks for anything is a foundation built to a guess.
-/// This renders a real squad analysis from the real service, and everything else earns its place after.
+/// ⭐ **Still one screen and no state management.** Riverpod and Drift are on the audit's Phase 4 list;
+/// adding them before a screen asks for anything is a foundation built to a guess. `http` remains the only
+/// dependency.
 library;
 
 import 'package:flutter/material.dart';
@@ -10,14 +10,14 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'pitch.dart';
 
 /// ⚠️ **Reaches the dev server from macOS desktop, the iOS simulator and Chrome** — all three share the
 /// host's network. A **physical device** cannot, and that is the point at which the API needs hosting.
 const String kBaseUrl = 'http://localhost:8078';
 
-/// ⚠️ **A placeholder until there is a squad picker.** The same fifteen the committed API samples use, so
-/// what this screen shows can be checked against `api-samples/analysis.json` by eye.
-const List<int> kSampleSquad = [1, 8, 12, 40, 68, 94, 115, 124, 165, 229, 330, 379, 391, 411, 572];
+/// The owner's own team, so the app opens on something real rather than a stranger's squad.
+const int kDefaultManagerId = 2885974;
 
 void main() => runApp(const MadbootsApp());
 
@@ -28,37 +28,33 @@ class MadbootsApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
         title: Brand.name,
         debugShowCheckedModeBanner: false,
-        // ⭐ Seeded from the brand's own purple, which is generated from `brand.py` — the web app's single
-        // source of truth (ADR-103/114). A hex typed here would be a second definition of the brand.
+        // ⭐ Seeded from the brand's own purple, generated from `brand.py` — the web app's single source of
+        // truth (ADR-103/114). A hex typed here would be a second definition of the brand.
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Brand.purple),
-          scaffoldBackgroundColor: Brand.surface,
+          scaffoldBackgroundColor: Brand.ink,
           useMaterial3: true,
         ),
-        home: const SquadScreen(),
+        home: const MyTeamScreen(),
       );
 }
 
-class SquadScreen extends StatefulWidget {
-  const SquadScreen({super.key});
+class MyTeamScreen extends StatefulWidget {
+  const MyTeamScreen({super.key});
 
   @override
-  State<SquadScreen> createState() => _SquadScreenState();
+  State<MyTeamScreen> createState() => _MyTeamScreenState();
 }
 
-class _SquadScreenState extends State<SquadScreen> {
+class _MyTeamScreenState extends State<MyTeamScreen> {
   final ServiceClient _client = ServiceClient(baseUrl: kBaseUrl);
-  late Future<SquadAnalysis> _analysis;
+  late final TextEditingController _id =
+      TextEditingController(text: '$kDefaultManagerId');
+  late Future<MyTeam> _team = _load(kDefaultManagerId);
 
-  @override
-  void initState() {
-    super.initState();
-    _analysis = _load();
-  }
-
-  /// ⭐ The health check first, because *"the service is not running"* and *"the request was refused"* are
-  /// different problems and only one of them is worth reading a stack trace over.
-  Future<SquadAnalysis> _load() async {
+  /// ⭐ The health check first, because *"the service is not running"* and *"that team is not public yet"*
+  /// are different problems, and only one of them is the manager's to fix.
+  Future<MyTeam> _load(int managerId) async {
     if (!await _client.healthy()) {
       throw StateError(
         'The service is not answering on $kBaseUrl.\n\n'
@@ -66,120 +62,111 @@ class _SquadScreenState extends State<SquadScreen> {
         '  venv/bin/python -m uvicorn src.service.http:app --port 8078',
       );
     }
-    return _client.analysis(kSampleSquad, horizon: 5);
+    return _client.myTeam(managerId, horizon: 1);
+  }
+
+  void _reload() {
+    final id = int.tryParse(_id.text.trim());
+    if (id == null || id < 1) return;
+    setState(() => _team = _load(id));
   }
 
   @override
   void dispose() {
     _client.close();
+    _id.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text(Brand.name),
-          backgroundColor: Brand.ink,
-          foregroundColor: Brand.surface,
-        ),
-        body: FutureBuilder<SquadAnalysis>(
-          future: _analysis,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              // ⚠️ The error is shown, not swallowed into an empty list. An app that renders nothing when a
-              // call fails looks like a squad with no players.
-              return Padding(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: SelectableText(
-                    '${snapshot.error}',
-                    style: const TextStyle(fontFamily: 'monospace', height: 1.5),
-                  ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _TitleBar(controller: _id, onSubmit: _reload),
+              Expanded(
+                child: FutureBuilder<MyTeam>(
+                  future: _team,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      // ⚠️ Shown, not swallowed. An app that renders an empty pitch on failure looks like a
+                      // squad with no players — and the message is usually the whole diagnosis.
+                      return Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Center(
+                          child: SelectableText(_reason(snapshot.error),
+                              style: const TextStyle(color: Colors.white70, height: 1.55)),
+                        ),
+                      );
+                    }
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+                      child: PitchView(team: snapshot.data!),
+                    );
+                  },
                 ),
-              );
-            }
-            return _Analysis(analysis: snapshot.data!);
-          },
+              ),
+            ],
+          ),
         ),
       );
+
+  static String _reason(Object? error) =>
+      error is ApiException ? error.detail : '$error';
 }
 
-class _Analysis extends StatelessWidget {
-  const _Analysis({required this.analysis});
+class _TitleBar extends StatelessWidget {
+  const _TitleBar({required this.controller, required this.onSubmit});
 
-  final SquadAnalysis analysis;
-
-  @override
-  Widget build(BuildContext context) {
-    final weeks = analysis.gameweeks;
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text(
-          'GW${weeks.first}–${weeks.last} · ${analysis.projectedXp.toStringAsFixed(1)} xP',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        Text(
-          'bench ${analysis.benchXp.toStringAsFixed(1)} · squad value £${analysis.value.toStringAsFixed(1)}m',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Brand.muted),
-        ),
-        if (analysis.topPick != null) ...[
-          const SizedBox(height: 16),
-          Text('Captain: ${analysis.topPick!.name} · ${analysis.topPick!.xp.toStringAsFixed(1)} xP',
-              style: Theme.of(context).textTheme.titleMedium),
-        ],
-        if (analysis.issues.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text('Worth a look', style: Theme.of(context).textTheme.titleMedium),
-          for (final p in analysis.issues)
-            Text('  ${p.name} — ${_why(p)}',
-                style: const TextStyle(color: Brand.warnFg)),
-        ],
-        const SizedBox(height: 24),
-        Text('Starting XI', style: Theme.of(context).textTheme.titleMedium),
-        for (final p in analysis.xi) _PlayerRow(player: p),
-        const SizedBox(height: 16),
-        Text('Bench', style: Theme.of(context).textTheme.titleMedium),
-        for (final p in analysis.bench) _PlayerRow(player: p),
-        const SizedBox(height: 24),
-        Text(Brand.mantra,
-            style: TextStyle(color: Brand.muted, fontSize: 12, fontStyle: FontStyle.italic)),
-      ],
-    );
-  }
-
-  /// ⭐ **Availability is three separate facts and none implies the others.** A reported departure is not a
-  /// status — FPL still calls an agreed transfer `a` (ADR-155) — and a doubt is a probability, not a
-  /// verdict (ADR-206), so the percentage is shown rather than collapsed into "doubtful".
-  static String _why(PlayerSummary p) {
-    if (p.isLeaving) return 'reported to be leaving';
-    if (p.isDoubtful) return p.chance == null ? 'doubtful' : '${p.chance}% chance of playing';
-    if (p.isUnavailable) return 'unavailable';
-    return 'flagged';
-  }
-}
-
-class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.player});
-
-  final PlayerSummary player;
+  final TextEditingController controller;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
         child: Row(
           children: [
-            SizedBox(width: 44, child: Text(player.position,
-                style: const TextStyle(color: Brand.muted, fontSize: 12))),
-            Expanded(child: Text(player.name)),
-            SizedBox(width: 52, child: Text(player.team,
-                style: const TextStyle(color: Brand.muted, fontSize: 12))),
+            const Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: 'MAD',
+                    style: TextStyle(color: Brand.purpleLight, fontWeight: FontWeight.w700)),
+                TextSpan(text: 'BOOTS', style: TextStyle(color: Colors.white)),
+              ]),
+              style: TextStyle(fontSize: 15, letterSpacing: .5),
+            ),
+            const Spacer(),
             SizedBox(
-              width: 56,
-              child: Text(player.xp.toStringAsFixed(1), textAlign: TextAlign.right),
+              width: 108,
+              height: 30,
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.end,
+                onSubmitted: (_) => onSubmit(),
+                style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  hintText: 'manager id',
+                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(Brand.radiusSm),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            IconButton(
+              onPressed: onSubmit,
+              icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
+              tooltip: 'Load this team',
             ),
           ],
         ),

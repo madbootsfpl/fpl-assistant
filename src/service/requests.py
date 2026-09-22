@@ -130,3 +130,23 @@ class BuildRequest:
             # ⚠️ Without this the solver simply returns no squad, and "Infeasible" reads as *"your budget is
             # too low"* rather than *"you asked for a player you also banned"*.
             raise ValueError(f"ids both included and excluded: {sorted(clash)}")
+
+
+@dataclass(frozen=True)
+class MyTeamRequest:
+    """*"Show me my team"* — ⚠️ **the one request that names a person rather than a squad.**
+
+    Every other endpoint takes player ids, because a client that uploaded rows would be defining the
+    engine's input. This one takes an **FPL manager id**, which is public, and the server fetches the squad
+    — so the phone never has to know how to read FPL's picks payload either.
+    """
+
+    manager_id: int | None = None
+    horizon: int = 1
+
+    def validate(self) -> None:
+        # ⭐ The horizon defaults to **1**, not five, and that is the screen's decision showing through: a
+        # landing pitch is about *this* gameweek. Every other endpoint looks further by default.
+        _check_horizon(self.horizon)
+        if not self.manager_id or self.manager_id < 1:
+            raise ValueError("no manager id given")

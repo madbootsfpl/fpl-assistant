@@ -21,6 +21,7 @@ from src.service import (
     BuildRequest,
     CaptainRequest,
     GameweekRequest,
+    MyTeamRequest,
     RouteRequest,
     SquadRequest,
     TransfersRequest,
@@ -498,3 +499,117 @@ def test_credentials_are_never_echoed(client, store):
                            json={"player_ids": _squad(store)},
                            headers={"Origin": "http://localhost:8080"})
     assert response.headers.get("access-control-allow-credentials") is None
+
+
+# ---- my-team: the landing pitch (ADR-222) -----------------------------------------------
+
+@pytest.fixture
+def team(store, monkeypatch):
+    """A manager whose squad is the seed's, with the FPL fetch stubbed out.
+
+    ⚠️ **Stubbed because the real one calls FPL over the network.** A test that reaches the internet is not
+    a test — it passes or fails on someone else's uptime, and this suite has an ADR about exactly that
+    (`conftest.py`, the language-model stub). What is under test is the *composition*, not the fetch.
+    """
+    picked = _squad(store)
+    squad = {"name": "RoboTS", "player_ids": picked, "bench_ids": picked[-4:],
+             "captain_id": picked[0], "vice_captain_id": picked[1]}
+    monkeypatch.setattr(svc, "fetch_manager_team", lambda entry_id, players: (squad, ""))
+    return squad
+
+
+def test_my_team_carries_everything_the_pitch_draws(store, team):
+    """⭐⭐ **The reason this endpoint exists.** The pitch needs ten things `analysis` does not return — the
+    gameweek, the deadline, both armbands, the kit, the opponent, the venue, the difficulty and the bench
+    order. ⚠️ Without them a phone makes five round trips before it can draw anything.
+    """
+    answer = svc.my_team(MyTeamRequest(manager_id=2885974, horizon=1), store=store)
+
+    assert answer["squad"]["captain_id"] == team["captain_id"]
+    assert answer["squad"]["vice_captain_id"] == team["vice_captain_id"]
+    assert answer["gameweek"]
+    assert answer["deadline"]["label"] and answer["deadline"]["at"]
+    assert answer["analysis"]["xi"] and answer["analysis"]["bench"]
+    assert answer["kits"] and answer["fixtures"]
+    assert set(answer["bench_roles"]) <= {"1st", "2nd", "3rd", "GK"}
+
+
+def test_the_analysis_inside_is_the_same_analysis(store, team):
+    """⭐ **One recipe** (ADR-041/181). A composing endpoint that quietly priced the squad differently from
+    `/squad/analysis` would put two answers about one team in the same app — the failure this whole layer
+    exists to prevent, arriving by the back door."""
+    composed = svc.my_team(MyTeamRequest(manager_id=2885974, horizon=1), store=store)["analysis"]
+    direct = svc.analysis(SquadRequest(player_ids=team["player_ids"], bench_ids=team["bench_ids"],
+                                       horizon=1), store=store)
+    assert composed == direct
+
+
+def test_every_map_is_keyed_by_something_json_leaves_alone(store, team):
+    """⚠️⚠️ **The trap this endpoint was shaped to avoid.** `by_gameweek` is keyed by integer gameweek and
+    crosses the wire as `{"6": …}`, where sorting as text puts `"10"` first. ⭐ So kits and fixtures are
+    keyed by **club short name** and bench roles by **role** — strings already, which JSON cannot change.
+
+    Keying any of them by player id would have repeated the mistake on a new screen.
+    """
+    answer = svc.my_team(MyTeamRequest(manager_id=2885974), store=store)
+    for field in ("kits", "fixtures", "bench_roles"):
+        for key in answer[field]:
+            assert isinstance(key, str), f"{field} is keyed by {type(key).__name__}, not str"
+            assert not key.isdigit(), f"{field} key {key!r} is a number wearing a string"
+
+
+def test_a_keeper_gets_the_keeper_kit(store, team):
+    """⚠️ FPL serves a separate goalkeeper shirt (`_1`). Drawing the outfield kit on a keeper is wrong on
+    every pitch in the game, and it is the sort of wrong nobody reports — it just looks cheap."""
+    answer = svc.my_team(MyTeamRequest(manager_id=2885974), store=store)
+    club, urls = next(iter(answer["kits"].items()))
+    assert urls["gk"] != urls["outfield"], f"{club} serves one kit for both"
+    assert "_1" in urls["gk"]
+
+
+def test_the_bench_is_ordered_the_way_fpl_will_substitute(store, team):
+    """⭐ Role → id, so the phone shows the order FPL will actually use. ⚠️ Without it a client invents an
+    order and the first auto-sub proves it wrong, on the screen a manager checks most."""
+    answer = svc.my_team(MyTeamRequest(manager_id=2885974), store=store)
+    roles = answer["bench_roles"]
+    assert set(roles.values()) <= set(team["bench_ids"])
+    assert len(set(roles.values())) == len(roles), "no player may hold two bench roles"
+
+
+def test_the_landing_pitch_looks_at_this_gameweek_by_default(store, team):
+    """⭐ Every other endpoint defaults to five. A landing pitch is about the week you are in, and the
+    default is where that decision lives — not in a caller that might forget."""
+    answer = svc.my_team(MyTeamRequest(manager_id=2885974), store=store)
+    assert answer["analysis"]["horizon"] == 1
+    assert len(answer["analysis"]["gameweeks"]) == 1
+
+
+def test_a_team_that_is_not_public_yet_says_so(store, monkeypatch):
+    """⭐⭐ **FPL's own words, passed through.** A bad id, an unreachable API and a team that has not locked
+    in yet are three different problems, and a client cannot tell them apart from a bare 400. ⚠️ The fetch
+    never raises — it returns `(None, message)` — so swallowing the message loses the only diagnosis there
+    is."""
+    monkeypatch.setattr(svc, "fetch_manager_team",
+                        lambda entry_id, players: (None, "That team isn't public yet — it locks in at GW1."))
+    with pytest.raises(ValueError, match="isn't public yet"):
+        svc.my_team(MyTeamRequest(manager_id=123), store=store)
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (MyTeamRequest(), "no manager id"),
+    (MyTeamRequest(manager_id=0), "no manager id"),
+    (MyTeamRequest(manager_id=-4), "no manager id"),
+    (MyTeamRequest(manager_id=1, horizon=0), "outside 1-8"),
+])
+def test_my_team_requests_that_cannot_be_answered_are_refused(request_, expected):
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()
+
+
+def test_my_team_returns_over_http_what_it_returns_in_process(client, store, team, monkeypatch):
+    import src.service as service
+
+    over_http = client.post("/api/v1/squad/my-team",
+                            json={"manager_id": 2885974, "horizon": 1}).json()
+    in_process = service.my_team(MyTeamRequest(manager_id=2885974, horizon=1), store=store)
+    assert over_http == json.loads(json.dumps(in_process))

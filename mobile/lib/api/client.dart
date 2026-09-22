@@ -48,6 +48,17 @@ class ServiceClient {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// Everything the **My Team** pitch draws, in one call.
+  ///
+  /// ⚠️ A refusal is often not the caller's fault: a team is not public until the first deadline, and FPL
+  /// is sometimes simply unreachable. [ApiException.detail] says which — show it rather than a generic
+  /// "something went wrong".
+  Future<MyTeam> myTeam(int managerId, {int horizon = 1}) async =>
+      MyTeam.fromJson(await _post('my-team', {
+        'manager_id': managerId,
+        'horizon': horizon,
+      }));
+
   Future<bool> healthy() async {
     final response = await _client.get(Uri.parse('$baseUrl/api/v1/health'));
     return response.statusCode == 200;

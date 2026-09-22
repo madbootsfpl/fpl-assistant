@@ -49,7 +49,7 @@ def shape(value, depth=0):
     return type(value).__name__
 
 
-ENDPOINTS = ["analysis", "transfers", "captain", "gameweek-plan", "route", "build"]
+ENDPOINTS = ["analysis", "transfers", "captain", "gameweek-plan", "route", "build", "my-team"]
 
 
 @pytest.fixture(scope="module")

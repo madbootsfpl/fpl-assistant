@@ -56,7 +56,26 @@ def responses(store) -> dict:
             service.RouteRequest(player_ids=ids, target_id=target, bank=2.0), store=store),
         "build": service.build(
             service.BuildRequest(budget=100.0, horizon=5), store=store),
+        # ⚠️ **The FPL fetch is stubbed, and it has to be.** `my_team` calls FPL over the network for a
+        # manager's picks; a sample regenerated from the internet is not reproducible, and the contract test
+        # that compares against it would pass or fail on someone else's uptime. ⭐ The *composition* is what
+        # the sample documents — the fetch has its own coverage.
+        "my-team": _my_team(store, ids),
     }
+
+
+def _my_team(store, ids):
+    """`my_team` over a fixed squad, so the sample is the same every time it is written."""
+    from src.service import answers
+
+    squad = {"name": "Sample XI", "player_ids": ids, "bench_ids": ids[-4:],
+             "captain_id": ids[0], "vice_captain_id": ids[1]}
+    real = answers.fetch_manager_team
+    answers.fetch_manager_team = lambda entry_id, players: (squad, "")
+    try:
+        return service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
+    finally:
+        answers.fetch_manager_team = real
 
 
 def main() -> None:

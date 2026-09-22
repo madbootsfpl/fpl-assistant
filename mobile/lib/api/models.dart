@@ -407,3 +407,113 @@ class BuildAnswer {
 
   bool get isOptimal => status == 'Optimal';
 }
+
+/// A club's next fixture — the cell under every card on the pitch.
+class Fixture {
+  Fixture({required this.opponent, required this.venue, required this.difficulty});
+
+  factory Fixture.fromJson(Map<String, dynamic> json) => Fixture(
+        opponent: json['opponent'] as String,
+        venue: json['venue'] as String,
+        difficulty: json['difficulty'] as int? ?? 3,
+      );
+
+  final String opponent;
+
+  /// `H` or `A`.
+  final String venue;
+
+  /// FDR 1–5. ⭐ Mirrors the official FPL app's scale so it reads familiarly.
+  final int difficulty;
+
+  String get label => '$opponent ($venue)';
+}
+
+/// `POST /api/v1/squad/my-team` — everything the landing pitch draws, in one call.
+///
+/// ⭐⭐ **One call because the pitch needs ten things `analysis` does not return.** Fetching them
+/// separately is five round trips before anything renders, on the client whose architecture was justified
+/// by measuring payload.
+class MyTeam {
+  MyTeam({
+    required this.squadName,
+    required this.gameweek,
+    required this.deadlineLabel,
+    required this.captainId,
+    required this.viceCaptainId,
+    required this.analysis,
+    required this.kits,
+    required this.fixtures,
+    required this.benchRoles,
+  });
+
+  factory MyTeam.fromJson(Map<String, dynamic> json) {
+    final squad = json['squad'] as Map<String, dynamic>;
+    final deadline = (json['deadline'] as Map<String, dynamic>?) ?? const {};
+    return MyTeam(
+      squadName: squad['name'] as String? ?? '',
+      gameweek: json['gameweek'] as int?,
+      deadlineLabel: deadline['label'] as String? ?? '',
+      captainId: squad['captain_id'] as int?,
+      viceCaptainId: squad['vice_captain_id'] as int?,
+      analysis: SquadAnalysis.fromJson(json['analysis'] as Map<String, dynamic>),
+      // ⭐ Keyed by **club short name** and by **role** — strings already, so JSON changes nothing on the
+      // way in. Keying these by player id would repeat `by_gameweek`'s trap.
+      kits: ((json['kits'] as Map?) ?? {}).map((club, urls) => MapEntry(
+            '$club',
+            (
+              outfield: (urls as Map)['outfield'] as String? ?? '',
+              gk: urls['gk'] as String? ?? '',
+            ),
+          )),
+      fixtures: ((json['fixtures'] as Map?) ?? {}).map((club, f) => MapEntry(
+            '$club',
+            f == null ? null : Fixture.fromJson((f as Map).cast<String, dynamic>()),
+          )),
+      benchRoles: ((json['bench_roles'] as Map?) ?? {})
+          .map((role, id) => MapEntry('$role', id as int)),
+    );
+  }
+
+  final String squadName;
+  final int? gameweek;
+
+  /// ⚠️ **Rendered as given** (ADR-086). It already carries the timezone and the countdown — re-deriving
+  /// *"in 18 days"* on the client would be a second clock, and the two would disagree by however long the
+  /// app had been open.
+  final String deadlineLabel;
+
+  /// ⚠️ **The manager's own armbands**, not the engine's pick. `analysis.topPick` is the recommendation;
+  /// these are what is actually set. ⭐ Showing one as the other is how an app tells you what you did wrong
+  /// while pretending it is what you did.
+  final int? captainId;
+  final int? viceCaptainId;
+
+  final SquadAnalysis analysis;
+  final Map<String, ({String outfield, String gk})> kits;
+  final Map<String, Fixture?> fixtures;
+
+  /// Role → player id: `1st` · `2nd` · `3rd` · `GK`, the order FPL will actually substitute in.
+  final Map<String, int> benchRoles;
+
+  /// The kit for a player, keeper variant included.
+  String kitFor(PlayerSummary p) {
+    final club = kits[p.team];
+    if (club == null) return '';
+    return p.position == 'GK' ? club.gk : club.outfield;
+  }
+
+  Fixture? fixtureFor(PlayerSummary p) => fixtures[p.team];
+
+  /// The bench in the order FPL will use it, rather than the order it happened to arrive in.
+  List<PlayerSummary> get orderedBench {
+    const order = ['1st', '2nd', '3rd', 'GK'];
+    final byId = {for (final p in analysis.bench) p.id: p};
+    final out = <PlayerSummary>[];
+    for (final role in order) {
+      final id = benchRoles[role];
+      if (id != null && byId.containsKey(id)) out.add(byId.remove(id)!);
+    }
+    return [...out, ...byId.values];
+  }
+}

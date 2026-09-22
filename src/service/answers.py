@@ -5,31 +5,39 @@ shapes the answer — ADR-181's rule on a new surface. A number that appears her
 implementation, and this layer exists to prevent exactly that.
 """
 
+from datetime import UTC, datetime
+
 from src.analytics import (
     SQUAD_15,
     analyse_squad,
     available_players,
     baseline_rate,
+    bench_order,
     best_legal_xi,
     captain_picks,
     minutes_weight_from_history,
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
+    team_schedule,
 )
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.optimizer import DEFAULT_BUDGET
 from src.analytics.transfer import route_to_player
+from src.kits import shirt_url
+from src.manager import fetch_manager_team
 from src.service.inputs import WIDE, load, opened
 from src.service.requests import (
     BuildRequest,
     CaptainRequest,
     GameweekRequest,
+    MyTeamRequest,
     RouteRequest,
     SquadRequest,
     TransfersRequest,
 )
 from src.storage import Storage
+from src.ui.deadline import deadline_line
 
 
 def analysis(request: SquadRequest, *, store: Storage | None = None) -> dict:
@@ -212,4 +220,89 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
         "projected_xp": round(sum(data.xp_by_id.get(p["id"], 0) for p in result["selected"]), 1),
         "unavailable_excluded": len(excluded),
         "default_budget": DEFAULT_BUDGET,
+    }
+
+
+def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
+    """Everything the **My Team** pitch draws, in one call.
+
+    ⭐⭐ **A composition, not a new answer.** It calls `fetch_manager_team`, `analysis`, `team_schedule`,
+    `bench_order`, `shirt_url_by_id` and `deadline_line` — every one of them already shipping. Nothing here
+    computes football, which is the rule this layer exists to keep.
+
+    ⚠️ **Why it is one endpoint rather than five.** The pitch needs ten things `analysis` does not return —
+    the gameweek, the deadline, the armbands, the bank, the kit, the opponent, the venue, the difficulty and
+    the bench order. On a phone that is five round trips before anything renders, on the client whose whole
+    architecture was justified by measuring payload (spike 017). ⭐ *A screen-shaped endpoint is a real cost
+    — it couples the API to a layout — and it is the smaller one here.*
+
+    ⭐ **Every map is keyed by something that is naturally a string**, so JSON changes nothing on the way
+    out: kits and fixtures by club short name, bench roles by role. The alternative — keying by player id —
+    would repeat `by_gameweek`'s trap, where `"10"` sorts before `"6"` and a client silently misreads it.
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        players = store.get_players()
+        squad, message = fetch_manager_team(request.manager_id, players)
+        if squad is None:
+            # ⭐ The FPL client's own words, passed through. It distinguishes a bad id from an unreachable
+            # API from a team that is not public yet, and a client cannot tell those apart from a 400 alone.
+            raise ValueError(message)
+
+        owned_ids = list(squad["player_ids"])
+        bench_ids = list(squad.get("bench_ids") or [])
+        answer = analysis(SquadRequest(player_ids=owned_ids, bench_ids=bench_ids,
+                                       horizon=request.horizon), store=store)
+
+        owned = [p for p in players if p["id"] in set(owned_ids)]
+        teams = store.get_teams()
+        upcoming = store.get_upcoming_fixtures()
+        code_by_club = {t["short_name"]: t["code"] for t in teams}
+        clubs = {p["team"] for p in owned}
+        gameweek, at, label, urgency = deadline_line(upcoming, datetime.now(UTC))
+    finally:
+        if ours:
+            store.close()
+
+    by_id = {p["id"]: p for p in owned}
+    # ⚠️ Keyed by club and not by player — eleven entries instead of fifteen, and the client picks the
+    # keeper variant by position, which is the same derivation the web pitch already makes.
+    kit_by_club = {
+        club: {"outfield": shirt_url(code_by_club.get(club)),
+               "gk": shirt_url(code_by_club.get(club), "GK")}
+        for club in clubs
+    }
+
+    fixtures = {}
+    for club in clubs:
+        cell = (team_schedule(upcoming, club) or [None])[0]
+        fixtures[club] = None if cell is None else {
+            "opponent": cell["opponent"], "venue": cell["venue"],
+            "difficulty": cell.get("difficulty"),
+        }
+
+    xp_by_id = {p["id"]: p["xp"] for p in answer["xi"] + answer["bench"]}
+    benched = [by_id[i] for i in bench_ids if i in by_id]
+    # ⭐ Role → id, so the phone orders the bench the way FPL will actually substitute. Without it a client
+    # invents an order, and the first auto-sub proves it wrong.
+    roles = {role: p["id"] for role, p in bench_order(benched, xp_by_id)} if benched else {}
+
+    return {
+        "manager_id": request.manager_id,
+        "squad": {
+            "name": squad.get("name"),
+            "player_ids": owned_ids,
+            "bench_ids": bench_ids,
+            "captain_id": squad.get("captain_id"),
+            "vice_captain_id": squad.get("vice_captain_id"),
+        },
+        "gameweek": gameweek,
+        # ⚠️ The label carries the timezone and the countdown already (ADR-086) — re-deriving "in 18 days"
+        # on the client would be a second clock, and the two would disagree by however long the app was open.
+        "deadline": {"at": at.isoformat(), "label": label, "urgency": urgency},
+        "analysis": answer,
+        "kits": kit_by_club,
+        "fixtures": fixtures,
+        "bench_roles": roles,
     }

@@ -17,6 +17,10 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 import streamlit as st
 
+# ⭐ **Re-exported, not redefined** (ADR-222). The kit URL moved to `src/kits.py` so the API can build one
+# without importing Streamlit; every existing caller of `badges.shirt_url_by_id` keeps working unchanged.
+from src.kits import shirt_url, shirt_url_by_id  # noqa: F401 — re-export for existing callers
+
 _BADGE = "https://resources.premierleague.com/premierleague/badges/70/t{code}.png"
 _PHOTO = "https://resources.premierleague.com/premierleague/photos/players/110x140/p{code}.png"
 # FPL club-shirt kit images — the outfield shirt, and the `_1` goalkeeper variant. Keyed by *team* code.
@@ -39,12 +43,6 @@ def photo_url(code) -> str:
     return _PHOTO.format(code=code) if code else ""
 
 
-def shirt_url(team_code, position=None) -> str:
-    """The club-shirt kit image by *team* code — the goalkeeper (`_1`) variant when `position == 'GK'`.
-    Empty when the team code is missing (no image, no crash)."""
-    if not team_code:
-        return ""
-    return _SHIRT.format(code=team_code, gk="_1" if position == "GK" else "")
 
 
 def _photo_exists(code) -> bool:
@@ -101,11 +99,3 @@ def photo_url_by_id(players, teams=None) -> dict:
     return out
 
 
-def shirt_url_by_id(players, teams=None) -> dict:
-    """`{player id -> club-shirt kit URL}` by each player's **current** team — the pitch kit (ADR-084 revision,
-    2026-08-22). Unlike `photo_url_by_id` (a mugshot, else the shirt), this is **always** the shirt, derived from
-    the live club — so a just-transferred player is never stuck in a **stale mugshot** (FPL's photo CDN lags a
-    transfer by weeks; the kit graphic updates instantly, like FPL's own pitch). GK (`_1`) variant for keepers.
-    Empty-safe; an empty string when the team code is missing (→ a 👕 placeholder on the pitch, no crash)."""
-    team_code = {t["short_name"]: t["code"] for t in teams} if teams else {}
-    return {p["id"]: shirt_url(team_code.get(_get(p, "team")), _get(p, "position")) for p in players}

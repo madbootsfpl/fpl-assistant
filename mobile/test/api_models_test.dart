@@ -25,6 +25,7 @@ Map<String, dynamic> sample(String name) {
 }
 
 void main() {
+  _myTeamTests();
   group('analysis', () {
     late SquadAnalysis answer;
     setUp(() => answer = SquadAnalysis.fromJson(sample('analysis')));
@@ -139,6 +140,59 @@ void main() {
     test('the solver status is carried, not swallowed', () {
       // ⚠️ A client that ignored this renders an empty pitch with no reason when the answer is Infeasible.
       expect(answer.status, isNotEmpty);
+    });
+  });
+}
+
+// ---- my-team: the landing pitch ----------------------------------------------------------
+
+void _myTeamTests() {
+  group('my-team', () {
+    late MyTeam team;
+    setUp(() => team = MyTeam.fromJson(sample('my-team')));
+
+    test('parses everything the pitch draws', () {
+      expect(team.squadName, isNotEmpty);
+      expect(team.gameweek, isNotNull);
+      expect(team.deadlineLabel, isNotEmpty);
+      expect(team.captainId, isNotNull);
+      expect(team.analysis.xi, hasLength(11));
+      expect(team.kits, isNotEmpty);
+      expect(team.fixtures, isNotEmpty);
+    });
+
+    test('every XI player has a kit and a fixture', () {
+      // ⚠️ The kit is keyed by club, so a player whose club is missing gets an empty string and a placeholder
+      // shirt — never a crash on the screen a manager checks most.
+      for (final p in team.analysis.xi) {
+        expect(team.kitFor(p), isNotEmpty, reason: '${p.name} (${p.team}) has no kit');
+        expect(team.fixtureFor(p), isNotNull, reason: '${p.name} has no fixture');
+      }
+    });
+
+    test('a keeper gets the keeper kit', () {
+      final keeper = team.analysis.xi.firstWhere((p) => p.position == 'GK');
+      final outfield = team.analysis.xi.firstWhere((p) => p.position != 'GK');
+      expect(team.kitFor(keeper), contains('_1'));
+      expect(team.kitFor(keeper), isNot(equals(team.kitFor(outfield))));
+    });
+
+    test('the bench comes back in the order FPL will substitute', () {
+      // ⭐ Not the order it arrived in: the first sub on is the one FPL brings on first.
+      final ordered = team.orderedBench;
+      expect(ordered, hasLength(team.analysis.bench.length));
+      expect(ordered.map((p) => p.id).toSet(),
+          equals(team.analysis.bench.map((p) => p.id).toSet()));
+      final first = team.benchRoles['1st'];
+      if (first != null) expect(ordered.first.id, equals(first));
+    });
+
+    test('the armbands are the manager\'s, not the engine\'s pick', () {
+      // ⚠️ `analysis.topPick` is the recommendation; `captainId` is what is actually set. Rendering one as
+      // the other tells a manager what they did wrong while pretending it is what they did.
+      expect(team.captainId, isNot(equals(-1)));
+      final ids = [...team.analysis.xi, ...team.analysis.bench].map((p) => p.id);
+      expect(ids, contains(team.captainId));
     });
   });
 }

@@ -93,6 +93,20 @@ class RouteBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m.")
 
 
+class MyTeamBody(BaseModel):
+    """⚠️ **An FPL manager id, not a squad** — the one endpoint that names a person.
+
+    It is public information: anyone can look up any manager's team on FPL's own site once a deadline has
+    passed. ⭐ *Nothing owner-scoped is served here* — this reads a public squad and analyses it, which is
+    why it needs no auth any more than the others do.
+    """
+
+    manager_id: int = Field(..., ge=1, description="The FPL manager (entry) id — the number in your team URL.")
+    horizon: int = Field(1, ge=1, le=MAX_HORIZON,
+                         description="Gameweeks to look ahead. Defaults to **1**: a landing pitch is about "
+                                     "this gameweek, where every other endpoint looks further.")
+
+
 class BuildBody(BaseModel):
     """⚠️ No `player_ids` — this is the one question that starts from nothing."""
 
@@ -154,6 +168,20 @@ def squad_route(body: RouteBody) -> dict:
     like the question was not understood.
     """
     return _answer(service.route, service.RouteRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/my-team")
+def squad_my_team(body: MyTeamBody) -> dict:
+    """Everything the **My Team** pitch draws, in one call: squad, armbands, deadline, analysis, kits,
+    fixtures and bench order.
+
+    ⭐ **A composition of endpoints that already exist**, offered as one because the alternative is five
+    round trips on a phone before anything renders.
+
+    ⚠️ A refusal here is often not the caller's fault — a team is not public until the first deadline, and
+    FPL's API is sometimes simply unreachable. The message says which.
+    """
+    return _answer(service.my_team, service.MyTeamRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/squad/build")
