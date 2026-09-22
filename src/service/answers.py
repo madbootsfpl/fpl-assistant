@@ -296,7 +296,16 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
             "bench_ids": bench_ids,
             "captain_id": squad.get("captain_id"),
             "vice_captain_id": squad.get("vice_captain_id"),
+            # ⭐ FPL's own numbers, not ours. `cost` is what the fifteen price at today; `value` is what FPL
+            # says the team is worth **including** the bank, which is why the two differ.
+            "bank": squad.get("bank"),
+            "value": squad.get("value"),
+            "cost": squad.get("cost"),
+            "active_chip": squad.get("active_chip"),
         },
+        # ⚠️ Echoed because FPL does not publish it and the client supplied it — ⭐ *a header that showed a
+        # number the manager never set would be the app inventing his position.*
+        "free_transfers": request.free_transfers,
         "gameweek": gameweek,
         # ⚠️ The label carries the timezone and the countdown already (ADR-086) — re-deriving "in 18 days"
         # on the client would be a second clock, and the two would disagree by however long the app was open.

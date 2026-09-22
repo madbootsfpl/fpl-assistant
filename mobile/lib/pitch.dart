@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import 'api/models.dart';
 import 'brand.dart';
+import 'pitch_markings.dart';
 
 /// Formation order, so the rows come out keeper-first the way a pitch reads.
 const List<String> _rows = ['GK', 'DEF', 'MID', 'FWD'];
@@ -33,29 +34,26 @@ class PitchView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Header(team: team),
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF3F8F5F), Color(0xFF357A51)],
-            ),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(Brand.radiusMd)),
-          ),
-          padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-          child: Column(
+        ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(Brand.radiusMd)),
+          child: PitchMarkings(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              child: Column(
             children: [
-              for (final row in _rows)
-                if (byRow[row]!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [for (final p in byRow[row]!) _Card(team: team, player: p)],
-                    ),
-                  ),
-            ],
+                  for (final row in _rows)
+                    if (byRow[row]!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [for (final p in byRow[row]!) _Card(team: team, player: p)],
+                        ),
+                      ),
+                ],
+              ),
+            ),
           ),
         ),
         _Bench(team: team),
@@ -97,9 +95,15 @@ class _Header extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _Stat(value: xi.toStringAsFixed(1), label: 'Predicted'),
-              _Stat(value: a.projectedXp.toStringAsFixed(1), label: 'Squad xP'),
-              _Stat(value: '£${a.value.toStringAsFixed(1)}m', label: 'Value'),
-              _Stat(value: '${a.issues.length}', label: 'Flagged'),
+              // ⚠️ FPL's bank, or an em dash — ⭐ *never £0.0m*, which is a real position and would read as
+              // one. `—` says "not known"; zero says "you are skint".
+              _Stat(value: team.bank == null ? '—' : '£${team.bank!.toStringAsFixed(1)}m', label: 'In the bank'),
+              _Stat(
+                  value: team.value == null ? '—' : '£${team.value!.toStringAsFixed(1)}m',
+                  label: 'Value'),
+              // ⭐ Shown as "n free" because the number is one the manager set, not one FPL published —
+              // the label is the honest bit.
+              _Stat(value: '${team.freeTransfers}', label: 'Transfers'),
             ],
           ),
         ],

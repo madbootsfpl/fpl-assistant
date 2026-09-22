@@ -105,6 +105,11 @@ class MyTeamBody(BaseModel):
     horizon: int = Field(1, ge=1, le=MAX_HORIZON,
                          description="Gameweeks to look ahead. Defaults to **1**: a landing pitch is about "
                                      "this gameweek, where every other endpoint looks further.")
+    free_transfers: int = Field(1, ge=0, le=5,
+                                description="⚠️ **You must supply this — FPL does not publish it.** The "
+                                            "entry payload carries bank and value but free transfers sit "
+                                            "behind a login. It is echoed back so a header can show what "
+                                            "the answer assumed.")
 
 
 class BuildBody(BaseModel):

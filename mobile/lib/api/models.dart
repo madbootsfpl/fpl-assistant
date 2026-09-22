@@ -437,6 +437,10 @@ class Fixture {
 class MyTeam {
   MyTeam({
     required this.squadName,
+    required this.bank,
+    required this.value,
+    required this.freeTransfers,
+    required this.activeChip,
     required this.gameweek,
     required this.deadlineLabel,
     required this.captainId,
@@ -452,6 +456,10 @@ class MyTeam {
     final deadline = (json['deadline'] as Map<String, dynamic>?) ?? const {};
     return MyTeam(
       squadName: squad['name'] as String? ?? '',
+      bank: (squad['bank'] as num?)?.toDouble(),
+      value: (squad['value'] as num?)?.toDouble(),
+      freeTransfers: json['free_transfers'] as int? ?? 1,
+      activeChip: squad['active_chip'] as String?,
       gameweek: json['gameweek'] as int?,
       deadlineLabel: deadline['label'] as String? ?? '',
       captainId: squad['captain_id'] as int?,
@@ -476,6 +484,22 @@ class MyTeam {
   }
 
   final String squadName;
+
+  /// ⚠️ **Null means *not known*, never zero.** An empty bank is a real position; *"we could not read your
+  /// bank"* is not, and showing the second as the first tells the affordability maths every transfer is
+  /// unaffordable.
+  final double? bank;
+
+  /// FPL's team value — ⭐ **includes the bank**, which is why it exceeds what the fifteen cost.
+  final double? value;
+
+  /// ⚠️ **Supplied by the client, not by FPL**, which publishes bank and value but keeps free transfers
+  /// behind a login. Echoed by the server so a header shows what the answer assumed (ADR-191).
+  final int freeTransfers;
+
+  /// `bboost` · `3xc` · `freehit` · `wildcard`, or null.
+  final String? activeChip;
+
   final int? gameweek;
 
   /// ⚠️ **Rendered as given** (ADR-086). It already carries the timezone and the countdown — re-deriving

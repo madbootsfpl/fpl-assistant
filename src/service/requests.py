@@ -143,6 +143,11 @@ class MyTeamRequest:
 
     manager_id: int | None = None
     horizon: int = 1
+    # ⚠️ **Manager-entered, because FPL does not publish it.** The entry payload carries bank and value but
+    # **not free transfers** — those sit behind a login. ADR-191 is the record of what happens when it is
+    # guessed: the app advised a position the manager was not in. ⭐ A stated assumption can be corrected
+    # where a silent one cannot, so it comes back in the answer.
+    free_transfers: int = 1
 
     def validate(self) -> None:
         # ⭐ The horizon defaults to **1**, not five, and that is the screen's decision showing through: a
@@ -150,3 +155,5 @@ class MyTeamRequest:
         _check_horizon(self.horizon)
         if not self.manager_id or self.manager_id < 1:
             raise ValueError("no manager id given")
+        if not 0 <= self.free_transfers <= 5:
+            raise ValueError(f"free transfers {self.free_transfers} is outside 0-5")

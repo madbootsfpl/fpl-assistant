@@ -15,10 +15,21 @@ from src.api.client import FplApiError, FplClient
 _BENCH_FROM = 12
 
 
+def _money(tenths) -> float | None:
+    """FPL counts money in tenths of a million — `13` is £1.3m. None when absent, never 0.0.
+
+    ⭐ **None and zero are different facts.** An empty bank is a real position a manager can be in; *"we do
+    not know your bank"* is not, and defaulting the second to the first would silently tell the affordability
+    maths that every transfer is unaffordable.
+    """
+    return None if tenths is None else round(tenths / 10, 1)
+
+
 def picks_to_squad(picks_payload: dict, players, *, name: str) -> dict | None:
     """Map a `/entry/{id}/event/{gw}/picks/` payload → a `SquadStore`-shaped squad dict, or None if the
     picks can't be resolved against the current players (a stale/mismatched cache). Pure + empty-safe."""
     by_id = {p["id"]: p for p in players}
+    history = picks_payload.get("entry_history") or {}
     picks = sorted(picks_payload.get("picks") or [], key=lambda pk: pk.get("position", 0))
     ids = [pk["element"] for pk in picks]
     if not ids or any(i not in by_id for i in ids):
@@ -36,6 +47,20 @@ def picks_to_squad(picks_payload: dict, players, *, name: str) -> dict | None:
         "captain_id": captain_id,
         "vice_captain_id": vice_captain_id,
         "cost": round(sum(by_id[i]["price"] for i in ids), 1),
+        # ⭐ **Read from `entry_history`, which was being thrown away** (ADR-223). ADR-191 found the app
+        # advising a position the manager was not in because `bank` was hard-coded to £0.0m while the
+        # Transfer tab collected it by hand three tabs away — and FPL had been sending it all along, in the
+        # same payload as the picks.
+        #
+        # ⚠️ **FPL counts money in tenths.** `bank: 13` is £1.3m, not £13m. A missing `/ 10` here would
+        # hand a manager ten times his money and every affordability answer downstream would be wrong while
+        # looking entirely reasonable.
+        "bank": _money(history.get("bank")),
+        # ⚠️ **`value` INCLUDES the bank** — verified by arithmetic rather than assumed: FPL reported
+        # value 995 and bank 13 for a squad this function prices at £98.2m, and 98.2 + 1.3 = 99.5.
+        "value": _money(history.get("value")),
+        # The chip in play this gameweek (`bboost`, `3xc`, `freehit`, `wildcard`) or None.
+        "active_chip": picks_payload.get("active_chip"),
     }
 
 

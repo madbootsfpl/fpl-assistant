@@ -613,3 +613,61 @@ def test_my_team_returns_over_http_what_it_returns_in_process(client, store, tea
                             json={"manager_id": 2885974, "horizon": 1}).json()
     in_process = service.my_team(MyTeamRequest(manager_id=2885974, horizon=1), store=store)
     assert over_http == json.loads(json.dumps(in_process))
+
+
+# ---- the money FPL does publish, and the number it does not ------------------------------
+
+def test_the_bank_comes_from_fpl_in_pounds_not_tenths(store, monkeypatch):
+    """⚠️⚠️ **FPL counts money in tenths** — `bank: 13` is £1.3m. A missing division hands a manager ten
+    times his money, and every affordability answer downstream is wrong while looking entirely reasonable.
+
+    ⚠️ **What this does NOT assert, and an earlier version wrongly did:** that `cost + bank == value`. That
+    is a fact about *FPL's* payload — verified once against the live API (995 and 13 against a squad this
+    code prices at £98.2m) — and it cannot be checked with a fabricated fixture, because the numbers here
+    are invented and the squad is a different one. ⭐ *A constructed fixture cannot confirm someone else's
+    arithmetic; it only confirms what you put in it.*
+    """
+    from src.manager import picks_to_squad
+
+    picks = {
+        "entry_history": {"bank": 13, "value": 995},
+        "active_chip": "bboost",
+        "picks": [{"element": i, "position": n + 1} for n, i in enumerate(_squad(store))],
+    }
+    squad = picks_to_squad(picks, store.get_players(), name="RoboTS")
+    assert squad["bank"] == 1.3, "13 tenths is £1.3m, not £13m"
+    assert squad["value"] == 99.5
+    assert squad["active_chip"] == "bboost", "a chip in play changes what the week's advice means"
+
+
+def test_an_unknown_bank_is_none_and_never_zero(store):
+    """⭐⭐ **None and zero are different facts.** An empty bank is a real position a manager can be in;
+    *"we could not read your bank"* is not. ⚠️ Defaulting the second to the first tells the affordability
+    maths every transfer is unaffordable — and it would look like a settled squad, not a bug."""
+    from src.manager import picks_to_squad
+
+    picks = {"picks": [{"element": i, "position": n + 1} for n, i in enumerate(_squad(store))]}
+    squad = picks_to_squad(picks, store.get_players(), name="No history")
+    assert squad["bank"] is None
+    assert squad["value"] is None
+
+
+def test_my_team_carries_the_money_and_the_assumption(store, team, monkeypatch):
+    """⭐ Bank and value come from FPL; free transfers do not exist in any public payload, so the client
+    states it and the server echoes it back. ⚠️ A header showing a number the manager never set would be
+    the app inventing his position (ADR-191)."""
+    monkeypatch.setattr(svc, "fetch_manager_team",
+                        lambda entry_id, players: ({**team, "bank": 1.3, "value": 99.5,
+                                                    "cost": 98.2, "active_chip": None}, ""))
+    answer = svc.my_team(MyTeamRequest(manager_id=1, free_transfers=2), store=store)
+    assert answer["squad"]["bank"] == 1.3
+    assert answer["squad"]["value"] == 99.5
+    assert answer["free_transfers"] == 2, "the assumption must come back, or a header cannot state it"
+
+
+@pytest.mark.parametrize("free", [-1, 6])
+def test_an_impossible_number_of_free_transfers_is_refused(free):
+    """⚠️ FPL caps banked transfers; a client sending 99 would get a plan recommending moves nobody can
+    make, and the plan would look perfectly confident."""
+    with pytest.raises(ValueError, match="free transfers"):
+        MyTeamRequest(manager_id=1, free_transfers=free).validate()

@@ -339,7 +339,7 @@
   },
   "deadline": {
     "at": "2026-10-10T10:00:00+00:00",
-    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 18 days, 1h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
+    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 18 days \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
     "urgency": "calm"
   },
   "fixtures": {
@@ -394,6 +394,7 @@
       "venue": "A"
     }
   },
+  "free_transfers": 1,
   "gameweek": 6,
   "kits": {
     "ARS": {
@@ -439,6 +440,8 @@
   },
   "manager_id": 1,
   "squad": {
+    "active_chip": null,
+    "bank": null,
     "bench_ids": [
       229,
       8,
@@ -446,6 +449,7 @@
       379
     ],
     "captain_id": 94,
+    "cost": null,
     "name": "Sample XI",
     "player_ids": [
       94,
@@ -464,6 +468,7 @@
       572,
       379
     ],
+    "value": null,
     "vice_captain_id": 330
   }
 }
