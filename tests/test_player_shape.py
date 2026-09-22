@@ -80,15 +80,24 @@ def _players_in(value, path="", found=None):
     return found
 
 
+#: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
+#: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
+COVERED = {"analysis", "chips", "transfers", "captain", "gameweek", "route", "build",
+           "replacements"}
+
+
 def _answers(store):
     ids = _squad(store)
     dearest = max((p for p in store.get_players() if p["id"] not in set(ids)),
                   key=lambda p: p["price"])
     return {
         "analysis": service.analysis(service.SquadRequest(player_ids=ids, horizon=1), store=store),
+        "chips": service.chips(service.ChipsRequest(player_ids=ids, bank=2.0), store=store),
         "transfers": service.transfers(
             service.TransfersRequest(player_ids=ids, horizon=1, bank=3.0), store=store),
         "captain": service.captain(service.CaptainRequest(player_ids=ids), store=store),
+        "gameweek": service.gameweek(
+            service.GameweekRequest(player_ids=ids, horizon=1, bank=3.0, free=1), store=store),
         "route": service.route(
             service.RouteRequest(player_ids=ids, target_id=dearest["id"], bank=0.0), store=store),
         "build": service.build(service.BuildRequest(budget=100.0, horizon=1), store=store),
@@ -96,6 +105,31 @@ def _answers(store):
             service.ReplacementsRequest(player_ids=ids, out_id=ids[0], bank=2.0, horizon=1),
             store=store),
     }
+
+
+#: Functions whose answers contain no players, so the sweep has nothing to check in them.
+NO_PLAYERS = {"my_team"}      # composes `analysis`, which is swept in its own right
+
+
+def test_the_sweep_covers_every_endpoint():
+    """⚠️⚠️ **A guard covers the surfaces it was pointed at.** The chips endpoint was written after this
+    sweep and immediately shipped a raw 45-column database row as its triple-captain pick — the exact thing
+    the sweep exists to prevent, in a corner it could not see.
+
+    ⭐ *A guard that requires manual registration is a guard that will be forgotten*, so this fails when a
+    public service function is not exercised above. It cannot build the request for you — every endpoint
+    takes a different DTO — but it can refuse to let you forget.
+    """
+    public = {
+        name for name in service.__all__
+        if callable(getattr(service, name)) and not name.endswith("Request")
+    }
+    swept = set(_answers.__annotations__.get("covers", ())) or COVERED
+    missing = public - swept - NO_PLAYERS
+    assert not missing, (
+        f"{sorted(missing)} are service endpoints that this sweep never calls. Add them to `_answers()` "
+        f"(and to COVERED), or to NO_PLAYERS with a reason."
+    )
 
 
 def test_the_sweep_actually_finds_players():

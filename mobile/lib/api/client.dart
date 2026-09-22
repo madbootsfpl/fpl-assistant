@@ -48,6 +48,17 @@ class ServiceClient {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// When to play each chip, and what a wildcard is worth.
+  ///
+  /// ⚠️ There is no `horizon`: a chip's window is its **deadline**, decided by the server (ADR-166).
+  Future<Map<String, dynamic>> chips(List<int> playerIds,
+          {List<int> benchIds = const [], double bank = 0.0}) =>
+      _post('chips', {
+        'player_ids': playerIds,
+        'bench_ids': benchIds,
+        'bank': bank,
+      });
+
   /// Everything the **My Team** pitch draws, in one call.
   ///
   /// ⚠️ A refusal is often not the caller's fault: a team is not public until the first deadline, and FPL

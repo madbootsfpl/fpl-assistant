@@ -29,8 +29,11 @@ from src.kits import shirt_url
 from src.manager import fetch_manager_team
 from src.service.inputs import WIDE, load, opened
 from src.service.requests import (
+    DEFAULT_HORIZON,
+    MAX_HORIZON,
     BuildRequest,
     CaptainRequest,
+    ChipsRequest,
     GameweekRequest,
     MyTeamRequest,
     ReplacementsRequest,
@@ -175,6 +178,38 @@ def gameweek(request: GameweekRequest, *, store: Storage | None = None) -> dict:
         free=request.free,
     )
     plan["horizon_gw"] = WIDE
+    # ⚠️⚠️ **ADR-227 normalised the captain ENDPOINT and missed the captain INSIDE the plan.** Both come
+    # from `captain_picks`, so both carried the xP model's working — `rate`, `ep_next`, `defcon_xp` — and
+    # the claim "one shape everywhere" was true of five surfaces out of seven.
+    #
+    # ⭐ *The sweep only saw what it was pointed at*, and this endpoint was not in its fixture. That is the
+    # finding, more than the fields: `tests/test_player_shape.py` now asserts its own completeness.
+    by_id = {p["id"]: p for p in data.owned}
+
+    def shaped(pick):
+        if not pick or pick.get("id") not in by_id:
+            return pick
+        return {**player_summary(by_id[pick["id"]], {pick["id"]: pick.get("xp", 0)},
+                                 reported_out=data.leaving),
+                "opponent": pick.get("opponent"),
+                "venue": pick.get("venue"),
+                "difficulty": pick.get("difficulty"),
+                "penalty_taker": pick.get("penalty_taker", False)}
+
+    plan["captain"] = shaped(plan.get("captain"))
+    plan["captain_ranked"] = [shaped(p) for p in (plan.get("captain_ranked") or [])]
+
+    # ⚠️ The lineup hands back the squad's own rows — so `start`, `bench`, `bring_in` and `drop` were four
+    # more raw shapes. ⭐ No fixture extras here: a lineup entry is a *player*, not a pick, and adding
+    # `opponent` to it would invent a distinction the answer does not make.
+    def summarise(p):
+        return (player_summary(by_id[p["id"]], data.xp_by_id, reported_out=data.leaving)
+                if p.get("id") in by_id else p)
+
+    lineup = plan.get("lineup") or {}
+    for key in ("start", "bench", "bring_in", "drop"):
+        if isinstance(lineup.get(key), list):
+            lineup[key] = [summarise(p) for p in lineup[key]]
     # ⭐⭐ **The explanation ships WITH the plan, not beside it** (ADR-089/224). The owner, on seeing the
     # phone's bare version: *"I was more thinking of capturing this"* — and pasted the web app's full
     # Confidence · Edge · Risk block. ⚠️ A recommendation without its reasoning is a different product:
@@ -427,4 +462,65 @@ def replacements(request: ReplacementsRequest, *, store: Storage | None = None) 
         "budget": budget,
         "bank": request.bank,
         "candidates": rows,
+    }
+
+
+def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
+    """When to play each chip, and what a wildcard is worth (ADR-082/185/229).
+
+    ⚠️⚠️ **The window is the chip's DEADLINE, not the caller's horizon** (ADR-166). A chip expires at the
+    end of each half-season, so *"is this week good?"* is the wrong question — ⭐ *the right one is "is this
+    week better than the weeks I have left?"*, and it cannot be asked over a window someone picked for a
+    different screen.
+
+    ⭐ The wildcard carries what it is **worth**, not only when to play it (ADR-185). The owner found that
+    gap himself, from a two-team A/B: the advisor said *"Wildcard GW5-7, your weakest stretch"* while his
+    squad already overlapped an optimal rebuild by 3 of 15 — ⚠️ *a recommendation that measures only WHEN
+    presents itself as an answer to WHETHER.*
+    """
+    request.validate()
+    from src.analytics.chips import chip_advisor, rebuild_value
+    from src.fpl_rules import chip_deadline
+
+    store, ours = opened(store)
+    try:
+        # The first upcoming gameweek decides which half-season's expiry applies; the window runs to it.
+        peek = load(request.player_ids, 1, store)
+        first = peek.ranked[0]["gameweeks"][0] if peek.ranked else None
+        window = max(1, (chip_deadline(first) - first + 1)) if first else DEFAULT_HORIZON
+        # ⚠️ Clamped to eight, which is what the engine will price — a chip deadline twelve weeks out asks
+        # for a horizon no other surface computes, and a silently different one would disagree with them.
+        window = min(window, MAX_HORIZON)
+        data = load(request.player_ids, window, store)
+        pool, _ = available_players(data.players)
+        rebuild = rebuild_value(data.owned, pool, data.xp_by_id,
+                                budget=round(sum(p["price"] for p in data.owned) + request.bank, 1))
+    finally:
+        if ours:
+            store.close()
+
+    advice = chip_advisor(
+        data.owned,
+        {r["id"]: r["by_gameweek"] for r in data.ranked},
+        data.ranked[0]["gameweeks"] if data.ranked else [],
+        rebuild=rebuild,
+    )
+    # ⚠️ **The triple-captain pick arrives as a raw database row**, because `chip_advisor` hands back the
+    # player it was given. ⭐ ADR-227 normalised five such shapes and this is a sixth — in a corner the
+    # sweep could not see, because this endpoint did not exist when the sweep was written.
+    # *A guard covers the surfaces it was pointed at, and a new surface is not one of them until someone
+    # points it.* `tests/test_player_shape.py` now asserts its own completeness for exactly this reason.
+    if advice and isinstance(advice.get("triple_captain"), dict):
+        pick = advice["triple_captain"].get("player")
+        if pick is not None:
+            advice["triple_captain"]["player"] = player_summary(
+                pick, data.xp_by_id, reported_out=data.leaving)
+
+    return {
+        # ⭐ Stated, because it is NOT what the caller asked for and a client showing "next 8 GWs" over a
+        # 3-gameweek window would be describing someone else's answer.
+        "window": window,
+        "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
+        "expires_after": chip_deadline(first) if first else None,
+        "chips": advice,
     }

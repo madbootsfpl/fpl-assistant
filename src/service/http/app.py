@@ -93,6 +93,10 @@ class RouteBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m.")
 
 
+class ChipsBody(SquadBody):
+    bank: float = Field(0.0, ge=0, description="Money available, in £m — a wildcard is priced against it.")
+
+
 class MyTeamBody(BaseModel):
     """⚠️ **An FPL manager id, not a squad** — the one endpoint that names a person.
 
@@ -186,6 +190,18 @@ def squad_route(body: RouteBody) -> dict:
     like the question was not understood.
     """
     return _answer(service.route, service.RouteRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/chips")
+def squad_chips(body: ChipsBody) -> dict:
+    """When to play each chip, and what a wildcard is **worth**.
+
+    ⚠️⚠️ **`horizon` is accepted and ignored.** A chip is a season decision with a fixed expiry, so the
+    window is the **chip's deadline** — the answer to *"is this week better than the weeks I have left?"*
+    cannot be computed over a window chosen for a different screen (ADR-166). The window actually used
+    comes back as `window`.
+    """
+    return _answer(service.chips, service.ChipsRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/squad/my-team")

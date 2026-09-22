@@ -64,11 +64,6 @@ class MoreView extends StatelessWidget {
 
           const _Heading('Not here yet'),
           const _Pending(
-            name: 'Chips',
-            why: 'Wildcard, Bench Boost, Triple Captain and Free Hit — the timing question, not the '
-                'squad one.',
-          ),
-          const _Pending(
             name: 'Players',
             why: 'Search, compare and the player card. The audit puts this in the first release; it is '
                 'the next thing to port.',

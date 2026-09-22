@@ -20,6 +20,7 @@ from src import config
 from src.service import (
     BuildRequest,
     CaptainRequest,
+    ChipsRequest,
     GameweekRequest,
     MyTeamRequest,
     ReplacementsRequest,
@@ -943,3 +944,63 @@ def test_a_doubtful_replacement_says_so(store):
         assert candidate["chance"] == market[candidate["id"]]["chance"], (
             "⭐ a doubt is a probability — the percentage is the fact, 'doubtful' is the rounding"
         )
+
+
+# ---- chips: a season decision, not a weekly one (ADR-229) --------------------------------
+
+def test_chips_look_to_their_own_deadline_not_the_callers_horizon(store):
+    """⚠️⚠️ **ADR-166, and it is the whole design.** A chip expires at the end of each half-season, so the
+    question is never *"is this week good?"* but *"is this week better than the weeks I have left?"* —
+    ⭐ *and that is not a smaller version of the first question, it is a different one.*
+
+    A caller asking for one gameweek must still get the chip's own window back.
+    """
+    picked = _squad(store)
+    answer = svc.chips(ChipsRequest(player_ids=picked, horizon=1, bank=2.0), store=store)
+
+    assert answer["window"] > 1, "a one-gameweek request must not produce a one-gameweek chip answer"
+    assert len(answer["gameweeks"]) == answer["window"]
+    assert answer["expires_after"] and answer["expires_after"] >= answer["gameweeks"][-1]
+
+
+def test_the_window_it_used_comes_back(store):
+    """⭐ Stated because it is **not** what the caller asked for. A client rendering "next 8 gameweeks"
+    over a 3-gameweek answer would be describing someone else's question."""
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store), horizon=5), store=store)
+    assert answer["window"] == len(answer["gameweeks"])
+
+
+def test_every_chip_gets_an_answer(store):
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store), bank=1.0), store=store)
+    assert set(answer["chips"]) == {"triple_captain", "bench_boost", "free_hit", "wildcard"}
+
+
+def test_the_wildcard_says_what_it_is_worth_not_only_when(store):
+    """⭐⭐ ADR-185, found by the owner from a two-team A/B he was 40 points ahead in: the advisor said
+    *"Wildcard GW5-7, your weakest stretch"* while his squad already overlapped an optimal rebuild by 3 of
+    15. ⚠️ *A recommendation that measures only WHEN presents itself as an answer to WHETHER.*"""
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store), bank=2.0), store=store)
+    wildcard = answer["chips"]["wildcard"]
+
+    # ⚠️ **Named exactly, because an `or` is a hedge.** A first version read
+    # `"gain" in w or "margin" in w` — and `margin` is present with or without the valuation, so the
+    # assertion reduced to its always-true half and a mutation dropping `rebuild=` survived.
+    # ⭐ *A hedge is not a weaker assertion, it is the absence of one* — third time this week (ADR-180).
+    for field in ("gain", "overlap", "current", "rebuilt"):
+        assert field in wildcard, (
+            f"the wildcard is missing `{field}` — without the rebuild it answers only WHEN, and "
+            f"ADR-185 exists because that presented itself as an answer to WHETHER"
+        )
+    assert wildcard["squad_size"] >= wildcard["overlap"], (
+        "the overlap cannot exceed the squad it is an overlap with"
+    )
+
+
+def test_the_triple_captain_pick_is_a_player_not_a_database_row(store):
+    """⚠️ It arrived as a **45-column raw row** the first time this endpoint ran — ADR-227's problem in a
+    corner the shape sweep could not see, because this endpoint did not exist when the sweep was written.
+    ⭐ *A guard covers the surfaces it was pointed at.*"""
+    answer = svc.chips(ChipsRequest(player_ids=_squad(store)), store=store)
+    pick = answer["chips"]["triple_captain"]["player"]
+    assert "status" in pick and "leaving" in pick
+    assert "scout_news_link" not in pick, "the database row is back"

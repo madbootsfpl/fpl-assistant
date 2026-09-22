@@ -202,3 +202,23 @@ class ReplacementsRequest(SquadRequest):
             raise ValueError(f"player {self.out_id} is not in this squad")
         if self.limit < 1:
             raise ValueError("limit must be at least 1")
+
+
+@dataclass(frozen=True)
+class ChipsRequest(SquadRequest):
+    """*"When should I play my chips?"* (ADR-082/229).
+
+    ⚠️⚠️ **`horizon` is ignored, and that is the whole point.** ADR-166: a chip is a **season** decision
+    with a fixed expiry, so the question is never *"is this week good?"* but *"is this week better than the
+    weeks I have left?"* — and answering it over a one-gameweek window is not a smaller version of that
+    question, it is **a different question**. The window is the **chip's deadline**, derived here.
+
+    ⭐ The field stays on the request so one client-side squad object serves every endpoint, and this
+    docstring is why nobody should conclude from the signature that it narrows the search.
+    """
+
+    bank: float = 0.0
+
+    def validate(self) -> None:
+        super().validate()
+        _check_money("bank", self.bank)
