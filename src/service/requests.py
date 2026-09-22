@@ -222,3 +222,21 @@ class ChipsRequest(SquadRequest):
     def validate(self) -> None:
         super().validate()
         _check_money("bank", self.bank)
+
+
+@dataclass(frozen=True)
+class PlayersRequest:
+    """The ranked market — ⚠️ **the one request with no squad at all** (ADR-230).
+
+    ⭐ **Returns everyone, ranked, in one call**, and leaves searching and filtering to the client. Spike
+    017 measured the whole board at ~162 KB; filtering 667 rows locally is instant, where a round trip per
+    keystroke is not. *The cheap thing to send once is cheaper than the small thing sent constantly.*
+    """
+
+    horizon: int = DEFAULT_HORIZON
+    limit: int = 800
+
+    def validate(self) -> None:
+        _check_horizon(self.horizon)
+        if self.limit < 1:
+            raise ValueError("limit must be at least 1")

@@ -15,6 +15,7 @@ from src.analytics import (
     bench_order,
     best_legal_xi,
     captain_picks,
+    is_unavailable,
     minutes_weight_from_history,
     player_summary,
     select_squad,
@@ -36,6 +37,7 @@ from src.service.requests import (
     ChipsRequest,
     GameweekRequest,
     MyTeamRequest,
+    PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
     SquadRequest,
@@ -523,4 +525,42 @@ def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
         "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
         "expires_after": chip_deadline(first) if first else None,
         "chips": advice,
+    }
+
+
+def players(request: PlayersRequest, *, store: Storage | None = None) -> dict:
+    """Every available player, ranked by xP over the horizon (ADR-230).
+
+    ⚠️ **§4.1 prefers a client that reads the published board straight from Supabase**, which is what
+    ADR-213 publishes it for — and spike 018 proved it (667 players, 162 KB, 511 ms). This endpoint exists
+    because **that path is not testable today**: staging predates the board, and production credentials are
+    not something to hand a browse screen in order to try it. ⭐ *Shipping a path nobody has run is how
+    this session's bugs were made.* Revisit when the app carries Supabase config for a real device.
+
+    ⭐ **Unavailable players are excluded, not flagged.** A browse list is for finding someone to buy; a
+    player who cannot play is not a candidate, and leaving him in makes the reader do the filtering the
+    app exists to do. ⚠️ *Doubtful* players stay — a doubt is a probability, not a verdict (ADR-206).
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        data = load([], request.horizon, store)
+    finally:
+        if ours:
+            store.close()
+
+    by_id = {p["id"]: p for p in data.players}
+    rows = [
+        player_summary(by_id[r["id"]], data.xp_by_id,
+                       {r["id"]: r["by_gameweek"] for r in data.ranked},
+                       {r["id"]: r["minutes_weight"] for r in data.ranked})
+        for r in data.ranked
+        if r["id"] in by_id and not is_unavailable(by_id[r["id"]])
+    ]
+    return {
+        "horizon": request.horizon,
+        "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
+        # ⭐ Stated so a client can say "667 of 720" rather than implying the list is everyone.
+        "total": len(rows),
+        "players": rows[:request.limit],
     }

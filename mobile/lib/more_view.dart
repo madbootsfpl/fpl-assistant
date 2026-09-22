@@ -23,6 +23,7 @@ class MoreView extends StatelessWidget {
     required this.freeTransfers,
     required this.onManagerId,
     required this.onFreeTransfers,
+    required this.onOpenChips,
     super.key,
   });
 
@@ -31,6 +32,10 @@ class MoreView extends StatelessWidget {
   final int freeTransfers;
   final ValueChanged<int> onManagerId;
   final ValueChanged<int> onFreeTransfers;
+
+  /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
+  /// *Working earns a place; frequency earns a slot.*
+  final VoidCallback onOpenChips;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -62,11 +67,12 @@ class MoreView extends StatelessWidget {
                 style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.45)),
           ),
 
-          const _Heading('Not here yet'),
-          const _Pending(
-            name: 'Players',
-            why: 'Search, compare and the player card. The audit puts this in the first release; it is '
-                'the next thing to port.',
+          const _Heading('Season decisions'),
+          _Link(
+            name: 'Chips',
+            why: 'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
+                'left, not the next one.',
+            onTap: onOpenChips,
           ),
 
           const _Heading('Under review'),
@@ -282,6 +288,42 @@ class _Pending extends StatelessWidget {
                   style: const TextStyle(color: Colors.white24, fontSize: 11, height: 1.45)),
             ),
           ],
+        ),
+      );
+}
+
+/// A row that goes somewhere. ⭐ Distinct from `_Pending`, which deliberately does not.
+class _Link extends StatelessWidget {
+  const _Link({required this.name, required this.why, required this.onTap});
+
+  final String name;
+  final String why;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(why,
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 11, height: 1.45)),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 18, color: Colors.white38),
+            ],
+          ),
         ),
       );
 }

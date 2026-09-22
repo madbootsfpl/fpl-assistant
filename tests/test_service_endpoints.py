@@ -23,6 +23,7 @@ from src.service import (
     ChipsRequest,
     GameweekRequest,
     MyTeamRequest,
+    PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
     SquadRequest,
@@ -1004,3 +1005,52 @@ def test_the_triple_captain_pick_is_a_player_not_a_database_row(store):
     pick = answer["chips"]["triple_captain"]["player"]
     assert "status" in pick and "leaving" in pick
     assert "scout_news_link" not in pick, "the database row is back"
+
+
+# ---- the market (ADR-230) ----------------------------------------------------------------
+
+def test_the_player_list_is_ranked_by_expected_points(store):
+    answer = svc.players(PlayersRequest(horizon=5), store=store)
+    xps = [p["xp"] for p in answer["players"]]
+    assert xps == sorted(xps, reverse=True), "a browse list nobody ranked is a database table"
+
+
+def test_players_who_cannot_play_are_left_out(store):
+    """⭐ **Excluded, not flagged.** A browse list is for finding someone to buy, and a player who cannot
+    play is not a candidate — leaving him in makes the reader do the filtering the app exists to do.
+
+    ⚠️ **Doubtful players stay.** A doubt is a probability, not a verdict (ADR-206), and a 75% player is
+    often exactly who you want.
+    """
+    answer = svc.players(PlayersRequest(horizon=1, limit=1000), store=store)
+    statuses = {p["status"] for p in answer["players"]}
+    assert not statuses & {"i", "s", "u", "n"}, f"unavailable players are listed: {statuses}"
+
+    market = store.get_players()
+    if any(p["status"] == "d" for p in market):
+        assert "d" in statuses, "a doubt is a probability — doubtful players belong in the list, flagged"
+
+
+def test_the_total_is_reported_separately_from_the_page(store):
+    """⭐ So a client can say *"481 of 667"* rather than implying the list is everyone."""
+    answer = svc.players(PlayersRequest(horizon=1, limit=10), store=store)
+    assert len(answer["players"]) == 10
+    assert answer["total"] > 10
+
+
+def test_the_whole_market_fits_in_one_sensible_payload(store):
+    """⚠️ The design depends on this: **send everyone once, filter locally**. A round trip per keystroke is
+    what this avoids, and it only holds while the payload stays reasonable — spike 017 measured the board
+    at ~162 KB and made payload the thing this client is designed around."""
+    answer = svc.players(PlayersRequest(horizon=5), store=store)
+    size = len(json.dumps(answer))
+    assert size < 400_000, f"the market is {size / 1024:.0f} KB — too big to send on every visit"
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (PlayersRequest(horizon=0), "outside 1-8"),
+    (PlayersRequest(limit=0), "limit must be at least 1"),
+])
+def test_a_bad_market_request_is_refused(request_, expected):
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()

@@ -93,6 +93,15 @@ class RouteBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m.")
 
 
+class PlayersBody(BaseModel):
+    """⚠️ No squad — this is the market, not your team."""
+
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON)
+    limit: int = Field(800, ge=1, le=1000,
+                       description="⭐ Defaults to everyone. The whole board is ~110 KB and filtering it "
+                                   "locally is instant, where a round trip per keystroke is not.")
+
+
 class ChipsBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m — a wildcard is priced against it.")
 
@@ -190,6 +199,17 @@ def squad_route(body: RouteBody) -> dict:
     like the question was not understood.
     """
     return _answer(service.route, service.RouteRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/players")
+def all_players(body: PlayersBody) -> dict:
+    """Every available player, ranked by xP over the horizon.
+
+    ⭐ **Unavailable players are excluded, not flagged** — a browse list is for finding someone to buy, and
+    a player who cannot play is not a candidate. ⚠️ *Doubtful* players stay: a doubt is a probability, not
+    a verdict.
+    """
+    return _answer(service.players, service.PlayersRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/squad/chips")

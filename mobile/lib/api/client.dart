@@ -32,9 +32,12 @@ class ServiceClient {
   final String baseUrl;
   final http.Client _client;
 
+  /// ⚠️ `path` is everything after `/api/v1/`, **including** the `squad/` prefix where there is
+  /// one. It used to assume that prefix, which made the market endpoint — the one thing that is
+  /// not squad-shaped — reachable only by a `../` that depended on URL normalisation.
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/api/v1/squad/$path'),
+      Uri.parse('$baseUrl/api/v1/$path'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
@@ -48,12 +51,25 @@ class ServiceClient {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// Every available player, ranked by xP.
+  ///
+  /// ⭐ Fetched **once** and filtered on the device: the whole market is ~110 KB, and searching 481 rows
+  /// locally is instant where a round trip per keystroke is not.
+  ///
+  /// ⚠️ Not under `/squad/` — this is the market, not your team.
+  Future<List<PlayerSummary>> players({int horizon = 5}) async {
+    final body = await _post('players', {'horizon': horizon, 'limit': 1000});
+    return ((body['players'] as List?) ?? [])
+        .map((p) => PlayerSummary.fromJson(p as Map<String, dynamic>))
+        .toList();
+  }
+
   /// When to play each chip, and what a wildcard is worth.
   ///
   /// ⚠️ There is no `horizon`: a chip's window is its **deadline**, decided by the server (ADR-166).
   Future<Map<String, dynamic>> chips(List<int> playerIds,
           {List<int> benchIds = const [], double bank = 0.0}) =>
-      _post('chips', {
+      _post('squad/chips', {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'bank': bank,
@@ -73,7 +89,7 @@ class ServiceClient {
     List<int> draftPlayerIds = const [],
     List<int> draftBenchIds = const [],
   }) async =>
-      MyTeam.fromJson(await _post('my-team', {
+      MyTeam.fromJson(await _post('squad/my-team', {
         'manager_id': managerId,
         'horizon': horizon,
         'free_transfers': freeTransfers,
@@ -88,7 +104,7 @@ class ServiceClient {
 
   Future<SquadAnalysis> analysis(List<int> playerIds,
           {List<int> benchIds = const [], int horizon = 5}) async =>
-      SquadAnalysis.fromJson(await _post('analysis', {
+      SquadAnalysis.fromJson(await _post('squad/analysis', {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'horizon': horizon,
@@ -101,7 +117,7 @@ class ServiceClient {
           double bank = 0.0,
           int count = 1,
           int limit = 5}) async =>
-      TransfersAnswer.fromJson(await _post('transfers', {
+      TransfersAnswer.fromJson(await _post('squad/transfers', {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'horizon': horizon,
@@ -112,7 +128,7 @@ class ServiceClient {
 
   /// ⚠️ Always the **next** gameweek, whatever horizon is sent.
   Future<CaptainAnswer> captain(List<int> playerIds, {int limit = 5}) async =>
-      CaptainAnswer.fromJson(await _post('captain', {
+      CaptainAnswer.fromJson(await _post('squad/captain', {
         'player_ids': playerIds,
         'limit': limit,
       }));
@@ -126,7 +142,7 @@ class ServiceClient {
           int horizon = 5,
           double bank = 0.0,
           int free = 1}) =>
-      _post('gameweek-plan', {
+      _post('squad/gameweek-plan', {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'horizon': horizon,
@@ -136,7 +152,7 @@ class ServiceClient {
 
   Future<RouteAnswer> route(List<int> playerIds, int targetId,
           {int horizon = 5, double bank = 0.0}) async =>
-      RouteAnswer.fromJson(await _post('route', {
+      RouteAnswer.fromJson(await _post('squad/route', {
         'player_ids': playerIds,
         'target_id': targetId,
         'horizon': horizon,
@@ -152,7 +168,7 @@ class ServiceClient {
     double bank = 0.0,
     int limit = 40,
   }) async =>
-      ReplacementsAnswer.fromJson(await _post('replacements', {
+      ReplacementsAnswer.fromJson(await _post('squad/replacements', {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'out_id': outId,
@@ -166,7 +182,7 @@ class ServiceClient {
           int horizon = 5,
           List<int> includeIds = const [],
           List<int> excludeIds = const []}) async =>
-      BuildAnswer.fromJson(await _post('build', {
+      BuildAnswer.fromJson(await _post('squad/build', {
         'budget': budget,
         'horizon': horizon,
         'include_ids': includeIds,

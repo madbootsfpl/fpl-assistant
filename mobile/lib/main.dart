@@ -11,6 +11,7 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'chips_view.dart';
+import 'players_view.dart';
 import 'draft.dart';
 import 'more_view.dart';
 import 'pitch.dart';
@@ -61,25 +62,32 @@ class MyTeamScreen extends StatefulWidget {
 /// later moves everything under the user's thumb"* — and it held while the fourth slot was a placeholder.
 /// ⭐ It stops holding when there is a **real** fourth item: four working tabs beat three plus a dead one,
 /// and the move is cheaper now than after anyone has built muscle memory for a button that does nothing.
-/// ⚠️ **Chips is back in the bar** — ADR-223 greyed it, ADR-228 moved it into More *because it did not
-/// work*, and ADR-229 built it. ⭐ *A tab earns its slot by working*, which is the rule both earlier moves
-/// were reaching for.
-enum _Tab { myTeam, transfers, thisWeek, chips, more }
+/// The bar, **ordered by how often a manager needs each** (ADR-166's rule for the web sidebar).
+///
+/// ⚠️ **Chips is not here, and it works.** ADR-229 put it in the bar on the rule *a tab earns its slot by
+/// working* — which is the rule for **removing dead tabs**, not for **allocating scarce slots**. Those are
+/// different questions, and the second one is decided by frequency: a chip is a handful of decisions per
+/// season, where Players is browsed weekly.
+///
+/// ⭐ The audit's §6 settles it without my opinion: the first release is *This week · My squad · Transfers
+/// · Players*, and Chips is not in it. It lives in More, which is no longer a graveyard for unbuilt
+/// things — it holds working ones now.
+enum _Tab { myTeam, thisWeek, transfers, players, more }
 
 extension on _Tab {
   String get label => switch (this) {
         _Tab.myTeam => 'My team',
-        _Tab.transfers => 'Transfers',
         _Tab.thisWeek => 'This week',
-        _Tab.chips => 'Chips',
+        _Tab.transfers => 'Transfers',
+        _Tab.players => 'Players',
         _Tab.more => 'More',
       };
 
   IconData get icon => switch (this) {
         _Tab.myTeam => Icons.sports_soccer,
-        _Tab.transfers => Icons.swap_horiz,
         _Tab.thisWeek => Icons.event_note,
-        _Tab.chips => Icons.style_outlined,
+        _Tab.transfers => Icons.swap_horiz,
+        _Tab.players => Icons.people_outline,
         _Tab.more => Icons.more_horiz,
       };
 }
@@ -308,7 +316,13 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             onPlan: (outId, inId) => _planSwap(team, outId, inId),
           ),
         _Tab.thisWeek => ThisWeekView(client: _client, team: team),
-        _Tab.chips => ChipsView(client: _client, team: team),
+        _Tab.players => PlayersView(
+            client: _client,
+            owned: {
+              ...team.analysis.xi.map((p) => p.id),
+              ...team.analysis.bench.map((p) => p.id),
+            },
+          ),
         _Tab.more => MoreView(
             team: team,
             managerId: _managerId,
@@ -321,6 +335,19 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
               _freeTransfers = n;
               _team = _load(_managerId);
             }),
+            onOpenChips: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => Scaffold(
+                  backgroundColor: Brand.ink,
+                  appBar: AppBar(
+                    title: const Text('Chips'),
+                    backgroundColor: Brand.ink,
+                    foregroundColor: Colors.white,
+                  ),
+                  body: ChipsView(client: _client, team: team),
+                ),
+              ),
+            ),
           ),
       };
   }
