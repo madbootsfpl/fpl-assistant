@@ -60,6 +60,11 @@ an Apple Developer account for signing.
 
 ```bash
 venv/bin/python -m uvicorn src.service.http:app --port 8078   # interactive docs: /api/v1/docs
+
+# ⚠️ That binds to 127.0.0.1, which accepts nothing that is not this machine — fine for macOS, Chrome and
+# the simulator, useless for a phone. For a real device use the script, which binds 0.0.0.0 and prints the
+# Wi-Fi address to type into the app (ADR-239, docs/03_Architecture/iPhone_Free_Provisioning.md):
+scripts/serve_api.sh
 ```
 
 ⭐ **`localhost` is enough for both Chrome and the iOS simulator** — the simulator shares the host's network.

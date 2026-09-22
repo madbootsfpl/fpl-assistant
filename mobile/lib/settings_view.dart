@@ -10,6 +10,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'server.dart';
+
 import 'api/models.dart';
 import 'brand.dart';
 
@@ -25,6 +27,8 @@ class SettingsView extends StatefulWidget {
     required this.freeTransfers,
     required this.onManagerId,
     required this.onFreeTransfers,
+    required this.baseUrl,
+    required this.onServer,
     super.key,
   });
 
@@ -33,6 +37,10 @@ class SettingsView extends StatefulWidget {
   final int freeTransfers;
   final ValueChanged<int> onManagerId;
   final ValueChanged<int> onFreeTransfers;
+
+  /// Where the API is. ⭐ Runtime state, not a `const` — see [Server].
+  final String baseUrl;
+  final Future<void> Function(String) onServer;
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -97,6 +105,9 @@ class _SettingsViewState extends State<SettingsView> {
             ),
           ),
         ),
+
+        const _Heading('Server'),
+        _ServerRow(baseUrl: widget.baseUrl, onServer: widget.onServer),
 
         const _Heading('On the web'),
         const _Note(
@@ -330,4 +341,161 @@ class _Note extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Where the API is — ⭐ **the field that got the app off this machine** (ADR-239).
+///
+/// ⭐⭐ **The check is the feature, not the text box.** Anyone can store a string; what a person needs on a
+/// phone is to be told *which* of the several indistinguishable failures they are looking at, because two
+/// of them are a sleeping laptop rather than a broken app.
+class _ServerRow extends StatefulWidget {
+  const _ServerRow({required this.baseUrl, required this.onServer});
+
+  final String baseUrl;
+  final Future<void> Function(String) onServer;
+
+  @override
+  State<_ServerRow> createState() => _ServerRowState();
+}
+
+class _ServerRowState extends State<_ServerRow> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.baseUrl,
+  );
+  bool _checking = false;
+  ReachResult? _result;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// ⚠️⚠️ **It checks before it saves.** Storing an address that does not answer would leave the app
+  /// broken on its next launch with no way back except reinstalling — ⭐ *a setting that can brick the
+  /// screen it is set from has to prove itself first.* "Use anyway" is there for the case where the server
+  /// is simply not up yet, and it says so.
+  Future<void> _check({bool thenSave = true}) async {
+    setState(() {
+      _checking = true;
+      _result = null;
+    });
+    final outcome = await reach(_controller.text);
+    if (!mounted) return;
+    setState(() {
+      _checking = false;
+      _result = outcome;
+    });
+    if (outcome.ok && thenSave) await widget.onServer(_controller.text);
+  }
+
+  Future<void> _useAnyway() => widget.onServer(_controller.text);
+
+  Future<void> _reset() async {
+    await Server.forget();
+    _controller.text = kDefaultBaseUrl;
+    await _check();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _result;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _controller,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+          enableSuggestions: false,
+          onSubmitted: (_) => _check(),
+          style: const TextStyle(color: Colors.white, fontSize: 13.5),
+          decoration: InputDecoration(
+            hintText: kDefaultBaseUrl,
+            hintStyle: const TextStyle(color: Colors.white24, fontSize: 12.5),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(Brand.radiusSm),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text(
+            'On a phone this is your Mac’s address on the Wi-Fi — something like '
+            'http://192.168.1.20:8078, not localhost. A phone’s localhost is the phone.',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 10.5,
+              height: 1.45,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: _checking ? null : () => _check(),
+                style: TextButton.styleFrom(
+                  backgroundColor: Brand.purple,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.white10,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Brand.radiusSm),
+                  ),
+                ),
+                child: Text(
+                  _checking ? 'Checking…' : 'Check and use',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: _checking ? null : _reset,
+                style: TextButton.styleFrom(foregroundColor: Colors.white54),
+                child: const Text('Reset', style: TextStyle(fontSize: 12.5)),
+              ),
+            ],
+          ),
+        ),
+        if (r != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              r.message,
+              style: TextStyle(
+                color: r.ok ? Brand.good : Brand.warn,
+                fontSize: 11.5,
+                height: 1.5,
+              ),
+            ),
+          ),
+        // ⭐ Offered only when the address itself is fine and nothing answered — never for a typo, where
+        // saving it is simply the wrong thing to do.
+        if (r != null && r.reach == Reach.refused)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _useAnyway,
+              style: TextButton.styleFrom(
+                foregroundColor: Brand.purpleLight,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+              ),
+              child: const Text(
+                'Use it anyway — the server is not up yet',
+                style: TextStyle(fontSize: 11.5),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

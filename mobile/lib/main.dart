@@ -12,6 +12,7 @@ import 'api/models.dart';
 import 'brand.dart';
 import 'chips_view.dart';
 import 'players_view.dart';
+import 'server.dart';
 import 'settings_view.dart';
 import 'signals_view.dart';
 import 'draft.dart';
@@ -22,35 +23,41 @@ import 'player_sheet.dart';
 import 'this_week_view.dart';
 import 'transfers_view.dart';
 
-/// ⚠️ **Reaches the dev server from macOS desktop, the iOS simulator and Chrome** — all three share the
-/// host's network. A **physical device** cannot, and that is the point at which the API needs hosting.
-const String kBaseUrl = 'http://localhost:8078';
-
 /// The owner's own team, so the app opens on something real rather than a stranger's squad.
 const int kDefaultManagerId = 2885974;
 
-void main() => runApp(const MadbootsApp());
+/// ⚠️ **`main` is async now, and that is the whole point** — the API's address is read from the device
+/// before the first frame, so no screen is ever built against a placeholder it would then have to be told
+/// about (ADR-239). The read is one `SharedPreferences` lookup; nothing user-visible waits on it.
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(MadbootsApp(baseUrl: await Server.load()));
+}
 
 class MadbootsApp extends StatelessWidget {
-  const MadbootsApp({super.key});
+  const MadbootsApp({required this.baseUrl, super.key});
+
+  final String baseUrl;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: Brand.name,
-        debugShowCheckedModeBanner: false,
-        // ⭐ Seeded from the brand's own purple, generated from `brand.py` — the web app's single source of
-        // truth (ADR-103/114). A hex typed here would be a second definition of the brand.
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Brand.purple),
-          scaffoldBackgroundColor: Brand.ink,
-          useMaterial3: true,
-        ),
-        home: const MyTeamScreen(),
-      );
+    title: Brand.name,
+    debugShowCheckedModeBanner: false,
+    // ⭐ Seeded from the brand's own purple, generated from `brand.py` — the web app's single source of
+    // truth (ADR-103/114). A hex typed here would be a second definition of the brand.
+    theme: ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: Brand.purple),
+      scaffoldBackgroundColor: Brand.ink,
+      useMaterial3: true,
+    ),
+    home: MyTeamScreen(baseUrl: baseUrl),
+  );
 }
 
 class MyTeamScreen extends StatefulWidget {
-  const MyTeamScreen({super.key});
+  const MyTeamScreen({required this.baseUrl, super.key});
+
+  final String baseUrl;
 
   @override
   State<MyTeamScreen> createState() => _MyTeamScreenState();
@@ -79,26 +86,29 @@ enum _Tab { myTeam, thisWeek, transfers, players, more }
 
 extension on _Tab {
   String get label => switch (this) {
-        _Tab.myTeam => 'My team',
-        _Tab.thisWeek => 'This week',
-        _Tab.transfers => 'Transfers',
-        _Tab.players => 'Players',
-        _Tab.more => 'More',
-      };
+    _Tab.myTeam => 'My team',
+    _Tab.thisWeek => 'This week',
+    _Tab.transfers => 'Transfers',
+    _Tab.players => 'Players',
+    _Tab.more => 'More',
+  };
 
   IconData get icon => switch (this) {
-        _Tab.myTeam => Icons.sports_soccer,
-        _Tab.thisWeek => Icons.event_note,
-        _Tab.transfers => Icons.swap_horiz,
-        _Tab.players => Icons.people_outline,
-        _Tab.more => Icons.more_horiz,
-      };
+    _Tab.myTeam => Icons.sports_soccer,
+    _Tab.thisWeek => Icons.event_note,
+    _Tab.transfers => Icons.swap_horiz,
+    _Tab.players => Icons.people_outline,
+    _Tab.more => Icons.more_horiz,
+  };
 }
 
 class _MyTeamScreenState extends State<MyTeamScreen> {
-  final ServiceClient _client = ServiceClient(baseUrl: kBaseUrl);
-  late final TextEditingController _id =
-      TextEditingController(text: '$kDefaultManagerId');
+  /// ⚠️ **Not `final`.** Changing the address has to build a new client — `ServiceClient` holds its base
+  /// URL, so mutating a field would leave every in-flight and future call pointed at the old machine.
+  late ServiceClient _client = ServiceClient(baseUrl: widget.baseUrl);
+  late final TextEditingController _id = TextEditingController(
+    text: '$kDefaultManagerId',
+  );
   late Future<MyTeam> _team = _load(kDefaultManagerId);
   _Tab _tab = _Tab.myTeam;
 
@@ -127,7 +137,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   ///
   /// ⭐ *A fix scoped to where it was noticed is a fix the next screen does not get.*
   Future<MyTeam> _load(int managerId) async {
-    final real = await _client.myTeam(managerId, horizon: 1, freeTransfers: _freeTransfers);
+    final real = await _client.myTeam(
+      managerId,
+      horizon: 1,
+      freeTransfers: _freeTransfers,
+    );
 
     // ⭐⭐ **The real team is fetched FIRST, always.** A saved draft is an overlay on reality, never a
     // substitute for it — so reality is established before anything is laid over it, and a draft that no
@@ -150,11 +164,13 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     }
 
     _draft = saved;
-    return _client.myTeam(managerId,
-        horizon: 1,
-        freeTransfers: _freeTransfers,
-        draftPlayerIds: saved.playerIds,
-        draftBenchIds: saved.benchIds);
+    return _client.myTeam(
+      managerId,
+      horizon: 1,
+      freeTransfers: _freeTransfers,
+      draftPlayerIds: saved.playerIds,
+      draftBenchIds: saved.benchIds,
+    );
   }
 
   /// Plan a swap: `outId` leaves, `inId` arrives.
@@ -184,7 +200,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     setState(() {
       _draft = draft;
       _dropped = null;
-      _tab = _Tab.myTeam;      // ⭐ Back to the pitch: the point of applying is to SEE it.
+      _tab = _Tab
+          .myTeam; // ⭐ Back to the pitch: the point of applying is to SEE it.
       _team = _load(_managerId);
     });
   }
@@ -194,23 +211,27 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   /// Push a full screen. ⭐ Used for the things More links to — they are screens, not rows, and giving them
   /// a back button is what makes More a menu rather than a very long page.
   void _open(String title, Widget body) => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => Scaffold(
-            backgroundColor: Brand.ink,
-            appBar: AppBar(
-              title: Text(title),
-              backgroundColor: Brand.ink,
-              foregroundColor: Colors.white,
-            ),
-            body: body,
-          ),
+    MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        backgroundColor: Brand.ink,
+        appBar: AppBar(
+          title: Text(title),
+          backgroundColor: Brand.ink,
+          foregroundColor: Colors.white,
         ),
-      );
+        body: body,
+      ),
+    ),
+  );
 
   /// Tap a player: armband, or replace him.
   Future<void> _openPlayer(MyTeam team, PlayerSummary player) async {
-    final action = await showPlayerSheet(context,
-        team: team, player: player, client: _client);
+    final action = await showPlayerSheet(
+      context,
+      team: team,
+      player: player,
+      client: _client,
+    );
     if (action == null) return;
     switch (action) {
       // ⭐ Armbands change no number this app computes, so they never leave the device — no round trip,
@@ -226,8 +247,13 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   /// ⚠️ **A captain cannot also be vice.** Setting one clears the other if they collide — FPL would reject
   /// it, and an app that let you build an impossible team is teaching you something untrue.
-  Future<void> _setArmband(MyTeam team, {int? captainId, int? viceCaptainId}) async {
-    final base = _draft ??
+  Future<void> _setArmband(
+    MyTeam team, {
+    int? captainId,
+    int? viceCaptainId,
+  }) async {
+    final base =
+        _draft ??
         Draft(
           managerId: _managerId,
           gameweek: team.gameweek ?? 0,
@@ -273,47 +299,52 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              const _TitleBar(),
-              Expanded(
-                child: FutureBuilder<MyTeam>(
-                  future: _team,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      // ⚠️ Shown, not swallowed. An app that renders an empty pitch on failure looks like a
-                      // squad with no players — and the message is usually the whole diagnosis.
-                      return Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Center(
-                          child: SelectableText(_reason(snapshot.error),
-                              style: const TextStyle(color: Colors.white70, height: 1.55)),
+    body: SafeArea(
+      child: Column(
+        children: [
+          const _TitleBar(),
+          Expanded(
+            child: FutureBuilder<MyTeam>(
+              future: _team,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  // ⚠️ Shown, not swallowed. An app that renders an empty pitch on failure looks like a
+                  // squad with no players — and the message is usually the whole diagnosis.
+                  return Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Center(
+                      child: SelectableText(
+                        _reason(snapshot.error),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          height: 1.55,
                         ),
-                      );
-                    }
-                    return Column(
-                      children: [
-                        if (snapshot.data!.isDraft || _draft != null)
-                          _DraftBanner(draft: _draft, onDiscard: _discardDraft),
-                        if (_dropped != null) _DroppedBanner(reason: _dropped!),
-                        Expanded(child: _body(snapshot.data!)),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    if (snapshot.data!.isDraft || _draft != null)
+                      _DraftBanner(draft: _draft, onDiscard: _discardDraft),
+                    if (_dropped != null) _DroppedBanner(reason: _dropped!),
+                    Expanded(child: _body(snapshot.data!)),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-        bottomNavigationBar: _BottomBar(
-          current: _tab,
-          onPick: (t) => setState(() => _tab = t),
-        ),
-      );
+        ],
+      ),
+    ),
+    bottomNavigationBar: _BottomBar(
+      current: _tab,
+      onPick: (t) => setState(() => _tab = t),
+    ),
+  );
 
   Widget _body(MyTeam rawTeam) {
     // ⭐ The draft's armbands win over FPL's for display. They are the only part of a plan the server never
@@ -325,53 +356,68 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             viceCaptainId: _draft!.viceCaptainId ?? rawTeam.viceCaptainId,
           );
     return switch (_tab) {
-        _Tab.myTeam => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-            child: PitchView(
-              team: team,
-              mode: _mode,
-              onMode: (m) => setState(() => _mode = m),
-              onTapPlayer: (p) => _openPlayer(team, p),
-            ),
-          ),
-        _Tab.transfers => TransfersView(
-            client: _client,
+      _Tab.myTeam => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+        child: PitchView(
+          team: team,
+          mode: _mode,
+          onMode: (m) => setState(() => _mode = m),
+          onTapPlayer: (p) => _openPlayer(team, p),
+        ),
+      ),
+      _Tab.transfers => TransfersView(
+        client: _client,
+        team: team,
+        onPlan: (outId, inId) => _planSwap(team, outId, inId),
+      ),
+      _Tab.thisWeek => ThisWeekView(client: _client, team: team),
+      _Tab.players => PlayersView(
+        client: _client,
+        owned: {
+          ...team.analysis.xi.map((p) => p.id),
+          ...team.analysis.bench.map((p) => p.id),
+        },
+      ),
+      _Tab.more => MoreView(
+        managerId: _managerId,
+        freeTransfers: _freeTransfers,
+        onOpenChips: () => _open(
+          'Chips',
+          ChipsView(client: _client, team: team, managerId: _managerId),
+        ),
+        onOpenSignals: () =>
+            _open('Signals', SignalsView(client: _client, team: team)),
+        onOpenFeedback: () =>
+            _open('Tell us something', FeedbackView(client: _client)),
+        onOpenSettings: () => _open(
+          'Settings',
+          SettingsView(
             team: team,
-            onPlan: (outId, inId) => _planSwap(team, outId, inId),
-          ),
-        _Tab.thisWeek => ThisWeekView(client: _client, team: team),
-        _Tab.players => PlayersView(
-            client: _client,
-            owned: {
-              ...team.analysis.xi.map((p) => p.id),
-              ...team.analysis.bench.map((p) => p.id),
-            },
-          ),
-        _Tab.more => MoreView(
             managerId: _managerId,
             freeTransfers: _freeTransfers,
-            onOpenChips: () => _open('Chips', ChipsView(client: _client, team: team, managerId: _managerId)),
-            onOpenSignals: () =>
-                _open('Signals', SignalsView(client: _client, team: team)),
-            onOpenFeedback: () => _open('Tell us something', FeedbackView(client: _client)),
-            onOpenSettings: () => _open(
-              'Settings',
-              SettingsView(
-                team: team,
-                managerId: _managerId,
-                freeTransfers: _freeTransfers,
-                onManagerId: (id) {
-                  _id.text = '$id';
-                  setState(() => _team = _load(id));
-                },
-                onFreeTransfers: (n) => setState(() {
-                  _freeTransfers = n;
-                  _team = _load(_managerId);
-                }),
-              ),
-            ),
+            baseUrl: _client.baseUrl,
+            // ⭐ A new client, and an immediate reload against it — the screen you came from is the
+            // proof the new address works, which beats a message saying it should.
+            onServer: (url) async {
+              await Server.save(url);
+              if (!mounted) return;
+              setState(() {
+                _client = ServiceClient(baseUrl: Server.tidy(url));
+                _team = _load(_managerId);
+              });
+            },
+            onManagerId: (id) {
+              _id.text = '$id';
+              setState(() => _team = _load(id));
+            },
+            onFreeTransfers: (n) => setState(() {
+              _freeTransfers = n;
+              _team = _load(_managerId);
+            }),
           ),
-      };
+        ),
+      ),
+    };
   }
 
   static String _reason(Object? error) => friendlyError(error);
@@ -384,19 +430,27 @@ class _TitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
-        child: Text.rich(
-          TextSpan(children: [
-            TextSpan(
-                text: 'MAD',
-                style: TextStyle(color: Brand.purpleLight, fontWeight: FontWeight.w700)),
-            TextSpan(text: 'BOOTS', style: TextStyle(color: Colors.white)),
-          ]),
-          style: TextStyle(fontSize: 15, letterSpacing: .5),
-        ),
-      );
+    padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
+    child: Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'MAD',
+            style: TextStyle(
+              color: Brand.purpleLight,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          TextSpan(
+            text: 'BOOTS',
+            style: TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+      style: TextStyle(fontSize: 15, letterSpacing: .5),
+    ),
+  );
 }
-
 
 class _BottomBar extends StatelessWidget {
   const _BottomBar({required this.current, required this.onPick});
@@ -406,40 +460,44 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: const Color(0xFF0F0C16),
-        padding: const EdgeInsets.only(top: 6, bottom: 8),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            children: [
-              for (final tab in _Tab.values)
-                Expanded(
-                  child: GestureDetector(
-                    // ⚠️ `opaque` so the whole column is the target, not just the glyph — a 19px icon is
-                    // under Apple's 44pt minimum and misses on a real thumb.
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onPick(tab),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(tab.icon,
-                            size: 19,
-                            color: tab == current ? Colors.white : Colors.white54),
-                        const SizedBox(height: 3),
-                        Text(tab.label,
-                            style: TextStyle(
-                                fontSize: 9.5,
-                                color: tab == current ? Colors.white : Colors.white54)),
-                      ],
+    color: const Color(0xFF0F0C16),
+    padding: const EdgeInsets.only(top: 6, bottom: 8),
+    child: SafeArea(
+      top: false,
+      child: Row(
+        children: [
+          for (final tab in _Tab.values)
+            Expanded(
+              child: GestureDetector(
+                // ⚠️ `opaque` so the whole column is the target, not just the glyph — a 19px icon is
+                // under Apple's 44pt minimum and misses on a real thumb.
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onPick(tab),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      tab.icon,
+                      size: 19,
+                      color: tab == current ? Colors.white : Colors.white54,
                     ),
-                  ),
+                    const SizedBox(height: 3),
+                    Text(
+                      tab.label,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: tab == current ? Colors.white : Colors.white54,
+                      ),
+                    ),
+                  ],
                 ),
-            ],
-          ),
-        ),
-      );
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
-
 
 /// ⭐⭐ **Unmissable, and it has to be.** A plan shown as your squad is a lie about something you can act
 /// on — so the banner is coloured, permanent while the draft is live, and carries the way out.
@@ -451,31 +509,37 @@ class _DraftBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        color: Brand.orange,
-        padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
-        child: Row(
-          children: [
-            const Icon(Icons.edit_note, size: 17, color: Colors.white),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                // ⚠️ Says what it is AND what it is not. "Plan" alone could be read as a saved team.
-                'A plan — not your FPL team. '
-                '${draft == null ? '' : '${draft!.changeCount} change${draft!.changeCount == 1 ? '' : 's'}. '}'
-                'Make it for real in the FPL app.',
-                style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.35),
-              ),
+    width: double.infinity,
+    color: Brand.orange,
+    padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+    child: Row(
+      children: [
+        const Icon(Icons.edit_note, size: 17, color: Colors.white),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            // ⚠️ Says what it is AND what it is not. "Plan" alone could be read as a saved team.
+            'A plan — not your FPL team. '
+            '${draft == null ? '' : '${draft!.changeCount} change${draft!.changeCount == 1 ? '' : 's'}. '}'
+            'Make it for real in the FPL app.',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11.5,
+              height: 1.35,
             ),
-            TextButton(
-              onPressed: onDiscard,
-              style: TextButton.styleFrom(
-                  foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10)),
-              child: const Text('Discard', style: TextStyle(fontSize: 11.5)),
-            ),
-          ],
+          ),
         ),
-      );
+        TextButton(
+          onPressed: onDiscard,
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+          ),
+          child: const Text('Discard', style: TextStyle(fontSize: 11.5)),
+        ),
+      ],
+    ),
+  );
 }
 
 /// ⭐ *"Your plan is gone"* and *"your plan already happened"* mean opposite things, so each gets its own
@@ -487,19 +551,18 @@ class _DroppedBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        color: Colors.white12,
-        padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
-        child: Text(
-          switch (reason) {
-            DraftStaleness.gameweekPassed =>
-              'Your saved plan was for a gameweek that has been played, so it has been cleared.',
-            DraftStaleness.squadChanged =>
-              'Your squad changed since you saved a plan — looks like you made the move. Plan cleared.',
-            DraftStaleness.otherManager => 'That plan belonged to a different manager id. Cleared.',
-            DraftStaleness.fresh => '',
-          },
-          style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),
-        ),
-      );
+    width: double.infinity,
+    color: Colors.white12,
+    padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
+    child: Text(
+      switch (reason) {
+        DraftStaleness.gameweekPassed => 'Your saved plan was for a gameweek that has been played, so it has been cleared.',
+        DraftStaleness.squadChanged => 'Your squad changed since you saved a plan — looks like you made the move. Plan cleared.',
+        DraftStaleness.otherManager =>
+          'That plan belonged to a different manager id. Cleared.',
+        DraftStaleness.fresh => '',
+      },
+      style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),
+    ),
+  );
 }

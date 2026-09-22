@@ -132,6 +132,8 @@ void _settingsOwnsItsState() {
       freeTransfers: 1,
       onManagerId: (_) {},
       onFreeTransfers: told.add,
+      baseUrl: 'http://test',
+      onServer: (_) async {},
     )));
 
     Color colourOf(int n) {

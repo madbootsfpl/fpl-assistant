@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,318 tests · 238 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,324 tests · 239 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
 page knowing three things:
@@ -49,6 +49,15 @@ page knowing three things:
    (238). ⭐⭐ **What was NOT copied is the point**: no "AI" label — their AI-transfers feature is our Boot
    Battle and Player DNA under a fashionable name — and their help/feedback, which sends you back to a
    desktop, became a destination that sends from the phone.
+
+   ✅ **The app runs on hardware other than this Mac** (ADR-239, 2026-09-22) — feature work stopped at the
+   owner's call, because none of ADR-228…238 could be opened by anybody. ⭐⭐ The blocker was a `const`, not
+   the signing: the API's address is now **runtime state with a compile-time default**, so the same build
+   takes a LAN address today and a hosted URL later. The two silent-failure iOS keys are in and tested,
+   and `scripts/serve_api.sh` binds `0.0.0.0` and prints the address to type in.
+   📅 **Next, in the owner's order:** his own iPhone on **free provisioning** (£0, ⚠️ 7-day certificate,
+   Wi-Fi only) → **poll the testers' handsets** → then the fork: **Apple £79/yr** for TestFlight, or the
+   **Android** work. ⭐ Both need the API hosted; neither needs anything in ADR-239 redone.
 
    📌 **Still owed from that review:** tap two Players rows to Boot Battle them; the progressive-disclosure
    *"Add filter"* dropdown the owner liked in their custom transfers; and a **pitch badge for new signals**

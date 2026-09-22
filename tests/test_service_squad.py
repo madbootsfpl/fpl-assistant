@@ -12,6 +12,7 @@ marginally different total from the in-process one. Each would read as working.
 """
 
 import json
+import pathlib
 import shutil
 
 import pytest
@@ -23,6 +24,7 @@ from src.service import inputs as service_inputs
 from src.service.http import app
 from src.storage import Storage
 
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 STAMP = "2026-09-21T09:00:00+00:00"
 
 
@@ -203,7 +205,57 @@ def test_health_answers_without_touching_the_database(client, monkeypatch):
     """⭐ A health check that fails when the database is slow reports on the database, not the service —
     and would take the app out of rotation for a dependency it can survive."""
     monkeypatch.setattr(service_inputs, "Storage", lambda: 1 / 0)
-    assert client.get("/api/v1/health").json() == {"ok": True}
+    body = client.get("/api/v1/health").json()
+    assert body["ok"] is True
+
+
+def test_health_says_which_service_answered(client):
+    """⭐⭐ **`service` exists for the phone, not for monitoring** (ADR-239).
+
+    Once the base URL is something a person types, a typo can land on a router's admin page, another dev
+    server on the same port, or a captive portal — ⚠️ **every one of which answers 200**. A bare
+    `{"ok": true}` cannot tell those apart, so the app would report a healthy connection to the wrong
+    machine and every later error would be blamed on the app.
+
+    ⚠️ `mobile/test/server_test.dart` branches on **exactly these two keys**, and asserts against a copy
+    of this body. Renaming either here without renaming it there leaves a Flutter build that reports
+    *"it is not MADBOOTS"* against MADBOOTS.
+    """
+    body = client.get("/api/v1/health").json()
+    assert body["service"] == "madboots"
+    assert body["version"], "a version that is present but empty tells the app nothing"
+
+
+def test_the_version_is_read_and_not_retyped():
+    """⭐ A version string written in two places is a version string that disagrees with itself."""
+    import tomllib
+
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    from src.service.http.app import _VERSION
+
+    assert _VERSION == pyproject["project"]["version"]
+
+
+def test_the_dart_test_asserts_against_the_body_this_service_returns(client):
+    """⭐⭐⭐ **The copy in the Dart test is a literal, and literals rot.**
+
+    `server_test.dart` cannot call this service, so it hard-codes the health body. That is the right
+    trade — a Dart test that needed a live server would be a Dart test nobody runs — but it means the copy
+    needs a guard on *this* side, where the real answer is. ⚠️ *A fixture nobody compares to the original
+    is a fixture that is eventually wrong about it.*
+    """
+    import re
+
+    dart = (ROOT / "mobile" / "test" / "server_test.dart").read_text()
+    quoted = re.search(r"const _health = '(\{.*?\})';", dart)
+    assert quoted, "server_test.dart no longer carries a _health literal — update this guard with it"
+
+    copied = json.loads(quoted.group(1))
+    live = client.get("/api/v1/health").json()
+    assert set(copied) == set(live), (
+        f"the Dart copy has keys {sorted(copied)}; the service returns {sorted(live)}. "
+        f"Update mobile/test/server_test.dart."
+    )
 
 
 def test_the_two_transports_return_the_same_answer(client, store):

@@ -13,6 +13,7 @@ here, the in-process consumer and the HTTP consumer have different products — 
 whole layer exists to prevent.
 """
 
+import importlib.metadata
 from collections.abc import Callable
 
 from fastapi import FastAPI, HTTPException
@@ -55,6 +56,15 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+# ⭐ Read from the package metadata rather than typed here. A version string written in two places is a
+# version string that disagrees with itself — ADR-212's lesson at its smallest scale.
+try:
+    _VERSION = importlib.metadata.version("fpl-assistant")
+except importlib.metadata.PackageNotFoundError:  # pragma: no cover - only when run uninstalled
+    _VERSION = "unknown"
+
 
 _GAMEWEEK_KEYS = ("⚠️ `by_gameweek` arrives keyed by gameweek as a **string**, because JSON has no integer "
                   "object keys — the same shape PostgREST already serves for the published board. ⭐ Parse "
@@ -197,10 +207,18 @@ def _answer(fn: Callable, request) -> dict:
 
 @app.get("/api/v1/health")
 def health() -> dict:
-    """Is the service up? Deliberately does not touch the database — ⭐ a health check that fails when the
-    database is slow reports on the database, not the service, and would take the app out of rotation for a
-    dependency it can survive."""
-    return {"ok": True}
+    """Is the service up, **and is it us**? Deliberately does not touch the database — ⭐ a health check
+    that fails when the database is slow reports on the database, not the service, and would take the app
+    out of rotation for a dependency it can survive.
+
+    ⭐⭐ **`service` and `version` are here for the phone, not for monitoring** (ADR-239). Once the base URL
+    is something a person types, a typo can land on a router's admin page, another dev server on the same
+    port, or a captive portal — all of which answer **200** and none of which are this API. A bare
+    `{"ok": true}` cannot tell those apart, so the app would report a healthy connection to the wrong
+    machine. ⚠️ *"Something answered" is not "the right thing answered",* and only the payload can say
+    which.
+    """
+    return {"ok": True, "service": "madboots", "version": _VERSION}
 
 
 @app.post("/api/v1/squad/analysis", description=_GAMEWEEK_KEYS)
