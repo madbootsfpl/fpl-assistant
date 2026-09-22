@@ -22,31 +22,31 @@ import 'brand.dart';
 enum SignalKind { official, departure, exodus, headline, unknown }
 
 SignalKind _kindOf(String raw) => switch (raw) {
-      'official' => SignalKind.official,
-      'departure' => SignalKind.departure,
-      'exodus' => SignalKind.exodus,
-      'headline' => SignalKind.headline,
-      _ => SignalKind.unknown,
-    };
+  'official' => SignalKind.official,
+  'departure' => SignalKind.departure,
+  'exodus' => SignalKind.exodus,
+  'headline' => SignalKind.headline,
+  _ => SignalKind.unknown,
+};
 
 extension on SignalKind {
   /// ⚠️ The label says **what kind of claim it is**, not how alarming it is. *"Unexplained"* is a statement
   /// about our own data, which is the honest thing an inference can say about itself.
   String get label => switch (this) {
-        SignalKind.official => 'FPL',
-        SignalKind.departure => 'Reported move',
-        SignalKind.exodus => 'Unexplained',
-        SignalKind.headline => 'Headline',
-        SignalKind.unknown => 'Signal',
-      };
+    SignalKind.official => 'FPL',
+    SignalKind.departure => 'Reported move',
+    SignalKind.exodus => 'Unexplained',
+    SignalKind.headline => 'Headline',
+    SignalKind.unknown => 'Signal',
+  };
 
   Color get colour => switch (this) {
-        SignalKind.official => Brand.bad,
-        SignalKind.departure => Brand.bad,
-        SignalKind.exodus => Brand.warn,
-        SignalKind.headline => Brand.purpleLight,
-        SignalKind.unknown => Brand.muted,
-      };
+    SignalKind.official => Brand.bad,
+    SignalKind.departure => Brand.bad,
+    SignalKind.exodus => Brand.warn,
+    SignalKind.headline => Brand.purpleLight,
+    SignalKind.unknown => Brand.muted,
+  };
 }
 
 /// Remembers which signals have already been shown. ⭐ One key, like the draft store — the app needs a
@@ -85,7 +85,8 @@ class SignalsView extends StatefulWidget {
 
 class _SignalsViewState extends State<SignalsView> {
   final _SeenStore _store = _SeenStore();
-  late final Future<(List<Map<String, dynamic>>, int, Set<String>)> _load = _fetch();
+  late final Future<(List<Map<String, dynamic>>, int, Set<String>)> _load =
+      _fetch();
 
   Future<(List<Map<String, dynamic>>, int, Set<String>)> _fetch() async {
     final seen = await _store.load();
@@ -103,55 +104,63 @@ class _SignalsViewState extends State<SignalsView> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      FutureBuilder<(List<Map<String, dynamic>>, int, Set<String>)>(
-        future: _load,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Center(
-                child: SelectableText(friendlyError(snapshot.error),
-                    style: const TextStyle(color: Colors.white70, height: 1.55)),
-              ),
-            );
-          }
-          final (signals, checked, seen) = snapshot.data!;
-          final fresh = signals.where((s) => !seen.contains('${s['key']}')).length;
+  Widget build(
+    BuildContext context,
+  ) => FutureBuilder<(List<Map<String, dynamic>>, int, Set<String>)>(
+    future: _load,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: SelectableText(
+              friendlyError(snapshot.error),
+              style: const TextStyle(color: Colors.white70, height: 1.55),
+            ),
+          ),
+        );
+      }
+      final (signals, checked, seen) = snapshot.data!;
+      final fresh = signals.where((s) => !seen.contains('${s['key']}')).length;
 
-          if (signals.isEmpty) {
-            // ⭐ A quiet week is news. An empty screen reads as a failure to load.
-            return _Empty(checked: checked);
-          }
+      if (signals.isEmpty) {
+        // ⭐ A quiet week is news. An empty screen reads as a failure to load.
+        return _Empty(checked: checked);
+      }
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
-            children: [
-              Text(
-                fresh == 0
-                    ? '${signals.length} across your $checked players — nothing new since you last looked.'
-                    : '$fresh new · ${signals.length} across your $checked players',
-                style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.45),
-              ),
-              const SizedBox(height: 12),
-              for (final signal in signals)
-                _Signal(
-                  data: signal,
-                  isNew: !seen.contains('${signal['key']}'),
-                ),
-              const SizedBox(height: 12),
-              const Text(
-                'Ordered by how much the source actually knows: FPL first, then a reported move, then a '
-                'sell-off nothing in the data explains, then headlines.',
-                style: TextStyle(color: Colors.white24, fontSize: 10.5, height: 1.5),
-              ),
-            ],
-          );
-        },
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+        children: [
+          Text(
+            fresh == 0
+                ? '${signals.length} across your $checked players — nothing new since you last looked.'
+                : '$fresh new · ${signals.length} across your $checked players',
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final signal in signals)
+            _Signal(data: signal, isNew: !seen.contains('${signal['key']}')),
+          const SizedBox(height: 12),
+          const Text(
+            'Ordered by how much the source actually knows: FPL first, then a reported move, then a '
+            'sell-off nothing in the data explains, then headlines.',
+            style: TextStyle(
+              color: Colors.white24,
+              fontSize: 10.5,
+              height: 1.5,
+            ),
+          ),
+        ],
       );
+    },
+  );
 }
 
 class _Signal extends StatelessWidget {
@@ -163,7 +172,9 @@ class _Signal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kind = _kindOf('${data['kind']}');
-    final player = PlayerSummary.fromJson(data['player'] as Map<String, dynamic>);
+    final player = PlayerSummary.fromJson(
+      data['player'] as Map<String, dynamic>,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 9),
@@ -178,35 +189,68 @@ class _Signal extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(player.name,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(
+                player.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(width: 6),
-              Text('${player.team} · ${player.position}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(
+                '${player.team} · ${player.position}',
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
               const Spacer(),
               if (isNew)
                 Container(
                   margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: Brand.accentTeal,
                     borderRadius: BorderRadius.circular(Brand.radiusPill),
                   ),
-                  child: const Text('new',
-                      style: TextStyle(
-                          color: Brand.ink, fontSize: 9, fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'new',
+                    style: TextStyle(
+                      color: Brand.ink,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              Text(kind.label,
-                  style: TextStyle(color: kind.colour, fontSize: 10, fontWeight: FontWeight.w600)),
+              Text(
+                kind.label,
+                style: TextStyle(
+                  color: kind.colour,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 5),
-          Text('${data['headline']}',
-              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.45)),
+          Text(
+            '${data['headline']}',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              height: 1.45,
+            ),
+          ),
           const SizedBox(height: 3),
-          Text('${data['detail']}',
-              style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.45)),
+          Text(
+            '${data['detail']}',
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 11,
+              height: 1.45,
+            ),
+          ),
         ],
       ),
     );
@@ -220,24 +264,34 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle_outline, size: 30, color: Colors.white24),
-              const SizedBox(height: 10),
-              Text('Nothing to report across your $checked players.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13.5)),
-              const SizedBox(height: 6),
-              const Text(
-                'No FPL news, no reported moves, no sell-off the data cannot explain.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white24, fontSize: 11.5, height: 1.5),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.check_circle_outline,
+            size: 30,
+            color: Colors.white24,
           ),
-        ),
-      );
+          const SizedBox(height: 10),
+          Text(
+            'Nothing to report across your $checked players.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white54, fontSize: 13.5),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'No FPL news, no reported moves, no sell-off the data cannot explain.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white24,
+              fontSize: 11.5,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

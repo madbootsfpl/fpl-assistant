@@ -5,6 +5,7 @@
 library;
 
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 /// One row of the published board.
@@ -31,7 +32,9 @@ class BoardRow {
   /// ⭐ Sum first. Round only at the point of display, and see the warning below before deciding how.
   double xpOver(int horizon) {
     final weeks = byGameweek.keys.toList()..sort();
-    return weeks.take(horizon).fold<double>(0, (sum, gw) => sum + byGameweek[gw]!);
+    return weeks
+        .take(horizon)
+        .fold<double>(0, (sum, gw) => sum + byGameweek[gw]!);
   }
 
   /// One-decimal display value.
@@ -106,12 +109,14 @@ class BoardClient {
       '$projectUrl/rest/v1/xp_board'
       '?select=web_name,team,position,by_gameweek',
     );
-    final response = await http.get(uri, headers: {
-      'apikey': publishableKey,
-      'Accept': 'application/json',
-    });
+    final response = await http.get(
+      uri,
+      headers: {'apikey': publishableKey, 'Accept': 'application/json'},
+    );
     if (response.statusCode != 200) {
-      throw Exception('board read failed: ${response.statusCode} ${response.body}');
+      throw Exception(
+        'board read failed: ${response.statusCode} ${response.body}',
+      );
     }
     lastBytes = response.bodyBytes.length;
     final rows = jsonDecode(response.body) as List<dynamic>;

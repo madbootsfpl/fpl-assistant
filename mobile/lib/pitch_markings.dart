@@ -21,21 +21,21 @@ class PitchMarkings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-        decoration: const BoxDecoration(
-          // ⭐ Banded rather than flat — a mown-stripe gradient reads as grass at a glance, and it is two
-          // colours rather than an image.
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF419462), Color(0xFF34754E)],
-          ),
-        ),
-        child: CustomPaint(
-          painter: _Markings(),
-          // ⚠️ `isComplex` off and no animation: this repaints only when the pitch resizes.
-          child: child,
-        ),
-      );
+    decoration: const BoxDecoration(
+      // ⭐ Banded rather than flat — a mown-stripe gradient reads as grass at a glance, and it is two
+      // colours rather than an image.
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF419462), Color(0xFF34754E)],
+      ),
+    ),
+    child: CustomPaint(
+      painter: _Markings(),
+      // ⚠️ `isComplex` off and no animation: this repaints only when the pitch resizes.
+      child: child,
+    ),
+  );
 }
 
 class _Markings extends CustomPainter {
@@ -45,8 +45,10 @@ class _Markings extends CustomPainter {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.4;
 
-  static final Paint _spot = Paint()..color = Colors.white.withValues(alpha: 0.22);
-  static final Paint _stripe = Paint()..color = Colors.white.withValues(alpha: 0.035);
+  static final Paint _spot = Paint()
+    ..color = Colors.white.withValues(alpha: 0.22);
+  static final Paint _stripe = Paint()
+    ..color = Colors.white.withValues(alpha: 0.035);
 
   /// The penalty arc, **computed rather than guessed**.
   ///
@@ -58,7 +60,13 @@ class _Markings extends CustomPainter {
   /// ⭐ The real rule: an arc of radius [r] about the penalty spot, showing **only the part outside the
   /// penalty area**. Where the arc crosses the box edge is `asin((edge − spot) / r)` — so the angles fall
   /// out of the geometry and are correct at every size.
-  static void _penaltyArc(Canvas canvas, Offset spot, double r, double edgeY, {required bool bulgeDown}) {
+  static void _penaltyArc(
+    Canvas canvas,
+    Offset spot,
+    double r,
+    double edgeY, {
+    required bool bulgeDown,
+  }) {
     final ratio = (edgeY - spot.dy) / r;
     // |ratio| >= 1 means the box edge lies beyond the arc entirely — nothing to draw, and drawing anyway is
     // how a stray curve appears across the pitch.
@@ -68,7 +76,13 @@ class _Markings extends CustomPainter {
     if (bulgeDown) {
       canvas.drawArc(rect, crossing, math.pi - 2 * crossing, false, _line);
     } else {
-      canvas.drawArc(rect, math.pi - crossing, math.pi + 2 * crossing, false, _line);
+      canvas.drawArc(
+        rect,
+        math.pi - crossing,
+        math.pi + 2 * crossing,
+        false,
+        _line,
+      );
     }
   }
 
@@ -117,9 +131,13 @@ class _Markings extends CustomPainter {
 
       final spotY = atTop ? field.top + spotOut : field.bottom - spotOut;
       canvas.drawCircle(Offset(cx, spotY), 1.6, _spot);
-      _penaltyArc(canvas, Offset(cx, spotY), arcR,
-          atTop ? field.top + boxH : field.bottom - boxH,
-          bulgeDown: atTop);
+      _penaltyArc(
+        canvas,
+        Offset(cx, spotY),
+        arcR,
+        atTop ? field.top + boxH : field.bottom - boxH,
+        bulgeDown: atTop,
+      );
     }
   }
 

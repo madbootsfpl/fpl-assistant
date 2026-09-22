@@ -21,11 +21,14 @@ class Brand {
 
   /// ⭐ Names the two halves of the system in the order they run — a description of the architecture rather
   /// than a metaphor about it, which is why it cannot drift from the truth (ADR-182).
-  static const String mantra = 'Analytics decide. Logic explains. You make the call.';
-  static const String descriptor = 'The FPL assistant where analytics decide and logic explains.';
+  static const String mantra =
+      'Analytics decide. Logic explains. You make the call.';
+  static const String descriptor =
+      'The FPL assistant where analytics decide and logic explains.';
 
   /// Legal hygiene (ADR-103) — a named product on official FPL data.
-  static const String disclaimer = 'MADBOOTS is not affiliated with the Premier League or the official Fantasy Premier League game.';
+  static const String disclaimer =
+      'MADBOOTS is not affiliated with the Premier League or the official Fantasy Premier League game.';
 
   /// The primary.
   static const Color purple = Color(0xFF8B2FC9);

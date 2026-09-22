@@ -49,58 +49,62 @@ class MoreView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-        children: [
-          _Row(
-            icon: Icons.campaign_outlined,
-            name: 'Signals',
-            why: 'FPL news, reported moves, and sell-offs the data cannot explain — about your fifteen, '
-                'strongest evidence first. Marks what is new since you last looked.',
-            onTap: onOpenSignals,
-          ),
-          _Row(
-            icon: Icons.style_outlined,
-            name: 'Chips',
-            why: 'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
-                'left, not the next one.',
-            onTap: onOpenChips,
-          ),
-          _Row(
-            icon: Icons.chat_bubble_outline,
-            name: 'Tell us something',
-            why: 'What worked, what broke, what you would add. It reaches us from here — you do not have '
-                'to go and find a laptop.',
-            onTap: onOpenFeedback,
-          ),
-          _Row(
-            icon: Icons.tune,
-            name: 'Settings',
-            // ⭐⭐ **The row states its own current value**, the same idea as the filter chips: a directory
-            // entry that says `Manager 2885974 · 2 free transfers` has already answered the question most
-            // people open it to check. *Showing the state beats offering the options.*
-            why: 'Manager $managerId · $freeTransfers free transfer${freeTransfers == 1 ? '' : 's'} · '
-                'this gameweek’s numbers, and where they come from.',
-            onTap: onOpenSettings,
-          ),
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+    children: [
+      _Row(
+        icon: Icons.campaign_outlined,
+        name: 'Signals',
+        why:
+            'FPL news, reported moves, and sell-offs the data cannot explain — about your fifteen, '
+            'strongest evidence first. Marks what is new since you last looked.',
+        onTap: onOpenSignals,
+      ),
+      _Row(
+        icon: Icons.style_outlined,
+        name: 'Chips',
+        why:
+            'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
+            'left, not the next one.',
+        onTap: onOpenChips,
+      ),
+      _Row(
+        icon: Icons.chat_bubble_outline,
+        name: 'Tell us something',
+        why:
+            'What worked, what broke, what you would add. It reaches us from here — you do not have '
+            'to go and find a laptop.',
+        onTap: onOpenFeedback,
+      ),
+      _Row(
+        icon: Icons.tune,
+        name: 'Settings',
+        // ⭐⭐ **The row states its own current value**, the same idea as the filter chips: a directory
+        // entry that says `Manager 2885974 · 2 free transfers` has already answered the question most
+        // people open it to check. *Showing the state beats offering the options.*
+        why:
+            'Manager $managerId · $freeTransfers free transfer${freeTransfers == 1 ? '' : 's'} · '
+            'this gameweek’s numbers, and where they come from.',
+        onTap: onOpenSettings,
+      ),
 
-          const _Heading('On the web'),
-          const _Note(
-            'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA and '
-            'Trending — and the market-wide view of Signals, where this app shows only your own squad.',
-          ),
-          const _Note(
-            // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find
-            // Team DNA here should learn that it is a decision, not an oversight.
-            'That split is deliberate. This app is the decision layer — what to do this week, and what a '
-            'move is worth. The web app stays the exploration layer, where a bigger screen earns its keep.',
-            muted: true,
-          ),
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: _Note(Brand.mantra, italic: true),
-          ),
-        ],
-      );
+      const _Heading('On the web'),
+      const _Note(
+        'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA and '
+        'Trending — and the market-wide view of Signals, where this app shows only your own squad.',
+      ),
+      const _Note(
+        // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find
+        // Team DNA here should learn that it is a decision, not an oversight.
+        'That split is deliberate. This app is the decision layer — what to do this week, and what a '
+        'move is worth. The web app stays the exploration layer, where a bigger screen earns its keep.',
+        muted: true,
+      ),
+      const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: _Note(Brand.mantra, italic: true),
+      ),
+    ],
+  );
 }
 
 /// One directory entry: icon, name, and **the line that makes the directory work**.
@@ -119,41 +123,51 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Brand.radiusSm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 1, right: 12),
-                child: Icon(icon, size: 19, color: Brand.purpleLight),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600)),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Text(why,
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 11.5, height: 1.45)),
-                    ),
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(top: 2, left: 8),
-                child: Icon(Icons.chevron_right, size: 18, color: Colors.white24),
-              ),
-            ],
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(Brand.radiusSm),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1, right: 12),
+            child: Icon(icon, size: 19, color: Brand.purpleLight),
           ),
-        ),
-      );
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    why,
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11.5,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 2, left: 8),
+            child: Icon(Icons.chevron_right, size: 18, color: Colors.white24),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Heading extends StatelessWidget {
@@ -163,10 +177,16 @@ class _Heading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 26, bottom: 8),
-        child: Text(text.toUpperCase(),
-            style: const TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 1.2)),
-      );
+    padding: const EdgeInsets.only(top: 26, bottom: 8),
+    child: Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white38,
+        fontSize: 10,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 }
 
 class _Note extends StatelessWidget {
@@ -178,13 +198,15 @@ class _Note extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text,
-            style: TextStyle(
-              color: muted ? Colors.white24 : Colors.white54,
-              fontSize: 11.5,
-              height: 1.5,
-              fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-            )),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: muted ? Colors.white24 : Colors.white54,
+        fontSize: 11.5,
+        height: 1.5,
+        fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+      ),
+    ),
+  );
 }

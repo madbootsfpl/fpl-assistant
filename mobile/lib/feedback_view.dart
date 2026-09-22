@@ -46,15 +46,18 @@ class _FeedbackViewState extends State<FeedbackView> {
       _outcome = null;
     });
     try {
-      final result =
-          await widget.client.feedback(message: text, screen: 'mobile', version: '0.0.1');
+      final result = await widget.client.feedback(
+        message: text,
+        screen: 'mobile',
+        version: '0.0.1',
+      );
       final sent = result['sent'] == true;
       setState(() {
         _ok = sent;
         _outcome = sent
             ? 'Thanks — that reached us.'
             : 'Not sent — ${result['reason'] ?? 'the service refused it'}. '
-                'Email ${result['email'] ?? 'us'} instead and it will not be lost.';
+                  'Email ${result['email'] ?? 'us'} instead and it will not be lost.';
         if (sent) _message.clear();
       });
     } catch (e) {
@@ -69,58 +72,67 @@ class _FeedbackViewState extends State<FeedbackView> {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-        children: [
-          const Text(
-            'What worked? What broke? What would you add?',
-            style: TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+    children: [
+      const Text(
+        'What worked? What broke? What would you add?',
+        style: TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+      ),
+      const Padding(
+        padding: EdgeInsets.only(top: 6, bottom: 12),
+        child: Text(
+          'Screen and app version travel with it, so you do not have to describe where you were.',
+          style: TextStyle(color: Colors.white38, fontSize: 11.5, height: 1.5),
+        ),
+      ),
+      TextField(
+        controller: _message,
+        maxLines: 6,
+        maxLength: 4000,
+        autofocus: true,
+        style: const TextStyle(color: Colors.white, fontSize: 13.5),
+        decoration: InputDecoration(
+          counterStyle: const TextStyle(color: Colors.white24, fontSize: 10),
+          filled: true,
+          fillColor: Colors.white10,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(Brand.radiusSm),
+            borderSide: BorderSide.none,
           ),
-          const Padding(
-            padding: EdgeInsets.only(top: 6, bottom: 12),
-            child: Text(
-              'Screen and app version travel with it, so you do not have to describe where you were.',
-              style: TextStyle(color: Colors.white38, fontSize: 11.5, height: 1.5),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: _sending ? null : _send,
+          style: TextButton.styleFrom(
+            backgroundColor: Brand.purple,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.white10,
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Brand.radiusSm),
             ),
           ),
-          TextField(
-            controller: _message,
-            maxLines: 6,
-            maxLength: 4000,
-            autofocus: true,
-            style: const TextStyle(color: Colors.white, fontSize: 13.5),
-            decoration: InputDecoration(
-              counterStyle: const TextStyle(color: Colors.white24, fontSize: 10),
-              filled: true,
-              fillColor: Colors.white10,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Brand.radiusSm),
-                borderSide: BorderSide.none,
-              ),
+          child: Text(
+            _sending ? 'Sending…' : 'Send',
+            style: const TextStyle(fontSize: 13.5),
+          ),
+        ),
+      ),
+      if (_outcome != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            _outcome!,
+            style: TextStyle(
+              color: _ok ? Brand.good : Brand.warn,
+              fontSize: 12,
+              height: 1.5,
             ),
           ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _sending ? null : _send,
-              style: TextButton.styleFrom(
-                backgroundColor: Brand.purple,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.white10,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                shape:
-                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(Brand.radiusSm)),
-              ),
-              child: Text(_sending ? 'Sending…' : 'Send', style: const TextStyle(fontSize: 13.5)),
-            ),
-          ),
-          if (_outcome != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_outcome!,
-                  style: TextStyle(
-                      color: _ok ? Brand.good : Brand.warn, fontSize: 12, height: 1.5)),
-            ),
-        ],
-      );
+        ),
+    ],
+  );
 }

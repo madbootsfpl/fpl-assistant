@@ -43,15 +43,15 @@ class Draft {
   });
 
   factory Draft.fromJson(Map<String, dynamic> json) => Draft(
-        managerId: json['manager_id'] as int,
-        gameweek: json['gameweek'] as int,
-        basePlayerIds: (json['base_player_ids'] as List).cast<int>(),
-        playerIds: (json['player_ids'] as List).cast<int>(),
-        benchIds: (json['bench_ids'] as List).cast<int>(),
-        savedAt: DateTime.parse(json['saved_at'] as String),
-        captainId: json['captain_id'] as int?,
-        viceCaptainId: json['vice_captain_id'] as int?,
-      );
+    managerId: json['manager_id'] as int,
+    gameweek: json['gameweek'] as int,
+    basePlayerIds: (json['base_player_ids'] as List).cast<int>(),
+    playerIds: (json['player_ids'] as List).cast<int>(),
+    benchIds: (json['bench_ids'] as List).cast<int>(),
+    savedAt: DateTime.parse(json['saved_at'] as String),
+    captainId: json['captain_id'] as int?,
+    viceCaptainId: json['vice_captain_id'] as int?,
+  );
 
   final int managerId;
 
@@ -76,15 +76,15 @@ class Draft {
   final int? viceCaptainId;
 
   Map<String, dynamic> toJson() => {
-        'manager_id': managerId,
-        'gameweek': gameweek,
-        'base_player_ids': basePlayerIds,
-        'player_ids': playerIds,
-        'bench_ids': benchIds,
-        'saved_at': savedAt.toIso8601String(),
-        'captain_id': captainId,
-        'vice_captain_id': viceCaptainId,
-      };
+    'manager_id': managerId,
+    'gameweek': gameweek,
+    'base_player_ids': basePlayerIds,
+    'player_ids': playerIds,
+    'bench_ids': benchIds,
+    'saved_at': savedAt.toIso8601String(),
+    'captain_id': captainId,
+    'vice_captain_id': viceCaptainId,
+  };
 
   /// The swaps this draft represents, as `(out, in)` ids.
   ///
@@ -94,32 +94,98 @@ class Draft {
     final gone = basePlayerIds.where((id) => !playerIds.contains(id)).toList();
     final added = playerIds.where((id) => !basePlayerIds.contains(id)).toList();
     return [
-      for (var i = 0; i < gone.length && i < added.length; i++) (gone[i], added[i]),
+      for (var i = 0; i < gone.length && i < added.length; i++)
+        (gone[i], added[i]),
     ];
   }
 
-  bool get isEmpty => swaps.isEmpty && captainId == null && viceCaptainId == null;
+  bool get isEmpty =>
+      swaps.isEmpty && captainId == null && viceCaptainId == null;
 
   /// How many changes this plan represents, armbands included — what the banner counts.
   int get changeCount =>
-      swaps.length + (captainId == null ? 0 : 1) + (viceCaptainId == null ? 0 : 1);
+      swaps.length +
+      (captainId == null ? 0 : 1) +
+      (viceCaptainId == null ? 0 : 1);
 
+  /// ⚠️⚠️ **`clearCaptain` / `clearViceCaptain` exist because `null` could not mean "clear"** (ADR-241).
+  /// With `captainId ?? this.captainId`, passing null means *leave it alone* — so the caller that tried to
+  /// empty the vice slot silently kept it, and one player ended up wearing **C and V at once**, which FPL
+  /// would reject. ⭐ *An optional argument cannot say "unset" and "no opinion" with the same value.*
   Draft copyWith({
     List<int>? playerIds,
     List<int>? benchIds,
     int? captainId,
     int? viceCaptainId,
-  }) =>
-      Draft(
-        managerId: managerId,
-        gameweek: gameweek,
-        basePlayerIds: basePlayerIds,
-        playerIds: playerIds ?? this.playerIds,
-        benchIds: benchIds ?? this.benchIds,
-        savedAt: savedAt,
-        captainId: captainId ?? this.captainId,
-        viceCaptainId: viceCaptainId ?? this.viceCaptainId,
-      );
+    bool clearCaptain = false,
+    bool clearViceCaptain = false,
+  }) => Draft(
+    managerId: managerId,
+    gameweek: gameweek,
+    basePlayerIds: basePlayerIds,
+    playerIds: playerIds ?? this.playerIds,
+    benchIds: benchIds ?? this.benchIds,
+    savedAt: savedAt,
+    captainId: clearCaptain ? null : (captainId ?? this.captainId),
+    viceCaptainId: clearViceCaptain
+        ? null
+        : (viceCaptainId ?? this.viceCaptainId),
+  );
+
+  /// A plan after swapping one player for another — ⭐⭐ **a named function rather than ten lines inside
+  /// a widget's private method, which is how the armband bug got in** (ADR-241).
+  ///
+  /// ⚠️ Logic that lives in a `State` cannot be called by a test, so its test has to *re-describe* it —
+  /// and a re-description drifts from the thing it describes without either side going red. The armband
+  /// was dropped here for exactly as long as nothing could reach this code but the app itself.
+  static Draft swap({
+    required Draft? existing,
+    required int managerId,
+    required int gameweek,
+    required List<int> basePlayerIds,
+    required List<int> benchIds,
+    required int outId,
+    required int inId,
+    required DateTime savedAt,
+    int? teamCaptainId,
+    int? teamViceCaptainId,
+  }) {
+    final current = existing?.playerIds ?? basePlayerIds;
+    final next = [for (final id in current) id == outId ? inId : id];
+    final bench = [for (final id in benchIds) id == outId ? inId : id];
+    final carried =
+        existing ??
+        Draft(
+          managerId: managerId,
+          gameweek: gameweek,
+          basePlayerIds: basePlayerIds,
+          playerIds: basePlayerIds,
+          benchIds: benchIds,
+          savedAt: savedAt,
+          captainId: teamCaptainId,
+          viceCaptainId: teamViceCaptainId,
+        );
+    final armbands = carried.armbandsWithin(next);
+    return Draft(
+      managerId: managerId,
+      gameweek: gameweek,
+      basePlayerIds: basePlayerIds,
+      playerIds: next,
+      benchIds: bench,
+      savedAt: savedAt,
+      captainId: armbands.captain,
+      viceCaptainId: armbands.vice,
+    );
+  }
+
+  /// The armbands after a squad change — ⭐ **an armband is only valid while the player is still yours.**
+  ///
+  /// ⚠️ A C left on a player you have transferred away is worse than no C: it survives into the pitch, the
+  /// plan and the next reload, describing a squad that no longer exists.
+  ({int? captain, int? vice}) armbandsWithin(List<int> squad) => (
+    captain: squad.contains(captainId) ? captainId : null,
+    vice: squad.contains(viceCaptainId) ? viceCaptainId : null,
+  );
 
   /// Whether this draft still describes something the manager can act on.
   ///
@@ -132,8 +198,12 @@ class Draft {
     required List<int> fplPlayerIds,
   }) {
     if (this.managerId != managerId) return DraftStaleness.otherManager;
-    if (gameweek != null && this.gameweek != gameweek) return DraftStaleness.gameweekPassed;
-    if (!_sameSet(basePlayerIds, fplPlayerIds)) return DraftStaleness.squadChanged;
+    if (gameweek != null && this.gameweek != gameweek) {
+      return DraftStaleness.gameweekPassed;
+    }
+    if (!_sameSet(basePlayerIds, fplPlayerIds)) {
+      return DraftStaleness.squadChanged;
+    }
     return DraftStaleness.fresh;
   }
 

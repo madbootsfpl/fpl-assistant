@@ -183,18 +183,18 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     final current = _draft?.playerIds ?? base;
     if (!current.contains(outId) || current.contains(inId)) return;
 
-    final next = [for (final id in current) id == outId ? inId : id];
-    final bench = [
-      for (final p in team.analysis.bench) p.id == outId ? inId : p.id,
-    ];
-    final draft = Draft(
+    final draft = Draft.swap(
+      existing: _draft,
       managerId: team.fplPlayerIds.isEmpty ? kDefaultManagerId : _managerId,
       gameweek: team.gameweek ?? 0,
       basePlayerIds: base,
-      playerIds: next,
-      benchIds: bench,
+      benchIds: team.analysis.bench.map((p) => p.id).toList(),
+      outId: outId,
+      inId: inId,
       // ⚠️ Stamped so a future version can age a plan out; nothing reads it yet, and it costs one field.
       savedAt: DateTime.now(),
+      teamCaptainId: team.captainId,
+      teamViceCaptainId: team.viceCaptainId,
     );
     await _drafts.save(draft);
     setState(() {
@@ -264,9 +264,13 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         );
     final nextCaptain = captainId ?? base.captainId ?? team.captainId;
     final nextVice = viceCaptainId ?? base.viceCaptainId ?? team.viceCaptainId;
+    // ⚠️ `clearViceCaptain`, not `null` — see `Draft.copyWith`. Passing null asked for "no opinion" and
+    // left the collision in place, so promoting your vice left him wearing both letters.
+    final collides = nextVice == nextCaptain;
     final draft = base.copyWith(
       captainId: nextCaptain,
-      viceCaptainId: nextVice == nextCaptain ? null : nextVice,
+      viceCaptainId: collides ? null : nextVice,
+      clearViceCaptain: collides,
     );
     await _drafts.save(draft);
     setState(() {

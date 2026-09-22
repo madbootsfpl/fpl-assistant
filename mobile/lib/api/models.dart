@@ -53,18 +53,18 @@ class PlayerSummary {
   });
 
   factory PlayerSummary.fromJson(Map<String, dynamic> json) => PlayerSummary(
-        id: json['id'] as int,
-        name: json['web_name'] as String,
-        team: json['team'] as String,
-        position: json['position'] as String,
-        price: _double(json['price']),
-        xp: _double(json['xp']),
-        status: json['status'] as String? ?? 'a',
-        chance: json['chance'] as int?,
-        minutesWeight: (json['minutes_weight'] as num?)?.toDouble() ?? 1.0,
-        leaving: json['leaving'] as Map<String, dynamic>?,
-        byGameweek: _gameweeks(json['by_gameweek']),
-      );
+    id: json['id'] as int,
+    name: json['web_name'] as String,
+    team: json['team'] as String,
+    position: json['position'] as String,
+    price: _double(json['price']),
+    xp: _double(json['xp']),
+    status: json['status'] as String? ?? 'a',
+    chance: json['chance'] as int?,
+    minutesWeight: (json['minutes_weight'] as num?)?.toDouble() ?? 1.0,
+    leaving: json['leaving'] as Map<String, dynamic>?,
+    byGameweek: _gameweeks(json['by_gameweek']),
+  );
 
   final int id;
   final String name;
@@ -135,8 +135,11 @@ class SquadAnalysis {
       topPick: json['top_pick'] == null
           ? null
           : PlayerSummary.fromJson(json['top_pick'] as Map<String, dynamic>),
-      clubCounts: ((json['club_counts'] as Map?) ?? {}).map((k, v) => MapEntry('$k', v as int)),
-      concentratedClubs: ((json['concentrated_clubs'] as List?) ?? []).cast<String>(),
+      clubCounts: ((json['club_counts'] as Map?) ?? {}).map(
+        (k, v) => MapEntry('$k', v as int),
+      ),
+      concentratedClubs: ((json['concentrated_clubs'] as List?) ?? [])
+          .cast<String>(),
     );
   }
 
@@ -172,13 +175,13 @@ class TransferMove {
   });
 
   factory TransferMove.fromJson(Map<String, dynamic> json) => TransferMove(
-        position: json['position'] as String,
-        out: PlayerSummary.fromJson(json['out'] as Map<String, dynamic>),
-        // ⚠️ `in` is a Dart keyword, so the field cannot share the wire's name.
-        incoming: PlayerSummary.fromJson(json['in'] as Map<String, dynamic>),
-        gain: _double(json['gain']),
-        outOnBench: json['out_on_bench'] as bool? ?? false,
-      );
+    position: json['position'] as String,
+    out: PlayerSummary.fromJson(json['out'] as Map<String, dynamic>),
+    // ⚠️ `in` is a Dart keyword, so the field cannot share the wire's name.
+    incoming: PlayerSummary.fromJson(json['in'] as Map<String, dynamic>),
+    gain: _double(json['gain']),
+    outOnBench: json['out_on_bench'] as bool? ?? false,
+  );
 
   final String position;
   final PlayerSummary out;
@@ -202,7 +205,8 @@ class TransfersAnswer {
     required this.moves,
   });
 
-  factory TransfersAnswer.fromJson(Map<String, dynamic> json) => TransfersAnswer(
+  factory TransfersAnswer.fromJson(Map<String, dynamic> json) =>
+      TransfersAnswer(
         horizon: json['horizon'] as int,
         bank: _double(json['bank']),
         count: json['count'] as int,
@@ -241,12 +245,12 @@ class CaptainPick {
   });
 
   factory CaptainPick.fromJson(Map<String, dynamic> json) => CaptainPick(
-        player: PlayerSummary.fromJson(json),
-        opponent: json['opponent'] as String?,
-        venue: json['venue'] as String?,
-        difficulty: json['difficulty'] as int?,
-        penaltyTaker: json['penalty_taker'] as bool? ?? false,
-      );
+    player: PlayerSummary.fromJson(json),
+    opponent: json['opponent'] as String?,
+    venue: json['venue'] as String?,
+    difficulty: json['difficulty'] as int?,
+    penaltyTaker: json['penalty_taker'] as bool? ?? false,
+  );
 
   final PlayerSummary player;
   final String? opponent;
@@ -270,11 +274,11 @@ class CaptainAnswer {
   CaptainAnswer({required this.gameweek, required this.picks});
 
   factory CaptainAnswer.fromJson(Map<String, dynamic> json) => CaptainAnswer(
-        gameweek: json['gameweek'] as int?,
-        picks: ((json['picks'] as List?) ?? [])
-            .map((p) => CaptainPick.fromJson(p as Map<String, dynamic>))
-            .toList(),
-      );
+    gameweek: json['gameweek'] as int?,
+    picks: ((json['picks'] as List?) ?? [])
+        .map((p) => CaptainPick.fromJson(p as Map<String, dynamic>))
+        .toList(),
+  );
 
   final int? gameweek;
   final List<CaptainPick> picks;
@@ -292,13 +296,13 @@ class RouteAnswer {
   });
 
   factory RouteAnswer.fromJson(Map<String, dynamic> json) => RouteAnswer(
-        horizon: json['horizon'] as int,
-        target: PlayerSummary.fromJson(json['target'] as Map<String, dynamic>),
-        owned: json['owned'] as bool? ?? false,
-        routes: ((json['routes'] as List?) ?? []).cast<Map<String, dynamic>>(),
-        blocked: ((json['blocked'] as List?) ?? []).cast<Map<String, dynamic>>(),
-        shortfall: (json['shortfall'] as num?)?.toDouble(),
-      );
+    horizon: json['horizon'] as int,
+    target: PlayerSummary.fromJson(json['target'] as Map<String, dynamic>),
+    owned: json['owned'] as bool? ?? false,
+    routes: ((json['routes'] as List?) ?? []).cast<Map<String, dynamic>>(),
+    blocked: ((json['blocked'] as List?) ?? []).cast<Map<String, dynamic>>(),
+    shortfall: (json['shortfall'] as num?)?.toDouble(),
+  );
 
   final int horizon;
   final PlayerSummary target;
@@ -331,15 +335,15 @@ class BuildAnswer {
   });
 
   factory BuildAnswer.fromJson(Map<String, dynamic> json) => BuildAnswer(
-        horizon: json['horizon'] as int,
-        budget: _double(json['budget']),
-        status: json['status'] as String,
-        selected: ((json['selected'] as List?) ?? [])
-            .map((p) => PlayerSummary.fromJson(p as Map<String, dynamic>))
-            .toList(),
-        totalCost: _double(json['total_cost']),
-        projectedXp: _double(json['projected_xp']),
-      );
+    horizon: json['horizon'] as int,
+    budget: _double(json['budget']),
+    status: json['status'] as String,
+    selected: ((json['selected'] as List?) ?? [])
+        .map((p) => PlayerSummary.fromJson(p as Map<String, dynamic>))
+        .toList(),
+    totalCost: _double(json['total_cost']),
+    projectedXp: _double(json['projected_xp']),
+  );
 
   final int horizon;
   final double budget;
@@ -365,11 +369,11 @@ class Fixture {
   });
 
   factory Fixture.fromJson(Map<String, dynamic> json) => Fixture(
-        gameweek: json['gameweek'] as int?,
-        opponent: json['opponent'] as String,
-        venue: json['venue'] as String,
-        difficulty: json['difficulty'] as int? ?? 3,
-      );
+    gameweek: json['gameweek'] as int?,
+    opponent: json['opponent'] as String,
+    venue: json['venue'] as String,
+    difficulty: json['difficulty'] as int? ?? 3,
+  );
 
   final int? gameweek;
   final String opponent;
@@ -396,10 +400,11 @@ class PriceMove {
   });
 
   factory PriceMove.fromJson(Map<String, dynamic> json) => PriceMove(
-        direction: json['direction'] as String? ?? 'stable',
-        netTransfers: json['net_transfers'] as int? ?? 0,
-        changedThisGameweek: (json['changed_this_gameweek'] as num?)?.toDouble() ?? 0.0,
-      );
+    direction: json['direction'] as String? ?? 'stable',
+    netTransfers: json['net_transfers'] as int? ?? 0,
+    changedThisGameweek:
+        (json['changed_this_gameweek'] as num?)?.toDouble() ?? 0.0,
+  );
 
   /// `rise` · `fall` · `stable`.
   final String direction;
@@ -455,31 +460,37 @@ class MyTeam {
       deadlineLabel: deadline['label'] as String? ?? '',
       captainId: squad['captain_id'] as int?,
       viceCaptainId: squad['vice_captain_id'] as int?,
-      analysis: SquadAnalysis.fromJson(json['analysis'] as Map<String, dynamic>),
+      analysis: SquadAnalysis.fromJson(
+        json['analysis'] as Map<String, dynamic>,
+      ),
       // ⭐ Keyed by **club short name** and by **role** — strings already, so JSON changes nothing on the
       // way in. Keying these by player id would repeat `by_gameweek`'s trap.
-      kits: ((json['kits'] as Map?) ?? {}).map((club, urls) => MapEntry(
-            '$club',
-            (
-              outfield: (urls as Map)['outfield'] as String? ?? '',
-              gk: urls['gk'] as String? ?? '',
-            ),
-          )),
-      fixtures: ((json['fixtures'] as Map?) ?? {}).map((club, list) => MapEntry(
-            '$club',
-            ((list as List?) ?? const [])
-                .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
-                .toList(),
-          )),
+      kits: ((json['kits'] as Map?) ?? {}).map(
+        (club, urls) => MapEntry('$club', (
+          outfield: (urls as Map)['outfield'] as String? ?? '',
+          gk: urls['gk'] as String? ?? '',
+        )),
+      ),
+      fixtures: ((json['fixtures'] as Map?) ?? {}).map(
+        (club, list) => MapEntry(
+          '$club',
+          ((list as List?) ?? const [])
+              .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
+              .toList(),
+        ),
+      ),
       // ⚠️ Keyed by player id, which crosses as a string — parsed back here, once, so nothing downstream
       // sorts or compares it as text.
-      prices: ((json['prices'] as Map?) ?? {}).map((id, move) => MapEntry(
-            int.parse('$id'),
-            PriceMove.fromJson((move as Map).cast<String, dynamic>()),
-          )),
+      prices: ((json['prices'] as Map?) ?? {}).map(
+        (id, move) => MapEntry(
+          int.parse('$id'),
+          PriceMove.fromJson((move as Map).cast<String, dynamic>()),
+        ),
+      ),
       run: json['run'] as int? ?? 1,
-      benchRoles: ((json['bench_roles'] as Map?) ?? {})
-          .map((role, id) => MapEntry('$role', id as int)),
+      benchRoles: ((json['bench_roles'] as Map?) ?? {}).map(
+        (role, id) => MapEntry('$role', id as int),
+      ),
     );
   }
 
@@ -523,6 +534,7 @@ class MyTeam {
 
   final SquadAnalysis analysis;
   final Map<String, ({String outfield, String gk})> kits;
+
   /// A club's next few fixtures, in order. ⭐ Keyed by club, so three players from one team share one list.
   final Map<String, List<Fixture>> fixtures;
 
@@ -553,24 +565,24 @@ class MyTeam {
   /// A copy with different armbands — ⭐ for a **draft**, whose captain the server never sees because it
   /// changes nothing the server computes.
   MyTeam withArmbands({int? captainId, int? viceCaptainId}) => MyTeam(
-        squadName: squadName,
-        isDraft: isDraft,
-        fplPlayerIds: fplPlayerIds,
-        bank: bank,
-        value: value,
-        freeTransfers: freeTransfers,
-        activeChip: activeChip,
-        gameweek: gameweek,
-        deadlineLabel: deadlineLabel,
-        captainId: captainId ?? this.captainId,
-        viceCaptainId: viceCaptainId ?? this.viceCaptainId,
-        analysis: analysis,
-        kits: kits,
-        fixtures: fixtures,
-        prices: prices,
-        run: run,
-        benchRoles: benchRoles,
-      );
+    squadName: squadName,
+    isDraft: isDraft,
+    fplPlayerIds: fplPlayerIds,
+    bank: bank,
+    value: value,
+    freeTransfers: freeTransfers,
+    activeChip: activeChip,
+    gameweek: gameweek,
+    deadlineLabel: deadlineLabel,
+    captainId: captainId ?? this.captainId,
+    viceCaptainId: viceCaptainId ?? this.viceCaptainId,
+    analysis: analysis,
+    kits: kits,
+    fixtures: fixtures,
+    prices: prices,
+    run: run,
+    benchRoles: benchRoles,
+  );
 
   /// The bench in the order FPL will use it, rather than the order it happened to arrive in.
   List<PlayerSummary> get orderedBench {
@@ -585,7 +597,6 @@ class MyTeam {
   }
 }
 
-
 /// One candidate to replace an owned player (ADR-226).
 class Replacement {
   Replacement({
@@ -595,10 +606,10 @@ class Replacement {
   });
 
   factory Replacement.fromJson(Map<String, dynamic> json) => Replacement(
-        player: PlayerSummary.fromJson(json),
-        affordable: json['affordable'] as bool? ?? true,
-        overBy: (json['over_by'] as num?)?.toDouble() ?? 0.0,
-      );
+    player: PlayerSummary.fromJson(json),
+    affordable: json['affordable'] as bool? ?? true,
+    overBy: (json['over_by'] as num?)?.toDouble() ?? 0.0,
+  );
 
   final PlayerSummary player;
 
@@ -618,7 +629,8 @@ class ReplacementsAnswer {
     required this.candidates,
   });
 
-  factory ReplacementsAnswer.fromJson(Map<String, dynamic> json) => ReplacementsAnswer(
+  factory ReplacementsAnswer.fromJson(Map<String, dynamic> json) =>
+      ReplacementsAnswer(
         out: PlayerSummary.fromJson(json['out'] as Map<String, dynamic>),
         budget: (json['budget'] as num).toDouble(),
         candidates: ((json['candidates'] as List?) ?? [])
@@ -635,16 +647,19 @@ class ReplacementsAnswer {
   final List<Replacement> candidates;
 }
 
-
 /// One gameweek a player has already played.
 class Appearance {
-  Appearance({required this.gameweek, required this.points, required this.minutes});
+  Appearance({
+    required this.gameweek,
+    required this.points,
+    required this.minutes,
+  });
 
   factory Appearance.fromJson(Map<String, dynamic> json) => Appearance(
-        gameweek: json['gameweek'] as int?,
-        points: json['points'] as int? ?? 0,
-        minutes: json['minutes'] as int? ?? 0,
-      );
+    gameweek: json['gameweek'] as int?,
+    points: json['points'] as int? ?? 0,
+    minutes: json['minutes'] as int? ?? 0,
+  );
 
   final int? gameweek;
   final int points;
@@ -661,11 +676,11 @@ class Contender {
   Contender({required this.player, required this.recent});
 
   factory Contender.fromJson(Map<String, dynamic> json) => Contender(
-        player: PlayerSummary.fromJson(json),
-        recent: ((json['recent'] as List?) ?? const [])
-            .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
-            .toList(),
-      );
+    player: PlayerSummary.fromJson(json),
+    recent: ((json['recent'] as List?) ?? const [])
+        .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
+        .toList(),
+  );
 
   final PlayerSummary player;
 
@@ -676,14 +691,19 @@ class Contender {
 /// One row of the stat grid — ⭐ `winner` is decided by the engine, which knows that a **lower** expected
 /// goals-conceded is the better number.
 class CompareRow {
-  CompareRow({required this.label, required this.a, required this.b, required this.winner});
+  CompareRow({
+    required this.label,
+    required this.a,
+    required this.b,
+    required this.winner,
+  });
 
   factory CompareRow.fromJson(Map<String, dynamic> json) => CompareRow(
-        label: json['label'] as String,
-        a: json['a'] as String,
-        b: json['b'] as String,
-        winner: json['winner'] as String?,
-      );
+    label: json['label'] as String,
+    a: json['a'] as String,
+    b: json['b'] as String,
+    winner: json['winner'] as String?,
+  );
 
   final String label;
   final String a;
@@ -695,16 +715,21 @@ class CompareRow {
 
 /// `POST /api/v1/compare` — Boot Battle.
 class BootBattle {
-  BootBattle({required this.a, required this.b, required this.rows, required this.gameweeks});
+  BootBattle({
+    required this.a,
+    required this.b,
+    required this.rows,
+    required this.gameweeks,
+  });
 
   factory BootBattle.fromJson(Map<String, dynamic> json) => BootBattle(
-        a: Contender.fromJson(json['a'] as Map<String, dynamic>),
-        b: Contender.fromJson(json['b'] as Map<String, dynamic>),
-        rows: ((json['rows'] as List?) ?? const [])
-            .map((r) => CompareRow.fromJson((r as Map).cast<String, dynamic>()))
-            .toList(),
-        gameweeks: ((json['gameweeks'] as List?) ?? const []).cast<int>(),
-      );
+    a: Contender.fromJson(json['a'] as Map<String, dynamic>),
+    b: Contender.fromJson(json['b'] as Map<String, dynamic>),
+    rows: ((json['rows'] as List?) ?? const [])
+        .map((r) => CompareRow.fromJson((r as Map).cast<String, dynamic>()))
+        .toList(),
+    gameweeks: ((json['gameweeks'] as List?) ?? const []).cast<int>(),
+  );
 
   final Contender a;
   final Contender b;
@@ -714,11 +739,10 @@ class BootBattle {
   /// How many rows each side wins. ⭐ A headline, not a verdict — ADR-197 gave the DNA comparison **no**
   /// verdict on purpose, and the same reasoning holds: a count of stats is not a recommendation.
   (int, int) get tally => (
-        rows.where((r) => r.winner == 'a').length,
-        rows.where((r) => r.winner == 'b').length,
-      );
+    rows.where((r) => r.winner == 'a').length,
+    rows.where((r) => r.winner == 'b').length,
+  );
 }
-
 
 /// `POST /api/v1/player` — one player in full, the card behind a row (ADR-237).
 class PlayerCard {
@@ -730,20 +754,19 @@ class PlayerCard {
   });
 
   factory PlayerCard.fromJson(Map<String, dynamic> json) => PlayerCard(
-        player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
-        stats: ((json['stats'] as List?) ?? const [])
-            .map((r) => (
-                  label: (r as Map)['label'] as String,
-                  value: '${r['value']}',
-                ))
-            .toList(),
-        recent: ((json['recent'] as List?) ?? const [])
-            .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
-            .toList(),
-        fixtures: ((json['fixtures'] as List?) ?? const [])
-            .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
-            .toList(),
-      );
+    player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    stats: ((json['stats'] as List?) ?? const [])
+        .map(
+          (r) => (label: (r as Map)['label'] as String, value: '${r['value']}'),
+        )
+        .toList(),
+    recent: ((json['recent'] as List?) ?? const [])
+        .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
+        .toList(),
+    fixtures: ((json['fixtures'] as List?) ?? const [])
+        .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
+        .toList(),
+  );
 
   final PlayerSummary player;
 

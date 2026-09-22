@@ -39,19 +39,22 @@ Future<PlayerAction?> showPlayerSheet(
   required MyTeam team,
   required PlayerSummary player,
   required ServiceClient client,
-}) =>
-    showModalBottomSheet<PlayerAction>(
-      context: context,
-      backgroundColor: Brand.ink,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Brand.radiusLg)),
-      ),
-      builder: (_) => _PlayerSheet(team: team, player: player, client: client),
-    );
+}) => showModalBottomSheet<PlayerAction>(
+  context: context,
+  backgroundColor: Brand.ink,
+  isScrollControlled: true,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(Brand.radiusLg)),
+  ),
+  builder: (_) => _PlayerSheet(team: team, player: player, client: client),
+);
 
 class _PlayerSheet extends StatefulWidget {
-  const _PlayerSheet({required this.team, required this.player, required this.client});
+  const _PlayerSheet({
+    required this.team,
+    required this.player,
+    required this.client,
+  });
 
   final MyTeam team;
   final PlayerSummary player;
@@ -68,7 +71,10 @@ class _PlayerSheetState extends State<_PlayerSheet> {
     final team = widget.team;
     setState(() {
       _options = widget.client.replacements(
-        [...team.analysis.xi.map((p) => p.id), ...team.analysis.bench.map((p) => p.id)],
+        [
+          ...team.analysis.xi.map((p) => p.id),
+          ...team.analysis.bench.map((p) => p.id),
+        ],
         widget.player.id,
         benchIds: team.analysis.bench.map((p) => p.id).toList(),
         horizon: 1,
@@ -97,12 +103,19 @@ class _PlayerSheetState extends State<_PlayerSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                    color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-            Text(p.name,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+            Text(
+              p.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             Text(
               '${p.position} · ${p.team} · £${p.price.toStringAsFixed(1)}m · '
               '${p.xp.toStringAsFixed(1)} xP',
@@ -129,7 +142,9 @@ class _PlayerSheetState extends State<_PlayerSheet> {
                 onTap: _findReplacements,
               ),
             ] else
-              Flexible(child: _Options(future: _options!, outId: p.id)),
+              Flexible(
+                child: _Options(future: _options!, outId: p.id),
+              ),
           ],
         ),
       ),
@@ -152,20 +167,28 @@ class _Action extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, size: 19, color: enabled ? Brand.purpleLight : Colors.white24),
-              const SizedBox(width: 12),
-              Text(label,
-                  style: TextStyle(
-                      color: enabled ? Colors.white : Colors.white24, fontSize: 14.5)),
-            ],
+    onTap: enabled ? onTap : null,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 19,
+            color: enabled ? Brand.purpleLight : Colors.white24,
           ),
-        ),
-      );
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: enabled ? Colors.white : Colors.white24,
+              fontSize: 14.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Options extends StatelessWidget {
@@ -176,107 +199,143 @@ class _Options extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<ReplacementsAnswer>(
-        future: future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Padding(
-              padding: EdgeInsets.all(28),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: SelectableText(friendlyError(snapshot.error),
-                  style: const TextStyle(color: Colors.white70)),
-            );
-          }
-          final answer = snapshot.data!;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text('£${answer.budget.toStringAsFixed(1)}m to spend',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              ),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: answer.candidates.length,
-                  itemBuilder: (_, i) {
-                    final c = answer.candidates[i];
-                    return InkWell(
-                      onTap: () => Navigator.pop(context, ReplaceWith(outId, c.player.id)),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(c.player.name,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                  ),
-                                  // ⚠️ **Flagged, never hidden.** The owner's call: *"can select a higher
-                                  // priced player, just flag it as over budget"* — and a candidate
-                                  // silently removed looks like one that does not exist, so a manager
-                                  // would conclude the player is ineligible rather than dear.
-                                  if (!c.affordable)
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 6),
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: Brand.warnTint,
-                                        borderRadius: BorderRadius.circular(Brand.radiusPill),
-                                      ),
-                                      child: Text('£${c.overBy.toStringAsFixed(1)}m over',
-                                          style: const TextStyle(
-                                              color: Brand.warnFg, fontSize: 9.5)),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(
-                              width: 40,
-                              child: Text(c.player.team,
-                                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                            ),
-                            SizedBox(
-                              width: 52,
-                              child: Text('£${c.player.price.toStringAsFixed(1)}',
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(color: Colors.white60, fontSize: 12.5)),
-                            ),
-                            SizedBox(
-                              width: 44,
-                              child: Text(c.player.xp.toStringAsFixed(1),
-                                  textAlign: TextAlign.right,
+    future: future,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Padding(
+          padding: EdgeInsets.all(28),
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (snapshot.hasError) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: SelectableText(
+            friendlyError(snapshot.error),
+            style: const TextStyle(color: Colors.white70),
+          ),
+        );
+      }
+      final answer = snapshot.data!;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '£${answer.budget.toStringAsFixed(1)}m to spend',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: answer.candidates.length,
+              itemBuilder: (_, i) {
+                final c = answer.candidates[i];
+                return InkWell(
+                  onTap: () =>
+                      Navigator.pop(context, ReplaceWith(outId, c.player.id)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  c.player.name,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                      color: Brand.accentTeal,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700)),
-                            ),
-                          ],
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              // ⚠️ **Flagged, never hidden.** The owner's call: *"can select a higher
+                              // priced player, just flag it as over budget"* — and a candidate
+                              // silently removed looks like one that does not exist, so a manager
+                              // would conclude the player is ineligible rather than dear.
+                              if (!c.affordable)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Brand.warnTint,
+                                    borderRadius: BorderRadius.circular(
+                                      Brand.radiusPill,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '£${c.overBy.toStringAsFixed(1)}m over',
+                                    style: const TextStyle(
+                                      color: Brand.warnFg,
+                                      fontSize: 9.5,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                        SizedBox(
+                          width: 40,
+                          child: Text(
+                            c.player.team,
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 52,
+                          child: Text(
+                            '£${c.player.price.toStringAsFixed(1)}',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 44,
+                          child: Text(
+                            c.player.xp.toStringAsFixed(1),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              color: Brand.accentTeal,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Players over your budget are shown too — prices drift, and a move you cannot quite '
+              'afford yet is still a plan.',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: 10.5,
+                height: 1.45,
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'Players over your budget are shown too — prices drift, and a move you cannot quite '
-                  'afford yet is still a plan.',
-                  style: TextStyle(color: Colors.white38, fontSize: 10.5, height: 1.45),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       );
+    },
+  );
 }

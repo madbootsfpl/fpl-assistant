@@ -35,68 +35,78 @@ class _TransfersViewState extends State<TransfersView> {
   late Future<TransfersAnswer> _answer = _load();
 
   Future<TransfersAnswer> _load() => widget.client.transfers(
-        widget.team.analysis.xi.map((p) => p.id).toList()
-          ..addAll(widget.team.analysis.bench.map((p) => p.id)),
-        benchIds: widget.team.analysis.bench.map((p) => p.id).toList(),
-        horizon: 1,
-        // ⚠️ The manager's real money, from FPL — not a zero default. ADR-191 is the record of an app
-        // advising a position its user was not in.
-        bank: widget.team.bank ?? 0.0,
-        count: _count,
-        limit: 5,
-      );
+    widget.team.analysis.xi.map((p) => p.id).toList()
+      ..addAll(widget.team.analysis.bench.map((p) => p.id)),
+    benchIds: widget.team.analysis.bench.map((p) => p.id).toList(),
+    horizon: 1,
+    // ⚠️ The manager's real money, from FPL — not a zero default. ADR-191 is the record of an app
+    // advising a position its user was not in.
+    bank: widget.team.bank ?? 0.0,
+    count: _count,
+    limit: 5,
+  );
 
   void _setCount(int n) => setState(() {
-        _count = n;
-        _answer = _load();
-      });
+    _count = n;
+    _answer = _load();
+  });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<TransfersAnswer>(
-        future: _answer,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _Message(text: friendlyError(snapshot.error));
-          }
-          final answer = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
-            children: [
-              _CountPicker(count: _count, onChanged: _setCount),
-              const SizedBox(height: 4),
-              Text(
-                answer.coordinated
-                    // ⭐ The distinction matters and is invisible otherwise: a plan's gains add up because
-                    // the moves share a bank; a menu's do not, and adding two double-counts the money.
-                    ? 'A plan — these ${answer.moves.length} moves share your bank, so the gains add up.'
-                    : 'Alternatives — each priced on its own. Taking two is not worth the sum.',
-                style: const TextStyle(color: Colors.white54, fontSize: 11.5, height: 1.45),
+    future: _answer,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError) {
+        return _Message(text: friendlyError(snapshot.error));
+      }
+      final answer = snapshot.data!;
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
+        children: [
+          _CountPicker(count: _count, onChanged: _setCount),
+          const SizedBox(height: 4),
+          Text(
+            answer.coordinated
+                // ⭐ The distinction matters and is invisible otherwise: a plan's gains add up because
+                // the moves share a bank; a menu's do not, and adding two double-counts the money.
+                ? 'A plan — these ${answer.moves.length} moves share your bank, so the gains add up.'
+                : 'Alternatives — each priced on its own. Taking two is not worth the sum.',
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 11.5,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (answer.moves.isEmpty)
+            const _Message(
+              text: 'No transfer improves this squad at the moment.',
+            )
+          else
+            for (final (i, m) in answer.moves.indexed)
+              _Move(
+                move: m,
+                lead: i == 0,
+                client: widget.client,
+                onPlan: () => widget.onPlan(m.out.id, m.incoming.id),
               ),
-              const SizedBox(height: 12),
-              if (answer.moves.isEmpty)
-                const _Message(text: 'No transfer improves this squad at the moment.')
-              else
-                for (final (i, m) in answer.moves.indexed)
-                  _Move(
-                    move: m,
-                    lead: i == 0,
-                    client: widget.client,
-                    onPlan: () => widget.onPlan(m.out.id, m.incoming.id),
-                  ),
-              const SizedBox(height: 14),
-              Text(
-                'Ranked over ${answer.horizon} gameweek'
-                '${answer.horizon == 1 ? '' : 's'}'
-                '${answer.longerWindow == null ? '' : '; near-ties broken on the ${answer.longerWindow}-gameweek view'}.',
-                style: const TextStyle(color: Colors.white38, fontSize: 10.5, height: 1.5),
-              ),
-            ],
-          );
-        },
+          const SizedBox(height: 14),
+          Text(
+            'Ranked over ${answer.horizon} gameweek'
+            '${answer.horizon == 1 ? '' : 's'}'
+            '${answer.longerWindow == null ? '' : '; near-ties broken on the ${answer.longerWindow}-gameweek view'}.',
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 10.5,
+              height: 1.5,
+            ),
+          ),
+        ],
       );
+    },
+  );
 }
 
 class _CountPicker extends StatelessWidget {
@@ -107,29 +117,32 @@ class _CountPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        children: [
-          for (var n = 1; n <= 3; n++)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(n),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: n == count ? Brand.purple : Colors.white10,
-                    borderRadius: BorderRadius.circular(Brand.radiusPill),
-                  ),
-                  child: Text(n == 1 ? '1 move' : '$n moves',
-                      style: TextStyle(
-                          color: n == count ? Colors.white : Colors.white54,
-                          fontSize: 12.5,
-                          fontWeight: n == count ? FontWeight.w600 : FontWeight.w400)),
+    children: [
+      for (var n = 1; n <= 3; n++)
+        Expanded(
+          child: GestureDetector(
+            onTap: () => onChanged(n),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: n == count ? Brand.purple : Colors.white10,
+                borderRadius: BorderRadius.circular(Brand.radiusPill),
+              ),
+              child: Text(
+                n == 1 ? '1 move' : '$n moves',
+                style: TextStyle(
+                  color: n == count ? Colors.white : Colors.white54,
+                  fontSize: 12.5,
+                  fontWeight: n == count ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
-        ],
-      );
+          ),
+        ),
+    ],
+  );
 }
 
 /// ⭐⭐ A move **and the working behind it**. Expanding is lazy: a comparison is fetched only when someone
@@ -160,7 +173,11 @@ class _MoveState extends State<_Move> {
   void _toggle() {
     setState(() {
       _battle = _battle == null
-          ? widget.client.compare(widget.move.out.id, widget.move.incoming.id, horizon: 5)
+          ? widget.client.compare(
+              widget.move.out.id,
+              widget.move.incoming.id,
+              horizon: 5,
+            )
           : null;
     });
   }
@@ -170,14 +187,17 @@ class _MoveState extends State<_Move> {
     final move = widget.move;
     final lead = widget.lead;
     return GestureDetector(
-        onTap: widget.onPlan,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
+      onTap: widget.onPlan,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
         decoration: BoxDecoration(
           color: lead ? Brand.purple.withValues(alpha: 0.16) : Colors.white10,
-          border: Border.all(color: lead ? Brand.purpleLight : Colors.transparent, width: 1.2),
+          border: Border.all(
+            color: lead ? Brand.purpleLight : Colors.transparent,
+            width: 1.2,
+          ),
           borderRadius: BorderRadius.circular(Brand.radiusMd),
         ),
         child: Column(
@@ -186,22 +206,34 @@ class _MoveState extends State<_Move> {
             Row(
               children: [
                 Expanded(
-                  child: Text(move.out.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 14,
-                          decoration: TextDecoration.lineThrough)),
+                  child: Text(
+                    move.out.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 14,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 7),
-                  child: Icon(Icons.arrow_forward, size: 15, color: Brand.purpleLight),
+                  child: Icon(
+                    Icons.arrow_forward,
+                    size: 15,
+                    color: Brand.purpleLight,
+                  ),
                 ),
                 Expanded(
-                  child: Text(move.incoming.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    move.incoming.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -215,9 +247,14 @@ class _MoveState extends State<_Move> {
                     style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ),
-                Text('+${move.gain.toStringAsFixed(1)} xP',
-                    style: const TextStyle(
-                        color: Brand.accentTeal, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                Text(
+                  '+${move.gain.toStringAsFixed(1)} xP',
+                  style: const TextStyle(
+                    color: Brand.accentTeal,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
             if (move.outOnBench)
@@ -227,7 +264,11 @@ class _MoveState extends State<_Move> {
                   // ⚠️ Selling a benched player lifts the XI by nothing this week — the gain here means
                   // something different, and saying so is cheaper than letting the number mislead.
                   'He is on your bench, so this changes the XI only if someone ahead of him misses.',
-                  style: TextStyle(color: Brand.warn, fontSize: 10.5, height: 1.4),
+                  style: TextStyle(
+                    color: Brand.warn,
+                    fontSize: 10.5,
+                    height: 1.4,
+                  ),
                 ),
               ),
             Padding(
@@ -235,8 +276,10 @@ class _MoveState extends State<_Move> {
               child: Row(
                 children: [
                   const Expanded(
-                    child: Text('Tap to see your pitch with this move',
-                        style: TextStyle(color: Colors.white38, fontSize: 10)),
+                    child: Text(
+                      'Tap to see your pitch with this move',
+                      style: TextStyle(color: Colors.white38, fontSize: 10),
+                    ),
                   ),
                   GestureDetector(
                     // ⚠️ Its own target, because the card's tap already *plans* the move. Two actions on
@@ -244,13 +287,26 @@ class _MoveState extends State<_Move> {
                     onTap: _toggle,
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       child: Row(
                         children: [
-                          Text(_battle == null ? 'Compare' : 'Hide',
-                              style: const TextStyle(color: Brand.purpleLight, fontSize: 10.5)),
-                          Icon(_battle == null ? Icons.expand_more : Icons.expand_less,
-                              size: 14, color: Brand.purpleLight),
+                          Text(
+                            _battle == null ? 'Compare' : 'Hide',
+                            style: const TextStyle(
+                              color: Brand.purpleLight,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                          Icon(
+                            _battle == null
+                                ? Icons.expand_more
+                                : Icons.expand_less,
+                            size: 14,
+                            color: Brand.purpleLight,
+                          ),
                         ],
                       ),
                     ),
@@ -261,7 +317,8 @@ class _MoveState extends State<_Move> {
             if (_battle != null) BootBattleView(future: _battle!),
           ],
         ),
-      ));
+      ),
+    );
   }
 }
 
@@ -272,10 +329,12 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: SelectableText(text,
-              style: const TextStyle(color: Colors.white70, height: 1.55)),
-        ),
-      );
+    padding: const EdgeInsets.all(20),
+    child: Center(
+      child: SelectableText(
+        text,
+        style: const TextStyle(color: Colors.white70, height: 1.55),
+      ),
+    ),
+  );
 }

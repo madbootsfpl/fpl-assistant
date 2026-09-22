@@ -28,10 +28,10 @@ enum PitchMode { nextGw, run, price }
 
 extension on PitchMode {
   String get label => switch (this) {
-        PitchMode.nextGw => 'Next GW',
-        PitchMode.run => 'Next 3',
-        PitchMode.price => 'Price',
-      };
+    PitchMode.nextGw => 'Next GW',
+    PitchMode.run => 'Next 3',
+    PitchMode.price => 'Price',
+  };
 }
 
 class PitchView extends StatelessWidget {
@@ -63,12 +63,14 @@ class PitchView extends StatelessWidget {
         _Header(team: team),
         _ModeBar(mode: mode, onMode: onMode),
         ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(Brand.radiusMd)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(Brand.radiusMd),
+          ),
           child: PitchMarkings(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
               child: Column(
-            children: [
+                children: [
                   for (final row in _rows)
                     if (byRow[row]!.isNotEmpty)
                       Padding(
@@ -78,7 +80,12 @@ class PitchView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             for (final p in byRow[row]!)
-                              _Card(team: team, player: p, mode: mode, onTap: () => onTapPlayer(p)),
+                              _Card(
+                                team: team,
+                                player: p,
+                                mode: mode,
+                                onTap: () => onTapPlayer(p),
+                              ),
                           ],
                         ),
                       ),
@@ -112,15 +119,27 @@ class _Header extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Gameweek ${team.gameweek ?? '—'}',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(
+                'Gameweek ${team.gameweek ?? '—'}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 2),
           // ⚠️ Rendered as given: it already carries the timezone and the countdown (ADR-086).
-          Text(team.deadlineLabel,
-              maxLines: 2,
-              style: const TextStyle(color: Colors.white70, fontSize: 11, height: 1.35)),
+          Text(
+            team.deadlineLabel,
+            maxLines: 2,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -128,10 +147,18 @@ class _Header extends StatelessWidget {
               _Stat(value: xi.toStringAsFixed(1), label: 'Predicted'),
               // ⚠️ FPL's bank, or an em dash — ⭐ *never £0.0m*, which is a real position and would read as
               // one. `—` says "not known"; zero says "you are skint".
-              _Stat(value: team.bank == null ? '—' : '£${team.bank!.toStringAsFixed(1)}m', label: 'In the bank'),
               _Stat(
-                  value: team.value == null ? '—' : '£${team.value!.toStringAsFixed(1)}m',
-                  label: 'Value'),
+                value: team.bank == null
+                    ? '—'
+                    : '£${team.bank!.toStringAsFixed(1)}m',
+                label: 'In the bank',
+              ),
+              _Stat(
+                value: team.value == null
+                    ? '—'
+                    : '£${team.value!.toStringAsFixed(1)}m',
+                label: 'Value',
+              ),
               // ⭐ Shown as "n free" because the number is one the manager set, not one FPL published —
               // the label is the honest bit.
               _Stat(value: '${team.freeTransfers}', label: 'Transfers'),
@@ -151,13 +178,19 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        value,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+    ],
+  );
 }
 
 class _Card extends StatelessWidget {
@@ -186,51 +219,70 @@ class _Card extends StatelessWidget {
       // ⚠️ `opaque` so the whole card is the target — the kit alone is well under a thumb's width.
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-      width: width,
-      child: Column(
-        children: [
-          SizedBox(
-            height: 34,
-            child: Stack(
-              alignment: Alignment.bottomCenter,
-              clipBehavior: Clip.none,
-              children: [
-                if (kit.isEmpty)
-                  const Text('👕', style: TextStyle(fontSize: 22))
-                else
-                  // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
-                  // number beside it is the point.
-                  Image.network(kit,
+        width: width,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 34,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  if (kit.isEmpty)
+                    const Text('👕', style: TextStyle(fontSize: 22))
+                  else
+                    // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
+                    // number beside it is the point.
+                    Image.network(
+                      kit,
                       height: 34,
-                      errorBuilder: (_, _, _) => const Text('👕', style: TextStyle(fontSize: 22))),
-                if (_armband != null)
-                  Positioned(top: -2, right: 6, child: _Armband(letter: _armband!)),
-              ],
+                      errorBuilder: (_, _, _) =>
+                          const Text('👕', style: TextStyle(fontSize: 22)),
+                    ),
+                  if (_armband != null)
+                    Positioned(
+                      top: -2,
+                      right: 6,
+                      child: _Armband(letter: _armband!),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(player.name,
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    player.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600)),
+                      color: Colors.white,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (_flag != null) ...[const SizedBox(width: 3), _flag!],
+              ],
+            ),
+            const SizedBox(height: 2),
+            switch (mode) {
+              PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
+              PitchMode.run => _Run(
+                fixtures: team.runFor(player),
+                player: player,
               ),
-              if (_flag != null) ...[const SizedBox(width: 3), _flag!],
-            ],
-          ),
-          const SizedBox(height: 2),
-          switch (mode) {
-            PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
-            PitchMode.run => _Run(fixtures: team.runFor(player), player: player),
-            PitchMode.price => _Price(move: team.priceFor(player), player: player),
-          },
-        ],
+              PitchMode.price => _Price(
+                move: team.priceFor(player),
+                player: player,
+              ),
+            },
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   /// ⚠️ The **manager's** armband, never the engine's recommendation.
@@ -261,22 +313,29 @@ class _NextGw extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-            decoration: BoxDecoration(
-              color: Brand.surface,
-              borderRadius: BorderRadius.circular(Brand.radiusPill),
-            ),
-            child: Text(player.xp.toStringAsFixed(1),
-                style: const TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: Brand.text)),
+    children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+        decoration: BoxDecoration(
+          color: Brand.surface,
+          borderRadius: BorderRadius.circular(Brand.radiusPill),
+        ),
+        child: Text(
+          player.xp.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Brand.text,
           ),
-          const SizedBox(height: 2),
-          Text('£${player.price.toStringAsFixed(1)}m · ${fixture?.label ?? '—'}',
-              style: const TextStyle(color: Colors.white70, fontSize: 8.5)),
-        ],
-      );
+        ),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        '£${player.price.toStringAsFixed(1)}m · ${fixture?.label ?? '—'}',
+        style: const TextStyle(color: Colors.white70, fontSize: 8.5),
+      ),
+    ],
+  );
 }
 
 /// **Next 3** — ⭐ *a manager deciding whether to HOLD a player is asking about his run, not his Saturday.*
@@ -309,12 +368,20 @@ class _Run extends StatelessWidget {
                         // quietly show the wrong number against the wrong opponent.
                         _xpFor(weeks, fixtures[i].gameweek),
                         style: const TextStyle(
-                            color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      Text(fixtures[i].opponent.toLowerCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.clip,
-                          style: const TextStyle(color: Colors.white60, fontSize: 7.5)),
+                      Text(
+                        fixtures[i].opponent.toLowerCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 7.5,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -346,11 +413,17 @@ class _Price extends StatelessWidget {
     final colour = m == null
         ? Colors.white54
         : m.rising
-            ? Brand.good
-            : m.falling
-                ? Brand.bad
-                : Colors.white54;
-    final arrow = m == null ? '·' : (m.rising ? '↗' : m.falling ? '↘' : '–');
+        ? Brand.good
+        : m.falling
+        ? Brand.bad
+        : Colors.white54;
+    final arrow = m == null
+        ? '·'
+        : (m.rising
+              ? '↗'
+              : m.falling
+              ? '↘'
+              : '–');
     return Column(
       children: [
         Container(
@@ -359,14 +432,21 @@ class _Price extends StatelessWidget {
             color: colour,
             borderRadius: BorderRadius.circular(Brand.radiusPill),
           ),
-          child: Text('$arrow £${player.price.toStringAsFixed(1)}',
-              style: const TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+          child: Text(
+            '$arrow £${player.price.toStringAsFixed(1)}',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           // ⭐ The evidence, not a forecast: what the crowd actually did this week.
-          m == null ? '—' : '${m.netTransfers >= 0 ? '+' : ''}${_compact(m.netTransfers)}',
+          m == null
+              ? '—'
+              : '${m.netTransfers >= 0 ? '+' : ''}${_compact(m.netTransfers)}',
           style: const TextStyle(color: Colors.white60, fontSize: 8.5),
         ),
       ],
@@ -391,33 +471,38 @@ class _ModeBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-        child: Row(
-          children: [
-            for (final option in PitchMode.values)
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onMode(option),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: option == mode ? Brand.purple : Colors.white10,
-                      borderRadius: BorderRadius.circular(Brand.radiusPill),
-                    ),
-                    child: Text(option.label,
-                        style: TextStyle(
-                            color: option == mode ? Colors.white : Colors.white54,
-                            fontSize: 11.5,
-                            fontWeight: option == mode ? FontWeight.w600 : FontWeight.w400)),
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+    child: Row(
+      children: [
+        for (final option in PitchMode.values)
+          Expanded(
+            child: GestureDetector(
+              onTap: () => onMode(option),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: option == mode ? Brand.purple : Colors.white10,
+                  borderRadius: BorderRadius.circular(Brand.radiusPill),
+                ),
+                child: Text(
+                  option.label,
+                  style: TextStyle(
+                    color: option == mode ? Colors.white : Colors.white54,
+                    fontSize: 11.5,
+                    fontWeight: option == mode
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                   ),
                 ),
               ),
-          ],
-        ),
-      );
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _Armband extends StatelessWidget {
@@ -427,17 +512,22 @@ class _Armband extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 15,
-        height: 15,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: letter == 'C' ? Brand.orange : Brand.muted,
-          shape: BoxShape.circle,
-        ),
-        child: Text(letter,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-      );
+    width: 15,
+    height: 15,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: letter == 'C' ? Brand.orange : Brand.muted,
+      shape: BoxShape.circle,
+    ),
+    child: Text(
+      letter,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 9,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class _Flag extends StatelessWidget {
@@ -448,18 +538,28 @@ class _Flag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: colour,
-          borderRadius: BorderRadius.circular(Brand.radiusPill),
-        ),
-        child: Text(text,
-            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w600)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    decoration: BoxDecoration(
+      color: colour,
+      borderRadius: BorderRadius.circular(Brand.radiusPill),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 8,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
 }
 
 class _Bench extends StatelessWidget {
-  const _Bench({required this.team, required this.mode, required this.onTapPlayer});
+  const _Bench({
+    required this.team,
+    required this.mode,
+    required this.onTapPlayer,
+  });
 
   final MyTeam team;
   final PitchMode mode;
@@ -471,13 +571,21 @@ class _Bench extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xEB17131F),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(Brand.radiusMd)),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(Brand.radiusMd),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(4, 7, 4, 10),
       child: Column(
         children: [
-          const Text('BENCH',
-              style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 2)),
+          const Text(
+            'BENCH',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 9,
+              letterSpacing: 2,
+            ),
+          ),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -487,7 +595,12 @@ class _Bench extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    _Card(team: team, player: p, mode: mode, onTap: () => onTapPlayer(p)),
+                    _Card(
+                      team: team,
+                      player: p,
+                      mode: mode,
+                      onTap: () => onTapPlayer(p),
+                    ),
                     if (roleOf[p.id] != null)
                       Positioned(
                         left: 2,
@@ -496,10 +609,17 @@ class _Bench extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 5),
                           decoration: BoxDecoration(
                             color: Brand.purple,
-                            borderRadius: BorderRadius.circular(Brand.radiusPill),
+                            borderRadius: BorderRadius.circular(
+                              Brand.radiusPill,
+                            ),
                           ),
-                          child: Text(roleOf[p.id]!,
-                              style: const TextStyle(color: Colors.white, fontSize: 8)),
+                          child: Text(
+                            roleOf[p.id]!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                          ),
                         ),
                       ),
                   ],
