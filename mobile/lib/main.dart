@@ -434,24 +434,38 @@ class _TitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
-    child: Text.rich(
-      TextSpan(
-        children: [
+    padding: EdgeInsets.fromLTRB(14, 8, 14, 6),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // ⭐ **The badge, not just the wordmark** (ADR-243). On a phone the badge is what a person
+        // recognises — it is what they tapped on the home screen a second earlier.
+        Image(
+          image: AssetImage('assets/madboots-badge.png'),
+          width: 22,
+          height: 22,
+          filterQuality: FilterQuality.medium,
+        ),
+        SizedBox(width: 7),
+        Text.rich(
           TextSpan(
-            text: 'MAD',
-            style: TextStyle(
-              color: Brand.purpleLight,
-              fontWeight: FontWeight.w700,
-            ),
+            children: [
+              TextSpan(
+                text: 'MAD',
+                style: TextStyle(
+                  color: Brand.purpleLight,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextSpan(
+                text: 'BOOTS',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
           ),
-          TextSpan(
-            text: 'BOOTS',
-            style: TextStyle(color: Colors.white),
-          ),
-        ],
-      ),
-      style: TextStyle(fontSize: 15, letterSpacing: .5),
+          style: TextStyle(fontSize: 15, letterSpacing: .5),
+        ),
+      ],
     ),
   );
 }
