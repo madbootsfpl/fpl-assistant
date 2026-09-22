@@ -222,6 +222,14 @@ class _ClubState extends State<_Club> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DnaBars(axes: c.axes),
+                  if (c.fixtures.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _Fixtures(fixtures: c.fixtures, form: c.form),
+                  ],
+                  if (c.keyPlayers.players.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _KeyPlayers(key_: c.keyPlayers),
+                  ],
                   if (c.insights.length > 1) const SizedBox(height: 6),
                   for (final insight in c.insights.skip(1))
                     Padding(
@@ -271,6 +279,207 @@ class _Grade extends StatelessWidget {
         fontSize: 13,
         fontWeight: FontWeight.w800,
       ),
+    ),
+  );
+}
+
+/// Where the club is going, and how it has been going (ADR-251).
+///
+/// ⭐ Tinted by difficulty, because the number 4 means nothing until it is a colour — and the run is the
+/// thing a manager is actually buying when he buys a player from this club.
+class _Fixtures extends StatelessWidget {
+  const _Fixtures({required this.fixtures, required this.form});
+
+  final List<Fixture> fixtures;
+  final List<({int gameweek, String result})> form;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'NEXT SIX',
+        style: TextStyle(
+          color: Colors.white38,
+          fontSize: 9.5,
+          letterSpacing: 1,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Row(
+        children: [
+          for (final f in fixtures)
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.only(right: 3),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _tint(f.difficulty),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      // ⚠️ Upper case home, lower case away — the convention the last-five boxes already
+                      // use, so a reader who has learned one has learned the other.
+                      f.venue == 'H'
+                          ? f.opponent.toUpperCase()
+                          : f.opponent.toLowerCase(),
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'GW${f.gameweek ?? '—'}',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 7.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      if (form.isNotEmpty) ...[
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Text(
+              'FORM',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: 9.5,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 7),
+            for (final r in form)
+              Container(
+                width: 17,
+                height: 17,
+                margin: const EdgeInsets.only(right: 3),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: switch (r.result) {
+                    'W' => Brand.good,
+                    'D' => Colors.white24,
+                    _ => Brand.bad,
+                  },
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  r.result,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    ],
+  );
+
+  /// ⚠️ Difficulty 1–5, and **null is neutral** rather than easy: an unknown fixture is not a good one.
+  static Color _tint(int? difficulty) => switch (difficulty) {
+    1 || 2 => Brand.good.withValues(alpha: 0.55),
+    3 => Colors.white10,
+    4 => Brand.warn.withValues(alpha: 0.45),
+    5 => Brand.bad.withValues(alpha: 0.55),
+    _ => Colors.white10,
+  };
+}
+
+/// Who to buy from this club (ADR-251).
+///
+/// ⚠️⚠️ **The season is named when it is not this one.** The ranking needs ~900 minutes, so until about
+/// GW10 this is *last* season's table (ADR-126) — ⭐ *a table from a different season that does not say so
+/// is the most quietly wrong thing on a page.*
+class _KeyPlayers extends StatelessWidget {
+  const _KeyPlayers({required this.key_});
+
+  final KeyPlayers key_;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        key_.season == null ? 'WORTH OWNING' : 'WORTH OWNING · ${key_.season}',
+        style: const TextStyle(
+          color: Colors.white38,
+          fontSize: 9.5,
+          letterSpacing: 1,
+        ),
+      ),
+      if (key_.season != null)
+        const Padding(
+          padding: EdgeInsets.only(top: 2, bottom: 2),
+          child: Text(
+            'Ranking needs ~900 minutes, so this season’s table fills from about GW10.',
+            style: TextStyle(color: Colors.white24, fontSize: 10, height: 1.35),
+          ),
+        ),
+      const SizedBox(height: 3),
+      for (final p in key_.players)
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 34,
+                child: Text(
+                  p.position,
+                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  p.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+              _Stat(label: 'xGI', value: p.xgi90.toStringAsFixed(2)),
+              _Stat(label: 'pts', value: p.pts90.toStringAsFixed(1)),
+              _Stat(label: 'own', value: '${p.owned.toStringAsFixed(1)}%'),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 52,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white70, fontSize: 11),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white24, fontSize: 7.5),
+        ),
+      ],
     ),
   );
 }

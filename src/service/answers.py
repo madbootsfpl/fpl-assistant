@@ -27,9 +27,12 @@ from src.analytics import (
 )
 from src.analytics.compare import compare_rows, stat_rows
 from src.analytics.gameweek import gameweek_plan
+from src.analytics.gw_form import team_form
+from src.analytics.last_season import last_season_name, last_season_rows
 from src.analytics.optimizer import DEFAULT_BUDGET, legal_xi_issues
 from src.analytics.player_dna import player_dna as analytics_player_dna
 from src.analytics.player_dna import player_insights
+from src.analytics.team_dna import key_players_this_or_last
 from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import shirt_url
@@ -895,6 +898,11 @@ _TIERS = {
 #: it moves when the league does.
 GLOBAL_OWNERSHIP_PERCENTILE = 75
 
+#: ⭐ Six fixtures on the DNA page, where the pitch card shows three (`RUN`). A club's *run* is a longer
+#: question than a player's next card — ⚠️ *and they are separate constants because they answer separate
+#: questions, not because one of them was forgotten.*
+DNA_RUN = 6
+
 
 def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
     """What a manager should know about his own fifteen, strongest evidence first (ADR-232).
@@ -1092,6 +1100,25 @@ def team_dna(request: TeamDnaRequest, *, store: Storage | None = None) -> dict:
         names = {t["short_name"]: t["name"] for t in teams}
         all_dna = team_dna_all(players, upcoming, team_names=names)
         mine = {p["team"] for p in players if p["id"] in set(request.player_ids)}
+        gw_history = store.get_gw_history_by_code()
+        past = store.get_history_by_code()
+        # ⚠️⚠️ **Last season, when this one cannot rank anybody yet** (ADR-126). The ranking needs ~900
+        # minutes and it is September — ⭐ *an empty table reads as "this club has no good players", which
+        # is a claim nobody made*, so the fallback answers and the label says which season it answered for.
+        last_rows = last_season_rows(players, past)
+        last_name = last_season_name(past)
+        schedule = {club: [{"gameweek": c.get("event"), "opponent": c["opponent"],
+                            "venue": c["venue"], "difficulty": c.get("difficulty")}
+                           for c in (team_schedule(upcoming, club) or [])[:DNA_RUN]]
+                    for club in all_dna}
+        form = {club: [{"gameweek": gw, "result": result}
+                       for gw, result in (team_form(gw_history, players, club) or [])]
+                for club in all_dna}
+        key_players = {}
+        for club in all_dna:
+            rows_, season = key_players_this_or_last(players, club, last_rows=last_rows,
+                                                    season_name=last_name)
+            key_players[club] = {"season": season, "players": rows_}
     finally:
         if ours:
             store.close()
@@ -1107,6 +1134,11 @@ def team_dna(request: TeamDnaRequest, *, store: Storage | None = None) -> dict:
             "axes": [{"label": a.label, "sublabel": a.sublabel, "value": a.value,
                       "percentile": a.percentile} for a in dna.axes],
             "insights": [{"kind": i.kind, "text": i.text} for i in team_insights(dna)],
+            # ⭐ The three things the web page carries beside the fingerprint, and the reason a manager
+            # opens it: where the club is going, how it has been going, and who to buy.
+            "fixtures": schedule.get(dna.team, []),
+            "form": form.get(dna.team, []),
+            "key_players": key_players.get(dna.team, {"season": None, "players": []}),
         })
     # ⭐ Best first. ⚠️ Ties broken by name rather than left to dict order, so two runs of the same data
     # cannot disagree about the table — *an unstable sort is a diff that appears from nowhere.*

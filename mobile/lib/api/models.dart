@@ -917,6 +917,9 @@ class ClubDna {
     required this.yours,
     required this.axes,
     required this.insights,
+    required this.fixtures,
+    required this.form,
+    required this.keyPlayers,
   });
 
   factory ClubDna.fromJson(Map<String, dynamic> json) => ClubDna(
@@ -933,6 +936,21 @@ class ClubDna {
       for (final i in (json['insights'] as List? ?? []))
         (kind: '${(i as Map<String, dynamic>)['kind']}', text: '${i['text']}'),
     ],
+    fixtures: [
+      for (final f in (json['fixtures'] as List? ?? []))
+        Fixture.fromJson(f as Map<String, dynamic>),
+    ],
+    form: [
+      for (final f in (json['form'] as List? ?? []))
+        (
+          gameweek:
+              ((f as Map<String, dynamic>)['gameweek'] as num?)?.toInt() ?? 0,
+          result: '${f['result']}',
+        ),
+    ],
+    keyPlayers: KeyPlayers.fromJson(
+      (json['key_players'] as Map<String, dynamic>?) ?? const {},
+    ),
   );
 
   final String team;
@@ -944,6 +962,52 @@ class ClubDna {
   final bool yours;
   final List<DnaAxis> axes;
   final List<({String kind, String text})> insights;
+
+  /// Where the club is going — ⭐ six, not the pitch card's three: *a club's run is a longer question
+  /// than a player's next card.*
+  final List<Fixture> fixtures;
+
+  /// How it has been going — W/D/L, oldest first.
+  final List<({int gameweek, String result})> form;
+
+  /// Who to buy, and **which season the table is from**.
+  final KeyPlayers keyPlayers;
+}
+
+/// The club's best FPL assets — ⚠️ **with the season named**, because the ranking needs ~900 minutes and
+/// falls back to last season until about GW10 (ADR-126). ⭐ *A table from a different season that does not
+/// say so is the most quietly wrong thing on a page.*
+class KeyPlayers {
+  KeyPlayers({required this.season, required this.players});
+
+  factory KeyPlayers.fromJson(Map<String, dynamic> json) => KeyPlayers(
+    season: json['season'] as String?,
+    players: [
+      for (final p in (json['players'] as List? ?? []))
+        (
+          name: '${(p as Map<String, dynamic>)['name']}',
+          position: '${p['pos']}',
+          xgi90: (p['xgi90'] as num?)?.toDouble() ?? 0,
+          pts90: (p['pts90'] as num?)?.toDouble() ?? 0,
+          minutesPct: (p['minpct'] as num?)?.toInt() ?? 0,
+          owned: (p['own'] as num?)?.toDouble() ?? 0,
+        ),
+    ],
+  );
+
+  /// Null when the table is **this** season's. ⭐ A label only where it changes the reading.
+  final String? season;
+  final List<
+    ({
+      String name,
+      String position,
+      double xgi90,
+      double pts90,
+      int minutesPct,
+      double owned,
+    })
+  >
+  players;
 }
 
 class DnaAxis {

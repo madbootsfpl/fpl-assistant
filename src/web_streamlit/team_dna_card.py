@@ -12,7 +12,15 @@ import streamlit as st
 
 from src.analytics import team_dna_all, team_insights, team_schedule
 from src.analytics.gw_form import team_form
-from src.analytics.player_dna import _f, _get
+from src.analytics.player_dna import _get
+
+# ⭐ Re-exported, not re-implemented. `team_key_players` and `key_players_this_or_last` moved to
+# `analytics/team_dna.py` (ADR-251) so the API could reach them without importing Streamlit; the page and
+# its tests still import them from here, and this line is why that keeps working.
+from src.analytics.team_dna import (  # noqa: F401
+    key_players_this_or_last,
+    team_key_players,
+)
 from src.web_streamlit import brand
 from src.web_streamlit.dna_card import _band, radar_svg
 from src.web_streamlit.insights_card import render_insights_card
@@ -136,34 +144,6 @@ def key_players_html(rows, season=None) -> str:
     return (TD_CSS + '<div class="td-card"><div class="td-ttl">🎯 Key players to target (FPL impact)</div>'
             f'{note}<table class="td-tbl"><thead><tr><th>Player</th><th>xGI/90</th><th>Pts/90</th>'
             f'<th>Mins</th><th>Own</th></tr></thead><tbody>{body}</tbody></table></div>')
-
-
-def team_key_players(players, team, *, n: int = 7, min_minutes: int = 900) -> list[dict]:
-    """The team's top players by FPL points (min. `min_minutes`), each with the target-table fields.
-    Row/dict safe; per-90 rates + a minutes% of a full season (38×90)."""
-    ps = [p for p in players if _get(p, "team") == team and _f(_get(p, "minutes")) >= min_minutes]
-    ps.sort(key=lambda p: _f(_get(p, "total_points")), reverse=True)
-    out = []
-    for p in ps[:n]:
-        mins = _f(_get(p, "minutes"))
-        p90 = mins / 90 or 1
-        out.append({"name": _get(p, "web_name"), "pos": _get(p, "position"),
-                    "xgi90": _f(_get(p, "xgi")) / p90, "pts90": _f(_get(p, "total_points")) / p90,
-                    "minpct": min(100, round(mins / 3420 * 100)), "own": _f(_get(p, "selected_by"))})
-    return out
-
-
-def key_players_this_or_last(players, team, last_rows=None, season_name=None, **kw):
-    """A team's key players from this season, or last season's if this season can't rank anyone yet (ADR-126).
-
-    `team_key_players` runs **unchanged** on last season, because `last_season_rows` hands it the same mapping
-    shape `get_players()` does — and it filters on the *current* club, which the projection carries, so a
-    summer signing is ranked with the side he plays for now. Returns `(rows, season_label)`; the label is None
-    when the rows are this season's, so the caller has nothing to announce."""
-    rows = team_key_players(players, team, **kw)
-    if rows:
-        return rows, None
-    return team_key_players(last_rows or [], team, **kw), (season_name if last_rows else None)
 
 
 def render_team_dna(dna, *, fixtures=None, key_players=None, key_players_season=None, form=None) -> None:

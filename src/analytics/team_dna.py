@@ -182,3 +182,41 @@ def team_insights(dna) -> list[Insight]:
         out.append(Insight("sp", "Loaded with set-piece threat (penalty + dead-ball takers)"))
 
     return out[:4]
+
+
+# ── key players ───────────────────────────────────────────────────────────────────────────────────
+#
+# ⭐⭐ **Moved here from `web_streamlit/team_dna_card.py`, unchanged** (ADR-251). They are pure analytics
+# and were only ever in the web package because that is where the first caller lived — and that package
+# imports Streamlit, so the API could not reach them.
+#
+# ⚠️ **Moved verbatim, not retyped.** This project has already paid for retyping a moved thing once: a
+# shirt-URL template lost its `-66` suffix in transit and every kit on the pitch broke. *A move is a cut
+# and a paste; anything else is a rewrite wearing a move's name.*
+
+def team_key_players(players, team, *, n: int = 7, min_minutes: int = 900) -> list[dict]:
+    """The team's top players by FPL points (min. `min_minutes`), each with the target-table fields.
+    Row/dict safe; per-90 rates + a minutes% of a full season (38×90)."""
+    ps = [p for p in players if _get(p, "team") == team and _f(_get(p, "minutes")) >= min_minutes]
+    ps.sort(key=lambda p: _f(_get(p, "total_points")), reverse=True)
+    out = []
+    for p in ps[:n]:
+        mins = _f(_get(p, "minutes"))
+        p90 = mins / 90 or 1
+        out.append({"name": _get(p, "web_name"), "pos": _get(p, "position"),
+                    "xgi90": _f(_get(p, "xgi")) / p90, "pts90": _f(_get(p, "total_points")) / p90,
+                    "minpct": min(100, round(mins / 3420 * 100)), "own": _f(_get(p, "selected_by"))})
+    return out
+
+
+def key_players_this_or_last(players, team, last_rows=None, season_name=None, **kw):
+    """A team's key players from this season, or last season's if this season can't rank anyone yet (ADR-126).
+
+    `team_key_players` runs **unchanged** on last season, because `last_season_rows` hands it the same mapping
+    shape `get_players()` does — and it filters on the *current* club, which the projection carries, so a
+    summer signing is ranked with the side he plays for now. Returns `(rows, season_label)`; the label is None
+    when the rows are this season's, so the caller has nothing to announce."""
+    rows = team_key_players(players, team, **kw)
+    if rows:
+        return rows, None
+    return team_key_players(last_rows or [], team, **kw), (season_name if last_rows else None)
