@@ -41,6 +41,7 @@ from src.service.requests import (
     PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
+    SignalsRequest,
     SquadRequest,
     TransfersRequest,
 )
@@ -620,3 +621,87 @@ def feedback(request: FeedbackRequest) -> dict:
 
     ok, note = relay_result(response)
     return {"sent": ok, "reason": note, "email": inbox}
+
+
+#: ⭐⭐ **The ordering IS the design** (ADR-150). These sources are not equally reliable, and putting them in
+#: one list without saying so would present a Reddit rumour beside an injury FPL confirmed. So they descend
+#: by **evidentiary strength**, and each says what it is.
+_TIERS = {
+    "official": 1,     # FPL's own `news`. A fact — it drives `status`, and therefore every xP in the app.
+    "departure": 2,    # the press and the crowd agreeing a player is leaving the league (ADR-153/155).
+    "exodus": 3,       # our own inference: a sell-off our fields cannot explain (ADR-146).
+    "headline": 4,     # reported by a named outlet (ADR-093).
+}
+
+
+def signals(request: SignalsRequest, *, store: Storage | None = None) -> dict:
+    """What a manager should know about his own fifteen, strongest evidence first (ADR-232).
+
+    ⭐ **Squad-scoped, which is the whole difference from the web page.** That browses the market; this
+    answers *"what should I know?"* about the players you actually hold — the question a manager opens a
+    phone to ask before a deadline.
+
+    ⚠️ **Each signal says what kind of thing it is**, because they are not equally reliable. An FPL `news`
+    string is a fact; an unexplained exodus is *"the crowd knows something and we do not"*; a headline is
+    one outlet's reporting. ⭐ *Presenting them as one undifferentiated list would be the page ADR-150 was
+    written to replace.*
+
+    ⭐ **Every signal carries a stable `key`**, so a client can remember which it has already shown. The
+    app cannot ask the server *what changed since I last looked* — the server has no idea when that was —
+    but it can be told what each thing **is**, and work the rest out itself.
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        data = load(request.player_ids, request.horizon, store, need_events=True)
+        events = data.events or {}
+    finally:
+        if ours:
+            store.close()
+
+    from src.analytics.crowd import exodus_detector
+
+    # ⚠️ Bound to the whole board, never the fifteen — ADR-210: a tenth of fifteen flags somebody weekly.
+    exodus_for = exodus_detector(data.players)
+
+    found = []
+    for player in data.owned:
+        summary = player_summary(player, data.xp_by_id, reported_out=data.leaving)
+        news = (player["news"] or "").strip() if "news" in player.keys() else ""
+
+        if news:
+            found.append({"kind": "official", "key": f"official:{player['id']}:{hash(news) & 0xffff}",
+                          "player": summary, "headline": news,
+                          "detail": "FPL's own news. It drives his status, and therefore his projection."})
+
+        if leaving := data.leaving.get(player["id"]):
+            found.append({"kind": "departure", "key": f"departure:{player['id']}",
+                          "player": summary,
+                          "headline": leaving.get("title") or "Reported to be leaving the league",
+                          "detail": f"Reported by {leaving.get('source') or 'the press'}. "
+                                    f"FPL still lists him as available."})
+
+        if exodus := exodus_for(player):
+            found.append({"kind": "exodus", "key": f"exodus:{player['id']}",
+                          "player": summary,
+                          # ⚠️ `net` is negative by construction — it is transfers *out* minus in. "-2,762 managers
+                          # sold him" reads as nonsense, and the sign is already carried by the
+                          # word "sold".
+                          "headline": f"{abs(exodus['net']):,} managers sold him this week",
+                          # ⭐ Deliberately says nothing about *what* the news is. It reports that the crowd
+                          # knows something and we do not — true, checkable, and the most the data supports.
+                          "detail": "Nothing in his status or news explains it."})
+
+        for event in events.get(player["id"], []):
+            row = dict(event)
+            found.append({"kind": "headline", "key": f"headline:{player['id']}:{row.get('seen_at')}",
+                          "player": summary, "headline": row.get("title") or "",
+                          "detail": f"Reported by {row.get('source') or 'an outlet'}.",
+                          "at": row.get("seen_at")})
+
+    found.sort(key=lambda s: (_TIERS[s["kind"]], s["player"]["web_name"]))
+    return {
+        "signals": found,
+        # ⭐ So a quiet week reads as *"nothing to report"* rather than as a screen that failed to load.
+        "checked": len(data.owned),
+    }

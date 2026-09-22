@@ -188,7 +188,10 @@ a screen asks for anything is a foundation built to a guess. `http` is the only 
 
 ---
 
-## ⏳ Under review — Signals on the phone
+## ~~⏳ Under review — Signals on the phone~~ ✅ **BUILT 2026-09-22 — [ADR-232](../06_Decisions/ADR-232-signals-and-a-memory-the-web-cannot-have.md)**
+
+⭐ The *what-changed* view turned out to need **no new data** — only the observation that the **client** is the thing with a memory of this user. Every signal carries a stable key; the device remembers which it has shown.
+
 
 **Raised 2026-09-22, deferred by the owner:** *"There may be a case for Signals in the app version, we can
 review that later."*

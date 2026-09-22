@@ -267,3 +267,13 @@ class FeedbackRequest:
             raise ValueError(f"message is longer than {MAX_FEEDBACK} characters")
         if len(self.contact) > 200:
             raise ValueError("contact is too long")
+
+
+@dataclass(frozen=True)
+class SignalsRequest(SquadRequest):
+    """*"What should I know?"* — about **your** players (ADR-150/232).
+
+    ⭐ The web page browses the whole market; this is squad-scoped, which is the difference between the
+    exploration layer and the decision layer. A manager checking a phone before a deadline is asking about
+    the fifteen he owns.
+    """

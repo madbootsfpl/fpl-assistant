@@ -25,6 +25,7 @@ class MoreView extends StatelessWidget {
     required this.onManagerId,
     required this.onFreeTransfers,
     required this.onOpenChips,
+    required this.onOpenSignals,
     required this.client,
     super.key,
   });
@@ -38,6 +39,12 @@ class MoreView extends StatelessWidget {
   /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
   /// *Working earns a place; frequency earns a slot.*
   final VoidCallback onOpenChips;
+
+  /// ⭐ Signals is time-sensitive and squad-scoped — decision layer, not research. It is here rather than
+  /// in the bar because the audit's first release does not include it, and *frequency earns a slot*
+  /// (ADR-230). ⚠️ The better answer is probably a badge on the pitch: **being told beats going to look**,
+  /// which is the whole reason a phone suits this.
+  final VoidCallback onOpenSignals;
   final ServiceClient client;
 
   @override
@@ -70,6 +77,14 @@ class MoreView extends StatelessWidget {
                 style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.45)),
           ),
 
+          const _Heading('What should I know?'),
+          _Link(
+            name: 'Signals',
+            why: 'FPL news, reported moves, and sell-offs the data cannot explain — about your fifteen, '
+                'strongest evidence first. Marks what is new since you last looked.',
+            onTap: onOpenSignals,
+          ),
+
           const _Heading('Season decisions'),
           _Link(
             name: 'Chips',
@@ -78,20 +93,10 @@ class MoreView extends StatelessWidget {
             onTap: onOpenChips,
           ),
 
-          const _Heading('Under review'),
-          const _Pending(
-            name: 'Signals',
-            why: 'What should I know? — official news, an unexplained transfer exodus, headlines, and '
-                'community chatter, ordered by how much each source actually knows. Arguably belongs '
-                'here: it is time-sensitive and actionable before a deadline, which is what a phone is '
-                'for. The app already carries its conclusions on your own players — the flags and the '
-                '✈ — but has no view of what CHANGED.',
-          ),
-
           const _Heading('On the web'),
           const _Note(
-            'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA, the '
-            'player pool and stat boards, and Trending.',
+            'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA and '
+            'Trending — and the market-wide view of Signals, where this app shows only your own squad.',
           ),
           const _Note(
             // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find
@@ -274,31 +279,7 @@ class _Fact extends StatelessWidget {
       );
 }
 
-/// ⭐ Named with a reason, not greyed out. *"Not built yet" is information; an empty row is a bug report.*
-class _Pending extends StatelessWidget {
-  const _Pending({required this.name, required this.why});
-
-  final String name;
-  final String why;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(name, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(why,
-                  style: const TextStyle(color: Colors.white24, fontSize: 11, height: 1.45)),
-            ),
-          ],
-        ),
-      );
-}
-
-/// A row that goes somewhere. ⭐ Distinct from `_Pending`, which deliberately does not.
+/// A row that goes somewhere, with a back button when it gets there.
 class _Link extends StatelessWidget {
   const _Link({required this.name, required this.why, required this.onTap});
 

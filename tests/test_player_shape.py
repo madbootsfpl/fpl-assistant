@@ -83,7 +83,7 @@ def _players_in(value, path="", found=None):
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
 COVERED = {"analysis", "chips", "transfers", "captain", "gameweek", "route", "build",
-           "replacements", "players"}
+           "replacements", "players", "signals"}
 
 
 def _answers(store):
@@ -94,6 +94,7 @@ def _answers(store):
         "analysis": service.analysis(service.SquadRequest(player_ids=ids, horizon=1), store=store),
         "chips": service.chips(service.ChipsRequest(player_ids=ids, bank=2.0), store=store),
         "players": service.players(service.PlayersRequest(horizon=1, limit=5), store=store),
+        "signals": service.signals(service.SignalsRequest(player_ids=ids, horizon=1), store=store),
         "transfers": service.transfers(
             service.TransfersRequest(player_ids=ids, horizon=1, bank=3.0), store=store),
         "captain": service.captain(service.CaptainRequest(player_ids=ids), store=store),

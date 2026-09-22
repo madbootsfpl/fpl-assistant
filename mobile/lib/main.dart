@@ -12,6 +12,7 @@ import 'api/models.dart';
 import 'brand.dart';
 import 'chips_view.dart';
 import 'players_view.dart';
+import 'signals_view.dart';
 import 'draft.dart';
 import 'more_view.dart';
 import 'pitch.dart';
@@ -188,6 +189,22 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   int get _managerId => int.tryParse(_id.text.trim()) ?? kDefaultManagerId;
 
+  /// Push a full screen. ⭐ Used for the things More links to — they are screens, not rows, and giving them
+  /// a back button is what makes More a menu rather than a very long page.
+  void _open(String title, Widget body) => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            backgroundColor: Brand.ink,
+            appBar: AppBar(
+              title: Text(title),
+              backgroundColor: Brand.ink,
+              foregroundColor: Colors.white,
+            ),
+            body: body,
+          ),
+        ),
+      );
+
   /// Tap a player: armband, or replace him.
   Future<void> _openPlayer(MyTeam team, PlayerSummary player) async {
     final action = await showPlayerSheet(context,
@@ -336,19 +353,9 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
               _freeTransfers = n;
               _team = _load(_managerId);
             }),
-            onOpenChips: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  backgroundColor: Brand.ink,
-                  appBar: AppBar(
-                    title: const Text('Chips'),
-                    backgroundColor: Brand.ink,
-                    foregroundColor: Colors.white,
-                  ),
-                  body: ChipsView(client: _client, team: team),
-                ),
-              ),
-            ),
+            onOpenChips: () => _open('Chips', ChipsView(client: _client, team: team)),
+            onOpenSignals: () =>
+                _open('Signals', SignalsView(client: _client, team: team)),
           ),
       };
   }

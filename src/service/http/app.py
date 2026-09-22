@@ -241,6 +241,19 @@ def all_players(body: PlayersBody) -> dict:
     return _answer(service.players, service.PlayersRequest(**body.model_dump()))
 
 
+@app.post("/api/v1/squad/signals")
+def squad_signals(body: SquadBody) -> dict:
+    """What a manager should know about his own fifteen, **strongest evidence first**.
+
+    ⭐ Each signal carries a `kind` — `official` · `departure` · `exodus` · `headline` — because they are
+    not equally reliable, and an unexplained sell-off is not the same claim as an injury FPL confirmed.
+    ⚠️ *Rendering them as one undifferentiated list is the page ADR-150 was written to replace.*
+
+    ⭐ Every signal has a stable `key`, so a client can remember which it has already shown.
+    """
+    return _answer(service.signals, service.SignalsRequest(**body.model_dump()))
+
+
 @app.post("/api/v1/squad/chips")
 def squad_chips(body: ChipsBody) -> dict:
     """When to play each chip, and what a wildcard is **worth**.

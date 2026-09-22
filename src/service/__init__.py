@@ -25,6 +25,7 @@ from src.service.answers import (
     players,
     replacements,
     route,
+    signals,
     transfers,
 )
 from src.service.requests import (
@@ -38,6 +39,7 @@ from src.service.requests import (
     PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
+    SignalsRequest,
     SquadRequest,
     TransfersRequest,
 )
@@ -53,6 +55,7 @@ __all__ = [
     "PlayersRequest",
     "ReplacementsRequest",
     "RouteRequest",
+    "SignalsRequest",
     "SquadRequest",
     "TransfersRequest",
     "analysis",
@@ -65,5 +68,6 @@ __all__ = [
     "players",
     "replacements",
     "route",
+    "signals",
     "transfers",
 ]

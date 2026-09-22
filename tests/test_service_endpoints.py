@@ -27,6 +27,7 @@ from src.service import (
     PlayersRequest,
     ReplacementsRequest,
     RouteRequest,
+    SignalsRequest,
     SquadRequest,
     TransfersRequest,
 )
@@ -1158,3 +1159,78 @@ def test_the_note_reaches_the_sink_unaltered(monkeypatch):
 def test_a_feedback_request_that_cannot_be_relayed_is_refused(request_, expected):
     with pytest.raises(ValueError, match=expected):
         request_.validate()
+
+
+# ---- signals: what should I know, about MY fifteen (ADR-232) -----------------------------
+
+def test_signals_are_ordered_by_how_much_the_source_knows(store, monkeypatch):
+    """⭐⭐ **The ordering IS the design** (ADR-150). These sources are not equally reliable, and putting
+    them in one list without saying so *"would present a Reddit rumour beside an injury FPL confirmed"*.
+
+    ⚠️ Constructed, because a seed with only one kind of signal cannot show an ordering.
+    """
+    picked = _squad(store)
+    from src.analytics import crowd, headlines
+
+    # A departure on one player and an exodus on another, so at least three tiers are present.
+    monkeypatch.setattr(headlines, "leavers",
+                        lambda owned, events, exodus_for, *, today:
+                            {picked[1]: {"title": "Agreed a move", "source": "Romano"}})
+    monkeypatch.setattr(crowd, "exodus_detector",
+                        lambda players: (lambda p: {"net": -9000, "pressure": -9000}
+                                         if p["id"] == picked[2] else None))
+
+    answer = svc.signals(SignalsRequest(player_ids=picked, horizon=1), store=store)
+    kinds = [s["kind"] for s in answer["signals"]]
+    assert kinds, "the constructed signals must actually appear, or this asserts nothing"
+
+    rank = {"official": 1, "departure": 2, "exodus": 3, "headline": 4}
+    assert [rank[k] for k in kinds] == sorted(rank[k] for k in kinds), (
+        f"signals are out of evidentiary order: {kinds}"
+    )
+
+
+def test_every_signal_says_what_kind_of_claim_it_is(store):
+    """⚠️ An FPL `news` string is a **fact**; an unexplained exodus is *"the crowd knows something and we
+    do not"*. ⭐ A client cannot present them differently if the server does not distinguish them."""
+    answer = svc.signals(SignalsRequest(player_ids=_squad(store), horizon=1), store=store)
+    for signal in answer["signals"]:
+        assert signal["kind"] in {"official", "departure", "exodus", "headline"}
+        assert signal["headline"], "a signal with no headline is a row with nothing in it"
+        assert signal["detail"], "…and the detail is what says how much the source actually knows"
+
+
+def test_every_signal_has_a_stable_key(store):
+    """⭐ So a client can remember which it has already shown. ⚠️ The server cannot answer *what changed
+    since I last looked* — it has no idea when that was — but it can name each thing well enough that the
+    client works it out."""
+    picked = _squad(store)
+    first = svc.signals(SignalsRequest(player_ids=picked, horizon=1), store=store)["signals"]
+    again = svc.signals(SignalsRequest(player_ids=picked, horizon=1), store=store)["signals"]
+
+    keys = [s["key"] for s in first]
+    assert len(set(keys)) == len(keys), "two signals sharing a key would mark each other as seen"
+    assert keys == [s["key"] for s in again], "a key that changes between calls is not a key"
+
+
+def test_the_exodus_is_bound_to_the_league_not_the_squad(store, monkeypatch):
+    """⚠️ ADR-210 — a tenth of fifteen flags somebody every week."""
+    seen = []
+    from src.analytics import crowd
+    real = crowd.exodus_detector
+    monkeypatch.setattr(crowd, "exodus_detector", lambda pop: (seen.append(len(pop)), real(pop))[1])
+
+    picked = _squad(store)
+    svc.signals(SignalsRequest(player_ids=picked, horizon=1), store=store)
+    assert seen and min(seen) > len(picked)
+
+
+def test_a_quiet_week_is_an_answer_not_an_empty_screen(store, monkeypatch):
+    """⭐ `checked` says how many players were looked at, so *nothing to report* reads as news rather than
+    as a screen that failed to load."""
+    from src.analytics import crowd, headlines
+    monkeypatch.setattr(headlines, "leavers", lambda *a, **kw: {})
+    monkeypatch.setattr(crowd, "exodus_detector", lambda players: lambda p: None)
+
+    answer = svc.signals(SignalsRequest(player_ids=_squad(store), horizon=1), store=store)
+    assert answer["checked"] == 15

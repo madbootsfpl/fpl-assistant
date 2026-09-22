@@ -51,6 +51,10 @@ class ServiceClient {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// What a manager should know about his own fifteen, strongest evidence first.
+  Future<Map<String, dynamic>> signals(List<int> playerIds) =>
+      _post('squad/signals', {'player_ids': playerIds, 'horizon': 1});
+
   /// Send a note to the owner.
   ///
   /// ⚠️ **Check `sent`.** It is the relay's own verdict — `false` with a `reason` is a real outcome, and a
