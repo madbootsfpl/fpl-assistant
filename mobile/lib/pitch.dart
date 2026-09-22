@@ -19,10 +19,33 @@ import 'pitch_markings.dart';
 /// Formation order, so the rows come out keeper-first the way a pitch reads.
 const List<String> _rows = ['GK', 'DEF', 'MID', 'FWD'];
 
+/// What the strip under each name is showing.
+///
+/// ⭐⭐ **One card, three readings** (ADR-235). A manager asks three different questions of the same
+/// eleven — *what will he score this week?*, *what is his run like?*, *is his price about to move?* — and
+/// each used to need a different screen, or no screen at all.
+enum PitchMode { nextGw, run, price }
+
+extension on PitchMode {
+  String get label => switch (this) {
+        PitchMode.nextGw => 'Next GW',
+        PitchMode.run => 'Next 3',
+        PitchMode.price => 'Price',
+      };
+}
+
 class PitchView extends StatelessWidget {
-  const PitchView({required this.team, required this.onTapPlayer, super.key});
+  const PitchView({
+    required this.team,
+    required this.onTapPlayer,
+    required this.mode,
+    required this.onMode,
+    super.key,
+  });
 
   final MyTeam team;
+  final PitchMode mode;
+  final ValueChanged<PitchMode> onMode;
 
   /// ⭐ The pitch is the right surface for editing a squad — it is where a manager already looks to decide
   /// anything, and a tab called "Captain" would be a second place to do a thing that belongs here.
@@ -38,6 +61,7 @@ class PitchView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Header(team: team),
+        _ModeBar(mode: mode, onMode: onMode),
         ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(Brand.radiusMd)),
           child: PitchMarkings(
@@ -54,7 +78,7 @@ class PitchView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             for (final p in byRow[row]!)
-                              _Card(team: team, player: p, onTap: () => onTapPlayer(p)),
+                              _Card(team: team, player: p, mode: mode, onTap: () => onTapPlayer(p)),
                           ],
                         ),
                       ),
@@ -63,7 +87,7 @@ class PitchView extends StatelessWidget {
             ),
           ),
         ),
-        _Bench(team: team, onTapPlayer: onTapPlayer),
+        _Bench(team: team, mode: mode, onTapPlayer: onTapPlayer),
       ],
     );
   }
@@ -137,10 +161,16 @@ class _Stat extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.team, required this.player, required this.onTap});
+  const _Card({
+    required this.team,
+    required this.player,
+    required this.mode,
+    required this.onTap,
+  });
 
   final MyTeam team;
   final PlayerSummary player;
+  final PitchMode mode;
   final VoidCallback onTap;
 
   /// ⚠️ Fixed, not flexible. A five-DEF row and a one-FWD row must draw the same card, or the eye reads
@@ -193,19 +223,11 @@ class _Card extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-            decoration: BoxDecoration(
-              color: Brand.surface,
-              borderRadius: BorderRadius.circular(Brand.radiusPill),
-            ),
-            child: Text(player.xp.toStringAsFixed(1),
-                style: const TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: Brand.text)),
-          ),
-          const SizedBox(height: 2),
-          Text('£${player.price.toStringAsFixed(1)}m · ${fixture?.label ?? '—'}',
-              style: const TextStyle(color: Colors.white70, fontSize: 8.5)),
+          switch (mode) {
+            PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
+            PitchMode.run => _Run(fixtures: team.runFor(player), player: player),
+            PitchMode.price => _Price(move: team.priceFor(player), player: player),
+          },
         ],
       ),
     ));
@@ -228,6 +250,174 @@ class _Card extends StatelessWidget {
     if (player.isUnavailable) return const _Flag(text: '✚', colour: Brand.bad);
     return null;
   }
+}
+
+/// **Next GW** — the reading the app opened with: what he is projected to score, and against whom.
+class _NextGw extends StatelessWidget {
+  const _NextGw({required this.player, required this.fixture});
+
+  final PlayerSummary player;
+  final Fixture? fixture;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+            decoration: BoxDecoration(
+              color: Brand.surface,
+              borderRadius: BorderRadius.circular(Brand.radiusPill),
+            ),
+            child: Text(player.xp.toStringAsFixed(1),
+                style: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: Brand.text)),
+          ),
+          const SizedBox(height: 2),
+          Text('£${player.price.toStringAsFixed(1)}m · ${fixture?.label ?? '—'}',
+              style: const TextStyle(color: Colors.white70, fontSize: 8.5)),
+        ],
+      );
+}
+
+/// **Next 3** — ⭐ *a manager deciding whether to HOLD a player is asking about his run, not his Saturday.*
+///
+/// ⚠️ The per-gameweek xP comes from `by_gameweek`, which the app has published since ADR-213 and threw
+/// away on this card until now.
+class _Run extends StatelessWidget {
+  const _Run({required this.fixtures, required this.player});
+
+  final List<Fixture> fixtures;
+  final PlayerSummary player;
+
+  @override
+  Widget build(BuildContext context) {
+    final weeks = player.byGameweek.keys.toList()..sort();
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < fixtures.length; i++)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1),
+                  child: Column(
+                    children: [
+                      Text(
+                        // ⭐ Matched by **gameweek**, not by position in the list: a blank gameweek means
+                        // a club's third fixture is not the third week, and lining them up by index would
+                        // quietly show the wrong number against the wrong opponent.
+                        _xpFor(weeks, fixtures[i].gameweek),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                      ),
+                      Text(fixtures[i].opponent.toLowerCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                          style: const TextStyle(color: Colors.white60, fontSize: 7.5)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _xpFor(List<int> weeks, int? gameweek) {
+    if (gameweek == null) return '—';
+    final value = player.byGameweek[gameweek];
+    return value == null ? '—' : value.toStringAsFixed(1);
+  }
+}
+
+/// **Price** — ⚠️ the direction, and the crowd movement behind it. *No "Tonight", no percentage:* the
+/// engine answers rise/fall/stable against a live percentile and does not estimate *when*.
+class _Price extends StatelessWidget {
+  const _Price({required this.move, required this.player});
+
+  final PriceMove? move;
+  final PlayerSummary player;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = move;
+    final colour = m == null
+        ? Colors.white54
+        : m.rising
+            ? Brand.good
+            : m.falling
+                ? Brand.bad
+                : Colors.white54;
+    final arrow = m == null ? '·' : (m.rising ? '↗' : m.falling ? '↘' : '–');
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+          decoration: BoxDecoration(
+            color: colour,
+            borderRadius: BorderRadius.circular(Brand.radiusPill),
+          ),
+          child: Text('$arrow £${player.price.toStringAsFixed(1)}',
+              style: const TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          // ⭐ The evidence, not a forecast: what the crowd actually did this week.
+          m == null ? '—' : '${m.netTransfers >= 0 ? '+' : ''}${_compact(m.netTransfers)}',
+          style: const TextStyle(color: Colors.white60, fontSize: 8.5),
+        ),
+      ],
+    );
+  }
+
+  static String _compact(int n) {
+    final abs = n.abs();
+    if (abs >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}m';
+    if (abs >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
+}
+
+/// ⭐ The switch the Hub puts behind a menu, out in the open — it changes what every card means, which is
+/// not a thing to hide two taps deep.
+class _ModeBar extends StatelessWidget {
+  const _ModeBar({required this.mode, required this.onMode});
+
+  final PitchMode mode;
+  final ValueChanged<PitchMode> onMode;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: Row(
+          children: [
+            for (final option in PitchMode.values)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onMode(option),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: option == mode ? Brand.purple : Colors.white10,
+                      borderRadius: BorderRadius.circular(Brand.radiusPill),
+                    ),
+                    child: Text(option.label,
+                        style: TextStyle(
+                            color: option == mode ? Colors.white : Colors.white54,
+                            fontSize: 11.5,
+                            fontWeight: option == mode ? FontWeight.w600 : FontWeight.w400)),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
 }
 
 class _Armband extends StatelessWidget {
@@ -269,9 +459,10 @@ class _Flag extends StatelessWidget {
 }
 
 class _Bench extends StatelessWidget {
-  const _Bench({required this.team, required this.onTapPlayer});
+  const _Bench({required this.team, required this.mode, required this.onTapPlayer});
 
   final MyTeam team;
+  final PitchMode mode;
   final void Function(PlayerSummary) onTapPlayer;
 
   @override
@@ -296,7 +487,7 @@ class _Bench extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    _Card(team: team, player: p, onTap: () => onTapPlayer(p)),
+                    _Card(team: team, player: p, mode: mode, onTap: () => onTapPlayer(p)),
                     if (roleOf[p.id] != null)
                       Positioned(
                         left: 2,

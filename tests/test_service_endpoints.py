@@ -1327,3 +1327,83 @@ def test_availability_is_per_half_season_not_per_season(played, gameweek, expect
         )
     else:
         assert answer["played_in"] is None
+
+
+# ---- the pitch card's three readings (ADR-235) -------------------------------------------
+
+def test_the_card_carries_a_run_not_a_single_fixture(store, team):
+    """⭐⭐ *A manager deciding whether to HOLD a player is asking about his run, not his Saturday.*
+
+    ⚠️ Each fixture names its **gameweek**, which is what lets a client line the per-gameweek xP up against
+    the right opponent — a blank gameweek means a club's third fixture is not the third week, and matching
+    by position in the list would show the wrong number against the wrong team.
+    """
+    answer = svc.my_team(MyTeamRequest(manager_id=1), store=store)
+
+    assert answer["run"] >= 3
+
+    # ⚠️ **`run` is a declared width and the lists are the data — they can disagree.** A first version
+    # asserted only the constant, so slicing the fixtures to one survived: the answer would claim three and
+    # carry one, and a client sizing its row from `run` would draw two empty columns.
+    # ⭐ *A field describing the shape of another field has to be checked against it.*
+    longest = max(len(f) for f in answer["fixtures"].values())
+    assert longest == answer["run"], (
+        f"the answer declares run={answer['run']} and the longest club list holds {longest}"
+    )
+
+    for club, fixtures in answer["fixtures"].items():
+        assert isinstance(fixtures, list), f"{club} is not a run"
+        for fixture in fixtures:
+            assert fixture["gameweek"] is not None, f"{club} has a fixture with no gameweek"
+            assert fixture["opponent"] and fixture["venue"]
+
+
+def test_a_clubs_run_is_in_gameweek_order(store, team):
+    """⚠️ The card reads left to right. A run out of order is three right numbers arranged into a lie."""
+    answer = svc.my_team(MyTeamRequest(manager_id=1), store=store)
+    for club, fixtures in answer["fixtures"].items():
+        weeks = [f["gameweek"] for f in fixtures]
+        assert weeks == sorted(weeks), f"{club}: {weeks}"
+
+
+def test_every_owned_player_has_a_price_call_with_its_evidence(store, team):
+    """⭐ **Direction, and the fact behind it.** The engine answers rise/fall/stable against a live
+    percentile; it does **not** answer *when*. ⚠️ *A "Tonight" we do not compute would be a number that
+    looks authoritative and is not* — so the card carries net transfers, which is what actually happened.
+    """
+    answer = svc.my_team(MyTeamRequest(manager_id=1), store=store)
+    owned = {p["id"] for p in answer["analysis"]["xi"] + answer["analysis"]["bench"]}
+
+    assert set(answer["prices"]) == owned, "every player on the pitch needs a price cell"
+    for move in answer["prices"].values():
+        assert move["direction"] in {"rise", "fall", "stable"}
+        assert isinstance(move["net_transfers"], int)
+
+        assert "eta" not in move and "progress" not in move, (
+            "⭐ we do not estimate WHEN a price moves — inventing it would be the 'GW rating' mistake"
+        )
+
+    # ⚠️ **Presence is not truth**, again: `isinstance(0, int)` passes against a field hard-coded to zero,
+    # and a mutation doing exactly that survived. ⭐ The seed's crowd fields are populated — so a board
+    # where *nobody* moved is the failure, not an acceptable quiet week.
+    moved = [m for m in answer["prices"].values() if m["net_transfers"] != 0]
+    assert moved, (
+        "no player has any net transfers. The crowd fields are populated in the snapshot, so this means "
+        "the evidence behind the price call is not reaching the answer."
+    )
+
+
+def test_the_price_call_is_bound_to_the_whole_board(store, team, monkeypatch):
+    """⚠️⚠️ ADR-215 — a percentile over the fifteen on screen manufactures a top 2% **inside the squad**,
+    so two of your players would read as rising every single week."""
+    seen = []
+    # ⚠️ Patched on `src.analytics`, not `src.analytics.price`: the endpoint does
+    # `from src.analytics import price_detector` at call time, so that is the name it reads. ⭐ *A seam is
+    # wherever the caller looks, not wherever the function was defined.*
+    import src.analytics as analytics
+    real = analytics.price_detector
+    monkeypatch.setattr(analytics, "price_detector",
+                        lambda players: (seen.append(len(players)), real(players))[1])
+
+    svc.my_team(MyTeamRequest(manager_id=1), store=store)
+    assert seen and min(seen) > 15, f"the detector saw {seen} players — the squad is 15"

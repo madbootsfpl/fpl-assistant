@@ -22,6 +22,11 @@ from src.storage import Storage
 # from the one the page prints would be deciding on a number the reader cannot see.
 WIDE = 5
 
+#: ⭐ How many upcoming fixtures a pitch card shows. Three, because a manager deciding whether to hold a
+#: player is asking about his **run**, not his Saturday — and because three fits a 70px card without the
+#: numbers becoming decoration.
+RUN = 3
+
 
 @dataclass(frozen=True)
 class Loaded:

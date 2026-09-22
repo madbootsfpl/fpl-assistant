@@ -100,6 +100,10 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   late Future<MyTeam> _team = _load(kDefaultManagerId);
   _Tab _tab = _Tab.myTeam;
 
+  /// ⭐ Held here, not inside the pitch, so it survives a tab switch. Changing what every card means and
+  /// then forgetting it the moment you look at Transfers would be its own small betrayal.
+  PitchMode _mode = PitchMode.nextGw;
+
   final DraftStore _drafts = DraftStore();
 
   /// The draft currently being shown, or null when the real team is.
@@ -321,7 +325,12 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     return switch (_tab) {
         _Tab.myTeam => SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-            child: PitchView(team: team, onTapPlayer: (p) => _openPlayer(team, p)),
+            child: PitchView(
+              team: team,
+              mode: _mode,
+              onMode: (m) => setState(() => _mode = m),
+              onTapPlayer: (p) => _openPlayer(team, p),
+            ),
           ),
         _Tab.transfers => TransfersView(
             client: _client,

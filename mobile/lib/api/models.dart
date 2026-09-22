@@ -355,16 +355,23 @@ class BuildAnswer {
   bool get isOptimal => status == 'Optimal';
 }
 
-/// A club's next fixture — the cell under every card on the pitch.
+/// One upcoming fixture — a cell on a pitch card.
 class Fixture {
-  Fixture({required this.opponent, required this.venue, required this.difficulty});
+  Fixture({
+    required this.gameweek,
+    required this.opponent,
+    required this.venue,
+    required this.difficulty,
+  });
 
   factory Fixture.fromJson(Map<String, dynamic> json) => Fixture(
+        gameweek: json['gameweek'] as int?,
         opponent: json['opponent'] as String,
         venue: json['venue'] as String,
         difficulty: json['difficulty'] as int? ?? 3,
       );
 
+  final int? gameweek;
   final String opponent;
 
   /// `H` or `A`.
@@ -374,6 +381,37 @@ class Fixture {
   final int difficulty;
 
   String get label => '$opponent ($venue)';
+}
+
+/// What a player's price is doing, and the evidence for it.
+///
+/// ⚠️ **Direction only.** The engine answers rise/fall/stable against a live percentile — it does **not**
+/// answer *when*, so there is no "Tonight" or "in 2 days" here. ⭐ *A number that looks authoritative and
+/// is not computed is worse than an absent one.* The net transfers are the fact behind the call.
+class PriceMove {
+  PriceMove({
+    required this.direction,
+    required this.netTransfers,
+    required this.changedThisGameweek,
+  });
+
+  factory PriceMove.fromJson(Map<String, dynamic> json) => PriceMove(
+        direction: json['direction'] as String? ?? 'stable',
+        netTransfers: json['net_transfers'] as int? ?? 0,
+        changedThisGameweek: (json['changed_this_gameweek'] as num?)?.toDouble() ?? 0.0,
+      );
+
+  /// `rise` · `fall` · `stable`.
+  final String direction;
+
+  /// Transfers in minus out this gameweek. ⭐ Positive means the crowd is buying.
+  final int netTransfers;
+
+  /// How much his price has already moved this gameweek, in £m.
+  final double changedThisGameweek;
+
+  bool get rising => direction == 'rise';
+  bool get falling => direction == 'fall';
 }
 
 /// `POST /api/v1/squad/my-team` — everything the landing pitch draws, in one call.
@@ -397,6 +435,8 @@ class MyTeam {
     required this.analysis,
     required this.kits,
     required this.fixtures,
+    required this.prices,
+    required this.run,
     required this.benchRoles,
   });
 
@@ -425,10 +465,19 @@ class MyTeam {
               gk: urls['gk'] as String? ?? '',
             ),
           )),
-      fixtures: ((json['fixtures'] as Map?) ?? {}).map((club, f) => MapEntry(
+      fixtures: ((json['fixtures'] as Map?) ?? {}).map((club, list) => MapEntry(
             '$club',
-            f == null ? null : Fixture.fromJson((f as Map).cast<String, dynamic>()),
+            ((list as List?) ?? const [])
+                .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
+                .toList(),
           )),
+      // ⚠️ Keyed by player id, which crosses as a string — parsed back here, once, so nothing downstream
+      // sorts or compares it as text.
+      prices: ((json['prices'] as Map?) ?? {}).map((id, move) => MapEntry(
+            int.parse('$id'),
+            PriceMove.fromJson((move as Map).cast<String, dynamic>()),
+          )),
+      run: json['run'] as int? ?? 1,
       benchRoles: ((json['bench_roles'] as Map?) ?? {})
           .map((role, id) => MapEntry('$role', id as int)),
     );
@@ -474,7 +523,13 @@ class MyTeam {
 
   final SquadAnalysis analysis;
   final Map<String, ({String outfield, String gk})> kits;
-  final Map<String, Fixture?> fixtures;
+  /// A club's next few fixtures, in order. ⭐ Keyed by club, so three players from one team share one list.
+  final Map<String, List<Fixture>> fixtures;
+
+  final Map<int, PriceMove> prices;
+
+  /// How many fixtures each club's list holds.
+  final int run;
 
   /// Role → player id: `1st` · `2nd` · `3rd` · `GK`, the order FPL will actually substitute in.
   final Map<String, int> benchRoles;
@@ -486,7 +541,14 @@ class MyTeam {
     return p.position == 'GK' ? club.gk : club.outfield;
   }
 
-  Fixture? fixtureFor(PlayerSummary p) => fixtures[p.team];
+  List<Fixture> runFor(PlayerSummary p) => fixtures[p.team] ?? const [];
+
+  Fixture? fixtureFor(PlayerSummary p) {
+    final list = runFor(p);
+    return list.isEmpty ? null : list.first;
+  }
+
+  PriceMove? priceFor(PlayerSummary p) => prices[p.id];
 
   /// A copy with different armbands — ⭐ for a **draft**, whose captain the server never sees because it
   /// changes nothing the server computes.
@@ -505,6 +567,8 @@ class MyTeam {
         analysis: analysis,
         kits: kits,
         fixtures: fixtures,
+        prices: prices,
+        run: run,
         benchRoles: benchRoles,
       );
 

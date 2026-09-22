@@ -29,7 +29,7 @@ from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import shirt_url
 from src.manager import fetch_manager_team
-from src.service.inputs import WIDE, load, opened
+from src.service.inputs import RUN, WIDE, load, opened
 from src.service.requests import (
     DEFAULT_HORIZON,
     MAX_HORIZON,
@@ -387,12 +387,36 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         for club in clubs
     }
 
-    fixtures = {}
-    for club in clubs:
-        cell = (team_schedule(upcoming, club) or [None])[0]
-        fixtures[club] = None if cell is None else {
-            "opponent": cell["opponent"], "venue": cell["venue"],
-            "difficulty": cell.get("difficulty"),
+    # ⭐⭐ **Three fixtures, not one** (ADR-235). The card used to carry the next opponent; a manager
+    # deciding whether to hold a player is asking about his **run**, not his Saturday — which is why the
+    # Hub shows three and why ours looked thin beside it.
+    #
+    # ⚠️ Still a list per **club**, so it stays keyed by something JSON leaves alone, and three clubs
+    # sharing a fixture do not each carry a copy.
+    fixtures = {
+        club: [
+            {"gameweek": cell.get("event"), "opponent": cell["opponent"],
+             "venue": cell["venue"], "difficulty": cell.get("difficulty")}
+            for cell in (team_schedule(upcoming, club) or [])[:RUN]
+        ]
+        for club in clubs
+    }
+
+    # ⭐ **Direction only, and the evidence for it.** `price_detector` answers rise/fall/stable against a
+    # live percentile (ADR-215). It does **not** answer *when*, and the Hub's "Tonight / >1 Week / 0.6%" is
+    # a progress-to-threshold estimate we do not compute — ⚠️ *inventing one would be a number that looks
+    # authoritative and is not*. So the card carries the call **and the net transfers behind it**, which is
+    # a fact rather than a forecast.
+    from src.analytics import price_detector
+
+    predict = price_detector(players)
+    prices = {}
+    for p in owned:
+        row = dict(p)
+        prices[p["id"]] = {
+            "direction": predict(p),
+            "net_transfers": (row.get("transfers_in_event") or 0) - (row.get("transfers_out_event") or 0),
+            "changed_this_gameweek": round((row.get("cost_change_event") or 0) / 10, 1),
         }
 
     xp_by_id = {p["id"]: p["xp"] for p in answer["xi"] + answer["bench"]}
@@ -432,6 +456,11 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "analysis": answer,
         "kits": kit_by_club,
         "fixtures": fixtures,
+        # ⚠️ Keyed by player id, which JSON turns into a string — the client parses it back. Unlike kits
+        # and fixtures there is no club-level answer here: two Arsenal players move in price separately.
+        "prices": prices,
+        # ⭐ How many fixtures each club's list holds, so a client sizes its row rather than guessing.
+        "run": RUN,
         "bench_roles": roles,
     }
 

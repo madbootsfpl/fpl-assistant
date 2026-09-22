@@ -344,56 +344,206 @@
   },
   "draft": false,
   "fixtures": {
-    "ARS": {
-      "difficulty": 2,
-      "opponent": "LEE",
-      "venue": "H"
-    },
-    "BHA": {
-      "difficulty": 3,
-      "opponent": "SUN",
-      "venue": "A"
-    },
-    "BOU": {
-      "difficulty": 4,
-      "opponent": "CHE",
-      "venue": "A"
-    },
-    "BRE": {
-      "difficulty": 4,
-      "opponent": "AVL",
-      "venue": "A"
-    },
-    "CHE": {
-      "difficulty": 3,
-      "opponent": "BOU",
-      "venue": "H"
-    },
-    "EVE": {
-      "difficulty": 2,
-      "opponent": "HUL",
-      "venue": "A"
-    },
-    "HUL": {
-      "difficulty": 3,
-      "opponent": "EVE",
-      "venue": "H"
-    },
-    "LEE": {
-      "difficulty": 5,
-      "opponent": "ARS",
-      "venue": "A"
-    },
-    "LIV": {
-      "difficulty": 4,
-      "opponent": "MCI",
-      "venue": "H"
-    },
-    "MCI": {
-      "difficulty": 4,
-      "opponent": "LIV",
-      "venue": "A"
-    }
+    "ARS": [
+      {
+        "difficulty": 2,
+        "gameweek": 6,
+        "opponent": "LEE",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 7,
+        "opponent": "NFO",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 8,
+        "opponent": "EVE",
+        "venue": "H"
+      }
+    ],
+    "BHA": [
+      {
+        "difficulty": 3,
+        "gameweek": 6,
+        "opponent": "SUN",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 7,
+        "opponent": "CRY",
+        "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 8,
+        "opponent": "LIV",
+        "venue": "A"
+      }
+    ],
+    "BOU": [
+      {
+        "difficulty": 4,
+        "gameweek": 6,
+        "opponent": "CHE",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 7,
+        "opponent": "SUN",
+        "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 8,
+        "opponent": "MUN",
+        "venue": "A"
+      }
+    ],
+    "BRE": [
+      {
+        "difficulty": 4,
+        "gameweek": 6,
+        "opponent": "AVL",
+        "venue": "A"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 7,
+        "opponent": "LIV",
+        "venue": "H"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 8,
+        "opponent": "HUL",
+        "venue": "A"
+      }
+    ],
+    "CHE": [
+      {
+        "difficulty": 3,
+        "gameweek": 6,
+        "opponent": "BOU",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 7,
+        "opponent": "EVE",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 8,
+        "opponent": "TOT",
+        "venue": "H"
+      }
+    ],
+    "EVE": [
+      {
+        "difficulty": 2,
+        "gameweek": 6,
+        "opponent": "HUL",
+        "venue": "A"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 7,
+        "opponent": "CHE",
+        "venue": "H"
+      },
+      {
+        "difficulty": 5,
+        "gameweek": 8,
+        "opponent": "ARS",
+        "venue": "A"
+      }
+    ],
+    "HUL": [
+      {
+        "difficulty": 3,
+        "gameweek": 6,
+        "opponent": "EVE",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 7,
+        "opponent": "FUL",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 8,
+        "opponent": "BRE",
+        "venue": "H"
+      }
+    ],
+    "LEE": [
+      {
+        "difficulty": 5,
+        "gameweek": 6,
+        "opponent": "ARS",
+        "venue": "A"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 7,
+        "opponent": "MUN",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 8,
+        "opponent": "SUN",
+        "venue": "A"
+      }
+    ],
+    "LIV": [
+      {
+        "difficulty": 4,
+        "gameweek": 6,
+        "opponent": "MCI",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 7,
+        "opponent": "BRE",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 8,
+        "opponent": "BHA",
+        "venue": "H"
+      }
+    ],
+    "MCI": [
+      {
+        "difficulty": 4,
+        "gameweek": 6,
+        "opponent": "LIV",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 7,
+        "opponent": "IPS",
+        "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 8,
+        "opponent": "AVL",
+        "venue": "A"
+      }
+    ]
   },
   "fpl_player_ids": [
     94,
@@ -457,6 +607,84 @@
     }
   },
   "manager_id": 1,
+  "prices": {
+    "1": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 9666
+    },
+    "115": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 9941
+    },
+    "12": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 5391
+    },
+    "124": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 18943
+    },
+    "165": {
+      "changed_this_gameweek": 0.0,
+      "direction": "fall",
+      "net_transfers": -24903
+    },
+    "229": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 1583
+    },
+    "330": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 5608
+    },
+    "379": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": -1160
+    },
+    "391": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 7994
+    },
+    "40": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 8468
+    },
+    "411": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 2588
+    },
+    "572": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 2772
+    },
+    "68": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 6848
+    },
+    "8": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 2855
+    },
+    "94": {
+      "changed_this_gameweek": 0.0,
+      "direction": "stable",
+      "net_transfers": 18241
+    }
+  },
+  "run": 3,
   "squad": {
     "active_chip": null,
     "bank": null,
