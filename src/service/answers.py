@@ -153,7 +153,40 @@ def gameweek(request: GameweekRequest, *, store: Storage | None = None) -> dict:
         free=request.free,
     )
     plan["horizon_gw"] = WIDE
+    # ⭐⭐ **The explanation ships WITH the plan, not beside it** (ADR-089/224). The owner, on seeing the
+    # phone's bare version: *"I was more thinking of capturing this"* — and pasted the web app's full
+    # Confidence · Edge · Risk block. ⚠️ A recommendation without its reasoning is a different product:
+    # ADR-182's mantra is *"Analytics decide. Logic explains. You make the call"*, and a screen that shows
+    # only the first clause has quietly dropped the other two.
+    #
+    # ⭐ Returned as one key rather than merged into the plan, so a caller that only wants the decision can
+    # still ignore it — and so nothing here can be mistaken for a number the engine computed.
+    plan["explanation"] = _explained(plan, data, request.horizon)
     return plan
+
+
+def _explained(plan: dict, data, horizon: int) -> dict | None:
+    """`explain_gameweek`'s output, flattened to plain dicts a client can read.
+
+    ⚠️ **Never load-bearing.** The explanation is a reading of a decision already made; if it cannot be
+    produced the plan is still the plan, and a screen that failed entirely because a sentence could not be
+    built would be letting the commentary take down the match.
+    """
+    try:
+        from dataclasses import asdict
+
+        from src.analytics.explain import explain_gameweek
+
+        xp_by_id = {r["id"]: r["xp"] for r in data.ranked}
+        found = explain_gameweek(plan, {p["id"]: p for p in data.players}, xp_by_id, horizon=horizon)
+        if not found:
+            return None
+        return {
+            key: (asdict(value) if hasattr(value, "__dataclass_fields__") else value)
+            for key, value in found.items()
+        }
+    except Exception:                                    # noqa: BLE001 — commentary, never the decision
+        return None
 
 
 def route(request: RouteRequest, *, store: Storage | None = None) -> dict:

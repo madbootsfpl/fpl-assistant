@@ -671,3 +671,60 @@ def test_an_impossible_number_of_free_transfers_is_refused(free):
     make, and the plan would look perfectly confident."""
     with pytest.raises(ValueError, match="free transfers"):
         MyTeamRequest(manager_id=1, free_transfers=free).validate()
+
+
+# ---- the plan explains itself (ADR-224) --------------------------------------------------
+
+def test_the_plan_ships_its_own_reasoning(store):
+    """⭐⭐ **A recommendation without its reasoning is a different product.** ADR-182's mantra is
+    *"Analytics decide. Logic explains. You make the call"* — a screen showing only the first clause has
+    quietly dropped the other two, and the owner said so on seeing the phone's bare version.
+    """
+    plan = svc.gameweek(GameweekRequest(player_ids=_squad(store), bank=2.0, free=1, horizon=1), store=store)
+    explanation = plan["explanation"]
+
+    assert 0 < explanation["overall"]["confidence"] <= 99
+    assert explanation["overall"]["band"] in {"High", "Medium", "Low"}
+    assert explanation["overall"]["reasons"], "a confidence with no reasons is a number to be trusted, not checked"
+    assert "fixed" in explanation["levers"], (
+        "⭐ the ceiling must be stated: a score with no limit invites chasing something that cannot move"
+    )
+
+
+def test_the_explanation_is_plain_data_a_client_can_read(store):
+    """⚠️ `explain_gameweek` returns dataclasses. Handing those to `json.dumps` raises, and the endpoint
+    would 500 on the happy path — a failure that only appears over HTTP, never in process."""
+    plan = svc.gameweek(GameweekRequest(player_ids=_squad(store), horizon=1), store=store)
+    assert json.loads(json.dumps(plan["explanation"])) == plan["explanation"]
+
+
+def test_a_broken_explanation_never_takes_the_plan_down(store, monkeypatch):
+    """⭐⭐ **Commentary must not take down the match.** The explanation is a reading of a decision already
+    made; if the sentence cannot be built, the plan is still the plan. ⚠️ Without this the richest screen in
+    the app is also the most fragile, and it fails for a reason that changes no recommendation."""
+    from src.analytics import explain
+
+    monkeypatch.setattr(explain, "explain_gameweek",
+                        lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom")))
+    plan = svc.gameweek(GameweekRequest(player_ids=_squad(store), horizon=1), store=store)
+    assert plan["explanation"] is None
+    assert plan["captain"] or plan["transfers"] is not None, "the decision survives"
+
+
+def test_the_explanation_describes_the_window_that_was_actually_ranked(store):
+    """⚠️ **A wrong horizon here is a wrong SENTENCE, not a wrong number.** `explain_transfer` writes its
+    reason as *"+2.3 to your starting XI over 1 GW"* — hard-code the window and the app states, in words, a
+    span it did not rank over. ⭐ The recommendation would be right and its justification false, which is
+    worse than either alone.
+
+    Found by mutation: swapping `request.horizon` for a literal 5 passed every other test in this file.
+    """
+    def reason_text(horizon):
+        plan = svc.gameweek(GameweekRequest(player_ids=_squad(store), bank=3.0, horizon=horizon),
+                            store=store)
+        transfer = (plan["explanation"] or {}).get("transfer") or {}
+        return " ".join(transfer.get("reasons") or [])
+
+    one, three = reason_text(1), reason_text(3)
+    assert "1 GW" in one, f"the one-gameweek plan explains itself as: {one!r}"
+    assert "3 GW" in three, f"the three-gameweek plan explains itself as: {three!r}"

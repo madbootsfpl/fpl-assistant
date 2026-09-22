@@ -131,6 +131,57 @@
     }
   ],
   "cliff": null,
+  "explanation": {
+    "captain": {
+      "band": "High",
+      "confidence": 92,
+      "reasons": [
+        "Highest projected points",
+        "Penalty taker",
+        "Expected ~84 mins",
+        "Strong fixture vs LEE",
+        "In form (6.0)"
+      ],
+      "risks": []
+    },
+    "levers": {
+      "ceiling": 92,
+      "fixed": "your captain's own number (92/100); lifting it means a different captain, not a different week",
+      "levers": [
+        {
+          "kind": "action",
+          "what": "Jo\u00e3o Pedro is flagged \u2014 replace him \u2014 you have no cover on your bench",
+          "worth": 8
+        }
+      ],
+      "score": 84
+    },
+    "lineup": [],
+    "overall": {
+      "band": "High",
+      "confidence": 84,
+      "reasons": [
+        "Clear captain: Saka (92/100 \u00b7 High)",
+        "A positive-gain upgrade available (+2.8 XI xP)"
+      ],
+      "risks": [
+        "Jo\u00e3o Pedro (doubtful, 75%)"
+      ]
+    },
+    "transfer": {
+      "band": "High",
+      "confidence": 95,
+      "reasons": [
+        "+2.8 to your starting XI over 1 GW",
+        "Higher projected points (5.4 vs 1.6)"
+      ],
+      "risks": [
+        "Costs \u00a30.3m from your bank",
+        "Selling Bogle (1.6 xP)",
+        "Differential (3% owned)"
+      ]
+    }
+  },
   "flags": [
     {
       "chance": 75,

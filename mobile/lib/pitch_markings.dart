@@ -10,6 +10,8 @@
 /// drawn at full contrast competes with every card on it.
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class PitchMarkings extends StatelessWidget {
@@ -43,7 +45,32 @@ class _Markings extends CustomPainter {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.4;
 
+  static final Paint _spot = Paint()..color = Colors.white.withValues(alpha: 0.22);
   static final Paint _stripe = Paint()..color = Colors.white.withValues(alpha: 0.035);
+
+  /// The penalty arc, **computed rather than guessed**.
+  ///
+  /// ⚠️⚠️ **This is the bug the owner saw as "distortion".** The first version passed literal start and
+  /// sweep angles — `0.46`, `2.22` — chosen because they looked about right on one screen size. They are
+  /// not a property of the drawing; they are a property of the *phone it was drawn on*, so on any other
+  /// aspect ratio the D swept most of a circle and cut through the cards.
+  ///
+  /// ⭐ The real rule: an arc of radius [r] about the penalty spot, showing **only the part outside the
+  /// penalty area**. Where the arc crosses the box edge is `asin((edge − spot) / r)` — so the angles fall
+  /// out of the geometry and are correct at every size.
+  static void _penaltyArc(Canvas canvas, Offset spot, double r, double edgeY, {required bool bulgeDown}) {
+    final ratio = (edgeY - spot.dy) / r;
+    // |ratio| >= 1 means the box edge lies beyond the arc entirely — nothing to draw, and drawing anyway is
+    // how a stray curve appears across the pitch.
+    if (ratio.abs() >= 1) return;
+    final crossing = math.asin(ratio);
+    final rect = Rect.fromCircle(center: spot, radius: r);
+    if (bulgeDown) {
+      canvas.drawArc(rect, crossing, math.pi - 2 * crossing, false, _line);
+    } else {
+      canvas.drawArc(rect, math.pi - crossing, math.pi + 2 * crossing, false, _line);
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -56,42 +83,44 @@ class _Markings extends CustomPainter {
       canvas.drawRect(Rect.fromLTWH(0, h / bands * i, w, h / bands), _stripe);
     }
 
-    // The touchline, inset so the pitch has a margin rather than bleeding to the card edge.
     const inset = 6.0;
     final field = Rect.fromLTWH(inset, inset, w - inset * 2, h - inset * 2);
     canvas.drawRect(field, _line);
 
-    // ⭐ The halfway line sits at the **midpoint of the card area**, which is where a viewer expects it —
-    // not at the midpoint of the widget, which drifts as rows are added.
+    // The halfway line and centre circle.
+    //
+    // ⭐ The circle's radius is taken from the **pitch's own proportions**, not from its width alone: a real
+    // centre circle is 9.15 m on a 68 m pitch, and clamping to a share of the *shorter* axis keeps it a
+    // circle that fits rather than one that swallows the midfield on a narrow phone.
     final midY = field.center.dy;
+    final radius = math.min(w * 0.125, h * 0.11);
     canvas.drawLine(Offset(field.left, midY), Offset(field.right, midY), _line);
-    canvas.drawCircle(Offset(field.center.dx, midY), w * 0.115, _line);
-    canvas.drawCircle(Offset(field.center.dx, midY), 1.8, _line..style = PaintingStyle.fill);
-    _line.style = PaintingStyle.stroke;
+    canvas.drawCircle(Offset(field.center.dx, midY), radius, _line);
+    canvas.drawCircle(Offset(field.center.dx, midY), 1.8, _spot);
 
-    // The penalty area at the top — the keeper's end, since the XI is drawn keeper-first.
-    final boxW = w * 0.46;
-    final boxH = h * 0.145;
-    final sixW = w * 0.22;
-    final sixH = h * 0.062;
-    void goalEnd(double top, {required bool flip}) {
-      final y = flip ? field.bottom - boxH : field.top;
-      canvas.drawRect(Rect.fromLTWH(field.center.dx - boxW / 2, y, boxW, boxH), _line);
-      final sy = flip ? field.bottom - sixH : field.top;
-      canvas.drawRect(Rect.fromLTWH(field.center.dx - sixW / 2, sy, sixW, sixH), _line);
-      // The D — only the arc outside the box, which is what makes it read as a penalty area.
-      final spotY = flip ? field.bottom - boxH * 0.72 : field.top + boxH * 0.72;
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset(field.center.dx, spotY), radius: w * 0.105),
-        flip ? -3.6 : 0.46,
-        flip ? 2.1 : 2.22,
-        false,
-        _line,
-      );
+    // Penalty areas. Proportions are the real ones: the box is 40.3 m of a 68 m width (59%) and 16.5 m of a
+    // 105 m length (16%); the six-yard box 18.3 m × 5.5 m; the spot 11 m out.
+    final boxW = field.width * 0.56;
+    final boxH = field.height * 0.155;
+    final sixW = field.width * 0.26;
+    final sixH = field.height * 0.058;
+    final spotOut = field.height * 0.105;
+    final arcR = field.width * 0.13;
+    final cx = field.center.dx;
+
+    for (final atTop in [true, false]) {
+      final boxTop = atTop ? field.top : field.bottom - boxH;
+      canvas.drawRect(Rect.fromLTWH(cx - boxW / 2, boxTop, boxW, boxH), _line);
+
+      final sixTop = atTop ? field.top : field.bottom - sixH;
+      canvas.drawRect(Rect.fromLTWH(cx - sixW / 2, sixTop, sixW, sixH), _line);
+
+      final spotY = atTop ? field.top + spotOut : field.bottom - spotOut;
+      canvas.drawCircle(Offset(cx, spotY), 1.6, _spot);
+      _penaltyArc(canvas, Offset(cx, spotY), arcR,
+          atTop ? field.top + boxH : field.bottom - boxH,
+          bulgeDown: atTop);
     }
-
-    goalEnd(field.top, flip: false);
-    goalEnd(field.bottom, flip: true);
   }
 
   @override
