@@ -9,6 +9,19 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# ⚠️⚠️ **`lib/brand.dart` is GENERATED and must not be formatted** (ADR-242).
+#
+# It is written by `scripts/generate_brand_dart.py` from the web app's `brand.py` — one source of truth
+# for the colours and the wording (ADR-103/114). `tests/test_brand_dart.py` compares the committed file
+# against a fresh generation, byte for byte.
+#
+# ⭐⭐ Without this exclusion the two tools fight: `dart format` rewraps the long string constants, which
+# fails the test; regenerating un-wraps them, which `dart format` then rewraps. **A loop with no stable
+# state** — and the visible symptom is a test failing for a file nobody edited.
+formatter:
+  exclude:
+    - lib/brand.dart
+
 analyzer:
   exclude:
     - build/**

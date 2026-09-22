@@ -48,6 +48,11 @@ class _PlayersViewState extends State<PlayersView> {
   /// set to or the list is silently lying about being the whole market.
   double? _maxPrice;
 
+  /// ⭐ **"Show me mine"** (feedback item 5). The board is 481 players and fifteen of them are the ones a
+  /// manager keeps coming back to — to check a price, a run, a flag. Without this, finding your own player
+  /// meant typing his name into a search box that already knows who you own.
+  bool _mineOnly = false;
+
   @override
   void dispose() {
     _search.dispose();
@@ -59,6 +64,7 @@ class _PlayersViewState extends State<PlayersView> {
     return all.where((p) {
       if (_position != null && p.position != _position) return false;
       if (_maxPrice != null && p.price > _maxPrice!) return false;
+      if (_mineOnly && !widget.owned.contains(p.id)) return false;
       if (term.isEmpty) return true;
       // ⭐ Name **or** club: "ars" should find Arsenal's players, which is how a manager actually looks.
       return p.name.toLowerCase().contains(term) ||
@@ -72,6 +78,7 @@ class _PlayersViewState extends State<PlayersView> {
       if (term.isNotEmpty) '“$term”',
       ?_position,
       if (_maxPrice != null) 'under £${_maxPrice!.toStringAsFixed(1)}m',
+      if (_mineOnly) 'your squad',
     ];
   }
 
@@ -186,6 +193,16 @@ class _PlayersViewState extends State<PlayersView> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
+                // ⚠️ Disabled rather than hidden when the caller passes no squad — a chip that vanishes
+                // looks like a bug; one that is visibly unavailable looks like a state.
+                _Chip(
+                  label: 'My squad',
+                  on: _mineOnly,
+                  onTap: widget.owned.isEmpty
+                      ? null
+                      : () => setState(() => _mineOnly = !_mineOnly),
+                ),
+                const _Divider(),
                 _Chip(
                   label: 'All',
                   on: _position == null,
@@ -268,7 +285,9 @@ class _Chip extends StatelessWidget {
 
   final String label;
   final bool on;
-  final VoidCallback onTap;
+
+  /// ⭐ Null means *there is nothing to filter to* — the chip renders dimmed and ignores taps.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -279,13 +298,21 @@ class _Chip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: on ? Brand.purple : Colors.white10,
+        color: onTap == null
+            ? Colors.white10
+            : on
+            ? Brand.purple
+            : Colors.white10,
         borderRadius: BorderRadius.circular(Brand.radiusPill),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: on ? Colors.white : Colors.white54,
+          color: onTap == null
+              ? Colors.white24
+              : on
+              ? Colors.white
+              : Colors.white54,
           fontSize: 12.5,
           fontWeight: on ? FontWeight.w600 : FontWeight.w400,
         ),
@@ -574,6 +601,15 @@ class _Card extends StatelessWidget {
                                 fontSize: 7.5,
                               ),
                             ),
+                            Text(
+                              g.versus,
+                              maxLines: 1,
+                              overflow: TextOverflow.clip,
+                              style: const TextStyle(
+                                color: Colors.white38,
+                                fontSize: 7.5,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -637,7 +673,9 @@ class _ValueChip extends StatelessWidget {
   final String label;
   final String value;
   final bool on;
-  final VoidCallback onTap;
+
+  /// ⭐ Null means *there is nothing to filter to* — the chip renders dimmed and ignores taps.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => GestureDetector(

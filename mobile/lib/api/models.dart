@@ -442,6 +442,7 @@ class MyTeam {
     required this.fixtures,
     required this.prices,
     required this.run,
+    required this.runXp,
     required this.benchRoles,
   });
 
@@ -488,6 +489,17 @@ class MyTeam {
         ),
       ),
       run: json['run'] as int? ?? 1,
+      // ⚠️⚠️ **The run card drew three columns and had one number** (ADR-242). `by_gameweek` follows the
+      // request's `horizon`, which is 1 because the headline is a this-week projection — so two of the
+      // three columns always read "—". `run_xp` carries the window the card actually draws, computed
+      // separately so the headline stays a one-week number.
+      runXp: {
+        for (final row in (json['run_xp'] as List? ?? []))
+          (row as Map<String, dynamic>)['id'] as int: {
+            for (final e in ((row['by_gameweek'] as Map?) ?? {}).entries)
+              int.parse('${e.key}'): (e.value as num).toDouble(),
+          },
+      },
       benchRoles: ((json['bench_roles'] as Map?) ?? {}).map(
         (role, id) => MapEntry('$role', id as int),
       ),
@@ -543,6 +555,13 @@ class MyTeam {
   /// How many fixtures each club's list holds.
   final int run;
 
+  /// Player id → gameweek → xP, across the **run** window rather than the request's horizon (ADR-242).
+  final Map<int, Map<int, double>> runXp;
+
+  /// ⭐ Falls back to the player's own `byGameweek` when the server did not send a run — an older build
+  /// then shows one real number and two dashes, which is what it did before, rather than nothing.
+  Map<int, double> runXpFor(PlayerSummary p) => runXp[p.id] ?? p.byGameweek;
+
   /// Role → player id: `1st` · `2nd` · `3rd` · `GK`, the order FPL will actually substitute in.
   final Map<String, int> benchRoles;
 
@@ -581,6 +600,7 @@ class MyTeam {
     fixtures: fixtures,
     prices: prices,
     run: run,
+    runXp: runXp,
     benchRoles: benchRoles,
   );
 
@@ -653,13 +673,30 @@ class Appearance {
     required this.gameweek,
     required this.points,
     required this.minutes,
+    required this.opponent,
+    required this.home,
   });
 
   factory Appearance.fromJson(Map<String, dynamic> json) => Appearance(
     gameweek: json['gameweek'] as int?,
     points: json['points'] as int? ?? 0,
     minutes: json['minutes'] as int? ?? 0,
+    // ⭐⭐ **Who it was against** (ADR-242). A run of bare numbers cannot tell a quiet week from a hard
+    // one — ⚠️ *two blanks against City and Arsenal say something completely different from two blanks
+    // against the bottom two.*
+    opponent: json['opponent'] as String?,
+    home: json['home'] as bool? ?? true,
   );
+
+  /// ⚠️ Null, never a guess, when the club is unknown — an away trip to "???" is worse than none.
+  final String? opponent;
+  final bool home;
+
+  /// ⭐ Lower case away, upper case home — the convention the fixture ticker already uses, so a reader
+  /// who has seen one has read the other.
+  String get versus => opponent == null
+      ? '—'
+      : (home ? opponent!.toUpperCase() : opponent!.toLowerCase());
 
   final int? gameweek;
   final int points;

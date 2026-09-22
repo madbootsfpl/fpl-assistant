@@ -514,22 +514,28 @@ class _DraftBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
+    // ⭐ **Quieter, not quiet** (feedback item 1: *"Orange Banner could be smaller"*). It still has to be
+    // unmissable — a plan shown as your squad is a lie about something you can act on — but it was taking
+    // a slab of a small screen to say something you learn in one glance and then stop needing. ⚠️ *The
+    // colour is what makes it unmissable; the height was only making it loud.*
     color: Brand.orange,
-    padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+    padding: const EdgeInsets.fromLTRB(12, 4, 6, 4),
     child: Row(
       children: [
-        const Icon(Icons.edit_note, size: 17, color: Colors.white),
-        const SizedBox(width: 7),
+        const Icon(Icons.edit_note, size: 14, color: Colors.white),
+        const SizedBox(width: 6),
         Expanded(
           child: Text(
             // ⚠️ Says what it is AND what it is not. "Plan" alone could be read as a saved team.
-            'A plan — not your FPL team. '
-            '${draft == null ? '' : '${draft!.changeCount} change${draft!.changeCount == 1 ? '' : 's'}. '}'
-            'Make it for real in the FPL app.',
+            // ⚠️ Still says what it is AND what it is not — "Plan" alone could be read as a saved team.
+            // ⭐ The instruction to go and make it real moved out: it is advice for when you are finished,
+            // not a caption you need on every screen, and it was the line that made this two rows tall.
+            'A plan — not your FPL team'
+            '${draft == null ? '' : ' · ${draft!.changeCount} change${draft!.changeCount == 1 ? '' : 's'}'}',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11.5,
-              height: 1.35,
+              fontSize: 10.5,
+              height: 1.2,
             ),
           ),
         ),
@@ -537,9 +543,11 @@ class _DraftBanner extends StatelessWidget {
           onPressed: onDiscard,
           style: TextButton.styleFrom(
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(0, 28),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          child: const Text('Discard', style: TextStyle(fontSize: 11.5)),
+          child: const Text('Discard', style: TextStyle(fontSize: 10.5)),
         ),
       ],
     ),

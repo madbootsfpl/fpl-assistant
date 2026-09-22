@@ -272,7 +272,7 @@ class _Card extends StatelessWidget {
               PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
               PitchMode.run => _Run(
                 fixtures: team.runFor(player),
-                player: player,
+                xpByGameweek: team.runXpFor(player),
               ),
               PitchMode.price => _Price(
                 move: team.priceFor(player),
@@ -343,14 +343,16 @@ class _NextGw extends StatelessWidget {
 /// ⚠️ The per-gameweek xP comes from `by_gameweek`, which the app has published since ADR-213 and threw
 /// away on this card until now.
 class _Run extends StatelessWidget {
-  const _Run({required this.fixtures, required this.player});
+  const _Run({required this.fixtures, required this.xpByGameweek});
 
   final List<Fixture> fixtures;
-  final PlayerSummary player;
+
+  /// ⭐ Handed the map rather than the player, so the card cannot silently read the wrong window again.
+  final Map<int, double> xpByGameweek;
 
   @override
   Widget build(BuildContext context) {
-    final weeks = player.byGameweek.keys.toList()..sort();
+    final weeks = xpByGameweek.keys.toList()..sort();
     return Column(
       children: [
         Row(
@@ -394,7 +396,7 @@ class _Run extends StatelessWidget {
 
   String _xpFor(List<int> weeks, int? gameweek) {
     if (gameweek == null) return '—';
-    final value = player.byGameweek[gameweek];
+    final value = xpByGameweek[gameweek];
     return value == null ? '—' : value.toStringAsFixed(1);
   }
 }

@@ -137,7 +137,10 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               ),
               _Action(
                 icon: Icons.swap_horiz,
-                label: 'Replace him…',
+                // ⭐ **"Transfer", because that is the word FPL uses** (feedback item 1). "Replace him"
+                // described the mechanic; the manager is thinking in the vocabulary of the game he is
+                // playing, and an app that renames his moves makes him translate.
+                label: 'Transfer…',
                 enabled: true,
                 onTap: _findReplacements,
               ),

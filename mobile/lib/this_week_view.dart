@@ -167,9 +167,9 @@ class _Confidence extends StatelessWidget {
       _ => Brand.bad,
     };
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 11),
-      padding: const EdgeInsets.fromLTRB(13, 11, 13, 13),
+    final confidence = Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
       decoration: BoxDecoration(
         color: Colors.white10,
         border: Border(left: BorderSide(color: colour, width: 3)),
@@ -178,6 +178,20 @@ class _Confidence extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ⭐⭐ **Top-left, like every other card** (feedback item 2: *"the rest are not aligned with the
+          // style card"*). `_Card` puts its label above its headline; this one put `CONFIDENCE` in the
+          // top-RIGHT corner, so the screen's first card was the one card that read differently from all
+          // the others. ⚠️ *A layout that is unique for no reason reads as a mistake, whatever it looks
+          // like on its own.*
+          const Text(
+            'CONFIDENCE',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 10,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 3),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -201,15 +215,6 @@ class _Confidence extends StatelessWidget {
                   color: colour,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              const Text(
-                'CONFIDENCE',
-                style: TextStyle(
-                  color: Colors.white24,
-                  fontSize: 9.5,
-                  letterSpacing: 1,
                 ),
               ),
             ],
@@ -248,56 +253,78 @@ class _Confidence extends StatelessWidget {
               ),
             ),
           ],
-          if (reasons.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text(
-              'EDGE',
-              style: TextStyle(
-                color: Colors.white24,
-                fontSize: 9.5,
-                letterSpacing: 1,
-              ),
-            ),
-            for (final r in reasons)
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text(
-                  '✓  $r',
-                  style: const TextStyle(
-                    color: Brand.accentTeal,
-                    fontSize: 11.5,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-          ],
-          if (risks.isNotEmpty) ...[
-            const SizedBox(height: 9),
-            const Text(
-              'RISK',
-              style: TextStyle(
-                color: Colors.white24,
-                fontSize: 9.5,
-                letterSpacing: 1,
-              ),
-            ),
-            for (final r in risks)
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text(
-                  '⚠  $r',
-                  style: const TextStyle(
-                    color: Brand.warn,
-                    fontSize: 11.5,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-          ],
         ],
       ),
     );
+
+    // ⭐⭐ **Three cards, not one wall.** Edge and Risk were sub-sections inside Confidence, so the top of
+    // the screen was a single block of six or seven lines while everything below it — Captain, Lineup,
+    // Transfer, Timing — came one idea per card. ⚠️ *They are three different questions ("how sure?",
+    // "what is going for you?", "what could go wrong?") and they were sharing one box.*
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        confidence,
+        if (reasons.isNotEmpty)
+          _Lines(
+            label: 'Edge',
+            mark: '✓',
+            colour: Brand.accentTeal,
+            lines: reasons,
+          ),
+        if (risks.isNotEmpty)
+          _Lines(label: 'Risk', mark: '⚠', colour: Brand.warn, lines: risks),
+      ],
+    );
   }
+}
+
+/// A card of one-line points — ⭐ the same shell as [_Card], for content that is a list rather than a
+/// headline and a detail.
+class _Lines extends StatelessWidget {
+  const _Lines({
+    required this.label,
+    required this.mark,
+    required this.colour,
+    required this.lines,
+  });
+
+  final String label;
+  final String mark;
+  final Color colour;
+  final List<dynamic> lines;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 9),
+    padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
+    decoration: BoxDecoration(
+      color: Colors.white10,
+      borderRadius: BorderRadius.circular(Brand.radiusMd),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            color: Colors.white38,
+            fontSize: 10,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        for (final line in lines)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              '$mark  $line',
+              style: TextStyle(color: colour, fontSize: 11.5, height: 1.4),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _Card extends StatelessWidget {

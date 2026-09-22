@@ -331,6 +331,31 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+def _recent_rows(rows, club_by_id) -> list[dict]:
+    """The last few appearances — points, minutes, **and who it was against** (ADR-242).
+
+    ⭐⭐ **"Last 5 should maybe indicate who they played"** (tester feedback item 5), and the data was
+    already in the row: `player_history` has stored `opponent_team` and `was_home` since ADR-201. A run of
+    bare numbers cannot distinguish a quiet week from a hard one — ⚠️ *two blanks against City and Arsenal
+    say something completely different from two blanks against the bottom two, and the column that made
+    them different was being dropped on the way out.*
+
+    ⚠️ `opponent` is **null, never a guess**, when the club id is unknown — an away trip to "???" is worse
+    than an away trip to nothing.
+    """
+    out = []
+    for r in rows:
+        row = dict(r)
+        out.append({
+            "gameweek": row.get("round"),
+            "points": row.get("total_points"),
+            "minutes": row.get("minutes"),
+            "opponent": club_by_id.get(row.get("opponent_team")),
+            "home": bool(row.get("was_home")),
+        })
+    return out
+
+
 def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
     """Everything the **My Team** pitch draws, in one call.
 
@@ -368,6 +393,25 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
                      else list(squad.get("bench_ids") or []))
         answer = analysis(SquadRequest(player_ids=owned_ids, bench_ids=bench_ids,
                                        horizon=request.horizon), store=store)
+
+        # ⚠️⚠️ **The run card had three fixtures and one number** (ADR-242). ADR-235's premise is *one
+        # fetch, three readings* — and the third reading shipped without its data: `horizon` is 1 because
+        # the headline is a **this-week** projection, so `by_gameweek` carried a single gameweek while the
+        # card drew three columns. Two of them always read "—".
+        #
+        # ⭐ Answered with a second pass rather than by raising `horizon`, because raising it changes the
+        # headline: the owner's `projected_xp` goes 44.9 → 133.9, which is a three-week total wearing a
+        # one-week label. *A fix that corrupts the number beside it is not a fix.*
+        #
+        # ⭐ Skipped entirely when the caller already asked for a wide enough window — the common case for
+        # every other consumer.
+        if request.horizon >= RUN:
+            run_answer = answer
+        else:
+            run_answer = analysis(SquadRequest(player_ids=owned_ids, bench_ids=bench_ids,
+                                               horizon=RUN), store=store)
+        run_xp = [{"id": p["id"], "by_gameweek": p["by_gameweek"]}
+                  for p in run_answer["xi"] + run_answer["bench"]]
 
         owned = [p for p in players if p["id"] in set(owned_ids)]
         teams = store.get_teams()
@@ -464,6 +508,9 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "prices": prices,
         # ⭐ How many fixtures each club's list holds, so a client sizes its row rather than guessing.
         "run": RUN,
+        # ⭐ A **list**, not a map keyed by player id. The docstring above explains why ids never become
+        # JSON keys here; a list sidesteps the question rather than arguing with it.
+        "run_xp": run_xp,
         "bench_roles": roles,
     }
 
@@ -807,6 +854,7 @@ def compare(request: CompareRequest, *, store: Storage | None = None) -> dict:
     try:
         data = load([request.a_id, request.b_id], request.horizon, store, need_history=True)
         gw_history = data.gw_history or {}
+        club_by_id = {t["id"]: t["short_name"] for t in store.get_teams()}
     finally:
         if ours:
             store.close()
@@ -824,11 +872,7 @@ def compare(request: CompareRequest, *, store: Storage | None = None) -> dict:
         rows = list(gw_history.get(player["code"]) or [])[-RECENT:]
         return {
             **player_summary(player, data.xp_by_id, by_gameweek, reported_out=data.leaving),
-            "recent": [
-                {"gameweek": dict(r).get("round"), "points": dict(r).get("total_points"),
-                 "minutes": dict(r).get("minutes")}
-                for r in rows
-            ],
+            "recent": _recent_rows(rows, club_by_id),
         }
 
     return {
@@ -861,6 +905,8 @@ def player(request: PlayerRequest, *, store: Storage | None = None) -> dict:
         data = load([request.player_id], request.horizon, store, need_history=True)
         gw_history = data.gw_history or {}
         upcoming = data.upcoming
+        # ⭐ Read inside the `try`, because it needs the store — see `_recent_rows`.
+        club_by_id = {t["id"]: t["short_name"] for t in store.get_teams()}
     finally:
         if ours:
             store.close()
@@ -873,11 +919,7 @@ def player(request: PlayerRequest, *, store: Storage | None = None) -> dict:
         "horizon": request.horizon,
         "player": player_summary(row, data.xp_by_id, by_gameweek, reported_out=data.leaving),
         "stats": [{"label": label, "value": value} for label, value in stat_rows(row)],
-        "recent": [
-            {"gameweek": dict(r).get("round"), "points": dict(r).get("total_points"),
-             "minutes": dict(r).get("minutes")}
-            for r in recent
-        ],
+        "recent": _recent_rows(recent, club_by_id),
         # ⭐ The run **with difficulty**, so a reader can see whether a high projection is a good player or
         # an easy month — which is the question a card is opened to answer.
         "fixtures": [

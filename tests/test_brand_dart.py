@@ -73,3 +73,29 @@ def test_the_generated_file_says_it_is_generated():
     head = DART.read_text()[:600]
     assert "generated" in head.lower()
     assert "generate_brand_dart.py" in head, "…and it must name the script that writes it"
+
+
+def test_the_generated_file_is_stable_under_dart_format():
+    """⚠️⚠️ **Two tools fighting over one file is a loop with no stable state** (ADR-242).
+
+    `dart format` rewrapped the long string constants, which failed the byte-for-byte comparison above;
+    regenerating unwrapped them, which the formatter then rewrapped. ⭐ *The visible symptom was a test
+    failing for a file nobody had edited*, which is the kind of failure people learn to re-run past.
+
+    The fix is a `// dart format off` marker inside the generated output. ⚠️ **The formatter recognises it
+    only verbatim** — a trailing comment on the same line disables it silently, which cost one round here —
+    and `formatter: exclude:` in `analysis_options.yaml` does not help, because `dart format lib/` with an
+    explicit path ignores the exclusion.
+    """
+    lines = DART.read_text().splitlines()
+    marker = "// dart format off"
+    assert marker in lines, (
+        f"the generated file has no verbatim {marker!r} line, so `dart format` will rewrap it and "
+        f"test_the_committed_dart_matches_a_fresh_generation will fail for a file nobody edited"
+    )
+    # ⚠️ Verbatim means *alone on its line*. This is the mistake that cost a round.
+    assert lines[lines.index(marker)] == marker
+    # ⭐ And it must come before any code, or it governs nothing.
+    assert lines.index(marker) < next(i for i, ln in enumerate(lines) if ln.startswith("import ")), (
+        "the marker sits after the imports, so the code above it is still formatted"
+    )
