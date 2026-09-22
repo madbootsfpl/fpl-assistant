@@ -132,6 +132,24 @@ class ServiceClient {
         'bank': bank,
       }));
 
+  /// Who could replace [outId] — ⚠️ **including players you cannot afford**, flagged rather than hidden.
+  Future<ReplacementsAnswer> replacements(
+    List<int> playerIds,
+    int outId, {
+    List<int> benchIds = const [],
+    int horizon = 1,
+    double bank = 0.0,
+    int limit = 40,
+  }) async =>
+      ReplacementsAnswer.fromJson(await _post('replacements', {
+        'player_ids': playerIds,
+        'bench_ids': benchIds,
+        'out_id': outId,
+        'horizon': horizon,
+        'bank': bank,
+        'limit': limit,
+      }));
+
   Future<BuildAnswer> build(
           {double budget = 100.0,
           int horizon = 5,

@@ -38,6 +38,8 @@ class Draft {
     required this.playerIds,
     required this.benchIds,
     required this.savedAt,
+    this.captainId,
+    this.viceCaptainId,
   });
 
   factory Draft.fromJson(Map<String, dynamic> json) => Draft(
@@ -47,6 +49,8 @@ class Draft {
         playerIds: (json['player_ids'] as List).cast<int>(),
         benchIds: (json['bench_ids'] as List).cast<int>(),
         savedAt: DateTime.parse(json['saved_at'] as String),
+        captainId: json['captain_id'] as int?,
+        viceCaptainId: json['vice_captain_id'] as int?,
       );
 
   final int managerId;
@@ -62,6 +66,15 @@ class Draft {
   final List<int> benchIds;
   final DateTime savedAt;
 
+  /// ⭐⭐ **Armbands live in the draft and nowhere else, because they change no number we compute.**
+  /// FPL doubles the captain's points; our projections are the XI's own xP and do not. So setting a
+  /// captain is a *display* decision — which is exactly why it can be a tap on the pitch rather than a
+  /// screen of its own, and why it needs no server round trip.
+  ///
+  /// ⚠️ Null means *"use FPL's"*, not *"nobody"*.
+  final int? captainId;
+  final int? viceCaptainId;
+
   Map<String, dynamic> toJson() => {
         'manager_id': managerId,
         'gameweek': gameweek,
@@ -69,6 +82,8 @@ class Draft {
         'player_ids': playerIds,
         'bench_ids': benchIds,
         'saved_at': savedAt.toIso8601String(),
+        'captain_id': captainId,
+        'vice_captain_id': viceCaptainId,
       };
 
   /// The swaps this draft represents, as `(out, in)` ids.
@@ -83,7 +98,28 @@ class Draft {
     ];
   }
 
-  bool get isEmpty => swaps.isEmpty;
+  bool get isEmpty => swaps.isEmpty && captainId == null && viceCaptainId == null;
+
+  /// How many changes this plan represents, armbands included — what the banner counts.
+  int get changeCount =>
+      swaps.length + (captainId == null ? 0 : 1) + (viceCaptainId == null ? 0 : 1);
+
+  Draft copyWith({
+    List<int>? playerIds,
+    List<int>? benchIds,
+    int? captainId,
+    int? viceCaptainId,
+  }) =>
+      Draft(
+        managerId: managerId,
+        gameweek: gameweek,
+        basePlayerIds: basePlayerIds,
+        playerIds: playerIds ?? this.playerIds,
+        benchIds: benchIds ?? this.benchIds,
+        savedAt: savedAt,
+        captainId: captainId ?? this.captainId,
+        viceCaptainId: viceCaptainId ?? this.viceCaptainId,
+      );
 
   /// Whether this draft still describes something the manager can act on.
   ///

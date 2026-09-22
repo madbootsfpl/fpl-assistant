@@ -23,7 +23,7 @@ from src.analytics import (
 )
 from src.analytics.gameweek import gameweek_plan
 from src.analytics.optimizer import DEFAULT_BUDGET
-from src.analytics.transfer import route_to_player
+from src.analytics.transfer import replacements_for, route_to_player
 from src.kits import shirt_url
 from src.manager import fetch_manager_team
 from src.service.inputs import WIDE, load, opened
@@ -32,6 +32,7 @@ from src.service.requests import (
     CaptainRequest,
     GameweekRequest,
     MyTeamRequest,
+    ReplacementsRequest,
     RouteRequest,
     SquadRequest,
     TransfersRequest,
@@ -361,4 +362,40 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         "kits": kit_by_club,
         "fixtures": fixtures,
         "bench_roles": roles,
+    }
+
+
+def replacements(request: ReplacementsRequest, *, store: Storage | None = None) -> dict:
+    """Every legal replacement for one owned player — **affordable or not** (ADR-226).
+
+    ⚠️ **Over-budget candidates are returned and flagged, never filtered.** The owner's call: *"can select a
+    higher priced player, just flag it as over budget."* ⭐ That matches what `apply_transfer` has always
+    done — an over-budget squad is a **soft warning, never a block**, because prices drift and a manager
+    planning a move he cannot quite afford yet is planning, not erring.
+
+    ⭐ And filtering would be worse than unhelpful: *a candidate silently removed looks like a candidate
+    that does not exist*, so the manager would conclude the player is ineligible rather than dear.
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        data = load(request.player_ids, request.horizon, store)
+    finally:
+        if ours:
+            store.close()
+
+    out = data.by_id[request.out_id]
+    budget = round(out["price"] + request.bank, 1)
+    rows = replacements_for(out, data.players, data.owned, xp_by_id=data.xp_by_id,
+                            bank=request.bank, reported_out=data.leaving, limit=request.limit)
+    return {
+        "horizon": request.horizon,
+        "out": {"id": out["id"], "web_name": out["web_name"], "team": out["team"],
+                "position": out["position"], "price": out["price"],
+                "xp": data.xp_by_id.get(out["id"], 0.0)},
+        # ⭐ Stated so a screen can show *"£8.5m to spend"* rather than making the reader do the addition
+        # of a sale price and a bank they are looking at on another row.
+        "budget": budget,
+        "bank": request.bank,
+        "candidates": rows,
     }

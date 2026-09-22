@@ -39,6 +39,26 @@ def _selection_xp(xp_by_id, reported_out):
     return {k: (0.0 if k in reported_out else v) for k, v in xp_by_id.items()}
 
 
+def _get(row, key):
+    """A field from a dict **or** a `sqlite3.Row`, absent-safe."""
+    try:
+        return row[key]
+    except (KeyError, IndexError):
+        return None
+
+
+def _club_counts(owned) -> dict:
+    """`{club short name: how many you hold}` — the tally FPL's ≤3-per-club cap is checked against.
+
+    ⭐ Extracted alongside `is_legal_replacement` (ADR-226): the manual-transfer screen needs the same
+    tally, and two places counting a squad is two places that can count it differently.
+    """
+    counts: dict = {}
+    for p in owned:
+        counts[p["team"]] = counts.get(p["team"], 0) + 1
+    return counts
+
+
 def _club_ok(out, candidate, club_counts, max_per_club) -> bool:
     """Would bringing `candidate` in (and `out` out) keep ≤ max_per_club from any club?
 
@@ -110,6 +130,67 @@ def _correlated_after(out, incoming, owned) -> int:
                and p["team"] == incoming["team"])
 
 
+def is_legal_replacement(candidate, out, *, owned_ids, reported_out, club_counts,
+                         max_per_club=MAX_PER_CLUB, budget=None) -> bool:
+    """Can `candidate` replace `out`? FPL's rules, in one place (ADR-226).
+
+    ⭐⭐ **Extracted rather than copied.** This predicate was written inline inside `suggest_transfers`, and
+    a manual-transfer screen needs exactly the same notion of *legal* — so the choice was one rule with two
+    implementations or one rule in one place. ADR-181 is this project's record of which of those survives
+    contact with a change.
+
+    ⚠️ `budget=None` means **do not check affordability**, which the manual screen wants: the owner's call
+    is *"can select a higher priced player, just flag it as over budget"*. ⭐ That matches what
+    `apply_transfer` has always done — an over-budget squad is a **soft warning, never a block**, because
+    prices drift and a manager planning a move he cannot quite afford yet is planning, not erring.
+    """
+    return (candidate["position"] == out["position"]
+            and candidate["id"] not in owned_ids
+            and not is_unavailable(candidate)
+            and candidate["id"] not in (reported_out or {})   # never buy someone on his way out (ADR-156)
+            and (budget is None or candidate["price"] <= budget)
+            and _club_ok(out, candidate, club_counts, max_per_club))
+
+
+def replacements_for(out, players, owned, *, xp_by_id, bank=0.0, reported_out=None,
+                     max_per_club=MAX_PER_CLUB, limit=40) -> list[dict]:
+    """Every legal replacement for one owned player, best xP first — **affordable or not**.
+
+    ⭐ The inverse of `suggest_transfers`, which picks *for* you. This lists what you could do, because a
+    manual transfer is a decision the manager has already made and wants priced, not recommended.
+
+    Each row carries `affordable` and `over_by` so a screen can show the gap rather than hide the player:
+    ⚠️ *a candidate silently filtered out looks like a candidate that does not exist.*
+    """
+    reported_out = reported_out or {}
+    owned_ids = {p["id"] for p in owned}
+    club_counts = _club_counts(owned)
+    budget = round(out["price"] + bank, 1)
+
+    rows = []
+    for c in players:
+        if not is_legal_replacement(c, out, owned_ids=owned_ids, reported_out=reported_out,
+                                    club_counts=club_counts, max_per_club=max_per_club):
+            continue
+        over = round(c["price"] - budget, 1)
+        rows.append({
+            **_summary(c, xp_by_id),
+            # ⚠️⚠️ **Availability travels with the candidate, and it must.** `_summary` here is the minimal
+            # five-key shape the transfer ranking uses, which carries no `status` — so a list built from it
+            # alone would offer a 25%-chance player with nothing to say he is doubtful. ⭐ *That is ADR-206
+            # exactly: a doubt is a probability, and hiding it prices it at certainty.*
+            "position": c["position"],
+            "status": c["status"],
+            "chance": _get(c, "chance"),
+            "affordable": over <= 0,
+            # ⭐ 0.0 rather than None when affordable: a screen reads one type, and "how far over" is a
+            # number whose zero is meaningful.
+            "over_by": max(over, 0.0),
+        })
+    rows.sort(key=lambda r: (-r["xp"], r["price"]))
+    return rows[:limit]
+
+
 def suggest_transfers(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, limit: int = 5, max_per_club: int = MAX_PER_CLUB,
@@ -148,9 +229,7 @@ def suggest_transfers(
     rank_xp = _selection_xp(xp_by_id, reported_out)
     base_xi = best_xi_points(owned, rank_xp) if xi_aware else 0.0
 
-    club_counts: dict = {}
-    for p in owned:
-        club_counts[p["team"]] = club_counts.get(p["team"], 0) + 1
+    club_counts = _club_counts(owned)
 
     # Every positive-gain (out → in) pair; the shortlist is then a disjoint pick from these.
     pairs = []
@@ -159,12 +238,9 @@ def suggest_transfers(
         out_sum = _summary(out, rank_xp)
         out_sum["leaving"] = reported_out.get(out["id"])
         for c in players:
-            if (c["position"] == out["position"]
-                    and c["id"] not in owned_ids
-                    and not is_unavailable(c)
-                    and c["id"] not in reported_out      # never buy someone on his way out (ADR-156)
-                    and c["price"] <= budget
-                    and _club_ok(out, c, club_counts, max_per_club)):
+            if is_legal_replacement(c, out, owned_ids=owned_ids, reported_out=reported_out,
+                                    club_counts=club_counts, max_per_club=max_per_club,
+                                    budget=budget):
                 in_sum = _summary(c, xp_by_id)
                 if xi_aware:   # how much the swap lifts the best legal XI (ADR-046)
                     after = best_xi_points([p for p in owned if p["id"] != out["id"]] + [c], rank_xp)

@@ -22,6 +22,7 @@ from src.service import (
     CaptainRequest,
     GameweekRequest,
     MyTeamRequest,
+    ReplacementsRequest,
     RouteRequest,
     SquadRequest,
     TransfersRequest,
@@ -809,3 +810,136 @@ def test_a_draft_bench_must_come_from_the_draft(store):
     with pytest.raises(ValueError, match="draft bench ids not in the draft squad"):
         MyTeamRequest(manager_id=1, draft_player_ids=list(range(1, 16)),
                       draft_bench_ids=[999]).validate()
+
+
+# ---- manual transfers: over budget is flagged, never hidden (ADR-226) --------------------
+
+def test_replacements_include_players_you_cannot_afford(store):
+    """⭐⭐ **The owner's call:** *"can select a higher priced player, just flag it as over budget."*
+
+    ⚠️ Filtering would be worse than unhelpful — *a candidate silently removed looks like a candidate that
+    does not exist*, so a manager concludes the player is **ineligible** when he is merely dear. And FPL
+    prices drift, so a move you cannot quite afford today is a plan, not an error. `apply_transfer` has
+    always treated over-budget as a soft warning; this is the same rule at the point of choosing.
+    """
+    picked = _squad(store)
+    answer = svc.replacements(
+        ReplacementsRequest(player_ids=picked, out_id=picked[0], bank=0.0, horizon=1, limit=40),
+        store=store)
+
+    assert answer["candidates"], "there is always someone who could come in"
+    dear = [c for c in answer["candidates"] if not c["affordable"]]
+    assert dear, "a zero bank must still surface players above the sale price"
+    assert all(c["over_by"] > 0 for c in dear), "…and each must say how far over"
+    assert all(c["over_by"] == 0.0 for c in answer["candidates"] if c["affordable"]), (
+        "⭐ 0.0 rather than None when affordable — one type to read, and a meaningful zero"
+    )
+
+
+def test_the_budget_is_stated_rather_than_left_to_the_reader(store):
+    """⭐ Sale price **plus** bank. A screen that showed only the bank would make a manager add two numbers
+    that appear on different rows, and get it wrong the first time."""
+    picked = _squad(store)
+    answer = svc.replacements(
+        ReplacementsRequest(player_ids=picked, out_id=picked[0], bank=1.5, horizon=1), store=store)
+    assert answer["budget"] == round(answer["out"]["price"] + 1.5, 1)
+
+
+def test_every_replacement_obeys_fpls_rules(store):
+    """⚠️ Affordability is the *only* rule relaxed. Position, ownership, availability and the ≤3-per-club
+    cap still hold — an illegal squad is not a plan, it is a squad FPL will refuse."""
+    picked = _squad(store)
+    by_id = {p["id"]: p for p in store.get_players()}
+    out = by_id[picked[0]]
+    answer = svc.replacements(
+        ReplacementsRequest(player_ids=picked, out_id=out["id"], bank=50.0, horizon=1, limit=200),
+        store=store)
+
+    for c in answer["candidates"]:
+        assert c["position"] == out["position"], f"{c['web_name']} is a {c['position']}"
+        assert c["id"] not in set(picked), f"{c['web_name']} is already owned"
+        assert c["status"] not in {"i", "s", "u"}, f"{c['web_name']} cannot play"
+
+
+def test_the_club_cap_survives_the_relaxed_budget(store):
+    """⭐ The ≤3-per-club rule is checked against the squad **after** the swap, which is why selling a
+    same-club player frees a slot. A manual screen relaxing budget must not quietly relax this too."""
+    picked = _squad(store)
+    by_id = {p["id"]: p for p in store.get_players()}
+    counts = {}
+    for i in picked:
+        counts[by_id[i]["team"]] = counts.get(by_id[i]["team"], 0) + 1
+    full = [club for club, n in counts.items() if n >= 3]
+    if not full:
+        pytest.skip("this seed squad holds no club three times — the case cannot arise")
+
+    out = by_id[picked[0]]
+    answer = svc.replacements(
+        ReplacementsRequest(player_ids=picked, out_id=out["id"], bank=50.0, horizon=1, limit=200),
+        store=store)
+    for c in answer["candidates"]:
+        if c["team"] in full and c["team"] != out["team"]:
+            pytest.fail(f"{c['web_name']} would make a 4th from {c['team']}")
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (ReplacementsRequest(player_ids=[1, 2]), "no player to replace"),
+    (ReplacementsRequest(player_ids=[1, 2], out_id=99), "not in this squad"),
+    (ReplacementsRequest(player_ids=[1, 2], out_id=1, bank=-1), "bank cannot be negative"),
+])
+def test_a_replacement_request_that_cannot_be_answered_is_refused(request_, expected):
+    """⚠️ Searching against a player you do not own returns a perfectly plausible list — ⭐ *a wrong answer
+    wearing the shape of a right one.*"""
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()
+
+
+def test_a_doubtful_replacement_says_so(store):
+    """⚠️⚠️ **Offering a 25%-chance player with nothing to say he is doubtful prices the doubt at
+    certainty** — ADR-206's exact failure, on a new screen.
+
+    ⭐ Found while writing these tests: `transfer.py`'s summary is the **five-key minimal** player shape
+    and carries no `status`, so a candidate list built from it alone could not flag anybody. That is the
+    four-player-shapes problem (start-checklist 1b) arriving in practice rather than in principle.
+    """
+    picked = _squad(store)
+    answer = svc.replacements(
+        ReplacementsRequest(player_ids=picked, out_id=picked[0], bank=50.0, horizon=1, limit=200),
+        store=store)
+
+    assert all("status" in c and "position" in c for c in answer["candidates"]), (
+        "every candidate must carry enough to be judged, not just enough to be listed"
+    )
+
+    # ⚠️ **Presence is not truth, and a presence check passes against a lie.** A mutation that hard-coded
+    # every status to "a" survived the assertion above — so the real doubtful player in the market has to
+    # be found and followed through, ⭐ *constructing the case rather than hoping the population holds it.*
+    market = {p["id"]: p for p in store.get_players()}
+
+    # ⚠️ **Every owned player is asked, rather than one chosen and assumed legal.** A first attempt picked
+    # a doubtful player and asserted he must appear — and he did not, because FPL's ≤3-per-club cap
+    # legitimately blocked him. ⭐ *The test had assumed a legality it had not checked*, which is the same
+    # species as the bug it was written to catch.
+    seen = []
+    for out_id in picked:
+        listing = svc.replacements(
+            ReplacementsRequest(player_ids=picked, out_id=out_id, bank=50.0, horizon=1, limit=400),
+            store=store)
+        seen += [c for c in listing["candidates"] if c["status"] == "d"]
+
+    # ⚠️⚠️ **Asserted, not skipped.** A first version skipped when `seen` was empty — and the mutation that
+    # hard-codes every status to "a" makes it empty, so the mutation caused the *skip* and survived.
+    # ⭐ *A test that skips is not a test that passes* (ADR-178), and the population was measured before
+    # this line was written: the seed market holds 24 doubtful players, 99 of whom are legal replacements
+    # for somebody in a normal squad. The case is real, so its absence is a failure and not a pass.
+    assert seen, (
+        "no doubtful player came back flagged. The seed contains 24 of them and they are legal "
+        "replacements — so either availability stopped travelling with a candidate, or the market changed "
+        "beyond recognition."
+    )
+
+    for candidate in seen:
+        assert candidate["status"] == "d", "a doubt must arrive flagged, never as available"
+        assert candidate["chance"] == market[candidate["id"]]["chance"], (
+            "⭐ a doubt is a probability — the percentage is the fact, 'doubtful' is the rounding"
+        )

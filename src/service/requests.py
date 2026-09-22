@@ -177,3 +177,28 @@ class MyTeamRequest:
             stray = set(self.draft_bench_ids) - set(self.draft_player_ids)
             if stray:
                 raise ValueError(f"draft bench ids not in the draft squad: {sorted(stray)}")
+
+
+@dataclass(frozen=True)
+class ReplacementsRequest(SquadRequest):
+    """*"Who could I put in instead of him?"* — the manual transfer (ADR-226).
+
+    ⭐ The inverse of `TransfersRequest`, which picks for you. This lists what you *could* do, because a
+    manual transfer is a decision already made and wanting to be priced rather than recommended.
+    """
+
+    out_id: int | None = None
+    bank: float = 0.0
+    limit: int = 40
+
+    def validate(self) -> None:
+        super().validate()
+        _check_money("bank", self.bank)
+        if not self.out_id:
+            raise ValueError("no player to replace")
+        if self.out_id not in set(self.player_ids):
+            # ⚠️ Without this the search runs against a player you do not own and returns a perfectly
+            # plausible list — ⭐ *a wrong answer wearing the shape of a right one.*
+            raise ValueError(f"player {self.out_id} is not in this squad")
+        if self.limit < 1:
+            raise ValueError("limit must be at least 1")

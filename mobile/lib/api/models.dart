@@ -541,6 +541,26 @@ class MyTeam {
 
   Fixture? fixtureFor(PlayerSummary p) => fixtures[p.team];
 
+  /// A copy with different armbands — ⭐ for a **draft**, whose captain the server never sees because it
+  /// changes nothing the server computes.
+  MyTeam withArmbands({int? captainId, int? viceCaptainId}) => MyTeam(
+        squadName: squadName,
+        isDraft: isDraft,
+        fplPlayerIds: fplPlayerIds,
+        bank: bank,
+        value: value,
+        freeTransfers: freeTransfers,
+        activeChip: activeChip,
+        gameweek: gameweek,
+        deadlineLabel: deadlineLabel,
+        captainId: captainId ?? this.captainId,
+        viceCaptainId: viceCaptainId ?? this.viceCaptainId,
+        analysis: analysis,
+        kits: kits,
+        fixtures: fixtures,
+        benchRoles: benchRoles,
+      );
+
   /// The bench in the order FPL will use it, rather than the order it happened to arrive in.
   List<PlayerSummary> get orderedBench {
     const order = ['1st', '2nd', '3rd', 'GK'];
@@ -552,4 +572,54 @@ class MyTeam {
     }
     return [...out, ...byId.values];
   }
+}
+
+
+/// One candidate to replace an owned player (ADR-226).
+class Replacement {
+  Replacement({
+    required this.player,
+    required this.affordable,
+    required this.overBy,
+  });
+
+  factory Replacement.fromJson(Map<String, dynamic> json) => Replacement(
+        player: PlayerSummary.fromJson(json),
+        affordable: json['affordable'] as bool? ?? true,
+        overBy: (json['over_by'] as num?)?.toDouble() ?? 0.0,
+      );
+
+  final PlayerSummary player;
+
+  /// ⚠️ **False does not mean unavailable.** An over-budget candidate is offered deliberately: FPL prices
+  /// drift, and a move you cannot quite afford today is a plan rather than an error.
+  final bool affordable;
+
+  /// How far over budget, in £m. ⭐ 0.0 when affordable — one type to read, and a meaningful zero.
+  final double overBy;
+}
+
+/// `POST /api/v1/squad/replacements`
+class ReplacementsAnswer {
+  ReplacementsAnswer({
+    required this.out,
+    required this.budget,
+    required this.candidates,
+  });
+
+  factory ReplacementsAnswer.fromJson(Map<String, dynamic> json) => ReplacementsAnswer(
+        out: PlayerRef.fromJson(json['out'] as Map<String, dynamic>),
+        budget: (json['budget'] as num).toDouble(),
+        candidates: ((json['candidates'] as List?) ?? [])
+            .map((c) => Replacement.fromJson(c as Map<String, dynamic>))
+            .toList(),
+      );
+
+  final PlayerRef out;
+
+  /// ⭐ Sale price **plus** bank, stated so a screen need not make the reader add two numbers that appear
+  /// on different rows.
+  final double budget;
+
+  final List<Replacement> candidates;
 }

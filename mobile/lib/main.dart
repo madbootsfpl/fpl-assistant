@@ -12,6 +12,7 @@ import 'api/models.dart';
 import 'brand.dart';
 import 'draft.dart';
 import 'pitch.dart';
+import 'player_sheet.dart';
 import 'this_week_view.dart';
 import 'transfers_view.dart';
 
@@ -54,14 +55,13 @@ class MyTeamScreen extends StatefulWidget {
 /// ⚠️ **Captain and Chips are listed and not yet built.** Showing them greyed is a deliberate choice over
 /// hiding them: a bottom bar that grows items later moves everything under the user's thumb, and muscle
 /// memory is the first thing a returning user brings.
-enum _Tab { myTeam, transfers, thisWeek, captain, chips }
+enum _Tab { myTeam, transfers, thisWeek, chips }
 
 extension on _Tab {
   String get label => switch (this) {
         _Tab.myTeam => 'My team',
         _Tab.transfers => 'Transfers',
         _Tab.thisWeek => 'This week',
-        _Tab.captain => 'Captain',
         _Tab.chips => 'Chips',
       };
 
@@ -69,7 +69,6 @@ extension on _Tab {
         _Tab.myTeam => Icons.sports_soccer,
         _Tab.transfers => Icons.swap_horiz,
         _Tab.thisWeek => Icons.event_note,
-        _Tab.captain => Icons.star_outline,
         _Tab.chips => Icons.style_outlined,
       };
 
@@ -172,6 +171,48 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   int get _managerId => int.tryParse(_id.text.trim()) ?? kDefaultManagerId;
 
+  /// Tap a player: armband, or replace him.
+  Future<void> _openPlayer(MyTeam team, PlayerSummary player) async {
+    final action = await showPlayerSheet(context,
+        team: team, player: player, client: _client);
+    if (action == null) return;
+    switch (action) {
+      // ⭐ Armbands change no number this app computes, so they never leave the device — no round trip,
+      // no reload, just a redraw. That is why a tap is enough and a tab would have been too much.
+      case MakeCaptain(:final playerId):
+        await _setArmband(team, captainId: playerId);
+      case MakeVice(:final playerId):
+        await _setArmband(team, viceCaptainId: playerId);
+      case ReplaceWith(:final outId, :final inId):
+        await _planSwap(team, outId, inId);
+    }
+  }
+
+  /// ⚠️ **A captain cannot also be vice.** Setting one clears the other if they collide — FPL would reject
+  /// it, and an app that let you build an impossible team is teaching you something untrue.
+  Future<void> _setArmband(MyTeam team, {int? captainId, int? viceCaptainId}) async {
+    final base = _draft ??
+        Draft(
+          managerId: _managerId,
+          gameweek: team.gameweek ?? 0,
+          basePlayerIds: team.fplPlayerIds,
+          playerIds: team.fplPlayerIds,
+          benchIds: team.analysis.bench.map((p) => p.id).toList(),
+          savedAt: DateTime.now(),
+        );
+    final nextCaptain = captainId ?? base.captainId ?? team.captainId;
+    final nextVice = viceCaptainId ?? base.viceCaptainId ?? team.viceCaptainId;
+    final draft = base.copyWith(
+      captainId: nextCaptain,
+      viceCaptainId: nextVice == nextCaptain ? null : nextVice,
+    );
+    await _drafts.save(draft);
+    setState(() {
+      _draft = draft;
+      _dropped = null;
+    });
+  }
+
   /// Show the real team again, forgetting the plan.
   Future<void> _discardDraft() async {
     await _drafts.clear();
@@ -224,7 +265,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                     }
                     return Column(
                       children: [
-                        if (snapshot.data!.isDraft)
+                        if (snapshot.data!.isDraft || _draft != null)
                           _DraftBanner(draft: _draft, onDiscard: _discardDraft),
                         if (_dropped != null) _DroppedBanner(reason: _dropped!),
                         Expanded(child: _body(snapshot.data!)),
@@ -242,10 +283,19 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         ),
       );
 
-  Widget _body(MyTeam team) => switch (_tab) {
+  Widget _body(MyTeam rawTeam) {
+    // ⭐ The draft's armbands win over FPL's for display. They are the only part of a plan the server never
+    // sees, because they change nothing it computes.
+    final team = _draft == null
+        ? rawTeam
+        : rawTeam.withArmbands(
+            captainId: _draft!.captainId ?? rawTeam.captainId,
+            viceCaptainId: _draft!.viceCaptainId ?? rawTeam.viceCaptainId,
+          );
+    return switch (_tab) {
         _Tab.myTeam => SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-            child: PitchView(team: team),
+            child: PitchView(team: team, onTapPlayer: (p) => _openPlayer(team, p)),
           ),
         _Tab.transfers => TransfersView(
             client: _client,
@@ -266,6 +316,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             ),
           ),
       };
+  }
 
   static String _reason(Object? error) =>
       error is ApiException ? error.detail : '$error';

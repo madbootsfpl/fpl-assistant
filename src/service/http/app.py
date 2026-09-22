@@ -119,6 +119,12 @@ class MyTeamBody(BaseModel):
                                             "the answer assumed.")
 
 
+class ReplacementsBody(SquadBody):
+    out_id: int = Field(..., description="The owned player you want to replace.")
+    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    limit: int = Field(40, ge=1, le=200, description="How many candidates to return.")
+
+
 class BuildBody(BaseModel):
     """⚠️ No `player_ids` — this is the one question that starts from nothing."""
 
@@ -194,6 +200,18 @@ def squad_my_team(body: MyTeamBody) -> dict:
     FPL's API is sometimes simply unreachable. The message says which.
     """
     return _answer(service.my_team, service.MyTeamRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/replacements")
+def squad_replacements(body: ReplacementsBody) -> dict:
+    """Every legal replacement for one owned player — **affordable or not**.
+
+    ⚠️ Over-budget candidates come back with `affordable: false` and `over_by`, rather than being filtered
+    out. ⭐ *A candidate silently removed looks like a candidate that does not exist*, so a manager would
+    conclude the player is ineligible when he is merely dear — and FPL prices drift, so a move you cannot
+    quite afford today is a plan, not an error.
+    """
+    return _answer(service.replacements, service.ReplacementsRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/squad/build")

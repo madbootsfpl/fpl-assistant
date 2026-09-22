@@ -20,9 +20,13 @@ import 'pitch_markings.dart';
 const List<String> _rows = ['GK', 'DEF', 'MID', 'FWD'];
 
 class PitchView extends StatelessWidget {
-  const PitchView({required this.team, super.key});
+  const PitchView({required this.team, required this.onTapPlayer, super.key});
 
   final MyTeam team;
+
+  /// ⭐ The pitch is the right surface for editing a squad — it is where a manager already looks to decide
+  /// anything, and a tab called "Captain" would be a second place to do a thing that belongs here.
+  final void Function(PlayerSummary) onTapPlayer;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +52,10 @@ class PitchView extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [for (final p in byRow[row]!) _Card(team: team, player: p)],
+                          children: [
+                            for (final p in byRow[row]!)
+                              _Card(team: team, player: p, onTap: () => onTapPlayer(p)),
+                          ],
                         ),
                       ),
                 ],
@@ -56,7 +63,7 @@ class PitchView extends StatelessWidget {
             ),
           ),
         ),
-        _Bench(team: team),
+        _Bench(team: team, onTapPlayer: onTapPlayer),
       ],
     );
   }
@@ -130,10 +137,11 @@ class _Stat extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.team, required this.player});
+  const _Card({required this.team, required this.player, required this.onTap});
 
   final MyTeam team;
   final PlayerSummary player;
+  final VoidCallback onTap;
 
   /// ⚠️ Fixed, not flexible. A five-DEF row and a one-FWD row must draw the same card, or the eye reads
   /// the wider one as more important.
@@ -143,7 +151,11 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     final kit = team.kitFor(player);
     final fixture = team.fixtureFor(player);
-    return SizedBox(
+    return GestureDetector(
+      onTap: onTap,
+      // ⚠️ `opaque` so the whole card is the target — the kit alone is well under a thumb's width.
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
       width: width,
       child: Column(
         children: [
@@ -196,7 +208,7 @@ class _Card extends StatelessWidget {
               style: const TextStyle(color: Colors.white70, fontSize: 8.5)),
         ],
       ),
-    );
+    ));
   }
 
   /// ⚠️ The **manager's** armband, never the engine's recommendation.
@@ -257,9 +269,10 @@ class _Flag extends StatelessWidget {
 }
 
 class _Bench extends StatelessWidget {
-  const _Bench({required this.team});
+  const _Bench({required this.team, required this.onTapPlayer});
 
   final MyTeam team;
+  final void Function(PlayerSummary) onTapPlayer;
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +296,7 @@ class _Bench extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    _Card(team: team, player: p),
+                    _Card(team: team, player: p, onTap: () => onTapPlayer(p)),
                     if (roleOf[p.id] != null)
                       Positioned(
                         left: 2,
