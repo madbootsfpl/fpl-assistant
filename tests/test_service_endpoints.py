@@ -728,3 +728,84 @@ def test_the_explanation_describes_the_window_that_was_actually_ranked(store):
     one, three = reason_text(1), reason_text(3)
     assert "1 GW" in one, f"the one-gameweek plan explains itself as: {one!r}"
     assert "3 GW" in three, f"the three-gameweek plan explains itself as: {three!r}"
+
+
+# ---- a drafted squad (ADR-225) -----------------------------------------------------------
+
+def test_a_draft_prices_a_squad_fpl_does_not_hold(store, team, monkeypatch):
+    """⭐⭐ **The question the product exists for is *what if?*** — and a phone that could only ever show
+    the committed team could not answer it. The draft replaces the fifteen and nothing else."""
+    picked = list(team["player_ids"])
+    replacement = next(p["id"] for p in store.get_players() if p["id"] not in picked)
+    drafted = [replacement if i == picked[0] else i for i in picked]
+
+    real = svc.my_team(MyTeamRequest(manager_id=1), store=store)
+    draft = svc.my_team(MyTeamRequest(manager_id=1, draft_player_ids=drafted,
+                                      draft_bench_ids=team["bench_ids"]), store=store)
+
+    assert real["draft"] is False
+    assert draft["draft"] is True, "the SERVER says whether this is the real team — a client can forget"
+    assert replacement in [p["id"] for p in draft["analysis"]["xi"] + draft["analysis"]["bench"]]
+    assert picked[0] not in [p["id"] for p in draft["analysis"]["xi"] + draft["analysis"]["bench"]]
+
+
+def test_a_draft_keeps_fpls_money_and_deadline(store, team, monkeypatch):
+    """⚠️ **A draft that invented its own bank would let a manager plan a move he cannot afford**, and one
+    that invented its own deadline would price the wrong gameweek. Only the players change."""
+    monkeypatch.setattr(svc, "fetch_manager_team",
+                        lambda entry_id, players: ({**team, "bank": 2.5, "value": 101.0}, ""))
+    picked = list(team["player_ids"])
+    drafted = [next(p["id"] for p in store.get_players() if p["id"] not in picked)
+               if i == picked[0] else i for i in picked]
+    answer = svc.my_team(MyTeamRequest(manager_id=1, draft_player_ids=drafted), store=store)
+
+    assert answer["squad"]["bank"] == 2.5
+    assert answer["squad"]["name"] == team["name"]
+    assert answer["deadline"]["label"]
+
+
+def test_a_draft_always_reports_the_real_squad_alongside_it(store, team):
+    """⭐⭐ **`fpl_player_ids` is what lets a saved plan check itself against reality** rather than trusting
+    that nothing moved while the app was closed. ⚠️ Without it a client cannot tell a plan it can still act
+    on from one the manager already carried out."""
+    picked = list(team["player_ids"])
+    drafted = [next(p["id"] for p in store.get_players() if p["id"] not in picked)
+               if i == picked[0] else i for i in picked]
+    answer = svc.my_team(MyTeamRequest(manager_id=1, draft_player_ids=drafted), store=store)
+
+    assert sorted(answer["fpl_player_ids"]) == sorted(picked), (
+        "the real squad must come back even when a draft is being shown"
+    )
+
+
+def test_a_drafted_in_player_from_a_new_club_still_gets_a_kit(store, team):
+    """⚠️ Kits are keyed by club and derived from the squad being **shown**. Deriving them from the FPL
+    squad would leave a new signing shirtless on the pitch — the one surface a manager checks most."""
+    picked = list(team["player_ids"])
+    clubs = {p["team"] for p in store.get_players() if p["id"] in set(picked)}
+    incomer = next((p for p in store.get_players()
+                    if p["id"] not in set(picked) and p["team"] not in clubs), None)
+    if incomer is None:
+        pytest.skip("this seed squad already covers every club — the case cannot arise here")
+
+    drafted = [incomer["id"] if i == picked[0] else i for i in picked]
+    answer = svc.my_team(MyTeamRequest(manager_id=1, draft_player_ids=drafted), store=store)
+    assert incomer["team"] in answer["kits"]
+    assert answer["fixtures"].get(incomer["team"]) is not None
+
+
+@pytest.mark.parametrize("ids, expected", [
+    ([1] * 15, "duplicate player ids in the draft"),
+    ([1, 2, 3], "needs 15 players"),
+])
+def test_a_malformed_draft_is_refused(ids, expected):
+    """⚠️ A draft of fourteen analyses perfectly well and simply projects less — ⭐ *a wrong answer wearing
+    the shape of a right one*, which is the check this codebase keeps having to add."""
+    with pytest.raises(ValueError, match=expected):
+        MyTeamRequest(manager_id=1, draft_player_ids=ids).validate()
+
+
+def test_a_draft_bench_must_come_from_the_draft(store):
+    with pytest.raises(ValueError, match="draft bench ids not in the draft squad"):
+        MyTeamRequest(manager_id=1, draft_player_ids=list(range(1, 16)),
+                      draft_bench_ids=[999]).validate()

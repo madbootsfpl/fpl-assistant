@@ -437,6 +437,8 @@ class Fixture {
 class MyTeam {
   MyTeam({
     required this.squadName,
+    required this.isDraft,
+    required this.fplPlayerIds,
     required this.bank,
     required this.value,
     required this.freeTransfers,
@@ -456,6 +458,8 @@ class MyTeam {
     final deadline = (json['deadline'] as Map<String, dynamic>?) ?? const {};
     return MyTeam(
       squadName: squad['name'] as String? ?? '',
+      isDraft: json['draft'] as bool? ?? false,
+      fplPlayerIds: ((json['fpl_player_ids'] as List?) ?? const []).cast<int>(),
       bank: (squad['bank'] as num?)?.toDouble(),
       value: (squad['value'] as num?)?.toDouble(),
       freeTransfers: json['free_transfers'] as int? ?? 1,
@@ -484,6 +488,14 @@ class MyTeam {
   }
 
   final String squadName;
+
+  /// ⭐⭐ **The server's word on whether this is the real team.** A client can forget to mention it; a field
+  /// cannot — and an app that shows a plan as your squad is lying about something you can act on.
+  final bool isDraft;
+
+  /// The squad FPL actually holds, whatever is being displayed. ⭐ What a saved draft is checked against,
+  /// rather than trusting that nothing moved while the app was closed.
+  final List<int> fplPlayerIds;
 
   /// ⚠️ **Null means *not known*, never zero.** An empty bank is a real position; *"we could not read your
   /// bank"* is not, and showing the second as the first tells the affordability maths every transfer is

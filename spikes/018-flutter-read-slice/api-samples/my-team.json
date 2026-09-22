@@ -342,6 +342,7 @@
     "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 17 days, 23h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
     "urgency": "calm"
   },
+  "draft": false,
   "fixtures": {
     "ARS": {
       "difficulty": 2,
@@ -394,6 +395,23 @@
       "venue": "A"
     }
   },
+  "fpl_player_ids": [
+    94,
+    330,
+    124,
+    165,
+    391,
+    411,
+    115,
+    12,
+    1,
+    40,
+    68,
+    229,
+    8,
+    572,
+    379
+  ],
   "free_transfers": 1,
   "gameweek": 6,
   "kits": {

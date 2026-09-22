@@ -11,10 +11,19 @@ import 'api/models.dart';
 import 'brand.dart';
 
 class TransfersView extends StatefulWidget {
-  const TransfersView({required this.client, required this.team, super.key});
+  const TransfersView({
+    required this.client,
+    required this.team,
+    required this.onPlan,
+    super.key,
+  });
 
   final ServiceClient client;
   final MyTeam team;
+
+  /// ⚠️ **Plans a swap; it does not make one.** FPL publishes no way to change a team from outside, so the
+  /// only honest thing a tap can do is show you the consequence. The real move happens in the FPL app.
+  final void Function(int outId, int inId) onPlan;
 
   @override
   State<TransfersView> createState() => _TransfersViewState();
@@ -69,7 +78,12 @@ class _TransfersViewState extends State<TransfersView> {
               if (answer.moves.isEmpty)
                 const _Message(text: 'No transfer improves this squad at the moment.')
               else
-                for (final (i, m) in answer.moves.indexed) _Move(move: m, lead: i == 0),
+                for (final (i, m) in answer.moves.indexed)
+                  _Move(
+                    move: m,
+                    lead: i == 0,
+                    onPlan: () => widget.onPlan(m.out.id, m.incoming.id),
+                  ),
               const SizedBox(height: 14),
               Text(
                 'Ranked over ${answer.horizon} gameweek'
@@ -117,16 +131,20 @@ class _CountPicker extends StatelessWidget {
 }
 
 class _Move extends StatelessWidget {
-  const _Move({required this.move, required this.lead});
+  const _Move({required this.move, required this.lead, required this.onPlan});
 
   final TransferMove move;
+  final VoidCallback onPlan;
 
   /// ⭐ The first move is the recommendation; the rest are context. Styling them identically would make a
   /// ranked list look like a menu of equals.
   final bool lead;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onPlan,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
         decoration: BoxDecoration(
@@ -184,9 +202,14 @@ class _Move extends StatelessWidget {
                   style: TextStyle(color: Brand.warn, fontSize: 10.5, height: 1.4),
                 ),
               ),
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text('Tap to see your pitch with this move',
+                  style: TextStyle(color: Colors.white38, fontSize: 10)),
+            ),
           ],
         ),
-      );
+      ));
 }
 
 class _Message extends StatelessWidget {

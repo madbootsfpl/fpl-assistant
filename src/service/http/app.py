@@ -105,6 +105,13 @@ class MyTeamBody(BaseModel):
     horizon: int = Field(1, ge=1, le=MAX_HORIZON,
                          description="Gameweeks to look ahead. Defaults to **1**: a landing pitch is about "
                                      "this gameweek, where every other endpoint looks further.")
+    draft_player_ids: list[int] = Field(
+        default_factory=list,
+        description="⭐ **A draft: price THIS squad instead of the one FPL holds.** Fifteen ids. The "
+                    "manager's name, bank, deadline and armbands still come from FPL — only the players "
+                    "change. Omit for the real team.")
+    draft_bench_ids: list[int] = Field(default_factory=list,
+                                       description="The draft's bench. Must be drawn from `draft_player_ids`.")
     free_transfers: int = Field(1, ge=0, le=5,
                                 description="⚠️ **You must supply this — FPL does not publish it.** The "
                                             "entry payload carries bank and value but free transfers sit "

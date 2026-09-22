@@ -53,11 +53,21 @@ class ServiceClient {
   /// ⚠️ A refusal is often not the caller's fault: a team is not public until the first deadline, and FPL
   /// is sometimes simply unreachable. [ApiException.detail] says which — show it rather than a generic
   /// "something went wrong".
-  Future<MyTeam> myTeam(int managerId, {int horizon = 1, int freeTransfers = 1}) async =>
+  /// [draftPlayerIds] prices a squad that is **not** the one FPL holds — the manager's name, bank,
+  /// deadline and armbands still come from FPL.
+  Future<MyTeam> myTeam(
+    int managerId, {
+    int horizon = 1,
+    int freeTransfers = 1,
+    List<int> draftPlayerIds = const [],
+    List<int> draftBenchIds = const [],
+  }) async =>
       MyTeam.fromJson(await _post('my-team', {
         'manager_id': managerId,
         'horizon': horizon,
         'free_transfers': freeTransfers,
+        'draft_player_ids': draftPlayerIds,
+        'draft_bench_ids': draftBenchIds,
       }));
 
   Future<bool> healthy() async {

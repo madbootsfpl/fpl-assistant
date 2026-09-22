@@ -283,8 +283,14 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
             # API from a team that is not public yet, and a client cannot tell those apart from a 400 alone.
             raise ValueError(message)
 
-        owned_ids = list(squad["player_ids"])
-        bench_ids = list(squad.get("bench_ids") or [])
+        fpl_ids = list(squad["player_ids"])
+        # ⭐⭐ **The draft replaces the fifteen and nothing else.** Name, bank, deadline and armbands still
+        # come from FPL — a draft that invented its own bank would let a manager plan a move he cannot pay
+        # for, and one that invented its own deadline would price the wrong gameweek.
+        drafting = bool(request.draft_player_ids)
+        owned_ids = list(request.draft_player_ids) if drafting else fpl_ids
+        bench_ids = (list(request.draft_bench_ids) if drafting
+                     else list(squad.get("bench_ids") or []))
         answer = analysis(SquadRequest(player_ids=owned_ids, bench_ids=bench_ids,
                                        horizon=request.horizon), store=store)
 
@@ -292,6 +298,8 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         teams = store.get_teams()
         upcoming = store.get_upcoming_fixtures()
         code_by_club = {t["short_name"]: t["code"] for t in teams}
+        # ⚠️ Clubs come from the squad being **shown**, so a drafted-in player from a new club still gets a
+        # kit and a fixture. Deriving them from the FPL squad would leave the new signing shirtless.
         clubs = {p["team"] for p in owned}
         gameweek, at, label, urgency = deadline_line(upcoming, datetime.now(UTC))
     finally:
@@ -336,6 +344,12 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
             "cost": squad.get("cost"),
             "active_chip": squad.get("active_chip"),
         },
+        # ⭐⭐ **The server says whether this is the real team.** A client can forget to mention it; a field
+        # cannot. ⚠️ *An app that shows a plan as your squad is lying about something you can act on* — and
+        # `fpl_player_ids` is what lets a client check its saved draft against reality rather than trusting
+        # that nothing moved while the app was closed.
+        "draft": drafting,
+        "fpl_player_ids": fpl_ids,
         # ⚠️ Echoed because FPL does not publish it and the client supplied it — ⭐ *a header that showed a
         # number the manager never set would be the app inventing his position.*
         "free_transfers": request.free_transfers,

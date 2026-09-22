@@ -39,6 +39,12 @@ dependencies:
   # asks for it — a foundation added before anything needs it is a guess with a version number.
   http: ^1.2.0
 
+  # ⭐ **Earned, not anticipated.** A modified squad has to survive closing the app, which is the first
+  # requirement that needs storage at all. ⚠️ Deliberately NOT Drift, which the audit's Phase 4 lists: this
+  # is one small document, and a SQLite ORM with code generation is machinery for a relational cache that
+  # does not exist yet. Drift arrives when the board is cached for offline use — a real trigger, not a plan.
+  shared_preferences: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

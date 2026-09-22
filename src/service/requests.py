@@ -149,6 +149,16 @@ class MyTeamRequest:
     # where a silent one cannot, so it comes back in the answer.
     free_transfers: int = 1
 
+    # ⭐⭐ **A DRAFT: price this squad, not the one FPL holds.** The app lets a manager try a swap before
+    # committing to it — and a phone that could only ever show the committed team could not answer *"what
+    # if?"*, which is the question the whole product exists for.
+    #
+    # ⚠️ **The manager is still fetched.** The name, the bank, the deadline and the armbands all come from
+    # FPL; only the fifteen change. A draft that invented its own bank would let a manager plan a transfer
+    # he cannot afford.
+    draft_player_ids: list[int] = field(default_factory=list)
+    draft_bench_ids: list[int] = field(default_factory=list)
+
     def validate(self) -> None:
         # ⭐ The horizon defaults to **1**, not five, and that is the screen's decision showing through: a
         # landing pitch is about *this* gameweek. Every other endpoint looks further by default.
@@ -157,3 +167,13 @@ class MyTeamRequest:
             raise ValueError("no manager id given")
         if not 0 <= self.free_transfers <= 5:
             raise ValueError(f"free transfers {self.free_transfers} is outside 0-5")
+        if self.draft_player_ids:
+            if len(set(self.draft_player_ids)) != len(self.draft_player_ids):
+                raise ValueError("duplicate player ids in the draft")
+            # ⚠️ Fifteen, exactly. A draft of fourteen analyses fine and simply projects less — the
+            # failure this codebase keeps writing down: *a wrong answer wearing the shape of a right one.*
+            if len(self.draft_player_ids) != 15:
+                raise ValueError(f"a draft squad needs 15 players, got {len(self.draft_player_ids)}")
+            stray = set(self.draft_bench_ids) - set(self.draft_player_ids)
+            if stray:
+                raise ValueError(f"draft bench ids not in the draft squad: {sorted(stray)}")
