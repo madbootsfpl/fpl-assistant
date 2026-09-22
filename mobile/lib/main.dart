@@ -11,6 +11,7 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'draft.dart';
+import 'more_view.dart';
 import 'pitch.dart';
 import 'player_sheet.dart';
 import 'this_week_view.dart';
@@ -55,24 +56,26 @@ class MyTeamScreen extends StatefulWidget {
 /// ⚠️ **Captain and Chips are listed and not yet built.** Showing them greyed is a deliberate choice over
 /// hiding them: a bottom bar that grows items later moves everything under the user's thumb, and muscle
 /// memory is the first thing a returning user brings.
-enum _Tab { myTeam, transfers, thisWeek, chips }
+/// ⚠️ **Chips left the bar and ADR-223 argued it should not.** That argument was *"a bar that grows items
+/// later moves everything under the user's thumb"* — and it held while the fourth slot was a placeholder.
+/// ⭐ It stops holding when there is a **real** fourth item: four working tabs beat three plus a dead one,
+/// and the move is cheaper now than after anyone has built muscle memory for a button that does nothing.
+enum _Tab { myTeam, transfers, thisWeek, more }
 
 extension on _Tab {
   String get label => switch (this) {
         _Tab.myTeam => 'My team',
         _Tab.transfers => 'Transfers',
         _Tab.thisWeek => 'This week',
-        _Tab.chips => 'Chips',
+        _Tab.more => 'More',
       };
 
   IconData get icon => switch (this) {
         _Tab.myTeam => Icons.sports_soccer,
         _Tab.transfers => Icons.swap_horiz,
         _Tab.thisWeek => Icons.event_note,
-        _Tab.chips => Icons.style_outlined,
+        _Tab.more => Icons.more_horiz,
       };
-
-  bool get ready => this == _Tab.myTeam || this == _Tab.transfers || this == _Tab.thisWeek;
 }
 
 class _MyTeamScreenState extends State<MyTeamScreen> {
@@ -223,14 +226,10 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
-  /// ⚠️ FPL does not publish this, so the app has to ask (ADR-191). One is the common case.
-  final int _freeTransfers = 1;
-
-  void _reload() {
-    final id = int.tryParse(_id.text.trim());
-    if (id == null || id < 1) return;
-    setState(() => _team = _load(id));
-  }
+  /// ⚠️⚠️ **FPL does not publish this, so the app has to ask** (ADR-191). It was `final int = 1` until
+  /// ADR-228 gave it a home in More — ⭐ *the app was advising a position the manager might not be in,
+  /// because there was nowhere to put a setting.* One is the common case, not the only one.
+  int _freeTransfers = 1;
 
   @override
   void dispose() {
@@ -244,7 +243,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _TitleBar(controller: _id, onSubmit: _reload),
+              const _TitleBar(),
               Expanded(
                 child: FutureBuilder<MyTeam>(
                   future: _team,
@@ -303,17 +302,18 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             onPlan: (outId, inId) => _planSwap(team, outId, inId),
           ),
         _Tab.thisWeek => ThisWeekView(client: _client, team: team),
-        // ⭐ Named rather than blank. "Not built yet" is information; an empty screen is a bug report.
-        _ => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Text(
-                '${_tab.label} is not built yet.\n\nOn the web it lives under My Squad; '
-                'it needs a way to change your team, not just read it.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white38, height: 1.6),
-              ),
-            ),
+        _Tab.more => MoreView(
+            team: team,
+            managerId: _managerId,
+            freeTransfers: _freeTransfers,
+            onManagerId: (id) {
+              _id.text = '$id';
+              setState(() => _team = _load(id));
+            },
+            onFreeTransfers: (n) => setState(() {
+              _freeTransfers = n;
+              _team = _load(_managerId);
+            }),
           ),
       };
   }
@@ -322,57 +322,22 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       error is ApiException ? error.detail : '$error';
 }
 
+/// ⭐ A wordmark and nothing else. The manager id used to live here, which made a **setting** look like a
+/// title — it is in More now, where a thing you change once belongs.
 class _TitleBar extends StatelessWidget {
-  const _TitleBar({required this.controller, required this.onSubmit});
-
-  final TextEditingController controller;
-  final VoidCallback onSubmit;
+  const _TitleBar();
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-        child: Row(
-          children: [
-            const Text.rich(
-              TextSpan(children: [
-                TextSpan(
-                    text: 'MAD',
-                    style: TextStyle(color: Brand.purpleLight, fontWeight: FontWeight.w700)),
-                TextSpan(text: 'BOOTS', style: TextStyle(color: Colors.white)),
-              ]),
-              style: TextStyle(fontSize: 15, letterSpacing: .5),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: 108,
-              height: 30,
-              child: TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.end,
-                onSubmitted: (_) => onSubmit(),
-                style: const TextStyle(color: Colors.white, fontSize: 12.5),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  hintText: 'manager id',
-                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                  filled: true,
-                  fillColor: Colors.white10,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(Brand.radiusSm),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            IconButton(
-              onPressed: onSubmit,
-              icon: const Icon(Icons.refresh, size: 18, color: Colors.white70),
-              tooltip: 'Load this team',
-            ),
-          ],
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
+        child: Text.rich(
+          TextSpan(children: [
+            TextSpan(
+                text: 'MAD',
+                style: TextStyle(color: Brand.purpleLight, fontWeight: FontWeight.w700)),
+            TextSpan(text: 'BOOTS', style: TextStyle(color: Colors.white)),
+          ]),
+          style: TextStyle(fontSize: 15, letterSpacing: .5),
         ),
       );
 }
@@ -395,7 +360,7 @@ class _BottomBar extends StatelessWidget {
               for (final tab in _Tab.values)
                 Expanded(
                   child: GestureDetector(
-                    // ⚠️ `opaque` so the whole column is the target, not just the glyph — a 15px icon is
+                    // ⚠️ `opaque` so the whole column is the target, not just the glyph — a 19px icon is
                     // under Apple's 44pt minimum and misses on a real thumb.
                     behavior: HitTestBehavior.opaque,
                     onTap: () => onPick(tab),
@@ -404,16 +369,12 @@ class _BottomBar extends StatelessWidget {
                       children: [
                         Icon(tab.icon,
                             size: 19,
-                            color: tab == current
-                                ? Colors.white
-                                : (tab.ready ? Colors.white54 : Colors.white24)),
+                            color: tab == current ? Colors.white : Colors.white54),
                         const SizedBox(height: 3),
                         Text(tab.label,
                             style: TextStyle(
                                 fontSize: 9.5,
-                                color: tab == current
-                                    ? Colors.white
-                                    : (tab.ready ? Colors.white54 : Colors.white24))),
+                                color: tab == current ? Colors.white : Colors.white54)),
                       ],
                     ),
                   ),
@@ -446,7 +407,7 @@ class _DraftBanner extends StatelessWidget {
               child: Text(
                 // ⚠️ Says what it is AND what it is not. "Plan" alone could be read as a saved team.
                 'A plan — not your FPL team. '
-                '${draft == null ? '' : '${draft!.swaps.length} change${draft!.swaps.length == 1 ? '' : 's'}. '}'
+                '${draft == null ? '' : '${draft!.changeCount} change${draft!.changeCount == 1 ? '' : 's'}. '}'
                 'Make it for real in the FPL app.',
                 style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.35),
               ),
