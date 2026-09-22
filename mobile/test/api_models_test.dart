@@ -20,7 +20,9 @@ import 'package:flutter_test/flutter_test.dart';
 Map<String, dynamic> sample(String name) {
   final file = File('../spikes/018-flutter-read-slice/api-samples/$name.json');
   if (!file.existsSync()) {
-    throw StateError('missing ${file.absolute.path} — run regenerate_samples.py');
+    throw StateError(
+      'missing ${file.absolute.path} — run regenerate_samples.py',
+    );
   }
   return jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
 }
@@ -92,7 +94,10 @@ void main() {
       expect(answer.gameweek, isNotNull);
       expect(answer.picks, isNotEmpty);
       final xps = answer.picks.map((p) => p.xp).toList();
-      expect(xps, equals(List<double>.from(xps)..sort((a, b) => b.compareTo(a))));
+      expect(
+        xps,
+        equals(List<double>.from(xps)..sort((a, b) => b.compareTo(a))),
+      );
     });
 
     test('a doubtful pick is flagged, not dropped', () {
@@ -168,8 +173,16 @@ void _myTeamTests() {
       // ⚠️ The kit is keyed by club, so a player whose club is missing gets an empty string and a placeholder
       // shirt — never a crash on the screen a manager checks most.
       for (final p in team.analysis.xi) {
-        expect(team.kitFor(p), isNotEmpty, reason: '${p.name} (${p.team}) has no kit');
-        expect(team.fixtureFor(p), isNotNull, reason: '${p.name} has no fixture');
+        expect(
+          team.kitFor(p),
+          isNotEmpty,
+          reason: '${p.name} (${p.team}) has no kit',
+        );
+        expect(
+          team.fixtureFor(p),
+          isNotNull,
+          reason: '${p.name} has no fixture',
+        );
       }
     });
 
@@ -184,8 +197,10 @@ void _myTeamTests() {
       // ⭐ Not the order it arrived in: the first sub on is the one FPL brings on first.
       final ordered = team.orderedBench;
       expect(ordered, hasLength(team.analysis.bench.length));
-      expect(ordered.map((p) => p.id).toSet(),
-          equals(team.analysis.bench.map((p) => p.id).toSet()));
+      expect(
+        ordered.map((p) => p.id).toSet(),
+        equals(team.analysis.bench.map((p) => p.id).toSet()),
+      );
       final first = team.benchRoles['1st'];
       if (first != null) expect(ordered.first.id, equals(first));
     });
@@ -194,7 +209,10 @@ void _myTeamTests() {
       // ⚠️ `analysis.topPick` is the recommendation; `captainId` is what is actually set. Rendering one as
       // the other tells a manager what they did wrong while pretending it is what they did.
       expect(team.captainId, isNot(equals(-1)));
-      final ids = [...team.analysis.xi, ...team.analysis.bench].map((p) => p.id);
+      final ids = [
+        ...team.analysis.xi,
+        ...team.analysis.bench,
+      ].map((p) => p.id);
       expect(ids, contains(team.captainId));
     });
   });

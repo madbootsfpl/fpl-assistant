@@ -140,6 +140,21 @@ class ServiceClient {
         .toList();
   }
 
+  /// Every club's eight-axis fingerprint, ranked across the league (ADR-247).
+  ///
+  /// ⚠️ Not under `/squad/` — this is the league, not your team. [playerIds] filters nothing; it only
+  /// marks which clubs you hold players from.
+  Future<List<ClubDna>> teamDna({List<int> playerIds = const []}) async {
+    final body = await _post('team-dna', {
+      'player_ids': playerIds,
+      'horizon': 1,
+    });
+    return [
+      for (final row in (body['teams'] as List? ?? []))
+        ClubDna.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
   /// When to play each chip, and what a wildcard is worth.
   ///
   /// ⚠️ There is no `horizon`: a chip's window is its **deadline**, decided by the server (ADR-166).

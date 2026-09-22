@@ -31,7 +31,10 @@ void main() {
     });
 
     test('https is left alone', () {
-      expect(Server.tidy('https://api.madboots.app'), 'https://api.madboots.app');
+      expect(
+        Server.tidy('https://api.madboots.app'),
+        'https://api.madboots.app',
+      );
     });
   });
 
@@ -62,11 +65,13 @@ void main() {
 
     test('the health route is what gets asked', () async {
       late Uri asked;
-      await reach('http://host:8078/',
-          client: MockClient((r) async {
-            asked = r.url;
-            return http.Response(_health, 200);
-          }));
+      await reach(
+        'http://host:8078/',
+        client: MockClient((r) async {
+          asked = r.url;
+          return http.Response(_health, 200);
+        }),
+      );
       // ⚠️ The trailing slash the user typed must not survive into the URL.
       expect(asked.toString(), 'http://host:8078/api/v1/health');
     });
@@ -88,7 +93,9 @@ void main() {
     });
 
     test('a 200 of HTML is named as such', () async {
-      final r = await against((_) => http.Response('<html>Router setup</html>', 200));
+      final r = await against(
+        (_) => http.Response('<html>Router setup</html>', 200),
+      );
       expect(r.reach, Reach.wrongService);
       expect(r.message, contains('JSON'));
     });
@@ -101,11 +108,13 @@ void main() {
 
     test('a typo never reaches the network at all', () async {
       var called = false;
-      final r = await reach('http://localhost:8078/api/v1/docs',
-          client: MockClient((_) async {
-            called = true;
-            return http.Response(_health, 200);
-          }));
+      final r = await reach(
+        'http://localhost:8078/api/v1/docs',
+        client: MockClient((_) async {
+          called = true;
+          return http.Response(_health, 200);
+        }),
+      );
       expect(r.reach, Reach.badAddress);
       // ⭐ *"That is not an address"* beats *"the server did not answer"* when the fault is the address —
       // and a request that is never sent cannot be answered by the wrong machine either.
@@ -113,14 +122,25 @@ void main() {
     });
 
     test('nothing listening names all three causes, because they are indistinguishable', () async {
-      final r = await reach('http://host:8078',
-          client: MockClient((_) async => throw http.ClientException('refused')));
+      final r = await reach(
+        'http://host:8078',
+        client: MockClient((_) async => throw http.ClientException('refused')),
+      );
       expect(r.reach, Reach.refused);
       // ⚠️ Most of these are not the app's fault, and two are permissions a person has to grant that
       // never announce themselves again once denied. A bare "connection refused" sends someone hunting
       // through the code for a phone that is on 4G.
-      for (final cause in ['Local Network', 'same Wi-Fi', 'awake', 'address change']) {
-        expect(r.message, contains(cause), reason: 'the message drops "$cause"');
+      for (final cause in [
+        'Local Network',
+        'same Wi-Fi',
+        'awake',
+        'address change',
+      ]) {
+        expect(
+          r.message,
+          contains(cause),
+          reason: 'the message drops "$cause"',
+        );
       }
     });
   });
@@ -131,32 +151,50 @@ void main() {
     // machine the developer sits at stops being advice once the client is a handset.*
     final message = refusedMessage('http://192.168.1.35:8078');
     for (final desktopism in ['venv/', 'uvicorn', 'python']) {
-      expect(message.toLowerCase(), isNot(contains(desktopism)),
-          reason: 'the message tells a phone to run "$desktopism"');
+      expect(
+        message.toLowerCase(),
+        isNot(contains(desktopism)),
+        reason: 'the message tells a phone to run "$desktopism"',
+      );
     }
-    expect(message, contains('Settings'), reason: 'it has to say where the address is changed');
+    expect(
+      message,
+      contains('Settings'),
+      reason: 'it has to say where the address is changed',
+    );
   });
 
-  test('the Settings check and a failed call explain it the same way', () async {
-    // ⭐ Two doors to one room drift apart (ADR-184). The check would be worthless if it disagreed with
-    // the screen that sent you to it.
-    final fromCheck = await reach('http://host:8078',
-        client: MockClient((_) async => throw http.ClientException('refused')));
-    expect(fromCheck.message, refusedMessage('http://host:8078'));
-  });
+  test(
+    'the Settings check and a failed call explain it the same way',
+    () async {
+      // ⭐ Two doors to one room drift apart (ADR-184). The check would be worthless if it disagreed with
+      // the screen that sent you to it.
+      final fromCheck = await reach(
+        'http://host:8078',
+        client: MockClient((_) async => throw http.ClientException('refused')),
+      );
+      expect(fromCheck.message, refusedMessage('http://host:8078'));
+    },
+  );
 
   test('the default is a compile-time default, overridable at build time', () {
     // ⚠️ Not asserting the literal — `--dart-define=MADBOOTS_API=…` is meant to change it, and a test
     // pinned to localhost would fail the hosted build it exists to support.
-    expect(Server.problemWith(kDefaultBaseUrl), isNull,
-        reason: 'whatever is baked in has to be a usable address');
+    expect(
+      Server.problemWith(kDefaultBaseUrl),
+      isNull,
+      reason: 'whatever is baked in has to be a usable address',
+    );
   });
 
-  test('the health body this file asserts against is the shape the client reads', () {
-    // ⭐ The sample above is a literal, which is exactly the thing that rots. This pins the two fields
-    // the client actually branches on, so a rename on the server fails here rather than in the field.
-    final body = jsonDecode(_health) as Map<String, dynamic>;
-    expect(body['service'], 'madboots');
-    expect(body.containsKey('version'), isTrue);
-  });
+  test(
+    'the health body this file asserts against is the shape the client reads',
+    () {
+      // ⭐ The sample above is a literal, which is exactly the thing that rots. This pins the two fields
+      // the client actually branches on, so a rename on the server fails here rather than in the field.
+      final body = jsonDecode(_health) as Map<String, dynamic>;
+      expect(body['service'], 'madboots');
+      expect(body.containsKey('version'), isTrue);
+    },
+  );
 }

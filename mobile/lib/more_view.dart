@@ -25,6 +25,7 @@ class MoreView extends StatelessWidget {
     required this.managerId,
     required this.freeTransfers,
     required this.onOpenChips,
+    required this.onOpenTeamDna,
     required this.onOpenSignals,
     required this.onOpenSettings,
     required this.onOpenFeedback,
@@ -39,6 +40,11 @@ class MoreView extends StatelessWidget {
   /// (ADR-230). ⚠️ The better answer is probably a badge on the pitch: **being told beats going to look**,
   /// which is the whole reason a phone suits this.
   final VoidCallback onOpenSignals;
+
+  /// ⭐ In More rather than the bar: it is research, and *frequency earns a slot* (ADR-230). ⚠️ It is also
+  /// the app's first **exploration** surface — the audit put those on the web, so it is worth watching
+  /// whether it pulls the phone the wrong way.
+  final VoidCallback onOpenTeamDna;
 
   /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
   /// *Working earns a place; frequency earns a slot.*
@@ -58,6 +64,14 @@ class MoreView extends StatelessWidget {
             'FPL news, reported moves, sell-offs the data cannot explain, and what the crowd is '
             'buying — your fifteen or the whole market, strongest evidence first. Marks what is new.',
         onTap: onOpenSignals,
+      ),
+      _Row(
+        icon: Icons.insights_outlined,
+        name: 'Team DNA',
+        why:
+            'Every club ranked across eight things that decide points — attack, defence, set pieces, '
+            'fixtures. Which side a player belongs to is half of what he is worth.',
+        onTap: onOpenTeamDna,
       ),
       _Row(
         icon: Icons.style_outlined,
@@ -89,14 +103,16 @@ class MoreView extends StatelessWidget {
 
       const _Heading('On the web'),
       const _Note(
-        'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA and '
-        'Trending — and the market-wide view of Signals, where this app shows only your own squad.',
+        'madboots.streamlit.app carries the research surfaces a bigger screen earns: the fixture '
+        'ticker, Player DNA, Squad Lab and Ask.',
       ),
       const _Note(
-        // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find
-        // Team DNA here should learn that it is a decision, not an oversight.
+        // ⚠️ **Updated when the line moved.** This paragraph used to name Team DNA and Trending as
+        // web-only — and they are not, since ADR-245 and ADR-247. ⭐ *Positioning copy that outlives the
+        // positioning is worse than none: it teaches a reader something the app then contradicts.*
         'That split is deliberate. This app is the decision layer — what to do this week, and what a '
-        'move is worth. The web app stays the exploration layer, where a bigger screen earns its keep.',
+        'move is worth. The web app stays the exploration layer, and a few research surfaces have '
+        'crossed over where the phone could carry them.',
         muted: true,
       ),
       const Padding(

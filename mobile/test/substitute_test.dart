@@ -15,10 +15,9 @@ import 'package:madboots/draft.dart';
 
 MyTeam sampleTeam() => MyTeam.fromJson(
   jsonDecode(
-        File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
-            .readAsStringSync(),
-      )
-      as Map<String, dynamic>,
+    File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
+        .readAsStringSync(),
+  ) as Map<String, dynamic>,
 );
 
 Draft swap(MyTeam team, int a, int b, {Draft? existing}) => Draft.substitute(
@@ -35,23 +34,32 @@ Draft swap(MyTeam team, int a, int b, {Draft? existing}) => Draft.substitute(
 );
 
 void main() {
-  test('the server tells the client who is legal, and keepers are the hard case', () {
-    final team = sampleTeam();
-    expect(team.swaps, isNotEmpty, reason: 'the sample carries no swap lists');
+  test(
+    'the server tells the client who is legal, and keepers are the hard case',
+    () {
+      final team = sampleTeam();
+      expect(
+        team.swaps,
+        isNotEmpty,
+        reason: 'the sample carries no swap lists',
+      );
 
-    final keepers = [
-      ...team.analysis.xi,
-      ...team.analysis.bench,
-    ].where((p) => p.position == 'GK').toList();
-    expect(keepers, hasLength(2));
+      final keepers = [
+        ...team.analysis.xi,
+        ...team.analysis.bench,
+      ].where((p) => p.position == 'GK').toList();
+      expect(keepers, hasLength(2));
 
-    // ⚠️ A keeper may only ever change places with the other keeper. A client that worked this out
-    // itself would be a second implementation of a rule the engine owns — and this is the one everybody
-    // gets wrong first.
-    for (final gk in keepers) {
-      expect(team.swapsFor(gk.id), [keepers.firstWhere((o) => o.id != gk.id).id]);
-    }
-  });
+      // ⚠️ A keeper may only ever change places with the other keeper. A client that worked this out
+      // itself would be a second implementation of a rule the engine owns — and this is the one everybody
+      // gets wrong first.
+      for (final gk in keepers) {
+        expect(team.swapsFor(gk.id), [
+          keepers.firstWhere((o) => o.id != gk.id).id,
+        ]);
+      }
+    },
+  );
 
   test('a substitution takes the outgoing player’s bench slot, not the end of the queue', () {
     final team = sampleTeam();
@@ -81,9 +89,17 @@ void main() {
     final bench = team.analysis.bench.map((p) => p.id).toList();
     final captain = team.analysis.xi.first.id;
 
-    final first = swap(team, bench.first, team.swapsFor(bench.first).first)
-        .copyWith(captainId: captain);
-    final second = swap(team, bench.last, team.swapsFor(bench.last).first, existing: first);
+    final first = swap(
+      team,
+      bench.first,
+      team.swapsFor(bench.first).first,
+    ).copyWith(captainId: captain);
+    final second = swap(
+      team,
+      bench.last,
+      team.swapsFor(bench.last).first,
+      existing: first,
+    );
 
     expect(second.captainId, captain);
   });

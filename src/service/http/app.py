@@ -318,6 +318,29 @@ class SignalsBody(BaseModel):
                        description="squad = your fifteen · global = the market, above a live ownership cut.")
 
 
+class TeamDnaBody(BaseModel):
+    """⭐ Your squad is optional and filters nothing — it only marks the clubs you hold players from."""
+
+    player_ids: list[int] = Field(default_factory=list,
+                                  description="Optional. Marks which clubs your own players come from.")
+    horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to look ahead.")
+
+
+@app.post("/api/v1/team-dna")
+def team_dna(body: TeamDnaBody) -> dict:
+    """Every club's eight-axis fingerprint, ranked across the league, best first.
+
+    ⭐⭐ **Team DNA, not player DNA.** A player's fingerprint answers *what kind of player is he?*, which
+    the app answers twice already — the expanding card and Boot Battle. A club's answers *is this attack
+    actually any good?*, which is what decides between two players from different sides.
+
+    ⚠️ Not under `/squad/` — this is the league, not your team.
+
+    ⭐ Every axis is a **percentile**, so `74` means the same thing on Attacking Threat as on Squad Depth.
+    """
+    return _answer(service.team_dna, service.TeamDnaRequest(**body.model_dump()))
+
+
 @app.post("/api/v1/squad/signals")
 def squad_signals(body: SignalsBody) -> dict:
     """What a manager should know — about his own fifteen, or about the market.

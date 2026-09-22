@@ -309,6 +309,21 @@ class SignalsRequest(SquadRequest):
 
 
 @dataclass(frozen=True)
+class TeamDnaRequest:
+    """Every club's eight-axis fingerprint, ranked across the league (ADR-118, ADR-247).
+
+    ⭐ `player_ids` is **optional and does not filter anything** — it only marks which clubs your own
+    players come from. A league table you can see yourself in is a different object from a league table.
+    """
+
+    player_ids: list[int] = field(default_factory=list)
+    horizon: int = DEFAULT_HORIZON
+
+    def validate(self) -> None:
+        _check_horizon(self.horizon)
+
+
+@dataclass(frozen=True)
 class CompareRequest:
     """**Boot Battle** — two players, side by side (ADR-110/236).
 

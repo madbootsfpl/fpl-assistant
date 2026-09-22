@@ -21,6 +21,8 @@ from src.analytics import (
     select_squad,
     suggest_transfer_plan,
     suggest_transfers,
+    team_dna_all,
+    team_insights,
     team_schedule,
 )
 from src.analytics.compare import compare_rows, stat_rows
@@ -47,6 +49,7 @@ from src.service.requests import (
     RouteRequest,
     SignalsRequest,
     SquadRequest,
+    TeamDnaRequest,
     TransfersRequest,
 )
 from src.storage import Storage
@@ -968,6 +971,52 @@ def _market_subjects(players):
         return [], None
     cut = shares[min(len(shares) - 1, int(len(shares) * GLOBAL_OWNERSHIP_PERCENTILE / 100))]
     return [p for p in rows if (p.get("selected_by") or 0) >= cut], round(cut, 1)
+
+
+def team_dna(request: TeamDnaRequest, *, store: Storage | None = None) -> dict:
+    """Every club's fingerprint, ranked across the league (ADR-247).
+
+    ⭐⭐ **Team DNA, not player DNA, and that is the choice.** A player's fingerprint answers *what kind of
+    player is he?* — a question the app already answers twice, on the expanding card (ADR-237) and in Boot
+    Battle (ADR-236). A club's answers *is this attack actually any good?*, which is what you need when
+    choosing between two players from different sides, and the app could not answer it at all.
+
+    ⭐ **Eight axes as percentiles**, so "74" means the same thing on Attacking Threat as on Squad Depth.
+    The web draws them as a radar; ⚠️ *a radar needs width a phone does not have*, so the client draws bars
+    — the same numbers, a shape that survives the screen.
+
+    ⭐ `player_ids` marks which clubs you hold players from. ⚠️ It **filters nothing**: a league table you
+    can see yourself in is a different object from a league table of the clubs you already own.
+    """
+    request.validate()
+    store, ours = opened(store)
+    try:
+        players = store.get_players()
+        teams = store.get_teams()
+        upcoming = store.get_upcoming_fixtures()
+        names = {t["short_name"]: t["name"] for t in teams}
+        all_dna = team_dna_all(players, upcoming, team_names=names)
+        mine = {p["team"] for p in players if p["id"] in set(request.player_ids)}
+    finally:
+        if ours:
+            store.close()
+
+    rows = []
+    for dna in all_dna.values():
+        rows.append({
+            "team": dna.team,
+            "name": dna.name,
+            "grade": dna.grade,
+            "score": dna.grade_score,
+            "yours": dna.team in mine,
+            "axes": [{"label": a.label, "sublabel": a.sublabel, "value": a.value,
+                      "percentile": a.percentile} for a in dna.axes],
+            "insights": [{"kind": i.kind, "text": i.text} for i in team_insights(dna)],
+        })
+    # ⭐ Best first. ⚠️ Ties broken by name rather than left to dict order, so two runs of the same data
+    # cannot disagree about the table — *an unstable sort is a diff that appears from nowhere.*
+    rows.sort(key=lambda r: (-r["score"], r["name"]))
+    return {"teams": rows, "yours": sorted(mine)}
 
 
 def _chip_status(manager_id, gameweek) -> dict:

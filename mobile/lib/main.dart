@@ -21,6 +21,7 @@ import 'feedback_view.dart';
 import 'more_view.dart';
 import 'pitch.dart';
 import 'player_sheet.dart';
+import 'team_dna_view.dart';
 import 'this_week_view.dart';
 import 'transfers_view.dart';
 
@@ -460,6 +461,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         ),
         onOpenSignals: () =>
             _open('Signals', SignalsView(client: _client, team: team)),
+        onOpenTeamDna: () =>
+            _open('Team DNA', TeamDnaView(client: _client, team: team)),
         onOpenFeedback: () =>
             _open('Tell us something', FeedbackView(client: _client)),
         onOpenSettings: () => _open(

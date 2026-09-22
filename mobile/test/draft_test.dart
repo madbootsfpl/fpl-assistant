@@ -13,21 +13,24 @@ Draft draftOf({
   int gameweek = 6,
   List<int> base = const [1, 2, 3, 4, 5],
   List<int>? players,
-}) =>
-    Draft(
-      managerId: managerId,
-      gameweek: gameweek,
-      basePlayerIds: base,
-      playerIds: players ?? const [1, 2, 3, 4, 99],
-      benchIds: const [99],
-      savedAt: DateTime(2026, 9, 22),
-    );
+}) => Draft(
+  managerId: managerId,
+  gameweek: gameweek,
+  basePlayerIds: base,
+  playerIds: players ?? const [1, 2, 3, 4, 99],
+  benchIds: const [99],
+  savedAt: DateTime(2026, 9, 22),
+);
 
 void main() {
   group('staleness', () {
     test('a plan for the same manager, week and squad still applies', () {
       expect(
-        draftOf().checkAgainst(managerId: 2885974, gameweek: 6, fplPlayerIds: [1, 2, 3, 4, 5]),
+        draftOf().checkAgainst(
+          managerId: 2885974,
+          gameweek: 6,
+          fplPlayerIds: [1, 2, 3, 4, 5],
+        ),
         DraftStaleness.fresh,
       );
     });
@@ -36,21 +39,33 @@ void main() {
       // ⭐⭐ The case this whole design exists for: plan on Friday, make the transfer for real on Saturday,
       // reopen on Sunday. A snapshot would show Friday's plan as your team.
       expect(
-        draftOf().checkAgainst(managerId: 2885974, gameweek: 6, fplPlayerIds: [1, 2, 3, 4, 99]),
+        draftOf().checkAgainst(
+          managerId: 2885974,
+          gameweek: 6,
+          fplPlayerIds: [1, 2, 3, 4, 99],
+        ),
         DraftStaleness.squadChanged,
       );
     });
 
     test('a plan for a gameweek already played is meaningless', () {
       expect(
-        draftOf().checkAgainst(managerId: 2885974, gameweek: 7, fplPlayerIds: [1, 2, 3, 4, 5]),
+        draftOf().checkAgainst(
+          managerId: 2885974,
+          gameweek: 7,
+          fplPlayerIds: [1, 2, 3, 4, 5],
+        ),
         DraftStaleness.gameweekPassed,
       );
     });
 
     test('another manager\'s plan is not yours', () {
       expect(
-        draftOf().checkAgainst(managerId: 123, gameweek: 6, fplPlayerIds: [1, 2, 3, 4, 5]),
+        draftOf().checkAgainst(
+          managerId: 123,
+          gameweek: 6,
+          fplPlayerIds: [1, 2, 3, 4, 5],
+        ),
         DraftStaleness.otherManager,
       );
     });
@@ -59,7 +74,11 @@ void main() {
       // ⚠️ FPL returns picks in its own order, and that order moves when a manager reorders the bench.
       // Treating order as identity would throw away a perfectly good plan for no reason.
       expect(
-        draftOf().checkAgainst(managerId: 2885974, gameweek: 6, fplPlayerIds: [5, 3, 1, 4, 2]),
+        draftOf().checkAgainst(
+          managerId: 2885974,
+          gameweek: 6,
+          fplPlayerIds: [5, 3, 1, 4, 2],
+        ),
         DraftStaleness.fresh,
       );
     });
@@ -68,7 +87,11 @@ void main() {
       // ⭐ Absent is not "different". Refusing to restore because a field was missing would punish the
       // manager for the server's silence.
       expect(
-        draftOf().checkAgainst(managerId: 2885974, gameweek: null, fplPlayerIds: [1, 2, 3, 4, 5]),
+        draftOf().checkAgainst(
+          managerId: 2885974,
+          gameweek: null,
+          fplPlayerIds: [1, 2, 3, 4, 5],
+        ),
         DraftStaleness.fresh,
       );
     });
@@ -76,7 +99,11 @@ void main() {
     test('a squad of the same size with a different player is caught', () {
       // ⚠️ Length alone is not identity — fifteen players are always fifteen players.
       expect(
-        draftOf().checkAgainst(managerId: 2885974, gameweek: 6, fplPlayerIds: [1, 2, 3, 4, 77]),
+        draftOf().checkAgainst(
+          managerId: 2885974,
+          gameweek: 6,
+          fplPlayerIds: [1, 2, 3, 4, 77],
+        ),
         DraftStaleness.squadChanged,
       );
     });

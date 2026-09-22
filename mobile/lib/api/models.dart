@@ -895,3 +895,68 @@ class SuggestedLineup {
 
   int get changes => bringIn.length;
 }
+
+/// One club's fingerprint (ADR-247).
+///
+/// ⭐ Every axis is a **percentile**, so 74 means the same thing on Attacking Threat as on Squad Depth —
+/// which is what lets eight different units share one scale, and one row of bars.
+class ClubDna {
+  ClubDna({
+    required this.team,
+    required this.name,
+    required this.grade,
+    required this.score,
+    required this.yours,
+    required this.axes,
+    required this.insights,
+  });
+
+  factory ClubDna.fromJson(Map<String, dynamic> json) => ClubDna(
+    team: json['team'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    grade: json['grade'] as String? ?? '',
+    score: json['score'] as int? ?? 0,
+    yours: json['yours'] as bool? ?? false,
+    axes: [
+      for (final a in (json['axes'] as List? ?? []))
+        DnaAxis.fromJson(a as Map<String, dynamic>),
+    ],
+    insights: [
+      for (final i in (json['insights'] as List? ?? []))
+        (kind: '${(i as Map<String, dynamic>)['kind']}', text: '${i['text']}'),
+    ],
+  );
+
+  final String team;
+  final String name;
+  final String grade;
+  final int score;
+
+  /// Whether you hold anyone from this club — ⚠️ a mark, never a filter.
+  final bool yours;
+  final List<DnaAxis> axes;
+  final List<({String kind, String text})> insights;
+}
+
+class DnaAxis {
+  DnaAxis({
+    required this.label,
+    required this.sublabel,
+    required this.value,
+    required this.percentile,
+  });
+
+  factory DnaAxis.fromJson(Map<String, dynamic> json) => DnaAxis(
+    label: json['label'] as String? ?? '',
+    sublabel: json['sublabel'] as String? ?? '',
+    value: (json['value'] as num?)?.toDouble() ?? 0,
+    percentile: (json['percentile'] as num?)?.toInt(),
+  );
+
+  final String label;
+  final String sublabel;
+  final double value;
+
+  /// ⚠️ Null means **unranked**, not zero — there was no pool to rank against.
+  final int? percentile;
+}

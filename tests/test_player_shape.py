@@ -124,6 +124,10 @@ def _answers(store):
 NO_PLAYERS = {
     "my_team",      # composes `analysis`, which is swept in its own right
     "feedback",     # relays a tester's note; there is no player in it
+    # ⚠️ Answers about **clubs**, not players — twenty fingerprints, no player row anywhere in it. Its own
+    # shape is guarded by `test_team_dna_endpoint.py`. ⭐ *"Nothing to check here" has to be written down,
+    # or the next reader cannot tell it from "nobody checked".*
+    "team_dna",
 }
 
 
