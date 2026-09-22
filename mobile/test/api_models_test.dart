@@ -13,6 +13,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:madboots/api/client.dart';
 import 'package:madboots/api/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,6 +27,7 @@ Map<String, dynamic> sample(String name) {
 
 void main() {
   _myTeamTests();
+  _unreachableTests();
   group('analysis', () {
     late SquadAnalysis answer;
     setUp(() => answer = SquadAnalysis.fromJson(sample('analysis')));
@@ -194,6 +196,46 @@ void _myTeamTests() {
       expect(team.captainId, isNot(equals(-1)));
       final ids = [...team.analysis.xi, ...team.analysis.bench].map((p) => p.id);
       expect(ids, contains(team.captainId));
+    });
+  });
+}
+
+// ---- a dead server reads like a dead server (ADR-233) ------------------------------------
+
+void _unreachableTests() {
+  group('unreachable service', () {
+    test('a refused connection becomes an actionable message', () async {
+      // ⭐ Port 1 is reserved and nothing listens on it — a real refused connection rather than a stub, so
+      // this exercises the same path the owner hit.
+      final client = ServiceClient(baseUrl: 'http://localhost:1');
+      try {
+        await client.analysis([1, 2, 3]);
+        fail('a refused connection must not look like an answer');
+      } on ApiException catch (e) {
+        expect(e.unreachable, isTrue);
+        expect(e.detail, contains('not answering'));
+        // ⚠️ The address AND the command. "Cannot connect" without either tells a reader only that they
+        // are stuck.
+        expect(e.detail, contains('localhost:1'));
+        expect(e.detail, contains('uvicorn'));
+        // ⭐ And no errno text — the thing this replaced.
+        expect(e.detail, isNot(contains('errno')));
+      } finally {
+        client.close();
+      }
+    });
+
+    test('friendlyError unwraps it rather than printing the object', () {
+      final e = ApiException(0, 'The service is not answering.');
+      expect(friendlyError(e), 'The service is not answering.');
+      expect(friendlyError(e), isNot(contains('ApiException')));
+    });
+
+    test('healthy() answers false instead of throwing', () async {
+      // ⚠️ A health check that throws is a health check that takes the screen down with it.
+      final client = ServiceClient(baseUrl: 'http://localhost:1');
+      expect(await client.healthy(), isFalse);
+      client.close();
     });
   });
 }

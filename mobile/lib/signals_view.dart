@@ -114,7 +114,7 @@ class _SignalsViewState extends State<SignalsView> {
             return Padding(
               padding: const EdgeInsets.all(20),
               child: Center(
-                child: SelectableText('${snapshot.error}',
+                child: SelectableText(friendlyError(snapshot.error),
                     style: const TextStyle(color: Colors.white70, height: 1.55)),
               ),
             );

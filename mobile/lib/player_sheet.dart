@@ -187,7 +187,7 @@ class _Options extends StatelessWidget {
           if (snapshot.hasError) {
             return Padding(
               padding: const EdgeInsets.all(16),
-              child: SelectableText('${snapshot.error}',
+              child: SelectableText(friendlyError(snapshot.error),
                   style: const TextStyle(color: Colors.white70)),
             );
           }

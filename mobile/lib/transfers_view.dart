@@ -58,7 +58,7 @@ class _TransfersViewState extends State<TransfersView> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return _Message(text: '${snapshot.error}');
+            return _Message(text: friendlyError(snapshot.error));
           }
           final answer = snapshot.data!;
           return ListView(

@@ -4,23 +4,41 @@
 /// defining the engine's input, which is how one rule becomes two implementations (audit §4.2).
 library;
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
 
-/// Raised when the service refuses a request. ⭐ **400 is the caller's mistake, not a server fault**, and
-/// the server says why — so this carries the reason rather than a status code alone.
+/// Raised when a request does not come back with an answer. ⭐ **400 is the caller's mistake, not a server
+/// fault**, and the server says why — so this carries the reason rather than a status code alone.
+///
+/// ⚠️ `statusCode == 0` means the request never reached anyone: the service is not running, or the device
+/// cannot see it.
 class ApiException implements Exception {
   ApiException(this.statusCode, this.detail);
 
   final int statusCode;
   final String detail;
 
+  bool get unreachable => statusCode == 0;
+
   @override
-  String toString() => 'ApiException($statusCode): $detail';
+  String toString() => detail;
 }
+
+/// What to show a human when a call fails.
+///
+/// ⭐⭐ **Here, in the client, because the client is the only thing that knows the base URL and what a
+/// refused socket means.** ⚠️ A good version of this message already existed — in `main.dart`, on the
+/// landing screen, and **nowhere else**: six other screens surfaced
+/// `ClientException with SocketException: Connection refused … errno = 61` verbatim.
+///
+/// ⭐ *A fix scoped to where it was noticed is a fix the next screen does not get.*
+String friendlyError(Object? error) =>
+    error is ApiException ? error.detail : '$error';
 
 class ServiceClient {
   ServiceClient({required this.baseUrl, http.Client? client})
@@ -36,11 +54,22 @@ class ServiceClient {
   /// one. It used to assume that prefix, which made the market endpoint — the one thing that is
   /// not squad-shaped — reachable only by a `../` that depended on URL normalisation.
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/v1/$path'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
-    );
+    late final http.Response response;
+    try {
+      response = await _client.post(
+        Uri.parse('$baseUrl/api/v1/$path'),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+    } on SocketException {
+      throw ApiException(0, _notRunning);
+    } on http.ClientException {
+      // ⚠️ On web there is no `SocketException` — a refused connection arrives as a `ClientException`.
+      // Catching only the first would have left Chrome showing the raw text this message replaces.
+      throw ApiException(0, _notRunning);
+    } on TimeoutException {
+      throw ApiException(0, 'The service did not answer in time.\n\n$baseUrl');
+    }
     if (response.statusCode != 200) {
       // ⚠️ FastAPI answers a malformed body with 422 and a *list* of errors, and a refused squad with 400
       // and a string. Both are the caller's fault and both belong in the same exception.
@@ -119,9 +148,20 @@ class ServiceClient {
       }));
 
   Future<bool> healthy() async {
-    final response = await _client.get(Uri.parse('$baseUrl/api/v1/health'));
-    return response.statusCode == 200;
+    try {
+      final response = await _client.get(Uri.parse('$baseUrl/api/v1/health'));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
+
+  /// ⭐ One string, one place. It names the address **and** the command, because "cannot connect" without
+  /// either is a message that tells you only that you are stuck.
+  String get _notRunning =>
+      'The service is not answering on $baseUrl.\n\n'
+      'Start it with:\n'
+      '  venv/bin/python -m uvicorn src.service.http:app --port 8078 --reload --reload-dir src';
 
   Future<SquadAnalysis> analysis(List<int> playerIds,
           {List<int> benchIds = const [], int horizon = 5}) async =>

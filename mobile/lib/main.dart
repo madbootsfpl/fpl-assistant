@@ -115,16 +115,12 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   /// ⚠️ This is also why there is still no Riverpod: a `setState` at the top of one screen is genuinely
   /// enough today. When it stops being enough, that is the moment it earns its place.
 
-  /// ⭐ The health check first, because *"the service is not running"* and *"that team is not public yet"*
-  /// are different problems, and only one of them is the manager's to fix.
+  /// ⚠️ **The health check is gone, and the message with it.** It said the same thing the client now says
+  /// for every call — and saying it here meant *only* this screen said it: six others surfaced
+  /// `SocketException: Connection refused … errno = 61` verbatim.
+  ///
+  /// ⭐ *A fix scoped to where it was noticed is a fix the next screen does not get.*
   Future<MyTeam> _load(int managerId) async {
-    if (!await _client.healthy()) {
-      throw StateError(
-        'The service is not answering on $kBaseUrl.\n\n'
-        'Start it with:\n'
-        '  venv/bin/python -m uvicorn src.service.http:app --port 8078',
-      );
-    }
     final real = await _client.myTeam(managerId, horizon: 1, freeTransfers: _freeTransfers);
 
     // ⭐⭐ **The real team is fetched FIRST, always.** A saved draft is an overlay on reality, never a
@@ -360,8 +356,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       };
   }
 
-  static String _reason(Object? error) =>
-      error is ApiException ? error.detail : '$error';
+  static String _reason(Object? error) => friendlyError(error);
 }
 
 /// ⭐ A wordmark and nothing else. The manager id used to live here, which made a **setting** look like a
