@@ -201,13 +201,21 @@ def _levers_lines(levers) -> list:
     """
     if not levers:
         return []
-    ceiling, score, acts = levers["ceiling"], levers["score"], levers["levers"]
+    ceiling, score = levers["ceiling"], levers["score"]
+    # ⚠️ **Split by what a line COSTS, not by whether it is a flag** (ADR-240). A flagged player already on
+    # your bench is worth 0 — counting him in "minus N for N flagged players" made the arithmetic in the
+    # sentence disagree with the arithmetic in the score.
+    acts = [lv for lv in levers["levers"] if lv.get("worth")]
+    noted = [lv for lv in levers["levers"] if not lv.get("worth")]
     if score >= ceiling:
-        return [f"  Why {score}? Nothing is holding it down — the ceiling is {levers['fixed']}."]
+        out = [f"  Why {score}? Nothing is holding it down — the ceiling is {levers['fixed']}."]
+        out += [f"    · No cost: {lv['what']}" for lv in noted]
+        return out
     gap = ceiling - score
     out = [f"  Why {score}? {ceiling} for your captain, minus {gap} for "
            f"{len(acts)} flagged player{'s' if len(acts) != 1 else ''}."]
     out += [f"    · Worth {lv['worth']}: {lv['what']}" for lv in acts]
+    out += [f"    · No cost: {lv['what']}" for lv in noted]
     out.append(f"    Ceiling this week is {ceiling} — {levers['fixed']}.")
     return out
 

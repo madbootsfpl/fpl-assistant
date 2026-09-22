@@ -551,8 +551,28 @@ def _lineup_edge_count(lineup, xp_by_id) -> int:
 
 def gameweek_confidence(captain_confidence_score, n_flags: int) -> int:
     """A plan-level confidence (ADR-089), 1–99 — the week is driven by the captain (its biggest single lever),
-    tempered by flagged (doubtful/unavailable) players. Documented, not a probability."""
+    tempered by flagged (doubtful/unavailable) players. Documented, not a probability.
+
+    ⚠️⚠️ **`n_flags` counts flagged players IN THE XI, not in the squad** (ADR-240, from tester feedback).
+    A flagged player who is already on your bench costs the XI nothing — ⭐ *a risk you have already
+    mitigated is not a risk to this week's plan, and charging for it makes the score unimprovable by the
+    very action it is asking for.*
+    """
     return max(1, min(99, round((captain_confidence_score or 50) - 8 * max(0, n_flags))))
+
+
+def starting_flags(flags) -> list:
+    """The flagged players who are actually in the XI.
+
+    ⭐⭐ **The information was always there and the score ignored it.** `gameweek.py` has computed
+    `"starting": p["id"] in optimal` since ADR-208, and said so in a comment — *"a flagged player already on
+    the bench costs the XI nothing"* — while `gameweek_confidence` counted the whole squad. ⚠️ *A fact
+    computed and then not used reads, from the outside, exactly like a fact nobody knew.*
+
+    ⚠️ Defaults to **True** for a flag with no `starting` key: an older payload that cannot say should be
+    charged for, not excused. Undercounting silently inflates the score, which is the worse failure.
+    """
+    return [f for f in (flags or []) if f.get("starting", True)]
 
 
 FLAG_COST = 8      # what one flagged player takes off the week's confidence (`gameweek_confidence`)
@@ -610,9 +630,14 @@ def confidence_levers(captain_score, flags) -> dict | None:
     if captain_score is None:
         return None
     flags = list(flags or [])
-    score = gameweek_confidence(captain_score, len(flags))
+    charged = starting_flags(flags)
+    score = gameweek_confidence(captain_score, len(charged))
+    # ⭐ A benched flag still gets a line, because it is a real thing about your squad — but it is worth
+    # **0**, and its kind is `noted`, not `action`. ⚠️ Listing it at the same cost as the others told the
+    # reader to do something they had already done, and then kept the 8 points anyway.
     levers = [{"what": f"{f['web_name']} is flagged — {_flag_action(f)}",
-               "worth": FLAG_COST, "kind": "action"} for f in flags]
+               "worth": FLAG_COST if f.get("starting", True) else 0,
+               "kind": "action" if f.get("starting", True) else "noted"} for f in flags]
     return {
         "score": score,
         "ceiling": int(captain_score),
@@ -654,7 +679,7 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
     else:
         risks.append("none — all your players are available")
 
-    score = gameweek_confidence(cap_ex.confidence if cap_ex else None, len(flags))
+    score = gameweek_confidence(cap_ex.confidence if cap_ex else None, len(starting_flags(flags)))
     overall = Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
     return {"captain": cap_ex, "transfer": tr_ex, "lineup": lineup, "overall": overall,
             # ADR-198 — the same sum, run backwards: what is holding the week's number down, and which of it
