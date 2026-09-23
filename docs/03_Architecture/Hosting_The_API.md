@@ -64,7 +64,9 @@ Any host that runs a container and injects `$PORT`. What actually matters:
 
 ## Step 3 — Deploy (🔴 not executed)
 
-One secret, and it is the same DSN the scheduled Actions already hold:
+### The one required secret
+
+It is the same DSN the scheduled Actions already hold:
 
 ```
 FPL_DATABASE_URL = postgresql://…@…pooler.supabase.com:5432/postgres
@@ -73,6 +75,26 @@ FPL_DATABASE_URL = postgresql://…@…pooler.supabase.com:5432/postgres
 ⚠️⚠️ **This is a database password.** It belongs in the platform's secret store, never in the image, never
 in the repo, and never in a Flutter `--dart-define`. ⭐ *Same rule as the `service_role` key: the reason it
 is safe server-side is that it stays there* (ADR-211).
+
+### The rest — optional, but ⚠️ **feedback silently does nothing without them**
+
+⚠️ **This section exists because it was missing, and the omission had a cost.** These were written up in
+`docs/BETA.md` as **Streamlit secrets** and never carried across to the host, so the first thing the owner
+tried on the live phone build — *Tell us something* — could not have worked. ⭐ *A variable documented for
+one deployment is not documented for the next one.* `tests/test_hosting_doc.py` now fails if the API reads
+a variable this table does not name.
+
+| Variable | Without it | Set it to |
+|---|---|---|
+| `FPL_FEEDBACK_WEBHOOK` | ⚠️ Feedback answers **"no feedback sink is configured on the server"** — honest, and still not delivered. **Set this or in-app feedback does not reach you.** | the relay URL from `docs/BETA.md` §1B, e.g. `https://formsubmit.co/ajax/hello@madboots.com` |
+| `FPL_FEEDBACK_KEY` | nothing, unless the relay needs an access key | Web3Forms' access key (not needed for FormSubmit) |
+| `FPL_FEEDBACK_EMAIL` | falls back to `hello@madboots.com` | the address offered to a tester when the relay fails |
+| `FPL_FEEDBACK_ORIGIN` | falls back to the Streamlit URL | ⚠️ only matters if the relay checks `Origin` |
+
+⭐ **Check it actually relays, rather than assuming.** `POST /api/v1/feedback` returns `sent: true/false`
+with the relay's **own** reason — that is the whole point of ADR-231. ⚠️ **The endpoint allows 5 calls an
+hour**, so a couple of test submissions will lock you out for the rest of it; that limit is a cost control,
+not a security boundary.
 
 **Verify before going further:**
 

@@ -62,6 +62,25 @@ nothing to stop them sliding back. A new package now fails on the day it is crea
 **4. The feature is tested with the package genuinely absent** — both branches, because ⚠️ *the failing
 import sat past the early return*, so a test hitting only the unconfigured path would still have missed it.
 
+## 3. And with the 500 gone, feedback still would not have arrived
+
+⚠️ Fixing the crash exposed the next layer: `FPL_FEEDBACK_WEBHOOK` is not in the hosting runbook. It was
+written up in `docs/BETA.md` as a **Streamlit secret** and never carried across to the host, so *Tell us
+something* could not have worked on the live build no matter what else was right.
+
+⭐ **A variable documented for one deployment is not documented for the next one.** And this failure is
+**silent by design** — the endpoint answers honestly (*"no feedback sink is configured"*) and the note is
+still never delivered.
+
+So the runbook now carries a table of every variable the API reads and **what its absence costs**, and
+`tests/test_hosting_doc.py` derives that list from the code rather than trusting it: a new `os.environ.get`
+in the service layer fails on the day it is written. ⚠️ A second test asserts the webhook row says what is
+*lost*, because a row reading merely *"optional"* would leave the runbook technically complete and
+practically wrong.
+
+📌 **Still to do, and it is the owner's to do:** set `FPL_FEEDBACK_WEBHOOK` in Render. It is his secret and
+it does not belong in this repo.
+
 ## Consequences
 
 📌 **The lesson generalises past this bug.** Everything the container does differently from a checkout is
