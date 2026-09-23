@@ -12,6 +12,7 @@ would have passed against the defect that prompted this file.
 
 import json
 import shutil
+import sys
 
 import pytest
 from fastapi.testclient import TestClient
@@ -1585,3 +1586,65 @@ def test_a_card_request_that_cannot_be_answered_is_refused(request_, expected):
 def test_an_unknown_player_is_named(store):
     with pytest.raises(ValueError, match=r"unknown player ids: \[999999\]"):
         svc.player(PlayerRequest(player_id=999999), store=store)
+
+
+def test_feedback_works_without_the_streamlit_package(monkeypatch):
+    """⭐⭐⭐ **The deployed unit is not the repo, and this test is the difference.**
+
+    `feedback` imported `relay_result` from `src.web_streamlit`, which is present in every developer
+    checkout and **excluded from the API image** by `.dockerignore`. So every mobile feedback POST answered
+    **HTTP 500** while the whole suite stayed green — ⚠️ *the tests ran somewhere the bug could not exist.*
+
+    Here the package is made genuinely unimportable, the way the container has it, and the endpoint is asked
+    to do its job anyway. ⭐ The static guard in `test_web.py` stops the import being written; this one
+    proves the feature survives without it.
+    """
+    import builtins
+
+    real_import = builtins.__import__
+
+    def no_streamlit_package(name, *args, **kwargs):
+        if name.startswith("src.web_streamlit"):
+            raise ModuleNotFoundError(f"No module named {name!r}")
+        return real_import(name, *args, **kwargs)
+
+    for loaded in [m for m in sys.modules if m.startswith("src.web_streamlit")]:
+        monkeypatch.delitem(sys.modules, loaded)
+    monkeypatch.setattr(builtins, "__import__", no_streamlit_package)
+    monkeypatch.delenv("FPL_FEEDBACK_WEBHOOK", raising=False)
+
+    # ⚠️ The assertion is that this *returns* — before the fix it raised ModuleNotFoundError, which FastAPI
+    # renders as the plain-text 500 the phone then tried to parse as JSON.
+    answer = svc.feedback(FeedbackRequest(message="sent from a container that has no Streamlit"))
+    assert answer["sent"] is False
+    assert "configured" in answer["reason"]
+
+
+def test_a_configured_sink_relays_without_the_streamlit_package(monkeypatch):
+    """The same absence, on the path that actually sends — ⚠️ *the failing import sat past the early
+    return*, so a test that only ever hit the unconfigured branch would still have missed it.
+    """
+    import builtins
+
+    real_import = builtins.__import__
+
+    def no_streamlit_package(name, *args, **kwargs):
+        if name.startswith("src.web_streamlit"):
+            raise ModuleNotFoundError(f"No module named {name!r}")
+        return real_import(name, *args, **kwargs)
+
+    class _Relayed:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"success": "true"}
+
+    for loaded in [m for m in sys.modules if m.startswith("src.web_streamlit")]:
+        monkeypatch.delitem(sys.modules, loaded)
+    monkeypatch.setattr(builtins, "__import__", no_streamlit_package)
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.invalid/relay")
+    monkeypatch.setattr("requests.post", lambda *a, **k: _Relayed())
+
+    answer = svc.feedback(FeedbackRequest(message="this one really sends", screen="Tell us something"))
+    assert answer["sent"] is True

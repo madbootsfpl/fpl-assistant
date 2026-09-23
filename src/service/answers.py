@@ -878,7 +878,7 @@ def feedback(request: FeedbackRequest) -> dict:
 
     import requests
 
-    from src.web_streamlit.feedback import relay_result
+    from src.relay import relay_result
 
     webhook = os.environ.get("FPL_FEEDBACK_WEBHOOK")
     inbox = os.environ.get("FPL_FEEDBACK_EMAIL", "hello@madboots.com")

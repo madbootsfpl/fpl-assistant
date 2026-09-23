@@ -37,6 +37,39 @@ class ApiException implements Exception {
 /// `ClientException with SocketException: Connection refused … errno = 61` verbatim.
 ///
 /// ⭐ *A fix scoped to where it was noticed is a fix the next screen does not get.*
+/// What an error response actually *says*, for any body a server might send.
+///
+/// ⚠️ FastAPI answers a malformed body with 422 and a *list* of errors, and a refused squad with 400 and a
+/// string. Both are the caller's fault and both belong in the same exception.
+///
+/// ⚠️⚠️ **But not every error body is JSON, and assuming so cost a real screen.** An unhandled exception
+/// reaches the client as Starlette's default 500 — the eight plain-text bytes `Internal Server Error`.
+/// Decoding that threw a `FormatException` which escaped the client entirely, so Feedback reported
+/// *"Not sent — FormatException: Unexpected character (at character 1)"*: ⭐ *the parser's complaint about
+/// the error, in place of the error*. A proxy or a cold host does the same thing with HTML.
+///
+/// ⭐ So the decode is attempted and its failure is **expected**, not exceptional — a body that is not JSON
+/// is described rather than parsed, and a 5xx is named as ours rather than handed to the reader as debris.
+String errorDetail(int status, String body) {
+  try {
+    final decoded = jsonDecode(body);
+    final detail = decoded is Map ? decoded['detail'] : decoded;
+    if (detail != null && '$detail'.trim().isNotEmpty) return '$detail';
+  } catch (_) {
+    // not JSON — fall through and say something true about it instead.
+  }
+  if (status >= 500) {
+    // ⚠️ Deliberately not the body: "Internal Server Error" tells a tester nothing they can act on, and
+    // reads as if they broke it.
+    return 'The service hit a problem at its end (HTTP $status). That is ours to fix, not yours — '
+        'please try again shortly.';
+  }
+  final trimmed = body.trim();
+  if (trimmed.isEmpty) return 'The service refused that (HTTP $status).';
+  return 'The service refused that (HTTP $status): '
+      '${trimmed.length > 200 ? '${trimmed.substring(0, 200)}…' : trimmed}';
+}
+
 String friendlyError(Object? error) =>
     error is ApiException ? error.detail : '$error';
 
@@ -74,11 +107,10 @@ class ServiceClient {
       throw ApiException(0, 'The service did not answer in time.\n\n$baseUrl');
     }
     if (response.statusCode != 200) {
-      // ⚠️ FastAPI answers a malformed body with 422 and a *list* of errors, and a refused squad with 400
-      // and a string. Both are the caller's fault and both belong in the same exception.
-      final decoded = jsonDecode(response.body);
-      final detail = decoded is Map ? decoded['detail'] : decoded;
-      throw ApiException(response.statusCode, '$detail');
+      throw ApiException(
+        response.statusCode,
+        errorDetail(response.statusCode, response.body),
+      );
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }

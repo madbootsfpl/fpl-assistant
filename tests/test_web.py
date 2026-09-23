@@ -65,10 +65,21 @@ def test_ask_escapes_html_in_the_question():
 
 # ---- the architectural guardrail (one-way data flow) ------------------------
 
+#: ⚠️⚠️ **Every layer that is not an edge belongs here, and `src/service` was missing for its whole
+#: life.** The guard below is exact and well-tested, and it still let a real illegal import through —
+#: `service/answers.py` imported `relay_result` from `web_streamlit`, which works in the repo and
+#: **HTTP 500s in the API container**, where `.dockerignore` excludes that package. ⭐ *A guardrail is
+#: only as wide as its list, and a hand-maintained list does not grow when the codebase does.*
+#: `test_core_list_covers_every_non_edge_package` below keeps this honest from now on.
 _CORE = [
-    "src/analytics", "src/ui", "src/api", "src/models",
+    "src/analytics", "src/ui", "src/api", "src/models", "src/service",
     "src/ask.py", "src/cli.py", "src/storage.py", "src/ingest.py",
-    "src/squads.py", "src/llm.py", "src/config.py",
+    "src/squads.py", "src/llm.py", "src/config.py", "src/relay.py",
+    #: ⭐ Added when the test below first ran. `kits.py` and `glossary.py` had already been *moved out* of
+    #: the Streamlit package precisely so the API could use them — and nothing then stopped them sliding
+    #: back, which is the same fault in the same place twice.
+    "src/chat_context.py", "src/community.py", "src/db.py", "src/fpl_rules.py",
+    "src/glossary.py", "src/kits.py", "src/manager.py", "src/pipeline.py",
 ]
 
 
@@ -110,3 +121,28 @@ def test_core_never_imports_a_web_edge():
             for mod in edge_imports(f.read_text()):
                 offenders.append(f"{f.relative_to(root)} imports {mod}")
     assert not offenders, f"the core must not import a web edge (one-way flow): {offenders}"
+
+
+def test_core_list_covers_every_non_edge_package():
+    """⭐⭐ **The guard above is only as wide as `_CORE`, so this widens it automatically.**
+
+    The import rule was correct, precisely written and mutation-tested — and it missed a real offender for
+    the whole life of `src/service`, because nobody added the new package to a hand-maintained list. ⚠️ *A
+    growing codebase silently shrinks the coverage of any list written by hand.*
+
+    So: every top-level module and package under `src/` is either an **edge** (`src/web*`) or is covered by
+    `_CORE`. A new package fails this test on the day it is created, which is the day the decision is cheap.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent
+    covered = {e.split("/", 1)[1] for e in _CORE}
+    missing = sorted(
+        p.name
+        for p in (root / "src").iterdir()
+        if not p.name.startswith(("_", ".", "web"))
+        and (p.is_dir() or p.suffix == ".py")
+        and p.name not in covered
+    )
+    assert not missing, (
+        f"these live under src/ but no layering rule covers them: {missing}. "
+        "Add each to _CORE (it must not import an edge), or name it an edge."
+    )
