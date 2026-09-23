@@ -20,6 +20,7 @@ import 'settings_view.dart';
 import 'signals_view.dart';
 import 'draft.dart';
 import 'feedback_view.dart';
+import 'lab_view.dart';
 import 'leagues_view.dart';
 import 'more_view.dart';
 import 'pitch.dart';
@@ -599,6 +600,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             _open('Player DNA', PlayerDnaView(client: _client, team: team)),
         onOpenTeamDna: () =>
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
+        onOpenLab: () =>
+            _open('Squad Lab', LabView(client: _client, team: team)),
         onOpenLeagues: () => _open(
           'Mini-leagues',
           LeaguesView(client: _client, managerId: _managerId),

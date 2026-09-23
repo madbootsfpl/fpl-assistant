@@ -316,6 +316,10 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
     result = select_squad(
         pool, budget=request.budget, formation=SQUAD_15, scores=data.xp_by_id,
         include_ids=request.include_ids, exclude_ids=request.exclude_ids,
+        # ⚠️ Passed through, and the caller decides. ⭐ *A wildcard squad that ignores the bench spends
+        # real money on players who never score* — but changing the default here would change an answer
+        # somebody may already rely on, so the choice stays with the request (ADR-268).
+        bench_weight=request.bench_weight,
     )
     # ⭐⭐ **Summarised, not the raw solver output** (ADR-227). `select_squad` returns the database rows it
     # was given, so this endpoint was shipping **45 columns per player** — `cbi`, `cost_change_event`,
@@ -339,7 +343,16 @@ def build(request: BuildRequest, *, store: Storage | None = None) -> dict:
         "status": result["status"],
         "selected": selected,
         "total_cost": result["total_cost"],
+        # ⚠️ All fifteen. Kept because it always meant that — ⭐ *changing what a field means is worse
+        # than adding one*, and a caller reading it today would silently start getting a smaller number.
         "projected_xp": round(sum(data.xp_by_id.get(p["id"], 0) for p in result["selected"]), 1),
+        # ⭐⭐ **What the manager actually scores.** Only the eleven count, so a bench-aware build looks
+        # *worse* on `projected_xp` while fielding a *better* side — ⚠️ *a headline that falls when the
+        # answer improves is a headline that will be optimised against.* `None` when no bench was
+        # designated, because then there is no eleven to name (ADR-268).
+        "xi_xp": (round(sum(data.xp_by_id.get(p["id"], 0)
+                            for p in result["selected"] if not p.get("bench")), 1)
+                  if request.bench_weight is not None else None),
         "unavailable_excluded": len(excluded),
         "default_budget": DEFAULT_BUDGET,
     }

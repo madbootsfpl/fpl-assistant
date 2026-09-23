@@ -332,6 +332,7 @@ class BuildAnswer {
     required this.selected,
     required this.totalCost,
     required this.projectedXp,
+    required this.xiXp,
   });
 
   factory BuildAnswer.fromJson(Map<String, dynamic> json) => BuildAnswer(
@@ -339,10 +340,11 @@ class BuildAnswer {
     budget: _double(json['budget']),
     status: json['status'] as String,
     selected: ((json['selected'] as List?) ?? [])
-        .map((p) => PlayerSummary.fromJson(p as Map<String, dynamic>))
+        .map((p) => BuiltPlayer.fromJson(p as Map<String, dynamic>))
         .toList(),
     totalCost: _double(json['total_cost']),
     projectedXp: _double(json['projected_xp']),
+    xiXp: (json['xi_xp'] as num?)?.toDouble(),
   );
 
   final int horizon;
@@ -352,9 +354,38 @@ class BuildAnswer {
   /// means *nothing fits these constraints*, which is an answer, not a failure. ⭐ A client that ignored it
   /// would render an empty pitch with no reason given.
   final String status;
-  final List<PlayerSummary> selected;
+
+  /// ⚠️ **Not bare summaries.** A built squad has to say **who starts** and **who was forced**, and
+  /// flattening it to a player list threw both away — ⭐ *a draft you cannot read the shape of is a list
+  /// of fifteen names.*
+  final List<BuiltPlayer> selected;
+
+  /// The eleven the solver would start.
+  List<BuiltPlayer> get xi => [
+    for (final p in selected)
+      if (!p.bench) p,
+  ];
+
+  /// The four it would not — ⚠️ in the solver's order, which is **not** FPL's substitution order.
+  List<BuiltPlayer> get bench => [
+    for (final p in selected)
+      if (p.bench) p,
+  ];
+
+  /// ⭐ `Optimal` is the only status that means the fifteen below are the best available. Anything else —
+  /// `Infeasible` above all — means the constraints could not be met, and ⚠️ *rendering an empty squad
+  /// under a heading is how "no answer" gets read as "no good players".*
+  bool get solved => status == 'Optimal' && selected.length == 15;
   final double totalCost;
   final double projectedXp;
+
+  /// ⭐⭐ **What the manager actually scores** — only the eleven count. A bench-aware draft reads
+  /// *lower* on the all-fifteen total while fielding a *better* side, so ⚠️ *a headline that falls
+  /// when the answer improves is a headline that will be optimised against.*
+  ///
+  /// ⚠️ Null when no bench was designated: there is then no eleven to name, and *a zero there would
+  /// read as a terrible squad.*
+  final double? xiXp;
 
   bool get isOptimal => status == 'Optimal';
 }
@@ -1533,4 +1564,29 @@ class HeadToHead {
   final String note;
 
   bool get iAmAhead => gap > 0;
+}
+
+/// One player in a built squad (ADR-268).
+class BuiltPlayer {
+  BuiltPlayer({
+    required this.player,
+    required this.bench,
+    required this.forced,
+  });
+
+  factory BuiltPlayer.fromJson(Map<String, dynamic> json) => BuiltPlayer(
+    player: PlayerSummary.fromJson(json),
+    bench: json['bench'] as bool? ?? false,
+    forced: json['forced'] as bool? ?? false,
+  );
+
+  final PlayerSummary player;
+
+  /// ⚠️ The solver's bench, not FPL's ordered one.
+  final bool bench;
+
+  /// ⭐ **You asked for him.** A kept player is in the squad because you said so, not because he won a
+  /// place — ⚠️ *and a draft that cannot tell you which is which invites you to trust a choice you made
+  /// yourself.*
+  final bool forced;
 }

@@ -395,17 +395,23 @@ class ServiceClient {
     }),
   );
 
+  /// The best legal fifteen within a budget.
+  ///
+  /// ⚠️⚠️ Pass  or the solver treats **all fifteen as if they play** (ADR-045) — a squad
+  /// nobody fields. `0.1` is a strong XI with a cheap-but-playing bench.
   Future<BuildAnswer> build({
     double budget = 100.0,
     int horizon = 5,
     List<int> includeIds = const [],
     List<int> excludeIds = const [],
+    double? benchWeight,
   }) async => BuildAnswer.fromJson(
     await _post('squad/build', {
       'budget': budget,
       'horizon': horizon,
       'include_ids': includeIds,
       'exclude_ids': excludeIds,
+      'bench_weight': ?benchWeight,
     }),
   );
 

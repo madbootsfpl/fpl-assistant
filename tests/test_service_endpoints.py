@@ -1836,3 +1836,62 @@ def test_every_row_carries_ownership_so_the_other_numbers_can_be_read():
 def test_a_bad_trending_request_is_refused(request_, expected):
     with pytest.raises(ValueError, match=expected):
         request_.validate()
+
+
+# ---- the Lab: a wildcard squad is not fifteen equal players (ADR-268) -------
+
+def test_a_build_without_a_bench_weight_designates_no_bench():
+    """⚠️ The old behaviour, kept deliberately — ⭐ *changing what an existing endpoint returns is how a
+    caller starts getting a different answer without asking for one.*"""
+    answer = svc.build(svc.BuildRequest(budget=100.0, horizon=5))
+    assert answer["status"] == "Optimal"
+    assert not any(p["bench"] for p in answer["selected"])
+    # ⚠️ No bench means no eleven to name, and a zero would read as a terrible squad.
+    assert answer["xi_xp"] is None
+
+
+def test_a_bench_aware_build_fields_a_better_eleven():
+    """⭐⭐ **The whole reason the Lab asks for it.** Without a bench weight the solver treats all fifteen
+    as if they play, and spends real money on players who score nothing.
+
+    ⚠️ **Measured, not asserted:** the bench-aware XI is compared against the flat squad's *best eleven
+    ignoring shape* — an **upper bound** on any legal XI it could field. Beating that bound means the flat
+    build could not field as good a side however it lined up.
+    """
+    aware = svc.build(svc.BuildRequest(budget=100.0, horizon=5, bench_weight=0.1))
+    flat = svc.build(svc.BuildRequest(budget=100.0, horizon=5))
+
+    assert sum(1 for p in aware["selected"] if p["bench"]) == 4
+    best_possible_flat_xi = sum(sorted((p["xp"] for p in flat["selected"]), reverse=True)[:11])
+    assert aware["xi_xp"] > best_possible_flat_xi, (
+        "the bench-aware eleven must beat the best eleven the flat build could possibly field"
+    )
+
+
+def test_the_all_fifteen_total_still_means_all_fifteen():
+    """⚠️ Two numbers that could be confused, so each is pinned. ⭐ *A bench-aware build scores LOWER on
+    the fifteen and HIGHER on the eleven* — which is the point, and the trap.
+    """
+    answer = svc.build(svc.BuildRequest(budget=100.0, horizon=5, bench_weight=0.1))
+    total = round(sum(p["xp"] for p in answer["selected"]), 1)
+    assert answer["projected_xp"] == pytest.approx(total, abs=0.2)
+    assert answer["xi_xp"] < answer["projected_xp"], "the eleven cannot outscore the fifteen"
+
+
+def test_a_kept_player_is_flagged_as_forced():
+    """⭐ *A draft that cannot tell you which players you chose yourself invites you to trust your own
+    choice as if the solver had made it.*"""
+    everyone = svc.players(svc.PlayersRequest(horizon=5, limit=400))["players"]
+    keep = [p["id"] for p in everyone if p["position"] == "DEF"][:2]
+
+    answer = svc.build(svc.BuildRequest(budget=100.0, horizon=5, bench_weight=0.1, include_ids=keep))
+    forced = {p["id"] for p in answer["selected"] if p["forced"]}
+    assert set(keep) <= forced
+    assert len(forced) == len(keep), "nothing unasked-for may be marked as kept"
+
+
+@pytest.mark.parametrize("weight", [-0.1, 1.5])
+def test_a_bench_weight_outside_zero_to_one_is_refused(weight):
+    """⚠️ Above 1 the bench would be worth more than the XI — not a preference, a different game."""
+    with pytest.raises(ValueError, match="bench_weight must be 0-1"):
+        svc.BuildRequest(bench_weight=weight).validate()

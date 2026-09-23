@@ -139,10 +139,29 @@ void main() {
 
     test('the squad has the FPL position split', () {
       final counts = <String, int>{};
-      for (final p in answer.selected) {
-        counts[p.position] = (counts[p.position] ?? 0) + 1;
+      for (final b in answer.selected) {
+        counts[b.player.position] = (counts[b.player.position] ?? 0) + 1;
       }
       expect(counts, equals({'GK': 2, 'DEF': 5, 'MID': 5, 'FWD': 3}));
+    });
+
+    // ⭐ A built squad has to say **who starts** — flattening it to a player list threw that away, and
+    // *a draft you cannot read the shape of is a list of fifteen names* (ADR-268).
+    test('it splits into an eleven and a bench', () {
+      expect(answer.xi, hasLength(11));
+      expect(answer.bench, hasLength(4));
+      expect(answer.solved, isTrue);
+    });
+
+    test('an unsolved answer is not treated as a squad', () {
+      final stuck = BuildAnswer.fromJson({
+        ...sample('build'),
+        'status': 'Infeasible',
+        'selected': const [],
+      });
+      // ⚠️ Rendering fifteen blank rows under a heading is how "your constraints cannot be met" gets
+      // read as "there are no good players".
+      expect(stuck.solved, isFalse);
     });
 
     test('the solver status is carried, not swallowed', () {

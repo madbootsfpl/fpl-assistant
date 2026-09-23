@@ -128,10 +128,20 @@ class BuildRequest:
     include_ids: list[int] = field(default_factory=list)
     exclude_ids: list[int] = field(default_factory=list)
 
+    #: ⚠️⚠️ **Without this the solver treats all fifteen as if they play** (ADR-045), so it spends real
+    #: money on a bench that scores nothing. ⭐ *A squad optimised as fifteen equal players is not a squad
+    #: anybody fields.* `0.1` builds a strong XI with a cheap-but-playing bench; `None` is the old
+    #: behaviour and is kept so existing callers are not changed underneath them.
+    bench_weight: float | None = None
+
     def validate(self) -> None:
         _check_horizon(self.horizon)
         if self.budget <= 0:
             raise ValueError("budget must be positive")
+        if self.bench_weight is not None and not 0 <= self.bench_weight <= 1:
+            # ⚠️ Above 1 the bench would be worth more than the XI, which is not a preference — it is a
+            # different game.
+            raise ValueError(f"bench_weight must be 0-1, not {self.bench_weight}")
         clash = set(self.include_ids) & set(self.exclude_ids)
         if clash:
             # ⚠️ Without this the solver simply returns no squad, and "Infeasible" reads as *"your budget is

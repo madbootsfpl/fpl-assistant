@@ -54,8 +54,11 @@ def responses(store) -> dict:
             service.GameweekRequest(player_ids=ids, horizon=1, bank=2.0, free=1), store=store),
         "route": service.route(
             service.RouteRequest(player_ids=ids, target_id=target, bank=2.0), store=store),
+        # ⚠️ **With `bench_weight`, because that is what the Lab asks for** (ADR-268). A sample built
+        # without it designates no bench at all, so ⭐ *the shape a client has to render would be absent
+        # from the only example it has.*
         "build": service.build(
-            service.BuildRequest(budget=100.0, horizon=5), store=store),
+            service.BuildRequest(budget=100.0, horizon=5, bench_weight=0.1), store=store),
         # ⚠️ **The FPL fetch is stubbed, and it has to be.** `my_team` calls FPL over the network for a
         # manager's picks; a sample regenerated from the internet is not reproducible, and the contract test
         # that compares against it would pass or fail on someone else's uptime. ⭐ The *composition* is what

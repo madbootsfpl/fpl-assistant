@@ -29,6 +29,7 @@ class MoreView extends StatelessWidget {
     required this.onOpenPlayerDna,
     required this.onOpenSignals,
     required this.onOpenSettings,
+    required this.onOpenLab,
     required this.onOpenLeagues,
     required this.onOpenTicker,
     required this.onOpenFeedback,
@@ -59,6 +60,7 @@ class MoreView extends StatelessWidget {
   final VoidCallback onOpenChips;
 
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenLab;
   final VoidCallback onOpenLeagues;
   final VoidCallback onOpenTicker;
   final VoidCallback onOpenFeedback;
@@ -101,6 +103,16 @@ class MoreView extends StatelessWidget {
             'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
             'left, not the next one.',
         onTap: onOpenChips,
+      ),
+      _Row(
+        icon: Icons.science_outlined,
+        name: 'Squad Lab',
+        // ⭐ Named by what it lets you do, not by what it runs. "Optimiser" describes the solver; nobody
+        // opens an app to run a solver.
+        why:
+            'Rebuild your fifteen on a wildcard — keep who you want, and see exactly who would come in '
+            'and who would go. Nothing here touches your real team.',
+        onTap: onOpenLab,
       ),
       _Row(
         icon: Icons.emoji_events_outlined,

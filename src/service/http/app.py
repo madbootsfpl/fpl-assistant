@@ -266,6 +266,12 @@ class BuildBody(BaseModel):
     horizon: int = Field(DEFAULT_HORIZON, ge=1, le=MAX_HORIZON, description="Gameweeks to optimise over.")
     include_ids: list[int] = Field(default_factory=list, description="Players to force in.")
     exclude_ids: list[int] = Field(default_factory=list, description="Players to rule out.")
+    bench_weight: float | None = Field(
+        None, ge=0, le=1,
+        description="⭐ Makes the build **bench-aware** (ADR-045): the solver also picks the XI and "
+                    "values the bench at this weight. `0.1` is a strong XI with a cheap-but-playing "
+                    "bench. ⚠️⚠️ **Omit it and all fifteen are treated as if they play** — a squad that "
+                    "spends real money on players who never score.")
 
 
 def _answer(fn: Callable, request) -> dict:
