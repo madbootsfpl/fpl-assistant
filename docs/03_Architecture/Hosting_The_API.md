@@ -101,6 +101,26 @@ time curl -s https://<your-host>/api/v1/health
 | **under ~3s** | scale-to-zero is fine. Nothing more to do. |
 | **10s or worse** | set minimum instances to 1. ⭐ One setting, same image, minutes to change. |
 
+### ✅ Executed on Render, 2026-09-23 — and it crossed the line
+
+| | |
+|---|---|
+| **cold, after idle** | **13.4 s** |
+| warm `/health` | 0.10–0.18 s |
+| warm `squad/analysis` | ~0.9 s |
+
+⚠️⚠️ **13.4 seconds is the second row of that table**, and the table was written before the answer was
+known. ⭐ *A threshold agreed in advance is the only kind that can overrule the person who set it* — the
+earlier decision to run scale-to-zero was made on a **1-second local container boot**, and the deployed
+measurement is thirteen times that.
+
+**What 13 seconds is:** a tester opening the app for the first time that day, watching a spinner, and
+concluding it is broken. It is the *first* impression, every time, for anyone who is not using it hourly.
+
+📌 **So this is now a decision about always-on**, and the runbook's own rule says take it. See
+*What it should cost* — the change is the same image and one setting, but on a free tier "minimum
+instances" is not a setting you have; it means a paid instance.
+
 📌 **A warming ping was designed and deliberately not built.** With a 1s app boot it would save a couple of
 seconds, once — ⭐ *building it anyway would be building for a fear the measurement contradicts.* If Step 4
 comes back slow, always-on is the simpler answer than a cron that pretends to be one.
