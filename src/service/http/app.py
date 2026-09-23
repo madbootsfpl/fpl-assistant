@@ -173,6 +173,16 @@ class PlayersBody(BaseModel):
                                    "locally is instant, where a round trip per keystroke is not.")
 
 
+class TickerBody(BaseModel):
+    """⚠️ No squad — this is the **league's** fixtures, not yours."""
+
+    next_n: int = Field(6, ge=1, le=10,
+                        description="How many gameweeks wide the grid is.")
+    source: str = Field("fpl", pattern="^(fpl|custom)$",
+                        description="⭐ `fpl` is the official 1-5 difficulty, so it reads the same as the "
+                                    "FPL app; `custom` is our own strength-at-venue number (ADR-005).")
+
+
 class ChipsBody(SquadBody):
     bank: float = Field(0.0, ge=0, description="Money available, in £m — a wildcard is priced against it.")
     manager_id: int | None = Field(
@@ -380,6 +390,22 @@ def all_players(body: PlayersBody) -> dict:
     a verdict.
     """
     return _answer(service.players, service.PlayersRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/ticker")
+def fixture_ticker(body: TickerBody) -> dict:
+    """The fixture-difficulty grid — every club, their next few gameweeks, **easiest run first**.
+
+    ⭐ **A blank gameweek is `null`, not a missing key**: *"they do not play"* is the most valuable thing a
+    ticker says, and an absent cell reads as absent data.
+
+    ⚠️ **A double carries both opponents** and is shaded by the **harder** of them — a double is only as
+    easy as its worse fixture.
+
+    ⚠️ `cells` is keyed by gameweek **as a string** (JSON has no integer keys); read the order from
+    `gameweeks`, not from the map.
+    """
+    return _answer(service.ticker, service.TickerRequest(**body.model_dump()))
 
 
 class SignalsBody(BaseModel):

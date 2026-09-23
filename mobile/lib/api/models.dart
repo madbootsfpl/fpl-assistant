@@ -1166,3 +1166,88 @@ class PlayerDna {
   /// "this player is bad at everything".
   final String? unranked;
 }
+
+/// One club's row in the fixture ticker (ADR-265).
+class TickerRow {
+  TickerRow({
+    required this.team,
+    required this.avgDifficulty,
+    required this.cells,
+  });
+
+  factory TickerRow.fromJson(Map<String, dynamic> json) => TickerRow(
+    team: json['team'] as String,
+    avgDifficulty: (json['avg_difficulty'] as num?)?.toDouble(),
+    cells: ((json['cells'] as Map?) ?? {}).map(
+      (k, v) => MapEntry(
+        int.parse(k as String),
+        v == null ? null : TickerCell.fromJson(v as Map<String, dynamic>),
+      ),
+    ),
+  );
+
+  final String team;
+
+  /// ⚠️ Nullable: a club whose window holds no rated fixture has no average, and 0 would read as *easy*.
+  final double? avgDifficulty;
+
+  /// ⭐ **A blank gameweek is a present key with a null value**, not a missing one — *"they do not play"*
+  /// is the most valuable thing a ticker says.
+  final Map<int, TickerCell?> cells;
+}
+
+class TickerCell {
+  TickerCell({
+    required this.opponent,
+    required this.venue,
+    required this.difficulty,
+    required this.opponents,
+    required this.venues,
+  });
+
+  factory TickerCell.fromJson(Map<String, dynamic> json) => TickerCell(
+    opponent: json['opponent'] as String,
+    venue: json['venue'] as String,
+    difficulty: (json['difficulty'] as num?)?.toInt() ?? 3,
+    opponents: [
+      for (final o in (json['opponents'] as List? ?? [])) o as String,
+    ],
+    venues: [for (final v in (json['venues'] as List? ?? [])) v as String],
+  );
+
+  final String opponent;
+  final String venue;
+
+  /// ⚠️ For a double this is the **harder** of the two — a double is only as easy as its worse fixture.
+  final int difficulty;
+
+  final List<String> opponents;
+  final List<String> venues;
+
+  /// ⭐ A double gameweek. The ticker is the view built for spotting these.
+  bool get isDouble => opponents.length > 1;
+
+  /// `CHE (H)`, or `CHE (H) + ARS (A)` for a double.
+  String get label => [
+    for (var i = 0; i < opponents.length; i++)
+      '${opponents[i]} (${i < venues.length ? venues[i] : "?"})',
+  ].join(' + ');
+}
+
+class FixtureTicker {
+  FixtureTicker({required this.gameweeks, required this.rows});
+
+  factory FixtureTicker.fromJson(Map<String, dynamic> json) => FixtureTicker(
+    // ⚠️ The order lives here, never in the cell map's keys.
+    gameweeks: [for (final g in (json['gameweeks'] as List? ?? [])) g as int],
+    rows: [
+      for (final r in (json['rows'] as List? ?? []))
+        TickerRow.fromJson(r as Map<String, dynamic>),
+    ],
+  );
+
+  final List<int> gameweeks;
+
+  /// ⭐ Easiest run first — the server ranks them, so every client agrees on what "easiest" means.
+  final List<TickerRow> rows;
+}

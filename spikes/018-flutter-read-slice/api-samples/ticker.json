@@ -1,0 +1,1452 @@
+{
+  "gameweeks": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "rows": [
+    {
+      "avg_difficulty": 2.5,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "EVE",
+          "opponents": [
+            "EVE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "CRY",
+          "opponents": [
+            "CRY"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "NEW",
+          "opponents": [
+            "NEW"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "TOT",
+          "opponents": [
+            "TOT"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "FUL",
+          "opponents": [
+            "FUL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "SUN",
+          "opponents": [
+            "SUN"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "COV"
+    },
+    {
+      "avg_difficulty": 2.8333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 2,
+          "opponent": "HUL",
+          "opponents": [
+            "HUL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "NEW",
+          "opponents": [
+            "NEW"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "LEE",
+          "opponents": [
+            "LEE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "NFO",
+          "opponents": [
+            "NFO"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "EVE",
+          "opponents": [
+            "EVE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 4,
+          "opponent": "LIV",
+          "opponents": [
+            "LIV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "ARS"
+    },
+    {
+      "avg_difficulty": 2.8333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 2,
+          "opponent": "IPS",
+          "opponents": [
+            "IPS"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "NFO",
+          "opponents": [
+            "NFO"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 4,
+          "opponent": "CHE",
+          "opponents": [
+            "CHE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 2,
+          "opponent": "SUN",
+          "opponents": [
+            "SUN"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 4,
+          "opponent": "MUN",
+          "opponents": [
+            "MUN"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "LEE",
+          "opponents": [
+            "LEE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "BOU"
+    },
+    {
+      "avg_difficulty": 2.8333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 4,
+          "opponent": "LIV",
+          "opponents": [
+            "LIV"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "COV",
+          "opponents": [
+            "COV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "NFO",
+          "opponents": [
+            "NFO"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "BHA",
+          "opponents": [
+            "BHA"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "NEW",
+          "opponents": [
+            "NEW"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "TOT",
+          "opponents": [
+            "TOT"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "CRY"
+    },
+    {
+      "avg_difficulty": 2.8333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 2,
+          "opponent": "NEW",
+          "opponents": [
+            "NEW"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 5,
+          "opponent": "MCI",
+          "opponents": [
+            "MCI"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "IPS",
+          "opponents": [
+            "IPS"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 2,
+          "opponent": "HUL",
+          "opponents": [
+            "HUL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "COV",
+          "opponents": [
+            "COV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 4,
+          "opponent": "AVL",
+          "opponents": [
+            "AVL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "FUL"
+    },
+    {
+      "avg_difficulty": 2.8333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "NFO",
+          "opponents": [
+            "NFO"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "FUL",
+          "opponents": [
+            "FUL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 4,
+          "opponent": "LIV",
+          "opponents": [
+            "LIV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 2,
+          "opponent": "IPS",
+          "opponents": [
+            "IPS"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 4,
+          "opponent": "AVL",
+          "opponents": [
+            "AVL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "BHA",
+          "opponents": [
+            "BHA"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "MCI"
+    },
+    {
+      "avg_difficulty": 2.8333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 4,
+          "opponent": "CHE",
+          "opponents": [
+            "CHE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 4,
+          "opponent": "AVL",
+          "opponents": [
+            "AVL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "BHA",
+          "opponents": [
+            "BHA"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "BOU",
+          "opponents": [
+            "BOU"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "LEE",
+          "opponents": [
+            "LEE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "COV",
+          "opponents": [
+            "COV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "SUN"
+    },
+    {
+      "avg_difficulty": 3.0,
+      "cells": {
+        "10": {
+          "difficulty": 4,
+          "opponent": "MUN",
+          "opponents": [
+            "MUN"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "SUN",
+          "opponents": [
+            "SUN"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "BRE",
+          "opponents": [
+            "BRE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "NEW",
+          "opponents": [
+            "NEW"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 4,
+          "opponent": "MCI",
+          "opponents": [
+            "MCI"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "FUL",
+          "opponents": [
+            "FUL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "AVL"
+    },
+    {
+      "avg_difficulty": 3.0,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "SUN",
+          "opponents": [
+            "SUN"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "LEE",
+          "opponents": [
+            "LEE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "BOU",
+          "opponents": [
+            "BOU"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "EVE",
+          "opponents": [
+            "EVE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "TOT",
+          "opponents": [
+            "TOT"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 4,
+          "opponent": "MUN",
+          "opponents": [
+            "MUN"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "CHE"
+    },
+    {
+      "avg_difficulty": 3.0,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "FUL",
+          "opponents": [
+            "FUL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 4,
+          "opponent": "ARS",
+          "opponents": [
+            "ARS"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "COV",
+          "opponents": [
+            "COV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "AVL",
+          "opponents": [
+            "AVL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "CRY",
+          "opponents": [
+            "CRY"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "EVE",
+          "opponents": [
+            "EVE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "NEW"
+    },
+    {
+      "avg_difficulty": 3.0,
+      "cells": {
+        "10": {
+          "difficulty": 5,
+          "opponent": "ARS",
+          "opponents": [
+            "ARS"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "BHA",
+          "opponents": [
+            "BHA"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "EVE",
+          "opponents": [
+            "EVE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "FUL",
+          "opponents": [
+            "FUL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "BRE",
+          "opponents": [
+            "BRE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "IPS",
+          "opponents": [
+            "IPS"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "HUL"
+    },
+    {
+      "avg_difficulty": 3.0,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "BOU",
+          "opponents": [
+            "BOU"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "TOT",
+          "opponents": [
+            "TOT"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "FUL",
+          "opponents": [
+            "FUL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 5,
+          "opponent": "MCI",
+          "opponents": [
+            "MCI"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "NFO",
+          "opponents": [
+            "NFO"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 2,
+          "opponent": "HUL",
+          "opponents": [
+            "HUL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "IPS"
+    },
+    {
+      "avg_difficulty": 3.0,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "LEE",
+          "opponents": [
+            "LEE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "IPS",
+          "opponents": [
+            "IPS"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 4,
+          "opponent": "MUN",
+          "opponents": [
+            "MUN"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 2,
+          "opponent": "COV",
+          "opponents": [
+            "COV"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 4,
+          "opponent": "CHE",
+          "opponents": [
+            "CHE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "CRY",
+          "opponents": [
+            "CRY"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "TOT"
+    },
+    {
+      "avg_difficulty": 3.1666666666666665,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "BHA",
+          "opponents": [
+            "BHA"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "EVE",
+          "opponents": [
+            "EVE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 4,
+          "opponent": "AVL",
+          "opponents": [
+            "AVL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 4,
+          "opponent": "LIV",
+          "opponents": [
+            "LIV"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "HUL",
+          "opponents": [
+            "HUL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "NFO",
+          "opponents": [
+            "NFO"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "BRE"
+    },
+    {
+      "avg_difficulty": 3.1666666666666665,
+      "cells": {
+        "10": {
+          "difficulty": 4,
+          "opponent": "MCI",
+          "opponents": [
+            "MCI"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "BOU",
+          "opponents": [
+            "BOU"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "CRY",
+          "opponents": [
+            "CRY"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 4,
+          "opponent": "ARS",
+          "opponents": [
+            "ARS"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "IPS",
+          "opponents": [
+            "IPS"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "BRE",
+          "opponents": [
+            "BRE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "NFO"
+    },
+    {
+      "avg_difficulty": 3.1666666666666665,
+      "cells": {
+        "10": {
+          "difficulty": 2,
+          "opponent": "COV",
+          "opponents": [
+            "COV"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 3,
+          "opponent": "BRE",
+          "opponents": [
+            "BRE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 2,
+          "opponent": "HUL",
+          "opponents": [
+            "HUL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 4,
+          "opponent": "CHE",
+          "opponents": [
+            "CHE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 5,
+          "opponent": "ARS",
+          "opponents": [
+            "ARS"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "NEW",
+          "opponents": [
+            "NEW"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "EVE"
+    },
+    {
+      "avg_difficulty": 3.3333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "CRY",
+          "opponents": [
+            "CRY"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "11": {
+          "difficulty": 4,
+          "opponent": "MUN",
+          "opponents": [
+            "MUN"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "6": {
+          "difficulty": 4,
+          "opponent": "MCI",
+          "opponents": [
+            "MCI"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "BRE",
+          "opponents": [
+            "BRE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 2,
+          "opponent": "BHA",
+          "opponents": [
+            "BHA"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 4,
+          "opponent": "ARS",
+          "opponents": [
+            "ARS"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        }
+      },
+      "team": "LIV"
+    },
+    {
+      "avg_difficulty": 3.3333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "AVL",
+          "opponents": [
+            "AVL"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 4,
+          "opponent": "LIV",
+          "opponents": [
+            "LIV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "TOT",
+          "opponents": [
+            "TOT"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "LEE",
+          "opponents": [
+            "LEE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "BOU",
+          "opponents": [
+            "BOU"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "9": {
+          "difficulty": 4,
+          "opponent": "CHE",
+          "opponents": [
+            "CHE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "MUN"
+    },
+    {
+      "avg_difficulty": 3.3333333333333335,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "BRE",
+          "opponents": [
+            "BRE"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 2,
+          "opponent": "HUL",
+          "opponents": [
+            "HUL"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 3,
+          "opponent": "SUN",
+          "opponents": [
+            "SUN"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 3,
+          "opponent": "CRY",
+          "opponents": [
+            "CRY"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 4,
+          "opponent": "LIV",
+          "opponents": [
+            "LIV"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 5,
+          "opponent": "MCI",
+          "opponents": [
+            "MCI"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "BHA"
+    },
+    {
+      "avg_difficulty": 3.6666666666666665,
+      "cells": {
+        "10": {
+          "difficulty": 3,
+          "opponent": "TOT",
+          "opponents": [
+            "TOT"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "11": {
+          "difficulty": 4,
+          "opponent": "CHE",
+          "opponents": [
+            "CHE"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "6": {
+          "difficulty": 5,
+          "opponent": "ARS",
+          "opponents": [
+            "ARS"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "7": {
+          "difficulty": 4,
+          "opponent": "MUN",
+          "opponents": [
+            "MUN"
+          ],
+          "venue": "H",
+          "venues": [
+            "H"
+          ]
+        },
+        "8": {
+          "difficulty": 3,
+          "opponent": "SUN",
+          "opponents": [
+            "SUN"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        },
+        "9": {
+          "difficulty": 3,
+          "opponent": "BOU",
+          "opponents": [
+            "BOU"
+          ],
+          "venue": "A",
+          "venues": [
+            "A"
+          ]
+        }
+      },
+      "team": "LEE"
+    }
+  ]
+}

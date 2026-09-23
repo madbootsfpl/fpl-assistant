@@ -1709,3 +1709,66 @@ def test_the_relay_timeout_allows_for_a_cold_apps_script(monkeypatch):
     # ⚠️ And not unbounded — a phone is waiting on this.
     assert seen["timeout"] <= 25, "a tester gives up before the request does"
     assert answer["sent"] is True, "a plain-text 2xx from a Sheet sink is a success"
+
+
+# ---- the fixture ticker: the league's fixtures, not yours (ADR-265) ---------
+
+def test_the_ticker_covers_every_club_and_ranks_easiest_first():
+    """⭐ **Easiest run first, decided by the server**, so every client agrees what "easiest" means."""
+    answer = svc.ticker(svc.TickerRequest(next_n=6))
+    assert len(answer["rows"]) == 20, "a ticker that omits clubs is a ticker you cannot compare with"
+    assert len(answer["gameweeks"]) == 6
+
+    rated = [r["avg_difficulty"] for r in answer["rows"] if r["avg_difficulty"] is not None]
+    assert rated == sorted(rated), "rows must arrive easiest-first"
+
+
+def test_a_blank_gameweek_is_a_present_key_with_no_cell():
+    """⭐⭐ *"They do not play"* is the most valuable thing a ticker says.
+
+    ⚠️ A missing key reads as missing **data**, and a client would render a gap identical to a bug. So
+    every gameweek in the window appears for every club, and a blank is an explicit `None`.
+    """
+    answer = svc.ticker(svc.TickerRequest(next_n=6))
+    weeks = {str(gw) for gw in answer["gameweeks"]}
+    for row in answer["rows"]:
+        assert set(row["cells"]) == weeks, f"{row['team']} is missing a gameweek key"
+
+
+def test_cell_keys_are_strings_because_json_has_no_integer_keys():
+    """⚠️ ADR-219's lesson, and the reason the order lives in `gameweeks` rather than in the map."""
+    answer = svc.ticker(svc.TickerRequest(next_n=3))
+    assert all(isinstance(k, str) for row in answer["rows"] for k in row["cells"])
+    assert all(isinstance(gw, int) for gw in answer["gameweeks"])
+
+
+def test_a_double_carries_both_opponents_and_the_harder_difficulty():
+    """⚠️ **A double is only as easy as its worse fixture**, and the ticker is the view built to spot one.
+
+    ⭐ Shading by the first match would make the one view people open to find doubles the one that
+    misrepresents them. Constructed, because ⚠️ *the seed may hold no double* — and a test that silently
+    skips when the data is ordinary reads as coverage (ADR-178).
+    """
+    from src.analytics.fdr import fixture_ticker
+
+    fixtures = [
+        {"event": 6, "home": "ARS", "away": "CHE", "team_h_difficulty": 2, "team_a_difficulty": 4},
+        {"event": 6, "home": "LIV", "away": "ARS", "team_h_difficulty": 2, "team_a_difficulty": 5},
+    ]
+    grid = fixture_ticker(fixtures, next_n=1)
+    arsenal = next(r for r in grid["rows"] if r["team"] == "ARS")
+    cell = arsenal["cells"][6]
+    assert len(cell["fixtures"]) == 2, "both halves of a double must be present"
+    assert cell["difficulty"] == 5, "a double is shaded by its harder half"
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (svc.TickerRequest(next_n=0), "next_n must be 1-10"),
+    (svc.TickerRequest(next_n=11), "next_n must be 1-10"),
+    # ⚠️ `elo` needs bands the caller cannot supply — an option that silently returns undefined
+    # difficulties is worse than one that is not offered.
+    (svc.TickerRequest(source="elo"), "source must be"),
+])
+def test_a_bad_ticker_request_is_refused(request_, expected):
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()

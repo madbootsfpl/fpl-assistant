@@ -29,6 +29,7 @@ class MoreView extends StatelessWidget {
     required this.onOpenPlayerDna,
     required this.onOpenSignals,
     required this.onOpenSettings,
+    required this.onOpenTicker,
     required this.onOpenFeedback,
     required this.onOpenHelp,
     super.key,
@@ -57,6 +58,7 @@ class MoreView extends StatelessWidget {
   final VoidCallback onOpenChips;
 
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenTicker;
   final VoidCallback onOpenFeedback;
 
   /// ⚠️ Leaves the app, which is the point: it is the one thing here that is better elsewhere.
@@ -97,6 +99,16 @@ class MoreView extends StatelessWidget {
             'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
             'left, not the next one.',
         onTap: onOpenChips,
+      ),
+      _Row(
+        icon: Icons.grid_on,
+        name: 'Fixture ticker',
+        // ⭐ Says what the grid is FOR, not what it contains. "Every club's next six fixtures" describes
+        // a table; "whose run turns good" is the reason to open one.
+        why:
+            'Every club’s next six, easiest run first — so you can see whose fixtures turn good before '
+            'you plan a transfer.',
+        onTap: onOpenTicker,
       ),
       // ⭐⭐ **Help goes out; feedback stays in** (ADR-254). They look like one item and are two jobs.
       // Help is *content* — long, searchable, better on a big screen, and updatable without an App Store

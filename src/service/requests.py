@@ -257,6 +257,27 @@ class PlayersRequest:
             raise ValueError("limit must be at least 1")
 
 
+@dataclass(frozen=True)
+class TickerRequest:
+    """The fixture-difficulty grid — ⚠️ **the other request with no squad at all** (ADR-265).
+
+    ⭐ It is about the **league**, not about you. A ticker answers *"whose run turns good?"*, which is the
+    question you ask before you have decided who to buy — so asking it does not require a squad, and
+    making it require one would have narrowed it to the clubs you already own.
+    """
+
+    next_n: int = 6
+    source: str = "fpl"
+
+    def validate(self) -> None:
+        if not 1 <= self.next_n <= 10:
+            raise ValueError(f"next_n must be 1-10, not {self.next_n}")
+        # ⚠️ `elo` is deliberately absent: it needs `elo_bands` the caller would have to supply, and an
+        # option that silently returns undefined difficulties is worse than one that is not offered.
+        if self.source not in ("fpl", "custom"):
+            raise ValueError(f"source must be 'fpl' or 'custom', not {self.source!r}")
+
+
 #: ⚠️ A cap, because this endpoint relays to the owner's own sink. It is not a general abuse defence —
 #: see `answers.feedback` — it is the difference between a bug report and a payload.
 MAX_FEEDBACK = 4000

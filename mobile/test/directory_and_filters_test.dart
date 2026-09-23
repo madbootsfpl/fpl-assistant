@@ -69,26 +69,58 @@ void _moreIsADirectory() {
         onOpenPlayerDna: () {},
         onOpenSignals: () {},
         onOpenSettings: () {},
+        onOpenTicker: () {},
         onOpenFeedback: () {},
         onOpenHelp: () {},
       ),
     );
 
+    /// ⚠️⚠️ **A tall viewport, because the list now runs past a phone's fold.** A `ListView` does not
+    /// build off-screen children, so adding one row silently took the last row out of every test that
+    /// looked for it — ⭐ *a test that cannot see a widget reports the same failure as one that is not
+    /// there.*
+    void tall(WidgetTester tester) {
+      tester.view.physicalSize = const Size(500, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    /// Every directory row, read **from the widget**.
+    ///
+    /// ⭐⭐ **Derived, not listed.** This was a hand-written list of seven names, so a new row was covered
+    /// by nothing until someone remembered to add it — the same failure that let an illegal import
+    /// through `_CORE` for the whole life of a package (ADR-261). ⚠️ *A hand-maintained list does not
+    /// grow when the thing it describes does.*
+    List<String> rowNames(WidgetTester tester) => [
+      for (final row in find.byType(InkWell).evaluate())
+        (tester
+                .widgetList<Text>(
+                  find.descendant(
+                    of: find.byWidget(row.widget),
+                    matching: find.byType(Text),
+                  ),
+                )
+                .first
+                .data ??
+            ''),
+    ];
+
     testWidgets('every entry explains itself', (tester) async {
+      tall(tester);
       await tester.pumpWidget(more());
 
-      // ⭐ The names, and for each one a sentence long enough to be an explanation rather than a label.
-      // ⚠️ Asserting only that the names render would pass on a bare menu — which is the thing ADR-238
-      // replaced.
-      for (final name in [
-        'Signals',
-        'Player DNA',
-        'Team DNA',
-        'Chips',
-        'Help & videos',
-        'Tell us something',
-        'Settings',
-      ]) {
+      final names = rowNames(tester);
+      // ⚠️ A guard that finds nothing must fail loudly rather than pass vacuously.
+      expect(
+        names.length,
+        greaterThanOrEqualTo(8),
+        reason: 'rows did not render',
+      );
+      expect(names, contains('Fixture ticker'));
+
+      // ⭐ For each row, a sentence long enough to be an explanation rather than a label. ⚠️ Asserting
+      // only that the names render would pass on a bare menu — the thing ADR-238 replaced.
+      for (final name in names) {
         final row = find.ancestor(
           of: find.text(name),
           matching: find.byType(InkWell),
@@ -116,6 +148,7 @@ void _moreIsADirectory() {
     });
 
     testWidgets('every entry is reachable and lands somewhere', (tester) async {
+      tall(tester);
       final opened = <String>[];
       await tester.pumpWidget(
         wrap(
@@ -127,37 +160,32 @@ void _moreIsADirectory() {
             onOpenPlayerDna: () => opened.add('Player DNA'),
             onOpenSignals: () => opened.add('Signals'),
             onOpenSettings: () => opened.add('Settings'),
+            onOpenTicker: () => opened.add('Fixture ticker'),
             onOpenFeedback: () => opened.add('Tell us something'),
             onOpenHelp: () => opened.add('Help & videos'),
           ),
         ),
       );
 
-      for (final name in [
-        'Signals',
-        'Player DNA',
-        'Team DNA',
-        'Chips',
-        'Help & videos',
-        'Tell us something',
-        'Settings',
-      ]) {
+      final names = rowNames(tester);
+      for (final name in names) {
         await tester.tap(find.text(name));
         await tester.pump();
       }
+
       // ⚠️ A directory whose rows all fire the *same* callback would satisfy "every row is tappable".
-      expect(opened, [
-        'Signals',
-        'Player DNA',
-        'Team DNA',
-        'Chips',
-        'Help & videos',
-        'Tell us something',
-        'Settings',
-      ]);
+      // ⭐ Each row must land somewhere **different**, and on the destination its own name promises.
+      expect(
+        opened.toSet().length,
+        names.length,
+        reason: 'two rows share a destination',
+      );
+      expect(opened.toSet(), containsAll(names));
     });
 
     testWidgets('the Settings row states its current value', (tester) async {
+      // ⚠️ Settings is the last row, so it went below the fold the moment the directory gained one.
+      tall(tester);
       await tester.pumpWidget(more(managerId: 2885974, freeTransfers: 2));
       expect(find.textContaining('Manager 2885974'), findsOneWidget);
       expect(find.textContaining('2 free transfers'), findsOneWidget);

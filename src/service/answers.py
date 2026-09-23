@@ -56,6 +56,7 @@ from src.service.requests import (
     SignalsRequest,
     SquadRequest,
     TeamDnaRequest,
+    TickerRequest,
     TransfersRequest,
 )
 from src.storage import Storage
@@ -814,6 +815,55 @@ def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
         "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
         "expires_after": chip_deadline(first) if first else None,
         "chips": advice,
+    }
+
+
+def ticker(request: TickerRequest, *, store: Storage | None = None) -> dict:
+    """The fixture-difficulty grid: every club, their next few gameweeks, easiest run first (ADR-265).
+
+    ⭐⭐ **The engine already did all of this.** `fixture_ticker` has handled doubles and blank gameweeks
+    since Sprint 062; what was missing was a way for a phone to ask. ⚠️ *A capability with no transport is
+    invisible to every surface that does not share a process.*
+
+    ⭐ **A blank gameweek is `null`, not a gap.** The cell is present and empty, because *"they do not
+    play"* is the single most valuable thing a ticker says and a missing key reads as missing data.
+
+    ⚠️ **A double shows both matches** and is shaded by its **harder** half — a double is only as easy as
+    its worse fixture, and shading it by the first would make the view built for spotting doubles the one
+    that misrepresents them.
+    """
+    request.validate()
+    from src.analytics.fdr import fixture_ticker
+
+    store, ours = opened(store)
+    try:
+        grid = fixture_ticker(store.get_upcoming_fixtures(), next_n=request.next_n,
+                              source=request.source)
+    finally:
+        if ours:
+            store.close()
+
+    return {
+        "gameweeks": grid["gameweeks"],
+        "rows": [
+            {
+                "team": row["team"],
+                "avg_difficulty": row["avg_difficulty"],
+                # ⚠️ Keys are stringified: JSON has no integer object keys, and a client sorting text
+                # would put "10" before "6" (ADR-219). The gameweek order lives in `gameweeks`.
+                "cells": {
+                    str(ev): None if cell is None else {
+                        "opponent": cell["opponent"],
+                        "venue": cell["venue"],
+                        "difficulty": cell["difficulty"],
+                        "opponents": [f["opponent"] for f in cell["fixtures"]],
+                        "venues": [f["venue"] for f in cell["fixtures"]],
+                    }
+                    for ev, cell in row["cells"].items()
+                },
+            }
+            for row in grid["rows"]
+        ],
     }
 
 

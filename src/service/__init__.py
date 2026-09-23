@@ -30,6 +30,7 @@ from src.service.answers import (
     route,
     signals,
     team_dna,
+    ticker,
     transfers,
 )
 from src.service.requests import (
@@ -49,6 +50,7 @@ from src.service.requests import (
     SignalsRequest,
     SquadRequest,
     TeamDnaRequest,
+    TickerRequest,
     TransfersRequest,
 )
 
@@ -68,6 +70,8 @@ __all__ = [
     "SignalsRequest",
     "PlayerDnaRequest",
     "TeamDnaRequest",
+    "TickerRequest",
+    "ticker",
     "SquadRequest",
     "TransfersRequest",
     "analysis",

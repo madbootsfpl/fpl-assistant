@@ -68,6 +68,10 @@ def responses(store) -> dict:
         # ⭐ The expanding card's own response. Added when a widget test needed to expand a row and had
         # nothing real to expand it with — ⚠️ *a hand-built card fixture would have tested the fixture.*
         "player": service.player(service.PlayerRequest(player_id=ids[0], horizon=5), store=store),
+        # ⭐ The fixture ticker — twenty clubs, six gameweeks (ADR-265). ⚠️ Worth a sample even though it
+        # takes no squad: the shape a client has to survive is the **blank cell**, and a hand-built
+        # fixture would be one somebody wrote rather than one the server produces.
+        "ticker": service.ticker(service.TickerRequest(next_n=6), store=store),
         # ⭐ Boot Battle's own response, so a widget test can render the real thing (ADR-258).
         "compare": _compare_pair(store, ids),
     }

@@ -26,6 +26,7 @@ import 'player_dna_view.dart';
 import 'player_sheet.dart';
 import 'team_dna_view.dart';
 import 'this_week_view.dart';
+import 'ticker_view.dart';
 import 'transfers_view.dart';
 
 /// The owner's own team, so the app opens on something real rather than a stranger's squad.
@@ -597,6 +598,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             _open('Player DNA', PlayerDnaView(client: _client, team: team)),
         onOpenTeamDna: () =>
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
+        onOpenTicker: () =>
+            _open('Fixture ticker', TickerView(client: _client)),
         onOpenFeedback: () => _open(
           _feedbackTitle,
           FeedbackView(client: _client, from: _lastScreen),

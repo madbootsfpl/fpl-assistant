@@ -142,6 +142,10 @@ NO_PLAYERS = {
     # shape is guarded by `test_team_dna_endpoint.py`. ⭐ *"Nothing to check here" has to be written down,
     # or the next reader cannot tell it from "nobody checked".*
     "team_dna",
+    # ⚠️ The **league's fixtures**, not anyone's players — a clubs × gameweeks grid whose cells hold an
+    # opponent's short name, never a player row. Its own shape is guarded in `test_service_endpoints.py`
+    # (blank cells present, keys stringified, a double shaded by its harder half).
+    "ticker",
 }
 
 

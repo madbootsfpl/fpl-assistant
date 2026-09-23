@@ -159,6 +159,13 @@ class ServiceClient {
     'version': version,
   });
 
+  /// The fixture-difficulty grid — every club, next few gameweeks, easiest run first (ADR-265).
+  ///
+  /// ⭐ **No squad.** It is a question about the league, not about you, and requiring a squad would have
+  /// narrowed it to the clubs you already own.
+  Future<FixtureTicker> ticker({int nextN = 6}) async =>
+      FixtureTicker.fromJson(await _post('ticker', {'next_n': nextN}));
+
   /// Every available player, ranked by xP.
   ///
   /// ⭐ Fetched **once** and filtered on the device: the whole market is ~110 KB, and searching 481 rows
