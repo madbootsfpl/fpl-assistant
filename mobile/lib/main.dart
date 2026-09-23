@@ -14,6 +14,7 @@ import 'apply_plan.dart';
 import 'brand.dart';
 import 'chips_view.dart';
 import 'players_view.dart';
+import 'seen_store.dart';
 import 'server.dart';
 import 'settings_view.dart';
 import 'signals_view.dart';
@@ -122,6 +123,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   final DraftStore _drafts = DraftStore();
 
+  /// ⭐⭐ **What the device has already shown you** (ADR-256). The server says what exists; only this knows
+  /// what is new — ADR-232's split, reused rather than a second mechanism invented.
+  final SeenStore _seen = SeenStore();
+  Set<String> _seenKeys = const {};
+
   /// The draft currently being shown, or null when the real team is.
   Draft? _draft;
 
@@ -214,7 +220,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   /// Push a full screen. ⭐ Used for the things More links to — they are screens, not rows, and giving them
   /// a back button is what makes More a menu rather than a very long page.
-  void _open(String title, Widget body) => Navigator.of(context).push(
+  Future<void> _open(String title, Widget body) => Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => Scaffold(
         backgroundColor: Brand.ink,
@@ -284,6 +290,15 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       _dropped = null;
     });
   }
+
+  /// Signals about your fifteen that this device has not shown yet.
+  ///
+  /// ⚠️ **Computed, never stored as a count.** A stored count goes stale the moment the squad changes or
+  /// a headline lands; the keys are the truth and the count is a view of them.
+  List<String> _unseen(MyTeam team) => [
+    for (final k in team.signalKeys)
+      if (!_seenKeys.contains(k)) k,
+  ];
 
   /// ⭐ **The one link that leaves the app** (ADR-254). Help is content — better on a big screen, and
   /// updatable without an App Store release.
@@ -369,6 +384,15 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   int _freeTransfers = 1;
 
   @override
+  void initState() {
+    super.initState();
+    // ⚠️ Loaded once and held: reading it per rebuild would make the badge flicker on every setState.
+    _seen.load().then((keys) {
+      if (mounted) setState(() => _seenKeys = keys);
+    });
+  }
+
+  @override
   void dispose() {
     _client.close();
     _id.dispose();
@@ -452,6 +476,24 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             // it are wrong, and disappears when they are not. ⭐ *A warning that is always on is a
             // decoration.*
             if (team.data.behind) _StaleBanner(data: team.data),
+            // ⚠️⚠️ **Being told beats going to look** — the argument ADR-228 made for a badge and then
+            // parked, because it was assumed to cost a round trip. ⭐ It does not: `my-team` carries the
+            // signal keys for ~50ms, and the device supplies the only part the server cannot know.
+            if (_unseen(team).isNotEmpty)
+              _SignalNudge(
+                count: _unseen(team).length,
+                // ⚠️⚠️ **Re-read on the way back.** Signals marks its keys seen as it renders, and
+                // without this the nudge would still be sitting there when you returned — ⭐ *a badge
+                // that survives the thing it pointed at is a badge nobody trusts twice.*
+                onTap: () async {
+                  await _open(
+                    'Signals',
+                    SignalsView(client: _client, team: team),
+                  );
+                  final keys = await _seen.load();
+                  if (mounted) setState(() => _seenKeys = keys);
+                },
+              ),
             Expanded(
               child: PitchView(
                 team: team,
@@ -492,8 +534,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           'Chips',
           ChipsView(client: _client, team: team, managerId: _managerId),
         ),
-        onOpenSignals: () =>
-            _open('Signals', SignalsView(client: _client, team: team)),
+        onOpenSignals: () async {
+          await _open('Signals', SignalsView(client: _client, team: team));
+          final keys = await _seen.load();
+          if (mounted) setState(() => _seenKeys = keys);
+        },
         onOpenPlayerDna: () =>
             _open('Player DNA', PlayerDnaView(client: _client, team: team)),
         onOpenTeamDna: () =>
@@ -746,6 +791,63 @@ class _StaleBanner extends StatelessWidget {
           ),
         ),
       ],
+    ),
+  );
+}
+
+/// *"Three things you have not seen."* — the nudge that makes a phone worth carrying (ADR-256).
+///
+/// ⭐⭐ **It disappears the moment you have looked**, which is the whole design: a badge that is always on
+/// is a decoration, and one that persists after you have read the thing is a liar. Opening Signals marks
+/// them seen, and the next build of this screen has nothing to show.
+///
+/// ⚠️ It is a **nudge, not an alarm**: these are things worth knowing, not things going wrong. The colour
+/// is the app's own purple rather than the warning orange the stale-data banner uses — *a screen where
+/// everything is urgent has no way to say that something is.*
+class _SignalNudge extends StatelessWidget {
+  const _SignalNudge({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(6, 2, 6, 6),
+      padding: const EdgeInsets.fromLTRB(11, 7, 9, 7),
+      decoration: BoxDecoration(
+        color: Brand.purple.withValues(alpha: 0.22),
+        border: Border.all(color: Brand.purpleLight, width: 1),
+        borderRadius: BorderRadius.circular(Brand.radiusSm),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.campaign_outlined,
+            size: 15,
+            color: Brand.purpleLight,
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              // ⭐ Says what it is about — *your* players — because a bare "3 new signals" invites a tap
+              // to find out whether it concerns you at all.
+              count == 1
+                  ? '1 new signal about your squad'
+                  : '$count new signals about your squad',
+              style: const TextStyle(
+                color: Brand.purpleLight,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 16, color: Brand.purpleLight),
+        ],
+      ),
     ),
   );
 }

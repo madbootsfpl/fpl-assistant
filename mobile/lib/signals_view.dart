@@ -9,14 +9,12 @@
 /// *what-changed* view the start checklist asked for, and it needed no new data at all.
 library;
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'seen_store.dart';
 
 /// How much the source behind a signal actually knows.
 enum SignalKind { official, departure, exodus, headline, trending, unknown }
@@ -54,30 +52,6 @@ extension on SignalKind {
   };
 }
 
-/// Remembers which signals have already been shown. ⭐ One key, like the draft store — the app needs a
-/// memory, not a database.
-class _SeenStore {
-  static const String _key = 'madboots.signals.seen.v1';
-
-  Future<Set<String>> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_key);
-    if (raw == null) return {};
-    try {
-      return (jsonDecode(raw) as List).cast<String>().toSet();
-    } catch (_) {
-      return {};
-    }
-  }
-
-  Future<void> save(Set<String> keys) async {
-    final prefs = await SharedPreferences.getInstance();
-    // ⚠️ Replaced, not merged: a key that no longer comes back is a signal that has passed, and keeping it
-    // forever would grow a list nobody reads until it slowed the thing it was meant to speed up.
-    await prefs.setString(_key, jsonEncode(keys.toList()));
-  }
-}
-
 class SignalsView extends StatefulWidget {
   const SignalsView({required this.client, required this.team, super.key});
 
@@ -89,7 +63,7 @@ class SignalsView extends StatefulWidget {
 }
 
 class _SignalsViewState extends State<SignalsView> {
-  final _SeenStore _store = _SeenStore();
+  final SeenStore _store = SeenStore();
 
   /// ⭐⭐ **Trending is not a separate screen any more** (ADR-245). It was the same question — *what is the
   /// crowd doing?* — asked in a different shape, and a second screen would have meant a second ordering,

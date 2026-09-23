@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'mugshot.dart';
 
 const List<String> _positions = ['GK', 'DEF', 'MID', 'FWD'];
 
@@ -48,6 +49,15 @@ class _PlayersViewState extends State<PlayersView> {
   /// set to or the list is silently lying about being the whole market.
   double? _maxPrice;
 
+  /// ⭐⭐ **Progressive disclosure** (ADR-257) — the pattern the owner liked in the competitor's custom
+  /// transfers. A row showing every filter it *could* apply spends its width on questions nobody asked;
+  /// one showing only the filters in play, plus a way to add another, spends it on answers.
+  ///
+  /// ⚠️ Position and price are deliberately **not** behind it: they were already visible and already
+  /// used. *Hiding a filter people reach for is not disclosure, it is a tax.*
+  double? _minXp;
+  String? _club;
+
   /// ⭐ **"Show me mine"** (feedback item 5). The board is 481 players and fifteen of them are the ones a
   /// manager keeps coming back to — to check a price, a run, a flag. Without this, finding your own player
   /// meant typing his name into a search box that already knows who you own.
@@ -65,6 +75,8 @@ class _PlayersViewState extends State<PlayersView> {
       if (_position != null && p.position != _position) return false;
       if (_maxPrice != null && p.price > _maxPrice!) return false;
       if (_mineOnly && !widget.owned.contains(p.id)) return false;
+      if (_minXp != null && p.xp < _minXp!) return false;
+      if (_club != null && p.team != _club) return false;
       if (term.isEmpty) return true;
       // ⭐ Name **or** club: "ars" should find Arsenal's players, which is how a manager actually looks.
       return p.name.toLowerCase().contains(term) ||
@@ -79,8 +91,15 @@ class _PlayersViewState extends State<PlayersView> {
       ?_position,
       if (_maxPrice != null) 'under £${_maxPrice!.toStringAsFixed(1)}m',
       if (_mineOnly) 'your squad',
+      if (_minXp != null) '${_minXp!.toStringAsFixed(0)}+ xP',
+      ?_club,
     ];
   }
+
+  /// ⭐ The clubs actually on the board, not a hard-coded twenty — a promoted side appears without a
+  /// release, and the filter can never offer a club with nobody in it.
+  List<String> _clubsIn(List<PlayerSummary> all) =>
+      all.map((p) => p.team).toSet().toList()..sort();
 
   Future<void> _pickPrice() async {
     final picked = await showModalBottomSheet<double?>(
@@ -215,6 +234,29 @@ class _PlayersViewState extends State<PlayersView> {
                     onTap: () => setState(() => _position = pos),
                   ),
                 const _Divider(),
+                if (_minXp != null)
+                  _ValueChip(
+                    label: 'xP',
+                    value: '${_minXp!.toStringAsFixed(0)}+',
+                    on: true,
+                    // ⚠️ Tapping the chip **removes** it. A separate ✕ would be a second control for one
+                    // idea, and at this size a target nobody hits.
+                    onTap: () => setState(() => _minXp = null),
+                  ),
+                if (_club != null)
+                  _ValueChip(
+                    label: 'Club',
+                    value: _club!,
+                    on: true,
+                    onTap: () => setState(() => _club = null),
+                  ),
+                _AddFilter(
+                  clubs: _clubsIn(all),
+                  hasXp: _minXp != null,
+                  hasClub: _club != null,
+                  onXp: (v) => setState(() => _minXp = v),
+                  onClub: (c) => setState(() => _club = c),
+                ),
                 _ValueChip(
                   label: 'Price',
                   // ⭐ It reads as a sentence either way — `Price: any` is a statement about the list,
@@ -561,6 +603,41 @@ class _Card extends StatelessWidget {
                   ),
               ],
             ),
+            // ⭐ Beside the fixtures, not above them: the face identifies, the numbers decide, and the
+            // decision should not have to scroll past the identification.
+            if (card.photo.isNotEmpty || card.player.name.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Mugshot(url: card.photo, name: card.player.name),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            card.player.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '${card.player.position} · ${card.player.team} · '
+                            '£${card.player.price.toStringAsFixed(1)}m',
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (card.recent.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -770,5 +847,187 @@ class _PriceOption extends StatelessWidget {
         ? const Icon(Icons.check, size: 17, color: Brand.purpleLight)
         : null,
     onTap: () => Navigator.of(context).pop(value),
+  );
+}
+
+/// *"Add filter"* — ⭐⭐ **the row shows what is in play, not everything that could be** (ADR-257).
+///
+/// ⚠️ An added filter becomes a chip that states its value, and **tapping that chip removes it**. A
+/// separate ✕ would be a second control for one idea, and at this size a target nobody hits.
+class _AddFilter extends StatelessWidget {
+  const _AddFilter({
+    required this.clubs,
+    required this.hasXp,
+    required this.hasClub,
+    required this.onXp,
+    required this.onClub,
+  });
+
+  final List<String> clubs;
+  final bool hasXp;
+  final bool hasClub;
+  final ValueChanged<double> onXp;
+  final ValueChanged<String> onClub;
+
+  @override
+  Widget build(BuildContext context) {
+    // ⭐ Gone entirely when there is nothing left to add — *a button that can only disappoint should
+    // disappear.*
+    if (hasXp && hasClub) return const SizedBox.shrink();
+    return GestureDetector(
+      onTap: () => _open(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
+        padding: const EdgeInsets.only(left: 10, right: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white24),
+          borderRadius: BorderRadius.circular(Brand.radiusPill),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add, size: 13, color: Colors.white54),
+            SizedBox(width: 3),
+            Text(
+              'Filter',
+              style: TextStyle(color: Colors.white54, fontSize: 12.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _open(BuildContext context) => showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Brand.ink,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (sheet) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Add a filter',
+                style: TextStyle(color: Colors.white, fontSize: 14.5),
+              ),
+            ),
+          ),
+          // ⚠️ Only what is not already on. A menu offering a filter you are using would be a menu that
+          // has not looked at the screen behind it.
+          if (!hasXp)
+            _Option(
+              icon: Icons.trending_up,
+              title: 'Minimum xP',
+              why: 'Hide anyone projected below a threshold',
+              onTap: () async {
+                Navigator.of(sheet).pop();
+                final picked = await _pickNumber(context);
+                if (picked != null) onXp(picked);
+              },
+            ),
+          if (!hasClub)
+            _Option(
+              icon: Icons.shield_outlined,
+              title: 'Club',
+              why: 'One side only',
+              onTap: () async {
+                Navigator.of(sheet).pop();
+                final picked = await _pickClub(context);
+                if (picked != null) onClub(picked);
+              },
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+
+  Future<double?> _pickNumber(BuildContext context) =>
+      showModalBottomSheet<double>(
+        context: context,
+        backgroundColor: Brand.ink,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (sheet) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final step in const [2.0, 3.0, 4.0, 5.0, 6.0])
+                ListTile(
+                  dense: true,
+                  title: Text(
+                    '${step.toStringAsFixed(0)} xP or more',
+                    style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                  ),
+                  onTap: () => Navigator.of(sheet).pop(step),
+                ),
+            ],
+          ),
+        ),
+      );
+
+  Future<String?> _pickClub(BuildContext context) =>
+      showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Brand.ink,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (sheet) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final club in clubs)
+                ListTile(
+                  dense: true,
+                  title: Text(
+                    club,
+                    style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                  ),
+                  onTap: () => Navigator.of(sheet).pop(club),
+                ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _Option extends StatelessWidget {
+  const _Option({
+    required this.icon,
+    required this.title,
+    required this.why,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String why;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    dense: true,
+    leading: Icon(icon, size: 18, color: Brand.purpleLight),
+    title: Text(
+      title,
+      style: const TextStyle(color: Colors.white, fontSize: 13.5),
+    ),
+    // ⭐ A line each, like the More directory: a menu of nouns makes you guess what they do.
+    subtitle: Text(
+      why,
+      style: const TextStyle(color: Colors.white38, fontSize: 11),
+    ),
+    onTap: onTap,
   );
 }

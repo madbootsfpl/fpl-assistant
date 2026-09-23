@@ -447,6 +447,7 @@ class MyTeam {
     required this.runXp,
     required this.suggestedLineup,
     required this.data,
+    required this.signalKeys,
     required this.swaps,
     required this.benchedIds,
     required this.benchRoles,
@@ -504,6 +505,7 @@ class MyTeam {
       data: DataFreshness.fromJson(
         (json['data'] as Map<String, dynamic>?) ?? const {},
       ),
+      signalKeys: [for (final k in (json['signal_keys'] as List? ?? [])) '$k'],
       swaps: {
         for (final row in (json['swaps'] as List? ?? []))
           (row as Map<String, dynamic>)['id'] as int: [
@@ -592,6 +594,10 @@ class MyTeam {
   /// How old this data is, and whether a finished gameweek is missing from it (ADR-248).
   final DataFreshness data;
 
+  /// Every signal about your fifteen, by stable key — ⭐ **keys, not signals** (ADR-256). The badge is a
+  /// count, and a count does not need the things it counted.
+  final List<String> signalKeys;
+
   /// Player id → the players he may legally change places with (ADR-246).
   ///
   /// ⭐⭐ **Decided by the engine, not here.** FPL's formation limits live in `XI_FLEX` and are enforced by
@@ -668,6 +674,7 @@ class MyTeam {
     runXp: runXp,
     suggestedLineup: suggestedLineup,
     data: data,
+    signalKeys: signalKeys,
     swaps: swaps,
     benchedIds: benchedIds,
     benchRoles: benchRoles,
@@ -854,6 +861,7 @@ class BootBattle {
 class PlayerCard {
   PlayerCard({
     required this.player,
+    required this.photo,
     required this.stats,
     required this.recent,
     required this.fixtures,
@@ -861,6 +869,7 @@ class PlayerCard {
 
   factory PlayerCard.fromJson(Map<String, dynamic> json) => PlayerCard(
     player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    photo: json['photo'] as String? ?? '',
     stats: ((json['stats'] as List?) ?? const [])
         .map(
           (r) => (label: (r as Map)['label'] as String, value: '${r['value']}'),
@@ -875,6 +884,9 @@ class PlayerCard {
   );
 
   final PlayerSummary player;
+
+  /// His mugshot — ⚠️ **on a named card, never on the pitch** (ADR-255/084).
+  final String photo;
 
   /// ⭐ **Already ordered for his position** by the server — a defender's card leads with expected goals
   /// conceded, a forward's with goals. ⚠️ Re-sorting these on the client would throw that away.
@@ -1100,6 +1112,7 @@ class DataFreshness {
 class PlayerDna {
   PlayerDna({
     required this.player,
+    required this.photo,
     required this.axes,
     required this.insights,
     required this.poolSize,
@@ -1111,6 +1124,7 @@ class PlayerDna {
 
   factory PlayerDna.fromJson(Map<String, dynamic> json) => PlayerDna(
     player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    photo: json['photo'] as String? ?? '',
     axes: [
       for (final a in (json['axes'] as List? ?? []))
         DnaAxis.fromJson(a as Map<String, dynamic>),
@@ -1130,6 +1144,9 @@ class PlayerDna {
   );
 
   final PlayerSummary player;
+
+  /// His mugshot — ⚠️ **on a named card, never on the pitch** (ADR-255/084).
+  final String photo;
   final List<DnaAxis> axes;
   final List<({String kind, String text})> insights;
 

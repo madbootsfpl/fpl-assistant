@@ -19,10 +19,13 @@ import streamlit as st
 
 # ⭐ **Re-exported, not redefined** (ADR-222). The kit URL moved to `src/kits.py` so the API can build one
 # without importing Streamlit; every existing caller of `badges.shirt_url_by_id` keeps working unchanged.
-from src.kits import shirt_url, shirt_url_by_id  # noqa: F401 — re-export for existing callers
+from src.kits import (  # noqa: F401 — re-exports for existing callers
+    badge_url,
+    photo_url,
+    shirt_url,
+    shirt_url_by_id,
+)
 
-_BADGE = "https://resources.premierleague.com/premierleague/badges/70/t{code}.png"
-_PHOTO = "https://resources.premierleague.com/premierleague/photos/players/110x140/p{code}.png"
 # FPL club-shirt kit images — the outfield shirt, and the `_1` goalkeeper variant. Keyed by *team* code.
 _SHIRT = "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_{code}{gk}-66.png"
 
@@ -30,17 +33,11 @@ _SWEEP_TIMEOUT = 2.5        # seconds per photo HEAD — kept short so a slow CD
 _SWEEP_WORKERS = 32
 
 
-def badge_url(code) -> str:
-    return _BADGE.format(code=code) if code else ""
-
-
 def badge_url_by_short_name(teams) -> dict:
     """`{team short_name -> badge URL}` from stored team rows (each with `short_name` + `code`)."""
     return {t["short_name"]: badge_url(t["code"]) for t in teams}
 
 
-def photo_url(code) -> str:
-    return _PHOTO.format(code=code) if code else ""
 
 
 

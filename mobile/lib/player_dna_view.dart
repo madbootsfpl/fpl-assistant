@@ -17,6 +17,7 @@ import 'brand.dart';
 import 'dna_bars.dart';
 import 'dna_radar.dart';
 import 'help_dot.dart';
+import 'mugshot.dart';
 
 class PlayerDnaView extends StatefulWidget {
   const PlayerDnaView({required this.client, required this.team, super.key});
@@ -161,6 +162,8 @@ class _Fingerprint extends StatelessWidget {
       children: [
         Row(
           children: [
+            Mugshot(url: dna.photo, name: dna.player.name, size: 40),
+            const SizedBox(width: 9),
             Expanded(
               child: Text(
                 dna.player.name,

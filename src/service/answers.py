@@ -35,7 +35,7 @@ from src.analytics.player_dna import player_insights
 from src.analytics.team_dna import key_players_this_or_last
 from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
-from src.kits import shirt_url
+from src.kits import photo_url, shirt_url
 from src.manager import fetch_manager_team
 from src.service.inputs import RUN, WIDE, load, opened, reported_leavers
 from src.service.requests import (
@@ -584,6 +584,10 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # flags somebody every week.
         leaving = reported_leavers(owned, players, store)
         freshness = _data_freshness(store)
+        # ⚠️ ~50ms over fifteen players, measured — cheap enough to fold into the screen everyone opens,
+        # and it saves the round trip that had this feature parked since ADR-228.
+        signal_keys = [s["key"] for s in signals(
+            SignalsRequest(player_ids=owned_ids, horizon=1), store=store)["signals"]]
     finally:
         if ours:
             store.close()
@@ -682,6 +686,14 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # monitoring and by nobody else — ⭐ *the place to say "these numbers are from yesterday" is beside
         # the numbers.*
         "data": freshness,
+        # ⭐⭐⭐ **The keys, not the signals** (ADR-256). The pitch wants a badge saying *"three things you
+        # have not seen"* — and the server cannot know what you have seen, because it has no idea when you
+        # last looked. ⚠️ *It can say what EXISTS; only the device knows what is new*, which is ADR-232's
+        # split reused rather than a second mechanism invented.
+        #
+        # ⭐ Keys only: three strings against a full sweep's worth of player summaries. The badge is a
+        # count, and a count does not need the things it counted.
+        "signal_keys": signal_keys,
         # ⭐ A **list**, not a map keyed by player id. The docstring above explains why ids never become
         # JSON keys here; a list sidesteps the question rather than arguing with it.
         "run_xp": run_xp,
@@ -1081,12 +1093,15 @@ def player_dna(request: PlayerDnaRequest, *, store: Storage | None = None) -> di
     if dna is None:
         # ⚠️ A player with no position cannot be ranked. ⭐ Saying so beats an empty radar, which reads as
         # "this player is bad at everything".
-        return {"player": summary, "axes": [], "insights": [], "pool_size": 0,
+        return {"player": summary, "photo": photo_url(target["code"]), "axes": [], "insights": [],
+                "pool_size": 0,
                 "low_minutes": True, "min_minutes": 0, "recent": _recent_rows(recent, club_by_id),
                 "unranked": "no position on record"}
 
     return {
         "player": summary,
+        # ⭐ Same rule as the card: a face belongs where a name already is.
+        "photo": photo_url(target["code"]),
         "axes": [{"label": a.label, "sublabel": a.sublabel, "value": a.value,
                   "percentile": a.percentile} for a in dna.axes],
         "insights": [{"kind": i.kind, "text": i.text} for i in insights],
@@ -1279,6 +1294,12 @@ def player(request: PlayerRequest, *, store: Storage | None = None) -> dict:
     return {
         "horizon": request.horizon,
         "player": player_summary(row, data.xp_by_id, by_gameweek, reported_out=data.leaving),
+        # ⭐⭐ **On a named card, never on the pitch** (ADR-255). ADR-084 chose the club kit there on
+        # purpose: FPL's photo CDN lags a transfer by weeks while the kit graphic updates instantly, so a
+        # just-transferred player would sit on the pitch wearing his old club's face. ⚠️ *On a card his
+        # name is beside him and the staleness is a curiosity; on the pitch it is the app being visibly
+        # wrong about your team.*
+        "photo": photo_url(row["code"]),
         "stats": [{"label": label, "value": value} for label, value in stat_rows(row)],
         "recent": _recent_rows(recent, club_by_id),
         # ⭐ The run **with difficulty**, so a reader can see whether a high projection is a good player or
