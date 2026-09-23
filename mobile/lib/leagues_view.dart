@@ -15,7 +15,6 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
-import 'mugshot.dart';
 
 class LeaguesView extends StatefulWidget {
   const LeaguesView({required this.client, required this.managerId, super.key});
@@ -622,6 +621,24 @@ class _Decomposition extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            Text(
+              // ⚠️⚠️ **Says which question this answers** (feedback). Sitting under a league table,
+              // *"1.6 behind"* reads as **league points** — and it is not: it is *projected points for
+              // the coming gameweek*, which can point the opposite way to the standings. ⭐ *A number
+              // that could be either of two things is read as whichever the reader already had in mind.*
+              // ⚠️ And it names **which squads**: a rival's picks are public only after a deadline, so
+              // this is each squad **as it finished** the last gameweek. ⭐ *A projection whose inputs
+              // are a week old is still useful; one that does not say so is not.*
+              h2h.gameweek == null
+                  ? 'Projected points for the coming gameweek — not your gap in the table.'
+                  : 'Projected points for GW${h2h.gameweek! + 1} — not your gap in the '
+                        'table. From each squad as it finished GW${h2h.gameweek}.',
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 10.5,
+                height: 1.4,
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               h2h.note,
@@ -649,9 +666,36 @@ class _Decomposition extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 10),
-      _EdgeList(title: 'Only you', rows: h2h.myEdge, good: true),
-      const SizedBox(height: 8),
-      _EdgeList(title: 'Only ${rival.team}', rows: h2h.theirEdge, good: false),
+      // ⭐⭐ **Side by side** (feedback). Stacked, the two lists were *two lists*; beside each other they
+      // are one comparison — ⚠️ *the question is "who is stronger where?", and an answer you have to
+      // scroll between cannot be read as a comparison at all.*
+      IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _EdgeList(title: 'Only you', rows: h2h.myEdge, good: true),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _EdgeList(
+                title: 'Only them',
+                rows: h2h.theirEdge,
+                good: false,
+              ),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          // ⚠️ The rival's name moves here: at column width it truncated to *"Only Famous Last…"*, and
+          // ⭐ *a heading that does not fit is a heading that stops being one.*
+          'Them = ${rival.team}',
+          style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+        ),
+      ),
     ],
   );
 }
@@ -692,8 +736,8 @@ class _EdgeList extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 4),
           child: Row(
             children: [
-              Mugshot(url: '', name: row.player.name, size: 22),
-              const SizedBox(width: 8),
+              // ⚠️ The mugshot goes at half width — ⭐ *a 22px avatar and a truncated name is a worse
+              // row than an untruncated name.*
               Expanded(
                 child: Text(
                   row.player.name,

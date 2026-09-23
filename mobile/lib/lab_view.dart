@@ -1,18 +1,17 @@
-/// Squad Lab — rebuild your fifteen and see what changes (ADR-268).
+/// Squad Lab — build a fifteen, edit it, and make it your plan (ADR-268/272).
 ///
-/// ⭐⭐ **A wildcard draft is only useful next to the squad it replaces.** The solver has answered *"the
-/// best fifteen within a budget"* since ADR-013, and on its own that is a list of names you then have to
-/// diff against your own team in your head. ⚠️ *The comparison is the product; the squad is the input to
-/// it.*
+/// ⭐⭐ **A draft is only useful next to the squad it replaces.** The solver has answered *"the best
+/// fifteen within a budget"* since ADR-013, and on its own that is a list of names you then diff against
+/// your own team in your head. ⚠️ *The comparison is the product; the squad is the input to it.*
 ///
-/// ⭐ **Nothing here changes anything.** FPL has no write API (and would not be given one), so this is a
-/// scratchpad — which is also why it can afford to be wrong: *an experiment you cannot accidentally
-/// execute is one you can run freely.*
+/// ⚠️⚠️ **"Apply" does not touch FPL, and cannot.** There is no write API and there will not be one — so
+/// applying makes this **your plan in this app**, which the pitch then draws and which survives closing
+/// the app (ADR-225/260). ⭐ *The real move still happens in the FPL app, and pretending otherwise would
+/// be the worst lie this screen could tell.*
 ///
-/// 📌 **Wildcard first, by the owner's call** — *"will need all 3, however to get feedback lets start with
-/// the Wildcard."* Free Hit and a fresh-season build are the **same solver with different defaults**
-/// (horizon 1, and £100.0m from nothing), which is why `_Mode` exists now rather than later: ⚠️ *a second
-/// mode bolted onto a screen built for one is how a screen ends up with two of everything.*
+/// 📌 **No pitch here, deliberately.** `PitchView` needs a real `MyTeam` — kits, fixtures, price moves,
+/// a deadline — and a built squad has none of them. ⭐ *A second pitch drawn from thinner data would be a
+/// worse pitch*, and applying the draft puts these fifteen on the real one.
 library;
 
 import 'package:flutter/material.dart';
@@ -20,36 +19,99 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'pill.dart';
 
-/// What the Lab is being asked to do. ⭐ Each mode is a **budget and a horizon**, not a different feature.
-enum LabMode { wildcard }
+/// What the Lab is being asked to do. ⭐ Each mode is a **budget and a horizon**, not a new feature.
+enum LabMode { wildcard, freeHit, freshSeason }
 
 extension LabModeDetail on LabMode {
   String get label => switch (this) {
     LabMode.wildcard => 'Wildcard',
+    LabMode.freeHit => 'Free Hit',
+    LabMode.freshSeason => 'New season',
   };
 
-  /// ⚠️ The horizon is the point of the mode. A wildcard is played for a **run**; a free hit would be
-  /// played for one week, and asking the solver for one week would give a different fifteen.
+  /// ⚠️ **The horizon is the point of the mode.** A wildcard is played for a **run**; a free hit is
+  /// played for **one week**, and asking the solver for a run would give a different fifteen.
   int get horizon => switch (this) {
     LabMode.wildcard => 5,
+    LabMode.freeHit => 1,
+    LabMode.freshSeason => 5,
+  };
+
+  /// ⭐ A new season starts from FPL's £100.0m, not from what you own — *that is the whole point of the
+  /// mode.* The other two spend your team value.
+  bool get fromScratch => this == LabMode.freshSeason;
+
+  String get note => switch (this) {
+    LabMode.wildcard => 'Your fifteen, rebuilt for the next five gameweeks.',
+    LabMode.freeHit =>
+      'One week only — picked for this gameweek and nothing after it.',
+    LabMode.freshSeason =>
+      'From £100.0m and nothing owned, the way a season starts.',
+  };
+}
+
+/// ⭐⭐ **How the solver values the bench** (ADR-045). Not a preference — two genuinely different squads.
+enum BuildStyle { strongXi, strongFifteen }
+
+extension BuildStyleDetail on BuildStyle {
+  String get label => switch (this) {
+    BuildStyle.strongXi => 'Strong XI',
+    BuildStyle.strongFifteen => 'Strong 15',
+  };
+
+  /// `0.1` spends almost everything on the eleven and buys a cheap bench that plays; `1.0` values all
+  /// fifteen equally, which is what a **Bench Boost** week actually asks for.
+  double get benchWeight => switch (this) {
+    BuildStyle.strongXi => 0.1,
+    BuildStyle.strongFifteen => 1.0,
+  };
+
+  String get note => switch (this) {
+    BuildStyle.strongXi =>
+      'Money on the eleven, a cheap bench that still plays.',
+    BuildStyle.strongFifteen =>
+      'All fifteen count — the shape for a Bench Boost.',
   };
 }
 
 class LabView extends StatefulWidget {
-  const LabView({required this.client, required this.team, super.key});
+  const LabView({
+    required this.client,
+    required this.team,
+    required this.onApply,
+    super.key,
+  });
 
   final ServiceClient client;
   final MyTeam team;
+
+  /// Make this squad the plan. ⚠️ *Not* a transfer — see the library note.
+  final Future<void> Function(BuildAnswer squad, String name) onApply;
 
   @override
   State<LabView> createState() => _LabViewState();
 }
 
 class _LabViewState extends State<LabView> {
-  final LabMode _mode = LabMode.wildcard;
+  LabMode _mode = LabMode.wildcard;
+  BuildStyle _style = BuildStyle.strongXi;
   final Set<int> _keep = {};
+
+  /// ⭐ Players sent away by **"Replace him"** — the solver must find someone else.
+  final Set<int> _drop = {};
+
+  final TextEditingController _name = TextEditingController();
   Future<BuildAnswer>? _draft;
+  BuildAnswer? _built;
+  bool _applied = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
 
   List<PlayerSummary> get _mine => [
     ...widget.team.analysis.xi,
@@ -58,33 +120,57 @@ class _LabViewState extends State<LabView> {
 
   /// ⭐⭐ **FPL's team value already includes the bank**, which is exactly what a wildcard has to spend.
   ///
-  /// ⚠️ It is not the sum of what the fifteen are worth today: FPL sells a risen player for less than his
-  /// current price, and ⭐ *a budget built by adding up current prices would be optimistic by exactly the
-  /// amount a manager has earned* — which is the direction that invents money.
-  double? get _budget => widget.team.value;
+  /// ⚠️ It is not the sum of what the fifteen are worth today: FPL sells a risen player for less than
+  /// his current price, and ⭐ *a budget built by adding up current prices would be optimistic by exactly
+  /// the amount a manager has earned* — the direction that invents money.
+  double? get _budget => _mode.fromScratch ? 100.0 : widget.team.value;
 
-  void _run() {
+  void _run({Set<int>? keep, Set<int>? drop}) {
     final budget = _budget;
     if (budget == null) return;
     setState(() {
-      _draft = widget.client.build(
-        budget: budget,
-        horizon: _mode.horizon,
-        includeIds: _keep.toList(),
-        // ⚠️⚠️ **Without this the solver treats all fifteen as if they play**, and spends real money on
-        // a bench that scores nothing (ADR-045). Measured: the bench-aware eleven beats the flat
-        // build's BEST POSSIBLE eleven — 329.1 against 325.1 — so this is not a preference.
-        benchWeight: 0.1,
-      );
+      _applied = false;
+      _draft = widget.client
+          .build(
+            budget: budget,
+            horizon: _mode.horizon,
+            includeIds: (keep ?? _keep).toList(),
+            excludeIds: (drop ?? _drop).toList(),
+            benchWeight: _style.benchWeight,
+          )
+          .then((answer) {
+            _built = answer;
+            return answer;
+          });
     });
   }
 
-  void _toggle(int id) {
+  /// Send one player away and rebuild around the rest.
+  ///
+  /// ⭐⭐ **The other fourteen are forced in**, so the solver replaces exactly one — ⚠️ *and the budget
+  /// stays honest without the screen doing any arithmetic*, which a hand-rolled swap list would have had
+  /// to get right on its own.
+  void _replace(BuiltPlayer player) {
+    final built = _built;
+    if (built == null) return;
+    final keep = {
+      for (final b in built.selected)
+        if (b.player.id != player.player.id) b.player.id,
+    };
+    _keep
+      ..clear()
+      ..addAll(keep);
+    _drop.add(player.player.id);
+    _run();
+  }
+
+  void _reset() {
     setState(() {
-      if (!_keep.remove(id)) _keep.add(id);
-      // ⚠️ The draft is cleared, never left standing. ⭐ *A result that no longer matches the question
-      // above it is worse than no result*, because it still looks like an answer.
+      _keep.clear();
+      _drop.clear();
       _draft = null;
+      _built = null;
+      _applied = false;
     });
   }
 
@@ -93,33 +179,72 @@ class _LabViewState extends State<LabView> {
     final budget = _budget;
     if (budget == null) {
       return const _Note(
-        'Your team value has not loaded, so there is no budget to build against. '
-        'Open My Team first.',
+        'Your team value has not loaded, so there is no budget to build against. Open My Team first.',
       );
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
       children: [
-        _Header(mode: _mode, budget: budget, keeping: _keep.length),
-        const SizedBox(height: 12),
-        Text(
-          // ⭐ Says what tapping does before anything is tapped — the interaction is not guessable from a
-          // grid of names.
-          'Tap anyone you want to keep. The rest is rebuilt around them.',
-          style: const TextStyle(
-            color: Colors.white38,
-            fontSize: 11.5,
-            height: 1.5,
-          ),
+        PillRow(
+          children: [
+            for (final mode in LabMode.values)
+              Pill(
+                label: mode.label,
+                selected: _mode == mode,
+                onTap: () {
+                  setState(() => _mode = mode);
+                  _reset();
+                },
+              ),
+          ],
+        ),
+        PillRow(
+          children: [
+            for (final style in BuildStyle.values)
+              Pill(
+                label: style.label,
+                selected: _style == style,
+                onTap: () {
+                  setState(() => _style = style);
+                  if (_built != null) _run();
+                },
+              ),
+          ],
         ),
         const SizedBox(height: 8),
-        _KeepGrid(players: _mine, keep: _keep, onToggle: _toggle),
-        const SizedBox(height: 14),
+        _Header(mode: _mode, style: _style, budget: budget),
+        const SizedBox(height: 12),
+        if (!_mode.fromScratch) ...[
+          const Text(
+            // ⭐ Says what tapping does before anything is tapped — the interaction is not guessable
+            // from a grid of names.
+            'Tap anyone you want to keep. The rest is rebuilt around them.',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 11.5,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _KeepGrid(
+            players: _mine,
+            keep: _keep,
+            onToggle: (id) => setState(() {
+              if (!_keep.remove(id)) _keep.add(id);
+              // ⚠️ The draft is cleared, never left standing. ⭐ *A result that no longer matches the
+              // question above it is worse than no result*, because it still looks like an answer.
+              _draft = null;
+              _built = null;
+              _applied = false;
+            }),
+          ),
+          const SizedBox(height: 12),
+        ],
         Row(
           children: [
             Expanded(
               child: TextButton(
-                onPressed: _run,
+                onPressed: () => _run(),
                 style: TextButton.styleFrom(
                   backgroundColor: Brand.purple,
                   foregroundColor: Colors.white,
@@ -136,19 +261,26 @@ class _LabViewState extends State<LabView> {
                 ),
               ),
             ),
-            if (_keep.isNotEmpty)
+            if (_keep.isNotEmpty || _drop.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 8),
                 child: TextButton(
-                  onPressed: () => setState(() {
-                    _keep.clear();
-                    _draft = null;
-                  }),
-                  child: const Text('Clear'),
+                  onPressed: _reset,
+                  child: const Text('Reset'),
                 ),
               ),
           ],
         ),
+        if (_drop.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              // ⚠️ Stated, because an exclusion the reader has forgotten about looks like the solver
+              // making an odd choice.
+              '${_drop.length} player${_drop.length == 1 ? '' : 's'} sent away — Reset brings them back.',
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+          ),
         if (_draft != null)
           Padding(
             padding: const EdgeInsets.only(top: 14),
@@ -164,7 +296,18 @@ class _LabViewState extends State<LabView> {
                 if (snapshot.hasError) {
                   return _Note(friendlyError(snapshot.error));
                 }
-                return _Draft(answer: snapshot.data!, mine: _mine);
+                return _Draft(
+                  answer: snapshot.data!,
+                  mine: _mine,
+                  mode: _mode,
+                  name: _name,
+                  applied: _applied,
+                  onReplace: _replace,
+                  onApply: () async {
+                    await widget.onApply(snapshot.data!, _name.text.trim());
+                    if (mounted) setState(() => _applied = true);
+                  },
+                );
               },
             ),
           ),
@@ -176,13 +319,13 @@ class _LabViewState extends State<LabView> {
 class _Header extends StatelessWidget {
   const _Header({
     required this.mode,
+    required this.style,
     required this.budget,
-    required this.keeping,
   });
 
   final LabMode mode;
+  final BuildStyle style;
   final double budget;
-  final int keeping;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -204,15 +347,27 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          // ⚠️⚠️ **The budget is FPL's team value, which is built from SELLING prices.** Saying so matters:
-          // a manager who compares this against the prices on the pitch will find they do not add up, and
-          // ⭐ *an unexplained number that disagrees with another number on the same app is a bug report.*
-          'That is your FPL team value — the bank plus what your fifteen would sell for. '
-          'Nothing here changes your real team.',
+          '${mode.note}  ${style.note}',
           style: const TextStyle(
-            color: Colors.white54,
+            color: Colors.white70,
             fontSize: 11,
             height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          mode.fromScratch
+              // ⚠️⚠️ **The budget is FPL's team value, built from SELLING prices.** Saying so matters: a
+              // manager comparing it against the prices on the pitch will find they do not add up, and
+              // ⭐ *an unexplained number that disagrees with another number on the same app is a bug
+              // report.*
+              ? 'Nothing here changes your real team.'
+              : 'That is your FPL team value — the bank plus what your fifteen would sell for. '
+                    'Nothing here changes your real team.',
+          style: const TextStyle(
+            color: Colors.white38,
+            fontSize: 10.5,
+            height: 1.45,
           ),
         ),
       ],
@@ -283,20 +438,43 @@ class _KeepGrid extends StatelessWidget {
   );
 }
 
+/// `3-4-3` — ⭐ **the shape, which a list of names does not show** and a wildcard very often changes.
+String formationOf(BuildAnswer answer) {
+  final counts = <String, int>{};
+  for (final b in answer.xi) {
+    counts[b.player.position] = (counts[b.player.position] ?? 0) + 1;
+  }
+  return '${counts['DEF'] ?? 0}-${counts['MID'] ?? 0}-${counts['FWD'] ?? 0}';
+}
+
 class _Draft extends StatelessWidget {
-  const _Draft({required this.answer, required this.mine});
+  const _Draft({
+    required this.answer,
+    required this.mine,
+    required this.mode,
+    required this.name,
+    required this.applied,
+    required this.onReplace,
+    required this.onApply,
+  });
 
   final BuildAnswer answer;
   final List<PlayerSummary> mine;
+  final LabMode mode;
+  final TextEditingController name;
+  final bool applied;
+  final ValueChanged<BuiltPlayer> onReplace;
+  final Future<void> Function() onApply;
 
   @override
   Widget build(BuildContext context) {
-    // ⚠️⚠️ **"Infeasible" is an answer, and it is not an empty squad.** Rendering fifteen blank rows under
-    // a heading is how *"your constraints cannot be met"* gets read as *"there are no good players"*.
+    // ⚠️⚠️ **"Infeasible" is an answer, and it is not an empty squad.** Rendering fifteen blank rows
+    // under a heading is how *"your constraints cannot be met"* gets read as *"there are no good
+    // players"*.
     if (!answer.solved) {
       return const _Note(
-        'No legal fifteen fits that. Keeping several expensive players leaves too little for the rest — '
-        'release one and try again.',
+        'No legal fifteen fits that. Keeping several expensive players — or sending too many away — '
+        'leaves too little for the rest. Release one and try again.',
       );
     }
     final diff = squadDiff(answer, mine);
@@ -311,22 +489,23 @@ class _Draft extends StatelessWidget {
               // answer improves is a headline that will be optimised against.*
               label: 'Your XI',
               value: (answer.xiXp ?? answer.projectedXp).toStringAsFixed(1),
-              unit: answer.xiXp == null ? 'xP (all 15)' : 'xP over 5 GWs',
+              unit: mode.horizon == 1 ? 'xP this GW' : 'xP over 5 GWs',
             ),
             _Stat(
               label: 'Spent',
               value: '£${answer.totalCost.toStringAsFixed(1)}m',
-              // ⭐ What is left over, because a draft that spends everything and one that leaves £1.5m in
-              // the bank are different plans.
               unit: 'of £${answer.budget.toStringAsFixed(1)}m',
             ),
-            _Stat(label: 'Changes', value: '${diff.out.length}', unit: 'moves'),
+            _Stat(
+              label: 'Shape',
+              value: formationOf(answer),
+              unit: '${diff.out.length} out',
+            ),
           ],
         ),
         const SizedBox(height: 12),
         if (diff.out.isEmpty)
           const Text(
-            // ⭐ A real and rather good outcome, said plainly rather than shown as two empty lists.
             'Nothing changes — the solver would keep your fifteen exactly as they are.',
             style: TextStyle(color: Brand.good, fontSize: 12.5, height: 1.5),
           )
@@ -340,24 +519,73 @@ class _Draft extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 14),
-        Text(
-          'The eleven it would start',
-          style: const TextStyle(
+        const Text(
+          'The eleven it would start  ·  tap anyone to replace him',
+          style: TextStyle(
             color: Colors.white54,
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 6),
-        for (final b in answer.xi) _DraftRow(built: b),
+        for (final b in answer.xi) _DraftRow(built: b, onReplace: onReplace),
         const SizedBox(height: 10),
-        Text(
+        const Text(
           // ⚠️ Named as the solver's bench, because it is not ordered the way FPL substitutes.
           'Bench (not in substitution order)',
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: TextStyle(color: Colors.white38, fontSize: 11),
         ),
         const SizedBox(height: 6),
-        for (final b in answer.bench) _DraftRow(built: b),
+        for (final b in answer.bench) _DraftRow(built: b, onReplace: onReplace),
+        const SizedBox(height: 16),
+        TextField(
+          controller: name,
+          style: const TextStyle(color: Colors.white, fontSize: 13.5),
+          decoration: InputDecoration(
+            isDense: true,
+            // ⭐ Optional, and labelled by what it buys: two drafts for the same fifteen are different
+            // plans, and a screen showing one of them with no name cannot say which.
+            hintText: 'Name this squad (optional) — e.g. “${mode.label} plan”',
+            hintStyle: const TextStyle(color: Colors.white24, fontSize: 12.5),
+            filled: true,
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(Brand.radiusSm),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: applied ? null : onApply,
+          style: TextButton.styleFrom(
+            backgroundColor: applied ? Colors.white10 : Brand.good,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Brand.good,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Brand.radiusSm),
+            ),
+          ),
+          child: Text(
+            applied ? '✓ This is your plan' : 'Make this my plan',
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            // ⚠️⚠️ **The one thing this screen must never imply.** FPL has no write API: applying makes
+            // it your plan here, and the transfers still have to be made in the FPL app.
+            'This becomes your plan in MADBOOTS — the pitch will show it, and it survives closing the '
+            'app. It does not make the transfers: FPL has no way to accept them from us.',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 10.5,
+              height: 1.5,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -452,58 +680,62 @@ class _Side extends StatelessWidget {
 }
 
 class _DraftRow extends StatelessWidget {
-  const _DraftRow({required this.built});
+  const _DraftRow({required this.built, required this.onReplace});
 
   final BuiltPlayer built;
+  final ValueChanged<BuiltPlayer> onReplace;
 
   @override
   Widget build(BuildContext context) {
     final p = built.player;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 34,
-            child: Text(
-              p.position,
-              style: const TextStyle(color: Colors.white30, fontSize: 10.5),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              p.name,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 12.5),
-            ),
-          ),
-          if (built.forced)
-            const Padding(
-              padding: EdgeInsets.only(right: 6),
+    return InkWell(
+      onTap: () => onReplace(built),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 34,
               child: Text(
-                // ⭐ Says which players you chose yourself — ⚠️ *a draft that cannot tell you which is
-                // which invites you to trust a choice you made.*
-                'kept',
-                style: TextStyle(color: Brand.purple, fontSize: 9.5),
+                p.position,
+                style: const TextStyle(color: Colors.white30, fontSize: 10.5),
               ),
             ),
-          SizedBox(
-            width: 42,
-            child: Text(
-              '£${p.price.toStringAsFixed(1)}',
-              textAlign: TextAlign.right,
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            Expanded(
+              child: Text(
+                p.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 12.5),
+              ),
             ),
-          ),
-          SizedBox(
-            width: 42,
-            child: Text(
-              p.xp.toStringAsFixed(1),
-              textAlign: TextAlign.right,
-              style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+            if (built.forced)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: Text(
+                  // ⭐ Says which players you chose yourself — ⚠️ *a draft that cannot tell you which is
+                  // which invites you to trust a choice you made.*
+                  'kept',
+                  style: TextStyle(color: Brand.purple, fontSize: 9.5),
+                ),
+              ),
+            SizedBox(
+              width: 42,
+              child: Text(
+                '£${p.price.toStringAsFixed(1)}',
+                textAlign: TextAlign.right,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
             ),
-          ),
-        ],
+            SizedBox(
+              width: 42,
+              child: Text(
+                p.xp.toStringAsFixed(1),
+                textAlign: TextAlign.right,
+                style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

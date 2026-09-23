@@ -379,6 +379,38 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   /// ⭐ Goes through the same [Draft] as everything else, so it inherits the banner, the staleness check
   /// and the way out. A second mechanism for "the squad you are looking at is not your FPL squad" is how
   /// one of them ends up not saying so.
+  /// Make a built fifteen the plan (ADR-272).
+  ///
+  /// ⚠️⚠️ **This makes no transfer and cannot.** FPL has no write API; the draft is an overlay this app
+  /// draws, and the moves still have to be made in the FPL app.
+  ///
+  /// ⭐ **Built from the squad FPL holds**, exactly like a one-player swap: `basePlayerIds` stays the
+  /// real fifteen, so the draft can still tell it has gone stale — *that single field is the difference
+  /// between a plan and a lie* — and `signalKeys` records what was known, so coming back to it can say
+  /// what has changed since (ADR-260).
+  Future<void> _applySquad(MyTeam team, BuildAnswer squad, String name) async {
+    if (!squad.solved) return;
+    final draft = Draft(
+      managerId: _managerId,
+      gameweek: team.gameweek ?? 0,
+      basePlayerIds: team.fplPlayerIds,
+      playerIds: [for (final b in squad.selected) b.player.id],
+      benchIds: [for (final b in squad.bench) b.player.id],
+      savedAt: DateTime.now(),
+      // ⚠️ **No armbands carried.** The captain you had may not be in this squad at all, and ⭐ *a
+      // captain silently reassigned to whoever inherited the position is worse than none*.
+      signalKeys: team.signalKeys.toSet(),
+      name: name,
+    );
+    await _drafts.save(draft);
+    if (!mounted) return;
+    setState(() {
+      _draft = draft;
+      _dropped = null;
+      _team = _load(_managerId);
+    });
+  }
+
   Future<void> _applyPlan(MyTeam team, SuggestedLineup plan) async {
     final base =
         _draft ??
@@ -600,8 +632,14 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             _open('Player DNA', PlayerDnaView(client: _client, team: team)),
         onOpenTeamDna: () =>
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
-        onOpenLab: () =>
-            _open('Squad Lab', LabView(client: _client, team: team)),
+        onOpenLab: () => _open(
+          'Squad Lab',
+          LabView(
+            client: _client,
+            team: team,
+            onApply: (squad, name) => _applySquad(team, squad, name),
+          ),
+        ),
         onOpenLeagues: () => _open(
           'Mini-leagues',
           LeaguesView(client: _client, managerId: _managerId),

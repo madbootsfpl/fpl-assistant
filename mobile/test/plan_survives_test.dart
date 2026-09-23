@@ -160,4 +160,45 @@ void main() {
       expect(fresh.since(const ['a:1', 'b:2']), {'b:2'});
     });
   });
+
+  group('copyWith keeps what the plan knows (ADR-272)', () {
+    Draft plan() => Draft(
+      managerId: 1,
+      gameweek: 6,
+      basePlayerIds: const [1, 2, 3],
+      playerIds: const [1, 2, 3],
+      benchIds: const [3],
+      savedAt: DateTime(2026, 9, 23),
+      signalKeys: const {'news:1', 'price:2'},
+      name: 'Plan B',
+    );
+
+    // ⚠️⚠️ This was live: `_applyPlan` calls `copyWith`, so pressing "Play Them" emptied the record of
+    // what was known when the plan was made — and the screen then reported everything as new.
+    test('the signal keys survive a bench change', () {
+      expect(plan().copyWith(benchIds: const [1]).signalKeys, {
+        'news:1',
+        'price:2',
+      });
+    });
+
+    test('the name survives too', () {
+      expect(plan().copyWith(benchIds: const [1]).name, 'Plan B');
+    });
+
+    test('and every other field still copies as before', () {
+      final next = plan().copyWith(playerIds: const [4, 5, 6], captainId: 9);
+      expect(next.playerIds, const [4, 5, 6]);
+      expect(next.captainId, 9);
+      expect(next.basePlayerIds, const [1, 2, 3]);
+      expect(next.savedAt, DateTime(2026, 9, 23));
+    });
+
+    test('clearing an armband still clears it', () {
+      expect(
+        plan().copyWith(captainId: 9).copyWith(clearCaptain: true).captainId,
+        isNull,
+      );
+    });
+  });
 }

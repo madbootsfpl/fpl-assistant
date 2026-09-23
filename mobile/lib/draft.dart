@@ -41,6 +41,7 @@ class Draft {
     this.captainId,
     this.viceCaptainId,
     this.signalKeys = const {},
+    this.name = '',
   });
 
   factory Draft.fromJson(Map<String, dynamic> json) => Draft(
@@ -58,9 +59,17 @@ class Draft {
     signalKeys: {
       for (final k in (json['signal_keys'] as List? ?? const [])) '$k',
     },
+    name: json['name'] as String? ?? '',
   );
 
   final int managerId;
+
+  /// ⭐ **What the manager called this plan**, empty for an unnamed one (ADR-272).
+  ///
+  /// ⚠️ It earns its place when a draft stops being *"the two moves I am considering"* and becomes a
+  /// whole squad — *"Wildcard" and "Free Hit" are different plans for the same fifteen*, and a screen
+  /// showing one of them with no name cannot say which.
+  final String name;
 
   /// ⚠️ The gameweek it was drafted for. A plan outlives its week only in the sense that the file does.
   final int gameweek;
@@ -92,6 +101,7 @@ class Draft {
     'signal_keys': signalKeys.toList(),
     'captain_id': captainId,
     'vice_captain_id': viceCaptainId,
+    'name': name,
   };
 
   /// ⭐⭐⭐ **What was known about your players when this plan was made** (ADR-260).
@@ -156,6 +166,12 @@ class Draft {
     viceCaptainId: clearViceCaptain
         ? null
         : (viceCaptainId ?? this.viceCaptainId),
+    // ⚠️⚠️ **These were being dropped, and it was live.** `copyWith` rebuilt the `Draft` without them,
+    // so `_applyPlan` — the "Play Them" button — silently emptied the record of what was known when the
+    // plan was made. ⭐ *The exact defect ADR-260 was written to prevent*, protected in `swap` and
+    // `substitute` and then reintroduced by the one path that looked too small to matter.
+    signalKeys: signalKeys,
+    name: name,
   );
 
   /// A plan after swapping one player for another — ⭐⭐ **a named function rather than ten lines inside

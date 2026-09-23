@@ -202,11 +202,13 @@ class TrendingBody(BaseModel):
     """What the crowd is doing. ⚠️ `player_ids` is **optional and does not narrow the boards** — it only
     lets a row come back flagged `owned` (ADR-245's pattern)."""
 
-    by: str = Field("look", pattern="^(look|in|out|owned|form)$",
+    by: str = Field("look", pattern="^(look|watch|in|out|owned|form)$",
                     description="⭐ `look` is **worth a look** (ADR-167) — players standing out on two or "
                                 "more stat boards at once, each with its evidence. It leads because it is "
                                 "the only board here about the *player* rather than about other managers. "
-                                "Then `in` most bought · `out` most sold · `owned` · `form`.")
+                                "`watch` is **worth noticing** (ADR-170) — three crowd patterns each "
+                                "needing two boards at once, grouped. Then `in` most bought · `out` most "
+                                "sold · `owned` · `form`.")
     limit: int = Field(15, ge=1, le=50)
     player_ids: list[int] = Field(default_factory=list)
 

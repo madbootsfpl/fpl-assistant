@@ -1948,3 +1948,35 @@ def test_the_note_does_not_describe_a_layout_the_phone_does_not_have():
     answer = svc.trending(svc.TrendingRequest(by="watch"))
     assert "below" not in answer["caveat"] or "boards below" not in answer["caveat"]
     assert "other managers" in answer["caveat"]
+
+
+def test_every_board_the_service_accepts_is_reachable_over_http():
+    """⚠️⚠️ **The route rejected a board the service accepted, and every test here missed it.**
+
+    `watch` was added to `TrendingRequest.validate` and not to the endpoint's `pattern`, so the service
+    answered and **FastAPI returned 422** — found only by calling the deployed API. ⭐ *Tests that call
+    the service function never cross the route*, and the route has its own copy of the rule.
+
+    ⭐⭐ So this derives the list from the service rather than repeating it: a board added to one and not
+    the other fails here, which is the only way the two copies stay in step.
+    """
+    from fastapi.testclient import TestClient
+
+    from src.analytics.crowd import TREND_BYS
+    from src.service.http import app
+
+    client = TestClient(app)
+    for by in {*TREND_BYS, "look", "watch"}:
+        # ⚠️ 422 is the failure this catches. Any other status means the board was at least accepted.
+        response = client.post("/api/v1/trending", json={"by": by, "limit": 3})
+        assert response.status_code != 422, f"the route rejects {by!r} that the service accepts"
+
+
+def test_the_route_still_refuses_a_board_that_does_not_exist():
+    """⚠️ A guard that accepts everything is not a guard — the pattern must still bite."""
+    from fastapi.testclient import TestClient
+
+    from src.service.http import app
+
+    assert TestClient(app).post(
+        "/api/v1/trending", json={"by": "sideways"}).status_code == 422
