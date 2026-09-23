@@ -18,9 +18,8 @@ String sample(String name) =>
     File('../spikes/018-flutter-read-slice/api-samples/$name.json')
         .readAsStringSync();
 
-MyTeam team() => MyTeam.fromJson(
-  jsonDecode(sample('my-team')) as Map<String, dynamic>,
-);
+MyTeam team() =>
+    MyTeam.fromJson(jsonDecode(sample('my-team')) as Map<String, dynamic>);
 
 ServiceClient clientServing(String body) => ServiceClient(
   baseUrl: 'http://test',
@@ -33,8 +32,9 @@ ServiceClient clientServing(String body) => ServiceClient(
   ),
 );
 
-Widget wrap(Widget child) =>
-    MaterialApp(home: Scaffold(backgroundColor: Brand.ink, body: child));
+Widget wrap(Widget child) => MaterialApp(
+  home: Scaffold(backgroundColor: Brand.ink, body: child),
+);
 
 void main() {
   testWidgets('the three headings are drawn, once each', (tester) async {
@@ -96,10 +96,7 @@ void main() {
 
     await tester.pumpWidget(
       wrap(
-        TrendingBoards(
-          client: clientServing(sample('trending')),
-          team: team(),
-        ),
+        TrendingBoards(client: clientServing(sample('trending')), team: team()),
       ),
     );
     await tester.pumpAndSettle();

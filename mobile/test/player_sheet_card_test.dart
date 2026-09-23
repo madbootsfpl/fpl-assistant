@@ -44,8 +44,12 @@ Future<void> openSheet(
         backgroundColor: Brand.ink,
         body: Builder(
           builder: (context) => TextButton(
-            onPressed: () =>
-                showPlayerSheet(context, team: team(), player: player, client: client),
+            onPressed: () => showPlayerSheet(
+              context,
+              team: team(),
+              player: player,
+              client: client,
+            ),
             child: const Text('open'),
           ),
         ),
@@ -61,7 +65,11 @@ void main() {
 
   testWidgets('the four actions are still there', (tester) async {
     await openSheet(tester, clientServing(sample('player')), starter);
-    for (final label in const ['Make captain', 'Make vice-captain', 'Transfer…']) {
+    for (final label in const [
+      'Make captain',
+      'Make vice-captain',
+      'Transfer…',
+    ]) {
       expect(find.text(label), findsOneWidget, reason: '$label is missing');
     }
   });
@@ -74,9 +82,17 @@ void main() {
     );
     // ⭐ Four, not nine — a block long enough to push the actions off-screen has replaced them.
     for (final stat in card.stats.take(4)) {
-      expect(find.text(stat.label), findsOneWidget, reason: '${stat.label} is missing');
+      expect(
+        find.text(stat.label),
+        findsOneWidget,
+        reason: '${stat.label} is missing',
+      );
     }
-    expect(find.text(card.stats[4].label), findsNothing, reason: 'too many stats shown');
+    expect(
+      find.text(card.stats[4].label),
+      findsNothing,
+      reason: 'too many stats shown',
+    );
   });
 
   testWidgets('his run is shown with the per-gameweek number', (tester) async {
@@ -88,7 +104,9 @@ void main() {
   });
 
   // ⚠️⚠️ The reason the sheet exists is the four buttons; a network error must not take them with it.
-  testWidgets('a failed stats fetch loses the stats, never the actions', (tester) async {
+  testWidgets('a failed stats fetch loses the stats, never the actions', (
+    tester,
+  ) async {
     await openSheet(tester, clientServing('nope', status: 500), starter);
 
     expect(find.text('Make captain'), findsOneWidget);
@@ -99,6 +117,9 @@ void main() {
   testWidgets('the header still names him', (tester) async {
     await openSheet(tester, clientServing(sample('player')), starter);
     expect(find.text(starter.name), findsWidgets);
-    expect(find.textContaining('£${starter.price.toStringAsFixed(1)}m'), findsWidgets);
+    expect(
+      find.textContaining('£${starter.price.toStringAsFixed(1)}m'),
+      findsWidgets,
+    );
   });
 }

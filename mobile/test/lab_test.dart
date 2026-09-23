@@ -8,10 +8,9 @@ import 'package:madboots/lab_view.dart';
 
 BuildAnswer sample() => BuildAnswer.fromJson(
   jsonDecode(
-        File('../spikes/018-flutter-read-slice/api-samples/build.json')
-            .readAsStringSync(),
-      )
-      as Map<String, dynamic>,
+    File('../spikes/018-flutter-read-slice/api-samples/build.json')
+        .readAsStringSync(),
+  ) as Map<String, dynamic>,
 );
 
 PlayerSummary p(int id, String name, {double price = 5.0}) => PlayerSummary(
@@ -112,19 +111,20 @@ void main() {
     // ⚠️ Two players can share a surname; a diff matching on text would pair the wrong two.
     test('it matches on id, not on name', () {
       final mine = [p(1, 'Silva'), p(2, 'Silva')];
-      final answer = drafted([BuiltPlayer(player: p(2, 'Silva'), bench: false, forced: false)]);
+      final answer = drafted([
+        BuiltPlayer(player: p(2, 'Silva'), bench: false, forced: false),
+      ]);
       final diff = squadDiff(answer, mine);
 
-      expect(diff.out.map((x) => x.id), [1], reason: 'only the player actually dropped');
+      expect(diff.out.map((x) => x.id), [
+        1,
+      ], reason: 'only the player actually dropped');
       expect(diff.in_, isEmpty, reason: 'the other Silva was already owned');
     });
 
     test('a kept player never appears as an arrival', () {
       final mine = [p(1, 'Kept'), p(2, 'Gone')];
-      final diff = squadDiff(
-        drafted([built(1, forced: true), built(9)]),
-        mine,
-      );
+      final diff = squadDiff(drafted([built(1, forced: true), built(9)]), mine);
       expect(diff.in_.map((x) => x.player.id), [9]);
       expect(diff.out.map((x) => x.id), [2]);
     });

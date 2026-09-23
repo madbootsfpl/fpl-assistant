@@ -17,6 +17,7 @@ import 'api/models.dart';
 import 'boot_battle.dart';
 import 'brand.dart';
 import 'mugshot.dart';
+import 'player_dna_view.dart';
 import 'player_picker.dart';
 
 const List<String> _positions = ['GK', 'DEF', 'MID', 'FWD'];
@@ -561,6 +562,7 @@ class _RowState extends State<_Row> {
           ),
           if (_card != null)
             _Card(
+              client: widget.client,
               future: _card!,
               rivals: widget.rivals,
               onCompare: (other) => _battle(context, other),
@@ -578,7 +580,12 @@ class _Card extends StatelessWidget {
     required this.future,
     required this.rivals,
     required this.onCompare,
+    required this.client,
   });
+
+  /// ⭐ Needed for the fingerprint below the stats (ADR-277) — a second request, made only once a row
+  /// is already open.
+  final ServiceClient client;
 
   final Future<PlayerCard> future;
   final List<PlayerSummary> rivals;
@@ -822,8 +829,66 @@ class _Card extends StatelessWidget {
                   ),
               ],
             ),
+            // ⭐⭐ **The DNA, under the stats it explains** (ADR-277). The owner: *"merge Players and
+            // Player DNA, just put the DNA under the player stat when selected."* They were two screens
+            // answering one question — ⚠️ *the stats say what he has done; the fingerprint says what
+            // kind of player does that*, and reaching the second meant leaving the first.
+            _Dna(client: client, player: card.player),
           ],
         ),
+      );
+    },
+  );
+}
+
+/// The fingerprint, fetched when a row is already open.
+///
+/// ⚠️ **A second request, and deliberately not merged into `/player`.** The card is fetched on every
+/// expand; the fingerprint ranks him against a whole position pool. ⭐ *Widening an endpoint everyone
+/// calls to serve a panel below the fold is how a fast list becomes a slow one.*
+class _Dna extends StatefulWidget {
+  const _Dna({required this.client, required this.player});
+
+  final ServiceClient client;
+  final PlayerSummary player;
+
+  @override
+  State<_Dna> createState() => _DnaState();
+}
+
+class _DnaState extends State<_Dna> {
+  late final Future<PlayerDna> _dna = widget.client.playerDna(widget.player.id);
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<PlayerDna>(
+    future: _dna,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        );
+      }
+      // ⚠️ A failure here loses the fingerprint, never the card above it — ⭐ *the stats are the reason
+      // the row was expanded.*
+      if (snapshot.hasError) {
+        return const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: Text(
+            'His fingerprint did not load.',
+            style: TextStyle(color: Colors.white24, fontSize: 11),
+          ),
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: PlayerFingerprint(dna: snapshot.data!, showHeader: false),
       );
     },
   );

@@ -71,6 +71,11 @@ def responses(store) -> dict:
         # ⭐ The expanding card's own response. Added when a widget test needed to expand a row and had
         # nothing real to expand it with — ⚠️ *a hand-built card fixture would have tested the fixture.*
         "player": service.player(service.PlayerRequest(player_id=ids[0], horizon=5), store=store),
+        # ⭐ A player's fingerprint (ADR-247/277) — its own sample, because it is now rendered **inside
+        # the Players card** as well as on its own screen, and ⚠️ *a widget shown in two places needs a
+        # fixture, or only one of them is ever tested.*
+        "player-dna": service.player_dna(
+            service.PlayerDnaRequest(player_id=ids[0], horizon=5), store=store),
         # ⭐ The crowd's boards (ADR-266). ⚠️ `by="in"` because the *most bought* board is the one the
         # tab opens on, and a sample of the board nobody sees first documents the wrong default.
         "trending": service.trending(service.TrendingRequest(by="in", limit=15), store=store),

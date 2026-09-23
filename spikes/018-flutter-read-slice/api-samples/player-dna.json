@@ -1,0 +1,135 @@
+{
+  "axes": [
+    {
+      "label": "Goal Threat",
+      "percentile": 78,
+      "sublabel": "xG/90",
+      "value": 0.35
+    },
+    {
+      "label": "Creativity",
+      "percentile": 56,
+      "sublabel": "xA/90",
+      "value": 0.17
+    },
+    {
+      "label": "Set Pieces",
+      "percentile": 94,
+      "sublabel": "pen/set",
+      "value": 15.0
+    },
+    {
+      "label": "FPL Output",
+      "percentile": 100,
+      "sublabel": "pts/90",
+      "value": 9.4
+    },
+    {
+      "label": "Consistency",
+      "percentile": 50,
+      "sublabel": "minutes",
+      "value": 450.0
+    },
+    {
+      "label": "Value",
+      "percentile": 100,
+      "sublabel": "pts/\u00a3m",
+      "value": 8.1
+    },
+    {
+      "label": "Bonus Potl",
+      "percentile": 89,
+      "sublabel": "ICT/90",
+      "value": 10.16
+    },
+    {
+      "label": "Team Attack",
+      "percentile": 100,
+      "sublabel": "team xG",
+      "value": 11.55
+    }
+  ],
+  "insights": [
+    {
+      "kind": "good",
+      "text": "Elite fpl output: top 1% of midfielders (pts/90 9.4)"
+    },
+    {
+      "kind": "good",
+      "text": "Elite value: top 1% of midfielders (pts/\u00a3m 8.1)"
+    },
+    {
+      "kind": "info",
+      "text": "Plays in a top-1% attack"
+    },
+    {
+      "kind": "sp",
+      "text": "First-choice penalty taker \u2014 a steady points floor"
+    },
+    {
+      "kind": "info",
+      "text": "Owned by 27.6% \u2014 \ud83d\udfe6 template"
+    }
+  ],
+  "low_minutes": false,
+  "min_minutes": 450,
+  "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p60307.png",
+  "player": {
+    "by_gameweek": {
+      "10": 4.4,
+      "6": 4.4,
+      "7": 4.4,
+      "8": 3.9,
+      "9": 3.5
+    },
+    "chance": null,
+    "id": 124,
+    "leaving": null,
+    "minutes_weight": 1.0,
+    "position": "MID",
+    "price": 5.8,
+    "status": "a",
+    "team": "BHA",
+    "web_name": "Gro\u00df",
+    "xp": 20.6
+  },
+  "pool_size": 10,
+  "recent": [
+    {
+      "gameweek": 1,
+      "home": true,
+      "minutes": 90,
+      "opponent": "AVL",
+      "points": 2
+    },
+    {
+      "gameweek": 2,
+      "home": false,
+      "minutes": 90,
+      "opponent": "CHE",
+      "points": 13
+    },
+    {
+      "gameweek": 3,
+      "home": true,
+      "minutes": 90,
+      "opponent": "LEE",
+      "points": 1
+    },
+    {
+      "gameweek": 4,
+      "home": false,
+      "minutes": 90,
+      "opponent": "COV",
+      "points": 17
+    },
+    {
+      "gameweek": 5,
+      "home": true,
+      "minutes": 90,
+      "opponent": "ARS",
+      "points": 14
+    }
+  ],
+  "unranked": null
+}

@@ -130,7 +130,7 @@ class _PlayerDnaViewState extends State<PlayerDnaView> {
                   ),
                 );
               }
-              return _Fingerprint(dna: snapshot.data!);
+              return PlayerFingerprint(dna: snapshot.data!);
             },
           ),
       ],
@@ -138,10 +138,20 @@ class _PlayerDnaViewState extends State<PlayerDnaView> {
   }
 }
 
-class _Fingerprint extends StatelessWidget {
-  const _Fingerprint({required this.dna});
+/// A player's fingerprint — ⭐ **public, because it is now shown in two places** (ADR-277): its own
+/// screen, and under the stats when a row is expanded in Players.
+///
+/// ⚠️ `showHeader` is false there: the card above it has already named him, and *a screen that names a
+/// player twice has two headings and one subject.*
+class PlayerFingerprint extends StatelessWidget {
+  const PlayerFingerprint({
+    required this.dna,
+    this.showHeader = true,
+    super.key,
+  });
 
   final PlayerDna dna;
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -160,27 +170,28 @@ class _Fingerprint extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Mugshot(url: dna.photo, name: dna.player.name, size: 40),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Text(
-                dna.player.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+        if (showHeader)
+          Row(
+            children: [
+              Mugshot(url: dna.photo, name: dna.player.name, size: 40),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  dna.player.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            Text(
-              '${dna.player.position} · ${dna.player.team} · '
-              '£${dna.player.price.toStringAsFixed(1)}m',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
-        ),
+              Text(
+                '${dna.player.position} · ${dna.player.team} · '
+                '£${dna.player.price.toStringAsFixed(1)}m',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
+          ),
         Row(
           children: [
             Flexible(

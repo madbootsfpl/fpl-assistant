@@ -4,23 +4,31 @@ import 'package:madboots/api/models.dart';
 import 'package:madboots/draft.dart';
 import 'package:madboots/lab_view.dart';
 
-PlayerSummary p(int id, String name, {String pos = 'MID', double price = 5.0}) =>
-    PlayerSummary(
-      id: id,
-      name: name,
-      team: 'ARS',
-      position: pos,
-      price: price,
-      xp: 4,
-      status: 'a',
-      chance: null,
-      minutesWeight: 1,
-      leaving: null,
-      byGameweek: const {},
-    );
+PlayerSummary p(
+  int id,
+  String name, {
+  String pos = 'MID',
+  double price = 5.0,
+}) => PlayerSummary(
+  id: id,
+  name: name,
+  team: 'ARS',
+  position: pos,
+  price: price,
+  xp: 4,
+  status: 'a',
+  chance: null,
+  minutesWeight: 1,
+  leaving: null,
+  byGameweek: const {},
+);
 
 BuiltPlayer built(int id, {String pos = 'MID', bool bench = false}) =>
-    BuiltPlayer(player: p(id, 'P$id', pos: pos), bench: bench, forced: false);
+    BuiltPlayer(
+      player: p(id, 'P$id', pos: pos),
+      bench: bench,
+      forced: false,
+    );
 
 BuildAnswer squadOf(List<BuiltPlayer> squad) => BuildAnswer(
   horizon: 5,
@@ -36,7 +44,12 @@ BuildAnswer squadOf(List<BuiltPlayer> squad) => BuildAnswer(
 BuildAnswer legalFifteen() {
   final squad = <BuiltPlayer>[];
   var id = 1;
-  for (final (pos, n) in const [('GK', 2), ('DEF', 5), ('MID', 5), ('FWD', 3)]) {
+  for (final (pos, n) in const [
+    ('GK', 2),
+    ('DEF', 5),
+    ('MID', 5),
+    ('FWD', 3),
+  ]) {
     for (var i = 0; i < n; i++) {
       squad.add(built(id++, pos: pos, bench: false));
     }
@@ -67,7 +80,11 @@ void main() {
     test('each mode says what it is for', () {
       for (final mode in LabMode.values) {
         expect(mode.label, isNotEmpty);
-        expect(mode.note.length, greaterThan(20), reason: '${mode.label} has a label, not a note');
+        expect(
+          mode.note.length,
+          greaterThan(20),
+          reason: '${mode.label} has a label, not a note',
+        );
       }
     });
   });
@@ -81,9 +98,12 @@ void main() {
       );
     });
 
-    test('a strong fifteen values the bench fully, which is what Bench Boost asks', () {
-      expect(BuildStyle.strongFifteen.benchWeight, 1.0);
-    });
+    test(
+      'a strong fifteen values the bench fully, which is what Bench Boost asks',
+      () {
+        expect(BuildStyle.strongFifteen.benchWeight, 1.0);
+      },
+    );
 
     test('neither weight is out of the range the server accepts', () {
       for (final style in BuildStyle.values) {
@@ -104,7 +124,10 @@ void main() {
 
   group('squadDiff', () {
     test('names who leaves and who arrives', () {
-      final diff = squadDiff(squadOf([built(1), built(3)]), [p(1, 'A'), p(2, 'B')]);
+      final diff = squadDiff(squadOf([built(1), built(3)]), [
+        p(1, 'A'),
+        p(2, 'B'),
+      ]);
       expect(diff.out.map((x) => x.id), [2]);
       expect(diff.in_.map((x) => x.player.id), [3]);
     });
@@ -112,7 +135,9 @@ void main() {
     // ⚠️ Two players can share a surname; a diff matching on text would pair the wrong two.
     test('it matches on id, not on name', () {
       final diff = squadDiff(
-        squadOf([BuiltPlayer(player: p(2, 'Silva'), bench: false, forced: false)]),
+        squadOf([
+          BuiltPlayer(player: p(2, 'Silva'), bench: false, forced: false),
+        ]),
         [p(1, 'Silva'), p(2, 'Silva')],
       );
       expect(diff.out.map((x) => x.id), [1]);
@@ -122,26 +147,29 @@ void main() {
 
   group('applying a squad makes a plan, never a transfer', () {
     // ⭐⭐ The draft keeps the REAL fifteen as its base, which is how it later knows it is stale.
-    test('the base stays the real squad while the plan becomes the built one', () {
-      final answer = legalFifteen();
-      final draft = Draft(
-        managerId: 7,
-        gameweek: 6,
-        basePlayerIds: const [90, 91, 92],
-        playerIds: [for (final b in answer.selected) b.player.id],
-        benchIds: [for (final b in answer.bench) b.player.id],
-        savedAt: DateTime(2026, 9, 23),
-        signalKeys: const {'news:1'},
-        name: 'Wildcard plan',
-      );
+    test(
+      'the base stays the real squad while the plan becomes the built one',
+      () {
+        final answer = legalFifteen();
+        final draft = Draft(
+          managerId: 7,
+          gameweek: 6,
+          basePlayerIds: const [90, 91, 92],
+          playerIds: [for (final b in answer.selected) b.player.id],
+          benchIds: [for (final b in answer.bench) b.player.id],
+          savedAt: DateTime(2026, 9, 23),
+          signalKeys: const {'news:1'},
+          name: 'Wildcard plan',
+        );
 
-      expect(draft.basePlayerIds, const [90, 91, 92]);
-      expect(draft.playerIds, hasLength(15));
-      expect(draft.benchIds, hasLength(4));
-      // ⚠️ Without this the plan cannot report what has changed since it was made (ADR-260).
-      expect(draft.signalKeys, {'news:1'});
-      expect(draft.name, 'Wildcard plan');
-    });
+        expect(draft.basePlayerIds, const [90, 91, 92]);
+        expect(draft.playerIds, hasLength(15));
+        expect(draft.benchIds, hasLength(4));
+        // ⚠️ Without this the plan cannot report what has changed since it was made (ADR-260).
+        expect(draft.signalKeys, {'news:1'});
+        expect(draft.name, 'Wildcard plan');
+      },
+    );
 
     test('a named plan survives a round trip through storage', () {
       final draft = Draft(

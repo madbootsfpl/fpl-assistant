@@ -5,14 +5,13 @@ import 'package:madboots/brand.dart';
 import 'package:madboots/lab_view.dart';
 import 'package:madboots/pill.dart';
 
-Widget wrap(Widget child) =>
-    MaterialApp(home: Scaffold(backgroundColor: Brand.ink, body: child));
+Widget wrap(Widget child) => MaterialApp(
+  home: Scaffold(backgroundColor: Brand.ink, body: child),
+);
 
 Color boxOf(WidgetTester tester, String label) {
   final container = tester.widget<Container>(
-    find
-        .ancestor(of: find.text(label), matching: find.byType(Container))
-        .first,
+    find.ancestor(of: find.text(label), matching: find.byType(Container)).first,
   );
   return ((container.decoration! as BoxDecoration).color)!;
 }
@@ -34,7 +33,9 @@ void main() {
       expect(find.text('Bench'), findsOneWidget);
     });
 
-    testWidgets('the selected half is filled and the other is not', (tester) async {
+    testWidgets('the selected half is filled and the other is not', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrap(
           MiniToggle(
@@ -65,21 +66,24 @@ void main() {
       expect(picked, 'Strong 15');
     });
 
-    testWidgets('tapping the selected half still reports, so a caller decides', (tester) async {
-      var calls = 0;
-      await tester.pumpWidget(
-        wrap(
-          MiniToggle(
-            label: 'Bench',
-            options: const ['Strong 11', 'Strong 15'],
-            selected: 'Strong 11',
-            onPick: (_) => calls++,
+    testWidgets(
+      'tapping the selected half still reports, so a caller decides',
+      (tester) async {
+        var calls = 0;
+        await tester.pumpWidget(
+          wrap(
+            MiniToggle(
+              label: 'Bench',
+              options: const ['Strong 11', 'Strong 15'],
+              selected: 'Strong 11',
+              onPick: (_) => calls++,
+            ),
           ),
-        ),
-      );
-      await tester.tap(find.text('Strong 11'));
-      expect(calls, 1);
-    });
+        );
+        await tester.tap(find.text('Strong 11'));
+        expect(calls, 1);
+      },
+    );
   });
 
   group('the build styles', () {

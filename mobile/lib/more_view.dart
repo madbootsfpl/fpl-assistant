@@ -26,7 +26,6 @@ class MoreView extends StatelessWidget {
     required this.freeTransfers,
     required this.onOpenChips,
     required this.onOpenTeamDna,
-    required this.onOpenPlayerDna,
     required this.onOpenSignals,
     required this.onOpenSettings,
     required this.onOpenLab,
@@ -53,7 +52,6 @@ class MoreView extends StatelessWidget {
 
   /// ⭐ Beside Team DNA, because they answer the two halves of the same question: *what kind of player is
   /// he* and *what kind of side is he in.*
-  final VoidCallback onOpenPlayerDna;
 
   /// ⭐ Chips lives here rather than in the bar — it works, and it is a handful of decisions per season.
   /// *Working earns a place; frequency earns a slot.*
@@ -80,14 +78,9 @@ class MoreView extends StatelessWidget {
             'strongest evidence first.',
         onTap: onOpenSignals,
       ),
-      _Row(
-        icon: Icons.fingerprint,
-        name: 'Player DNA',
-        why:
-            'What kind of player he is, ranked against others in his position rather than the '
-            'whole league.',
-        onTap: onOpenPlayerDna,
-      ),
+      // ⚠️ **Player DNA is gone from here on purpose** (ADR-277). It lives under a player's stats in
+      // the Players tab now — ⭐ *the stats say what he has done, the fingerprint says what kind of
+      // player does that*, and they were two directory entries away from each other.
       _Row(
         icon: Icons.insights_outlined,
         name: 'Team DNA',

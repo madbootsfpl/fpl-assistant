@@ -24,7 +24,6 @@ import 'lab_view.dart';
 import 'leagues_view.dart';
 import 'more_view.dart';
 import 'pitch.dart';
-import 'player_dna_view.dart';
 import 'player_sheet.dart';
 import 'team_dna_view.dart';
 import 'this_week_view.dart';
@@ -628,8 +627,6 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           final keys = await _seen.load();
           if (mounted) setState(() => _seenKeys = keys);
         },
-        onOpenPlayerDna: () =>
-            _open('Player DNA', PlayerDnaView(client: _client, team: team)),
         onOpenTeamDna: () =>
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
         onOpenLab: () => _open(
