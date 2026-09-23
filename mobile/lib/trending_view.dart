@@ -68,6 +68,7 @@ class _TrendingBoardsState extends State<TrendingBoards> {
           children: [
             for (final (value, label) in const [
               ('look', 'Worth a look'),
+              ('watch', 'Worth noticing'),
               ('in', 'Most bought'),
               ('out', 'Most sold'),
               ('owned', 'Most owned'),
@@ -125,8 +126,26 @@ class _TrendingBoardsState extends State<TrendingBoards> {
                       style: TextStyle(color: Colors.white38, fontSize: 12.5),
                     ),
                   ),
-                for (final row in board.rows)
-                  _BoardRow(row: row, column: board.column),
+                for (var i = 0; i < board.rows.length; i++) ...[
+                  // ⭐⭐ **The separators are the board** (feedback). Twelve rows in three named groups
+                  // say three different things; the same twelve in one list say nothing, because
+                  // ⚠️ *the pattern a row belongs to IS the reason it is on the page.*
+                  if (board.rows[i].group.isNotEmpty &&
+                      (i == 0 ||
+                          board.rows[i - 1].group != board.rows[i].group))
+                    Padding(
+                      padding: EdgeInsets.only(top: i == 0 ? 0 : 12, bottom: 6),
+                      child: Text(
+                        board.rows[i].group,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  _BoardRow(row: board.rows[i], column: board.column),
+                ],
               ],
             );
           },
@@ -240,26 +259,30 @@ class _BoardRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                trendValue(row.value, column),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+          // ⚠️ **No number when the board has none.** These rows are sentences, and ⭐ *a figure in the
+          // corner invites a reader to sort by it* — there is nothing here to sort by.
+          if (column.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  trendValue(row.value, column),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              Text(
-                // ⚠️ The column names the unit. Five boards share `value`, and ⭐ *a number with no unit
-                // is not information.*
-                column,
-                style: const TextStyle(color: Colors.white30, fontSize: 9.5),
-              ),
-            ],
-          ),
+                Text(
+                  // ⚠️ The column names the unit. Five boards share `value`, and ⭐ *a number with no unit
+                  // is not information.*
+                  column,
+                  style: const TextStyle(color: Colors.white30, fontSize: 9.5),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

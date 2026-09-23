@@ -77,6 +77,10 @@ def responses(store) -> dict:
         # ⭐ The convergence board (ADR-167/269) — its own sample, because it carries `reasons`, a field
         # no crowd board has. ⚠️ *A shape a client must render was absent from every example it had.*
         "worth-a-look": service.trending(service.TrendingRequest(by="look", limit=8), store=store),
+        # ⭐ The grouped reader (ADR-170/271) — its own sample, because it is the only answer whose rows
+        # carry a `group` and whose `column` is **empty**. ⚠️ *Both are shapes a client must handle and
+        # neither appears in any other example.*
+        "worth-noticing": service.trending(service.TrendingRequest(by="watch"), store=store),
         # ⭐ The fixture ticker — twenty clubs, six gameweeks (ADR-265). ⚠️ Worth a sample even though it
         # takes no squad: the shape a client has to survive is the **blank cell**, and a hand-built
         # fixture would be one somebody wrote rather than one the server produces.

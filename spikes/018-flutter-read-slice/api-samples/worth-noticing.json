@@ -1,0 +1,368 @@
+{
+  "by": "watch",
+  "caveat": "**12 players** the other boards only show *between* them. This is what other managers are **doing** \u2014 not a points projection, and not a reason: for *why* a player is moving, see \ud83d\udce1 **Signals**.",
+  "column": "",
+  "label": "worth noticing",
+  "rows": [
+    {
+      "group": "In form, still under-owned",
+      "owned": false,
+      "owned_by": 4.9,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p540324.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.1,
+          "6": 6.3,
+          "7": 6.3,
+          "8": 6.3,
+          "9": 6.9
+        },
+        "chance": null,
+        "id": 286,
+        "leaving": null,
+        "minutes_weight": 0.95,
+        "position": "MID",
+        "price": 5.1,
+        "status": "a",
+        "team": "HUL",
+        "web_name": "Belloumi",
+        "xp": 30.9
+      },
+      "reasons": [
+        "form 7.0 on just 4.9% owned"
+      ],
+      "tier": "differential",
+      "value": 0.0
+    },
+    {
+      "group": "In form, still under-owned",
+      "owned": false,
+      "owned_by": 3.9,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p116535.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.7,
+          "6": 3.4,
+          "7": 3.7,
+          "8": 4.1,
+          "9": 3.4
+        },
+        "chance": null,
+        "id": 350,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "GK",
+        "price": 5.5,
+        "status": "a",
+        "team": "LIV",
+        "web_name": "A.Becker",
+        "xp": 18.3
+      },
+      "reasons": [
+        "form 6.2 on just 3.9% owned"
+      ],
+      "tier": "differential",
+      "value": 0.0
+    },
+    {
+      "group": "In form, still under-owned",
+      "owned": false,
+      "owned_by": 3.5,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p610799.png",
+      "player": {
+        "by_gameweek": {
+          "10": 6.3,
+          "6": 6.4,
+          "7": 6.4,
+          "8": 5.7,
+          "9": 5.1
+        },
+        "chance": null,
+        "id": 504,
+        "leaving": null,
+        "minutes_weight": 0.99,
+        "position": "DEF",
+        "price": 5.0,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Vuskovic",
+        "xp": 29.9
+      },
+      "reasons": [
+        "form 6.5 on just 3.5% owned"
+      ],
+      "tier": "differential",
+      "value": 0.0
+    },
+    {
+      "group": "In form, still under-owned",
+      "owned": false,
+      "owned_by": 3.5,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p647850.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.7,
+          "6": 3.7,
+          "7": 3.7,
+          "8": 3.3,
+          "9": 3.0
+        },
+        "chance": null,
+        "id": 138,
+        "leaving": null,
+        "minutes_weight": 0.78,
+        "position": "FWD",
+        "price": 5.6,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Kostoulas",
+        "xp": 17.4
+      },
+      "reasons": [
+        "form 6.8 on just 3.5% owned"
+      ],
+      "tier": "differential",
+      "value": 0.0
+    },
+    {
+      "group": "A bandwagon forming",
+      "owned": false,
+      "owned_by": 10.7,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p513418.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.6,
+          "6": 4.1,
+          "7": 4.1,
+          "8": 5.1,
+          "9": 4.6
+        },
+        "chance": null,
+        "id": 94,
+        "leaving": null,
+        "minutes_weight": 0.99,
+        "position": "MID",
+        "price": 6.2,
+        "status": "a",
+        "team": "BRE",
+        "web_name": "Schade",
+        "xp": 22.5
+      },
+      "reasons": [
+        "+302,415 transfers this gameweek, still 10.7% owned"
+      ],
+      "tier": "popular",
+      "value": 0.0
+    },
+    {
+      "group": "A bandwagon forming",
+      "owned": false,
+      "owned_by": 16.8,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p487838.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.5,
+          "6": 3.9,
+          "7": 3.6,
+          "8": 3.6,
+          "9": 3.6
+        },
+        "chance": null,
+        "id": 449,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.3,
+        "status": "a",
+        "team": "NEW",
+        "web_name": "Hall",
+        "xp": 18.2
+      },
+      "reasons": [
+        "+188,061 transfers this gameweek, still 16.8% owned"
+      ],
+      "tier": "popular",
+      "value": 0.0
+    },
+    {
+      "group": "A bandwagon forming",
+      "owned": false,
+      "owned_by": 15.9,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p17761.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.3,
+          "6": 4.3,
+          "7": 3.5,
+          "8": 3.2,
+          "9": 3.9
+        },
+        "chance": null,
+        "id": 229,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 6.1,
+        "status": "a",
+        "team": "EVE",
+        "web_name": "Tarkowski",
+        "xp": 19.2
+      },
+      "reasons": [
+        "+157,715 transfers this gameweek, still 15.9% owned"
+      ],
+      "tier": "popular",
+      "value": 0.0
+    },
+    {
+      "group": "A bandwagon forming",
+      "owned": false,
+      "owned_by": 6.9,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p441264.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.5,
+          "6": 4.2,
+          "7": 3.8,
+          "8": 4.2,
+          "9": 4.2
+        },
+        "chance": null,
+        "id": 552,
+        "leaving": null,
+        "minutes_weight": 0.89,
+        "position": "FWD",
+        "price": 5.7,
+        "status": "a",
+        "team": "SUN",
+        "web_name": "Brobbey",
+        "xp": 19.9
+      },
+      "reasons": [
+        "+143,835 transfers this gameweek, still 6.9% owned"
+      ],
+      "tier": "popular",
+      "value": 0.0
+    },
+    {
+      "group": "The template breaking up",
+      "owned": false,
+      "owned_by": 65.8,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p475168.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.9,
+          "6": 3.9,
+          "7": 3.9,
+          "8": 3.9,
+          "9": 3.5
+        },
+        "chance": 75,
+        "id": 165,
+        "leaving": null,
+        "minutes_weight": 0.51,
+        "position": "FWD",
+        "price": 7.7,
+        "status": "d",
+        "team": "CHE",
+        "web_name": "Jo\u00e3o Pedro",
+        "xp": 19.1
+      },
+      "reasons": [
+        "-281,131 transfers this gameweek, off 65.8% owned"
+      ],
+      "tier": "essential",
+      "value": 0.0
+    },
+    {
+      "group": "The template breaking up",
+      "owned": false,
+      "owned_by": 33.2,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p424876.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.5,
+          "6": 4.1,
+          "7": 4.5,
+          "8": 5.0,
+          "9": 4.1
+        },
+        "chance": null,
+        "id": 368,
+        "leaving": null,
+        "minutes_weight": 0.98,
+        "position": "MID",
+        "price": 7.0,
+        "status": "a",
+        "team": "LIV",
+        "web_name": "Szoboszlai",
+        "xp": 22.2
+      },
+      "reasons": [
+        "-145,335 transfers this gameweek, off 33.2% owned"
+      ],
+      "tier": "template",
+      "value": 0.0
+    },
+    {
+      "group": "The template breaking up",
+      "owned": false,
+      "owned_by": 38.7,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p141746.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.9,
+          "6": 6.0,
+          "7": 6.0,
+          "8": 6.0,
+          "9": 5.4
+        },
+        "chance": null,
+        "id": 426,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 11.9,
+        "status": "a",
+        "team": "MUN",
+        "web_name": "B.Fernandes",
+        "xp": 29.3
+      },
+      "reasons": [
+        "-134,627 transfers this gameweek, off 38.7% owned"
+      ],
+      "tier": "template",
+      "value": 0.0
+    },
+    {
+      "group": "The template breaking up",
+      "owned": false,
+      "owned_by": 20.7,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p446008.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.6,
+          "6": 5.7,
+          "7": 5.7,
+          "8": 5.6,
+          "9": 5.1
+        },
+        "chance": null,
+        "id": 427,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 7.9,
+        "status": "a",
+        "team": "MUN",
+        "web_name": "Mbeumo",
+        "xp": 27.7
+      },
+      "reasons": [
+        "-80,264 transfers this gameweek, off 20.7% owned"
+      ],
+      "tier": "template",
+      "value": 0.0
+    }
+  ]
+}

@@ -1025,6 +1025,67 @@ def head_to_head(request: HeadToHeadRequest, *, store: Storage | None = None) ->
     }
 
 
+def _worth_noticing(request: TrendingRequest, data) -> dict:
+    """What the crowd is doing that a single leaderboard cannot show (ADR-170/271).
+
+    ⭐⭐ **Three patterns, each needing two boards at once**: *in form, still under-owned* · *a bandwagon
+    forming* · *the template breaking up*. ⚠️ *A player can top none of the four boards and still be the
+    most interesting name on the page* — which is exactly what a ranking of one number cannot say.
+
+    ⚠️⚠️ **It says what the crowd is DOING, never why.** Trending and Signals split on that axis
+    (ADR-149/150): what people *do*, in numbers, versus what is being *said*. ⭐ *Repeating a headline
+    here would put an unsourced guess next to a measured fact.*
+
+    ⭐ **Rows carry a `group`, rather than this being a third answer shape.** The client renders a heading
+    when the group changes — ⚠️ *a second row shape would be a second renderer, and the two would drift.*
+    """
+    from src.analytics.crowd import ownership_label
+    from src.analytics.crowd_watch import watch_note, worth_noticing
+
+    groups = worth_noticing(data.players, per_pattern=4)
+    by_id = {p["id"]: p for p in data.players}
+    ranked_by_id = {r["id"]: r for r in data.ranked}
+    owned_ids = set(request.player_ids)
+
+    rows = []
+    for group in groups:
+        for row in group["players"]:
+            raw = by_id.get(row["id"])
+            if raw is None:
+                continue
+            ranked = ranked_by_id.get(row["id"], {})
+            rows.append({
+                "player": player_summary(raw, data.xp_by_id,
+                                         {row["id"]: ranked.get("by_gameweek", {})},
+                                         {row["id"]: ranked.get("minutes_weight", 1.0)}),
+                "photo": photo_url(raw["code"]),
+                # ⭐ The heading this row sits under. Carried per row so the order cannot come apart from
+                # the grouping — ⚠️ *two lists that have to be zipped are two lists that will be.*
+                "group": group["label"],
+                # ⚠️ **No ranking number.** These rows are sentences, and ⭐ *a number in the corner would
+                # invite a reader to sort by it* — there is nothing here to sort by.
+                "value": 0.0,
+                "owned_by": raw.get("selected_by"),
+                "tier": ownership_label(raw),
+                "owned": row["id"] in owned_ids,
+                "reasons": [row["reason"]],
+            })
+
+    return {
+        "by": "watch",
+        "label": "worth noticing",
+        # ⭐ Empty on purpose: the client shows no value column when there is no number to head.
+        "column": "",
+        # ⚠️ The engine's sentence says *"the four boards below"* — true of a page that stacks them and
+        # ⭐ **false on a phone, where they are a tap away**. Reworded here rather than in the engine,
+        # because the Streamlit page it was written for still stacks them: *a sentence about a layout
+        # belongs to the layout.*
+        "caveat": watch_note(groups).replace("the four boards below only show *between* them",
+                                             "the other boards only show *between* them"),
+        "rows": rows,
+    }
+
+
 def _worth_a_look(request: TrendingRequest, data, store) -> dict:
     """ADR-167's convergence board, on a phone (ADR-269).
 
@@ -1112,6 +1173,8 @@ def trending(request: TrendingRequest, *, store: Storage | None = None) -> dict:
         data = load(list(request.player_ids), DEFAULT_HORIZON, store)
         if request.by == "look":
             return _worth_a_look(request, data, store)
+        if request.by == "watch":
+            return _worth_noticing(request, data)
     finally:
         if ours:
             store.close()

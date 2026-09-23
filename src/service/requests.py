@@ -350,8 +350,12 @@ class TrendingRequest:
         #: because it is the only one here that is about the *player* rather than about other managers.
         #: ⚠️ It rides on this endpoint because it answers the same reader's question — *"who should I be
         #: looking at?"* — and a separate endpoint would have meant a separate screen for one list.
-        if self.by not in {*TREND_BYS, "look"}:
-            raise ValueError(f"by must be one of {sorted({*TREND_BYS, 'look'})}, not {self.by!r}")
+        #: ⭐ Two **readers** (`look`, `watch`) and four **boards**. The readers lead because each says
+        #: something no single board can — ⚠️ *a board ranks one number; the useful signals live between
+        #: them* (ADR-167, ADR-170).
+        if self.by not in {*TREND_BYS, "look", "watch"}:
+            allowed = sorted({*TREND_BYS, "look", "watch"})
+            raise ValueError(f"by must be one of {allowed}, not {self.by!r}")
         if not 1 <= self.limit <= 50:
             raise ValueError(f"limit must be 1-50, not {self.limit}")
 

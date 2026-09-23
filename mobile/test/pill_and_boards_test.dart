@@ -220,6 +220,58 @@ void main() {
       expect(nine, lessThan(ten), reason: 'GW9 must come before GW10');
     });
   });
+
+  group('worth noticing', () {
+    TrendingBoard board() => TrendingBoard.fromJson(
+      jsonDecode(
+        File('../spikes/018-flutter-read-slice/api-samples/worth-noticing.json')
+            .readAsStringSync(),
+      ) as Map<String, dynamic>,
+    );
+
+    test('every row carries its heading and its sentence', () {
+      final rows = board().rows;
+      expect(rows, isNotEmpty);
+      for (final row in rows) {
+        expect(row.group, isNotEmpty);
+        expect(row.reasons, hasLength(1));
+      }
+    });
+
+    // ⚠️ The client draws a heading when the group CHANGES, so a group appearing twice would draw two
+    // headings for one pattern.
+    test('rows of one group are contiguous', () {
+      final runs = <String>[];
+      for (final row in board().rows) {
+        if (runs.isEmpty || runs.last != row.group) runs.add(row.group);
+      }
+      expect(
+        runs.length,
+        runs.toSet().length,
+        reason: 'a group was split: $runs',
+      );
+    });
+
+    test('the under-owned pattern leads', () {
+      expect(board().rows.first.group, startsWith('In form'));
+    });
+
+    // ⭐ These rows are sentences; a figure in the corner would invite sorting by it.
+    test('the board declares no value column', () {
+      expect(board().column, isEmpty);
+    });
+
+    test('a crowd board has no groups and does declare a column', () {
+      final crowd = TrendingBoard.fromJson(
+        jsonDecode(
+          File('../spikes/018-flutter-read-slice/api-samples/trending.json')
+              .readAsStringSync(),
+        ) as Map<String, dynamic>,
+      );
+      expect(crowd.rows.every((r) => r.group.isEmpty), isTrue);
+      expect(crowd.column, isNotEmpty);
+    });
+  });
 }
 
 /// The ticker's header line, on its own — the screen itself needs a live client.

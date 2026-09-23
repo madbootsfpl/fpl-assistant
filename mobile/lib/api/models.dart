@@ -1303,6 +1303,7 @@ class TrendingRow {
     required this.tier,
     required this.owned,
     this.reasons = const [],
+    this.group = '',
   });
 
   factory TrendingRow.fromJson(Map<String, dynamic> json) => TrendingRow(
@@ -1313,6 +1314,7 @@ class TrendingRow {
     tier: json['tier'] as String? ?? '',
     owned: json['owned'] as bool? ?? false,
     reasons: [for (final r in (json['reasons'] as List? ?? [])) '$r'],
+    group: json['group'] as String? ?? '',
   );
 
   final PlayerSummary player;
@@ -1338,6 +1340,11 @@ class TrendingRow {
   /// ⚠️ Each line names its own season, because *most of the evidence is last season's and a reason
   /// without its vintage is the most misleading kind of true statement* (ADR-167).
   final List<String> reasons;
+
+  /// ⭐ The heading this row sits under, on the boards that have them. ⚠️ Carried **per row** so the
+  /// order cannot come apart from the grouping — *two lists that have to be zipped are two lists that
+  /// will be.*
+  final String group;
 }
 
 class TrendingBoard {

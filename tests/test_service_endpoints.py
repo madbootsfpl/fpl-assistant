@@ -1898,3 +1898,53 @@ def test_a_bench_weight_outside_zero_to_one_is_refused(weight):
     """⚠️ Above 1 the bench would be worth more than the XI — not a preference, a different game."""
     with pytest.raises(ValueError, match="bench_weight must be 0-1"):
         svc.BuildRequest(bench_weight=weight).validate()
+
+
+# ---- worth noticing: what a single leaderboard cannot show (ADR-170/271) ----
+
+def test_the_groups_arrive_in_their_most_actionable_order():
+    """⭐ *In form, still under-owned* leads because it is the only pattern that tells you something
+    **before** the crowd does; the other two describe a move already under way."""
+    answer = svc.trending(svc.TrendingRequest(by="watch"))
+    seen = []
+    for row in answer["rows"]:
+        if row["group"] not in seen:
+            seen.append(row["group"])
+    assert seen[0].startswith("In form"), f"the leading group was {seen[0]!r}"
+    assert len(seen) <= 3
+
+
+def test_every_row_knows_which_group_it_is_in():
+    """⚠️ **Carried per row, not as parallel lists.** ⭐ *Two lists that have to be zipped are two lists
+    that will be* — and a row under the wrong heading is a wrong claim about a player."""
+    answer = svc.trending(svc.TrendingRequest(by="watch"))
+    assert answer["rows"], "the seed must hold crowd movement for this to mean anything"
+    for row in answer["rows"]:
+        assert row["group"], "a row with no group would render under whatever came before it"
+        assert row["reasons"], "the sentence IS the row"
+
+
+def test_rows_stay_together_within_a_group():
+    """⚠️ The client draws a heading when the group **changes**, so a group appearing twice would draw
+    two headings for one pattern."""
+    answer = svc.trending(svc.TrendingRequest(by="watch"))
+    runs = []
+    for row in answer["rows"]:
+        if not runs or runs[-1] != row["group"]:
+            runs.append(row["group"])
+    assert len(runs) == len(set(runs)), f"a group was split across the list: {runs}"
+
+
+def test_the_board_carries_no_ranking_number():
+    """⭐ These rows are **sentences**. ⚠️ *A figure in the corner invites a reader to sort by it*, and
+    there is nothing here to sort by — so the column is empty and the client draws none."""
+    answer = svc.trending(svc.TrendingRequest(by="watch"))
+    assert answer["column"] == ""
+
+
+def test_the_note_does_not_describe_a_layout_the_phone_does_not_have():
+    """⚠️ The engine's sentence says *"the four boards below"* — true of the page it was written for and
+    ⭐ **false on a phone**, where they are a tap away."""
+    answer = svc.trending(svc.TrendingRequest(by="watch"))
+    assert "below" not in answer["caveat"] or "boards below" not in answer["caveat"]
+    assert "other managers" in answer["caveat"]
