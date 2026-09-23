@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'mugshot.dart';
+import 'ticker_view.dart' show difficultyColour;
 import 'player_picker.dart';
 
 /// What the sheet was asked to do.
@@ -80,6 +82,17 @@ class _PlayerSheetState extends State<_PlayerSheet> {
   /// player, and pushing a route would lose the context you opened it from.
   bool _swapping = false;
 
+  /// ⭐⭐ **The desktop's mini-card, merged into the sheet the owner already taps** (ADR-276).
+  ///
+  /// The owner: *"do you think there is enough real estate to merge these 2 at the bottom of the
+  /// screen… so you can select the option as well as having some real stats?"* There is — the sheet was
+  /// four actions and a subtitle, in a panel half of which was blank.
+  ///
+  /// ⚠️ **Fetched, not free.** The run and the price are already in hand; the season stats are not, and
+  /// they are the half that answers *"is he actually any good?"* ⭐ *The alternative was a second tap to
+  /// a second screen, which is the thing this merge removes.*
+  late final Future<PlayerCard> _card = widget.client.player(widget.player.id);
+
   void _findReplacements() {
     final team = widget.team;
     setState(() {
@@ -134,7 +147,12 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               '${p.xp.toStringAsFixed(1)} xP',
               style: const TextStyle(color: Colors.white54, fontSize: 12.5),
             ),
-            const SizedBox(height: 14),
+            // ⚠️ **Only with the actions.** Once the sheet has become a replacement list or a swap
+            // picker it is answering a different question, and ⭐ *a stat block under a list of
+            // candidates describes the wrong player.*
+            if (_options == null && !_swapping)
+              _Card(future: _card, team: widget.team, player: p),
+            const SizedBox(height: 12),
             if (_options == null && !_swapping) ...[
               _Action(
                 icon: Icons.star,
@@ -515,6 +533,160 @@ class _SwapOptions extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The stats half of the sheet (ADR-276): his run, then his season.
+///
+/// ⭐ **The run is drawn immediately and the season fills in.** The fixtures are already on the device
+/// (`MyTeam` carries three per club); the season stats are a round trip. ⚠️ *Blocking the whole card on
+/// the slower half would make the fast half feel slow.*
+class _Card extends StatelessWidget {
+  const _Card({required this.future, required this.team, required this.player});
+
+  final Future<PlayerCard> future;
+  final MyTeam team;
+  final PlayerSummary player;
+
+  @override
+  Widget build(BuildContext context) {
+    final run = team.runFor(player);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (run.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final fixture in run.take(3))
+                Expanded(
+                  child: _Fixture(fixture: fixture, player: player),
+                ),
+            ],
+          ),
+        ],
+        FutureBuilder<PlayerCard>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
+            // ⚠️ **A failure here loses the stats, never the actions.** ⭐ *The reason the sheet exists
+            // is the four buttons below it*, and a network error must not take them with it.
+            if (snapshot.hasError) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  'Season stats did not load.',
+                  style: TextStyle(color: Colors.white24, fontSize: 11),
+                ),
+              );
+            }
+            final card = snapshot.data!;
+            // ⭐ Four, not nine. The endpoint returns everything the Players tab shows; this is a sheet
+            // above a pitch, and ⚠️ *a stat block long enough to push the actions off-screen has
+            // replaced them rather than joined them.*
+            final shown = card.stats.take(4).toList();
+            return Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                children: [
+                  Mugshot(url: card.photo, name: player.name, size: 40),
+                  const SizedBox(width: 12),
+                  for (final stat in shown)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              stat.value,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              stat.label,
+                              style: const TextStyle(
+                                color: Colors.white38,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// One upcoming fixture — ⭐ **shaded on the same 1-5 scale as the ticker** (ADR-265), because *a colour
+/// that means "hard" on one screen must not mean anything else on another* (ADR-184).
+class _Fixture extends StatelessWidget {
+  const _Fixture({required this.fixture, required this.player});
+
+  final Fixture fixture;
+  final PlayerSummary player;
+
+  @override
+  Widget build(BuildContext context) {
+    final gw = fixture.gameweek;
+    // ⚠️ Per-gameweek xP, which is the number that makes a fixture readable — *"CRY (H)" says who; "4.4"
+    // says what it is worth.*
+    final xp = gw == null ? null : player.byGameweek[gw];
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: difficultyColour(fixture.difficulty).withValues(alpha: 0.28),
+        border: Border.all(
+          color: difficultyColour(fixture.difficulty).withValues(alpha: 0.7),
+        ),
+        borderRadius: BorderRadius.circular(Brand.radiusSm),
+      ),
+      child: Column(
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              fixture.label,
+              style: const TextStyle(color: Colors.white, fontSize: 11),
+            ),
+          ),
+          Text(
+            xp == null ? '—' : xp.toStringAsFixed(1),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
