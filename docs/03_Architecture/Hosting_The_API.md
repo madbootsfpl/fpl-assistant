@@ -86,10 +86,35 @@ a variable this table does not name.
 
 | Variable | Without it | Set it to |
 |---|---|---|
-| `FPL_FEEDBACK_WEBHOOK` | ⚠️ Feedback answers **"no feedback sink is configured on the server"** — honest, and still not delivered. **Set this or in-app feedback does not reach you.** | the relay URL from `docs/BETA.md` §1B, e.g. `https://formsubmit.co/ajax/hello@madboots.com` |
+| `FPL_FEEDBACK_WEBHOOK` | ⚠️ Feedback answers **"no feedback sink is configured on the server"** — honest, and still not delivered. **Set this or in-app feedback does not reach you.** | 🔴 **not FormSubmit** — see below. A **Web3Forms** endpoint, or a Google Apps Script Sheet (`docs/BETA.md` §1A) |
 | `FPL_FEEDBACK_KEY` | nothing, unless the relay needs an access key | Web3Forms' access key (not needed for FormSubmit) |
 | `FPL_FEEDBACK_EMAIL` | falls back to `hello@madboots.com` | the address offered to a tester when the relay fails |
 | `FPL_FEEDBACK_ORIGIN` | falls back to the Streamlit URL | ⚠️ only matters if the relay checks `Origin` |
+
+### 🔴 FormSubmit does not work from a hosted server
+
+⚠️⚠️ **This cost a full debugging session, and the symptom named the wrong culprit** (ADR-262). In-app
+feedback returned `sent: false, "the service returned HTTP 403"` with everything configured correctly.
+
+**FormSubmit sits behind Cloudflare, and Cloudflare refuses requests from datacenter IPs** before they ever
+reach the form. The same POST — same URL, same headers, same payload — succeeds from a laptop and is
+refused from Render. ⭐ *It is not the form, the address, the activation state, or the User-Agent; all four
+were ruled out by probe.* FormSubmit is built for **browser** forms, and that bot protection is doing
+exactly its job.
+
+⚠️ It works on Streamlit Cloud, which is why nothing looked wrong until the API moved. ⭐ *A dependency
+that works from one host is not a dependency that works.*
+
+**Use a relay designed to be called by a server:**
+
+| Option | Why |
+|---|---|
+| **Web3Forms** (recommended) | An API with an access key rather than a browser form — set `FPL_FEEDBACK_WEBHOOK = https://api.web3forms.com/submit` **and** `FPL_FEEDBACK_KEY`. `docs/BETA.md` §1C. |
+| **Google Apps Script → Sheet** | Google does not bot-block server POSTs. A running log rather than email. `docs/BETA.md` §1A. |
+
+⭐ **The app will now say which of these is happening.** A CDN block is reported as *"the relay's CDN
+(Cloudflare) blocked this server… hosts on datacenter IPs are refused"*, which is a different problem from
+an unactivated form — and the status code alone cannot tell them apart.
 
 ⭐ **Check it actually relays, rather than assuming.** `POST /api/v1/feedback` returns `sent: true/false`
 with the relay's **own** reason — that is the whole point of ADR-231. ⚠️ **The endpoint allows 5 calls an

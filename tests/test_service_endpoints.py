@@ -1648,3 +1648,31 @@ def test_a_configured_sink_relays_without_the_streamlit_package(monkeypatch):
 
     answer = svc.feedback(FeedbackRequest(message="this one really sends", screen="Tell us something"))
     assert answer["sent"] is True
+
+
+def test_the_payload_carries_both_subject_spellings(monkeypatch):
+    """⚠️ **The two relays disagree, and the wrong spelling fails silently.**
+
+    FormSubmit reads `_subject`; Web3Forms reads `subject`. ⭐ *A field a relay does not recognise does not
+    error — it quietly produces an untitled email*, so this is precisely the defect nobody reports, because
+    the message still arrives (ADR-262).
+    """
+    sent = {}
+
+    class _Ok:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"success": "true"}
+
+    def capture(url, **kwargs):
+        sent.update(kwargs.get("json") or {})
+        return _Ok()
+
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://example.invalid/relay")
+    monkeypatch.setattr("requests.post", capture)
+    svc.feedback(FeedbackRequest(message="a note", screen="Signals"))
+
+    assert sent["_subject"] == sent["subject"], "both relays must get the same title"
+    assert "Signals" in sent["subject"], "the screen is the useful half of the subject"

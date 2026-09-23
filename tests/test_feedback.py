@@ -145,3 +145,61 @@ def test_a_refusal_with_no_explanation_reads_exactly_as_before():
     """⚠️ The old wording is load-bearing — a silent relay must not gain a dangling dash."""
     _, note = relay_result(_Refusal(403, text=""))
     assert note == "the service returned HTTP 403"
+
+
+# ---- a CDN block is a different problem from a refused form (ADR-262) -------
+
+class _Blocked:
+    status_code = 403
+
+    def __init__(self, html):
+        self.text = html
+
+    @staticmethod
+    def json():
+        raise ValueError("not JSON")
+
+
+def test_a_cloudflare_block_is_named_rather_than_swallowed():
+    """⭐⭐ **Suppressing markup suppressed the whole diagnosis.**
+
+    A relay behind a CDN answers a blocked server with an HTML challenge page. The rule *"never echo
+    `<html>`"* is right, and applied here it left the app saying **"HTTP 403"** and nothing else — while
+    holding a page that named the cause. ⚠️ *A CDN blocking a datacenter IP and a form that is not
+    activated are completely different problems, and the status code cannot tell them apart.*
+    """
+    _, note = relay_result(_Blocked(
+        "<!DOCTYPE html><html><head><title>Access denied</title></head>"
+        "<body>Cloudflare Ray ID: abc123</body></html>"))
+    assert "Cloudflare" in note
+    assert "datacenter" in note
+    assert "<" not in note, "the page is classified, never shown"
+
+
+@pytest.mark.parametrize("marker", ["Attention Required!", "Just a moment...", "Access Denied"])
+def test_the_usual_challenge_pages_are_recognised(marker):
+    _, note = relay_result(_Blocked(f"<html><body>{marker}</body></html>"))
+    assert "CDN" in note or "front door" in note
+    assert "<" not in note
+
+
+def test_ordinary_html_boilerplate_is_still_not_repeated():
+    """⚠️ The original rule must survive the exception to it — a plain gateway page explains nothing."""
+    _, note = relay_result(_Blocked("<html><head><title>502 Bad Gateway</title></head></html>"))
+    assert note == "the service returned HTTP 403"
+
+
+def test_a_json_refusal_is_still_preferred_over_a_challenge_guess():
+    """⭐ A relay that *did* answer in its own words outranks any classification of ours."""
+
+    class _Spoke:
+        status_code = 403
+        text = "<html>Cloudflare</html>"
+
+        @staticmethod
+        def json():
+            return {"message": "this form is not activated"}
+
+    _, note = relay_result(_Spoke())
+    assert "not activated" in note
+    assert "Cloudflare" not in note

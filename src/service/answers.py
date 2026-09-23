@@ -893,7 +893,12 @@ def feedback(request: FeedbackRequest) -> dict:
         "page": request.screen or "(not sure)",
         "version": request.version,
         "ts": datetime.now(UTC).isoformat(timespec="seconds"),
+        # ⚠️ **Both spellings, because the two relays disagree and the wrong one is silently ignored.**
+        # FormSubmit reads `_subject`; Web3Forms reads `subject`. ⭐ *A field a relay does not recognise
+        # does not fail — it just quietly produces an untitled email*, which is the kind of defect nobody
+        # reports because the message still arrives (ADR-262).
         "_subject": f"MADBOOTS mobile feedback — {request.screen or 'general'}",
+        "subject": f"MADBOOTS mobile feedback — {request.screen or 'general'}",
     }
     if key := os.environ.get("FPL_FEEDBACK_KEY"):
         payload["access_key"] = key

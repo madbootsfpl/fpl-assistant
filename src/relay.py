@@ -56,7 +56,38 @@ def _why(response) -> str:
         else:
             said = data
         said = " ".join(str(said or "").split())
+        if not said:
+            continue
         # ⚠️ An HTML error page is boilerplate, not an explanation — saying nothing beats saying `<html>`.
-        if said and not said.lstrip().startswith("<"):
-            return f" — {said[:300]}"
+        # ⭐⭐ **But "nothing" was itself a wrong answer here.** A relay behind Cloudflare answers a blocked
+        # server with an HTML challenge page, so suppressing markup suppressed the whole diagnosis: the app
+        # said *"HTTP 403"* and stopped, when the page it was holding named the cause (ADR-262). So HTML is
+        # **classified**, not echoed.
+        if said.lstrip().startswith("<"):
+            if (blocked := _challenge(said)) is not None:
+                return f" — {blocked}"
+            continue
+        return f" — {said[:300]}"
     return ""
+
+
+#: ⭐ Markers from the front doors that sit in front of form relays. ⚠️ Matched against an HTML body we
+#: deliberately never show, purely to name *who* refused — a CDN blocking a datacenter IP is a completely
+#: different problem from a form that is not activated, and the status code alone cannot tell them apart.
+_CHALLENGES = (
+    ("cloudflare", "the relay's CDN (Cloudflare) blocked this server, not the form itself — hosts on "
+                   "datacenter IPs are refused before the request reaches the relay"),
+    ("attention required", "the relay's CDN challenged this request as automated traffic"),
+    ("just a moment", "the relay's CDN challenged this request as automated traffic"),
+    ("access denied", "the relay's front door refused this server outright"),
+)
+
+
+def _challenge(html: str) -> str | None:
+    """Name the CDN that refused us, from a page we will never show. `None` if it is ordinary boilerplate."""
+    low = html.lower()
+    for marker, said in _CHALLENGES:
+        if marker in low:
+            return said
+    return None
+
