@@ -78,9 +78,14 @@ A Google Apps Script bound to a Sheet:
      const d = JSON.parse(e.postData.contents);
      SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
        .appendRow([new Date(), d.message || "", d.email || "", d.page || "", d.version || ""]);
-     // Optional — the row is the record; this is the nudge. Delete these two lines for log-only.
-     MailApp.sendEmail("hello@madboots.com", d._subject || "MADBOOTS feedback",
-                       `${d.message}\n\n— ${d.email || "no address"} · ${d.page} · ${d.version}`);
+     // Optional — the row is the record; this is the nudge. Delete this block for log-only.
+     // ⭐ `replyTo` is the point: hitting Reply answers the tester, not yourself.
+     MailApp.sendEmail({
+       to: "hello@madboots.com",
+       subject: d._subject || "MADBOOTS feedback",
+       body: `${d.message}\n\n— ${d.email || "no address given"} · ${d.page} · ${d.version}`,
+       ...(d.email ? {replyTo: d.email} : {}),
+     });
      return ContentService.createTextOutput("ok");
    }
    ```

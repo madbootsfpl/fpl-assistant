@@ -14,11 +14,20 @@ import 'package:flutter/material.dart';
 
 import 'api/client.dart';
 import 'brand.dart';
+import 'contact_store.dart';
 
 class FeedbackView extends StatefulWidget {
-  const FeedbackView({required this.client, super.key});
+  const FeedbackView({required this.client, this.from = '', super.key});
 
   final ServiceClient client;
+
+  /// ⭐ **The screen the tester was actually on**, so the report says where it happened.
+  ///
+  /// ⚠️⚠️ This used to be the literal string `'mobile'`, hardcoded — while the screen's own copy promised
+  /// *"Screen and app version travel with it, so you do not have to describe where you were."* ⭐ *Every
+  /// report said "mobile", and the promise on the page was the reason nobody thought to add the detail
+  /// by hand* (ADR-263).
+  final String from;
 
   @override
   State<FeedbackView> createState() => _FeedbackViewState();
@@ -26,15 +35,31 @@ class FeedbackView extends StatefulWidget {
 
 class _FeedbackViewState extends State<FeedbackView> {
   final TextEditingController _message = TextEditingController();
+  final TextEditingController _contact = TextEditingController();
+  final ContactStore _contacts = ContactStore();
   bool _sending = false;
   String? _outcome;
   bool _ok = false;
 
   @override
+  void initState() {
+    super.initState();
+    _contacts.load().then((saved) {
+      if (mounted && saved.isNotEmpty) _contact.text = saved;
+    });
+  }
+
+  @override
   void dispose() {
     _message.dispose();
+    _contact.dispose();
     super.dispose();
   }
+
+  /// What the report says it is about. ⭐ Falls back to naming the app rather than claiming a screen we
+  /// do not know — ⚠️ *an invented location is worse than none, because it is believed.*
+  String get _screen =>
+      widget.from.trim().isEmpty ? 'mobile' : widget.from.trim();
 
   /// ⚠️ **It never says "sent" unless the relay said so** (ADR-231) — *a success message that cannot fail
   /// is not a success message.* When it fails it hands over the email address rather than the error.
@@ -46,9 +71,13 @@ class _FeedbackViewState extends State<FeedbackView> {
       _outcome = null;
     });
     try {
+      final contact = _contact.text.trim();
+      // ⚠️ Saved before the send, not after: a tester whose report fails still typed their address once.
+      await _contacts.save(contact);
       final result = await widget.client.feedback(
         message: text,
-        screen: 'mobile',
+        contact: contact,
+        screen: _screen,
         version: '0.0.1',
       );
       final sent = result['sent'] == true;
@@ -78,11 +107,17 @@ class _FeedbackViewState extends State<FeedbackView> {
         'What worked? What broke? What would you add?',
         style: TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
       ),
-      const Padding(
-        padding: EdgeInsets.only(top: 6, bottom: 12),
+      Padding(
+        padding: const EdgeInsets.only(top: 6, bottom: 12),
         child: Text(
-          'Screen and app version travel with it, so you do not have to describe where you were.',
-          style: TextStyle(color: Colors.white38, fontSize: 11.5, height: 1.5),
+          // ⭐ It names the screen rather than claiming one travels along. ⚠️ *A promise the reader can
+          // check is worth more than a promise they must take on trust* — and this one was false.
+          'Sent as a report about $_screen, with the app version.',
+          style: const TextStyle(
+            color: Colors.white38,
+            fontSize: 11.5,
+            height: 1.5,
+          ),
         ),
       ),
       TextField(
@@ -93,6 +128,25 @@ class _FeedbackViewState extends State<FeedbackView> {
         style: const TextStyle(color: Colors.white, fontSize: 13.5),
         decoration: InputDecoration(
           counterStyle: const TextStyle(color: Colors.white24, fontSize: 10),
+          filled: true,
+          fillColor: Colors.white10,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(Brand.radiusSm),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      TextField(
+        controller: _contact,
+        keyboardType: TextInputType.emailAddress,
+        autocorrect: false,
+        style: const TextStyle(color: Colors.white, fontSize: 13.5),
+        decoration: InputDecoration(
+          // ⭐ Labelled by what it BUYS the tester, not by what it is. *"Email (optional)" asks for data;
+          // "so we can reply" says why it is worth giving* — and a beta runs on replies.
+          hintText: 'Email, so we can reply (optional)',
+          hintStyle: const TextStyle(color: Colors.white24, fontSize: 12.5),
           filled: true,
           fillColor: Colors.white10,
           border: OutlineInputBorder(

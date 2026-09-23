@@ -221,19 +221,34 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
   /// Push a full screen. ⭐ Used for the things More links to — they are screens, not rows, and giving them
   /// a back button is what makes More a menu rather than a very long page.
-  Future<void> _open(String title, Widget body) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => Scaffold(
-        backgroundColor: Brand.ink,
-        appBar: AppBar(
-          title: Text(title),
+  /// ⭐ **Where the tester last was**, so a report can say where it happened rather than *"mobile"*.
+  ///
+  /// ⚠️ Updated by `_open` and by the tab bar, because those are the two ways a screen is reached — miss
+  /// either and the value is confidently stale, which is worse than blank (ADR-263).
+  String _lastScreen = 'My team';
+
+  /// ⭐ Named once and used by both the route and the guard — ⚠️ *two spellings of one string is how a
+  /// guard silently stops guarding* (ADR-184).
+  static const _feedbackTitle = 'Tell us something';
+
+  Future<void> _open(String title, Widget body) {
+    // ⚠️ Feedback deliberately does not record itself: it is the one route that is never what a report is
+    // about, and letting it overwrite would erase the answer on the way to asking the question.
+    if (title != _feedbackTitle) _lastScreen = title;
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
           backgroundColor: Brand.ink,
-          foregroundColor: Colors.white,
+          appBar: AppBar(
+            title: Text(title),
+            backgroundColor: Brand.ink,
+            foregroundColor: Colors.white,
+          ),
+          body: body,
         ),
-        body: body,
       ),
-    ),
-  );
+    );
+  }
 
   /// Tap a player: armband, or replace him.
   Future<void> _openPlayer(MyTeam team, PlayerSummary player) async {
@@ -468,7 +483,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     ),
     bottomNavigationBar: _BottomBar(
       current: _tab,
-      onPick: (t) => setState(() => _tab = t),
+      onPick: (t) => setState(() {
+        _tab = t;
+        // ⭐ The More tab is a directory, not a place a bug happens — so it does not claim to be one.
+        if (t != _Tab.more) _lastScreen = t.label;
+      }),
     ),
   );
 
@@ -578,8 +597,10 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             _open('Player DNA', PlayerDnaView(client: _client, team: team)),
         onOpenTeamDna: () =>
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
-        onOpenFeedback: () =>
-            _open('Tell us something', FeedbackView(client: _client)),
+        onOpenFeedback: () => _open(
+          _feedbackTitle,
+          FeedbackView(client: _client, from: _lastScreen),
+        ),
         onOpenHelp: _openHelp,
         onOpenSettings: () => _open(
           'Settings',
