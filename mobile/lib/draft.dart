@@ -40,6 +40,7 @@ class Draft {
     required this.savedAt,
     this.captainId,
     this.viceCaptainId,
+    this.signalKeys = const {},
   });
 
   factory Draft.fromJson(Map<String, dynamic> json) => Draft(
@@ -51,6 +52,12 @@ class Draft {
     savedAt: DateTime.parse(json['saved_at'] as String),
     captainId: json['captain_id'] as int?,
     viceCaptainId: json['vice_captain_id'] as int?,
+    // ⚠️ Absent on a plan saved before ADR-260 — which reads as "nothing was known", so every current
+    // signal looks new. ⭐ That is the safe direction: *over-reporting a change invites a second look;
+    // under-reporting one lets a plan be executed blind.*
+    signalKeys: {
+      for (final k in (json['signal_keys'] as List? ?? const [])) '$k',
+    },
   );
 
   final int managerId;
@@ -82,8 +89,27 @@ class Draft {
     'player_ids': playerIds,
     'bench_ids': benchIds,
     'saved_at': savedAt.toIso8601String(),
+    'signal_keys': signalKeys.toList(),
     'captain_id': captainId,
     'vice_captain_id': viceCaptainId,
+  };
+
+  /// ⭐⭐⭐ **What was known about your players when this plan was made** (ADR-260).
+  ///
+  /// The owner: *"people like to manipulate their teams, wait till near deadline and then make the
+  /// changes **if nothing else external has happened that might influence change**."* Keeping the plan was
+  /// only half of that — ⚠️ *a plan you come back to is only safe to execute if you know what has changed
+  /// underneath it*, and until now the app knew and never said.
+  ///
+  /// ⭐ Stored as keys rather than a timestamp: a signal's key is already stable (ADR-232), so "what is
+  /// new" is a set difference and needs no clock. *The device compared, the server never has to know when
+  /// you last looked.*
+  final Set<String> signalKeys;
+
+  /// What has happened since, given what is known now.
+  Set<String> since(Iterable<String> current) => {
+    for (final k in current)
+      if (!signalKeys.contains(k)) k,
   };
 
   /// The swaps this draft represents, as `(out, in)` ids.
@@ -149,6 +175,10 @@ class Draft {
     required DateTime savedAt,
     int? teamCaptainId,
     int? teamViceCaptainId,
+
+    /// ⭐ Only used when there is **no** existing plan — an existing one already carries its own, and
+    /// overwriting it would silence the warning the plan needs on its way back.
+    Set<String> signalKeys = const {},
   }) {
     final current = existing?.playerIds ?? basePlayerIds;
     final next = [for (final id in current) id == outId ? inId : id];
@@ -164,6 +194,7 @@ class Draft {
           savedAt: savedAt,
           captainId: teamCaptainId,
           viceCaptainId: teamViceCaptainId,
+          signalKeys: signalKeys,
         );
     final armbands = carried.armbandsWithin(next);
     return Draft(
@@ -175,6 +206,10 @@ class Draft {
       savedAt: savedAt,
       captainId: armbands.captain,
       viceCaptainId: armbands.vice,
+      // ⚠️ Carried, not re-read. A transfer is a change to the *plan*, not a moment of looking at the
+      // news — ⭐ *resetting it here would quietly mark everything as seen and silence the very warning
+      // the plan needs on its way back.*
+      signalKeys: carried.signalKeys,
     );
   }
 
@@ -197,6 +232,7 @@ class Draft {
     required DateTime savedAt,
     int? teamCaptainId,
     int? teamViceCaptainId,
+    Set<String> signalKeys = const {},
   }) {
     final bench = List<int>.from(existing?.benchIds ?? benchIds);
     // ⚠️ Exactly one of the two is on the bench — the server only offers legal partners, and a swap
@@ -216,6 +252,7 @@ class Draft {
             savedAt,
             teamCaptainId,
             teamViceCaptainId,
+            signalKeys,
           );
     }
     bench[slot] = arriving;
@@ -240,6 +277,7 @@ class Draft {
       savedAt: savedAt,
       captainId: carried.captainId,
       viceCaptainId: carried.viceCaptainId,
+      signalKeys: carried.signalKeys,
     );
   }
 
@@ -250,8 +288,10 @@ class Draft {
     List<int> benchIds,
     DateTime savedAt,
     int? captainId,
-    int? viceCaptainId,
-  ) => Draft(
+    int? viceCaptainId, [
+    // ⭐ Optional and last: every caller that has an existing plan takes its keys from that plan instead.
+    Set<String> signalKeys = const {},
+  ]) => Draft(
     managerId: managerId,
     gameweek: gameweek,
     basePlayerIds: basePlayerIds,

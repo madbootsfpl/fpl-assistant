@@ -205,6 +205,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       savedAt: DateTime.now(),
       teamCaptainId: team.captainId,
       teamViceCaptainId: team.viceCaptainId,
+      signalKeys: team.signalKeys.toSet(),
     );
     await _drafts.save(draft);
     setState(() {
@@ -291,6 +292,21 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
+  /// ⭐⭐⭐ **What has happened to your players since you made this plan** (ADR-260).
+  ///
+  /// The owner: *"people like to manipulate their teams, wait till near deadline and then make the
+  /// changes **if nothing else external has happened that might influence change**."* Keeping the plan was
+  /// only half of that — ⚠️ *a plan you come back to is only safe to execute if you know what changed
+  /// underneath it*, and the app knew and never said.
+  ///
+  /// ⭐ A set difference against what was known when it was saved. No clock, no server-side memory: the
+  /// keys are stable (ADR-232), so the device can answer a question the server cannot.
+  List<String> _sincePlan(MyTeam team) {
+    final draft = _draft;
+    if (draft == null) return const [];
+    return draft.since(team.signalKeys).toList();
+  }
+
   /// Signals about your fifteen that this device has not shown yet.
   ///
   /// ⚠️ **Computed, never stored as a count.** A stored count goes stale the moment the squad changes or
@@ -329,6 +345,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       savedAt: DateTime.now(),
       teamCaptainId: team.captainId,
       teamViceCaptainId: team.viceCaptainId,
+      signalKeys: team.signalKeys.toSet(),
     );
     await _drafts.save(draft);
     if (!mounted) return;
@@ -356,6 +373,9 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           savedAt: DateTime.now(),
           captainId: team.captainId,
           viceCaptainId: team.viceCaptainId,
+          // ⭐⭐ **What was known when the plan was made** (ADR-260) — so that coming back to it can say
+          // what has happened since.
+          signalKeys: team.signalKeys.toSet(),
         );
     // ⚠️ `playerIds` is untouched on purpose — the fifteen are the same fifteen. Only the bench moves.
     final draft = base.copyWith(benchIds: plan.bench);
@@ -479,7 +499,22 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             // ⚠️⚠️ **Being told beats going to look** — the argument ADR-228 made for a badge and then
             // parked, because it was assumed to cost a round trip. ⭐ It does not: `my-team` carries the
             // signal keys for ~50ms, and the device supplies the only part the server cannot know.
-            if (_unseen(team).isNotEmpty)
+            // ⭐ **Before the general nudge**, because it is a different and sharper question: not
+            // *"is there news?"* but *"is the plan I am about to execute still the plan I made?"*
+            if (_draft != null)
+              _SincePlan(
+                changed: _sincePlan(team).length,
+                savedAt: _draft!.savedAt,
+                onTap: () async {
+                  await _open(
+                    'Signals',
+                    SignalsView(client: _client, team: team),
+                  );
+                  final keys = await _seen.load();
+                  if (mounted) setState(() => _seenKeys = keys);
+                },
+              ),
+            if (_draft == null && _unseen(team).isNotEmpty)
               _SignalNudge(
                 count: _unseen(team).length,
                 // ⚠️⚠️ **Re-read on the way back.** Signals marks its keys seen as it renders, and
@@ -850,4 +885,81 @@ class _SignalNudge extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// *"Nothing has happened since you made this plan."* — or what has (ADR-260).
+///
+/// ⭐⭐⭐ **The reassurance is the feature, not the warning.** A manager who plans on Tuesday and executes
+/// on Saturday wants to know one thing before committing: *has anything changed?* An app that only spoke
+/// up when something had would leave silence meaning two different things — *nothing happened* and
+/// *nobody checked* — and only one of those is safe to act on.
+///
+/// ⚠️ It replaces the general signals nudge while a plan is live: the same news, asked as the question
+/// that actually matters at that moment.
+class _SincePlan extends StatelessWidget {
+  const _SincePlan({
+    required this.changed,
+    required this.savedAt,
+    required this.onTap,
+  });
+
+  final int changed;
+  final DateTime savedAt;
+  final VoidCallback onTap;
+
+  /// ⭐ Rough on purpose. *"3 days ago"* is what a person remembers; a timestamp is what a log wants.
+  String get _ago {
+    final gap = DateTime.now().difference(savedAt);
+    if (gap.inMinutes < 60) return '${gap.inMinutes} min ago';
+    if (gap.inHours < 36) return '${gap.inHours} hours ago';
+    return '${gap.inDays} days ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quiet = changed == 0;
+    return GestureDetector(
+      onTap: quiet ? null : onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(6, 2, 6, 6),
+        padding: const EdgeInsets.fromLTRB(11, 7, 9, 7),
+        decoration: BoxDecoration(
+          color: (quiet ? Brand.good : Brand.warn).withValues(alpha: 0.16),
+          border: Border.all(color: quiet ? Brand.good : Brand.warn),
+          borderRadius: BorderRadius.circular(Brand.radiusSm),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              quiet ? Icons.check_circle_outline : Icons.new_releases_outlined,
+              size: 15,
+              color: quiet ? Brand.good : Brand.warn,
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                quiet
+                    // ⭐ Says what it checked, not just that it is content. "Nothing has changed" without
+                    // a subject invites *"nothing about what?"*
+                    ? 'Nothing has happened to your players since you planned this, $_ago.'
+                    : changed == 1
+                    ? '1 thing has happened to your players since you planned this, $_ago.'
+                    : '$changed things have happened to your players since you planned this, $_ago.',
+                style: TextStyle(
+                  color: quiet ? Brand.good : Brand.warn,
+                  fontSize: 11.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (!quiet)
+              const Icon(Icons.chevron_right, size: 16, color: Brand.warn),
+          ],
+        ),
+      ),
+    );
+  }
 }
