@@ -121,6 +121,63 @@ Server** still overrides it for you.
 ⚠️ **Hide that field before a build goes to testers.** It points the app wherever someone types, which was
 flagged when it was built and is still true.
 
+⚠️ **If this ends in `Error running application on iPhone`, read the section below before changing
+anything** — it has twice now meant a successful install and a refused launch.
+
+---
+
+## ⚠️ "Error running application on iPhone" — twice now, neither time a real error
+
+Flutter reports a **launch** failure with the same words it uses for a build failure:
+
+```
+Xcode build done.                                           19.8s
+Could not run build/ios/iphoneos/Runner.app on 00008150-…
+Installing and launching...
+Error running application on iPhone 17 (wireless).
+```
+
+⭐⭐ **The app is already installed at this point.** The build succeeded, the install succeeded, and only
+the launch was refused — but the message reads as none of those, and ⚠️ *the tempting next move is to
+re-run the command, which will fail identically every time because nothing about it is wrong.*
+
+Ask the phone why:
+
+```bash
+xcrun devicectl device process launch --device <device-id> com.madboots.fpl
+```
+
+| what it says | what it means | what to do |
+|---|---|---|
+| `Locked` | the phone is locked — it cannot launch an app onto a locked screen | unlock it, open the app from the home screen |
+| `…profile has not been explicitly trusted` | first install with this certificate | Settings ▸ General ▸ VPN & Device Management ▸ Trust |
+| `Developer Mode` | iOS 16+ has not been switched on | see `iPhone_Free_Provisioning.md`, Step 5 |
+| `expired` / will not launch at all | 🔴 the **7-day certificate** | re-run `flutter run --release` |
+
+⭐ **In every one of those cases the app is on the phone already.** Open it from the home screen rather
+than re-running the command.
+
+---
+
+## ⚠️ Measured on the deployed instance (Render, 2026-09-23) — ✅ executed
+
+| | hosted, warm | local |
+|---|---|---|
+| `/health` | **69–78 ms** | — |
+| `squad/analysis` | **787–802 ms** | 54 ms |
+| `players` (97 KB) | **984–1098 ms** | 76 ms |
+
+⭐⭐ **The network is not the problem and the code is not the problem.** `/health` does no work and returns
+in ~70 ms, so the round trip is fine; the same analysis that takes 54 ms locally takes 800 ms there. The
+difference is **CPU** — a shared free-tier core against an M-series Mac.
+
+⚠️ **So the app will feel about a second per screen, not instant.** That is usable for a beta and worth
+knowing before a tester says it. ⭐ *The fix, if it becomes one, is a bigger instance — not a rewrite: the
+local numbers already prove the code is fast.*
+
+📌 **Still owed: the cold-start measurement (Step 4).** Free tiers spin down; a warm instance says nothing
+about one that has been idle for an hour.
+
 ---
 
 ## What it should cost
