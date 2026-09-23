@@ -58,6 +58,7 @@ from src.service.requests import (
     TeamDnaRequest,
     TickerRequest,
     TransfersRequest,
+    TrendingRequest,
 )
 from src.storage import Storage
 from src.ui.deadline import deadline_line
@@ -815,6 +816,67 @@ def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
         "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
         "expires_after": chip_deadline(first) if first else None,
         "chips": advice,
+    }
+
+
+def trending(request: TrendingRequest, *, store: Storage | None = None) -> dict:
+    """The crowd's four leaderboards — most bought, most sold, most owned, in form (ADR-266).
+
+    ⚠️⚠️ **This is the weakest evidence the app carries, and it says so.** ADR-150 ranks the signal tiers
+    by evidentiary strength and puts `trending` **last, deliberately** — ⭐ *it is a fact about other
+    managers, not about the player.* Presenting it beside FPL's own injury news without that framing is
+    the failure this endpoint is built to avoid, so every board carries its own `caveat`.
+
+    ⭐ **Ownership is the number that makes the others readable.** *"200k bought him"* means something
+    different at 4% ownership than at 40%, so each row carries `owned_by` and its tier whichever board
+    you are on.
+    """
+    request.validate()
+    from src.analytics.crowd import TREND_BYS, ownership_label
+    from src.analytics.crowd import trending as rank_trending
+
+    store, ours = opened(store)
+    try:
+        data = load(list(request.player_ids), DEFAULT_HORIZON, store)
+    finally:
+        if ours:
+            store.close()
+
+    by_id = {p["id"]: p for p in data.players}
+    ranked_by_id = {r["id"]: r for r in data.ranked}
+    owned_ids = set(request.player_ids)
+
+    label, column = TREND_BYS[request.by]
+    rows = []
+    for row in rank_trending(data.players, by=request.by, limit=request.limit):
+        raw = by_id.get(row["id"])
+        if raw is None:
+            continue
+        ranked = ranked_by_id.get(row["id"], {})
+        rows.append({
+            "player": player_summary(raw, data.xp_by_id,
+                                     {row["id"]: ranked.get("by_gameweek", {})},
+                                     {row["id"]: ranked.get("minutes_weight", 1.0)}),
+            # ⭐ A named card, so the photo is right here (ADR-084's rule) — ⚠️ *never the pitch*, where
+            # the CDN lags a transfer by weeks and a just-moved player would wear his old club's face.
+            "photo": photo_url(raw["code"]),
+            # ⚠️ The board's own number, named by the board — `trend` alone would be four different
+            # quantities sharing one key, and a client would have to know which board it asked for.
+            "value": row["trend"],
+            "owned_by": raw.get("selected_by"),
+            "tier": ownership_label(raw),
+            "owned": row["id"] in owned_ids,
+        })
+
+    return {
+        "by": request.by,
+        "label": label,
+        "column": column,
+        # ⭐ Carried with the answer rather than written into the app, so the warning cannot drift from
+        # the numbers it is about.
+        "caveat": "What other managers are doing. It is the weakest evidence here — a reason a template "
+                  "forms, not on its own a reason to join one.",
+        "rows": rows,
     }
 
 

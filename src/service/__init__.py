@@ -32,6 +32,7 @@ from src.service.answers import (
     team_dna,
     ticker,
     transfers,
+    trending,
 )
 from src.service.requests import (
     DEFAULT_HORIZON,
@@ -52,6 +53,7 @@ from src.service.requests import (
     TeamDnaRequest,
     TickerRequest,
     TransfersRequest,
+    TrendingRequest,
 )
 
 __all__ = [
@@ -72,6 +74,8 @@ __all__ = [
     "TeamDnaRequest",
     "TickerRequest",
     "ticker",
+    "TrendingRequest",
+    "trending",
     "SquadRequest",
     "TransfersRequest",
     "analysis",

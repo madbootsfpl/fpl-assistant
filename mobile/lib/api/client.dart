@@ -159,6 +159,22 @@ class ServiceClient {
     'version': version,
   });
 
+  /// What the crowd is doing (ADR-266).
+  ///
+  /// ⚠️ `playerIds` does **not** narrow the boards — it only lets a row come back flagged `owned`, the
+  /// same arrangement the market signals use (ADR-245).
+  Future<TrendingBoard> trending({
+    String by = 'in',
+    int limit = 15,
+    List<int> playerIds = const [],
+  }) async => TrendingBoard.fromJson(
+    await _post('trending', {
+      'by': by,
+      'limit': limit,
+      'player_ids': playerIds,
+    }),
+  );
+
   /// The fixture-difficulty grid — every club, next few gameweeks, easiest run first (ADR-265).
   ///
   /// ⭐ **No squad.** It is a question about the league, not about you, and requiring a squad would have

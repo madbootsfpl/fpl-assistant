@@ -173,6 +173,16 @@ class PlayersBody(BaseModel):
                                    "locally is instant, where a round trip per keystroke is not.")
 
 
+class TrendingBody(BaseModel):
+    """What the crowd is doing. ⚠️ `player_ids` is **optional and does not narrow the boards** — it only
+    lets a row come back flagged `owned` (ADR-245's pattern)."""
+
+    by: str = Field("in", pattern="^(in|out|owned|form)$",
+                    description="`in` most bought · `out` most sold · `owned` most owned · `form`.")
+    limit: int = Field(15, ge=1, le=50)
+    player_ids: list[int] = Field(default_factory=list)
+
+
 class TickerBody(BaseModel):
     """⚠️ No squad — this is the **league's** fixtures, not yours."""
 
@@ -390,6 +400,19 @@ def all_players(body: PlayersBody) -> dict:
     a verdict.
     """
     return _answer(service.players, service.PlayersRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/trending")
+def what_the_crowd_is_doing(body: TrendingBody) -> dict:
+    """The crowd's leaderboards — most bought, most sold, most owned, in form.
+
+    ⚠️⚠️ **Display-only, and never xP.** ⭐ *"Lots of people did this" is a fact about other managers, not
+    about the player* — the reason a template forms, and not on its own a reason to join one. ADR-150
+    ranks this **last** among signal tiers, and the answer carries its own `caveat` so the framing cannot
+    drift from the numbers.
+    """
+    return _answer(service.trending, service.TrendingRequest(
+        by=body.by, limit=body.limit, player_ids=tuple(body.player_ids)))
 
 
 @app.post("/api/v1/ticker")

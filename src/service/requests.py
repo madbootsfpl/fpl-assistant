@@ -258,6 +258,31 @@ class PlayersRequest:
 
 
 @dataclass(frozen=True)
+class TrendingRequest:
+    """What the crowd is doing — ⚠️ **display-only, and never xP** (ADR-057/266).
+
+    ⭐⭐ *"Lots of people did this" is a fact about other managers, not about the player.* It is the reason
+    a template forms, and on its own it is not a reason to join one — which is why these numbers have
+    never been allowed near the ranking, and are not here either.
+
+    `player_ids` is optional and does **not** narrow the boards: it only lets a row come back flagged
+    `owned`, so the app can say *"you have him"* without matching ids itself (ADR-245's pattern).
+    """
+
+    by: str = "in"
+    limit: int = 15
+    player_ids: tuple[int, ...] = ()
+
+    def validate(self) -> None:
+        from src.analytics.crowd import TREND_BYS
+
+        if self.by not in TREND_BYS:
+            raise ValueError(f"by must be one of {sorted(TREND_BYS)}, not {self.by!r}")
+        if not 1 <= self.limit <= 50:
+            raise ValueError(f"limit must be 1-50, not {self.limit}")
+
+
+@dataclass(frozen=True)
 class TickerRequest:
     """The fixture-difficulty grid — ⚠️ **the other request with no squad at all** (ADR-265).
 

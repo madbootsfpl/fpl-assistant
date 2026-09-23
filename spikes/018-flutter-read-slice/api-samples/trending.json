@@ -1,0 +1,398 @@
+{
+  "by": "in",
+  "caveat": "What other managers are doing. It is the weakest evidence here \u2014 a reason a template forms, not on its own a reason to join one.",
+  "column": "Net in",
+  "label": "most transferred in",
+  "rows": [
+    {
+      "owned": false,
+      "owned_by": 27.6,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p60307.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.4,
+          "6": 4.4,
+          "7": 4.4,
+          "8": 3.9,
+          "9": 3.5
+        },
+        "chance": null,
+        "id": 124,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 5.8,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Gro\u00df",
+        "xp": 20.6
+      },
+      "tier": "template",
+      "value": 660754
+    },
+    {
+      "owned": false,
+      "owned_by": 10.7,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p513418.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.6,
+          "6": 4.1,
+          "7": 4.1,
+          "8": 5.1,
+          "9": 4.6
+        },
+        "chance": null,
+        "id": 94,
+        "leaving": null,
+        "minutes_weight": 0.99,
+        "position": "MID",
+        "price": 6.2,
+        "status": "a",
+        "team": "BRE",
+        "web_name": "Schade",
+        "xp": 22.5
+      },
+      "tier": "popular",
+      "value": 302415
+    },
+    {
+      "owned": false,
+      "owned_by": 3.5,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p647850.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.7,
+          "6": 3.7,
+          "7": 3.7,
+          "8": 3.3,
+          "9": 3.0
+        },
+        "chance": null,
+        "id": 138,
+        "leaving": null,
+        "minutes_weight": 0.78,
+        "position": "FWD",
+        "price": 5.6,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Kostoulas",
+        "xp": 17.4
+      },
+      "tier": "differential",
+      "value": 240177
+    },
+    {
+      "owned": false,
+      "owned_by": 27.2,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p465730.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.1,
+          "6": 5.1,
+          "7": 5.1,
+          "8": 4.5,
+          "9": 4.0
+        },
+        "chance": null,
+        "id": 115,
+        "leaving": null,
+        "minutes_weight": 0.94,
+        "position": "DEF",
+        "price": 4.9,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "De Cuyper",
+        "xp": 23.8
+      },
+      "tier": "template",
+      "value": 218319
+    },
+    {
+      "owned": false,
+      "owned_by": 16.8,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p487838.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.5,
+          "6": 3.9,
+          "7": 3.6,
+          "8": 3.6,
+          "9": 3.6
+        },
+        "chance": null,
+        "id": 449,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.3,
+        "status": "a",
+        "team": "NEW",
+        "web_name": "Hall",
+        "xp": 18.2
+      },
+      "tier": "popular",
+      "value": 188061
+    },
+    {
+      "owned": false,
+      "owned_by": 15.9,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p17761.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.3,
+          "6": 4.3,
+          "7": 3.5,
+          "8": 3.2,
+          "9": 3.9
+        },
+        "chance": null,
+        "id": 229,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 6.1,
+        "status": "a",
+        "team": "EVE",
+        "web_name": "Tarkowski",
+        "xp": 19.2
+      },
+      "tier": "popular",
+      "value": 157715
+    },
+    {
+      "owned": false,
+      "owned_by": 6.9,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p441264.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.5,
+          "6": 4.2,
+          "7": 3.8,
+          "8": 4.2,
+          "9": 4.2
+        },
+        "chance": null,
+        "id": 552,
+        "leaving": null,
+        "minutes_weight": 0.89,
+        "position": "FWD",
+        "price": 5.7,
+        "status": "a",
+        "team": "SUN",
+        "web_name": "Brobbey",
+        "xp": 19.9
+      },
+      "tier": "popular",
+      "value": 143835
+    },
+    {
+      "owned": false,
+      "owned_by": 5.4,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p201666.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.3,
+          "6": 5.9,
+          "7": 5.4,
+          "8": 5.4,
+          "9": 5.3
+        },
+        "chance": null,
+        "id": 453,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 6.1,
+        "status": "a",
+        "team": "NEW",
+        "web_name": "Barnes",
+        "xp": 27.3
+      },
+      "tier": "popular",
+      "value": 117638
+    },
+    {
+      "owned": false,
+      "owned_by": 26.6,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p477424.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.4,
+          "6": 4.0,
+          "7": 4.9,
+          "8": 4.0,
+          "9": 4.9
+        },
+        "chance": null,
+        "id": 391,
+        "leaving": null,
+        "minutes_weight": 0.96,
+        "position": "DEF",
+        "price": 5.7,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 22.2
+      },
+      "tier": "template",
+      "value": 77915
+    },
+    {
+      "owned": false,
+      "owned_by": 6.8,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p226182.png",
+      "player": {
+        "by_gameweek": {
+          "10": 2.2,
+          "6": 1.7,
+          "7": 2.0,
+          "8": 2.2,
+          "9": 2.2
+        },
+        "chance": null,
+        "id": 330,
+        "leaving": null,
+        "minutes_weight": 0.81,
+        "position": "DEF",
+        "price": 4.6,
+        "status": "a",
+        "team": "LEE",
+        "web_name": "Bogle",
+        "xp": 10.3
+      },
+      "tier": "popular",
+      "value": 77765
+    },
+    {
+      "owned": false,
+      "owned_by": 12.4,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p473284.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.1,
+          "6": 6.4,
+          "7": 6.4,
+          "8": 6.4,
+          "9": 7.1
+        },
+        "chance": null,
+        "id": 572,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "GK",
+        "price": 4.6,
+        "status": "a",
+        "team": "HUL",
+        "web_name": "Tzolakis",
+        "xp": 31.4
+      },
+      "tier": "popular",
+      "value": 75095
+    },
+    {
+      "owned": false,
+      "owned_by": 42.2,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p154561.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.6,
+          "6": 4.6,
+          "7": 4.1,
+          "8": 4.1,
+          "9": 3.7
+        },
+        "chance": null,
+        "id": 1,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "GK",
+        "price": 6.1,
+        "status": "a",
+        "team": "ARS",
+        "web_name": "Raya",
+        "xp": 21.1
+      },
+      "tier": "template",
+      "value": 70310
+    },
+    {
+      "owned": false,
+      "owned_by": 15.4,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p437730.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.2,
+          "6": 4.7,
+          "7": 5.7,
+          "8": 4.6,
+          "9": 5.7
+        },
+        "chance": null,
+        "id": 397,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 8.4,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Semenyo",
+        "xp": 25.9
+      },
+      "tier": "popular",
+      "value": 68433
+    },
+    {
+      "owned": false,
+      "owned_by": 40.4,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p244850.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.5,
+          "6": 4.5,
+          "7": 4.5,
+          "8": 4.5,
+          "9": 4.1
+        },
+        "chance": null,
+        "id": 40,
+        "leaving": null,
+        "minutes_weight": 0.97,
+        "position": "MID",
+        "price": 7.7,
+        "status": "a",
+        "team": "CHE",
+        "web_name": "Rogers",
+        "xp": 22.1
+      },
+      "tier": "template",
+      "value": 54348
+    },
+    {
+      "owned": false,
+      "owned_by": 2.4,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p577725.png",
+      "player": {
+        "by_gameweek": {
+          "10": 4.5,
+          "6": 4.6,
+          "7": 4.6,
+          "8": 4.6,
+          "9": 3.7
+        },
+        "chance": null,
+        "id": 268,
+        "leaving": null,
+        "minutes_weight": 0.94,
+        "position": "MID",
+        "price": 5.5,
+        "status": "a",
+        "team": "FUL",
+        "web_name": "King",
+        "xp": 22.0
+      },
+      "tier": "differential",
+      "value": 51464
+    }
+  ]
+}

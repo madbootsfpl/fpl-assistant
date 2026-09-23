@@ -15,6 +15,7 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'seen_store.dart';
+import 'trending_view.dart';
 
 /// How much the source behind a signal actually knows.
 enum SignalKind { official, departure, exodus, headline, trending, unknown }
@@ -97,82 +98,104 @@ class _SignalsViewState extends State<SignalsView> {
     if (scope == _scope) return;
     setState(() {
       _scope = scope;
-      _load = _fetch();
+      // ⚠️ Trending does not go through `signals`, and that endpoint only accepts squad/global — asking
+      // it here would fetch a **422** nothing reads.
+      if (scope != 'trending') _load = _fetch();
     });
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) => FutureBuilder<(List<Map<String, dynamic>>, int, Set<String>, double?)>(
-    future: _load,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (snapshot.hasError) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: SelectableText(
-              friendlyError(snapshot.error),
-              style: const TextStyle(color: Colors.white70, height: 1.55),
-            ),
-          ),
-        );
-      }
-      final (signals, checked, seen, floor) = snapshot.data!;
-      final fresh = signals.where((s) => !seen.contains('${s['key']}')).length;
-      final global = _scope == 'global';
-
-      if (signals.isEmpty) {
-        // ⭐ A quiet week is news. An empty screen reads as a failure to load.
-        return Column(
-          children: [
-            _ScopeBar(scope: _scope, onPick: _pick),
-            Expanded(child: _Empty(checked: checked)),
-          ],
-        );
-      }
-
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+  Widget build(BuildContext context) {
+    // ⭐ A different question needs a different body, not a reshaped one. The boards are ranked by crowd
+    // volume; the signals are ranked by evidence (ADR-150). ⚠️ *Forcing both through one list would mean
+    // choosing one ordering and misrepresenting the other.*
+    if (_scope == 'trending') {
+      return Column(
         children: [
-          _ScopeBar(scope: _scope, onPick: _pick),
-          const SizedBox(height: 10),
-          Text(
-            global
-                // ⚠️⚠️ **The floor is stated, always.** A market view that silently drops four fifths of
-                // the board is a view that lies by omission — ⭐ *a filter the reader cannot see is one he
-                // will eventually be surprised by* (ADR-215).
-                ? '$fresh new · ${signals.length} across $checked players '
-                      'owned by ${floor?.toStringAsFixed(1) ?? '—'}% or more'
-                : fresh == 0
-                ? '${signals.length} across your $checked players — nothing new since you last looked.'
-                : '$fresh new · ${signals.length} across your $checked players',
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-              height: 1.45,
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            child: _ScopeBar(scope: _scope, onPick: _pick),
           ),
-          const SizedBox(height: 12),
-          for (final signal in signals)
-            _Signal(data: signal, isNew: !seen.contains('${signal['key']}')),
-          const SizedBox(height: 12),
-          const Text(
-            'Ordered by how much the source actually knows: FPL first, then a reported move, then a '
-            'sell-off nothing in the data explains, then headlines.',
-            style: TextStyle(
-              color: Colors.white24,
-              fontSize: 10.5,
-              height: 1.5,
-            ),
+          Expanded(
+            child: TrendingBoards(client: widget.client, team: widget.team),
           ),
         ],
       );
-    },
-  );
+    }
+    return FutureBuilder<
+      (List<Map<String, dynamic>>, int, Set<String>, double?)
+    >(
+      future: _load,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: SelectableText(
+                friendlyError(snapshot.error),
+                style: const TextStyle(color: Colors.white70, height: 1.55),
+              ),
+            ),
+          );
+        }
+        final (signals, checked, seen, floor) = snapshot.data!;
+        final fresh = signals
+            .where((s) => !seen.contains('${s['key']}'))
+            .length;
+        final global = _scope == 'global';
+
+        if (signals.isEmpty) {
+          // ⭐ A quiet week is news. An empty screen reads as a failure to load.
+          return Column(
+            children: [
+              _ScopeBar(scope: _scope, onPick: _pick),
+              Expanded(child: _Empty(checked: checked)),
+            ],
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+          children: [
+            _ScopeBar(scope: _scope, onPick: _pick),
+            const SizedBox(height: 10),
+            Text(
+              global
+                  // ⚠️⚠️ **The floor is stated, always.** A market view that silently drops four fifths of
+                  // the board is a view that lies by omission — ⭐ *a filter the reader cannot see is one he
+                  // will eventually be surprised by* (ADR-215).
+                  ? '$fresh new · ${signals.length} across $checked players '
+                        'owned by ${floor?.toStringAsFixed(1) ?? '—'}% or more'
+                  : fresh == 0
+                  ? '${signals.length} across your $checked players — nothing new since you last looked.'
+                  : '$fresh new · ${signals.length} across your $checked players',
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final signal in signals)
+              _Signal(data: signal, isNew: !seen.contains('${signal['key']}')),
+            const SizedBox(height: 12),
+            const Text(
+              'Ordered by how much the source actually knows: FPL first, then a reported move, then a '
+              'sell-off nothing in the data explains, then headlines.',
+              style: TextStyle(
+                color: Colors.white24,
+                fontSize: 10.5,
+                height: 1.5,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _Signal extends StatelessWidget {
@@ -345,16 +368,21 @@ class _ScopeBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
+      // ⚠️⚠️ **Trending returns as a tab, not as the screen ADR-245 removed.** That ADR folded the old
+      // Trending *page* into the market scope and was right: *"what is notable?"* was asked twice. ⭐ This
+      // is the other question — **the charts** — ordered by how many managers moved, where the market
+      // scope orders by how strong the evidence is. *Same data, different ordering.*
       for (final (value, label) in const [
         ('squad', 'My squad'),
         ('global', 'The market'),
+        ('trending', 'Trending'),
       ])
         Expanded(
           child: GestureDetector(
             onTap: () => onPick(value),
             behavior: HitTestBehavior.opaque,
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(vertical: 8),
               alignment: Alignment.center,
               decoration: BoxDecoration(

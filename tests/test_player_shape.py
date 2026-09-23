@@ -93,7 +93,7 @@ def _players_in(value, path="", found=None):
 
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
-COVERED = {"analysis", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
+COVERED = {"analysis", "trending", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
            "replacements", "players", "player", "player_dna", "signals"}
 
 
@@ -112,6 +112,9 @@ def _answers(store):
         "analysis": service.analysis(service.SquadRequest(player_ids=ids, horizon=1), store=store),
         "chips": service.chips(service.ChipsRequest(player_ids=ids, bank=2.0), store=store),
         "players": service.players(service.PlayersRequest(horizon=1, limit=5), store=store),
+        # ⭐ In the sweep proper: a crowd board carries a **player summary** per row, which is exactly the
+        # shape a raw 45-column database row leaks through (ADR-227's original defect).
+        "trending": service.trending(service.TrendingRequest(by="in", limit=5), store=store),
         "compare": _compare_two(store),
         "player": service.player(
             service.PlayerRequest(player_id=ids[0], horizon=1), store=store),

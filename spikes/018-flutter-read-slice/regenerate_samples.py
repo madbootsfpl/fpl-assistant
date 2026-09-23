@@ -68,6 +68,9 @@ def responses(store) -> dict:
         # ⭐ The expanding card's own response. Added when a widget test needed to expand a row and had
         # nothing real to expand it with — ⚠️ *a hand-built card fixture would have tested the fixture.*
         "player": service.player(service.PlayerRequest(player_id=ids[0], horizon=5), store=store),
+        # ⭐ The crowd's boards (ADR-266). ⚠️ `by="in"` because the *most bought* board is the one the
+        # tab opens on, and a sample of the board nobody sees first documents the wrong default.
+        "trending": service.trending(service.TrendingRequest(by="in", limit=15), store=store),
         # ⭐ The fixture ticker — twenty clubs, six gameweeks (ADR-265). ⚠️ Worth a sample even though it
         # takes no squad: the shape a client has to survive is the **blank cell**, and a hand-built
         # fixture would be one somebody wrote rather than one the server produces.

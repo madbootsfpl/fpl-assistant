@@ -1772,3 +1772,67 @@ def test_a_double_carries_both_opponents_and_the_harder_difficulty():
 def test_a_bad_ticker_request_is_refused(request_, expected):
     with pytest.raises(ValueError, match=expected):
         request_.validate()
+
+
+# ---- trending: the crowd's charts, and the weakest evidence we carry (ADR-266) ----
+
+@pytest.mark.parametrize("by", ["in", "out", "owned", "form"])
+def test_every_board_ranks_by_its_own_number(by):
+    """⭐ Four boards, four quantities, one `value` field — so each says which it is in `column`.
+
+    ⚠️ *A number with no unit is not information*, and a client that had to remember which board it asked
+    for would eventually label one wrongly.
+    """
+    answer = svc.trending(svc.TrendingRequest(by=by, limit=10))
+    assert answer["by"] == by
+    assert answer["column"], "a board must name its own column"
+    values = [r["value"] for r in answer["rows"]]
+    if by == "out":
+        # ⚠️ Most-sold ranks by the most negative net — the **sort** is by magnitude of selling while the
+        # **displayed** number keeps its sign, and confusing the two would rank the board backwards.
+        assert values == sorted(values), "most-sold must run from biggest sell downward"
+    else:
+        assert values == sorted(values, reverse=True)
+
+
+def test_the_caveat_travels_with_the_numbers():
+    """⚠️⚠️ **The weakest evidence in the app, and it has to say so** (ADR-150 ranks it last).
+
+    ⭐ *"Lots of people did this" is a fact about other managers, not about the player.* The warning is
+    carried in the answer rather than written into each client, because *a caveat that lives apart from
+    its numbers drifts from them*.
+    """
+    answer = svc.trending(svc.TrendingRequest())
+    assert "other managers" in answer["caveat"]
+    assert "template" in answer["caveat"]
+
+
+def test_owning_a_player_flags_his_row_without_narrowing_the_board():
+    """⚠️ `player_ids` must not filter. ⭐ Same arrangement as the market signals (ADR-245): the ids are
+    sent so a row can come back flagged, never to narrow the question."""
+    wide = svc.trending(svc.TrendingRequest(by="in", limit=15))
+    mine = [r["player"]["id"] for r in wide["rows"][:3]]
+
+    flagged = svc.trending(svc.TrendingRequest(by="in", limit=15, player_ids=tuple(mine)))
+    assert len(flagged["rows"]) == len(wide["rows"]), "the board must not shrink"
+    assert [r["owned"] for r in flagged["rows"][:3]] == [True, True, True]
+    assert not any(r["owned"] for r in flagged["rows"][3:])
+
+
+def test_every_row_carries_ownership_so_the_other_numbers_can_be_read():
+    """⭐ *"661k bought him" means something different at 4% than at 40%.*"""
+    answer = svc.trending(svc.TrendingRequest(by="in", limit=10))
+    assert answer["rows"], "the seed must hold transfer data for this to mean anything"
+    for row in answer["rows"]:
+        assert "owned_by" in row
+        assert "photo" in row and row["photo"], "a named card carries a real face (ADR-084)"
+
+
+@pytest.mark.parametrize("request_, expected", [
+    (svc.TrendingRequest(by="sideways"), "by must be one of"),
+    (svc.TrendingRequest(limit=0), "limit must be 1-50"),
+    (svc.TrendingRequest(limit=51), "limit must be 1-50"),
+])
+def test_a_bad_trending_request_is_refused(request_, expected):
+    with pytest.raises(ValueError, match=expected):
+        request_.validate()

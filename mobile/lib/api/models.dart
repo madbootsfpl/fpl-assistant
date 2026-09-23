@@ -1251,3 +1251,78 @@ class FixtureTicker {
   /// ⭐ Easiest run first — the server ranks them, so every client agrees on what "easiest" means.
   final List<TickerRow> rows;
 }
+
+/// One row on a crowd leaderboard (ADR-266).
+class TrendingRow {
+  TrendingRow({
+    required this.player,
+    required this.photo,
+    required this.value,
+    required this.ownedBy,
+    required this.tier,
+    required this.owned,
+  });
+
+  factory TrendingRow.fromJson(Map<String, dynamic> json) => TrendingRow(
+    player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    photo: json['photo'] as String? ?? '',
+    value: (json['value'] as num?)?.toDouble() ?? 0,
+    ownedBy: (json['owned_by'] as num?)?.toDouble(),
+    tier: json['tier'] as String? ?? '',
+    owned: json['owned'] as bool? ?? false,
+  );
+
+  final PlayerSummary player;
+
+  /// ⭐ A named card carries the real face (ADR-084) — the pitch deliberately does not.
+  final String photo;
+
+  /// ⚠️ **Four different quantities share this field** — net transfers, ownership %, or form, depending
+  /// on the board. The board says which in its `column`; ⭐ *a number with no unit is not information.*
+  final double value;
+
+  /// ⭐ Ownership travels on every board, because *"200k bought him"* means something different at 4%
+  /// than at 40%.
+  final double? ownedBy;
+
+  /// `differential` · `popular` · `template` · `essential`, or empty.
+  final String tier;
+
+  /// ⭐ Whether this is one of yours — flagged by the server so the client never matches ids itself.
+  final bool owned;
+}
+
+class TrendingBoard {
+  TrendingBoard({
+    required this.by,
+    required this.label,
+    required this.column,
+    required this.caveat,
+    required this.rows,
+  });
+
+  factory TrendingBoard.fromJson(Map<String, dynamic> json) => TrendingBoard(
+    by: json['by'] as String? ?? 'in',
+    label: json['label'] as String? ?? '',
+    column: json['column'] as String? ?? '',
+    caveat: json['caveat'] as String? ?? '',
+    rows: [
+      for (final r in (json['rows'] as List? ?? []))
+        TrendingRow.fromJson(r as Map<String, dynamic>),
+    ],
+  );
+
+  final String by;
+
+  /// "most transferred in" — ⭐ the board's own words, so the screen cannot describe it differently.
+  final String label;
+
+  /// The column header for `value` — "Net in", "Own%", "Form".
+  final String column;
+
+  /// ⚠️⚠️ **Carried with the numbers, not written into the app**, so the warning cannot drift from what
+  /// it is warning about.
+  final String caveat;
+
+  final List<TrendingRow> rows;
+}
