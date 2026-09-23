@@ -2,6 +2,8 @@
 
 from urllib.parse import parse_qs, urlparse
 
+import pytest
+
 from src.web_streamlit.feedback import feedback_mailto, relay_result
 
 
@@ -64,3 +66,82 @@ def test_mailto_ignores_the_not_sure_page_sentinel():
 def test_mailto_url_encodes_spaces_and_newlines():
     href = feedback_mailto("a@b.com", "line one\nline two with spaces")
     assert " " not in href and "\n" not in href                     # everything is percent-encoded
+
+
+# ---- a refusal must carry the relay's own words too (ADR-262) ----------------
+
+class _Refusal:
+    """A relay that says no *and says why* — which is the normal case, not an edge one."""
+
+    def __init__(self, status, payload=None, text=""):
+        self.status_code = status
+        self._payload = payload
+        self.text = text
+
+    def json(self):
+        if self._payload is None:
+            raise ValueError("not JSON")
+        return self._payload
+
+
+def test_a_refusal_carries_the_reason_the_relay_gave():
+    """⭐⭐ **ADR-231 promised the relay's own verdict, and delivered it only on success.**
+
+    A 200 carrying `success: false` surfaced its `message`; a 403 was flattened to its status code. ⚠️ *The
+    one response nobody could diagnose was the one that had already been diagnosed for us* — FormSubmit
+    answers a server-side POST with 403 **and a sentence naming the cause**, and it never reached anyone.
+    """
+    ok, note = relay_result(_Refusal(403, {"message": "You are posting from a web server, not a browser."}))
+    assert ok is False
+    assert "403" in note
+    assert "web server" in note, "the status code alone is not a diagnosis"
+
+
+def test_a_refusal_reads_plain_text_when_there_is_no_json():
+    ok, note = relay_result(_Refusal(429, text="Rate limit exceeded for this form."))
+    assert ok is False
+    assert "Rate limit exceeded" in note
+
+
+@pytest.mark.parametrize("field", ["message", "error", "detail"])
+def test_the_reason_is_found_under_any_of_the_usual_keys(field):
+    """⚠️ Relays disagree about what to call it, and guessing one name would work for one vendor only."""
+    _, note = relay_result(_Refusal(400, {field: "the form is not activated"}))
+    assert "not activated" in note
+
+
+def test_an_html_error_page_is_not_repeated_as_an_explanation():
+    """⚠️ A proxy's HTML is boilerplate, not a reason. ⭐ *Saying nothing beats saying `<html>`.*"""
+    _, note = relay_result(_Refusal(502, text="<html><head><title>502 Bad Gateway</title></head></html>"))
+    assert "<" not in note
+    assert "502" in note
+
+
+def test_a_body_that_cannot_be_read_at_all_still_reports_the_status():
+    """⭐ *A diagnostic that can itself fail turns a reported error into a hidden one.*"""
+
+    class _Hostile:
+        status_code = 500
+
+        @staticmethod
+        def json():
+            raise RuntimeError("boom")
+
+        @property
+        def text(self):
+            raise RuntimeError("boom")
+
+    ok, note = relay_result(_Hostile())
+    assert ok is False
+    assert "500" in note
+
+
+def test_a_long_refusal_is_trimmed_rather_than_dumped():
+    _, note = relay_result(_Refusal(403, {"message": "x" * 4000}))
+    assert len(note) < 400
+
+
+def test_a_refusal_with_no_explanation_reads_exactly_as_before():
+    """⚠️ The old wording is load-bearing — a silent relay must not gain a dangling dash."""
+    _, note = relay_result(_Refusal(403, text=""))
+    assert note == "the service returned HTTP 403"

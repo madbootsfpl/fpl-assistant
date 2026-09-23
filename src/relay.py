@@ -23,7 +23,12 @@ def relay_result(response) -> tuple[bool, str]:
     """
     status = getattr(response, "status_code", 200)
     if status >= 400:
-        return False, f"the service returned HTTP {status}"
+        # ⚠️⚠️ **The relay explains itself in the body, and this used to throw it away.** ADR-231's whole
+        # claim is that the relay's *own verdict* comes back — and that held for a 200 carrying
+        # `success: false` while a 4xx was flattened to its status code. ⭐ *The one response we could not
+        # diagnose was the one that had already been diagnosed for us*: FormSubmit answers a server-side
+        # POST with 403 **and a sentence naming the reason**, which never reached anyone (ADR-262).
+        return False, f"the service returned HTTP {status}{_why(response)}"
     try:
         data = response.json()
     except Exception:
@@ -32,3 +37,26 @@ def relay_result(response) -> tuple[bool, str]:
         ok = str(data.get("success")).strip().lower() == "true"
         return ok, "" if ok else str(data.get("message") or "the relay didn't accept the submission")
     return True, ""                                      # 2xx JSON with no success flag → treat as sent
+
+
+def _why(response) -> str:
+    """The relay's own explanation of a refusal, as a trailing clause — or nothing if it did not give one.
+
+    ⚠️ **Defensive on purpose.** This runs on the failure path, where the body is least predictable: JSON,
+    HTML, empty, or a megabyte of proxy boilerplate. ⭐ *A diagnostic that can itself fail turns a reported
+    error into a hidden one* — so anything unreadable degrades to the bare status code we had before.
+    """
+    for read in (lambda: response.json(), lambda: response.text):
+        try:
+            data = read()
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            said = data.get("message") or data.get("error") or data.get("detail")
+        else:
+            said = data
+        said = " ".join(str(said or "").split())
+        # ⚠️ An HTML error page is boilerplate, not an explanation — saying nothing beats saying `<html>`.
+        if said and not said.lstrip().startswith("<"):
+            return f" — {said[:300]}"
+    return ""
