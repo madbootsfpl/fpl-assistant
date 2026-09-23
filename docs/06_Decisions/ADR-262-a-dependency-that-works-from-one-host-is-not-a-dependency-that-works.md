@@ -72,11 +72,20 @@ into a hidden one.*
 
 📌 **Not decided here:** which relay to adopt. That needs an account the owner holds.
 
-⚠️ **One variable still untested, and it is the cheapest one.** The working Streamlit deployment points at
-`…/ajax/fpl.assistant@proton.me`; the Render deployment was pointed at a **different mailbox**. The probes
-above rule out activation as a cause of a *403* — an unactivated form answers `200` — but they were run
-against a third address, so ⭐ *pointing Render at the exact value Streamlit already uses is the one test
-that isolates the host from the form.* Do that before migrating relay.
+### ✅ Confirmed in production, not inferred
+
+Once the classifier deployed, the live endpoint answered:
+
+> `the service returned HTTP 403 — the relay's CDN (Cloudflare) blocked this server, not the form itself`
+
+⭐ **The 403 body is a Cloudflare challenge page**, read back from the running service. The diagnosis stops
+being a hypothesis at that point.
+
+⚠️ **And it settles a loose end the mailbox difference had opened.** Streamlit relays to
+`…/ajax/fpl.assistant@proton.me` while Render was pointed at a **different mailbox**, which looked like the
+cheapest remaining variable to swap. It is not worth much: ⭐ *the block lands before the form is
+identified, so which form it is cannot change the outcome.* Worth 30 seconds to confirm, not worth waiting
+on — the relay has to change.
 
 ## Verification
 
