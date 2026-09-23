@@ -1676,3 +1676,36 @@ def test_the_payload_carries_both_subject_spellings(monkeypatch):
 
     assert sent["_subject"] == sent["subject"], "both relays must get the same title"
     assert "Signals" in sent["subject"], "the screen is the useful half of the subject"
+
+
+def test_the_relay_timeout_allows_for_a_cold_apps_script(monkeypatch):
+    """⚠️ **A timeout sized for the wrong dependency reports a working sink as unreachable.**
+
+    Six seconds suited a form relay answering instantly. The sink that actually works from a hosted server
+    is a Google Apps Script web app, which cold-starts, follows a redirect, and may send mail first
+    (ADR-262). ⭐ *"Could not reach the feedback service" for a sink that is merely slow is the most
+    misleading failure available here* — it points the reader at the network.
+    """
+    seen = {}
+
+    class _Ok:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            raise ValueError("Apps Script answers 'ok' in plain text")
+
+        text = "ok"
+
+    def capture(url, **kwargs):
+        seen["timeout"] = kwargs.get("timeout")
+        return _Ok()
+
+    monkeypatch.setenv("FPL_FEEDBACK_WEBHOOK", "https://script.google.com/macros/s/x/exec")
+    monkeypatch.setattr("requests.post", capture)
+    answer = svc.feedback(FeedbackRequest(message="via a Sheet"))
+
+    assert seen["timeout"] >= 12, "a cold Apps Script routinely exceeds a form relay's budget"
+    # ⚠️ And not unbounded — a phone is waiting on this.
+    assert seen["timeout"] <= 25, "a tester gives up before the request does"
+    assert answer["sent"] is True, "a plain-text 2xx from a Sheet sink is a success"

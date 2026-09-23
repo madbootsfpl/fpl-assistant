@@ -62,7 +62,12 @@ The in-app form POSTs JSON to `FPL_FEEDBACK_WEBHOOK`. Point it at a **Sheet** (1
 relay** (1B, straight to your inbox). **Skip this entirely** and the form still works — it offers a **pre-filled
 email** to `FPL_FEEDBACK_EMAIL` (the tester's mail app → your inbox), so you can recruit before wiring anything.
 
-### 1A. A Google Sheet (~10 min) — a running log
+> ⭐ **Hosted API? §1A is the only one of these that works.** Both relays in §1B refuse a server-side call
+> on their free tiers — FormSubmit via Cloudflare (datacenter IPs are blocked before the form), Web3Forms
+> explicitly (*"Pro plan is required"*). They are built for **browsers**, and that is the point. See
+> ADR-262. §1B still works from Streamlit, which is why this went unnoticed until the API moved.
+
+### 1A. A Google Sheet (~10 min) — a running log, and an email if you want one
 
 A Google Apps Script bound to a Sheet:
 
@@ -73,11 +78,18 @@ A Google Apps Script bound to a Sheet:
      const d = JSON.parse(e.postData.contents);
      SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
        .appendRow([new Date(), d.message || "", d.email || "", d.page || "", d.version || ""]);
+     // Optional — the row is the record; this is the nudge. Delete these two lines for log-only.
+     MailApp.sendEmail("hello@madboots.com", d._subject || "MADBOOTS feedback",
+                       `${d.message}\n\n— ${d.email || "no address"} · ${d.page} · ${d.version}`);
      return ContentService.createTextOutput("ok");
    }
    ```
+   ⭐ **This is strictly better than the email relays were**: the row is a durable log *and* the mail is a
+   nudge, with no third party in between. ⚠️ The first run asks you to authorise `MailApp`.
 3. **Deploy → New deployment → Web app**, *Execute as: me*, *Who has access: Anyone*. Copy the `/exec` URL →
-   that's `FPL_FEEDBACK_WEBHOOK`.
+   that's `FPL_FEEDBACK_WEBHOOK`. ⚠️ *Anyone* means the URL itself is the secret: anybody holding it can
+   append a row. That is acceptable for feedback and it is why the URL stays in the server's secret store.
+   ⚠️ **Re-deploying can mint a new `/exec` URL** — use *Manage deployments → edit* to keep the old one.
 4. Test: submit the in-app form; a row should appear in the Sheet.
 
 ### 1B. An email relay (~5 min) — straight to hello@madboots.com

@@ -855,6 +855,16 @@ def players(request: PlayersRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+#: ⚠️ **Six seconds was sized for a form relay and is too tight for the sink we can actually use.** A
+#: Google Apps Script web app cold-starts, follows a redirect, and may send mail before answering — well
+#: past six. ⭐ *A timeout tuned to a dependency we no longer have would report a working sink as
+#: unreachable*, which is the most misleading failure available here (ADR-262).
+#:
+#: ⚠️ Deliberately not larger: this is a phone waiting on a spinner, and the caller must learn something
+#: before a tester gives up on it.
+_RELAY_TIMEOUT = 15
+
+
 def feedback(request: FeedbackRequest) -> dict:
     """Relay a tester's note to the owner's own sink (ADR-231).
 
@@ -906,7 +916,7 @@ def feedback(request: FeedbackRequest) -> dict:
 
     try:
         response = requests.post(webhook, json=payload,
-                                 headers={"Origin": origin, "Referer": origin}, timeout=6)
+                                 headers={"Origin": origin, "Referer": origin}, timeout=_RELAY_TIMEOUT)
     except requests.RequestException as exc:
         return {"sent": False, "reason": f"could not reach the feedback service ({exc.__class__.__name__})",
                 "email": inbox}

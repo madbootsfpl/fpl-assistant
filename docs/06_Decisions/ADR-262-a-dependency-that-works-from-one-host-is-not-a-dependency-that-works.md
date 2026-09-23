@@ -70,7 +70,25 @@ spellings, plain-text fallback, long bodies trimmed, an unreadable body degradin
 and a silent relay reading exactly as before. ⭐ *A diagnostic that can itself fail turns a reported error
 into a hidden one.*
 
-📌 **Not decided here:** which relay to adopt. That needs an account the owner holds.
+**4. ⚠️ The replacement was tried and also refused — in its own words.** Web3Forms was recommended, set up,
+and answered *"This method is not allowed. Use our API in client side or contact support with server IP
+address (Pro plan is required)"*.
+
+⭐⭐ **That converts a coincidence into a category.** Both free form relays exclude server-side callers
+**on purpose** — they exist to take posts from browsers, and a hosted API is precisely the traffic their
+free tiers are built to refuse. ⚠️ *The first refusal looked like a misconfiguration; the second showed the
+architecture was wrong.*
+
+**So the sink is a Google Apps Script web app** (`docs/BETA.md` §1A): no bot protection, no plan gate, and
+⭐ it can **email as well as log the row** — strictly better than either relay, with no third party in
+between. A durable record *and* a nudge.
+
+**5. The relay timeout moves 6s → 15s.** ⚠️ Six was sized for a form relay answering instantly; an Apps
+Script web app cold-starts, follows a redirect, and may send mail first. ⭐ *A timeout tuned to a
+dependency we no longer have would report a working sink as unreachable* — the most misleading failure
+available here, because it points the reader at the network. Not larger, because a phone is waiting.
+
+📌 **Setting it up needs a Google account the owner holds.**
 
 ### ✅ Confirmed in production, not inferred
 

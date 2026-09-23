@@ -86,8 +86,8 @@ a variable this table does not name.
 
 | Variable | Without it | Set it to |
 |---|---|---|
-| `FPL_FEEDBACK_WEBHOOK` | ⚠️ Feedback answers **"no feedback sink is configured on the server"** — honest, and still not delivered. **Set this or in-app feedback does not reach you.** | 🔴 **not FormSubmit** — see below. A **Web3Forms** endpoint, or a Google Apps Script Sheet (`docs/BETA.md` §1A) |
-| `FPL_FEEDBACK_KEY` | nothing, unless the relay needs an access key | Web3Forms' access key (not needed for FormSubmit) |
+| `FPL_FEEDBACK_WEBHOOK` | ⚠️ Feedback answers **"no feedback sink is configured on the server"** — honest, and still not delivered. **Set this or in-app feedback does not reach you.** | 🔴 **neither FormSubmit nor free Web3Forms** — see below. An **Apps Script `/exec` URL** (`docs/BETA.md` §1A) |
+| `FPL_FEEDBACK_KEY` | nothing, unless the relay needs an access key | ⚠️ leave unset for an Apps Script sink — it is only Web3Forms' `access_key` |
 | `FPL_FEEDBACK_EMAIL` | falls back to `hello@madboots.com` | the address offered to a tester when the relay fails |
 | `FPL_FEEDBACK_ORIGIN` | falls back to the Streamlit URL | ⚠️ only matters if the relay checks `Origin` |
 
@@ -107,10 +107,17 @@ that works from one host is not a dependency that works.*
 
 **Use a relay designed to be called by a server:**
 
-| Option | Why |
+⚠️⚠️ **Web3Forms is not the answer either, and it was tried.** It refuses a server-side call in its own
+words — *"This method is not allowed. Use our API in client side or contact support with server IP address
+(Pro plan is required)"*. ⭐ **Both free form relays are built for browsers on purpose**, and a hosted API
+is exactly what their free tiers exclude. That is a category, not two coincidences.
+
+| Option | Verdict |
 |---|---|
-| **Web3Forms** (recommended) | An API with an access key rather than a browser form — set `FPL_FEEDBACK_WEBHOOK = https://api.web3forms.com/submit` **and** `FPL_FEEDBACK_KEY`. `docs/BETA.md` §1B. |
-| **Google Apps Script → Sheet** | Google does not bot-block server POSTs. A running log rather than email. `docs/BETA.md` §1A. |
+| **Google Apps Script → Sheet** ✅ | **Use this.** Google does not bot-block server POSTs, there is no plan gate, and the script can **email you as well as log the row** (`docs/BETA.md` §1A). |
+| ~~FormSubmit~~ 🔴 | Cloudflare refuses datacenter IPs before the form is reached. |
+| ~~Web3Forms (free)~~ 🔴 | Server-side calls require the Pro plan. |
+| A transactional email API | Resend/Postmark/SendGrid are built for servers. ⚠️ More setup — domain verification — and only worth it if the Sheet proves inadequate. |
 
 ⭐ **The app will now say which of these is happening.** A CDN block is reported as *"the relay's CDN
 (Cloudflare) blocked this server… hosts on datacenter IPs are refused"*, which is a different problem from
