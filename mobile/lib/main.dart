@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
@@ -284,6 +285,22 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
+  /// ⭐ **The one link that leaves the app** (ADR-254). Help is content — better on a big screen, and
+  /// updatable without an App Store release.
+  ///
+  /// ⚠️ **It reports a failure rather than doing nothing.** A row that silently does not open is worse
+  /// than one that is not there: the reader taps twice, concludes the app is broken, and is right.
+  Future<void> _openHelp() async {
+    const url = 'https://madboots.streamlit.app/Help';
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    ).catchError((_) => false);
+    if (!mounted || opened) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Could not open $url')));
+  }
+
   /// Change two players' places — ⭐ **free and reversible**, unlike a transfer (ADR-246).
   Future<void> _substitute(MyTeam team, int a, int b) async {
     final draft = Draft.substitute(
@@ -483,6 +500,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
         onOpenFeedback: () =>
             _open('Tell us something', FeedbackView(client: _client)),
+        onOpenHelp: _openHelp,
         onOpenSettings: () => _open(
           'Settings',
           SettingsView(

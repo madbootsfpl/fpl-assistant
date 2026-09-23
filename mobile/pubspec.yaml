@@ -44,6 +44,7 @@ dependencies:
   # is one small document, and a SQLite ORM with code generation is machinery for a relational cache that
   # does not exist yet. Drift arrives when the board is cached for offline use — a real trigger, not a plan.
   shared_preferences: ^2.3.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

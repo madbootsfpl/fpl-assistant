@@ -70,6 +70,7 @@ void _moreIsADirectory() {
         onOpenSignals: () {},
         onOpenSettings: () {},
         onOpenFeedback: () {},
+        onOpenHelp: () {},
       ),
     );
 
@@ -84,6 +85,7 @@ void _moreIsADirectory() {
         'Player DNA',
         'Team DNA',
         'Chips',
+        'Help & videos',
         'Tell us something',
         'Settings',
       ]) {
@@ -126,6 +128,7 @@ void _moreIsADirectory() {
             onOpenSignals: () => opened.add('Signals'),
             onOpenSettings: () => opened.add('Settings'),
             onOpenFeedback: () => opened.add('Tell us something'),
+            onOpenHelp: () => opened.add('Help & videos'),
           ),
         ),
       );
@@ -135,6 +138,7 @@ void _moreIsADirectory() {
         'Player DNA',
         'Team DNA',
         'Chips',
+        'Help & videos',
         'Tell us something',
         'Settings',
       ]) {
@@ -147,6 +151,7 @@ void _moreIsADirectory() {
         'Player DNA',
         'Team DNA',
         'Chips',
+        'Help & videos',
         'Tell us something',
         'Settings',
       ]);

@@ -19,11 +19,9 @@ import 'package:madboots/pitch_markings.dart';
 
 MyTeam sampleTeam() => MyTeam.fromJson(
   jsonDecode(
-        File(
-          '../spikes/018-flutter-read-slice/api-samples/my-team.json',
-        ).readAsStringSync(),
-      )
-      as Map<String, dynamic>,
+    File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
+        .readAsStringSync(),
+  ) as Map<String, dynamic>,
 );
 
 /// A phone-shaped surface: the pitch gets whatever is left, as it does in the app.
@@ -56,11 +54,17 @@ void main() {
     final pitch = tester.getSize(find.byType(PitchMarkings));
     // ⚠️ **A proportion, not a pixel count.** Pinning 640 would fail on the next phone; the claim is that
     // the pitch is the screen, and a screen where the main subject gets less than half is not.
-    expect(pitch.height, greaterThan(760 * 0.6),
-        reason: 'the pitch got ${pitch.height} of 760 — the chrome has crept back');
+    expect(
+      pitch.height,
+      greaterThan(760 * 0.6),
+      reason:
+          'the pitch got ${pitch.height} of 760 — the chrome has crept back',
+    );
   });
 
-  testWidgets('the bench sits inside the green, not beneath it', (tester) async {
+  testWidgets('the bench sits inside the green, not beneath it', (
+    tester,
+  ) async {
     final team = sampleTeam();
     await tester.pumpWidget(
       screen(
@@ -139,13 +143,10 @@ void main() {
   test('the server sends the deadline in parts, not only as prose', () {
     // ⚠️ The one-line header is only possible because the API sends `when` and `countdown`. If it stops,
     // the header silently falls back to the 96-character line and wraps again.
-    final json =
-        jsonDecode(
-              File(
-                '../spikes/018-flutter-read-slice/api-samples/my-team.json',
-              ).readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final json = jsonDecode(
+      File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
+          .readAsStringSync(),
+    ) as Map<String, dynamic>;
     final deadline = json['deadline'] as Map<String, dynamic>;
     expect(deadline['when'], isNotEmpty);
     expect(deadline['countdown'], isNotEmpty);

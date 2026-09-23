@@ -30,6 +30,7 @@ class MoreView extends StatelessWidget {
     required this.onOpenSignals,
     required this.onOpenSettings,
     required this.onOpenFeedback,
+    required this.onOpenHelp,
     super.key,
   });
 
@@ -57,6 +58,9 @@ class MoreView extends StatelessWidget {
 
   final VoidCallback onOpenSettings;
   final VoidCallback onOpenFeedback;
+
+  /// ⚠️ Leaves the app, which is the point: it is the one thing here that is better elsewhere.
+  final VoidCallback onOpenHelp;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -94,6 +98,19 @@ class MoreView extends StatelessWidget {
             'left, not the next one.',
         onTap: onOpenChips,
       ),
+      // ⭐⭐ **Help goes out; feedback stays in** (ADR-254). They look like one item and are two jobs.
+      // Help is *content* — long, searchable, better on a big screen, and updatable without an App Store
+      // release. Reporting happens the instant you notice something, and ⚠️ *every step between noticing
+      // and reporting loses reports* — so that one keeps its two taps, and keeps the screen and build
+      // number it already sends for free.
+      _Row(
+        icon: Icons.menu_book_outlined,
+        name: 'Help & videos',
+        why:
+            'The written walkthrough and Maddie’s 90-second explainers, on the web where a bigger screen '
+            'earns its keep. Opens madboots.streamlit.app.',
+        onTap: onOpenHelp,
+      ),
       _Row(
         icon: Icons.chat_bubble_outline,
         name: 'Tell us something',
@@ -117,7 +134,7 @@ class MoreView extends StatelessWidget {
       const _Heading('On the web'),
       const _Note(
         'madboots.streamlit.app carries the research surfaces a bigger screen earns: the fixture '
-        'ticker, Player DNA, Squad Lab and Ask.',
+        'ticker, Squad Lab, Ask — and the help above.',
       ),
       const _Note(
         // ⚠️ **Updated when the line moved.** This paragraph used to name Team DNA and Trending as
