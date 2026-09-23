@@ -1025,6 +1025,21 @@ def head_to_head(request: HeadToHeadRequest, *, store: Storage | None = None) ->
     }
 
 
+def plain(text: str) -> str:
+    """Markdown emphasis removed — ⭐ **the API speaks text, not Streamlit** (ADR-274).
+
+    ⚠️⚠️ The engine's notes were written for a page that renders markdown, and the phone printed them
+    literally: *"`**12 players**` stand out on two or more of these boards"*, asterisks and all, at the
+    top of the screen the owner had asked to be made prominent.
+
+    ⭐ *A string formatted for one renderer is a string formatted for one renderer* — and the transport is
+    where that gets undone, exactly as the *"boards below"* wording was (ADR-271), because the Streamlit
+    page it was written for still renders it correctly.
+    """
+    # ⚠️ Bold before italic: `**x**` would otherwise be read as an italic `*` wrapping `*x*`.
+    return text.replace("**", "").replace("*", "")
+
+
 def _worth_noticing(request: TrendingRequest, data) -> dict:
     """What the crowd is doing that a single leaderboard cannot show (ADR-170/271).
 
@@ -1080,8 +1095,8 @@ def _worth_noticing(request: TrendingRequest, data) -> dict:
         # ⭐ **false on a phone, where they are a tap away**. Reworded here rather than in the engine,
         # because the Streamlit page it was written for still stacks them: *a sentence about a layout
         # belongs to the layout.*
-        "caveat": watch_note(groups).replace("the four boards below only show *between* them",
-                                             "the other boards only show *between* them"),
+        "caveat": plain(watch_note(groups).replace("the four boards below only show *between* them",
+                                                   "the other boards only show *between* them")),
         "rows": rows,
     }
 
@@ -1147,7 +1162,7 @@ def _worth_a_look(request: TrendingRequest, data, store) -> dict:
         "column": "signals",
         # ⭐ The engine's own sentence — including for an **empty** list, which is a real answer here and
         # not a failure to load.
-        "caveat": scout_note(found, season=season if rows else None),
+        "caveat": plain(scout_note(found, season=season if rows else None)),
         "rows": out,
     }
 
