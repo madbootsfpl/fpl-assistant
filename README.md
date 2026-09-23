@@ -27,7 +27,7 @@ Two things changed underneath it this month, and both are worth knowing before y
 comparable assistant is an app. The plan — Flutter, reusing the analytics rather than reimplementing them —
 is in **[Mobile_Platform_Audit.md](docs/03_Architecture/Mobile_Platform_Audit.md)**.
 
-**258 ADRs · 2,472 tests · CI green.**
+**259 ADRs · 2,472 tests · CI green.**
 
 New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
 **[Direction & options](docs/00_Project/DIRECTION.md)**. Running a beta? **[BETA.md](docs/BETA.md)**. The live
