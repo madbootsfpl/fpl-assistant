@@ -44,6 +44,23 @@ TERMS: dict[str, tuple[str, str]] = {
         "**kind** of claim it is, because an injury FPL confirmed and a crowd movement are not the same "
         "evidence.",
     ),
+    "lineup": (
+        "Lineup",
+        "Changes to **who starts**, from the fifteen you already own. Free and reversible — no transfer "
+        "is spent and nothing is bought, so this is the cheapest gain on the screen and the first one "
+        "worth taking.",
+    ),
+    "transfer": (
+        "Transfer",
+        "A move that **costs** something — a free transfer, or four points. The gain shown is what the "
+        "move is worth over the window, so a small gain over one gameweek and the same gain over five "
+        "are very different propositions.",
+    ),
+    "timing": (
+        "Timing",
+        "Whether to act **now or wait**. Prices move, news lands, and a player's chance of starting "
+        "firms up as the deadline nears — so a move worth making is not always a move worth making yet.",
+    ),
     "percentile": (
         "Percentile",
         "A **rank**, not a score: 74 means better than 74% of the others being compared. It lets things "

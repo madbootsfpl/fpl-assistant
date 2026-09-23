@@ -1025,6 +1025,72 @@ def head_to_head(request: HeadToHeadRequest, *, store: Storage | None = None) ->
     }
 
 
+def _worth_a_look(request: TrendingRequest, data, store) -> dict:
+    """ADR-167's convergence board, on a phone (ADR-269).
+
+    ⭐⭐ **The claim is deliberately narrow: *worth a look*, not *worth points*.** Two of the signals it
+    reads — set-piece duty and DefCon — are ones the engine has explicitly decided **not** to price, so
+    ⚠️ *ranking players on them as though they were points would be the app asserting confidence it has
+    withheld*, and would put a second opinion beside xP.
+
+    ⭐ **What a single board cannot say is that two boards agree.** A first-choice penalty taker who also
+    clears the DefCon bar is a different proposition from either fact alone, and that convergence is the
+    only new information here.
+
+    ⚠️⚠️ **Most of the evidence is last season's, and every reason says so.** The rate boards need 900
+    minutes; ⭐ *a reason that did not carry its own vintage would be the most misleading kind of true
+    statement.*
+    """
+    from src.analytics.crowd import ownership_label
+    from src.analytics.last_season import last_season_name, last_season_rows
+    from src.analytics.scout import scout_note, worth_a_look
+
+    # ⚠️⚠️ **`get_history_by_code`, not `get_gw_history_by_code`.** The first holds PAST SEASONS; the
+    # second holds this season's gameweeks. Reading the wrong one returned 667 codes and **zero** last-
+    # season rows, so the rate boards ran on five gameweeks of minutes, cleared nothing, and the board
+    # came back empty — ⭐ *a wrong source that returns plenty of data fails as an empty answer, not as an
+    # error*, and "nobody stands out" is a sentence this board is designed to say truthfully.
+    past = store.get_history_by_code()
+    season = last_season_name(past)
+    rows = last_season_rows(data.players, past)
+    found = worth_a_look(data.players, rows=rows or data.players, season=season,
+                         limit=request.limit)
+
+    by_id = {p["id"]: p for p in data.players}
+    ranked_by_id = {r["id"]: r for r in data.ranked}
+    owned_ids = set(request.player_ids)
+    out = []
+    for row in found:
+        raw = by_id.get(row["id"])
+        if raw is None:
+            continue
+        ranked = ranked_by_id.get(row["id"], {})
+        out.append({
+            "player": player_summary(raw, data.xp_by_id,
+                                     {row["id"]: ranked.get("by_gameweek", {})},
+                                     {row["id"]: ranked.get("minutes_weight", 1.0)}),
+            "photo": photo_url(raw["code"]),
+            # ⚠️ **The count of agreeing signals, not a score.** ⭐ *A number that looked like a rating
+            # would compete with xP*, which is the one thing this board must not do.
+            "value": float(len(row["reasons"])),
+            "owned_by": raw.get("selected_by"),
+            "tier": ownership_label(raw),
+            "owned": row["id"] in owned_ids,
+            # ⭐ The evidence itself, each line carrying its own vintage.
+            "reasons": row["reasons"],
+        })
+
+    return {
+        "by": "look",
+        "label": "worth a look",
+        "column": "signals",
+        # ⭐ The engine's own sentence — including for an **empty** list, which is a real answer here and
+        # not a failure to load.
+        "caveat": scout_note(found, season=season if rows else None),
+        "rows": out,
+    }
+
+
 def trending(request: TrendingRequest, *, store: Storage | None = None) -> dict:
     """The crowd's four leaderboards — most bought, most sold, most owned, in form (ADR-266).
 
@@ -1044,6 +1110,8 @@ def trending(request: TrendingRequest, *, store: Storage | None = None) -> dict:
     store, ours = opened(store)
     try:
         data = load(list(request.player_ids), DEFAULT_HORIZON, store)
+        if request.by == "look":
+            return _worth_a_look(request, data, store)
     finally:
         if ours:
             store.close()

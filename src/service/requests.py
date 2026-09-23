@@ -338,15 +338,20 @@ class TrendingRequest:
     `owned`, so the app can say *"you have him"* without matching ids itself (ADR-245's pattern).
     """
 
-    by: str = "in"
+    #: ⭐ Defaults to the convergence board, because it is what the screen opens on.
+    by: str = "look"
     limit: int = 15
     player_ids: tuple[int, ...] = ()
 
     def validate(self) -> None:
         from src.analytics.crowd import TREND_BYS
 
-        if self.by not in TREND_BYS:
-            raise ValueError(f"by must be one of {sorted(TREND_BYS)}, not {self.by!r}")
+        #: ⭐⭐ `look` is not a crowd metric at all — it is ADR-167's **convergence** board, and it leads
+        #: because it is the only one here that is about the *player* rather than about other managers.
+        #: ⚠️ It rides on this endpoint because it answers the same reader's question — *"who should I be
+        #: looking at?"* — and a separate endpoint would have meant a separate screen for one list.
+        if self.by not in {*TREND_BYS, "look"}:
+            raise ValueError(f"by must be one of {sorted({*TREND_BYS, 'look'})}, not {self.by!r}")
         if not 1 <= self.limit <= 50:
             raise ValueError(f"limit must be 1-50, not {self.limit}")
 

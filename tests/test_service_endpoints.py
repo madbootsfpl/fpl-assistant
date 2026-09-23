@@ -1802,7 +1802,10 @@ def test_the_caveat_travels_with_the_numbers():
     carried in the answer rather than written into each client, because *a caveat that lives apart from
     its numbers drifts from them*.
     """
-    answer = svc.trending(svc.TrendingRequest())
+    # ⚠️ Names its board. This test used to rely on the default, and the default moved to the
+    # convergence board — ⭐ *a test that depends on a default is a test that breaks when the default
+    # changes, which is a fact about the test, not about the code.*
+    answer = svc.trending(svc.TrendingRequest(by="in"))
     assert "other managers" in answer["caveat"]
     assert "template" in answer["caveat"]
 

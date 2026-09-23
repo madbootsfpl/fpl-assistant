@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import 'api/models.dart';
 import 'brand.dart';
+import 'pill.dart';
 
 /// How to order the list. ⭐ **xP first because it is the reason to be here**; the others are ways to find
 /// a player you have already decided on.
@@ -286,48 +287,22 @@ class PickerControls extends StatelessWidget {
           ),
         ),
       ),
-      SizedBox(
-        height: 42,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          children: [
-            for (final option in PickerSort.values)
-              Padding(
-                padding: const EdgeInsets.only(right: 6, top: 7),
-                child: ChoiceChip(
-                  label: Text(option.label),
-                  labelStyle: TextStyle(
-                    fontSize: 11.5,
-                    color: sort == option ? Colors.white : Colors.white54,
-                  ),
-                  selected: sort == option,
-                  showCheckmark: false,
-                  backgroundColor: Colors.white10,
-                  selectedColor: Brand.purple,
-                  side: BorderSide.none,
-                  onSelected: (_) => onSort(option),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.only(right: 6, top: 7),
-              child: ChoiceChip(
-                // ⚠️ The club chip **says its value** when one is set (ADR-258) — a filter hiding behind
-                // a generic label is a filter people forget is on.
-                label: Text(club ?? 'Any club'),
-                labelStyle: TextStyle(
-                  fontSize: 11.5,
-                  color: club == null ? Colors.white54 : Colors.white,
-                ),
-                selected: club != null,
-                showCheckmark: false,
-                backgroundColor: Colors.white10,
-                selectedColor: Brand.purple,
-                side: BorderSide.none,
-                onSelected: (_) => _chooseClub(context),
-              ),
+      PillRow(
+        children: [
+          for (final option in PickerSort.values)
+            Pill(
+              label: option.label,
+              selected: sort == option,
+              onTap: () => onSort(option),
             ),
-          ],
-        ),
+          Pill(
+            // ⚠️ The club pill **says its value** when one is set (ADR-258) — a filter hiding behind a
+            // generic label is a filter people forget is on.
+            label: club ?? 'Any club',
+            selected: club != null,
+            onTap: () => _chooseClub(context),
+          ),
+        ],
       ),
     ],
   );

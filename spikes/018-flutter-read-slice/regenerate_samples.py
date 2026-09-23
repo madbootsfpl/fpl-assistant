@@ -74,6 +74,9 @@ def responses(store) -> dict:
         # ⭐ The crowd's boards (ADR-266). ⚠️ `by="in"` because the *most bought* board is the one the
         # tab opens on, and a sample of the board nobody sees first documents the wrong default.
         "trending": service.trending(service.TrendingRequest(by="in", limit=15), store=store),
+        # ⭐ The convergence board (ADR-167/269) — its own sample, because it carries `reasons`, a field
+        # no crowd board has. ⚠️ *A shape a client must render was absent from every example it had.*
+        "worth-a-look": service.trending(service.TrendingRequest(by="look", limit=8), store=store),
         # ⭐ The fixture ticker — twenty clubs, six gameweeks (ADR-265). ⚠️ Worth a sample even though it
         # takes no squad: the shape a client has to survive is the **blank cell**, and a hand-built
         # fixture would be one somebody wrote rather than one the server produces.

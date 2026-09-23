@@ -50,7 +50,7 @@ def shape(value, depth=0):
 
 
 ENDPOINTS = ["analysis", "transfers", "captain", "gameweek-plan", "route", "build", "my-team",
-             "players", "player", "compare", "ticker", "trending", "leagues", "league", "h2h"]
+             "players", "player", "compare", "ticker", "trending", "leagues", "league", "h2h", "worth-a-look"]
 
 
 @pytest.fixture(scope="module")

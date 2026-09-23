@@ -18,6 +18,7 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'mugshot.dart';
+import 'pill.dart';
 
 class TrendingBoards extends StatefulWidget {
   const TrendingBoards({required this.client, required this.team, super.key});
@@ -30,9 +31,13 @@ class TrendingBoards extends StatefulWidget {
 }
 
 class _TrendingBoardsState extends State<TrendingBoards> {
-  /// ⭐ **Opens on "most bought"**, because that is the board people come for — *who is everyone buying?*
-  /// is the question that sends someone here, and "most owned" is the one that changes slowest.
-  String _by = 'in';
+  /// ⭐⭐ **Opens on "Worth a look"** (feedback: *"most important information from this section. It should
+  /// lead, first tab"*).
+  ///
+  /// ⚠️ It is also the only board here that is **about the player** — the other four are facts about other
+  /// managers. ⭐ *Leading with the crowd taught the screen to be read as a popularity chart*, which is
+  /// exactly the framing ADR-150 ranks last.
+  String _by = 'look';
 
   late Future<TrendingBoard> _future = _fetch();
 
@@ -58,35 +63,22 @@ class _TrendingBoardsState extends State<TrendingBoards> {
     children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-        child: SizedBox(
-          height: 34,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (final (value, label) in const [
-                ('in', 'Most bought'),
-                ('out', 'Most sold'),
-                ('owned', 'Most owned'),
-                ('form', 'In form'),
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(label),
-                    labelStyle: TextStyle(
-                      fontSize: 11.5,
-                      color: _by == value ? Colors.white : Colors.white54,
-                    ),
-                    selected: _by == value,
-                    showCheckmark: false,
-                    backgroundColor: Colors.white10,
-                    selectedColor: Brand.purple,
-                    side: BorderSide.none,
-                    onSelected: (_) => _pick(value),
-                  ),
-                ),
-            ],
-          ),
+        child: PillRow(
+          height: 40,
+          children: [
+            for (final (value, label) in const [
+              ('look', 'Worth a look'),
+              ('in', 'Most bought'),
+              ('out', 'Most sold'),
+              ('owned', 'Most owned'),
+              ('form', 'In form'),
+            ])
+              Pill(
+                label: label,
+                selected: _by == value,
+                onTap: () => _pick(value),
+              ),
+          ],
         ),
       ),
       Expanded(
@@ -147,6 +139,10 @@ class _TrendingBoardsState extends State<TrendingBoards> {
 /// How a board's number reads. ⭐ **Net transfers are people**, so 660754 becomes `661k` — ⚠️ *a raw
 /// six-digit count is a number you have to parse before you can compare two of them.*
 String trendValue(double value, String column) {
+  // ⚠️ **No branch for `signals`, deliberately.** One was written and the mutation run showed it was
+  // dead: a signal count is at most four, and the path below already renders small integers as plain
+  // counts — the branch could only differ above a thousand. ⭐ *Defensive code for a case that cannot
+  // arise is untested code that looks tested.*
   if (column == 'Own%') return '${value.toStringAsFixed(1)}%';
   if (column == 'Form') return value.toStringAsFixed(1);
   final n = value.abs();
@@ -216,6 +212,31 @@ class _BoardRow extends StatelessWidget {
                   '${row.tier.isEmpty ? '' : ' · ${row.tier}'}',
                   style: const TextStyle(color: Colors.white38, fontSize: 10.5),
                 ),
+                // ⭐⭐ **The reasons ARE the board.** A convergence list without its evidence is a ranking
+                // on a number nobody can see — ⚠️ *and this board deliberately has no such number.*
+                for (final reason in row.reasons)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 3, right: 5),
+                          child: Icon(Icons.check, size: 10, color: Brand.good),
+                        ),
+                        Expanded(
+                          child: Text(
+                            reason,
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 10.5,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -232,7 +253,7 @@ class _BoardRow extends StatelessWidget {
                 ),
               ),
               Text(
-                // ⚠️ The column names the unit. Four boards share `value`, and ⭐ *a number with no unit
+                // ⚠️ The column names the unit. Five boards share `value`, and ⭐ *a number with no unit
                 // is not information.*
                 column,
                 style: const TextStyle(color: Colors.white30, fontSize: 9.5),

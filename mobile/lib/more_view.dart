@@ -142,9 +142,13 @@ class MoreView extends StatelessWidget {
       _Row(
         icon: Icons.menu_book_outlined,
         name: 'Help & videos',
+        // ⚠️ Trimmed to the clause the owner named — *"on the web where a bigger screen earns its
+        // keep"* — and **no further**. ⭐ The destination stays: `test_help_link.py` exists because
+        // *tapping a list item and landing in Safari is a surprise unless it was announced*, and my
+        // first trim took that with it. The guard caught it.
         why:
-            'The written walkthrough and Maddie’s 90-second explainers, on the web where a bigger screen '
-            'earns its keep. Opens madboots.streamlit.app.',
+            'The written walkthrough and Maddie’s 90-second explainers. '
+            'Opens madboots.streamlit.app.',
         onTap: onOpenHelp,
       ),
       _Row(
@@ -167,23 +171,16 @@ class MoreView extends StatelessWidget {
         onTap: onOpenSettings,
       ),
 
-      const _Heading('On the web'),
-      const _Note(
-        'madboots.streamlit.app carries the research surfaces a bigger screen earns: the fixture '
-        'ticker, Squad Lab, Ask — and the help above.',
-      ),
-      const _Note(
-        // ⚠️ **Updated when the line moved.** This paragraph used to name Team DNA and Trending as
-        // web-only — and they are not, since ADR-245 and ADR-247. ⭐ *Positioning copy that outlives the
-        // positioning is worse than none: it teaches a reader something the app then contradicts.*
-        'That split is deliberate. This app is the decision layer — what to do this week, and what a '
-        'move is worth. The web app stays the exploration layer, and a few research surfaces have '
-        'crossed over where the phone could carry them.',
-        muted: true,
-      ),
+      // ⚠️⚠️ **The "On the web" block is gone, and it had become wrong twice over.** It advertised the
+      // fixture ticker and Squad Lab as surfaces the web carried — ⭐ *and both are now in this app*
+      // (ADR-265, ADR-268). Positioning copy outlives the positioning it describes, and this one had
+      // started telling a reader the opposite of what the directory above it offers.
+      //
+      // ⭐ The directory is also the screen's job. Two paragraphs of philosophy pushed the last option
+      // below the fold — *an option you have to scroll to find is an option most people never see.*
       const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: _Note(Brand.mantra, italic: true),
+        padding: EdgeInsets.only(top: 14),
+        child: _Note(Brand.mantra, italic: true, accent: true),
       ),
     ],
   );
@@ -252,31 +249,16 @@ class _Row extends StatelessWidget {
   );
 }
 
-class _Heading extends StatelessWidget {
-  const _Heading(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 26, bottom: 8),
-    child: Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        color: Colors.white38,
-        fontSize: 10,
-        letterSpacing: 1.2,
-      ),
-    ),
-  );
-}
-
 class _Note extends StatelessWidget {
-  const _Note(this.text, {this.muted = false, this.italic = false});
+  const _Note(this.text, {this.italic = false, this.accent = false});
 
   final String text;
-  final bool muted;
   final bool italic;
+
+  /// ⭐ The mantra, in the brand's orange. It is the one line here that is a **statement about the
+  /// product** rather than a description of a row — ⚠️ *and set in the same grey as the rows it sits
+  /// under, it read as one more caption nobody finishes.*
+  final bool accent;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -284,8 +266,8 @@ class _Note extends StatelessWidget {
     child: Text(
       text,
       style: TextStyle(
-        color: muted ? Colors.white24 : Colors.white54,
-        fontSize: 11.5,
+        color: accent ? Brand.orange : Colors.white54,
+        fontSize: accent ? 12.5 : 11.5,
         height: 1.5,
         fontStyle: italic ? FontStyle.italic : FontStyle.normal,
       ),

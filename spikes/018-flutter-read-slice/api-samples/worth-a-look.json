@@ -1,0 +1,248 @@
+{
+  "by": "look",
+  "caveat": "**8 players** stand out on two or more of these boards at once. That is a reason to look, **not a points projection** \u2014 set-piece and DefCon value is not in xP yet. Most of the evidence is **2025/26** \u2014 the rate boards need ~900 minutes, so they read last season until around GW10.",
+  "column": "signals",
+  "label": "worth a look",
+  "rows": [
+    {
+      "owned": false,
+      "owned_by": 0.1,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p174874.png",
+      "player": {
+        "by_gameweek": {
+          "10": 2.8,
+          "6": 2.9,
+          "7": 2.9,
+          "8": 2.9,
+          "9": 2.3
+        },
+        "chance": 100,
+        "id": 253,
+        "leaving": null,
+        "minutes_weight": 0.85,
+        "position": "DEF",
+        "price": 5.0,
+        "status": "a",
+        "team": "FUL",
+        "web_name": "Andersen",
+        "xp": 13.8
+      },
+      "reasons": [
+        "DefCon +0.3/90 over the bar (2025/26)",
+        "11 pts below expected \u2014 due a bounce (2025/26)"
+      ],
+      "tier": "differential",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 50.6,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p466075.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.3,
+          "6": 5.4,
+          "7": 4.9,
+          "8": 4.9,
+          "9": 4.4
+        },
+        "chance": null,
+        "id": 8,
+        "leaving": null,
+        "minutes_weight": 0.92,
+        "position": "DEF",
+        "price": 5.8,
+        "status": "a",
+        "team": "ARS",
+        "web_name": "Calafiori",
+        "xp": 24.9
+      },
+      "reasons": [
+        "concedes 0.52 xGC/90 (2025/26)",
+        "10 pts below expected \u2014 due a bounce (2025/26)"
+      ],
+      "tier": "template",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 0.2,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p651426.png",
+      "player": {
+        "by_gameweek": {
+          "10": 1.7,
+          "6": 1.9,
+          "7": 1.9,
+          "8": 2.1,
+          "9": 1.9
+        },
+        "chance": null,
+        "id": 203,
+        "leaving": null,
+        "minutes_weight": 0.39,
+        "position": "DEF",
+        "price": 4.8,
+        "status": "a",
+        "team": "CRY",
+        "web_name": "Canvot",
+        "xp": 9.5
+      },
+      "reasons": [
+        "DefCon +1.4/90 over the bar (2025/26)",
+        "10 pts below expected \u2014 due a bounce (2025/26)"
+      ],
+      "tier": "differential",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 0.2,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p135720.png",
+      "player": {
+        "by_gameweek": {
+          "10": 1.1,
+          "6": 1.3,
+          "7": 1.2,
+          "8": 1.3,
+          "9": 1.3
+        },
+        "chance": null,
+        "id": 501,
+        "leaving": null,
+        "minutes_weight": 0.31,
+        "position": "DEF",
+        "price": 5.0,
+        "status": "a",
+        "team": "SUN",
+        "web_name": "Danso",
+        "xp": 6.2
+      },
+      "reasons": [
+        "DefCon +1.6/90 over the bar (2025/26)",
+        "concedes 1.22 xGC/90 (2025/26)"
+      ],
+      "tier": "differential",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 0.2,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p232928.png",
+      "player": {
+        "by_gameweek": {
+          "10": 2.8,
+          "6": 2.9,
+          "7": 2.3,
+          "8": 2.1,
+          "9": 2.6
+        },
+        "chance": 100,
+        "id": 239,
+        "leaving": null,
+        "minutes_weight": 0.73,
+        "position": "MID",
+        "price": 6.0,
+        "status": "a",
+        "team": "EVE",
+        "web_name": "Garner",
+        "xp": 12.7
+      },
+      "reasons": [
+        "first-choice corners",
+        "DefCon +0.1/90 over the bar (2025/26)"
+      ],
+      "tier": "differential",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 1.3,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p231747.png",
+      "player": {
+        "by_gameweek": {
+          "10": 0.0,
+          "6": 0.0,
+          "7": 0.0,
+          "8": 0.0,
+          "9": 0.0
+        },
+        "chance": 0,
+        "id": 223,
+        "leaving": null,
+        "minutes_weight": 0.0,
+        "position": "FWD",
+        "price": 6.3,
+        "status": "i",
+        "team": "CRY",
+        "web_name": "Mateta",
+        "xp": 0.0
+      },
+      "reasons": [
+        "first-choice penalties",
+        "14 pts below expected \u2014 due a bounce (2025/26)"
+      ],
+      "tier": "differential",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 20.7,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p446008.png",
+      "player": {
+        "by_gameweek": {
+          "10": 5.6,
+          "6": 5.7,
+          "7": 5.7,
+          "8": 5.6,
+          "9": 5.1
+        },
+        "chance": null,
+        "id": 427,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 7.9,
+        "status": "a",
+        "team": "MUN",
+        "web_name": "Mbeumo",
+        "xp": 27.7
+      },
+      "reasons": [
+        "penalties (order 2)",
+        "11 pts below expected \u2014 due a bounce (2025/26)"
+      ],
+      "tier": "template",
+      "value": 2.0
+    },
+    {
+      "owned": false,
+      "owned_by": 0.6,
+      "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p427623.png",
+      "player": {
+        "by_gameweek": {
+          "10": 3.3,
+          "6": 3.7,
+          "7": 3.6,
+          "8": 4.0,
+          "9": 3.6
+        },
+        "chance": null,
+        "id": 202,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.0,
+        "status": "a",
+        "team": "CRY",
+        "web_name": "Richards",
+        "xp": 18.2
+      },
+      "reasons": [
+        "DefCon +-0.1/90 over the bar (2025/26)",
+        "13 pts below expected \u2014 due a bounce (2025/26)"
+      ],
+      "tier": "differential",
+      "value": 2.0
+    }
+  ]
+}

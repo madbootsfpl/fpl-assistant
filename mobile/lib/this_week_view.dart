@@ -191,7 +191,10 @@ class _Confidence extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
       decoration: BoxDecoration(
         color: Colors.white10,
-        border: Border(left: BorderSide(color: colour, width: 3)),
+        // ⭐⭐ **The whole box, not one edge** (feedback). A 3px left rule reads as decoration; a border
+        // reads as a **verdict on the card it encloses** — ⚠️ *and this card's colour IS the verdict*,
+        // which is why it was the one place a partial border was most misleading.
+        border: Border.all(color: colour, width: 1.6),
         borderRadius: BorderRadius.circular(Brand.radiusMd),
       ),
       child: Column(
@@ -298,8 +301,11 @@ class _Confidence extends StatelessWidget {
             colour: Brand.accentTeal,
             lines: reasons,
           ),
+        // ⭐ **Risk is always red** (feedback), never amber. The card is the **category**, and a category
+        // whose colour changes with its contents cannot be recognised at a glance — ⚠️ *severity belongs
+        // in the line ("doubtful, 75%"), not in the frame around it.*
         if (risks.isNotEmpty)
-          _Lines(label: 'Risk', mark: '⚠', colour: Brand.warn, lines: risks),
+          _Lines(label: 'Risk', mark: '⚠', colour: Brand.bad, lines: risks),
       ],
     );
   }
@@ -326,6 +332,9 @@ class _Lines extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
     decoration: BoxDecoration(
       color: Colors.white10,
+      // ⭐ Each card bordered in what it **means**: Edge is what is going for you, Risk is what could go
+      // wrong. ⚠️ *Three cards in identical grey made the reader do the sorting the colours exist to do.*
+      border: Border.all(color: colour.withValues(alpha: 0.75), width: 1.4),
       borderRadius: BorderRadius.circular(Brand.radiusMd),
     ),
     child: Column(
@@ -382,22 +391,35 @@ class _Card extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
     decoration: BoxDecoration(
       color: highlight ? Brand.purple.withValues(alpha: 0.2) : Colors.white10,
+      // ⚠️ **A border always, not only when highlighted.** Transparent-when-not is the same as none, and
+      // ⭐ *a card that only gains an outline when it is special leaves every ordinary card looking
+      // unfinished beside it.* The accent still marks the highlighted one — it is a stronger colour, not
+      // the only colour.
       border: Border.all(
-        color: highlight ? Brand.purpleLight : Colors.transparent,
-        width: 1.2,
+        color: highlight
+            ? Brand.purpleLight
+            : Brand.accentTeal.withValues(alpha: 0.35),
+        width: highlight ? 1.6 : 1.2,
       ),
       borderRadius: BorderRadius.circular(Brand.radiusMd),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white38,
-            fontSize: 10,
-            letterSpacing: 1,
-          ),
+        Row(
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white38,
+                fontSize: 10,
+                letterSpacing: 1,
+              ),
+            ),
+            // ⭐ LINEUP was the one heading on this screen with no (?) beside it — ⚠️ *a help affordance
+            // that appears on three cards out of six reads as "these three are the complicated ones".*
+            HelpDot(label.toLowerCase(), size: 12),
+          ],
         ),
         const SizedBox(height: 3),
         Text(

@@ -60,6 +60,11 @@ def test_the_row_in_the_app_says_where_it_goes():
     """⚠️⚠️ **A row that leaves the app has to say so.** Tapping a list item and landing in Safari is a
     surprise unless it was announced — ⭐ *the surprise is the cost, not the browser.*"""
     more = (ROOT / "mobile" / "lib" / "more_view.dart").read_text()
-    block = re.search(r"name: 'Help[^']*',\s*why:\s*((?:\s*'[^']*'\s*)+)", more)
+    # ⚠️ **Comments may sit between the name and the description**, and the first version of this
+    # pattern did not allow for them — so it reported *"the Help row is gone or renamed"* about a row
+    # that was present and correct. ⭐ *A guard that fails for its own reasons teaches people to edit the
+    # guard*, which is how a real one stops being trusted.
+    block = re.search(
+        r"name: 'Help[^']*',(?:\s*//[^\n]*\n)*\s*why:\s*((?:\s*'[^']*'\s*)+)", more)
     assert block, "the Help row is gone or renamed — update this guard with it"
     assert "madboots" in block.group(1), "the Help row does not say it opens the web app"

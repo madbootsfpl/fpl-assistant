@@ -1259,10 +1259,20 @@ class TickerCell {
   bool get isDouble => opponents.length > 1;
 
   /// `CHE (H)`, or `CHE (H) + ARS (A)` for a double.
-  String get label => [
-    for (var i = 0; i < opponents.length; i++)
-      '${opponents[i]} (${i < venues.length ? venues[i] : "?"})',
-  ].join(' + ');
+  ///
+  /// ⚠️⚠️ **Falls back to the singular fields.** This was built only from `opponents`, so a cell carrying
+  /// `opponent` and no list rendered as an **empty string** — a fixture that exists, shown as nothing.
+  /// ⭐ *A derived field that silently returns empty is worse than one that throws*, because the screen
+  /// still lays out a row for it.
+  String get label {
+    if (opponents.isEmpty) {
+      return opponent.isEmpty ? '' : '$opponent ($venue)';
+    }
+    return [
+      for (var i = 0; i < opponents.length; i++)
+        '${opponents[i]} (${i < venues.length ? venues[i] : "?"})',
+    ].join(' + ');
+  }
 }
 
 class FixtureTicker {
@@ -1292,6 +1302,7 @@ class TrendingRow {
     required this.ownedBy,
     required this.tier,
     required this.owned,
+    this.reasons = const [],
   });
 
   factory TrendingRow.fromJson(Map<String, dynamic> json) => TrendingRow(
@@ -1301,6 +1312,7 @@ class TrendingRow {
     ownedBy: (json['owned_by'] as num?)?.toDouble(),
     tier: json['tier'] as String? ?? '',
     owned: json['owned'] as bool? ?? false,
+    reasons: [for (final r in (json['reasons'] as List? ?? [])) '$r'],
   );
 
   final PlayerSummary player;
@@ -1321,6 +1333,11 @@ class TrendingRow {
 
   /// ⭐ Whether this is one of yours — flagged by the server so the client never matches ids itself.
   final bool owned;
+
+  /// ⭐⭐ **Why he is here** — only the *worth a look* board carries these, and they are the board.
+  /// ⚠️ Each line names its own season, because *most of the evidence is last season's and a reason
+  /// without its vintage is the most misleading kind of true statement* (ADR-167).
+  final List<String> reasons;
 }
 
 class TrendingBoard {

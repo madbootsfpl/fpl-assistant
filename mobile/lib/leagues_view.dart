@@ -519,38 +519,53 @@ class _HeadToHeadState extends State<_HeadToHead> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 20),
       children: [
-        Text(
-          _rival == null
-              ? 'Pick someone to compare against.'
-              : 'You against ${_rival!.team}.',
-          style: const TextStyle(color: Colors.white70, fontSize: 12.5),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 34,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (final r in rivals)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(r.team),
-                    labelStyle: TextStyle(
-                      fontSize: 11.5,
-                      color: _rival?.entry == r.entry
-                          ? Colors.white
-                          : Colors.white54,
+        // ⭐⭐ **A dropdown, not a swipe row** (feedback). A league can hold fifty managers, and a
+        // horizontal strip shows four — ⚠️ *an option you have to swipe to discover is an option most
+        // people never learn is there*, which made the comparison look like it only worked against the
+        // top of the table.
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(Brand.radiusSm),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<LeagueStanding>(
+              value: _rival,
+              isExpanded: true,
+              dropdownColor: const Color(0xFF241E30),
+              iconEnabledColor: Colors.white54,
+              style: const TextStyle(color: Colors.white, fontSize: 13.5),
+              hint: const Text(
+                'Compare against…',
+                style: TextStyle(color: Colors.white54, fontSize: 13.5),
+              ),
+              items: [
+                for (final r in rivals)
+                  DropdownMenuItem(
+                    value: r,
+                    child: Row(
+                      children: [
+                        // ⭐ Rank first, so the list reads as the table you just looked at.
+                        SizedBox(
+                          width: 28,
+                          child: Text(
+                            '${r.rank}',
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(r.team, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
                     ),
-                    selected: _rival?.entry == r.entry,
-                    showCheckmark: false,
-                    backgroundColor: Colors.white10,
-                    selectedColor: Brand.purple,
-                    side: BorderSide.none,
-                    onSelected: (_) => _pick(r),
                   ),
-                ),
-            ],
+              ],
+              onChanged: (r) => r == null ? null : _pick(r),
+            ),
           ),
         ),
         const SizedBox(height: 12),

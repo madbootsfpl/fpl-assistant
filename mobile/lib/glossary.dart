@@ -20,10 +20,13 @@ const Map<String, (String, String)> glossary = {
   'exodus': ('Unexplained sell-off', 'Far more managers sold this player this week than his status or news explains.\n\nIt reports that **the crowd knows something we do not**. It does not say what.'),
   'free_transfers': ('Free transfers', 'How many moves you can make without a points hit. **FPL does not publish this**, so the app has to ask you for it — and the week\'s plan recommends this many moves.'),
   'grade': ('Club grade', 'A → D, from the axes that decide FPL points for a club\'s players. It is a **rank against the other nineteen**, so a D in a strong league is not the same as a D in a weak one.'),
+  'lineup': ('Lineup', 'Changes to **who starts**, from the fifteen you already own. Free and reversible — no transfer is spent and nothing is bought, so this is the cheapest gain on the screen and the first one worth taking.'),
   'minutes_weight': ('Minutes weight', 'How reliably he starts, 0–1, from his recent minutes. It scales every projection: a brilliant player who plays sixty minutes is worth less than the same player playing ninety.'),
   'percentile': ('Percentile', 'A **rank**, not a score: 74 means better than 74% of the others being compared. It lets things measured in different units sit on one scale.\n\n⚠️ A high percentile in a weak field is still a high percentile.'),
   'price_direction': ('Price direction', 'Which way his price is heading, from net transfers measured against the whole board.\n\n⚠️ It does **not** say *when*. A change tonight and a change next week look the same here.'),
   'risk': ('Risk', 'What could go wrong — doubtful players, and sell-offs the data cannot explain. Each says what **kind** of claim it is, because an injury FPL confirmed and a crowd movement are not the same evidence.'),
+  'timing': ('Timing', 'Whether to act **now or wait**. Prices move, news lands, and a player\'s chance of starting firms up as the deadline nears — so a move worth making is not always a move worth making yet.'),
+  'transfer': ('Transfer', 'A move that **costs** something — a free transfer, or four points. The gain shown is what the move is worth over the window, so a small gain over one gameweek and the same gain over five are very different propositions.'),
   'xgi': ('xG involvement', 'Expected goals plus expected assists: the chances a player creates **and** finishes, before luck is applied.'),
   'xp': ('Expected points (xP)', 'What we project a player to score, over the window shown. It is a **projection from minutes, fixtures and underlying numbers** — not a prediction of what will happen, and not FPL\'s own figure.'),
 };
