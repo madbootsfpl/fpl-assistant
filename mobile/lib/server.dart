@@ -28,6 +28,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String _key = 'server_base_url';
 
 /// ⭐ `--dart-define=MADBOOTS_API=https://api.example.com` at build time; localhost when nobody says.
+/// Whether the **Server** field is offered in Settings (ADR-270).
+///
+/// ⚠️⚠️ **Off unless a build asks for it.** A tester handed an editable API address has a way to point
+/// the app at nothing, and ⭐ *the only bug report that follows is "the app stopped working"* — with no
+/// sign in it that a field was ever touched. It is a developer's tool for pointing at a laptop on the
+/// LAN, and it has no job on a handset that already knows where the hosted API is.
+///
+/// ⭐ Compile-time, so it is **absent from the build**, not merely hidden in it — *a control you can
+/// reach by accident is a control that is enabled.*
+///
+/// Developer builds pass `--dart-define=MADBOOTS_DEV=true`.
+const bool kServerFieldEnabled = bool.fromEnvironment('MADBOOTS_DEV');
+
 const String kDefaultBaseUrl = String.fromEnvironment(
   'MADBOOTS_API',
   defaultValue: 'http://localhost:8078',

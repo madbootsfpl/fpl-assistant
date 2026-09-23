@@ -189,11 +189,15 @@ comes back slow, always-on is the simpler answer than a cron that pretends to be
   -d <device-id>)
 ```
 
-⭐ No code change: the address has been runtime configuration since ADR-239, and **More ▸ Settings ▸
-Server** still overrides it for you.
+⭐ No code change: the address has been runtime configuration since ADR-239.
 
-⚠️ **Hide that field before a build goes to testers.** It points the app wherever someone types, which was
-flagged when it was built and is still true.
+✅ **The Settings ▸ Server field is no longer in a tester's build** (ADR-270) — it was flagged as a risk
+when it was built and is now gone unless a build asks for it. ⚠️ *A tester handed an editable API address
+has a way to point the app at nothing, and the only bug report that follows is "the app stopped
+working".*
+
+Add `--dart-define=MADBOOTS_DEV=true` when **you** need the field — pointing a handset at a laptop on the
+LAN is the case it exists for.
 
 ⚠️ **If this ends in `Error running application on iPhone`, read the section below before changing
 anything** — it has twice now meant a successful install and a refused launch.

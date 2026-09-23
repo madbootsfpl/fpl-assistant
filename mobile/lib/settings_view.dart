@@ -115,13 +115,20 @@ class _SettingsViewState extends State<SettingsView> {
           note: team.data.behind ? 'behind a finished gameweek' : 'up to date',
         ),
 
-        const _Heading('Server'),
-        _ServerRow(baseUrl: widget.baseUrl, onServer: widget.onServer),
+        // ⚠️ **Not built into a tester's app at all** (ADR-270) — see `kServerFieldEnabled`.
+        if (kServerFieldEnabled) ...[
+          const _Heading('Server'),
+          _ServerRow(baseUrl: widget.baseUrl, onServer: widget.onServer),
+        ],
 
         const _Heading('On the web'),
         const _Note(
-          'madboots.streamlit.app carries the research surfaces: the fixture ticker, Team DNA and '
-          'Trending — and the market-wide view of Signals, where this app shows only your own squad.',
+          // ⚠️⚠️ **This paragraph had gone false.** It named the fixture ticker, Team DNA and Trending
+          // as things only the web carried — ⭐ *all three are in this app now* (ADR-245/247/265), and
+          // the same stale claim had to be removed from the More tab in ADR-269. *Positioning copy
+          // outlives the positioning it describes.*
+          'madboots.streamlit.app carries the help, the videos, and the research surfaces a bigger '
+          'screen earns.',
         ),
         const _Note(
           // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find

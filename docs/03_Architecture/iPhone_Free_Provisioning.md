@@ -128,11 +128,14 @@ you re-run every seven days.**
 
 ```bash
 (cd mobile && flutter run --release \
-  --dart-define=MADBOOTS_API=http://192.168.1.35:8078 -d <device-id>)
+  --dart-define=MADBOOTS_API=http://192.168.1.35:8078 \
+  --dart-define=MADBOOTS_DEV=true -d <device-id>)
 ```
 
-⭐ Saves typing it on the phone the first time. The Settings field still overrides it, and still has to be
-used whenever the lease changes.
+⚠️⚠️ **`MADBOOTS_DEV=true` is what gives you the Settings ▸ Server field**, and a build without it does not
+have one (ADR-270) — ⭐ *the field is a developer's tool for pointing at a laptop, and a LAN address moves
+with the DHCP lease, so this is the build where you need it.* Leave the flag off for anything a tester
+touches.
 
 ---
 
