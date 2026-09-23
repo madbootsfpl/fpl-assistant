@@ -173,6 +173,31 @@ class PlayersBody(BaseModel):
                                    "locally is instant, where a round trip per keystroke is not.")
 
 
+class LeaguesBody(BaseModel):
+    """⭐ A manager id, not a league id — *nobody knows their league id* (ADR-141)."""
+
+    manager_id: int = Field(..., ge=1)
+
+
+class LeagueBody(BaseModel):
+    """One classic league. ⚠️⚠️ `with_captains` costs **one FPL request per manager**; the table costs one
+    in total."""
+
+    league_id: int = Field(..., ge=1)
+    manager_id: int = Field(0, ge=0)
+    gameweek: int | None = Field(None, ge=1)
+    with_captains: bool = False
+    limit: int = Field(20, ge=1, le=50)
+
+
+class HeadToHeadBody(BaseModel):
+    """You against one rival. ⭐ A table says who is ahead; this says **what would have to happen**."""
+
+    manager_id: int = Field(..., ge=1)
+    rival_id: int = Field(..., ge=1)
+    horizon: int = Field(1, ge=1, le=MAX_HORIZON)
+
+
 class TrendingBody(BaseModel):
     """What the crowd is doing. ⚠️ `player_ids` is **optional and does not narrow the boards** — it only
     lets a row come back flagged `owned` (ADR-245's pattern)."""
@@ -400,6 +425,44 @@ def all_players(body: PlayersBody) -> dict:
     a verdict.
     """
     return _answer(service.players, service.PlayersRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/leagues")
+def manager_leagues(body: LeaguesBody) -> dict:
+    """The classic leagues a manager is in.
+
+    ⭐⭐ **Looked up from the manager id**, because *nobody knows their league id* — it lives in a URL you
+    have to go and find. ⚠️ **Private leagues lead**: FPL mixes the league you joined with friends in among
+    automatic ones (your club, your region, Overall), and sorting by size would bury the only leagues
+    anyone means.
+    """
+    return _answer(service.leagues, service.LeaguesRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/league")
+def one_league(body: LeagueBody) -> dict:
+    """A classic league's table, and optionally what its managers captained.
+
+    ⚠️⚠️ **`with_captains` is opt-in and capped** — the table is one request, the split is `limit` more.
+    ⭐ *A screen that quietly spends fifty requests to draw a second panel will be blamed for being slow.*
+
+    ⚠️ **`captains_from` says how many squads it actually read.** A manager whose fetch fails is absent
+    rather than fatal, and a partial read must never present itself as the whole league.
+    """
+    return _answer(service.league, service.LeagueRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/h2h")
+def head_to_head(body: HeadToHeadBody) -> dict:
+    """You against one rival, decomposed (ADR-161).
+
+    ⭐⭐ **The shared players are reported and then set aside** — they are usually most of both totals and
+    the part you can do nothing about. ⚠️ *Printing the shared total is what makes the small gap believable
+    rather than looking like a rounding error on two big numbers.*
+
+    ⚠️ It reads the **last finished** gameweek: a rival's picks are public only after a deadline.
+    """
+    return _answer(service.head_to_head, service.HeadToHeadRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/trending")

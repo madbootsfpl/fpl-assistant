@@ -43,7 +43,11 @@ void main() {
       expect(back.captainId, 1);
       expect(back.signalKeys, {'official:5:1'});
       expect(
-        back.checkAgainst(managerId: 7, gameweek: 6, fplPlayerIds: const [1, 2, 3]),
+        back.checkAgainst(
+          managerId: 7,
+          gameweek: 6,
+          fplPlayerIds: const [1, 2, 3],
+        ),
         DraftStaleness.fresh,
       );
     });
@@ -52,7 +56,11 @@ void main() {
       // ⚠️ The deadline passed; the plan is history. ⭐ *Silently showing it would be showing a team that
       // cannot be fielded.*
       expect(
-        planned().checkAgainst(managerId: 7, gameweek: 7, fplPlayerIds: const [1, 2, 3]),
+        planned().checkAgainst(
+          managerId: 7,
+          gameweek: 7,
+          fplPlayerIds: const [1, 2, 3],
+        ),
         DraftStaleness.gameweekPassed,
       );
     });
@@ -112,7 +120,9 @@ void main() {
         savedAt: DateTime(2026, 9, 21),
         signalKeys: const {'a:1', 'b:2', 'c:3'},
       );
-      expect(after.signalKeys, {'a:1'}, reason: 'the transfer reset what the plan knew');
+      expect(after.signalKeys, {
+        'a:1',
+      }, reason: 'the transfer reset what the plan knew');
       expect(after.since(const ['a:1', 'b:2']), {'b:2'});
     });
 

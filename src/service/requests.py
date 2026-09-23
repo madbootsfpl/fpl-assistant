@@ -258,6 +258,65 @@ class PlayersRequest:
 
 
 @dataclass(frozen=True)
+class LeaguesRequest:
+    """Which leagues a manager is in — ⭐ **looked up from the manager id**, because *nobody knows their
+    league id* (ADR-141): it lives in a URL you have to go and find, and the manager id is the handle
+    people actually have.
+    """
+
+    manager_id: int = 0
+
+    def validate(self) -> None:
+        if self.manager_id < 1:
+            raise ValueError("a manager id is required")
+
+
+@dataclass(frozen=True)
+class LeagueRequest:
+    """One classic league: the table, and optionally what its managers captained (ADR-267).
+
+    ⚠️⚠️ **`with_captains` is opt-in because it costs one FPL request per manager.** The table is a single
+    call; the captain split is `limit` more. ⭐ *A screen that quietly spends fifty requests to draw a
+    second panel is a screen that will be blamed for being slow.*
+    """
+
+    league_id: int = 0
+    manager_id: int = 0
+    gameweek: int | None = None
+    with_captains: bool = False
+    limit: int = 20
+
+    def validate(self) -> None:
+        if self.league_id < 1:
+            raise ValueError("a league id is required")
+        if not 1 <= self.limit <= 50:
+            raise ValueError(f"limit must be 1-50, not {self.limit}")
+        if self.gameweek is not None and self.gameweek < 1:
+            raise ValueError("gameweek must be 1 or more")
+
+
+@dataclass(frozen=True)
+class HeadToHeadRequest:
+    """You against one rival, this gameweek (ADR-161/267).
+
+    ⭐ **The comparison people actually want**, and the reason it is worth the two fetches: a league table
+    says who is ahead, and this says **what would have to happen** for that to change.
+    """
+
+    manager_id: int = 0
+    rival_id: int = 0
+    horizon: int = 1
+
+    def validate(self) -> None:
+        if self.manager_id < 1 or self.rival_id < 1:
+            raise ValueError("two manager ids are required")
+        if self.manager_id == self.rival_id:
+            # ⚠️ Not a crash, but an answer that would be a row of zeros presented as analysis.
+            raise ValueError("a manager cannot be compared with himself")
+        _check_horizon(self.horizon)
+
+
+@dataclass(frozen=True)
 class TrendingRequest:
     """What the crowd is doing — ⚠️ **display-only, and never xP** (ADR-057/266).
 

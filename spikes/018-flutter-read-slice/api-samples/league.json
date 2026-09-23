@@ -1,0 +1,73 @@
+{
+  "captains": [
+    {
+      "count": 2,
+      "effective_ownership": 166.7,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 124,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 5.8,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Gro\u00df",
+        "xp": 0
+      },
+      "share": 66.7
+    },
+    {
+      "count": 1,
+      "effective_ownership": 133.3,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 94,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 6.2,
+        "status": "a",
+        "team": "BRE",
+        "web_name": "Schade",
+        "xp": 0
+      },
+      "share": 33.3
+    }
+  ],
+  "captains_from": 3,
+  "gameweek": 5,
+  "league_id": 4021,
+  "name": "A League of Our Own",
+  "rows": [
+    {
+      "entry": 101,
+      "gw_points": 60,
+      "manager": "Manager 1",
+      "movement": null,
+      "rank": 1,
+      "team": "Team 1",
+      "total": 400
+    },
+    {
+      "entry": 102,
+      "gw_points": 59,
+      "manager": "Manager 2",
+      "movement": 1,
+      "rank": 2,
+      "team": "Team 2",
+      "total": 390
+    },
+    {
+      "entry": 103,
+      "gw_points": 58,
+      "manager": "Manager 3",
+      "movement": 1,
+      "rank": 3,
+      "team": "Team 3",
+      "total": 380
+    }
+  ]
+}

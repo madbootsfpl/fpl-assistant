@@ -1326,3 +1326,211 @@ class TrendingBoard {
 
   final List<TrendingRow> rows;
 }
+
+/// One classic league a manager is in (ADR-267).
+class LeagueSummary {
+  LeagueSummary({
+    required this.id,
+    required this.name,
+    required this.size,
+    required this.rank,
+    required this.private,
+  });
+
+  factory LeagueSummary.fromJson(Map<String, dynamic> json) => LeagueSummary(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: json['name'] as String? ?? '',
+    size: (json['size'] as num?)?.toInt() ?? 0,
+    rank: (json['rank'] as num?)?.toInt(),
+    private: json['private'] as bool? ?? false,
+  );
+
+  final int id;
+  final String name;
+  final int size;
+
+  /// ⚠️ Nullable — a manager who has not been ranked yet has no rank, and 0 would read as *first*.
+  final int? rank;
+
+  /// ⭐ A league somebody created, rather than one FPL put you in. These lead, because *sorting by size
+  /// buries the only leagues anyone means.*
+  final bool private;
+}
+
+/// One row of a league table.
+class LeagueStanding {
+  LeagueStanding({
+    required this.entry,
+    required this.manager,
+    required this.team,
+    required this.rank,
+    required this.movement,
+    required this.gwPoints,
+    required this.total,
+  });
+
+  factory LeagueStanding.fromJson(Map<String, dynamic> json) => LeagueStanding(
+    entry: (json['entry'] as num?)?.toInt() ?? 0,
+    manager: json['manager'] as String? ?? '',
+    team: json['team'] as String? ?? '',
+    rank: (json['rank'] as num?)?.toInt() ?? 0,
+    movement: (json['movement'] as num?)?.toInt(),
+    gwPoints: (json['gw_points'] as num?)?.toInt() ?? 0,
+    total: (json['total'] as num?)?.toInt() ?? 0,
+  );
+
+  /// The manager's FPL entry id — ⭐ the handle a head-to-head needs.
+  final int entry;
+  final String manager;
+  final String team;
+  final int rank;
+
+  /// Positive means climbing. ⚠️ **Null means new**, not "did not move": a manager with no previous rank
+  /// has not fallen 400 places.
+  final int? movement;
+
+  final int gwPoints;
+  final int total;
+}
+
+/// A player the league captained, and how many went with him.
+class LeagueCaptain {
+  LeagueCaptain({
+    required this.player,
+    required this.count,
+    required this.share,
+    required this.effectiveOwnership,
+  });
+
+  factory LeagueCaptain.fromJson(Map<String, dynamic> json) => LeagueCaptain(
+    player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    count: (json['count'] as num?)?.toInt() ?? 0,
+    share: (json['share'] as num?)?.toDouble() ?? 0,
+    effectiveOwnership: (json['effective_ownership'] as num?)?.toDouble() ?? 0,
+  );
+
+  final PlayerSummary player;
+  final int count;
+
+  /// ⭐ The share, not just the count — *"9 of 12"* is a different fact from *"9"*, and the reader is
+  /// deciding whether to differ from a crowd.
+  final double share;
+
+  /// Ownership counting the armband twice — ⚠️ it can exceed 100%.
+  final double effectiveOwnership;
+}
+
+class LeagueTable {
+  LeagueTable({
+    required this.leagueId,
+    required this.name,
+    required this.gameweek,
+    required this.rows,
+    required this.captainsFrom,
+    required this.captains,
+  });
+
+  factory LeagueTable.fromJson(Map<String, dynamic> json) => LeagueTable(
+    leagueId: (json['league_id'] as num?)?.toInt() ?? 0,
+    name: json['name'] as String? ?? '',
+    gameweek: (json['gameweek'] as num?)?.toInt(),
+    rows: [
+      for (final r in (json['rows'] as List? ?? []))
+        LeagueStanding.fromJson(r as Map<String, dynamic>),
+    ],
+    captainsFrom: (json['captains_from'] as num?)?.toInt() ?? 0,
+    captains: [
+      for (final c in (json['captains'] as List? ?? []))
+        LeagueCaptain.fromJson(c as Map<String, dynamic>),
+    ],
+  );
+
+  final int leagueId;
+  final String name;
+  final int? gameweek;
+  final List<LeagueStanding> rows;
+
+  /// ⚠️ **How many squads were actually read.** A manager whose fetch fails is absent rather than fatal,
+  /// and ⭐ *a partial read must never present itself as the whole league.*
+  final int captainsFrom;
+
+  final List<LeagueCaptain> captains;
+}
+
+/// One differential in a head-to-head (ADR-161/267).
+class EdgePlayer {
+  EdgePlayer({
+    required this.player,
+    required this.multiplier,
+    required this.xp,
+  });
+
+  factory EdgePlayer.fromJson(Map<String, dynamic> json) => EdgePlayer(
+    player: PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+    multiplier: (json['multiplier'] as num?)?.toInt() ?? 1,
+    xp: (json['xp'] as num?)?.toDouble() ?? 0,
+  );
+
+  /// ⭐ The **one player shape** (ADR-227) — so a doubtful differential can be flagged as one, which the
+  /// engine's own row could not do.
+  final PlayerSummary player;
+
+  /// 2 means he is that side's captain.
+  final int multiplier;
+
+  /// ⚠️ Already multiplied — what this differential is worth to that side.
+  final double xp;
+
+  bool get isCaptain => multiplier > 1;
+}
+
+class HeadToHead {
+  HeadToHead({
+    required this.gameweek,
+    required this.gap,
+    required this.sharedCount,
+    required this.sharedXp,
+    required this.myEdge,
+    required this.theirEdge,
+    required this.sameCaptain,
+    required this.note,
+  });
+
+  factory HeadToHead.fromJson(Map<String, dynamic> json) => HeadToHead(
+    gameweek: (json['gameweek'] as num?)?.toInt(),
+    gap: (json['gap'] as num?)?.toDouble() ?? 0,
+    sharedCount: (json['shared_count'] as num?)?.toInt() ?? 0,
+    sharedXp: (json['shared_xp'] as num?)?.toDouble() ?? 0,
+    myEdge: [
+      for (final e in (json['my_edge'] as List? ?? []))
+        EdgePlayer.fromJson(e as Map<String, dynamic>),
+    ],
+    theirEdge: [
+      for (final e in (json['their_edge'] as List? ?? []))
+        EdgePlayer.fromJson(e as Map<String, dynamic>),
+    ],
+    sameCaptain: json['same_captain'] as bool? ?? false,
+    note: json['note'] as String? ?? '',
+  );
+
+  final int? gameweek;
+
+  /// ⭐ **Positive means you are ahead.** On projection, not on points already scored.
+  final double gap;
+
+  /// ⚠️⚠️ **Reported and then set aside.** The shared players are usually most of both totals and the
+  /// part you can do nothing about — ⭐ *printing the shared total is what makes the small gap believable
+  /// rather than looking like a rounding error on two big numbers.*
+  final int sharedCount;
+  final double sharedXp;
+
+  final List<EdgePlayer> myEdge;
+  final List<EdgePlayer> theirEdge;
+  final bool sameCaptain;
+
+  /// ⭐ One sentence from the server, built from these same numbers — so the headline and the rows can
+  /// never disagree.
+  final String note;
+
+  bool get iAmAhead => gap > 0;
+}

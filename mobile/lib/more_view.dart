@@ -29,6 +29,7 @@ class MoreView extends StatelessWidget {
     required this.onOpenPlayerDna,
     required this.onOpenSignals,
     required this.onOpenSettings,
+    required this.onOpenLeagues,
     required this.onOpenTicker,
     required this.onOpenFeedback,
     required this.onOpenHelp,
@@ -58,6 +59,7 @@ class MoreView extends StatelessWidget {
   final VoidCallback onOpenChips;
 
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenLeagues;
   final VoidCallback onOpenTicker;
   final VoidCallback onOpenFeedback;
 
@@ -99,6 +101,16 @@ class MoreView extends StatelessWidget {
             'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
             'left, not the next one.',
         onTap: onOpenChips,
+      ),
+      _Row(
+        icon: Icons.emoji_events_outlined,
+        name: 'Mini-leagues',
+        // ⭐ Named by the thing people actually open it for. "Leagues" describes a list; the head-to-head
+        // is the reason to look, and a table you already know the top of is not.
+        why:
+            'Your league tables, what everyone captained, and you against any rival — what actually '
+            'separates your two squads this week.',
+        onTap: onOpenLeagues,
       ),
       _Row(
         icon: Icons.grid_on,

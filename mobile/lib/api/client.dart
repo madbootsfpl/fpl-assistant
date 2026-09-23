@@ -159,6 +159,39 @@ class ServiceClient {
     'version': version,
   });
 
+  /// The classic leagues this manager is in (ADR-267).
+  ///
+  /// ⭐ Looked up from the **manager id**, because *nobody knows their league id.*
+  Future<List<LeagueSummary>> leagues(int managerId) async {
+    final body = await _post('leagues', {'manager_id': managerId});
+    return [
+      for (final l in (body['leagues'] as List? ?? []))
+        LeagueSummary.fromJson(l as Map<String, dynamic>),
+    ];
+  }
+
+  /// One league's table, and optionally its captain split.
+  ///
+  /// ⚠️⚠️ `withCaptains` costs **one FPL request per manager** — the table costs one in total. Ask for it
+  /// only when the reader is looking at that panel.
+  Future<LeagueTable> league(
+    int leagueId, {
+    bool withCaptains = false,
+    int limit = 20,
+  }) async => LeagueTable.fromJson(
+    await _post('league', {
+      'league_id': leagueId,
+      'with_captains': withCaptains,
+      'limit': limit,
+    }),
+  );
+
+  /// You against one rival, decomposed (ADR-161).
+  Future<HeadToHead> headToHead(int managerId, int rivalId) async =>
+      HeadToHead.fromJson(
+        await _post('h2h', {'manager_id': managerId, 'rival_id': rivalId}),
+      );
+
   /// What the crowd is doing (ADR-266).
   ///
   /// ⚠️ `playerIds` does **not** narrow the boards — it only lets a row come back flagged `owned`, the

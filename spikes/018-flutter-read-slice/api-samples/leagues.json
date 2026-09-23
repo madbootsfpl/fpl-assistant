@@ -1,0 +1,20 @@
+{
+  "leagues": [
+    {
+      "id": 4021,
+      "name": "A League of Our Own",
+      "private": true,
+      "rank": 3,
+      "size": 12
+    },
+    {
+      "id": 314,
+      "name": "Overall",
+      "private": false,
+      "rank": 482347,
+      "size": 10833601
+    }
+  ],
+  "manager_id": 1,
+  "name": "Sample Manager"
+}

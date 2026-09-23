@@ -27,6 +27,13 @@ LIMITS: dict[str, tuple[int, int]] = {
     "/squad/build": (20, 60),
     # ⭐ The whole board, ~97 KB. Cheap to compute, expensive to send.
     "/players": (60, 60),
+    # ⚠️⚠️ **The only endpoints whose cost lands on somebody else.** `league` with `with_captains` spends
+    # one FPL request per manager, and `h2h` spends two — ⭐ *a limit here is courtesy to the upstream we
+    # do not own, not protection of ours*, which is the same reason the history backfill throttles
+    # (ADR-027). ⚠️ The longest matching suffix wins, so `/league` must not shadow `/leagues`.
+    "/leagues": (30, 60),
+    "/league": (20, 60),
+    "/h2h": (30, 60),
 }
 
 #: Everything else. ⭐ Generous, because the app itself makes several calls per screen and a limit that

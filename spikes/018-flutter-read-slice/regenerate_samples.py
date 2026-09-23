@@ -77,7 +77,102 @@ def responses(store) -> dict:
         "ticker": service.ticker(service.TickerRequest(next_n=6), store=store),
         # ⭐ Boot Battle's own response, so a widget test can render the real thing (ADR-258).
         "compare": _compare_pair(store, ids),
+        # ⚠️⚠️ **Stubbed, and it has to be** — these three call FPL over the network, and a sample
+        # regenerated from the internet is not reproducible: the contract test comparing against it would
+        # pass or fail on somebody else's uptime, and on whichever gameweek happened to be live. ⭐ The
+        # *composition* is what the sample documents; the fetch has its own coverage.
+        "leagues": _leagues(),
+        "league": _league(store, ids),
+        "h2h": _h2h(store, ids),
     }
+
+
+class _CannedFpl:
+    """An FPL client that answers from fixtures. ⭐ Shaped like the real payloads, **not** like our own
+    answers — ⚠️ *a stub shaped like the output cannot catch a mistake in the code that produces it.*"""
+
+    def __init__(self, entries, picks):
+        self._entries, self._picks = entries, picks
+
+    def get_entry(self, entry_id):
+        return {
+            "player_first_name": "Sample", "player_last_name": "Manager",
+            "leagues": {"classic": [
+                {"id": 4021, "name": "A League of Our Own", "rank_count": 12,
+                 "entry_rank": 3, "league_type": "x"},
+                {"id": 314, "name": "Overall", "rank_count": 10833601,
+                 "entry_rank": 482347, "league_type": "s"},
+            ]},
+        }
+
+    def get_league_standings(self, league_id, page=1):
+        return {
+            "league": {"name": "A League of Our Own"},
+            "standings": {"has_next": False, "results": [
+                {"entry": e, "player_name": f"Manager {i + 1}", "entry_name": f"Team {i + 1}",
+                 "rank": i + 1, "last_rank": i + 2 if i else 0,
+                 "event_total": 60 - i, "total": 400 - 10 * i}
+                for i, e in enumerate(self._entries)
+            ]},
+        }
+
+    def get_entry_picks(self, entry_id, gameweek):
+        return self._picks[entry_id]
+
+
+def _canned_picks(ids, captain, vice):
+    """One manager's picks payload, in FPL's own shape."""
+    return {"picks": [
+        {"element": pid, "position": i + 1,
+         "multiplier": 2 if pid == captain else (0 if i >= 11 else 1),
+         "is_captain": pid == captain, "is_vice_captain": pid == vice}
+        for i, pid in enumerate(ids)
+    ], "active_chip": None}
+
+
+def _with_canned(client, fn):
+    """Run `fn` with the FPL client replaced — ⚠️ restored in a `finally`, because a leaked stub would
+    silently make every later sample fictional."""
+    from src.api import client as api_client
+    real = api_client.FplClient
+    api_client.FplClient = lambda *a, **k: client
+    try:
+        return fn()
+    finally:
+        api_client.FplClient = real
+
+
+def _leagues():
+    return _with_canned(
+        _CannedFpl([], {}),
+        lambda: service.leagues(service.LeaguesRequest(manager_id=1)))
+
+
+def _league(store, ids):
+    entries = [101, 102, 103]
+    picks = {
+        101: _canned_picks(ids, ids[0], ids[1]),
+        102: _canned_picks(ids, ids[0], ids[2]),
+        103: _canned_picks(ids, ids[3], ids[1]),
+    }
+    return _with_canned(
+        _CannedFpl(entries, picks),
+        lambda: service.league(
+            service.LeagueRequest(league_id=4021, manager_id=101, gameweek=5,
+                                  with_captains=True, limit=20),
+            store=store))
+
+
+def _h2h(store, ids):
+    """⚠️ The two squads **differ**, or the sample would document the one case the screen never shows —
+    ⭐ *a fixture where both sides are identical makes every differential row disappear.*"""
+    others = [p["id"] for p in store.get_players() if p["id"] not in set(ids)][:15]
+    mine = _canned_picks(ids, ids[0], ids[1])
+    theirs = _canned_picks(ids[:8] + others[:7], others[0], ids[1])
+    return _with_canned(
+        _CannedFpl([1, 2], {1: mine, 2: theirs}),
+        lambda: service.head_to_head(
+            service.HeadToHeadRequest(manager_id=1, rival_id=2, horizon=1), store=store))
 
 
 def _compare_pair(store, ids):

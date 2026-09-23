@@ -18,12 +18,20 @@ added later fails here, in the suite CI runs — which is the only way a rule ab
 true.
 """
 
+import pathlib
 import shutil
+import sys
 
 import pytest
 
 from src import config, service
 from src.storage import Storage
+
+# ⚠️ The league endpoints call FPL over the network. ⭐ Reusing the sample generator's **canned client**
+# rather than writing a second one: *two stubs of one upstream drift apart*, and this sweep is exactly the
+# place a drifted stub would hide a raw row.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent
+                       / "spikes" / "018-flutter-read-slice"))
 
 #: The one shape. ⭐ A player is described by what a manager needs to judge him — not by what the database
 #: happens to hold, and not by the subset one caller happened to need.
@@ -93,7 +101,7 @@ def _players_in(value, path="", found=None):
 
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
-COVERED = {"analysis", "trending", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
+COVERED = {"analysis", "trending", "league", "head_to_head", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
            "replacements", "players", "player", "player_dna", "signals"}
 
 
@@ -102,6 +110,16 @@ def _compare_two(store):
     mids = [p for p in store.get_players() if p["position"] == "MID"][:2]
     return service.compare(
         service.CompareRequest(a_id=mids[0]["id"], b_id=mids[1]["id"], horizon=1), store=store)
+
+
+def _league(store, ids):
+    from regenerate_samples import _league as build
+    return build(store, ids)
+
+
+def _h2h(store, ids):
+    from regenerate_samples import _h2h as build
+    return build(store, ids)
 
 
 def _answers(store):
@@ -115,6 +133,11 @@ def _answers(store):
         # ⭐ In the sweep proper: a crowd board carries a **player summary** per row, which is exactly the
         # shape a raw 45-column database row leaks through (ADR-227's original defect).
         "trending": service.trending(service.TrendingRequest(by="in", limit=5), store=store),
+        # ⭐ A league's captain split carries a summary per captained player, and the head-to-head carries
+        # a row per differential. ⚠️ Both are **stubbed at the FPL boundary**, because a sweep that needed
+        # the internet would be a sweep somebody eventually deletes.
+        "league": _league(store, ids),
+        "head_to_head": _h2h(store, ids),
         "compare": _compare_two(store),
         "player": service.player(
             service.PlayerRequest(player_id=ids[0], horizon=1), store=store),
@@ -149,6 +172,9 @@ NO_PLAYERS = {
     # opponent's short name, never a player row. Its own shape is guarded in `test_service_endpoints.py`
     # (blank cells present, keys stringified, a double shaded by its harder half).
     "ticker",
+    # ⚠️ A list of **leagues** — an id, a name, a size and a rank. There is no player in it at all; the
+    # league that carries players is `league`, which is swept above.
+    "leagues",
 }
 
 

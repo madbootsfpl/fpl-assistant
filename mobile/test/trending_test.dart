@@ -8,10 +8,9 @@ import 'package:madboots/trending_view.dart';
 
 TrendingBoard sample() => TrendingBoard.fromJson(
   jsonDecode(
-        File('../spikes/018-flutter-read-slice/api-samples/trending.json')
-            .readAsStringSync(),
-      )
-      as Map<String, dynamic>,
+    File('../spikes/018-flutter-read-slice/api-samples/trending.json')
+        .readAsStringSync(),
+  ) as Map<String, dynamic>,
 );
 
 void main() {

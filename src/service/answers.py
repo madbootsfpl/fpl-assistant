@@ -47,6 +47,9 @@ from src.service.requests import (
     CompareRequest,
     FeedbackRequest,
     GameweekRequest,
+    HeadToHeadRequest,
+    LeagueRequest,
+    LeaguesRequest,
     MyTeamRequest,
     PlayerDnaRequest,
     PlayerRequest,
@@ -816,6 +819,196 @@ def chips(request: ChipsRequest, *, store: Storage | None = None) -> dict:
         "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
         "expires_after": chip_deadline(first) if first else None,
         "chips": advice,
+    }
+
+
+def leagues(request: LeaguesRequest) -> dict:
+    """The classic leagues a manager is in (ADR-141/267).
+
+    ⭐⭐ **Nobody knows their league id.** It appears in a URL you have to go and find, which made the
+    first cut of the web page unusable for the thing it was built for. The manager id is the handle people
+    actually have, and the entry payload already carries every league behind it.
+
+    ⚠️ **Private leagues lead.** FPL mixes the mini-league you joined with your friends in among automatic
+    ones — your club, your region, "Gameweek 1", Overall — and by size the automatic ones always win.
+    ⭐ *Sorting by size would bury the only leagues anyone means.*
+    """
+    request.validate()
+    from src.analytics.league import my_leagues
+    from src.api.client import FplApiError, FplClient
+
+    try:
+        entry = FplClient().get_entry(request.manager_id)
+    except FplApiError as exc:
+        # ⭐ The client's own words: it distinguishes a bad id from an unreachable API, and a caller
+        # cannot tell those apart from a 400 alone.
+        raise ValueError(str(exc)) from exc
+
+    return {
+        "manager_id": request.manager_id,
+        "name": entry.get("player_first_name", "") + " " + entry.get("player_last_name", ""),
+        "leagues": my_leagues(entry),
+    }
+
+
+def _picks_for(entries, gameweek, client):
+    """Each manager's picks for a finished gameweek, best-effort.
+
+    ⚠️ **A manager whose fetch fails is simply absent.** ⭐ *A partial league still gives a usable split,
+    and an exception here would throw away forty-nine good fetches because of one bad id* — so the caller
+    reports how many it is standing on rather than pretending it read them all.
+    """
+    from src.api.client import FplApiError
+
+    out = {}
+    for entry in entries:
+        try:
+            out[entry] = client.get_entry_picks(entry, gameweek)
+        except FplApiError:
+            continue
+    return out
+
+
+def league(request: LeagueRequest, *, store: Storage | None = None) -> dict:
+    """One classic league — the table, and optionally what everybody captained (ADR-267).
+
+    ⚠️⚠️ **The captain split is opt-in and capped**, because it costs one FPL request per manager where
+    the table costs one in total. ⭐ *A screen that quietly spends fifty requests to draw a second panel is
+    a screen that will be blamed for being slow.*
+
+    ⚠️ **Only a finished gameweek.** Picks are public **after** a deadline; asking for the one in flight
+    returns 404 for everybody, and a split built from nothing would read as *"nobody captained anyone"*.
+    """
+    request.validate()
+    from src.analytics.league import (
+        captain_split,
+        effective_ownership,
+        last_completed_gameweek,
+        league_name,
+        standings_rows,
+    )
+    from src.api.client import FplApiError, FplClient
+
+    client = FplClient()
+    try:
+        payload = client.get_league_standings(request.league_id)
+    except FplApiError as exc:
+        raise ValueError(str(exc)) from exc
+
+    rows = standings_rows(payload)
+    store, ours = opened(store)
+    try:
+        players = store.get_players()
+        gameweek = request.gameweek or last_completed_gameweek(store.get_upcoming_fixtures())
+        captains, checked = [], 0
+        if request.with_captains and gameweek:
+            entries = [r["entry"] for r in rows[:request.limit] if r["entry"]]
+            picks = _picks_for(entries, gameweek, client)
+            checked = len(picks)
+            by_id = {p["id"]: p for p in players}
+            eo = effective_ownership(picks)
+            captains = [
+                {
+                    "player": player_summary(by_id[pid], {}, {}, {}) if pid in by_id else None,
+                    "count": count,
+                    # ⭐ The share, not just the count — *"9 of 12"* is a different fact from *"9"*, and
+                    # the reader is deciding whether to differ from a crowd.
+                    "share": round(100 * count / checked, 1) if checked else 0.0,
+                    "effective_ownership": round(eo.get(pid, 0.0), 1),
+                }
+                for pid, count in captain_split(picks)
+                if pid in by_id
+            ]
+    finally:
+        if ours:
+            store.close()
+
+    return {
+        "league_id": request.league_id,
+        "name": league_name(payload),
+        "gameweek": gameweek,
+        "rows": rows,
+        # ⚠️ Stated, so a partial read never presents itself as the whole league (ADR-215's rule).
+        "captains_from": checked,
+        "captains": captains,
+    }
+
+
+def head_to_head(request: HeadToHeadRequest, *, store: Storage | None = None) -> dict:
+    """You against one rival, decomposed (ADR-161/267).
+
+    ⭐⭐ **The shared players are reported and then set aside.** They are usually the large majority of
+    both totals and the part you can do nothing about — ⚠️ *printing the shared total is what makes the
+    small gap believable rather than looking like a rounding error on two big numbers.*
+
+    ⭐ **It leads with the differentials, not the totals**, because *a reader told "52.1 vs 49.8" learns
+    far less than one told "three players separate you, and their captain is worth 4.2 more than yours."*
+    """
+    request.validate()
+    from src.analytics.h2h import catch_up_note, h2h_gap
+    from src.analytics.league import last_completed_gameweek
+    from src.api.client import FplApiError, FplClient
+
+    store, ours = opened(store)
+    try:
+        players = store.get_players()
+        data = load([], request.horizon, store)
+        # ⚠️⚠️ **The last FINISHED gameweek, and the same rule the league table uses.** A rival's picks
+        # are public only after a deadline, so the gameweek in flight cannot be read for anybody. ⭐ *Two
+        # places deciding separately where "now" is would eventually disagree*, which is exactly why
+        # `last_completed_gameweek` is derived from the fixtures cut rather than invented again here.
+        gameweek = last_completed_gameweek(store.get_upcoming_fixtures())
+        if gameweek is None:
+            raise ValueError("no gameweek has finished yet — a head-to-head needs both squads to be public")
+        client = FplClient()
+        try:
+            mine = client.get_entry_picks(request.manager_id, gameweek)
+            theirs = client.get_entry_picks(request.rival_id, gameweek)
+        except FplApiError as exc:
+            raise ValueError(str(exc)) from exc
+        gap = h2h_gap(mine, theirs, data.xp_by_id, players)
+    finally:
+        if ours:
+            store.close()
+
+    by_id = {pl["id"]: pl for pl in players}
+
+    def edges(rows):
+        """The engine's differential rows, re-dressed in **the one player shape** (ADR-227).
+
+        ⚠️⚠️ **Found by the shape sweep, and it was a real defect, not a formality.** The engine's row
+        carries `{id, web_name, team, position, multiplier, xp}` — no `status` — so ⭐ *a differential who
+        is doubtful could not be flagged as one*, which is precisely ADR-226's bug: **a doubt hidden is a
+        doubt priced at certainty.** The differentials are the players the whole screen is about, and they
+        were the ones it could not warn you on.
+
+        ⚠️ The engine is left alone: this is the transport's job, and the Streamlit page reads the same
+        function. ⭐ *A shape the API owes its clients is not a reason to change what the engine computes.*
+        """
+        out = []
+        for row in rows:
+            raw = by_id.get(row["id"])
+            if raw is None:
+                continue
+            out.append({
+                "player": player_summary(raw, data.xp_by_id, {}, {}),
+                # ⭐ 2 means he is their captain. Kept beside the player rather than folded into `xp`,
+                # because *"his captain"* and *"a good player"* are different reasons to be behind.
+                "multiplier": row["multiplier"],
+                # ⚠️ Already multiplied — what this differential is actually worth to that side.
+                "xp": row["xp"],
+            })
+        return out
+
+    return {
+        "gameweek": gameweek,
+        **gap,
+        "my_edge": edges(gap["my_edge"]),
+        "their_edge": edges(gap["their_edge"]),
+        # ⭐ One sentence saying where this actually sits, built from the same numbers — so the headline
+        # and the rows can never disagree. ⚠️ Built from the **engine's** rows, before re-dressing, so the
+        # sentence and the list cannot come from two different sets.
+        "note": catch_up_note(gap),
     }
 
 

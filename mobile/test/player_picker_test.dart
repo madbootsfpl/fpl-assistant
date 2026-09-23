@@ -36,14 +36,20 @@ void main() {
       expect(out.map((x) => x.name), ['Salah', 'Palmer', 'Saka', 'Rice']);
     });
 
-    test('price sorts cheapest first, because it answers "what can I afford?"', () {
-      final out = siftPlayers(squad, of, sort: PickerSort.price);
-      expect(out.first.name, 'Rice');
-      expect(out.last.name, 'Salah');
-    });
+    test(
+      'price sorts cheapest first, because it answers "what can I afford?"',
+      () {
+        final out = siftPlayers(squad, of, sort: PickerSort.price);
+        expect(out.first.name, 'Rice');
+        expect(out.last.name, 'Salah');
+      },
+    );
 
     test('name and club each sort alphabetically', () {
-      expect(siftPlayers(squad, of, sort: PickerSort.name).first.name, 'Palmer');
+      expect(
+        siftPlayers(squad, of, sort: PickerSort.name).first.name,
+        'Palmer',
+      );
       expect(siftPlayers(squad, of, sort: PickerSort.club).first.team, 'ARS');
     });
 
@@ -70,7 +76,10 @@ void main() {
     });
 
     test('club and search combine rather than replace each other', () {
-      expect(siftPlayers(squad, of, club: 'ARS', query: 'saka').single.name, 'Saka');
+      expect(
+        siftPlayers(squad, of, club: 'ARS', query: 'saka').single.name,
+        'Saka',
+      );
       expect(siftPlayers(squad, of, club: 'LIV', query: 'saka'), isEmpty);
     });
 
@@ -93,9 +102,12 @@ void main() {
   });
 
   group('clubsIn', () {
-    test('lists each club once, sorted — so it can never offer an empty one', () {
-      expect(clubsIn(squad, of), ['ARS', 'CHE', 'LIV']);
-    });
+    test(
+      'lists each club once, sorted — so it can never offer an empty one',
+      () {
+        expect(clubsIn(squad, of), ['ARS', 'CHE', 'LIV']);
+      },
+    );
 
     test('an empty list has no clubs rather than throwing', () {
       expect(clubsIn(<PlayerSummary>[], of), isEmpty);

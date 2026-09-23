@@ -1,0 +1,233 @@
+{
+  "gameweek": 5,
+  "gap": 1.0,
+  "mine": {
+    "captain": 124,
+    "chip": null,
+    "starters": [
+      [
+        124,
+        2
+      ],
+      [
+        229,
+        1
+      ],
+      [
+        330,
+        1
+      ],
+      [
+        94,
+        1
+      ],
+      [
+        411,
+        1
+      ],
+      [
+        115,
+        1
+      ],
+      [
+        391,
+        1
+      ],
+      [
+        399,
+        1
+      ],
+      [
+        572,
+        1
+      ],
+      [
+        165,
+        1
+      ],
+      [
+        379,
+        1
+      ]
+    ],
+    "xp": 54.3
+  },
+  "my_edge": [
+    {
+      "multiplier": 1,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 572,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "GK",
+        "price": 4.6,
+        "status": "a",
+        "team": "HUL",
+        "web_name": "Tzolakis",
+        "xp": 6.4
+      },
+      "xp": 6.4
+    },
+    {
+      "multiplier": 1,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 379,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "FWD",
+        "price": 9.1,
+        "status": "a",
+        "team": "LIV",
+        "web_name": "Isak",
+        "xp": 5.6
+      },
+      "xp": 5.6
+    },
+    {
+      "multiplier": 1,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 124,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 5.8,
+        "status": "a",
+        "team": "BHA",
+        "web_name": "Gro\u00df",
+        "xp": 4.4
+      },
+      "xp": 4.4
+    },
+    {
+      "multiplier": 1,
+      "player": {
+        "by_gameweek": {},
+        "chance": 75,
+        "id": 165,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "FWD",
+        "price": 7.7,
+        "status": "d",
+        "team": "CHE",
+        "web_name": "Jo\u00e3o Pedro",
+        "xp": 3.9
+      },
+      "xp": 3.9
+    }
+  ],
+  "note": "8 shared starters cancel out (34.0 xP each way). 7 differentials decide it, and on projection You lead by 1.0. The biggest single one is Semenyo (9.4 xP).",
+  "same_captain": false,
+  "shared_count": 8,
+  "shared_xp": 34.0,
+  "their_edge": [
+    {
+      "multiplier": 2,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 397,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 8.4,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Semenyo",
+        "xp": 4.7
+      },
+      "xp": 9.4
+    },
+    {
+      "multiplier": 1,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 286,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 5.1,
+        "status": "a",
+        "team": "HUL",
+        "web_name": "Belloumi",
+        "xp": 6.3
+      },
+      "xp": 6.3
+    },
+    {
+      "multiplier": 1,
+      "player": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 68,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "MID",
+        "price": 6.1,
+        "status": "a",
+        "team": "BOU",
+        "web_name": "Tavernier",
+        "xp": 3.6
+      },
+      "xp": 3.6
+    }
+  ],
+  "theirs": {
+    "captain": 397,
+    "chip": null,
+    "starters": [
+      [
+        124,
+        1
+      ],
+      [
+        229,
+        1
+      ],
+      [
+        330,
+        1
+      ],
+      [
+        94,
+        1
+      ],
+      [
+        411,
+        1
+      ],
+      [
+        115,
+        1
+      ],
+      [
+        391,
+        1
+      ],
+      [
+        399,
+        1
+      ],
+      [
+        397,
+        2
+      ],
+      [
+        68,
+        1
+      ],
+      [
+        286,
+        1
+      ]
+    ],
+    "xp": 53.3
+  }
+}

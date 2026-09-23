@@ -15,10 +15,16 @@ void main() {
       );
     });
 
-    test('a FastAPI 422 shows its list of complaints rather than swallowing them', () {
-      final said = errorDetail(422, '{"detail": [{"loc": ["body", "fpl_id"], "msg": "field required"}]}');
-      expect(said, contains('field required'));
-    });
+    test(
+      'a FastAPI 422 shows its list of complaints rather than swallowing them',
+      () {
+        final said = errorDetail(
+          422,
+          '{"detail": [{"loc": ["body", "fpl_id"], "msg": "field required"}]}',
+        );
+        expect(said, contains('field required'));
+      },
+    );
 
     // ⭐ The bug. Starlette's default 500 body is plain text, not JSON.
     test('a plain-text 500 never leaks a parser error', () {
@@ -36,7 +42,10 @@ void main() {
     });
 
     test('a proxy answering HTML does not reach the reader as tags', () {
-      final said = errorDetail(502, '<html><head><title>502 Bad Gateway</title></head></html>');
+      final said = errorDetail(
+        502,
+        '<html><head><title>502 Bad Gateway</title></head></html>',
+      );
       expect(said, isNot(contains('FormatException')));
       expect(said, contains('502'));
     });
@@ -52,9 +61,12 @@ void main() {
       expect(said, contains('…'));
     });
 
-    test('a 4xx body that is JSON but has no detail still names the status', () {
-      expect(errorDetail(403, '{"error": "nope"}'), contains('403'));
-    });
+    test(
+      'a 4xx body that is JSON but has no detail still names the status',
+      () {
+        expect(errorDetail(403, '{"error": "nope"}'), contains('403'));
+      },
+    );
 
     // ⚠️ friendlyError is what the Feedback screen prints, so the wiring matters as much as the helper.
     test('friendlyError passes an ApiException detail through unchanged', () {
