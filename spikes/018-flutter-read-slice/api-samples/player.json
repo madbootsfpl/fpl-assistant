@@ -1,0 +1,142 @@
+{
+  "fixtures": [
+    {
+      "difficulty": 3,
+      "gameweek": 6,
+      "opponent": "SUN",
+      "venue": "A"
+    },
+    {
+      "difficulty": 3,
+      "gameweek": 7,
+      "opponent": "CRY",
+      "venue": "H"
+    },
+    {
+      "difficulty": 4,
+      "gameweek": 8,
+      "opponent": "LIV",
+      "venue": "A"
+    },
+    {
+      "difficulty": 5,
+      "gameweek": 9,
+      "opponent": "MCI",
+      "venue": "A"
+    },
+    {
+      "difficulty": 3,
+      "gameweek": 10,
+      "opponent": "BRE",
+      "venue": "H"
+    }
+  ],
+  "horizon": 5,
+  "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p60307.png",
+  "player": {
+    "by_gameweek": {
+      "10": 4.4,
+      "6": 4.4,
+      "7": 4.4,
+      "8": 3.9,
+      "9": 3.5
+    },
+    "chance": null,
+    "id": 124,
+    "leaving": null,
+    "minutes_weight": 1.0,
+    "position": "MID",
+    "price": 5.8,
+    "status": "a",
+    "team": "BHA",
+    "web_name": "Gro\u00df",
+    "xp": 20.6
+  },
+  "recent": [
+    {
+      "gameweek": 1,
+      "home": true,
+      "minutes": 90,
+      "opponent": "AVL",
+      "points": 2
+    },
+    {
+      "gameweek": 2,
+      "home": false,
+      "minutes": 90,
+      "opponent": "CHE",
+      "points": 13
+    },
+    {
+      "gameweek": 3,
+      "home": true,
+      "minutes": 90,
+      "opponent": "LEE",
+      "points": 1
+    },
+    {
+      "gameweek": 4,
+      "home": false,
+      "minutes": 90,
+      "opponent": "COV",
+      "points": 17
+    },
+    {
+      "gameweek": 5,
+      "home": true,
+      "minutes": 90,
+      "opponent": "ARS",
+      "points": 14
+    }
+  ],
+  "stats": [
+    {
+      "label": "FPL Points",
+      "value": "47"
+    },
+    {
+      "label": "Points / game",
+      "value": "9.4"
+    },
+    {
+      "label": "Goals",
+      "value": "3"
+    },
+    {
+      "label": "xG Involvement",
+      "value": "2.63"
+    },
+    {
+      "label": "Assists",
+      "value": "4"
+    },
+    {
+      "label": "Ownership",
+      "value": "27.6%"
+    },
+    {
+      "label": "Expected Assists",
+      "value": "0.86"
+    },
+    {
+      "label": "Value",
+      "value": "8.1 pts/\u00a3m"
+    },
+    {
+      "label": "DefCon / 90",
+      "value": "5.20"
+    },
+    {
+      "label": "ICT Index",
+      "value": "50.8"
+    },
+    {
+      "label": "Minutes",
+      "value": "450"
+    },
+    {
+      "label": "Recoveries",
+      "value": "10"
+    }
+  ]
+}

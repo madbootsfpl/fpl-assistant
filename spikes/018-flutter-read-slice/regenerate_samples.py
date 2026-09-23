@@ -65,6 +65,9 @@ def responses(store) -> dict:
         # downloads it in one go (ADR-236). A trimmed sample would hide the only thing worth knowing
         # about this response — its size.
         "players": service.players(service.PlayersRequest(horizon=5), store=store),
+        # ⭐ The expanding card's own response. Added when a widget test needed to expand a row and had
+        # nothing real to expand it with — ⚠️ *a hand-built card fixture would have tested the fixture.*
+        "player": service.player(service.PlayerRequest(player_id=ids[0], horizon=5), store=store),
     }
 
 

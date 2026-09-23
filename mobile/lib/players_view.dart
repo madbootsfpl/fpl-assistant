@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
+import 'boot_battle.dart';
 import 'brand.dart';
 import 'mugshot.dart';
 
@@ -313,6 +314,13 @@ class _PlayersViewState extends State<PlayersView> {
                       player: shown[i],
                       owned: widget.owned.contains(shown[i].id),
                       client: widget.client,
+                      // ⭐ The filtered list, minus himself, same position only.
+                      rivals: [
+                        for (final p in shown)
+                          if (p.id != shown[i].id &&
+                              p.position == shown[i].position)
+                            p,
+                      ],
                     ),
                   ),
           ),
@@ -368,11 +376,24 @@ class _Chip extends StatelessWidget {
 ///
 /// ⚠️ The detail is fetched **on expand**, never with the list.
 class _Row extends StatefulWidget {
-  const _Row({required this.player, required this.owned, required this.client});
+  const _Row({
+    required this.player,
+    required this.owned,
+    required this.client,
+    required this.rivals,
+  });
 
   final PlayerSummary player;
   final bool owned;
   final ServiceClient client;
+
+  /// ⭐⭐ **Who he can be compared with** — the *currently filtered* list, same position only.
+  ///
+  /// ⭐ That the filters narrow it is the point: `MID · under £8.0m · BHA` is how you find the two players
+  /// worth putting side by side, so the filter row earns its keep twice. ⚠️ Same position is the engine's
+  /// rule, not a simplification — *a comparison across positions ranks them on stats that do not mean the
+  /// same thing*, and `compare` refuses it.
+  final List<PlayerSummary> rivals;
 
   @override
   State<_Row> createState() => _RowState();
@@ -380,6 +401,30 @@ class _Row extends StatefulWidget {
 
 class _RowState extends State<_Row> {
   Future<PlayerCard>? _card;
+
+  /// ⭐ Boot Battle, from the list — the last piece the audit's §6 *"search, compare, the card"* was
+  /// missing (ADR-257). It has existed since ADR-236 and could only be reached from the transfer flow,
+  /// which answers *"who should replace him?"* — a different question from *"which of these two?"*.
+  void _battle(BuildContext context, PlayerSummary other) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          backgroundColor: Brand.ink,
+          appBar: AppBar(
+            title: Text('${widget.player.name} v ${other.name}'),
+            backgroundColor: Brand.ink,
+            foregroundColor: Colors.white,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+            child: BootBattleView(
+              future: widget.client.compare(widget.player.id, other.id),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _toggle() => setState(() {
     _card = _card == null
@@ -511,7 +556,12 @@ class _RowState extends State<_Row> {
               ),
             ),
           ),
-          if (_card != null) _Card(future: _card!),
+          if (_card != null)
+            _Card(
+              future: _card!,
+              rivals: widget.rivals,
+              onCompare: (other) => _battle(context, other),
+            ),
         ],
       ),
     );
@@ -521,9 +571,15 @@ class _RowState extends State<_Row> {
 /// The expanded detail. ⭐ Three blocks — the season, the recent past, the projected run — because those
 /// are the three different questions a reader has about a name on a list.
 class _Card extends StatelessWidget {
-  const _Card({required this.future});
+  const _Card({
+    required this.future,
+    required this.rivals,
+    required this.onCompare,
+  });
 
   final Future<PlayerCard> future;
+  final List<PlayerSummary> rivals;
+  final void Function(PlayerSummary) onCompare;
 
   @override
   Widget build(BuildContext context) => FutureBuilder<PlayerCard>(
@@ -636,6 +692,32 @@ class _Card extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            // ⭐⭐ **The last piece of audit §6** — *search, compare, the card* (ADR-257). Boot Battle has
+            // existed since ADR-236 and could only be reached from the transfer flow, which answers *"who
+            // should replace him?"*. ⚠️ *That is a different question from "which of these two?"*, and the
+            // second one is what a browse list is for.
+            if (rivals.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _pick(context, card.player),
+                    icon: const Icon(Icons.compare_arrows, size: 16),
+                    label: Text('Compare with one of ${rivals.length}'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Brand.purpleLight,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: Brand.purple.withValues(alpha: 0.18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(Brand.radiusSm),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             if (card.recent.isNotEmpty) ...[
@@ -1030,4 +1112,60 @@ class _Option extends StatelessWidget {
     ),
     onTap: onTap,
   );
+}
+
+extension on _Card {
+  /// Who to put him up against — ⭐ **the filtered list**, which is why the filter row is worth having.
+  ///
+  /// ⚠️ Same position only, and that is the **engine's** rule surfaced rather than a simplification:
+  /// `compare` refuses a cross-position pairing because *"it ranks them on stats that do not mean the
+  /// same thing"*. Offering one here would be offering an error.
+  Future<void> _pick(BuildContext context, PlayerSummary subject) async {
+    final chosen = await showModalBottomSheet<PlayerSummary>(
+      context: context,
+      backgroundColor: Brand.ink,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheet) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text(
+                '${subject.name} against…',
+                style: const TextStyle(color: Colors.white, fontSize: 14.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                // ⭐ Says why the list is what it is — otherwise "where is everyone?" is the first
+                // thought, and the answer (your filters, and his position) is invisible.
+                'Other ${subject.position}s in the list you are looking at.',
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ),
+            for (final rival in rivals)
+              ListTile(
+                dense: true,
+                title: Text(
+                  rival.name,
+                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                ),
+                subtitle: Text(
+                  '${rival.team} · £${rival.price.toStringAsFixed(1)}m · '
+                  '${rival.xp.toStringAsFixed(1)} xP',
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                onTap: () => Navigator.of(sheet).pop(rival),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) onCompare(chosen);
+  }
 }
