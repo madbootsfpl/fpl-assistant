@@ -1,0 +1,23 @@
+# The hosted JSON API's dependencies — deliberately NOT the app's (ADR-256).
+#
+# ⭐ **Measured before it was written.** The API process loads 24 top-level packages weighing **193 MB**.
+# The app's full requirements weigh **481 MB**, and the difference is Streamlit's stack — **pandas 132 MB,
+# pyarrow 244 MB, streamlit 67 MB, numpy 62 MB, altair 19 MB** — none of which the API imports. Installing
+# them into an image that renders nothing is the same waste `requirements-pipeline.txt` was written to stop.
+#
+# ⚠️ **`pulp` stays, and it is not optional.** `src.analytics.__init__` imports the optimiser, so dropping
+# it fails at **import**, not at use — the same trap the pipeline's file records. It is 71 MB of the 193,
+# and the CBC binary it bundles is what `squad/build` actually runs.
+#
+# ⚠️ **If the API ever needs something new, it goes HERE as well as in requirements.txt.** A module that
+# imports cleanly in local dev and not in the image fails on deploy, in front of whoever is waiting.
+#
+# ⚠️ **No `-e .`**, for the same reason the pipeline omits it: the image runs `uvicorn` from the repo root,
+# so the root is already on `sys.path`, and an editable install triggers a setuptools build on every cold
+# image rebuild for no benefit.
+
+fastapi               # the read-only JSON edge over the analytics
+uvicorn               # the ASGI server the container runs
+requests              # the FPL client — `my-team` fetches a manager's picks live
+psycopg[binary]       # Postgres — reads what the pipeline publishes (ADR-211)
+pulp                  # not called by most endpoints, but on the import path (see above)

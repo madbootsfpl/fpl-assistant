@@ -1,0 +1,28 @@
+# ⭐ What the API image does NOT need — and this file, not the Dockerfile, is where that is enforced.
+#
+# ⚠️ The measurements that justify each line are in `requirements-api.txt`: the web stack alone is 445 MB
+# of wheels the API never imports, and `data/` holds a committed SQLite snapshot the hosted service must
+# never read — ⭐ *an image carrying last month's seed is an image that can silently serve it.*
+
+.git/
+.github/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# The web app — a different deployment, with a different dependency set.
+src/web_streamlit/
+
+# ⚠️⚠️ The committed seed and the local cache. The hosted API reads Postgres; shipping a database file
+# would give it something to fall back to **silently** (`config.DB_PATH` falls back to the seed when no
+# DSN is set), and a stale board that renders perfectly is the failure ADR-248 exists to make visible.
+data/
+
+tests/
+spikes/
+docs/
+mobile/
+scripts/
+sql/
+*.md

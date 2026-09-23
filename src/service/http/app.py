@@ -14,6 +14,7 @@ whole layer exists to prevent.
 """
 
 import importlib.metadata
+import pathlib
 from collections.abc import Callable
 
 from fastapi import FastAPI, HTTPException
@@ -21,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src import service
+from src.service.http.limits import RateLimiter, rate_limit_middleware
 from src.service.requests import (
     DEFAULT_HORIZON,
     FPL_BUDGET,
@@ -57,13 +59,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ⭐⭐ **A public, unauthenticated API needs a cost control before it is public** (ADR-256). Two endpoints
+# have a real price: `feedback` reaches a human, and `build` runs an LP solver whose CPU a stranger would
+# be choosing. ⚠️ *It is a cost control, not a security boundary* — see `limits.caller`.
+# ⭐ On `app.state`, where FastAPI expects app-scoped objects — and reachable from a test without import
+# gymnastics. ⚠️ A module-level `_limiter` looked simpler and was not: `src/service/http/__init__.py` does
+# `from src.service.http.app import app`, which binds the FastAPI **object** over its own submodule, so
+# even the full dotted path hands you the app rather than the module.
+app.state.limiter = RateLimiter()
+app.middleware("http")(rate_limit_middleware(app.state.limiter))
+
 
 # ⭐ Read from the package metadata rather than typed here. A version string written in two places is a
 # version string that disagrees with itself — ADR-212's lesson at its smallest scale.
-try:
-    _VERSION = importlib.metadata.version("fpl-assistant")
-except importlib.metadata.PackageNotFoundError:  # pragma: no cover - only when run uninstalled
-    _VERSION = "unknown"
+def _version() -> str:
+    """The package version, from metadata or — ⚠️ **in a container, where it is not installed** — from
+    `pyproject.toml`.
+
+    ⭐ Found by running the image rather than reading it: the hosted API reported `"version": "unknown"`,
+    because `requirements-api.txt` deliberately omits `-e .` and `importlib.metadata` then has nothing to
+    read. *A deployment that cannot say which build it is cannot be diagnosed*, and the phone's own
+    connection check asserts the field is non-empty.
+    """
+    try:
+        return importlib.metadata.version("fpl-assistant")
+    except importlib.metadata.PackageNotFoundError:
+        try:
+            import tomllib
+
+            root = pathlib.Path(__file__).resolve().parents[3]
+            return tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+        except Exception:  # pragma: no cover - only if pyproject is absent too
+            return "unknown"
+
+
+_VERSION = _version()
 
 
 _GAMEWEEK_KEYS = ("⚠️ `by_gameweek` arrives keyed by gameweek as a **string**, because JSON has no integer "
@@ -218,7 +248,57 @@ def health() -> dict:
     machine. ⚠️ *"Something answered" is not "the right thing answered",* and only the payload can say
     which.
     """
-    return {"ok": True, "service": "madboots", "version": _VERSION}
+    # ⚠️⚠️ **`ok` is not a constant, and it used to be.** Running the image with no `FPL_DATABASE_URL`
+    # produced a container that answered `/health` with `200 {"ok": true}` and **500-ed every real
+    # request** — a platform polling health would have kept it in rotation, and the failure would have
+    # reached a tester as "the app is broken".
+    #
+    # ⭐ So health answers the question it is being asked: *can this instance serve?* — which is a
+    # different question from *is the process alive?*, and only the first one is worth reporting.
+    #
+    # ⚠️ Still does not touch the database's **contents**: a check that fails when a query is slow reports
+    # on the database, not the service.
+    reachable, why = _can_serve()
+    return {"ok": reachable, "service": "madboots", "version": _VERSION,
+            **({} if reachable else {"reason": why})}
+
+
+def _can_serve() -> tuple[bool, str]:
+    """Whether this instance has a database to read at all.
+
+    ⭐ Cheap and cached: it opens a store once and remembers. ⚠️ *A per-request connection test would make
+    the health check the most expensive endpoint*, which is the opposite of the point.
+    """
+    global _SERVE_CHECK
+    if _SERVE_CHECK is None:
+        # ⚠️⚠️ **Named before it is diagnosed.** Without this the container reported
+        # *"PermissionError: [Errno 13] Permission denied: 'data'"* — true, and useless: the actual fault
+        # is a missing secret, and the permission error is three steps downstream of it. ⭐ *A health
+        # reason that describes a symptom sends whoever reads it to the wrong file.*
+        from src import config
+
+        if not config.DATABASE_URL and not pathlib.Path(config.DB_PATH).exists():
+            _SERVE_CHECK = (False, "FPL_DATABASE_URL is not set and there is no local database — "
+                                   "a hosted instance reads Postgres (ADR-211)")
+            return _SERVE_CHECK
+        try:
+            from src.storage import Storage
+
+            store = Storage()
+            try:
+                store.get_teams()
+            finally:
+                store.close()
+            _SERVE_CHECK = (True, "")
+        except Exception as exc:
+            # ⚠️ The reason travels: "no database" and "wrong credentials" are different deploys to fix.
+            _SERVE_CHECK = (False, f"no readable database — {type(exc).__name__}: {exc}"[:200])
+    return _SERVE_CHECK
+
+
+#: ⭐ `None` until first asked. Reset by tests; never reset in production, where a database that vanishes
+#: mid-life is a restart, not a recovery.
+_SERVE_CHECK: tuple[bool, str] | None = None
 
 
 @app.post("/api/v1/squad/analysis", description=_GAMEWEEK_KEYS)

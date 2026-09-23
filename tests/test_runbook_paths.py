@@ -17,6 +17,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 RUNBOOK = ROOT / "docs" / "03_Architecture" / "iPhone_Free_Provisioning.md"
 
+#: ⭐ **Every runbook, not the one that broke.** This file exists because the iPhone guide broke four
+#: times on first use; applying its lessons only to that file would be fixing the instance and leaving the
+#: class. ⚠️ *A guard that covers one document is a guard the next document does not get.*
+RUNBOOKS = sorted((ROOT / "docs" / "03_Architecture").glob("*.md"))
+
 
 def _bash_blocks(text):
     return re.findall(r"```bash\n(.*?)```", text, re.S)
@@ -112,3 +117,51 @@ def test_every_step_referred_to_actually_exists(runbook):
         f"the runbook sends the reader to step(s) {dangling}, which do not exist. "
         f"It has steps {sorted(headings)}."
     )
+
+
+
+# ── the same rules, applied to every runbook in the folder ───────────────────────────────────────
+
+@pytest.mark.parametrize("path", RUNBOOKS, ids=lambda p: p.stem)
+def test_no_runbook_changes_the_readers_directory(path):
+    """⚠️ The iPhone guide's step 2 left the shell inside `mobile/` and step 3's path then resolved to
+    `mobile/mobile/…`. ⭐ *Both lines were correct in isolation and the pair was wrong.*"""
+    offenders = [
+        line.strip()
+        for block in _bash_blocks(path.read_text())
+        for line in block.splitlines()
+        if line.strip().startswith("cd ") or " && cd " in line.strip()
+    ]
+    assert not offenders, (
+        f"{path.name}: these leave the reader's shell elsewhere, breaking the NEXT step: {offenders}"
+    )
+
+
+@pytest.mark.parametrize("path", RUNBOOKS, ids=lambda p: p.stem)
+def test_every_runbook_names_real_scripts(path):
+    import os
+
+    for script in set(re.findall(r"\b(scripts/[\w./-]+\.sh)", path.read_text())):
+        target = ROOT / script
+        assert target.exists(), f"{path.name} names {script}, which does not exist"
+        assert os.access(target, os.X_OK), f"{script} is not executable, so the command as written fails"
+
+
+def test_the_hosting_runbook_marks_what_was_actually_run():
+    """⭐⭐⭐ **The distinction that makes a runbook trustworthy.**
+
+    ⚠️ The iPhone guide was written from knowledge and broke four times on first use — every fault a
+    step-to-step interaction reading could not find. This one separates *executed* from *not executed*, so
+    a reader knows which half has been through a machine and which half is still a plan.
+
+    ⭐ *An unverified instruction is not a defect; an unverified instruction presented as a verified one
+    is.*
+    """
+    text = (ROOT / "docs" / "03_Architecture" / "Hosting_The_API.md").read_text()
+    assert "Executed on this machine" in text
+    assert "Not executed" in text
+    # Every step heading says which it is, so the marking cannot quietly stop partway down.
+    headings = re.findall(r"(?m)^## Step \d+ — .*$", text)
+    assert headings, "the hosting runbook has no steps"
+    for heading in headings:
+        assert "executed" in heading.lower(), f"unmarked step: {heading}"
