@@ -75,3 +75,77 @@ class PillRow extends StatelessWidget {
     child: ListView(scrollDirection: Axis.horizontal, children: children),
   );
 }
+
+/// A small two-option switch — ⭐ **for a choice that modifies the thing above it**, where a full row of
+/// pills would claim equal billing with the mode itself.
+///
+/// ⚠️ The owner, on the Lab: *"can the Strong XI & Strong 15 be a toggle, doesn't need to be a large
+/// tab."* He is right — ⭐ *a control's size is a claim about its importance*, and two rows of identical
+/// pills said the build style mattered as much as choosing a wildcard.
+class MiniToggle extends StatelessWidget {
+  const MiniToggle({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onPick,
+    super.key,
+  });
+
+  /// What the choice is *about*, set beside it rather than above — ⚠️ *a toggle with no subject is two
+  /// words a reader has to infer a question from.*
+  final String label;
+  final List<String> options;
+  final String selected;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Text(
+        label,
+        style: const TextStyle(color: Colors.white38, fontSize: 11.5),
+      ),
+      const SizedBox(width: 8),
+      Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(Brand.radiusPill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in options)
+              GestureDetector(
+                onTap: () => onPick(option),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    // ⚠️ Explicit on both states, for the reason `Pill` exists (ADR-269).
+                    color: selected == option
+                        ? Brand.purple
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(Brand.radiusPill),
+                  ),
+                  child: Text(
+                    option,
+                    style: TextStyle(
+                      color: selected == option ? Colors.white : Colors.white54,
+                      fontSize: 11.5,
+                      fontWeight: selected == option
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ],
+  );
+}

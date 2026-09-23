@@ -57,7 +57,10 @@ enum BuildStyle { strongXi, strongFifteen }
 
 extension BuildStyleDetail on BuildStyle {
   String get label => switch (this) {
-    BuildStyle.strongXi => 'Strong XI',
+    // ⭐ **One numbering.** "Strong XI" beside "Strong 15" mixed Roman and Arabic inside a single
+    // control — ⚠️ *two ways of writing a number in one control reads as two kinds of thing.* Arabic,
+    // because it is how FPL managers talk: *"all 15 score on a Bench Boost."*
+    BuildStyle.strongXi => 'Strong 11',
     BuildStyle.strongFifteen => 'Strong 15',
   };
 
@@ -198,31 +201,33 @@ class _LabViewState extends State<LabView> {
               ),
           ],
         ),
-        PillRow(
-          children: [
-            for (final style in BuildStyle.values)
-              Pill(
-                label: style.label,
-                selected: _style == style,
-                onTap: () {
-                  setState(() => _style = style);
-                  if (_built != null) _run();
-                },
-              ),
-          ],
+        const SizedBox(height: 6),
+        // ⭐ A **toggle**, not a second row of pills: the build style modifies the mode above it, and
+        // ⚠️ *a control's size is a claim about its importance.*
+        MiniToggle(
+          label: 'Bench',
+          options: [for (final s in BuildStyle.values) s.label],
+          selected: _style.label,
+          onPick: (label) {
+            final style = BuildStyle.values.firstWhere((s) => s.label == label);
+            setState(() => _style = style);
+            if (_built != null) _run();
+          },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _Header(mode: _mode, style: _style, budget: budget),
         const SizedBox(height: 12),
         if (!_mode.fromScratch) ...[
           const Text(
             // ⭐ Says what tapping does before anything is tapped — the interaction is not guessable
-            // from a grid of names.
+            // from a grid of names. ⚠️ **In orange** (owner's call): grey made it read as a caption
+            // under the card above, and *an instruction that looks like a footnote gets skipped.*
             'Tap anyone you want to keep. The rest is rebuilt around them.',
             style: TextStyle(
-              color: Colors.white38,
+              color: Brand.orange,
               fontSize: 11.5,
               height: 1.5,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
