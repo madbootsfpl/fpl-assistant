@@ -56,7 +56,7 @@ void main() {
 
     // ⚠️ The button lives on the **expanded** card, where a reader has already said they are interested
     // in this player. A compare button on every one of 481 closed rows is noise.
-    expect(find.textContaining('Compare with'), findsNothing);
+    expect(find.textContaining('Boot Battle'), findsNothing);
   });
 
   testWidgets('expanding a row offers the comparison', (tester) async {
@@ -71,7 +71,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.expand_more).first);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Compare with'), findsOneWidget);
+    expect(find.textContaining('Boot Battle'), findsOneWidget);
   });
 
   testWidgets('the picker explains why the list is what it is', (tester) async {
@@ -81,7 +81,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.expand_more).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Compare with'));
+    await tester.tap(find.textContaining('Boot Battle'));
     await tester.pumpAndSettle();
 
     // ⭐ Otherwise *"where is everyone?"* is the first thought, and the answer — your filters, and his
@@ -109,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final label = tester
-        .widgetList<Text>(find.textContaining('Compare with'))
+        .widgetList<Text>(find.textContaining('Boot Battle'))
         .map((w) => w.data!)
         .single;
     final offered = int.parse(

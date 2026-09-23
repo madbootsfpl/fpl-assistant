@@ -68,7 +68,17 @@ def responses(store) -> dict:
         # ⭐ The expanding card's own response. Added when a widget test needed to expand a row and had
         # nothing real to expand it with — ⚠️ *a hand-built card fixture would have tested the fixture.*
         "player": service.player(service.PlayerRequest(player_id=ids[0], horizon=5), store=store),
+        # ⭐ Boot Battle's own response, so a widget test can render the real thing (ADR-258).
+        "compare": _compare_pair(store, ids),
     }
+
+
+def _compare_pair(store, ids):
+    """Two same-position players from the sample squad — ⚠️ `compare` refuses a cross-position pairing."""
+    by_id = {p["id"]: p for p in store.get_players()}
+    same = [i for i in ids if by_id[i]["position"] == by_id[ids[0]]["position"]]
+    return service.compare(
+        service.CompareRequest(a_id=same[0], b_id=same[1], horizon=5), store=store)
 
 
 def _my_team(store, ids):

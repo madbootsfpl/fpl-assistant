@@ -786,16 +786,20 @@ class Appearance {
 
 /// One side of a **Boot Battle**.
 class Contender {
-  Contender({required this.player, required this.recent});
+  Contender({required this.player, required this.photo, required this.recent});
 
   factory Contender.fromJson(Map<String, dynamic> json) => Contender(
     player: PlayerSummary.fromJson(json),
+    photo: json['photo'] as String? ?? '',
     recent: ((json['recent'] as List?) ?? const [])
         .map((r) => Appearance.fromJson((r as Map).cast<String, dynamic>()))
         .toList(),
   );
 
   final PlayerSummary player;
+
+  /// His mugshot — ⭐ the web's compare header has had one since ADR-110.
+  final String photo;
 
   /// His last five gameweeks, oldest first.
   final List<Appearance> recent;

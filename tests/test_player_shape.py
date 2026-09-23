@@ -39,6 +39,16 @@ ALLOWED_EXTRAS = {
     "affordable", "over_by",                # a replacement's price against *your* budget
     "opponent", "venue", "difficulty", "penalty_taker",   # facts about the fixture, not the player
     "recent",                               # a comparison's last-five form: an answer, not a stored field
+    # ⚠️⚠️ **`photo` is deliberately NOT in `SHAPE`, and that is the whole point of it being here.**
+    #
+    # It is derived (a URL from the player's `code`), so it is an answer rather than a stored field — but
+    # the real reason it cannot join the shared shape is ADR-084: the **pitch** must show the club kit,
+    # never the mugshot, because FPL's photo CDN lags a transfer by weeks while the kit updates instantly.
+    # Putting `photo` in `SHAPE` would put a face on every XI card's payload and invite one onto the pitch.
+    #
+    # ⭐ So it appears only where a **name already is** — Boot Battle's two sides here, and as a top-level
+    # sibling on `player` and `player_dna`. *An allowlist entry is a decision; this one is ADR-255's.*
+    "photo",
 }
 
 

@@ -1248,6 +1248,9 @@ def compare(request: CompareRequest, *, store: Storage | None = None) -> dict:
         rows = list(gw_history.get(player["code"]) or [])[-RECENT:]
         return {
             **player_summary(player, data.xp_by_id, by_gameweek, reported_out=data.leaving),
+            # ⭐ The face, as the web's compare header has had since ADR-110 — a named card, which is where
+            # ADR-255 says a mugshot belongs.
+            "photo": photo_url(player["code"]),
             "recent": _recent_rows(rows, club_by_id),
         }
 

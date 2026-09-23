@@ -1,0 +1,198 @@
+{
+  "a": {
+    "by_gameweek": {
+      "10": 4.4,
+      "6": 4.4,
+      "7": 4.4,
+      "8": 3.9,
+      "9": 3.5
+    },
+    "chance": null,
+    "id": 124,
+    "leaving": null,
+    "minutes_weight": 1.0,
+    "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p60307.png",
+    "position": "MID",
+    "price": 5.8,
+    "recent": [
+      {
+        "gameweek": 1,
+        "home": true,
+        "minutes": 90,
+        "opponent": "AVL",
+        "points": 2
+      },
+      {
+        "gameweek": 2,
+        "home": false,
+        "minutes": 90,
+        "opponent": "CHE",
+        "points": 13
+      },
+      {
+        "gameweek": 3,
+        "home": true,
+        "minutes": 90,
+        "opponent": "LEE",
+        "points": 1
+      },
+      {
+        "gameweek": 4,
+        "home": false,
+        "minutes": 90,
+        "opponent": "COV",
+        "points": 17
+      },
+      {
+        "gameweek": 5,
+        "home": true,
+        "minutes": 90,
+        "opponent": "ARS",
+        "points": 14
+      }
+    ],
+    "status": "a",
+    "team": "BHA",
+    "web_name": "Gro\u00df",
+    "xp": 20.6
+  },
+  "b": {
+    "by_gameweek": {
+      "10": 4.6,
+      "6": 4.1,
+      "7": 4.1,
+      "8": 5.1,
+      "9": 4.6
+    },
+    "chance": null,
+    "id": 94,
+    "leaving": null,
+    "minutes_weight": 1.0,
+    "photo": "https://resources.premierleague.com/premierleague/photos/players/110x140/p513418.png",
+    "position": "MID",
+    "price": 6.2,
+    "recent": [
+      {
+        "gameweek": 1,
+        "home": true,
+        "minutes": 90,
+        "opponent": "TOT",
+        "points": 3
+      },
+      {
+        "gameweek": 2,
+        "home": false,
+        "minutes": 87,
+        "opponent": "LEE",
+        "points": 10
+      },
+      {
+        "gameweek": 3,
+        "home": true,
+        "minutes": 90,
+        "opponent": "SUN",
+        "points": 2
+      },
+      {
+        "gameweek": 4,
+        "home": false,
+        "minutes": 90,
+        "opponent": "BOU",
+        "points": 15
+      },
+      {
+        "gameweek": 5,
+        "home": true,
+        "minutes": 90,
+        "opponent": "CHE",
+        "points": 9
+      }
+    ],
+    "status": "a",
+    "team": "BRE",
+    "web_name": "Schade",
+    "xp": 22.5
+  },
+  "gameweeks": [
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "horizon": 5,
+  "rows": [
+    {
+      "a": "47",
+      "b": "39",
+      "label": "FPL Points",
+      "winner": "a"
+    },
+    {
+      "a": "9.4",
+      "b": "7.8",
+      "label": "Points / game",
+      "winner": "a"
+    },
+    {
+      "a": "3",
+      "b": "3",
+      "label": "Goals",
+      "winner": null
+    },
+    {
+      "a": "2.63",
+      "b": "1.84",
+      "label": "xG Involvement",
+      "winner": "a"
+    },
+    {
+      "a": "4",
+      "b": "2",
+      "label": "Assists",
+      "winner": "a"
+    },
+    {
+      "a": "27.6%",
+      "b": "10.7%",
+      "label": "Ownership",
+      "winner": null
+    },
+    {
+      "a": "0.86",
+      "b": "0.32",
+      "label": "Expected Assists",
+      "winner": "a"
+    },
+    {
+      "a": "8.1 pts/\u00a3m",
+      "b": "6.3 pts/\u00a3m",
+      "label": "Value",
+      "winner": "a"
+    },
+    {
+      "a": "5.20",
+      "b": "6.85",
+      "label": "DefCon / 90",
+      "winner": "b"
+    },
+    {
+      "a": "50.8",
+      "b": "35.4",
+      "label": "ICT Index",
+      "winner": "a"
+    },
+    {
+      "a": "450",
+      "b": "447",
+      "label": "Minutes",
+      "winner": "a"
+    },
+    {
+      "a": "10",
+      "b": "21",
+      "label": "Recoveries",
+      "winner": "b"
+    }
+  ]
+}

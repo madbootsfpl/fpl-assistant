@@ -411,7 +411,9 @@ class _RowState extends State<_Row> {
         builder: (_) => Scaffold(
           backgroundColor: Brand.ink,
           appBar: AppBar(
-            title: Text('${widget.player.name} v ${other.name}'),
+            // ⭐ The brand's word, not a description of it (ADR-258). The names are on the card below,
+            // in their own colours — repeating them in the bar spends the title on something already said.
+            title: const Text('Boot Battle'),
             backgroundColor: Brand.ink,
             foregroundColor: Colors.white,
           ),
@@ -705,8 +707,10 @@ class _Card extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: () => _pick(context, card.player),
-                    icon: const Icon(Icons.compare_arrows, size: 16),
-                    label: Text('Compare with one of ${rivals.length}'),
+                    icon: const Icon(Icons.sports_mma_outlined, size: 16),
+                    // ⚠️ *A feature with two names is two features to anyone who has to be told which is
+                    // which* — the desktop has called this **Boot Battle** since the wave-3 feedback.
+                    label: Text('Boot Battle — one of ${rivals.length}'),
                     style: TextButton.styleFrom(
                       foregroundColor: Brand.purpleLight,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1135,7 +1139,7 @@ extension on _Card {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Text(
-                '${subject.name} against…',
+                'Boot Battle — ${subject.name} against…',
                 style: const TextStyle(color: Colors.white, fontSize: 14.5),
               ),
             ),
