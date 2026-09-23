@@ -17,6 +17,7 @@ import 'api/models.dart';
 import 'boot_battle.dart';
 import 'brand.dart';
 import 'mugshot.dart';
+import 'player_picker.dart';
 
 const List<String> _positions = ['GK', 'DEF', 'MID', 'FWD'];
 
@@ -1125,50 +1126,14 @@ extension on _Card {
   /// `compare` refuses a cross-position pairing because *"it ranks them on stats that do not mean the
   /// same thing"*. Offering one here would be offering an error.
   Future<void> _pick(BuildContext context, PlayerSummary subject) async {
-    final chosen = await showModalBottomSheet<PlayerSummary>(
-      context: context,
-      backgroundColor: Brand.ink,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheet) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: Text(
-                'Boot Battle — ${subject.name} against…',
-                style: const TextStyle(color: Colors.white, fontSize: 14.5),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                // ⭐ Says why the list is what it is — otherwise "where is everyone?" is the first
-                // thought, and the answer (your filters, and his position) is invisible.
-                'Other ${subject.position}s in the list you are looking at.',
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
-              ),
-            ),
-            for (final rival in rivals)
-              ListTile(
-                dense: true,
-                title: Text(
-                  rival.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                ),
-                subtitle: Text(
-                  '${rival.team} · £${rival.price.toStringAsFixed(1)}m · '
-                  '${rival.xp.toStringAsFixed(1)} xP',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-                onTap: () => Navigator.of(sheet).pop(rival),
-              ),
-          ],
-        ),
-      ),
+    final chosen = await pickPlayer<PlayerSummary>(
+      context,
+      title: 'Boot Battle — ${subject.name} against…',
+      // ⭐ Says why the list is what it is — otherwise "where is everyone?" is the first thought, and
+      // the answer (your filters, and his position) is invisible.
+      subtitle: 'Other ${subject.position}s in the list you are looking at.',
+      items: rivals,
+      of: (p) => p,
     );
     if (chosen != null) onCompare(chosen);
   }

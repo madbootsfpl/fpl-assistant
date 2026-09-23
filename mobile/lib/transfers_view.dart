@@ -130,12 +130,18 @@ class _CountPicker extends StatelessWidget {
                 color: n == count ? Brand.purple : Colors.white10,
                 borderRadius: BorderRadius.circular(Brand.radiusPill),
               ),
-              child: Text(
-                n == 1 ? '1 move' : '$n moves',
-                style: TextStyle(
-                  color: n == count ? Colors.white : Colors.white54,
-                  fontSize: 12.5,
-                  fontWeight: n == count ? FontWeight.w600 : FontWeight.w400,
+              // ⚠️ `FittedBox` because "3 transfers" is materially wider than "3 moves" in a third of
+              // a phone's width — ⭐ *a rename can overflow a layout that fitted the old word*.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  // ⭐ FPL's own word (feedback), matching "Transfer" on the player sheet.
+                  n == 1 ? '1 transfer' : '$n transfers',
+                  style: TextStyle(
+                    color: n == count ? Colors.white : Colors.white54,
+                    fontSize: 12.5,
+                    fontWeight: n == count ? FontWeight.w600 : FontWeight.w400,
+                  ),
                 ),
               ),
             ),

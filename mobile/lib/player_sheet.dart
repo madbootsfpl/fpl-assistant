@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'player_picker.dart';
 
 /// What the sheet was asked to do.
 sealed class PlayerAction {
@@ -153,8 +154,12 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               if (widget.team.swapsFor(p.id).isNotEmpty)
                 _Action(
                   icon: Icons.swap_vert,
+                  // ⭐ **"Substitute", the word FPL uses** (feedback) — the same reasoning that made
+                  // "Replace him" into "Transfer": ⚠️ *an app that renames the moves makes the manager
+                  // translate.* The ellipsis stays because a picker follows; the bench direction keeps
+                  // its own words, since "Substitute" does not say which way he is going.
                   label: widget.team.benchedIds.contains(p.id)
-                      ? 'Bring him on…'
+                      ? 'Substitute…'
                       : 'Bench him…',
                   enabled: true,
                   onTap: () => setState(() => _swapping = true),
@@ -174,7 +179,11 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               )
             else
               Flexible(
-                child: _Options(future: _options!, outId: p.id),
+                child: _Options(
+                  future: _options!,
+                  outId: p.id,
+                  onBack: () => setState(() => _options = null),
+                ),
               ),
           ],
         ),
@@ -222,15 +231,41 @@ class _Action extends StatelessWidget {
   );
 }
 
-class _Options extends StatelessWidget {
-  const _Options({required this.future, required this.outId});
+/// ⭐⭐ **A candidate list you can sift** (ADR-264). It arrived as a flat list of everything affordable,
+/// which for a midfielder is most of the market — ⚠️ *a list nobody can sift is a list nobody reads to
+/// the bottom of*, so it was really offering its top.
+///
+/// ⚠️ It keeps its own chrome rather than becoming the modal picker: this list is **already inside** the
+/// player sheet, and the over-budget flag below is a deliberate feature the generic row does not carry.
+/// ⭐ *The sifting is shared; the presentation is not the thing that was wrong.*
+class _Options extends StatefulWidget {
+  const _Options({required this.future, required this.outId, this.onBack});
 
   final Future<ReplacementsAnswer> future;
   final int outId;
 
+  /// ⭐ **A way to change your mind** (feedback) — the list replaces the actions in place, so without
+  /// this the only way back out is closing the sheet and finding the player again.
+  final VoidCallback? onBack;
+
+  @override
+  State<_Options> createState() => _OptionsState();
+}
+
+class _OptionsState extends State<_Options> {
+  final TextEditingController _search = TextEditingController();
+  String? _club;
+  PickerSort _sort = PickerSort.xp;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<ReplacementsAnswer>(
-    future: future,
+    future: widget.future,
     builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) {
         return const Padding(
@@ -248,26 +283,68 @@ class _Options extends StatelessWidget {
         );
       }
       final answer = snapshot.data!;
+      final shown = siftPlayers<Replacement>(
+        answer.candidates,
+        (c) => c.player,
+        query: _search.text,
+        club: _club,
+        sort: _sort,
+      );
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              '£${answer.budget.toStringAsFixed(1)}m to spend',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
+          Row(
+            children: [
+              if (widget.onBack != null)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                  onPressed: widget.onBack,
+                  tooltip: 'Back',
+                  visualDensity: VisualDensity.compact,
+                ),
+              Expanded(
+                child: Text(
+                  '£${answer.budget.toStringAsFixed(1)}m to spend',
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              ),
+              Text(
+                // ⭐ So an empty list reads as *"your filters"*, not *"nobody is available"*.
+                '${shown.length}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ],
           ),
+          PickerControls(
+            search: _search,
+            onChanged: (_) => setState(() {}),
+            sort: _sort,
+            onSort: (s) => setState(() => _sort = s),
+            club: _club,
+            clubs: clubsIn<Replacement>(answer.candidates, (c) => c.player),
+            onClub: (c) => setState(() => _club = c),
+          ),
+          if (shown.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                'Nobody matches that. Clear the search or the club.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white38, fontSize: 12.5),
+              ),
+            ),
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: answer.candidates.length,
+              itemCount: shown.length,
               itemBuilder: (_, i) {
-                final c = answer.candidates[i];
+                final c = shown[i];
                 return InkWell(
-                  onTap: () =>
-                      Navigator.pop(context, ReplaceWith(outId, c.player.id)),
+                  onTap: () => Navigator.pop(
+                    context,
+                    ReplaceWith(widget.outId, c.player.id),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 9),
                     child: Row(

@@ -100,9 +100,13 @@ class ApplyPlanStrip extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Brand.radiusSm),
               ),
             ),
-            child: const Text(
-              'Field it',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            child: Text(
+              // ⭐ **"Play Him", asked for by name** (feedback) — ⚠️ but the plan can start more than one,
+              // and the strip beside it literally reads *"start Salah and Saka"*. A flat rename would
+              // have read *"Play Him"* over a two-player change. ⭐ *A label is part of the sentence the
+              // screen is saying, not a word on its own.*
+              plan.bringIn.length == 1 ? 'Play Him' : 'Play Them',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
         ],
