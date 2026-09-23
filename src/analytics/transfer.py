@@ -14,7 +14,7 @@ suggestion is always a move you could actually make.
 
 from src.analytics.analyse import player_summary
 from src.analytics.dead_slot import dead_slots
-from src.analytics.optimizer import MAX_PER_CLUB, best_xi_points, is_unavailable
+from src.analytics.optimizer import MAX_PER_CLUB, best_legal_xi, best_xi_points, is_unavailable
 
 
 def _summary(player, xp_by_id) -> dict:
@@ -289,8 +289,53 @@ def suggest_transfers(
             "in": in_sum,
             "gain": gain,
             "out_on_bench": out["id"] in bench,
+            # ⭐⭐ **What the gain assumes you will also do** (ADR-273).
+            **_lineup_condition(owned, out, c, rank_xp, xi_aware),
         })
     return suggestions
+
+
+def _lineup_condition(owned, out, incoming, rank_xp, xi_aware: bool) -> dict:
+    """Whether this move's gain needs a **lineup change**, and whom it displaces.
+
+    ⚠️⚠️ **The owner, on a suggestion to replace his benched keeper:** *"Leno to Tzolakis won't provide a
+    +2.2 xP as I will be playing Pickford."* He is right, and so is the number — they are answers to two
+    different questions. `xi_aware` ranks by the **best legal XI** before and after, so buying a keeper
+    better than the one you start is worth the difference **if you also start him**.
+
+    ⭐ *A conditional gain stated unconditionally is not a number, it is a promise* — and this one had no
+    way to say what it was conditional on. The move is not wrong and must not be dropped: it is the most
+    valuable thing you can do with that money. It simply comes with a second step.
+
+    Returns `displaces` — who stops starting because of him — ⚠️ `None` when nothing in the lineup
+    moves, so a caller can say nothing at all.
+
+    ⚠️⚠️ **There is deliberately no "does he start?" flag**, and a mutation run is what settled it: one
+    was written, and setting it to a constant `True` broke nothing. It cannot be anything else. If the
+    incoming player were *not* in the after-XI, that XI would be drawn entirely from the other fourteen —
+    a subset of the squad the before-XI was already optimal over — so it could not beat it, and the gain
+    could not be positive. ⭐ *A field that is provably constant is not information, it is a place for a
+    reader to look for one.*
+    """
+    if not xi_aware:
+        return {}
+
+    # ⚠️⚠️ **`total_points` defaulted, because `best_legal_xi` sorts its output on it** and a row without
+    # one raises `KeyError`. Real rows always carry it; hand-built fixtures do not, and twelve tests went
+    # red the moment this function was added. ⭐ *A helper that works on production rows and not on the
+    # rows its own tests use is a helper with a hidden dependency* — and the field is only a display
+    # tie-break here, so zero changes no answer.
+    def _sortable(rows):
+        return [{"total_points": 0, **p} for p in rows]
+
+    before = best_legal_xi(_sortable(owned), rank_xp)
+    after_squad = [p for p in owned if p["id"] != out["id"]] + [incoming]
+    after = best_legal_xi(_sortable(after_squad), rank_xp)
+
+    # ⚠️ The outgoing player is excluded: he leaves the squad, so of course he stops starting. ⭐ *Naming
+    # him as "displaced" would describe the transfer itself as a consequence of the transfer.*
+    dropped = [p for p in owned if p["id"] in before and p["id"] not in after and p["id"] != out["id"]]
+    return {"displaces": _summary(dropped[0], rank_xp) if dropped else None}
 
 
 def suggest_transfer_plan(

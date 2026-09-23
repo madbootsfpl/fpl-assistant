@@ -6,6 +6,19 @@
   "longer_window": 5,
   "moves": [
     {
+      "displaces": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 391,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.7,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 4.0
+      },
       "gain": 2.3,
       "in": {
         "by_gameweek": {},
@@ -37,6 +50,19 @@
       "position": "MID"
     },
     {
+      "displaces": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 391,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.7,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 4.0
+      },
       "gain": 1.1,
       "in": {
         "by_gameweek": {},
@@ -68,6 +94,7 @@
       "position": "DEF"
     },
     {
+      "displaces": null,
       "gain": 1.9,
       "in": {
         "by_gameweek": {},
@@ -99,6 +126,19 @@
       "position": "DEF"
     },
     {
+      "displaces": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 391,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.7,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 4.0
+      },
       "gain": 1.9,
       "in": {
         "by_gameweek": {},
@@ -130,6 +170,7 @@
       "position": "FWD"
     },
     {
+      "displaces": null,
       "gain": 1.5,
       "in": {
         "by_gameweek": {},

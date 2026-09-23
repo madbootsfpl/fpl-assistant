@@ -349,6 +349,19 @@
   },
   "transfer": {
     "bank_after": 4.1,
+    "displaces": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 391,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.7,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Gvardiol",
+      "xp": 4.0
+    },
     "gain": 2.3,
     "horizon_gain": 10.9,
     "in": {
@@ -383,6 +396,19 @@
   "transfers": [
     {
       "bank_after": 4.1,
+      "displaces": {
+        "by_gameweek": {},
+        "chance": null,
+        "id": 391,
+        "leaving": null,
+        "minutes_weight": 1.0,
+        "position": "DEF",
+        "price": 5.7,
+        "status": "a",
+        "team": "MCI",
+        "web_name": "Gvardiol",
+        "xp": 4.0
+      },
       "gain": 2.3,
       "horizon_gain": 10.9,
       "in": {

@@ -187,6 +187,52 @@ void _moreIsADirectory() {
       expect(opened.toSet(), containsAll(names));
     });
 
+    // ⭐⭐ **Measured, not guessed.** The owner asked for two lines so every option fits without
+    // scrolling; a character-count proxy would be a different rule that happens to correlate. This
+    // lays the text out at a real phone width and counts the lines the renderer actually produced.
+    testWidgets('every description fits two lines at phone width', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(
+        390,
+        2400,
+      ); // an iPhone's logical width
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(more());
+
+      final names = rowNames(tester);
+      expect(names, isNotEmpty);
+      for (final name in names) {
+        final row = find.ancestor(
+          of: find.text(name),
+          matching: find.byType(InkWell),
+        );
+        final description = tester
+            .widgetList<Text>(
+              find.descendant(of: row, matching: find.byType(Text)),
+            )
+            .map((w) => w.data ?? '')
+            .firstWhere((s) => s != name, orElse: () => '');
+        expect(description, isNotEmpty, reason: '$name has no description');
+
+        // ⚠️⚠️ **A character budget — and the direct measurement was tried first.** Laying the text
+        // out and counting lines is the obvious test, and in `flutter test` the default font is a
+        // placeholder where every glyph is a full em wide: 301px fits **26** characters instead of the
+        // ~55 a real font gives. ⭐ *A line count measured in a widget test is a line count for a font
+        // nobody has* — it failed strings that sit on two lines comfortably on the phone.
+        //
+        // So: ~55 characters a line at this width, two lines. ⚠️ No margin added to be generous —
+        // *a budget padded "just in case" permits the thing it was set to prevent.*
+        expect(
+          description.length,
+          lessThanOrEqualTo(110),
+          reason:
+              '$name is ${description.length} chars — over two lines: "$description"',
+        );
+      }
+    });
+
     testWidgets('the Settings row states its current value', (tester) async {
       // ⚠️ Settings is the last row, so it went below the fold the moment the directory gained one.
       tall(tester);

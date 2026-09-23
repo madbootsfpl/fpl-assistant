@@ -76,24 +76,24 @@ class MoreView extends StatelessWidget {
         icon: Icons.campaign_outlined,
         name: 'Signals',
         why:
-            'FPL news, reported moves, sell-offs the data cannot explain, and what the crowd is '
-            'buying — your fifteen or the whole market, strongest evidence first. Marks what is new.',
+            'News, reported moves and what the crowd is doing — yours or the whole market, '
+            'strongest evidence first.',
         onTap: onOpenSignals,
       ),
       _Row(
         icon: Icons.fingerprint,
         name: 'Player DNA',
         why:
-            'What kind of player he is — goal threat, creativity, set pieces, minutes — ranked against '
-            'others in his position, not against the whole league.',
+            'What kind of player he is, ranked against others in his position rather than the '
+            'whole league.',
         onTap: onOpenPlayerDna,
       ),
       _Row(
         icon: Icons.insights_outlined,
         name: 'Team DNA',
         why:
-            'Every club ranked across eight things that decide points — attack, defence, set pieces, '
-            'fixtures. Which side a player belongs to is half of what he is worth.',
+            'Every club across the eight things that decide points — half of what a player is '
+            'worth.',
         onTap: onOpenTeamDna,
       ),
       _Row(
@@ -101,7 +101,7 @@ class MoreView extends StatelessWidget {
         name: 'Chips',
         why:
             'Wildcard, Bench Boost, Triple Captain and Free Hit — judged over the weeks you have '
-            'left, not the next one.',
+            'left.',
         onTap: onOpenChips,
       ),
       _Row(
@@ -110,8 +110,8 @@ class MoreView extends StatelessWidget {
         // ⭐ Named by what it lets you do, not by what it runs. "Optimiser" describes the solver; nobody
         // opens an app to run a solver.
         why:
-            'Rebuild your fifteen on a wildcard — keep who you want, and see exactly who would come in '
-            'and who would go. Nothing here touches your real team.',
+            'Rebuild your fifteen — wildcard, free hit or a new season. Keep who you want and see '
+            'what changes.',
         onTap: onOpenLab,
       ),
       _Row(
@@ -120,8 +120,8 @@ class MoreView extends StatelessWidget {
         // ⭐ Named by the thing people actually open it for. "Leagues" describes a list; the head-to-head
         // is the reason to look, and a table you already know the top of is not.
         why:
-            'Your league tables, what everyone captained, and you against any rival — what actually '
-            'separates your two squads this week.',
+            'Your tables, what everyone captained, and what actually separates you from any '
+            'rival.',
         onTap: onOpenLeagues,
       ),
       _Row(
@@ -129,9 +129,7 @@ class MoreView extends StatelessWidget {
         name: 'Fixture ticker',
         // ⭐ Says what the grid is FOR, not what it contains. "Every club's next six fixtures" describes
         // a table; "whose run turns good" is the reason to open one.
-        why:
-            'Every club’s next six, easiest run first — so you can see whose fixtures turn good before '
-            'you plan a transfer.',
+        why: 'Every club’s next six, easiest run first — whose fixtures turn good, and when.',
         onTap: onOpenTicker,
       ),
       // ⭐⭐ **Help goes out; feedback stays in** (ADR-254). They look like one item and are two jobs.
@@ -154,9 +152,7 @@ class MoreView extends StatelessWidget {
       _Row(
         icon: Icons.chat_bubble_outline,
         name: 'Tell us something',
-        why:
-            'What worked, what broke, what you would add. It reaches us from here — you do not have '
-            'to go and find a laptop.',
+        why: 'What worked, what broke, what you would add. It reaches us from here.',
         onTap: onOpenFeedback,
       ),
       _Row(
@@ -167,7 +163,7 @@ class MoreView extends StatelessWidget {
         // people open it to check. *Showing the state beats offering the options.*
         why:
             'Manager $managerId · $freeTransfers free transfer${freeTransfers == 1 ? '' : 's'} · '
-            'this gameweek’s numbers, and where they come from.',
+            'where the numbers come from.',
         onTap: onOpenSettings,
       ),
 

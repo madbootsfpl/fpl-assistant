@@ -263,12 +263,35 @@ class _MoveState extends State<_Move> {
                 ),
               ],
             ),
-            if (move.outOnBench)
+            // ⚠️⚠️ **What the gain assumes you will also do** (ADR-273). The owner: *"Leno to Tzolakis
+            // won't provide a +2.2 xP as I will be playing Pickford."* He is right, and so is the
+            // number — the gain is measured on the **best legal XI**, so it is real only if the new
+            // player actually starts. ⭐ *A conditional gain stated unconditionally is not a number, it
+            // is a promise.*
+            //
+            // ⚠️ This replaced a **guess** that was wrong here: the old note said a benched player
+            // changes the XI *"only if someone ahead of him misses"* — false when the incoming player is
+            // better than the one starting. ⭐ *A hedge in place of a calculation is not caution; it is a
+            // different wrong answer.*
+            if (move.needsLineupChange)
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  'Worth +${move.gain.toStringAsFixed(1)} only if you also start '
+                  '${move.incoming.name} ahead of ${move.displaces!.name}. '
+                  'Keep ${move.displaces!.name} and this move gains you nothing this week.',
+                  style: const TextStyle(
+                    color: Brand.warn,
+                    fontSize: 10.5,
+                    height: 1.4,
+                  ),
+                ),
+              )
+            else if (move.outOnBench)
               const Padding(
                 padding: EdgeInsets.only(top: 5),
                 child: Text(
-                  // ⚠️ Selling a benched player lifts the XI by nothing this week — the gain here means
-                  // something different, and saying so is cheaper than letting the number mislead.
+                  // ⭐ Still true when nothing in the lineup moves: the man leaving was not starting.
                   'He is on your bench, so this changes the XI only if someone ahead of him misses.',
                   style: TextStyle(
                     color: Brand.warn,

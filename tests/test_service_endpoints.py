@@ -1980,3 +1980,80 @@ def test_the_route_still_refuses_a_board_that_does_not_exist():
 
     assert TestClient(app).post(
         "/api/v1/trending", json={"by": "sideways"}).status_code == 422
+
+
+# ---- a transfer's gain says what it assumes (ADR-273) -----------------------
+
+def _squad_and_bench(store=None):
+    """A real squad, with its bench — so the fixture reaches the case rather than constructing it."""
+    team = svc.my_team(svc.MyTeamRequest(manager_id=2885974, horizon=1))
+    ids = ([p["id"] for p in team["analysis"]["xi"]]
+           + [p["id"] for p in team["analysis"]["bench"]])
+    bench = [p["id"] for p in team["analysis"]["bench"]]
+    return team, ids, bench
+
+
+def test_a_move_says_whom_it_would_displace():
+    """⚠️⚠️ **The owner:** *"Leno to Tzolakis won't provide a +2.2 xP as I will be playing Pickford."*
+
+    He is right and so is the number — they answer different questions. `xi_aware` ranks on the **best
+    legal XI**, so buying a keeper better than the one you start is worth the difference **if you also
+    start him**. ⭐ *A conditional gain stated unconditionally is not a number, it is a promise.*
+    """
+    team, ids, bench = _squad_and_bench()
+    answer = svc.transfers(svc.TransfersRequest(
+        player_ids=ids, bench_ids=bench, horizon=1,
+        bank=team["squad"].get("bank") or 0.0, limit=6))
+
+    conditional = [m for m in answer["moves"] if m.get("displaces")]
+    assert conditional, "this squad's fixture must contain a move that changes the lineup"
+    for move in conditional:
+        assert move["displaces"]["id"] != move["out"]["id"], (
+            "the outgoing player leaves the squad — naming him as displaced would describe the "
+            "transfer as a consequence of itself"
+        )
+
+
+def test_every_move_carries_the_field_even_when_it_is_empty():
+    """⭐ Present and `None` rather than absent — ⚠️ *a missing key and "nothing is displaced" are the
+    same thing to a careless reader and different things to a correct one.*"""
+    team, ids, bench = _squad_and_bench()
+    answer = svc.transfers(svc.TransfersRequest(
+        player_ids=ids, bench_ids=bench, horizon=1,
+        bank=team["squad"].get("bank") or 0.0, limit=6))
+    for move in answer["moves"]:
+        assert "displaces" in move
+
+
+def test_a_raw_ranking_makes_no_claim_about_the_lineup():
+    """⭐ `xi_aware=False` ranks on the player's own xP and knows nothing about an XI — ⚠️ *so it must
+    say nothing*, rather than carrying a field it cannot fill honestly."""
+    from src.analytics.transfer import suggest_transfers
+    from src.service.inputs import load
+    from src.storage import Storage
+
+    store = Storage()
+    try:
+        team, ids, bench = _squad_and_bench()
+        data = load(ids, 1, store)
+        raw = suggest_transfers(data.owned, data.players, data.xp_by_id,
+                                bench_ids=bench, bank=2.0, limit=3, xi_aware=False)
+    finally:
+        store.close()
+    assert raw, "the raw ranking must still produce moves"
+    assert all("displaces" not in m for m in raw)
+
+
+def test_the_displaced_player_was_actually_starting():
+    """⚠️ A "displaced" player who was already benched would be a claim about nothing."""
+    team, ids, bench = _squad_and_bench()
+    starting = {p["id"] for p in team["analysis"]["xi"]}
+    answer = svc.transfers(svc.TransfersRequest(
+        player_ids=ids, bench_ids=bench, horizon=1,
+        bank=team["squad"].get("bank") or 0.0, limit=6))
+
+    for move in answer["moves"]:
+        if move.get("displaces"):
+            assert move["displaces"]["id"] in starting, (
+                f"{move['displaces']['web_name']} was not in the XI to begin with"
+            )

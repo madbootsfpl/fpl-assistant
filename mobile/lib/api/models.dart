@@ -172,6 +172,7 @@ class TransferMove {
     required this.incoming,
     required this.gain,
     required this.outOnBench,
+    this.displaces,
   });
 
   factory TransferMove.fromJson(Map<String, dynamic> json) => TransferMove(
@@ -181,11 +182,25 @@ class TransferMove {
     incoming: PlayerSummary.fromJson(json['in'] as Map<String, dynamic>),
     gain: _double(json['gain']),
     outOnBench: json['out_on_bench'] as bool? ?? false,
+    displaces: json['displaces'] == null
+        ? null
+        : PlayerSummary.fromJson(json['displaces'] as Map<String, dynamic>),
   );
 
   final String position;
   final PlayerSummary out;
   final PlayerSummary incoming;
+
+  /// ⭐⭐ **Who stops starting if you make this move** (ADR-273), or null when the lineup does not move.
+  ///
+  /// ⚠️⚠️ The owner: *"Leno to Tzolakis won't provide a +2.2 xP as I will be playing Pickford."* He is
+  /// right, and so is the number — they answer different questions. The gain is measured on the **best
+  /// legal XI**, so buying a keeper better than the one you start is worth the difference **if you also
+  /// start him**. ⭐ *A conditional gain stated unconditionally is not a number, it is a promise.*
+  final PlayerSummary? displaces;
+
+  /// ⭐ True when banking the gain needs a **second action** — the transfer alone will not do it.
+  bool get needsLineupChange => displaces != null;
 
   /// Expected points gained **by the starting XI** over the request's horizon.
   final double gain;
