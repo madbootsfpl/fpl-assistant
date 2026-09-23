@@ -109,7 +109,7 @@ that works from one host is not a dependency that works.*
 
 | Option | Why |
 |---|---|
-| **Web3Forms** (recommended) | An API with an access key rather than a browser form — set `FPL_FEEDBACK_WEBHOOK = https://api.web3forms.com/submit` **and** `FPL_FEEDBACK_KEY`. `docs/BETA.md` §1C. |
+| **Web3Forms** (recommended) | An API with an access key rather than a browser form — set `FPL_FEEDBACK_WEBHOOK = https://api.web3forms.com/submit` **and** `FPL_FEEDBACK_KEY`. `docs/BETA.md` §1B. |
 | **Google Apps Script → Sheet** | Google does not bot-block server POSTs. A running log rather than email. `docs/BETA.md` §1A. |
 
 ⭐ **The app will now say which of these is happening.** A CDN block is reported as *"the relay's CDN

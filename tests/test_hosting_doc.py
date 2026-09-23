@@ -11,6 +11,7 @@ derived one: a new `os.environ.get` in the service layer fails this test on the 
 
 import ast
 import pathlib
+import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOC = ROOT / "docs" / "03_Architecture" / "Hosting_The_API.md"
@@ -66,3 +67,19 @@ def test_the_doc_says_what_happens_without_the_feedback_sink():
     assert "FPL_FEEDBACK_WEBHOOK" in doc
     row = next(line for line in doc.splitlines() if line.startswith("| `FPL_FEEDBACK_WEBHOOK`"))
     assert "does not reach you" in row, "the row must say what is lost, not just that it is optional"
+
+
+def test_every_beta_runbook_section_it_cites_exists():
+    """⚠️ **A citation to a section that does not exist sends a reader somewhere there is no help.**
+
+    This file pointed at `BETA.md §1C` for Web3Forms, which lives under **§1B** — written from memory of a
+    structure rather than from the structure. ⭐ *Cross-references rot silently: nothing fails, the reader
+    just arrives nowhere*, and this repo has hit it before (the iPhone runbook, after a renumber).
+    """
+    beta = (ROOT / "docs" / "BETA.md").read_text()
+    headings = set(re.findall(r"^#{2,4}\s*(\d+[A-Z]?)\.", beta, re.M))
+    assert headings, "found no numbered sections in BETA.md — the scan is broken, not the citation"
+
+    cited = set(re.findall(r"BETA\.md`?\s*§(\d+[A-Z]?)", DOC.read_text()))
+    missing = sorted(c for c in cited if c not in headings)
+    assert not missing, f"cites BETA.md sections that do not exist: {missing} (it has {sorted(headings)})"
