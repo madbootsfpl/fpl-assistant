@@ -148,8 +148,10 @@ list on sight, not on suspicion.
   pitch already filled 91% of the screen and drew a phone-sized card on it. Now scaled by **proportion**
   — a phone's card is 18% of its screen width, and a tablet's is too. ⭐ *A tablet is not a phone with
   more room for whitespace; it is the same design, larger.* Phone layout unchanged, gated at 600pt.
-- **Mini-league sub-tabs** — Transfers, Rank and Chips, plus the Awards tab. Parked by the owner at
-  ADR-267; the engine for all of them already exists.
+- ✅ **Mini-league sub-tabs — done 2026-09-24 (ADR-287).** Transfers, Rank, Chips and Awards. ⭐ Three of
+  the four were **already being fetched**: the captain split spends a request per manager and that
+  payload carries the chip, the overall rank, the transfer count, the hit and the bench points.
+  📌 Not done: transfer **detail** (who moved — a second N-call pass) and season-long awards.
 - **The Lab's other two modes** — Free Hit and a fresh-season build are the **same solver with different
   defaults** and `LabMode` already exists to hold them (ADR-272).
 

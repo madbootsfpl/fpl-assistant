@@ -214,7 +214,11 @@ class _OneLeagueState extends State<_OneLeague> {
                     vertical: 7,
                     horizontal: 12,
                   ),
-                  alignment: Alignment.center,
+                  // ⚠️⚠️ **No `alignment`, and that one word was the whole bug.** A `Container`
+                  // with an alignment expands to the largest size its constraints allow, so
+                  // every pill took the full width and the `Wrap` gave each its own line —
+                  // ⭐ *seven full-width buttons stacked down the screen, which is the
+                  // opposite of what a wrapping tab bar is for.*
                   decoration: BoxDecoration(
                     color: _tab == i ? Brand.purple : Colors.white10,
                     borderRadius: BorderRadius.circular(Brand.radiusPill),
