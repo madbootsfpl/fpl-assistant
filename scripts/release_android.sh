@@ -159,6 +159,15 @@ cat > "$SITE/app/index.html" <<HTML
  ol{padding-left:20px} li{margin-bottom:10px}
  .n{border-left:3px solid var(--o);background:#ff7a1815;padding:12px 14px;border-radius:0 8px 8px 0;
     font-size:.9rem;color:#c9d1d9}
+ h2{font-size:1.05rem;margin:34px 0 6px;scroll-margin-top:20px}
+ h2 + p{color:#8b949e;font-size:.9rem;margin:0 0 12px}
+ /* The example url is the whole explanation, so it is shown as the browser shows it: one line,
+    monospaced, with the part that matters picked out rather than described. */
+ .url{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:11px 12px;margin:10px 0;
+      font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8b949e;overflow-x:auto;
+      white-space:nowrap}
+ .url b{color:#ff7a18}
+ .eq{font:600 15px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#e6edf3;margin:0 0 14px}
 </style></head><body>
 <h1>MADBOOTS for Android</h1>
 <div class="v">Version $name &middot; build $next</div>
@@ -169,9 +178,24 @@ cat > "$SITE/app/index.html" <<HTML
  <li>Open the downloaded file. Android will say this source is not allowed to install apps.
      Tap <b>Settings</b> and turn on <b>Allow from this source</b>, then go back.</li>
  <li>Tap <b>Install</b>, then <b>Open</b>.</li>
+ <li>The app asks for your <b>FPL ID</b> the first time it opens.
+     <a href="#fpl-id">Here is how to find it</a>.</li>
 </ol>
 <p class="n">Updating? Just download and install again &mdash; it installs over the old one and your
 squad, plan and settings are kept. The app tells you when a newer build is here.</p>
+
+<h2 id="fpl-id">Find your FPL ID</h2>
+<p>The numerical ID attached to your Fantasy Premier League account.</p>
+<ol>
+ <li>Go to the <a href="https://fantasy.premierleague.com" target="_blank"
+     rel="noopener">Fantasy Premier League website</a> and log in.</li>
+ <li>Open <b>My Team</b>, then the <b>Points</b> tab.</li>
+ <li>Look at the web address in your browser. It will look something like this:</li>
+</ol>
+<div class="url">https://fantasy.premierleague.com/entry/<b>1234567</b>/event/6</div>
+<p>The number after <code>/entry/</code> is your FPL ID. So in this example:</p>
+<p class="eq">FPL ID = 1234567</p>
+<p class="n"><b>Tip:</b> your FPL ID is not your team name, and not your league ID.</p>
 </body></html>
 HTML
 

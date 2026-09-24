@@ -192,3 +192,43 @@ def test_the_redirect_cannot_swallow_the_current_apk() -> None:
 
 def test_the_redirect_survives_being_written_twice() -> None:
     assert _write_redirects() == _write_redirects()
+
+
+def _install_page() -> str:
+    """The install page the release script writes, with its shell variables filled in."""
+    body = re.search(
+        r'cat > "\$SITE/app/index\.html" <<HTML\n(.*?)\nHTML\n', SCRIPT.read_text(), re.S
+    )
+    assert body, "the release script no longer writes an install page"
+    return body[1].replace("$name", "1.0.0").replace("$next", "5")
+
+
+def test_the_install_page_explains_how_to_find_an_fpl_id() -> None:
+    """⭐⭐ **The app is unusable without this number and nothing told anyone where to get it.**
+
+    ⚠️ It is asked for on first launch, which is the worst moment to go looking — *a first run that stops
+    on a question the product never answers is a first run that ends there.*
+    """
+    page = _install_page()
+
+    assert 'id="fpl-id"' in page, "the explainer anchor is gone"
+    # ⚠️ The **example block**, not the word "/entry/" — which also appears in the sentence below it, so
+    # a bare substring check passed with the example deleted. ⭐ *A test satisfied by a neighbour is not a
+    # test of the thing it names* — the second time that exact trap has caught me in this ADR.
+    example = re.search(r'<div class="url">(.*?)</div>', page, re.S)
+    assert example, "the example url block is gone"
+    assert "/entry/" in example[1], example[1]
+    # ⭐ The id is picked out rather than described, so the reader can match it against their own bar.
+    assert re.search(r"<b>\d+</b>", example[1]), example[1]
+    assert "not your league ID" in page, "the tip that heads off the usual mistake is gone"
+
+
+def test_the_install_steps_reach_the_explainer() -> None:
+    """⚠️ A section nothing links to is a section nobody scrolls to."""
+    page = _install_page()
+
+    assert 'href="#fpl-id"' in page
+    # ⭐ **After the install steps, not among them.** You cannot act on this until the app is open, and
+    # *a step you cannot do yet is a step that reads as a blocker.*
+    assert page.index('href="#fpl-id"') < page.index('id="fpl-id"')
+    assert page.index("Tap <b>Install</b>") < page.index('href="#fpl-id"')

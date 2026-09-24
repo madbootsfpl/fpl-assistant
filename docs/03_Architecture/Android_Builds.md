@@ -244,6 +244,18 @@ dead link it replaces.* ⚠️ Add a `?x=1` if you need to bypass a cached respo
 diagnosing — *a cached answer to "is it fixed yet?" is the answer to a question you asked four hours
 ago.*
 
+### The install page also answers "what is my FPL ID?"
+
+⭐⭐ **The app is unusable without that number and nothing told anyone where to get it.** It is asked for on
+first launch, which is the worst possible moment to go looking — ⚠️ *a first run that stops on a question
+the product never answers is a first run that ends there.*
+
+The page carries it as **step 4 plus a section below**, not as step 2: you cannot act on it until the app
+is open, and ⭐ *a step you cannot do yet reads as a blocker.*
+
+⚠️ It lives in the release script's heredoc, not in the staged file. Editing `~/madboots-site/app/index.html`
+by hand works until the next release overwrites it.
+
 ### The split APKs and `versionCode`
 
 `--split-per-abi` offsets each ABI by 1000 (armeabi-v7a 1000+n, arm64-v8a 2000+n, x86_64 3000+n), so

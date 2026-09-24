@@ -79,6 +79,23 @@ label and icon disagreeing, `onSeen` being dropped, and either message reverting
   soon` as **plain text**. ⭐ *A greyed-out button still invites a tap, and a tap that does nothing reads as
   broken.* A line of muted text says the same thing and asks for nothing.
 
+### ⭐ And the number the app cannot run without
+
+The install page now explains **how to find an FPL ID** — log in, My Team → Points, read the number after
+`/entry/` in the address bar, with the example rendered as the browser renders it and the id picked out
+rather than described.
+
+⭐⭐ **It is asked for on first launch and nothing told anyone where to get it.** ⚠️ *A first run that stops
+on a question the product never answers is a first run that ends there.* Placed as **step 4 and a section
+below**, not step 2 as suggested: you cannot act on it until the app is open, and ⭐ *a step you cannot do
+yet reads as a blocker.*
+
+⚠️ Written into the release script's template rather than the staged page — *a fix to a generated file is
+a fix with an expiry date.* Three tests hold it; 4/4 mutations killed, one only after the `/entry/`
+assertion turned out to be satisfied by the **sentence below the example** — ⭐ *a test satisfied by a
+neighbour is not a test of the thing it names*, which is the second time that exact trap has caught me in
+this ADR.
+
 ## ⚠️⚠️ And the answer to the question underneath it: the cap does not apply to the app
 
 The owner asked whether publishing an Android button opens the product past his 50-user cap.
