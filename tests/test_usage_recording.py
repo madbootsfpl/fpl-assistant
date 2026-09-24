@@ -212,3 +212,75 @@ def test_an_empty_store_reports_nothing_rather_than_zeroes():
 
     assert summarise([])["platforms"] == []
     assert summarise([])["busiest_day"] is None
+
+
+# ---- the two copies of one rule (ADR-281) ----------------------------------
+
+def test_the_api_derives_the_same_events_url_as_the_web_app():
+    """⚠️⚠️ **The bug that made this whole feature silently do nothing.**
+
+    `FPL_STORE_URL` is a full **table** url (`…/rest/v1/squads`), so the events table is its *sibling*.
+    The API appended `/rest/v1/events` to the whole thing instead — a 404 the fail-silent writer
+    swallowed exactly as designed, so nothing was recorded and nothing complained.
+
+    ⭐⭐ *Two copies of one rule need a test that they agree, or one of them is already wrong and nobody
+    knows.* The API cannot import the web app's copy — `src/web_streamlit` is excluded from the API image
+    (ADR-261) — so agreement is asserted instead.
+    """
+    from src.service.http.usage import events_url
+
+    for store in ("https://abc.supabase.co/rest/v1/squads",
+                  "https://abc.supabase.co/rest/v1/beta_users",
+                  "https://example.test/rest/v1/anything"):
+        # The web app's rule, inline — `base = url.rsplit("/", 1)[0]; f"{base}/events"`.
+        expected = f"{store.rsplit('/', 1)[0]}/events"
+        assert events_url(store) == expected, (
+            f"the API and the web app disagree about where events live: "
+            f"{events_url(store)} vs {expected}"
+        )
+
+
+def test_the_derived_url_never_doubles_the_rest_path():
+    """⭐ The specific shape of the failure, named — *a test that says what went wrong is worth more than
+    one that says what should be true.*"""
+    from src.service.http.usage import events_url
+
+    url = events_url("https://abc.supabase.co/rest/v1/squads")
+    assert url.count("/rest/v1/") == 1, f"the REST path was appended twice: {url}"
+    assert url.endswith("/events")
+
+
+def test_health_says_whether_recording_is_working():
+    """⭐⭐ **The lesson of the whole episode.** ⚠️ *An empty panel read identically to a quiet week* —
+    nobody could tell "not configured" from "configured and 404ing", because the writer is fail-silent
+    by design and should stay that way **towards the request**.
+
+    ⭐ So the silence moved: still silent to the caller, no longer silent to the owner. One word.
+    """
+    from src.service.http import app as api
+
+    body = TestClient(api).get("/api/v1/health").json()
+    assert "usage" in body, "health cannot say whether usage recording works"
+    assert body["usage"] == "off", "with no store configured it must say so plainly"
+
+
+def test_the_status_distinguishes_broken_from_unconfigured(monkeypatch):
+    """⚠️ The distinction that cost an afternoon."""
+    monkeypatch.setenv("FPL_STORE_URL", "https://example.invalid/rest/v1/squads")
+    monkeypatch.setenv("FPL_STORE_KEY", "k")
+    monkeypatch.setattr(usage, "_last", "failing (404)")
+    assert usage.status() == "failing (404)"
+
+    monkeypatch.delenv("FPL_STORE_URL")
+    assert usage.status() == "off", "unconfigured must not report as broken"
+
+
+def test_a_404_is_recorded_as_failing_not_as_success(monkeypatch):
+    """⚠️⚠️ **A 404 does not raise**, which is exactly how the wrong endpoint went unnoticed."""
+    class _NotFound:
+        status_code = 404
+
+    monkeypatch.setattr(usage.requests, "post", lambda *a, **k: _NotFound())
+    monkeypatch.setattr(usage, "_last", "never")
+    usage._post("https://example.invalid/rest/v1/events", "k", {})
+    assert usage._last.startswith("failing"), "a 404 was counted as a successful write"

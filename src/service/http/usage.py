@@ -46,11 +46,29 @@ _TIMEOUT = 3
 _TABLE = "events"
 
 
+def events_url(store_url: str) -> str:
+    """The `events` endpoint, derived from `FPL_STORE_URL` **exactly as the web app derives it**.
+
+    ⚠️⚠️ **`FPL_STORE_URL` is a full TABLE url**, not a base — `https://…/rest/v1/squads`. So the events
+    table is its **sibling**: strip the last segment, append `events`.
+
+    ⭐⭐ *This was reimplemented rather than matched, and it cost a silent failure.* The first version
+    appended `/rest/v1/events` to the whole thing, producing `…/rest/v1/squads/rest/v1/events` — a 404
+    that the fail-silent writer swallowed exactly as designed, so the API recorded **nothing** while
+    reporting no error at all.
+
+    ⚠️ It cannot simply import the web app's copy: `src/web_streamlit` is excluded from the API image
+    (ADR-261). `tests/test_usage_recording.py` pins that both derive the same URL from the same input,
+    which is the cheapest thing that stops two copies of one rule drifting.
+    """
+    return f"{store_url.rsplit('/', 1)[0]}/{_TABLE}"
+
+
 def _endpoint() -> tuple[str | None, str | None]:
     url, key = os.environ.get("FPL_STORE_URL"), os.environ.get("FPL_STORE_KEY")
     if not url or not key:
         return None, None
-    return f"{url.rstrip('/')}/rest/v1/{_TABLE}", key
+    return events_url(url), key
 
 
 def is_enabled() -> bool:
@@ -61,15 +79,37 @@ def is_enabled() -> bool:
     return _endpoint()[0] is not None
 
 
+#: ⚠️⚠️ **What the last write did.** ⭐ *Fail-silent hid a total failure*: the events endpoint was being
+#: built wrongly, every write 404'd, and the panel read exactly like "nobody has used the app yet" —
+#: indistinguishable from success by anyone, including the two people looking at it.
+#:
+#: ⭐ So the silence is still silent **towards the request** — that rule does not move — and no longer
+#: silent towards the owner. One word, no url, no key, no payload.
+_last: str = "never"
+
+
+def status() -> str:
+    """`off` · `never` · `ok` · `failing` — ⭐ enough to tell *not configured* from *configured and
+    broken*, which is the distinction that cost an afternoon."""
+    if not is_enabled():
+        return "off"
+    return _last
+
+
 def _post(url: str, key: str, payload: dict) -> None:
     """One best-effort write. ⚠️ Swallows everything — nothing here may surface into a request."""
+    global _last
     try:
-        requests.post(
+        response = requests.post(
             url, json=payload, timeout=_TIMEOUT,
             headers={"apikey": key, "Authorization": f"Bearer {key}",
                      "Content-Type": "application/json", "Prefer": "return=minimal"},
         )
-    except Exception:
+        # ⚠️ The status code matters: a 404 from a wrong endpoint does not raise, and that is precisely
+        # how this failed unnoticed.
+        _last = "ok" if response.status_code < 400 else f"failing ({response.status_code})"
+    except Exception as exc:
+        _last = f"failing ({exc.__class__.__name__})"
         return
 
 

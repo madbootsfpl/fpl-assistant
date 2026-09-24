@@ -247,7 +247,10 @@ def test_the_dart_test_asserts_against_the_body_this_service_returns(client):
     import re
 
     dart = (ROOT / "mobile" / "test" / "server_test.dart").read_text()
-    quoted = re.search(r"const _health = '(\{.*?\})';", dart)
+    # ⚠️ Whitespace-tolerant: `dart format` wraps a long literal onto its own line, and the first
+    # version of this pattern required it on one — ⭐ *a guard that breaks when the formatter runs is a
+    # guard people learn to edit rather than trust* (the same fault as ADR-269's help-link regex).
+    quoted = re.search(r"const _health\s*=\s*'(\{.*?\})';", dart, re.S)
     assert quoted, "server_test.dart no longer carries a _health literal — update this guard with it"
 
     copied = json.loads(quoted.group(1))

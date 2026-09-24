@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from src import service
 from src.service.http.limits import RateLimiter, rate_limit_middleware
+from src.service.http.usage import status as usage_status
 from src.service.http.usage import usage_middleware
 from src.service.requests import (
     DEFAULT_HORIZON,
@@ -321,6 +322,10 @@ def health() -> dict:
     # on the database, not the service.
     reachable, why = _can_serve()
     return {"ok": reachable, "service": "madboots", "version": _VERSION,
+            # ⭐ `off` · `never` · `ok` · `failing (…)` — ⚠️ *fail-silent usage recording hid a total
+            # failure once* (ADR-281), and an empty panel read identically to a quiet week. This is the
+            # one place to tell *not configured* from *configured and broken*. No url, no key, no data.
+            "usage": usage_status(),
             **({} if reachable else {"reason": why})}
 
 

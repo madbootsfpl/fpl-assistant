@@ -16,7 +16,8 @@ import 'package:madboots/server.dart';
 
 /// ⭐ The real `/api/v1/health` body, copied from what the route returns — see
 /// `tests/test_service_health.py`, which asserts the server keeps returning exactly this.
-const _health = '{"ok":true,"service":"madboots","version":"0.0.1"}';
+const _health =
+    '{"ok": true, "service": "madboots", "version": "0.0.1", "usage": "off"}';
 
 void main() {
   group('tidying what a person types', () {
