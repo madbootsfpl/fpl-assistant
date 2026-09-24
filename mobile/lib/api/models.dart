@@ -1515,6 +1515,8 @@ class LeagueTable {
     required this.rows,
     required this.captainsFrom,
     required this.captains,
+    required this.managers,
+    required this.awards,
   });
 
   factory LeagueTable.fromJson(Map<String, dynamic> json) => LeagueTable(
@@ -1530,12 +1532,29 @@ class LeagueTable {
       for (final c in (json['captains'] as List? ?? []))
         LeagueCaptain.fromJson(c as Map<String, dynamic>),
     ],
+    managers: [
+      for (final m in (json['managers'] as List? ?? []))
+        LeagueManager.fromJson(m as Map<String, dynamic>),
+    ],
+    awards: [
+      for (final a in (json['awards'] as List? ?? []))
+        LeagueAward.fromJson(a as Map<String, dynamic>),
+    ],
   );
 
   final int leagueId;
   final String name;
   final int? gameweek;
   final List<LeagueStanding> rows;
+
+  /// One row per manager whose squad was read — ⭐ **free riders on the captain fetch** (ADR-287).
+  ///
+  /// ⚠️ Shorter than [rows] whenever a read failed, and `captainsFrom` is the number that says so.
+  final List<LeagueManager> managers;
+
+  /// ⭐ Who won the gameweek and who wasted the most — **structured, not worded**: the server sends who
+  /// and how much, and this app supplies the title and the emoji (the badges' rule, ADR-286).
+  final List<LeagueAward> awards;
 
   /// ⚠️ **How many squads were actually read.** A manager whose fetch fails is absent rather than fatal,
   /// and ⭐ *a partial read must never present itself as the whole league.*
@@ -1645,4 +1664,74 @@ class BuiltPlayer {
   /// place — ⚠️ *and a draft that cannot tell you which is which invites you to trust a choice you made
   /// yourself.*
   final bool forced;
+}
+
+/// A manager's gameweek, out of the picks payload the captain split already fetched (ADR-287).
+///
+/// ⭐⭐ **Every field here arrived for free.** `active_chip` and `entry_history` ride along with the
+/// picks, and the four sub-tabs were parked as unbuilt while the data was being fetched and discarded.
+class LeagueManager {
+  const LeagueManager({
+    required this.entry,
+    required this.manager,
+    required this.team,
+    required this.points,
+    required this.overallRank,
+    required this.transfers,
+    required this.hit,
+    required this.benchPoints,
+    required this.chip,
+  });
+
+  factory LeagueManager.fromJson(Map<String, dynamic> json) => LeagueManager(
+    entry: (json['entry'] as num?)?.toInt() ?? 0,
+    manager: json['manager'] as String?,
+    team: json['team'] as String?,
+    points: (json['points'] as num?)?.toInt(),
+    overallRank: (json['overall_rank'] as num?)?.toInt(),
+    transfers: (json['transfers'] as num?)?.toInt(),
+    hit: (json['hit'] as num?)?.toInt(),
+    benchPoints: (json['bench_points'] as num?)?.toInt(),
+    chip: json['chip'] as String?,
+  );
+
+  final int entry;
+  final String? manager;
+  final String? team;
+  final int? points;
+
+  /// ⭐ The one number a league table cannot show you: where you are **in the world**.
+  final int? overallRank;
+
+  final int? transfers;
+
+  /// ⚠️ Positive — the points a hit **cost**, not a negative to be added somewhere by accident.
+  final int? hit;
+
+  final int? benchPoints;
+
+  /// FPL's own key — `bboost`, `3xc`, `freehit`, `wildcard` — or null for no chip.
+  final String? chip;
+}
+
+/// A gameweek award (ADR-287). ⭐ The server names the winner; the app names the award.
+class LeagueAward {
+  const LeagueAward({
+    required this.kind,
+    required this.manager,
+    required this.team,
+    required this.value,
+  });
+
+  factory LeagueAward.fromJson(Map<String, dynamic> json) => LeagueAward(
+    kind: json['kind'] as String? ?? '',
+    manager: json['manager'] as String?,
+    team: json['team'] as String?,
+    value: (json['value'] as num?)?.toInt() ?? 0,
+  );
+
+  final String kind;
+  final String? manager;
+  final String? team;
+  final int value;
 }

@@ -135,14 +135,20 @@ class _CannedFpl:
         return self._picks[entry_id]
 
 
-def _canned_picks(ids, captain, vice):
-    """One manager's picks payload, in FPL's own shape."""
+def _canned_picks(ids, captain, vice, history=None, chip=None):
+    """One manager's picks payload, in FPL's own shape.
+
+    ⚠️⚠️ **`entry_history` is not optional garnish.** The Transfers, Rank, Chips and Awards tabs are all
+    read out of it (ADR-287), and a stub that omits it produced a sample whose every new field was
+    `null` — ⭐ *a sample that documents the empty case documents the one screen nobody will see*, which
+    is precisely what this file's own docstring warns samples are for.
+    """
     return {"picks": [
         {"element": pid, "position": i + 1,
          "multiplier": 2 if pid == captain else (0 if i >= 11 else 1),
          "is_captain": pid == captain, "is_vice_captain": pid == vice}
         for i, pid in enumerate(ids)
-    ], "active_chip": None}
+    ], "active_chip": chip, "entry_history": history or {}}
 
 
 def _with_canned(client, fn):
@@ -165,10 +171,19 @@ def _leagues():
 
 def _league(store, ids):
     entries = [101, 102, 103]
+    # ⭐ Three managers who differ on **every** column the new tabs read, so the sample shows a winner,
+    # a wasted bench, a hit, a chip and three very different overall ranks rather than three copies of
+    # one row.
     picks = {
-        101: _canned_picks(ids, ids[0], ids[1]),
-        102: _canned_picks(ids, ids[0], ids[2]),
-        103: _canned_picks(ids, ids[3], ids[1]),
+        101: _canned_picks(ids, ids[0], ids[1], chip="bboost", history={
+            "points": 62, "overall_rank": 3842466, "event_transfers": 1,
+            "event_transfers_cost": 0, "points_on_bench": 3}),
+        102: _canned_picks(ids, ids[0], ids[2], history={
+            "points": 91, "overall_rank": 41206, "event_transfers": 3,
+            "event_transfers_cost": 8, "points_on_bench": 19}),
+        103: _canned_picks(ids, ids[3], ids[1], history={
+            "points": 55, "overall_rank": 912004, "event_transfers": 0,
+            "event_transfers_cost": 0, "points_on_bench": 0}),
     }
     return _with_canned(
         _CannedFpl(entries, picks),

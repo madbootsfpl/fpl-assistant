@@ -905,6 +905,73 @@ def _picks_for(entries, gameweek, client):
     return out
 
 
+def _manager_rows(picks: dict, rows: list) -> list[dict]:
+    """One row per manager read, from the picks payload the captain split already fetched.
+
+    ⚠️ **Only the managers whose fetch succeeded**, like the captain split — ⭐ *a partial read must never
+    present itself as the whole league* (ADR-215), and `captains_from` already says how many.
+    """
+    named = {r["entry"]: r for r in rows if r.get("entry")}
+    out = []
+    for entry, payload in picks.items():
+        history = payload.get("entry_history") or {}
+        row = named.get(entry) or {}
+        out.append({
+            "entry": entry,
+            "manager": row.get("manager"),
+            "team": row.get("team"),
+            "points": history.get("points"),
+            # ⭐ The one number a league table cannot show you: where you are **in the world**, not just
+            # among the eleven people you know.
+            "overall_rank": history.get("overall_rank"),
+            "transfers": history.get("event_transfers"),
+            # ⚠️ Positive in FPL's payload and positive here. ⭐ *A cost stored as a negative number gets
+            # added somewhere by accident exactly once.*
+            "hit": history.get("event_transfers_cost"),
+            "bench_points": history.get("points_on_bench"),
+            # `None` when no chip was played — ⚠️ not `""`, which a client would render as a blank chip.
+            "chip": payload.get("active_chip"),
+        })
+    return sorted(out, key=lambda m: -(m["points"] or 0))
+
+
+def _awards(picks: dict, rows: list) -> list[dict]:
+    """The two the owner picked: who won the gameweek, and who wasted the most on their bench.
+
+    ⚠️ **Structured, not worded.** The server sends *who* and *how much*; the client supplies the title
+    and the emoji — ⭐ the same split as a player card's badges (ADR-286), and for the same reason: *a
+    client that has to take a sentence apart to lay it out will one day take it apart differently.*
+    """
+    managers = _manager_rows(picks, rows)
+    if not managers:
+        return []
+
+    def best(field: str) -> dict | None:
+        # ⚠️ `max` is stable, so a tie resolves to the highest-placed manager in the table rather than to
+        # whichever order a dict happened to iterate in — ⭐ *an award that changes hands on a refresh is
+        # an award nobody believes.*
+        ranked = [m for m in managers if m.get(field) is not None]
+        return max(ranked, key=lambda m: m[field]) if ranked else None
+
+    out = []
+    if winner := best("points"):
+        out.append({"kind": "gameweek_winner", **_award_of(winner, "points")})
+    # ⭐ Omitted when nobody left anything behind. *An award for wasting nothing is not an award*, and a
+    # row reading "0 pts left on the bench" invites the reader to work out whether that is good.
+    if (bench := best("bench_points")) and bench["bench_points"]:
+        out.append({"kind": "worst_bench", **_award_of(bench, "bench_points")})
+    return out
+
+
+def _award_of(manager: dict, field: str) -> dict:
+    return {
+        "entry": manager["entry"],
+        "manager": manager["manager"],
+        "team": manager["team"],
+        "value": manager[field],
+    }
+
+
 def league(request: LeagueRequest, *, store: Storage | None = None) -> dict:
     """One classic league — the table, and optionally what everybody captained (ADR-267).
 
@@ -936,7 +1003,7 @@ def league(request: LeagueRequest, *, store: Storage | None = None) -> dict:
     try:
         players = store.get_players()
         gameweek = request.gameweek or last_completed_gameweek(store.get_upcoming_fixtures())
-        captains, checked = [], 0
+        captains, checked, picks = [], 0, {}
         if request.with_captains and gameweek:
             entries = [r["entry"] for r in rows[:request.limit] if r["entry"]]
             picks = _picks_for(entries, gameweek, client)
@@ -967,6 +1034,12 @@ def league(request: LeagueRequest, *, store: Storage | None = None) -> dict:
         # ⚠️ Stated, so a partial read never presents itself as the whole league (ADR-215's rule).
         "captains_from": checked,
         "captains": captains,
+        # ⭐⭐ **Free riders on a fetch already being made** (ADR-287). `with_captains` spends one request
+        # per manager, and the payload it gets back carries `active_chip` and an `entry_history` with the
+        # overall rank, the transfer count, the hit and the bench points. ⚠️ *Four sub-tabs were parked as
+        # unbuilt when three of them were already paid for* — the data was arriving and being discarded.
+        "managers": _manager_rows(picks, rows),
+        "awards": _awards(picks, rows),
     }
 
 

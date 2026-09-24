@@ -164,12 +164,18 @@ class _OneLeagueState extends State<_OneLeague> {
   late Future<LeagueTable> _table = widget.client.league(widget.league.id);
   bool _askedCaptains = false;
 
+  /// ⭐⭐ **Everything past the table rides on one fetch** (ADR-287). `withCaptains` spends a request per
+  /// manager and the payload carries the chip, the overall rank, the transfer count, the hit and the
+  /// bench points — ⚠️ *four tabs were parked as unbuilt while the data was arriving and being thrown
+  /// away.* So five tabs share one flag, and opening the fifth costs nothing if you opened the second.
+  static const _needsSquads = {1, 2, 3, 4};
+
   void _pickTab(int tab) {
     setState(() {
       _tab = tab;
       // ⚠️ Fetched on first open only. ⭐ *A panel that re-spends twenty requests every time you tab back
       // to it is a panel that punishes browsing.*
-      if (tab == 1 && !_askedCaptains) {
+      if (_needsSquads.contains(tab) && !_askedCaptains) {
         _askedCaptains = true;
         _table = widget.client.league(widget.league.id, withCaptains: true);
       }
@@ -181,36 +187,48 @@ class _OneLeagueState extends State<_OneLeague> {
     children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
-        child: Row(
+        // ⚠️⚠️ **Wraps, because six do not fit a phone in one row.** ⭐ *A tab bar that scrolls
+        // sideways hides tabs behind a gesture nothing advertises* — two visible rows beat one row with
+        // a secret in it. `Table` and `Head to head` keep the ends they had, so the two tabs anyone had
+        // learned did not move.
+        child: Wrap(
+          spacing: 4,
+          runSpacing: 4,
           children: [
             for (final (i, label) in const [
               (0, 'Table'),
               (1, 'Captains'),
-              (2, 'Head to head'),
+              (2, 'Transfers'),
+              (3, 'Rank'),
+              (4, 'Chips'),
+              (5, 'Awards'),
+              (6, 'Head to head'),
             ])
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _pickTab(i),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _tab == i ? Brand.purple : Colors.white10,
-                      borderRadius: BorderRadius.circular(Brand.radiusPill),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          color: _tab == i ? Colors.white : Colors.white54,
-                          fontSize: 12.5,
-                          fontWeight: _tab == i
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                        ),
+              // ⚠️ Not `Expanded`: a `Wrap` gives its children their own width, and seven equal columns
+              // would leave "Rank" in a box built for "Head to head".
+              GestureDetector(
+                onTap: () => _pickTab(i),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 7,
+                    horizontal: 12,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _tab == i ? Brand.purple : Colors.white10,
+                    borderRadius: BorderRadius.circular(Brand.radiusPill),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: _tab == i ? Colors.white : Colors.white54,
+                        fontSize: 12.5,
+                        fontWeight: _tab == i
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                   ),
@@ -229,7 +247,7 @@ class _OneLeagueState extends State<_OneLeague> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const CircularProgressIndicator(),
-                    if (_tab == 1)
+                    if (_needsSquads.contains(_tab))
                       const Padding(
                         padding: EdgeInsets.only(top: 14),
                         child: Text(
@@ -251,7 +269,11 @@ class _OneLeagueState extends State<_OneLeague> {
             final table = snapshot.data!;
             return switch (_tab) {
               1 => _Captains(table: table),
-              2 => _HeadToHead(
+              2 => LeagueManagers(table: table, column: LeagueColumn.transfers),
+              3 => LeagueManagers(table: table, column: LeagueColumn.rank),
+              4 => LeagueManagers(table: table, column: LeagueColumn.chip),
+              5 => LeagueAwards(table: table),
+              6 => _HeadToHead(
                 client: widget.client,
                 table: table,
                 managerId: widget.managerId,
@@ -822,4 +844,319 @@ class _Problem extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Which number a manager row is showing (ADR-287).
+///
+/// ⭐ Public, like `TrendingBoards`: these are leaf presentation and the alternative is a widget test
+/// that has to stand up a network client to reach them.
+///
+/// ⭐ **One list, three columns.** Transfers, Rank and Chips are the same twelve managers ordered
+/// differently with a different figure on the right — ⚠️ *three near-identical widgets is three places
+/// to fix the next alignment bug in.*
+enum LeagueColumn { transfers, rank, chip }
+
+/// FPL's own chip keys, in FPL's own words.
+///
+/// ⚠️ *An app that renames the game's moves makes the manager translate* — the same rule that made
+/// "Replace him" into "Transfer" (ADR-286).
+const Map<String, String> _chipNames = {
+  'bboost': 'Bench Boost',
+  '3xc': 'Triple Captain',
+  'freehit': 'Free Hit',
+  'wildcard': 'Wildcard',
+  'manager': 'Assistant Manager',
+};
+
+class LeagueManagers extends StatelessWidget {
+  const LeagueManagers({required this.table, required this.column, super.key});
+
+  final LeagueTable table;
+  final LeagueColumn column;
+
+  List<LeagueManager> get _ordered {
+    final rows = [...table.managers];
+    switch (column) {
+      case LeagueColumn.transfers:
+        // ⭐ Busiest first: the question is *who is churning their squad*, not who is alphabetically near.
+        rows.sort((a, b) => (b.transfers ?? 0).compareTo(a.transfers ?? 0));
+      case LeagueColumn.rank:
+        // ⚠️ Ascending, and nulls last — a smaller overall rank is better, and a manager whose squad
+        // could not be read must not sort to the top of the world.
+        rows.sort((a, b) {
+          final x = a.overallRank, y = b.overallRank;
+          if (x == null) return y == null ? 0 : 1;
+          if (y == null) return -1;
+          return x.compareTo(y);
+        });
+      case LeagueColumn.chip:
+        // ⭐ Chip-players first; the rest keep their points order. *A list where the answer is scattered
+        // through twelve rows of "—" is a list you have to read rather than look at.*
+        rows.sort((a, b) {
+          final x = a.chip == null ? 1 : 0, y = b.chip == null ? 1 : 0;
+          return x.compareTo(y);
+        });
+    }
+    return rows;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (table.managers.isEmpty) {
+      return const _Problem(
+        message: 'No squads could be read for this gameweek.',
+      );
+    }
+    final rows = _ordered;
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 18),
+      itemCount: rows.length + 1,
+      itemBuilder: (context, i) {
+        if (i == rows.length) return _Footnote(table: table, column: column);
+        final m = rows[i];
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.manager ?? 'Unknown manager',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                    if (m.team != null)
+                      Text(
+                        m.team!,
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              _Value(manager: m, column: column),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The right-hand figure — ⭐ *the reason this tab is a separate tab.*
+class _Value extends StatelessWidget {
+  const _Value({required this.manager, required this.column});
+
+  final LeagueManager manager;
+  final LeagueColumn column;
+
+  @override
+  Widget build(BuildContext context) => switch (column) {
+    LeagueColumn.transfers => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${manager.transfers ?? 0}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 10),
+        // ⚠️⚠️ **The hit, in the colour a cost deserves.** A transfer count without its price is half
+        // the fact — ⭐ *three transfers for nothing and three for minus eight are different weeks.*
+        SizedBox(
+          width: 42,
+          child: Text(
+            (manager.hit ?? 0) == 0 ? '' : '−${manager.hit}',
+            textAlign: TextAlign.end,
+            style: const TextStyle(color: Brand.warn, fontSize: 13),
+          ),
+        ),
+      ],
+    ),
+    LeagueColumn.rank => Text(
+      // ⚠️ Grouped, because seven digits unseparated are unreadable at a glance and this column exists
+      // to be glanced at.
+      manager.overallRank == null ? '—' : _grouped(manager.overallRank!),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    LeagueColumn.chip =>
+      manager.chip == null
+          // ⭐ A dash, not a blank: *"no chip" is an answer, and an empty cell looks like a missing one.*
+          ? const Text(
+              '—',
+              style: TextStyle(color: Colors.white24, fontSize: 13),
+            )
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: Brand.purple.withValues(alpha: 0.25),
+                border: Border.all(color: Brand.purpleLight),
+                borderRadius: BorderRadius.circular(Brand.radiusPill),
+              ),
+              child: Text(
+                _chipNames[manager.chip] ?? manager.chip!,
+                style: const TextStyle(color: Colors.white, fontSize: 11.5),
+              ),
+            ),
+  };
+}
+
+String _grouped(int n) {
+  final s = '$n';
+  final out = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) out.write(',');
+    out.write(s[i]);
+  }
+  return out.toString();
+}
+
+/// What the column adds up to across the league — ⭐ *a list of twelve numbers invites the reader to add
+/// them up, and doing the arithmetic for them is the whole job.*
+class _Footnote extends StatelessWidget {
+  const _Footnote({required this.table, required this.column});
+
+  final LeagueTable table;
+  final LeagueColumn column;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = table.managers;
+    final text = switch (column) {
+      LeagueColumn.transfers => () {
+        final moves = m.fold(0, (a, x) => a + (x.transfers ?? 0));
+        final hits = m.fold(0, (a, x) => a + (x.hit ?? 0));
+        return 'The league made $moves transfer${moves == 1 ? '' : 's'}'
+            '${hits == 0 ? ' and took no hits' : ', costing $hits points in hits'}.';
+      }(),
+      // ⚠️ Says the population it is drawn from, never just the count — *a partial read must not present
+      // itself as the whole league* (ADR-215).
+      LeagueColumn.rank =>
+        'Overall rank across the game, from ${table.captainsFrom} '
+            'squad${table.captainsFrom == 1 ? '' : 's'} read.',
+      LeagueColumn.chip => () {
+        final played = m.where((x) => x.chip != null).length;
+        return played == 0
+            ? 'Nobody played a chip this gameweek.'
+            : '$played of ${m.length} played a chip this gameweek.';
+      }(),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white38,
+          fontSize: 11.5,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+/// The gameweek's two honours (ADR-287).
+///
+/// ⭐⭐ **The server names the winner; this names the award.** It sends `kind`, `manager` and `value` —
+/// ⚠️ *a client that has to take a sentence apart to lay it out will one day take it apart differently*
+/// (the badges' rule, ADR-286).
+class LeagueAwards extends StatelessWidget {
+  const LeagueAwards({required this.table, super.key});
+
+  final LeagueTable table;
+
+  static const _titles = {
+    'gameweek_winner': (
+      emoji: '🏆',
+      title: 'Gameweek winner',
+      unit: 'pts',
+      note: 'Most points in the league this gameweek.',
+    ),
+    'worst_bench': (
+      emoji: '😖',
+      title: 'Worst bench',
+      unit: 'pts left on the bench',
+      note: 'Points that were in the squad and not in the eleven.',
+    ),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (table.awards.isEmpty) {
+      return const _Problem(
+        message:
+            'No squads could be read for this gameweek, so there is '
+            'nothing to award.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 18),
+      children: [
+        for (final award in table.awards)
+          if (_titles[award.kind] case final t?)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(Brand.radiusMd),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t.emoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.title,
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 11,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${award.manager ?? 'Unknown manager'} — '
+                          '${award.value} ${t.unit}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          t.note,
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 11.5,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      ],
+    );
+  }
 }

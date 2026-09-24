@@ -1,4 +1,20 @@
 {
+  "awards": [
+    {
+      "entry": 102,
+      "kind": "gameweek_winner",
+      "manager": "Manager 2",
+      "team": "Team 2",
+      "value": 91
+    },
+    {
+      "entry": 102,
+      "kind": "worst_bench",
+      "manager": "Manager 2",
+      "team": "Team 2",
+      "value": 19
+    }
+  ],
   "captains": [
     {
       "count": 2,
@@ -40,6 +56,41 @@
   "captains_from": 3,
   "gameweek": 5,
   "league_id": 4021,
+  "managers": [
+    {
+      "bench_points": 19,
+      "chip": null,
+      "entry": 102,
+      "hit": 8,
+      "manager": "Manager 2",
+      "overall_rank": 41206,
+      "points": 91,
+      "team": "Team 2",
+      "transfers": 3
+    },
+    {
+      "bench_points": 3,
+      "chip": "bboost",
+      "entry": 101,
+      "hit": 0,
+      "manager": "Manager 1",
+      "overall_rank": 3842466,
+      "points": 62,
+      "team": "Team 1",
+      "transfers": 1
+    },
+    {
+      "bench_points": 0,
+      "chip": null,
+      "entry": 103,
+      "hit": 0,
+      "manager": "Manager 3",
+      "overall_rank": 912004,
+      "points": 55,
+      "team": "Team 3",
+      "transfers": 0
+    }
+  ],
   "name": "A League of Our Own",
   "rows": [
     {
