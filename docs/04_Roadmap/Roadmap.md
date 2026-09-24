@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,587 tests · 279 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,596 tests · 280 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
 page knowing three things:
@@ -141,7 +141,11 @@ list on sight, not on suspicion.
 - **The Lab's other two modes** — Free Hit and a fresh-season build are the **same solver with different
   defaults** and `LabMode` already exists to hold them (ADR-272).
 
-### 📱 Who is actually testing the mobile app? — **open, 2026-09-24**
+### 📱 Who is actually testing the mobile app? — **answered 2026-09-24 as LOAD, not people (ADR-280)**
+
+⭐ The owner settled it the moment it was raised: *"I am not interested in personal information"* — so the API now records **platform · version · a random install id · endpoint · duration**, and never the manager id, the IP or the body. The counting question below is closed; the **accounts** question (ADR-259) remains parked.
+
+<details><summary>the original finding, kept</summary>
 
 The owner, after putting the APK on a tablet: *"how do I know who is testing, does that information route
 back to our admin stats on the desktop?"*
@@ -170,6 +174,8 @@ follows (ADR-231).
 📌 **Deliberately not decided here.** It is a product question — *how much do you want to know about
 testers who never asked to be measured?* — and it is entangled with the accounts question (ADR-259) that
 is already parked. Named so it is not rediscovered.
+
+</details>
 
 
 *(**Sprint 61's design notes audited 2026-09-02** — the two screenshots the owner attached four days ago were

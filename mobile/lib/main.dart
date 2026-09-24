@@ -27,6 +27,7 @@ import 'more_view.dart';
 import 'pitch.dart';
 import 'player_sheet.dart';
 import 'team_dna_view.dart';
+import 'telemetry.dart';
 import 'this_week_view.dart';
 import 'ticker_view.dart';
 import 'transfers_view.dart';
@@ -48,6 +49,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // ⭐ Both reads happen before the first frame, for the same reason: *no screen is ever built against a
   // placeholder it would then have to be told about.*
+  // ⭐ Resolved here so nothing downstream ever awaits it. ⚠️ *A failure is silent and costs one
+  // uncounted install* — see `Telemetry.init`.
+  await Telemetry.init();
   runApp(
     MadbootsApp(
       baseUrl: await Server.load(),

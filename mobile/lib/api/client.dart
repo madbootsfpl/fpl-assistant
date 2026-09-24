@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../telemetry.dart';
 import 'models.dart';
 
 /// Raised when a request does not come back with an answer. ⭐ **400 is the caller's mistake, not a server
@@ -73,6 +74,13 @@ String errorDetail(int status, String body) {
 String friendlyError(Object? error) =>
     error is ApiException ? error.detail : '$error';
 
+/// The app's version, and ⚠️ **the only place it is written down in Dart.**
+///
+/// ⭐ `test/version_matches_pubspec_test.dart` fails if it drifts from `pubspec.yaml` — *a version
+/// number kept in two places is a version number that will disagree with itself*, and this one is what
+/// tells the owner an old build is still in somebody's pocket (ADR-280).
+const String kAppVersion = '1.0.0';
+
 class ServiceClient {
   ServiceClient({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
@@ -86,6 +94,20 @@ class ServiceClient {
   /// ⚠️ `path` is everything after `/api/v1/`, **including** the `squad/` prefix where there is
   /// one. It used to assume that prefix, which made the market endpoint — the one thing that is
   /// not squad-shaped — reachable only by a `../` that depended on URL normalisation.
+  /// ⭐⭐ **Three values, and the whole of what the app says about itself** (ADR-280): which platform,
+  /// which build, and a random install id. ⚠️ *Not* the manager id — the server receives that on four
+  /// endpoints and must never join it to these.
+  ///
+  /// ⚠️ **Synchronous, and reading no storage.** `Telemetry.init()` resolves the identity once before
+  /// the first frame; this is a field read. ⭐ *Telemetry in the request path is telemetry that gets
+  /// blamed for the app being slow* — and when it was an `await` here, eighteen unrelated tests started
+  /// failing on a missing plugin binding.
+  Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    'X-Madboots-Version': kAppVersion,
+    ...Telemetry.headers,
+  };
+
   Future<Map<String, dynamic>> _post(
     String path,
     Map<String, dynamic> body,
@@ -94,7 +116,7 @@ class ServiceClient {
     try {
       response = await _client.post(
         Uri.parse('$baseUrl/api/v1/$path'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: _headers,
         body: jsonEncode(body),
       );
     } on SocketException {

@@ -90,6 +90,16 @@ a variable this table does not name.
 | `FPL_FEEDBACK_KEY` | nothing, unless the relay needs an access key | ⚠️ leave unset for an Apps Script sink — it is only Web3Forms' `access_key` |
 | `FPL_FEEDBACK_EMAIL` | falls back to `hello@madboots.com` | the address offered to a tester when the relay fails |
 | `FPL_FEEDBACK_ORIGIN` | falls back to the Streamlit URL | ⚠️ only matters if the relay checks `Origin` |
+| `FPL_STORE_URL` + `FPL_STORE_KEY` | ⭐ **no usage recording at all** — the API answers requests and counts nothing. Set them and it records load per platform (ADR-280) | the same Supabase store the web app uses; ⚠️ *no new secret, and no new table* |
+| `FPL_USAGE_OFF` | nothing — recording stays on | ⭐ set to anything to stop it **without a deploy**: *a thing that records people should be possible to stop without one* |
+
+### ⭐ What the usage rows contain, and what they never will
+
+`platform` · `version` · a **random install id** · the endpoint · a duration. ⚠️⚠️ **Not the manager id**,
+which the API receives on four endpoints and must never join to these; **not the caller's IP**, which the
+rate limiter next door does read; and **not the request body**. ⭐ *The difference between "twelve Android
+devices" and "Tony opened Trending" is the whole of the promise* — `tests/test_usage_recording.py` pins
+both the behaviour and a source sweep that fails the day somebody adds the join.
 
 ### 🔴 FormSubmit does not work from a hosted server
 

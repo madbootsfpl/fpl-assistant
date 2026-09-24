@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from src import service
 from src.service.http.limits import RateLimiter, rate_limit_middleware
+from src.service.http.usage import usage_middleware
 from src.service.requests import (
     DEFAULT_HORIZON,
     FPL_BUDGET,
@@ -68,6 +69,10 @@ app.add_middleware(
 # even the full dotted path hands you the app rather than the module.
 app.state.limiter = RateLimiter()
 app.middleware("http")(rate_limit_middleware(app.state.limiter))
+
+# ⭐ Registered AFTER the limiter, so it runs OUTSIDE it — a rejected request is load too, and ⚠️ *a
+# capacity measure that cannot see the traffic it refused is the one measure you need when refusing.*
+app.middleware("http")(usage_middleware())
 
 
 # ⭐ Read from the package metadata rather than typed here. A version string written in two places is a
