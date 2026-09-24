@@ -498,6 +498,29 @@ def _suggested_lineup(owned, declared_bench_ids, xp_by_id, leaving) -> dict | No
     }
 
 
+def _badges(row) -> list[dict]:
+    """The display lenses a player card carries — ownership tier and set-piece duty.
+
+    ⚠️ **Glyph and word kept apart**, not the `"🟦 template"` string the tables use. ⭐ *A client that has
+    to split a string to lay it out will one day split it differently* — and the phone draws the two at
+    different sizes.
+
+    ⭐ Built from `crowd`'s **public** helpers, so the duty rules and the ownership boundaries have one
+    definition. ⚠️ *A second copy of "who takes the corners" is a second answer to it.*
+
+    Never xP. These are lenses over facts already inside the projection (ADR-081): a penalty taker's
+    penalties are in his points before any badge says so.
+    """
+    from src.analytics.crowd import ownership_tier, set_piece_flags
+
+    def split(flag: str) -> dict:
+        glyph, _, label = flag.partition(" ")
+        return {"glyph": glyph, "label": label}
+
+    tier = ownership_tier(row)
+    return [*([split(tier)] if tier else []), *(split(f) for f in set_piece_flags(row))]
+
+
 def _recent_rows(rows, club_by_id) -> list[dict]:
     """The last few appearances — points, minutes, **and who it was against** (ADR-242).
 
@@ -1783,6 +1806,14 @@ def player(request: PlayerRequest, *, store: Storage | None = None) -> dict:
         # wrong about your team.*
         "photo": photo_url(row["code"]),
         "stats": [{"label": label, "value": value} for label, value in stat_rows(row)],
+        # ⭐⭐ **Already computed, and the phone could not see them** (ADR-286). The web card has carried
+        # set-piece duty and the ownership tier since ADR-081/US-289; the mobile card showed neither,
+        # because this endpoint never sent them. ⚠️ *A lens the engine already applies, withheld from one
+        # client, is not a missing feature — it is the same product disagreeing with itself.*
+        #
+        # ⭐ Ownership first, then the duties, which is the order they answer in: *how many people own
+        # him* frames *what he does for them*.
+        "badges": _badges(row),
         "recent": _recent_rows(recent, club_by_id),
         # ⭐ The run **with difficulty**, so a reader can see whether a high projection is a good player or
         # an easy month — which is the question a card is opened to answer.

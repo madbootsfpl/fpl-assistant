@@ -65,10 +65,13 @@ void main() {
 
   testWidgets('the four actions are still there', (tester) async {
     await openSheet(tester, clientServing(sample('player')), starter);
+    // ⚠️ **Shortened to fit four across** (ADR-286). The icon above each word carries the recognition;
+    // "Make captain" needed the verb when it was a full-width row with three others stacked under it.
     for (final label in const [
-      'Make captain',
-      'Make vice-captain',
-      'Transfer…',
+      'Captain',
+      'Vice-captain',
+      'Bench',
+      'Transfer',
     ]) {
       expect(find.text(label), findsOneWidget, reason: '$label is missing');
     }
@@ -109,8 +112,8 @@ void main() {
   ) async {
     await openSheet(tester, clientServing('nope', status: 500), starter);
 
-    expect(find.text('Make captain'), findsOneWidget);
-    expect(find.text('Transfer…'), findsOneWidget);
+    expect(find.text('Captain'), findsOneWidget);
+    expect(find.text('Transfer'), findsOneWidget);
     expect(find.textContaining('did not load'), findsOneWidget);
   });
 
@@ -120,6 +123,81 @@ void main() {
     expect(
       find.textContaining('£${starter.price.toStringAsFixed(1)}m'),
       findsWidgets,
+    );
+  });
+
+  testWidgets('every fixture on the card carries its own xP', (tester) async {
+    /// ⚠️⚠️ **The bug the owner photographed.** The sheet read `player.byGameweek`, and `my-team` is
+    /// fetched with `horizon: 1` — so it held **one** gameweek and the second and third fixtures
+    /// rendered as `—` while the web card showed 5.4 / 5.4 / 5.3.
+    ///
+    /// ⭐ *A value that is fetched, parsed, stored and then read from the wrong place looks exactly like
+    /// a value the server never sent* — which is why this asserts there is **no** em-dash, not merely
+    /// that the first number is right.
+    await openSheet(tester, clientServing(sample('player')), starter);
+
+    final run = team().runFor(starter).take(3);
+    expect(
+      run.length,
+      greaterThan(1),
+      reason: 'the fixture strip needs a run to test',
+    );
+    for (final fixture in run) {
+      expect(find.text(fixture.label), findsOneWidget);
+    }
+    expect(
+      find.text('—'),
+      findsNothing,
+      reason: 'a fixture with no xP means the sheet is reading the one-gameweek map again',
+    );
+  });
+
+  testWidgets('the fixture xP comes from the run, not the squad summary', (
+    tester,
+  ) async {
+    // ⭐ Pinned against the model rather than a literal, so the numbers can change without this failing
+    // and the *source* still cannot.
+    final xp = team().runXpFor(starter);
+    await openSheet(tester, clientServing(sample('player')), starter);
+
+    for (final fixture in team().runFor(starter).take(3)) {
+      final gw = fixture.gameweek;
+      if (gw == null || xp[gw] == null) continue;
+      expect(find.text(xp[gw]!.toStringAsFixed(1)), findsWidgets);
+    }
+  });
+
+  testWidgets('the lenses are shown, glyph and word together', (tester) async {
+    // ⭐ The web card has shown these for a year (ADR-081/US-289); the phone showed neither, because the
+    // endpoint never sent them.
+    await openSheet(tester, clientServing(sample('player')), starter);
+
+    final card = PlayerCard.fromJson(
+      jsonDecode(sample('player')) as Map<String, dynamic>,
+    );
+    expect(
+      card.badges,
+      isNotEmpty,
+      reason: 'the sample has no badges to render',
+    );
+    for (final badge in card.badges) {
+      // ⚠️ Both halves. *Three unlabelled pictures is a rebus, and the reader who does not already know
+      // what 🎯 means has no way to find out from a phone.*
+      expect(find.text('${badge.glyph} ${badge.label}'), findsOneWidget);
+    }
+  });
+
+  testWidgets('a card with no badges renders no strip', (tester) async {
+    // ⚠️ An empty row of pills would read as "loading", not as "nothing to say".
+    final bare = jsonDecode(sample('player')) as Map<String, dynamic>;
+    bare.remove('badges');
+    await openSheet(tester, clientServing(jsonEncode(bare)), starter);
+
+    expect(find.byType(Wrap), findsNothing);
+    expect(
+      find.text('Captain'),
+      findsOneWidget,
+      reason: 'the actions must survive it',
     );
   });
 }

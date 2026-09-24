@@ -1,4 +1,22 @@
 {
+  "badges": [
+    {
+      "glyph": "\ud83d\udfe6",
+      "label": "template"
+    },
+    {
+      "glyph": "\u26bd",
+      "label": "pens"
+    },
+    {
+      "glyph": "\ud83d\udea9",
+      "label": "corners"
+    },
+    {
+      "glyph": "\ud83c\udfaf",
+      "label": "FK"
+    }
+  ],
   "fixtures": [
     {
       "difficulty": 3,

@@ -154,42 +154,60 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               _Card(future: _card, team: widget.team, player: p),
             const SizedBox(height: 12),
             if (_options == null && !_swapping) ...[
-              _Action(
-                icon: Icons.star,
-                label: isCaptain ? 'Already your captain' : 'Make captain',
-                enabled: !isCaptain,
-                onTap: () => Navigator.pop(context, MakeCaptain(p.id)),
-              ),
-              _Action(
-                icon: Icons.star_half,
-                label: isVice ? 'Already your vice' : 'Make vice-captain',
-                enabled: !isVice,
-                onTap: () => Navigator.pop(context, MakeVice(p.id)),
-              ),
-              // ⭐⭐ **Above Transfer, deliberately.** A substitution is free and reversible; a transfer
-              // costs points and cannot be undone. ⚠️ *Order on a list of actions is a recommendation,
-              // whether or not it was meant as one.*
-              if (widget.team.swapsFor(p.id).isNotEmpty)
-                _Action(
-                  icon: Icons.swap_vert,
-                  // ⭐ **"Substitute", the word FPL uses** (feedback) — the same reasoning that made
-                  // "Replace him" into "Transfer": ⚠️ *an app that renames the moves makes the manager
-                  // translate.* The ellipsis stays because a picker follows; the bench direction keeps
-                  // its own words, since "Substitute" does not say which way he is going.
-                  label: widget.team.benchedIds.contains(p.id)
-                      ? 'Substitute…'
-                      : 'Bench him…',
-                  enabled: true,
-                  onTap: () => setState(() => _swapping = true),
-                ),
-              _Action(
-                icon: Icons.swap_horiz,
-                // ⭐ **"Transfer", because that is the word FPL uses** (feedback item 1). "Replace him"
-                // described the mechanic; the manager is thinking in the vocabulary of the game he is
-                // playing, and an app that renames his moves makes him translate.
-                label: 'Transfer…',
-                enabled: true,
-                onTap: _findReplacements,
+              // ⭐⭐ **One row, not four** (ADR-286). Four full-width rows cost ~200pt of a sheet whose
+              // job is to show a player, and ⚠️ *a sheet that pushes its own subject off the screen has
+              // become a menu about him.* Across, they read as *what can I do here?* — one glance, four
+              // answers.
+              //
+              // ⚠️ **Order preserved, left to right.** A substitution is free and reversible; a transfer
+              // costs points and cannot be undone — ⭐ *order on a set of actions is a recommendation,
+              // whether or not it was meant as one*, and reading order still carries it.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _Action(
+                      icon: Icons.star,
+                      label: isCaptain ? 'Your captain' : 'Captain',
+                      enabled: !isCaptain,
+                      onTap: () => Navigator.pop(context, MakeCaptain(p.id)),
+                    ),
+                  ),
+                  Expanded(
+                    child: _Action(
+                      icon: Icons.star_half,
+                      label: isVice ? 'Your vice' : 'Vice-captain',
+                      enabled: !isVice,
+                      onTap: () => Navigator.pop(context, MakeVice(p.id)),
+                    ),
+                  ),
+                  Expanded(
+                    child: _Action(
+                      icon: Icons.swap_vert,
+                      // ⭐ **"Substitute", the word FPL uses** (feedback) — the same reasoning that made
+                      // "Replace him" into "Transfer": ⚠️ *an app that renames the moves makes the
+                      // manager translate.* The bench direction keeps its own word, since "Substitute"
+                      // does not say which way he is going.
+                      label: widget.team.benchedIds.contains(p.id)
+                          ? 'Substitute'
+                          : 'Bench',
+                      // ⚠️ Shown greyed rather than removed when he has no legal partner. ⭐ *A row of
+                      // four that sometimes has three moves the other three sideways*, and a control
+                      // that changes place is a control you have to find again.
+                      enabled: widget.team.swapsFor(p.id).isNotEmpty,
+                      onTap: () => setState(() => _swapping = true),
+                    ),
+                  ),
+                  Expanded(
+                    child: _Action(
+                      icon: Icons.swap_horiz,
+                      // ⭐ **"Transfer", because that is the word FPL uses** (feedback item 1).
+                      label: 'Transfer',
+                      enabled: true,
+                      onTap: _findReplacements,
+                    ),
+                  ),
+                ],
               ),
             ] else if (_swapping)
               Flexible(
@@ -223,24 +241,33 @@ class _Action extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
 
+  /// ⭐ Icon above word, because four of these share a line. Side by side they would each need the
+  /// width of their longest label; stacked, the icon carries the recognition and the word confirms it.
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: enabled ? onTap : null,
+    borderRadius: BorderRadius.circular(Brand.radiusMd),
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 19,
+            size: 21,
             color: enabled ? Brand.purpleLight : Colors.white24,
           ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: enabled ? Colors.white : Colors.white24,
-              fontSize: 14.5,
+          const SizedBox(height: 6),
+          // ⚠️ `scaleDown`, so "Vice-captain" on a narrow phone shrinks rather than wrapping to two
+          // lines and making its tile taller than the three beside it.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: enabled ? Colors.white : Colors.white24,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -561,7 +588,15 @@ class _Card extends StatelessWidget {
             children: [
               for (final fixture in run.take(3))
                 Expanded(
-                  child: _Fixture(fixture: fixture, player: player),
+                  child: _Fixture(
+                    fixture: fixture,
+                    // ⚠️⚠️ **`runXpFor`, not the player's own map** (ADR-286). `my-team` is fetched with
+                    // `horizon: 1`, so `player.byGameweek` holds **one** gameweek and the second and
+                    // third fixtures rendered as `—`. The numbers were on the device the whole time,
+                    // in `run_xp` — ⭐ *a value that is fetched, parsed, stored and then read from the
+                    // wrong place looks exactly like a value the server never sent.*
+                    xpByGameweek: team.runXpFor(player),
+                  ),
                 ),
             ],
           ),
@@ -597,45 +632,59 @@ class _Card extends StatelessWidget {
             // above a pitch, and ⚠️ *a stat block long enough to push the actions off-screen has
             // replaced them rather than joined them.*
             final shown = card.stats.take(4).toList();
-            return Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Row(
-                children: [
-                  Mugshot(url: card.photo, name: player.name, size: 40),
-                  const SizedBox(width: 12),
-                  for (final stat in shown)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              stat.value,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Row(
+                    children: [
+                      Mugshot(url: card.photo, name: player.name, size: 40),
+                      const SizedBox(width: 12),
+                      for (final stat in shown)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  stat.value,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              stat.label,
-                              style: const TextStyle(
-                                color: Colors.white38,
-                                fontSize: 9.5,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  stat.label,
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 9.5,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+                        ),
+                    ],
+                  ),
+                ),
+                // ⭐⭐ **The lenses, on one line** (ADR-286). Ownership tier then set-piece duty — the
+                // order they answer in: *how many people own him* frames *what he does for them.*
+                // The web card has shown these for a year; ⚠️ *the phone was not missing a feature, it
+                // was showing a different product.*
+                //
+                // ⚠️ **Never a number.** A penalty taker's penalties are already inside his xP — ⭐ *a
+                // badge says why the projection looks like that, which is a different job from saying
+                // what it is*, and a badge that looked like a score would be read as one.
+                if (card.badges.isNotEmpty) _Badges(badges: card.badges),
+              ],
             );
           },
         ),
@@ -647,17 +696,20 @@ class _Card extends StatelessWidget {
 /// One upcoming fixture — ⭐ **shaded on the same 1-5 scale as the ticker** (ADR-265), because *a colour
 /// that means "hard" on one screen must not mean anything else on another* (ADR-184).
 class _Fixture extends StatelessWidget {
-  const _Fixture({required this.fixture, required this.player});
+  const _Fixture({required this.fixture, required this.xpByGameweek});
 
   final Fixture fixture;
-  final PlayerSummary player;
+
+  /// ⭐ The run's projections, which cover **every** fixture shown — not the squad summary's, which
+  /// covers only the gameweek the board was asked for.
+  final Map<int, double> xpByGameweek;
 
   @override
   Widget build(BuildContext context) {
     final gw = fixture.gameweek;
     // ⚠️ Per-gameweek xP, which is the number that makes a fixture readable — *"CRY (H)" says who; "4.4"
     // says what it is worth.*
-    final xp = gw == null ? null : player.byGameweek[gw];
+    final xp = gw == null ? null : xpByGameweek[gw];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2),
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -689,4 +741,42 @@ class _Fixture extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Ownership tier and set-piece duty, on one line (ADR-286).
+///
+/// ⭐⭐ **Glyph first, word second, both small.** The owner asked for "set piece and template emojis",
+/// and the emoji alone was the temptation — ⚠️ *three unlabelled pictures is a rebus, and the reader who
+/// does not already know what 🎯 means has no way to find out from a phone.* The web card learned this
+/// the other way round (ADR-178): on a 104px kit the words wrapped to three lines, so the pitch dropped
+/// them and put a key at the bottom. ⭐ There is room here, and a sheet has no key.
+class _Badges extends StatelessWidget {
+  const _Badges({required this.badges});
+
+  final List<({String glyph, String label})> badges;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    // ⚠️ Wraps rather than scrolls. Four badges fit a phone; a fifth would be invisible in a scroller
+    // nothing suggests you can scroll — ⭐ *a row that can hide something must not look full.*
+    child: Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final badge in badges)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white10,
+              borderRadius: BorderRadius.circular(Brand.radiusPill),
+            ),
+            child: Text(
+              '${badge.glyph} ${badge.label}',
+              style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+            ),
+          ),
+      ],
+    ),
+  );
 }

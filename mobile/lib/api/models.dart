@@ -915,6 +915,7 @@ class PlayerCard {
     required this.stats,
     required this.recent,
     required this.fixtures,
+    required this.badges,
   });
 
   factory PlayerCard.fromJson(Map<String, dynamic> json) => PlayerCard(
@@ -931,6 +932,16 @@ class PlayerCard {
     fixtures: ((json['fixtures'] as List?) ?? const [])
         .map((f) => Fixture.fromJson((f as Map).cast<String, dynamic>()))
         .toList(),
+    // ⭐ Defaults to empty, so a card from an older build renders without them rather than not at all.
+    badges: ((json['badges'] as List?) ?? const [])
+        .map(
+          (b) => (
+            glyph: '${(b as Map)['glyph'] ?? ''}',
+            label: '${b['label'] ?? ''}',
+          ),
+        )
+        .where((b) => b.glyph.isNotEmpty)
+        .toList(),
   );
 
   final PlayerSummary player;
@@ -944,6 +955,12 @@ class PlayerCard {
 
   final List<Appearance> recent;
   final List<Fixture> fixtures;
+
+  /// Ownership tier and set-piece duty — ⭐ *lenses over facts already inside the projection* (ADR-286).
+  ///
+  /// ⚠️ **Never xP.** A penalty taker's penalties are in his points before any badge says so; the badge
+  /// says *why* the number looks like that, which is a different job from saying what it is.
+  final List<({String glyph, String label})> badges;
 }
 
 /// The lineup the engine would field, and what it is worth (ADR-244).
