@@ -48,6 +48,14 @@ android {
             keyPassword = keystoreProperties.getProperty("keyPassword")
             storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
             storePassword = keystoreProperties.getProperty("storePassword")
+
+            // ⭐⭐ **v3 costs nothing and is the only hedge against the one unrecoverable mistake here.**
+            // Losing the keystore means never updating the app again — v3 is the scheme that supports
+            // **key rotation**, so a future key can prove it succeeds this one. ⚠️ *It has to be in the
+            // APKs people already installed*: rotation proves a chain from the key they trust, and a
+            // build signed v2-only can never start that chain.
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 

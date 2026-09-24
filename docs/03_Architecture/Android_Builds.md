@@ -76,6 +76,23 @@ Then `cp android/key.properties.example android/key.properties` and fill in the 
 ⭐ **The release build fails loudly without it** rather than falling back to the debug key: *a fallback
 that silently produces an installable artefact is how a debug-signed APK reaches a tester.*
 
+**v2 and v3 signing are both on.** ⭐ v3 is the scheme that supports **key rotation**, the only hedge
+against the one unrecoverable mistake here — ⚠️ *and it has to be in the APKs people already installed*,
+because rotation proves a chain from the key they already trust. A build signed v2-only can never start
+that chain.
+
+### ⚠️ What "the signature must match" looks like
+
+Installing a properly-signed build over the earlier debug-signed one is **refused**:
+
+```
+INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package com.madboots.fpl
+signatures do not match newer version; ignoring!
+```
+
+⭐ *That refusal is the guarantee, not a bug* — it is what stops anyone else publishing an update to your
+users. The only way past it is uninstall, which is why signing is settled **before** distribution.
+
 ### 🔴 What is private, and what ships
 
 | | Where it lives | Who sees it |
