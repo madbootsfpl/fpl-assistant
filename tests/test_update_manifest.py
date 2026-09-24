@@ -232,3 +232,23 @@ def test_the_install_steps_reach_the_explainer() -> None:
     # *a step you cannot do yet is a step that reads as a blocker.*
     assert page.index('href="#fpl-id"') < page.index('id="fpl-id"')
     assert page.index("Tap <b>Install</b>") < page.index('href="#fpl-id"')
+
+
+def test_the_release_keeps_the_previous_builds() -> None:
+    """⚠️⚠️ **A missing APK does not 404 on Cloudflare Pages — it serves the site's index page.**
+
+    And the `_headers` rule then labels 384KB of HTML `application/vnd.android.package-archive`, so a
+    tester whose install page is cached one build behind downloads that and gets a parse error from
+    Android. ⭐ *The fallback for a stale link should be an older version of the thing, not a corrupt
+    version of it.*
+
+    The first version of this script deleted every previous APK to keep the folder tidy.
+    """
+    script = SCRIPT.read_text()
+
+    assert "rm -f \"$SITE/app\"/madboots*.apk" not in script, (
+        "the release script deletes every previous APK again"
+    )
+    # ⭐ Keeps a bounded number rather than all of them — 18MB each adds up, and the reason to keep one is
+    # a stale cache, which does not reach back further than a build or two.
+    assert "tail -n +4" in script, "the retention window is gone or unbounded"

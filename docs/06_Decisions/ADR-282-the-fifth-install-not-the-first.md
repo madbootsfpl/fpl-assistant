@@ -178,6 +178,20 @@ the same release just published, so the download would have bounced to the insta
 downloaded anything — ⭐ *a redirect that catches the file it is protecting is worse than the dead link it
 replaces.*
 
+### ⚠️⚠️ And the tidy-up that would have broken a stale link
+
+Versioned filenames came with `rm -f madboots*.apk` — one APK in the folder, the current one. That was
+wrong, and the reason is the same fact that caused every other problem here: **Cloudflare Pages does not
+404 a missing file, it serves the site's index page** — and the content-type rule then labels 384KB of
+HTML as an Android package.
+
+⭐⭐ *A tester whose install page is cached one build behind would not get a failed download. They would
+get a successful download of a file Android refuses to parse* — the worst of both, because a failure that
+looks like success is the one nobody reports as a bug.
+
+Now the last **three** builds are kept. ⭐ *The fallback for a stale link should be an older version of the
+thing, not a corrupt version of it.*
+
 ## What this does not do
 
 - **iOS.** TestFlight is the answer there and it needs the paid developer account. The owner is the only

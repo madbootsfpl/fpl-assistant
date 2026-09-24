@@ -256,6 +256,25 @@ is open, and ⭐ *a step you cannot do yet reads as a blocker.*
 ⚠️ It lives in the release script's heredoc, not in the staged file. Editing `~/madboots-site/app/index.html`
 by hand works until the next release overwrites it.
 
+### ⚠️⚠️ Old APKs are kept, and deleting them is a trap
+
+Cloudflare Pages does **not** 404 a missing file — it serves the site's index page. The `_headers` rule
+then labels 384KB of HTML `application/vnd.android.package-archive`:
+
+```
+$ curl -sI https://madboots.com/app/madboots-99.apk
+HTTP/2 200
+content-type: application/vnd.android.package-archive
+content-length: 384640          ← the homepage
+```
+
+⭐ So a tester whose install page is cached one build behind does not get a failed download. They get a
+**successful** download of a file Android then refuses to parse.
+
+The script keeps the **last three** APKs. ⭐ *The fallback for a stale link should be an older version of
+the thing, not a corrupt version of it* — one build old still installs, still works, and the app's own
+update banner takes it from there.
+
 ### The split APKs and `versionCode`
 
 `--split-per-abi` offsets each ABI by 1000 (armeabi-v7a 1000+n, arm64-v8a 2000+n, x86_64 3000+n), so

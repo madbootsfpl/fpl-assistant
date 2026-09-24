@@ -74,8 +74,16 @@ echo "  built: $(du -h "$APK" | cut -f1)  versionCode=$code"
 # ⭐ A URL that has never been requested cannot be stale. No purge step, no waiting, no "try again in four
 # hours" — *the release that needs a manual cache purge is the release someone ships without one.*
 mkdir -p "$SITE/app"
-rm -f "$SITE/app"/madboots*.apk          # ⭐ one APK in the folder: the current one
 cp "$APK" "$SITE/app/madboots-$next.apk"
+# ⚠️⚠️ **The previous builds stay.** Deleting them looked tidy and was a trap: Cloudflare Pages does not
+# 404 a missing file, it serves the site's index page — ⭐ and the `_headers` rule then labels 384KB of
+# HTML `application/vnd.android.package-archive`. A tester whose install page is cached one build behind
+# downloads that, and gets a parse error from Android instead of a download that failed.
+#
+# ⭐ Keeping three means a stale page still delivers a **real, signed, installable** APK one build old —
+# and the app's own update banner takes it from there. *The fallback for a stale link should be an older
+# version of the thing, not a corrupt version of it.*
+ls -t "$SITE/app"/madboots-*.apk 2>/dev/null | tail -n +4 | xargs -r rm -f
 cat > "$SITE/app/version.json" <<JSON
 {
   "version": "$name",
