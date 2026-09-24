@@ -67,18 +67,40 @@ the recorder must not read it. ⭐ *A guard that fires on the prose explaining t
 delete the prose* — the same trap as ADR-261's Dockerfile comments. It now strips docstrings and comments
 via `ast` before sweeping.
 
+## ⭐ Seeing it, not just recording it
+
+Recording is half the ask. The Admin page gains **📱 Platforms — reach, load and the slow tail**:
+
+| Platform | Devices | Requests | Slowest 5% |
+|---|---|---|---|
+
+⚠️ **Devices and requests are different questions and both are shown.** Requests answer *load*; devices
+answer *reach* — ⭐ *reporting one as the other is how a busy tester reads as a crowd*, since one person
+refreshing twenty times is one device.
+
+**p95, not a mean** — ⚠️ *a mean hides the tail, and the tail is what a manager notices thirty seconds
+before a deadline.* And the **busiest single day**, because ⭐ *capacity is sized on the peak*: an average
+over a quiet week hides the evening before a deadline.
+
+⚠️ A row labelled **web** is the Streamlit app, which predates the platform field; **unknown** is an API
+caller that sent no header. ⭐ *Two different facts, and bucketing them together would hide whichever one
+mattered.*
+
 ## Verification
 
-* **8 Python tests** — ⭐ the **negative** ones are the point: no personal field in a row, the middleware
+* **13 Python tests** — ⭐ the **negative** ones are the point: no personal field in a row, the middleware
   reading only three headers with an IP present on the request, off by default, stoppable, and a failing
   recorder that cannot take a request down.
 * **A source sweep** that fails the day somebody adds the join, **proved** by adding a `manager_id` and
   watching both it and the behavioural test fail.
-* **4/4 mutations killed** — ⚠️ three only after the harness was rewritten to a file, having silently
+* **7/7 mutations killed** — ⚠️ three only after the harness was rewritten to a file, having silently
   failed to apply from a shell heredoc. *The recurring fault of this project's week.*
+* ⚠️ **And one test's example could not have shown what it claimed.** *"p95 reveals what a mean hides"*
+  was written with one outlier in twenty — which puts p95 at 298 against a mean of 297.5. ⭐ *A test whose
+  example cannot distinguish the two answers is not a test of the difference between them.*
 * **11 Dart tests**: the install id is minted once, is random, is resettable, and the headers carry
   exactly three keys and no manager id. Plus a guard that `kAppVersion` matches `pubspec.yaml`.
-* 2,596 Python · 274 Dart.
+* 2,601 Python · 274 Dart.
 
 📌 **Still parked:** accounts (ADR-259) and therefore subscriptions. ⭐ Nothing here blocks either — and
 *usage history cannot be backfilled*, which is the one reason to start recording before the question is

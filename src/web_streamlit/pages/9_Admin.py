@@ -239,6 +239,36 @@ with st.expander("🔧 Are cross-device preferences storing?"):
             st.caption("Rows are keyed by a **hash** of the email (`auth.user_key`), never the address itself "
                        "— the same handle the squads table uses (ADR-106).")
 
+# ⭐⭐ **Platform distribution** (ADR-280) — the owner: *"I want to see the distribution & number using
+# the apps on the different platforms, the reason, to make sure that we are scaled enough to support."*
+#
+# ⚠️ **Devices and requests are different questions and both are shown.** Requests answer *load*;
+# devices answer *reach* — ⭐ *reporting one as the other is how a busy tester reads as a crowd.*
+st.subheader("📱 Platforms — reach, load and the slow tail")
+_platforms = s.get("platforms") or []
+if not _platforms:
+    st.caption(
+        "No platform rows yet. The API records them only when `FPL_STORE_URL` / `FPL_STORE_KEY` are set "
+        "on the host — and the phone apps have to make a request before anything appears."
+    )
+else:
+    st.dataframe(
+        [{"Platform": r["platform"], "Devices": r["devices"], "Requests": r["requests"],
+          "Slowest 5% (ms)": r["p95_ms"] if r["p95_ms"] is not None else "—"} for r in _platforms],
+        hide_index=True, use_container_width=True,
+    )
+    _busy = s.get("busiest_day")
+    if _busy:
+        # ⭐ *Capacity is sized on the peak, not the average* — an average over a quiet week hides the
+        # evening before a deadline.
+        st.caption(f"Busiest single day: **{_busy['day']}** with **{_busy['requests']:,}** requests. "
+                   f"⚠️ A row labelled **web** is the Streamlit app, which predates the platform field; "
+                   f"**unknown** is an API caller that sent no header.")
+    st.caption(
+        "⚠️ These rows carry **no personal information** — platform, build, a random install id, the "
+        "endpoint and a duration. Never the manager id, the caller's IP, or the request body (ADR-280)."
+    )
+
 left, right = st.columns(2)
 with left:
     st.subheader("Most-viewed pages")

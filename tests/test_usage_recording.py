@@ -147,3 +147,68 @@ def test_the_module_never_reads_a_manager_id_or_an_address():
         assert forbidden not in code, (
             f"`{forbidden}` appears in the usage recorder's CODE — it records load, not people"
         )
+
+
+# ---- seeing it, not just recording it (ADR-280) ----------------------------
+
+def test_the_rollup_separates_devices_from_requests():
+    """⭐ Requests answer *load*; devices answer *reach*. ⚠️ *Reporting one as the other is how a busy
+    tester reads as a crowd* — one person refreshing twenty times is one device."""
+    from src.web_streamlit.analytics import summarise
+
+    rows = [{"ts": "2026-09-24T10:00:00Z", "anon_id": "same-device", "event": "api",
+             "duration_ms": 100, "meta": {"platform": "android"}} for _ in range(20)]
+    platforms = summarise(rows)["platforms"]
+
+    assert platforms[0]["platform"] == "android"
+    assert platforms[0]["requests"] == 20
+    assert platforms[0]["devices"] == 1, "twenty requests from one phone is not twenty phones"
+
+
+def test_a_row_with_no_platform_is_the_web_app_not_unknown():
+    """⚠️ Two different facts. The web client predates the field; *"unknown"* is what the API records for
+    a caller that sent no header — ⭐ *bucketing them together would hide whichever one mattered.*"""
+    from src.web_streamlit.analytics import summarise
+
+    rows = [
+        {"ts": "2026-09-24T10:00:00Z", "anon_id": "w", "event": "page_viewed"},
+        {"ts": "2026-09-24T10:00:00Z", "anon_id": "u", "event": "api", "meta": {"platform": "unknown"}},
+    ]
+    names = {r["platform"] for r in summarise(rows)["platforms"]}
+    assert names == {"web", "unknown"}
+
+
+def test_the_busiest_day_is_the_peak_not_the_average():
+    """⭐ *Capacity is sized on the peak* — an average over a quiet week hides the evening before a
+    deadline."""
+    from src.web_streamlit.analytics import summarise
+
+    rows = ([{"ts": "2026-09-20T10:00:00Z", "event": "api"}]
+            + [{"ts": "2026-09-24T10:00:00Z", "event": "api"} for _ in range(9)])
+    assert summarise(rows)["busiest_day"] == {"day": "2026-09-24", "requests": 9}
+
+
+def test_the_rollup_reports_the_slow_tail_not_the_mean():
+    """⚠️ p95, because ⭐ *a mean hides the tail, and the tail is what a manager notices thirty seconds
+    before a deadline.*"""
+    from src.web_streamlit.analytics import summarise
+
+    # ⚠️ **The example matters.** One outlier in twenty puts p95 exactly on the boundary — 19×50ms plus
+    # one 5s gives p95 = 298 and a mean of 297.5, which demonstrates nothing. ⭐ *A test whose example
+    # cannot distinguish the two answers is not a test of the difference between them.*
+    timings = [50] * 18 + [5000, 5000]
+    rows = [{"ts": "2026-09-24T10:00:00Z", "anon_id": "a", "event": "api",
+             "duration_ms": ms, "meta": {"platform": "ios"}} for ms in timings]
+
+    p95 = summarise(rows)["platforms"][0]["p95_ms"]
+    mean = sum(timings) / len(timings)
+    assert p95 > 4000, f"the slow tail vanished: p95={p95}"
+    assert p95 > 5 * mean, f"p95 ({p95}) is no more revealing than the mean ({mean})"
+
+
+def test_an_empty_store_reports_nothing_rather_than_zeroes():
+    """⭐ *An empty table and a quiet week look identical in a bar chart* — so the panel says which."""
+    from src.web_streamlit.analytics import summarise
+
+    assert summarise([])["platforms"] == []
+    assert summarise([])["busiest_day"] is None

@@ -211,6 +211,64 @@ def _percentile(sorted_vals, pct):
     return None if value is None else round(value)
 
 
+def _platform_of(row) -> str:
+    """Which client a row came from.
+
+    ⭐ The API sets `meta.platform` (ADR-280). The **web** client predates the field and sets none, so a
+    row without one is the web app — ⚠️ *stated rather than silently bucketed as "unknown"*, because
+    "unknown" is also what the API records for a caller that sent no header, and those are different
+    facts.
+    """
+    meta = row.get("meta") or {}
+    if isinstance(meta, dict) and meta.get("platform"):
+        return str(meta["platform"])
+    return "web"
+
+
+def platform_rollup(rows):
+    """Per platform: **devices**, **requests**, and **p95** — the three numbers *"are we scaled enough"*
+    actually needs (ADR-280).
+
+    ⭐ **Devices, not sessions.** The owner asked how many are *using* each platform; requests answer
+    load and devices answer reach, and ⚠️ *reporting one as the other is how a busy tester reads as a
+    crowd.*
+    """
+    by = {}
+    for row in rows or []:
+        name = _platform_of(row)
+        slot = by.setdefault(name, {"platform": name, "devices": set(), "requests": 0, "_ms": []})
+        slot["requests"] += 1
+        if row.get("anon_id"):
+            slot["devices"].add(row["anon_id"])
+        if isinstance(row.get("duration_ms"), (int, float)):
+            slot["_ms"].append(row["duration_ms"])
+
+    out = []
+    for slot in by.values():
+        ms = sorted(slot.pop("_ms"))
+        out.append({
+            "platform": slot["platform"],
+            "devices": len(slot["devices"]),
+            "requests": slot["requests"],
+            # ⚠️ p95, not the mean — ⭐ *a mean hides the slow tail, and the tail is what a manager
+            # notices thirty seconds before a deadline.*
+            "p95_ms": _percentile(ms, 95) if ms else None,
+        })
+    # ⭐ Busiest first: the platform carrying the load is the one a capacity question is about.
+    out.sort(key=lambda r: -r["requests"])
+    return out
+
+
+def _busiest_day(rows):
+    """The heaviest single day, as `{day, requests}` — ⭐ *capacity is sized on the peak, not the
+    average*, and an average over a quiet week hides the evening before a deadline."""
+    days = Counter(r["ts"][:10] for r in rows or [] if r.get("ts"))
+    if not days:
+        return None
+    day, n = days.most_common(1)[0]
+    return {"day": day, "requests": n}
+
+
 def summarise(rows):
     """Aggregate event rows into headline stats — **pure** (no I/O), so it's unit-tested directly. All anonymous:
     session/device counts, returning devices (seen on 2+ distinct days), top pages, event counts, a success rate,
@@ -243,6 +301,8 @@ def summarise(rows):
 
     tss = [r["ts"] for r in rows if r.get("ts")]
     return {
+        "platforms": platform_rollup(rows),
+        "busiest_day": _busiest_day(rows),
         "events": len(rows),
         "sessions": len(sessions),
         "devices": len(devices),
