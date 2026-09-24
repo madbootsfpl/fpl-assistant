@@ -180,6 +180,42 @@ It does four things, and the **first** is the one that cannot be skipped:
 Then **drag the site folder onto Cloudflare Pages**, and commit the version bump. Testers go to
 <https://madboots.com/app/>.
 
+### Publishing (ADR-290)
+
+The release publishes itself once Cloudflare credentials are in the environment. Until then it stages and
+tells you to drag — ⭐ *a release tool that refuses to run without a secret is a release tool you stop
+running.*
+
+**Turning it on, once:**
+
+1. Cloudflare dashboard → **My Profile → API Tokens → Create Token**.
+2. Use the **Custom token** template with one permission: **Account → Cloudflare Pages → Edit**.
+   ⚠️ Nothing else. *A deploy token that can also read your DNS is a deploy token whose loss is a
+   different-sized problem.*
+3. Copy the **Account ID** from the dashboard sidebar.
+4. Put both in your shell profile:
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=<account id>
+export CLOUDFLARE_API_TOKEN=<token>
+# only if the Pages project is not called "madboots":
+export MADBOOTS_PAGES_PROJECT=<project name>
+```
+
+⚠️ **The token is read from the environment and never written anywhere** — not to a file, not to the
+command line (where it would sit in shell history and `ps`), not to the output.
+`tests/test_update_manifest.py` fails if that changes.
+
+Then `scripts/release_android.sh` ends with:
+
+```
+  publishing to Cloudflare Pages (project: madboots)…
+  ✅ live at https://madboots.com/
+```
+
+⭐ **A failed publish is not a failed release.** The APKs are already staged, so the fallback is the drag
+you were doing anyway.
+
 ### ⚠️⚠️ Why the build number is the whole point
 
 Android decides *"is this an update?"* on `versionCode` alone. `versionName` is a label it ignores.

@@ -216,6 +216,37 @@ squad, plan and settings are kept. The app tells you when a newer build is here.
 </body></html>
 HTML
 
+# ── 4. publish ────────────────────────────────────────────────────────────────
+# ⭐⭐ **The step that kept getting skipped** (ADR-290). Cutting a release and shipping it were two
+# actions with a human in between, and the human one is the one that does not happen: the live build sat
+# **three releases behind** while the release script was being improved. ⚠️ *A publish step a person has
+# to remember is a publish step that measures how busy they are.*
+#
+# ⚠️ **Absent credentials are not an error.** The script still stages, still prints what it made, and
+# says how to turn publishing on — ⭐ *a release tool that refuses to run without a secret is a release
+# tool you stop running.*
+PROJECT="${MADBOOTS_PAGES_PROJECT:-madboots}"
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  echo
+  echo "  publishing to Cloudflare Pages (project: $PROJECT)…"
+  # ⚠️ `--commit-dirty` because `$SITE` is a build output and is **never** a git worktree; without it
+  # wrangler warns on every deploy about uncommitted changes it has no business looking for.
+  if npx --yes wrangler@4 pages deploy "$SITE" \
+        --project-name="$PROJECT" --branch=main --commit-dirty=true 2>&1 | tail -6; then
+    echo "  ✅ live at https://madboots.com/"
+  else
+    # ⚠️ The APKs are already staged, so a failed publish costs the drag, not the build.
+    echo "  ⚠️  publish failed — the files are staged; drag $SITE to Cloudflare Pages instead"
+  fi
+else
+  echo
+  echo "  ⓘ  not published: CLOUDFLARE_API_TOKEN is not set."
+  echo "     Create a token with the Cloudflare Pages:Edit permission, then:"
+  echo "       export CLOUDFLARE_ACCOUNT_ID=<your account id>"
+  echo "       export CLOUDFLARE_API_TOKEN=<the token>"
+  echo "     Until then, drag $SITE to Cloudflare Pages by hand."
+fi
+
 echo
 echo "  staged in $SITE/app:"
 ls -lh "$SITE/app" | awk 'NR>1 {printf "    %-18s %s\n", $9, $5}'

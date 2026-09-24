@@ -252,3 +252,61 @@ def test_the_release_keeps_the_previous_builds() -> None:
     # ⭐ Keeps a bounded number rather than all of them — 18MB each adds up, and the reason to keep one is
     # a stale cache, which does not reach back further than a build or two.
     assert "tail -n +4" in script, "the retention window is gone or unbounded"
+
+
+def test_the_release_publishes_itself() -> None:
+    """⭐⭐ **The step that kept getting skipped** (ADR-290).
+
+    Cutting a release and shipping it were two actions with a human in between, and the human one is the
+    one that does not happen — the live build sat **three releases behind** while this very script was
+    being improved. ⚠️ *A publish step a person has to remember is a publish step that measures how busy
+    they are.*
+    """
+    script = SCRIPT.read_text()
+
+    assert "wrangler" in script, "the release no longer publishes"
+    assert "pages deploy" in script
+    # ⚠️ The staged folder, not some other path — the APKs and the manifest are in it.
+    assert 'pages deploy "$SITE"' in script
+
+
+def test_a_missing_token_is_not_an_error() -> None:
+    """⭐ *A release tool that refuses to run without a secret is a release tool you stop running.*
+
+    Without credentials the script must still bump, build, stage and **say how to turn publishing on**.
+    """
+    script = SCRIPT.read_text()
+
+    assert 'if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then' in script, (
+        "publishing is no longer gated on the token being present"
+    )
+    # ⚠️ And the else branch has to tell the reader what to do, not just fall silent.
+    assert "not published" in script
+    assert "drag $SITE to Cloudflare Pages" in script
+
+
+def test_the_token_is_only_ever_read() -> None:
+    """⚠️⚠️ **A secret that reaches a file reaches the repo eventually.**
+
+    The token is an environment variable and must stay one: never written to disk, never echoed, never
+    passed as a command-line argument where it would sit in shell history and `ps`.
+    """
+    # ⚠️ **Expansions, not mentions.** The instructions print the variable's *name* so the reader knows
+    # what to export — ⭐ *a test that cannot tell `$TOKEN` from the word "TOKEN" forbids the
+    # documentation along with the leak*, which is how a guard gets deleted rather than satisfied.
+    expansions = re.findall(r"\$\{?CLOUDFLARE_API_TOKEN[^}]*\}?", SCRIPT.read_text())
+
+    assert expansions == ["${CLOUDFLARE_API_TOKEN:-}"], (
+        f"the token's value is expanded somewhere other than its presence check: {expansions}"
+    )
+
+
+def test_no_credential_file_is_tracked() -> None:
+    """⭐ The same rule the keystore has (ADR-278): the repo must not be able to hold the secret."""
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True
+    ).stdout.split()
+
+    for name in tracked:
+        assert ".wrangler" not in name, name
+        assert not name.endswith((".dev.vars", "wrangler.toml.local")), name
