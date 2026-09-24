@@ -122,6 +122,23 @@ body = "\n".join(kept).strip()
 p.write_text((body + "\n\n" if body else "") + rule)
 PY
 
+# ⚠️ **Old APK urls bounce to the install page.** A versioned filename means yesterday's link is a dead
+# path — and a tester reaching it via history, a bookmark or Chrome's autocomplete would get the site's
+# index page served as a download, or a stale edge copy. ⭐ *A link that used to work should land
+# somewhere that still does, not somewhere that looks broken.*
+python3 - "$SITE" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]) / "_redirects"
+# ⚠️⚠️ The legacy **unversioned** name only. A `madboots-*.apk` glob would match the APK this very
+# release just published and bounce the download to the install page — ⭐ *a redirect that catches
+# the file it is protecting is worse than the dead link it replaces.*
+rule = "/app/madboots.apk  /app/  302\n"
+existing = p.read_text() if p.exists() else ""
+kept = [l for l in existing.splitlines() if not l.strip().startswith("/app/madboots")]
+body = "\n".join(kept).strip()
+p.write_text((body + "\n\n" if body else "") + rule)
+PY
+
 # ⚠️⚠️ **A landing page, not a bare APK link.** Android refuses a sideloaded install until the browser
 # is allowed to do it, and the prompt it shows ("for security, your phone is not allowed to install
 # unknown apps") reads like a virus warning. ⭐ *Testers who hit that with no explanation do not ask —

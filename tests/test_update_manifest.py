@@ -151,3 +151,44 @@ def test_the_apk_url_carries_the_build_number() -> None:
         "version.json points somewhere other than the versioned APK"
     )
     assert 'href="madboots-$next.apk"' in script, "the install page links to an unversioned APK"
+
+
+def _write_redirects() -> str:
+    """Run the release script's `_redirects` block against a throwaway site folder."""
+    block = re.search(
+        r'python3 - "\$SITE" <<\'PY\'\nimport pathlib, sys\np = pathlib\.Path\(sys\.argv\[1\]\) / "_redirects"(.*?)\nPY\n',
+        SCRIPT.read_text(),
+        re.S,
+    )
+    assert block, "the release script no longer writes _redirects"
+    site = Path(tempfile.mkdtemp())
+    body = 'import pathlib, sys\np = pathlib.Path(sys.argv[1]) / "_redirects"' + block[1]
+    subprocess.run(["python3", "-c", body, str(site)], check=True)
+    return (site / "_redirects").read_text()
+
+
+def test_the_legacy_apk_url_bounces_to_the_install_page() -> None:
+    """⭐ A link that used to work should land somewhere that still does.
+
+    Versioned filenames make yesterday's url a dead path, and a tester reaching it from history or
+    autocomplete would get the site's index served as a download.
+    """
+    assert "/app/madboots.apk" in _write_redirects()
+
+
+def test_the_redirect_cannot_swallow_the_current_apk() -> None:
+    """⚠️⚠️ **This was nearly shipped as `/app/madboots-*.apk`.**
+
+    That glob matches the APK the same release just published, so the download would have bounced to the
+    install page and never downloaded anything — ⭐ *a redirect that catches the file it is protecting is
+    worse than the dead link it replaces.*
+    """
+    rules = _write_redirects()
+
+    assert "*" not in rules, f"a glob would match the versioned APK:\n{rules}"
+    for build in (2, 3, 17):
+        assert f"/app/madboots-{build}.apk" not in rules, rules
+
+
+def test_the_redirect_survives_being_written_twice() -> None:
+    assert _write_redirects() == _write_redirects()

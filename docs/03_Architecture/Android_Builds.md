@@ -229,7 +229,18 @@ curl -sI https://madboots.com/app/$(python3 -c "import json,urllib.request;print
   | grep -i content-type
 ```
 
-An empty answer there is the bug. ⚠️ Add a `?x=1` if you need to bypass a cached response while
+An empty answer there is the bug.
+
+⭐ `_redirects` (also site root) bounces the **legacy unversioned** url to the install page, so a link
+from history or autocomplete lands somewhere that still works:
+
+```
+/app/madboots.apk  /app/  302
+```
+
+⚠️⚠️ **No glob.** `/app/madboots-*.apk` would match the APK the same release just published and bounce
+the download to the install page — *a redirect that catches the file it is protecting is worse than the
+dead link it replaces.* ⚠️ Add a `?x=1` if you need to bypass a cached response while
 diagnosing — *a cached answer to "is it fixed yet?" is the answer to a question you asked four hours
 ago.*
 

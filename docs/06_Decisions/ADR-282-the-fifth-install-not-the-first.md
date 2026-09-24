@@ -164,6 +164,20 @@ run-twice.
 signature and the app — all of which were right. ⚠️⚠️ *The APK was the one artefact nothing verified by
 asking for it the way a tester would*, and `curl -sI` on the published file is now part of the runbook.
 
+### ⭐ And old links land somewhere that works
+
+A versioned filename makes yesterday's url a dead path. `_redirects` bounces the legacy unversioned name
+to the install page, which always points at the current build:
+
+```
+/app/madboots.apk  /app/  302
+```
+
+⚠️⚠️ **Written first as `/app/madboots-*.apk` and caught before it shipped.** That glob matches the APK
+the same release just published, so the download would have bounced to the install page and never
+downloaded anything — ⭐ *a redirect that catches the file it is protecting is worse than the dead link it
+replaces.*
+
 ## What this does not do
 
 - **iOS.** TestFlight is the answer there and it needs the paid developer account. The owner is the only
