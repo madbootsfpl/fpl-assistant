@@ -37,6 +37,7 @@ Widget screen(Widget child) => MaterialApp(
 );
 
 void main() {
+  _scaling();
   testWidgets('the green fills the space it is given', (tester) async {
     final team = sampleTeam();
     await tester.pumpWidget(
@@ -155,5 +156,138 @@ void main() {
       lessThan('${deadline['label']}'.length),
       reason: 'the parts should be shorter than the prose they replace',
     );
+  });
+}
+
+/// The pitch scales to the screen it is on (ADR-285).
+///
+/// ⭐⭐ **The owner's report was "portrait stretches the pitch and leaves dead green space", and the
+/// measurement is what showed what that meant.** The pitch filled 91% of a 1280pt tablet and drew the
+/// same 70×86 card it draws on a 390pt phone — ⚠️ *the green stretched and the players did not.*
+void _scaling() {
+  group('how wide a card is drawn', () {
+    test('a phone is left exactly as it was', () {
+      // ⚠️⚠️ **The whole safety of this change.** ADR-253 tuned the phone pitch against the owner's own
+      // screenshots; ⭐ *changing it as a side effect of a tablet fix is how a report about one screen
+      // becomes a surprise on another.*
+      for (final width in [320.0, 390.0, 430.0, 599.0]) {
+        expect(
+          PitchView.cardWidthFor(width - 8, 5, shortestSide: width),
+          70,
+          reason: 'a $width-wide phone must draw the design card',
+        );
+        expect(
+          PitchView.cardWidthFor(width - 8, 4, shortestSide: width),
+          70,
+          reason: 'a four-across row on a $width phone must not grow either',
+        );
+      }
+    });
+
+    test('a tablet draws the same fraction of the screen a phone does', () {
+      // ⭐ The phone draws 70 on 390 — 18%. A tablet drawing 18% fills the rows vertically for the same
+      // reason it fills them across: *a tablet is not a phone with more room for whitespace.*
+      final tablet = PitchView.cardWidthFor(792, 4, shortestSide: 800);
+
+      expect(tablet / 800, closeTo(70 / 390, 0.02));
+      expect(tablet, greaterThan(70));
+    });
+
+    test('a tablet is the same size in portrait and landscape', () {
+      // ⚠️ Driven by `shortestSide`, so turning the device does not resize the team.
+      expect(
+        PitchView.cardWidthFor(792, 4, shortestSide: 800),
+        PitchView.cardWidthFor(1272, 4, shortestSide: 800),
+      );
+    });
+
+    test('a crowded row still bounds it', () {
+      // ⭐ Proportion is what it wants; the slot is what it can have. Five across on a narrow tablet
+      // must not overlap whatever the proportion says.
+      final five = PitchView.cardWidthFor(400, 5, shortestSide: 800);
+      expect(five * 5, lessThan(400));
+    });
+
+    test('it never runs away on a very large surface', () {
+      expect(PitchView.cardWidthFor(4000, 4, shortestSide: 3000), 70 * 2.4);
+    });
+
+    test('a degenerate row falls back rather than dividing by zero', () {
+      expect(PitchView.cardWidthFor(800, 0, shortestSide: 800), 70);
+      expect(PitchView.cardWidthFor(double.infinity, 4, shortestSide: 800), 70);
+    });
+  });
+
+  group('what the screen actually draws', () {
+    Future<List<Size>> cards(WidgetTester tester, double w, double h) async {
+      tester.view.physicalSize = Size(w, h);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PitchView(
+              team: sampleTeam(),
+              mode: PitchMode.nextGw,
+              onMode: (_) {},
+              onTapPlayer: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      // ⚠️⚠️ **The painted kit, not the card's box.** Measuring the box let a mutation survive that
+      // removed the up-scaling entirely: the `SizedBox` was still 143pt wide while the shirt inside it
+      // stayed phone-sized. ⭐ *A layout test that measures the container rather than the thing in it
+      // will pass on an empty container.*
+      //
+      // ⚠️⚠️ **And `getRect`, not `getSize`.** A `FittedBox` scales by a **transform**, so its child's
+      // layout size never changes — `getSize` reported 22.3×31 on a tablet and a phone alike, which is
+      // the same blind spot one level down. `getRect` goes through `localToGlobal` and sees what is
+      // actually on the screen: ⭐ *if the change is something the eye can see, the test has to look
+      // where the eye looks.*
+      return [
+        for (final e in find.byType(Image).evaluate())
+          if (tester.getRect(find.byWidget(e.widget)).width > 20)
+            tester.getRect(find.byWidget(e.widget)).size,
+      ];
+    }
+
+    testWidgets('every card on a tablet is the same width', (tester) async {
+      // ⚠️⚠️ **Written per row first, which gave the lone goalkeeper a card half again as wide as the
+      // defenders below him.** ⭐ The code already said why: *"a five-DEF row and a one-FWD row must draw
+      // the same card, or the eye reads the wider one as more important."*
+      final sizes = await cards(tester, 800, 1280);
+
+      expect(
+        sizes.length,
+        greaterThanOrEqualTo(15),
+        reason: 'eleven and a bench of four',
+      );
+      expect(sizes.map((s) => s.width.round()).toSet().length, 1);
+    });
+
+    testWidgets('the bench is drawn at the same width as the eleven', (
+      tester,
+    ) async {
+      // ⭐ They have always matched on a phone. *A fix that stops at the edge of the thing that was
+      // reported is a fix that creates the next report.*
+      final sizes = await cards(tester, 800, 1280);
+      final phone = await cards(tester, 390, 760);
+      // ⭐ Every kit on the tablet is bigger than every kit on the phone, and they all agree with
+      // each other — the XI and the bench alike.
+      expect(
+        sizes.map((s) => s.width.round()).toSet().single,
+        greaterThan(phone.map((s) => s.width.round()).toSet().single),
+      );
+    });
+
+    testWidgets('a phone still draws the design card', (tester) async {
+      final sizes = await cards(tester, 390, 760);
+      // ⭐ One size across the whole squad, and it is the size ADR-253 tuned.
+      expect(sizes.map((s) => s.width.round()).toSet().length, 1);
+      expect(sizes.first.width, closeTo(22.3, 1));
+    });
   });
 }

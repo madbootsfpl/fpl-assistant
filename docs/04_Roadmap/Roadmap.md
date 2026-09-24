@@ -144,8 +144,10 @@ list on sight, not on suspicion.
   than a default.** Rate limits are what stand there today — `/squad/build` 20/min is the one that matters,
   being the only endpoint whose CPU a stranger controls. ⭐ Watch the **slowest 5% on `/squad/build`** in the
   platform panel, not the user count. Belongs with accounts (ADR-259), still parked.
-- **The tablet's portrait pitch** — landscape reads well; portrait stretches the pitch and leaves dead
-  green space (ADR-278's screenshots). Contained: the pitch is the only widget that misbehaves.
+- ✅ **The tablet's portrait pitch — done 2026-09-24 (ADR-285).** The green was never the problem; the
+  pitch already filled 91% of the screen and drew a phone-sized card on it. Now scaled by **proportion**
+  — a phone's card is 18% of its screen width, and a tablet's is too. ⭐ *A tablet is not a phone with
+  more room for whitespace; it is the same design, larger.* Phone layout unchanged, gated at 600pt.
 - **Mini-league sub-tabs** — Transfers, Rank and Chips, plus the Awards tab. Parked by the owner at
   ADR-267; the engine for all of them already exists.
 - **The Lab's other two modes** — Free Hit and a fresh-season build are the **same solver with different

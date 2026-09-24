@@ -56,6 +56,52 @@ class PitchView extends StatelessWidget {
   /// slot rather than a hard-coded child so the pitch does not have to know what a lineup plan is.
   final Widget? footer;
 
+  /// ⚠️⚠️ **The standard tablet threshold, and the reason it exists.** Without it the rule also grew the
+  /// phone — a four-across row has slack at 70pt, so cards went to 82 — and ⭐ *the phone pitch was tuned
+  /// by the owner against screenshots (ADR-253); changing it as a side effect of a tablet fix is how a
+  /// report about one screen becomes a surprise on another.*
+  ///
+  /// `shortestSide`, so it does not flip when a phone is turned sideways.
+  static const double tabletFrom = 600;
+
+  /// One card width for the whole pitch, set by the **most crowded row**.
+  ///
+  /// ⚠️⚠️ **Measured once, not per row — and I wrote it per row first.** That gave the lone goalkeeper a
+  /// 112pt card above 82pt defenders, because a row of one has the whole width to itself. ⭐⭐ *The code
+  /// had already said why that is wrong*: `_Card.width` is a constant precisely so **"a five-DEF row and
+  /// a one-FWD row must draw the same card, or the eye reads the wider one as more important."* Making a
+  /// width responsive is not a reason to stop it being uniform.
+  ///
+  /// ⚠️ The `0.86` leaves the gaps. A slot filled edge to edge is a row of touching shirts — ⭐ *spacing
+  /// is not left-over room; it is what tells the eye these are eleven things and not one thing.*
+  ///
+  /// ## ⭐⭐ Proportion, which is what "dead green space" actually meant
+  ///
+  /// Filling the slot was not enough. A tablet's pitch is **1171pt tall for four rows**, so even at 1.6×
+  /// the shirts floated in bands of empty grass — ⚠️ *the complaint was about the gaps between the rows,
+  /// and I first read it as a complaint about the size of the shirts.*
+  ///
+  /// The phone draws a 70pt card on a 390pt screen: **18% of the width**. A tablet drawing the same 18%
+  /// gets ~143pt, which fills the rows vertically for the same reason it fills them horizontally — ⭐ *a
+  /// tablet is not a phone with more room for whitespace; it is the same design, larger.* Driving it off
+  /// `shortestSide` keeps a tablet the same in portrait and landscape.
+  ///
+  /// The slot is still the other bound, so a crowded row never overlaps whatever the proportion says.
+  static const double phoneBaseline = 390;
+
+  static double cardWidthFor(
+    double available,
+    int widestRow, {
+    required double shortestSide,
+  }) {
+    if (shortestSide < tabletFrom) return _Card.width;
+    if (widestRow <= 0 || !available.isFinite) return _Card.width;
+    final proportional = _Card.width * (shortestSide / phoneBaseline);
+    final slot = available / widestRow * 0.86;
+    final want = proportional < slot ? proportional : slot;
+    return want.clamp(_Card.width, _Card.width * _Card.maxUpscale);
+  }
+
   @override
   Widget build(BuildContext context) {
     final byRow = <String, List<PlayerSummary>>{for (final r in _rows) r: []};
@@ -78,60 +124,85 @@ class PitchView extends StatelessWidget {
               top: Radius.circular(Brand.radiusMd),
             ),
             child: PitchMarkings(
-              child: Column(
-                children: [
-                  // ⭐ The wordmark, inside the pitch. It used to have a row of its own above the header
-                  // — 60px to say a name the reader already knows. On the green it is present and costs
-                  // nothing, which is the trick the competitor's corner chip is playing.
-                  const _PitchMark(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                      child: Column(
-                        children: [
-                          // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.**
-                          // With `spaceEvenly` the rows demanded their intrinsic height and overflowed by
-                          // 4px on a 760pt screen once the footer was added — and a smaller phone, or a
-                          // stale-data banner, would clip a whole row of shirts. ⭐ *A pitch that must be
-                          // given enough room is not a pitch that fills the room it is given.*
-                          for (final row in _rows)
-                            if (byRow[row]!.isNotEmpty)
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    for (final p in byRow[row]!)
-                                      _Card(
-                                        team: team,
-                                        player: p,
-                                        mode: mode,
-                                        onTap: () => onTapPlayer(p),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                        ],
+              // ⭐⭐ **One measurement, used by the eleven and the bench.** Scoped to the rows alone it
+              // left a tablet drawing big shirts above a 70pt bench — ⚠️ *a fix that stops at the edge
+              // of the thing that was reported is a fix that creates the next report.*
+              //
+              // ⚠️⚠️ **`LayoutBuilder`, not `MediaQuery.width`.** I used the window width first: in the
+              // app the pitch is full-bleed so the two agree, and the existing ADR-253 tests — which
+              // hand the pitch a 390pt box inside an 800pt window — **overflowed by 49px**. ⭐ *A
+              // measurement taken from the screen rather than from the space a widget was actually
+              // given is right until something is laid out beside it*, and a split-screen tablet is
+              // exactly that something.
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final cardWidth = cardWidthFor(
+                    // ⚠️ Less the padding the rows sit in, below.
+                    box.maxWidth - 8,
+                    byRow.values
+                        .map((r) => r.length)
+                        .fold(0, (a, b) => a > b ? a : b),
+                    shortestSide: MediaQuery.sizeOf(context).shortestSide,
+                  );
+                  return Column(
+                    children: [
+                      // ⭐ The wordmark, inside the pitch. It used to have a row of its own above the header
+                      // — 60px to say a name the reader already knows. On the green it is present and costs
+                      // nothing, which is the trick the competitor's corner chip is playing.
+                      const _PitchMark(),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                          child: Column(
+                            children: [
+                              // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.**
+                              // With `spaceEvenly` the rows demanded their intrinsic height and overflowed by
+                              // 4px on a 760pt screen once the footer was added — and a smaller phone, or a
+                              // stale-data banner, would clip a whole row of shirts. ⭐ *A pitch that must be
+                              // given enough room is not a pitch that fills the room it is given.*
+                              for (final row in _rows)
+                                if (byRow[row]!.isNotEmpty)
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        for (final p in byRow[row]!)
+                                          _Card(
+                                            team: team,
+                                            player: p,
+                                            mode: mode,
+                                            onTap: () => onTapPlayer(p),
+                                            drawWidth: cardWidth,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  // ⭐ On the green, not under it: a dark panel **sitting on** the pitch is integrated
-                  // and still plainly separate, which is what the bench is.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                    child: _Bench(
-                      team: team,
-                      mode: mode,
-                      onTapPlayer: onTapPlayer,
-                    ),
-                  ),
-                  if (footer != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                      child: footer!,
-                    ),
-                ],
+                      // ⭐ On the green, not under it: a dark panel **sitting on** the pitch is integrated
+                      // and still plainly separate, which is what the bench is.
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                        child: _Bench(
+                          team: team,
+                          mode: mode,
+                          onTapPlayer: onTapPlayer,
+                          drawWidth: cardWidth,
+                        ),
+                      ),
+                      if (footer != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                          child: footer!,
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -301,6 +372,7 @@ class _Card extends StatelessWidget {
     required this.player,
     required this.mode,
     required this.onTap,
+    this.drawWidth = width,
   });
 
   final MyTeam team;
@@ -308,9 +380,21 @@ class _Card extends StatelessWidget {
   final PitchMode mode;
   final VoidCallback onTap;
 
+  /// The size the card is **designed** at. Every measurement inside it — the 34pt kit box, the type
+  /// sizes, the fixture strip — is drawn against this and then scaled as one.
+  ///
   /// ⚠️ Fixed, not flexible. A five-DEF row and a one-FWD row must draw the same card, or the eye reads
   /// the wider one as more important.
   static const double width = 70;
+
+  /// ⚠️⚠️ **A ceiling, not the rule.** The rule is proportion (see [PitchView.cardWidthFor]); this only
+  /// stops a very large surface — a desktop window, a foldable opened flat — turning the team sheet into
+  /// a poster. ⭐ *A layout that grows without limit stops being the same design and starts being a
+  /// zoomed screenshot of it.*
+  static const double maxUpscale = 2.4;
+
+  /// What this card is actually drawn at. Defaults to the design size, so a phone is untouched.
+  final double drawWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -328,70 +412,78 @@ class _Card extends StatelessWidget {
       // ⚠️ The width box is **inside** the FittedBox, not outside it. A `FittedBox` hands its child
       // unbounded width, and the run's `Expanded` cells cannot lay out against that — *a box that scales
       // its child must still give it something to be a fraction of.*
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: SizedBox(
-          width: width,
-          child: Column(
-            children: [
-              SizedBox(
-                height: 34,
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  clipBehavior: Clip.none,
-                  children: [
-                    if (kit.isEmpty)
-                      const Text('👕', style: TextStyle(fontSize: 22))
-                    else
-                      // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
-                      // number beside it is the point.
-                      Image.network(
-                        kit,
-                        height: 34,
-                        errorBuilder: (_, _, _) =>
-                            const Text('👕', style: TextStyle(fontSize: 22)),
-                      ),
-                    if (_armband != null)
-                      Positioned(
-                        top: -2,
-                        right: 6,
-                        child: _Armband(letter: _armband!),
-                      ),
-                  ],
+      // ⚠️⚠️ **`scaleDown` on a phone, `contain` once a screen has offered more** (ADR-285). The
+      // original note here said *"never up, only down: on a tall screen the card stays the size it was
+      // designed at"* — right for phones, and the whole of the tablet bug: the pitch filled 91% of a
+      // 1280pt screen and drew the same 70×86 card it draws on a 390pt phone, so ⭐ *the green stretched
+      // and the players did not.*
+      child: SizedBox(
+        width: drawWidth,
+        child: FittedBox(
+          fit: drawWidth > width ? BoxFit.contain : BoxFit.scaleDown,
+          child: SizedBox(
+            width: width,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 34,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    clipBehavior: Clip.none,
+                    children: [
+                      if (kit.isEmpty)
+                        const Text('👕', style: TextStyle(fontSize: 22))
+                      else
+                        // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
+                        // number beside it is the point.
+                        Image.network(
+                          kit,
+                          height: 34,
+                          errorBuilder: (_, _, _) =>
+                              const Text('👕', style: TextStyle(fontSize: 22)),
+                        ),
+                      if (_armband != null)
+                        Positioned(
+                          top: -2,
+                          right: 6,
+                          child: _Armband(letter: _armband!),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      player.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        player.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
+                    if (_flag != null) ...[const SizedBox(width: 3), _flag!],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                switch (mode) {
+                  PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
+                  PitchMode.run => _Run(
+                    fixtures: team.runFor(player),
+                    xpByGameweek: team.runXpFor(player),
                   ),
-                  if (_flag != null) ...[const SizedBox(width: 3), _flag!],
-                ],
-              ),
-              const SizedBox(height: 2),
-              switch (mode) {
-                PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
-                PitchMode.run => _Run(
-                  fixtures: team.runFor(player),
-                  xpByGameweek: team.runXpFor(player),
-                ),
-                PitchMode.price => _Price(
-                  move: team.priceFor(player),
-                  player: player,
-                ),
-              },
-            ],
+                  PitchMode.price => _Price(
+                    move: team.priceFor(player),
+                    player: player,
+                  ),
+                },
+              ],
+            ),
           ),
         ),
       ),
@@ -716,11 +808,16 @@ class _Bench extends StatelessWidget {
     required this.team,
     required this.mode,
     required this.onTapPlayer,
+    required this.drawWidth,
   });
 
   final MyTeam team;
   final PitchMode mode;
   final void Function(PlayerSummary) onTapPlayer;
+
+  /// ⭐ **The width the eleven above are drawn at.** On a phone the bench and the XI have always matched
+  /// each other, and a tablet should be no different.
+  final double drawWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -755,6 +852,7 @@ class _Bench extends StatelessWidget {
                       player: p,
                       mode: mode,
                       onTap: () => onTapPlayer(p),
+                      drawWidth: drawWidth,
                     ),
                     if (roleOf[p.id] != null)
                       Positioned(
