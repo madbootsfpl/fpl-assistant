@@ -126,6 +126,52 @@ list on sight, not on suspicion.
 
 ## 🟢 Buildable now — nothing blocking
 
+### 📱 Mobile — named and not built *(2026-09-24)*
+
+⭐ Listed so none of it reads as finished. None is blocked; each is a decision or a slice of work.
+
+- **Distribution** — serving the APK from the owner's Mac works for one person and not for nine.
+  Firebase App Distribution or a Play internal-testing track are the usual answers, and both want a
+  decision rather than a default. ⚠️ Also: `versionCode` must be incremented per release or Android will
+  not treat a build as an update.
+- **The tablet's portrait pitch** — landscape reads well; portrait stretches the pitch and leaves dead
+  green space (ADR-278's screenshots). Contained: the pitch is the only widget that misbehaves.
+- **Mini-league sub-tabs** — Transfers, Rank and Chips, plus the Awards tab. Parked by the owner at
+  ADR-267; the engine for all of them already exists.
+- **The Lab's other two modes** — Free Hit and a fresh-season build are the **same solver with different
+  defaults** and `LabMode` already exists to hold them (ADR-272).
+
+### 📱 Who is actually testing the mobile app? — **open, 2026-09-24**
+
+The owner, after putting the APK on a tablet: *"how do I know who is testing, does that information route
+back to our admin stats on the desktop?"*
+
+**Answer today: no, and for a structural reason.**
+
+| | Desktop | Mobile |
+|---|---|---|
+| Identity | an **email**, from the beta allow-list (`beta_users`) | **none** — there is no sign-in |
+| Signal | `last_seen` on sign-in · `updated_at` when a squad is saved | **nothing is sent** |
+| Admin panel | 👥 Tester activity: active / dormant / lapsed / never | absent |
+
+⚠️ The mobile app sends **zero telemetry** — a grep for `track(` / analytics in `mobile/lib/` returns only
+the mantra copy. The desktop's roster (ADR-142) is built entirely on the email allow-list, and the phone
+has no email because it deliberately has no accounts (ADR-259, still open).
+
+⭐⭐ **But the server already receives everything needed and records none of it.** Every squad endpoint is
+called with a `manager_id`, so the API could answer *"which managers used the app this week, and which
+screens"* **without a single client change and without accounts** — it simply does not log it.
+
+**The cheap version, if wanted:** record `(manager_id, endpoint, timestamp)` server-side and add a panel
+beside the existing one. ⚠️ *A manager id is public and is their own, but this is still tracking* — it
+should be said out loud in the app rather than discovered, which is the same rule the feedback relay
+follows (ADR-231).
+
+📌 **Deliberately not decided here.** It is a product question — *how much do you want to know about
+testers who never asked to be measured?* — and it is entangled with the accounts question (ADR-259) that
+is already parked. Named so it is not rediscovered.
+
+
 *(**Sprint 61's design notes audited 2026-09-02** — the two screenshots the owner attached four days ago were
 read and checked against the app. **📅 Fixtures: fully shipped**, and better than the reference in one respect
 — the ticker is a badge × gameweek grid with a **difficulty digit** beside the colour, which the mockup is
