@@ -26,7 +26,6 @@ class MoreView extends StatelessWidget {
     required this.freeTransfers,
     required this.onOpenChips,
     required this.onOpenTeamDna,
-    required this.onOpenSignals,
     required this.onOpenSettings,
     required this.onOpenLab,
     required this.onOpenLeagues,
@@ -43,7 +42,6 @@ class MoreView extends StatelessWidget {
   /// in the bar because the audit's first release does not include it, and *frequency earns a slot*
   /// (ADR-230). ⚠️ The better answer is probably a badge on the pitch: **being told beats going to look**,
   /// which is the whole reason a phone suits this.
-  final VoidCallback onOpenSignals;
 
   /// ⭐ In More rather than the bar: it is research, and *frequency earns a slot* (ADR-230). ⚠️ It is also
   /// the app's first **exploration** surface — the audit put those on the web, so it is worth watching
@@ -70,17 +68,36 @@ class MoreView extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
     children: [
+      // ⭐⭐ **The order is the argument** (ADR-284). Signals left this list entirely — it has a tab
+      // now, and ⚠️ *a directory that still lists what the nav bar carries is teaching two routes to one
+      // room and calling the second one a feature.*
+      //
+      // ⭐ What remains is ordered by **how often you open it**: your rivals and the fixtures ahead are
+      // weekly; DNA, Chips and the Lab are decisions you make a handful of times a season; and the three
+      // at the bottom are about the app rather than the game — *the least-used rows are the ones you can
+      // always find, because they are the ones you go looking for by name.*
       _Row(
-        icon: Icons.campaign_outlined,
-        name: 'Signals',
+        icon: Icons.emoji_events_outlined,
+        name: 'Mini-leagues',
+        // ⭐ Named by the thing people actually open it for. "Leagues" describes a list; the head-to-head
+        // is the reason to look, and a table you already know the top of is not.
         why:
-            'News, reported moves and what the crowd is doing — yours or the whole market, '
-            'strongest evidence first.',
-        onTap: onOpenSignals,
+            'Your tables, what everyone captained, and what actually separates you from any '
+            'rival.',
+        onTap: onOpenLeagues,
       ),
-      // ⚠️ **Player DNA is gone from here on purpose** (ADR-277). It lives under a player's stats in
-      // the Players tab now — ⭐ *the stats say what he has done, the fingerprint says what kind of
-      // player does that*, and they were two directory entries away from each other.
+      _Row(
+        icon: Icons.grid_on,
+        // ⚠️ **Renamed from "Fixture ticker"** (ADR-284). *Ticker* is the name of the widget; **Fixture
+        // Difficulty Rating** is the name of the thing every FPL manager already has a word for — ⭐ *a
+        // row named after its implementation asks the reader to learn your vocabulary before they can
+        // tell whether they want it.*
+        name: 'Fixture Difficulty Rating',
+        // ⭐ Says what the grid is FOR, not what it contains. "Every club's next six fixtures" describes
+        // a table; "whose run turns good" is the reason to open one.
+        why: 'Every club’s next six, easiest run first — whose fixtures turn good, and when.',
+        onTap: onOpenTicker,
+      ),
       _Row(
         icon: Icons.insights_outlined,
         name: 'Team DNA',
@@ -107,29 +124,6 @@ class MoreView extends StatelessWidget {
             'what changes.',
         onTap: onOpenLab,
       ),
-      _Row(
-        icon: Icons.emoji_events_outlined,
-        name: 'Mini-leagues',
-        // ⭐ Named by the thing people actually open it for. "Leagues" describes a list; the head-to-head
-        // is the reason to look, and a table you already know the top of is not.
-        why:
-            'Your tables, what everyone captained, and what actually separates you from any '
-            'rival.',
-        onTap: onOpenLeagues,
-      ),
-      _Row(
-        icon: Icons.grid_on,
-        name: 'Fixture ticker',
-        // ⭐ Says what the grid is FOR, not what it contains. "Every club's next six fixtures" describes
-        // a table; "whose run turns good" is the reason to open one.
-        why: 'Every club’s next six, easiest run first — whose fixtures turn good, and when.',
-        onTap: onOpenTicker,
-      ),
-      // ⭐⭐ **Help goes out; feedback stays in** (ADR-254). They look like one item and are two jobs.
-      // Help is *content* — long, searchable, better on a big screen, and updatable without an App Store
-      // release. Reporting happens the instant you notice something, and ⚠️ *every step between noticing
-      // and reporting loses reports* — so that one keeps its two taps, and keeps the screen and build
-      // number it already sends for free.
       _Row(
         icon: Icons.menu_book_outlined,
         name: 'Help & videos',

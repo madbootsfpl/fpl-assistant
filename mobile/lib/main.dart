@@ -718,11 +718,6 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           'Chips',
           ChipsView(client: _client, team: team, managerId: _managerId),
         ),
-        onOpenSignals: () async {
-          await _open('Signals', SignalsView(client: _client, team: team));
-          final keys = await _seen.load();
-          if (mounted) setState(() => _seenKeys = keys);
-        },
         onOpenTeamDna: () =>
             _open('Team DNA', TeamDnaView(client: _client, team: team)),
         onOpenLab: () => _open(
@@ -738,7 +733,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           LeaguesView(client: _client, managerId: _managerId),
         ),
         onOpenTicker: () =>
-            _open('Fixture ticker', TickerView(client: _client)),
+            _open('Fixture Difficulty Rating', TickerView(client: _client)),
         onOpenFeedback: () => _open(
           _feedbackTitle,
           FeedbackView(client: _client, from: _lastScreen),

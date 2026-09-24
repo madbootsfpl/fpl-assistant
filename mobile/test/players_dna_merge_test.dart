@@ -96,7 +96,6 @@ void main() {
             freeTransfers: 1,
             onOpenChips: () {},
             onOpenTeamDna: () {},
-            onOpenSignals: () {},
             onOpenSettings: () {},
             onOpenLab: () {},
             onOpenLeagues: () {},

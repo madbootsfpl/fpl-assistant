@@ -66,7 +66,6 @@ void _moreIsADirectory() {
         freeTransfers: freeTransfers,
         onOpenChips: () {},
         onOpenTeamDna: () {},
-        onOpenSignals: () {},
         onOpenSettings: () {},
         onOpenLab: () {},
         onOpenLeagues: () {},
@@ -117,7 +116,25 @@ void _moreIsADirectory() {
         greaterThanOrEqualTo(8),
         reason: 'rows did not render',
       );
-      expect(names, contains('Fixture ticker'));
+      expect(names, contains('Fixture Difficulty Rating'));
+
+      // ⚠️⚠️ **The order is pinned, because the order is the decision** (ADR-284). Twice now a list has
+      // been reordered on feedback with the whole suite staying green — ⭐ *an order no test names is an
+      // order the next edit reverses by accident, and the only reader who notices is the owner.*
+      expect(names, [
+        'Mini-leagues',
+        'Fixture Difficulty Rating',
+        'Team DNA',
+        'Chips',
+        'Squad Lab',
+        'Help & videos',
+        'Tell us something',
+        'Settings',
+      ]);
+
+      // ⭐ Signals has a tab now. *A directory that still lists what the nav bar carries is teaching two
+      // routes to one room and calling the second one a feature.*
+      expect(names, isNot(contains('Signals')));
 
       // ⭐ For each row, a sentence long enough to be an explanation rather than a label. ⚠️ Asserting
       // only that the names render would pass on a bare menu — the thing ADR-238 replaced.
@@ -158,11 +175,10 @@ void _moreIsADirectory() {
             freeTransfers: 1,
             onOpenChips: () => opened.add('Chips'),
             onOpenTeamDna: () => opened.add('Team DNA'),
-            onOpenSignals: () => opened.add('Signals'),
             onOpenSettings: () => opened.add('Settings'),
             onOpenLab: () => opened.add('Squad Lab'),
             onOpenLeagues: () => opened.add('Mini-leagues'),
-            onOpenTicker: () => opened.add('Fixture ticker'),
+            onOpenTicker: () => opened.add('Fixture Difficulty Rating'),
             onOpenFeedback: () => opened.add('Tell us something'),
             onOpenHelp: () => opened.add('Help & videos'),
           ),
