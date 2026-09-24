@@ -1,0 +1,6 @@
+# Copy to android/key.properties and fill in. ⚠️ key.properties is GITIGNORED and must stay that way —
+# it holds the password to the keystore that is this app's identity.
+storeFile=/Users/tonysheridan/madboots-release.jks
+storePassword=<the keystore password you set>
+keyAlias=madboots
+keyPassword=<the same one, if you pressed Enter at the second prompt>

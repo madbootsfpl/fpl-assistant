@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP to a laptop on the LAN — the Android counterpart of iOS's NSAllowsLocalNetworking.
+
+  ⚠️⚠️ THIS FILE IS IN src/debug AND MUST STAY THERE. A release build has no network security config at
+  all, so it is HTTPS-only, and the hosted API is HTTPS. ⭐ The equivalent of ADR-239's rule: that ADR
+  rejected NSAllowsArbitraryLoads BY NAME because it disables transport security for every host and
+  follows the app to the store — a debug-only config cannot.
+
+  ⚠️ Private ranges only, not `cleartextTrafficPermitted="true"` on a bare base-config: a developer
+  pointing at his own Mac needs 192.168.x.x, and nothing else needs cleartext ever.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>        <!-- the emulator's view of the host -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">192.168.0.0</domain>
+        <domain includeSubdomains="true">192.168.1.0</domain>
+    </domain-config>
+</network-security-config>

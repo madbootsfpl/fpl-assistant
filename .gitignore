@@ -48,3 +48,15 @@ downloaded_files/
 .ruff_cache/
 # …except the committed demo squads (ADR-054):
 !data/seed_squads.json
+
+# ── Signing material — never, anywhere in this tree ────────────────────────────────────────────────
+# ⚠️⚠️ Flutter's template ignores these only under `mobile/android/`. A keystore backed up to the repo
+# root — which is exactly what happened on 2026-09-24 — sat outside that rule and would have been
+# committed by `git add -A`.
+#
+# ⭐ The private key is the app's identity: anyone holding it can publish an update Android accepts as
+# genuine. And a "backup" inside the repository is not a backup — it is the same disk, plus a way to
+# publish it.
+*.jks
+*.keystore
+key.properties
