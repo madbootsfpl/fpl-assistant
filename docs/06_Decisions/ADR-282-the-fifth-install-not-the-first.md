@@ -116,6 +116,30 @@ the emulator showed:
 only be proven on a debug build, which is the correct trade and worth writing down rather than
 rediscovering.
 
+## ⚠️ And then the first real download rendered as text
+
+The site went live and the first tester tap produced **18MB of zip printed into the browser**.
+
+`curl -sI` on the APK:
+
+```
+HTTP/2 200
+content-length: 18707560
+x-content-type-options: nosniff
+```
+
+⭐⭐ **No `Content-Type` line at all.** Cloudflare Pages does not recognise `.apk`, so it declares
+nothing, and Chrome falls back to rendering the bytes. ⚠️ *The download did not fail — it succeeded, into
+a wall of mojibake*, which reads as a broken site rather than a missing header.
+
+Fixed with a `_headers` rule at the **site root**, written by the release script and merged rather than
+overwritten, because ⭐ *a one-line fix on a path nobody revisits is exactly the kind that vanishes in the
+next site rebuild.*
+
+**What the smoke test could not have caught.** Every check to this point ran against the manifest, the
+signature and the app — all of which were right. ⚠️⚠️ *The APK was the one artefact nothing verified by
+asking for it the way a tester would*, and `curl -sI` on the published file is now part of the runbook.
+
 ## What this does not do
 
 - **iOS.** TestFlight is the answer there and it needs the paid developer account. The owner is the only

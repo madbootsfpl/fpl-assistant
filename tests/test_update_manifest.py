@@ -61,3 +61,26 @@ def test_the_app_looks_where_the_script_puts_it() -> None:
 def test_the_script_runs() -> None:
     """⭐ A syntax error here is only ever found mid-release, with the keystore already loaded."""
     assert subprocess.run(["bash", "-n", SCRIPT], capture_output=True).returncode == 0
+
+
+def test_the_release_script_declares_the_apk_content_type() -> None:
+    """⚠️⚠️ **Cloudflare Pages does not know what a `.apk` is.**
+
+    With no `Content-Type` it sends none at all, and Chrome renders 18MB of zip as text. ⭐ *The
+    download does not fail — it succeeds into a wall of mojibake*, which reads as a broken site rather
+    than a missing header, and it was a tester who found it, not the build.
+
+    The fix is one `_headers` rule, and ⭐ *a one-line fix on a path nobody revisits is exactly the kind
+    that vanishes in the next site rebuild* — so the script writes it and this pins that it still does.
+    """
+    script = SCRIPT.read_text()
+
+    assert "_headers" in script, "the release script no longer writes a Cloudflare _headers file"
+    assert "application/vnd.android.package-archive" in script, (
+        "the APK content type is gone — Chrome will display the APK instead of downloading it"
+    )
+    # ⚠️ At the site root. Cloudflare reads `_headers` from the deploy root and nowhere else; one
+    # written into `app/` is a file Cloudflare never looks at.
+    assert 'root / "_headers"' in script or '"$SITE"' in script, (
+        "_headers must be written at the site root, not beside the APK"
+    )

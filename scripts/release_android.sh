@@ -78,6 +78,27 @@ cat > "$SITE/app/version.json" <<JSON
 }
 JSON
 
+# ⚠️⚠️ **Cloudflare Pages does not know what a `.apk` is.** With no `Content-Type` it sends none at all,
+# and Chrome renders 18MB of zip as text — ⭐ *the download silently becomes a wall of mojibake, which
+# looks like a broken site rather than a missing header.* Found by a tester on the first real download.
+#
+# ⚠️ `_headers` lives at the SITE ROOT, not in `app/`. Written here rather than kept by hand, because
+# ⭐ *a file that only matters once, on a path nobody revisits, is a file that gets lost in the next
+# site rebuild.*
+python3 - "$SITE" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1]); p = root / "_headers"
+rule = """/app/*.apk
+  Content-Type: application/vnd.android.package-archive
+  Content-Disposition: attachment; filename="madboots.apk"
+"""
+existing = p.read_text() if p.exists() else ""
+# ⚠️ Merged, not overwritten — the site may grow other rules, and a release script that flattens
+# someone else's configuration is a release script people stop running.
+if "/app/*.apk" not in existing:
+    p.write_text((existing.rstrip() + "\n\n" if existing.strip() else "") + rule)
+PY
+
 # ⚠️⚠️ **A landing page, not a bare APK link.** Android refuses a sideloaded install until the browser
 # is allowed to do it, and the prompt it shows ("for security, your phone is not allowed to install
 # unknown apps") reads like a virus warning. ⭐ *Testers who hit that with no explanation do not ask —

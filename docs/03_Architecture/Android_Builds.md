@@ -194,6 +194,30 @@ itself**. `mobile/test/telemetry_test.dart` fails if the three ever drift apart,
 `tests/test_update_manifest.py` fails if the script and `update_check.dart` stop agreeing on the shape
 of `version.json`.
 
+### ⚠️ Cloudflare must be told what an APK is
+
+Pages serves `.apk` with **no `Content-Type` at all** — it does not recognise the extension — and Chrome
+then renders 18MB of zip as text. ⭐ *The download does not fail; it succeeds into a wall of mojibake*,
+which reads as a broken site rather than a missing header. A tester found this on the first real
+download, not the build.
+
+`_headers` at the **site root** (written by the release script, merged not overwritten):
+
+```
+/app/*.apk
+  Content-Type: application/vnd.android.package-archive
+  Content-Disposition: attachment; filename="madboots.apk"
+```
+
+⚠️ Root, not `app/`. Cloudflare reads `_headers` from the deploy root and nowhere else. Check after any
+deploy:
+
+```bash
+curl -sI https://madboots.com/app/madboots.apk | grep -i content-type
+```
+
+An empty answer there is the bug.
+
 ### The split APKs and `versionCode`
 
 `--split-per-abi` offsets each ABI by 1000 (armeabi-v7a 1000+n, arm64-v8a 2000+n, x86_64 3000+n), so
