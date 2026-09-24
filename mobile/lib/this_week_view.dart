@@ -18,6 +18,7 @@ class ThisWeekView extends StatefulWidget {
     required this.client,
     required this.team,
     required this.onApply,
+    required this.onAlternatives,
     super.key,
   });
 
@@ -31,6 +32,12 @@ class ThisWeekView extends StatefulWidget {
   /// first. ⚠️ *Making a reader remember a recommendation and go elsewhere to apply it is the transcription
   /// problem ADR-244 removed, reintroduced one screen along.*
   final Future<void> Function(SuggestedLineup) onApply;
+
+  /// Open the full transfer board (ADR-283).
+  ///
+  /// ⭐ The card above says *"Sangaré → Groß, +2.2 xP"*. This is the question that follows it — *"and
+  /// what else?"* — which is why it sits between the answer and the timing rather than a tab away.
+  final VoidCallback onAlternatives;
 
   @override
   State<ThisWeekView> createState() => _ThisWeekViewState();
@@ -133,6 +140,10 @@ class _ThisWeekViewState extends State<ThisWeekView> {
                 detail: '+${(m['gain'] as num).toStringAsFixed(1)} xP',
                 explanation: explanation?['transfer'] as Map<String, dynamic>?,
               ),
+          // ⚠️ **Shown whether or not there is a move to make.** "Hold" is a recommendation too, and
+          // ⭐ *the reader most likely to want the alternatives is the one who was just told to do
+          // nothing.*
+          _AlternativesButton(onTap: widget.onAlternatives),
           if (timing.isNotEmpty)
             _Card(
               label: 'Timing',
@@ -486,6 +497,52 @@ class _Card extends StatelessWidget {
             ),
         ],
       ],
+    ),
+  );
+}
+
+/// The way into the transfer board from the recommendation that prompted it (ADR-283).
+///
+/// ⚠️ Deliberately quieter than `ApplyPlanStrip` above it. That strip performs an action; this one only
+/// opens a screen — ⭐ *giving them the same weight would make "look at options" compete with "do the
+/// thing", and the reader cannot tell which one the app is recommending.*
+class _AlternativesButton extends StatelessWidget {
+  const _AlternativesButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      margin: const EdgeInsets.only(top: 2, bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        border: Border.all(color: Brand.purple.withValues(alpha: 0.65)),
+        borderRadius: BorderRadius.circular(Brand.radiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.swap_horiz, size: 16, color: Brand.purple),
+          const SizedBox(width: 9),
+          const Expanded(
+            child: Text(
+              'See transfer alternatives',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            size: 17,
+            color: Brand.purple.withValues(alpha: 0.9),
+          ),
+        ],
+      ),
     ),
   );
 }

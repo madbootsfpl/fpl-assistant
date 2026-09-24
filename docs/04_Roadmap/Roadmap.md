@@ -138,6 +138,12 @@ list on sight, not on suspicion.
   version numbers drift — *the step that must happen every time and is invisible when skipped.*
   📌 **Still open: iOS.** TestFlight needs the £79/yr account, and the owner is the only iPhone tester,
   so it costs nothing to wait.
+- 🔴 **The mobile API is unauthenticated and uncapped** *(named 2026-09-24, ADR-283)*. `FPL_USER_CAP` and
+  `beta_users` live in `src/web_streamlit/` and have never applied to the app. That was fine while
+  distribution meant *"I send you a file"*; ⚠️ **a public Android download button makes it a decision rather
+  than a default.** Rate limits are what stand there today — `/squad/build` 20/min is the one that matters,
+  being the only endpoint whose CPU a stranger controls. ⭐ Watch the **slowest 5% on `/squad/build`** in the
+  platform panel, not the user count. Belongs with accounts (ADR-259), still parked.
 - **The tablet's portrait pitch** — landscape reads well; portrait stretches the pitch and leaves dead
   green space (ADR-278's screenshots). Contained: the pitch is the only widget that misbehaves.
 - **Mini-league sub-tabs** — Transfers, Rank and Chips, plus the Awards tab. Parked by the owner at

@@ -144,13 +144,20 @@ class MyTeamScreen extends StatefulWidget {
 /// ⭐ The audit's §6 settles it without my opinion: the first release is *This week · My squad · Transfers
 /// · Players*, and Chips is not in it. It lives in More, which is no longer a graveyard for unbuilt
 /// things — it holds working ones now.
-enum _Tab { myTeam, thisWeek, transfers, players, more }
+/// ⭐⭐ **Transfers left this row for This Week** (ADR-283). Not because it was unused — because it was
+/// in the wrong place: the recommendation *"Sangaré → Groß, +2.2 xP"* lives on This Week, and the
+/// alternatives to it lived a tab away. ⚠️ *A list of alternatives is only meaningful beside the thing it
+/// is an alternative to.*
+///
+/// ⭐ Signals takes the slot, which is the other half of the same argument: it answers *"has anything
+/// changed?"*, a question asked far more often than *"who else could I buy?"*
+enum _Tab { myTeam, thisWeek, signals, players, more }
 
 extension on _Tab {
   String get label => switch (this) {
     _Tab.myTeam => 'My team',
     _Tab.thisWeek => 'This week',
-    _Tab.transfers => 'Transfers',
+    _Tab.signals => 'Signals',
     _Tab.players => 'Players',
     _Tab.more => 'More',
   };
@@ -158,7 +165,7 @@ extension on _Tab {
   IconData get icon => switch (this) {
     _Tab.myTeam => Icons.sports_soccer,
     _Tab.thisWeek => Icons.event_note,
-    _Tab.transfers => Icons.swap_horiz,
+    _Tab.signals => Icons.campaign_outlined,
     _Tab.players => Icons.people_outline,
     _Tab.more => Icons.more_horiz,
   };
@@ -671,15 +678,31 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           ],
         ),
       ),
-      _Tab.transfers => TransfersView(
+      // ⚠️ Marks its keys seen as it renders, so the count must be re-read on the way out — ⭐ *a badge
+      // that survives the thing it pointed at is a badge nobody trusts twice.* Same rule the nudge and
+      // the More row already follow; this is a third door to one room, not a third mechanism.
+      _Tab.signals => SignalsView(
         client: _client,
         team: team,
-        onPlan: (outId, inId) => _planSwap(team, outId, inId),
+        onSeen: () async {
+          final keys = await _seen.load();
+          if (mounted) setState(() => _seenKeys = keys);
+        },
       ),
       _Tab.thisWeek => ThisWeekView(
         client: _client,
         team: team,
         onApply: (plan) => _applyPlan(team, plan),
+        // ⭐ Pushed, not switched to. It is an answer to the card above it, so it gets a back button
+        // rather than a place in the row — ⚠️ *a tab is somewhere you go; this is something you open.*
+        onAlternatives: () => _open(
+          'Transfer alternatives',
+          TransfersView(
+            client: _client,
+            team: team,
+            onPlan: (outId, inId) => _planSwap(team, outId, inId),
+          ),
+        ),
       ),
       _Tab.players => PlayersView(
         client: _client,
@@ -891,7 +914,12 @@ class _DraftBanner extends StatelessWidget {
             // ⚠️ Still says what it is AND what it is not — "Plan" alone could be read as a saved team.
             // ⭐ The instruction to go and make it real moved out: it is advice for when you are finished,
             // not a caption you need on every screen, and it was the line that made this two rows tall.
-            'A plan — not your FPL team'
+            // ⚠️⚠️ **Reworded** (ADR-283). *"A plan — not your FPL team"* was read by the owner as an
+            // error about whose team he was looking at, three minutes after a message that genuinely was
+            // one. ⭐ *Two unrelated sentences that both begin by denying this is your team will be read
+            // as the same complaint twice.* This one is not a warning at all — it says what you are
+            // looking at and that FPL has not been told, which is the only thing a reader needs.
+            'Your plan — not saved to FPL yet'
             '${draft == null ? '' : ' · ${draft!.changeCount} change${draft!.changeCount == 1 ? '' : 's'}'}',
             style: const TextStyle(
               color: Colors.white,
@@ -931,8 +959,14 @@ class _DroppedBanner extends StatelessWidget {
       switch (reason) {
         DraftStaleness.gameweekPassed => 'Your saved plan was for a gameweek that has been played, so it has been cleared.',
         DraftStaleness.squadChanged => 'Your squad changed since you saved a plan — looks like you made the move. Plan cleared.',
+        // ⚠️⚠️ **Says what actually happened** (ADR-283). Until ADR-279 every install opened on a demo
+        // squad baked into the source, so the first plan a tester saved was saved against *that* id.
+        // Setting their own id then produced *"That plan belonged to a different manager id"* — ⭐ true,
+        // unexplained, and indistinguishable from the app losing their data. *A message that is accurate
+        // about the machine and silent about the cause is a message that reads as a fault.*
         DraftStaleness.otherManager =>
-          'That plan belonged to a different manager id. Cleared.',
+          'That plan was saved against a different FPL id, so it has been '
+              'cleared. Plans you make from now on are kept.',
         DraftStaleness.fresh => '',
       },
       style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),

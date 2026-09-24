@@ -54,10 +54,22 @@ extension on SignalKind {
 }
 
 class SignalsView extends StatefulWidget {
-  const SignalsView({required this.client, required this.team, super.key});
+  const SignalsView({
+    required this.client,
+    required this.team,
+    this.onSeen,
+    super.key,
+  });
 
   final ServiceClient client;
   final MyTeam team;
+
+  /// Called once this screen has marked its signals seen (ADR-283).
+  ///
+  /// ⚠️⚠️ **Needed because Signals became a tab.** As a pushed screen the caller re-read the count when
+  /// it came back; a tab is never *come back from* — ⭐ *the badge would have sat there while you read
+  /// the very thing it was pointing at.* Null when the caller keeps no count of its own.
+  final VoidCallback? onSeen;
 
   @override
   State<SignalsView> createState() => _SignalsViewState();
@@ -86,6 +98,8 @@ class _SignalsViewState extends State<SignalsView> {
     // ⭐ Marked seen on *this* render, so the badge survives exactly one visit — which is what "new since
     // you last looked" means. Saving before rendering would make it never show.
     await _store.save(signals.map((s) => '${s['key']}').toSet());
+    // ⭐ After the save, so the caller re-reads a store that already has this visit in it.
+    widget.onSeen?.call();
     return (
       signals,
       body['checked'] as int? ?? 0,
