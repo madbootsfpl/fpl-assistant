@@ -31,13 +31,17 @@ class TrendingBoards extends StatefulWidget {
 }
 
 class _TrendingBoardsState extends State<TrendingBoards> {
-  /// ⭐⭐ **Opens on "Worth a look"** (feedback: *"most important information from this section. It should
-  /// lead, first tab"*).
+  /// ⭐⭐ **Opens on "Worth noticing"** (ADR-283; the owner, having first asked for *"Worth a look"* to
+  /// lead and then swapped it back).
   ///
-  /// ⚠️ It is also the only board here that is **about the player** — the other four are facts about other
-  /// managers. ⭐ *Leading with the crowd taught the screen to be read as a popularity chart*, which is
-  /// exactly the framing ADR-150 ranks last.
-  String _by = 'look';
+  /// ⚠️ **Order and default move together.** A first pill that is not the selected one is a row that opens
+  /// mid-way along itself — ⭐ *"first tab" names a position and a starting point, and splitting them makes
+  /// the screen look like it forgot where it was.*
+  ///
+  /// ⭐ Both leading boards are still **about the player**; the four behind them are facts about other
+  /// managers, and *leading with the crowd would teach the screen to be read as a popularity chart* —
+  /// the framing ADR-150 ranks last, and the reason the market boards stay at the back.
+  String _by = 'watch';
 
   late Future<TrendingBoard> _future = _fetch();
 
@@ -67,8 +71,8 @@ class _TrendingBoardsState extends State<TrendingBoards> {
           height: 40,
           children: [
             for (final (value, label) in const [
-              ('look', 'Worth a look'),
               ('watch', 'Worth noticing'),
+              ('look', 'Worth a look'),
               ('in', 'Most bought'),
               ('out', 'Most sold'),
               ('owned', 'Most owned'),

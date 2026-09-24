@@ -78,4 +78,40 @@ void main() {
       expect(trendValue(6.2, 'Form'), '6.2');
     });
   });
+
+  group('which board leads', () {
+    /// ⚠️⚠️ **Nothing pinned this, and it has now been changed twice on feedback.** Both times the whole
+    /// suite stayed green — ⭐ *an order no test names is an order the next edit can reverse by accident,
+    /// and the only reader who notices is the owner.*
+    final source = File('lib/trending_view.dart').readAsStringSync();
+
+    /// The pill list, in the order it is written.
+    List<String> pills() =>
+        RegExp(r"\('(\w+)', '([^']+)'\)")
+            .allMatches(source)
+            .map((m) => m[2]!)
+            .toList();
+
+    test('Worth noticing is the first pill', () {
+      expect(pills().first, 'Worth noticing');
+    });
+
+    test('Worth a look is second', () {
+      // ⭐ The two player-centred boards stay at the front; the four about other managers stay behind
+      // them, because *leading with the crowd teaches the screen to be read as a popularity chart.*
+      expect(pills()[1], 'Worth a look');
+      expect(pills().sublist(2), [
+        'Most bought',
+        'Most sold',
+        'Most owned',
+        'In form',
+      ]);
+    });
+
+    test('the screen opens on the pill that leads', () {
+      // ⚠️ Order and default are one decision. A first pill that is not the selected one is a row that
+      // opens mid-way along itself.
+      expect(source, contains("String _by = 'watch';"));
+    });
+  });
 }

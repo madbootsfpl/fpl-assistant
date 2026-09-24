@@ -100,6 +100,17 @@ It belongs with accounts/identity (ADR-259), still parked.
 
 ## What this does not do
 
-- **Trending's pill order is unchanged.** The owner asked for Worth noticing to lead, then said the
-  direction was a mistake; Worth a look stays first.
+- **Trending's pill order did change, on the third answer.** The owner asked for Worth noticing to lead,
+  called the direction a mistake, then confirmed the swap after seeing the build. ⭐ *Recorded as three
+  answers rather than tidied into one, because the cost of the churn was a minute and the cost of
+  pretending it did not happen is a reader who cannot tell a settled decision from a fresh one.*
+
+  **Order and default moved together.** A first pill that is not the selected one is a row that opens
+  mid-way along itself — ⚠️ *"first tab" names a position and a starting point, and splitting them makes
+  the screen look like it forgot where it was.*
+
+  ⚠️⚠️ **And nothing pinned that order, through two reversals.** Both times the full suite stayed green.
+  ⭐ *An order no test names is an order the next edit reverses by accident, and the only reader who
+  notices is the owner.* Three tests now hold the row, the two leading boards and the default; 3/3
+  mutations killed.
 - **Mini-league sub-tabs, the Lab's other modes, the tablet's portrait pitch** — all still open.
