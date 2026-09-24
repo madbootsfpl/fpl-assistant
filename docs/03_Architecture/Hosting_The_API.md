@@ -2,7 +2,7 @@
 
 **What this gets you:** the app working on 4G, away from the house, for someone who is not you.
 **Time:** under an hour, most of it waiting.
-**Cost:** near zero at this traffic — see *What it should cost*.
+**Cost:** near zero at this traffic — see *What it should cost*. ⭐ Always-on was measured for and **declined** on 2026-09-24 (ADR-288): the instance no longer goes cold.
 
 ---
 
@@ -184,6 +184,23 @@ concluding it is broken. It is the *first* impression, every time, for anyone wh
 📌 **So this is now a decision about always-on**, and the runbook's own rule says take it. See
 *What it should cost* — the change is the same image and one setting, but on a free tier "minimum
 instances" is not a setting you have; it means a paid instance.
+
+### 🔴 …and on 2026-09-24 it stopped reproducing (ADR-288)
+
+| idle | cold response |
+|---|---|
+| 17 minutes | **0.4 s** |
+| 45 minutes | **0.1 s** |
+
+⭐⭐ **The instance is not spinning down.** Nothing in the repo pings it; a public HTTPS endpoint simply
+receives unsolicited traffic, and any request resets the idle timer. ⚠️ *That is an accident, not an
+architecture* — so **the threshold above stays on the books**, and if cold starts return the answer is
+still one setting.
+
+⚠️⚠️ **What was actually failing was the deploy.** Every push redeploys and leaves a window with nothing
+serving; on one evening **10 of 12 pushes** touched only docs, ADRs or mobile code and rebuilt the image
+for nothing. ⭐ *A build filter costs nothing and removes five sixths of the windows* — a dashboard
+setting, not a bill.
 
 📌 **A warming ping was designed and deliberately not built.** With a 1s app boot it would save a couple of
 seconds, once — ⭐ *building it anyway would be building for a fear the measurement contradicts.* If Step 4
