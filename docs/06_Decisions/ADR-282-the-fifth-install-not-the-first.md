@@ -136,6 +136,30 @@ Fixed with a `_headers` rule at the **site root**, written by the release script
 overwritten, because ⭐ *a one-line fix on a path nobody revisits is exactly the kind that vanishes in the
 next site rebuild.*
 
+### ⚠️⚠️ The redeploy changed nothing
+
+The rule was correct and the site was redeployed, and the tester saw **exactly the same wall of text.**
+
+```
+cf-cache-status: REVALIDATED     ← the plain url: still no content-type
+cf-cache-status: MISS            ← the same url with ?x=…: correct, both headers
+```
+
+Cloudflare had cached `madboots.apk` for four hours *before* the rule existed and kept serving that copy.
+⭐⭐ **A fix that is live but invisible is indistinguishable from a fix that did not work** — and the
+person looking at it is a tester, not the person who can read the cache status.
+
+The answer was not "purge the cache". Each release now publishes **`madboots-<build>.apk`**, and ⭐ *a URL
+that has never been requested cannot be stale.* No purge step, no waiting: cache invalidation **avoided**
+rather than managed, because *the release that needs a manual cache purge is the release someone ships
+without one.*
+
+⚠️ **And the `_headers` merge had the same bug in miniature.** It skipped when `/app/*.apk` was already
+present — protecting other people's rules, and in doing so preserving its own outdated one. ⭐ *"Leave
+other people's config alone" had quietly become "never fix my own."* It now replaces the block it owns and
+keeps the rest, with four tests covering from-nothing, own-stale-rule, foreign-rule-alongside, and
+run-twice.
+
 **What the smoke test could not have caught.** Every check to this point ran against the manifest, the
 signature and the app — all of which were right. ⚠️⚠️ *The APK was the one artefact nothing verified by
 asking for it the way a tester would*, and `curl -sI` on the published file is now part of the runbook.

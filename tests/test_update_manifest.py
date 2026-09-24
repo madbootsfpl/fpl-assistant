@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,3 +85,69 @@ def test_the_release_script_declares_the_apk_content_type() -> None:
     assert 'root / "_headers"' in script or '"$SITE"' in script, (
         "_headers must be written at the site root, not beside the APK"
     )
+
+
+def _merge_headers(initial: str | None) -> str:
+    """Run the release script's `_headers` merge against a throwaway site folder."""
+    block = re.search(r"python3 - \"\$SITE\" <<'PY'\n(.*?)\nPY\n", SCRIPT.read_text(), re.S)
+    assert block, "the release script no longer writes _headers via an inline python block"
+    site = Path(tempfile.mkdtemp())
+    if initial is not None:
+        (site / "_headers").write_text(initial)
+    subprocess.run(["python3", "-c", block[1], str(site)], check=True)
+    return (site / "_headers").read_text()
+
+
+def test_headers_merge_writes_the_rule_from_nothing() -> None:
+    assert "application/vnd.android.package-archive" in _merge_headers(None)
+
+
+def test_headers_merge_updates_its_own_outdated_rule() -> None:
+    """⭐⭐ **"Leave other people's config alone" must not become "never fix my own."**
+
+    The first version skipped entirely when `/app/*.apk` was already present, so it kept serving a stale
+    `filename=` it had written itself — ⚠️ *the same shape of bug as a cache that will not invalidate,
+    and invisible for the same reason: the file looked configured.*
+    """
+    out = _merge_headers('/app/*.apk\n  Content-Type: text/plain\n  Content-Disposition: attachment; filename="old.apk"\n')
+
+    assert "text/plain" not in out, out
+    assert 'filename="old.apk"' not in out, out
+    assert out.count("/app/*.apk") == 1, f"the rule was duplicated rather than replaced:\n{out}"
+
+
+def test_headers_merge_keeps_rules_it_does_not_own() -> None:
+    # ⚠️ A release script that flattens someone else's configuration is one people stop running.
+    out = _merge_headers("/*\n  X-Frame-Options: DENY\n\n/app/*.apk\n  Content-Type: text/plain\n")
+
+    assert "X-Frame-Options: DENY" in out, out
+    assert "text/plain" not in out, out
+
+
+def test_headers_merge_is_idempotent() -> None:
+    """⭐ Two releases in a day must not leave the rule written twice."""
+    once = _merge_headers(None)
+    assert _merge_headers(once) == once
+
+
+def test_the_apk_url_carries_the_build_number() -> None:
+    """⚠️⚠️ **Cache invalidation avoided rather than managed.**
+
+    Cloudflare cached `madboots.apk` for four hours *before* the content-type rule existed and kept
+    serving the headerless copy after the redeploy — ⭐ *a fix that is live but invisible is
+    indistinguishable from a fix that did not work, and the person looking at it is a tester.*
+
+    A URL that has never been requested cannot be stale. ⭐ *The release that needs a manual cache purge
+    is the release someone ships without one.*
+    """
+    script = SCRIPT.read_text()
+    # ⚠️ The **copy** line specifically. A bare substring check passed while the APK was staged
+    # unversioned, because the manifest and the link two lines below still mentioned the versioned name —
+    # ⭐ *a test satisfied by a neighbour is not a test of the thing it names.*
+    assert re.search(r'cp "\$APK" "\$SITE/app/madboots-\$next\.apk"', script), (
+        "the published APK filename no longer carries the build number"
+    )
+    assert '"url": "https://madboots.com/app/madboots-$next.apk"' in script, (
+        "version.json points somewhere other than the versioned APK"
+    )
+    assert 'href="madboots-$next.apk"' in script, "the install page links to an unversioned APK"

@@ -209,14 +209,29 @@ download, not the build.
   Content-Disposition: attachment; filename="madboots.apk"
 ```
 
-⚠️ Root, not `app/`. Cloudflare reads `_headers` from the deploy root and nowhere else. Check after any
-deploy:
+⚠️ Root, not `app/`. Cloudflare reads `_headers` from the deploy root and nowhere else.
+
+### ⚠️⚠️ …and the APK filename carries the build number
+
+Adding that rule was not enough on its own. Cloudflare had already cached `madboots.apk` for four hours
+**before** the rule existed, so the redeploy changed nothing a tester could see — ⭐ *a fix that is live
+but invisible is indistinguishable from a fix that did not work.*
+
+So each release publishes `madboots-<build>.apk`. ⭐ **A URL that has never been requested cannot be
+stale**, which is cache invalidation avoided rather than managed — *the release that needs a manual cache
+purge is the release someone ships without one.* The script deletes the previous APK, so the folder holds
+exactly one.
+
+Check after any deploy:
 
 ```bash
-curl -sI https://madboots.com/app/madboots.apk | grep -i content-type
+curl -sI https://madboots.com/app/$(python3 -c "import json,urllib.request;print(json.load(urllib.request.urlopen('https://madboots.com/app/version.json'))['url'].rsplit('/',1)[1])") \
+  | grep -i content-type
 ```
 
-An empty answer there is the bug.
+An empty answer there is the bug. ⚠️ Add a `?x=1` if you need to bypass a cached response while
+diagnosing — *a cached answer to "is it fixed yet?" is the answer to a question you asked four hours
+ago.*
 
 ### The split APKs and `versionCode`
 

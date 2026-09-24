@@ -66,14 +66,22 @@ echo "  built: $(du -h "$APK" | cut -f1)  versionCode=$code"
 # ── 3. stage the site ─────────────────────────────────────────────────────────────────────────────
 # ⭐ `version.json` sits NEXT TO the APK it describes, so the two cannot disagree — *a manifest kept
 # somewhere else is a manifest that will eventually describe a different build.*
+# ⚠️⚠️ **The filename carries the build number**, and that is cache invalidation avoided rather than
+# managed. Cloudflare cached `madboots.apk` for four hours *before* the `_headers` rule existed, and kept
+# serving the headerless copy after the redeploy — ⭐ *a fix that is live and invisible is indistinguishable
+# from a fix that did not work, and the person looking at it is a tester, not you.*
+#
+# ⭐ A URL that has never been requested cannot be stale. No purge step, no waiting, no "try again in four
+# hours" — *the release that needs a manual cache purge is the release someone ships without one.*
 mkdir -p "$SITE/app"
-cp "$APK" "$SITE/app/madboots.apk"
+rm -f "$SITE/app"/madboots*.apk          # ⭐ one APK in the folder: the current one
+cp "$APK" "$SITE/app/madboots-$next.apk"
 cat > "$SITE/app/version.json" <<JSON
 {
   "version": "$name",
   "build": $next,
   "versionCode": $code,
-  "url": "https://madboots.com/app/madboots.apk",
+  "url": "https://madboots.com/app/madboots-$next.apk",
   "notes": ""
 }
 JSON
@@ -88,15 +96,30 @@ JSON
 python3 - "$SITE" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1]); p = root / "_headers"
+# ⚠️ No `filename=` here. The APK is published under a versioned name and *the glob must not disagree
+# with it* — ⭐ a Content-Disposition naming a different file than the URL is a download that saves as
+# something the install page never mentioned.
 rule = """/app/*.apk
   Content-Type: application/vnd.android.package-archive
-  Content-Disposition: attachment; filename="madboots.apk"
+  Content-Disposition: attachment
 """
-existing = p.read_text() if p.exists() else ""
 # ⚠️ Merged, not overwritten — the site may grow other rules, and a release script that flattens
-# someone else's configuration is a release script people stop running.
-if "/app/*.apk" not in existing:
-    p.write_text((existing.rstrip() + "\n\n" if existing.strip() else "") + rule)
+# someone else's configuration is a release script people stop running. ⭐⭐ **But it must still update
+# the rule it owns**: a first pass that skipped when `/app/*.apk` was already present left its own
+# outdated `filename=` in place — *"leave other people's config alone" quietly became "never fix my
+# own", which is the same bug as a cache that will not invalidate.*
+existing = p.read_text() if p.exists() else ""
+kept, skipping = [], False
+for line in existing.splitlines():
+    if line.strip() == "/app/*.apk":
+        skipping = True
+        continue
+    if skipping and (not line.strip() or not line.startswith((" ", "\t"))):
+        skipping = False
+    if not skipping:
+        kept.append(line)
+body = "\n".join(kept).strip()
+p.write_text((body + "\n\n" if body else "") + rule)
 PY
 
 # ⚠️⚠️ **A landing page, not a bare APK link.** Android refuses a sideloaded install until the browser
@@ -122,7 +145,7 @@ cat > "$SITE/app/index.html" <<HTML
 </style></head><body>
 <h1>MADBOOTS for Android</h1>
 <div class="v">Version $name &middot; build $next</div>
-<a class="dl" href="madboots.apk">Download the app</a>
+<a class="dl" href="madboots-$next.apk">Download the app</a>
 <ol>
  <li>Tap <b>Download the app</b>. Chrome will warn that this file type can harm your device &mdash;
      that warning appears for every APK. Choose <b>Download anyway</b>.</li>
