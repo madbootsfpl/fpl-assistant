@@ -31,6 +31,7 @@ import 'telemetry.dart';
 import 'this_week_view.dart';
 import 'ticker_view.dart';
 import 'transfers_view.dart';
+import 'update_check.dart';
 import 'welcome_view.dart';
 
 /// ⚠️⚠️ **There is no default manager id any more** (ADR-279).
@@ -173,6 +174,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   );
   late Future<MyTeam> _team = _load(widget.managerId);
   _Tab _tab = _Tab.myTeam;
+
+  /// ⭐⭐ **Checked once, and nothing waits for it** (ADR-282). ⚠️ *An update prompt that can stop you
+  /// using the app is worse than the stale build it is warning about* — so this is a `setState` that
+  /// arrives whenever it arrives, and never on the path to the first frame.
+  Available? _update;
 
   /// ⭐ Held here, not inside the pitch, so it survives a tab switch. Changing what every card means and
   /// then forgetting it the moment you look at Transfers would be its own small betrayal.
@@ -516,6 +522,12 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     _seen.load().then((keys) {
       if (mounted) setState(() => _seenKeys = keys);
     });
+    // ⚠️ Fire-and-forget. A failed check is silent and the app behaves exactly as before.
+    published().then((available) {
+      if (mounted && isNewer(available: available, runningBuild: kAppBuild)) {
+        setState(() => _update = available);
+      }
+    });
   }
 
   @override
@@ -605,6 +617,10 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             // strip would be read once and then never again; this appears exactly when the numbers below
             // it are wrong, and disappears when they are not. ⭐ *A warning that is always on is a
             // decoration.*
+            // ⭐ **First, and only when it applies.** A newer build usually means the thing a tester is
+            // about to report has already been fixed — ⚠️ *and a stale install is the one problem the
+            // app itself is best placed to notice.*
+            if (_update != null) _UpdateBanner(available: _update!),
             if (team.data.behind) _StaleBanner(data: team.data),
             // ⚠️⚠️ **Being told beats going to look** — the argument ADR-228 made for a badge and then
             // parked, because it was assumed to cost a round trip. ⭐ It does not: `my-team` carries the
@@ -1098,4 +1114,53 @@ class _SincePlan extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A newer build is published (ADR-282).
+///
+/// ⚠️ **Dismissible by ignoring it, not by dismissing it.** There is no ✕: the banner is gone the moment
+/// the new build is installed, and ⭐ *a warning you can silence without fixing anything is a warning
+/// that gets silenced.* It is one slim strip, and only when a newer build actually exists.
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner({required this.available});
+
+  final Available available;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: () => launchUrl(
+      Uri.parse(available.url),
+      mode: LaunchMode.externalApplication,
+    ),
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: Brand.orange.withValues(alpha: 0.18),
+        border: Border.all(color: Brand.orange.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(Brand.radiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.system_update, size: 15, color: Brand.orange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              // ⭐ Says what it is for, not just that it exists — *"there is an update" invites "so
+              // what?"; "what you are about to report may already be fixed" does not.*
+              'Build ${available.build} is out — yours is $kAppBuild. '
+              'Tap to update; what you are about to report may already be fixed.',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11.5,
+                height: 1.4,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 16, color: Brand.orange),
+        ],
+      ),
+    ),
+  );
 }

@@ -130,10 +130,14 @@ list on sight, not on suspicion.
 
 ⭐ Listed so none of it reads as finished. None is blocked; each is a decision or a slice of work.
 
-- **Distribution** — serving the APK from the owner's Mac works for one person and not for nine.
-  Firebase App Distribution or a Play internal-testing track are the usual answers, and both want a
-  decision rather than a default. ⚠️ Also: `versionCode` must be incremented per release or Android will
-  not treat a build as an update.
+- ✅ **Distribution — done 2026-09-24, self-hosted (ADR-282).** `madboots.com/app/` serves the APK, a
+  `version.json` beside it, and an install page; the app checks that manifest at start-up and shows a
+  banner only when a newer build exists. ⭐ Chosen over Firebase App Distribution, which wanted an
+  account per tester and a service-account secret to solve what a JSON file beside the APK solves.
+  ⚠️ `versionCode` is now bumped by `scripts/release_android.sh`, with tests that fail if the three
+  version numbers drift — *the step that must happen every time and is invisible when skipped.*
+  📌 **Still open: iOS.** TestFlight needs the £79/yr account, and the owner is the only iPhone tester,
+  so it costs nothing to wait.
 - **The tablet's portrait pitch** — landscape reads well; portrait stretches the pitch and leaves dead
   green space (ADR-278's screenshots). Contained: the pitch is the only widget that misbehaves.
 - **Mini-league sub-tabs** — Transfers, Rank and Chips, plus the Awards tab. Parked by the owner at

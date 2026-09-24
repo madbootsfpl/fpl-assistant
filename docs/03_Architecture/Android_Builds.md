@@ -159,3 +159,66 @@ Screenshot: `adb exec-out screencap -p > shot.png`.
 
 ⭐ This is why Android went first once the testers were counted: **9 of 10 are on it**, and it is also the
 platform where a build reaching them costs nothing and does not expire.
+
+---
+
+## 7. Cutting a release (ADR-282)
+
+```bash
+scripts/release_android.sh            # bump the build number: 1.0.0+2 -> 1.0.0+3
+scripts/release_android.sh 1.1.0      # …and set a new version name as well
+```
+
+It does four things, and the **first** is the one that cannot be skipped:
+
+1. **Bumps three numbers together** — `mobile/pubspec.yaml`, `kAppVersion` and `kAppBuild`.
+2. Builds the split APKs against the live API.
+3. Stages `madboots.apk`, `version.json` and an install page into `$MADBOOTS_SITE/app/`
+   (defaults to `~/madboots-site`).
+4. Prints the `versionCode` it produced, so you can see it went up.
+
+Then **drag the site folder onto Cloudflare Pages**, and commit the version bump. Testers go to
+<https://madboots.com/app/>.
+
+### ⚠️⚠️ Why the build number is the whole point
+
+Android decides *"is this an update?"* on `versionCode` alone. `versionName` is a label it ignores.
+Ship a new APK without bumping and every tester's phone refuses it **silently** — no error, no prompt,
+the old build simply stays.
+
+The app's own update check compares on the same number, for the same reason: ⭐ *`1.0.0` ships twenty
+times during a beta, and a comparison on a label that does not change cannot tell two builds apart.*
+
+So a release that moves the name and not the number ships an app **unable to tell it is newer than
+itself**. `mobile/test/telemetry_test.dart` fails if the three ever drift apart, and
+`tests/test_update_manifest.py` fails if the script and `update_check.dart` stop agreeing on the shape
+of `version.json`.
+
+### The split APKs and `versionCode`
+
+`--split-per-abi` offsets each ABI by 1000 (armeabi-v7a 1000+n, arm64-v8a 2000+n, x86_64 3000+n), so
+build 2 ships as `versionCode` 2002 on the APK actually published. ⭐ *This is deliberate on Flutter's
+part — it keeps the three splits orderable against each other* — and it is recorded in `version.json`
+for reference only. The app never compares it; it compares `build`.
+
+### What a tester sees
+
+A slim orange banner at the top of the team screen, **only** when a newer build exists. Tapping it opens
+the install page. There is no ✕: it is gone once the new build is installed, and ⭐ *a warning you can
+silence without fixing anything is a warning that gets silenced.*
+
+A failed check — offline, site down, manifest missing — is **silent**, and the app behaves exactly as it
+did before the check existed.
+
+### Installing over the top
+
+The new APK keeps squad, plan and settings **as long as it is signed with the same keystore**. ⚠️ A
+different key means Android refuses the install outright (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) and the
+only way out is uninstalling first — ⭐ *which is why the keystore backup matters more than the source
+does: the source can be rewritten, the key cannot.*
+
+Check before publishing:
+
+```bash
+apksigner verify --print-certs ~/madboots-site/app/madboots.apk
+```

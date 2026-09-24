@@ -96,11 +96,20 @@ void main() {
     test('matches pubspec.yaml', () {
       final pubspec = File('pubspec.yaml').readAsLinesSync();
       final line = pubspec.firstWhere((l) => l.startsWith('version:'));
-      final declared = line.split(':')[1].trim().split('+').first;
+      final declared = line.split(':')[1].trim();
+
       expect(
         kAppVersion,
-        declared,
+        declared.split('+').first,
         reason: 'kAppVersion has drifted from pubspec.yaml',
+      );
+      // ⚠️⚠️ **And the build number**, which is what the update check compares on. ⭐ *A release that
+      // bumps the name and not the number ships an app that cannot tell it is newer than itself* —
+      // `scripts/release_android.sh` moves all three together for exactly this reason.
+      expect(
+        kAppBuild,
+        int.parse(declared.split('+').last),
+        reason: 'kAppBuild has drifted from pubspec.yaml',
       );
     });
   });

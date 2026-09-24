@@ -81,6 +81,11 @@ String friendlyError(Object? error) =>
 /// tells the owner an old build is still in somebody's pocket (ADR-280).
 const String kAppVersion = '1.0.0';
 
+/// The build number — ⚠️ **the only thing that distinguishes two builds of `1.0.0`**, which during a beta
+/// is most of them. ⭐ *Android ignores `versionName` for exactly this reason*, and the update check
+/// compares on this for the same one.
+const int kAppBuild = 2;
+
 class ServiceClient {
   ServiceClient({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
