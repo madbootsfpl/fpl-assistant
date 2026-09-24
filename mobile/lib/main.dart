@@ -21,6 +21,7 @@ import 'signals_view.dart';
 import 'draft.dart';
 import 'feedback_view.dart';
 import 'lab_view.dart';
+import 'manager_store.dart';
 import 'leagues_view.dart';
 import 'more_view.dart';
 import 'pitch.dart';
@@ -29,22 +30,55 @@ import 'team_dna_view.dart';
 import 'this_week_view.dart';
 import 'ticker_view.dart';
 import 'transfers_view.dart';
+import 'welcome_view.dart';
 
-/// The owner's own team, so the app opens on something real rather than a stranger's squad.
-const int kDefaultManagerId = 2885974;
+/// ⚠️⚠️ **There is no default manager id any more** (ADR-279).
+///
+/// This was `const int kDefaultManagerId = 2885974` — the author's own team — so **every install opened
+/// on somebody else's squad**, and the id was never saved, so a tester who corrected it in Settings
+/// found it gone the next launch.
+///
+/// ⭐ *A default here is a guess about whose team you are looking at, and the app cannot tell a guess
+/// from an answer once it has written one down.* It asks instead: `WelcomeView`.
 
 /// ⚠️ **`main` is async now, and that is the whole point** — the API's address is read from the device
 /// before the first frame, so no screen is ever built against a placeholder it would then have to be told
 /// about (ADR-239). The read is one `SharedPreferences` lookup; nothing user-visible waits on it.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MadbootsApp(baseUrl: await Server.load()));
+  // ⭐ Both reads happen before the first frame, for the same reason: *no screen is ever built against a
+  // placeholder it would then have to be told about.*
+  runApp(
+    MadbootsApp(
+      baseUrl: await Server.load(),
+      managerId: await ManagerStore().load(),
+    ),
+  );
 }
 
-class MadbootsApp extends StatelessWidget {
-  const MadbootsApp({required this.baseUrl, super.key});
+class MadbootsApp extends StatefulWidget {
+  const MadbootsApp({
+    required this.baseUrl,
+    required this.managerId,
+    super.key,
+  });
 
   final String baseUrl;
+
+  /// ⚠️ Null on a first run — nobody has said whose team this is yet.
+  final int? managerId;
+
+  @override
+  State<MadbootsApp> createState() => _MadbootsAppState();
+}
+
+class _MadbootsAppState extends State<MadbootsApp> {
+  late int? _managerId = widget.managerId;
+
+  Future<void> _setManagerId(int id) async {
+    await ManagerStore().save(id);
+    if (mounted) setState(() => _managerId = id);
+  }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -57,12 +91,28 @@ class MadbootsApp extends StatelessWidget {
       scaffoldBackgroundColor: Brand.ink,
       useMaterial3: true,
     ),
-    home: MyTeamScreen(baseUrl: baseUrl),
+    // ⭐ Ask before assuming. ⚠️ *A tester's first impression of the app was a stranger's team.*
+    home: _managerId == null
+        ? WelcomeView(onManagerId: _setManagerId)
+        : MyTeamScreen(baseUrl: widget.baseUrl, managerId: _managerId!),
   );
 }
 
 class MyTeamScreen extends StatefulWidget {
-  const MyTeamScreen({required this.baseUrl, super.key});
+  const MyTeamScreen({
+    required this.baseUrl,
+    required this.managerId,
+    this.client,
+    super.key,
+  });
+
+  /// ⭐ **Injectable so the shell can be tested at all** (ADR-279). It builds its own client from
+  /// `baseUrl` in the app; a test hands in a fake. ⚠️ *The screen that owns first-run, the manager id and
+  /// every draft had no test that could reach it*, because it could only ever talk to a real network.
+  final ServiceClient? client;
+
+  /// ⭐ Supplied, never guessed — the app has already asked (`WelcomeView`).
+  final int managerId;
 
   final String baseUrl;
 
@@ -112,11 +162,12 @@ extension on _Tab {
 class _MyTeamScreenState extends State<MyTeamScreen> {
   /// ⚠️ **Not `final`.** Changing the address has to build a new client — `ServiceClient` holds its base
   /// URL, so mutating a field would leave every in-flight and future call pointed at the old machine.
-  late ServiceClient _client = ServiceClient(baseUrl: widget.baseUrl);
+  late ServiceClient _client =
+      widget.client ?? ServiceClient(baseUrl: widget.baseUrl);
   late final TextEditingController _id = TextEditingController(
-    text: '$kDefaultManagerId',
+    text: '${widget.managerId}',
   );
-  late Future<MyTeam> _team = _load(kDefaultManagerId);
+  late Future<MyTeam> _team = _load(widget.managerId);
   _Tab _tab = _Tab.myTeam;
 
   /// ⭐ Held here, not inside the pitch, so it survives a tab switch. Changing what every card means and
@@ -197,7 +248,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
 
     final draft = Draft.swap(
       existing: _draft,
-      managerId: team.fplPlayerIds.isEmpty ? kDefaultManagerId : _managerId,
+      managerId: _managerId,
       gameweek: team.gameweek ?? 0,
       basePlayerIds: base,
       benchIds: team.analysis.bench.map((p) => p.id).toList(),
@@ -219,7 +270,9 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
-  int get _managerId => int.tryParse(_id.text.trim()) ?? kDefaultManagerId;
+  /// ⚠️ Falls back to the id the app was **given**, never to a constant — ⭐ *a fallback to somebody
+  /// else's team is worse than no fallback at all.*
+  int get _managerId => int.tryParse(_id.text.trim()) ?? widget.managerId;
 
   /// Push a full screen. ⭐ Used for the things More links to — they are screens, not rows, and giving them
   /// a back button is what makes More a menu rather than a very long page.
@@ -443,7 +496,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     setState(() {
       _draft = null;
       _dropped = null;
-      _team = _load(int.tryParse(_id.text.trim()) ?? kDefaultManagerId);
+      _team = _load(_managerId);
     });
   }
 
@@ -665,9 +718,21 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                 _team = _load(_managerId);
               });
             },
-            onManagerId: (id) {
+            onManagerId: (id) async {
               _id.text = '$id';
-              setState(() => _team = _load(id));
+              // ⚠️⚠️ **Saved, which it never was.** Settings let a tester correct the manager id and
+              // the app forgot it on the next launch — ⭐ *a setting that does not persist is a setting
+              // that was never really offered* (ADR-279). Written before the reload so a crash mid-fetch
+              // still leaves the right id behind.
+              await ManagerStore().save(id);
+              // ⚠️ **A block, not an arrow.** `setState(() => _team = _load(id))` *returns* the
+              // Future it assigns, and Flutter asserts on a `setState` callback that returns one —
+              // ⭐ *an assertion that only fires in debug, on a screen no test had ever pumped.*
+              if (mounted) {
+                setState(() {
+                  _team = _load(id);
+                });
+              }
             },
             onFreeTransfers: (n) => setState(() {
               _freeTransfers = n;
