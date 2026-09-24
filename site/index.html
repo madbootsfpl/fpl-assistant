@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MADBOOTS — Fantasy Football, Calculated.</title>
+<meta name="description" content="MADBOOTS is a free Fantasy Premier League (FPL) assistant where analytics decide and logic explains. Captain, transfers, fixtures, squad — you make the call.">
+<link rel="canonical" href="https://madboots.com/">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#120e1a">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MADBOOTS">
+<meta property="og:url" content="https://madboots.com/">
+<meta property="og:title" content="MADBOOTS — Fantasy Football, Calculated.">
+<meta property="og:description" content="The FPL tool that does the maths for you — captain, transfers, fixtures and your whole squad, from one honest expected-points number.">
+<meta property="og:image" content="https://madboots.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MADBOOTS — Fantasy Football, Calculated.">
+<meta name="twitter:description" content="The FPL tool that does the maths for you — from one honest expected-points number.">
+<meta name="twitter:image" content="https://madboots.com/og-image.png">
+<style>
+:root{
+  --purple:#8B2FC9; --purple-lt:#B45CF0; --green:#86D91E; --orange:#FF6A00; --yellow:#FFC21E; --ink:#0c0a12;
+  --bg:#120e1a; --bg2:#171226; --panel:#1d1730; --line:rgba(180,150,240,.16); --text:#efe9fb; --muted:#b7add0;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --heavy:"Arial Black","Helvetica Neue",Impact,var(--sans);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+a{color:inherit}
+.btn{display:inline-flex;align-items:center;gap:.5em;background:var(--orange);color:#fff;font-weight:800;
+  letter-spacing:.01em;text-decoration:none;border-radius:12px;padding:14px 22px;font-size:1.02rem;
+  box-shadow:0 6px 22px rgba(255,106,0,.32);transition:transform .12s ease,box-shadow .12s ease}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,106,0,.42)}
+.btn.ghost{background:rgba(139,47,201,.22);color:#fff;border:1px solid var(--purple-lt);box-shadow:none;font-weight:700}
+.btn.ghost:hover{border-color:var(--purple-lt);background:rgba(139,47,201,.12)}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.brand{font-family:var(--heavy);font-style:italic;font-weight:900;font-size:1.15rem;letter-spacing:-.01em;
+  display:inline-flex;gap:2px}
+.brand .a{color:var(--purple-lt)} .brand .b{color:var(--orange)}
+.top .lk{font-weight:700;font-size:.92rem;text-decoration:none;color:var(--muted)}
+.top .lk:hover{color:var(--text)}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line);
+  background:radial-gradient(60% 60% at 50% 12%,rgba(139,47,201,.34),transparent 70%),
+             radial-gradient(50% 40% at 80% 30%,rgba(134,217,30,.14),transparent 70%),
+             linear-gradient(180deg,var(--bg2),var(--bg))}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:center;padding:26px 22px 56px}
+/* The artwork is 377x378. `width:100%` UPSCALED it to 460 and made it 40% of a phone screen, which is
+   why it ate the fold. Now it is bounded by the VIEWPORT, so it shrinks on a short window instead of
+   pushing the page down: never taller than 38vh, never wider than its own pixels. */
+.hero img{width:auto;height:auto;max-width:min(377px,100%);max-height:38vh;display:block;margin:0 auto;filter:drop-shadow(0 18px 40px rgba(0,0,0,.5))}
+.tagline{font-family:var(--heavy);font-style:italic;font-weight:900;font-size:clamp(2rem,5.4vw,3.1rem);
+  line-height:1.02;letter-spacing:-.02em;margin:.1em 0 .35em;text-wrap:balance}
+.tagline .c{color:var(--orange)}
+.lede{color:var(--muted);font-size:1.08rem;max-width:52ch;margin:0 0 1.4em}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+/* Platform picker. The two that work are buttons; iOS is a line of text, because a greyed-out
+   button still invites a tap and a tap that does nothing reads as broken. */
+.plat{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.plat .btn{font-size:.95rem}
+.soon{color:#8b93a7;font-size:.85rem;font-weight:600;padding:0 2px;white-space:nowrap}
+.note{color:var(--muted);font-size:.86rem;margin-top:1.1em}
+.beta-pill{display:inline-block;border:1px solid var(--purple-lt);border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:800;color:#efe9fb;background:rgba(139,47,201,.22);margin-right:7px;letter-spacing:.01em}
+.note b{color:var(--yellow)}
+
+/* sections */
+section{padding:58px 0}
+.eyebrow{font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:var(--purple-lt);margin-bottom:10px}
+h2{font-family:var(--heavy);font-style:italic;font-weight:900;font-size:clamp(1.5rem,3.6vw,2.1rem);margin:.1em 0 .5em;letter-spacing:-.01em;text-wrap:balance}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+.card .ic{font-size:1.6rem;margin-bottom:.4em}
+.card h3{margin:.1em 0 .3em;font-size:1.08rem;font-weight:800}
+.card h3 .u{color:var(--green)}
+.card p{margin:0;color:var(--muted);font-size:.97rem}
+
+.inside{border-top:1px solid var(--line);background:var(--bg2)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:9px 16px;font-weight:700;font-size:.95rem;background:rgba(139,47,201,.08)}
+.chip b{color:var(--purple-lt)}
+
+.cta{background:radial-gradient(70% 120% at 50% 0%,rgba(255,106,0,.22),transparent 70%),var(--bg);text-align:center}
+.cta h2{margin-bottom:.6em}
+
+footer{border-top:1px solid var(--line);background:var(--ink);color:var(--muted);font-size:.9rem;padding:30px 0 40px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;align-items:center}
+footer .discl{max-width:60ch;font-size:.82rem;color:#cfc6e6}
+footer a{color:var(--purple-lt);text-decoration:none}
+
+@media(max-width:760px){
+  .hero .wrap{grid-template-columns:1fr;text-align:center;padding-top:8px}
+  .hero img{max-width:min(300px,64vw);max-height:26vh}
+  .lede{margin-left:auto;margin-right:auto}
+  .cta-row{justify-content:center}
+  .cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap" style="display:block;padding-bottom:0">
+    <div class="top">
+      <a class="brand" href="/" aria-label="MADBOOTS home" style="text-decoration:none"><span class="a">MAD</span><span class="b">BOOTS</span></a>
+      <a class="lk" href="https://madboots.streamlit.app">Launch the app →</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <div>
+      <h1 class="tagline">Fantasy Football,<br><span class="c">Calculated.</span></h1>
+      <p class="lede">The FPL tool that does the maths for you — captain, transfers, fixtures and your whole
+        squad, all from one honest expected-points number. Analytics decide. Logic explains. You make
+        the call.</p>
+      <div class="cta-row">
+        <div class="plat">
+          <a class="btn" href="https://madboots.streamlit.app">🖥 Use on Desktop →</a>
+          <a class="btn ghost" href="/app/">🤖 Get it on Android →</a>
+          <span class="soon">iOS — coming soon</span>
+        </div>
+      </div>
+      <div class="cta-row">
+        <a class="btn ghost" href="#why" onclick="return mbPlay(event)">See how it works</a>
+      </div>
+      <p class="note"><span class="beta-pill">🔒 Invite-only beta</span> Free · email-only sign-in · your data stays yours · a personal project.</p>
+    </div>
+    <div><img src="boots.png" width="377" height="378" loading="eager" decoding="async" alt="MADBOOTS — two wild football boots"></div>
+  </div>
+</div>
+
+<section id="why">
+  <div class="wrap">
+    <div class="eyebrow">Why MADBOOTS</div>
+    <h2>Calculated, not guessed.</h2>
+    <div class="cards">
+      <div class="card"><div class="ic">🎯</div><h3>One <span class="u">honest</span> number</h3>
+        <p>Every player boils down to a single expected-points (xP) figure — the same number the whole app
+          decides with. No hype, no black box.</p></div>
+      <div class="card"><div class="ic">✅</div><h3>Grounded, <span class="u">not</span> guessing</h3>
+        <p>Every answer is checked against the real data and marked ✓ or ⚠, and shows the working behind
+          it: the number, where it came from, and what we don't know.</p></div>
+      <div class="card"><div class="ic">⚙️</div><h3>Your whole <span class="u">week</span></h3>
+        <p>Build a squad, pick a captain, plan transfers, read the fixtures and time your chips — the maths,
+          done for you.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="inside">
+  <div class="wrap">
+    <div class="eyebrow">What's inside</div>
+    <h2>Everything for your team, in one place.</h2>
+    <div class="chips">
+      <span class="chip"><b>My Squad</b> — your XI, captain, transfers and chips in one place, plus the <b>Lab</b> to build a fresh 15</span>
+      <span class="chip"><b>Signals</b> — injuries, unexplained sell-offs and reported moves out of the league</span>
+      <span class="chip"><b>Leagues</b> — effective ownership, the captain split, and a head-to-head against any rival</span>
+      <span class="chip"><b>Scout</b> — the players two or more stat boards agree on, with the evidence</span>
+      <span class="chip"><b>Players</b> — the whole pool, sortable stats</span>
+      <span class="chip"><b>Team DNA</b> — how strong every club is, at both ends</span>
+      <span class="chip"><b>FDR</b> — every club's run, week by week</span>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>Ready to play it calculated?</h2>
+    <div class="plat" style="justify-content:center">
+      <a class="btn" href="https://madboots.streamlit.app">🖥 Use on Desktop →</a>
+      <a class="btn ghost" href="/app/">🤖 Get it on Android →</a>
+      <span class="soon">iOS — coming soon</span>
+    </div>
+    <p class="note">Sign in with Google — your squad saves to your account and syncs across your devices. Private beta: new sign-ins join the waitlist.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <span class="brand" style="font-size:1rem"><span class="a">MAD</span><span class="b">BOOTS</span></span>
+      &nbsp;·&nbsp; Fantasy Football, Calculated. &nbsp;·&nbsp; <a href="mailto:hello@madboots.com">hello@madboots.com</a>
+      <div class="discl">MADBOOTS is not affiliated with the Premier League or the official Fantasy Premier
+        League game. A personal analytics project built on public FPL data.</div>
+    </div>
+    <div>© 2026 MADBOOTS</div>
+  </div>
+</footer>
+<!-- "See how it works" → the Maddie intro (lightbox). Self-contained; plays https://youtu.be/Igt5mqheQpE -->
+<style>
+#mb-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(12,8,20,.85);
+  align-items:center;justify-content:center;padding:24px;}
+#mb-modal .mb-box{position:relative;width:min(960px,100%);}
+#mb-modal .mb-video{position:relative;width:100%;padding-top:56.25%;border-radius:14px;overflow:hidden;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.8);background:#000;}
+#mb-modal .mb-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+#mb-modal .mb-close{position:absolute;top:-46px;right:0;background:none;border:0;color:#fff;
+  font-size:1.7rem;line-height:1;cursor:pointer;}
+</style>
+<div id="mb-modal" onclick="if(event.target===this)mbClose()">
+  <div class="mb-box">
+    <button class="mb-close" aria-label="Close video" onclick="mbClose()">&times;</button>
+    <div class="mb-video" id="mb-video"></div>
+  </div>
+</div>
+<script>
+function mbPlay(e){ if(e){e.preventDefault();}
+  document.getElementById('mb-video').innerHTML =
+    '<iframe src="https://www.youtube.com/embed/Igt5mqheQpE?autoplay=1&rel=0&modestbranding=1" '
+    + 'allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>';
+  document.getElementById('mb-modal').style.display='flex'; return false; }
+function mbClose(){ document.getElementById('mb-modal').style.display='none';
+  document.getElementById('mb-video').innerHTML=''; }
+document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ mbClose(); } });
+</script>
+</body>
+</html>

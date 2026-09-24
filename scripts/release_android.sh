@@ -73,6 +73,15 @@ echo "  built: $(du -h "$APK" | cut -f1)  versionCode=$code"
 #
 # ⭐ A URL that has never been requested cannot be stale. No purge step, no waiting, no "try again in four
 # hours" — *the release that needs a manual cache purge is the release someone ships without one.*
+# ⭐⭐ **The landing page comes from the repo** (ADR-289). It lived only in `$SITE` — one folder, on one
+# machine, not backed up and not reviewable — and ⚠️ *a broken explainer-video link sat on the live
+# homepage unnoticed because nothing could look at it.* `$SITE` is a **build output** now.
+#
+# ⚠️ Copied, not synced: the generated files below (`app/`, `_headers`, `_redirects`) live only here, and
+# a `--delete` would remove the APKs this script just spent three minutes building.
+mkdir -p "$SITE"
+cp site/index.html site/*.png "$SITE/"
+
 mkdir -p "$SITE/app"
 cp "$APK" "$SITE/app/madboots-$next.apk"
 # ⚠️⚠️ **The previous builds stay.** Deleting them looked tidy and was a trap: Cloudflare Pages does not
