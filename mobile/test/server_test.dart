@@ -8,6 +8,8 @@ library;
 
 import 'dart:convert';
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -20,6 +22,8 @@ const _health =
     '{"ok": true, "service": "madboots", "version": "0.0.1", "usage": "off"}';
 
 void main() {
+  _retryAffordance();
+  _refusedWording();
   group('tidying what a person types', () {
     test('a missing scheme is added, not refused', () {
       expect(Server.tidy('192.168.1.20:8078'), 'http://192.168.1.20:8078');
@@ -198,4 +202,113 @@ void main() {
       expect(body.containsKey('version'), isTrue);
     },
   );
+}
+
+/// The refused message tells the reader about **their** deployment (ADR-288).
+///
+/// ⭐⭐ **One wording served two situations that fail for unrelated reasons.** A tester on the hosted
+/// service, whose only problem was a server waking up, was told to check their Wi-Fi, grant a Local
+/// Network permission, and see whether a shell script was running on a computer they do not own.
+void _refusedWording() {
+  group('which explanation a reader gets', () {
+    test('a machine on the network gets the developer advice', () {
+      for (final base in const [
+        'http://192.168.1.35:8078',
+        'http://10.0.2.2:8078',
+        'http://localhost:8078',
+        'http://127.0.0.1:8078',
+        'http://mac.local:8078',
+        'http://172.16.4.2:8078',
+      ]) {
+        expect(isLocalAddress(base), isTrue, reason: base);
+        expect(refusedMessage(base), contains('same Wi-Fi'));
+      }
+    });
+
+    test('the hosted service gets the reason it actually failed', () {
+      final message = refusedMessage('https://madboots-api.onrender.com');
+
+      expect(message, contains('sleeps'));
+      // ⚠️ None of the developer advice. *An error message that describes somebody else's setup sends
+      // the reader to fix something that was never broken.*
+      expect(message, isNot(contains('Wi-Fi')));
+      expect(message, isNot(contains('serve_api.sh')));
+      expect(message, isNot(contains('Local Network')));
+      // ⭐ And a way out that is not "go and read a runbook".
+      expect(message, contains('Try again'));
+    });
+
+    test('172.32 is not somebody\'s kitchen table', () {
+      // ⚠️ 172.16–172.31 is private; a `startsWith("172.")` would claim half the public internet is on
+      // the reader's own network and hand them the wrong advice.
+      expect(isLocalAddress('http://172.16.0.1'), isTrue);
+      expect(isLocalAddress('http://172.31.255.1'), isTrue);
+      expect(isLocalAddress('http://172.32.0.1'), isFalse);
+      expect(isLocalAddress('http://172.15.0.1'), isFalse);
+    });
+
+    test(
+      'a hostname that merely starts with a private prefix is not local',
+      () {
+        expect(isLocalAddress('https://10-0-0-1.example.com'), isFalse);
+        expect(isLocalAddress('https://localhost.evil.com'), isFalse);
+      },
+    );
+
+    test('plain HTTP on an explicit port is a machine on this network', () {
+      // ⭐ The shape `scripts/serve_api.sh` produces, and the one case a private-range check cannot
+      // catch: `http://mac:8078` is a hostname with no address in it at all.
+      expect(isLocalAddress('http://host:8078'), isTrue);
+      expect(isLocalAddress('http://mac:8078'), isTrue);
+      // ⚠️ But the hosted service is HTTPS, and must not be mistaken for one.
+      expect(isLocalAddress('https://madboots-api.onrender.com'), isFalse);
+    });
+
+    test('a private address is local on its own merits', () {
+      // ⚠️⚠️ **Without the port, or the range check is never exercised.** Every earlier example here was
+      // `http://…:8078`, so the explicit-port rule answered first and a mutation deleting the whole
+      // private-range branch survived — ⭐ *two rules that both return true make each other untestable,
+      // and the test suite reports the pair as covered.*
+      expect(isLocalAddress('https://192.168.1.35'), isTrue);
+      expect(isLocalAddress('https://10.0.2.2'), isTrue);
+      expect(isLocalAddress('https://172.20.0.5'), isTrue);
+      expect(isLocalAddress('https://mac.local'), isTrue);
+    });
+  });
+}
+
+/// The retry that did not exist (ADR-288).
+///
+/// ⚠️⚠️ **The commonest failure in this app is also the most temporary** — the service sleeps when idle
+/// and takes seconds to wake — and until now the only way out of the error screen was to force-quit.
+/// ⭐ *An error a second attempt would fix, with no way to make a second attempt, is an error that reads
+/// as broken.*
+void _retryAffordance() {
+  final main = File('lib/main.dart').readAsStringSync();
+  final client = File('lib/api/client.dart').readAsStringSync();
+
+  group('a failed load offers a way back', () {
+    test('the error screen carries a button', () {
+      expect(main, contains("child: const Text('Try again')"));
+      expect(main, contains('onPressed: _retry'));
+    });
+
+    test('retrying replaces the future through setState', () {
+      // ⚠️ *Or the screen keeps showing the error it is being asked to leave.*
+      expect(
+        main,
+        contains('void _retry() => setState(() => _team = _load(_managerId));'),
+      );
+    });
+
+    test('the message names the button that exists', () {
+      // ⚠️⚠️ **It said "Pull down to try again" and there is no pull-to-refresh in this app** — the same
+      // fault as the advice it replaced: ⭐ *telling the reader to do something the screen cannot do.*
+      final hosted = refusedMessage('https://madboots-api.onrender.com');
+
+      expect(hosted, contains('Try again'));
+      expect(hosted, isNot(contains('Pull down')));
+      expect(client, isNot(contains('Pull down')));
+    });
+  });
 }

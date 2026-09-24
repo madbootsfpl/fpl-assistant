@@ -445,18 +445,53 @@ class ServiceClient {
   void close() => _client.close();
 }
 
+/// Whether this address is a machine on the same network as the phone.
+///
+/// ⚠️⚠️ **The two deployments fail for completely different reasons**, and until ADR-288 they shared one
+/// explanation — the developer one. A tester on the hosted service, whose only problem was a server
+/// waking up, was told to check their Wi-Fi, grant a Local Network permission and see whether a shell
+/// script was running on a computer they do not own.
+///
+/// ⭐ *An error message that describes somebody else's setup is worse than no message: it sends the
+/// reader to fix something that was never broken.*
+bool isLocalAddress(String baseUrl) {
+  final uri = Uri.tryParse(baseUrl);
+  final host = uri?.host ?? '';
+  // ⭐ **The shape `scripts/serve_api.sh` produces**: plain HTTP on an explicit port. The hosted service
+  // is HTTPS on 443 — ⚠️ *and iOS blocks cleartext off the LAN anyway*, so an `http://…:8078` is a
+  // machine on this network whatever it calls itself. This is the case a bare hostname like
+  // `http://mac:8078` falls into, which no private-range check would ever catch.
+  if (uri != null && uri.scheme == 'http' && uri.hasPort) return true;
+  return host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host.endsWith('.local') ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.') ||
+      // ⚠️ 172.16–172.31 is private; 172.32+ is not. A `startsWith('172.')` would claim half the
+      // public internet is on the reader's kitchen table.
+      RegExp(r'^172\.(1[6-9]|2\d|3[01])\.').hasMatch(host);
+}
+
 /// Why nothing answered — ⭐ **one wording, used by every call and by the Settings check.**
 ///
 /// ⭐⭐ **All of these produce an identical silence from the app's side**, and only one of them is a
 /// problem with the app. A bare "connection refused" sends someone hunting through code for a phone that
-/// is on 4G. ⚠️ Two of the five are *permissions a person has to grant*, and neither announces itself
-/// afterwards: iOS asks once for the local network, macOS asks once for incoming connections, and a
-/// "Don't Allow" on either is remembered silently.
-String refusedMessage(String baseUrl) =>
-    'Nothing answered at $baseUrl.\n\n'
-    'On a phone, in the order worth checking:\n'
-    '  • Settings ▸ Privacy & Security ▸ Local Network — is MADBOOTS allowed?\n'
-    '  • Is the phone on the same Wi-Fi as the computer, not mobile data?\n'
-    '  • Is the computer awake, with scripts/serve_api.sh running?\n'
-    '  • Did the computer\'s address change? It is a Wi-Fi lease and it moves.\n\n'
-    'Change the address under More ▸ Settings ▸ Server.';
+/// is on 4G. ⚠️ Two of the developer ones are *permissions a person has to grant*, and neither announces
+/// itself afterwards: iOS asks once for the local network, macOS asks once for incoming connections, and
+/// a "Don't Allow" on either is remembered silently.
+String refusedMessage(String baseUrl) => isLocalAddress(baseUrl)
+    ? 'Nothing answered at $baseUrl.\n\n'
+          'On a phone, in the order worth checking:\n'
+          '  • Settings ▸ Privacy & Security ▸ Local Network — is MADBOOTS allowed?\n'
+          '  • Is the phone on the same Wi-Fi as the computer, not mobile data?\n'
+          '  • Is the computer awake, with scripts/serve_api.sh running?\n'
+          '  • Did the computer\'s address change? It is a Wi-Fi lease and it moves.\n\n'
+          'Change the address under More ▸ Settings ▸ Server.'
+    // ⭐ What is actually true for a tester: the service sleeps when nobody has used it, and waking it
+    // takes longer than a request is willing to wait. ⚠️ *Naming the cause is what stops a slow morning
+    // being reported as a broken app.*
+    : 'The MADBOOTS service did not answer.\n\n'
+          'It sleeps when nobody has used it for a while, and takes a few '
+          'seconds to wake up. Tap Try again — the second attempt is usually '
+          'the one that works.\n\n'
+          'If it keeps happening, tell us under More ▸ Tell us something.';

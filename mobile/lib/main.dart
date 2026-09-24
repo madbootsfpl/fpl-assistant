@@ -287,6 +287,11 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
+  /// ⭐ Re-asks for the same team. The future is the only state a failed load left behind, so replacing
+  /// it is the whole of the retry — ⚠️ *and it must go through `setState`, or the screen keeps showing
+  /// the error it is being asked to leave.*
+  void _retry() => setState(() => _team = _load(_managerId));
+
   /// ⚠️ Falls back to the id the app was **given**, never to a constant — ⭐ *a fallback to somebody
   /// else's team is worse than no fallback at all.*
   int get _managerId => int.tryParse(_id.text.trim()) ?? widget.managerId;
@@ -567,12 +572,30 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                   return Padding(
                     padding: const EdgeInsets.all(22),
                     child: Center(
-                      child: SelectableText(
-                        _reason(snapshot.error),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          height: 1.55,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SelectableText(
+                            _reason(snapshot.error),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              height: 1.55,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // ⚠️⚠️ **There was no way to retry at all** (ADR-288). The service sleeps
+                          // when idle and takes seconds to wake, so the commonest failure in the app is
+                          // also the most temporary — and the only way out was to force-quit.
+                          // ⭐ *An error a second attempt would fix, with no way to make a second
+                          // attempt, is an error that reads as broken.*
+                          FilledButton(
+                            onPressed: _retry,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Brand.purple,
+                            ),
+                            child: const Text('Try again'),
+                          ),
+                        ],
                       ),
                     ),
                   );
