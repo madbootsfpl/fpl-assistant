@@ -28,6 +28,9 @@ ELEMENT_SUMMARY_PATH = "/element-summary/{}/"
 # `{}` is the manager (entry) id; the picks path takes (entry_id, gameweek).
 ENTRY_PATH = "/entry/{}/"
 ENTRY_PICKS_PATH = "/entry/{}/event/{}/picks/"
+#: Every player's stats for one gameweek, **with FPL's own points attribution** (ADR-299).
+#: ⭐ One call covers all 659 players, so it is asked per **gameweek**, never per player.
+EVENT_LIVE_PATH = "/event/{}/live/"
 ENTRY_TRANSFERS_PATH = "/entry/{}/transfers/"
 # A manager's season history — `chips` lists what has been PLAYED and when (ADR-234).
 ENTRY_HISTORY_PATH = "/entry/{}/history/"

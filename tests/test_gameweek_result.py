@@ -17,13 +17,25 @@ from src.storage import Storage
 class FakeFpl:
     """FPL's picks payload for one gameweek, in FPL's own shape."""
 
-    def __init__(self, payload=None, raises=False):
+    def __init__(self, payload=None, raises=False, live=None, live_raises=False):
         self._payload, self._raises = payload, raises
+        self._live, self._live_raises = live, live_raises
 
     def get_entry_picks(self, entry_id, gameweek):
         if self._raises:
             raise fpl_client.FplApiError("not published")
         return self._payload
+
+    def get_event_live(self, gameweek):
+        """FPL's own points attribution for the week (ADR-299).
+
+        ⚠️ Defaults to an **empty** payload rather than being absent: every existing test in this file
+        goes through `gameweek_result`, which now makes this call, and ⭐ *a fake that is missing a method
+        the code under test calls turns one new feature into fourteen red tests about something else.*
+        """
+        if self._live_raises:
+            raise fpl_client.FplApiError("live is down")
+        return self._live or {"elements": []}
 
 
 def picks(elements, *, captain=None, subs=(), chip=None, **history):
@@ -51,8 +63,9 @@ def squad_ids():
         store.close()
 
 
-def run(monkeypatch, payload, gameweek=5, raises=False):
-    monkeypatch.setattr(fpl_client, "FplClient", lambda *a, **k: FakeFpl(payload, raises))
+def run(monkeypatch, payload, gameweek=5, raises=False, live=None, live_raises=False):
+    monkeypatch.setattr(fpl_client, "FplClient",
+                        lambda *a, **k: FakeFpl(payload, raises, live, live_raises))
     return gameweek_result(GameweekResultRequest(manager_id=1, gameweek=gameweek))
 
 
@@ -190,3 +203,137 @@ def test_every_player_in_that_week_has_a_shirt(monkeypatch, squad_ids):
         assert club in answer["kits"], f"{entry['player']['web_name']} ({club}) has no shirt"
         assert answer["kits"][club]["outfield"], f"{club}'s outfield shirt is blank"
         assert answer["kits"][club]["gk"], f"{club}'s keeper shirt is blank"
+
+
+def test_a_played_week_carries_fpls_own_points_breakdown(monkeypatch, squad_ids):
+    """⭐⭐⭐ **FPL attributes the points; we never do** (ADR-299).
+
+    The owner asked for the breakdown his competitor shows — *minutes 80' → 2, goals 1 → 4, yellow 1 →
+    -1*. 🔴 **The obvious implementation is the wrong one**: a scoring table (goals 6/5/4 by position,
+    assists 3, clean sheet 4/1) is twenty lines and is **already wrong**, because FPL added
+    `defensive_contribution` this season and it appears in real rows now.
+
+    ⚠️ *A points breakdown that disagrees with the total printed above it is worse than no breakdown*, and
+    a hand-rolled table starts disagreeing the moment the game changes without telling us.
+    """
+    live = {"elements": [
+        {"id": squad_ids[0], "explain": [{"fixture": 1, "stats": [
+            {"identifier": "minutes", "value": 90, "points": 2},
+            {"identifier": "goals_scored", "value": 1, "points": 6},
+            {"identifier": "yellow_cards", "value": 1, "points": -1},
+            # ⭐ The line a scoring table would have missed.
+            {"identifier": "defensive_contribution", "value": 11, "points": 2},
+        ]}]},
+    ]}
+    answer = run(monkeypatch, picks(squad_ids), live=live)
+
+    first = next(e for e in answer["squad"] if e["player"]["id"] == squad_ids[0])
+    stats = [line["stat"] for line in first["result"]["breakdown"]]
+    assert "defensive_contribution" in stats, (
+        "the breakdown is being derived rather than taken from FPL — this season's new stat is missing"
+    )
+    assert [line["points"] for line in first["result"]["breakdown"]] == [2, 6, -1, 2]
+
+    # ⚠️ Everyone else gets an empty list, never a fabricated one.
+    others = [e for e in answer["squad"] if e["player"]["id"] != squad_ids[0]]
+    assert all(e["result"]["breakdown"] == [] for e in others)
+
+
+def test_a_zero_point_line_is_dropped(monkeypatch, squad_ids):
+    """⚠️ FPL emits `minutes 0 → 0` for a man who never came on. ⭐ *A breakdown listing what did not
+    happen is longer and says less.*"""
+    live = {"elements": [{"id": squad_ids[0], "explain": [{"stats": [
+        {"identifier": "minutes", "value": 0, "points": 0},
+        {"identifier": "bonus", "value": 1, "points": 1},
+    ]}]}]}
+    answer = run(monkeypatch, picks(squad_ids), live=live)
+
+    first = next(e for e in answer["squad"] if e["player"]["id"] == squad_ids[0])
+    assert [line["stat"] for line in first["result"]["breakdown"]] == ["bonus"]
+
+
+def test_a_failed_breakdown_does_not_take_the_week_with_it(monkeypatch, squad_ids):
+    """⚠️⚠️ **One extra request, and it must never be fatal.** The week's points, squad, kits and cards
+    were all working before this field existed — ⭐ *a detail that did not load must not take down the
+    screen that was working without it.*"""
+    answer = run(monkeypatch, picks(squad_ids), live_raises=True)
+
+    assert answer["played"] is True
+    assert len(answer["squad"]) == 15
+    assert all(e["result"]["breakdown"] == [] for e in answer["squad"])
+
+
+def test_a_played_week_names_the_match_and_its_scoreline(monkeypatch, squad_ids):
+    """⭐ *"away to MUN 1-0" is the context a bare total lacks.* ⚠️ A **list**, because a double gameweek
+    is two matches and showing one of two is worse than showing neither."""
+    answer = run(monkeypatch, picks(squad_ids))
+
+    played = [e for e in answer["squad"] if e["result"]["played"]]
+    assert played, "the fixture needs a played week to describe"
+
+    store = Storage()
+    try:
+        history = store.get_gw_history_by_code()
+        clubs = {tm["id"]: tm["short_name"] for tm in store.get_teams()}
+        players = {p["id"]: p for p in store.get_players()}
+    finally:
+        store.close()
+
+    checked = 0
+    for entry in played:
+        matches = entry["result"]["matches"]
+        assert matches, f"{entry['player']['web_name']} played but names no match"
+        rows = [r for r in history[players[entry["player"]["id"]]["code"]] if r["round"] == 5]
+        assert len(matches) == len(rows), "a double gameweek must name both matches"
+        for match, row in zip(matches, rows, strict=True):
+            # ⚠️ `opponent` is null, never a guess — the rule `_recent_rows` already follows.
+            assert match["opponent"] == clubs.get(row["opponent_team"])
+            assert match["home"] == bool(row["was_home"])
+            # ⭐⭐ **Oriented by who was at home**, which is the half a "does the key exist?" test misses.
+            # ⚠️ *A scoreline printed the wrong way round turns a 1-0 win into a 1-0 defeat*, and it is
+            # right half the time by accident — a mutation swapping the two survived until this line.
+            if match["home"]:
+                assert match["scored"] == row["team_h_score"]
+                assert match["conceded"] == row["team_a_score"]
+            else:
+                assert match["scored"] == row["team_a_score"]
+                assert match["conceded"] == row["team_h_score"]
+            checked += 1
+
+    assert checked >= 5, f"only {checked} scorelines were actually compared"
+
+
+def test_a_double_gameweek_names_both_matches(monkeypatch, squad_ids):
+    """⚠️⚠️ **The fixture has no double gameweek, so nothing exercised the second match.**
+
+    A mutation taking `rows[:1]` survived every other test in this file — correctly, because every player
+    in the committed fixture played exactly once in GW5. ⭐ *A branch the test data cannot reach is a
+    branch the test suite is not testing*, however many assertions point at it.
+
+    So this one manufactures the case: one player, two rows, one round.
+    """
+    store = Storage()
+    try:
+        history = {code: list(rows) for code, rows in store.get_gw_history_by_code().items()}
+        players = {p["id"]: p for p in store.get_players()}
+    finally:
+        store.close()
+
+    code = players[squad_ids[0]]["code"]
+    week = [r for r in history[code] if r["round"] == 5]
+    assert len(week) == 1, "the fixture changed — this test builds its double from a single"
+    # ⭐ A second match in the same round: what a rearranged fixture actually looks like.
+    twin = dict(week[0])
+    twin["opponent_team"] = 99
+    history[code] = history[code] + [twin]
+
+    monkeypatch.setattr(Storage, "get_gw_history_by_code", lambda self: history)
+    answer = run(monkeypatch, picks(squad_ids))
+
+    entry = next(e for e in answer["squad"] if e["player"]["id"] == squad_ids[0])
+    assert len(entry["result"]["matches"]) == 2, (
+        "only one match of a double gameweek is named — showing one of two is worse than showing "
+        "neither, because it looks complete"
+    )
+    # ⚠️ And the unknown club stays null rather than becoming a guess.
+    assert entry["result"]["matches"][1]["opponent"] is None

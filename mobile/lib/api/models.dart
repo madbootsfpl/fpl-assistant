@@ -1769,6 +1769,75 @@ class LeagueAward {
 /// ⭐⭐ **A week that is over never changes**, which is the whole economics of the swipe: fetch it once
 /// and it is correct for the rest of the season. ⚠️ *A cache whose entries can never go stale is the only
 /// kind that needs no invalidation policy.*
+/// One line of FPL's own points attribution — ⭐ *minutes 90 → 2*, *yellow_cards 1 → −1* (ADR-299).
+///
+/// ⚠️ **Never computed here.** A scoring table would already be wrong: FPL added `defensive_contribution`
+/// this season, and *a breakdown that disagrees with the total printed above it is worse than no
+/// breakdown.*
+class ScoreLine {
+  const ScoreLine({
+    required this.stat,
+    required this.value,
+    required this.points,
+  });
+
+  factory ScoreLine.fromJson(Map<String, dynamic> json) => ScoreLine(
+    stat: json['stat'] as String? ?? '',
+    value: (json['value'] as num?)?.toInt() ?? 0,
+    points: (json['points'] as num?)?.toInt() ?? 0,
+  );
+
+  /// FPL's identifier — `minutes`, `goals_scored`, `defensive_contribution`…
+  final String stat;
+  final int value;
+  final int points;
+
+  /// ⭐ Readable, with a **fallback that is the identifier itself**: FPL adds stats between seasons, and
+  /// ⚠️ *a label map that silently drops an unknown line loses points the reader can see in the total.*
+  String get label => switch (stat) {
+    'minutes' => 'Minutes played',
+    'goals_scored' => 'Goals',
+    'assists' => 'Assists',
+    'clean_sheets' => 'Clean sheet',
+    'goals_conceded' => 'Goals conceded',
+    'own_goals' => 'Own goals',
+    'penalties_saved' => 'Penalties saved',
+    'penalties_missed' => 'Penalties missed',
+    'yellow_cards' => 'Yellow cards',
+    'red_cards' => 'Red card',
+    'saves' => 'Saves',
+    'bonus' => 'Bonus',
+    'defensive_contribution' => 'Defensive contribution',
+    'starts' => 'Started',
+    _ => stat.replaceAll('_', ' '),
+  };
+}
+
+/// One match in a gameweek — ⭐ *"BOU 0-1 LIV" is the context a bare total lacks.*
+class PlayedMatch {
+  const PlayedMatch({
+    required this.opponent,
+    required this.home,
+    required this.scored,
+    required this.conceded,
+  });
+
+  factory PlayedMatch.fromJson(Map<String, dynamic> json) => PlayedMatch(
+    // ⚠️ Null, never a guess — an away trip to "???" is worse than one to nothing.
+    opponent: json['opponent'] as String?,
+    home: json['home'] as bool? ?? false,
+    scored: (json['scored'] as num?)?.toInt(),
+    conceded: (json['conceded'] as num?)?.toInt(),
+  );
+
+  final String? opponent;
+  final bool home;
+  final int? scored;
+  final int? conceded;
+
+  bool get hasScore => scored != null && conceded != null;
+}
+
 class GameweekResult {
   const GameweekResult({
     required this.gameweek,
@@ -1850,6 +1919,8 @@ class GameweekPlayer {
     required this.yellowCards,
     required this.redCards,
     required this.didPlay,
+    this.breakdown = const [],
+    this.matches = const [],
     required this.isCaptain,
     required this.isViceCaptain,
     required this.benched,
@@ -1876,6 +1947,14 @@ class GameweekPlayer {
       yellowCards: n(result, 'yellow_cards'),
       redCards: n(result, 'red_cards'),
       didPlay: result['played'] as bool? ?? false,
+      breakdown: [
+        for (final e in (result['breakdown'] as List? ?? const []))
+          ScoreLine.fromJson((e as Map).cast<String, dynamic>()),
+      ],
+      matches: [
+        for (final e in (result['matches'] as List? ?? const []))
+          PlayedMatch.fromJson((e as Map).cast<String, dynamic>()),
+      ],
       isCaptain: pick['is_captain'] as bool? ?? false,
       isViceCaptain: pick['is_vice_captain'] as bool? ?? false,
       benched: pick['benched'] as bool? ?? false,
@@ -1898,6 +1977,14 @@ class GameweekPlayer {
   /// ⚠️ **Not `points > 0`.** A blank gameweek and a pointless ninety minutes are different weeks —
   /// ⭐ *a zero that means "he did not play" must not draw like a zero that means "he played badly".*
   final bool didPlay;
+
+  /// FPL's own attribution of this week's points — ⭐ empty for a blank week, which the card draws as
+  /// *"did not play"* rather than as a table of zeroes.
+  final List<ScoreLine> breakdown;
+
+  /// The match or matches he played that week — ⚠️ a **list**, because a double gameweek is two of them
+  /// and *showing one of two is worse than showing neither.*
+  final List<PlayedMatch> matches;
 
   final bool isCaptain;
   final bool isViceCaptain;

@@ -29,7 +29,15 @@ class PastGameweek extends StatelessWidget {
   const PastGameweek({required this.result, this.onTapPlayer, super.key});
 
   final GameweekResult result;
-  final void Function(PlayerSummary)? onTapPlayer;
+
+  /// ⭐ Carries **which week the tap came from** (ADR-299) — the sheet opens on that gameweek rather
+  /// than on the next one.
+  final void Function(
+    PlayerSummary player,
+    int? gameweek,
+    GameweekPlayer? result,
+  )?
+  onTapPlayer;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +72,15 @@ class PastGameweek extends StatelessWidget {
               top: Radius.circular(Brand.radiusMd),
             ),
             child: PitchMarkings(
-              child: ResultPitch(result: result, onTapPlayer: onTapPlayer),
+              child: ResultPitch(
+                result: result,
+                // ⭐ The week that was played — the sheet opens on the result, not on a projection.
+                // ⭐ The whole entry travels with the tap: what he did that week is the one thing the
+                // sheet cannot look up for itself (ADR-299).
+                onTapPlayer: onTapPlayer == null
+                    ? null
+                    : (e) => onTapPlayer!(e.player, result.gameweek, e),
+              ),
             ),
           ),
         ),
@@ -281,7 +297,15 @@ class SeasonPages extends StatefulWidget {
   final ServiceClient client;
   final PitchMode mode;
   final ValueChanged<PitchMode> onMode;
-  final void Function(PlayerSummary) onTapPlayer;
+
+  /// ⭐ Carries **which week the tap came from**, and on a played week **what he did in it**
+  /// (ADR-299) — so the sheet opens on that gameweek rather than on the next one.
+  final void Function(
+    PlayerSummary player,
+    int? gameweek,
+    GameweekPlayer? result,
+  )
+  onTapPlayer;
 
   /// ⚠️ Drawn on the **live** page only. Applying a plan is an act on the squad you own today; offering
   /// the button under GW3's result would be offering to change the past.
@@ -340,7 +364,8 @@ class _SeasonPagesState extends State<SeasonPages> {
           team: widget.team,
           mode: widget.mode,
           onMode: widget.onMode,
-          onTapPlayer: widget.onTapPlayer,
+          // ⭐ Null: the live pitch IS the next gameweek, and the sheet's default is that week.
+          onTapPlayer: (p) => widget.onTapPlayer(p, null, null),
           footer: widget.footer,
         );
       }
@@ -352,7 +377,7 @@ class _SeasonPagesState extends State<SeasonPages> {
           team: widget.team,
           mode: widget.mode,
           onMode: widget.onMode,
-          onTapPlayer: widget.onTapPlayer,
+          onTapPlayer: (p) => widget.onTapPlayer(p, gameweek, null),
           gameweek: gameweek,
         );
       }
@@ -366,7 +391,15 @@ class _Past extends StatelessWidget {
   const _Past({required this.future, this.onTapPlayer});
 
   final Future<GameweekResult> future;
-  final void Function(PlayerSummary)? onTapPlayer;
+
+  /// ⭐ Carries **which week the tap came from** (ADR-299) — the sheet opens on that gameweek rather
+  /// than on the next one.
+  final void Function(
+    PlayerSummary player,
+    int? gameweek,
+    GameweekPlayer? result,
+  )?
+  onTapPlayer;
 
   @override
   Widget build(BuildContext context) => FutureBuilder<GameweekResult>(

@@ -329,12 +329,22 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   }
 
   /// Tap a player: armband, or replace him.
-  Future<void> _openPlayer(MyTeam team, PlayerSummary player) async {
+  Future<void> _openPlayer(
+    MyTeam team,
+    PlayerSummary player, {
+    int? gameweek,
+    GameweekPlayer? result,
+  }) async {
     final action = await showPlayerSheet(
       context,
       team: team,
       player: player,
       client: _client,
+      // ⭐ Which week the reader is standing on (ADR-299). Null on the live pitch, which is every
+      // existing caller — ⚠️ *a context parameter that changes behaviour when omitted is a trap for the
+      // next person to add a tap.*
+      gameweek: gameweek,
+      result: result,
     );
     if (action == null) return;
     switch (action) {
@@ -696,7 +706,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                 client: _client,
                 mode: _mode,
                 onMode: (m) => setState(() => _mode = m),
-                onTapPlayer: (p) => _openPlayer(team, p),
+                onTapPlayer: (p, gw, res) =>
+                    _openPlayer(team, p, gameweek: gw, result: res),
                 // ⭐ On the pitch, below the bench — the action where the thing it acts on is.
                 // ⚠️ Live page only; see `SeasonPages`.
                 footer: ApplyPlanStrip(

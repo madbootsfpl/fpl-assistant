@@ -50,6 +50,8 @@ Future<PlayerAction?> showPlayerSheet(
   required MyTeam team,
   required PlayerSummary player,
   required ServiceClient client,
+  int? gameweek,
+  GameweekPlayer? result,
 }) => showModalBottomSheet<PlayerAction>(
   context: context,
   backgroundColor: Brand.ink,
@@ -57,7 +59,13 @@ Future<PlayerAction?> showPlayerSheet(
   shape: const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(Brand.radiusLg)),
   ),
-  builder: (_) => _PlayerSheet(team: team, player: player, client: client),
+  builder: (_) => _PlayerSheet(
+    team: team,
+    player: player,
+    client: client,
+    gameweek: gameweek,
+    result: result,
+  ),
 );
 
 class _PlayerSheet extends StatefulWidget {
@@ -65,11 +73,26 @@ class _PlayerSheet extends StatefulWidget {
     required this.team,
     required this.player,
     required this.client,
+    this.gameweek,
+    this.result,
   });
 
   final MyTeam team;
   final PlayerSummary player;
   final ServiceClient client;
+
+  /// The gameweek page this sheet was opened from, or null on the live pitch (ADR-299).
+  ///
+  /// ⭐⭐⭐ **ADR-298 made the pitch week-aware and left this behind.** Swipe to a future week, tap a
+  /// player, and the sheet answered a question about *this* Saturday — ⚠️ *a screen that changes what it
+  /// is about must change what its children are about*, and the sheet is where a reader goes for detail.
+  final int? gameweek;
+
+  /// What this player actually did, when the sheet was opened from a **played** week (ADR-299).
+  ///
+  /// ⭐⭐ **Its presence is what makes this a different card**, rather than a flag saying so. Null on every
+  /// other page, and the one thing a past sheet has that no other sheet can have.
+  final GameweekPlayer? result;
 
   @override
   State<_PlayerSheet> createState() => _PlayerSheetState();
@@ -113,6 +136,7 @@ class _PlayerSheetState extends State<_PlayerSheet> {
   @override
   Widget build(BuildContext context) {
     final p = widget.player;
+    final past = widget.result;
     final isCaptain = p.id == widget.team.captainId;
     final isVice = p.id == widget.team.viceCaptainId;
 
@@ -143,16 +167,35 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               ),
             ),
             Text(
-              '${p.position} · ${p.team} · £${p.price.toStringAsFixed(1)}m · '
-              '${p.xp.toStringAsFixed(1)} xP',
+              // ⚠️⚠️ **No xP and no price on a played week.** Both are facts about *today* — a projection
+              // for a match that has been played is meaningless, and today's price under a GW4 heading
+              // reads as the price then. ⭐ *A true number in the wrong place becomes a false claim*, the
+              // same rule the forward pitch follows.
+              past == null
+                  ? '${p.position} · ${p.team} · £${p.price.toStringAsFixed(1)}m · '
+                        '${p.xp.toStringAsFixed(1)} xP'
+                  : '${p.position} · ${p.team} · GW${widget.gameweek}',
               style: const TextStyle(color: Colors.white54, fontSize: 12.5),
             ),
+            // ⭐⭐⭐ **What he actually did** (ADR-299) — the owner's report: *"the player pop up card needs
+            // to show the history of that GW and not the prediction from the current gameweek onwards."*
+            if (past != null) _Played(entry: past),
             // ⚠️ **Only with the actions.** Once the sheet has become a replacement list or a swap
             // picker it is answering a different question, and ⭐ *a stat block under a list of
             // candidates describes the wrong player.*
-            if (_options == null && !_swapping)
-              _Card(future: _card, team: widget.team, player: p),
+            if (past == null && _options == null && !_swapping)
+              _Card(
+                future: _card,
+                team: widget.team,
+                player: p,
+                gameweek: widget.gameweek,
+              ),
             const SizedBox(height: 12),
+            // ⚠️⚠️⚠️ **The played-week guard belongs INSIDE this branch, not on it** — putting it on the
+            // `if` dropped a past week through to the `else` below, which dereferences `_options!`, and
+            // the whole sheet threw before drawing a pixel. ⭐ *A condition added to the head of an
+            // if/else chain changes which branch every other case lands in*, and this one is three
+            // branches long.
             if (_options == null && !_swapping) ...[
               // ⭐⭐ **One row, not four** (ADR-286). Four full-width rows cost ~200pt of a sheet whose
               // job is to show a player, and ⚠️ *a sheet that pushes its own subject off the screen has
@@ -162,53 +205,58 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               // ⚠️ **Order preserved, left to right.** A substitution is free and reversible; a transfer
               // costs points and cannot be undone — ⭐ *order on a set of actions is a recommendation,
               // whether or not it was meant as one*, and reading order still carries it.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _Action(
-                      icon: Icons.star,
-                      label: isCaptain ? 'Your captain' : 'Captain',
-                      enabled: !isCaptain,
-                      onTap: () => Navigator.pop(context, MakeCaptain(p.id)),
+              // ⚠️⚠️ **Nothing to do about a week that has been played.** Captain · Vice · Bench ·
+              // Transfer were being offered against a gameweek that finished eleven days ago — ⭐ *an
+              // action that cannot be taken is worse than a missing one, because the reader has to work
+              // out why it did nothing.*
+              if (past == null)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _Action(
+                        icon: Icons.star,
+                        label: isCaptain ? 'Your captain' : 'Captain',
+                        enabled: !isCaptain,
+                        onTap: () => Navigator.pop(context, MakeCaptain(p.id)),
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _Action(
-                      icon: Icons.star_half,
-                      label: isVice ? 'Your vice' : 'Vice-captain',
-                      enabled: !isVice,
-                      onTap: () => Navigator.pop(context, MakeVice(p.id)),
+                    Expanded(
+                      child: _Action(
+                        icon: Icons.star_half,
+                        label: isVice ? 'Your vice' : 'Vice-captain',
+                        enabled: !isVice,
+                        onTap: () => Navigator.pop(context, MakeVice(p.id)),
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _Action(
-                      icon: Icons.swap_vert,
-                      // ⭐ **"Substitute", the word FPL uses** (feedback) — the same reasoning that made
-                      // "Replace him" into "Transfer": ⚠️ *an app that renames the moves makes the
-                      // manager translate.* The bench direction keeps its own word, since "Substitute"
-                      // does not say which way he is going.
-                      label: widget.team.benchedIds.contains(p.id)
-                          ? 'Substitute'
-                          : 'Bench',
-                      // ⚠️ Shown greyed rather than removed when he has no legal partner. ⭐ *A row of
-                      // four that sometimes has three moves the other three sideways*, and a control
-                      // that changes place is a control you have to find again.
-                      enabled: widget.team.swapsFor(p.id).isNotEmpty,
-                      onTap: () => setState(() => _swapping = true),
+                    Expanded(
+                      child: _Action(
+                        icon: Icons.swap_vert,
+                        // ⭐ **"Substitute", the word FPL uses** (feedback) — the same reasoning that made
+                        // "Replace him" into "Transfer": ⚠️ *an app that renames the moves makes the
+                        // manager translate.* The bench direction keeps its own word, since "Substitute"
+                        // does not say which way he is going.
+                        label: widget.team.benchedIds.contains(p.id)
+                            ? 'Substitute'
+                            : 'Bench',
+                        // ⚠️ Shown greyed rather than removed when he has no legal partner. ⭐ *A row of
+                        // four that sometimes has three moves the other three sideways*, and a control
+                        // that changes place is a control you have to find again.
+                        enabled: widget.team.swapsFor(p.id).isNotEmpty,
+                        onTap: () => setState(() => _swapping = true),
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _Action(
-                      icon: Icons.swap_horiz,
-                      // ⭐ **"Transfer", because that is the word FPL uses** (feedback item 1).
-                      label: 'Transfer',
-                      enabled: true,
-                      onTap: _findReplacements,
+                    Expanded(
+                      child: _Action(
+                        icon: Icons.swap_horiz,
+                        // ⭐ **"Transfer", because that is the word FPL uses** (feedback item 1).
+                        label: 'Transfer',
+                        enabled: true,
+                        onTap: _findReplacements,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ] else if (_swapping)
               Flexible(
                 child: _SwapOptions(team: widget.team, player: p),
@@ -570,15 +618,35 @@ class _SwapOptions extends StatelessWidget {
 /// (`MyTeam` carries three per club); the season stats are a round trip. ⚠️ *Blocking the whole card on
 /// the slower half would make the fast half feel slow.*
 class _Card extends StatelessWidget {
-  const _Card({required this.future, required this.team, required this.player});
+  const _Card({
+    required this.future,
+    required this.team,
+    required this.player,
+    this.gameweek,
+  });
 
   final Future<PlayerCard> future;
   final MyTeam team;
   final PlayerSummary player;
 
+  /// The week being looked at — see `showPlayerSheet`.
+  final int? gameweek;
+
   @override
   Widget build(BuildContext context) {
-    final run = team.runFor(player);
+    // ⚠️⚠️ **From the week you are standing on, not always from the next one** (ADR-299). Tapping a
+    // player on the GW9 page used to open GW6 · GW7 · GW8 — ⭐ *three correct numbers answering a
+    // question the reader had already swiped past.*
+    //
+    // ⭐ **This half cost one line and no request.** `runFor` and `runXpFor` have carried six gameweeks
+    // since ADR-298 widened the window to `SWIPE`; the sheet was simply always reading from the front.
+    final all = team.runFor(player);
+    final from = gameweek == null
+        ? 0
+        : all.indexWhere((f) => f.gameweek == gameweek);
+    // ⚠️ A week the run does not contain (a blank gameweek, or a stale page) falls back to the front
+    // rather than showing nothing — *an empty row reads as a broken card.*
+    final run = from <= 0 ? all : all.sublist(from);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -776,6 +844,141 @@ class _Badges extends StatelessWidget {
               style: const TextStyle(color: Colors.white70, fontSize: 11.5),
             ),
           ),
+      ],
+    ),
+  );
+}
+
+/// What a player actually did in a week that has been played (ADR-299).
+///
+/// ⭐⭐⭐ **The owner's report, and the reason the card had to change at all:** *"the player pop up card
+/// needs to show the history of that GW and not the prediction from the current gameweek onwards."*
+///
+/// ⚠️ Every number here comes from FPL — the total, the per-line attribution, and the scoreline. ⭐ *This
+/// widget adds up nothing*, which is the whole design: a breakdown computed here would disagree with the
+/// total the moment the game's scoring changes, and it changed this season.
+class _Played extends StatelessWidget {
+  const _Played({required this.entry});
+
+  final GameweekPlayer entry;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(Brand.radiusMd),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    // ⚠️ A blank gameweek is a dash, not a zero — the rule the pitch already follows.
+                    entry.didPlay ? '${entry.points}' : '—',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (entry.isCaptain || entry.isViceCaptain)
+                  Text(
+                    entry.isCaptain ? 'Captain' : 'Vice-captain',
+                    style: const TextStyle(
+                      color: Brand.purple,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+              ],
+            ),
+            const Text(
+              'points',
+              style: TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+            // ⭐ The scoreline — *a bare total says how many; this says what match.* One row per
+            // fixture, because a double gameweek is two of them.
+            for (final m in entry.matches) ...[
+              const SizedBox(height: 9),
+              Text(
+                m.opponent == null
+                    // ⚠️ Null is never rendered as a guess.
+                    ? 'opponent unknown'
+                    : m.hasScore
+                    ? '${m.home ? 'v' : 'away to'} ${m.opponent}  ${m.scored}–${m.conceded}'
+                    : '${m.home ? 'v' : 'away to'} ${m.opponent}',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (entry.breakdown.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            // ⚠️⚠️ **Not an empty table.** FPL publishes no lines for a man who never came on, and ⭐ *a
+            // table of zeroes claims he played and scored nothing, which is a different week.*
+            entry.didPlay
+                ? 'No scoring events this week.'
+                : entry.benched
+                ? 'On your bench, and did not come on.'
+                : 'Did not play.',
+            style: const TextStyle(color: Colors.white38, fontSize: 12.5),
+          ),
+        )
+      else
+        for (final line in entry.breakdown) _Line(line: line),
+    ],
+  );
+}
+
+/// One row of FPL's attribution — what he did, and what it was worth.
+class _Line extends StatelessWidget {
+  const _Line({required this.line});
+
+  final ScoreLine line;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                line.label,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              Text(
+                // ⭐ `minutes` reads as a duration and everything else as a count — *"90 minutes" and
+                // "1 goals" are the difference between a sentence and a database row.*
+                line.stat == 'minutes' ? "${line.value}'" : '${line.value}',
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          // ⭐ Signed, always: a deduction has to be legible **as** a deduction.
+          line.points > 0 ? '+${line.points}' : '${line.points}',
+          style: TextStyle(
+            color: line.points < 0 ? Brand.bad : Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ],
     ),
   );

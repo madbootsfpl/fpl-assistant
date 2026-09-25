@@ -86,6 +86,24 @@ class FplClient:
         """A manager's squad picks for `gameweek` (public **after** that GW's deadline; 404 before)."""
         return self._get_json(config.ENTRY_PICKS_PATH.format(entry_id, gameweek))
 
+    def get_event_live(self, gameweek: int) -> dict:
+        """Every player's stats for one gameweek, **including FPL's own points attribution** (ADR-299).
+
+        ⭐⭐ **The `explain` block is why this endpoint is here.** Each player carries a per-stat breakdown —
+        `minutes 90 → 2`, `goals_scored 1 → 4`, `yellow_cards 1 → -1` — computed by FPL, for the week that
+        was actually played.
+
+        🔴 **The alternative was to derive it, and it would already be wrong.** A scoring table (goals
+        6/5/4 by position, assists 3, clean sheet 4/1) is twenty lines and omits
+        `defensive_contribution`, which FPL added this season and which appears in real rows now.
+        ⚠️ *A points breakdown that disagrees with the total printed above it is worse than no breakdown*,
+        and a hand-rolled table starts disagreeing the moment the game changes without telling us.
+
+        ⚠️ **Asked per gameweek, never per player.** One call returns all 659, which is what makes a
+        fifteen-man squad's breakdown cost one request rather than fifteen.
+        """
+        return self._get_json(config.EVENT_LIVE_PATH.format(gameweek))
+
     def get_entry_transfers(self, entry_id: int) -> list:
         """Every transfer a manager has made **this season** (ADR-162) — `[]` before their first.
 

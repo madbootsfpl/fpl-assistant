@@ -266,7 +266,7 @@ void main() {
           client: stubClient(asked: asked),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );
@@ -292,7 +292,7 @@ void main() {
           client: stubClient(asked: asked),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );
@@ -317,7 +317,7 @@ void main() {
           client: stubClient(asked: asked),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );
@@ -340,7 +340,7 @@ void main() {
           client: stubClient(),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );
@@ -364,7 +364,7 @@ void main() {
           client: stubClient(),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
           footer: const Text('APPLY-ME'),
         ),
       ),
@@ -461,7 +461,7 @@ void main() {
           client: stubClient(),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       );
 
@@ -499,7 +499,7 @@ void main() {
           client: stubClient(asked: asked),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );
@@ -530,7 +530,7 @@ void main() {
           client: stubClient(),
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );
@@ -576,7 +576,7 @@ void main() {
             client: client,
             mode: PitchMode.nextGw,
             onMode: (_) {},
-            onTapPlayer: (_) {},
+            onTapPlayer: (_, _, _) {},
           ),
         ),
       );
@@ -612,7 +612,7 @@ void main() {
           client: client,
           mode: PitchMode.nextGw,
           onMode: (_) {},
-          onTapPlayer: (_) {},
+          onTapPlayer: (_, _, _) {},
         ),
       ),
     );

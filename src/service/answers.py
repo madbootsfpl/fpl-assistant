@@ -1101,8 +1101,52 @@ def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None =
         # player shape, which `test_player_shape.py` refused within minutes of it being written.
         # ⚠️ *A past week's facts are not properties of a player; they are properties of a player in a
         # week*, and flattening them makes every other endpoint's shape a little less true.
+        # ⭐⭐⭐ **FPL's own points attribution, fetched once for the whole gameweek** (ADR-299). The
+        # owner asked for the breakdown his competitor shows — *minutes 80' → 2, goals 1 → 4, yellow 1 →
+        # -1* — and 🔴 **the obvious implementation is the wrong one**: a scoring table is twenty lines and
+        # is already wrong, because FPL added `defensive_contribution` this season and it is in real rows
+        # now. ⚠️ *A breakdown that disagrees with the total printed above it is worse than no breakdown.*
+        #
+        # ⚠️⚠️ **Never fatal.** One request per gameweek, and if it fails the page still draws everything
+        # it drew before — ⭐ *a detail that did not load must not take the screen that was working with
+        # it.*
+        # ⭐ Club ids → short names, for the scoreline line. ⚠️ Missing ids stay **null, never a guess**
+        # — the rule `_recent_rows` already follows: *an away trip to "???" is worse than to nothing.*
+        clubs = {tm["id"]: tm["short_name"] for tm in store.get_teams()}
+
+        explain = {}
+        try:
+            live = client.get_event_live(request.gameweek)
+        except (FplApiError, KeyError, TypeError, AttributeError):
+            # ⚠️ **`AttributeError` too, and it is not defensive padding.** Three test doubles in this
+            # repo implement only the calls their subject used to make, and a client injected by any
+            # future caller may do the same — ⭐ *an optional decoration that hard-requires a method turns
+            # every partial client into a crash*, which is the opposite of what this `try` is for.
+            live = None
+        for element in ((live or {}).get("elements") or []):
+            lines = [
+                {"stat": stat.get("identifier"), "value": stat.get("value"),
+                 "points": stat.get("points")}
+                for fixture in (element.get("explain") or [])
+                for stat in (fixture.get("stats") or [])
+                # ⚠️ Zero-point lines dropped: FPL emits `minutes 0 → 0` for a man who never came on, and
+                # ⭐ *a breakdown listing what did not happen is longer and says less.*
+                if stat.get("points")
+            ]
+            if lines:
+                explain[element.get("id")] = lines
+
         squad = []
         total = lambda rows, key: sum((r[key] or 0) for r in rows)
+
+        # ⚠️ **`sqlite3.Row` indexes by name but has no `.get`**, and a psycopg row is a dict — so one
+        # accessor for both, tolerant of a column an older database has not migrated yet. ⭐ *A detail
+        # line that throws takes down the whole played week it was decorating.*
+        def cell(row, key):
+            try:
+                return row[key]
+            except (KeyError, IndexError):
+                return None
         for pick in payload.get("picks") or []:
             pid = pick.get("element")
             player = players.get(pid)
@@ -1128,6 +1172,21 @@ def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None =
                     # ⚠️ Distinguishes *"zero points"* from *"no match"* — ⭐ a blank gameweek and a bad
                     # performance are different weeks and must not draw the same.
                     "played": bool(rows),
+                    # ⭐ **How the points were earned, in FPL's words** (ADR-299). Empty for a blank week,
+                    # which the client draws as "did not play" rather than as a table of zeroes.
+                    "breakdown": explain.get(pid, []),
+                    # ⭐ The scoreline, already stored — *"BOU 0-1 LIV" is the context a bare total lacks.*
+                    # ⚠️ A list because a double gameweek is two matches, and showing one of two is worse
+                    # than showing neither.
+                    "matches": [
+                        {"opponent": clubs.get(cell(r, "opponent_team")),
+                         "home": bool(cell(r, "was_home")),
+                         "scored": cell(r, "team_h_score") if cell(r, "was_home")
+                                   else cell(r, "team_a_score"),
+                         "conceded": cell(r, "team_a_score") if cell(r, "was_home")
+                                     else cell(r, "team_h_score")}
+                        for r in rows
+                    ],
                 },
                 "pick": {
                     "multiplier": pick.get("multiplier"),

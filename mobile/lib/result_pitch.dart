@@ -22,7 +22,10 @@ class ResultPitch extends StatelessWidget {
   const ResultPitch({required this.result, this.onTapPlayer, super.key});
 
   final GameweekResult result;
-  final void Function(PlayerSummary)? onTapPlayer;
+
+  /// ⭐ Hands back the **whole entry**, not just the player: what he did that week is the one thing the
+  /// sheet cannot look up for itself (ADR-299).
+  final void Function(GameweekPlayer)? onTapPlayer;
 
   @override
   Widget build(BuildContext context) => PitchBoard<GameweekPlayer>(
@@ -33,7 +36,7 @@ class ResultPitch extends StatelessWidget {
       entry: entry,
       kit: result.kitFor(entry),
       drawWidth: width,
-      onTap: onTapPlayer == null ? null : () => onTapPlayer!(entry.player),
+      onTap: onTapPlayer == null ? null : () => onTapPlayer!(entry),
     ),
   );
 }
