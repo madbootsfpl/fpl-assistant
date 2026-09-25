@@ -157,11 +157,20 @@ class _ResultCard extends StatelessWidget {
               // price-and-opponent strip.
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  _events,
-                  style: const TextStyle(color: Colors.white70, fontSize: 9.5),
-                ),
+                child: _Events(entry: entry),
               ),
+              // ⭐⭐ **Who it was against** (owner: *"for history GWs, can we see which club player played
+              // against"*). The live card has carried its opponent since ADR-235 and the past card had
+              // only events — ⚠️ *two points against City and two against Burnley are different weeks,
+              // and the column that told them apart was the one missing.*
+              if (_opponents.isNotEmpty)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _opponents,
+                    style: const TextStyle(color: Colors.white54, fontSize: 9),
+                  ),
+                ),
             ],
           ),
         ),
@@ -183,31 +192,171 @@ class _ResultCard extends StatelessWidget {
     return Brand.bad.withValues(alpha: 0.72);
   }
 
-  /// The week in glyphs — ⭐ the number says how many, this says what for.
-  String get _events {
-    // ⚠️⚠️⚠️ **Two of these were emoji and rendered as something else entirely on Android.** 🅰 came out
-    // as a **white A on a red rounded box** — which on a screen whose other new feature is *red cards* is
-    // about the worst possible accident — and 🧤 came out as a shield, the glyph already being used one
-    // slot along for a clean sheet.
-    //
-    // ⭐ *An emoji is a request, not an instruction*: the platform picks the font, and a card 70pt wide
-    // has no room to survive a bad guess. ⚽ and 🛡 render correctly and stay; the two that did not are
-    // now letters, which cannot be substituted for anything.
-    final parts = <String>[
-      if (entry.goals > 0) '⚽${entry.goals}',
-      if (entry.assists > 0) 'A${entry.assists}',
-      if (entry.cleanSheet) '🛡',
-      if (entry.saves >= 3) 'SV${entry.saves}',
-      if (entry.bonus > 0) '+${entry.bonus}',
+  /// Who he played, in the app's existing `OPP (H)` shorthand.
+  ///
+  /// ⚠️ A **double gameweek shows both**, separated — *showing one of two is worse than showing neither,
+  /// because it looks complete.* ⭐ Blank rather than a placeholder when the club is unknown: the rule
+  /// `_recent_rows` set on the server, kept here.
+  String get _opponents => [
+    for (final m in entry.matches)
+      if (m.opponent != null) '${m.opponent} (${m.home ? 'H' : 'A'})',
+  ].join(' · ');
+}
+
+/// What he did, as icons (owner: *"I prefer the icons used by FFH, football for each goal, a boot for
+/// assist etc., bonus point in a coloured circle"*).
+///
+/// ⭐⭐ **One icon per goal, not a number beside one icon.** Two footballs read as *two goals* before
+/// anything is parsed; `⚽2` has to be read. ⚠️ Capped at three, because a hat-trick is the point at which
+/// a 70pt card runs out of room and *four of anything is a number again anyway.*
+///
+/// ⚠️⚠️ **Drawn, not typed.** The first version used emoji and Android substituted its own: 🅰 came out
+/// as a white A on a **red** box — on a screen whose other feature is red cards — and 🧤 came out as a
+/// shield, the glyph already in use for a clean sheet. ⭐ *An emoji is a request, not an instruction*;
+/// these are shapes this app draws itself and no font can reinterpret.
+class _Events extends StatelessWidget {
+  const _Events({required this.entry});
+
+  final GameweekPlayer entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final icons = <Widget>[
+      for (var i = 0; i < entry.goals && i < 3; i++) const _Ball(),
+      for (var i = 0; i < entry.assists && i < 3; i++) const _Boot(),
+      if (entry.cleanSheet) const _Sheet(),
+      if (entry.saves >= 3) _Pip(text: '${entry.saves}', colour: Brand.purple),
+      // ⭐ The bonus in its own coloured circle, which is how FPL itself prints it.
+      if (entry.bonus > 0)
+        _Pip(text: '${entry.bonus}', colour: const Color(0xFFE59A1B)),
     ];
-    if (parts.isNotEmpty) return parts.join(' ');
-    // ⚠️ Never blank: an empty strip would make the card a different height from its neighbours, which
-    // is the grid problem the live card already solved once.
-    if (!entry.didPlay) return entry.benched ? 'benched' : 'did not play';
-    if (entry.cameOn) return 'came on';
-    if (entry.wentOff) return 'auto-sub';
-    return '${entry.minutes} mins';
+    if (icons.isEmpty) {
+      // ⚠️ Never blank: an empty strip would make the card a different height from its neighbours, which
+      // is the grid problem the live card already solved once.
+      return Text(
+        !entry.didPlay
+            ? (entry.benched ? 'benched' : 'did not play')
+            : entry.cameOn
+            ? 'came on'
+            : entry.wentOff
+            ? 'auto-sub'
+            : '${entry.minutes} mins',
+        style: const TextStyle(color: Colors.white70, fontSize: 9.5),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final icon in icons)
+          Padding(padding: const EdgeInsets.only(right: 2), child: icon),
+      ],
+    );
   }
+}
+
+/// A goal.
+class _Ball extends StatelessWidget {
+  const _Ball();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.black54, width: 1.2),
+    ),
+  );
+}
+
+/// An assist — a boot.
+///
+/// ⚠️⚠️ **Drawn, because Material has no football boot and the nearest icon was a ball outline** — which
+/// on a strip whose first icon is a **ball** is the one shape it must not be. ⭐ *An icon that has to be
+/// told apart from the icon beside it is doing less work than the word it replaced.*
+///
+/// ⭐ A silhouette: ankle, instep, sole. At 11pt the sole's overhang is the whole read.
+class _Boot extends StatelessWidget {
+  const _Boot();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    width: 12,
+    height: 11,
+    child: CustomPaint(painter: _BootPainter()),
+  );
+}
+
+class _BootPainter extends CustomPainter {
+  const _BootPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final ink = Paint()..color = const Color(0xFF9FE6B8);
+
+    // ⭐ **Shaft, instep, toe** — the three parts that make a silhouette a boot rather than an L. The
+    // first version drew a thin upright and a bar, and at 11pt it read as a corner.
+    final boot = Path()
+      // Up the back of the ankle and across its top.
+      ..moveTo(w * 0.10, h * 0.72)
+      ..lineTo(w * 0.10, h * 0.08)
+      ..lineTo(w * 0.44, h * 0.08)
+      // Down the front of the shaft, then forward along the instep to the toe.
+      ..lineTo(w * 0.44, h * 0.40)
+      ..lineTo(w * 0.84, h * 0.55)
+      // ⭐ The toe is rounded — a square one reads as a box.
+      ..quadraticBezierTo(w * 0.99, h * 0.60, w * 0.97, h * 0.72)
+      ..close();
+    canvas.drawPath(boot, ink);
+
+    // The sole, proud of the boot on both ends — the part that says "football boot".
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.04, h * 0.74, w * 0.94, h * 0.18),
+        const Radius.circular(1),
+      ),
+      ink,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BootPainter oldDelegate) => false;
+}
+
+/// A clean sheet.
+class _Sheet extends StatelessWidget {
+  const _Sheet();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Icon(Icons.shield, size: 10, color: Color(0xFF8FB8D6));
+}
+
+/// A number in a coloured circle — bonus, and saves.
+class _Pip extends StatelessWidget {
+  const _Pip({required this.text, required this.colour});
+
+  final String text;
+  final Color colour;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 12,
+    height: 12,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(color: colour, shape: BoxShape.circle),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 8,
+        fontWeight: FontWeight.w700,
+        height: 1,
+      ),
+    ),
+  );
 }
 
 class _Band extends StatelessWidget {

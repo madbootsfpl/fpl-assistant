@@ -133,7 +133,41 @@ class PitchBoard<T> extends StatelessWidget {
                   mainAxisSize: sideways ? MainAxisSize.min : MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [for (final p in bench) card(p, cardWidth)],
+                  // ⭐⭐ **A position label over each substitute** (owner feedback, matching FFH).
+                  // ⚠️⚠️ *It does not replace the order badge, because the two say different things.*
+                  // `1st · 2nd · 3rd · GK` is **what FPL will do** if someone does not play; `DEF` is
+                  // **what he can come on for**. A bench you are reading to answer *"who covers my
+                  // injured defender?"* needs the second, and the first is the one nobody else shows.
+                  children: [
+                    for (final p in bench)
+                      // ⚠️⚠️ **The label goes on whichever axis has room — the same argument ADR-293
+                      // made for the bench itself.** Stacked above the card it cost ~14pt each, and on a
+                      // phone in landscape that shrank the kits from 17pt to **11**, which is the exact
+                      // bug ADR-293 existed to fix. ⭐ *A label added on the scarce axis is a label paid
+                      // for by the thing it is labelling.* Sideways there is width going spare, so it
+                      // sits beside the shirt instead.
+                      Flex(
+                        direction: sideways ? Axis.horizontal : Axis.vertical,
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            positionOf(p),
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 8.5,
+                              letterSpacing: 1,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(
+                            width: sideways ? 4 : 0,
+                            height: sideways ? 0 : 3,
+                          ),
+                          card(p, cardWidth),
+                        ],
+                      ),
+                  ],
                 ),
               ],
             ),

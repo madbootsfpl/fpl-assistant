@@ -119,7 +119,15 @@ class _Markings extends CustomPainter {
     final sixW = field.width * 0.26;
     final sixH = field.height * 0.058;
     final spotOut = field.height * 0.105;
-    final arcR = field.width * 0.13;
+    // ⚠️⚠️⚠️ **The same radius as the centre circle, and that is the laws of the game, not a trick**
+    // (owner: *"in landscape mode, the 12 yard semi circles encroach the centre circle"*). Both are
+    // **9.15 m**. This was `field.width * 0.13`, which is about right on a portrait phone — where width
+    // is ~0.6 of height — and enormous on a landscape tablet, where it is nearly twice it.
+    //
+    // ⭐ *The fix is to stop deriving one real distance two different ways.* The centre circle already
+    // clamps against both axes for exactly this reason; the D now reads the answer rather than
+    // recomputing it from the one axis that does not constrain it.
+    final arcR = radius;
     final cx = field.center.dx;
 
     for (final atTop in [true, false]) {

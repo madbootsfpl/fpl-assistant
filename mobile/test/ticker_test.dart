@@ -4,6 +4,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:madboots/api/client.dart';
 import 'package:madboots/api/models.dart';
 import 'package:madboots/ticker_view.dart';
 
@@ -13,6 +16,40 @@ FixtureTicker sample() => FixtureTicker.fromJson(
         .readAsStringSync(),
   ) as Map<String, dynamic>,
 );
+
+/// Renders the grid against the committed sample, and returns the name of a club that is **not** in
+/// `myClubs` — so a filter test can assert on something it should have removed.
+Future<String> pumpTicker(
+  WidgetTester tester, {
+  Set<String> myClubs = const {},
+}) async {
+  final body = File('../spikes/018-flutter-read-slice/api-samples/ticker.json')
+      .readAsStringSync();
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        backgroundColor: const Color(0xFF17131F),
+        body: TickerView(
+          client: ServiceClient(
+            baseUrl: 'http://x',
+            client: MockClient(
+              (_) async => http.Response(
+                body,
+                200,
+                headers: const {'content-type': 'application/json'},
+              ),
+            ),
+          ),
+          myClubs: myClubs,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return sample().rows
+      .map((r) => r.team)
+      .firstWhere((c) => !myClubs.contains(c));
+}
 
 void main() {
   group('parsing', () {
@@ -167,4 +204,62 @@ void main() {
       },
     );
   });
+
+  // ── owner feedback: the venue, and a squad filter ───────────────────────────
+
+  testWidgets('a fixture says (H) or (A), never an unmarked home game', (
+    tester,
+  ) async {
+    // ⚠️⚠️ **An asterisk marks one case and leaves the other unmarked**, so the *absence* of a mark has
+    // to be read as information — ⭐ *a reader who has not found the legend cannot tell a home fixture
+    // from a typo.* Two labels are longer than one mark and shorter than the explanation one mark needs.
+    await pumpTicker(tester);
+
+    expect(find.textContaining('(H)'), findsWidgets);
+    expect(find.textContaining('(A)'), findsWidgets);
+    expect(find.textContaining('*'), findsNothing);
+    // ⭐ And the legend goes with it: `CHE (A)` needs none, which is the point.
+    expect(find.textContaining('asterisk'), findsNothing);
+    expect(find.text('CHE* = away'), findsNothing);
+  });
+
+  testWidgets('the squad filter narrows the grid to your clubs', (
+    tester,
+  ) async {
+    final mine = await pumpTicker(tester, myClubs: {'ARS'});
+    expect(find.text('My squad'), findsOneWidget);
+    expect(find.text('All clubs'), findsOneWidget);
+
+    // ⭐ Off by default: the grid's job is the whole league, and a reader who lands on a filtered view
+    // has to notice the filter before they can trust what is missing.
+    expect(find.text('ARS'), findsWidgets);
+    expect(find.text(mine), findsWidgets, reason: 'another club is missing');
+
+    await tester.tap(find.text('My squad'));
+    await tester.pumpAndSettle();
+    expect(find.text('ARS'), findsWidgets);
+    expect(
+      find.text(mine),
+      findsNothing,
+      reason: '$mine survived a filter that should have removed it',
+    );
+  });
+
+  testWidgets('a filter that matches nothing says so', (tester) async {
+    // ⚠️ *An empty grid with a filter on is indistinguishable from a broken one* — the rule the Players
+    // board already follows: name the filter that emptied it.
+    await pumpTicker(tester, myClubs: {'NOPE'});
+    await tester.tap(find.text('My squad'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('None of your clubs'), findsOneWidget);
+  });
+
+  testWidgets(
+    'no squad means no filter, rather than one that matches nothing',
+    (tester) async {
+      // ⭐ The honest state before a squad has loaded.
+      await pumpTicker(tester);
+      expect(find.text('My squad'), findsNothing);
+    },
+  );
 }

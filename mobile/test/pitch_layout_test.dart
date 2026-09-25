@@ -387,4 +387,86 @@ void _landscape() {
 
     expect(r.kits.reduce((a, b) => a < b ? a : b), greaterThan(14));
   });
+
+  testWidgets('each substitute is labelled with the position he can fill', (
+    tester,
+  ) async {
+    // ⭐⭐ Owner feedback, matching FFH: *"can we have labels over each substitute, like GK, DEF, MID,
+    // FWD."* ⚠️⚠️ **It does not replace the order badge**, because the two say different things:
+    // `1st · 2nd · 3rd · GK` is *what FPL will do* if someone does not play; `DEF` is *what he can come
+    // on for*. A bench read to answer "who covers my injured defender?" needs the second.
+    final team = sampleTeam();
+    await tester.pumpWidget(
+      screen(
+        PitchView(
+          team: team,
+          mode: PitchMode.nextGw,
+          onMode: (_) {},
+          onTapPlayer: (_) {},
+        ),
+      ),
+    );
+
+    final bench = tester.getRect(find.text('BENCH'));
+    for (final p in team.orderedBench) {
+      // The label sits with its own card, below the BENCH heading.
+      final labels = find.text(p.position);
+      expect(
+        labels,
+        findsWidgets,
+        reason: 'no ${p.position} label on the bench',
+      );
+      final onBench = tester.getRect(find.text(p.name)).top;
+      expect(onBench, greaterThan(bench.top));
+    }
+    // ⭐ And the order badge is still there — this added a fact, it did not swap one.
+    expect(find.text('1st'), findsOneWidget);
+  });
+
+  testWidgets('the labels do not cost the eleven their size in landscape', (
+    tester,
+  ) async {
+    // ⚠️⚠️ **This is how the first version of the labels broke ADR-293.** Stacked above the card they
+    // cost ~14pt each, and on a phone in landscape the kits shrank from 17pt to **11** — the exact bug
+    // ADR-293 existed to fix. ⭐ *A label added on the scarce axis is a label paid for by the thing it is
+    // labelling*, so sideways it sits beside the shirt instead.
+    final team = sampleTeam();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          backgroundColor: const Color(0xFF17131F),
+          body: SizedBox(
+            width: 760,
+            height: 390,
+            child: Column(
+              children: [
+                Expanded(
+                  child: PitchView(
+                    team: team,
+                    mode: PitchMode.nextGw,
+                    onMode: (_) {},
+                    onTapPlayer: (_) {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    final kits = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((i) => i.height)
+        .whereType<double>();
+    expect(kits, isNotEmpty);
+    final drawn = tester.getRect(find.byType(Image).first).height;
+    expect(
+      drawn,
+      greaterThanOrEqualTo(15),
+      reason: 'the labels shrank the kits to ${drawn.toStringAsFixed(1)}pt',
+    );
+  });
 }

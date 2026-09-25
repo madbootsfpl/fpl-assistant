@@ -9,6 +9,8 @@
 /// read it — ⚠️ *a familiar scale with unfamiliar colours is a scale you have to learn twice.*
 library;
 
+import 'brand.dart';
+
 import 'package:flutter/material.dart';
 
 import 'api/client.dart';
@@ -30,9 +32,16 @@ Color difficultyInk(int difficulty) =>
     difficulty == 2 ? const Color(0xFF07240F) : Colors.white;
 
 class TickerView extends StatefulWidget {
-  const TickerView({required this.client, super.key});
+  const TickerView({required this.client, this.myClubs = const {}, super.key});
 
   final ServiceClient client;
+
+  /// The clubs the manager actually owns (owner: *"add in a filter for My Squad"*).
+  ///
+  /// ⭐ Clubs, not players: the ticker's unit is a club's run, and ⚠️ *a filter whose unit differs from
+  /// the grid's unit has to explain itself.* Empty means the filter cannot be offered — which is the
+  /// honest state before a squad has loaded, rather than a control that silently matches nothing.
+  final Set<String> myClubs;
 
   @override
   State<TickerView> createState() => _TickerViewState();
@@ -40,6 +49,10 @@ class TickerView extends StatefulWidget {
 
 class _TickerViewState extends State<TickerView> {
   late Future<FixtureTicker> _future = widget.client.ticker();
+
+  /// ⭐ Off by default: the grid's job is the **whole league**, and a reader who lands on a filtered
+  /// view has to notice the filter before they can trust what is missing.
+  bool _mineOnly = false;
 
   @override
   Widget build(BuildContext context) => FutureBuilder<FixtureTicker>(
@@ -81,7 +94,7 @@ class _TickerViewState extends State<TickerView> {
             // reader looking for something.* The tap is built now, and the line says what the grid means
             // instead of advertising it.
             child: Text(
-              'Easiest run first. An asterisk means away. Tap any club for its run in full.',
+              'Easiest run first. Tap any club for its run in full.',
               style: TextStyle(
                 color: Colors.white38,
                 fontSize: 11.5,
@@ -93,18 +106,61 @@ class _TickerViewState extends State<TickerView> {
             padding: EdgeInsets.fromLTRB(14, 0, 14, 6),
             child: _Legend(),
           ),
+          // ⚠️ Offered only when the squad is known — see `myClubs`.
+          if (widget.myClubs.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+              child: Row(
+                children: [
+                  _Chip(
+                    label: 'All clubs',
+                    on: !_mineOnly,
+                    onTap: () => setState(() => _mineOnly = false),
+                  ),
+                  const SizedBox(width: 8),
+                  _Chip(
+                    label: 'My squad',
+                    on: _mineOnly,
+                    onTap: () => setState(() => _mineOnly = true),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 20),
-              // ⭐ One for the header row of gameweek numbers, then a row per club.
-              itemCount: grid.rows.length + 1,
-              itemBuilder: (_, i) => i == 0
-                  ? _HeaderRow(gameweeks: grid.gameweeks)
-                  : _ClubRow(
-                      row: grid.rows[i - 1],
-                      gameweeks: grid.gameweeks,
-                      onTap: () => showClubRun(context, grid.rows[i - 1]),
+            child: Builder(
+              builder: (context) {
+                final rows = _mineOnly
+                    ? [
+                        for (final r in grid.rows)
+                          if (widget.myClubs.contains(r.team)) r,
+                      ]
+                    : grid.rows;
+                if (rows.isEmpty) {
+                  // ⚠️ *An empty grid with a filter on is indistinguishable from a broken one* — the
+                  // rule the Players board already follows: name the filter that emptied it.
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'None of your clubs are in the ticker.',
+                        style: TextStyle(color: Colors.white38),
+                      ),
                     ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 20),
+                  // ⭐ One for the header row of gameweek numbers, then a row per club.
+                  itemCount: rows.length + 1,
+                  itemBuilder: (_, i) => i == 0
+                      ? _HeaderRow(gameweeks: grid.gameweeks)
+                      : _ClubRow(
+                          row: rows[i - 1],
+                          gameweeks: grid.gameweeks,
+                          onTap: () => showClubRun(context, rows[i - 1]),
+                        ),
+                );
+              },
             ),
           ),
         ],
@@ -224,10 +280,8 @@ class _Legend extends StatelessWidget {
           ),
       ],
       const Spacer(),
-      const Text(
-        'CHE* = away',
-        style: TextStyle(color: Colors.white38, fontSize: 9.5),
-      ),
+      // ⭐ The legend goes too: `CHE (A)` needs none, which is the point of the change.
+      const SizedBox.shrink(),
     ],
   );
 }
@@ -375,9 +429,14 @@ class _Cell extends StatelessWidget {
             child: Text(
               // ⚠️ A double shows both — the ticker is the view built for spotting them, and showing
               // only the first would hide the half that makes it a double.
+              // ⚠️⚠️ **`(H)` and `(A)`, not an asterisk** (owner feedback). An asterisk marks one of the
+              // two cases and leaves the other unmarked, so *the absence of a mark has to be read as
+              // information* — which means a reader who has not found the legend cannot tell a home
+              // fixture from a typo. ⭐ *Two labels are longer than one mark and shorter than the
+              // explanation one mark needs.*
               c.isDouble
                   ? c.label
-                  : '${c.opponent}${c.venue == "H" ? "" : "*"}',
+                  : '${c.opponent} (${c.venue == "H" ? "H" : "A"})',
               style: TextStyle(
                 color: difficultyInk(c.difficulty),
                 fontSize: 10.5,
@@ -389,4 +448,34 @@ class _Cell extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A two-state filter chip — ⭐ the same shape the Players board uses, so the control is learnt once.
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.on, required this.onTap});
+
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: on ? Brand.purple : Colors.white10,
+        borderRadius: BorderRadius.circular(Brand.radiusPill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: on ? Colors.white : Colors.white60,
+          fontSize: 12,
+          fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+    ),
+  );
 }

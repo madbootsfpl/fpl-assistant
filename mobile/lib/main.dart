@@ -773,8 +773,17 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           'Mini-leagues',
           LeaguesView(client: _client, managerId: _managerId),
         ),
-        onOpenTicker: () =>
-            _open('Fixture Difficulty Rating', TickerView(client: _client)),
+        onOpenTicker: () => _open(
+          'Fixture Difficulty Rating',
+          // ⭐ The clubs you own, so the grid can be narrowed to them.
+          TickerView(
+            client: _client,
+            myClubs: {
+              for (final p in [...team.analysis.xi, ...team.analysis.bench])
+                p.team,
+            },
+          ),
+        ),
         onOpenFeedback: () => _open(
           _feedbackTitle,
           FeedbackView(client: _client, from: _lastScreen),

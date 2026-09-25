@@ -360,13 +360,26 @@ class _SeasonPagesState extends State<SeasonPages> {
         );
       }
       if (gameweek == _current) {
-        return PitchView(
-          team: widget.team,
-          mode: widget.mode,
-          onMode: widget.onMode,
-          // ⭐ Null: the live pitch IS the next gameweek, and the sheet's default is that week.
-          onTapPlayer: (p) => widget.onTapPlayer(p, null, null),
-          footer: widget.footer,
+        // ⭐⭐⭐ **The live week is framed** (owner: *"as I scroll left and right, I wonder could we have
+        // a purple border around current GW so it stands out"*).
+        //
+        // ⚠️⚠️ **A frame, not a badge or a colour change.** Every page already says which gameweek it is;
+        // what the swipe took away was knowing *where you are relative to now* — ⭐ *the question is not
+        // "which week is this?" but "how far have I wandered?"*, and a border answers it from the corner
+        // of the eye, without being read.
+        //
+        // ⭐ Purple because purple is already this app's "this is yours" — the armbands, the bench order,
+        // the signal banner. ⚠️ *A new accent colour for a new meaning is how a palette stops meaning
+        // anything.*
+        return _Framed(
+          child: PitchView(
+            team: widget.team,
+            mode: widget.mode,
+            onMode: widget.onMode,
+            // ⭐ Null: the live pitch IS the next gameweek, and the sheet's default is that week.
+            onTapPlayer: (p) => widget.onTapPlayer(p, null, null),
+            footer: widget.footer,
+          ),
         );
       }
       if (gameweek <= _current + kForwardWeeks) {
@@ -430,5 +443,27 @@ class _Past extends StatelessWidget {
       }
       return PastGameweek(result: snap.data!, onTapPlayer: onTapPlayer);
     },
+  );
+}
+
+/// The live week, framed (owner feedback).
+///
+/// ⭐ Drawn **around** the page rather than inside it, so the pitch it frames needs to know nothing about
+/// being the live one — ⚠️ *a widget that changes its own appearance depending on where it sits is a
+/// widget you cannot reuse on the page next door.*
+class _Framed extends StatelessWidget {
+  const _Framed({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(2, 0, 2, 2),
+    padding: const EdgeInsets.all(2),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(Brand.radiusMd + 2),
+      border: Border.all(color: Brand.purple.withValues(alpha: 0.85), width: 2),
+    ),
+    child: child,
   );
 }

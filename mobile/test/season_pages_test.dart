@@ -622,4 +622,46 @@ void main() {
     expect(find.text('GW—'), findsOneWidget);
     expect(find.text('GW0'), findsNothing);
   });
+
+  testWidgets('the live week is framed and no other week is', (tester) async {
+    // ⭐⭐ Owner: *"as I scroll left and right, I wonder could we have a purple border around current GW
+    // so it stands out."* ⚠️ *The question a swipe takes away is not "which week is this?" — every page
+    // says that — but "how far have I wandered?"*, and a border answers it from the corner of the eye.
+    Iterable<Container> framed() => tester
+        .widgetList<Container>(find.byType(Container))
+        .where(
+          (c) =>
+              (c.decoration as BoxDecoration?)?.border != null &&
+              ((c.decoration as BoxDecoration?)!.border! as Border)
+                      .top
+                      .color
+                      .a >
+                  0.5 &&
+              ((c.decoration as BoxDecoration?)!.border! as Border).top.width ==
+                  2,
+        );
+
+    await tester.pumpWidget(
+      screen(
+        SeasonPages(
+          team: sampleTeam(),
+          client: stubClient(),
+          mode: PitchMode.nextGw,
+          onMode: (_) {},
+          onTapPlayer: (_, _, _) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(framed(), hasLength(1), reason: 'the live week is not framed');
+
+    // ⚠️ And the frame does not travel with you — that would make it decoration rather than a landmark.
+    await tester.drag(find.byType(PageView), const Offset(-360, 0));
+    await tester.pumpAndSettle();
+    expect(framed(), isEmpty, reason: 'GW7 is wearing the live week\'s frame');
+
+    await tester.drag(find.byType(PageView), const Offset(360, 0));
+    await tester.pumpAndSettle();
+    expect(framed(), hasLength(1), reason: 'the frame did not come back');
+  });
 }

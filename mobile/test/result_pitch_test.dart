@@ -67,6 +67,10 @@ Map<String, dynamic> man({
     'yellow_cards': yellow,
     'red_cards': red,
     'played': played,
+    // ⭐ Who it was against — the card prints it under the events.
+    'matches': [
+      if (played) {'opponent': team, 'home': true, 'scored': 2, 'conceded': 0},
+    ],
   },
   'pick': {
     'multiplier': captain ? 2 : 1,
@@ -294,7 +298,16 @@ void main() {
     expect(find.text('12'), findsOneWidget);
   });
 
-  testWidgets('what the points were for is on the card', (tester) async {
+  testWidgets('what the points were for is drawn, one icon per event', (
+    tester,
+  ) async {
+    // ⭐⭐ **One icon per goal, not a number beside one icon** (owner: *"football for each goal, a boot
+    // for assist etc., bonus point in a coloured circle"*). Two footballs read as *two goals* before
+    // anything is parsed; `⚽2` has to be read.
+    //
+    // ⚠️ Counted by **shape**, not by text — which is the whole point of the change: the previous version
+    // asserted the string `'⚽2 +3'`, and a string is exactly what Android was free to re-render as
+    // something else.
     final scored = week(
       squad: [
         man(id: 1, name: 'Keeper', position: 'GK', saves: 5, cleanSheet: true),
@@ -310,9 +323,83 @@ void main() {
     );
     await tester.pumpWidget(screen(PastGameweek(result: scored)));
     await tester.pumpAndSettle();
-    expect(find.text('⚽2 +3'), findsOneWidget);
-    expect(find.text('A1'), findsOneWidget);
-    expect(find.text('🛡 SV5'), findsOneWidget);
+
+    // Two goals → two balls: white circles, 10pt.
+    final balls = tester
+        .widgetList<Container>(find.byType(Container))
+        .where(
+          (c) =>
+              c.constraints?.maxWidth == 10 &&
+              (c.decoration as BoxDecoration?)?.shape == BoxShape.circle &&
+              (c.decoration as BoxDecoration?)?.color == Colors.white,
+        )
+        .length;
+    expect(balls, 2, reason: 'two goals should draw two footballs');
+
+    // One assist → one boot.
+    // ⚠️ A drawn boot, not an icon: Material has no football boot and the nearest was a ball
+    // outline — the one shape it must not be, on a strip whose first icon is a ball.
+    expect(find.byType(CustomPaint), findsWidgets);
+    expect(
+      tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .where((c) => c.painter.runtimeType.toString().contains('Boot'))
+          .length,
+      1,
+      reason: 'one assist should draw one boot',
+    );
+    // One clean sheet → one shield.
+    expect(find.byIcon(Icons.shield), findsOneWidget);
+    // ⭐ Bonus in its own coloured circle, which is how FPL itself prints it.
+    final bonus = tester
+        .widgetList<Container>(find.byType(Container))
+        .where(
+          (c) =>
+              (c.decoration as BoxDecoration?)?.color ==
+              const Color(0xFFE59A1B),
+        )
+        .length;
+    expect(bonus, 1, reason: 'the bonus pip is missing');
+    expect(find.text('3'), findsWidgets, reason: 'the bonus count');
+    expect(find.text('5'), findsWidgets, reason: 'the save count');
+  });
+
+  testWidgets('a hat-trick does not run off the card', (tester) async {
+    // ⚠️ Capped at three — *a 70pt card runs out of room, and four of anything is a number again anyway.*
+    final haul = week(
+      squad: [
+        man(id: 1, name: 'Keeper', position: 'GK'),
+        for (var i = 0; i < 4; i++)
+          man(id: 10 + i, name: 'Def$i', position: 'DEF'),
+        for (var i = 0; i < 4; i++)
+          man(id: 20 + i, name: 'Mid$i', position: 'MID'),
+        man(id: 30, name: 'Striker', position: 'FWD', goals: 5, points: 24),
+        man(id: 31, name: 'Fwd1', position: 'FWD'),
+        for (var i = 0; i < 4; i++)
+          man(id: 40 + i, name: 'Sub$i', benched: true),
+      ],
+    );
+    await tester.pumpWidget(screen(PastGameweek(result: haul)));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    final balls = tester
+        .widgetList<Container>(find.byType(Container))
+        .where(
+          (c) =>
+              c.constraints?.maxWidth == 10 &&
+              (c.decoration as BoxDecoration?)?.color == Colors.white,
+        )
+        .length;
+    expect(balls, 3, reason: 'five goals drew $balls footballs');
+  });
+
+  testWidgets('a past card says who he played', (tester) async {
+    // ⭐⭐ Owner: *"for history GWs, can we see which club player played against."* ⚠️ *Two points against
+    // City and two against Burnley are different weeks*, and the column that told them apart was missing.
+    await tester.pumpWidget(screen(PastGameweek(result: week())));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ARS (H)'), findsWidgets);
   });
 }
 
