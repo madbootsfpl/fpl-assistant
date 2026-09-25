@@ -305,7 +305,7 @@ table"* and *"one guess gets one row."*
 **Stage B does not stop:** someone who **knows a key** reading that row. That is unchanged from ADR-094's
 original design, and it splits in two:
 
-- a `sha256(email)` key is **not guessable** — those users are effectively protected
+- 🔴 **a `sha256(email)` key is NOT a secret, and this line was wrong** (corrected 2026-09-25, ADR-297). It is not *guessable*, which is a different property: anyone who knows the email **computes** it — `sha256(clean_email(e))[:32]`, one line, no access to anything required. ⭐ *It was built to keep raw emails out of the table (ADR-106), a privacy measure, and then quietly became the access control.* See `docs/00_Project/Security_Review.md`
 - a **user-chosen handle** from the no-login path (`"TS"`, `"RoboTS"`) **is** guessable, and always was
 
 ⭐ **Only Stage C fixes the second case**, by replacing "knowing the key" with "being the user".
@@ -351,10 +351,19 @@ Sign-in admits normally; the Admin roster renders via `FPL_ADMIN_STORE_KEY`.
   real run; the instruction that failed silently in one shell has been moved inside the script, where it
   works in both.
 
-⚠️ **What remains open, and it is not small:** a **guessed** handle still reads through `get_squad`. The
-`sha256(email)` keys are not guessable; the user-chosen ones from the no-login path — `ts`, `robots`,
-`tesheridan` were all visible in the pre-B3 probe — are. **Only Stage C closes that**, by replacing *knowing
-the key* with *being the user*.
+⚠️⚠️ **What remains open, and it is bigger than this section said** (corrected 2026-09-25, ADR-297).
+A handle read through `get_squad` needs only to be **known**, and there are two ways to know one:
+
+- user-chosen handles from the no-login path — `ts`, `robots`, `tesheridan` were all visible in the
+  pre-B3 probe — are **guessable**, which this section already said;
+- 🔴 **`sha256(email)` keys are computable by anyone who knows the email**, which it said the opposite of.
+  Not guessing: `sha256(clean_email(e))[:32]`, one line. ⭐ *A hash of something other people know is a
+  pseudonym, not a secret* — it was built to keep raw emails out of the table (ADR-106) and then became
+  the access control.
+
+**Only Stage C closes either**, by replacing *knowing the key* with *being the user*. Until then see
+`docs/00_Project/Security_Review.md` for the interim options and what currently stands between this and
+an exploit (the publishable key is server-side only, and **not** in the mobile app).
 
 📋 **Also found on the way:** `player_watchlist` was documented in BETA.md and **never created in
 production**, so the watchlist had never persisted — it worked within a session and vanished on refresh, on
