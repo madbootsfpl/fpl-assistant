@@ -1,8 +1,8 @@
 # ADR-300 — Chatter and News under Signals
 
 **Date:** 2026-09-25
-**Status:** ⏳ **Gate — asked, not agreed.** Nothing in this ADR ships code, and one half of it is a
-recommendation to **not build**.
+**Status:** ✅ **Chatter built** (2026-09-25). 🔴 **News not built** — the recommendation below stands
+and was accepted.
 **From:** the owner — *"Signals: can we add in the Headlines — FPL analysis & football news as well as the
 Community chatter, maybe stick under one or two new sub tabs under Signals called Chatter and/or News. Can
 we have images rather than just links. Thoughts?"*
@@ -75,3 +75,51 @@ page*, and it is the one this app can supply without asking anyone's permission.
 📌 **If the answer is "build News anyway"**, the version I would argue for is *narrow*: team-news and
 injury headlines **only**, filtered to clubs in your squad, with the source named on every row — ⚠️ *which
 is a Signals feature wearing a News label, and that is rather the point.*
+
+
+---
+
+## What building Chatter found
+
+⭐⭐ **The estimate held: it was one endpoint.** `community_signals` needed no change at all — the service
+wraps it, flags rows against the squad, and hands back the same player shape every other answer uses.
+
+⚠️⚠️ **The gating question was answered before any UI existed.** `src/community.py` has warned since
+ADR-059 that *"the cloud IP may be blocked"*, and a tab that is permanently empty in production is not a
+feature. So the service half shipped first and was called **from Render**: Reddit answers. ⭐ *The order
+of work was chosen so the expensive half could be abandoned cheaply.*
+
+⚠️⚠️⚠️ **It needed a cache, and `RedditRssClient`'s own docstring said so** — *"cache + rate-limit-respect
+live at the caller"* — and mine had none. Two taps a minute apart were two fetches, and the second came
+back *"Reddit didn't respond"* the first time I tried it. ⭐ *A tab that fails when you open it twice is a
+tab people conclude is broken.* Ten minutes, keyed on **nothing**: `player_ids` only flag and `limit` only
+slices, so one fetch serves every caller. A failure is never cached — *caching an outage makes a blip into
+a symptom.*
+
+**Four mutants survived honestly, and each led somewhere:**
+
+- Two were **fixture** gaps: a two-entry feed cannot show a post cap being applied, and a cache test that
+  warms the cache with the generous case cannot see a stingy fetch. ⭐ *A branch the test data cannot
+  reach is not being tested.*
+- One was a **genuine redundancy**: the freshness check also tested `rows is not None`, which made the
+  "only cache a success" rule unfalsifiable. ⚠️ *Defence in depth on a rule nobody can break is defence
+  against nothing, and it hides which line is doing the work.* One guard now, and both mutations die.
+- One was a **real gap in the UI test**: I asserted the word *"yours"* and never the outline, which is
+  what the eye actually finds first.
+
+⭐ **And the player-shape sweep demanded the new endpoint before I remembered to add it** — the guard that
+exists because *"a guard that requires manual registration is a guard that will be forgotten."*
+
+📌 **Looks like a bug, is not:** the initials fallback appears more on this screen than anywhere else. The
+Premier League CDN 403s for players it holds no photo of — new signings, mostly — and ⭐ *those are exactly
+the players a subreddit has suddenly started talking about.* Measured: Brobbey, Barry and Tzolakis 403;
+Haaland, Palmer and Isak 200.
+
+## What shipped
+
+**Service:** `chatter()` + `ChatterRequest` + `POST /api/v1/chatter`, with a ten-minute shared cache.
+
+**App:** `chatter_view.dart` — a fourth scope on the Signals bar, each row carrying its mugshot, its
+count, the threads behind it, and an outline if he is yours.
+
+**Tests:** 12 service, 5 widget, mutation-tested **9/9** and **8/8**.
