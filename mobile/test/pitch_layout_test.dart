@@ -37,6 +37,7 @@ Widget screen(Widget child) => MaterialApp(
 );
 
 void main() {
+  _landscape();
   _scaling();
   testWidgets('the green fills the space it is given', (tester) async {
     final team = sampleTeam();
@@ -289,5 +290,101 @@ void _scaling() {
       expect(sizes.map((s) => s.width.round()).toSet().length, 1);
       expect(sizes.first.width, closeTo(22.3, 1));
     });
+  });
+}
+
+/// Landscape: the bench beside the pitch, not below it (ADR-293).
+///
+/// ⭐⭐ **The substitutes were drawn larger than the team.** The XI rows are `Expanded` and divide
+/// whatever height is left, so each card shrinks to fit its row; the bench is not height-constrained and
+/// kept its full size. On the owner's tablet in landscape that was **32pt kits against a 46pt bench** —
+/// and a phone in landscape was worse still, at 9pt.
+void _landscape() {
+  Future<({List<double> kits, int cards})> pump(
+    WidgetTester tester,
+    double w,
+    double h,
+  ) async {
+    tester.view.physicalSize = Size(w, h);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PitchView(
+            team: sampleTeam(),
+            mode: PitchMode.nextGw,
+            onMode: (_) {},
+            onTapPlayer: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    // ⚠️ `takeException`, because the first version of this layout overflowed by 3.7px — ⭐ *a layout
+    // that fits on the device you tested is not a layout that fits.*
+    expect(tester.takeException(), isNull);
+    final kits = [
+      for (final e in find.byType(Image).evaluate())
+        if (tester.getRect(find.byWidget(e.widget)).width > 16)
+          tester.getRect(find.byWidget(e.widget)).width,
+    ];
+    return (kits: kits, cards: kits.length);
+  }
+
+  group('the bench never outgrows the eleven', () {
+    for (final (w, h, name) in const [
+      (390.0, 760.0, 'phone portrait'),
+      (760.0, 390.0, 'phone landscape'),
+      (800.0, 1280.0, 'tablet portrait'),
+      (1280.0, 800.0, 'tablet landscape'),
+    ]) {
+      testWidgets('on a $name', (tester) async {
+        final r = await pump(tester, w, h);
+
+        expect(
+          r.cards,
+          greaterThanOrEqualTo(15),
+          reason: 'eleven and a bench of four',
+        );
+        // ⭐ Within a point of each other. *A bench bigger than the XI is a screen that has its
+        // priorities the wrong way round*, and it is the shape of the bug this fixes.
+        final biggest = r.kits.reduce((a, b) => a > b ? a : b);
+        final smallest = r.kits.reduce((a, b) => a < b ? a : b);
+        expect(
+          biggest - smallest,
+          lessThan(2),
+          reason:
+              'kits range $smallest..$biggest — the bench and the XI disagree',
+        );
+      });
+    }
+  });
+
+  testWidgets('landscape is no longer a punishment', (tester) async {
+    // ⚠️⚠️ **The numbers, because the change is a size.** Portrait was always fine; landscape was the
+    // screen that could not be read.
+    final portrait = await pump(tester, 800, 1280);
+    final landscape = await pump(tester, 1280, 800);
+
+    expect(
+      landscape.kits.first,
+      greaterThan(40),
+      reason: 'was 32 before the bench moved',
+    );
+    expect(
+      (landscape.kits.first - portrait.kits.first).abs(),
+      lessThan(2),
+      reason: 'turning the tablet should not resize the team',
+    );
+  });
+
+  testWidgets('a phone in landscape is helped too', (tester) async {
+    // ⭐ I gated this to tablets first, reasoning a phone would end up with a letterbox pitch. The
+    // measurement said the opposite: 9pt kits became 17. *A rule that needs a device class is a rule
+    // that has not found what it depends on yet.*
+    final r = await pump(tester, 760, 390);
+
+    expect(r.kits.reduce((a, b) => a < b ? a : b), greaterThan(14));
   });
 }

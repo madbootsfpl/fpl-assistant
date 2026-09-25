@@ -144,7 +144,34 @@ class PitchView extends StatelessWidget {
                         .fold(0, (a, b) => a > b ? a : b),
                     shortestSide: MediaQuery.sizeOf(context).shortestSide,
                   );
-                  return Column(
+                  // ⭐⭐ **Beside the pitch when the screen is wide** (ADR-293). Along the bottom the
+                  // bench cost ~180pt of the height the eleven were dividing, and on a landscape tablet
+                  // the XI's kits came out at 32pt against the bench's 46pt — ⚠️⚠️ *the substitutes were
+                  // drawn larger than the team.* Sideways there is width going spare and no height at
+                  // all, so the bench takes the width and gives the height back.
+                  //
+                  // ⚠️⚠️ **Any shape wider than it is tall, phones included — and I gated this to
+                  // tablets first.** The reasoning was that a 390pt-tall phone would end up with a
+                  // letterbox pitch; the measurement said the opposite. A phone in landscape was the
+                  // *worst* case of the bug, at **9pt kits against a 22pt bench**, and sideways it is
+                  // 17–18pt and matched.
+                  //
+                  // ⭐ *A rule that needs a device class is a rule that has not found what it depends
+                  // on yet* — and what this depends on is the shape, which is already in `box`.
+                  final sideways = box.maxWidth > box.maxHeight;
+
+                  final bench = Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                    child: _Bench(
+                      team: team,
+                      mode: mode,
+                      onTapPlayer: onTapPlayer,
+                      drawWidth: cardWidth,
+                      vertical: sideways,
+                    ),
+                  );
+
+                  final pitch = Column(
                     children: [
                       // ⭐ The wordmark, inside the pitch. It used to have a row of its own above the header
                       // — 60px to say a name the reader already knows. On the green it is present and costs
@@ -184,17 +211,31 @@ class PitchView extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // ⭐ On the green, not under it: a dark panel **sitting on** the pitch is integrated
-                      // and still plainly separate, which is what the bench is.
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                        child: _Bench(
-                          team: team,
-                          mode: mode,
-                          onTapPlayer: onTapPlayer,
-                          drawWidth: cardWidth,
+                    ],
+                  );
+
+                  if (sideways) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: pitch),
+                        // ⚠️ Centred, not stretched: four cards in a column do not fill a tablet's
+                        // height, and a panel of empty dark down the side reads as a missing list.
+                        //
+                        // ⚠️⚠️ **And `scaleDown`, because it overflowed by 3.7px.** Four cards at the
+                        // XI's own size is *nearly* a tablet's height, and "nearly" is a yellow-striped
+                        // overflow on some screens and not others — ⭐ *a layout that fits on the device
+                        // you tested is not a layout that fits.*
+                        Center(
+                          child: FittedBox(fit: BoxFit.scaleDown, child: bench),
                         ),
-                      ),
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      Expanded(child: pitch),
+                      bench,
                       if (footer != null)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
@@ -809,6 +850,7 @@ class _Bench extends StatelessWidget {
     required this.mode,
     required this.onTapPlayer,
     required this.drawWidth,
+    this.vertical = false,
   });
 
   final MyTeam team;
@@ -818,6 +860,13 @@ class _Bench extends StatelessWidget {
   /// ⭐ **The width the eleven above are drawn at.** On a phone the bench and the XI have always matched
   /// each other, and a tablet should be no different.
   final double drawWidth;
+
+  /// Stacked down the side rather than along the bottom (ADR-293).
+  ///
+  /// ⭐⭐ **A landscape tablet has width to spare and no height at all.** Along the bottom the bench cost
+  /// ~180pt of the room the eleven were dividing, and the XI's kits rendered at 32pt against the bench's
+  /// 46pt — ⚠️ *the substitutes were drawn larger than the team.*
+  final bool vertical;
 
   @override
   Widget build(BuildContext context) {
@@ -829,6 +878,7 @@ class _Bench extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(4, 5, 4, 7),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
             'BENCH',
@@ -839,7 +889,11 @@ class _Bench extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Row(
+          // ⭐ One list, laid out along whichever axis has the room. ⚠️ *Two bench widgets would be two
+          // places for the order badge to drift out of.*
+          Flex(
+            direction: vertical ? Axis.vertical : Axis.horizontal,
+            mainAxisSize: vertical ? MainAxisSize.min : MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
