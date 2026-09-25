@@ -118,13 +118,49 @@ stating the rule it broke — *null means not known, never zero*, and **GW0 is a
 `0.0 Predicted` above fifteen cards that all read `—` — *a header that contradicts every number under it
 is worse than no header, because it is the one a reader trusts.* It is a dash now too.
 
+## What the testers found that the build did not
+
+⭐⭐⭐ **Four reports from a tablet and an iPhone, and the first one invalidated a screen that twenty
+tests passed on.** *"The right swipe into history shows a list rather than a pitch layout."*
+
+⚠️⚠️ **He is right, and the reason is the feature.** The pitch **is** how this app says *"your team."*
+The same fifteen names in a column says *"a report about your team"*, and the reason to swipe back is to
+see the side you picked, in the shape you picked it. ⭐ *A test that checks the values a screen shows
+cannot tell you it is the wrong screen* — every assertion I had written was about the numbers.
+
+⭐ The layout is now **shared rather than copied**: `PitchBoard<T>` holds the green, the four rows and the
+bench; the caller supplies the cards. Everything ADR-253 and ADR-293 paid for applies to a past week
+without being written twice, and all 21 layout tests passed unchanged through the extraction.
+
+⚠️⚠️ **"The list does not have yellow or red cards."** They were in the build — as a 🟨 glyph inside a
+run-on line of events. ⭐ *An event you have to read a sentence to find is an event the screen did not
+report.* A booking is now a coloured rectangle on the shirt, and a rectangle rather than an emoji because
+🟨 renders grey on some Android builds — *the one event whose entire meaning is its colour.*
+
+⚠️⚠️⚠️ **The iPhone was offered an Android APK.** Nothing checked the platform, and the manifest describes
+the one artefact an iPhone cannot do anything with. ⭐ *A notice is a promise that tapping it will help.*
+The gate lives in `published()` rather than at the call site, and takes an override — **the bug shipped
+precisely because the iOS path could not be exercised from a Mac test run**, and *a guard no test can
+reach is a guard that is not there.*
+
+⚠️ **The Android update stopped auto-opening.** `Content-Disposition: attachment` means *"do not handle
+this, file it away"*, so Chrome stopped offering **Open** and the installer had to be found in Downloads.
+⭐ *Two headers were added to fix one bug and only one of them was doing the work* — the
+rendering-as-text bug was a missing `Content-Type`. The disposition was added beside it defensively and
+quietly cost a step on every update for three builds. ⚠️ *A defensive line nobody can point at a failure
+for is a line that is free to cost something.*
+
+📌 **Not a defect: the swipe does not exist on `madboots.streamlit.app`.** It was built in the Flutter app
+only. The web app is a separate codebase and would need its own build of this.
+
 ## What shipped
 
 **Service:** `POST /api/v1/squad/gameweek` → `gameweek_result()`; `run_xp` and the fixture map widened from
 `RUN` to `SWIPE`; `yellow_cards` / `red_cards` through the model, the schema, and the migrations.
 
-**App:** `season_view.dart` — `SeasonPages` (the `PageView` and the index arithmetic), `PastGameweek` (the
-result list), `ForwardEdge` (the page that says why it stops). `PitchView` gained an optional `gameweek`,
+**App:** `season_view.dart` — `SeasonPages` (the `PageView` and the index arithmetic), `PastGameweek`,
+`ForwardEdge` (the page that says why it stops); `result_pitch.dart` — a played week on the green;
+`PitchBoard<T>` in `pitch.dart`, the layout both weeks share. `PitchView` gained an optional `gameweek`,
 and on a forward page it drops the mode bar, the deadline countdown, the bank, the value, the transfers and
 the price — ⭐ *every one of those is a true fact about today that becomes a false claim four weeks out.*
 
