@@ -238,6 +238,20 @@ class ChipsBody(SquadBody):
                     "wildcard someone played in GW4 is a wrong answer delivered confidently.")
 
 
+class GameweekResultBody(BaseModel):
+    """⚠️ **A manager and a gameweek that has been played** (ADR-298).
+
+    ⭐ Public, like `my-team`: FPL shows any manager's past squad on its own site once the deadline has
+    passed. Nothing owner-scoped is served here either.
+    """
+
+    manager_id: int = Field(..., ge=1, description="The FPL manager (entry) id.")
+    gameweek: int = Field(..., ge=1, le=38,
+                          description="The gameweek to look back at. A week FPL has not published yet "
+                                      "answers `played: false` rather than failing — swiping past the "
+                                      "present is a normal gesture.")
+
+
 class MyTeamBody(BaseModel):
     """⚠️ **An FPL manager id, not a squad** — the one endpoint that names a person.
 
@@ -615,6 +629,20 @@ def squad_my_team(body: MyTeamBody) -> dict:
     FPL's API is sometimes simply unreachable. The message says which.
     """
     return _answer(service.my_team, service.MyTeamRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/squad/gameweek")
+def squad_gameweek(body: GameweekResultBody) -> dict:
+    """A **played** gameweek: the squad as it was, and what each player actually scored.
+
+    ⭐⭐ **Cheap on purpose.** The per-player week — points, goals, assists, bonus, saves, minutes, cards
+    — is already stored by the pipeline; the only thing FPL alone knows is whose team he was in, which is
+    one request. ⚠️⚠️ *And a played gameweek never changes*, so a client may cache this permanently: the
+    cost is one request per manager per gameweek, ever.
+
+    ⭐ A week that has not happened answers `played: false` with an empty squad rather than an error.
+    """
+    return _answer(service.gameweek_result, service.GameweekResultRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/squad/replacements")

@@ -101,7 +101,7 @@ def _players_in(value, path="", found=None):
 
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
-COVERED = {"analysis", "trending", "league", "head_to_head", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
+COVERED = {"analysis", "trending", "league", "gameweek_result", "head_to_head", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
            "replacements", "players", "player", "player_dna", "signals"}
 
 
@@ -122,6 +122,38 @@ def _h2h(store, ids):
     return build(store, ids)
 
 
+def _gameweek_result(store, ids):
+    """A played gameweek, stubbed at the FPL boundary like `_league` and `_h2h`.
+
+    ⭐ In the sweep proper, not in NO_PLAYERS: **a past week comes with its player**, and the first
+    version of this endpoint invented a flat `{web_name, points}` dict — a second player shape, caught
+    here within minutes of being written. ⚠️ *The guard's value is that it refuses a new shape at the
+    moment it is cheapest to change.*
+    """
+    from src.api import client as fpl_client
+
+    class _Canned:
+        def get_entry_picks(self, entry_id, gameweek):
+            return {
+                "active_chip": None,
+                "automatic_subs": [],
+                "entry_history": {"points": 50, "overall_rank": 1, "rank": 1,
+                                  "event_transfers": 0, "event_transfers_cost": 0,
+                                  "points_on_bench": 0},
+                "picks": [{"element": e, "position": n + 1, "multiplier": 1,
+                           "is_captain": False, "is_vice_captain": False}
+                          for n, e in enumerate(ids)],
+            }
+
+    real = fpl_client.FplClient
+    fpl_client.FplClient = lambda *a, **k: _Canned()
+    try:
+        return service.gameweek_result(
+            service.GameweekResultRequest(manager_id=1, gameweek=1), store=store)
+    finally:
+        fpl_client.FplClient = real
+
+
 def _answers(store):
     ids = _squad(store)
     dearest = max((p for p in store.get_players() if p["id"] not in set(ids)),
@@ -137,6 +169,7 @@ def _answers(store):
         # a row per differential. ⚠️ Both are **stubbed at the FPL boundary**, because a sweep that needed
         # the internet would be a sweep somebody eventually deletes.
         "league": _league(store, ids),
+        "gameweek_result": _gameweek_result(store, ids),
         "head_to_head": _h2h(store, ids),
         "compare": _compare_two(store),
         "player": service.player(

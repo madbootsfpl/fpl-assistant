@@ -75,6 +75,13 @@ _MIGRATIONS = {
         "threat": "REAL",
         "defcon": "INTEGER",
         "value": "INTEGER",
+        # ⚠️⚠️ **ADR-298 — and they belong HERE, in the entry that already exists.** Adding a second
+        # `"player_history"` key to this dict is silently the *last* one: Python keeps it, discards the
+        # other, and the migration simply never runs. ⭐ *A duplicate key in a dict literal is not an
+        # error, it is a deletion* — the columns appeared in the schema, the migration looked registered,
+        # and an existing database gained neither.
+        "yellow_cards": "INTEGER",
+        "red_cards": "INTEGER",
     },
     "players": {
         "points_per_game": "REAL",
@@ -218,6 +225,8 @@ CREATE TABLE IF NOT EXISTS player_history (
     threat         REAL,
     defcon         INTEGER,
     value          INTEGER,
+    yellow_cards   INTEGER,       -- ADR-298 — a week's story is not only its points
+    red_cards      INTEGER,
     -- ⚠️ **`season` is part of the identity (ADR-201), and without it this table could only ever hold one.**
     -- FPL restarts `fixture` ids at 1 every August, so `(element_code, fixture)` silently collided across
     -- seasons: GW1 of the new season would overwrite GW1 of the old, row for row, with no error. The
@@ -488,8 +497,8 @@ UPSERT_HISTORY = """
 INSERT INTO player_history
     (element_code, season, round, minutes, total_points, was_home, opponent_team, fixture, kickoff_time,
      team_h_score, team_a_score, goals_scored, assists, clean_sheets, goals_conceded, saves, bonus, bps, xg,
-     xa, xgi, xgc, ict_index, influence, creativity, threat, defcon, value)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     xa, xgi, xgc, ict_index, influence, creativity, threat, defcon, value, yellow_cards, red_cards)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(element_code, season, fixture) DO UPDATE SET
     minutes        = excluded.minutes,
     total_points   = excluded.total_points,
@@ -515,7 +524,9 @@ ON CONFLICT(element_code, season, fixture) DO UPDATE SET
     creativity     = excluded.creativity,
     threat         = excluded.threat,
     defcon         = excluded.defcon,
-    value          = excluded.value
+    value          = excluded.value,
+    yellow_cards   = excluded.yellow_cards,
+    red_cards      = excluded.red_cards
 """
 
 UPSERT_FIXTURE = """
@@ -1079,7 +1090,8 @@ class Storage:
              r.was_home, r.opponent_team, r.fixture,
              r.kickoff_time, r.team_h_score, r.team_a_score, r.goals_scored, r.assists, r.clean_sheets,
              r.goals_conceded, r.saves, r.bonus, r.bps, r.xg, r.xa, r.xgi, r.xgc, r.ict_index,
-             r.influence, r.creativity, r.threat, r.defcon, r.value)
+             r.influence, r.creativity, r.threat, r.defcon, r.value,
+               r.yellow_cards, r.red_cards)
             for r in rows
         ]
         with self.conn:

@@ -1043,6 +1043,110 @@ def league(request: LeagueRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None = None) -> dict:
+    """A gameweek that has been **played** — the squad as it was, and what each player actually scored.
+
+    ⭐⭐ **Almost all of this is already on the server** (ADR-298). The per-player week — points, goals,
+    assists, bonus, saves, minutes, cards — is in `player_history`, kept current by the pipeline. The one
+    thing FPL alone knows is *whose team he was in that week*, which costs one request.
+
+    ⚠️⚠️ **A played gameweek never changes**, so a caller may cache this forever. That is the whole
+    economics of the feature: one request per manager per gameweek, ever.
+
+    ⚠️ Degrades rather than raises, like `my_team` — a gameweek FPL has not published yet returns
+    `played: false` and an empty squad, because ⭐ *a screen that can be swiped into before the data
+    exists must have something true to draw.*
+    """
+    from src.api.client import FplApiError, FplClient
+
+    request.validate()
+    client = FplClient()
+    try:
+        payload = client.get_entry_picks(request.manager_id, request.gameweek)
+    except FplApiError:
+        # ⭐ Not an error: swiping to a gameweek that has not happened is a normal gesture.
+        return {"gameweek": request.gameweek, "played": False, "squad": [], "summary": {}}
+
+    store, ours = opened(store)
+    try:
+        players = {p["id"]: p for p in store.get_players()}
+        by_code = store.get_gw_history_by_code()
+        # ⚠️ Keyed by the **round**, not the fixture: a double gameweek gives a player two rows, and the
+        # week's story is their sum — ⭐ *showing one of two matches is worse than showing neither,
+        # because it looks complete.*
+        week = {}
+        for code, rows in by_code.items():
+            played = [r for r in rows if r["round"] == request.gameweek]
+            if played:
+                week[code] = played
+
+        history = payload.get("entry_history") or {}
+        subs = {s.get("element_out"): s.get("element_in")
+                for s in (payload.get("automatic_subs") or [])}
+
+        # ⭐⭐ **The player is a `player_summary`, and the week sits beside him** (ADR-227). The first
+        # version of this invented a flat dict with `web_name` and `points` on one level — a *second*
+        # player shape, which `test_player_shape.py` refused within minutes of it being written.
+        # ⚠️ *A past week's facts are not properties of a player; they are properties of a player in a
+        # week*, and flattening them makes every other endpoint's shape a little less true.
+        squad = []
+        total = lambda rows, key: sum((r[key] or 0) for r in rows)
+        for pick in payload.get("picks") or []:
+            pid = pick.get("element")
+            player = players.get(pid)
+            if player is None:
+                continue
+            rows = week.get(player["code"], [])
+            squad.append({
+                # ⚠️ Empty projection maps: a played week has results, not forecasts — the same call the
+                # league captain split makes.
+                "player": player_summary(player, {}, {}, {}),
+                "result": {
+                    # ⚠️ FPL's own total, **not** ours: it already includes bonus, and recomputing a
+                    # settled fact is offering a second opinion on it.
+                    "points": total(rows, "total_points"),
+                    "minutes": total(rows, "minutes"),
+                    "goals": total(rows, "goals_scored"),
+                    "assists": total(rows, "assists"),
+                    "bonus": total(rows, "bonus"),
+                    "saves": total(rows, "saves"),
+                    "clean_sheet": any(r["clean_sheets"] for r in rows),
+                    "yellow_cards": total(rows, "yellow_cards"),
+                    "red_cards": total(rows, "red_cards"),
+                    # ⚠️ Distinguishes *"zero points"* from *"no match"* — ⭐ a blank gameweek and a bad
+                    # performance are different weeks and must not draw the same.
+                    "played": bool(rows),
+                },
+                "pick": {
+                    "multiplier": pick.get("multiplier"),
+                    "is_captain": bool(pick.get("is_captain")),
+                    "is_vice_captain": bool(pick.get("is_vice_captain")),
+                    # ⭐ The bench as it was **set**; `came_on` is what the game then did.
+                    "benched": (pick.get("position") or 0) > 11,
+                    "came_on": pid in set(subs.values()),
+                    "went_off": pid in subs,
+                },
+            })
+
+        return {
+            "gameweek": request.gameweek,
+            "played": True,
+            "squad": squad,
+            "summary": {
+                "points": history.get("points"),
+                "overall_rank": history.get("overall_rank"),
+                "rank": history.get("rank"),
+                "transfers": history.get("event_transfers"),
+                "hit": history.get("event_transfers_cost"),
+                "bench_points": history.get("points_on_bench"),
+                "chip": payload.get("active_chip"),
+            },
+        }
+    finally:
+        if ours:
+            store.close()
+
+
 def head_to_head(request: HeadToHeadRequest, *, store: Storage | None = None) -> dict:
     """You against one rival, decomposed (ADR-161/267).
 

@@ -149,6 +149,28 @@ class BuildRequest:
             raise ValueError(f"ids both included and excluded: {sorted(clash)}")
 
 
+@dataclass
+class GameweekResultRequest:
+    """*"What happened in gameweek N?"* — a week that has been **played** (ADR-298).
+
+    ⚠️ Like `MyTeamRequest` this names a person rather than a squad, because only FPL knows whose team a
+    player was in five weeks ago. ⭐ *The alternative is a client that uploads its own history, which is a
+    client defining the past.*
+    """
+
+    manager_id: int = 0
+    gameweek: int = 0
+
+    def validate(self) -> None:
+        if self.manager_id < 1:
+            raise ValueError("a manager id is required")
+        # ⚠️ 1-38 is the shape of a season, not a guess about which ones exist. A gameweek that has not
+        # been played is answered with `played: false`, not refused — ⭐ *swiping into next week is a
+        # normal gesture and must not read as an error.*
+        if not 1 <= self.gameweek <= 38:
+            raise ValueError(f"gameweek {self.gameweek} is outside 1-38")
+
+
 @dataclass(frozen=True)
 class MyTeamRequest:
     """*"Show me my team"* — ⚠️ **the one request that names a person rather than a squad.**

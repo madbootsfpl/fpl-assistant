@@ -61,6 +61,11 @@ class PlayerGameweek:
     threat: float | None = None
     defcon: int | None = None
     value: int | None = None          # price that gameweek, in tenths (FPL's own unit)
+    # ⭐⭐ **Cards, because a week's story is not only its points** (ADR-298). A 17-point haul and a
+    # 17-point haul with a red card are different weeks, and the scoreline alone cannot tell them apart.
+    # ⚠️ FPL has sent these since the beginning; we simply never stored them.
+    yellow_cards: int | None = None
+    red_cards: int | None = None
 
     @classmethod
     def from_api(cls, raw: dict, element_code: int) -> "PlayerGameweek":
@@ -83,6 +88,8 @@ class PlayerGameweek:
             assists=_to_int(raw.get("assists")),
             clean_sheets=_to_int(raw.get("clean_sheets")),
             goals_conceded=_to_int(raw.get("goals_conceded")),
+            yellow_cards=_to_int(raw.get("yellow_cards")),
+            red_cards=_to_int(raw.get("red_cards")),
             saves=_to_int(raw.get("saves")),
             bonus=_to_int(raw.get("bonus")),
             bps=_to_int(raw.get("bps")),
