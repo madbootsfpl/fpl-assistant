@@ -296,8 +296,13 @@ def test_the_token_is_only_ever_read() -> None:
     # documentation along with the leak*, which is how a guard gets deleted rather than satisfied.
     expansions = re.findall(r"\$\{?CLOUDFLARE_API_TOKEN[^}]*\}?", SCRIPT.read_text())
 
-    assert expansions == ["${CLOUDFLARE_API_TOKEN:-}"], (
-        f"the token's value is expanded somewhere other than its presence check: {expansions}"
+    # ⚠️ **Every** expansion must be the presence-check form — not "there is exactly one of them". The
+    # script legitimately asks twice (whether to publish, and what to print at the end), and pinning the
+    # count made the guard fail on a change that was entirely safe. ⭐ *A security test that counts
+    # occurrences instead of judging them fails on growth and gets loosened by whoever is in a hurry.*
+    assert expansions, "the presence check is gone — publishing may be unguarded"
+    assert set(expansions) == {"${CLOUDFLARE_API_TOKEN:-}"}, (
+        f"the token's value is expanded outside a presence check: {set(expansions)}"
     )
 
 
@@ -310,3 +315,23 @@ def test_no_credential_file_is_tracked() -> None:
     for name in tracked:
         assert ".wrangler" not in name, name
         assert not name.endswith((".dev.vars", "wrangler.toml.local")), name
+
+
+def test_the_closing_line_knows_whether_it_published() -> None:
+    """⭐ *A closing instruction that tells you to do the thing the script just did is how a reader learns
+    to stop reading them.*
+
+    The first run of ADR-290 deployed successfully and then printed "NEXT: drag $SITE to Cloudflare
+    Pages" — ⚠️ *the release was correct and its last word was wrong*, which is the half of a change that
+    tests do not usually reach.
+    """
+    script = SCRIPT.read_text()
+    tail = script[script.index("NEXT:") - 400:]
+
+    assert 'if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then' in tail, (
+        "the closing instruction no longer depends on whether it published"
+    )
+    assert "Testers already have it" in script
+    assert "drag $SITE to Cloudflare Pages, then commit" in script, (
+        "the manual fallback instruction is gone for people without a token"
+    )

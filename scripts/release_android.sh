@@ -251,5 +251,11 @@ echo
 echo "  staged in $SITE/app:"
 ls -lh "$SITE/app" | awk 'NR>1 {printf "    %-18s %s\n", $9, $5}'
 echo
-echo "  NEXT: drag $SITE to Cloudflare Pages, then commit the version bump."
-echo "        testers go to https://madboots.com/app/"
+# ⚠️ Says what is actually left, which depends on whether it published. ⭐ *A closing instruction that
+# tells you to do the thing the script just did is how a reader learns to stop reading them.*
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  echo "  NEXT: commit the version bump. Testers already have it: https://madboots.com/app/"
+else
+  echo "  NEXT: drag $SITE to Cloudflare Pages, then commit the version bump."
+  echo "        testers go to https://madboots.com/app/"
+fi

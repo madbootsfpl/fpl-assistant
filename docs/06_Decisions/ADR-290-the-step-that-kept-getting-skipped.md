@@ -49,6 +49,31 @@ leak*, and a guard that fires on the prose explaining the guard teaches people t
 5/5 mutations killed: publishing removed, the wrong folder deployed, a missing token breaking the
 release, the script falling silent about publishing, and the token reaching the command line.
 
+## ⭐ Proven on the first run, and it found two things
+
+Release `1.0.0+10` published itself:
+
+```
+  publishing to Cloudflare Pages (project: madboots)…
+✨ Success! Uploaded 3 files (6 already uploaded) (7.13 sec)
+  ✅ live at https://madboots.com/
+```
+
+The project was called `madboots` — the default — so the third variable was never needed. ⭐ *Trying the
+default before chasing the name cost one command and would have cost a dashboard visit.*
+
+**The release was correct and its last word was wrong.** It deployed, and then printed *"NEXT: drag
+$SITE to Cloudflare Pages"* — ⚠️ *a closing instruction that tells you to do the thing the script just
+did is how a reader learns to stop reading them.* It now says what is actually left, and still gives the
+manual fallback to anyone without a token.
+
+**And the security guard failed on safe code.** Adding that second branch meant a second
+`${CLOUDFLARE_API_TOKEN:-}`, and the test asserted there was exactly **one**. ⭐⭐ *A security test that
+counts occurrences instead of judging them fails on growth and gets loosened by whoever is in a hurry* —
+exactly the wrong moment to be editing a guard about secrets. It checks that **every** expansion is the
+presence-check form now, which is the rule it always meant, and re-killing the command-line-leak mutation
+confirmed it still bites.
+
 ## What this does not do
 
 - **No CI deploy.** This runs on the machine that builds the APK, because that is where the APK is.
