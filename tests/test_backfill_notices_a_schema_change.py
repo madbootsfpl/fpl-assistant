@@ -111,3 +111,46 @@ def test_a_schema_lag_never_tells_a_READER_their_data_is_behind() -> None:
     assert rounds == set()
     # ⭐ While the pipeline, asking its own question of the same database, still knows there is work.
     assert rewalk_due(0, HELD)[0] is True
+
+
+def test_the_rewalk_overwrites_rows_it_already_holds(tmp_path) -> None:
+    """⚠️⚠️⚠️ **The load-bearing assumption of this whole mechanism, and nothing pinned it.**
+
+    The gate deciding to rewalk is useless if the walk cannot *overwrite*. Production's rows already
+    exist, so the fix depends entirely on `save_history` upserting the new columns onto them — and if its
+    `ON CONFLICT` clause ever stopped listing `yellow_cards`, the job would walk 659 players, change
+    nothing, stamp itself current and **go quiet forever**.
+
+    ⭐ *The worst version of a self-healing mechanism is one that reports success without healing* — and
+    this test is the only thing standing between the design and that outcome.
+    """
+    from src.models.player_gameweek import PlayerGameweek
+    from src.storage import Storage
+
+    store = Storage(str(tmp_path / "u.db"), ensure_schema=True)
+    try:
+        raw = {"round": 4, "minutes": 22, "total_points": -2, "was_home": True,
+               "opponent_team": 3, "fixture": 41, "kickoff_time": "2026-09-12T14:00:00Z",
+               "goals_scored": 0, "assists": 0, "clean_sheets": 0, "bonus": 0, "saves": 0,
+               "yellow_cards": 0, "red_cards": 0}
+        # ⭐ The shape production is in: a real row, scored, with the new columns empty.
+        store.save_history([PlayerGameweek.from_api(raw, 111)])
+
+        # The same fixture, refetched — FPL has always had these values; we simply never stored them.
+        store.save_history([PlayerGameweek.from_api(dict(raw, yellow_cards=1, red_cards=1), 111)])
+
+        row = store.conn.execute(
+            "SELECT yellow_cards, red_cards FROM player_history WHERE element_code=111 AND round=4"
+        ).fetchone()
+        assert tuple(row) == (1, 1), (
+            "a rewalk leaves the stored row untouched — the gate would fire, the walk would run, and "
+            "nothing would change"
+        )
+
+        # ⚠️ And repairs rather than duplicates: a second row would double every total downstream.
+        held = store.conn.execute(
+            "SELECT COUNT(*) FROM player_history WHERE element_code=111"
+        ).fetchone()[0]
+        assert held == 1, f"the walk inserted a duplicate instead of updating ({held} rows)"
+    finally:
+        store.close()
