@@ -150,6 +150,28 @@ class BuildRequest:
 
 
 @dataclass
+class ChatterRequest:
+    """*"What is everyone talking about?"* — r/FantasyPL mention counts (ADR-300, on ADR-059).
+
+    ⭐ `player_ids` is **optional and does not narrow the sweep** — the same contract `SignalsRequest`'s
+    global scope already uses. The subreddit talks about whoever it talks about; the ids only let each row
+    come back flagged `owned`, so a list can say *"you have him"* without the client matching ids itself.
+
+    ⚠️ **No `scope`.** Chatter has only one: the whole subreddit. ⭐ *An option with one value is a control
+    that will be read as meaning something.*
+    """
+
+    player_ids: list[int] = field(default_factory=list)
+    limit: int = 10
+
+    def validate(self) -> None:
+        # ⚠️ An upper bound because this is a **display list**, not a dataset: past ~25 rows the tab has
+        # stopped being "what is everyone talking about" and become a directory.
+        if not 1 <= self.limit <= 25:
+            raise ValueError(f"limit {self.limit} is outside 1-25")
+
+
+@dataclass
 class GameweekResultRequest:
     """*"What happened in gameweek N?"* — a week that has been **played** (ADR-298).
 

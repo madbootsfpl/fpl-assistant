@@ -238,6 +238,23 @@ class ChipsBody(SquadBody):
                     "wildcard someone played in GW4 is a wrong answer delivered confidently.")
 
 
+class ChatterBody(BaseModel):
+    """⚠️ **Player ids are optional and do not narrow the sweep** (ADR-300).
+
+    r/FantasyPL talks about whoever it talks about. ⭐ The ids only let each row come back flagged
+    `owned`, so a list can say *"you have him"* without the client matching ids itself — the same contract
+    the global signals scope already uses.
+    """
+
+    player_ids: list[int] = Field(default_factory=list,
+                                  description="Your squad, so rows can be flagged `owned`. Does not "
+                                              "filter the sweep.")
+    limit: int = Field(10, ge=1, le=25,
+                       description="How many players to rank. Capped because this is a display list: "
+                                   "past ~25 rows it has stopped being 'what is everyone talking about' "
+                                   "and become a directory.")
+
+
 class GameweekResultBody(BaseModel):
     """⚠️ **A manager and a gameweek that has been played** (ADR-298).
 
@@ -643,6 +660,23 @@ def squad_gameweek(body: GameweekResultBody) -> dict:
     ⭐ A week that has not happened answers `played: false` with an empty squad rather than an error.
     """
     return _answer(service.gameweek_result, service.GameweekResultRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/chatter")
+def chatter(body: ChatterBody) -> dict:
+    """What r/FantasyPL is talking about — **mention counts, not sentiment**.
+
+    ⭐⭐ **Built on machinery that has existed since ADR-059** and was reachable only from Streamlit: the
+    counter resolves shared `web_name`s properly (ADR-152), so a bare *"Palmer"* is not credited to two
+    players and *"James Maddison"* is not credited to Reece James.
+
+    ⚠️⚠️ **It degrades rather than fails.** Reddit blocks datacentre IPs at times and rate-limits at
+    others; either way this answers with an empty list and a sentence saying so — ⭐ *a tab that can go
+    dark must have something true to draw when it does.*
+
+    ⚠️ Not `/squad/` prefixed: there is no squad here. The ids, if sent, only flag rows.
+    """
+    return _answer(service.chatter, service.ChatterRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/squad/replacements")

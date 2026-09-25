@@ -102,7 +102,25 @@ def _players_in(value, path="", found=None):
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
 COVERED = {"analysis", "trending", "league", "gameweek_result", "head_to_head", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
-           "replacements", "players", "player", "player_dna", "signals"}
+           "replacements", "players", "player", "player_dna", "signals", "chatter"}
+
+
+class _FakeReddit:
+    """An RSS feed naming real players, so the sweep sees real rows."""
+
+    def __init__(self, store):
+        names = [p["web_name"] for p in store.get_players()
+                 if len(p["web_name"]) > 5 and p["web_name"].isalpha()][:3]
+        entries = "".join(
+            f"<entry><title>{n} thread</title><content>{n} {n}</content>"
+            f'<link href="https://reddit.com/{i}"/></entry>'
+            for i, n in enumerate(names)
+        )
+        self._xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+                     '<feed xmlns="http://www.w3.org/2005/Atom">' + entries + "</feed>")
+
+    def get_subreddit_rss(self) -> str:
+        return self._xml
 
 
 def _compare_two(store):
@@ -160,6 +178,11 @@ def _answers(store):
                   key=lambda p: p["price"])
     return {
         "analysis": service.analysis(service.SquadRequest(player_ids=ids, horizon=1), store=store),
+        # ⭐ Chatter carries a summary per talked-about player. ⚠️ **Stubbed at the Reddit boundary** — a
+        # sweep that needed the live subreddit would be a sweep that goes red when somebody else's site
+        # is slow.
+        "chatter": service.chatter(service.ChatterRequest(player_ids=ids, limit=5),
+                                   store=store, client=_FakeReddit(store)),
         "chips": service.chips(service.ChipsRequest(player_ids=ids, bank=2.0), store=store),
         "players": service.players(service.PlayersRequest(horizon=1, limit=5), store=store),
         # ⭐ In the sweep proper: a crowd board carries a **player summary** per row, which is exactly the

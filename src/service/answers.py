@@ -1055,6 +1055,102 @@ def league(request: LeagueRequest, *, store: Storage | None = None) -> dict:
     }
 
 
+#: How long a fetched buzz list is reused (ADR-300).
+#:
+#: ⚠️⚠️ **Reddit rate-limits, and `RedditRssClient` says so in its own docstring:** *"cache +
+#: rate-limit-respect live at the caller."* Without this, two taps a minute apart is two fetches, and the
+#: second came back *"Reddit didn't respond"* the first time I tried it — ⭐ *a tab that fails when you
+#: open it twice is a tab people conclude is broken.*
+#:
+#: ⭐ Ten minutes because the subreddit does not turn over faster than that, and *a cache shorter than the
+#: thing it is caching changes is a rate limiter with extra steps.*
+CHATTER_TTL_SECONDS = 600
+
+#: The last fetched buzz, and when it expires. ⭐ **Keyed by nothing**: `player_ids` only flags rows and
+#: `limit` slices them, so one fetch serves every caller — ⚠️ *a cache keyed on the caller's options is a
+#: cache that misses on the first thing that differs.*
+_CHATTER: dict = {"until": 0.0, "rows": None, "note": ""}
+
+
+def chatter(request: "ChatterRequest", *, store: Storage | None = None, client=None) -> dict:
+    """What r/FantasyPL is talking about (ADR-300, built on ADR-059).
+
+    ⭐⭐⭐ **Almost none of this is new.** `community_signals` has counted whole-word player mentions against
+    the squad index since Sprint 067 — resolving shared `web_name`s properly (ADR-152), degrading on any
+    403 / 429 / timeout / parse error, and never raising. ⚠️ *It was wired to Streamlit and to nothing
+    else*, so the phone has never been able to ask for it: the expensive half was paid for a year ago and
+    has been invisible to every tester since the app shipped.
+
+    ⚠️⚠️ **Mention frequency, not sentiment**, and the note says so. ⭐ *A count of names is not an opinion
+    about players*, and a screen that blurs the two is inventing analysis it did not do.
+
+    ⚠️ Degrades like everything else here: an unreachable Reddit returns an empty list and a sentence, not
+    an error — ⭐ *a tab that can go dark must have something true to draw when it does.*
+    """
+    import time as _time
+
+    from src.community import community_signals
+
+    request.validate()
+    store, ours = opened(store)
+    try:
+        data = load(request.player_ids, 1, store)
+        players = {p["id"]: p for p in data.players}
+        # ⚠️ **One guard, not two.** This also tested `rows is not None`, which made the "only cache
+        # a success" rule below unfalsifiable — a mutation that cached failures survived every test,
+        # because this line quietly refused to serve them. ⭐ *Defence in depth on a rule nobody can
+        # break is defence against nothing, and it hides which line is doing the work.*
+        fresh = _time.time() < _CHATTER["until"]
+        if fresh:
+            rows, note = _CHATTER["rows"], _CHATTER["note"]
+        else:
+            # ⭐ Fetched wide and sliced per caller, so one request serves every `limit`.
+            rows, note = community_signals(data.players, limit=25, client=client)
+            # ⚠️ **A failure is not cached.** Reddit blocking one request must not blank the tab for ten
+            # minutes — ⭐ *caching an outage makes a blip into a symptom.*
+            if rows:
+                _CHATTER.update(
+                    rows=rows, note=note, until=_time.time() + CHATTER_TTL_SECONDS
+                )
+        rows = (rows or [])[: request.limit]
+    finally:
+        if ours:
+            store.close()
+
+    owned_ids = set(request.player_ids)
+    out = []
+    for row in rows or []:
+        raw = players.get(row.get("id"))
+        if raw is None:
+            continue
+        out.append({
+            # ⭐ The **same player shape as every other answer** — `test_player_shape.py` refused a
+            # flattened one within minutes the last time, and it was right to.
+            "player": player_summary(raw, data.xp_by_id),
+            # ⭐⭐ **Our own mugshot, not a thumbnail from the feed** (ADR-300). Reddit entries carry no
+            # reliable image, and ⚠️ *an image that identifies the subject is worth more than one that
+            # decorates the page* — this one we can supply without asking anyone's permission.
+            "photo": photo_url(raw["code"]),
+            "mentions": row.get("mentions", 0),
+            "owned": row["id"] in owned_ids,
+            # ⚠️ Capped: a busy player can be in a dozen threads and ⭐ *a row that scrolls is a row that
+            # has stopped being a summary.* The count above is the whole number; these are the evidence.
+            "posts": [
+                {"title": post.get("title", ""), "link": post.get("link", "")}
+                for post in (row.get("posts") or [])[:3]
+            ],
+        })
+
+    return {
+        "rows": out,
+        # ⭐ The service's own sentence, carried rather than re-derived — *two places that describe the
+        # same outcome are two places that will disagree about it.*
+        "note": note,
+        # ⚠️ **Named on every row's behalf, once.** The tab is about attention, not quality.
+        "measures": "mentions",
+    }
+
+
 def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None = None) -> dict:
     """A gameweek that has been **played** — the squad as it was, and what each player actually scored.
 
