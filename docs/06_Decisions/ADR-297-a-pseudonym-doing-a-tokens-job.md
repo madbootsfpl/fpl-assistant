@@ -73,7 +73,13 @@ mistake* — the fourth time this session (ADR-261, ADR-280, ADR-290).
 
 ## Recommended, in order of effort
 
-1. **Revoke `delete_squad` from `anon`.** One line; removes the only irreversible verb.
+1. ~~**Revoke `delete_squad` from `anon`.**~~ 🔴 **Withdrawn the same day, on being asked how to do
+   it.** Checking produced two corrections: it **breaks the Clear button** (`squads.py:500`), and
+   `save_squad` is an **upsert**, so the same caller destroys the same row by overwriting it.
+   ⭐⭐ *Removing one irreversible verb while leaving another that reaches the same end changes the
+   tidiness of the attack, not its outcome* — and ⚠️ *the recommendation was written from the shape of
+   the grant list rather than from what calls it*, which is the same mistake as the claim it was
+   recommending a fix for.
 2. **Date Stage C**, or accept the email-derived key with a review date — ⭐ *an accepted risk has a
    date; an unexamined one does not.*
 3. **Do not put the publishable key in the mobile app** when accounts arrive.

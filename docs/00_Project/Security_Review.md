@@ -103,8 +103,16 @@ with 'being the user'"*, i.e. real Supabase Auth and RLS on `auth.uid()`. ⭐ *T
 the answer; what it got wrong was how much time it had.*
 
 **Cheaper interim options, in order of effort:**
-1. **Drop `delete_squad` from `anon`.** Destruction is the one irreversible verb, and nothing in the UI
-   needs an anonymous caller to have it.
+1. ~~**Drop `delete_squad` from `anon`.**~~ 🔴 **Withdrawn on 2026-09-25 — I checked it and it was wrong
+   twice** (ADR-297).
+   - **It breaks a feature.** `squads.py:500` calls it: the **Clear** button, by which a user deletes
+     their own saved squad. *"Nothing in the UI needs it"* was asserted, not checked.
+   - **It buys much less than it sounds like.** `save_squad` is an **upsert** —
+     `on conflict (handle) do update set data = excluded.data` — so the same caller can destroy the same
+     row by overwriting it with anything. ⭐ *Removing one irreversible verb while leaving another that
+     reaches the same end is a fix that changes the tidiness of the attack, not its outcome.*
+
+   ⚠️ Revoke it if you want the Clear button gone anyway; do not revoke it believing it closes the hole.
 2. **Salt the key** — `sha256(SERVER_SALT + email)` with the salt held server-side. Restores "not
    guessable" without touching the schema. ⚠️ Existing rows would need migrating or would be orphaned.
 3. **Accept it explicitly** while the beta is ten people who know each other, and record that as a
