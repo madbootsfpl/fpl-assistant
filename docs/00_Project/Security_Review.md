@@ -70,7 +70,7 @@ def user_key(email: str) -> str:            # src/web_streamlit/auth.py
 ```
 
 ⭐⭐ **It was designed so the table need not store raw emails (ADR-106) — a privacy measure — and it has
-since become the access control.** `docs/SUPABASE_RLS.md` reasons:
+since become the access control.** `docs/SUPABASE_RLS.md` reasons — twice, and ADR-259 a third time:
 
 > *a `sha256(email)` key is **not guessable** — those users are effectively protected*
 
@@ -137,8 +137,10 @@ the answer; what it got wrong was how much time it had.*
 ## What I would do before widening the beta
 
 1. **Revoke `delete_squad` from `anon`.** One line, removes the only irreversible verb.
-2. **Decide Stage C's date**, or explicitly accept the email-derived key with a review date. ⭐ *An
-   accepted risk has a date; an unexamined one does not.*
+2. ✅ **Done — Stage C is a precondition on accounts (ADR-259), not a date.** ⚠️ *A date invites
+   slippage; a dependency written into the thing that would violate it does not.* ⭐ **Widening the
+   mobile beta does not need it** — the app keeps everything on the device and carries no Supabase
+   credential, so more testers do not change what Stage C defends. **Building accounts does.**
 3. **Do not put the publishable key in the mobile app** when accounts arrive — that is the change that
    turns a theoretical finding into a live one.
 4. **Correct `SUPABASE_RLS.md`.** Its "not guessable" line is the sentence that would let this be

@@ -28,7 +28,7 @@ Two things changed underneath it this month, and both are worth knowing before y
 publishes itself (ADR-290). Nine testers are on it. ⚠️ *This section said "next: a mobile app" for three
 weeks after it existed* — see ADR-294 for why that is its own kind of bug.
 
-**298 ADRs · 2,705 tests · CI green.**
+**298 ADRs · 2,707 tests · CI green.**
 
 New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
 **[Direction & options](docs/00_Project/DIRECTION.md)**. Running a beta? **[BETA.md](docs/BETA.md)**. The live

@@ -31,7 +31,8 @@ def user_key(email: str) -> str:
     return hashlib.sha256(clean_email(email).encode()).hexdigest()[:32]
 ```
 
-`SUPABASE_RLS.md` reasoned, in **two places**:
+`SUPABASE_RLS.md` reasoned, in **two places** — and ADR-259 in a **third**, found only when the guard
+was widened from a list of files to the whole corpus:
 
 > *a `sha256(email)` key is **not guessable** — those users are effectively protected*
 
@@ -54,7 +55,7 @@ a client.
 
 ## ⭐⭐ The failure mode worth naming
 
-**The two copies corroborated each other.** ADR-281's rule was *"two copies of one rule need a test that
+**The three copies corroborated each other.** ADR-281's rule was *"two copies of one rule need a test that
 they agree, or one is already wrong and nobody knows."* Here both copies said the same wrong thing, so
 agreement proved nothing — ⚠️ *a claim repeated is a claim that looks checked.*
 

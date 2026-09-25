@@ -33,10 +33,12 @@ distribution *is* the gate — the owner hands it to people.
 public FPL data, and the rate limit (ADR-256) caps the cost — ⚠️ but the code already says that reasoning
 *"expires the day the answer depends on who is asking."* Accounts are that day.
 
-🔴 **A guessed handle still reads a saved squad.** `SUPABASE_RLS.md` records it: `sha256(email)` keys are
-not guessable, but the user-chosen handles from the no-login path — `ts`, `robots`, `tesheridan` — were
-all visible in a pre-hardening probe. ⭐ *Only Stage C closes it, by replacing knowing the key with being
-the user.*
+🔴 **A known handle still reads a saved squad**, and there are two ways to know one. The user-chosen
+handles from the no-login path — `ts`, `robots`, `tesheridan` — were all visible in a pre-hardening probe
+and are **guessable**. And `sha256(email)` keys are **computable by anyone who knows the email**, which
+this paragraph originally called *"not guessable"* — ⚠️⚠️ *the third copy of a sentence that was wrong in
+all three places, corrected 2026-09-25 (ADR-297).* ⭐ *Only Stage C closes either, by replacing knowing
+the key with being the user.*
 
 ## Decision
 
@@ -91,6 +93,26 @@ rather than by whichever is easier.
 
 🔴 **Hide the Settings server field before any tester build.** It points the app wherever someone types;
 flagged at ADR-239 and still true.
+
+## 🔴 Precondition: Stage C ships before this does (added 2026-09-25, ADR-297)
+
+⚠️⚠️ **Not a recommendation — a dependency.** Accounts is the change that creates server-side user data
+for the app *and* would put the publishable key in a client. Today neither is true: the mobile app stores
+everything on the device and carries no Supabase credential, which is the only reason the
+computable-key finding (ADR-297) is theoretical rather than live.
+
+⭐⭐ **Building accounts on the current scheme would be the moment the finding stops being theoretical** —
+`sha256(email)` is computable by anyone who knows the address, so shipping a client key alongside it
+hands every saved squad to anyone with a tester's email.
+
+**So the order is fixed:** Supabase Auth + `owner uuid` + RLS on `auth.uid()` (`SUPABASE_RLS.md`
+§ *Stage C — real identity*), **then** this ADR. ⚠️ Stage C is a **migration of live data** — existing
+`sha256(email)` keys mapped to new `auth.uid()`s without stranding a saved squad, with a dual-run period
+— and it needs its own ADR, which is why it is a precondition and not a step inside this one.
+
+⭐ **What this does not block:** more testers on the mobile app. They have nothing in Supabase to protect
+— *the app sidestepped Stage C by keeping everything on the phone*, and widening the beta does not change
+what Stage C is defending.
 
 ## Consequences
 

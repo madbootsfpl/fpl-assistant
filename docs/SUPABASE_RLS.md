@@ -375,7 +375,20 @@ only by capitalisation or whitespace (the ADR-120 problem). Harmless for admissi
 
 ---
 
-## Stage C — real identity (Phase 3, with the mobile API)
+## Stage C — real identity
+
+> ⭐ **What the shipped app changed about this (2026-09-25, ADR-297).** This section was written when
+> Streamlit was the product and Stage C was scheduled *"Phase 3, with the mobile API"*. The app that
+> shipped **sidesteps it**: it stores plan, manager id, seen signals and contact address **on the
+> device**, POSTs nothing that is kept server-side, and carries **no Supabase credential** — so Stage C
+> defends *web* users' saved squads, prefs and watchlists, and nothing belonging to an app tester.
+>
+> ⚠️⚠️ **So the trigger is not a date, it is a feature.** Accounts (ADR-259) creates server-side user
+> data for the app *and* would put the publishable key in a client — and it now records Stage C as a
+> **precondition** rather than a neighbour. ⭐ *A dependency written into the thing that would violate it
+> outlives the conversation that agreed it.*
+>
+> ⭐ Widening the mobile beta does **not** need this: more testers do not change what it defends.
 
 Supabase Auth issues a `uid`; every user-data table gains an `owner uuid references auth.users`; policies
 become the real thing:

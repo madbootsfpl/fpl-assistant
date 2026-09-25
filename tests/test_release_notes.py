@@ -44,11 +44,32 @@ def test_notes_are_a_list() -> None:
 
 
 def test_a_release_with_nothing_to_say_says_nothing() -> None:
-    """⭐⭐ **Empty is the normal case.** Today's HEAD is docs and tests since the last release, and the
-    honest note for that is none — ⚠️ *a script that insists on filling this field will produce "various
-    fixes" forever, which is worse than silence because it looks like information.*
+    """⭐⭐ **Empty is a legal answer**, and the script must be able to give it.
+
+    ⚠️⚠️ **This asserted `notes == []` and passed until the next `fix:` commit landed** — it had pinned
+    *what HEAD happened to be*, not a behaviour, so it failed on a change that was entirely correct.
+    ⭐ *A test that reads the repository's current state tests the day it was written.*
+
+    ⚠️ *A script that insists on filling this field will produce "various fixes" forever, which is worse
+    than silence because it looks like information* — so the empty case is exercised through the one
+    input that can produce it deterministically.
     """
-    assert manifest()["notes"] == []
+    # ⚠️ A blank override is **not** an override — it falls through to the commits, which is right and
+    # which my first rewrite of this test also assumed away. ⭐ *The second wrong assumption about the
+    # same function is the one that shows you were guessing rather than reading it.*
+    assert manifest({"MADBOOTS_NOTES": "   \n\n  "})["notes"] == manifest()["notes"]
+
+    # The empty case is reached through the filter — a release of only invisible work.
+    keep = _subject_filter()
+    assert not any(keep.match(s) for s in [
+        "docs: update the readme",
+        "chore: release 1.0.0+13",
+        "test: cover the lab modes",
+    ])
+
+    # And whatever HEAD happens to be, every entry is real, trimmed text — never a blank bullet.
+    for note in manifest()["notes"]:
+        assert note and note.strip() == note
 
 
 def test_a_human_can_override_them() -> None:

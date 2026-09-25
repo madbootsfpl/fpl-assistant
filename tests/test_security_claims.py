@@ -16,6 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 RLS = ROOT / "docs" / "SUPABASE_RLS.md"
 REVIEW = ROOT / "docs" / "00_Project" / "Security_Review.md"
 
+#: ⚠️⚠️ **Every markdown file, not a list of two.** The first version named `SUPABASE_RLS.md` and the
+#: review — and missed a **third** copy of the claim in ADR-259, which is the file that would have been
+#: read next by whoever built accounts. ⭐ *A guard that enumerates the places a mistake was found only
+#: guards the places it was found.*
+ALL_DOCS = sorted(ROOT.glob("docs/**/*.md"))
+
 
 def test_the_key_is_a_pure_function_of_the_email() -> None:
     """⭐ The finding itself, as arithmetic rather than prose.
@@ -42,7 +48,7 @@ def test_no_document_calls_the_email_key_unguessable() -> None:
         r"(not|un)[- ]?guessable[^.\n]{0,60}sha256\(email\)",
         re.I,
     )
-    for doc in (RLS, REVIEW):
+    for doc in ALL_DOCS:
         for line in doc.read_text().splitlines():
             # ⚠️⚠️ **A quotation of the wrong claim is not the wrong claim.** The first version of this
             # fired on the Security Review's own blockquote — the sentence it exists to refute — which
@@ -79,3 +85,31 @@ def test_the_review_says_what_it_did_not_cover() -> None:
 
     for uncovered in ("penetration", "dependency", "not what is"):
         assert uncovered in body, f"the review does not say it skipped: {uncovered}"
+
+
+def test_accounts_records_stage_c_as_a_precondition() -> None:
+    """⭐⭐ **A dependency, not a recommendation** (ADR-297).
+
+    Accounts is the change that creates server-side user data for the app *and* would put the publishable
+    key in a client — the two facts whose absence makes the computable-key finding theoretical rather
+    than live. ⚠️⚠️ *An intention recorded in a conversation is an intention; recorded in the ADR that
+    would violate it, it is a dependency.*
+    """
+    adr = next((ROOT / "docs" / "06_Decisions").glob("ADR-259-*.md")).read_text()
+
+    assert "Precondition" in adr, "ADR-259 no longer records Stage C as a precondition"
+    assert "Stage C ships before" in adr
+    # ⭐ And the reason, because a rule without one gets waived by whoever is in a hurry.
+    assert "publishable key in a client" in adr
+
+
+def test_widening_the_mobile_beta_is_not_blocked_by_it() -> None:
+    """⚠️ A precondition that blocks more than it needs to is a precondition people route around.
+
+    ⭐ The app stores everything on the device and carries no Supabase credential, so more testers do not
+    change what Stage C defends — and saying so is what keeps the rule credible.
+    """
+    adr = next((ROOT / "docs" / "06_Decisions").glob("ADR-259-*.md")).read_text()
+
+    assert "does not block" in adr
+    assert "more testers" in adr
