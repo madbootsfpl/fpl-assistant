@@ -152,12 +152,19 @@ PY
 python3 - "$SITE" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1]); p = root / "_headers"
-# ⚠️ No `filename=` here. The APK is published under a versioned name and *the glob must not disagree
-# with it* — ⭐ a Content-Disposition naming a different file than the URL is a download that saves as
-# something the install page never mentioned.
+# ⚠️⚠️⚠️ **No `Content-Disposition` at all, and removing it is the fix** (owner's report on build 14:
+# *"I have to go into downloads to open it unlike before when it auto opened"*).
+#
+# ⭐ `attachment` means *"do not handle this, file it away"* — so Chrome stopped offering the **Open**
+# action on the finished download and the installer had to be reached by hand through the Downloads app.
+# The `Content-Type` alone is what Android needs: it identifies the file as a package, and the browser
+# then offers to install it the moment it lands.
+#
+# ⚠️ It was added defensively, to stop a 18MB binary being rendered as text — but *that* was the missing
+# **Content-Type**, which is the line above. ⭐ *Two headers were added to fix one bug, and only one of
+# them was doing the work; the other quietly cost a step on every update for three builds.*
 rule = """/app/*.apk
   Content-Type: application/vnd.android.package-archive
-  Content-Disposition: attachment
 """
 # ⚠️ Merged, not overwritten — the site may grow other rules, and a release script that flattens
 # someone else's configuration is a release script people stop running. ⭐⭐ **But it must still update

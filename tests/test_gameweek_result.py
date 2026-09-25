@@ -64,7 +64,11 @@ def test_a_gameweek_fpl_has_not_published_is_not_an_error(monkeypatch, squad_ids
     """
     answer = run(monkeypatch, None, gameweek=38, raises=True)
 
-    assert answer == {"gameweek": 38, "played": False, "squad": [], "summary": {}}
+    # ⭐ **Every key is present and empty, none is missing.** `kits` arrived with the pitch and joined the
+    # rest — ⚠️ *a degraded answer that drops fields makes the client handle two shapes, and the second
+    # one only ever appears on the path nobody tests by hand.*
+    assert answer == {"gameweek": 38, "played": False, "squad": [],
+                      "kits": {}, "summary": {}}
 
 
 def test_the_squad_is_the_one_from_that_week(monkeypatch, squad_ids):
@@ -169,3 +173,20 @@ def test_an_unknown_player_is_skipped_not_fatal(monkeypatch, squad_ids):
     answer = run(monkeypatch, picks([999_999] + squad_ids[:14]))
 
     assert len(answer["squad"]) == 14
+
+
+def test_every_player_in_that_week_has_a_shirt(monkeypatch, squad_ids):
+    """⚠️⚠️ **The kits of the clubs you owned THEN, which is the whole point of sending them.**
+
+    The past week is drawn on the pitch (owner's feedback on ADR-298's first build), and the live
+    `my-team` kit map covers only the clubs in the *current* squad. ⭐ *A player you have since sold would
+    be shirtless in the week he scored* — which is exactly the week you swiped back to look at.
+    """
+    answer = run(monkeypatch, picks(squad_ids))
+
+    assert answer["kits"], "a played week carries no kits, so the pitch draws fifteen 👕 emoji"
+    for entry in answer["squad"]:
+        club = entry["player"]["team"]
+        assert club in answer["kits"], f"{entry['player']['web_name']} ({club}) has no shirt"
+        assert answer["kits"][club]["outfield"], f"{club}'s outfield shirt is blank"
+        assert answer["kits"][club]["gk"], f"{club}'s keeper shirt is blank"

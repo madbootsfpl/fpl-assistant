@@ -13,8 +13,9 @@ import 'package:flutter/material.dart';
 import 'api/models.dart';
 import 'api/client.dart';
 import 'brand.dart';
-import 'mugshot.dart';
 import 'pitch.dart';
+import 'pitch_markings.dart';
+import 'result_pitch.dart';
 
 /// How far forward the swipe goes (ADR-298).
 ///
@@ -25,9 +26,10 @@ const int kForwardWeeks = 5;
 
 /// One played gameweek, drawn as a list of what each player did.
 class PastGameweek extends StatelessWidget {
-  const PastGameweek({required this.result, super.key});
+  const PastGameweek({required this.result, this.onTapPlayer, super.key});
 
   final GameweekResult result;
+  final void Function(PlayerSummary)? onTapPlayer;
 
   @override
   Widget build(BuildContext context) {
@@ -36,31 +38,36 @@ class PastGameweek extends StatelessWidget {
       // same omission in a shorter sentence.
       return _NotYet(gameweek: result.gameweek);
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+    // ⚠️⚠️⚠️ **A pitch, not a list** — the owner's feedback on the first build: *"the right swipe into
+    // history shows a list rather than a pitch layout."* ⭐ *The pitch is how this app says "your team";
+    // the same fifteen names in a column says "a report about your team",* and the reason to swipe back
+    // is to see the side you picked in the shape you picked it.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ⚠️⚠️⚠️ **Found on a device, not by a test.** Every number on this page was right and the page
-        // never said which week they belonged to — you swiped four times and had no way back to knowing
-        // where you were. ⭐ *A screen whose whole purpose is "which week is this?" has to answer it.*
-        //
-        // ⭐ Said in the same shape the live pitch and the forward pages use — `GW5 · final` against
-        // `GW9 · projected` — so the three page types read as one screen rather than three.
-        _WeekLine(gameweek: result.gameweek, label: 'final'),
-        _Summary(summary: result.summary),
-        const SizedBox(height: 10),
-        for (final player in result.xi) _PlayerRow(entry: player),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(2, 16, 2, 6),
-          child: Text(
-            'BENCH',
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 9.5,
-              letterSpacing: 2,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _WeekLine(gameweek: result.gameweek, label: 'final'),
+              _Summary(summary: result.summary),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // ⭐ The green runs to the bottom, exactly as it does on the live pitch (ADR-253) — ⚠️ *a past
+        // week drawn in half the space would read as a lesser screen.*
+        Expanded(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(Brand.radiusMd),
+            ),
+            child: PitchMarkings(
+              child: ResultPitch(result: result, onTapPlayer: onTapPlayer),
             ),
           ),
         ),
-        for (final player in result.bench) _PlayerRow(entry: player),
       ],
     );
   }
@@ -106,12 +113,10 @@ class _Summary extends StatelessWidget {
   final GameweekSummary summary;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
-    decoration: BoxDecoration(
-      color: Colors.white10,
-      borderRadius: BorderRadius.circular(Brand.radiusMd),
-    ),
+  // ⭐ No card around it any more. On the live pitch these four figures sit bare under the gameweek
+  // line, and ⚠️ *a panel here and no panel there makes two screens out of one.*
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 2),
     child: Row(
       children: [
         _Figure(value: '${summary.points ?? '—'}', label: 'Points'),
@@ -174,121 +179,6 @@ class _Figure extends StatelessWidget {
       ],
     ),
   );
-}
-
-/// One player's week.
-class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.entry});
-
-  final GameweekPlayer entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = entry.player;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        children: [
-          Mugshot(url: '', name: p.name, size: 26),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        p.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                    ),
-                    if (entry.isCaptain) const _Band(letter: 'C'),
-                    if (entry.isViceCaptain) const _Band(letter: 'V'),
-                  ],
-                ),
-                _Events(entry: entry),
-              ],
-            ),
-          ),
-          // ⚠️⚠️ **A blank gameweek is not a zero** — ⭐ *a zero that means "he did not play" must not
-          // draw like a zero that means "he played badly."*
-          Text(
-            entry.didPlay ? '${entry.points}' : '—',
-            style: TextStyle(
-              color: entry.didPlay ? Colors.white : Colors.white24,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Band extends StatelessWidget {
-  const _Band({required this.letter});
-
-  final String letter;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(left: 6),
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-    decoration: BoxDecoration(
-      color: Brand.purple,
-      borderRadius: BorderRadius.circular(Brand.radiusPill),
-    ),
-    child: Text(
-      letter,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 9,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-  );
-}
-
-/// What actually happened, in glyphs — ⭐ *the row above says how many points; this says what for.*
-class _Events extends StatelessWidget {
-  const _Events({required this.entry});
-
-  final GameweekPlayer entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final parts = <String>[
-      if (entry.goals > 0) '⚽ ${entry.goals}',
-      if (entry.assists > 0) '🅰 ${entry.assists}',
-      if (entry.cleanSheet) '🛡',
-      if (entry.saves > 0) '🧤 ${entry.saves}',
-      if (entry.bonus > 0) '+${entry.bonus} bonus',
-      // ⭐ The field the owner asked for by name.
-      if (entry.yellowCards > 0)
-        '🟨${entry.yellowCards > 1 ? ' ${entry.yellowCards}' : ''}',
-      if (entry.redCards > 0) '🟥',
-      // ⚠️ What the game did, not what was chosen — the bench says the choice.
-      if (entry.cameOn) 'came on',
-      if (entry.wentOff) 'auto-subbed',
-      if (!entry.didPlay) 'did not play',
-    ];
-    if (parts.isEmpty) {
-      return Text(
-        '${entry.minutes} mins',
-        style: const TextStyle(color: Colors.white38, fontSize: 11),
-      );
-    }
-    return Text(
-      parts.join('  ·  '),
-      style: const TextStyle(color: Colors.white54, fontSize: 11),
-    );
-  }
 }
 
 /// A gameweek FPL has not published.
@@ -437,7 +327,14 @@ class _SeasonPagesState extends State<SeasonPages> {
     itemCount: SeasonPages.pageCount(_current),
     itemBuilder: (context, page) {
       final gameweek = page + 1;
-      if (gameweek < _current) return _Past(future: _result(gameweek));
+      if (gameweek < _current) {
+        // ⭐ Tapping a past player opens the same sheet the live pitch opens — ⚠️ *a card that is
+        // tappable on one page and inert on the next teaches the reader that neither is reliable.*
+        return _Past(
+          future: _result(gameweek),
+          onTapPlayer: widget.onTapPlayer,
+        );
+      }
       if (gameweek == _current) {
         return PitchView(
           team: widget.team,
@@ -466,9 +363,10 @@ class _SeasonPagesState extends State<SeasonPages> {
 
 /// A past page, while its week is in the air.
 class _Past extends StatelessWidget {
-  const _Past({required this.future});
+  const _Past({required this.future, this.onTapPlayer});
 
   final Future<GameweekResult> future;
+  final void Function(PlayerSummary)? onTapPlayer;
 
   @override
   Widget build(BuildContext context) => FutureBuilder<GameweekResult>(
@@ -497,7 +395,7 @@ class _Past extends StatelessWidget {
           ),
         );
       }
-      return PastGameweek(result: snap.data!);
+      return PastGameweek(result: snap.data!, onTapPlayer: onTapPlayer);
     },
   );
 }

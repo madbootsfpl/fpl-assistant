@@ -1077,7 +1077,7 @@ def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None =
         payload = client.get_entry_picks(request.manager_id, request.gameweek)
     except FplApiError:
         # ⭐ Not an error: swiping to a gameweek that has not happened is a normal gesture.
-        return {"gameweek": request.gameweek, "played": False, "squad": [], "summary": {}}
+        return {"gameweek": request.gameweek, "played": False, "squad": [], "kits": {}, "summary": {}}
 
     store, ours = opened(store)
     try:
@@ -1140,10 +1140,24 @@ def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None =
                 },
             })
 
+        # ⚠️⚠️ **The kits of the clubs you owned THEN, not the ones you own now.** The past week is drawn
+        # on the pitch (feedback on ADR-298's first build) and the live `my-team` kit map covers only the
+        # current squad's clubs — ⭐ *a player you have since sold would be shirtless in the week he
+        # scored*, which is exactly the week you swiped back to look at.
+        past_clubs = {p["player"]["team"] for p in squad if p["player"].get("team")}
+        teams = store.get_teams()
+        code_by_club = {tm["short_name"]: tm["code"] for tm in teams}
+        kits = {
+            club: {"outfield": shirt_url(code_by_club.get(club)),
+                   "gk": shirt_url(code_by_club.get(club), "GK")}
+            for club in past_clubs
+        }
+
         return {
             "gameweek": request.gameweek,
             "played": True,
             "squad": squad,
+            "kits": kits,
             "summary": {
                 "points": history.get("points"),
                 "overall_rank": history.get("overall_rank"),

@@ -1775,6 +1775,7 @@ class GameweekResult {
     required this.played,
     required this.squad,
     required this.summary,
+    this.kits = const {},
   });
 
   factory GameweekResult.fromJson(Map<String, dynamic> json) => GameweekResult(
@@ -1792,12 +1793,32 @@ class GameweekResult {
     summary: GameweekSummary.fromJson(
       (json['summary'] as Map?)?.cast<String, dynamic>() ?? const {},
     ),
+    // ⚠️⚠️ **The clubs you owned THEN.** The live kit map covers the current squad only — ⭐ *a player
+    // you have since sold would be shirtless in the week he scored*, which is the week you swiped back
+    // to look at.
+    kits: {
+      for (final e in ((json['kits'] as Map?) ?? const {}).entries)
+        '${e.key}': (
+          outfield: (e.value as Map)['outfield'] as String? ?? '',
+          gk: (e.value as Map)['gk'] as String? ?? '',
+        ),
+    },
   );
 
   final int? gameweek;
   final bool played;
   final List<GameweekPlayer> squad;
   final GameweekSummary summary;
+
+  /// Club short name → the shirt to draw, for the squad as it was that week.
+  final Map<String, ({String outfield, String gk})> kits;
+
+  /// The shirt for one of that week's players, keeper variant included.
+  String kitFor(GameweekPlayer p) {
+    final club = kits[p.player.team];
+    if (club == null) return '';
+    return p.player.position == 'GK' ? club.gk : club.outfield;
+  }
 
   /// The eleven who were picked to start — ⚠️ *as set*, before any automatic substitution.
   List<GameweekPlayer> get xi => [

@@ -361,3 +361,40 @@ def test_the_closing_line_knows_whether_it_published() -> None:
     assert "drag $SITE to Cloudflare Pages, then commit" in script, (
         "the manual fallback instruction is gone for people without a token"
     )
+
+
+def test_the_apk_is_never_served_as_an_attachment() -> None:
+    """⚠️⚠️⚠️ **The header that cost a step on every update for three builds.**
+
+    Reported on build 14: *"it does download the apk on the tablet, however I have to go into downloads
+    to open it unlike before when it auto opened."*
+
+    `Content-Disposition: attachment` means *"do not handle this, file it away"*, so Chrome stopped
+    offering **Open** on the finished download and the installer had to be reached by hand. The
+    `Content-Type` alone is what Android needs — it identifies the file as a package and the browser then
+    offers to install it the moment it lands.
+
+    ⭐ **Two headers were added to fix one bug and only one of them was doing the work.** The bug was an
+    18MB binary rendering as text, which is a missing *Content-Type*; the disposition was added beside it
+    defensively and was never the fix. ⚠️ *A defensive line nobody can point at a failure for is a line
+    that is free to cost something.*
+    """
+    out = _merge_headers(None)
+    assert "application/vnd.android.package-archive" in out, out
+    assert "Content-Disposition" not in out, (
+        "the APK is served as an attachment again — Chrome will not offer to install it, and the "
+        f"tester has to find it in Downloads:\n{out}"
+    )
+
+
+def test_a_rule_that_already_says_attachment_is_corrected() -> None:
+    """⭐ The site is live with the bad header **now**, so writing the new rule is not enough on its own —
+    the merge has to *replace* what is there. ⚠️ *A fix that only applies to a fresh install leaves every
+    existing deployment broken*, which is the same trap ADR-282's cached APK fell into."""
+    out = _merge_headers(
+        "/app/*.apk\n"
+        "  Content-Type: application/vnd.android.package-archive\n"
+        "  Content-Disposition: attachment\n"
+    )
+    assert "Content-Disposition" not in out, out
+    assert out.count("/app/*.apk") == 1, out

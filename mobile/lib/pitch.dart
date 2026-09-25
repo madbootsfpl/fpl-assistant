@@ -34,6 +34,180 @@ extension on PitchMode {
   };
 }
 
+/// The green, the four rows and the bench — ⭐⭐ **one layout, whatever is written on the cards.**
+///
+/// ⚠️⚠️ **Extracted because the past gameweek had to be a pitch too** (feedback on ADR-298). The first
+/// build drew a played week as a *list*, and the owner's reply was immediate: *"the right swipe into
+/// history shows a list rather than a pitch layout."* He is right — the pitch **is** how this app says
+/// "your team", and a list says "a report about your team".
+///
+/// ⭐ Copying the layout would have been the quick way and the wrong one: everything ADR-253 and ADR-293
+/// paid for lives in the forty lines below — the rows that divide the height rather than demand it, the
+/// one card measurement shared by the eleven and the bench, the bench that moves to the side when the
+/// screen is wider than it is tall. ⚠️ *A second copy of a layout is a second place for a bug that was
+/// already found once to come back.*
+class PitchBoard<T> extends StatelessWidget {
+  const PitchBoard({
+    required this.xi,
+    required this.bench,
+    required this.positionOf,
+    required this.card,
+    this.footer,
+    super.key,
+  });
+
+  final List<T> xi;
+  final List<T> bench;
+
+  /// `GK` · `DEF` · `MID` · `FWD` — which row a player stands in.
+  final String Function(T) positionOf;
+
+  /// One player's card, at the width the board measured.
+  ///
+  /// ⭐ The board decides **where** and **how big**; the caller decides **what it says**. That split is
+  /// the whole point of the extraction — a live card shows expected points, a past card shows what
+  /// actually happened, and neither needs to know how a pitch is laid out.
+  final Widget Function(T player, double drawWidth) card;
+
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final byRow = <String, List<T>>{for (final r in _rows) r: []};
+    for (final p in xi) {
+      byRow[positionOf(p)]?.add(p);
+    }
+    // ⚠️⚠️ **`LayoutBuilder`, not `MediaQuery.width`.** I used the window width first: in the app the
+    // pitch is full-bleed so the two agree, and the existing ADR-253 tests — which hand the pitch a
+    // 390pt box inside an 800pt window — **overflowed by 49px**. ⭐ *A measurement taken from the screen
+    // rather than from the space a widget was actually given is right until something is laid out beside
+    // it*, and a split-screen tablet is exactly that something.
+    return LayoutBuilder(
+      builder: (context, box) {
+        // ⭐⭐ **One measurement, used by the eleven and the bench.** Scoped to the rows alone it left a
+        // tablet drawing big shirts above a 70pt bench — ⚠️ *a fix that stops at the edge of the thing
+        // that was reported is a fix that creates the next report.*
+        final cardWidth = PitchView.cardWidthFor(
+          // ⚠️ Less the padding the rows sit in, below.
+          box.maxWidth - 8,
+          byRow.values.map((r) => r.length).fold(0, (a, b) => a > b ? a : b),
+          shortestSide: MediaQuery.sizeOf(context).shortestSide,
+        );
+        // ⭐⭐ **Beside the pitch when the screen is wide** (ADR-293). Along the bottom the bench cost
+        // ~180pt of the height the eleven were dividing, and on a landscape tablet the XI's kits came
+        // out at 32pt against the bench's 46pt — ⚠️⚠️ *the substitutes were drawn larger than the team.*
+        //
+        // ⚠️⚠️ **Any shape wider than it is tall, phones included — and I gated this to tablets first.**
+        // The reasoning was that a 390pt-tall phone would end up with a letterbox pitch; the measurement
+        // said the opposite. A phone in landscape was the *worst* case of the bug, at **9pt kits against
+        // a 22pt bench**, and sideways it is 17–18pt and matched.
+        //
+        // ⭐ *A rule that needs a device class is a rule that has not found what it depends on yet* — and
+        // what this depends on is the shape, which is already in `box`.
+        final sideways = box.maxWidth > box.maxHeight;
+
+        final benchPanel = Padding(
+          padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Brand.ink.withValues(alpha: 0.82),
+              borderRadius: BorderRadius.circular(Brand.radiusMd),
+            ),
+            padding: const EdgeInsets.fromLTRB(4, 5, 4, 7),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'BENCH',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // ⭐ One list, laid out along whichever axis has the room. ⚠️ *Two bench widgets would
+                // be two places for the order badge to drift out of.*
+                Flex(
+                  direction: sideways ? Axis.vertical : Axis.horizontal,
+                  mainAxisSize: sideways ? MainAxisSize.min : MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [for (final p in bench) card(p, cardWidth)],
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final pitch = Column(
+          children: [
+            // ⭐ The wordmark, inside the pitch. It used to have a row of its own above the header — 60px
+            // to say a name the reader already knows. On the green it is present and costs nothing, which
+            // is the trick the competitor's corner chip is playing.
+            const _PitchMark(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                child: Column(
+                  children: [
+                    // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.** With
+                    // `spaceEvenly` the rows demanded their intrinsic height and overflowed by 4px on a
+                    // 760pt screen once the footer was added — and a smaller phone, or a stale-data
+                    // banner, would clip a whole row of shirts. ⭐ *A pitch that must be given enough
+                    // room is not a pitch that fills the room it is given.*
+                    for (final row in _rows)
+                      if (byRow[row]!.isNotEmpty)
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              for (final p in byRow[row]!) card(p, cardWidth),
+                            ],
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+
+        if (sideways) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: pitch),
+              // ⚠️ Centred, not stretched: four cards in a column do not fill a tablet's height, and a
+              // panel of empty dark down the side reads as a missing list.
+              //
+              // ⚠️⚠️ **And `scaleDown`, because it overflowed by 3.7px.** Four cards at the XI's own size
+              // is *nearly* a tablet's height, and "nearly" is a yellow-striped overflow on some screens
+              // and not others — ⭐ *a layout that fits on the device you tested is not a layout that
+              // fits.*
+              Center(
+                child: FittedBox(fit: BoxFit.scaleDown, child: benchPanel),
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Expanded(child: pitch),
+            benchPanel,
+            if (footer != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                child: footer!,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class PitchView extends StatelessWidget {
   const PitchView({
     required this.team,
@@ -148,117 +322,51 @@ class PitchView extends StatelessWidget {
               // measurement taken from the screen rather than from the space a widget was actually
               // given is right until something is laid out beside it*, and a split-screen tablet is
               // exactly that something.
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final cardWidth = cardWidthFor(
-                    // ⚠️ Less the padding the rows sit in, below.
-                    box.maxWidth - 8,
-                    byRow.values
-                        .map((r) => r.length)
-                        .fold(0, (a, b) => a > b ? a : b),
-                    shortestSide: MediaQuery.sizeOf(context).shortestSide,
+              child: PitchBoard<PlayerSummary>(
+                xi: team.analysis.xi,
+                bench: team.orderedBench,
+                positionOf: (p) => p.position,
+                footer: footer,
+                card: (player, width) {
+                  final roleOf = {
+                    for (final e in team.benchRoles.entries) e.value: e.key,
+                  };
+                  final role = roleOf[player.id];
+                  final card = _Card(
+                    team: team,
+                    player: player,
+                    mode: isForward ? PitchMode.nextGw : mode,
+                    onTap: () => onTapPlayer(player),
+                    drawWidth: width,
+                    gameweek: gameweek,
                   );
-                  // ⭐⭐ **Beside the pitch when the screen is wide** (ADR-293). Along the bottom the
-                  // bench cost ~180pt of the height the eleven were dividing, and on a landscape tablet
-                  // the XI's kits came out at 32pt against the bench's 46pt — ⚠️⚠️ *the substitutes were
-                  // drawn larger than the team.* Sideways there is width going spare and no height at
-                  // all, so the bench takes the width and gives the height back.
-                  //
-                  // ⚠️⚠️ **Any shape wider than it is tall, phones included — and I gated this to
-                  // tablets first.** The reasoning was that a 390pt-tall phone would end up with a
-                  // letterbox pitch; the measurement said the opposite. A phone in landscape was the
-                  // *worst* case of the bug, at **9pt kits against a 22pt bench**, and sideways it is
-                  // 17–18pt and matched.
-                  //
-                  // ⭐ *A rule that needs a device class is a rule that has not found what it depends
-                  // on yet* — and what this depends on is the shape, which is already in `box`.
-                  final sideways = box.maxWidth > box.maxHeight;
-
-                  final bench = Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                    child: _Bench(
-                      team: team,
-                      mode: isForward ? PitchMode.nextGw : mode,
-                      onTapPlayer: onTapPlayer,
-                      drawWidth: cardWidth,
-                      vertical: sideways,
-                      gameweek: gameweek,
-                    ),
-                  );
-
-                  final pitch = Column(
+                  if (role == null) return card;
+                  // ⭐ The substitution order, drawn by the caller — the board lays cards out and has no
+                  // opinion about what is written on them.
+                  return Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      // ⭐ The wordmark, inside the pitch. It used to have a row of its own above the header
-                      // — 60px to say a name the reader already knows. On the green it is present and costs
-                      // nothing, which is the trick the competitor's corner chip is playing.
-                      const _PitchMark(),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                          child: Column(
-                            children: [
-                              // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.**
-                              // With `spaceEvenly` the rows demanded their intrinsic height and overflowed by
-                              // 4px on a 760pt screen once the footer was added — and a smaller phone, or a
-                              // stale-data banner, would clip a whole row of shirts. ⭐ *A pitch that must be
-                              // given enough room is not a pitch that fills the room it is given.*
-                              for (final row in _rows)
-                                if (byRow[row]!.isNotEmpty)
-                                  Expanded(
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceEvenly,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        for (final p in byRow[row]!)
-                                          _Card(
-                                            team: team,
-                                            player: p,
-                                            mode: isForward
-                                                ? PitchMode.nextGw
-                                                : mode,
-                                            onTap: () => onTapPlayer(p),
-                                            drawWidth: cardWidth,
-                                            gameweek: gameweek,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                            ],
+                      card,
+                      Positioned(
+                        left: 2,
+                        top: -3,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          decoration: BoxDecoration(
+                            color: Brand.purple,
+                            borderRadius: BorderRadius.circular(
+                              Brand.radiusPill,
+                            ),
+                          ),
+                          child: Text(
+                            role,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                       ),
-                    ],
-                  );
-
-                  if (sideways) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: pitch),
-                        // ⚠️ Centred, not stretched: four cards in a column do not fill a tablet's
-                        // height, and a panel of empty dark down the side reads as a missing list.
-                        //
-                        // ⚠️⚠️ **And `scaleDown`, because it overflowed by 3.7px.** Four cards at the
-                        // XI's own size is *nearly* a tablet's height, and "nearly" is a yellow-striped
-                        // overflow on some screens and not others — ⭐ *a layout that fits on the device
-                        // you tested is not a layout that fits.*
-                        Center(
-                          child: FittedBox(fit: BoxFit.scaleDown, child: bench),
-                        ),
-                      ],
-                    );
-                  }
-                  return Column(
-                    children: [
-                      Expanded(child: pitch),
-                      bench,
-                      if (footer != null)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                          child: footer!,
-                        ),
                     ],
                   );
                 },
@@ -959,102 +1067,4 @@ class _Flag extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _Bench extends StatelessWidget {
-  const _Bench({
-    this.gameweek,
-    required this.team,
-    required this.mode,
-    required this.onTapPlayer,
-    required this.drawWidth,
-    this.vertical = false,
-  });
-
-  final MyTeam team;
-  final PitchMode mode;
-  final int? gameweek;
-  final void Function(PlayerSummary) onTapPlayer;
-
-  /// ⭐ **The width the eleven above are drawn at.** On a phone the bench and the XI have always matched
-  /// each other, and a tablet should be no different.
-  final double drawWidth;
-
-  /// Stacked down the side rather than along the bottom (ADR-293).
-  ///
-  /// ⭐⭐ **A landscape tablet has width to spare and no height at all.** Along the bottom the bench cost
-  /// ~180pt of the room the eleven were dividing, and the XI's kits rendered at 32pt against the bench's
-  /// 46pt — ⚠️ *the substitutes were drawn larger than the team.*
-  final bool vertical;
-
-  @override
-  Widget build(BuildContext context) {
-    final roleOf = {for (final e in team.benchRoles.entries) e.value: e.key};
-    return Container(
-      decoration: BoxDecoration(
-        color: Brand.ink.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(Brand.radiusMd),
-      ),
-      padding: const EdgeInsets.fromLTRB(4, 5, 4, 7),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'BENCH',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 9,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          // ⭐ One list, laid out along whichever axis has the room. ⚠️ *Two bench widgets would be two
-          // places for the order badge to drift out of.*
-          Flex(
-            direction: vertical ? Axis.vertical : Axis.horizontal,
-            mainAxisSize: vertical ? MainAxisSize.min : MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final p in team.orderedBench)
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    _Card(
-                      team: team,
-                      player: p,
-                      mode: mode,
-                      onTap: () => onTapPlayer(p),
-                      drawWidth: drawWidth,
-                      gameweek: gameweek,
-                    ),
-                    if (roleOf[p.id] != null)
-                      Positioned(
-                        left: 2,
-                        top: -3,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          decoration: BoxDecoration(
-                            color: Brand.purple,
-                            borderRadius: BorderRadius.circular(
-                              Brand.radiusPill,
-                            ),
-                          ),
-                          child: Text(
-                            roleOf[p.id]!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }

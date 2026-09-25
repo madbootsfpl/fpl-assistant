@@ -15,7 +15,9 @@
 library;
 
 import 'dart:convert';
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 /// Where the current build is published. ⚠️ Not the API: the API knows about squads, not about which
@@ -82,6 +84,20 @@ List<String> _notes(Object? raw) => switch (raw) {
 /// ⭐ *a notice that grows with the work is a notice that stops being read on the busiest week.*
 const int kMaxNotes = 3;
 
+/// Whether this build can install its own updates.
+///
+/// ⚠️⚠️⚠️ **Android only, and the first version checked nothing** (owner's report from his iPhone:
+/// *"the build 14 is out, asks me to download the .apk which doesn't seem correct"*). The manifest at
+/// `madboots.com/app/version.json` describes an **APK** — the one artefact an iPhone cannot do anything
+/// with. iOS builds are installed from Xcode today and from TestFlight when that is paid for, and in
+/// neither case can the app update itself.
+///
+/// ⭐ *A notice is a promise that tapping it will help*, and this one offered an iPhone a file it cannot
+/// open, from a page it cannot install from. Silence is the correct behaviour, not a smaller banner.
+///
+/// ⚠️ `kIsWeb` first: `Platform` throws in a browser, so the order of these two is load-bearing.
+bool get selfHostedUpdates => !kIsWeb && Platform.isAndroid;
+
 /// The published build, or `null` if it could not be read.
 ///
 /// ⭐ Null on **every** failure — offline, a typo'd URL, a half-deployed site serving HTML. ⚠️ *A
@@ -89,7 +105,16 @@ const int kMaxNotes = 3;
 Future<Available?> published({
   http.Client? client,
   Duration timeout = const Duration(seconds: 4),
+  bool? selfHosted,
 }) async {
+  // ⚠️⚠️ **The platform gate lives here, not at the call site.** Every future caller of this function
+  // inherits it — ⭐ *a rule enforced where the decision is made cannot be forgotten by the next person
+  // who needs the answer.*
+  //
+  // ⭐ Overridable so it can be **tested on either platform**: the bug shipped precisely because the
+  // iOS path could not be exercised from a Mac test run. *A guard no test can reach is a guard that is
+  // not there.*
+  if (!(selfHosted ?? selfHostedUpdates)) return null;
   final own = client == null;
   final c = client ?? http.Client();
   try {

@@ -19,6 +19,7 @@ void main() {
   group('published', () {
     test('reads the manifest', () async {
       final available = await published(
+        selfHosted: true,
         client: _serving(
           200,
           jsonEncode({
@@ -38,6 +39,7 @@ void main() {
     test('asks the site, not the API', () async {
       late Uri asked;
       await published(
+        selfHosted: true,
         client: MockClient((request) async {
           asked = request.url;
           return http.Response('{}', 200);
@@ -55,6 +57,7 @@ void main() {
       // is still there* — this one fails the moment the status check goes.
       expect(
         await published(
+          selfHosted: true,
           client: _serving(404, '{"version":"9.9.9","build":99,"url":"x"}'),
         ),
         isNull,
@@ -63,13 +66,22 @@ void main() {
 
     test('is null when the site serves HTML', () async {
       // ⭐ A half-deployed Pages site answers 200 with its own index page.
-      expect(await published(client: _serving(200, '<!doctype html>')), isNull);
+      expect(
+        await published(
+          selfHosted: true,
+          client: _serving(200, '<!doctype html>'),
+        ),
+        isNull,
+      );
     });
 
     test('is null when the manifest is JSON but not an object', () async {
       // ⚠️ Separate from the HTML case: `[]` **parses**, so only the shape check rejects it. Unparseable
       // bodies are caught by the `try`, which would hide a missing guard here.
-      expect(await published(client: _serving(200, '[]')), isNull);
+      expect(
+        await published(selfHosted: true, client: _serving(200, '[]')),
+        isNull,
+      );
     });
 
     test('is null when the manifest has no build number', () async {
@@ -91,6 +103,7 @@ void main() {
 
     test('gives up rather than hanging', () async {
       final available = await published(
+        selfHosted: true,
         client: MockClient((_) async {
           await Future<void>.delayed(const Duration(seconds: 2));
           return http.Response('{"build":9}', 200);
@@ -199,6 +212,52 @@ void _notes() {
 
       expect(parse(many).notes.length, kMaxNotes);
       expect(parse(many).notes.first, 'Change number 0');
+    });
+  });
+
+  // ── the platform that cannot install an APK ─────────────────────────────────
+
+  group('only a build that can install its own updates asks about them', () {
+    test('an iPhone is never told about an Android build', () async {
+      // ⚠️⚠️⚠️ **Reported from the owner's own phone:** *"the build 14 is out, asks me to download the
+      // .apk which doesn't seem correct."* The manifest describes the one artefact an iPhone cannot do
+      // anything with, and nothing checked. ⭐ *A notice is a promise that tapping it will help.*
+      var asked = false;
+      final result = await published(
+        selfHosted: false,
+        client: MockClient((request) async {
+          asked = true;
+          return http.Response(
+            jsonEncode({'version': '1.0.0', 'build': 99, 'url': 'x.apk'}),
+            200,
+          );
+        }),
+      );
+      expect(result, isNull);
+      // ⭐ And it does not even ask. Fetching a manifest to throw the answer away would still be a
+      // request per launch, on a platform that can never act on it.
+      expect(asked, isFalse, reason: 'the manifest was fetched on iOS');
+    });
+
+    test('an Android build still asks, exactly as before', () async {
+      // ⚠️ The counterpart. Without it, returning null unconditionally would pass the test above — ⭐ *a
+      // guard with no counterpart is indistinguishable from the feature being switched off.*
+      final result = await published(
+        selfHosted: true,
+        client: MockClient(
+          (request) async => http.Response(
+            jsonEncode({'version': '1.0.0', 'build': 99, 'url': 'x.apk'}),
+            200,
+          ),
+        ),
+      );
+      expect(result?.build, 99);
+    });
+
+    test('the gate defaults to the platform, not to permissive', () {
+      // ⚠️ On a Mac test run this is false, and that is the point: the default must be *computed*, never
+      // a hard-coded `true` that happens to be right on the machine the tests run on.
+      expect(selfHostedUpdates, isFalse);
     });
   });
 }
