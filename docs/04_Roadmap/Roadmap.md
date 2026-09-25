@@ -151,6 +151,16 @@ list on sight, not on suspicion.
   `0.0 Predicted`. ⭐ *A window includes the week you are standing on* — there is a `SWIPE = WIDE + 1`
   constant for it now and `tests/test_forward_limit_agrees.py` reads the Dart and the Python halves
   together, because neither suite can see the other's number.
+- 🔴 **GitHub runs 7% of the scheduled pipeline ticks** *(measured 2026-09-25)*. `data.yml` declares
+  `*/15 * * * *` and fired **5 times in 24 hours** — 47 in seven days against 672 implied. `backfill.yml`
+  declares hourly and manages roughly one run in five hours. ⚠️⚠️ So *"the data refreshes itself"*
+  (ADR-211) is true at a granularity of **~5 hours, not 15 minutes**, and nothing in the product says so:
+  ⭐ *the staleness banner only fires when a completed gameweek has no rows at all*, never when the rows
+  are five hours old. That matters most where the data moves fastest — price changes land ~02:30 UK, so a
+  morning reader can be looking at yesterday's prices. 📌 **Needs a decision, not effort**: make the cron
+  honest and teach `behind` about age, or drive the tick from something that actually keeps time and use
+  GitHub only as the worker. ⚠️ *A schedule the platform ignores is a schedule that lies in the
+  documentation as well as in the file.*
 - 🔴 **The mobile API is unauthenticated and uncapped** *(named 2026-09-24, ADR-283)*. `FPL_USER_CAP` and
   `beta_users` live in `src/web_streamlit/` and have never applied to the app. That was fine while
   distribution meant *"I send you a file"*; ⚠️ **a public Android download button makes it a decision rather
