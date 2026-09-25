@@ -171,10 +171,25 @@ class _PlayerSheetState extends State<_PlayerSheet> {
               // for a match that has been played is meaningless, and today's price under a GW4 heading
               // reads as the price then. ⭐ *A true number in the wrong place becomes a false claim*, the
               // same rule the forward pitch follows.
-              past == null
-                  ? '${p.position} · ${p.team} · £${p.price.toStringAsFixed(1)}m · '
-                        '${p.xp.toStringAsFixed(1)} xP'
-                  : '${p.position} · ${p.team} · GW${widget.gameweek}',
+              // ⚠️⚠️⚠️ **`p.xp` is the LIVE week's number, whatever page you are on** — so a GW9 card
+              // was captioned with GW6's projection, immediately above three cards showing GW9, GW10 and
+              // GW11. ⭐ *A number with no week beside it borrows the week of whatever it is next to*,
+              // and here that was the wrong one. Found in a screenshot of the finished feature, which is
+              // the same defect the feature was built to fix.
+              //
+              // ⭐ The week's own projection is on the cards below; this line names the week instead of
+              // repeating a number it cannot label.
+              switch (widget.gameweek) {
+                null =>
+                  '${p.position} · ${p.team} · £${p.price.toStringAsFixed(1)}m · '
+                      '${p.xp.toStringAsFixed(1)} xP',
+                // ⚠️ No price on a played week — it is today's, and under a GW4 heading it reads as the
+                // price then.
+                final gw when past != null =>
+                  '${p.position} · ${p.team} · GW$gw',
+                final gw =>
+                  '${p.position} · ${p.team} · £${p.price.toStringAsFixed(1)}m · GW$gw',
+              },
               style: const TextStyle(color: Colors.white54, fontSize: 12.5),
             ),
             // ⭐⭐⭐ **What he actually did** (ADR-299) — the owner's report: *"the player pop up card needs

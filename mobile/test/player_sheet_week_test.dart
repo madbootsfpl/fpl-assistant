@@ -325,4 +325,40 @@ void main() {
     expect(find.textContaining('MUN'), findsWidgets);
     expect(find.textContaining('EVE'), findsWidgets);
   });
+
+  testWidgets('a forward card never captions itself with this week\'s number', (
+    tester,
+  ) async {
+    // ⚠️⚠️⚠️ **Found in a screenshot of the finished feature.** `p.xp` is the live week's projection
+    // whatever page you are on, so a GW9 card was captioned "3.4 xP" — GW6's number — immediately above
+    // three cards reading GW9, GW10 and GW11. ⭐ *A number with no week beside it borrows the week of
+    // whatever it is next to.*
+    final team = sampleTeam();
+    // Someone whose live projection differs from the week being viewed, so the leak is visible.
+    final p = team.analysis.xi.firstWhere(
+      (x) => team.xpAt(x, 10) != null && (team.xpAt(x, 10)! - x.xp).abs() > 0.4,
+    );
+    await open(tester, team, p, gameweek: 10);
+
+    expect(
+      find.textContaining('${p.xp.toStringAsFixed(1)} xP'),
+      findsNothing,
+      reason: "the live week's projection is captioning a GW10 card",
+    );
+    // ⭐ The week is named instead, and the price stays — it is a fact you act on now.
+    expect(find.textContaining('GW10'), findsOneWidget);
+    expect(find.textContaining('£'), findsOneWidget);
+  });
+
+  testWidgets('the live card is unchanged, xP and all', (tester) async {
+    // ⭐ The counterpart. Without it, dropping the caption everywhere would pass the test above.
+    final team = sampleTeam();
+    final p = team.analysis.xi.first;
+    await open(tester, team, p);
+
+    expect(
+      find.textContaining('${p.xp.toStringAsFixed(1)} xP'),
+      findsOneWidget,
+    );
+  });
 }

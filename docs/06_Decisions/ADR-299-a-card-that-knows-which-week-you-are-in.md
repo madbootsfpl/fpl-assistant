@@ -1,7 +1,7 @@
 # ADR-299 — A card that knows which week you are in
 
 **Date:** 2026-09-25
-**Status:** ⏳ **Gate — agreed on the feedback, not yet built.** Nothing in this ADR ships code.
+**Status:** ✅ **Built** (2026-09-25).
 **From:** the owner, with two FFH screenshots — *"in the history GW screens, the player pop up card needs
 to be different, it needs to show the history of that GW and not the prediction from the current gameweek
 onwards… The future tabs need to show the prediction for GWs from that GW onwards up to our cap of +5."*
@@ -91,3 +91,46 @@ at the week you are looking at · the squad actions hidden on any week that is n
    the design; it follows from ADR-298's cap and needs a nod rather than a discussion.
 2. **What an unplayed or blank week shows** on a past card — ⭐ probably the fixture and "did not play",
    with no breakdown, since FPL publishes no `explain` lines for a man who never came on.
+
+
+---
+
+## What building found
+
+⭐⭐ **Verified on a device, against real data.** Gvardiol, GW4: *away to MUN 1−0*, **11 points** —
+`Minutes played 90' +2` · `Assists 1 +3` · `Clean sheet 1 +4` · `Yellow cards 1 −1` · `Bonus 3 +3`. Every
+line from FPL, and they sum to the total above them. The forward card for Mitchell on the GW9 page shows
+`TOT (A) 3.4` · `LIV (H) 3.0` · `COV (A) 3.7` — GW9, GW10, GW11, where it used to show GW6, GW7, GW8.
+
+⚠️⚠️⚠️ **A bug I introduced and caught in the same hour:** putting the played-week guard on the *head* of
+the sheet's `if/else` chain dropped a past week through to the `else`, which dereferences `_options!` —
+and the whole sheet threw before drawing a pixel. ⭐ *A condition added to the head of an if/else chain
+changes which branch every other case lands in*, and this one is three branches long.
+
+⚠️⚠️ **And one found in a screenshot of the finished feature**, which is the same defect the feature was
+built to fix: `p.xp` is the **live** week's projection whatever page you are on, so a GW9 card was
+captioned *"3.4 xP"* — GW6's number — immediately above three cards reading GW9, GW10 and GW11. ⭐ *A
+number with no week beside it borrows the week of whatever it is next to.* The caption names the week now
+and lets the cards carry the numbers.
+
+**Two mutants survived honestly and led somewhere:**
+
+- *"a double gameweek names one match"* survived because **no player in the fixture plays twice in a
+  week** — ⭐ *a branch the test data cannot reach is not being tested*, however many assertions point at
+  it. The test now manufactures the double.
+- The other was a no-op mutation of my own: `[] or [...]` is `[...]`.
+
+⚠️ The `try` around the live call includes **`AttributeError`**: three test doubles in this repo implement
+only the calls their subject used to make, and ⭐ *an optional decoration that hard-requires a method turns
+every partial client into a crash.*
+
+## What shipped
+
+**Service:** `FplClient.get_event_live` · `breakdown` and `matches` on every squad entry in
+`gameweek_result`, from FPL's `explain` and from the scorelines already stored.
+
+**App:** `_Played` and `_Line` in `player_sheet.dart` · the sheet takes a `gameweek` and a `result` · the
+run window starts at the week being viewed · `SeasonPages` reports which page a tap came from.
+
+**Tests:** 12 in `player_sheet_week_test.dart`, 6 more in `test_gameweek_result.py`, mutation-tested
+**11/11** on the app side and **5/5** on the service. 405 app, 2715 server.
