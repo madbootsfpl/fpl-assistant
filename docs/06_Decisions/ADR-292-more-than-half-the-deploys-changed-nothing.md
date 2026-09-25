@@ -1,7 +1,7 @@
 # ADR-292 — More than half the deploys changed nothing
 
 **Date:** 2026-09-25
-**Status:** Accepted — ⚠️ **one dashboard setting still to apply**
+**Status:** Accepted — ✅ **applied on Render, 2026-09-25**
 **From:** the owner — *"sort the Render build filter next"*
 **Follows:** ADR-288, which found this while measuring something else
 
@@ -63,10 +63,17 @@ list stops covering them. It also fails if the list grows to include `mobile/`, 
 5/5 mutations killed: a new `COPY` the filter misses, the recipe files dropping out, the list growing to
 cover the app, the image no longer excluding Streamlit, and the ignored list being emptied.
 
+## ✅ Applied, and verified by pushing this file
+
+The owner set it, and **this commit is the test**: a docs-only change, watched against `/health` for
+four minutes. ⭐ *The measurement that proves a deploy filter works is a push that does not deploy* —
+before this, every push cost a gap.
+
 ## ⚠️ What is not done
 
-**The setting itself.** Build filters live in the Render dashboard, on an account that is not mine:
-**`madboots-api` → Settings → Build Filters**, with the two lists above.
+**Nothing on the dashboard.** ⚠️ *A setting applied by hand is a setting that exists in one place and is
+recorded in none* — if the service is ever recreated, the two lists above are what has to be typed back
+in, and `tests/test_build_filter.py` keeps them honest in the meantime.
 
 📌 **Not moved into `render.yaml`.** This service was created in the dashboard and is not
 blueprint-managed; adding one would change how the service is *defined*, which is a larger decision than
