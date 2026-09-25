@@ -88,8 +88,21 @@ plan anywhere, it is history, not a pending task.
   `disable row level security` to those tables**; that is the hole this closed, and `tests/test_setup_docs.py`
   guards the docs against re-teaching it.
 
-**Next: a Flutter mobile app** — see `docs/03_Architecture/Mobile_Platform_Audit.md`. The driver is feedback,
-not architecture: people don't want a browser for FPL.
+**The Flutter app shipped** — Android and iOS from one codebase, nine testers on it. Android is
+self-hosted at `madboots.com/app/` with in-app update checks (ADR-282) and a release that publishes
+itself to Cloudflare Pages (ADR-290). The landing page lives in `site/` and is deployed by the same
+script (ADR-289).
+
+⚠️ **Read the sprint line in PROJECT_STATUS before planning anything.** This file is loaded into every
+session and it said *"next: a Flutter mobile app"* for three weeks after the app existed — ⭐ *a document
+that orients you is the one worst placed to be out of date* (ADR-294).
+
+**Open, and both need a decision rather than effort:** iOS TestFlight (£79/yr) and the **unauthenticated
+public API**, which ties to accounts (ADR-259).
+
+📅 **Held on a date: the learned xMins model** — the Phase 1 gate (ADR-204) is re-decided once **GW8 is
+played, on or after 2026-10-26**, against a rule written before the data existed. ⚠️ Do not re-argue the
+threshold; that is the point of it.
 
 For the live status and forward plan, see:
 - docs/00_Project/PROJECT_STATUS.md (the single live status)

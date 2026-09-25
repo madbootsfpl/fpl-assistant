@@ -29,9 +29,11 @@ page knowing three things:
    gameweek — **live since 2026-09-19, so it is met on or after 2026-10-03** if nothing needed a hand.*
    ⚠️ *Dated on 2026-09-21 because "two weeks" with no anchor cannot expire; it just keeps sounding
    current — the same rot ADR-212 found in a "(tomorrow)" that had been true in August.*
-3. **The next phase is mobile, and it is the first phase driven by user feedback rather than by what was
-   next in the plan.** People don't want a browser for FPL. See
-   [Mobile_Platform_Audit.md](../03_Architecture/Mobile_Platform_Audit.md).
+3. ✅ **Mobile shipped** — the first phase driven by user feedback rather than by what was next in the
+   plan, and it is done: Flutter on **Android and iOS** from one codebase, nine testers, self-publishing
+   releases (ADR-282/290). See [Mobile_Platform_Audit.md](../03_Architecture/Mobile_Platform_Audit.md)
+   for the plan it came from. ⚠️ *This line read "the next phase is mobile" for three weeks after the app
+   was on people's phones.*
    **Phase 1 ✅** the read surface is proven (Flutter reads the published board straight from Supabase — 667
    players, 162 KB, 511 ms). **Phase 2 ✅** the pipeline (ADR-211). **Phase 3 🟢 endpoints done:** all six
    squad endpoints are built and smoke-tested (ADR-219 → ADR-220), with Streamlit's Health tab as the web's

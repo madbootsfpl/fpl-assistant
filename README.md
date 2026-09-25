@@ -23,11 +23,12 @@ Two things changed underneath it this month, and both are worth knowing before y
   means running one file — **[`sql/setup.sql`](sql/setup.sql)** — and **[SUPABASE_RLS.md](docs/SUPABASE_RLS.md)**
   explains what it does and what it deliberately does not.
 
-**Next: a mobile app.** The consistent feedback is that people don't want to use a browser for FPL, and every
-comparable assistant is an app. The plan — Flutter, reusing the analytics rather than reimplementing them —
-is in **[Mobile_Platform_Audit.md](docs/03_Architecture/Mobile_Platform_Audit.md)**.
+**The mobile app shipped.** Flutter, one codebase, on **Android and iOS** — Android self-hosted at
+[madboots.com/app/](https://madboots.com/app/) with in-app update checks (ADR-282), and a release that
+publishes itself (ADR-290). Nine testers are on it. ⚠️ *This section said "next: a mobile app" for three
+weeks after it existed* — see ADR-294 for why that is its own kind of bug.
 
-**295 ADRs · 2,688 tests · CI green.**
+**296 ADRs · 2,693 tests · CI green.**
 
 New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
 **[Direction & options](docs/00_Project/DIRECTION.md)**. Running a beta? **[BETA.md](docs/BETA.md)**. The live
@@ -98,8 +99,10 @@ status is **[PROJECT_STATUS.md](docs/00_Project/PROJECT_STATUS.md)**; the forwar
 
 ## Planned (not yet built)
 
-- **Next — a mobile app** (Flutter). The reason is feedback, not tech: people don't want a browser for FPL.
-  See **[Mobile_Platform_Audit.md](docs/03_Architecture/Mobile_Platform_Audit.md)**.
+- **iOS distribution** — TestFlight needs the £79/yr developer account. The owner is the only iPhone
+  tester, so builds go on by cable and the certificate expires every 7 days.
+- **Accounts and identity** (ADR-259), and with it the **unauthenticated public API** — the app's backend
+  has no cap, no allowlist and no auth, which was fine when distribution meant sending a file by hand.
 - **Data Hardening** — per-gameweek history + in-season **form** blended into xP; a full history backfill;
   the attack/defence FDR split. Partly unblocked now the season is running.
 - **Under review, on a date** — a learned expected-minutes model. Measured at the Phase 1 gate (ADR-204) and
