@@ -310,6 +310,23 @@ def _completed_rounds(fixtures) -> set:
     return played - pending
 
 
+#: ⭐⭐⭐ **What shape of per-gameweek history the current code writes.** Bump this whenever a column is
+#: **added** to `player_history` and the new column needs values for weeks already stored.
+#:
+#: ⚠️⚠️⚠️ **This exists because a migration is not a backfill, and nothing noticed the difference.**
+#: ADR-298 added `yellow_cards` and `red_cards`. The migration ran, the columns appeared, every test
+#: passed — and production served **zero bookings for every player in every gameweek**, because the rows
+#: were written before the columns existed and the backfill gate asks *"is a completed gameweek
+#: missing?"*, which they were not. The bug surfaced as a tester saying *"don't see red or yellow
+#: cards"*, on a screen whose whole job was to show them.
+#:
+#: ⭐ *A row that exists is not a row that is current*, and a gate that only counts rows cannot tell the
+#: two apart. The version number can.
+#:
+#: 2 — `yellow_cards` / `red_cards` (ADR-298).
+HISTORY_SCHEMA = 2
+
+
 def backfill_due(fixtures, gw_history_by_code) -> tuple[bool, str, set]:
     """Which completed gameweeks have no stored history yet — `(due, why, rounds)`.
 
@@ -333,6 +350,38 @@ def backfill_due(fixtures, gw_history_by_code) -> tuple[bool, str, set]:
     return True, f"no stored history for GW{sorted(missing)}", missing
 
 
+def rewalk_due(stored_schema, gw_history_by_code) -> tuple[bool, str, set]:
+    """Were the rows we hold written **before** the columns we now read existed? — `(due, why, rounds)`.
+
+    ⚠️⚠️⚠️ **A different question from `backfill_due`, and merging the two was a mistake I made and
+    caught here.** *"Is a gameweek missing?"* is what a **reader** needs — it drives the app's stale-data
+    banner, which exists to say *"the numbers on this screen are from yesterday."* *"Were these rows
+    written at an older schema?"* is what the **pipeline** needs, and it is not a reader-facing fault at
+    all: every number on the screen is correct, one secondary column is simply empty.
+
+    ⭐ Asking both through one function put `behind: true` and `missing_gameweeks: [1,2,3,4,5]` into every
+    `my-team` response — ⚠️ *nine testers told their data was broken when it was not, which would have
+    been a worse bug than the blank column it was reporting.*
+    """
+    from src.analytics.minutes import completed_gameweeks
+
+    held = completed_gameweeks(gw_history_by_code)
+    if (stored_schema or 0) >= HISTORY_SCHEMA:
+        return False, f"history is at schema v{HISTORY_SCHEMA}", set()
+    # ⚠️⚠️ **Nothing held is nothing to rewrite**, and without this an empty database asks for 659
+    # throttled requests to refresh rows that do not exist. ⭐ *This check is about rows that arrived
+    # before the question changed; where there are no rows there is no such thing.* A fresh database gets
+    # its history through the missing-gameweek path above and is stamped on the way out.
+    if not held:
+        return False, "no stored history to bring forward", set()
+    # ⭐ Every completed round, not just the newest: the empty values are in the **old** rows, which is
+    # precisely the set any freshness check would skip.
+    return (True,
+            f"history was written at schema v{stored_schema or 0}, code writes v{HISTORY_SCHEMA} — "
+            f"the columns added since have no values for GW{sorted(held)}",
+            set(held))
+
+
 def run_backfill(store: Storage, *, now=None, force: bool = False, client=None, sleep=None) -> dict:
     """Fetch per-gameweek history when a completed gameweek is missing it (ADR-211 2d).
 
@@ -344,7 +393,22 @@ def run_backfill(store: Storage, *, now=None, force: bool = False, client=None, 
     """
     now = now or datetime.now(UTC)
     stamp = now.isoformat(timespec="seconds")
-    due, why, rounds = backfill_due(store.get_all_fixtures(), store.get_gw_history_by_code())
+    status = store.data_status()
+    stored_schema = None
+    if status is not None:
+        # ⚠️ `sqlite3.Row` and a psycopg row both index by name, but neither has `.get` — and a database
+        # that predates the column has no key at all. ⭐ *A freshness check that throws is a pipeline that
+        # stops refreshing*, which is worse than the staleness it was added to catch.
+        try:
+            stored_schema = status["backfilled_schema"]
+        except (KeyError, IndexError):
+            stored_schema = None
+    history = store.get_gw_history_by_code()
+    due, why, rounds = backfill_due(store.get_all_fixtures(), history)
+    if not due:
+        # ⭐ Only when nothing is outright missing: a gameweek with no rows is the bigger hole and the
+        # more useful message.
+        due, why, rounds = rewalk_due(stored_schema, history)
     if not due and not force:
         return {"ran": False, "ok": None, "reason": why, "rounds": []}
 
@@ -357,7 +421,11 @@ def run_backfill(store: Storage, *, now=None, force: bool = False, client=None, 
         store.set_data_status(backfilled_at=stamp)
         return {"ran": True, "ok": False, "reason": f"backfill failed: {exc}", "rounds": sorted(rounds)}
 
-    store.set_data_status(backfilled_at=stamp, backfilled_event=max(rounds) if rounds else None)
+    # ⭐ Stamped only on a **clean** run. A backfill that failed part-way must not claim the new shape, or
+    # the gate goes quiet with half the values still missing — ⚠️ *the exact silence this whole mechanism
+    # was added to break.*
+    store.set_data_status(backfilled_at=stamp, backfilled_event=max(rounds) if rounds else None,
+                          backfilled_schema=HISTORY_SCHEMA if failures == 0 else None)
     return {"ran": True, "ok": failures == 0, "reason": why, "rounds": sorted(rounds),
             "counts": (players, seasons, gameweeks, failures)}
 

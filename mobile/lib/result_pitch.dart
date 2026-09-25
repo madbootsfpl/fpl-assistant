@@ -182,11 +182,19 @@ class _ResultCard extends StatelessWidget {
 
   /// The week in glyphs — ⭐ the number says how many, this says what for.
   String get _events {
+    // ⚠️⚠️⚠️ **Two of these were emoji and rendered as something else entirely on Android.** 🅰 came out
+    // as a **white A on a red rounded box** — which on a screen whose other new feature is *red cards* is
+    // about the worst possible accident — and 🧤 came out as a shield, the glyph already being used one
+    // slot along for a clean sheet.
+    //
+    // ⭐ *An emoji is a request, not an instruction*: the platform picks the font, and a card 70pt wide
+    // has no room to survive a bad guess. ⚽ and 🛡 render correctly and stay; the two that did not are
+    // now letters, which cannot be substituted for anything.
     final parts = <String>[
       if (entry.goals > 0) '⚽${entry.goals}',
-      if (entry.assists > 0) '🅰${entry.assists}',
+      if (entry.assists > 0) 'A${entry.assists}',
       if (entry.cleanSheet) '🛡',
-      if (entry.saves >= 3) '🧤${entry.saves}',
+      if (entry.saves >= 3) 'SV${entry.saves}',
       if (entry.bonus > 0) '+${entry.bonus}',
     ];
     if (parts.isNotEmpty) return parts.join(' ');
@@ -238,13 +246,19 @@ class _CardBadge extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
+      // ⚠️ **Outlined in white, and half as big again as the first version.** A booking sits on top of a
+      // club shirt, so it has no background it can rely on — ⭐ *a yellow rectangle on a yellow kit is a
+      // rectangle nobody sees*, and the owner's report was exactly "don't see red or yellow cards".
       Container(
-        width: 8,
-        height: 11,
+        width: 11,
+        height: 15,
         decoration: BoxDecoration(
           color: red ? const Color(0xFFE5343D) : const Color(0xFFF5C518),
-          borderRadius: BorderRadius.circular(1.5),
-          border: Border.all(color: Colors.black26, width: 0.5),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: Colors.white, width: 1),
+          boxShadow: const [
+            BoxShadow(color: Colors.black54, blurRadius: 2, spreadRadius: 0.5),
+          ],
         ),
       ),
       // ⚠️ Only when there were two — a "1" beside every booking is noise on a 70pt card.

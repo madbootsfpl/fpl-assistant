@@ -311,8 +311,8 @@ void main() {
     await tester.pumpWidget(screen(PastGameweek(result: scored)));
     await tester.pumpAndSettle();
     expect(find.text('⚽2 +3'), findsOneWidget);
-    expect(find.text('🅰1'), findsOneWidget);
-    expect(find.text('🛡 🧤5'), findsOneWidget);
+    expect(find.text('A1'), findsOneWidget);
+    expect(find.text('🛡 SV5'), findsOneWidget);
   });
 }
 

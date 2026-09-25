@@ -36,6 +36,12 @@ _MIGRATIONS = {
     "data_status": {
         "backfilled_at": "TEXT",
         "backfilled_event": "INTEGER",
+        # ⚠️⚠️⚠️ **Which VERSION of the history shape that backfill wrote** (ADR-298 follow-up). Added
+        # because adding two columns to `player_history` silently produced a database that looked complete
+        # and was not: every completed gameweek had rows, so the backfill gate said "nothing to do", and
+        # `yellow_cards` sat at zero in production for every player in every week. ⭐ *A row that exists
+        # is not a row that is current, and "do we have this gameweek?" cannot tell the two apart.*
+        "backfilled_schema": "INTEGER",
     },
     # Spike 017 — the board became a faithful stand-in for `decision_xp` so the app could stop downloading
     # 1.9 MB of history to recompute it. These three post-date the table's first version (ADR-213), and the
@@ -325,7 +331,9 @@ CREATE TABLE IF NOT EXISTS data_status (
     -- requests, once per gameweek, after the results post. Its own stamp so a slow or failed backfill is
     -- visible without being mistaken for a stale core refresh.
     backfilled_at    TEXT,
-    backfilled_event INTEGER
+    backfilled_event INTEGER,
+    -- ⚠️ Which shape of `player_history` that backfill wrote — see HISTORY_SCHEMA.
+    backfilled_schema INTEGER
 )
 """
 
@@ -1037,7 +1045,7 @@ class Storage:
             return None
 
     def set_data_status(self, *, refreshed_at=None, attempted_at=None, event=None, ok=None, note=None,
-                        backfilled_at=None, backfilled_event=None) -> None:
+                        backfilled_at=None, backfilled_event=None, backfilled_schema=None) -> None:
         """Record the outcome of a refresh attempt — **including a failed one** (ADR-211 2b).
 
         ⭐ *Recording only successes would make a dead pipeline indistinguishable from a quiet one*, which is
@@ -1047,8 +1055,9 @@ class Storage:
         with self.conn:
             self.conn.execute(
                 "INSERT INTO data_status "
-                "(id, refreshed_at, attempted_at, event, ok, note, backfilled_at, backfilled_event) "
-                "VALUES (1, ?, ?, ?, ?, ?, ?, ?) "
+                "(id, refreshed_at, attempted_at, event, ok, note, backfilled_at, backfilled_event, "
+                "backfilled_schema) "
+                "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) "
                 "ON CONFLICT(id) DO UPDATE SET "
                 "refreshed_at = COALESCE(excluded.refreshed_at, data_status.refreshed_at), "
                 "attempted_at = COALESCE(excluded.attempted_at, data_status.attempted_at), "
@@ -1062,9 +1071,10 @@ class Storage:
                 # write carries a verdict, it owns the note; when it does not (a backfill), it leaves both.
                 "note = CASE WHEN excluded.ok IS NULL THEN data_status.note ELSE excluded.note END, "
                 "backfilled_at = COALESCE(excluded.backfilled_at, data_status.backfilled_at), "
-                "backfilled_event = COALESCE(excluded.backfilled_event, data_status.backfilled_event)",
+                "backfilled_event = COALESCE(excluded.backfilled_event, data_status.backfilled_event), "
+                "backfilled_schema = COALESCE(excluded.backfilled_schema, data_status.backfilled_schema)",
                 (refreshed_at, attempted_at, event, None if ok is None else int(ok), note,
-                 backfilled_at, backfilled_event))
+                 backfilled_at, backfilled_event, backfilled_schema))
 
     def save_history_past(self, seasons: list[PlayerSeason]) -> None:
         """Upsert past-season history rows (ADR-027). Idempotent on (code, season)."""
