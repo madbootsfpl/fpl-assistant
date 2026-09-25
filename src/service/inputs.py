@@ -27,6 +27,15 @@ WIDE = 5
 #: numbers becoming decoration.
 RUN = 3
 
+#: ⭐⭐ **How many gameweeks the swipe forward can reach** (ADR-298), and why it is not `WIDE`.
+#:
+#: ⚠️⚠️ **A window includes the week you are standing on.** Five forward pages therefore need *six*
+#: gameweeks of projection — the live one plus five — and shipping `WIDE` left the fifth page showing
+#: fifteen dashes. ⭐ *A mutation test found this, not a reading of the code: the escaping mutant was "a
+#: missing projection becomes 0.0", and chasing why nothing caught it showed there was a page where every
+#: projection was missing.*
+SWIPE = WIDE + 1
+
 
 @dataclass(frozen=True)
 class Loaded:

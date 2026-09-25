@@ -442,6 +442,30 @@ class ServiceClient {
     }),
   );
 
+  /// A gameweek that has been played (ADR-298).
+  ///
+  /// ⭐⭐ **Cached for the life of the process, because a played week never changes.** One request per
+  /// gameweek, ever — ⚠️ *the only cache in this client that needs no expiry, because the thing it holds
+  /// cannot become wrong.*
+  ///
+  /// ⚠️ An unplayed week is a normal answer (`played: false`), not an error, so it is **not** cached:
+  /// ⭐ *caching "it has not happened yet" is how a screen stays empty after it has.*
+  final Map<int, GameweekResult> _playedWeeks = {};
+
+  Future<GameweekResult> gameweekResult(int managerId, int gameweek) async {
+    final cached = _playedWeeks[gameweek];
+    if (cached != null) return cached;
+
+    final answer = GameweekResult.fromJson(
+      await _post('squad/gameweek', {
+        'manager_id': managerId,
+        'gameweek': gameweek,
+      }),
+    );
+    if (answer.played) _playedWeeks[gameweek] = answer;
+    return answer;
+  }
+
   void close() => _client.close();
 }
 

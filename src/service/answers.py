@@ -37,7 +37,7 @@ from src.analytics.transfer import replacements_for, route_to_player
 from src.fpl_rules import CHIP_NAMES, chips_available
 from src.kits import photo_url, shirt_url
 from src.manager import fetch_manager_team
-from src.service.inputs import RUN, WIDE, load, opened, reported_leavers
+from src.service.inputs import RUN, SWIPE, WIDE, load, opened, reported_leavers
 from src.service.requests import (
     DEFAULT_HORIZON,
     MAX_HORIZON,
@@ -595,11 +595,15 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         #
         # ⭐ Skipped entirely when the caller already asked for a wide enough window — the common case for
         # every other consumer.
-        if request.horizon >= RUN:
+        # ⚠️⚠️ **Widened from `RUN` to `SWIPE` by ADR-298.** The second pass existed to fill a
+        # three-fixture card; the swipe forward needs a projection for each of five gameweeks, and it
+        # reads the same `by_gameweek` map. ⭐ Still a second pass rather than a raised `horizon`, for
+        # exactly the reason above — *the headline must stay a one-week number.*
+        if request.horizon >= SWIPE:
             run_answer = answer
         else:
             run_answer = analysis(SquadRequest(player_ids=owned_ids, bench_ids=bench_ids,
-                                               horizon=RUN), store=store)
+                                               horizon=SWIPE), store=store)
         run_xp = [{"id": p["id"], "by_gameweek": p["by_gameweek"]}
                   for p in run_answer["xi"] + run_answer["bench"]]
 
@@ -652,7 +656,15 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         club: [
             {"gameweek": cell.get("event"), "opponent": cell["opponent"],
              "venue": cell["venue"], "difficulty": cell.get("difficulty")}
-            for cell in (team_schedule(upcoming, club) or [])[:RUN]
+            # ⚠️⚠️ **As far as the caller asked, not a fixed three** (ADR-298). Swiping forward to GW+5
+            # needs an opponent for every week it can reach — ⭐ *a projection with no fixture beside it
+            # is a number the reader cannot check.* The run card still shows three; that is its own
+            # decision and it takes what it needs.
+            #
+            # ⭐ `SWIPE`, which is `WIDE + 1` — *a window includes the week you are standing on*, so
+            # five forward pages need six weeks of fixtures. ⚠️ Shipping `WIDE` here left the fifth
+            # page with no opponent on any card.
+            for cell in (team_schedule(upcoming, club) or [])[:max(SWIPE, request.horizon)]
         ]
         for club in clubs
     }

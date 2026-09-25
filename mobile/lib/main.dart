@@ -14,6 +14,7 @@ import 'apply_plan.dart';
 import 'brand.dart';
 import 'chips_view.dart';
 import 'players_view.dart';
+import 'season_view.dart';
 import 'seen_store.dart';
 import 'server.dart';
 import 'settings_view.dart';
@@ -685,13 +686,19 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                   if (mounted) setState(() => _seenKeys = keys);
                 },
               ),
+            // ⭐⭐⭐ **The season, as pages** (ADR-298). The banners above do not move: they are about
+            // *now* — a stale-data warning or a changed plan is not a fact about GW3. ⚠️ *Scrolling the
+            // warning away with the pitch would let you swipe into a week where the caveat no longer
+            // appears to apply.*
             Expanded(
-              child: PitchView(
+              child: SeasonPages(
                 team: team,
+                client: _client,
                 mode: _mode,
                 onMode: (m) => setState(() => _mode = m),
                 onTapPlayer: (p) => _openPlayer(team, p),
                 // ⭐ On the pitch, below the bench — the action where the thing it acts on is.
+                // ⚠️ Live page only; see `SeasonPages`.
                 footer: ApplyPlanStrip(
                   team: team,
                   onApply: (plan) => _applyPlan(team, plan),

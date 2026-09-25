@@ -345,8 +345,8 @@
   },
   "deadline": {
     "at": "2026-10-10T10:00:00+00:00",
-    "countdown": "in 14 days, 17h",
-    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 14 days, 17h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
+    "countdown": "in 14 days, 16h",
+    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 14 days, 16h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
     "urgency": "calm",
     "when": "Sat 10 Oct, 11:00"
   },
@@ -370,6 +370,24 @@
         "gameweek": 8,
         "opponent": "EVE",
         "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 9,
+        "opponent": "LIV",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 10,
+        "opponent": "HUL",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 11,
+        "opponent": "NEW",
+        "venue": "A"
       }
     ],
     "BHA": [
@@ -389,6 +407,24 @@
         "difficulty": 4,
         "gameweek": 8,
         "opponent": "LIV",
+        "venue": "A"
+      },
+      {
+        "difficulty": 5,
+        "gameweek": 9,
+        "opponent": "MCI",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 10,
+        "opponent": "BRE",
+        "venue": "H"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 11,
+        "opponent": "HUL",
         "venue": "A"
       }
     ],
@@ -410,6 +446,24 @@
         "gameweek": 8,
         "opponent": "HUL",
         "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 9,
+        "opponent": "NFO",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 10,
+        "opponent": "BHA",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 11,
+        "opponent": "EVE",
+        "venue": "H"
       }
     ],
     "CHE": [
@@ -429,6 +483,24 @@
         "difficulty": 3,
         "gameweek": 8,
         "opponent": "TOT",
+        "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 9,
+        "opponent": "MUN",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 10,
+        "opponent": "SUN",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 11,
+        "opponent": "LEE",
         "venue": "H"
       }
     ],
@@ -450,6 +522,24 @@
         "gameweek": 8,
         "opponent": "ARS",
         "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 9,
+        "opponent": "NEW",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 10,
+        "opponent": "COV",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 11,
+        "opponent": "BRE",
+        "venue": "A"
       }
     ],
     "HUL": [
@@ -469,6 +559,24 @@
         "difficulty": 3,
         "gameweek": 8,
         "opponent": "BRE",
+        "venue": "H"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 9,
+        "opponent": "IPS",
+        "venue": "H"
+      },
+      {
+        "difficulty": 5,
+        "gameweek": 10,
+        "opponent": "ARS",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 11,
+        "opponent": "BHA",
         "venue": "H"
       }
     ],
@@ -490,6 +598,24 @@
         "gameweek": 8,
         "opponent": "SUN",
         "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 9,
+        "opponent": "BOU",
+        "venue": "A"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 10,
+        "opponent": "TOT",
+        "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 11,
+        "opponent": "CHE",
+        "venue": "A"
       }
     ],
     "LIV": [
@@ -509,6 +635,24 @@
         "difficulty": 2,
         "gameweek": 8,
         "opponent": "BHA",
+        "venue": "H"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 9,
+        "opponent": "ARS",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 10,
+        "opponent": "CRY",
+        "venue": "A"
+      },
+      {
+        "difficulty": 4,
+        "gameweek": 11,
+        "opponent": "MUN",
         "venue": "H"
       }
     ],
@@ -530,6 +674,24 @@
         "gameweek": 8,
         "opponent": "AVL",
         "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 9,
+        "opponent": "BHA",
+        "venue": "H"
+      },
+      {
+        "difficulty": 3,
+        "gameweek": 10,
+        "opponent": "NFO",
+        "venue": "A"
+      },
+      {
+        "difficulty": 2,
+        "gameweek": 11,
+        "opponent": "FUL",
+        "venue": "H"
       }
     ]
   },
@@ -672,127 +834,172 @@
   "run_xp": [
     {
       "by_gameweek": {
+        "10": 5.1,
+        "11": 7.0,
         "6": 6.4,
         "7": 6.4,
-        "8": 6.4
+        "8": 6.4,
+        "9": 7.1
       },
       "id": 572
     },
     {
       "by_gameweek": {
+        "10": 5.1,
+        "11": 5.6,
         "6": 5.1,
         "7": 5.1,
-        "8": 4.5
+        "8": 4.5,
+        "9": 4.0
       },
       "id": 115
     },
     {
       "by_gameweek": {
+        "10": 4.4,
+        "11": 4.9,
         "6": 4.0,
         "7": 4.9,
-        "8": 4.0
+        "8": 4.0,
+        "9": 4.9
       },
       "id": 391
     },
     {
       "by_gameweek": {
+        "10": 4.3,
+        "11": 3.9,
         "6": 4.3,
         "7": 3.5,
-        "8": 3.2
+        "8": 3.2,
+        "9": 3.9
       },
       "id": 229
     },
     {
       "by_gameweek": {
+        "10": 2.2,
+        "11": 2.0,
         "6": 1.7,
         "7": 2.0,
-        "8": 2.2
+        "8": 2.2,
+        "9": 2.2
       },
       "id": 330
     },
     {
       "by_gameweek": {
-        "6": 4.1,
-        "7": 4.1,
-        "8": 5.1
-      },
-      "id": 94
-    },
-    {
-      "by_gameweek": {
+        "10": 4.6,
+        "11": 5.1,
         "6": 4.1,
         "7": 5.1,
-        "8": 4.1
+        "8": 4.1,
+        "9": 5.1
       },
       "id": 399
     },
     {
       "by_gameweek": {
+        "10": 4.6,
+        "11": 4.6,
+        "6": 4.1,
+        "7": 4.1,
+        "8": 5.1,
+        "9": 4.6
+      },
+      "id": 94
+    },
+    {
+      "by_gameweek": {
+        "10": 4.4,
+        "11": 4.8,
         "6": 4.4,
         "7": 4.4,
-        "8": 3.9
+        "8": 3.9,
+        "9": 3.5
       },
       "id": 124
     },
     {
       "by_gameweek": {
+        "10": 6.9,
+        "11": 7.6,
         "6": 6.2,
         "7": 7.6,
-        "8": 6.2
+        "8": 6.2,
+        "9": 7.6
       },
       "id": 411
     },
     {
       "by_gameweek": {
+        "10": 6.2,
+        "11": 5.6,
         "6": 5.6,
         "7": 6.2,
-        "8": 6.9
+        "8": 6.9,
+        "9": 5.6
       },
       "id": 379
     },
     {
       "by_gameweek": {
+        "10": 3.9,
+        "11": 4.2,
         "6": 3.9,
         "7": 3.9,
-        "8": 3.9
+        "8": 3.9,
+        "9": 3.5
       },
       "id": 165
     },
     {
       "by_gameweek": {
+        "10": 6.7,
+        "11": 6.1,
         "6": 6.7,
         "7": 6.1,
-        "8": 6.0
+        "8": 6.1,
+        "9": 5.4
       },
       "id": 12
     },
     {
       "by_gameweek": {
+        "10": 6.3,
+        "11": 7.0,
         "6": 6.4,
-        "7": 6.3,
-        "8": 5.7
+        "7": 6.4,
+        "8": 5.7,
+        "9": 5.1
       },
       "id": 504
     },
     {
       "by_gameweek": {
+        "10": 4.6,
+        "11": 4.1,
         "6": 4.6,
         "7": 4.1,
-        "8": 4.1
+        "8": 4.1,
+        "9": 3.7
       },
       "id": 1
     },
     {
       "by_gameweek": {
-        "6": 3.6,
+        "10": 4.1,
+        "11": 3.6,
+        "6": 3.7,
         "7": 4.1,
-        "8": 4.5
+        "8": 4.5,
+        "9": 3.6
       },
       "id": 367
     }
   ],
   "signal_keys": [
-    "official:165:64408",
+    "official:165:12866",
     "headline:391:2026-09-17T14:42:54.374225+00:00",
     "headline:411:2026-09-22T21:44:59.535385+00:00",
     "headline:379:2026-09-22T21:44:59.535385+00:00",

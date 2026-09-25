@@ -472,6 +472,7 @@ class PriceMove {
 /// by measuring payload.
 class MyTeam {
   MyTeam({
+    required this.managerId,
     required this.squadName,
     required this.isDraft,
     required this.fplPlayerIds,
@@ -503,6 +504,11 @@ class MyTeam {
     final squad = json['squad'] as Map<String, dynamic>;
     final deadline = (json['deadline'] as Map<String, dynamic>?) ?? const {};
     return MyTeam(
+      // ⭐⭐ **Whose team this is, carried by the team itself** (ADR-298). The swipe fetches a past week by
+      // manager id, and the alternative was for the screen to pass down the id it happened to be holding
+      // — ⚠️ *two sources for one fact, and a rename or a retry is all it takes for the pitch and the page
+      // beside it to be about different people.*
+      managerId: json['manager_id'] as int? ?? 0,
       squadName: squad['name'] as String? ?? '',
       isDraft: json['draft'] as bool? ?? false,
       fplPlayerIds: ((json['fpl_player_ids'] as List?) ?? const []).cast<int>(),
@@ -663,6 +669,9 @@ class MyTeam {
   /// Player id → gameweek → xP, across the **run** window rather than the request's horizon (ADR-242).
   final Map<int, Map<int, double>> runXp;
 
+  /// The manager whose squad this is — see `fromJson`.
+  final int managerId;
+
   /// ⭐ Falls back to the player's own `byGameweek` when the server did not send a run — an older build
   /// then shows one real number and two dashes, which is what it did before, rather than nothing.
   Map<int, double> runXpFor(PlayerSummary p) => runXp[p.id] ?? p.byGameweek;
@@ -684,6 +693,24 @@ class MyTeam {
     return list.isEmpty ? null : list.first;
   }
 
+  /// The fixture a player has **in a named gameweek**, or null if he has none (ADR-298).
+  ///
+  /// ⚠️⚠️ **Null is a real answer here and it is not "no data".** A blank gameweek is a club not playing
+  /// that week, and the swipe walks straight into one — ⭐ *the page must be able to say "no fixture"
+  /// rather than fall back to a different week's opponent and look confident about it.*
+  Fixture? fixtureAt(PlayerSummary p, int gameweek) {
+    for (final f in runFor(p)) {
+      if (f.gameweek == gameweek) return f;
+    }
+    return null;
+  }
+
+  /// A player's projection for a named gameweek, or null past the window the server sent.
+  ///
+  /// ⭐ Null, not zero. *Zero is a prediction; absence is the absence of one*, and the two draw
+  /// differently — a dash rather than a confident nothing.
+  double? xpAt(PlayerSummary p, int gameweek) => runXpFor(p)[gameweek];
+
   PriceMove? priceFor(PlayerSummary p) => prices[p.id];
 
   /// A player's name from his id — ⭐ so a suggestion that travels as ids can be spoken as names.
@@ -699,6 +726,7 @@ class MyTeam {
   /// A copy with different armbands — ⭐ for a **draft**, whose captain the server never sees because it
   /// changes nothing the server computes.
   MyTeam withArmbands({int? captainId, int? viceCaptainId}) => MyTeam(
+    managerId: managerId,
     squadName: squadName,
     isDraft: isDraft,
     fplPlayerIds: fplPlayerIds,
@@ -1734,4 +1762,152 @@ class LeagueAward {
   final String? manager;
   final String? team;
   final int value;
+}
+
+/// A gameweek that has been **played** (ADR-298).
+///
+/// ⭐⭐ **A week that is over never changes**, which is the whole economics of the swipe: fetch it once
+/// and it is correct for the rest of the season. ⚠️ *A cache whose entries can never go stale is the only
+/// kind that needs no invalidation policy.*
+class GameweekResult {
+  const GameweekResult({
+    required this.gameweek,
+    required this.played,
+    required this.squad,
+    required this.summary,
+  });
+
+  factory GameweekResult.fromJson(Map<String, dynamic> json) => GameweekResult(
+    gameweek: (json['gameweek'] as num?)?.toInt() ?? 0,
+    // ⭐ `false` means *"FPL has not published this yet"*, not *"something went wrong"* — swiping past
+    // the present is an ordinary gesture.
+    played: json['played'] as bool? ?? false,
+    squad: [
+      for (final e in (json['squad'] as List? ?? []))
+        GameweekPlayer.fromJson((e as Map).cast<String, dynamic>()),
+    ],
+    summary: GameweekSummary.fromJson(
+      (json['summary'] as Map?)?.cast<String, dynamic>() ?? const {},
+    ),
+  );
+
+  final int gameweek;
+  final bool played;
+  final List<GameweekPlayer> squad;
+  final GameweekSummary summary;
+
+  /// The eleven who were picked to start — ⚠️ *as set*, before any automatic substitution.
+  List<GameweekPlayer> get xi => [
+    for (final p in squad)
+      if (!p.benched) p,
+  ];
+
+  List<GameweekPlayer> get bench => [
+    for (final p in squad)
+      if (p.benched) p,
+  ];
+}
+
+/// One player, and what his week was.
+///
+/// ⭐⭐ **The player is the shared shape; the week sits beside him** (ADR-227). A past week's facts are
+/// not properties of a player — they are properties of a player *in a week*, and flattening them would
+/// have made a second player shape.
+class GameweekPlayer {
+  const GameweekPlayer({
+    required this.player,
+    required this.points,
+    required this.minutes,
+    required this.goals,
+    required this.assists,
+    required this.bonus,
+    required this.saves,
+    required this.cleanSheet,
+    required this.yellowCards,
+    required this.redCards,
+    required this.didPlay,
+    required this.isCaptain,
+    required this.isViceCaptain,
+    required this.benched,
+    required this.cameOn,
+    required this.wentOff,
+  });
+
+  factory GameweekPlayer.fromJson(Map<String, dynamic> json) {
+    final result =
+        (json['result'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final pick = (json['pick'] as Map?)?.cast<String, dynamic>() ?? const {};
+    int n(Map<String, dynamic> m, String k) => (m[k] as num?)?.toInt() ?? 0;
+    return GameweekPlayer(
+      player: PlayerSummary.fromJson(
+        (json['player'] as Map).cast<String, dynamic>(),
+      ),
+      points: n(result, 'points'),
+      minutes: n(result, 'minutes'),
+      goals: n(result, 'goals'),
+      assists: n(result, 'assists'),
+      bonus: n(result, 'bonus'),
+      saves: n(result, 'saves'),
+      cleanSheet: result['clean_sheet'] as bool? ?? false,
+      yellowCards: n(result, 'yellow_cards'),
+      redCards: n(result, 'red_cards'),
+      didPlay: result['played'] as bool? ?? false,
+      isCaptain: pick['is_captain'] as bool? ?? false,
+      isViceCaptain: pick['is_vice_captain'] as bool? ?? false,
+      benched: pick['benched'] as bool? ?? false,
+      cameOn: pick['came_on'] as bool? ?? false,
+      wentOff: pick['went_off'] as bool? ?? false,
+    );
+  }
+
+  final PlayerSummary player;
+  final int points;
+  final int minutes;
+  final int goals;
+  final int assists;
+  final int bonus;
+  final int saves;
+  final bool cleanSheet;
+  final int yellowCards;
+  final int redCards;
+
+  /// ⚠️ **Not `points > 0`.** A blank gameweek and a pointless ninety minutes are different weeks —
+  /// ⭐ *a zero that means "he did not play" must not draw like a zero that means "he played badly".*
+  final bool didPlay;
+
+  final bool isCaptain;
+  final bool isViceCaptain;
+  final bool benched;
+  final bool cameOn;
+  final bool wentOff;
+}
+
+/// The week's own numbers, as FPL settled them.
+class GameweekSummary {
+  const GameweekSummary({
+    this.points,
+    this.overallRank,
+    this.transfers,
+    this.hit,
+    this.benchPoints,
+    this.chip,
+  });
+
+  factory GameweekSummary.fromJson(Map<String, dynamic> json) =>
+      GameweekSummary(
+        points: (json['points'] as num?)?.toInt(),
+        overallRank: (json['overall_rank'] as num?)?.toInt(),
+        transfers: (json['transfers'] as num?)?.toInt(),
+        hit: (json['hit'] as num?)?.toInt(),
+        benchPoints: (json['bench_points'] as num?)?.toInt(),
+        chip: json['chip'] as String?,
+      );
+
+  /// ⚠️ Null means *not known*, never zero — the rule `bank` and `value` already follow.
+  final int? points;
+  final int? overallRank;
+  final int? transfers;
+  final int? hit;
+  final int? benchPoints;
+  final String? chip;
 }

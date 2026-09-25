@@ -140,11 +140,17 @@ list on sight, not on suspicion.
   version numbers drift — *the step that must happen every time and is invisible when skipped.*
   📌 **Still open: iOS.** TestFlight needs the £79/yr account, and the owner is the only iPhone tester,
   so it costs nothing to wait.
-- ⏳ **Swipe through the season on My Team** (ADR-298, gated 2026-09-25) — swipe right to GW1 for the
-  squad as it was with real points and match events; swipe left to **GW+5**, not GW38. ⭐ Backwards is
-  nearly free: the weekly data is **already stored** and a played gameweek caches forever. ⚠️ Forward was
-  capped deliberately — *a number the model cannot stand behind does more damage on the main screen than
-  anywhere else.* 📌 Needs `yellow_cards`/`red_cards` and a backfill first.
+- ✅ **Swipe through the season on My Team** (ADR-298, gated **and built** 2026-09-25) — swipe right to
+  GW1 for the squad as it was with real points and match events; swipe left to **GW+5**, not GW38. ⭐
+  Backwards was nearly free: the weekly data was **already stored** and a settled gameweek caches forever —
+  ⚠️ *keyed on `played`, not on the gameweek number, so a week still being played is re-fetched every time
+  it is looked at.* Forward was capped deliberately — *a number the model cannot stand behind does more
+  damage on the main screen than anywhere else.*
+  ⚠️⚠️ **The cap shipped one week short and a surviving mutant found it.** The service sent 5 weeks while
+  the app walked 5 pages *past* the live one, so the last forward page was fifteen dashes under a confident
+  `0.0 Predicted`. ⭐ *A window includes the week you are standing on* — there is a `SWIPE = WIDE + 1`
+  constant for it now and `tests/test_forward_limit_agrees.py` reads the Dart and the Python halves
+  together, because neither suite can see the other's number.
 - 🔴 **The mobile API is unauthenticated and uncapped** *(named 2026-09-24, ADR-283)*. `FPL_USER_CAP` and
   `beta_users` live in `src/web_streamlit/` and have never applied to the app. That was fine while
   distribution meant *"I send you a file"*; ⚠️ **a public Android download button makes it a decision rather

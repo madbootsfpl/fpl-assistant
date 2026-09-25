@@ -1349,9 +1349,18 @@ def test_the_card_carries_a_run_not_a_single_fixture(store, team):
     # asserted only the constant, so slicing the fixtures to one survived: the answer would claim three and
     # carry one, and a client sizing its row from `run` would draw two empty columns.
     # ⭐ *A field describing the shape of another field has to be checked against it.*
+    #
+    # ⚠️⚠️ **Equality here, and ADR-298 broke it deliberately.** The card still draws `run` columns, but the
+    # swipe walks `SWIPE` weeks off the same fixture map, so the data is now *wider* than the card. ⭐ The
+    # check that matters is unchanged in spirit — the card must never be wider than its data, which is the
+    # failure the original was written to catch — so it is stated as the inequality it always meant.
     longest = max(len(f) for f in answer["fixtures"].values())
-    assert longest == answer["run"], (
-        f"the answer declares run={answer['run']} and the longest club list holds {longest}"
+    assert longest >= answer["run"], (
+        f"the answer declares run={answer['run']} and the longest club list holds only {longest} — "
+        f"a client sizing its row from `run` will draw empty columns"
+    )
+    assert longest == service_inputs.SWIPE, (
+        f"the longest club list holds {longest}, not the {service_inputs.SWIPE} weeks the swipe walks"
     )
 
     for club, fixtures in answer["fixtures"].items():

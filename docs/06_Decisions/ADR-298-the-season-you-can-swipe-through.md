@@ -1,7 +1,9 @@
 # ADR-298 — The season you can swipe through
 
 **Date:** 2026-09-25
-**Status:** ⏳ **Gate — agreed, not built.** Nothing in this ADR ships code.
+**Status:** ✅ **Built** (2026-09-25). The gate was agreed first and this document was written before
+any code — ⭐ *the section below on what building found is the part a gate ADR cannot contain, and the
+reason it is worth coming back to write it down.*
 **From:** the owner, with two FFH screenshots — *"swipe the 'My Team' page right you get the previous
 week's team with scores, yellow cards picked up etc., swipe left and you get the next GW predicted
 score… till you reach GW1 or GW38. How difficult would this be to add and at what cost?"*
@@ -69,15 +71,56 @@ actually was, including auto-subs · GW points and overall rank · cards, once b
   this today.
 - other managers' past squads — a different feature with a per-manager cost (ADR-287's economics)
 
-## What must be settled before building
+## What had to be settled before building — and what building settled
 
-1. **Cards first.** `yellow_cards` / `red_cards` columns and a backfill re-run — ⚠️ *a screen that shows
-   every match event except the one the owner named is a screen that gets reported as broken.*
-2. **Where the cache lives.** Picks per manager per gameweek: on the device, or server-side beside the
-   board? ⭐ On-device is free and private; server-side is shared across a manager's devices. Probably
-   on-device, and that is its own small decision.
-3. **What an unplayed gameweek looks like mid-week.** ⚠️ GW6 is neither past nor future while it is being
-   played — *the state nobody designs for is the one the app spends every Saturday in.*
+1. **Cards first.** ✅ `yellow_cards` / `red_cards` are columns on `player_history`, parsed in
+   `PlayerGameweek.from_api`, and registered in `_MIGRATIONS` — ⚠️ *which is where this nearly failed
+   silently: the migration went in as a **second `player_history` key** in the dict literal and Python
+   discarded the first without a word.* `tests/test_migrations_are_registered.py` now guards that shape.
+2. **Where the cache lives.** ✅ **On the device, in memory, for the session.** `ServiceClient` holds a
+   `Map<int, GameweekResult>` and writes to it **only when `played` is true** — ⭐ *the cache key is not
+   the gameweek, it is the gameweek's finality.* A week still being played is re-fetched every time it is
+   looked at, which is exactly what item 3 turned out to need.
+   ⚠️ **Not persisted, and that is the smaller decision inside this one.** A settled gameweek never
+   changes, so persisting it would be safe — but it would also be the first thing in this app that stores
+   a manager's history on the device, and a session-length cache already removes every repeat request
+   within the one sitting where repeats happen.
+3. **What an unplayed gameweek looks like mid-week.** ✅ It says so, and it is never cached. `played` comes
+   from the service and the page prints *"This gameweek has not been played yet"* — ⭐ *the state nobody
+   designs for got the shortest code path, because the honest answer to "what happened?" during a match is
+   "ask again later."*
+
+## What building found that planning did not
+
+⚠️⚠️⚠️ **The forward limit was off by one, and no test noticed for an hour.** The service sent `WIDE` = 5
+gameweeks of projection and the app walked 5 pages *past* the live one — so the fifth forward page had no
+data at all: fifteen dashes under a confident **0.0 Predicted**. ⭐ *A window includes the week you are
+standing on*, so five forward pages need six weeks. There is now a `SWIPE = WIDE + 1` constant that says
+this in one line, and `tests/test_forward_limit_agrees.py` reads **both halves** — the Dart constant and
+the Python one — because neither suite can see the other's number.
+
+⭐⭐ **It was a surviving mutant that found it, not a reading of the code.** The mutation *"a missing
+projection becomes 0.0"* survived, which said no test cared about a missing projection. Chasing why led
+straight to a whole page of them. ⚠️ *The bug was invisible to every test that existed and to me; the only
+thing that pointed at it was a deliberately broken version of the code passing.*
+
+⭐ **And the header was lying in the same direction.** Summing `?? 0` over a week with no data printed
+`0.0 Predicted` above fifteen cards that all read `—` — *a header that contradicts every number under it
+is worse than no header, because it is the one a reader trusts.* It is a dash now too.
+
+## What shipped
+
+**Service:** `POST /api/v1/squad/gameweek` → `gameweek_result()`; `run_xp` and the fixture map widened from
+`RUN` to `SWIPE`; `yellow_cards` / `red_cards` through the model, the schema, and the migrations.
+
+**App:** `season_view.dart` — `SeasonPages` (the `PageView` and the index arithmetic), `PastGameweek` (the
+result list), `ForwardEdge` (the page that says why it stops). `PitchView` gained an optional `gameweek`,
+and on a forward page it drops the mode bar, the deadline countdown, the bank, the value, the transfers and
+the price — ⭐ *every one of those is a true fact about today that becomes a false claim four weeks out.*
+
+**Tests:** 16 in `mobile/test/season_pages_test.dart` and 7 in `mobile/test/gameweek_result_test.dart`,
+mutation-tested at **15/15 caught** after the two gaps above were closed; `test_forward_limit_agrees.py`,
+plus the widened window pinned in `tests/test_run_window_and_opponents.py`.
 
 ## Cost
 

@@ -41,12 +41,25 @@ class PitchView extends StatelessWidget {
     required this.mode,
     required this.onMode,
     this.footer,
+    this.gameweek,
     super.key,
   });
 
   final MyTeam team;
   final PitchMode mode;
   final ValueChanged<PitchMode> onMode;
+
+  /// The gameweek this pitch is about, when it is **not** the next one (ADR-298).
+  ///
+  /// ⭐⭐ **Null means "the live pitch", and that is the normal case** — the swipe's forward pages set it
+  /// and nothing else does. ⚠️⚠️ When it is set the mode bar goes away and the reading is forced back to
+  /// a single projection: *"Next 3" on a page about GW+4 would be a run starting from a week that has not
+  /// happened, and "Price" does not vary by gameweek at all.* A control that cannot mean anything on the
+  /// page it is drawn on is worse than a missing control.
+  final int? gameweek;
+
+  /// Whether this pitch is showing a week other than the next one.
+  bool get isForward => gameweek != null;
 
   /// ⭐ The pitch is the right surface for editing a squad — it is where a manager already looks to decide
   /// anything, and a tab called "Captain" would be a second place to do a thing that belongs here.
@@ -111,8 +124,9 @@ class PitchView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Header(team: team),
-        _ModeBar(mode: mode, onMode: onMode),
+        _Header(team: team, gameweek: gameweek),
+        // ⚠️ See `gameweek` — a forward page has nothing the other two readings could mean.
+        if (!isForward) _ModeBar(mode: mode, onMode: onMode),
         // ⭐⭐⭐ **One green area, from the mode bar to the bottom** (ADR-253). The pitch was 747px of a
         // 1932px screen with the bench floating on the dark background below it and 140px of dead space
         // under that. The competitor gives its pitch **twice** the room by letting the green run behind
@@ -164,10 +178,11 @@ class PitchView extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
                     child: _Bench(
                       team: team,
-                      mode: mode,
+                      mode: isForward ? PitchMode.nextGw : mode,
                       onTapPlayer: onTapPlayer,
                       drawWidth: cardWidth,
                       vertical: sideways,
+                      gameweek: gameweek,
                     ),
                   );
 
@@ -200,9 +215,12 @@ class PitchView extends StatelessWidget {
                                           _Card(
                                             team: team,
                                             player: p,
-                                            mode: mode,
+                                            mode: isForward
+                                                ? PitchMode.nextGw
+                                                : mode,
                                             onTap: () => onTapPlayer(p),
                                             drawWidth: cardWidth,
+                                            gameweek: gameweek,
                                           ),
                                       ],
                                     ),
@@ -307,16 +325,34 @@ class _PitchMark extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.team});
+  const _Header({required this.team, this.gameweek});
 
   final MyTeam team;
+
+  /// A forward page's week — see `PitchView.gameweek`.
+  final int? gameweek;
 
   @override
   Widget build(BuildContext context) {
     final a = team.analysis;
     // ⭐ The XI's own total, not the squad's. A landing number that silently included the bench would
     // flatter every team by four players who are not playing.
-    final xi = a.xi.fold<double>(0, (sum, p) => sum + p.xp);
+    //
+    // ⚠️⚠️ **A forward page totals THAT week, not this one** (ADR-298). Reusing `p.xp` here would have
+    // put the same "Predicted" figure on all six pages while the cards underneath it changed — ⭐ *a
+    // total that disagrees with the numbers it is the total of teaches the reader to ignore it.*
+    //
+    // ⚠️⚠️⚠️ **And it is a dash when there is nothing to total** — found by a test I wrote for the cards.
+    // Summing `?? 0` over a week the server did not send produced a confident **0.0 Predicted** above
+    // fifteen cards all reading `—`. ⭐ *A header that contradicts every number under it is worse than no
+    // header, because it is the one a reader trusts.*
+    final weekly = gameweek == null
+        ? [for (final p in a.xi) p.xp]
+        : [for (final p in a.xi) team.xpAt(p, gameweek!)];
+    final known = weekly.whereType<double>().toList();
+    final xi = known.isEmpty
+        ? null
+        : known.fold<double>(0, (sum, x) => sum + x);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
       child: Column(
@@ -332,7 +368,7 @@ class _Header extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                'GW${team.gameweek ?? '—'}',
+                'GW${gameweek ?? team.gameweek ?? '—'}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -342,7 +378,12 @@ class _Header extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  team.deadlineWhen.isEmpty
+                  // ⚠️⚠️ **The countdown belongs to the next deadline only.** On a GW+4 page it would be
+                  // counting down to a gameweek that is not the one on screen — ⭐ *the most misleading
+                  // possible thing to put next to a week's name.*
+                  gameweek != null
+                      ? 'projected'
+                      : team.deadlineWhen.isEmpty
                       // ⚠️ Falls back to the prose line if the parts are absent — an older server must
                       // not leave the header blank.
                       ? team.deadlineLabel
@@ -358,24 +399,32 @@ class _Header extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _Stat(value: xi.toStringAsFixed(1), label: 'Predicted'),
-              // ⚠️ FPL's bank, or an em dash — ⭐ *never £0.0m*, which is a real position and would read as
-              // one. `—` says "not known"; zero says "you are skint".
               _Stat(
-                value: team.bank == null
-                    ? '—'
-                    : '£${team.bank!.toStringAsFixed(1)}m',
-                label: 'In the bank',
+                value: xi == null ? '—' : xi.toStringAsFixed(1),
+                label: 'Predicted',
               ),
-              _Stat(
-                value: team.value == null
-                    ? '—'
-                    : '£${team.value!.toStringAsFixed(1)}m',
-                label: 'Value',
-              ),
-              // ⭐ Shown as "n free" because the number is one the manager set, not one FPL published —
-              // the label is the honest bit.
-              _Stat(value: '${team.freeTransfers}', label: 'Transfers'),
+              // ⚠️⚠️ **Money and transfers are facts about today.** They are shown on the live pitch and
+              // nowhere else: a bank balance under a GW+4 projection reads as *the balance then*, which
+              // nobody can know. ⭐ *A true number in the wrong place becomes a false claim.*
+              if (gameweek == null) ...[
+                // ⚠️ FPL's bank, or an em dash — ⭐ *never £0.0m*, which is a real position and would read as
+                // one. `—` says "not known"; zero says "you are skint".
+                _Stat(
+                  value: team.bank == null
+                      ? '—'
+                      : '£${team.bank!.toStringAsFixed(1)}m',
+                  label: 'In the bank',
+                ),
+                _Stat(
+                  value: team.value == null
+                      ? '—'
+                      : '£${team.value!.toStringAsFixed(1)}m',
+                  label: 'Value',
+                ),
+                // ⭐ Shown as "n free" because the number is one the manager set, not one FPL published —
+                // the label is the honest bit.
+                _Stat(value: '${team.freeTransfers}', label: 'Transfers'),
+              ],
             ],
           ),
         ],
@@ -409,6 +458,7 @@ class _Stat extends StatelessWidget {
 
 class _Card extends StatelessWidget {
   const _Card({
+    this.gameweek,
     required this.team,
     required this.player,
     required this.mode,
@@ -419,6 +469,9 @@ class _Card extends StatelessWidget {
   final MyTeam team;
   final PlayerSummary player;
   final PitchMode mode;
+
+  /// Set only on a swipe-forward page — see `PitchView.gameweek`.
+  final int? gameweek;
   final VoidCallback onTap;
 
   /// The size the card is **designed** at. Every measurement inside it — the 34pt kit box, the type
@@ -513,6 +566,13 @@ class _Card extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 switch (mode) {
+                  // ⭐ Same slot, a different week. The card's shape does not change between the live
+                  // pitch and a forward page, so a reader who has learnt one has learnt both.
+                  PitchMode.nextGw when gameweek != null => _AtGameweek(
+                    player: player,
+                    fixture: team.fixtureAt(player, gameweek!),
+                    xp: team.xpAt(player, gameweek!),
+                  ),
                   PitchMode.nextGw => _NextGw(player: player, fixture: fixture),
                   PitchMode.run => _Run(
                     fixtures: team.runFor(player),
@@ -551,6 +611,59 @@ class _Card extends StatelessWidget {
 }
 
 /// **Next GW** — the reading the app opened with: what he is projected to score, and against whom.
+/// One named gameweek's projection, for a swipe-forward page (ADR-298).
+///
+/// ⚠️⚠️ **Three different reasons for a dash, and only one of them is a missing fixture.** A blank
+/// gameweek, a week past the window the server sent, and a player the server has no projection for all
+/// arrive here as nulls — ⭐ *and all three are honestly "we are not telling you a number", which is what
+/// a dash says.* Inventing zero for any of them would be a prediction.
+class _AtGameweek extends StatelessWidget {
+  const _AtGameweek({
+    required this.player,
+    required this.fixture,
+    required this.xp,
+  });
+
+  final PlayerSummary player;
+  final Fixture? fixture;
+  final double? xp;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+        // ⭐ The same difficulty language as every other card — a reader learns one, not four.
+        decoration: BoxDecoration(
+          color: fixture?.difficulty == null
+              ? Brand.surface
+              : difficultyTint(fixture!.difficulty),
+          borderRadius: BorderRadius.circular(Brand.radiusPill),
+        ),
+        child: Text(
+          xp == null ? '—' : xp!.toStringAsFixed(1),
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: fixture?.difficulty == null ? Brand.text : Colors.white,
+          ),
+        ),
+      ),
+      const SizedBox(height: 2),
+      // ⚠️⚠️ **No price on a forward page.** Today's price is a fact about today; printing it under a
+      // GW+4 projection invites it to be read as the price *then*. ⭐ The opponent gets the whole line
+      // instead, which is the thing the projection actually depends on.
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          fixture?.label ?? 'no fixture',
+          style: const TextStyle(color: Colors.white70, fontSize: 9.5),
+        ),
+      ),
+    ],
+  );
+}
+
 class _NextGw extends StatelessWidget {
   const _NextGw({required this.player, required this.fixture});
 
@@ -635,7 +748,11 @@ class _Run extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (var i = 0; i < fixtures.length; i++)
+        // ⚠️⚠️ **Three, because the card is called "Next 3."** The fixture window now follows the
+        // request horizon (ADR-298), so this list can be five — and iterating all of it would
+        // silently rename the card. ⭐ *A widget that renders whatever it is given is a widget
+        // whose label is a hope.*
+        for (var i = 0; i < fixtures.length && i < 3; i++)
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 1),
@@ -846,6 +963,7 @@ class _Flag extends StatelessWidget {
 
 class _Bench extends StatelessWidget {
   const _Bench({
+    this.gameweek,
     required this.team,
     required this.mode,
     required this.onTapPlayer,
@@ -855,6 +973,7 @@ class _Bench extends StatelessWidget {
 
   final MyTeam team;
   final PitchMode mode;
+  final int? gameweek;
   final void Function(PlayerSummary) onTapPlayer;
 
   /// ⭐ **The width the eleven above are drawn at.** On a phone the bench and the XI have always matched
@@ -907,6 +1026,7 @@ class _Bench extends StatelessWidget {
                       mode: mode,
                       onTap: () => onTapPlayer(p),
                       drawWidth: drawWidth,
+                      gameweek: gameweek,
                     ),
                     if (roleOf[p.id] != null)
                       Positioned(

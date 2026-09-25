@@ -12,7 +12,7 @@ the horizon is 1, since the headline beside it is a **this-week** projection. Tw
 import pytest
 
 from src import service
-from src.service.answers import RUN, _recent_rows
+from src.service.answers import RUN, SWIPE, WIDE, _recent_rows
 from src.storage import Storage
 
 
@@ -80,12 +80,14 @@ def test_my_team_sends_the_run_its_numbers_even_at_horizon_one(store, squad):
     finally:
         answers.fetch_manager_team = real
 
+    # ⭐ The card still draws three. `run` is what the CARD shows; `run_xp` is how far the DATA reaches,
+    # and ADR-298 pushed the second apart from the first so the swipe forward has five weeks to read.
     assert out["run"] == RUN
     assert len(out["run_xp"]) == 15, "every player in the fifteen needs his run"
     for row in out["run_xp"]:
-        assert len(row["by_gameweek"]) == RUN, (
-            f"player {row['id']} has {len(row['by_gameweek'])} gameweeks for a {RUN}-fixture run — "
-            f"the card draws {RUN} columns and the missing ones render as dashes"
+        assert len(row["by_gameweek"]) == SWIPE, (
+            f"player {row['id']} has {len(row['by_gameweek'])} gameweeks — the card draws {RUN} columns "
+            f"and the swipe walks {SWIPE} of them, so the missing weeks render as dashes on both"
         )
 
     # ⚠️ And the headline is still a single week, which is the whole reason for the second pass.
@@ -108,10 +110,60 @@ def test_a_wide_request_does_not_pay_for_a_second_pass(store, squad):
 
     answers.analysis = counting
     try:
+        service.my_team(service.MyTeamRequest(manager_id=1, horizon=SWIPE), store=store)
+    finally:
+        answers.analysis, answers.fetch_manager_team = real_analysis, real_fetch
+    assert calls == [SWIPE], f"expected one analysis pass, got {calls}"
+
+
+def test_a_three_week_request_still_pays_for_the_second_pass(store, squad):
+    """⚠️⚠️ **The counterpart, and the one ADR-298 changed.** A `horizon=3` caller used to be wide enough
+    to skip the second pass; now it is not, because the swipe reaches five. ⭐ *Widening a window silently
+    narrows the set of callers who get it for free — a test that only checks the free case cannot tell.*
+    """
+    from src.service import answers
+
+    picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
+             "captain_id": squad[0], "vice_captain_id": squad[1]}
+    calls = []
+    real_analysis, real_fetch = answers.analysis, answers.fetch_manager_team
+    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+
+    def counting(req, *, store=None):
+        calls.append(req.horizon)
+        return real_analysis(req, store=store)
+
+    answers.analysis = counting
+    try:
         service.my_team(service.MyTeamRequest(manager_id=1, horizon=RUN), store=store)
     finally:
         answers.analysis, answers.fetch_manager_team = real_analysis, real_fetch
-    assert calls == [RUN], f"expected one analysis pass, got {calls}"
+    assert calls == [RUN, SWIPE], f"expected a headline pass then a wide pass, got {calls}"
+
+
+def test_every_club_carries_a_fixture_for_every_week_the_swipe_can_reach(store, squad):
+    """⚠️⚠️ **ADR-298.** A forward page names the opponent beside the projection. ⭐ *A number with no
+    fixture beside it is a number the reader cannot check* — and the fixture map was cut to three."""
+    from src.service import answers
+
+    picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
+             "captain_id": squad[0], "vice_captain_id": squad[1]}
+    real = answers.fetch_manager_team
+    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    try:
+        out = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
+    finally:
+        answers.fetch_manager_team = real
+
+    assert out["fixtures"], "a squad with no clubs cannot be drawn"
+    for club, cells in out["fixtures"].items():
+        assert len(cells) == SWIPE, (
+            f"{club} carries {len(cells)} fixtures — the swipe walks {SWIPE} weeks and a page past the "
+            f"last one has no opponent to print"
+        )
+        # ⭐ And they are the *consecutive* weeks the swipe walks, not any five.
+        weeks = [c["gameweek"] for c in cells]
+        assert weeks == sorted(weeks), f"{club}'s fixtures are out of order: {weeks}"
 
 
 # ── who they played ──────────────────────────────────────────────────────────────────────────────
@@ -150,3 +202,31 @@ def test_the_live_endpoint_carries_both(store):
     assert named, "no appearance named an opponent — the club join found nothing"
     for row in answer["recent"]:
         assert set(row) == {"gameweek", "points", "minutes", "opponent", "home"}
+
+
+def test_the_window_is_one_week_wider_than_the_swipe_goes_forward(store, squad):
+    """⚠️⚠️⚠️ **The bug a mutation test found, pinned.** `SWIPE` shipped as `WIDE` — five weeks — and the
+    app's fifth forward page showed fifteen dashes, because *a window includes the week you are standing
+    on*. Five pages past the live one need six weeks.
+
+    ⭐ The app declares the same five in `kForwardWeeks`; `tests/test_forward_limit_agrees.py` is what
+    stops the two halves from drifting apart again. This one states the arithmetic on the server's side.
+    """
+    from src.service import answers
+
+    picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
+             "captain_id": squad[0], "vice_captain_id": squad[1]}
+    real = answers.fetch_manager_team
+    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    try:
+        out = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
+    finally:
+        answers.fetch_manager_team = real
+
+    live = out["gameweek"]
+    assert live is not None, "a squad with no gameweek cannot be walked"
+    carried = {gw for row in out["run_xp"] for gw in row["by_gameweek"]}
+    # ⭐ The live week and each of the five ahead of it — every page the swipe can land a number on.
+    assert carried == set(range(live, live + SWIPE)), (
+        f"the swipe walks GW{live}..GW{live + SWIPE - 1} and the answer carries {sorted(carried)}"
+    )
