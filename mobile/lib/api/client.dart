@@ -155,6 +155,18 @@ class ServiceClient {
     'scope': scope,
   });
 
+  /// What r/FantasyPL is talking about (ADR-300).
+  ///
+  /// ⚠️ `playerIds` **flag** rows rather than filter them — the subreddit talks about whoever it talks
+  /// about, and the ids only let a row say *"you have him"* without the client matching ids itself.
+  ///
+  /// ⭐ No caching here: the **service** caches the fetch for ten minutes, because Reddit rate-limits and
+  /// a per-device cache would still let nine testers hammer it.
+  Future<Chatter> chatter(List<int> playerIds, {int limit = 15}) async =>
+      Chatter.fromJson(
+        await _post('chatter', {'player_ids': playerIds, 'limit': limit}),
+      );
+
   /// One player in full — the card behind a row.
   ///
   /// ⭐ Called when a row is **expanded**, not with the list: the market is 481 players and carrying every

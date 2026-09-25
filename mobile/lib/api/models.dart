@@ -2022,3 +2022,69 @@ class GameweekSummary {
   final int? benchPoints;
   final String? chip;
 }
+
+/// What r/FantasyPL is talking about (ADR-300).
+///
+/// ⚠️⚠️ **Mentions, not sentiment**, and `measures` says so on the wire. ⭐ *A count of names is not an
+/// opinion about players*, and a screen that blurs the two is inventing analysis it did not do.
+class Chatter {
+  const Chatter({
+    required this.rows,
+    required this.note,
+    required this.measures,
+  });
+
+  factory Chatter.fromJson(Map<String, dynamic> json) => Chatter(
+    rows: [
+      for (final e in (json['rows'] as List? ?? const []))
+        ChatterRow.fromJson((e as Map).cast<String, dynamic>()),
+    ],
+    // ⭐ The service's own sentence, carried rather than re-derived — *two places that describe the same
+    // outcome are two places that will disagree about it.* It is also the whole of the error state: a
+    // blocked Reddit arrives as no rows and a sentence saying why.
+    note: json['note'] as String? ?? '',
+    measures: json['measures'] as String? ?? 'mentions',
+  );
+
+  final List<ChatterRow> rows;
+  final String note;
+  final String measures;
+}
+
+/// One talked-about player.
+class ChatterRow {
+  const ChatterRow({
+    required this.player,
+    required this.photo,
+    required this.mentions,
+    required this.owned,
+    required this.posts,
+  });
+
+  factory ChatterRow.fromJson(Map<String, dynamic> json) => ChatterRow(
+    player: PlayerSummary.fromJson(
+      (json['player'] as Map).cast<String, dynamic>(),
+    ),
+    photo: json['photo'] as String? ?? '',
+    mentions: (json['mentions'] as num?)?.toInt() ?? 0,
+    owned: json['owned'] as bool? ?? false,
+    posts: [
+      for (final e in (json['posts'] as List? ?? const []))
+        (
+          title: (e as Map)['title'] as String? ?? '',
+          link: e['link'] as String? ?? '',
+        ),
+    ],
+  );
+
+  final PlayerSummary player;
+
+  /// ⭐ **Our own mugshot**, not a thumbnail from the feed — *an image that identifies the subject is
+  /// worth more than one that decorates the page*, and it is the one we can supply without asking.
+  final String photo;
+  final int mentions;
+  final bool owned;
+
+  /// The threads behind the count — ⭐ *the number is the claim, these are the evidence for it.*
+  final List<({String title, String link})> posts;
+}

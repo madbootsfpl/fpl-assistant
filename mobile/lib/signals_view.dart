@@ -12,6 +12,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'api/client.dart';
+import 'chatter_view.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'seen_store.dart';
@@ -123,7 +124,7 @@ class _SignalsViewState extends State<SignalsView> {
     // ⭐ A different question needs a different body, not a reshaped one. The boards are ranked by crowd
     // volume; the signals are ranked by evidence (ADR-150). ⚠️ *Forcing both through one list would mean
     // choosing one ordering and misrepresenting the other.*
-    if (_scope == 'trending') {
+    if (_scope == 'trending' || _scope == 'chatter') {
       return Column(
         children: [
           Padding(
@@ -131,7 +132,9 @@ class _SignalsViewState extends State<SignalsView> {
             child: _ScopeBar(scope: _scope, onPick: _pick),
           ),
           Expanded(
-            child: TrendingBoards(client: widget.client, team: widget.team),
+            child: _scope == 'trending'
+                ? TrendingBoards(client: widget.client, team: widget.team)
+                : ChatterBoard(client: widget.client, team: widget.team),
           ),
         ],
       );
@@ -390,6 +393,11 @@ class _ScopeBar extends StatelessWidget {
         ('squad', 'My squad'),
         ('global', 'The market'),
         ('trending', 'Trending'),
+        // ⭐⭐ **Chatter joins the same bar rather than opening a screen** (ADR-300). It is the fourth
+        // answer to *"what is the crowd doing?"* — the market ranks by evidence, Trending by how many
+        // managers moved, and this by how many people are **talking**. ⚠️ *A separate screen would have
+        // been a fourth place to keep the same question honest.*
+        ('chatter', 'Chatter'),
       ])
         Expanded(
           child: GestureDetector(
