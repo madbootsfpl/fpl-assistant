@@ -285,6 +285,48 @@ about one that has been idle for an hour.
 
 ---
 
+## Build filters — stop rebuilding an image that did not change (ADR-292)
+
+Render redeploys on **every push to master**, and a redeploy is a window with nothing serving. Measured
+over 120 commits, **68 of them — 57% — changed nothing the image contains.**
+
+⚠️⚠️ *Every one of those was a window in which a tester could open the app and be told it was broken*,
+and two of them were (ADR-288).
+
+**Dashboard → `madboots-api` → Settings → Build Filters.**
+
+**Included Paths** — exactly what the Dockerfile copies, plus the two files that decide what it copies:
+
+```
+Dockerfile
+.dockerignore
+requirements-api.txt
+pyproject.toml
+src/**
+```
+
+**Ignored Paths** — the one thing under `src/` the image explicitly excludes:
+
+```
+src/web_streamlit/**
+```
+
+⭐ That second list is not an optimisation. `.dockerignore` drops `src/web_streamlit/` from the image, so
+a commit touching only the Streamlit app **cannot** change the API — ⚠️ *and it is the directory this
+project changes most often after `mobile/`.*
+
+### ⚠️ Keep this list and the Dockerfile in agreement
+
+`tests/test_build_filter.py` derives the required paths from the Dockerfile's own `COPY` lines and fails
+if this block no longer covers them. ⭐ *A deploy filter that has drifted from the build is a service that
+stops redeploying when it should* — the failure mode is silence, which is why it is a test and not a
+comment.
+
+📌 **Not in `render.yaml`.** This service was created in the dashboard, so it is not blueprint-managed;
+adding a `render.yaml` would change how the service is defined, which is a larger decision than a filter.
+
+---
+
 ## What it should cost
 
 At this traffic — a handful of testers, sub-200ms calls, 87 MB — **scale-to-zero is effectively free** and
