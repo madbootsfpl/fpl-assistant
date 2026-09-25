@@ -152,8 +152,11 @@ list on sight, not on suspicion.
   the four were **already being fetched**: the captain split spends a request per manager and that
   payload carries the chip, the overall rank, the transfer count, the hit and the bench points.
   📌 Not done: transfer **detail** (who moved — a second N-call pass) and season-long awards.
-- **The Lab's other two modes** — Free Hit and a fresh-season build are the **same solver with different
-  defaults** and `LabMode` already exists to hold them (ADR-272).
+- ✅ **The Lab's other two modes — already done in ADR-272 (confirmed 2026-09-25, ADR-294).** This line
+  was written while `LabMode` existed and the screen did not use it, and the commit it cites is the one
+  that wired it up. ⚠️ *A roadmap entry outlives the work it describes unless something closes it.*
+  ⭐ What was genuinely missing were tests: the enum was pinned and the **screen's use of it was not**, so
+  hardcoding the Wildcard's horizon and budget passed all 341 tests. Six now read the request.
 
 ### 📱 Who is actually testing the mobile app? — **answered 2026-09-24 as LOAD, not people (ADR-280)**
 
