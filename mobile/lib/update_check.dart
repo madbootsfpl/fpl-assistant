@@ -34,18 +34,53 @@ class Available {
     required this.version,
     required this.build,
     required this.url,
+    this.notes = const [],
   });
 
   factory Available.fromJson(Map<String, dynamic> json) => Available(
     version: json['version'] as String? ?? '',
     build: (json['build'] as num?)?.toInt() ?? 0,
     url: json['url'] as String? ?? '',
+    // ⚠️ **A list, and a string is accepted too.** The field shipped as `""` in ADR-282 and the
+    // manifests already published still carry that shape — ⭐ *a reader that only understands the new
+    // format makes every older release unreadable, which is the opposite of what a version check is
+    // for.* Blank entries are dropped, so `""` simply means no notes.
+    notes: _notes(json['notes']),
   );
 
   final String version;
   final int build;
   final String url;
+
+  /// What changed, in the words of the release that changed it (ADR-296).
+  ///
+  /// ⭐⭐ **Empty is the normal case and must read as one.** A release with nothing worth saying is not a
+  /// broken release — ⚠️ *a banner that insists on filling this field will get "various fixes" forever,
+  /// which is worse than silence because it looks like information.*
+  final List<String> notes;
 }
+
+/// What changed, cleaned and capped — ⭐⭐ **in one place.**
+///
+/// ⚠️ The cap lived in three: here, the generator, and the banner's `take(3)`. Mutating any one of them
+/// left the other two passing, which is ⭐ *a cap enforced in several places being a cap that moves* —
+/// the banner now renders whatever this returns and trusts it.
+///
+/// ⚠️ **A bare string is accepted**, because `"notes": ""` is the shape ADR-282 shipped and manifests
+/// carrying it are already published: *a reader that only understands the new format makes every older
+/// release unreadable.*
+List<String> _notes(Object? raw) => switch (raw) {
+  final List list => [
+    for (final n in list)
+      if ('$n'.trim().isNotEmpty) '$n'.trim(),
+  ].take(kMaxNotes).toList(),
+  final String s when s.trim().isNotEmpty => [s.trim()],
+  _ => const [],
+};
+
+/// ⚠️ **Three.** A release with eleven commits has eleven things to say and the reader has a banner —
+/// ⭐ *a notice that grows with the work is a notice that stops being read on the busiest week.*
+const int kMaxNotes = 3;
 
 /// The published build, or `null` if it could not be read.
 ///

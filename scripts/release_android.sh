@@ -93,15 +93,54 @@ cp "$APK" "$SITE/app/madboots-$next.apk"
 # and the app's own update banner takes it from there. *The fallback for a stale link should be an older
 # version of the thing, not a corrupt version of it.*
 ls -t "$SITE/app"/madboots-*.apk 2>/dev/null | tail -n +4 | xargs -r rm -f
-cat > "$SITE/app/version.json" <<JSON
-{
-  "version": "$name",
-  "build": $next,
-  "versionCode": $code,
-  "url": "https://madboots.com/app/madboots-$next.apk",
-  "notes": ""
-}
-JSON
+# ⭐⭐ **The notes write themselves** (ADR-296). A release note nobody is prompted for is a release note
+# nobody writes — ⚠️ *the same argument as the publish step: a step a person has to remember is a step
+# that measures how busy they are.* So they come from the commits since the last release, and
+# `MADBOOTS_NOTES` overrides them when a release deserves words chosen on purpose.
+python3 - "$name" "$next" "$code" "$SITE/app/version.json" <<'PY'
+import json, re, subprocess, sys
+
+name, nxt, code, out = sys.argv[1:5]
+
+# ⭐ Three, matching `kMaxNotes` in `update_check.dart` — a reader has a banner, not a changelog.
+MAX_NOTES = 3
+
+def notes() -> list[str]:
+    import os
+    if override := os.environ.get("MADBOOTS_NOTES", "").strip():
+        return [l.strip() for l in override.splitlines() if l.strip()]
+
+    # ⚠️ Since the **previous** release commit, not since a tag: this project does not tag, and a range
+    # that guesses would silently report the wrong week's work.
+    last = subprocess.run(
+        ["git", "log", "--format=%H", "--grep=^chore: release", "-n", "1"],
+        capture_output=True, text=True).stdout.strip()
+    rng = f"{last}..HEAD" if last else "HEAD"
+    subjects = subprocess.run(
+        ["git", "log", "--format=%s", rng], capture_output=True, text=True).stdout.splitlines()
+
+    out = []
+    for s in subjects:
+        # ⭐ Only what a reader of the app would notice. `docs:`, `test:` and `chore:` changed nothing
+        # they can see, and *a note about work nobody can observe teaches people to skip the notes.*
+        m = re.match(r"^(feat|fix)\([^)]*\):\s*(.+)$|^(feat|fix):\s*(.+)$", s)
+        if not m:
+            continue
+        text = (m.group(2) or m.group(4)).strip()
+        out.append(text[0].upper() + text[1:])
+    return out
+
+json.dump({
+    "version": name,
+    "build": int(nxt),
+    "versionCode": int(code),
+    "url": f"https://madboots.com/app/madboots-{nxt}.apk",
+    # ⚠️ **Capped once, here.** It was capped in both branches of `notes()` and again in the app's
+    # banner; mutating any one left the others passing — ⭐ *a cap enforced in several places is a cap
+    # that moves.* The client caps too, but that is a different job: this decides what is **published**.
+    "notes": notes()[:MAX_NOTES],
+}, open(out, "w"), indent=2, ensure_ascii=False)
+PY
 
 # ⚠️⚠️ **Cloudflare Pages does not know what a `.apk` is.** With no `Content-Type` it sends none at all,
 # and Chrome renders 18MB of zip as text — ⭐ *the download silently becomes a wall of mojibake, which

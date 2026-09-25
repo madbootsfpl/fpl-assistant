@@ -23,11 +23,25 @@ CHECK = ROOT / "mobile" / "lib" / "update_check.dart"
 
 
 def _manifest_written() -> dict:
-    """The JSON the release script writes, with its shell variables filled in."""
-    body = re.search(r"cat > \"\$SITE/app/version\.json\" <<JSON\n(.*?)\nJSON", SCRIPT.read_text(), re.S)
-    assert body, "the release script no longer writes version.json in a JSON heredoc"
-    filled = re.sub(r"\$\{?(\w+)\}?", lambda m: {"next": "2", "code": "2002"}.get(m[1], "x"), body[1])
-    return json.loads(filled)
+    """The manifest the release script actually produces — ⭐ **by running its generator**, not by
+    parsing it.
+
+    ⚠️⚠️ This used to read a bash heredoc, and broke the day ADR-296 replaced it with a python block that
+    writes the same keys. The guard was right to fire — the manifest generation *had* moved — but ⭐ *a
+    test coupled to how a value is produced fails on every refactor that does not change the value*, and
+    a test that fails for the wrong reason is one someone deletes rather than reads.
+    """
+    body = re.search(
+        r"python3 - \"\$name\" \"\$next\" \"\$code\" \"\$SITE/app/version\.json\" <<'PY'\n(.*?)\nPY",
+        SCRIPT.read_text(),
+        re.S,
+    )
+    assert body, "the release script no longer builds version.json in python"
+    out = Path(tempfile.mkdtemp()) / "version.json"
+    subprocess.run(
+        ["python3", "-c", body[1], "1.0.0", "2", "2002", str(out)], cwd=ROOT, check=True
+    )
+    return json.loads(out.read_text())
 
 
 def test_the_script_writes_every_field_the_app_reads() -> None:
@@ -41,7 +55,7 @@ def test_the_script_writes_every_field_the_app_reads() -> None:
 
 
 def test_build_is_a_number_because_the_app_compares_it() -> None:
-    # ⚠️ Quoting it in the heredoc would make `(json['build'] as num?)` null, and a null build is read
+    # ⚠️ Emitting it as a string would make `(json['build'] as num?)` null, and a null build is read
     # as "no update" — ⭐ *the one wrong answer that looks exactly like a working check.*
     assert isinstance(_manifest_written()["build"], int)
 
@@ -147,7 +161,8 @@ def test_the_apk_url_carries_the_build_number() -> None:
     assert re.search(r'cp "\$APK" "\$SITE/app/madboots-\$next\.apk"', script), (
         "the published APK filename no longer carries the build number"
     )
-    assert '"url": "https://madboots.com/app/madboots-$next.apk"' in script, (
+    # ⭐ Checked on the **produced** manifest, so it survives a change of technique.
+    assert _manifest_written()["url"].endswith("/madboots-2.apk"), (
         "version.json points somewhere other than the versioned APK"
     )
     assert 'href="madboots-$next.apk"' in script, "the install page links to an unversioned APK"

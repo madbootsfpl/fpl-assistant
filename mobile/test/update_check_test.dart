@@ -15,6 +15,7 @@ http.Client _serving(int status, String body) =>
     MockClient((_) async => http.Response(body, status));
 
 void main() {
+  _notes();
   group('published', () {
     test('reads the manifest', () async {
       final available = await published(
@@ -137,4 +138,67 @@ void main() {
 
 class SocketExceptionish implements Exception {
   const SocketExceptionish();
+}
+
+/// What changed, carried into the banner (ADR-296).
+///
+/// ⭐⭐ **The field shipped empty in ADR-282 and stayed empty**, because nothing produced it. Now the
+/// release derives it from its own commits — and the client has to read both shapes, because manifests
+/// already published carry `"notes": ""`.
+void _notes() {
+  Available parse(Object? notes) => Available.fromJson({
+    'version': '1.0.1',
+    'build': 4,
+    'url': 'https://x/a.apk',
+    'notes': notes,
+  });
+
+  group('reading what changed', () {
+    test('a list arrives as a list', () {
+      expect(parse(['Landscape fixed', 'Faster search']).notes, [
+        'Landscape fixed',
+        'Faster search',
+      ]);
+    });
+
+    test(
+      'an older manifest\'s empty string is no notes, not one blank note',
+      () {
+        // ⚠️⚠️ **The shape already on the website.** ⭐ *A reader that only understands the new format
+        // makes every older release unreadable, which is the opposite of what a version check is for.*
+        expect(parse('').notes, isEmpty);
+        expect(parse('   ').notes, isEmpty);
+      },
+    );
+
+    test('an older manifest with real text still says it', () {
+      expect(parse('Landscape fixed').notes, ['Landscape fixed']);
+    });
+
+    test('a missing field is no notes', () {
+      expect(
+        Available.fromJson({'version': '1.0.1', 'build': 4, 'url': 'x'}).notes,
+        isEmpty,
+      );
+    });
+
+    test('blank entries are dropped rather than rendered', () {
+      // ⭐ A bullet with nothing after it is a bug the reader has to interpret.
+      expect(parse(['Real note', '', '  ']).notes, ['Real note']);
+    });
+
+    test('whitespace does not survive into the banner', () {
+      expect(parse(['  Landscape fixed  ']).notes, ['Landscape fixed']);
+    });
+
+    test('a busy week is capped, in one place', () {
+      // ⚠️⚠️ **The cap used to live in three places** — the model, the release script and the banner's
+      // own `take(3)` — and mutating any one left the other two passing. ⭐ *A cap enforced in several
+      // places is a cap that moves*; the banner now renders whatever this returns.
+      final many = [for (var i = 0; i < 9; i++) 'Change number $i'];
+
+      expect(parse(many).notes.length, kMaxNotes);
+      expect(parse(many).notes.first, 'Change number 0');
+    });
+  });
 }

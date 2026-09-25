@@ -1203,16 +1203,45 @@ class _UpdateBanner extends StatelessWidget {
           const Icon(Icons.system_update, size: 15, color: Brand.orange),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              // ⭐ Says what it is for, not just that it exists — *"there is an update" invites "so
-              // what?"; "what you are about to report may already be fixed" does not.*
-              'Build ${available.build} is out — yours is $kAppBuild. '
-              'Tap to update; what you are about to report may already be fixed.',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11.5,
-                height: 1.4,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  // ⭐ Says what it is for, not just that it exists — *"there is an update" invites "so
+                  // what?"; "what you are about to report may already be fixed" does not.*
+                  'Build ${available.build} is out — yours is $kAppBuild. '
+                  'Tap to update; what you are about to report may already be fixed.',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.5,
+                    height: 1.4,
+                  ),
+                ),
+                // ⭐⭐ **What changed, when the release had something to say** (ADR-296). The banner has
+                // always been able to say *that* there is an update; this is the first version that can
+                // say *what* — ⚠️ *"there is a new build" is a chore, and "the landscape pitch is fixed"
+                // is a reason.*
+                //
+                // ⚠️ Capped in the model (`kMaxNotes`), not here — ⭐ *a cap enforced in several
+                // places is a cap that moves.*
+                for (final note in available.notes)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      '· $note',
+                      // ⚠️ Two lines each, then an ellipsis. A long commit subject must not push the
+                      // pitch down the screen.
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const Icon(Icons.chevron_right, size: 16, color: Brand.orange),
