@@ -1778,7 +1778,10 @@ class GameweekResult {
   });
 
   factory GameweekResult.fromJson(Map<String, dynamic> json) => GameweekResult(
-    gameweek: (json['gameweek'] as num?)?.toInt() ?? 0,
+    // ⚠️ **Nullable, and `?? 0` was wrong here.** `GameweekSummary` one class down states the rule this
+    // broke — *null means not known, never zero* — and GW0 is a week that does not exist. ⭐ The screen
+    // draws `GW—`, which is the honest answer to a server that did not say.
+    gameweek: (json['gameweek'] as num?)?.toInt(),
     // ⭐ `false` means *"FPL has not published this yet"*, not *"something went wrong"* — swiping past
     // the present is an ordinary gesture.
     played: json['played'] as bool? ?? false,
@@ -1791,7 +1794,7 @@ class GameweekResult {
     ),
   );
 
-  final int gameweek;
+  final int? gameweek;
   final bool played;
   final List<GameweekPlayer> squad;
   final GameweekSummary summary;

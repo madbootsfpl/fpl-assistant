@@ -104,7 +104,17 @@ projection becomes 0.0"* survived, which said no test cared about a missing proj
 straight to a whole page of them. ⚠️ *The bug was invisible to every test that existed and to me; the only
 thing that pointed at it was a deliberately broken version of the code passing.*
 
-⭐ **And the header was lying in the same direction.** Summing `?? 0` over a week with no data printed
+⚠️⚠️⚠️ **And a past page never said which week it was — found on a device, with twenty tests passing.**
+Every number was right: the points, the rank, the bench, the goals, the cards, the auto-subs. After four
+swipes there was no way to know which gameweek you were reading. ⭐ *A screen whose entire purpose is
+"which week is this?" has to answer it, and every test here was checking the answers to other questions.*
+Each page now carries its week in one shape — `GW5 · final`, `GW6 · Sat 10 Oct, 11:00`, `GW9 · projected`,
+`GW6 · not played yet` — so the four page types read as one screen rather than four.
+
+⚠️ Chasing that also found `GameweekResult.gameweek` parsing as `?? 0`, one class above the comment
+stating the rule it broke — *null means not known, never zero*, and **GW0 is a week that does not exist.**
+
+⭐ **The header was lying in the same direction.** Summing `?? 0` over a week with no data printed
 `0.0 Predicted` above fifteen cards that all read `—` — *a header that contradicts every number under it
 is worse than no header, because it is the one a reader trusts.* It is a dash now too.
 
@@ -118,8 +128,8 @@ result list), `ForwardEdge` (the page that says why it stops). `PitchView` gaine
 and on a forward page it drops the mode bar, the deadline countdown, the bank, the value, the transfers and
 the price — ⭐ *every one of those is a true fact about today that becomes a false claim four weeks out.*
 
-**Tests:** 16 in `mobile/test/season_pages_test.dart` and 7 in `mobile/test/gameweek_result_test.dart`,
-mutation-tested at **15/15 caught** after the two gaps above were closed; `test_forward_limit_agrees.py`,
+**Tests:** 21 in `mobile/test/season_pages_test.dart` and 7 in `mobile/test/gameweek_result_test.dart`,
+mutation-tested at **19/19 caught** after the three gaps above were closed; `test_forward_limit_agrees.py`,
 plus the widened window pinned in `tests/test_run_window_and_opponents.py`.
 
 ## Cost

@@ -444,4 +444,182 @@ void main() {
     // ⚠️ And it says there is no fixture, rather than borrowing another week's opponent.
     expect(find.text('no fixture'), findsWidgets);
   });
+
+  testWidgets(
+    'leaving the pitch and coming back returns you to the live week',
+    (tester) async {
+      // ⚠️⚠️ **The page index lives in `SeasonPages`, which the tab switch rebuilds.** ⭐ That is the wanted
+      // behaviour and it is worth pinning rather than leaving to chance: a manager who wandered back to GW2,
+      // opened Signals, and returned should be looking at *this* week — *the pitch's job is today, and a
+      // screen that reopens four weeks in the past has quietly changed what it is for.*
+      //
+      // ⚠️ It is also the opposite choice from `PitchMode`, which is held in the screen above precisely so
+      // it *does* survive. The difference: a mode is a preference, a page is a place you walked to.
+      Widget walk() => screen(
+        SeasonPages(
+          team: sampleTeam(),
+          client: stubClient(),
+          mode: PitchMode.nextGw,
+          onMode: (_) {},
+          onTapPlayer: (_) {},
+        ),
+      );
+
+      await tester.pumpWidget(walk());
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(PageView), const Offset(-360, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('GW7'), findsOneWidget);
+
+      // A different screen, then back — what a tab switch does.
+      await tester.pumpWidget(screen(const Text('SIGNALS')));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(walk());
+      await tester.pumpAndSettle();
+      expect(find.text('GW6'), findsOneWidget);
+      expect(
+        find.text('In the bank'),
+        findsOneWidget,
+        reason: 'not the live pitch',
+      );
+    },
+  );
+
+  testWidgets('a past week is fetched once, however often you swipe over it', (
+    tester,
+  ) async {
+    // ⭐ The client caches a settled week, and the page holds the future rather than rebuilding it — ⚠️ *a
+    // `FutureBuilder` handed a fresh future on every rebuild re-fetches on every frame of the swipe
+    // animation*, which is the classic way this widget is got wrong.
+    final asked = <String>[];
+    await tester.pumpWidget(
+      screen(
+        SeasonPages(
+          team: sampleTeam(),
+          client: stubClient(asked: asked),
+          mode: PitchMode.nextGw,
+          onMode: (_) {},
+          onTapPlayer: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 3; i++) {
+      await tester.drag(find.byType(PageView), const Offset(360, 0));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(PageView), const Offset(-360, 0));
+      await tester.pumpAndSettle();
+    }
+    expect(asked, [
+      '5',
+    ], reason: 'GW5 was fetched ${asked.length} times: $asked');
+  });
+
+  // ── which week am I looking at ───────────────────────────────────────────────
+
+  testWidgets('every page in the walk names its own gameweek', (tester) async {
+    // ⚠️⚠️⚠️ **The defect a device found and every test here missed.** All sixteen tests above passed
+    // while the past pages carried no gameweek at all: the points were right, the rank was right, and
+    // after four swipes you had no way of knowing which week you were reading. ⭐ *A screen whose entire
+    // purpose is "which week is this?" has to answer it, and the tests were all checking the answers to
+    // other questions.*
+    await tester.pumpWidget(
+      screen(
+        SeasonPages(
+          team: sampleTeam(),
+          client: stubClient(),
+          mode: PitchMode.nextGw,
+          onMode: (_) {},
+          onTapPlayer: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('GW6'), findsOneWidget, reason: 'the live page');
+
+    await tester.drag(find.byType(PageView), const Offset(360, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('GW5'), findsOneWidget, reason: 'a past page');
+    // ⭐ And it says what kind of number it is showing, in the same shape as 'projected'.
+    expect(find.text('final'), findsOneWidget);
+
+    await tester.drag(find.byType(PageView), const Offset(-720, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('GW7'), findsOneWidget, reason: 'a forward page');
+    expect(find.text('projected'), findsOneWidget);
+  });
+
+  testWidgets(
+    'a week still being played says which week, and that it is not done',
+    (tester) async {
+      // ⭐ The state the app spends every Saturday in. ⚠️ *"This gameweek has not been played yet" with no
+      // gameweek on it is the same omission in a shorter sentence.*
+      final client = ServiceClient(
+        baseUrl: 'http://x',
+        client: MockClient(
+          (request) async => http.Response(
+            jsonEncode({
+              'gameweek': 5,
+              'played': false,
+              'squad': const [],
+              'summary': const {},
+            }),
+            200,
+            headers: const {'content-type': 'application/json'},
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        screen(
+          SeasonPages(
+            team: sampleTeam(),
+            client: client,
+            mode: PitchMode.nextGw,
+            onMode: (_) {},
+            onTapPlayer: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(PageView), const Offset(360, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('GW5'), findsOneWidget);
+      expect(find.text('not played yet'), findsOneWidget);
+      expect(find.textContaining('has not been played yet'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a week the server did not name is a dash, never GW0', (
+    tester,
+  ) async {
+    // ⚠️ Reachable only from an older server that omits `gameweek` — ⭐ *and "GW0" is a week that does not
+    // exist, which is a worse answer than admitting we were not told.* The same rule `bank` and `value`
+    // already follow on the pitch above.
+    final client = ServiceClient(
+      baseUrl: 'http://x',
+      client: MockClient(
+        (request) async => http.Response(
+          jsonEncode({'played': false, 'squad': const [], 'summary': const {}}),
+          200,
+          headers: const {'content-type': 'application/json'},
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      screen(
+        SeasonPages(
+          team: sampleTeam(),
+          client: client,
+          mode: PitchMode.nextGw,
+          onMode: (_) {},
+          onTapPlayer: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(PageView), const Offset(360, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('GW—'), findsOneWidget);
+    expect(find.text('GW0'), findsNothing);
+  });
 }

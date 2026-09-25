@@ -32,11 +32,20 @@ class PastGameweek extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!result.played) {
-      return const _NotYet();
+      // ⭐ Named here as well. *"This gameweek has not been played yet"* with no gameweek on it is the
+      // same omission in a shorter sentence.
+      return _NotYet(gameweek: result.gameweek);
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
       children: [
+        // ⚠️⚠️⚠️ **Found on a device, not by a test.** Every number on this page was right and the page
+        // never said which week they belonged to — you swiped four times and had no way back to knowing
+        // where you were. ⭐ *A screen whose whole purpose is "which week is this?" has to answer it.*
+        //
+        // ⭐ Said in the same shape the live pitch and the forward pages use — `GW5 · final` against
+        // `GW9 · projected` — so the three page types read as one screen rather than three.
+        _WeekLine(gameweek: result.gameweek, label: 'final'),
         _Summary(summary: result.summary),
         const SizedBox(height: 10),
         for (final player in result.xi) _PlayerRow(entry: player),
@@ -55,6 +64,38 @@ class PastGameweek extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Which week you are looking at — ⭐ the one thing a swipe has to keep answering.
+class _WeekLine extends StatelessWidget {
+  const _WeekLine({required this.gameweek, required this.label});
+
+  final int? gameweek;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(
+          'GW${gameweek ?? '—'}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
+        ),
+      ],
+    ),
+  );
 }
 
 /// ⭐ The week's own numbers, as FPL settled them — *recomputing a settled fact is offering a second
@@ -252,17 +293,26 @@ class _Events extends StatelessWidget {
 
 /// A gameweek FPL has not published.
 class _NotYet extends StatelessWidget {
-  const _NotYet();
+  const _NotYet({this.gameweek});
+
+  final int? gameweek;
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.all(28),
-    child: Center(
-      child: Text(
-        'This gameweek has not been played yet.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.white38, height: 1.5),
-      ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _WeekLine(gameweek: gameweek, label: 'not played yet'),
+        const SizedBox(height: 40),
+        const Center(
+          child: Text(
+            'This gameweek has not been played yet.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white38, height: 1.5),
+          ),
+        ),
+      ],
     ),
   );
 }
