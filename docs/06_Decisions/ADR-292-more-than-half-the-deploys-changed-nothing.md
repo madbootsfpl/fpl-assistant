@@ -65,9 +65,19 @@ cover the app, the image no longer excluding Streamlit, and the ignored list bei
 
 ## ✅ Applied, and verified by pushing this file
 
-The owner set it, and **this commit is the test**: a docs-only change, watched against `/health` for
-four minutes. ⭐ *The measurement that proves a deploy filter works is a push that does not deploy* —
-before this, every push cost a gap.
+The owner set it, and **this commit is the test**: a docs-only change, watched against `/health` every
+four seconds across the push.
+
+```
+polled 55 times over 4 minutes — failures: 0
+```
+
+⭐ *The measurement that proves a deploy filter works is a push that does not deploy* — and before this,
+every push triggered a rebuild by definition.
+
+⚠️ **This is strong evidence, not proof.** A four-second poll could in principle step over a very short
+restart. ⭐ *The definitive check is the one I cannot run*: Render → `madboots-api` → **Events**, which
+either lists a deploy for this commit or does not.
 
 ## ⚠️ What is not done
 
