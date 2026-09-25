@@ -28,6 +28,17 @@ enum DraftStaleness {
 
   /// ⭐ The real squad changed underneath it — usually because the manager **made the move for real**.
   squadChanged,
+
+  /// ⚠️⚠️ **The draft contradicts itself** — a bench id that is not in its own squad (ADR-291).
+  ///
+  /// ⭐ This should be impossible, and it happened: `swap()` built the XI from the draft and the bench
+  /// from the team, so a second transfer resurrected a sold player onto the bench. The server refused
+  /// the request and the app showed the refusal on every launch — ⚠️ *a saved plan that cannot be sent
+  /// and cannot be cleared is an app that will not open.*
+  ///
+  /// ⭐⭐ Checked even though the bug that caused it is fixed: *the fix stops new ones being written, and
+  /// says nothing about the one already on somebody's phone.*
+  inconsistent,
 }
 
 class Draft {
@@ -198,7 +209,15 @@ class Draft {
   }) {
     final current = existing?.playerIds ?? basePlayerIds;
     final next = [for (final id in current) id == outId ? inId : id];
-    final bench = [for (final id in benchIds) id == outId ? inId : id];
+    // ⚠️⚠️ **From the draft, exactly like the XI above** (ADR-291). This read `benchIds` — the *team's*
+    // bench — while the XI came from `existing.playerIds`, so a second transfer rebuilt the bench from
+    // the original squad and **resurrected the player the first transfer had sold**. The owner's phone
+    // reached `draft bench ids not in the draft squad: [496]` and could not get past it.
+    //
+    // ⭐ *Two halves of one object derived from two sources will disagree; the only question is when.*
+    // `replace()` next door has always done it this way.
+    final currentBench = existing?.benchIds ?? benchIds;
+    final bench = [for (final id in currentBench) id == outId ? inId : id];
     final carried =
         existing ??
         Draft(
@@ -337,6 +356,12 @@ class Draft {
     required int? gameweek,
     required List<int> fplPlayerIds,
   }) {
+    // ⚠️ **First**, because a self-contradictory draft must be dropped whoever it belongs to and
+    // whatever gameweek it is for — ⭐ *the other three checks ask whether it still applies; this one
+    // asks whether it was ever sendable.*
+    if (benchIds.any((id) => !playerIds.contains(id))) {
+      return DraftStaleness.inconsistent;
+    }
     if (this.managerId != managerId) return DraftStaleness.otherManager;
     if (gameweek != null && this.gameweek != gameweek) {
       return DraftStaleness.gameweekPassed;

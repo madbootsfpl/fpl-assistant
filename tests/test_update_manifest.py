@@ -317,6 +317,17 @@ def test_no_credential_file_is_tracked() -> None:
         assert not name.endswith((".dev.vars", "wrangler.toml.local")), name
 
 
+def test_the_wrangler_cache_is_ignored_not_merely_untracked() -> None:
+    """⚠️⚠️ **Untracked is not enough when the next command is `git add -A`.**
+
+    The first publish wrote `.wrangler/cache/pages.json` into the working tree and the release commit
+    swept it in — the guard above caught it, but only on the next full run, after the push. ⭐ *A tool
+    that writes into your working tree will be committed by the next `add -A`*, so the fix is a rule in
+    `.gitignore`, not vigilance.
+    """
+    assert ".wrangler/" in (ROOT / ".gitignore").read_text()
+
+
 def test_the_closing_line_knows_whether_it_published() -> None:
     """⭐ *A closing instruction that tells you to do the thing the script just did is how a reader learns
     to stop reading them.*

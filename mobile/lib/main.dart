@@ -985,6 +985,11 @@ class _DroppedBanner extends StatelessWidget {
         DraftStaleness.otherManager =>
           'That plan was saved against a different FPL id, so it has been '
               'cleared. Plans you make from now on are kept.',
+        // ⭐ Does not blame the reader, and does not explain a bug they cannot act on. *"Rebuild it"
+        // is the only instruction that helps, and it is the whole of what they need to know.*
+        DraftStaleness.inconsistent =>
+          'That plan had gone inconsistent and could not be sent, so it has '
+              'been cleared. Sorry — please make it again.',
         DraftStaleness.fresh => '',
       },
       style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),

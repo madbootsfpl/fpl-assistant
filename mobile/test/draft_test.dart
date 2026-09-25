@@ -23,6 +23,7 @@ Draft draftOf({
 );
 
 void main() {
+  _selfConsistency();
   group('staleness', () {
     test('a plan for the same manager, week and squad still applies', () {
       expect(
@@ -125,6 +126,139 @@ void main() {
       expect(restored.swaps, equals(draftOf().swaps));
       expect(restored.basePlayerIds, equals(draftOf().basePlayerIds));
       expect(restored.gameweek, equals(6));
+    });
+  });
+}
+
+/// A plan that contradicts itself (ADR-291).
+///
+/// ⚠️⚠️ **The owner's phone reached `draft bench ids not in the draft squad: [496]` and could not get
+/// past it.** The server refused the request, the app showed the refusal, and the saved plan that caused
+/// it was re-sent on every launch — ⭐ *a saved plan that cannot be sent and cannot be cleared is an app
+/// that will not open.*
+void _selfConsistency() {
+  final at = DateTime(2026, 9, 25);
+  const squad = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 496];
+  const bench = [12, 13, 14, 496];
+
+  group('a second transfer', () {
+    test('does not resurrect the player the first one sold', () {
+      // ⭐⭐ The exact shape of the owner's bug: 496 is a bench keeper, transferred out first.
+      final first = Draft.swap(
+        existing: null,
+        managerId: 1,
+        gameweek: 6,
+        basePlayerIds: squad,
+        benchIds: bench,
+        outId: 496,
+        inId: 900,
+        savedAt: at,
+      );
+      final second = Draft.swap(
+        // ⚠️ The team's own bench, which is what the screen passes — *and the reason the bug existed*:
+        // the XI came from the draft and the bench came from here.
+        existing: first,
+        managerId: 1,
+        gameweek: 6,
+        basePlayerIds: squad,
+        benchIds: bench,
+        outId: 5,
+        inId: 901,
+        savedAt: at,
+      );
+
+      expect(second.benchIds, isNot(contains(496)));
+      expect(
+        second.benchIds.toSet().difference(second.playerIds.toSet()),
+        isEmpty,
+      );
+    });
+
+    test('keeps every bench id inside its own squad, over four transfers', () {
+      // ⭐ Not just the second. *A bug that needs two steps to appear is a bug that gets fixed for two
+      // steps*, so this walks far enough to catch a fix that only repairs the first repeat.
+      var draft = Draft.swap(
+        existing: null,
+        managerId: 1,
+        gameweek: 6,
+        basePlayerIds: squad,
+        benchIds: bench,
+        outId: 496,
+        inId: 900,
+        savedAt: at,
+      );
+      for (final (out, into) in const [(12, 901), (1, 902), (900, 903)]) {
+        draft = Draft.swap(
+          existing: draft,
+          managerId: 1,
+          gameweek: 6,
+          basePlayerIds: squad,
+          benchIds: bench,
+          outId: out,
+          inId: into,
+          savedAt: at,
+        );
+        expect(
+          draft.benchIds.toSet().difference(draft.playerIds.toSet()),
+          isEmpty,
+          reason: 'after selling $out the bench left the squad',
+        );
+      }
+      expect(
+        draft.benchIds.length,
+        bench.length,
+        reason: 'the bench changed size',
+      );
+    });
+  });
+
+  group('a draft that already contradicts itself', () {
+    Draft broken() => Draft(
+      managerId: 1,
+      gameweek: 6,
+      basePlayerIds: squad,
+      playerIds: const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 900],
+      benchIds: bench, // ⚠️ still holds 496, which the squad no longer has
+      savedAt: at,
+    );
+
+    test('is dropped rather than sent', () {
+      // ⭐⭐ Checked even though the cause is fixed: *the fix stops new ones being written, and says
+      // nothing about the one already on somebody's phone.*
+      expect(
+        broken().checkAgainst(managerId: 1, gameweek: 6, fplPlayerIds: squad),
+        DraftStaleness.inconsistent,
+      );
+    });
+
+    test('is dropped whoever it belongs to and whatever gameweek it is', () {
+      // ⚠️ The other reasons ask whether it still applies; this asks whether it was ever sendable — so
+      // it must win, or a stuck phone stays stuck until the gameweek turns.
+      expect(
+        broken().checkAgainst(
+          managerId: 999,
+          gameweek: 9,
+          fplPlayerIds: const [1],
+        ),
+        DraftStaleness.inconsistent,
+      );
+    });
+
+    test('a consistent plan is still fresh', () {
+      final good = Draft.swap(
+        existing: null,
+        managerId: 1,
+        gameweek: 6,
+        basePlayerIds: squad,
+        benchIds: bench,
+        outId: 496,
+        inId: 900,
+        savedAt: at,
+      );
+      expect(
+        good.checkAgainst(managerId: 1, gameweek: 6, fplPlayerIds: squad),
+        DraftStaleness.fresh,
+      );
     });
   });
 }

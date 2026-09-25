@@ -60,3 +60,9 @@ downloaded_files/
 *.jks
 *.keystore
 key.properties
+
+# ⚠️ Wrangler writes a cache here when the release publishes (ADR-290). It holds the Cloudflare
+# account id — an identifier, not a credential, but not ours to publish — and `git add -A` swept it
+# into a commit before `test_no_credential_file_is_tracked` caught it on the next full run.
+# ⭐ *A tool that writes into your working tree will be committed by the next `add -A`.*
+.wrangler/
