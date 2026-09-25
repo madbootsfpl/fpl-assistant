@@ -153,6 +153,38 @@ for is a line that is free to cost something.*
 📌 **Not a defect: the swipe does not exist on `madboots.streamlit.app`.** It was built in the Flutter app
 only. The web app is a separate codebase and would need its own build of this.
 
+## The one that was not in the app at all
+
+⭐⭐⭐ **"Don't see red or yellow cards" — twice, on two builds, and the app was right both times.** The
+badge drew correctly, the tests passed, a render of local data showed all five of GW3's bookings. The
+**deployed** API was returning zero for every one of them: Foden scored **−2** in GW4 — which only a
+sending-off does — with `red_cards: 0` beside it.
+
+⚠️⚠️⚠️ **A migration is not a backfill.** The columns were added, the migration ran, every test passed —
+*because the test fixture is rebuilt from scratch and therefore always has every column populated.*
+Production was not rebuilt. Its rows predate the columns, and the backfill gate asks *"is a completed
+gameweek missing?"*, which they were not. ⭐ *A row that exists is not a row that is current, and that
+question cannot tell the two apart.*
+
+⭐ The gate now has a version to compare against — `HISTORY_SCHEMA`, bumped whenever a column is added
+that needs values for weeks already stored — so the hourly job notices and rewalks without anyone
+being asked to click anything.
+
+**Two things caught while building that, both by existing checks rather than by me:**
+
+- ⚠️ An **empty** database asked to rewalk 659 players' worth of rows that do not exist. *Where there are
+  no rows, there is nothing that arrived before the question changed.*
+- ⚠️⚠️ Folding the schema check into `backfill_due` put `behind: true` and `missing_gameweeks: [1,2,3,4,5]`
+  into **every** `my-team` response — the contract sample showed it. That function also answers the app's
+  stale-data banner, which means *"the numbers on this screen are from yesterday."* ⭐ *Nine testers told
+  their data was broken, when every number was correct and one secondary column was empty, would have been
+  a worse bug than the blank column it was reporting.* Two questions, two functions.
+
+**And two seen only once real card data was in front of a device:** the assist emoji rendered on Android
+as a **white A on a red rounded box** — on a screen whose other new feature is red cards — and the glove
+emoji rendered as a shield, the glyph already in use one slot along for a clean sheet. ⭐ *An emoji is a
+request, not an instruction*; the platform picks the font and a 70pt card cannot survive a bad guess.
+
 ## What shipped
 
 **Service:** `POST /api/v1/squad/gameweek` → `gameweek_result()`; `run_xp` and the fixture map widened from
