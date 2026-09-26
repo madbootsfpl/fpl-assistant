@@ -163,18 +163,37 @@ root = pathlib.Path(sys.argv[1]); p = root / "_headers"
 # ⚠️ It was added defensively, to stop a 18MB binary being rendered as text — but *that* was the missing
 # **Content-Type**, which is the line above. ⭐ *Two headers were added to fix one bug, and only one of
 # them was doing the work; the other quietly cost a step on every update for three builds.*
-rule = """/app/*.apk
-  Content-Type: application/vnd.android.package-archive
-"""
-# ⚠️ Merged, not overwritten — the site may grow other rules, and a release script that flattens
-# someone else's configuration is a release script people stop running. ⭐⭐ **But it must still update
-# the rule it owns**: a first pass that skipped when `/app/*.apk` was already present left its own
-# outdated `filename=` in place — *"leave other people's config alone" quietly became "never fix my
-# own", which is the same bug as a cache that will not invalidate.*
+# ⭐ Each rule is a path and the headers it owns. ⚠️ *The merge below updates the rules named here and
+# leaves every other rule alone* — a release script that flattens someone else's configuration is a
+# release script people stop running.
+RULES = {
+    "/app/*.apk": ["Content-Type: application/vnd.android.package-archive"],
+    # ⚠️⚠️⚠️ **The four files that tell a browser the app has changed** (ADR-304). Cloudflare Pages
+    # defaults to a **four-hour** cache, and it was applying that to `flutter_service_worker.js` — the
+    # file whose entire job is to announce a new version. So a deploy went live and every browser that
+    # had already loaded the app kept serving the old one from its own cache, for four hours, **through
+    # a reload**. ⭐ *This is the APK bug's twin*: the fix was live and invisible, which is
+    # indistinguishable from the fix not working — and it surfaced the same way, as a tester saying a
+    # shipped feature was not there.
+    #
+    # ⭐ `no-cache` is not `no-store`: the browser still holds the bytes and still gets a **304** when
+    # nothing moved. It only stops it from skipping the question. ⚠️ `main.dart.js` is in the list
+    # because Flutter does **not** hash it into the filename — the name is stable and the contents are
+    # not, which is exactly the case a long max-age gets wrong.
+    "/app/web/index.html": ["Cache-Control: no-cache"],
+    "/app/web/flutter_service_worker.js": ["Cache-Control: no-cache"],
+    "/app/web/flutter_bootstrap.js": ["Cache-Control: no-cache"],
+    "/app/web/main.dart.js": ["Cache-Control: no-cache"],
+}
+
+# ⚠️ Merged, not overwritten. ⭐⭐ **But it must still update the rules it owns**: a first pass that
+# skipped when `/app/*.apk` was already present left its own outdated `filename=` in place — *"leave
+# other people's config alone" quietly became "never fix my own", which is the same bug as a cache that
+# will not invalidate.*
 existing = p.read_text() if p.exists() else ""
 kept, skipping = [], False
 for line in existing.splitlines():
-    if line.strip() == "/app/*.apk":
+    if line.strip() in RULES:
         skipping = True
         continue
     if skipping and (not line.strip() or not line.startswith((" ", "\t"))):
@@ -182,6 +201,9 @@ for line in existing.splitlines():
     if not skipping:
         kept.append(line)
 body = "\n".join(kept).strip()
+rule = "\n".join(
+    path + "\n" + "".join(f"  {h}\n" for h in headers) for path, headers in RULES.items()
+)
 p.write_text((body + "\n\n" if body else "") + rule)
 PY
 
