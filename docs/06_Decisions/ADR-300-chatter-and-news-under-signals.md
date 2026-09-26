@@ -15,9 +15,15 @@ we have images rather than just links. Thoughts?"*
 public RSS, counts whole-word player mentions against the squad index, and returns a ranked *most talked
 about* list. It degrades on 403 / 429 / timeout / parse error to `(None, message)` and never raises.
 
-⚠️ **It is wired to Streamlit and to nothing else.** There is no route in `src/service/`, so the Flutter
-app has never been able to ask for it. ⭐ *The expensive half of "Chatter" was paid for a year ago and has
-been invisible to every tester since the app shipped.*
+⚠️⚠️⚠️ **Correction (2026-09-26): it was wired to *nothing*.** This ADR said *"wired to Streamlit and to
+nothing else"*, and that was wrong — I assumed it rather than checking. `git log -S community_signals`
+says: it shipped on the **web** in Sprint 068, sat on the Trending page through US-345 (10 Aug 2026), and
+was dropped by **ADR-150** on 26 Aug when Signals and Trending were reorganised. From that day until the
+Chatter endpoint was written it was **called by no caller on any surface** — a month of dead code that no
+test noticed, because nothing that still ran touched it.
+
+⭐⭐ *A feature does not have to be deleted to be lost.* It was removed from the one screen that used it,
+and the code stayed exactly where it was, passing its own unit tests, reachable by nobody.
 
 **Cost to surface it:** one endpoint, one model, one sub-tab. No new dependency, no new source, no new
 failure mode — the degradation path is already written and already tested.
