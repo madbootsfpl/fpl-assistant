@@ -145,6 +145,36 @@ router in the sequence below is **item 6 of 7 and gated on evidence that does no
 build. ⭐ *A decision already taken on measurement should not be reopened by a new design document that
 contains none.*
 
+## ⭐⭐ Correction worth pinning: the model was retained, the hosting was not
+
+⚠️ *"No LLM in the shipped product"* is true **of Ask** and too strong as a general claim, and the owner
+caught it — *"I thought we had retained the cloud llama?"* ⭐ **A Llama is load-bearing in production data
+today; it simply runs on the owner's Mac.**
+
+[ADR-211](ADR-211-the-pipeline-runs-without-you.md)'s gate chose **(b) headlines stay manual**, which means
+keeping `qwen3:8b` locally. `enrich_headlines` (`src/ingest.py:241`) calls `src.llm.extract`, and §2e pinned
+what makes it reach users:
+
+> *"`cmd_refresh` opens **ONE** store and hands that same store to `enrich_headlines`, so
+> `FPL_DATABASE_URL=… app.py refresh` on a machine with Ollama writes players **and** headlines straight
+> into Postgres."*
+
+⭐ So the honest statement is **the model was retained; the hosting was not** — a local model that publishes
+to the cloud. The scheduled pipeline excludes it deliberately (`data.yml`: *"headlines are absent by
+construction, not by flag"*), and those events feed the leavers logic on **six surfaces** plus ADR-210's
+exodus lede.
+
+⭐⭐⭐ **This changes item 5's arithmetic, and improves it: the inference host has TWO customers, not one.**
+ADR-211 called headline extraction *"the one place the audit's £0-until-real-usage assumption does not
+hold"* and left it manual rather than paid. A hosted model would **retire that manual step and unlock Ask
+prose on the same bill** — so the cost is shared, not charged to Ask alone.
+
+⚠️⚠️ **And it names a risk that is currently unowned.** After ADR-211 removed every other human from the
+pipeline, this is **the last one**: six surfaces depend on a command being run on one particular laptop, and
+⭐ *a step that only a person remembers is a step that eventually stops happening.* ADR-211 anticipated
+exactly this — Signals prints when headlines were last read, because *"stale headlines do not look stale"* —
+📌 but a freshness label reports the lapse, it does not prevent it.
+
 ## Voice — the question actually asked, and the cheapest item here
 
 ⚠️ The brief sequences voice at **Phase 4-5, behind all the LLM work.** It needs none of it. Platform STT
@@ -179,7 +209,7 @@ question; voice out fights the product.* If it ever arrives it suits only the on
 | **2** | **Surface the gameweek briefing** | no | it exists, and it is better than the mockup — this is UI |
 | **3** | **Plumb context: *"Why?"*, *"and the next?"*** | no | exists since ADR-047; unreachable from the phone |
 | **4** | **Harden name resolution for dictation** | no | the real work in voice, and ADR-308 depends on it too |
-| **5** | 📌 **Decide the inference host** | — | 🔴 the actual gate: £, latency, privacy |
+| **5** | 📌 **Decide the inference host** | — | 🔴 the actual gate: £, latency, privacy. ⭐ **Two customers**: it also retires the manual headline step and takes the last human out of the pipeline |
 | **6** | LLM as **fallback router only** | yes | 🔴 **gated on ADR-168's unmet revisit condition** — real tester questions keywords cannot fix. Three times now, keywords were cheaper |
 | **7** | LLM prose over facts | yes | already designed for — `facts` + `task` are waiting |
 | — | ✗ text-to-speech | — | declined above |
