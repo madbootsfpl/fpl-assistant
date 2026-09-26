@@ -557,6 +557,13 @@ def _captain_versus(picks: list, named: list, players, scope: str, team_names: d
             "detail": "\n".join(lines),
             "facts": _captain_facts(top),
             "subjects": [top["web_name"]],
+            # ⚠️⚠️⚠️ **`task` is not optional — omitting it is a 500, not a missing sentence.**
+            # `_build_prompt` reads `decision['task']` with a hard subscript, and it is evaluated as the
+            # **argument** to `narrator(...)`, so it runs even where the narrator is silenced — which is
+            # every request the API serves. ⭐ *A field only the optional half consumes still has to be
+            # there, because the call that discards it is made after the one that builds it.*
+            "task": f"in 2-3 short sentences, say why {top['web_name']} is your captain pick, noting that "
+                    "neither player asked about is among the ranked options",
         }
     return {
         "headline": f"Better captain ({scope}): {best['web_name']} — xP {best['xp']} next GW",

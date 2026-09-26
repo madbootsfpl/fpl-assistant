@@ -144,9 +144,16 @@ def test_a_minutes_question_is_answered_with_minutes(squad, store):
 
 def test_two_named_players_are_compared_with_each_other(squad, store):
     """⚠️ *"Is A a better captain than B?"* is a question about two men, and answering it with whoever the
-    engine ranked first is the most confident way to ignore somebody."""
-    store_players = {p["id"]: p for p in Storage().get_players()}
-    names = [store_players[i]["web_name"] for i in squad[:2]]
+    engine ranked first is the most confident way to ignore somebody.
+
+    ⚠️⚠️ The two names come from **the engine's own shortlist**, not from the squad's price order. ⭐ *A test
+    that picks its subjects by a property the code under test does not use is a test that passes on one
+    dataset* — this asked about the two most expensive players, who are ranked in the live cache and are not
+    in the committed seed, so it took the "neither is ranked" path in CI and nowhere else.
+    """
+    names = [ask(q, squad, store)["facts"]["player"].split(" (")[0]
+             for q in ("Who should I captain?", "Who should be my vice-captain?")]
+    assert names[0] != names[1]
 
     out = ask(f"Is {names[0]} a better captain than {names[1]}?", squad, store)
 
@@ -396,3 +403,73 @@ def test_a_named_player_outside_the_squad_still_resolves(squad, store):
         f"{outsider} is in the game but outside the squad, and the answer never mentions him"
     )
     assert "not among the captain options" in out["detail"]
+
+
+# ── the contract every decision owes its consumer ────────────────────────────
+#
+# ⚠️⚠️⚠️ **This is the bug the mutation pass could not see, and CI caught.** `_captain_versus`'s
+# "neither is ranked" branch returned `facts` **without** `task`, and `_build_prompt` reads
+# `decision['task']` with a hard subscript — so the branch was a **`KeyError`, a 500 on the live API**,
+# not a missing sentence.
+#
+# ⭐⭐⭐ **And the narrator being silenced does not save it**, which is the part worth remembering:
+# `assemble` calls `narrator(_build_prompt(decision))`, so the prompt is built as the **argument**, before
+# the call that throws it away. ⭐ *A field only the optional half consumes still has to be there, because
+# the call that discards it is made after the one that builds it.*
+#
+# ⚠️⚠️ **Why the tests above missed it:** `test_when_neither_is_ranked_it_still_answers` calls
+# `_captain_versus` **directly** and asserts on its dict — ⭐ *a unit test of a producer cannot see a
+# contract its consumer imposes.* It only surfaced against the committed seed, where the two named players
+# fall outside the shortlist; the richer local cache put them inside it and took the branch never.
+
+
+def prompts_built(decision, question="q", intent="captain"):
+    """Drive a decision through the real consumer, capturing what the narrator was handed."""
+    seen = []
+
+    def narrator(prompt, *a, **k):
+        seen.append(prompt)
+        return None          # ⭐ exactly the deployed case — silenced, but the prompt is still built
+
+    ask_engine.assemble(question, intent, decision, narrator)
+    return seen
+
+
+def test_the_unranked_pair_survives_being_narrated():
+    a, b = pick(98, "One", xp=1.0), pick(99, "Two", xp=1.0)
+    decision = ask_engine._captain_versus(SHORTLIST, [a, b], SHORTLIST, "squad", {})
+
+    seen = prompts_built(decision)      # ⚠️ this raised KeyError('task') before the fix
+
+    assert seen and "Star" in seen[0]
+
+
+@pytest.mark.parametrize("lens", [None, "vice", "safest", "differential", "rotation"])
+def test_every_lens_owes_its_consumer_a_task(lens, squad, store):
+    """⭐ The invariant stated once, over every path a captain question can take: **a decision carrying
+    `facts` carries a `task`.**"""
+    question = {None: "Who should I captain?", "vice": "Who should be my vice-captain?",
+                "safest": "Who is the safest captain?",
+                "differential": "Who is the best differential captain?",
+                "rotation": "Is my captain at rotation risk?"}[lens]
+
+    decision = ask_engine._decide_captain(
+        store, "yours", lens=ask_engine.captain_lens(question), question=question,
+        active_squad={"name": "yours", "player_ids": list(squad), "bench_ids": list(squad[-4:])},
+    )
+
+    assert decision is not None
+    if "facts" in decision:
+        assert decision.get("task"), f"{lens or 'plain'} returns facts with no task — a 500 when narrated"
+        assert prompts_built(decision)
+
+
+def test_both_named_shapes_owe_a_task_too():
+    """⚠️ Both `_captain_versus` exits, since only one of them had it."""
+    ranked = ask_engine._captain_versus(SHORTLIST, [SHORTLIST[1], SHORTLIST[0]], SHORTLIST, "squad", {})
+    neither = ask_engine._captain_versus(
+        SHORTLIST, [pick(98, "One", xp=1.0), pick(99, "Two", xp=1.0)], SHORTLIST, "squad", {})
+
+    for name, decision in (("ranked pair", ranked), ("neither ranked", neither)):
+        assert decision.get("task"), f"{name} returns facts with no task"
+        assert prompts_built(decision), name
