@@ -54,9 +54,15 @@ def test_the_screen_a_manager_opens_carries_the_age(store, squad):
     monitoring and by nobody else — ⭐ *the place to say "these numbers are from yesterday" is beside the
     numbers.*"""
     data = as_manager(store, squad)["data"]
-    assert set(data) == {"refreshed_at", "missing_gameweeks", "behind", "why"}
+    # ⭐ The **exact** set, which is why this test noticed `age_minutes` arriving (ADR-303) — ⚠️ *a test
+    # that checked only for the keys it wanted would let a fifth appear unremarked.*
+    assert set(data) == {"refreshed_at", "missing_gameweeks", "behind", "why", "age_minutes"}
     assert isinstance(data["behind"], bool)
     assert data["why"], "a freshness verdict with no reason is a mood, not a fact"
+    # ⚠️⚠️ **Age sits BESIDE `behind`, never inside it.** `behind` is *a completed gameweek has no rows*;
+    # age is *the last refresh was a while ago*. ⭐ Merging them is the mistake ADR-301 caught, where a
+    # schema lag would have told nine testers their data was broken.
+    assert isinstance(data["age_minutes"], (int, type(None)))
 
 
 def test_it_names_the_missing_gameweeks_not_just_a_flag(store, squad, monkeypatch):

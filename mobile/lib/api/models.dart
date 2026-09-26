@@ -1165,6 +1165,7 @@ class DataFreshness {
     required this.missingGameweeks,
     required this.behind,
     required this.why,
+    this.ageMinutes,
   });
 
   factory DataFreshness.fromJson(Map<String, dynamic> json) => DataFreshness(
@@ -1174,6 +1175,7 @@ class DataFreshness {
     ],
     behind: json['behind'] as bool? ?? false,
     why: json['why'] as String? ?? '',
+    ageMinutes: (json['age_minutes'] as num?)?.toInt(),
   );
 
   final DateTime? refreshedAt;
@@ -1183,13 +1185,52 @@ class DataFreshness {
   final bool behind;
   final String why;
 
+  /// Minutes since the last successful refresh, from the server (ADR-303).
+  ///
+  /// ⭐⭐ **Computed there, not here.** The device's clock is the device's, and ⚠️ *a phone an hour fast
+  /// would tell its owner the data was an hour staler than it is.* `null` when nothing has ever
+  /// refreshed — **never zero**, which would read as "updated moments ago".
+  final int? ageMinutes;
+
+  /// ⚠️⚠️ **Old enough to say so, and nothing more alarming than that.**
+  ///
+  /// Three hours means at least two scheduled refreshes did not happen — measured gaps run 2h27m to
+  /// 5h41m, so this is *sometimes* and not *always*. ⭐ *A notice that is always on is a decoration*
+  /// (ADR-248's rule, and the reason the stale banner is rare), so the threshold has to sit above the
+  /// normal case rather than at it.
+  bool get isOld => (ageMinutes ?? 0) >= 180;
+
+  /// *"5h"* — the compact form, for the pitch header where the deadline already owns the line.
+  ///
+  /// ⚠️ Hours only. *"312 min"* is a number a reader has to convert, and the whole point of this line is
+  /// that it can be understood without stopping.
+  String get shortAge {
+    final mins = ageMinutes;
+    if (mins == null) return '';
+    if (mins < 48 * 60) return '${mins ~/ 60}h old';
+    return '${mins ~/ 1440}d old';
+  }
+
+  /// *"4 hours ago"* — ⭐ from the server's number, so every surface says the same thing.
+  String get since {
+    final mins = ageMinutes;
+    if (mins == null) return 'unknown';
+    if (mins < 90) return '$mins min ago';
+    if (mins < 36 * 60) return '${mins ~/ 60} hours ago';
+    return '${mins ~/ 1440} days ago';
+  }
+
   /// ⭐ Named so a person can act: *"missing GW5"* beats *"stale"*, which is a mood.
   String get warning => missingGameweeks.isEmpty
       ? 'The board is behind — $why'
       : 'Results for GW${missingGameweeks.join(", GW")} are missing, so points, '
             'form and projections are out of date.';
 
+  /// ⚠️ **The server's number when there is one, the device's clock when there is not.** An older build
+  /// talking to a newer server is the ordinary case here; ⭐ *a field added on one side must not blank a
+  /// line that was working on the other.*
   String get age {
+    if (ageMinutes != null) return since;
     final at = refreshedAt;
     if (at == null) return 'unknown';
     final ago = DateTime.now().toUtc().difference(at.toUtc());

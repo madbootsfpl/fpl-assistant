@@ -370,6 +370,25 @@ def _deadline_parts(at, now) -> tuple[str, str]:
     return at.astimezone(_UK).strftime("%a %-d %b, %H:%M"), _countdown(at - now)
 
 
+def _age_minutes(refreshed_at, now=None) -> int | None:
+    """Minutes since the last successful refresh — `None` when nothing has ever refreshed.
+
+    ⚠️ **None, never zero.** *A database that has never been refreshed is not one refreshed just now*, and
+    a client reading `0` would print "updated moments ago" about a file nothing has ever written.
+    """
+    if not refreshed_at:
+        return None
+    try:
+        at = datetime.fromisoformat(str(refreshed_at))
+    except ValueError:
+        return None
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=UTC)
+    # ⚠️ Clamped at zero: clock skew between the writer and the reader must not report a negative age,
+    # which a client would render as a refresh in the future.
+    return max(0, int(((now or datetime.now(UTC)) - at).total_seconds() // 60))
+
+
 def _data_freshness(store) -> dict:
     """How old this data is, and whether a finished gameweek is missing from it (ADR-248).
 
@@ -401,6 +420,16 @@ def _data_freshness(store) -> dict:
         "missing_gameweeks": sorted(rounds),
         "behind": bool(behind),
         "why": why,
+        # ⭐⭐⭐ **How old the numbers are** (ADR-303), and ⚠️⚠️ **deliberately NOT folded into `behind`.**
+        # `behind` means *a completed gameweek has no rows* — a hole. Age means *the last refresh was a
+        # while ago* — the data is whole and possibly out of date. ⭐ *Two questions, two fields*: merging
+        # them is the mistake ADR-301 caught, where a schema lag reached the reader as "your data is
+        # broken" and would have alarmed nine testers about nothing.
+        #
+        # ⚠️ Why it exists: the refresh declares a 15-minute cadence and GitHub fires **6-7%** of it, so
+        # the app was implying a freshness it did not have — and the staleness banner could not see it,
+        # because a five-hour-old row is still a row.
+        "age_minutes": _age_minutes(status.get("refreshed_at")),
     }
 
 

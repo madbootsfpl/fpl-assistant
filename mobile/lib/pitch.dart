@@ -535,6 +535,23 @@ class _Header extends StatelessWidget {
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ),
+              // ⭐⭐⭐ **How old the numbers are, said quietly and only when it is true** (ADR-303).
+              //
+              // ⚠️⚠️ The refresh declares a 15-minute cadence and GitHub fires **6-7%** of it, so this
+              // screen was implying a freshness it did not have — and the stale banner could not see it,
+              // because *a five-hour-old row is still a row*. ⭐ This is not that banner: no colour, no
+              // icon, no border. The banner means **a gameweek is missing**; this means **it has been a
+              // while**, and conflating the two would make the loud one meaningless.
+              //
+              // ⚠️ Live page only. On a forward page the header already says *"projected"*, and on a past
+              // one the week is settled — *the age of the board is a fact about now.*
+              if (gameweek == null && team.data.isOld) ...[
+                const SizedBox(width: 8),
+                Text(
+                  team.data.shortAge,
+                  style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),

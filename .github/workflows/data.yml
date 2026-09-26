@@ -1,7 +1,8 @@
 name: Data pipeline
 
 # The scheduled refresh (ADR-211, Phase 2c) — what replaces a person running `reseed` and committing a
-# binary. Ticks every 15 minutes and lets `app.py pipeline` decide whether anything is due.
+# binary. Ticks hourly — see the schedule below — and lets `app.py pipeline` decide whether anything
+# is due.
 #
 # ⭐ **The schedule lives in Python, not in this cron line, because the thing it depends on moves every week.**
 # GitHub cannot know when Saturday's deadline is; the fixtures can. So the tick is dumb and frequent, and the
@@ -14,7 +15,20 @@ name: Data pipeline
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    # ⚠️⚠️⚠️ **Hourly, because every-fifteen-minutes was never true.** Measured 2026-09-26 against the
+    # Actions API: `*/15` fired **6 times in 24 hours** and 48 in 7 days — **6-7%** of what it declared,
+    # with real gaps of 2h27m, 2h55m, 3h14m, 5h10m and 5h41m.
+    #
+    # ⭐ This changes the **documentation, not the data.** GitHub deprioritises scheduled runs on free
+    # runners, and `backfill.yml` is already hourly and throttled just as hard — so this will not fire
+    # sixty times a day either. What it stops is the file **claiming** a cadence the platform never
+    # honoured: ⭐⭐ *a schedule the platform ignores is a schedule that lies in the documentation as well
+    # as in the file*, and the person it misleads is whoever reads it next looking for why the prices are
+    # old.
+    #
+    # 📌 Actually fixing freshness means driving the tick from something that keeps time and using GitHub
+    # as the worker — a decision with a token in it, deliberately not taken here.
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       force:

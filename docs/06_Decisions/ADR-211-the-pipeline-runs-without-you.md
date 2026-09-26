@@ -42,6 +42,14 @@ Everything below was timed against the live pipeline today, not estimated.
 | **Per-GW history backfill** (`history --backfill`) | **~3.3 min** (659 throttled calls @ 0.3 s) | FPL API, heavily | once per gameweek, after results |
 | **Headline extraction** (`enrich_headlines`) | **64 s** | 🔴 **a local LLM** (Ollama `qwen3:8b` on `localhost:11434`) | daily-ish |
 
+> ⚠️⚠️⚠️ **Correction (2026-09-26): it does not run every 15 minutes, and never did.** Measured against
+> the Actions API, `*/15` fired **6 times in 24 hours** — 6-7% of what it declared — with real gaps of
+> 2h27m to 5h41m. GitHub deprioritises scheduled runs on free runners, and `backfill.yml` is throttled
+> just as hard at hourly. ⭐ *The reasoning below is sound and the arithmetic is right; the premise that
+> the platform would honour the cadence is what was wrong.* The cron is now hourly so the file stops
+> claiming otherwise (ADR-303), and the answer carries `data.age_minutes` so a reader can see the truth
+> rather than infer it from a schedule.
+
 ⭐ **The job that must run often is the cheap one.** A 3.6-second task can run every 15 minutes for nothing.
 That single number removes most of the imagined infrastructure from this phase.
 

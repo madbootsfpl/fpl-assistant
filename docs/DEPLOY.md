@@ -56,9 +56,14 @@ the few-clicks part, which **you run** (Claude can't create the account).
     place, or restart the app after `python app.py refresh`.
 
   **After the cutover** (`FPL_DATABASE_URL` set on the app *and* as a repo secret):
-  - The app reads **Postgres**, and `.github/workflows/data.yml` refreshes it through the day — hourly when
-    quiet, every 15 minutes in the hour before a deadline, every 10 minutes during a live gameweek. **No
-    commit, no redeploy, no you.** `.github/workflows/backfill.yml` adds each gameweek's per-player history
+  - The app reads **Postgres**, and `.github/workflows/data.yml` refreshes it through the day. **No
+    commit, no redeploy, no you.**
+    ⚠️⚠️ **How often, honestly:** the *intended* cadence is in Python — hourly when quiet, every 15
+    minutes in the hour before a deadline, every 10 minutes during a live gameweek — but that only
+    describes what the tick **decides** when it runs. What actually runs is up to GitHub, and measured on
+    2026-09-26 it fired **6 times in 24 hours**: real gaps of 2h27m to 5h41m. ⭐ *The schedule is a
+    request, not a guarantee*, so treat the data as **a few hours old** rather than minutes, and read
+    `data.age_minutes` in any answer if you need to know. `.github/workflows/backfill.yml` adds each gameweek's per-player history
     once its results post.
   - ⚠️ **`reseed` does not go away, and its job changes.** It maintains `data/seed.db`, which is now the
     **fallback** the app shows if Postgres cannot be reached — so run it occasionally, because *a very stale
