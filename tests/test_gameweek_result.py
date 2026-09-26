@@ -63,10 +63,40 @@ def squad_ids():
         store.close()
 
 
-def run(monkeypatch, payload, gameweek=5, raises=False, live=None, live_raises=False):
+def _last_played_round():
+    """The newest gameweek the committed fixture can actually describe.
+
+    ⚠️⚠️⚠️ **This was hard-coded to `5`, and that is why CI could not go green.** The suite reads
+    `data/fpl.db` when it exists and the committed `data/seed.db` otherwise — the live cache had GW5, the
+    seed stops at GW4, so three tests here passed on a laptop and failed on every runner.
+
+    ⭐⭐ *A test that hard-codes a value the dataset supplies is a test with an expiry date* — this one's was
+    the following Saturday, whichever fixture it ran against.
+    """
+    store = Storage()
+    try:
+        rounds = {row["round"] for rows in store.get_gw_history_by_code().values() for row in rows
+                  # ⚠️ A scoreline, not a row: FPL writes a per-gameweek row when a fixture is merely
+                  # *scheduled* (ADR-125/129), so rows alone would name a week nothing has played.
+                  if row["team_h_score"] is not None}
+    finally:
+        store.close()
+    assert rounds, "the fixture carries no played gameweek at all"
+    return max(rounds)
+
+
+#: ⚠️⚠️ Read **once, at import**, and deliberately not on demand: several tests here monkeypatch
+#: `Storage.get_gw_history_by_code` with synthetic rows to manufacture a double gameweek, and a helper that
+#: consulted the store lazily would read *their* rows instead of the fixture's. ⭐ *A fact about the fixture
+#: has to be gathered before the tests start rewriting it.*
+PLAYED_ROUND = _last_played_round()
+
+
+def run(monkeypatch, payload, gameweek=None, raises=False, live=None, live_raises=False):
     monkeypatch.setattr(fpl_client, "FplClient",
                         lambda *a, **k: FakeFpl(payload, raises, live, live_raises))
-    return gameweek_result(GameweekResultRequest(manager_id=1, gameweek=gameweek))
+    return gameweek_result(
+        GameweekResultRequest(manager_id=1, gameweek=PLAYED_ROUND if gameweek is None else gameweek))
 
 
 def test_a_gameweek_fpl_has_not_published_is_not_an_error(monkeypatch, squad_ids):
@@ -131,7 +161,9 @@ def test_a_double_gameweek_sums_both_matches(monkeypatch, squad_ids):
         store.close()
 
     def doubled(self):
-        row = {"round": 5, "total_points": 6, "minutes": 90, "goals_scored": 1, "assists": 0,
+        # ⚠️ The round must be the one `run` asks for — a hard-coded 5 matched nothing the day the
+        # fixture stopped at GW4, and the answer came back as a silent zero rather than an error.
+        row = {"round": PLAYED_ROUND, "total_points": 6, "minutes": 90, "goals_scored": 1, "assists": 0,
                "bonus": 1, "saves": 0, "clean_sheets": 0, "yellow_cards": 1, "red_cards": 0}
         return {code: [dict(row), dict(row)]}
 
@@ -283,7 +315,8 @@ def test_a_played_week_names_the_match_and_its_scoreline(monkeypatch, squad_ids)
     for entry in played:
         matches = entry["result"]["matches"]
         assert matches, f"{entry['player']['web_name']} played but names no match"
-        rows = [r for r in history[players[entry["player"]["id"]]["code"]] if r["round"] == 5]
+        rows = [r for r in history[players[entry["player"]["id"]]["code"]]
+                if r["round"] == PLAYED_ROUND]
         assert len(matches) == len(rows), "a double gameweek must name both matches"
         for match, row in zip(matches, rows, strict=True):
             # ⚠️ `opponent` is null, never a guess — the rule `_recent_rows` already follows.
@@ -307,7 +340,7 @@ def test_a_double_gameweek_names_both_matches(monkeypatch, squad_ids):
     """⚠️⚠️ **The fixture has no double gameweek, so nothing exercised the second match.**
 
     A mutation taking `rows[:1]` survived every other test in this file — correctly, because every player
-    in the committed fixture played exactly once in GW5. ⭐ *A branch the test data cannot reach is a
+    in the committed fixture played exactly once in that week. ⭐ *A branch the test data cannot reach is a
     branch the test suite is not testing*, however many assertions point at it.
 
     So this one manufactures the case: one player, two rows, one round.
@@ -319,9 +352,12 @@ def test_a_double_gameweek_names_both_matches(monkeypatch, squad_ids):
     finally:
         store.close()
 
-    code = players[squad_ids[0]]["code"]
-    week = [r for r in history[code] if r["round"] == 5]
-    assert len(week) == 1, "the fixture changed — this test builds its double from a single"
+    gw = PLAYED_ROUND
+    subject = next((pid for pid in squad_ids
+                    if len([r for r in history[players[pid]["code"]] if r["round"] == gw]) == 1), None)
+    assert subject is not None, "no player in the fixture played exactly once in the last played week"
+    code = players[subject]["code"]
+    week = [r for r in history[code] if r["round"] == gw]
     # ⭐ A second match in the same round: what a rearranged fixture actually looks like.
     twin = dict(week[0])
     twin["opponent_team"] = 99
@@ -330,7 +366,7 @@ def test_a_double_gameweek_names_both_matches(monkeypatch, squad_ids):
     monkeypatch.setattr(Storage, "get_gw_history_by_code", lambda self: history)
     answer = run(monkeypatch, picks(squad_ids))
 
-    entry = next(e for e in answer["squad"] if e["player"]["id"] == squad_ids[0])
+    entry = next(e for e in answer["squad"] if e["player"]["id"] == subject)
     assert len(entry["result"]["matches"]) == 2, (
         "only one match of a double gameweek is named — showing one of two is worse than showing "
         "neither, because it looks complete"
