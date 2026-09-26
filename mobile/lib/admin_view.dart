@@ -144,10 +144,8 @@ class _AdminViewState extends State<AdminView> {
               );
             }
             if (snap.hasError) {
-              // ⭐ Shown as-is: a 401 and a 404 are both *"that did not work"*, and the endpoint is
-              // deliberately silent about which.
               return Text(
-                '${snap.error}',
+                _explain(snap.error),
                 style: const TextStyle(
                   color: Brand.warn,
                   fontSize: 12.5,
@@ -291,4 +289,23 @@ class _Breakdown extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What went wrong, in terms the owner can act on.
+///
+/// ⚠️⚠️⚠️ **The server is deliberately silent about whether a key was wrong or absent, and that silence
+/// reached the owner as the single word "Not found".** He had typed the right PIN — the one the Streamlit
+/// app uses — and nothing on screen suggested the API had simply never been given it.
+///
+/// ⭐⭐ **One message for both**, so a stranger still learns nothing: *the refusal is identical whether
+/// the key is wrong or missing.* What changed is that it names the two possibilities instead of one
+/// unhelpful word — ⭐ *a door that will not open should at least say which two things to check.*
+String _explain(Object? error) {
+  if (error is ApiException &&
+      (error.statusCode == 401 || error.statusCode == 404)) {
+    return 'That key was not accepted — or this server has no admin key set.\n\n'
+        'They are separate secrets: the API reads its own environment, not the '
+        "web app's. Setting one does not set the other.";
+  }
+  return friendlyError(error);
 }

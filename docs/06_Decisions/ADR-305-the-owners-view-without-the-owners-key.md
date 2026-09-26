@@ -75,3 +75,27 @@ naming: `key_matches` returning `True` for an **unset** key survived every test,
 404s first and nothing reached the comparison. ⭐ *A security guard that is only correct because a
 different guard runs first becomes wrong the day somebody reorders them* — and that one fails **open**.
 It is now tested at the function.
+
+---
+
+## The silence reached the wrong person (2026-09-26)
+
+⚠️⚠️⚠️ **The owner typed the right PIN and the screen said "Not found".**
+
+The endpoint is deliberately silent about whether a key is **wrong** or **absent** — that is the point of
+the 404, and it is correct. But the client printed the raw detail, so the one word that reached the person
+who *has* the key was the one word that helps him least. ⭐ *A refusal designed to teach a stranger nothing
+had ended up teaching the owner nothing either.*
+
+⭐⭐ **Fixed on the client, not the server.** One message covers both, so a stranger still learns nothing —
+the text is identical for 401 and 404, and a test pins that. What changed is that it names the two things
+to check: *"That key was not accepted — or this server has no admin key set. They are separate secrets:
+the API reads its own environment, not the web app's."*
+
+⚠️ And a **500 says something else entirely**, because *not every failure is the key* and a server that is
+simply down must not send the owner hunting for a secret.
+
+📌 **The underlying cause was configuration, not code**: Streamlit reads `st.secrets`, Render reads its own
+environment, and the PIN had only ever been given to the first. `"usage":"ok"` on `/health` already proved
+Render had `FPL_STORE_URL` and `FPL_STORE_KEY` — so the two to add are **`FPL_ADMIN_KEY`** and
+**`FPL_ADMIN_STORE_KEY`**.

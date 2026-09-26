@@ -127,17 +127,59 @@ void main() {
     expect(find.textContaining('220  ·  53%'), findsOneWidget);
   });
 
-  testWidgets('a refused key is shown as-is and keeps the field', (
+  testWidgets('a refusal names both possibilities and keeps the field', (
     tester,
   ) async {
-    // ⭐ A 401 and a 404 are both *"that did not work"*, and the endpoint is deliberately silent about
-    // which — the screen must not invent a distinction the server refused to make.
+    // ⚠️⚠️⚠️ **The owner hit this.** He typed the right PIN — the one the Streamlit app uses — and the
+    // screen said *"Not found"*, because the API had never been given it. ⭐ *A door that will not open
+    // should at least say which two things to check.*
     await pump(tester, savedKey: 'wrong', reply: const {}, status: 401);
     await tester.tap(find.text('7d'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+    expect(find.textContaining('not accepted'), findsOneWidget);
+    expect(find.textContaining('no admin key set'), findsOneWidget);
+    expect(find.textContaining('separate secrets'), findsOneWidget);
+    // ⭐ And you can try again without leaving the screen.
     expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('a wrong key and an unconfigured server read identically', (
+    tester,
+  ) async {
+    // ⭐⭐ **The security property, pinned.** The server is deliberately silent about which of the two it
+    // is, and ⚠️ *a screen that helpfully distinguished them would undo that silence on the client* —
+    // telling a stranger whether this deployment has stats at all.
+    await pump(tester, savedKey: 'wrong', reply: const {}, status: 401);
+    await tester.tap(find.text('7d'));
+    await tester.pumpAndSettle();
+    final wrongKey = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => w.data)
+        .firstWhere((s) => s != null && s.contains('not accepted'));
+
+    await pump(tester, savedKey: 'wrong', reply: const {}, status: 404);
+    await tester.tap(find.text('7d'));
+    await tester.pumpAndSettle();
+    final unconfigured = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => w.data)
+        .firstWhere((s) => s != null && s.contains('not accepted'));
+
+    expect(unconfigured, wrongKey, reason: 'the client distinguishes them');
+  });
+
+  testWidgets('a server that is simply down says something else', (
+    tester,
+  ) async {
+    // ⚠️ *Not every failure is the key* — a 500 must not send the owner hunting for a secret.
+    await pump(tester, savedKey: 'sesame', reply: const {}, status: 500);
+    await tester.tap(find.text('7d'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('not accepted'), findsNothing);
+    expect(find.textContaining('at its end'), findsOneWidget);
   });
 
   testWidgets('an unreadable store still draws, and says why', (tester) async {
