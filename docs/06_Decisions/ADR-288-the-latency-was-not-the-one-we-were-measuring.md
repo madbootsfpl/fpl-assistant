@@ -4,6 +4,9 @@
 **Status:** Accepted
 **From:** the owner — *"lets sort the always-on vs scale-to-zero latency"*
 **Revisits:** `Hosting_The_API.md` Step 4 (13.4s, 2026-09-23), which said to buy always-on
+**⚠️ Revisited in turn by [ADR-306](./ADR-306-a-liveness-probe-is-not-usage.md)** — the stats panel later showed `/health` being
+polled every few minutes, and *a service polled every few minutes is never idle*. The measurement below
+may have been of a warm instance that was never allowed to sleep.
 
 ---
 

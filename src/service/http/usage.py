@@ -140,6 +140,19 @@ def record(*, path: str, platform: str, version: str, install: str,
         return
 
 
+#: ⚠️⚠️⚠️ **Paths that are the platform talking to itself, not somebody using the app** (ADR-306).
+#:
+#: The first look at the owner's stats panel read **955 of 995 events — 96% — as `/health`**, with the
+#: whole of the real traffic (six squad loads, one Ask) buried underneath it. ⭐ *A liveness probe is not
+#: usage*, and this table exists to answer one question the owner asked in his own words: *"the
+#: distribution & number using the apps… to make sure that we are scaled enough."* Something polling a
+#: URL every few minutes is not a person, and counting it makes the number that matters unreadable.
+#:
+#: ⚠️ Skipped at the **recorder**, not in the panel: a row written and then filtered is a row that still
+#: costs a write, a table row and a read — ⭐ *the cheapest place to drop something is before it exists.*
+UNCOUNTED: frozenset[str] = frozenset({"/api/v1/health", "/health"})
+
+
 def usage_middleware():
     """FastAPI middleware recording one row per request.
 
@@ -151,6 +164,8 @@ def usage_middleware():
     async def middleware(request, call_next):
         started = time.monotonic()
         response = await call_next(request)
+        if request.url.path in UNCOUNTED:
+            return response
         try:
             record(
                 path=request.url.path,
