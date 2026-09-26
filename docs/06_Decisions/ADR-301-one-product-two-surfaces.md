@@ -133,3 +133,46 @@ class (ADR-253/293), which turns out to have bought more than it was meant to.
 
 📌 **Still open, and unchanged by this:** Streamlit keeps the invite gate, Admin and the Help/video content,
 and nothing here proposes moving them.
+
+
+---
+
+## Admin is the counter-example, and it sharpens the recommendation (2026-09-26)
+
+**From the owner:** *"what about the Admin feature too?"* — a fair challenge to this ADR's first pass,
+which waved Admin aside as *"not a user feature"*. That is a reason to **scope** it, not to skip it.
+
+⭐⭐⭐ **Admin does not need porting, because it is already surface-agnostic.** Both front ends write to the
+**same Supabase `events` table**: the web through `web_streamlit/analytics.py` (ADR-100), the app through
+`service/http/usage.py` (ADR-280) — *"one place to read, whichever surface a tester used."* Admin reads that
+table. It has been watching the phones since the day they shipped.
+
+⚠️ **So nothing about ADR-301 threatens the data. It threatens the reader**, because Admin is a Streamlit
+page and would go wherever Streamlit goes.
+
+⭐⭐ **And it should not follow.** Admin is the one place where Streamlit is genuinely the better tool:
+
+- **It is owner-only**, gated by `FPL_ADMIN_KEY`, behind the beta gate. ⚠️ *A dashboard with a password in
+  a shipped mobile binary is a password in every tester's pocket* — and the anon key already ships to the
+  browser, which the page itself says.
+- **It is a dashboard**: tables, medians, P95s, a sign-in probe that writes one row and reports what the
+  store said. ⭐ *Streamlit exists for exactly this*, and rebuilding it in Dart would be a week spent making
+  something worse.
+- **Its audience is one person**, who has a laptop.
+
+## Recommendation, sharpened
+
+⭐ **Option C, with the line drawn at "who is it for":**
+
+| | goes where |
+|---|---|
+| Everything a **tester** opens | Flutter — phone, and the same build on desktop |
+| Everything the **owner** opens, plus the invite gate | Streamlit, unchanged |
+
+⚠️⚠️ **This also removes the strongest argument against retiring Streamlit as a product surface**, which
+was *"but then we lose Admin."* We do not: Admin keeps reading the table both surfaces already write to,
+and it keeps running on the machine it was built for. ⭐ *The question was never web-versus-app; it was
+which audience each surface serves.*
+
+📌 **What still has to move before Streamlit stops being a product surface:** `Ask` and the browsable
+Headlines list (ADR-300). Help and the videos are content and can live anywhere.
