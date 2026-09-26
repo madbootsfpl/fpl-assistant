@@ -1,7 +1,7 @@
 # ADR-306 — A liveness probe is not usage
 
 **Date:** 2026-09-26
-**Status:** ✅ **Built** (the fix). ⏳ **One question open for the owner** — see the end.
+**Status:** ✅ **Built**, and the open question is answered — see the end.
 **From:** the owner's first look at his own stats panel (ADR-305), which arrived as a screenshot.
 
 ---
@@ -62,3 +62,22 @@ uncounted, the panel can no longer show whether the pinger is alive. ⭐ *That i
 usage table and the wrong one for a dependency* — if warmth is load-bearing, it deserves to be
 **deliberate** (always-on, or a documented ping) rather than an accident visible only as noise in a
 different report.
+
+
+---
+
+## Answered (2026-09-26): nothing is pinging it on purpose
+
+The owner: *"no, nothing is pinging it that I am aware of."*
+
+⭐ **So the probes are the platform's own**, and ADR-288's conclusion stands on its own feet: the 13.4s
+was the deploy window, the build filter removed five sixths of those, and always-on stays declined.
+
+⚠️ **The residual is smaller and different in kind.** If Render's own checks are what keeps the container
+warm, that is **platform behaviour, not a dependency this project created** — there is nothing to
+document, nothing to renew, and nothing that lapses because somebody forgot it. ⭐ *A risk you do not own
+is a risk you cannot drop*, which is the opposite of the case I was worried about.
+
+📌 **What to watch instead**, now that the panel no longer shows the probes: the **P95** on that same
+screen. A container starting shows up there as a single slow request among fast ones — ⭐ *the slow tail is
+where a cold start hides*, and it is already on display for exactly that reason.
