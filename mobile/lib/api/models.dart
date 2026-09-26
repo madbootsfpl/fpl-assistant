@@ -2168,3 +2168,62 @@ class Answer {
   /// ⚠️ An unrecognised question routes to `chat`, whose whole answer is the message.
   bool get isFallback => intent == null || intent == 'chat';
 }
+
+/// The owner's usage summary (ADR-305) — ⭐ **aggregates, never rows.**
+///
+/// ⚠️ `usage.py` refused to store a manager id on the owner's own instruction — *"I am not interested in
+/// personal information"* — and *a promise kept by the writer and broken by the reader is not a promise.*
+class AdminUsage {
+  const AdminUsage({
+    required this.ok,
+    required this.reason,
+    required this.days,
+    required this.events,
+    required this.installs,
+    required this.failures,
+    required this.platforms,
+    required this.versions,
+    required this.pages,
+    this.medianMs,
+    this.p95Ms,
+    this.slowestMs,
+  });
+
+  factory AdminUsage.fromJson(Map<String, dynamic> json) {
+    Map<String, int> counts(Object? raw) => {
+      for (final e in ((raw as Map?) ?? const {}).entries)
+        '${e.key}': (e.value as num?)?.toInt() ?? 0,
+    };
+    return AdminUsage(
+      ok: json['ok'] as bool? ?? false,
+      reason: json['reason'] as String? ?? '',
+      days: (json['days'] as num?)?.toInt() ?? 0,
+      events: (json['events'] as num?)?.toInt() ?? 0,
+      installs: (json['installs'] as num?)?.toInt() ?? 0,
+      failures: (json['failures'] as num?)?.toInt() ?? 0,
+      platforms: counts(json['platforms']),
+      versions: counts(json['versions']),
+      pages: counts(json['pages']),
+      // ⚠️ Null, never zero: *no timings at all is not "instant"*.
+      medianMs: (json['median_ms'] as num?)?.toInt(),
+      p95Ms: (json['p95_ms'] as num?)?.toInt(),
+      slowestMs: (json['slowest_ms'] as num?)?.toInt(),
+    );
+  }
+
+  final bool ok;
+  final String reason;
+  final int days;
+  final int events;
+
+  /// ⚠️ Distinct **installs**, not people — *an install id is tied to nothing and must not be spoken of
+  /// as a user.*
+  final int installs;
+  final int failures;
+  final Map<String, int> platforms;
+  final Map<String, int> versions;
+  final Map<String, int> pages;
+  final int? medianMs;
+  final int? p95Ms;
+  final int? slowestMs;
+}

@@ -34,6 +34,11 @@ LIMITS: dict[str, tuple[int, int]] = {
     "/leagues": (30, 60),
     "/league": (20, 60),
     "/h2h": (30, 60),
+    # ⚠️⚠️ **The one door on an otherwise open API** (ADR-305). Ten a minute is far more than one person
+    # pressing a button and far too few to grind a password — ⭐ *a rate limit is the difference between a
+    # secret and a secret you can guess at leisure.* The limiter runs **before** the handler, so a wrong
+    # key costs an attacker a slot whether or not the endpoint is even configured.
+    "/admin/usage": (10, 60),
 }
 
 #: Everything else. ⭐ Generous, because the app itself makes several calls per screen and a limit that

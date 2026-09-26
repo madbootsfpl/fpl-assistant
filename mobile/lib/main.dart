@@ -795,6 +795,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           'Settings',
           SettingsView(
             team: team,
+            client: _client,
             managerId: _managerId,
             freeTransfers: _freeTransfers,
             baseUrl: _client.baseUrl,

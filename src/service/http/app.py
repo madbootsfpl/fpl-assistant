@@ -17,7 +17,7 @@ import importlib.metadata
 import pathlib
 from collections.abc import Callable
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -236,6 +236,14 @@ class ChipsBody(SquadBody):
         description="⭐ **Supply it and the answer knows which chips you have already spent.** Without it "
                     "each chip's `available` is `null` — ⚠️ *unknown*, never *true*: recommending a "
                     "wildcard someone played in GW4 is a wrong answer delivered confidently.")
+
+
+class AdminUsageBody(BaseModel):
+    """⚠️ The owner's password, per request (ADR-305). ⭐ *The client holds no credential*: reading the
+    events table needs a service-role key, and the web build is public JavaScript."""
+
+    key: str = Field(..., min_length=1, max_length=200, description="The owner's admin key.")
+    days: int = Field(7, ge=1, le=90, description="How far back to summarise.")
 
 
 class AskBody(BaseModel):
@@ -674,6 +682,33 @@ def squad_gameweek(body: GameweekResultBody) -> dict:
     ⭐ A week that has not happened answers `played: false` with an empty squad rather than an error.
     """
     return _answer(service.gameweek_result, service.GameweekResultRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/admin/usage")
+def admin_usage(body: AdminUsageBody, response: Response) -> dict:
+    """Usage stats for the owner — **aggregates only, never rows**.
+
+    ⚠️⚠️⚠️ **Inert unless configured**, exactly like the Streamlit page it replaces: with no
+    `FPL_ADMIN_KEY` and no `FPL_ADMIN_STORE_KEY` this answers **404**, because ⭐ *an endpoint that exists
+    but cannot work is an endpoint somebody will spend an afternoon debugging.*
+
+    ⚠️ A wrong key is **401 with nothing else in it** — no hint about whether the endpoint is configured,
+    no echo of what was sent. ⭐ *The only thing a failed attempt should teach is that it failed.*
+
+    ⭐ What comes back is counts, medians and a P95. `usage.py` refused to store a manager id on the
+    owner's own instruction — *"I am not interested in personal information"* — and ⚠️ *a promise kept by
+    the writer and broken by the reader is not a promise.*
+    """
+    from src.service.http import admin
+
+    if not admin.is_enabled():
+        raise HTTPException(status_code=404, detail="Not found")
+    if not admin.key_matches(body.key):
+        # ⚠️ Deliberately indistinguishable from any other rejection.
+        raise HTTPException(status_code=401, detail="Not authorised")
+    # ⭐ Never cached, anywhere: this is one person's private view of the whole beta.
+    response.headers["Cache-Control"] = "no-store"
+    return admin.usage(body.days)
 
 
 @app.post("/api/v1/ask")

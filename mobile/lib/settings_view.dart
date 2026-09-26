@@ -8,6 +8,10 @@
 /// the same rule that ordered the bottom bar* (ADR-230).
 library;
 
+import 'api/client.dart';
+import 'admin_view.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
 import 'server.dart';
@@ -28,12 +32,14 @@ class SettingsView extends StatefulWidget {
     required this.freeTransfers,
     required this.onManagerId,
     required this.onFreeTransfers,
+    required this.client,
     required this.baseUrl,
     required this.onServer,
     super.key,
   });
 
   final MyTeam team;
+  final ServiceClient client;
   final int managerId;
   final int freeTransfers;
   final ValueChanged<int> onManagerId;
@@ -47,7 +53,12 @@ class SettingsView extends StatefulWidget {
   State<SettingsView> createState() => _SettingsViewState();
 }
 
+/// ⚠️ On the device, never on the server — it is a password the owner types, not one we issue.
+const String _adminKeyPref = 'madboots.admin_key';
+
 class _SettingsViewState extends State<SettingsView> {
+  /// ⭐ Remembered so a reload does not ask again. Read once, on first build.
+  String? _adminKey;
   late int _freeTransfers = widget.freeTransfers;
 
   /// ⭐ Changing whose team this is **leaves the screen**. The facts below are this manager's, captured on
@@ -55,6 +66,23 @@ class _SettingsViewState extends State<SettingsView> {
   void _manager(int id) {
     widget.onManagerId(id);
     Navigator.of(context).maybePop();
+  }
+
+  @override
+  @override
+  void initState() {
+    super.initState();
+    // ⚠️ Best-effort and silent: ⭐ *a stats panel that cannot remember a password is an inconvenience;
+    // a Settings screen that fails to open because of one is a bug.*
+    SharedPreferences.getInstance()
+        .then((prefs) {
+          if (!mounted) return;
+          final saved = prefs.getString(_adminKeyPref);
+          if (saved != null && saved.isNotEmpty) {
+            setState(() => _adminKey = saved);
+          }
+        })
+        .catchError((Object _) => null);
   }
 
   @override
@@ -123,24 +151,64 @@ class _SettingsViewState extends State<SettingsView> {
 
         const _Heading('On the web'),
         const _Note(
-          // ⚠️⚠️ **This paragraph had gone false.** It named the fixture ticker, Team DNA and Trending
-          // as things only the web carried — ⭐ *all three are in this app now* (ADR-245/247/265), and
-          // the same stale claim had to be removed from the More tab in ADR-269. *Positioning copy
-          // outlives the positioning it describes.*
-          'madboots.streamlit.app carries the help, the videos, and the research surfaces a bigger '
-          'screen earns.',
+          // ⚠️⚠️⚠️ **This paragraph has now gone false twice.** It once named the fixture ticker, Team
+          // DNA and Trending as web-only — all three were already in this app (ADR-245/247/265). Then
+          // it said *"the web app stays the exploration layer"*, which stopped being true the day
+          // `madboots.com` started serving **this same app** on the desktop (ADR-301/304).
+          //
+          // ⭐ *Positioning copy outlives the positioning it describes*, twice now in the same nine
+          // lines — so this version claims the smallest true thing: where the videos are.
+          'On a desktop, madboots.com runs this same app in the browser — same screens, same numbers, '
+          'a bigger window.',
         ),
         const _Note(
-          // ⭐ The positioning, said out loud rather than implied by absence. Someone who cannot find
-          // Team DNA should learn that it is a decision, not an oversight.
-          'That split is deliberate. This app is the decision layer — what to do this week, and what a '
-          'move is worth. The web app stays the exploration layer, where a bigger screen earns its keep.',
+          'madboots.streamlit.app is still where the help and Maddie\'s videos live.',
           muted: true,
         ),
 
         const _Heading('About'),
         const _Note(Brand.mantra, italic: true),
         const _Note(Brand.disclaimer, muted: true),
+        // ⭐⭐ **Last, behind a disclosure, and only where a table of medians fits** (ADR-305). The owner
+        // asked for it *"buried in Settings … on my desktop only"*. ⚠️⚠️ *Hiding it is tidiness, not
+        // security* — the lock is the key check on the server, and the door is shut for everyone who
+        // does not have the key whether or not they can find it.
+        if (MediaQuery.sizeOf(context).width >= kAdminMinWidth) ...[
+          const _Heading('Owner'),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              title: const Text(
+                'Usage stats',
+                style: TextStyle(color: Colors.white70, fontSize: 13.5),
+              ),
+              subtitle: const Text(
+                'Requests, platforms and the slow tail. Needs the admin key.',
+                style: TextStyle(color: Colors.white38, fontSize: 11.5),
+              ),
+              iconColor: Colors.white38,
+              collapsedIconColor: Colors.white38,
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              children: [
+                SizedBox(
+                  height: 420,
+                  child: AdminView(
+                    client: widget.client,
+                    savedKey: _adminKey,
+                    onKey: (key) async {
+                      setState(() => _adminKey = key);
+                      final prefs = await SharedPreferences.getInstance();
+                      // ⚠️ On the device only. *The server never stores a password on a client's
+                      // behalf*, and this one is typed, not issued.
+                      await prefs.setString(_adminKeyPref, key);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

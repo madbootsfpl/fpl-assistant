@@ -190,6 +190,19 @@ class ServiceClient {
     }),
   );
 
+  /// The owner's usage stats (ADR-305).
+  ///
+  /// ⚠️⚠️ **The key travels per request and is never stored on the server's behalf.** Reading the events
+  /// table needs a service-role key that stays on the server — ⭐ *the web build is public JavaScript, so
+  /// a credential shipped to this client is a credential published.*
+  ///
+  /// ⚠️ A wrong key is a **401** and an unconfigured server a **404**; both surface as an `ApiException`
+  /// the caller shows as-is, because *the only thing a failed attempt should teach is that it failed.*
+  Future<AdminUsage> adminUsage(String key, {int days = 7}) async =>
+      AdminUsage.fromJson(
+        await _post('admin/usage', {'key': key, 'days': days}),
+      );
+
   /// One player in full — the card behind a row.
   ///
   /// ⭐ Called when a row is **expanded**, not with the list: the market is 481 players and carrying every

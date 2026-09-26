@@ -277,6 +277,7 @@ void _settingsOwnsItsState() {
     await tester.pumpWidget(
       wrap(
         SettingsView(
+          client: ServiceClient(baseUrl: 'http://x'),
           team: MyTeam.fromJson(
             jsonDecode(sampleText('my-team')) as Map<String, dynamic>,
           ),

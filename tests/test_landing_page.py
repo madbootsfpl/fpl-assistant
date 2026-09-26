@@ -84,7 +84,14 @@ def test_the_artwork_declares_the_size_it_actually_is() -> None:
 def test_both_platform_buttons_go_somewhere_real() -> None:
     # ⚠️ Android points at the install page this repo also generates; iOS is text, not a dead button.
     assert 'href="/app/"' in PAGE, "the Android button is gone"
-    assert "madboots.streamlit.app" in PAGE, "the desktop button is gone"
+    # ⭐⭐ **Desktop is the web build now, not Streamlit** (ADR-305, on ADR-301). It is the same app in a
+    # browser — same screens, same numbers — where the old link led to a different product that had
+    # drifted three features behind. ⚠️ *A button labelled "use on desktop" that opens something else is
+    # a button that teaches people the two are unrelated.*
+    assert 'href="/app/web/"' in PAGE, "the desktop button is gone"
+    assert "madboots.streamlit.app" not in PAGE, (
+        "the landing page still sends desktop users to Streamlit"
+    )
     assert "iOS — coming soon" in PAGE
     assert not re.search(r'<a[^>]*>[^<]*iOS[^<]*</a>', PAGE), (
         "iOS is a link again — a tap that does nothing reads as broken"

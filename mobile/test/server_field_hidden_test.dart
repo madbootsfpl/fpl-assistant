@@ -4,6 +4,7 @@
 // report that follows is "the app stopped working" — with no sign in it that a field was ever touched.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:madboots/api/client.dart';
 import 'package:madboots/api/models.dart';
 import 'package:madboots/server.dart';
 import 'package:madboots/settings_view.dart';
@@ -32,6 +33,7 @@ void main() {
     await tester.pumpWidget(
       wrap(
         SettingsView(
+          client: ServiceClient(baseUrl: 'http://x'),
           team: sampleTeam(),
           managerId: 2885974,
           freeTransfers: 2,
@@ -73,6 +75,7 @@ void main() {
     await tester.pumpWidget(
       wrap(
         SettingsView(
+          client: ServiceClient(baseUrl: 'http://x'),
           team: sampleTeam(),
           managerId: 2885974,
           freeTransfers: 2,
