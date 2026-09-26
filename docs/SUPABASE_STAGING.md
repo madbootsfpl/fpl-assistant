@@ -11,6 +11,14 @@ project before anything touches production. **Nothing in this file changes produ
 whose parts are **Stage A / B / C** in [`SUPABASE_RLS.md`](SUPABASE_RLS.md) — letters, never numbers, and
 unrelated to ADR-211's **Stage 2a–2f**, which is the data pipeline.
 
+> ⚠️⚠️ **If Supabase says this project is about to be paused, that is expected — and it is not a reason
+> to delete it.** A free project pauses after about a week without activity, and staging is idle by
+> design: it is used in bursts, when a change to the access rules needs rehearsing. ⭐ *A paused project
+> can be restored from the dashboard; a deleted one is Steps 1–5 again* — and **Stage C**
+> ([`SUPABASE_RLS.md`](SUPABASE_RLS.md)) is still open, which is exactly the kind of change this project
+> exists to rehearse. ⚠️ Nothing automated points at it: no workflow, no deployed service, no test. Only
+> `scripts/run_app_staging.sh`, and only when a person runs it.
+
 **Where this stops.** Steps 1–5 leave you with a staging project that is a faithful copy of production's
 *current, insecure* state, the exposure reproduced and measured, and your local app pointed at it. The
 hardening itself is Step 6 onwards and is deliberately not in this file yet — ⭐ *you cannot tell whether a
