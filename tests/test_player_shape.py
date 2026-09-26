@@ -102,7 +102,7 @@ def _players_in(value, path="", found=None):
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
 COVERED = {"analysis", "trending", "league", "gameweek_result", "head_to_head", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
-           "replacements", "players", "player", "player_dna", "signals", "chatter"}
+           "replacements", "players", "player", "player_dna", "signals", "chatter", "ask_question"}
 
 
 class _FakeReddit:
@@ -183,6 +183,12 @@ def _answers(store):
         # is slow.
         "chatter": service.chatter(service.ChatterRequest(player_ids=ids, limit=5),
                                    store=store, client=_FakeReddit(store)),
+        # ⭐ Ask's `facts` are **pre-humanised strings** — `"Saka (ARS)"`, not a row — which is the whole
+        # reason it passes. ⚠️ Swept anyway: *a shape that is right today is not a shape that is
+        # guarded*, and this one is assembled by fifteen different intents.
+        "ask_question": service.ask_question(
+            service.AskRequest(question="who should I captain?", player_ids=ids,
+                               bench_ids=ids[-4:]), store=store),
         "chips": service.chips(service.ChipsRequest(player_ids=ids, bank=2.0), store=store),
         "players": service.players(service.PlayersRequest(horizon=1, limit=5), store=store),
         # ⭐ In the sweep proper: a crowd board carries a **player summary** per row, which is exactly the

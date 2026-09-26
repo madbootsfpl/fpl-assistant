@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api/client.dart';
+import 'ask_view.dart';
 import 'api/models.dart';
 import 'apply_plan.dart';
 import 'brand.dart';
@@ -769,6 +770,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             onApply: (squad, name) => _applySquad(team, squad, name),
           ),
         ),
+        onOpenAsk: () => _open('Ask', AskView(client: _client, team: team)),
         onOpenLeagues: () => _open(
           'Mini-leagues',
           LeaguesView(client: _client, managerId: _managerId),

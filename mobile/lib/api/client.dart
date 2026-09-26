@@ -167,6 +167,29 @@ class ServiceClient {
         await _post('chatter', {'player_ids': playerIds, 'limit': limit}),
       );
 
+  /// A question in words (ADR-302).
+  ///
+  /// ⭐ The squad travels as ids and becomes the **active squad**, so *"who should I captain"* resolves
+  /// without the app knowing anything about how the engine loads a team.
+  ///
+  /// ⚠️ `free` and `bank` are sent because the plan uses them — *a plan that ignores what you can afford
+  /// is a plan for somebody else.*
+  Future<Answer> ask(
+    String question, {
+    required List<int> playerIds,
+    List<int> benchIds = const [],
+    int free = 1,
+    double bank = 0,
+  }) async => Answer.fromJson(
+    await _post('ask', {
+      'question': question,
+      'player_ids': playerIds,
+      'bench_ids': benchIds,
+      'free': free,
+      'bank': bank,
+    }),
+  );
+
   /// One player in full — the card behind a row.
   ///
   /// ⭐ Called when a row is **expanded**, not with the list: the market is 481 players and carrying every

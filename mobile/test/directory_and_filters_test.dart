@@ -68,6 +68,7 @@ void _moreIsADirectory() {
         onOpenTeamDna: () {},
         onOpenSettings: () {},
         onOpenLab: () {},
+        onOpenAsk: () {},
         onOpenLeagues: () {},
         onOpenTicker: () {},
         onOpenFeedback: () {},
@@ -122,6 +123,11 @@ void _moreIsADirectory() {
       // been reordered on feedback with the whole suite staying green — ⭐ *an order no test names is an
       // order the next edit reverses by accident, and the only reader who notices is the owner.*
       expect(names, [
+        // ⭐⭐ **Ask leads the game rows** (ADR-302). Every other row is a named screen you go to on
+        // purpose; this is where you go when you do not know which screen you want — ⚠️ *and that is the
+        // commonest state a manager is in on a Friday night.* The owner's chosen order (ADR-284) is
+        // otherwise untouched: game things, then app things.
+        'Ask',
         'Mini-leagues',
         'Fixture Difficulty Rating',
         'Team DNA',
@@ -171,6 +177,7 @@ void _moreIsADirectory() {
       await tester.pumpWidget(
         wrap(
           MoreView(
+            onOpenAsk: () => opened.add('Ask'),
             managerId: 1,
             freeTransfers: 1,
             onOpenChips: () => opened.add('Chips'),

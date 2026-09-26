@@ -2088,3 +2088,42 @@ class ChatterRow {
   /// The threads behind the count — ⭐ *the number is the claim, these are the evidence for it.*
   final List<({String title, String link})> posts;
 }
+
+/// An answer to a question asked in words (ADR-302).
+class Answer {
+  const Answer({
+    required this.question,
+    required this.intent,
+    required this.headline,
+    required this.detail,
+    required this.message,
+    required this.facts,
+  });
+
+  factory Answer.fromJson(Map<String, dynamic> json) => Answer(
+    question: json['question'] as String? ?? '',
+    intent: json['intent'] as String?,
+    headline: json['headline'] as String? ?? '',
+    detail: json['detail'] as String? ?? '',
+    message: json['message'] as String? ?? '',
+    facts: {
+      for (final e in ((json['facts'] as Map?) ?? const {}).entries)
+        '${e.key}': e.value,
+    },
+  );
+
+  final String question;
+
+  /// Which engine answered — ⭐ so the screen can say so. ⚠️ `chat` is the engine that answers *"I can
+  /// answer about…"*, which is a real answer and not a failure.
+  final String? intent;
+  final String headline;
+  final String detail;
+
+  /// Shown **instead** of the headline, never beside it.
+  final String message;
+  final Map<String, dynamic> facts;
+
+  /// ⚠️ An unrecognised question routes to `chat`, whose whole answer is the message.
+  bool get isFallback => intent == null || intent == 'chat';
+}

@@ -238,6 +238,20 @@ class ChipsBody(SquadBody):
                     "wildcard someone played in GW4 is a wrong answer delivered confidently.")
 
 
+class AskBody(BaseModel):
+    """⚠️ A question in words, plus the squad it is about (ADR-302)."""
+
+    question: str = Field(..., min_length=1, max_length=500,
+                          description="The question, in plain English.")
+    player_ids: list[int] = Field(default_factory=list,
+                                  description="Your fifteen, treated as the active squad so "
+                                              "squad-scoped questions resolve without a saved name.")
+    bench_ids: list[int] = Field(default_factory=list, description="Which four are benched.")
+    free: int = Field(1, ge=0, le=5, description="Free transfers available.")
+    bank: float = Field(0.0, ge=0, description="Money in the bank, in millions.")
+    horizon: int = Field(5, ge=1, le=8, description="The planning window for plan-shaped answers.")
+
+
 class ChatterBody(BaseModel):
     """⚠️ **Player ids are optional and do not narrow the sweep** (ADR-300).
 
@@ -660,6 +674,23 @@ def squad_gameweek(body: GameweekResultBody) -> dict:
     ⭐ A week that has not happened answers `played: false` with an empty squad rather than an error.
     """
     return _answer(service.gameweek_result, service.GameweekResultRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/ask")
+def ask(body: AskBody) -> dict:
+    """A question in words → the engine that answers it.
+
+    ⭐⭐ **The routing has existed since Sprint 036 and no phone could reach it.** Fifteen intents, each
+    loading what it needs and returning a decision, the facts behind it, and a rendered detail block.
+
+    ⚠️⚠️ **No LLM prose.** `ask.answer` narrates through **Ollama on localhost**, and there is none here —
+    so the narrator is silenced rather than left to time out per request. ⭐ *The prose was always the
+    optional half*: the decision and its facts come from the analytics either way.
+
+    ⚠️ An unroutable question answers with `message` and a null `intent` — not an error. *"I could not
+    understand that" is a normal outcome of a free-text box.*
+    """
+    return _answer(service.ask_question, service.AskRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/chatter")

@@ -28,6 +28,7 @@ class MoreView extends StatelessWidget {
     required this.onOpenTeamDna,
     required this.onOpenSettings,
     required this.onOpenLab,
+    required this.onOpenAsk,
     required this.onOpenLeagues,
     required this.onOpenTicker,
     required this.onOpenFeedback,
@@ -57,6 +58,7 @@ class MoreView extends StatelessWidget {
 
   final VoidCallback onOpenSettings;
   final VoidCallback onOpenLab;
+  final VoidCallback onOpenAsk;
   final VoidCallback onOpenLeagues;
   final VoidCallback onOpenTicker;
   final VoidCallback onOpenFeedback;
@@ -76,6 +78,16 @@ class MoreView extends StatelessWidget {
       // weekly; DNA, Chips and the Lab are decisions you make a handful of times a season; and the three
       // at the bottom are about the app rather than the game — *the least-used rows are the ones you can
       // always find, because they are the ones you go looking for by name.*
+      // ⭐⭐ **First, because it is the only row that answers a question you have not learnt to ask
+      // yet.** Every other row here is a named screen you go to on purpose; this one is where you go
+      // when you do not know which screen you want — ⚠️ *and that is the commonest state a manager is
+      // in on a Friday night.*
+      _Row(
+        icon: Icons.chat_bubble_outline,
+        name: 'Ask',
+        why: 'Captaincy, transfers, a plan for the week, chips, the rules — in your own words.',
+        onTap: onOpenAsk,
+      ),
       _Row(
         icon: Icons.emoji_events_outlined,
         name: 'Mini-leagues',

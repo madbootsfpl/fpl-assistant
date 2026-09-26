@@ -98,6 +98,7 @@ void main() {
             onOpenTeamDna: () {},
             onOpenSettings: () {},
             onOpenLab: () {},
+            onOpenAsk: () {},
             onOpenLeagues: () {},
             onOpenTicker: () {},
             onOpenFeedback: () {},

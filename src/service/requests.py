@@ -150,6 +150,35 @@ class BuildRequest:
 
 
 @dataclass
+class AskRequest:
+    """*"Just tell me what to do"* — a question in words, routed to the engine that answers it (ADR-302).
+
+    ⭐⭐ **The squad travels as ids, like every other request.** `ask` on the web resolves a *saved squad
+    by name*; a phone has no saved squads, it has **the fifteen FPL says you own** — so the caller sends
+    them and the router treats them as the active squad. ⚠️ *A client that uploaded rows would be defining
+    the engine's input*, which is the rule every endpoint here already follows.
+
+    ⚠️ `free` and `bank` matter: a transfer answer computed against £0 and one free transfer is a
+    different answer, and ⭐ *a plan that ignores what you can afford is a plan for somebody else.*
+    """
+
+    question: str = ""
+    player_ids: list[int] = field(default_factory=list)
+    bench_ids: list[int] = field(default_factory=list)
+    free: int = 1
+    bank: float = 0.0
+    horizon: int = 5
+
+    def validate(self) -> None:
+        if not self.question.strip():
+            raise ValueError("a question is required")
+        # ⚠️ A ceiling, because this string is routed and matched against squad names and gameweeks —
+        # ⭐ *an unbounded free-text field on a public endpoint is somebody else's CPU.*
+        if len(self.question) > 500:
+            raise ValueError("that question is too long — keep it under 500 characters")
+
+
+@dataclass
 class ChatterRequest:
     """*"What is everyone talking about?"* — r/FantasyPL mention counts (ADR-300, on ADR-059).
 

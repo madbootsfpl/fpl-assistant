@@ -1072,6 +1072,66 @@ CHATTER_TTL_SECONDS = 600
 _CHATTER: dict = {"until": 0.0, "rows": None, "note": ""}
 
 
+def ask_question(request: "AskRequest", *, store: Storage | None = None, narrator=None) -> dict:
+    """A question in words → the engine's answer (ADR-302, on ADR-036/054).
+
+    ⭐⭐⭐ **The routing is the feature, and it has existed since Sprint 036.** `src/ask.py` matches a
+    question to one of fifteen intents, loads what that intent needs, and hands back a decision, the facts
+    behind it and a rendered detail block. The phone has never been able to ask.
+
+    ⚠️⚠️ **No narrator, and that is deliberate rather than a limitation.** `ask.answer` defaults to
+    `llm.narrate`, which talks to **Ollama on localhost** — there is none on the server, so every request
+    would spend its connection timeout discovering that. ⭐ *The prose was always the optional half*:
+    `AskResult.explanation` is documented as *"the LLM prose, or None when the model is unavailable"*, and
+    the decision, the facts and the detail are computed by the analytics either way.
+
+    ⚠️ Markdown is stripped on the way out — `plain()`, ADR-274 — because *the API speaks text, not
+    Streamlit*, and a phone prints asterisks literally.
+    """
+    from src import ask as ask_engine
+
+    request.validate()
+    store, ours = opened(store)
+    try:
+        # ⭐ The fifteen the caller owns, presented as the session squad — which is what `active_squad`
+        # was built for (ADR-054/055), so squad-scoped questions resolve without a saved name.
+        active = {
+            # ⭐ Named so the engine's own sentence reads: *"Captain pick (squad 'yours')"*.
+            # ⚠️ "your squad" produced *"squad 'your squad'"*, which looks like a bug rather than
+            # a phrase — *the caller chooses this word and the engine prints it verbatim.*
+            "name": "yours",
+            "player_ids": list(request.player_ids),
+            "bench_ids": list(request.bench_ids),
+        } if request.player_ids else None
+
+        result = ask_engine.answer(
+            request.question,
+            store=store,
+            # ⚠️ Silences the narrator without pretending it answered — see above.
+            narrator=narrator or (lambda *a, **k: None),
+            active_squad=active,
+            horizon=request.horizon,
+            free=request.free,
+            bank=request.bank,
+        )
+    finally:
+        if ours:
+            store.close()
+
+    return {
+        "question": result.question,
+        # ⭐ Which engine answered, so a client can say so — ⚠️ *"I could not understand that" and "the
+        # captain engine has nothing to say" are different answers and must not draw the same.*
+        "intent": result.intent,
+        "headline": plain(result.headline or ""),
+        "detail": plain(result.detail or ""),
+        # ⚠️ Present only when the router found nothing — the client shows this *instead*, never beside.
+        "message": plain(result.message or ""),
+        # ⭐ The facts behind the decision, already humanised by `ask` into strings a person can read.
+        "facts": result.facts or {},
+    }
+
+
 def chatter(request: "ChatterRequest", *, store: Storage | None = None, client=None) -> dict:
     """What r/FantasyPL is talking about (ADR-300, built on ADR-059).
 
@@ -1418,7 +1478,16 @@ def plain(text: str) -> str:
     page it was written for still renders it correctly.
     """
     # ⚠️ Bold before italic: `**x**` would otherwise be read as an italic `*` wrapping `*x*`.
-    return text.replace("**", "").replace("*", "")
+    #
+    # ⭐ `__bold__` too, because the docstring above promises *markdown emphasis* and underscores are
+    # markdown emphasis — found by a test that fed some through rather than looking for some.
+    #
+    # 🔴 **A single `_` is deliberately left alone, and completing the symmetry here would be a bug.**
+    # FPL's own stat identifiers reach the screen as text — `defensive_contribution`, `goals_scored`,
+    # `clean_sheets` — and the played-week card prints them (ADR-299). Stripping single underscores would
+    # render that line as *"defensivecontribution"*. ⚠️ *The rule is not "remove punctuation", it is
+    # "remove emphasis", and a lone underscore between two letters is neither.*
+    return text.replace("**", "").replace("*", "").replace("__", "")
 
 
 def _worth_noticing(request: TrendingRequest, data) -> dict:
