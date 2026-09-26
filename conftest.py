@@ -124,10 +124,9 @@ def _copy_snapshot_into(conn) -> None:
 
     if not os.path.exists(config.SEED_DB_PATH):
         return
-    for ddl in (storage_module.CREATE_TEAMS, storage_module.CREATE_PLAYERS, storage_module.CREATE_FIXTURES,
-                storage_module.CREATE_HISTORY_PAST, storage_module.CREATE_HISTORY,
-                storage_module.CREATE_HEADLINE_EVENTS, storage_module.CREATE_AVAILABILITY,
-                storage_module.CREATE_TRANSFER_FLOW):
+    # ⭐⭐ **`storage.SCHEMA_DDL` is the list, and this reads it rather than keeping a second copy** — the
+    # copy that used to live here omitted three tables and cost the dual-backend job 1,892 failures.
+    for ddl in storage_module.SCHEMA_DDL:
         conn.execute(ddl)
 
     src = sqlite3.connect(config.SEED_DB_PATH)

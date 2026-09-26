@@ -164,3 +164,35 @@ def test_a_column_added_later_migrates_onto_an_existing_POSTGRES_table():
     assert conn.execute("SELECT name FROM teams WHERE id = 1").fetchone()["name"] == "Arsenal", \
         "the migration must add columns, never rebuild the table (ADR-129's lesson)"
     first.close()
+
+
+def test_the_schema_list_carries_every_table_storage_declares():
+    """⚠️⚠️⚠️ **The list was written twice and the copies drifted.** `conftest.py` built the Postgres test
+    schema from its own tuple, and three tables added later — `data_status` (ADR-211 2b), `xp_board`,
+    `team_dna_board` — never reached it: the dual-backend job failed **1,892 times** with
+    `relation "data_status" does not exist`, for weeks.
+
+    ⭐⭐ There is one list now, and `conftest` reads it. This guards the remaining way to break it: adding a
+    `CREATE_` constant and forgetting to put it in `SCHEMA_DDL`. ⭐ *A list nothing re-checks is a list that
+    rots*, which is the lesson the duplicate already taught once.
+    """
+    from src import storage
+
+    declared = {name for name in vars(storage) if name.startswith("CREATE_")}
+    built = {ddl for ddl in storage.SCHEMA_DDL}
+
+    missing = sorted(n for n in declared if getattr(storage, n) not in built)
+    assert not missing, f"declared in storage.py but never created: {missing}"
+    assert len(storage.SCHEMA_DDL) == len(declared), "SCHEMA_DDL has a duplicate or a stray entry"
+
+
+def test_teams_is_created_before_the_tables_that_reference_it():
+    """⭐ The list is an **order**, not a set: `players.team_id` and `fixtures.team_h/team_a` are foreign keys
+    onto `teams(id)`, so a run that created those first would fail on a real Postgres."""
+    from src import storage
+
+    order = list(storage.SCHEMA_DDL)
+
+    assert order[0] is storage.CREATE_TEAMS, "teams must be created first"
+    for table in (storage.CREATE_PLAYERS, storage.CREATE_FIXTURES):
+        assert order.index(table) > order.index(storage.CREATE_TEAMS)

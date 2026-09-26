@@ -411,6 +411,35 @@ CREATE TABLE IF NOT EXISTS fixtures (
 )
 """
 
+#: **Every table, in creation order** — the single source of truth for building this schema.
+#:
+#: ⭐ An order, not a set: `players.team_id` and `fixtures.team_h/team_a` are foreign keys onto `teams(id)`,
+#: so `CREATE_TEAMS` has to come first.
+#:
+#: ⚠️⚠️⚠️ **This exists because the same list was written twice and the copies drifted.** `conftest.py` built
+#: the Postgres test schema from its own hand-written tuple, and three tables added later — `data_status`
+#: (ADR-211 2b), `xp_board`, `team_dna_board` — never reached it. The dual-backend job failed **1,892 times**
+#: with `relation "data_status" does not exist`, for weeks.
+#:
+#: ⭐⭐ **Only Postgres could be hurt, and for the reason it is safe**: on SQLite `_init_schema` runs
+#: `CREATE TABLE IF NOT EXISTS` and heals an omission on the spot, while on Postgres a reader deliberately
+#: never creates a schema (ADR-211 2b) — so the backend that cannot self-heal is the one whose list had to be
+#: complete. *The safety property and the fragility were the same decision.*
+SCHEMA_DDL = (
+    CREATE_TEAMS,
+    CREATE_PLAYERS,
+    CREATE_FIXTURES,
+    CREATE_HISTORY_PAST,
+    CREATE_HISTORY,
+    CREATE_HEADLINE_EVENTS,
+    CREATE_AVAILABILITY,
+    CREATE_TRANSFER_FLOW,
+    CREATE_DATA_STATUS,
+    CREATE_XP_BOARD,
+    CREATE_TEAM_DNA_BOARD,
+)
+
+
 # Upsert: insert a new row, or refresh the existing one if the id already exists.
 UPSERT_TEAM = """
 INSERT INTO teams (id, name, short_name, strength_overall_home, strength_overall_away, code)
@@ -650,17 +679,8 @@ class Storage:
 
     def _init_schema(self) -> None:
         with self.conn:
-            self.conn.execute(CREATE_TEAMS)
-            self.conn.execute(CREATE_PLAYERS)
-            self.conn.execute(CREATE_FIXTURES)
-            self.conn.execute(CREATE_HISTORY_PAST)
-            self.conn.execute(CREATE_HISTORY)
-            self.conn.execute(CREATE_HEADLINE_EVENTS)
-            self.conn.execute(CREATE_AVAILABILITY)
-            self.conn.execute(CREATE_TRANSFER_FLOW)
-            self.conn.execute(CREATE_DATA_STATUS)
-            self.conn.execute(CREATE_XP_BOARD)
-            self.conn.execute(CREATE_TEAM_DNA_BOARD)
+            for ddl in SCHEMA_DDL:          # ⭐ the one list — see its note above
+                self.conn.execute(ddl)
             # ⭐ **The two migrations below repair OLD SQLITE FILES, and a Postgres database has no old files.**
             # `_migrate` adds columns that post-date a table, and `_rekey_history` rebuilds a primary key that
             # changed in ADR-129 — both exist because a cache on someone's laptop may have been created in
