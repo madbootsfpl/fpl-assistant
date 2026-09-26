@@ -1,8 +1,8 @@
 # ADR-300 — Chatter and News under Signals
 
 **Date:** 2026-09-25
-**Status:** ✅ **Chatter built** (2026-09-25). 🔴 **News not built** — the recommendation below stands
-and was accepted.
+**Status:** ✅ **Chatter built** (2026-09-25). ⚠️⚠️⚠️ **The News recommendation below was wrong and is
+withdrawn** — see *Second correction*. 📌 Headlines is a **parity gap**, not a new feature.
 **From:** the owner — *"Signals: can we add in the Headlines — FPL analysis & football news as well as the
 Community chatter, maybe stick under one or two new sub tabs under Signals called Chatter and/or News. Can
 we have images rather than just links. Thoughts?"*
@@ -129,3 +129,49 @@ Haaland, Palmer and Isak 200.
 count, the threads behind it, and an outline if he is yours.
 
 **Tests:** 12 service, 5 widget, mutation-tested **9/9** and **8/8**.
+
+
+---
+
+## Second correction (2026-09-26) — I was wrong twice, and the same way both times
+
+⚠️⚠️⚠️ **Both errors came from grepping for a symbol instead of looking at the screen.**
+
+### 1. Chatter was never dead — the orchestrator was
+
+Last night's correction said `community_signals` had *"no caller on any surface"*, and that was true of the
+**function** and false of the **feature**. `pages/3_Signals.py` section 4, *"Community chatter"*, has been
+live the whole time — it imports `community_buzz` (the pure counter) and `RedditRssClient` directly and does
+its own caching. ⭐ *A feature is not a function name*, and `git log -S` cannot tell you what a page shows.
+
+So there was no month of invisibility. What exists is a **duplication**: the web does its own fetching and
+counting; the service now does it again behind `/api/v1/chatter`. ⚠️ *That is the ADR-301 problem in one
+file* — two surfaces solving the same thing twice because neither reaches through the same contract.
+
+### 2. Headlines already shipped, a year ago, under a written policy
+
+🔴 **This ADR argued that a news feed "changes what the product is". The product already does it.**
+`pages/3_Signals.py` section 3 is *"Headlines — FPL analysis & football news"*: **ADR-093**, Fantasy
+Football Scout and BBC Football, six per source, cached and button-gated.
+
+⭐⭐ **And ADR-093 already answered every objection I raised**, which is why the objections read as
+reasonable and were still wrong:
+
+| my objection | ADR-093's standing answer |
+|---|---|
+| *"it would carry text nobody can hold this app accountable for"* | **display-only, never xP** — a lens, and named as one |
+| *"a feed is a liability the pipeline does not have"* | **per-feed best-effort**: one feed 403s, the rest still show |
+| *"it changes what the product is"* | it was adopted as a **signal source**, under a policy written for exactly that |
+
+⚠️ My remaining point — **hot-linking publishers' images** — is the only one that survives, and it is an
+argument about *thumbnails*, not about headlines. ⭐ *The feature was never the question; the pictures were.*
+
+### What this actually means
+
+📌 **Headlines is a parity gap.** The app already receives **player-matched** headlines inside Signals
+(`kind: headline`, *"Reported by an outlet"*). What it lacks is the web's **browsable** list by source —
+which is a screen, not a capability, and follows an ADR that is already accepted.
+
+⭐ **Recommendation, revised:** build it, as ADR-093 specifies — named source, display-only, best-effort,
+no thumbnails from the publishers. ⚠️ *And build it against the service contract rather than beside it*, or
+it becomes the third thing in this file that two surfaces do twice.
