@@ -1,7 +1,7 @@
 # ADR-301 — One product, two surfaces
 
 **Date:** 2026-09-26
-**Status:** ⏳ **Gate — measured, not decided.** Nothing here ships code.
+**Status:** ⏳ **Gate — measured, not decided.** The measurement has now been taken; see the end.
 **From:** the owner — *"where possible, the desktop should reflect the apps & vice versa; we did state that
 in the architecture redesign when we decided to support Android & iPhone."*
 
@@ -81,3 +81,55 @@ reach a place the Flutter build already reaches for the cost of a deploy step.
 function has **no caller on any surface**. Chatter was invisible for a month and every suite was green.
 ⭐ *The parity problem that actually bit us was not a feature missing from one surface — it was a feature
 missing from both, with nothing able to say so.*
+
+
+---
+
+## The measurement (2026-09-26)
+
+⭐ **Published, unlisted, at `madboots.com/app/web/`** — beside the APKs, linked from nothing. The landing
+page and the install page are untouched.
+
+⭐⭐⭐ **The whole app runs in a desktop browser.** Live API, real squad, the purple live-week frame, the
+bench on the right — ADR-293's sideways layout triggers correctly, because a 1440×900 window is wider than
+it is tall, and it is the best-looking part of the screen.
+
+### It found a real bug in ninety seconds, which is what it was for
+
+⚠️⚠️⚠️ **Every kit and every mugshot was a 👕.** Both image servers — `fantasy.premierleague.com` and
+`resources.premierleague.com` — return **200 with no `Access-Control-Allow-Origin`**, and CanvasKit fetches
+image bytes in order to draw them, so all fifteen shirts came out identical.
+
+⭐ Fixed with `webHtmlElementStrategy: WebHtmlElementStrategy.fallback` on all three `Image.network` call
+sites: when the fetch fails, Flutter hands the URL to a plain `<img>`, which a browser displays
+cross-origin quite happily because it never exposes the pixels to script. **Ignored on mobile**, so it
+costs the phones nothing. Rebuilt, redeployed, verified — real club shirts.
+
+⚠️ *This is exactly the class of thing that would have been discovered by a tester, months later, and
+reported as "the web version looks broken."*
+
+### What a mouse-and-keyboard user actually hits
+
+🔴 **It is a phone layout on a monitor**, as predicted, and the specifics are worth having:
+
+- The four figures — Predicted · In the bank · Value · Transfers — **spread across the full 1440px** with
+  gaps wide enough to lose the relationship between a label and its number.
+- **Next GW · Next 3 · Price** become three pill-shaped buttons ~460px wide each.
+- The **bottom nav** sits at the bottom of the window, which is a thumb pattern on a surface with no thumbs.
+- The pitch itself is **fine** — better than fine: the wide shape is what ADR-293 was built for.
+
+⭐ *None of that is a blocker and none of it is parity either.* The honest read is that the web build makes
+every feature **reachable** on a desktop today, and makes roughly two screens **pleasant** there.
+
+### What this changes about the decision
+
+⭐⭐ **Option A is now clearly the wrong one.** Re-implementing ADR-298/299/300 in Python would be a week
+of work to reach a place this build reached in an afternoon — including the season swipe, which works.
+
+⚠️ **Option B is not free either**, and the cost is now specific rather than hand-waved: it is a
+**responsive pass** over the shell — the stat row, the mode bar and the navigation — not a rewrite. The
+screens inside it already behave, because they were built against `LayoutBuilder` rather than a device
+class (ADR-253/293), which turns out to have bought more than it was meant to.
+
+📌 **Still open, and unchanged by this:** Streamlit keeps the invite gate, Admin and the Help/video content,
+and nothing here proposes moving them.

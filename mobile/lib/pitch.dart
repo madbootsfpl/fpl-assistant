@@ -673,6 +673,16 @@ class _Card extends StatelessWidget {
                         // ⚠️ A kit that fails to load must not take the pitch down — a shirt is decoration and the
                         // number beside it is the point.
                         Image.network(
+                          // ⚠️⚠️ **A cross-origin image needs a CORS header on the web, and the two servers we
+                          // take images from send none** (ADR-301). CanvasKit fetches the bytes in order to draw
+                          // them, so the fetch fails and every kit and mugshot falls back to the 👕 — measured on
+                          // the first desktop build, where all fifteen shirts came out identical.
+                          //
+                          // ⭐ `fallback` hands the URL to a plain `<img>` when the fetch fails, which a browser
+                          // displays cross-origin quite happily because it never exposes the pixels to script.
+                          // ⚠️ Ignored on mobile, so it costs nothing there.
+                          webHtmlElementStrategy:
+                              WebHtmlElementStrategy.fallback,
                           kit,
                           height: 34,
                           errorBuilder: (_, _, _) =>
