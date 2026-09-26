@@ -8,7 +8,15 @@
 
 # Runtime dependencies
 requests
-pulp          # integer-programming solver for the squad optimiser (ADR-008)
+pulp==3.3.2   # integer-programming solver for the squad optimiser (ADR-008) — PINNED, and this one is
+              # load-bearing twice over. **PuLP 4.0.0 (released 2026-09-25) removes `PULP_CBC_CMD`
+              # entirely**: the bundled CBC binary is gone, `listSolvers(onlyAvailable=True)` returns `[]`,
+              # and `optimizer.select_squad` raises `AttributeError` on import-and-solve. Unpinned, that
+              # landed in CI the next morning as **277 failures** — and Render installs this same file, so
+              # the next deploy would have taken the solver out in production: every build, every gameweek
+              # plan, the whole My Squad page. Moving to 4.x is not a version bump but a **solver change**
+              # (HiGHS), and the solver decides which fifteen players the app recommends — so it needs its
+              # own gate and a re-validation of the optimiser's output, not a `pip install -U`.
 
 # Web UI (optional — the CLI runs without these). Two read-only edges over the same analytics:
 #   Streamlit (the UI we grow, ADR-051/052) — run: `python -m src.web_streamlit`
