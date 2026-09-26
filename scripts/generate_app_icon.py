@@ -51,7 +51,10 @@ MASKABLE_INSET = 0.62
 #: and the generator was never taught the third surface*, so the tab kept saying Flutter.
 WEB = ROOT / "mobile" / "web"
 WEB_ICONS = {
-    "favicon.png": (32, INSET),                      # ⭐ 32, not Flutter's 16 — the badge needs the pixels
+    # ⭐⭐ 32, not Flutter's 16, and **full bleed**: at tab size the badge is ~30 pixels across, and the
+    # ordinary 18% margin spends six of them on ink. ⚠️ *A favicon is the one icon with no room for
+    # composition* — at 0.82 it reads as a dark blob, at 1.0 the MB and the grin survive.
+    "favicon.png": (32, 1.0),
     "icons/Icon-192.png": (192, INSET),              # also the apple-touch-icon in index.html
     "icons/Icon-512.png": (512, INSET),
     "icons/Icon-maskable-192.png": (192, MASKABLE_INSET),
