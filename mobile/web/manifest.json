@@ -1,11 +1,11 @@
 {
-    "name": "madboots",
-    "short_name": "madboots",
+    "name": "MADBOOTS \u2014 Fantasy Football, Calculated.",
+    "short_name": "MADBOOTS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#17131F",
+    "theme_color": "#17131F",
+    "description": "MADBOOTS is a Fantasy Premier League assistant where analytics decide and logic explains. Captain, transfers, fixtures, squad \u2014 you make the call.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

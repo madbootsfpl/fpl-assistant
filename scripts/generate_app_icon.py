@@ -37,6 +37,27 @@ FLUTTER_ASSET = ROOT / "mobile" / "assets" / "madboots-badge.png"
 # corners the way a flat glyph would.
 INSET = 0.82
 
+#: ⭐ **A maskable icon is cropped by the platform**, to a circle or a squircle of its choosing, and only the
+#: central ~80% is guaranteed to survive. ⚠️ At the ordinary inset the hexagon's points sit exactly where the
+#: crop lands, so the badge needs to pull further in for these two — *the same art, framed for a mask.*
+MASKABLE_INSET = 0.62
+
+#: Web/PWA icons — path under `mobile/web/` → (pixel size, inset).
+#:
+#: ⚠️⚠️⚠️ **Flutter's blue logo shipped a third time.** This file's own opening line records the first
+#: (a home screen) and ADR-279 the second (the Android launcher) — and while both were being fixed, the
+#: **web build kept all five of its stock icons**: the favicon in the browser tab, both PWA icons, and the
+#: `apple-touch-icon` an iPhone uses when you add it to the home screen. ⭐⭐ *The icon was regenerated twice
+#: and the generator was never taught the third surface*, so the tab kept saying Flutter.
+WEB = ROOT / "mobile" / "web"
+WEB_ICONS = {
+    "favicon.png": (32, INSET),                      # ⭐ 32, not Flutter's 16 — the badge needs the pixels
+    "icons/Icon-192.png": (192, INSET),              # also the apple-touch-icon in index.html
+    "icons/Icon-512.png": (512, INSET),
+    "icons/Icon-maskable-192.png": (192, MASKABLE_INSET),
+    "icons/Icon-maskable-512.png": (512, MASKABLE_INSET),
+}
+
 
 def _ink() -> tuple[int, int, int]:
     """The brand's ink as RGB — ⚠️ read from `brand.py`, never typed here (ADR-103/114)."""
@@ -44,9 +65,9 @@ def _ink() -> tuple[int, int, int]:
     return tuple(int(raw[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def render(size: int, badge: Image.Image) -> Image.Image:
+def render(size: int, badge: Image.Image, inset: float = INSET) -> Image.Image:
     canvas = Image.new("RGB", (size, size), _ink())
-    edge = max(1, int(size * INSET))
+    edge = max(1, int(size * inset))
     scaled = badge.resize((edge, edge), Image.LANCZOS)
     offset = (size - edge) // 2
     # ⭐ Pasted *through its own alpha*, which is what turns a transparent PNG into an opaque icon rather
@@ -84,6 +105,15 @@ def main() -> None:
             render(size, badge).save(folder / filename)
             wrote += 1
         print(f"  {folder.relative_to(ROOT)}: {wrote} icons")
+
+    # ⭐ The web build is the same app in a browser, so it wears the same icon — see `WEB_ICONS`.
+    wrote = 0
+    for relative, (size, inset) in sorted(WEB_ICONS.items(), key=lambda kv: kv[1][0]):
+        target = WEB / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        render(size, badge, inset).save(target)
+        wrote += 1
+    print(f"  {WEB.relative_to(ROOT)}: {wrote} icons (favicon, PWA, apple-touch)")
 
     # ⚠️ Transparent here, unlike the app icons: the header sits on the app's own background, and an inked
     # square would show as a box around the badge.
