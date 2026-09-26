@@ -545,9 +545,17 @@ def _squads_view(view):
 
 
 def test_squads_page_analyses_the_demo_squad():
-    # Health view: the demo seed populates the picker (ADR-054) → an analysis renders, no crash
+    # Health view: the demo seed populates the view (ADR-054) → an analysis renders, no crash
     at = _squads_view("DNA")
-    assert any(s.label == "Squad" for s in at.selectbox)   # the squad picker (a GW selector is also present)
+    # ⚠️⚠️⚠️ **Not "a picker labelled Squad exists" — that contradicted a shipped decision.** ADR-175
+    # removes the picker outright when there is one squad: *"with a single option the control is a line of
+    # chrome that answers a question nobody has, above a banner already naming the team."* A clean checkout
+    # has exactly one (the committed demo), so this asserted the absence of a feature working as designed.
+    #
+    # ⭐⭐ It passed only on a machine with extra squads in the **gitignored** `data/squads.json`, so it was
+    # green here and red on every runner — ⭐ *a test that asserts a control is present is asserting a
+    # layout; asserting the view rendered at all is asserting the behaviour.*
+    assert at.selectbox, "the DNA view rendered no control at all"
     assert len(at.code) == 1 or len(at.info) >= 1          # the health table (or a "no data" note)
 
 
@@ -580,7 +588,8 @@ def test_chip_advice_is_its_own_panel_and_still_only_on_request():
 
 def test_transfer_page_renders_and_reacts_to_the_bank(monkeypatch):
     at = _squads_view("Transfer")
-    assert any(s.label == "Squad" for s in at.selectbox)   # the squad picker (a GW selector is also present)
+    # ⚠️ See the DNA view above — ADR-175 drops the picker with one squad, so the **bank slider** driven
+    # below is what proves this page is live, and it raises if it is missing.
     assert len(at.code) == 1 or len(at.info) >= 1          # the swaps (or a "no upgrades" note)
     next(s for s in at.slider if s.label == "Bank (£m)").set_value(3.0).run()   # move the bank → recompute
     assert not at.exception
