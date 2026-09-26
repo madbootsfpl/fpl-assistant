@@ -12,9 +12,9 @@ also means a new logo cannot land on one platform and not the other.
 """
 
 import pathlib
-import subprocess
 
 import pytest
+from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MASTER = ROOT / "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
@@ -29,20 +29,54 @@ def test_the_master_icon_exists():
     assert MASTER.exists(), f"the 1024px master is missing: {MASTER}"
 
 
+#: How far a real resize sits from a reference resize, and how far the wrong icon sits. ⭐⭐ **Measured, not
+#: chosen**, against Flutter's actual default launcher icon — the image that caused ADR-279:
+#:
+#:     density     ours vs master    FLUTTER'S DEFAULT vs master
+#:     mdpi             5.78                   93.40
+#:     hdpi             5.69                   93.46
+#:     xhdpi            4.84                   92.80
+#:     xxhdpi           3.41                   92.50
+#:     xxxhdpi          2.57                   92.63
+#:
+#: ⭐ A **16× gap**, so the threshold is not a fine judgement. Ours differ from the reference at all only
+#: because the committed icons were resized by a different resampler than the one here.
+MAX_MEAN_DIFF = 20.0
+
+
+def mean_abs_diff(a: Image.Image, b: Image.Image) -> float:
+    """Mean per-channel difference between two same-size images, 0-255."""
+    pa, pb = a.convert("RGBA").tobytes(), b.convert("RGBA").tobytes()
+    assert len(pa) == len(pb)
+    return sum(abs(x - y) for x, y in zip(pa, pb)) / len(pa)
+
+
 @pytest.mark.parametrize("density,size", DENSITIES.items())
-def test_each_density_is_a_resize_of_the_master(tmp_path, density, size):
+def test_each_density_is_a_resize_of_the_master(density, size):
     """⚠️ **Content, not dimensions.** Flutter's defaults are already exactly these sizes, so a size
-    check passes whether the icon was replaced or not — which is how the blue logo reached a tablet."""
+    check passes whether the icon was replaced or not — which is how the blue logo reached a tablet.
+
+    ⚠️⚠️⚠️ **This used to shell out to `sips`, which exists only on macOS** — so on every Linux runner it
+    raised `FileNotFoundError` and the five densities failed. ⭐⭐ *A check that can only run on the author's
+    machine is a check CI does not have*, and CI is the only place it would have caught a regression nobody
+    was looking for.
+
+    ⭐ Compared by **pixels rather than bytes**, and deliberately: byte-exactness was a property of one
+    resampler on one OS version, so it would have broken on the next macOS update as surely as it broke on
+    Linux. The tolerance is measured against the real failure — see `MAX_MEAN_DIFF`.
+    """
     icon = MIPMAP / f"mipmap-{density}/ic_launcher.png"
     assert icon.exists(), f"{density} launcher icon is missing"
 
-    expected = tmp_path / "expected.png"
-    subprocess.run(
-        ["sips", "-z", str(size), str(size), str(MASTER), "--out", str(expected)],
-        check=True, capture_output=True,
-    )
-    assert icon.read_bytes() == expected.read_bytes(), (
-        f"mipmap-{density}/ic_launcher.png is not the MADBOOTS master resized to {size}px. "
+    shipped = Image.open(icon)
+    assert shipped.size == (size, size), f"mipmap-{density} is {shipped.size}, not {size}x{size}"
+
+    reference = Image.open(MASTER).resize((size, size), Image.LANCZOS)
+    difference = mean_abs_diff(shipped, reference)
+
+    assert difference <= MAX_MEAN_DIFF, (
+        f"mipmap-{density}/ic_launcher.png differs from the MADBOOTS master by {difference:.1f} "
+        f"(a real resize scores under {MAX_MEAN_DIFF}; Flutter's default scores ~93). "
         f"Regenerate it — see docs/03_Architecture/Android_Builds.md."
     )
 

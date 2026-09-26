@@ -85,11 +85,25 @@ def _last_played_round():
     return max(rounds)
 
 
-#: ⚠️⚠️ Read **once, at import**, and deliberately not on demand: several tests here monkeypatch
-#: `Storage.get_gw_history_by_code` with synthetic rows to manufacture a double gameweek, and a helper that
-#: consulted the store lazily would read *their* rows instead of the fixture's. ⭐ *A fact about the fixture
-#: has to be gathered before the tests start rewriting it.*
-PLAYED_ROUND = _last_played_round()
+#: The fixture's newest played gameweek, read **once per module**.
+#:
+#: ⚠️⚠️ Not lazily on each use: several tests here monkeypatch `Storage.get_gw_history_by_code` with
+#: synthetic rows to manufacture a double gameweek, and a helper consulting the store on demand would read
+#: *their* rows instead of the fixture's.
+#:
+#: ⚠️⚠️⚠️ And **not at import either**, which is where I put it first. Opening a `Storage` while the module
+#: is being collected runs before the suite's Postgres setup has built a schema, so the dual-backend job
+#: failed 16 tests with `relation "data_status" does not exist` — ⭐⭐ *collection time is not run time, and a
+#: test module that touches a database while it is merely being read has picked the one moment nothing is
+#: ready.* An autouse module fixture runs after that setup and still before any test body's monkeypatch.
+PLAYED_ROUND: int | None = None
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _read_the_fixtures_last_played_round():
+    global PLAYED_ROUND
+    if PLAYED_ROUND is None:
+        PLAYED_ROUND = _last_played_round()
 
 
 def run(monkeypatch, payload, gameweek=None, raises=False, live=None, live_raises=False):

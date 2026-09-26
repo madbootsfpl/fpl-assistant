@@ -40,6 +40,8 @@ psycopg[binary]
 # Development / testing
 pytest
 httpx         # FastAPI TestClient (web-edge tests; ADR-050)
+pillow        # the launcher-icon check compares PIXELS (ADR-279) — streamlit already pulls this in, but a
+              # test that needs it should declare it rather than rely on another package's dependency
 ruff          # linter (CI + pre-commit; config in ruff.toml) — ADR none, US-079
 pyyaml        # a test parses .github/workflows/data.yml and puts its command through the real
               # CLI parser (ADR-211 2c). It arrived transitively via pre-commit; a test that
