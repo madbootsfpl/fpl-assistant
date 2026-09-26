@@ -67,7 +67,6 @@ def test_the_rewalk_covers_the_old_rounds_not_just_the_newest() -> None:
     """⚠️⚠️ **The missing values are in the OLD rows.** A fix that refreshed only the latest gameweek would
     leave GW1-4 blank and look like it had worked — ⭐ *the set a freshness check would skip is exactly the
     set that needs rewriting.*"""
-    fixtures = [{"event": n, "finished": True, "team_h_score": 1, "team_a_score": 0} for n in (1, 2, 3)]
     held = {100: [{"round": n, "minutes": 90, "total_points": 2, "team_h_score": 1, "team_a_score": 0}
                   for n in (1, 2, 3)]}
 

@@ -33,8 +33,13 @@ class _AskViewState extends State<AskView> {
 
   /// ⭐ Real questions in the engine's own vocabulary, because *a free-text box with no examples is a
   /// box people type one thing into and give up on.* Tapping one asks it.
+  /// ⚠️⚠️ Two of these are here to advertise that **the qualifier is heard** (ADR-308). Offering only
+  /// *"who should I captain?"* taught the box that captaincy is one question with one answer — ⭐ *and a
+  /// reader who never learns he can ask for the vice never finds out the engine can tell him.*
   static const List<String> _examples = [
     'Who should I captain?',
+    'Who should be my vice-captain?',
+    'Who is the safest captain?',
     'What should I do this week?',
     'Who should I transfer?',
     'How do chips work?',

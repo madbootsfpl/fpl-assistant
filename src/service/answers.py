@@ -41,12 +41,15 @@ from src.service.inputs import RUN, SWIPE, WIDE, load, opened, reported_leavers
 from src.service.requests import (
     DEFAULT_HORIZON,
     MAX_HORIZON,
+    AskRequest,
     BuildRequest,
     CaptainRequest,
+    ChatterRequest,
     ChipsRequest,
     CompareRequest,
     FeedbackRequest,
     GameweekRequest,
+    GameweekResultRequest,
     HeadToHeadRequest,
     LeagueRequest,
     LeaguesRequest,
@@ -1101,7 +1104,7 @@ CHATTER_TTL_SECONDS = 600
 _CHATTER: dict = {"until": 0.0, "rows": None, "note": ""}
 
 
-def ask_question(request: "AskRequest", *, store: Storage | None = None, narrator=None) -> dict:
+def ask_question(request: AskRequest, *, store: Storage | None = None, narrator=None) -> dict:
     """A question in words → the engine's answer (ADR-302, on ADR-036/054).
 
     ⭐⭐⭐ **The routing is the feature, and it has existed since Sprint 036.** `src/ask.py` matches a
@@ -1161,7 +1164,7 @@ def ask_question(request: "AskRequest", *, store: Storage | None = None, narrato
     }
 
 
-def chatter(request: "ChatterRequest", *, store: Storage | None = None, client=None) -> dict:
+def chatter(request: ChatterRequest, *, store: Storage | None = None, client=None) -> dict:
     """What r/FantasyPL is talking about (ADR-300, built on ADR-059).
 
     ⭐⭐⭐ **Almost none of this is new.** `community_signals` has counted whole-word player mentions against
@@ -1240,7 +1243,7 @@ def chatter(request: "ChatterRequest", *, store: Storage | None = None, client=N
     }
 
 
-def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None = None) -> dict:
+def gameweek_result(request: GameweekResultRequest, *, store: Storage | None = None) -> dict:
     """A gameweek that has been **played** — the squad as it was, and what each player actually scored.
 
     ⭐⭐ **Almost all of this is already on the server** (ADR-298). The per-player week — points, goals,
@@ -1322,7 +1325,8 @@ def gameweek_result(request: "GameweekResultRequest", *, store: Storage | None =
                 explain[element.get("id")] = lines
 
         squad = []
-        total = lambda rows, key: sum((r[key] or 0) for r in rows)
+        def total(rows, key):
+            return sum((r[key] or 0) for r in rows)
 
         # ⚠️ **`sqlite3.Row` indexes by name but has no `.get`**, and a psycopg row is a dict — so one
         # accessor for both, tolerant of a column an older database has not migrated yet. ⭐ *A detail

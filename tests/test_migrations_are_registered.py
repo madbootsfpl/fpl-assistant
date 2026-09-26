@@ -76,8 +76,9 @@ def test_an_existing_database_gains_them() -> None:
     """⭐ The end-to-end claim, on a real connection: open a database made before the column existed and
     it converges. ⚠️ *Reading the list proves it was registered; opening a database proves it works.*"""
     import sqlite3
+
     from src import db
-    from src.storage import _MIGRATIONS, Storage
+    from src.storage import _MIGRATIONS
 
     con = sqlite3.connect(":memory:")
     con.execute("CREATE TABLE player_history (element_code INTEGER, round INTEGER)")

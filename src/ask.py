@@ -55,6 +55,7 @@ from src.analytics import (
 from src.analytics.captain import _next_opponent
 from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
+from src.analytics.names import build_index, find_mentions
 from src.fpl_rules import match_rules
 from src.squads import SquadStore
 from src.storage import Storage
@@ -386,24 +387,200 @@ def detect_followup(question: str) -> FollowUp | None:
     return None
 
 
-def _captain_facts(pick: dict) -> dict:
+def _captain_facts(pick: dict, lens: str | None = None) -> dict:
     """Pre-humanised, self-describing facts for one captain pick — nothing to decode."""
     venue = "home against" if pick["venue"] == "H" else "away against"
-    return {
+    facts = {
         "player": f"{pick['web_name']} ({pick['team']})",
         "expected_points_next_gameweek": pick["xp"],
         "fixture": f"{venue} {pick['opponent']}",
         "is_penalty_taker": pick["penalty_taker"],
     }
+    # ⭐⭐ **A question about minutes has to be answered with minutes.** Naming the lens in the heading and
+    # then handing back the same four facts would be *the same failure in nicer clothing* — the reader
+    # asked whether his captain might be rested and would still be reading expected points.
+    if lens in {"rotation", "safest"}:
+        facts["expected_minutes_share"] = _minutes_phrase(pick)
+        facts["is_flagged_doubtful"] = bool(pick.get("doubtful"))
+        if pick.get("chance") is not None:
+            facts["fpl_chance_of_playing"] = f"{pick['chance']}%"
+    return facts
 
 
-def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, active_squad=None) -> dict | None:
+def _minutes_phrase(pick: dict) -> str:
+    """xMins as a sentence — ⚠️ *0.82 is a number the model produced, not a thing a person can act on.*
+
+    ⭐ The bands are the ones the pitch already uses for a doubt (ADR-206): a flagged player is a
+    different kind of risk from a rotated one, and they must not read the same.
+    """
+    weight = pick.get("minutes_weight")
+    if weight is None:
+        return "not known"
+    if pick.get("doubtful"):
+        return f"{round(weight * 100)}% of a full game, and FPL has him flagged"
+    if weight >= 0.9:
+        return f"{round(weight * 100)}% of a full game — he starts"
+    if weight >= 0.7:
+        return f"{round(weight * 100)}% of a full game — usually starts"
+    return f"{round(weight * 100)}% of a full game — rotated"
+
+
+#: ⭐⭐⭐ **One captaincy engine, one intent** (ADR-308) — the owner's own instinct, and the right one:
+#: *six analytics functions would be six places for the definition of "best captain" to drift apart.*
+#:
+#: ⚠️⚠️ **These existed as questions long before they existed as answers.** Measured against the owner's
+#: list (ADR-307): *"who should be my **vice**-captain?"*, *"who is the **safest** captain?"* and *"who is
+#: the best **differential** captain?"* all returned the **same top pick**, confidently, because the
+#: router matched `captain` and dropped the word that made the question specific. ⭐ *A wrong answer
+#: wearing the shape of a right one* — and `src/ask.py` already carried the principle in its routing
+#: table, where a bare "strategy" is left unroutable on purpose.
+CAPTAIN_LENSES: dict[str, tuple[str, ...]] = {
+    # ⭐ Order is deliberately *not* load-bearing — `captain_lens` compares phrase **length**, so
+    # "vice-captain" beats "vice" wherever either sits. ⚠️ *A table whose correctness depends on its own
+    # line order is a table the next edit breaks silently.*
+    "vice": ("vice-captain", "vice captain", "vice", "second captain", "backup captain"),
+    "safest": ("safest", "safe captain", "most reliable", "least risky", "nailed on", "nailed-on"),
+    "differential": ("differential", "punt", "low owned", "low-owned", "under the radar"),
+    "rotation": ("rotation risk", "rotation", "be rested", "get rested", "start this week",
+                 "minutes risk"),
+}
+
+
+def captain_lens(question: str) -> str | None:
+    """Which captaincy question was actually asked — or `None` for *"who should I captain?"*.
+
+    ⭐ The longest phrase wins, so a question naming two lenses gets the more specific one — *"is my
+    vice-captain a rotation risk"* is about the vice — rather than whichever the dict listed first.
+
+    ⚠️ Note "captain" itself is **not** in the table: routing to the captain intent happens upstream, and
+    this only ever chooses *which* captain question was asked.
+    """
+    low = f" {question.lower()} "
+    best, hit = None, 0
+    for lens, phrases in CAPTAIN_LENSES.items():
+        for phrase in phrases:
+            if phrase in low and len(phrase) > hit:
+                best, hit = lens, len(phrase)
+    return best
+
+
+def _lens_pick(picks: list, lens: str | None, owned_by: dict) -> tuple[int, str | None]:
+    """The index the lens selects, and a note when the lens could not be honoured.
+
+    ⚠️⚠️ **A note, never a redirect.** The owner's rule: *"if they use Ask they will want the answer from
+    there and not to be directed somewhere else to find it."* ⭐ So when a lens cannot be applied the
+    answer still carries the pick it *can* stand behind, and says plainly which question it answered.
+    """
+    if not lens:
+        return 0, None
+    if lens == "vice":
+        # ⭐ The engine has always been able to do this — `rank` is an existing parameter. Only the word
+        # was unrecognised, which is why this was the cheapest fix on the whole list.
+        if len(picks) < 2:
+            return 0, ("There is only one player I can rank as captain in this squad, so I cannot "
+                       "separate a vice from him.")
+        return 1, None
+    if lens == "safest":
+        # ⚠️ Safest is **expected minutes**, not expected points. ⭐ *A captain who does not play is the
+        # only captaincy outcome that cannot be recovered from*, which is what "safe" means here — and
+        # xP is the tie-break rather than the criterion.
+        order = sorted(
+            range(len(picks)),
+            key=lambda i: (not picks[i].get("doubtful", False),
+                           picks[i].get("minutes_weight") or 0.0,
+                           picks[i].get("xp") or 0.0),
+            reverse=True,
+        )
+        return order[0], None
+    if lens == "differential":
+        owned = [(i, owned_by.get(picks[i]["id"])) for i in range(len(picks))]
+        known = [(i, o) for i, o in owned if o is not None]
+        if not known:
+            return 0, ("I do not have ownership for these players, so I cannot tell you which is the "
+                       "differential — this is the highest-scoring captain instead.")
+        # ⭐ Least-owned first, xP as the tie-break: *a differential is a bet on other people not having
+        # him*, so ownership is the criterion and points decide between equals.
+        known.sort(key=lambda pair: (pair[1], -(picks[pair[0]].get("xp") or 0.0)))
+        return known[0][0], None
+    if lens == "rotation":
+        # ⭐ The question is about **the pick**, not a different pick: *"is my captain at rotation risk?"*
+        # wants the same man, described honestly.
+        return 0, None
+    return 0, None
+
+
+#: ⭐ Phrasings that are asking *"which of these two?"* — the shape that makes a missing name a defect
+#: rather than a detail.
+_COMPARISON_WORDS = (" better ", " or ", " vs ", " versus ", " compared to ", " instead of ")
+
+
+def _looks_like_a_comparison(question: str) -> bool:
+    return any(word in f" {question.lower()} " for word in _COMPARISON_WORDS)
+
+
+def _named_in(question: str, players) -> list:
+    """The players a question names, in the order the engine ranks them — ⭐ *resolved, never regexed.*"""
+    index = build_index(players)
+    hits = find_mentions(question.lower(), index)
+    by_id = {p["id"]: p for p in players}
+    return [by_id[pid] for pid in hits if pid in by_id]
+
+
+def _captain_versus(picks: list, named: list, players, scope: str, team_names: dict) -> dict:
+    """Two named players, compared as captains.
+
+    ⚠️⚠️ **Both may be outside the shortlist**, and that is itself the answer: a player the captaincy
+    engine did not rank is a player it does not think you should captain. ⭐ *Saying "he is not in your
+    top options" is more useful than silently substituting somebody who is.*
+    """
+    ranked = {p["id"]: (i, p) for i, p in enumerate(picks)}
+    lines, best, best_xp = [], None, None
+    for row in named[:2]:
+        place = ranked.get(row["id"])
+        if place is None:
+            lines.append(f"{row['web_name']} ({row['team']}) — not among the captain options I can rank "
+                         f"for this squad")
+            continue
+        index, pick = place
+        lines.append(f"{pick['web_name']} ({pick['team']}) — xP {pick['xp']}, "
+                     f"{_minutes_phrase(pick)}, #{index + 1} of my captain options")
+        if best_xp is None or (pick["xp"] or 0) > best_xp:
+            best, best_xp = pick, pick["xp"] or 0
+
+    if best is None:
+        # ⭐ Still an answer, and still from here — the owner's rule: *if they use Ask they want the
+        # answer from Ask, not to be sent somewhere else to find it.*
+        top = picks[0]
+        return {
+            "headline": (f"Neither is among the captain options I can rank ({scope}). "
+                         f"My pick is {top['web_name']} — xP {top['xp']} next GW."),
+            "detail": "\n".join(lines),
+            "facts": _captain_facts(top),
+            "subjects": [top["web_name"]],
+        }
+    return {
+        "headline": f"Better captain ({scope}): {best['web_name']} — xP {best['xp']} next GW",
+        "detail": "\n".join(lines),
+        "facts": _captain_facts(best, "rotation"),
+        "subjects": [best["web_name"]],
+        "task": f"in 2-3 short sentences, say why {best['web_name']} is the better captain of the two, "
+                "using ONLY the facts",
+    }
+
+
+def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, active_squad=None,
+                    lens: str | None = None, question: str | None = None) -> dict | None:
     """Analytics DECIDE the captain (never the LLM); return the decision + humanised facts.
 
     `rank` (ADR-047) picks the Nth-best (0 = top); past the end returns a soft message so a
     conversational "and the next?" degrades gracefully.
     """
     players = store.get_players()
+    # ⚠️⚠️ **Names resolve against the whole market, never against the squad.** Asking *"is Salah a better
+    # captain than Haaland?"* with Salah unowned found **one** name, fell through to the ordinary path,
+    # and answered *"Captain pick: Haaland"* — ⭐ *silently dropping the player the question was about*,
+    # which is the failure this ADR exists to stop and which it had just reintroduced one function along.
+    market = players
     upcoming = store.get_upcoming_fixtures()
     history_by_code = store.get_history_by_code()
     baselines = {c: baseline_rate(r) for c, r in history_by_code.items()}
@@ -419,7 +596,11 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
 
     # xMins v0 (ADR-038): `ask` is a decision, so weight xP by expected minutes (default-on).
     picks = captain_picks(
-        players, upcoming, baseline_by_code=baselines, limit=max(3, rank + 1),
+        # ⚠️ A lens has to see the whole shortlist, not the top three: the safest or least-owned captain
+        # is routinely outside them. ⭐ *A filter applied to a truncated list is a filter that answers
+        # about the truncation.*
+        players, upcoming, baseline_by_code=baselines,
+        limit=max(3, rank + 1) if not lens else 15,
         minutes_weight=minutes_weight_from_history(history_by_code, store.get_gw_history_by_code()),
         history_by_code=history_by_code,
     )
@@ -427,12 +608,44 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
         return None
     if rank >= len(picks):
         return {"message": "That's the last captain option I can rank — nothing more to add."}
+
+    # ⭐⭐ **The lens chooses which of the shortlist answers the question actually asked** (ADR-308).
+    # ⚠️ It moves `rank`, so everything downstream — the explanation, the card, the runner-up — is about
+    # the player the reader asked about rather than the one the engine happened to rank first.
+    owned_by = {p["id"]: p["selected_by"] for p in players} if lens == "differential" else {}
+
+    # ⭐⭐ **Named players win over every other lens** (ADR-308). *"Is Haaland a better captain than
+    # Salah?"* is a question about two men, and answering it with whoever the engine ranked first is the
+    # most confident way to ignore somebody. ⚠️ Resolved with the **same index the buzz counter uses**
+    # (ADR-152), so a bare "Palmer" is not credited to two players.
+    named = _named_in(question, market) if question else []
+    if len(named) >= 2:
+        return _captain_versus(picks, named, market, scope, team_names)
+
+    # ⚠️⚠️⚠️ **A comparison with a name I could not resolve must say so.** *"Is Mbappé a better captain
+    # than Haaland?"* resolves one name, falls through here, and would answer *"Captain pick: Haaland"* —
+    # ⭐ *which is a correct sentence and a dishonest answer*, because it silently drops the half of the
+    # question the reader was actually asking about.
+    #
+    # ⭐⭐ **It still answers.** The owner's rule: *"if they use Ask they will want the answer from there
+    # and not to be directed somewhere else to find it."* So the pick comes with the note, in one reply.
+    unresolved = _looks_like_a_comparison(question) and len(named) < 2 if question else False
+
+    if lens:
+        rank, note = _lens_pick(picks, lens, owned_by)
+    else:
+        note = None
+    if unresolved:
+        known = f" I did recognise {named[0]['web_name']}." if named else ""
+        note = ("I could not place one of those players — check the spelling, or he may not be in the "
+                f"game this season.{known}")
+
     top = picks[rank]
-    ordinal = f" #{rank + 1}" if rank else ""
+    ordinal = f" #{rank + 1}" if rank and not lens else ""
     # Explainability (ADR-089): grounded Why/Risk/Confidence for the chosen pick — the slice makes it [0]
     # and the next-best the runner-up (for the "narrow lead" risk).
     explanation = explain_captain(picks[rank:], {p["id"]: p for p in players})
-    facts = _captain_facts(top)
+    facts = _captain_facts(top, lens)
     if explanation is not None:
         facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
         facts["why"] = "; ".join(explanation.reasons) or "none"
@@ -450,12 +663,28 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
                                  team_names=team_names, heading=heading, nudge=nudge)
     return {
         "detail": detail,   # shown with or without prose (the block is the truth)
-        "headline": f"Captain pick{ordinal} ({scope}): {top['web_name']} — xP {top['xp']} next GW",
+        # ⭐⭐ **The headline names the question it answered**, so a reader can see at a glance whether the
+        # qualifier landed — ⚠️ *the failure this fixes was invisible precisely because the answer looked
+        # identical whichever of the five was asked.*
+        "headline": (f"{_LENS_HEADING.get(lens, 'Captain pick')}{ordinal} ({scope}): "
+                     f"{top['web_name']} — xP {top['xp']} next GW"
+                     + (f" · {note}" if note else "")),
         "facts": facts,
         "subjects": [top["web_name"]],
         "task": f"explain in 2-3 short sentences why {top['web_name']} is a good captain pick this gameweek, "
                 "reflecting the confidence and the ✓ reasons / ⚠ risks — using ONLY the facts",
     }
+
+
+#: How each lens names itself. ⭐ *A heading that repeats the question is a heading that proves it was
+#: heard* — and it is the only part of the answer a reader checks before trusting the rest.
+_LENS_HEADING: dict[str | None, str] = {
+    None: "Captain pick",
+    "vice": "Vice-captain",
+    "safest": "Safest captain",
+    "differential": "Differential captain",
+    "rotation": "Captain, and his minutes",
+}
 
 
 def _transfer_count(question: str) -> int:
@@ -1706,7 +1935,10 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "transfer":
         return _decide_transfer(store, squad, count, rank=rank, active_squad=active_squad)
     if intent == "captain":
-        return _decide_captain(store, squad, rank=rank, active_squad=active_squad)
+        # ⭐ The question, not just the intent: *"vice"*, *"safest"*, *"differential"* and *"rotation"*
+        # all route here, and until ADR-308 all four returned the same pick.
+        return _decide_captain(store, squad, rank=rank, active_squad=active_squad,
+                               lens=captain_lens(question), question=question)
     if intent == "start_bench":
         return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "gameweek":

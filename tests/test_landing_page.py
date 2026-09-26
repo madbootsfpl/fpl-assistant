@@ -9,7 +9,6 @@ These assert the things that have actually gone wrong, not everything that could
 
 from __future__ import annotations
 
-import base64
 import re
 import struct
 from pathlib import Path

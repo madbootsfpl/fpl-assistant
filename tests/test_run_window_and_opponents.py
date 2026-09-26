@@ -12,7 +12,7 @@ the horizon is 1, since the headline beside it is a **this-week** projection. Tw
 import pytest
 
 from src import service
-from src.service.answers import RUN, SWIPE, WIDE, _recent_rows
+from src.service.answers import RUN, SWIPE, _recent_rows
 from src.storage import Storage
 
 
