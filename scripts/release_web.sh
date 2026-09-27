@@ -34,7 +34,19 @@ if [ -f .env.release ]; then
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in ''|'#'*) continue ;; esac
     key=${line%%=*}; val=${line#*=}
-    case "$key" in *[!A-Za-z0-9_]*) continue ;; esac       # ignore anything that is not a plain name
+    # ⚠️⚠️ **`KEY = value` is a normal thing to write, and the first version of this skipped it in
+    # silence** — the space landed inside the key, failed the plain-name test, and the deploy reported
+    # only "no store in the environment". ⭐ *A parser that is stricter than the format people actually
+    # type has to say so, or it teaches them the file does not work.*
+    key=${key#"${key%%[![:space:]]*}"}; key=${key%"${key##*[![:space:]]}"}
+    val=${val#"${val%%[![:space:]]*}"}; val=${val%"${val##*[![:space:]]}"}
+    case "$val" in \"*\") val=${val#\"}; val=${val%\"} ;;
+                   \'*\') val=${val#\'}; val=${val%\'} ;; esac
+    case "$key" in
+      ''|*[!A-Za-z0-9_]*)
+        echo "  ⚠️  .env.release: ignoring a line that is not NAME=value:  ${line%%=*}=…"
+        continue ;;
+    esac
     eval "current=\${$key-}"
     [ -n "$current" ] || export "$key=$val"
   done < .env.release
