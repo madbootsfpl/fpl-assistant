@@ -35,6 +35,7 @@ import 'ticker_view.dart';
 import 'transfers_view.dart';
 import 'update_check.dart';
 import 'welcome_view.dart';
+import 'wordmark.dart';
 
 /// ⚠️⚠️ **There is no default manager id any more** (ADR-279).
 ///
@@ -858,31 +859,11 @@ class _TitleBar extends StatelessWidget {
           filterQuality: FilterQuality.medium,
         ),
         SizedBox(width: 7),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'MAD',
-                style: TextStyle(
-                  color: Brand.purpleLight,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              // ⚠️⚠️ **Orange, because the brand says so** — `brand.py`'s `wordmark_html`: *"MAD purple ·
-              // BOOTS orange, the colour split doing the word-break"*. The app rendered it white, which
-              // was not a decision anybody took: the wordmark was **retyped here** instead of derived,
-              // so it drifted from the one source of truth ADR-103/114 exists to keep.
-              //
-              // ⭐ `tests/test_brand_dart.py` now compares these two colours against `brand.py`. *A
-              // generated palette does not stop a hand-written rule from disagreeing with it.*
-              TextSpan(
-                text: 'BOOTS',
-                style: TextStyle(color: Brand.orange),
-              ),
-            ],
-          ),
-          style: TextStyle(fontSize: 15, letterSpacing: .5),
-        ),
+        // ⭐⭐ **One widget** (ADR-312). The colours were already derived here; the *setting* was not —
+        // this copy was upright at +.5 tracking while the web was italic at −.01em. ⚠️ *A generated
+        // palette does not stop a hand-written rule from disagreeing with it*, and six hand-written
+        // wordmarks disagreed six ways.
+        Wordmark(size: 15),
       ],
     ),
   );

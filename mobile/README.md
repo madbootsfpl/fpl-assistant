@@ -1,6 +1,8 @@
 # madboots
 
-A new Flutter project.
+MADBOOTS — Fantasy Football, Calculated. The Flutter app for Android, iOS and the web build at
+`madboots.com/app/web/`. Brand tokens are generated from `src/web_streamlit/brand.py` (ADR-103/114/312) —
+do not retype a hex or a wordmark here.
 
 ## Getting Started
 

@@ -169,7 +169,7 @@ def card_body(player, *, team_name="", photo_url=None, badge_url=None,
     # US-349/355: the shared MB badge + two-tone MADBOOTS lockup (US-355 fixes the MAD/BOOTS gap); PURPLE_LT
     # reads on the band's dark ground.
     band = "" if compact else (
-        f'<div class="plc-band">{brand.mark_html(badge_px=15, font_px=12, purple=brand.PURPLE_LT)}'
+        f'<div class="plc-band">{brand.mark_html(badge_px=15, font_px=12, purple=brand.MAD_ON_DARK)}'
         '<span class="plc-title">Player Card</span><span class="plc-brand">Last season</span></div>')
 
     return (
@@ -231,7 +231,7 @@ def compare_card_html(a, b, *, a_team="", b_team="", a_photo=None, b_photo=None,
         f'<span class="cmp-v{" win" if win == "b" else ""}">{e(fb)}</span></div>'
         for label, fa, fb, win in compare_rows(a, b))
     # The MADBOOTS brand band — mirrors the single card's (US-355), titled "Boot Battle" (wave-3 feedback).
-    band = (f'<div class="plc-band">{brand.mark_html(badge_px=15, font_px=12, purple=brand.PURPLE_LT)}'
+    band = (f'<div class="plc-band">{brand.mark_html(badge_px=15, font_px=12, purple=brand.MAD_ON_DARK)}'
             '<span class="plc-title">Boot Battle</span><span class="plc-brand">Last season</span></div>')
     return (f'<div class="pl-card cmp-card"><div class="cmp-body">{heads}{band}'
             f'<div class="cmp-grid">{rows}</div></div></div>')

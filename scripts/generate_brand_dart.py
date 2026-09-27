@@ -72,6 +72,22 @@ class Brand {{
 
   /// Legal hygiene (ADR-103) — a named product on official FPL data.
   static const String disclaimer = {brand.DISCLAIMER!r};
+{_const("madOnDark", brand.MAD_ON_DARK, "Which purple carries MAD on a dark ground (ADR-312).")}
+{_const("madOnLight", brand.MAD_ON_LIGHT, "…and on a light one.")}
+
+  /// How the wordmark is set — ⭐ **one place**, because it was hand-typed in six and no two agreed.
+  static const bool wordmarkItalic = {str(brand.WORDMARK_ITALIC).lower()};
+  static const int wordmarkWeight = {brand.WORDMARK_WEIGHT};
+  static const double wordmarkTrackingEm = {brand.WORDMARK_TRACKING_EM};
+
+  /// ⭐ The drawn logo letters the name its own way, on purpose (ADR-312 §4).
+  static const String logoArtExempt = {brand.LOGO_ART_EXEMPT!r};
+{_const("darkBg", brand.DARK_BG, "The dark page ground (landing page + phone).")}
+{_const("darkPanel", brand.DARK_PANEL)}
+{_const("darkText", brand.DARK_TEXT)}
+{_const("darkMuted", brand.DARK_MUTED)}
+{_const("green", brand.GREEN)}
+{_const("yellow", brand.YELLOW)}
 {_const("purple", brand.PURPLE, "The primary.")}
 {_const("purpleLight", brand.PURPLE_LT, "Legible on the card band's dark ground.")}
 {_const("orange", brand.ORANGE)}

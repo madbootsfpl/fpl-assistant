@@ -1,5 +1,9 @@
+# ⚠️⚠️ **Lowercase here is a language rule, not the brand** (ADR-312). This is the **Dart package
+# identifier** — it appears in every `package:madboots/…` import and must be a valid lowercase identifier,
+# so it is the one place the name is not `MADBOOTS` and cannot be. ⭐ *Recorded, because an exception that
+# looks like drift gets "fixed" by the next person and takes the build with it.*
 name: madboots
-description: "A new Flutter project."
+description: "MADBOOTS — Fantasy Football, Calculated. An FPL assistant where analytics decide and logic explains."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

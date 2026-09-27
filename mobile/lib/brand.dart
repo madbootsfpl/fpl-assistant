@@ -32,6 +32,33 @@ class Brand {
   /// Legal hygiene (ADR-103) — a named product on official FPL data.
   static const String disclaimer = 'MADBOOTS is not affiliated with the Premier League or the official Fantasy Premier League game.';
 
+  /// Which purple carries MAD on a dark ground (ADR-312).
+  static const Color madOnDark = Color(0xFFB45CF0);
+
+  /// …and on a light one.
+  static const Color madOnLight = Color(0xFF8B2FC9);
+
+  /// How the wordmark is set — ⭐ **one place**, because it was hand-typed in six and no two agreed.
+  static const bool wordmarkItalic = true;
+  static const int wordmarkWeight = 900;
+  static const double wordmarkTrackingEm = -0.01;
+
+  /// ⭐ The drawn logo letters the name its own way, on purpose (ADR-312 §4).
+  static const String logoArtExempt = 'The drawn logo is an illustration and letters the name in its own style. Wherever the name is SET IN TYPE it is MADBOOTS — one word, MAD purple, BOOTS orange.';
+
+  /// The dark page ground (landing page + phone).
+  static const Color darkBg = Color(0xFF120E1A);
+
+  static const Color darkPanel = Color(0xFF1D1730);
+
+  static const Color darkText = Color(0xFFEFE9FB);
+
+  static const Color darkMuted = Color(0xFFB7ADD0);
+
+  static const Color green = Color(0xFF86D91E);
+
+  static const Color yellow = Color(0xFFFFC21E);
+
   /// The primary.
   static const Color purple = Color(0xFF8B2FC9);
 

@@ -1,7 +1,7 @@
 # ADR-312 — The style card that already exists
 
 **Date:** 2026-09-27
-**Status:** ⏳ **Gate — audited, not built.** Four decisions below need the owner before any sweep.
+**Status:** ✅ **Built.** All four decided by the owner 2026-09-27; the sweep landed the same day.
 **From:** the owner's list — *"Did we ever build a style card? We are not consistent across the apps, web &
 Landing page. for example MADBOOTS (which is correct) vs…"*
 
@@ -57,7 +57,21 @@ the app is **upright where the web is italic**, which is the difference a reader
 - **Five landing-page colours exist nowhere central**: `--bg`, `--panel`, `--text`, `--muted`, and the
   semantic `--green` / `--yellow`. ⚠️ `ACCENT_TEAL` exists in `brand.py` and nowhere on the landing page.
 
-## 🔴 Four decisions, which are the gate
+## ✅ The four decisions, as taken
+
+| | decision | what shipped |
+|---|---|---|
+| **1** | **`PURPLE_LT` on dark, `PURPLE` on light** | `MAD_ON_DARK` / `MAD_ON_LIGHT` in `brand.py`; the ground picks the shade |
+| **2** | **Italic** | `WORDMARK_ITALIC/WEIGHT/TRACKING_EM` — the app was the odd one out and moved |
+| **3** | **`MADBOOTS`** under the icon | `android:label`, both iOS keys |
+| **4** | **Art exempt, written down** | `brand.LOGO_ART_EXEMPT` |
+
+⚠️ **One exception the sweep found and kept:** `pubspec.yaml`'s `name: madboots` stays lowercase. It is the
+**Dart package identifier**, appears in every `package:madboots/…` import, and must be a lowercase
+identifier — ⭐ *a language rule, not drift*, recorded beside it so the next person does not "fix" it and
+take the build with them.
+
+## The decisions as they were put
 
 **1 — Which purple carries MAD?** `brand.py` defaults to **#8B2FC9**; the landing page and all four app
 sites use **#B45CF0**. ⭐ *Recommend `PURPLE_LT` on dark grounds and `PURPLE` on light* — which is what
@@ -99,3 +113,43 @@ as the same drift as everything else* — which is exactly how it read to the ow
 - ⚠️ **Stated cost:** generating the landing page's CSS makes `site/index.html` partly a build output, and
   a hand edit to those variables would be overwritten. That is the same trade `brand.dart` already makes,
   and the reason it has not drifted.
+
+---
+
+## What actually shipped
+
+- **One wordmark.** `mobile/lib/wordmark.dart` replaces four hand-built copies. ⭐ Tracking is declared in
+  **em** so it scales with the size — *a fixed letter-spacing is why six copies read differently at 10.5pt
+  and at 24pt.* ⚠️ `welcome_view`'s was **two plain `Text`s in a Row**, so the colour split was a *layout*
+  rather than a word: it could not carry tracking across the break, and a screen reader read the product as
+  two fragments.
+- **A generated landing-page palette.** `scripts/generate_site_palette.py` + `tests/test_site_palette.py`,
+  the same regenerate-and-compare that has kept `brand.dart` honest. ⭐ Only the brand block is generated —
+  `--bg2`, `--line` and the font stacks stay hand-written, because *a generator that owns the whole file
+  makes every edit a merge conflict with a script, and the next person simply stops running it.*
+- **A generated share card.** `scripts/generate_og_image.py` renders `og-image.png` **through Chrome**,
+  because the wordmark is Arial Black *italicised by synthesis* — there is no Arial Black Italic file, and
+  ⚠️ *the asset a link shows is the worst place for an approximation of the brand.*
+- **One spelling** across `android:label` and both iOS keys, plus the last two Flutter defaults
+  (`pubspec`'s description, `mobile/README.md`).
+
+## ⚠️ A five-minute mistake worth recording
+
+Promoting the landing page's colours, I added `TEXT` and `MUTED` to `brand.py` — which **already defines
+both**, as the *light* theme's ink. Streamlit runs on white; the landing page and the phone run on ink. The
+later assignment silently won and my values vanished. ⭐⭐ *Two surfaces with opposite grounds cannot share
+one unqualified name for "the text colour"* — they are `DARK_TEXT` / `DARK_MUTED` now.
+
+⭐ It also caught a second error the same minute: I had changed `mark_html`'s default purple to the
+dark-ground shade, which would have put `PURPLE_LT` on Streamlit's **white** pages. The default is
+`MAD_ON_LIGHT`; the two dark-band callers ask for the other by name.
+
+## Guards
+
+`test_brand_dart.py` gains three: **no file but `wordmark.dart` may contain `'MAD'` and `'BOOTS'`** (a
+seventh copy fails the suite — mutation-tested by reinstating one), the widget must read its setting from
+the generated tokens (*moving a hard-coded value into a function does not stop it being hard-coded*), and
+the launcher labels must be `brand.NAME`. `test_site_palette.py` adds four more, including the ink that
+drifted, by name.
+
+**2854 Python · 458 Dart.**

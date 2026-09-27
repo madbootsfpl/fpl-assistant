@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'brand.dart';
+import 'wordmark.dart';
 
 class WelcomeView extends StatefulWidget {
   const WelcomeView({required this.onManagerId, super.key});
@@ -58,26 +59,10 @@ class _WelcomeViewState extends State<WelcomeView> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'MAD',
-                    style: TextStyle(
-                      color: Brand.purpleLight,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  Text(
-                    'BOOTS',
-                    style: TextStyle(
-                      color: Brand.orange,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
+                // ⚠️⚠️ This one was **two plain `Text`s in a Row**, so the colour split was a *layout*
+                // rather than a word — ⭐ *a break made of widgets cannot carry tracking across itself*,
+                // and a screen reader read the product as two fragments.
+                children: [Wordmark(size: 24)],
               ),
               const SizedBox(height: 22),
               const Text(

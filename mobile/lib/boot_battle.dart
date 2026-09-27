@@ -16,6 +16,7 @@ import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'mugshot.dart';
+import 'wordmark.dart';
 
 /// ⭐⭐⭐ **Colour is identity here, not victory — and on the web it is the other way round.**
 ///
@@ -381,24 +382,7 @@ class _Band extends StatelessWidget {
           filterQuality: FilterQuality.medium,
         ),
         const SizedBox(width: 6),
-        const Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'MAD',
-                style: TextStyle(
-                  color: Brand.purpleLight,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextSpan(
-                text: 'BOOTS',
-                style: TextStyle(color: Brand.orange),
-              ),
-            ],
-          ),
-          style: TextStyle(fontSize: 10.5, letterSpacing: .3),
-        ),
+        const Wordmark(size: 10.5),
         const Spacer(),
         const Text(
           'BOOT BATTLE',

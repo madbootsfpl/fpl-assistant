@@ -120,14 +120,92 @@ def test_the_app_wordmark_is_the_brands_wordmark():
     sys.path.insert(0, str(ROOT))
     from src.web_streamlit import brand
 
-    dart = (ROOT / "mobile" / "lib" / "main.dart").read_text()
+    # ⭐⭐ **Reads `wordmark.dart` now, because that is where the wordmark lives** (ADR-312). It used to read
+    # `main.dart`, which was one of **four** Dart files building it by hand — ⚠️ *a guard pointed at one of
+    # six copies can only ever vouch for one of them.* The widget is the single copy, so this now vouches
+    # for every surface at once.
+    dart = (ROOT / "mobile" / "lib" / "wordmark.dart").read_text()
     block = re.search(r"text: 'MAD'.*?text: 'BOOTS'.*?color: ([\w.]+)", dart, re.S)
-    assert block, "the wordmark in main.dart no longer looks like MAD + BOOTS — update this guard with it"
+    assert block, "the wordmark widget no longer looks like MAD + BOOTS — update this guard with it"
     boots = block.group(1)
     assert boots == "Brand.orange", (
         f"BOOTS renders in {boots}; brand.py's wordmark_html puts it in {brand.ORANGE}. "
         f"The two-tone split is the brand, not a style choice."
     )
 
-    mad = re.search(r"text: 'MAD'.*?color: ([\w.]+)", dart, re.S).group(1)
-    assert mad in {"Brand.purple", "Brand.purpleLight"}, f"MAD renders in {mad}"
+    # ⚠️ MAD is a **choice**, not a constant: ADR-312 §1 made the ground pick the shade, so the colour is
+    # a ternary over `onDark`. ⭐ *A guard that expects one hex cannot read a rule that has two answers.*
+    mad = re.search(r"text: 'MAD'.*?color: ([^,\n]+)", dart, re.S).group(1)
+    assert "Brand.madOnDark" in mad and "Brand.madOnLight" in mad, (
+        f"MAD renders as `{mad.strip()}`; it should pick between the two sanctioned shades by ground"
+    )
+
+
+# ── one wordmark, not six ─────────────────────────────────────────────────────
+
+def test_the_app_builds_the_wordmark_in_exactly_one_place() -> None:
+    """⚠️⚠️⚠️ **It was hand-typed in four Dart files and two on the web, and no two agreed** (ADR-312).
+    Measured: `brand.py` and the landing page set it **italic 900 at −.01em**; `main`, `welcome_view`,
+    `pitch` and `boot_battle` set it **upright 700/800 at +.3 to +1.2** — ⭐⭐ *the web tightened the word and
+    the app loosened it, opposite directions from the same brand.*
+
+    ⭐ The colours were already generated from `brand.py` and pinned by the tests above, and it drifted
+    anyway — because **a generated palette does not stop a hand-written rule from disagreeing with it.**
+    What drifted was the *setting*: weight, slant, tracking. So the widget owns those now.
+
+    ⚠️ This guard is the only thing that stops a seventh.
+    """
+    lib = ROOT / "mobile" / "lib"
+    offenders = []
+    for path in sorted(lib.rglob("*.dart")):
+        if path.name == "wordmark.dart":            # ⭐ the one place, by definition
+            continue
+        text = path.read_text()
+        if "'MAD'" in text and "'BOOTS'" in text:
+            offenders.append(path.relative_to(ROOT).as_posix())
+
+    assert not offenders, (
+        "the wordmark is being built by hand in: " + ", ".join(offenders)
+        + "\nUse `Wordmark(size: …)` from mobile/lib/wordmark.dart — see ADR-312."
+    )
+
+
+def test_the_wordmark_widget_reads_its_setting_from_the_generated_tokens() -> None:
+    """⭐ Otherwise the widget is just a seventh hand-built copy with a nicer name — ⚠️ *moving a
+    hard-coded value into a function does not stop it being hard-coded.*"""
+    widget = (ROOT / "mobile" / "lib" / "wordmark.dart").read_text()
+
+    for token in ("Brand.wordmarkItalic", "Brand.wordmarkWeight", "Brand.wordmarkTrackingEm",
+                  "Brand.madOnDark", "Brand.madOnLight", "Brand.orange"):
+        assert token in widget, f"{token} is not what the wordmark widget uses"
+
+
+def test_the_drawn_logo_is_exempt_in_writing() -> None:
+    """⭐⭐ ADR-312 §4: the illustration letters the name **"MAD BOOTS"**, two words, and keeps it — that
+    lettering is part of the drawing. ⚠️ *A stated exception is a rule; an unstated one is a licence*, and
+    an unstated one is very likely how `Madboots`, `madboots` and `MAD BOOTS` all came to exist at once.
+    """
+    from src.web_streamlit import brand
+
+    assert "SET IN TYPE" in brand.LOGO_ART_EXEMPT
+    assert brand.NAME in brand.LOGO_ART_EXEMPT
+
+
+def test_the_name_under_the_icon_is_the_brands_name() -> None:
+    """⚠️⚠️ **A phone showed three spellings at once** (ADR-312): `MADBOOTS` in the app, **`Madboots`** under
+    the icon, and `madboots` in `CFBundleName`. ⭐ *The one under the icon is the most-seen instance of the
+    name and was the one nobody had looked at.*
+
+    ⚠️ `pubspec.yaml`'s `name:` is deliberately **not** checked — it is the Dart package identifier, appears
+    in every `package:madboots/…` import, and must be a lowercase identifier. ⭐ *That exception is a
+    language rule, not drift, which is why it is written down beside it.*
+    """
+    from src.web_streamlit import brand
+
+    manifest = (ROOT / "mobile/android/app/src/main/AndroidManifest.xml").read_text()
+    plist = (ROOT / "mobile/ios/Runner/Info.plist").read_text()
+
+    assert f'android:label="{brand.NAME}"' in manifest, "the Android launcher label is not the brand name"
+    for key in ("CFBundleDisplayName", "CFBundleName"):
+        block = plist.split(f"<key>{key}</key>", 1)[1].split("</string>", 1)[0]
+        assert brand.NAME in block, f"iOS {key} is {block.strip()}, not {brand.NAME}"

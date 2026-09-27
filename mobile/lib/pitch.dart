@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'api/models.dart';
 import 'brand.dart';
 import 'pitch_markings.dart';
+import 'wordmark.dart';
 
 /// Formation order, so the rows come out keeper-first the way a pitch reads.
 const List<String> _rows = ['GK', 'DEF', 'MID', 'FWD'];
@@ -440,24 +441,7 @@ class _PitchMark extends StatelessWidget {
                 filterQuality: FilterQuality.medium,
               ),
               SizedBox(width: 5),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'MAD',
-                      style: TextStyle(
-                        color: Brand.purpleLight,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'BOOTS',
-                      style: TextStyle(color: Brand.orange),
-                    ),
-                  ],
-                ),
-                style: TextStyle(fontSize: 10.5, letterSpacing: .3),
-              ),
+              Wordmark(size: 10.5),
             ],
           ),
         ),

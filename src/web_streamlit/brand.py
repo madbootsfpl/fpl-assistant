@@ -13,6 +13,20 @@ import functools
 from pathlib import Path
 
 NAME = "MADBOOTS"                              # the display name — one word; the wordmark is two-tone (MAD/BOOTS)
+
+# ⭐⭐⭐ **The drawn logo is exempt, and that is a decision rather than an oversight** (ADR-312 §4). The
+# illustration letters the name as **"MAD BOOTS"**, two words, in its own graffiti hand — and it keeps it.
+# ⭐ *That lettering is part of the drawing*, like the spirals and the explosion; redrawing it to close a gap
+# nobody sees would cost the asset the thing that makes it recognisable.
+#
+# ⚠️⚠️ **Written down because an unwritten exception spreads.** Someone reads the logo, concludes the name is
+# two words, and types it that way into a page or a store listing — which is very likely how `Madboots`,
+# `madboots` and `MAD BOOTS` all came to exist at once. ⭐ *A stated exception is a rule; an unstated one is
+# a licence.*
+LOGO_ART_EXEMPT = (
+    "The drawn logo is an illustration and letters the name in its own style. Wherever the name is SET IN "
+    "TYPE it is MADBOOTS — one word, MAD purple, BOOTS orange."
+)
 TAGLINE = "Fantasy Football, Calculated."
 # Legal hygiene (ADR-103): a named product on official FPL data — a quiet, honest not-affiliated line.
 DISCLAIMER = f"{NAME} is not affiliated with the Premier League or the official Fantasy Premier League game."
@@ -22,6 +36,35 @@ PURPLE = "#8B2FC9"
 PURPLE_LT = "#B45CF0"                          # a lighter purple, legible on the card band's dark ground
 ORANGE = "#FF6A00"
 INK = "#17131F"
+
+# ⭐⭐ **Which purple carries MAD** (ADR-312 §1). Not one answer but two, because legibility is a property of
+# the ground: the lighter purple on a dark surface, the darker on a light one. ⚠️ *`#8B2FC9` on ink is the
+# combination that sent every surface looking for its own shade* — `mark_html` already took a `purple`
+# argument for exactly this, so this names a capability rather than adding one.
+MAD_ON_DARK = PURPLE_LT
+MAD_ON_LIGHT = PURPLE
+
+# ⭐⭐ **How the wordmark is set** (ADR-312 §2), in one place because it was hand-typed in six and no two
+# agreed. ⚠️⚠️ The web tightened the word (−.01em) and the app loosened it (+.3 to +1.2) — *opposite
+# directions from the same brand* — and the app was upright where the web is italic, which is the difference
+# a reader actually notices.
+WORDMARK_ITALIC = True
+WORDMARK_WEIGHT = 900
+WORDMARK_TRACKING_EM = -0.01
+
+# ⭐ **The surface colours**, promoted from `site/index.html` where they lived alone (ADR-312). ⚠️ `INK`
+# above and the page's own `--ink` had already drifted apart (#17131F vs #0c0a12) precisely because only one
+# of them was in this file.
+# ⚠️⚠️⚠️ **Named `DARK_*`, and a five-minute mistake earned the prefix.** `TEXT` and `MUTED` already exist
+# below as the **light** theme's ink — Streamlit runs on white, the landing page and the phone run on ink —
+# so defining them again here silently lost to the later assignment and produced dark-on-dark. ⭐ *Two
+# surfaces with opposite grounds cannot share one unqualified name for "the text colour".*
+DARK_BG = "#120E1A"                            # the page ground, a shade above INK
+DARK_PANEL = "#1D1730"                         # cards and raised surfaces
+DARK_TEXT = "#EFE9FB"
+DARK_MUTED = "#B7ADD0"
+GREEN = "#86D91E"                              # the "good news" accent in prose (not a state chip — see GOOD)
+YELLOW = "#FFC21E"
 
 # --- Design tokens (ADR-114) — the single source of truth for colour/scale; consume these, don't re-type hexes. ---
 
@@ -103,7 +146,7 @@ def page_config(page: str | None = None) -> dict:
             "page_icon": PAGE_ICON, "layout": "wide"}
 
 
-def mark_html(badge_px: int = 15, font_px: int = 12, purple: str = PURPLE) -> str:
+def mark_html(badge_px: int = 15, font_px: int = 12, purple: str = MAD_ON_LIGHT) -> str:
     """The MB badge **+** the two-tone MADBOOTS wordmark as one compact lockup — for card bands/footers (the player
     card, the captain card). MAD+BOOTS are a **single** flex child (wrapped in one span), so the badge↔word `gap`
     can never fall *inside* the word — the colour split (`purple` · orange) carries the break. `purple` lets the
