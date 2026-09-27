@@ -100,6 +100,11 @@ class _SettingsViewState extends State<SettingsView> {
           onChanged: _manager,
         ),
         _FreeTransfersRow(
+          // ⭐⭐ **What FPL's history implies you hold** (a tester's *"how does FFH know?"*). The paid
+          // tools log you in and read `transfers.limit`; this derives it from the transfers you have
+          // made. ⚠️ Shown **beside** the control and never instead of it: moves made in the current
+          // window are invisible until the deadline passes, so you may know something this does not.
+          implied: widget.team.freeTransfersImplied,
           value: _freeTransfers,
           onChanged: (n) {
             setState(() => _freeTransfers = n);
@@ -173,6 +178,11 @@ class _SettingsViewState extends State<SettingsView> {
         ),
 
         const _Heading('About'),
+        // ⭐⭐ **Which build this is** (a tester asked). ⚠️ It already existed — `kAppBuild` drives the
+        // update check — and was readable **only** when an update was available, which is exactly when a
+        // tester does not need it. ⭐ *The number that settles "is this the version with the fix?" was
+        // being shown only to people who were already behind.*
+        _Note('Version $kAppVersion  ·  build $kAppBuild'),
         const _Note(Brand.mantra, italic: true),
         const _Note(Brand.disclaimer, muted: true),
         // ⭐⭐ **Last, behind a disclosure, and only where a table of medians fits** (ADR-305). The owner
@@ -335,10 +345,17 @@ class _ManagerIdRowState extends State<_ManagerIdRow> {
 
 /// ⚠️⚠️ **The one number FPL will not tell us**, and it changes the advice (ADR-191/228).
 class _FreeTransfersRow extends StatelessWidget {
-  const _FreeTransfersRow({required this.value, required this.onChanged});
+  const _FreeTransfersRow({
+    required this.value,
+    required this.onChanged,
+    this.implied,
+  });
 
   final int value;
   final ValueChanged<int> onChanged;
+
+  /// What the manager's own transfer history implies they hold, or null if it could not be checked.
+  final int? implied;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -378,12 +395,19 @@ class _FreeTransfersRow extends StatelessWidget {
               ),
           ],
         ),
-        const Padding(
-          padding: EdgeInsets.only(top: 5),
+        // ⚠️⚠️ **This caption used to say FPL does not publish it, so the app has to ask.** That was
+        // half true and is now the wrong half: the number is **derivable** from the transfers you have
+        // made (ADR-318). ⭐ *A caption that explains a limitation the app no longer has teaches people to
+        // distrust the ones it does.*
+        Padding(
+          padding: const EdgeInsets.only(top: 5),
           child: Text(
-            'FPL does not publish this, so the app has to ask. The week’s plan recommends this many '
-            'moves.',
-            style: TextStyle(
+            implied == null
+                ? 'FPL does not publish this directly, so the app asks. The week’s plan recommends this '
+                      'many moves.'
+                : 'Your transfer history says $implied. Moves you make before the next deadline are not '
+                      'visible until it passes — set it yourself if that is out of date.',
+            style: const TextStyle(
               color: Colors.white38,
               fontSize: 10.5,
               height: 1.45,

@@ -474,6 +474,7 @@ class MyTeam {
   MyTeam({
     required this.managerId,
     required this.squadName,
+    this.freeTransfersImplied,
     required this.isDraft,
     required this.fplPlayerIds,
     required this.bank,
@@ -515,6 +516,8 @@ class MyTeam {
       bank: (squad['bank'] as num?)?.toDouble(),
       value: (squad['value'] as num?)?.toDouble(),
       freeTransfers: json['free_transfers'] as int? ?? 1,
+      // ⭐ What FPL's own history implies you hold, beside what the caller asked for (ADR-318).
+      freeTransfersImplied: (json['free_transfers_implied'] as num?)?.toInt(),
       activeChip: squad['active_chip'] as String?,
       gameweek: json['gameweek'] as int?,
       deadlineLabel: deadline['label'] as String? ?? '',
@@ -588,6 +591,10 @@ class MyTeam {
   }
 
   final String squadName;
+
+  /// What the transfer history implies; null when it could not be checked.
+  /// ⚠️ Moves made before the next deadline are invisible until it passes.
+  final int? freeTransfersImplied;
 
   /// ⭐⭐ **The server's word on whether this is the real team.** A client can forget to mention it; a field
   /// cannot — and an app that shows a plan as your squad is lying about something you can act on.
@@ -728,6 +735,7 @@ class MyTeam {
   MyTeam withArmbands({int? captainId, int? viceCaptainId}) => MyTeam(
     managerId: managerId,
     squadName: squadName,
+    freeTransfersImplied: freeTransfersImplied,
     isDraft: isDraft,
     fplPlayerIds: fplPlayerIds,
     bank: bank,
@@ -2043,6 +2051,7 @@ class GameweekSummary {
     this.hit,
     this.benchPoints,
     this.chip,
+    this.overallRankMoved,
   });
 
   factory GameweekSummary.fromJson(Map<String, dynamic> json) =>
@@ -2053,6 +2062,10 @@ class GameweekSummary {
         hit: (json['hit'] as num?)?.toInt(),
         benchPoints: (json['bench_points'] as num?)?.toInt(),
         chip: json['chip'] as String?,
+        // ⭐ Places climbed (+) or dropped (−). ⚠️ The **server** does this arithmetic, because *a rank of
+        // 167,946 is better than 292,349* — inverting it on each surface is repeating the trap on each
+        // surface.
+        overallRankMoved: (json['overall_rank_moved'] as num?)?.toInt(),
       );
 
   /// ⚠️ Null means *not known*, never zero — the rule `bank` and `value` already follow.
@@ -2062,6 +2075,10 @@ class GameweekSummary {
   final int? hit;
   final int? benchPoints;
   final String? chip;
+
+  /// Places gained (+) or lost (−) since the previous gameweek.
+  /// ⚠️ Null means **not known** — GW1, or a lookup that failed. *"We could not check" is not "no movement".*
+  final int? overallRankMoved;
 }
 
 /// What r/FantasyPL is talking about (ADR-300).

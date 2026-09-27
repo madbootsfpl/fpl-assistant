@@ -34,7 +34,12 @@ from src.analytics.player_dna import player_dna as analytics_player_dna
 from src.analytics.player_dna import player_insights
 from src.analytics.team_dna import key_players_this_or_last
 from src.analytics.transfer import replacements_for, route_to_player
-from src.fpl_rules import CHIP_NAMES, chips_available
+from src.fpl_rules import (
+    CHIP_NAMES,
+    chips_available,
+    free_transfers_from_history,
+    rank_movement,
+)
 from src.kits import photo_url, shirt_url
 from src.manager import fetch_manager_team
 from src.service.inputs import RUN, SWIPE, WIDE, load, opened, reported_leavers
@@ -749,6 +754,15 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # ⚠️ Echoed because FPL does not publish it and the client supplied it — ⭐ *a header that showed a
         # number the manager never set would be the app inventing his position.*
         "free_transfers": request.free_transfers,
+        # ⭐⭐ **What FPL's own history implies you hold** (ADR-318), answering a tester's *"how does FFH
+        # know how many transfers you have?"* — the paid tools log you in and read `transfers.limit`; this
+        # derives it. ⚠️ Offered beside the caller's number, never instead of it: transfers made **during
+        # the current window are invisible** until the deadline passes, so the manager may know something
+        # this does not. ⭐ *A derived number presented as fact is worse than a field.*
+        "free_transfers_implied": (
+            free_transfers_from_history(_history.get("current"), _history.get("chips"))
+            if (_history := _entry_history(request.manager_id)) else None
+        ),
         "gameweek": gameweek,
         # ⚠️ The label carries the timezone and the countdown already (ADR-086) — re-deriving "in 18 days"
         # on the client would be a second clock, and the two would disagree by however long the app was open.
@@ -1431,6 +1445,13 @@ def gameweek_result(request: GameweekResultRequest, *, store: Storage | None = N
                 "transfers": history.get("event_transfers"),
                 "hit": history.get("event_transfers_cost"),
                 "bench_points": history.get("points_on_bench"),
+                # ⭐⭐ **Places climbed (+) or dropped (−)**, computed here and not in the client.
+                # ⚠️⚠️ *A rank of 167,946 is better than 292,349, so a falling number is a rising
+                # position* — doing that arithmetic on each surface is repeating the trap on each surface.
+                # ⚠️ None for GW1, and None when the lookup failed: *"we could not check" is not "no
+                # movement".*
+                "overall_rank_moved": rank_movement(
+                    (_entry_history(request.manager_id).get("current") or []), request.gameweek),
                 "chip": payload.get("active_chip"),
             },
         }
@@ -2162,6 +2183,22 @@ def team_dna(request: TeamDnaRequest, *, store: Storage | None = None) -> dict:
     # cannot disagree about the table — *an unstable sort is a diff that appears from nowhere.*
     rows.sort(key=lambda r: (-r["score"], r["name"]))
     return {"teams": rows, "yours": sorted(mine)}
+
+
+def _entry_history(manager_id) -> dict:
+    """A manager's season history, or `{}` — ⚠️ **never load-bearing** (ADR-234's rule, reused).
+
+    ⭐ One fetch behind three answers now: which chips are gone, how many free transfers are held, and how
+    far the overall rank moved. *A call worth making once is worth making once.*
+    """
+    if not manager_id:
+        return {}
+    try:
+        from src.api.client import FplClient
+
+        return FplClient().get_entry_history(manager_id) or {}
+    except Exception:                                # noqa: BLE001 — every caller degrades
+        return {}
 
 
 def _next_gameweek(store) -> int | None:

@@ -85,7 +85,7 @@
     },
     "levers": {
       "ceiling": 73,
-      "fixed": "your captain's own number (73/100); lifting it means a different captain, not a different week",
+      "fixed": "the same as your captain's confidence (73/100), because the week turns on that one pick",
       "levers": [
         {
           "kind": "noted",
@@ -343,7 +343,7 @@
   "timing": {
     "action": "use",
     "cost": 2.3,
-    "reason": "Waiting costs 2.3 and saves only 2.1",
+    "reason": "Waiting would save 2.1 pts on a future hit, but making the move above a week later costs 2.3 \u2014 0.2 worse.",
     "second_gain": 2.1,
     "value": 2.1
   },

@@ -141,6 +141,10 @@ class _Summary extends StatelessWidget {
               ? '—'
               : _grouped(summary.overallRank!),
           label: 'Overall rank',
+          // ⭐⭐ **Which way the week went**, which is the part a manager actually reads a rank for
+          // (ADR-318). ⚠️ Absent on GW1 and when the lookup failed — *"we could not check" is not "no
+          // movement", and a 0 with no arrow would say the second.*
+          moved: summary.overallRankMoved,
         ),
         _Figure(value: '${summary.benchPoints ?? '—'}', label: 'On the bench'),
         // ⚠️ Only when it cost something. *A row of zeroes is a row nobody reads.*
@@ -165,11 +169,19 @@ const Map<String, String> _chipNames = {
 };
 
 class _Figure extends StatelessWidget {
-  const _Figure({required this.value, required this.label, this.warn = false});
+  const _Figure({
+    required this.value,
+    required this.label,
+    this.warn = false,
+    this.moved,
+  });
 
   final String value;
   final String label;
   final bool warn;
+
+  /// Places gained (+) or lost (−), drawn beside the figure. Null draws nothing.
+  final int? moved;
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -188,9 +200,39 @@ class _Figure extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+        // ⚠️ **Scaled down like the figure above it.** Four of these share a row, and *"Overall rank"*
+        // plus an arrow plus six digits does not fit a quarter of a phone — the first version overflowed
+        // fifteen tests. ⭐ *A label that has outgrown its column is a layout bug, not a font size.*
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+              ),
+              if (moved != null && moved != 0) ...[
+                const SizedBox(width: 4),
+                // ⭐ A 45° arrow, because the movement is a direction before it is a number — ⚠️ *a green
+                // figure alone still has to be read to be understood.*
+                Icon(
+                  moved! > 0 ? Icons.north_east : Icons.south_east,
+                  size: 10,
+                  color: moved! > 0 ? Brand.good : Brand.bad,
+                ),
+                const SizedBox(width: 1),
+                Text(
+                  _grouped(moved!.abs()),
+                  style: TextStyle(
+                    color: moved! > 0 ? Brand.good : Brand.bad,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     ),

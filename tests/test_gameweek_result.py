@@ -199,6 +199,10 @@ def test_the_summary_is_fpls_own_numbers(monkeypatch, squad_ids):
     assert answer["summary"] == {
         "points": 77, "overall_rank": 3_842_466, "rank": 4,
         "transfers": 2, "hit": 4, "bench_points": 8, "chip": None,
+        # ⭐ Places climbed or dropped (ADR-318). ⚠️ **None here, and that is the assertion**: this test
+        # stubs FPL with a single gameweek, so there is no previous rank to compare against — *"we could
+        # not check" is not "no movement", and a 0 would have said the second.*
+        "overall_rank_moved": None,
     }
 
 

@@ -296,3 +296,64 @@ def chip_deadline(gameweek) -> int:
         if gameweek is not None and gameweek <= last:
             return last
     return CHIP_HALVES[-1]
+
+
+# ── what a manager's own history implies (ADR-318) ────────────────────────────
+
+#: Free transfers roll over to a maximum of five (the 2024/25 rule change; one before that).
+FT_CAP = 5
+
+#: Chips that make a gameweek's transfers free — ⭐ playing one does **not** spend your saved transfers.
+FT_FREE_CHIPS = {"wildcard", "freehit"}
+
+
+def free_transfers_from_history(rows, chips=None, *, cap: int = FT_CAP) -> int:
+    """How many free transfers a manager holds for the **next** gameweek, from their own history.
+
+    ⭐⭐ **Tester's question: "how does FFH know how many transfers you have?"** Two ways, and this is the
+    second. FPL's authenticated `/api/my-team/{id}/` returns `transfers.limit` outright — but it needs the
+    manager's login. Unauthenticated, the number is **derivable**: one free transfer a week, rolling over
+    to a cap, minus the ones spent.
+
+    ⚠️⚠️ **And that derivation has a blind spot worth stating.** `event_transfers` only appears once a
+    gameweek has ticked over, so transfers made *during the current window* are invisible until the
+    deadline passes. ⭐ *This is the honest reason the paid tools ask you to log in* — not cleverness, just
+    a different endpoint.
+
+    ⚠️ A wildcard or free hit week makes transfers free and **leaves the bank untouched**, which is why the
+    chip list matters here and not only for chip advice.
+    """
+    played = sorted(rows or [], key=lambda r: r.get("event") or 0)
+    if not played:
+        return 1
+    by_event = {c.get("event"): c.get("name") for c in (chips or [])}
+
+    held = 1                                        # ⭐ GW1 opens with one
+    for row in played:
+        event = row.get("event")
+        if event and event > 1:
+            held = min(cap, held + 1)
+        if by_event.get(event) in FT_FREE_CHIPS:
+            continue                                # the chip paid for the moves; the bank is untouched
+        # ⚠️ Never negative: transfers beyond the free ones cost points, not future transfers.
+        held = max(0, held - int(row.get("event_transfers") or 0))
+    # ⭐ The week ahead has not been played, so its transfer is already yours.
+    return min(cap, held + 1)
+
+
+def rank_movement(rows, gameweek) -> int | None:
+    """Places climbed (+) or dropped (−) in overall rank between `gameweek` and the one before it.
+
+    ⚠️⚠️⚠️ **The sign is inverted from the number, and that is the whole reason this lives here.** A rank
+    of 167,946 is *better* than 292,349 — so a **falling number is a rising position**. ⭐ *Doing this
+    arithmetic in each client is repeating the trap on every surface*; doing it once means one test.
+
+    Returns None for the first gameweek, or when either rank is missing.
+    """
+    by_event = {r.get("event"): r for r in (rows or []) if r.get("event")}
+    now = (by_event.get(gameweek) or {}).get("overall_rank")
+    before = (by_event.get((gameweek or 0) - 1) or {}).get("overall_rank")
+    if now is None or before is None:
+        return None
+    # ⭐ before − now: a smaller rank this week is a positive move.
+    return int(before) - int(now)
