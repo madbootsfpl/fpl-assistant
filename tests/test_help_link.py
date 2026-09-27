@@ -122,11 +122,39 @@ def test_the_store_can_be_configured_once_instead_of_every_deploy() -> None:
     example = ROOT / ".env.release.example"
     assert example.exists(), "the template is gone — nobody can tell what to put in .env.release"
     body = example.read_text()
-    for name in ("MADBOOTS_STORE_URL", "MADBOOTS_STORE_KEY"):
+    # ⭐⭐ **All four names, because the template offers two routes and the easy one must be first.** The
+    # first version listed only the `MADBOOTS_` pair — the route where the URL is taken verbatim and can
+    # therefore be spelled wrong — and the owner reasonably asked which to use. ⚠️ *A template that
+    # documents the harder path is a template that will be followed into the harder path.*
+    for name in ("FPL_STORE_URL", "FPL_STORE_KEY", "MADBOOTS_STORE_URL", "MADBOOTS_STORE_KEY"):
         assert name in body, f"{name} is not in the template the script reads"
+    # ⚠️⚠️ **Read the ASSIGNMENTS, not the prose.** The first version of this compared `body.index(...)`
+    # of the two names and **survived the blocks being swapped**, because the `MADBOOTS_` section's own
+    # comment says *"unlike `FPL_STORE_URL`…"* — ⭐ *a guard a comment can satisfy is reading the
+    # documentation again*, which is the second time that exact trap has caught me in this file.
+    active = [line.split("=")[0].strip() for line in body.splitlines()
+              if re.match(r"\s*(FPL|MADBOOTS)_STORE_URL\s*=", line)]
+    assert active and active[0] == "FPL_STORE_URL", (
+        f"the template's uncommented route is {active or 'missing'} — it should default to the pair that "
+        f"can be pasted verbatim, since the other one is taken as given and can be spelled wrong"
+    )
     # ⭐ The one mistake that would matter: `service_role` bypasses RLS, and unlike Streamlit this file's
     # values are served to browsers.
     assert "service_role" in body, "the template does not warn which key must never be used here"
+
+
+def test_a_store_url_with_the_table_still_on_it_is_refused() -> None:
+    """🔴 **The one mistake this setup invites, and it fails silently.** `MADBOOTS_STORE_URL` is taken
+    exactly as given, so `…/rest/v1/squads` makes the page ask for `…/rest/v1/squads/maddie_videos` and
+    report only that it could not load the videos — with nothing anywhere saying why.
+
+    ⭐ PostgREST's base is always `<project>/rest/v1`, so this is checkable rather than a guess, and *a
+    deploy that can see the value is wrong should say so rather than ship it.*
+    """
+    script = RELEASE.read_text()
+    assert "/rest/v1}" in script and 'store_url=""' in script, (
+        "release_web.sh no longer rejects a store URL with a table name on the end"
+    )
 
 
 def test_the_real_env_file_is_not_committable() -> None:

@@ -128,6 +128,21 @@ if [ -z "$store_url" ] && [ -n "${FPL_STORE_URL:-}" ]; then
   store_url="${FPL_STORE_URL%/*}"                 # .../rest/v1/squads -> .../rest/v1
 fi
 store_key="${MADBOOTS_STORE_KEY:-${FPL_STORE_KEY:-}}"
+
+# ⚠️⚠️ **A URL with the table still on the end is the one mistake this setup invites**, and it fails
+# *silently*: `help.js` would ask for `…/rest/v1/squads/maddie_videos` and the page would say it could not
+# load the videos, with nothing anywhere saying why. The `FPL_STORE_URL` path strips it for you; the
+# `MADBOOTS_STORE_URL` path takes what it is given, so it is the one that can be wrong.
+#
+# ⭐ PostgREST's base is always `<project>/rest/v1`, so this is checkable rather than a guess — and *a
+# deploy that can see the value is wrong should say so, not ship it.*
+if [ -n "$store_url" ] && [ "${store_url%/rest/v1}" = "$store_url" ]; then
+  echo "  ⚠️  help: ignoring the store URL — it should end in /rest/v1, and it is:"
+  echo "         $store_url"
+  echo "      Drop the table name (…/rest/v1/squads → …/rest/v1), or set FPL_STORE_URL instead"
+  echo "      and let this script strip it for you."
+  store_url=""
+fi
 if [ -n "$store_url" ] && [ -n "$store_key" ]; then
   printf 'window.MADBOOTS_STORE = { url: %s, key: %s };\n' \
     "\"$store_url\"" "\"$store_key\"" > "$SITE/help-config.js"
