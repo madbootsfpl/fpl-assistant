@@ -15,6 +15,13 @@
 # — which is the owner's to make, and would let `_headers` do this on its own.
 set -euo pipefail
 
+# ⚠️⚠️ **Anchored, because every path below is relative.** Its two siblings already did this; this one did
+# not, so running it from anywhere but the repo root died on `mobile/pubspec.yaml` — and once it began
+# reading `.env.release`, a wrong directory would have meant *the video hub is silently unconfigured*
+# rather than a loud failure. ⭐ *A script that only works from one directory has a prerequisite nobody
+# wrote down.*
+cd "$(dirname "$0")/.."
+
 # ⭐⭐ **Read once from a file, not retyped every deploy.** Two web releases went out with the video hub
 # unconfigured because the values lived only in a shell that had since closed — ⚠️ *a setup step you must
 # remember is a setup step that gets skipped on the release you were in a hurry for.* Copy

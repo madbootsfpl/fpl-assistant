@@ -105,6 +105,22 @@ def test_both_platform_buttons_go_somewhere_real() -> None:
     )
 
 
+@pytest.mark.parametrize("script", ["release_android.sh", "release_web.sh", "release_ios.sh"])
+def test_every_release_script_runs_from_the_repo_root(script: str) -> None:
+    """⚠️⚠️ **Every path in these scripts is relative, so the working directory is an input.** Two of the
+    three anchored themselves and `release_web.sh` did not — it died on `mobile/pubspec.yaml` when run
+    from anywhere else, and once it started reading `.env.release` a wrong directory would have meant the
+    video hub was **silently** unconfigured instead of a loud failure.
+
+    ⭐ *A script that only works from one directory has a prerequisite nobody wrote down* — and the two
+    that got it right are why this is a guard rather than a preference.
+    """
+    text = (SITE.parent / "scripts" / script).read_text()
+    assert 'cd "$(dirname "$0")/.."' in text, (
+        f"{script} does not anchor itself, so its relative paths follow whatever directory you are in"
+    )
+
+
 @pytest.mark.parametrize("script", ["release_android.sh", "release_web.sh"])
 def test_the_release_scripts_publish_this_directory(script: str) -> None:
     """⭐ Otherwise the repo copy is a decoration and `$SITE` is still the original.
