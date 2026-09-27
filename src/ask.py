@@ -1101,7 +1101,7 @@ def _price_a_rebuild(owned, players, xp_by_id, squad):
 
 
 def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
-                  *, horizon=_HORIZON) -> dict | None:
+                  *, horizon=_HORIZON, chip_status=None) -> dict | None:
     """Analytics DECIDE when to play each chip (ADR-082): Triple Captain · Bench Boost · Free Hit · Wildcard.
 
     An assembly of the per-GW xP (`chip_advisor` over `by_gameweek`), humanised for narration and
@@ -1130,7 +1130,8 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
     facts["confidence"] = "; ".join(f"{c.replace('_', ' ')} {v['confidence']}/100 ({v['band']})"
                                     for c, v in confidences.items())
     return {
-        "detail": render_chip_advice(advice, squad_name, horizon=horizon, confidences=confidences),
+        "detail": render_chip_advice(advice, squad_name, horizon=horizon,
+                                     confidences=confidences, status=chip_status),
         "headline": f"Chip strategy ({scope_label(squad_name)}): "
                     f"Triple Captain GW{tc['gameweek']}, Bench Boost GW{advice['bench_boost']['gameweek']}",
         "facts": facts,
@@ -1948,7 +1949,7 @@ def assemble(question: str, intent: str | None, decision: dict | None, narrator,
 
 def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
               *, count: int = 1, rank: int = 0, active_squad=None, horizon=_HORIZON,
-              free: int = 1, bank: float = 0.0) -> dict | None:
+              free: int = 1, bank: float = 0.0, chip_status=None) -> dict | None:
     """Run the decision engine for `intent` (shared by `answer` and `converse`).
 
     `count`/`rank` are threaded so a conversational follow-up can ask for an N-transfer plan or
@@ -1969,7 +1970,8 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
         return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon,
                                 question=question, free=free, bank=bank)
     if intent == "chips":
-        return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon)
+        return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon,
+                             chip_status=chip_status)
     if intent == "rules":
         return _decide_rules(question)
     if intent == "compare":
@@ -2024,7 +2026,7 @@ def _resolve_pronoun(question: str, context: "Context | None") -> str:
 
 
 def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None,
-           horizon=_HORIZON, free: int = 1, bank: float = 0.0):
+           horizon=_HORIZON, free: int = 1, bank: float = 0.0, chip_status=None):
     """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
 
     A successful answer becomes the new context; a fallback/soft-failure leaves the running
@@ -2050,6 +2052,7 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
 
     count = _transfer_count(question)
     decision = _dispatch(intent, store, question, squad, count=count, active_squad=active_squad,
+                         chip_status=chip_status,
                          horizon=horizon, free=free, bank=bank)
     known = [p["web_name"] for p in store.get_players()] if decision else ()
     result = assemble(question, intent, decision, narrator, known_names=known)
@@ -2128,7 +2131,7 @@ def converse(question: str, context: "Context | None", *, store: Storage,
 
 
 def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
-           active_squad=None, horizon=_HORIZON, free: int = 1, bank: float = 0.0) -> AskResult:
+           active_squad=None, horizon=_HORIZON, free: int = 1, bank: float = 0.0, chip_status=None) -> AskResult:
     """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional.
 
     The one-shot entry point: a single `converse` turn with no prior context (so a follow-up-only
@@ -2141,6 +2144,7 @@ def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
     store = store or Storage()
     try:
         result, _context = _fresh(question, None, store, narrator, active_squad, horizon=horizon,
+                                  chip_status=chip_status,
                                   free=free, bank=bank)
         return result
     finally:

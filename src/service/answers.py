@@ -1150,6 +1150,15 @@ def ask_question(request: AskRequest, *, store: Storage | None = None, narrator=
             horizon=request.horizon,
             free=request.free,
             bank=request.bank,
+            # ⭐⭐ **Which chips are actually left** (ADR-317). ⚠️ Fetched here rather than in the engine:
+            # `src/ask.py` decides, it does not call FPL — *an engine that reaches the network is an engine
+            # that cannot be tested without one.*
+            #
+            # ⚠️⚠️ Only when a manager id is given, and never optimistic: a failed lookup leaves every chip
+            # **unknown**, which prints nothing, rather than **available**, which would print an
+            # instruction. *"We could not check" and "you still hold it" are different facts and only one
+            # of them is safe to act on.*
+            chip_status=_chip_status(request.manager_id, _next_gameweek(store)),
         )
     finally:
         if ours:
@@ -2149,6 +2158,21 @@ def team_dna(request: TeamDnaRequest, *, store: Storage | None = None) -> dict:
     # cannot disagree about the table — *an unstable sort is a diff that appears from nowhere.*
     rows.sort(key=lambda r: (-r["score"], r["name"]))
     return {"teams": rows, "yours": sorted(mine)}
+
+
+def _next_gameweek(store) -> int | None:
+    """The gameweek chip availability should be judged against — ⭐ *the one you are about to play.*
+
+    ⚠️ Availability is **per half**, not per season (ADR-234): a wildcard spent in GW4 leaves the
+    second-half one untouched. So the answer depends on which half we are in, and that needs a gameweek.
+
+    ⚠️ `sqlite3.Row` has no `.get` — the third time this session — so the rows are read through the same
+    tolerant accessor the analytics use.
+    """
+    from src.analytics.names import _get
+
+    events = sorted({_get(f, "event") for f in store.get_upcoming_fixtures() if _get(f, "event")})
+    return events[0] if events else None
 
 
 def _chip_status(manager_id, gameweek) -> dict:

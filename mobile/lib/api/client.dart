@@ -179,6 +179,7 @@ class ServiceClient {
     required List<int> playerIds,
     List<int> benchIds = const [],
     String squadName = '',
+    int? managerId,
     int free = 1,
     double bank = 0,
   }) async => Answer.fromJson(
@@ -191,6 +192,10 @@ class ServiceClient {
       // `squad.name` the whole time, which this app already parsed into `MyTeam.squadName` and never
       // used. ⭐ *The name was three layers deep and one field short of the sentence that needed it.*
       'squad_name': squadName,
+      // ⭐⭐ So chip advice knows which chips you have already played (ADR-317). ⚠️ Without it Ask
+      // recommended a Triple Captain that had been spent in GW3 — *the Chips screen knew and Ask could
+      // not*, because this request had no field to carry the id.
+      'manager_id': ?managerId,
       'free': free,
       'bank': bank,
     }),

@@ -258,6 +258,10 @@ class AskBody(BaseModel):
     squad_name: str = Field("", max_length=60,
                             description="Your FPL team name, so answers say it instead of 'yours'. "
                                         "`my_team` returns it as `squad.name`.")
+    manager_id: int | None = Field(None, ge=1,
+                                   description="Your FPL manager id, so chip advice knows which chips "
+                                               "you have already played. Optional: without it the advice "
+                                               "stands but says it could not check.")
     free: int = Field(1, ge=0, le=5, description="Free transfers available.")
     bank: float = Field(0.0, ge=0, description="Money in the bank, in millions.")
     horizon: int = Field(5, ge=1, le=8, description="The planning window for plan-shaped answers.")

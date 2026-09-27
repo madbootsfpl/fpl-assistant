@@ -172,6 +172,15 @@ class AskRequest:
     #: ⭐ FPL already gives it to us. `fetch_manager_team` reads `entry["name"]` and `my_team` returns it as
     #: `squad.name`; only `ask` had no field to carry it, so *the API knew the name and the answer did not.*
     squad_name: str = ""
+    #: ⚠️⚠️⚠️ **Without this, Ask recommends chips you have already played** (ADR-317). `get_entry_history`
+    #: has carried the list since ADR-234, and its own docstring says why it matters: *"a chip advisor
+    #: recommends a wildcard that has already been spent — which is not a rough edge, it is a wrong answer
+    #: delivered confidently."* The **Chips screen** passes a manager id and knows; `ask` had no field to
+    #: carry one, so ⭐ *the same engine was blind on one path and sighted on the other.*
+    #:
+    #: ⭐ Optional: a caller who cannot supply it still gets advice, marked **unknown** rather than
+    #: available — *"we could not check" and "you still hold it" are different facts.*
+    manager_id: int | None = None
     free: int = 1
     bank: float = 0.0
     horizon: int = 5

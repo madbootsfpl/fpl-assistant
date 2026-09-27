@@ -112,6 +112,7 @@ class _AskViewState extends State<AskView> {
       ],
       benchIds: [for (final p in widget.team.analysis.bench) p.id],
       squadName: widget.team.squadName,
+      managerId: widget.team.managerId,
       // ⚠️ The real numbers. Asking against £0 and one transfer would answer a question about a
       // position the manager is not in — the exact defect `ask.py` records at its own call site.
       free: widget.team.freeTransfers,

@@ -68,7 +68,25 @@ def _conf(confidences, chip) -> str:
     return f"  · Confidence {c['confidence']}/100 · {c['band']}" if c else ""
 
 
-def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -> str:
+#: FPL's own name for each chip → the label this block prints.
+_SPENT_KEY = {"triple_captain": "3xc", "bench_boost": "bboost",
+              "free_hit": "freehit", "wildcard": "wildcard"}
+
+
+def _spent(status, key: str) -> str:
+    """`" — PLAYED in GW3"` when a chip is gone, `""` when it is not, `""` when we could not check.
+
+    ⚠️⚠️⚠️ **Unknown is not available.** A failed lookup must read as silence, never as *"you still have
+    it"* — ⭐ *"we could not check" and "you still hold it" are different facts and only one of them is safe
+    to act on* (ADR-234's rule, which the Chips screen has always followed and Ask could not).
+    """
+    if not status:
+        return ""
+    played = (status.get(_SPENT_KEY[key]) or {}).get("played_in")
+    return f"  ⚠ ALREADY PLAYED — GW{played}" if played else ""
+
+
+def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None, status=None) -> str:
     """The chip advice as a readable block (ADR-082). `horizon` labels the window the advice looked over;
     `confidences` (from `explain_chips`, ADR-089) appends a per-chip confidence.
 
@@ -79,13 +97,20 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
     lines = [
         f"Chip strategy — {squad_name} ({window})",
         "",
-        f"  Triple Captain: {_tc_line(advice['triple_captain'])}{_conf(confidences, 'triple_captain')}",
+        # ⚠️ **A spent chip keeps its timing advice** — *when it would have been best* is still true, and
+        # hiding the line would leave a reader wondering whether the app knew about the chip at all.
+        # ⭐ It is marked, not removed: **the recommendation stops being an instruction.**
+        f"  Triple Captain: {_tc_line(advice['triple_captain'])}{_conf(confidences, 'triple_captain')}"
+        f"{_spent(status, 'triple_captain')}",
         *([f"                  {_moved(advice['triple_captain'])}"] if _moved(advice["triple_captain"]) else []),
-        f"  Bench Boost:    {_bb_line(advice['bench_boost'])}{_conf(confidences, 'bench_boost')}",
+        f"  Bench Boost:    {_bb_line(advice['bench_boost'])}{_conf(confidences, 'bench_boost')}"
+        f"{_spent(status, 'bench_boost')}",
         *([f"                  {_moved(advice['bench_boost'])}"] if _moved(advice["bench_boost"]) else []),
-        f"  Free Hit:       {_fh_line(advice['free_hit'])}{_conf(confidences, 'free_hit')}",
+        f"  Free Hit:       {_fh_line(advice['free_hit'])}{_conf(confidences, 'free_hit')}"
+        f"{_spent(status, 'free_hit')}",
         *([f"                  {_moved(advice['free_hit'])}"] if _moved(advice["free_hit"]) else []),
-        f"  Wildcard:       {_wc_line(advice['wildcard'])}{_conf(confidences, 'wildcard')}",
+        f"  Wildcard:       {_wc_line(advice['wildcard'])}{_conf(confidences, 'wildcard')}"
+        f"{_spent(status, 'wildcard')}",
         "",
         "  Confidence = how clearly that gameweek beats the alternatives (a heuristic; low when the weeks are",
         "  close). Based on your fixture run + projected points — double/blank gameweeks and mini-league",
