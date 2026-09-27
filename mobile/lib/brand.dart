@@ -55,6 +55,18 @@ class Brand {
 
   static const Color darkMuted = Color(0xFFB7ADD0);
 
+  /// The result card's event disc — the card's own ink, softened.
+  static const Color eventDisc = Color(0xD916181D);
+
+  static const Color eventGlyph = Color(0xFFFFFFFF);
+
+  static const Color eventMark = Color(0xFF16181D);
+
+  static const Color cleanSheet = Color(0xFF8FB8D6);
+
+  /// FPL prints bonus in amber; so do we.
+  static const Color bonus = Color(0xFFE59A1B);
+
   static const Color green = Color(0xFF86D91E);
 
   static const Color yellow = Color(0xFFFFC21E);

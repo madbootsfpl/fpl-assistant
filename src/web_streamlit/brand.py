@@ -73,6 +73,18 @@ YELLOW = "#FFC21E"
 GOOD, GOOD_TINT, GOOD_FG = "#1e8047", "#e6f4ec", "#0b5e30"
 WARN, WARN_TINT, WARN_FG = "#d98c00", "#fdf1d6", "#8a5a00"
 BAD, BAD_TINT, BAD_FG = "#c62828", "#fce8e8", "#a51d1d"
+# ⭐⭐ **The result card's events** (ADR-313). ⚠️ These were four hard-coded hexes inside
+# `result_pitch.dart` — mint, steel blue, amber — *retyped on the one surface furthest from this file*,
+# which is the drift ADR-312 was written about, one component along.
+#
+# ⭐ The glyphs sit on a **dark disc borrowed from the card's own ground**, so the strip belongs to the card
+# rather than sitting on top of it, and the two numbered pips stay the only bright marks in the row —
+# ⚠️ *bonus is the rarest event on the card and should be the thing the eye finds.*
+EVENT_DISC = "#16181DD9"                        # the card's ink at 85% — a disc, not a badge
+EVENT_GLYPH = "#FFFFFF"                         # boot, and the football's body
+EVENT_MARK = "#16181D"                          # the football's panels, read against its white body
+CLEAN_SHEET = "#8FB8D6"
+BONUS = "#E59A1B"                               # FPL prints bonus in amber, and so do we
 ACCENT_TEAL = "#5eead4"                         # the single "projected / winner" highlight
 
 # FDR 1–5 → (background, text) pairs — **mirrors the official FPL app** so it reads familiarly (owner, 2026-08-17):

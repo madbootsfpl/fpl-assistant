@@ -24,8 +24,17 @@ OUT = pathlib.Path(__file__).resolve().parents[1] / "mobile" / "lib" / "brand.da
 
 
 def _colour(hex_string: str) -> str:
-    """`#8B2FC9` → `Color(0xFF8B2FC9)`. ⚠️ Dart's Color wants ARGB, so the alpha is prepended."""
-    return f"Color(0xFF{hex_string.lstrip('#').upper()})"
+    """`#8B2FC9` → `Color(0xFF8B2FC9)`; `#16181DD9` → `Color(0xD916181D)`.
+
+    ⚠️⚠️ **Eight digits are CSS's `#RRGGBBAA`, and Dart wants `0xAARRGGBB`** — the alpha moves from the end
+    to the front. ⭐ Blindly prepending `FF` to an eight-digit value produced a **ten-digit** literal, which
+    is not a colour at all; the first translucent token in `brand.py` found that the same afternoon it was
+    added.
+    """
+    raw = hex_string.lstrip("#").upper()
+    if len(raw) == 8:
+        return f"Color(0x{raw[6:8]}{raw[0:6]})"
+    return f"Color(0xFF{raw})"
 
 
 def _const(name: str, hex_string: str, comment: str = "") -> str:
@@ -86,6 +95,11 @@ class Brand {{
 {_const("darkPanel", brand.DARK_PANEL)}
 {_const("darkText", brand.DARK_TEXT)}
 {_const("darkMuted", brand.DARK_MUTED)}
+{_const("eventDisc", brand.EVENT_DISC, "The result card's event disc — the card's own ink, softened.")}
+{_const("eventGlyph", brand.EVENT_GLYPH)}
+{_const("eventMark", brand.EVENT_MARK)}
+{_const("cleanSheet", brand.CLEAN_SHEET)}
+{_const("bonus", brand.BONUS, "FPL prints bonus in amber; so do we.")}
 {_const("green", brand.GREEN)}
 {_const("yellow", brand.YELLOW)}
 {_const("purple", brand.PURPLE, "The primary.")}
