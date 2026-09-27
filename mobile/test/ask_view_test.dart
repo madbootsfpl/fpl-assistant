@@ -21,13 +21,14 @@ import 'package:madboots/ask_view.dart';
 /// ⚠️⚠️ **The overrides exist because the sample's own values are `1` and `null`** — which are exactly
 /// the numbers a hard-coding would use. ⭐ *A fixture whose values match the bug is a fixture that cannot
 /// see it*: a mutation replacing `team.freeTransfers` with `1` survived every assertion until this.
-MyTeam sampleTeam({int? free, double? bank}) {
+MyTeam sampleTeam({int? free, double? bank, String? name}) {
   final raw = jsonDecode(
     File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
         .readAsStringSync(),
   ) as Map<String, dynamic>;
   if (free != null) raw['free_transfers'] = free;
   if (bank != null) (raw['squad'] as Map<String, dynamic>)['bank'] = bank;
+  if (name != null) (raw['squad'] as Map<String, dynamic>)['name'] = name;
   return MyTeam.fromJson(raw);
 }
 
@@ -214,5 +215,47 @@ void _bankMayBeUnknown() {
 
     expect(sampleTeam().bank, isNull, reason: 'the sample changed');
     expect(sent.single['bank'], 0);
+  });
+
+  testWidgets('the question carries the team name, so the answer can say it', (
+    tester,
+  ) async {
+    // ⚠️⚠️ **Every answer used to read `(squad 'yours')`.** The name was never missing — FPL gives it,
+    // `my_team` returns it as `squad.name`, and this app already parsed it into `MyTeam.squadName` — ⭐ *it
+    // was three layers deep and one request field short of the sentence that needed it.*
+    final sent = <Map<String, dynamic>>[];
+    await pump(
+      tester,
+      sent: sent,
+      team: sampleTeam(name: 'The 4-4-2 Towers'),
+      reply: {'headline': 'Captain pick (The 4-4-2 Towers): Haaland', 'intent': 'captain'},
+    );
+
+    await tester.enterText(find.byType(TextField), 'who should I captain?');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pumpAndSettle();
+
+    expect(sent.single['squad_name'], 'The 4-4-2 Towers');
+  });
+
+  testWidgets('a team with no name still asks, rather than sending nothing', (
+    tester,
+  ) async {
+    // ⭐ The engine falls back to "yours", so an empty name must travel as empty rather than block the
+    // question — ⚠️ *a screen that refuses to ask because a label is missing has confused a caption for
+    // the point of the page.*
+    final sent = <Map<String, dynamic>>[];
+    await pump(
+      tester,
+      sent: sent,
+      team: sampleTeam(name: ''),
+      reply: {'headline': "Captain pick (yours): Haaland", 'intent': 'captain'},
+    );
+
+    await tester.enterText(find.byType(TextField), 'who should I captain?');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pumpAndSettle();
+
+    expect(sent.single['squad_name'], '');
   });
 }

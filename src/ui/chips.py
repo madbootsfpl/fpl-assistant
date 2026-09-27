@@ -74,10 +74,10 @@ def render_chip_advice(advice, squad_name, horizon: int = 8, confidences=None) -
 
     Fixture-run + xP based — the closing note is honest about what sharpens in-season."""
     if not advice:
-        return f"Chip strategy — squad '{squad_name}': no data yet (refresh, or add players)."
+        return f"Chip strategy — {squad_name}: no data yet (refresh, or add players)."
     window = f"next {horizon} GW" if horizon != 1 else "next GW"
     lines = [
-        f"Chip strategy — squad '{squad_name}' ({window})",
+        f"Chip strategy — {squad_name} ({window})",
         "",
         f"  Triple Captain: {_tc_line(advice['triple_captain'])}{_conf(confidences, 'triple_captain')}",
         *([f"                  {_moved(advice['triple_captain'])}"] if _moved(advice["triple_captain"]) else []),

@@ -165,6 +165,13 @@ class AskRequest:
     question: str = ""
     player_ids: list[int] = field(default_factory=list)
     bench_ids: list[int] = field(default_factory=list)
+    #: ⭐⭐ **The team's own name**, so an answer can say *"Captain pick (The 4-4-2 Towers)"* rather than the
+    #: placeholder it used to print. ⚠️ Optional on purpose: the engine names the scope in every headline, so
+    #: a caller that does not send one must still get a sentence that reads — it falls back to *"yours"*.
+    #:
+    #: ⭐ FPL already gives it to us. `fetch_manager_team` reads `entry["name"]` and `my_team` returns it as
+    #: `squad.name`; only `ask` had no field to carry it, so *the API knew the name and the answer did not.*
+    squad_name: str = ""
     free: int = 1
     bank: float = 0.0
     horizon: int = 5
@@ -176,6 +183,10 @@ class AskRequest:
         # ⭐ *an unbounded free-text field on a public endpoint is somebody else's CPU.*
         if len(self.question) > 500:
             raise ValueError("that question is too long — keep it under 500 characters")
+        # ⚠️ Capped for the same reason and printed verbatim into a headline — ⭐ *a label the caller
+        # chooses is a label the caller could make 10,000 characters long.* FPL's own limit is 20.
+        if len(self.squad_name) > 60:
+            raise ValueError("that squad name is too long — keep it under 60 characters")
 
 
 @dataclass

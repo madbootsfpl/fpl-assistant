@@ -446,6 +446,19 @@ CAPTAIN_LENSES: dict[str, tuple[str, ...]] = {
 }
 
 
+def scope_label(squad_name: str) -> str:
+    """How an answer names the squad it is about — ⭐ *the team's own name, and nothing else.*
+
+    ⚠️⚠️ It used to read **`squad 'yours'`**, and both halves were wrong. The placeholder was there because
+    the phone had no field to send a team name (fixed in `AskRequest`), and the `squad '…'` wrapper existed
+    to make a *placeholder* sound like a label — ⭐ *scaffolding for a stand-in, kept after the real thing
+    arrived.* With a real name it reads as a stutter: *"Captain pick (squad 'The 4-4-2 Towers')"*.
+
+    ⭐ Saved squads on the web read the same way — *"(Demo XI)"* — because a name is a name.
+    """
+    return squad_name
+
+
 def captain_lens(question: str) -> str | None:
     """Which captaincy question was actually asked — or `None` for *"who should I captain?"*.
 
@@ -599,7 +612,7 @@ def _decide_captain(store: Storage, squad_name: str | None, rank: int = 0, activ
             return None
         ids = set(squad["player_ids"])
         players = [p for p in players if p["id"] in ids]
-        scope = f"squad '{squad_name}'"
+        scope = scope_label(squad_name)
 
     # xMins v0 (ADR-038): `ask` is a decision, so weight xP by expected minutes (default-on).
     picks = captain_picks(
@@ -813,11 +826,11 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
         facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"
         facts["why"] = "; ".join(explanation.reasons) or "none"
         facts["risk"] = "; ".join(explanation.risks) or "none noted"
-    detail = "\n".join([f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
+    detail = "\n".join([f"Transfer{ordinal} ({scope_label(squad_name)}): {m['out']['web_name']} → "
                         f"{m['in']['web_name']}", "", render_explanation(explanation), "", MODEL_NOTE])
     return {
         "detail": detail,   # self-contained Why/Risk/Confidence block (the truth, LLM or not)
-        "headline": f"Transfer{ordinal} (squad '{squad_name}'): {m['out']['web_name']} → "
+        "headline": f"Transfer{ordinal} ({scope_label(squad_name)}): {m['out']['web_name']} → "
                     f"{m['in']['web_name']} (+{m['gain']} XI xP over {_HORIZON} GW)",
         "facts": facts,
         "subjects": [m["out"]["web_name"], m["in"]["web_name"]],
@@ -1027,7 +1040,7 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
         # legitimately return something else, and then the button and the sentence above it would disagree.
         "plan": plan,
         "detail": f"{scope}\n\n{detail}" if scope else detail,
-        "headline": f"This week (squad '{squad_name}'): captain "
+        "headline": f"This week ({scope_label(squad_name)}): captain "
                     f"{cap['web_name'] if cap else '—'}",
         "facts": facts,
         "subjects": subjects,
@@ -1114,7 +1127,7 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
                                     for c, v in confidences.items())
     return {
         "detail": render_chip_advice(advice, squad_name, horizon=horizon, confidences=confidences),
-        "headline": f"Chip strategy (squad '{squad_name}'): "
+        "headline": f"Chip strategy ({scope_label(squad_name)}): "
                     f"Triple Captain GW{tc['gameweek']}, Bench Boost GW{advice['bench_boost']['gameweek']}",
         "facts": facts,
         "subjects": subjects,

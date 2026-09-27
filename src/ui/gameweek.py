@@ -226,7 +226,7 @@ def render_gameweek_plan(plan, squad_name, horizon: int = 5, explanation=None) -
     (`explain_gameweek`, ADR-089) adds a per-recommendation Confidence + a short Edge."""
     ex = explanation or {}
     cap_ex, tr_ex = ex.get("captain"), ex.get("transfer")
-    lines = [f"This week — squad '{squad_name}'", ""]
+    lines = [f"This week — {squad_name}", ""]
 
     if ex.get("overall"):   # the plan-level Confidence · Edge · Risk summary (US-274, ADR-089)
         # ADR-198 — the levers explain the Confidence line, so they sit directly under it rather than

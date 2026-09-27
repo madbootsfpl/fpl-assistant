@@ -128,7 +128,7 @@ def test_render_captain_picks_delegates_to_the_card_with_friendly_teams():
     ]
     ex = Explanation(reasons=["Highest projected points"], risks=[], confidence=70, band="Medium")
     out = render_captain_picks(picks, squad_name="RoboTS", explanation=ex, team_names={"MUN": "Man Utd"})
-    assert out.startswith("Captain Pick") and "from squad 'RoboTS'" in out
+    assert out.startswith("Captain Pick") and "from RoboTS" in out
     assert "🥇 B.Fernandes" in out and "Man Utd · MID" in out
     assert "Alternatives\n🥈 Haaland 5.7 pts" in out and "Model note:" in out
     assert render_captain_picks([], squad_name="RoboTS").startswith("No captain candidates in squad")

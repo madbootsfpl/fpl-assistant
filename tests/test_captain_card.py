@@ -18,8 +18,8 @@ _EX = Explanation(reasons=["Highest projected points", "Penalty taker"],
 
 
 def test_card_shows_pick_confidence_why_risks_and_alternatives():
-    h = captain_card_html(_RANKED, _EX, scope="from squad 'RoboTS'", team_names={"MUN": "Man Utd"})
-    assert ".cap-card" in h and "🥇 Captain Pick" in h and "from squad &#x27;RoboTS&#x27;" in h
+    h = captain_card_html(_RANKED, _EX, scope="from RoboTS", team_names={"MUN": "Man Utd"})
+    assert ".cap-card" in h and "🥇 Captain Pick" in h and "from RoboTS" in h
     assert "B.Fernandes" in h and "Man Utd · MID" in h and "5.9 pts" in h    # pick + projected chip
     assert "69/100 · Medium" in h and brand.WARN_TINT in h                   # confidence pill (Medium → WARN token)
     assert "✓ Penalty taker" in h and "⚠ Away fixture" in h                  # Edge / Risk

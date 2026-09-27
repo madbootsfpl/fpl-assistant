@@ -71,5 +71,5 @@ def render_captain_picks(picks, squad_name: str | None = None, explanation=None,
         if squad_name:
             return f"{base} in squad '{squad_name}' — check the name, or `refresh` first."
         return f"{base} — run `refresh` first (and `history --backfill` for baseline rates)."
-    scope = f"from squad '{squad_name}'" if squad_name else "all players"
+    scope = f"from {squad_name}" if squad_name else "all players"
     return render_captain_pick(picks, explanation, scope=scope, team_names=team_names)

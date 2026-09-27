@@ -91,7 +91,7 @@ _FULL_PLAN = {
 
 def test_render_gameweek_plan_shows_all_four_sections():
     out = render_gameweek_plan(_FULL_PLAN, "TS")
-    assert "This week — squad 'TS'" in out
+    assert "This week — TS" in out
     assert "Haaland (MCI)" in out and "home vs BUR" in out and "penalty taker" in out
     assert "start Saka — bench Foden" in out
     assert "Watkins (AVL) → Isak (NEW)" in out and "+1.3 XI xP" in out

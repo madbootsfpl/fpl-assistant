@@ -774,7 +774,7 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     monkeypatch.setattr(ask, "gameweek_plan", lambda *a, **k: plan)
 
     decision = _decide_gameweek(_FakeStore(), "TST")
-    assert "This week — squad 'TST'" in decision["detail"]
+    assert "This week — TST" in decision["detail"]
     assert "Haaland" in decision["subjects"] and "Palmer" in decision["subjects"]   # owned + the buy
     assert "over 5 GW" in decision["detail"]                                        # default horizon
     # US-273/274 (ADR-089): explainability — a plan-level Confidence + a per-recommendation Edge (ADR-107 vocab)
@@ -825,7 +825,7 @@ def test_decide_chips_is_grounded_and_verified(monkeypatch):
     monkeypatch.setattr(ask, "chip_advisor", lambda *a, **k: advice)
 
     decision = _decide_chips(_FakeStore(), "TST", horizon=8)
-    assert "Chip strategy — squad 'TST'" in decision["detail"]
+    assert "Chip strategy — TST" in decision["detail"]
     assert decision["subjects"] == ["Haaland"]                       # the named TC player
 
     res = assemble("q", "chips", decision,
@@ -1131,7 +1131,8 @@ def test_ask_captain_scopes_to_the_active_session_squad():
               "player_names": [p["web_name"] for p in picks], "bench_ids": [], "cost": 100.0}
 
     with_active = render_ask(ask.answer("who should i captain from ZZTestXI", active_squad=active))
-    assert "squad 'ZZTestXI'" in with_active and "all players" not in with_active
+    # ⭐ The name, not the old `squad '…'` wrapper (ADR-311) — the claim is *scoped, not global*.
+    assert "ZZTestXI" in with_active and "all players" not in with_active
     without = render_ask(ask.answer("who should i captain from ZZTestXI"))   # not in SquadStore
     assert "all players" in without                                          # the old fallback
 
@@ -1164,9 +1165,9 @@ def test_ask_captain_defaults_to_the_loaded_squad_hyphen_and_bare(tmp_path, monk
               "player_names": [p["web_name"] for p in picks], "bench_ids": [], "cost": 100.0}
 
     hyphen = render_ask(ask.answer("who should I captain from my-team?", active_squad=active))
-    assert "squad 'ZZTestXI'" in hyphen and "all players" not in hyphen   # the reported bug, fixed
+    assert "ZZTestXI" in hyphen and "all players" not in hyphen   # the reported bug, fixed
     bare = render_ask(ask.answer("who should I captain?", active_squad=active))
-    assert "squad 'ZZTestXI'" in bare                                     # default-to-loaded-squad
+    assert "ZZTestXI" in bare                                             # default-to-loaded-squad
     glob = render_ask(ask.answer("who should I captain from all players?", active_squad=active))
     assert "all players" in glob and "squad 'ZZTestXI'" not in glob       # explicit-global escapes
     assert "Best Captain Picks" in glob and "to scope to your squad" in glob   # US-280: reframed + nudged

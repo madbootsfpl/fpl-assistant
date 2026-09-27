@@ -255,6 +255,9 @@ class AskBody(BaseModel):
                                   description="Your fifteen, treated as the active squad so "
                                               "squad-scoped questions resolve without a saved name.")
     bench_ids: list[int] = Field(default_factory=list, description="Which four are benched.")
+    squad_name: str = Field("", max_length=60,
+                            description="Your FPL team name, so answers say it instead of 'yours'. "
+                                        "`my_team` returns it as `squad.name`.")
     free: int = Field(1, ge=0, le=5, description="Free transfers available.")
     bank: float = Field(0.0, ge=0, description="Money in the bank, in millions.")
     horizon: int = Field(5, ge=1, le=8, description="The planning window for plan-shaped answers.")

@@ -500,6 +500,36 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ⭐⭐ **Whose team this is** (owner: *"can we incorporate the team name on the current game
+          // week"*). The name came from FPL all along — `my_team` returns it as `squad.name` and this app
+          // already parsed it into `MyTeam.squadName` — ⚠️ *it was three layers deep and displayed
+          // nowhere.*
+          //
+          // ⚠️⚠️ **The live page only, and deliberately.** ADR-253 cut this header from three lines to
+          // one because the space is the screen's most valuable, and a name repeated on all six swipe
+          // pages would spend it six times to say something that does not change. ⭐ *Identity belongs
+          // where you land, not on every page you pass through.*
+          // ⚠️⚠️⚠️ **Portrait only, and a test made me prove it.** In landscape the pitch has no vertical
+          // room to give: this line cost ~16pt and `pitch_layout_test`'s *"the bench never outgrows the
+          // eleven"* went from 15 to 4 — ⭐ *the header is where ADR-253 already found the screen's most
+          // expensive space, and landscape is where it is most expensive.*
+          if (gameweek == null &&
+              team.squadName.isNotEmpty &&
+              MediaQuery.orientationOf(context) == Orientation.portrait)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                team.squadName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: .2,
+                ),
+              ),
+            ),
           // ⭐⭐ **One line, where three were** (ADR-253). The web's banner is 96 characters and wrapped
           // to three lines here — ~40pt of the screen's most valuable space spent on a match count and a
           // first kick-off time that nobody acts on from the pitch.

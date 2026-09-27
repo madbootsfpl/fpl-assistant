@@ -92,7 +92,13 @@ class _SettingsViewState extends State<SettingsView> {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
       children: [
         const _Heading('Your team'),
-        _ManagerIdRow(managerId: widget.managerId, onChanged: _manager),
+        _ManagerIdRow(
+          managerId: widget.managerId,
+          // ⭐ Whose team that id belongs to, so the number can be checked against something a person
+          // recognises — ⚠️ *an id on its own is only verifiable by pasting it somewhere else.*
+          squadName: widget.team.squadName,
+          onChanged: _manager,
+        ),
         _FreeTransfersRow(
           value: _freeTransfers,
           onChanged: (n) {
@@ -234,9 +240,14 @@ class _Heading extends StatelessWidget {
 }
 
 class _ManagerIdRow extends StatefulWidget {
-  const _ManagerIdRow({required this.managerId, required this.onChanged});
+  const _ManagerIdRow({
+    required this.managerId,
+    required this.squadName,
+    required this.onChanged,
+  });
 
   final int managerId;
+  final String squadName;
   final ValueChanged<int> onChanged;
 
   @override
@@ -264,10 +275,28 @@ class _ManagerIdRowState extends State<_ManagerIdRow> {
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
       children: [
-        const Expanded(
-          child: Text(
-            'FPL manager id',
-            style: TextStyle(color: Colors.white, fontSize: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'FPL manager id',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              // ⭐⭐ The name FPL has for this id. ⚠️ Absent rather than blank when the team has not
+              // loaded — *a label with nothing after it reads as a failure, not as "not yet".*
+              if (widget.squadName.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, right: 8),
+                  child: Text(
+                    widget.squadName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ),
+            ],
           ),
         ),
         SizedBox(

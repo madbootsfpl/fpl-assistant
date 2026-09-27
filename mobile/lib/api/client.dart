@@ -178,6 +178,7 @@ class ServiceClient {
     String question, {
     required List<int> playerIds,
     List<int> benchIds = const [],
+    String squadName = '',
     int free = 1,
     double bank = 0,
   }) async => Answer.fromJson(
@@ -185,6 +186,11 @@ class ServiceClient {
       'question': question,
       'player_ids': playerIds,
       'bench_ids': benchIds,
+      // ⭐⭐ Your FPL team's own name, so an answer reads *"Captain pick (The 4-4-2 Towers)"*. ⚠️ Every
+      // answer used to say **"squad 'yours'"** — and `my_team` had been returning the real name as
+      // `squad.name` the whole time, which this app already parsed into `MyTeam.squadName` and never
+      // used. ⭐ *The name was three layers deep and one field short of the sentence that needed it.*
+      'squad_name': squadName,
       'free': free,
       'bank': bank,
     }),

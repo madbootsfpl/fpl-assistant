@@ -1128,10 +1128,15 @@ def ask_question(request: AskRequest, *, store: Storage | None = None, narrator=
         # ⭐ The fifteen the caller owns, presented as the session squad — which is what `active_squad`
         # was built for (ADR-054/055), so squad-scoped questions resolve without a saved name.
         active = {
-            # ⭐ Named so the engine's own sentence reads: *"Captain pick (squad 'yours')"*.
+            # ⭐ Named so the engine's own sentence reads: *"Captain pick (The 4-4-2 Towers)"*.
             # ⚠️ "your squad" produced *"squad 'your squad'"*, which looks like a bug rather than
             # a phrase — *the caller chooses this word and the engine prints it verbatim.*
-            "name": "yours",
+            #
+            # ⚠️⚠️ **This was hard-coded to "yours" and every answer said so**, while `my_team` had been
+            # returning the real FPL team name in `squad.name` all along — ⭐ *the API knew the name and the
+            # answer did not, because `ask` had no field to carry it.* Still falls back, because a caller
+            # that sends no name must get a sentence that reads.
+            "name": request.squad_name.strip() or "yours",
             "player_ids": list(request.player_ids),
             "bench_ids": list(request.bench_ids),
         } if request.player_ids else None
