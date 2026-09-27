@@ -1141,30 +1141,34 @@ def ask_question(request: AskRequest, *, store: Storage | None = None, narrator=
             "bench_ids": list(request.bench_ids),
         } if request.player_ids else None
 
-        result = ask_engine.answer(
+        # ⭐⭐⭐ **`converse`, not `answer`** (ADR-317 C). `converse()` has carried *why* · *and the next?*
+        # · *what about defenders?* since ADR-047, and the phone could never reach any of them because
+        # `ask_question` called the one-shot entry point — ⚠️ *the machinery was built, tested and
+        # unreachable, which is the shape of half this month's findings.*
+        #
+        # ⚠️ **The context is rebuilt, never trusted.** The client holds five small fields; the decision
+        # behind them is recomputed here.
+        settings = {"horizon": request.horizon, "free": request.free, "bank": request.bank,
+                    "chip_status": _chip_status(request.manager_id, _next_gameweek(store))}
+        context = ask_engine.context_from_wire(request.context, store, active_squad=active, **settings)
+        result, next_context = ask_engine.converse(
             request.question,
+            context,
             store=store,
             # ⚠️ Silences the narrator without pretending it answered — see above.
             narrator=narrator or (lambda *a, **k: None),
             active_squad=active,
-            horizon=request.horizon,
-            free=request.free,
-            bank=request.bank,
-            # ⭐⭐ **Which chips are actually left** (ADR-317). ⚠️ Fetched here rather than in the engine:
-            # `src/ask.py` decides, it does not call FPL — *an engine that reaches the network is an engine
-            # that cannot be tested without one.*
-            #
-            # ⚠️⚠️ Only when a manager id is given, and never optimistic: a failed lookup leaves every chip
-            # **unknown**, which prints nothing, rather than **available**, which would print an
-            # instruction. *"We could not check" and "you still hold it" are different facts and only one
-            # of them is safe to act on.*
-            chip_status=_chip_status(request.manager_id, _next_gameweek(store)),
+            **settings,
         )
     finally:
         if ours:
             store.close()
 
     return {
+        # ⭐ Hand back so the next question can be a follow-up. ⚠️ Null when there is nothing to follow —
+        # *a client that stores an empty context will send it, and "why?" about nothing is a worse answer
+        # than the nudge.*
+        "context": ask_engine.context_to_wire(next_context),
         "question": result.question,
         # ⭐ Which engine answered, so a client can say so — ⚠️ *"I could not understand that" and "the
         # captain engine has nothing to say" are different answers and must not draw the same.*

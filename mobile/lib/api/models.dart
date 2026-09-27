@@ -2139,6 +2139,7 @@ class Answer {
     required this.detail,
     required this.message,
     required this.facts,
+    this.context,
   });
 
   factory Answer.fromJson(Map<String, dynamic> json) => Answer(
@@ -2151,9 +2152,16 @@ class Answer {
       for (final e in ((json['facts'] as Map?) ?? const {}).entries)
         '${e.key}': e.value,
     },
+    // ⭐⭐ What the last turn was about, so the next question can be "why?" or "and the next?"
+    // (ADR-317 C). ⚠️ Held and handed back unchanged — the app never reads inside it, and the server
+    // re-decides rather than trusting what comes back.
+    context: (json['context'] as Map?)?.cast<String, dynamic>(),
   );
 
   final String question;
+
+  /// Opaque: hand it back with the next question, or null to start fresh.
+  final Map<String, dynamic>? context;
 
   /// Which engine answered — ⭐ so the screen can say so. ⚠️ `chat` is the engine that answers *"I can
   /// answer about…"*, which is a real answer and not a failure.

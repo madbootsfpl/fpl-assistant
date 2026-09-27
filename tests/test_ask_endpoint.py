@@ -157,7 +157,11 @@ def test_markdown_is_stripped_at_the_seam_whatever_the_engine_emits(squad, monke
         message="I can answer about **captaincy**",
         facts={"player": "Saka (ARS)"},
     )
-    monkeypatch.setattr(ask_engine, "answer", lambda *a, **k: loud)
+    # ⚠️⚠️ **Stubs `converse`, not `answer`** (ADR-317 C). `ask_question` called the one-shot entry point
+    # until follow-ups were plumbed through; a stub left on `answer` is **silently bypassed** and this test
+    # then asserts against the real engine's output. ⭐ *A stub on the wrong seam does not fail loudly — it
+    # passes for the wrong reason*, and it only failed here because the real headline happens to differ.
+    monkeypatch.setattr(ask_engine, "converse", lambda *a, **k: (loud, None))
 
     out = ask("who should I captain?", squad)
 

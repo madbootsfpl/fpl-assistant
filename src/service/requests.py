@@ -181,6 +181,11 @@ class AskRequest:
     #: ⭐ Optional: a caller who cannot supply it still gets advice, marked **unknown** rather than
     #: available — *"we could not check" and "you still hold it" are different facts.*
     manager_id: int | None = None
+    #: ⭐⭐ **What the last turn was about**, so *"why?"* and *"and the next?"* mean something (ADR-317 C).
+    #: The client holds it between questions and hands it back unchanged; the engine **re-decides** rather
+    #: than trusting it — ⚠️ *a server that accepts a decision it did not make has stopped being the thing
+    #: that decides.*
+    context: dict | None = None
     free: int = 1
     bank: float = 0.0
     horizon: int = 5

@@ -258,6 +258,9 @@ class AskBody(BaseModel):
     squad_name: str = Field("", max_length=60,
                             description="Your FPL team name, so answers say it instead of 'yours'. "
                                         "`my_team` returns it as `squad.name`.")
+    context: dict | None = Field(None,
+                                 description="The `context` from the previous answer, so \"why?\" and "
+                                             "\"and the next?\" work. Hand it back unchanged.")
     manager_id: int | None = Field(None, ge=1,
                                    description="Your FPL manager id, so chip advice knows which chips "
                                                "you have already played. Optional: without it the advice "

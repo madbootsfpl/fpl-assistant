@@ -58,6 +58,24 @@ CORPUS = [
     ("should I go for a set-and-forget team?", None),
     ("is it worth taking a hit this week?", None),
     ("how many premiums should I own?", None),
+
+    # --- definitions, and the strategy questions they must not steal (ADR-317 B) ---
+    # ⚠️⚠️ **Nobody types the apostrophe on a phone.** `what's a` was here and `whats a` was not, so
+    # "whats a chip?" reached `chips` and got a strategy — and worse, "whats a wildcard?" reached
+    # `build_squad` and **built a squad**. ⭐ *A definition question answered by a machine that does
+    # something is the most confidently wrong shape this router has.*
+    ("whats a chip?", "rules"),
+    ("whats a wildcard?", "rules"),
+    ("whats an assist?", "rules"),
+    ("whats a double gameweek?", "rules"),
+    # ⚠️⚠️⚠️ **The four below are here because the fix broke them once.** `whats the` was added beside
+    # `whats a`, and it stole every one — a strategy question answered with a definition. ⭐ *"a" and "an"
+    # announce a definition; "the" announces almost anything*, and the spot-check that missed it happened
+    # to use "whats **my** best chip strategy".
+    ("whats the best chip strategy?", "chips"),
+    ("whats the best way to use your chips before they expire?", "chips"),
+    ("whats the best transfer?", "transfer"),
+    ("what chips have i played?", "chips"),
 ]
 
 

@@ -180,6 +180,7 @@ class ServiceClient {
     List<int> benchIds = const [],
     String squadName = '',
     int? managerId,
+    Map<String, dynamic>? context,
     int free = 1,
     double bank = 0,
   }) async => Answer.fromJson(
@@ -196,6 +197,8 @@ class ServiceClient {
       // recommended a Triple Captain that had been spent in GW3 — *the Chips screen knew and Ask could
       // not*, because this request had no field to carry the id.
       'manager_id': ?managerId,
+      // ⭐ The previous answer's `context`, so a follow-up knows what it follows.
+      'context': ?context,
       'free': free,
       'bank': bank,
     }),

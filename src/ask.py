@@ -56,7 +56,7 @@ from src.analytics.captain import _next_opponent
 from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
 from src.analytics.names import build_index, find_spoken_mentions
-from src.fpl_rules import match_rules
+from src.fpl_rules import CHIP_NAMES, chip_deadline, match_rules
 from src.squads import SquadStore
 from src.storage import Storage
 from src.ui.analyse import render_squad_analysis
@@ -105,7 +105,18 @@ _INTENT_KEYWORDS = {
     # rules (ADR-085): question-shaped, general cues so a rules question ("how does bench boost work",
     # "how do transfers work") beats the squad intents — WITHOUT stealing squad commands, which are imperative
     # / squad-scoped ("fix my bench", "what transfer should I make") and match none of these.
+    # ⚠️⚠️⚠️ **The apostrophe-less forms, and they matter more than they look** (ADR-317 B). `what's a`
+    # was here and `whats a` was not, so *"whats a chip?"* fell past `rules` into `chips` and got a
+    # strategy. Worse, two others landed on engines that **act** rather than explain: *"whats a wildcard?"*
+    # reached `build_squad` and **built a squad**, *"explain the bench boost"* reached `start_bench`.
+    # ⭐⭐ *A definition question answered by a machine that does something is the most confidently wrong
+    # shape this router has* — and nobody types the apostrophe on a phone.
     "rules": ("how does", "how do ", "how is a", "how are", "what is a", "what are the", "what's a",
+              # ⚠️⚠️⚠️ **"whats the" is NOT here, and it was.** It stole *"whats the best chip
+              # strategy?"* into `rules` — a strategy question answered with a definition. ⭐ *"a" and "an"
+              # announce a definition; "the" announces almost anything*, and the spot-check that missed it
+              # used "whats **my** best chip strategy" by luck.
+              "whats a", "whats an", "what're the",
               "what does", "what happens", "how many points", "how much do", "the rules", "fpl rules",
               "scoring", "clean sheet", "bonus point", "defensive contribution", "defcon", "price change",
               "price rise", "price fall", "sell-on", "auto sub", "auto-sub", "autosub", "when is the deadline",
@@ -127,6 +138,12 @@ _INTENT_KEYWORDS = {
               # Timing phrasings (2026-08-30). Without these, "wildcard now or wait?" fell through to
               # build_squad's bare "wildcard" and **built a squad** — a confidently wrong answer to a
               # question about when, measured as the only harmful mis-route in a 30-question corpus.
+              # ⚠️⚠️ **The past tense was missing, and `build_squad` took it.** `chips` knew "use my
+              # wildcard" and not "used my wildcard", so *"have i used my wildcard?"* fell past it to a
+              # bare "wildcard" and **built a squad** — ⭐ *asking whether you spent a chip is not asking
+              # to spend it, and the difference is one letter* (ADR-317 A).
+              "have i used", "have i played", "did i use", "did i play", "chips have i",
+              "can i still play", "do i still have", "still have my", "already played my",
               "wildcard now", "wildcard or wait", "wildcard this week", "wildcard yet",
               "when should i wildcard", "hold my wildcard", "save my wildcard"),
     # trends: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
@@ -362,6 +379,50 @@ class Context:
     count: int = 1                  # transfer count
     rank: int = 0                   # how many "next" steps in — the current pick / shortlist page
     decision: dict | None = None    # the decision itself, so "why" can re-narrate its facts
+
+
+#: The parts of a `Context` that travel back to a stateless client (ADR-317 C).
+#:
+#: ⚠️⚠️⚠️ **`decision` is deliberately NOT among them.** It is the engine's own output, and a client that
+#: could hand it back could hand back anything — ⭐ *a server that trusts a decision it did not make has
+#: stopped being the thing that decides.* The decision is **recomputed** from these five fields instead,
+#: which costs one dispatch and buys the guarantee.
+CONTEXT_WIRE = ("intent", "squad", "question", "count", "rank")
+
+
+def context_to_wire(context: "Context | None") -> dict | None:
+    """A `Context` reduced to what a client may hold between turns."""
+    if context is None or not context.intent:
+        return None
+    return {field: getattr(context, field) for field in CONTEXT_WIRE}
+
+
+def context_from_wire(payload, store: Storage, *, active_squad=None, horizon=_HORIZON,
+                      free: int = 1, bank: float = 0.0, chip_status=None) -> "Context | None":
+    """Rebuild the last turn from what the client sent back, **re-deciding** rather than trusting it.
+
+    ⭐ Only *"why"* needs the decision at all — *"and the next?"* and *"what about defenders?"* re-dispatch
+    anyway — so the cost is one engine call on a follow-up, and never on a fresh question.
+
+    ⚠️ Returns None on anything malformed. *A follow-up that cannot be rebuilt is a fresh question*, which
+    is the same thing that happens at the start of a chat and needs no special case.
+    """
+    if not isinstance(payload, dict) or not payload.get("intent"):
+        return None
+    try:
+        context = Context(
+            intent=str(payload["intent"]),
+            squad=payload.get("squad") or None,
+            question=str(payload.get("question") or ""),
+            count=int(payload.get("count") or 1),
+            rank=int(payload.get("rank") or 0),
+        )
+        decision = _dispatch(context.intent, store, context.question, context.squad,
+                             count=context.count, rank=context.rank, active_squad=active_squad,
+                             horizon=horizon, free=free, bank=bank, chip_status=chip_status)
+    except (KeyError, TypeError, ValueError):
+        return None
+    return replace(context, decision=decision)
 
 
 def detect_followup(question: str) -> FollowUp | None:
@@ -1100,14 +1161,125 @@ def _price_a_rebuild(owned, players, xp_by_id, squad):
     return rebuild_value(owned, players, xp_by_id, budget=budget)
 
 
+#: ⭐⭐⭐ **One chips engine, one intent** (ADR-317 A) — the shape ADR-308 gave captaincy, one intent along.
+#:
+#: ⚠️⚠️ **Four questions were getting one answer.** *"What chips have I played?"* is a **fact**, not a
+#: recommendation; *"before they expire"* is the same recommendation over a **shorter list**; *"can I still
+#: play my bench boost?"* is a **yes or no**. All three got the full four-chip strategy block, which is why
+#: the owner said it was not credible — ⭐ *the same answer to different questions is indistinguishable from
+#: not having listened.*
+CHIP_LENSES: dict[str, tuple[str, ...]] = {
+    "played": ("have i played", "have i used", "chips have i", "already played", "already used",
+               "which chips have", "what chips have", "did i play", "did i use"),
+    "holding": ("can i still play", "do i still have", "have i still got", "still have my",
+                "can i still use", "do i have my"),
+    "expiry": ("before they expire", "before it expires", "expire", "expiring", "run out", "left to use"),
+}
+
+
+def chip_lens(question: str) -> str | None:
+    """Which chip question was asked — or `None` for *"which chip should I use?"*.
+
+    ⭐ Longest phrase wins, the same rule `captain_lens` uses, so *"what chips have i played"* is a `played`
+    question rather than an `expiry` one because it names the more specific thing.
+    """
+    low = f" {question.lower()} "
+    best, hit = None, 0
+    for lens, phrases in CHIP_LENSES.items():
+        for phrase in phrases:
+            if phrase in low and len(phrase) > hit:
+                best, hit = lens, len(phrase)
+    return best
+
+
+def _chip_named(question: str) -> str | None:
+    """The FPL chip a question names, if it names one — for *"can I still play my bench boost?"*."""
+    low = question.lower()
+    for fpl in CHIP_NAMES:
+        spoken = {"bboost": ("bench boost", "benchboost"), "3xc": ("triple captain", "triple-captain"),
+                  "freehit": ("free hit", "freehit"), "wildcard": ("wildcard", "wild card")}[fpl]
+        if any(word in low for word in spoken):
+            return fpl
+    return None
+
+
+def _chip_state_answer(chip_status, squad_name: str, lens: str, question: str) -> dict:
+    """The two questions that are **facts about your season**, not recommendations (ADR-317 A).
+
+    ⚠️⚠️ **Without a manager id there is no honest answer here**, and the engine says so rather than
+    guessing — ⭐ *this is the one place where "I do not know" is the whole truth, and inventing a chip list
+    would be the worst failure this file could have.*
+    """
+    known = chip_status and any(v.get("available") is not None for v in chip_status.values())
+    if not known:
+        return {"message": ("I cannot see which chips you have played — that needs your FPL manager id. "
+                            "Ask me *which chip should I use?* and I will still tell you when each is best.")}
+
+    played = [(CHIP_NAMES[k], v["played_in"]) for k, v in chip_status.items() if v.get("played_in")]
+    held = [CHIP_NAMES[k] for k, v in chip_status.items() if v.get("available")]
+
+    # ⭐⭐ **Naming a chip asks a yes/no, whichever way the question was phrased.** *"Have I used my
+    # wildcard?"* reads as a `played` question and wants one word, not a list of four — ⚠️ *the lens says
+    # what kind of question it is; the named chip says how narrow the answer should be.*
+    named = _chip_named(question)
+    if named:
+        state = chip_status.get(named) or {}
+        gone = state.get("played_in")
+        # ⭐ The answer first, then the evidence — *a yes/no question answered with a paragraph has not
+        # been answered.*
+        head = (f"No — you played your {CHIP_NAMES[named]} in GW{gone}."
+                if gone else f"Yes — your {CHIP_NAMES[named]} is still available.")
+        return {
+            "headline": f"{head} ({squad_name})",
+            "detail": _chip_state_detail(played, held),
+            "facts": {"chip": CHIP_NAMES[named],
+                      "available": "no" if gone else "yes",
+                      "played_in": f"GW{gone}" if gone else "not played"},
+            "subjects": [],
+            "task": f"answer in one short sentence whether the {CHIP_NAMES[named]} is still available, "
+                    "using ONLY the facts",
+        }
+
+    # ⭐ `played`, or a `holding` question that named no chip — both want the same list.
+    head = (", ".join(f"{name} (GW{gw})" for name, gw in played) if played
+            else "none yet — all four are still in hand")
+    return {
+        "headline": f"Chips played ({squad_name}): {head}",
+        "detail": _chip_state_detail(played, held),
+        "facts": {"played": head, "still_available": ", ".join(held) or "none"},
+        "subjects": [],
+        "task": "say in one short sentence which chips are gone and which are left, using ONLY the facts",
+    }
+
+
+def _chip_state_detail(played, held) -> str:
+    lines = ["Your chips", ""]
+    if played:
+        lines.append("  Played:     " + ", ".join(f"{n} (GW{g})" for n, g in played))
+    else:
+        lines.append("  Played:     none yet")
+    lines += [f"  Still have: {', '.join(held)}"] if held else ["  Still have: none"]
+    # ⚠️ Availability is per HALF, not per season (ADR-234) — a wildcard spent in GW4 leaves the
+    # second-half one untouched, and a reader who does not know that reads "played" as "gone for good".
+    lines += ["", "  Chips reset at the halfway point, so a chip used in the first half does not",
+              "  spend the second half's."]
+    return "\n".join(lines)
+
+
 def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
-                  *, horizon=_HORIZON, chip_status=None) -> dict | None:
+                  *, horizon=_HORIZON, chip_status=None, lens=None, question="") -> dict | None:
     """Analytics DECIDE when to play each chip (ADR-082): Triple Captain · Bench Boost · Free Hit · Wildcard.
 
     An assembly of the per-GW xP (`chip_advisor` over `by_gameweek`), humanised for narration and
     verified — the LLM never decides anything. Reuses `_squad_xp` so the horizon xP is the same the
     transfer/analyse/gameweek tools use (no drift). `horizon` (ADR-077) drives the window.
     """
+    # ⭐⭐ **A question about your season, not about the fixtures** (ADR-317 A). *"What have I played?"* and
+    # *"can I still play X?"* are answered from the chip status alone — ⚠️ *running a five-gameweek
+    # optimisation to answer "yes" is how four questions came to share one answer.*
+    if lens in {"played", "holding"}:
+        return _chip_state_answer(chip_status, squad_name or "yours", lens, question)
+
     data = _squad_xp(store, squad_name, active_squad, horizon=horizon)
     if data is None:
         return None
@@ -1129,10 +1301,27 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
     facts = _chips_facts(advice)
     facts["confidence"] = "; ".join(f"{c.replace('_', ' ')} {v['confidence']}/100 ({v['band']})"
                                     for c, v in confidences.items())
+    # ⭐⭐ **"Before they expire" is the same recommendation over a shorter list**, so it changes the
+    # heading and not the arithmetic — ⚠️ *a lens that recomputed the answer would be a second engine, and
+    # two engines for one question is how a number starts disagreeing with itself.*
+    expiry_note, expiry_lead = "", ""
+    if lens == "expiry":
+        last = chip_deadline(gameweeks[0] if gameweeks else None)
+        held = [CHIP_NAMES[k] for k, v in (chip_status or {}).items() if v.get("available")]
+        expiry_note = (f" — {', '.join(held)} expire after GW{last}" if held
+                       else f" — this half's chips expire after GW{last}")
+        # ⚠️⚠️ **The heading is not the answer.** A lens that changed only the headline left the body
+        # identical to the plain strategy question — ⭐ *which is the complaint this ADR exists for, made
+        # by my own fix.* The deadline and what is still in hand belong in the block a reader reads.
+        expiry_lead = (
+            f"Expiring after GW{last}: {', '.join(held)}\n\n" if held
+            else f"Nothing left to use — this half's chips expire after GW{last}.\n\n"
+        )
+
     return {
-        "detail": render_chip_advice(advice, squad_name, horizon=horizon,
-                                     confidences=confidences, status=chip_status),
-        "headline": f"Chip strategy ({scope_label(squad_name)}): "
+        "detail": expiry_lead + render_chip_advice(advice, squad_name, horizon=horizon,
+                                                   confidences=confidences, status=chip_status),
+        "headline": f"Chip strategy ({scope_label(squad_name)}){expiry_note}: "
                     f"Triple Captain GW{tc['gameweek']}, Bench Boost GW{advice['bench_boost']['gameweek']}",
         "facts": facts,
         "subjects": subjects,
@@ -1971,7 +2160,7 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
                                 question=question, free=free, bank=bank)
     if intent == "chips":
         return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon,
-                             chip_status=chip_status)
+                             chip_status=chip_status, lens=chip_lens(question), question=question)
     if intent == "rules":
         return _decide_rules(question)
     if intent == "compare":
@@ -2063,6 +2252,29 @@ def _fresh(question: str, context: "Context | None", store: Storage, narrator, a
     return result, new_context
 
 
+def _why_detail(decision: dict, subject: str) -> str:
+    """The reasons behind a pick, from the facts the engine already computed (ADR-089).
+
+    ⭐ *An explanation that only exists when a language model is attached is not an explanation, it is a
+    flourish* — and every shipped surface runs without one.
+    """
+    facts = decision.get("facts") or {}
+    lines = [f"Why {subject}", ""]
+    for label, key in (("For", "why"), ("Against", "risk"), ("Confidence", "confidence")):
+        value = facts.get(key)
+        if not value:
+            continue
+        # ⭐ One reason per line: the engine joins them with "; " for a prompt, and a reader wants a list.
+        parts = [p.strip() for p in str(value).split(";")] if key != "confidence" else [str(value)]
+        lines.append(f"  {label}:")
+        lines += [f"    · {p}" for p in parts if p]
+        lines.append("")
+    if len(lines) <= 2:
+        # ⚠️ Nothing grounded to show — say so rather than printing a heading over an empty block.
+        return f"I do not have a recorded reason for {subject} beyond the numbers above."
+    return "\n".join(lines).rstrip()
+
+
 def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator, active_squad=None):
     """Resolve a follow-up against `context` → (result, new_context), or None if it can't apply
     here (e.g. 'what about defenders?' after a captain pick → let it fall through to a fresh Q)."""
@@ -2074,7 +2286,17 @@ def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator, 
         subject = (context.decision.get("subjects") or ["this pick"])[0]
         detailed = {**context.decision,
                     "task": f"explain in 3-4 short sentences, in more depth, why {subject} is the "
-                            "pick here — using ONLY the facts"}
+                            "pick here — using ONLY the facts",
+                    # ⭐⭐⭐ **"Why?" has to say something new without a model, and it can** (ADR-317 C).
+                    # ⚠️⚠️ It used to re-narrate the same decision with a deeper `task`, which on a
+                    # deployment with no Ollama — *which is every deployment* (ADR-309) — produced the
+                    # **identical answer**. The owner's complaint, arriving through a different door: *the
+                    # same answer to a different question is indistinguishable from not having listened.*
+                    #
+                    # ⭐ The grounded reasons were already computed and sitting in `facts` (ADR-089):
+                    # `why`, `risk` and `confidence`. The prose was never where the explanation lived.
+                    "detail": _why_detail(context.decision, subject),
+                    "headline": f"Why {subject}?"}
         return assemble(context.question, context.intent, detailed, narrator, known_names=known), context
 
     if fu.kind == "next":
@@ -2112,7 +2334,8 @@ def _swap_position(question: str, new_code: str) -> str:
 
 
 def converse(question: str, context: "Context | None", *, store: Storage,
-             narrator=llm.narrate, active_squad=None) -> tuple[AskResult, "Context | None"]:
+             narrator=llm.narrate, active_squad=None, horizon=_HORIZON, free: int = 1,
+             bank: float = 0.0, chip_status=None) -> tuple[AskResult, "Context | None"]:
     """One conversational turn (ADR-047): a follow-up on `context`, else a fresh question.
 
     Returns ``(result, new_context)``. `context` is None at the start of a chat; a follow-up with
@@ -2127,7 +2350,8 @@ def converse(question: str, context: "Context | None", *, store: Storage,
         if applied is not None:
             return applied
         # a detected follow-up that doesn't apply here → treat the line as a fresh question.
-    return _fresh(question, context, store, narrator, active_squad)
+    return _fresh(question, context, store, narrator, active_squad, horizon=horizon,
+                  free=free, bank=bank, chip_status=chip_status)
 
 
 def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,

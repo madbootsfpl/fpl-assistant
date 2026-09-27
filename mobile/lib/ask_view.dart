@@ -45,6 +45,10 @@ class _AskViewState extends State<AskView> {
   late final Dictation _mic = widget.dictation ?? Dictation();
   Listening _listening = Listening.idle;
 
+  /// ⭐⭐ What the last answer was about, so *"why?"* and *"and the next?"* mean something (ADR-317 C).
+  /// ⚠️ Opaque — the app never reads inside it, and the server re-decides rather than trusting it back.
+  Map<String, dynamic>? _context;
+
   /// ⭐ Real questions in the engine's own vocabulary, because *a free-text box with no examples is a
   /// box people type one thing into and give up on.* Tapping one asks it.
   /// ⚠️⚠️ Two of these are here to advertise that **the qualifier is heard** (ADR-308). Offering only
@@ -113,6 +117,7 @@ class _AskViewState extends State<AskView> {
       benchIds: [for (final p in widget.team.analysis.bench) p.id],
       squadName: widget.team.squadName,
       managerId: widget.team.managerId,
+      context: _context,
       // ⚠️ The real numbers. Asking against £0 and one transfer would answer a question about a
       // position the manager is not in — the exact defect `ask.py` records at its own call site.
       free: widget.team.freeTransfers,
@@ -126,6 +131,17 @@ class _AskViewState extends State<AskView> {
     // ⭐ Found by a test that returned 500 from a mock, which completes in microseconds. *A network
     // error is normally slow enough to hide this, which is exactly why it would have shipped.*
     unawaited(pending.then((_) {}, onError: (Object _, StackTrace _) {}));
+    // ⭐⭐ **Remember what this turn was about**, so the next question can follow it (ADR-317 C).
+    // ⚠️ Cleared on failure rather than kept: *"why?" about a question that errored is a follow-up to
+    // nothing*, and the nudge the server sends back is a better answer than a stale one.
+    unawaited(pending.then(
+      (a) {
+        if (mounted) _context = a.context;
+      },
+      onError: (Object _, StackTrace _) {
+        if (mounted) _context = null;
+      },
+    ));
     // ⚠️ A block body, not an arrow: `=> _answer = pending` **returns** the assignment, and Flutter
     // refuses a `setState` callback that returns a Future — *the arrow is shorter and says something
     // different.*
