@@ -124,6 +124,11 @@ def test_the_release_scripts_publish_this_directory(script: str) -> None:
     assert re.search(r'cp\s+[^\n]*\bsite/index\.html\b[^\n]*"\$SITE/?"', text), (
         f"{script} deploys $SITE without refreshing the landing page from the repo"
     )
+    # ⚠️⚠️ **Same argument, one page along.** `/help` is served out of the same folder, so a release that
+    # refreshes `index.html` and not `help.html` republishes a stale help page — ⭐ *the failure this
+    # guard already exists for, which is the reason to extend it rather than write a second one.*
+    for page in ("help.html", "help.css", "help.js"):
+        assert page in text, f"{script} deploys $SITE without refreshing {page} from the repo"
 
 
 def test_the_phone_layout_centres_the_buttons_with_everything_else():

@@ -80,7 +80,12 @@ echo "  built: $(du -h "$APK" | cut -f1)  versionCode=$code"
 # ⚠️ Copied, not synced: the generated files below (`app/`, `_headers`, `_redirects`) live only here, and
 # a `--delete` would remove the APKs this script just spent three minutes building.
 mkdir -p "$SITE"
-cp site/index.html site/*.png "$SITE/"
+# ⚠️⚠️ **The help page is copied here too, and that is the whole point of this line existing.** Both
+# scripts deploy the entire `$SITE` folder, so an Android release republishes whatever landing page is
+# sitting in it — which is how a copy **nine lines stale** went live once. ⭐ *A guard that names one
+# script teaches everyone the other script is covered*, and `/help` was one release away from the same
+# story (ADR-319/321).
+cp site/index.html site/help.html site/help.css site/help.js site/*.png "$SITE/"
 
 mkdir -p "$SITE/app"
 cp "$APK" "$SITE/app/madboots-$next.apk"
