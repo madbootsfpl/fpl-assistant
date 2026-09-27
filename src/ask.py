@@ -55,7 +55,7 @@ from src.analytics import (
 from src.analytics.captain import _next_opponent
 from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
-from src.analytics.names import build_index, find_mentions
+from src.analytics.names import build_index, find_spoken_mentions
 from src.fpl_rules import match_rules
 from src.squads import SquadStore
 from src.storage import Storage
@@ -534,7 +534,11 @@ def _looks_like_a_comparison(question: str) -> bool:
 def _named_in(question: str, players) -> list:
     """The players a question names, in the order the engine ranks them — ⭐ *resolved, never regexed.*"""
     index = build_index(players)
-    hits = find_mentions(question.lower(), index)
+    # ⭐⭐ **Spoken-tolerant** (ADR-315): exact matching first and unchanged, then one conservative pass over
+    # what it did not claim — because a phone's recogniser has never heard of Semenyo and returns *"semenio"*.
+    # ⚠️ Ask only: the same index feeds the buzz counter over thousands of Reddit sentences, where a fuzzy
+    # pass would credit players to ordinary words at scale.
+    hits = find_spoken_mentions(question.lower(), index)
     by_id = {p["id"]: p for p in players}
     return [by_id[pid] for pid in hits if pid in by_id]
 

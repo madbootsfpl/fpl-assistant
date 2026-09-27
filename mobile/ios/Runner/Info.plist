@@ -6,6 +6,12 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- ⭐⭐ The sheet a person reads before deciding. ⚠️ A vague reason is a denied permission: say what
+	     is recorded, what it becomes, and that it stops when they stop talking. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>So you can ask MADBOOTS a question out loud instead of typing it. Recording only happens while you hold the microphone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>To turn what you say into the question MADBOOTS answers. Only the words are used — nothing is stored, and nothing is sent to MADBOOTS but the finished question.</string>
 	<key>CFBundleDisplayName</key>
 	<string>MADBOOTS</string>
 	<key>CFBundleExecutable</key>

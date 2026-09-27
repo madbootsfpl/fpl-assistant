@@ -22,7 +22,9 @@ dropped. Measured across the 14 collisions: 9 have a clear favourite, and in the
 the candidates, so nothing of value is lost.
 """
 
+import difflib
 import re
+import unicodedata
 
 MIN_NAME = 4          # shorter names collide with ordinary words; the buzz counter has always used this
 CLEAR_OWNERSHIP = 1.0     # a favourite must be owned by at least this % …
@@ -151,5 +153,100 @@ def find_mentions(text: str, index) -> dict:
                 continue                 # a bare surname that is really someone else's first name
             taken[a:b] = b"\x01" * (b - a)
             pid = _get(player, "id")
+            hits[pid] = hits.get(pid, 0) + 1
+    return hits
+
+
+# ── dictation ────────────────────────────────────────────────────────────────
+#
+# ⭐⭐ **Spoken names arrive wrong, and the fix belongs here rather than in the recogniser.** A phone's
+# speech engine has never heard of Semenyo, Ndiaye or Cunha; it returns the nearest thing in its own
+# vocabulary — *"semenio"*, *"n diaye"*, *"koonya"*.
+#
+# ⚠️⚠️⚠️ **A similarity threshold alone cannot do this, and measuring said so.** Of 647 web names, **87
+# pairs are already ≥0.80 similar to each other** — `Fernandes` ↔ `B.Fernandes`, `Timber` ↔ `J.Timber`, and
+# **`McAteer` ↔ `McAtee` at 0.92, two different players.** Any cutoff loose enough to catch a mangled name
+# sits inside the range where real players are confusable.
+#
+# ⭐⭐⭐ So the rule is **a threshold AND a margin**: the best candidate must clear `MIN_RATIO`, *and* beat
+# the runner-up by `MIN_MARGIN`. Measured on sixteen realistic manglings and thirteen ordinary question
+# words ("captain", "transfer", "should", "this week", …):
+#
+#     noise words peak at            0.71  ("better" → Zetterer) — every one rejected
+#     clean manglings cluster at    ≥0.86  with margins ≥0.16    — every one accepted
+#     the dangerous case: "sala" → Salia at 0.89 — a WRONG player with a high ratio,
+#     rejected only by its 0.09 margin.
+#
+# ⭐ At these values: **7 of 7 accepted correctly, 0 wrong, 7 dropped.** That is the right direction to be
+# wrong in (ADR-154) — *a dropped name costs a question; a wrong one answers about somebody else.*
+MIN_RATIO = 0.85
+MIN_MARGIN = 0.15
+
+#: How many words a spoken name might occupy — "sam enyo" is one name the recogniser split in two.
+MAX_SPOKEN_WORDS = 2
+
+
+def _fold(text: str) -> str:
+    """Accents, punctuation and case removed — ⭐ *`N'Diaye`, `Ndiaye` and `n diaye` are one word here.*"""
+    stripped = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in stripped if c.isalnum())
+
+
+def nearest_name(spoken: str, index) -> tuple | None:
+    """The player a mis-heard name most likely meant → `(player, ratio, margin)`, or None if unsure.
+
+    ⚠️ Returns None rather than a best guess whenever the margin is thin — see the note above for why the
+    margin, not the ratio, is what makes this safe.
+    """
+    token = _fold(spoken)
+    if len(token) < MIN_NAME:
+        return None
+
+    best: dict = {}
+    for pattern, player, _exact in index:
+        pid = _get(player, "id")
+        ratio = difflib.SequenceMatcher(None, token, _fold(pattern)).ratio()
+        if ratio > best.get(pid, (0.0, None))[0]:
+            best[pid] = (ratio, player)
+
+    ranked = sorted(best.values(), key=lambda pair: -pair[0])
+    if not ranked:
+        return None
+    top_ratio, top_player = ranked[0]
+    runner_up = ranked[1][0] if len(ranked) > 1 else 0.0
+    margin = top_ratio - runner_up
+    if top_ratio < MIN_RATIO or margin < MIN_MARGIN:
+        return None
+    return top_player, round(top_ratio, 2), round(margin, 2)
+
+
+def find_spoken_mentions(text: str, index) -> dict:
+    """`find_mentions`, then a **conservative** second pass over what it did not claim (ADR-315).
+
+    ⭐ Exact matching runs first and unchanged, so a correctly transcribed name behaves exactly as it always
+    has. Only the leftovers are guessed at, and only when the guess is clear.
+
+    ⚠️⚠️ **Deliberately not folded into `find_mentions`.** That function also feeds the buzz counter over
+    Reddit and headlines — thousands of sentences full of ordinary words — where a fuzzy pass would credit
+    players to noise at scale. ⭐ *Fuzziness is a property of how this text arrived, not of the index.*
+    """
+    hits = dict(find_mentions(text, index))
+    if not text:
+        return hits
+
+    claimed = {pid for pid in hits}
+    words = re.findall(r"[A-Za-z'\u2019-]+", text)
+    for size in range(MAX_SPOKEN_WORDS, 0, -1):
+        for i in range(len(words) - size + 1):
+            run = " ".join(words[i:i + size])
+            if _fold(run) in {_fold(p) for p, pl, _ in index if _get(pl, "id") in claimed}:
+                continue
+            found = nearest_name(run, index)
+            if found is None:
+                continue
+            pid = _get(found[0], "id")
+            if pid in claimed:
+                continue
+            claimed.add(pid)
             hits[pid] = hits.get(pid, 0) + 1
     return hits

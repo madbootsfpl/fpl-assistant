@@ -16,12 +16,22 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/models.dart';
 import 'brand.dart';
+import 'dictation.dart';
 
 class AskView extends StatefulWidget {
-  const AskView({required this.client, required this.team, super.key});
+  const AskView({
+    required this.client,
+    required this.team,
+    this.dictation,
+    super.key,
+  });
 
   final ServiceClient client;
   final MyTeam team;
+
+  /// ⭐ Injectable so the microphone's behaviour can be tested without one — ⚠️ *a control whose states
+  /// only exist on a device is a control nothing checks.*
+  final Dictation? dictation;
 
   @override
   State<AskView> createState() => _AskViewState();
@@ -30,6 +40,10 @@ class AskView extends StatefulWidget {
 class _AskViewState extends State<AskView> {
   final TextEditingController _question = TextEditingController();
   Future<Answer>? _answer;
+
+  /// ⭐ The microphone (ADR-315) — the platform's own recogniser, on this device.
+  late final Dictation _mic = widget.dictation ?? Dictation();
+  Listening _listening = Listening.idle;
 
   /// ⭐ Real questions in the engine's own vocabulary, because *a free-text box with no examples is a
   /// box people type one thing into and give up on.* Tapping one asks it.
@@ -47,8 +61,39 @@ class _AskViewState extends State<AskView> {
 
   @override
   void dispose() {
+    _mic.stop();
     _question.dispose();
     super.dispose();
+  }
+
+  /// ⭐⭐ **Tap to talk, tap to stop** — not press-and-hold. A question takes a few seconds to say and a
+  /// held finger covers the field it is filling; ⚠️ *a control that hides its own output is a control
+  /// people use once.*
+  Future<void> _dictate() async {
+    if (_listening == Listening.live) {
+      await _mic.stop();
+      setState(() => _listening = Listening.idle);
+      return;
+    }
+    if (!await _mic.available()) {
+      // ⚠️ Said once, in place, and the keyboard still works — ⭐ *a missing microphone is not a broken
+      // screen.*
+      if (mounted) setState(() => _listening = Listening.unavailable);
+      return;
+    }
+    setState(() => _listening = Listening.live);
+    await _mic.start(
+      onWords: (words, done) {
+        if (!mounted) return;
+        setState(() {
+          // ⭐ The field fills **as it is spoken**, so a name coming out wrong is visible before the
+          // question is sent rather than after the answer is wrong.
+          _question.text = words;
+          _question.selection = TextSelection.collapsed(offset: words.length);
+          if (done) _listening = Listening.idle;
+        });
+      },
+    );
   }
 
   void _ask([String? preset]) {
@@ -110,9 +155,28 @@ class _AskViewState extends State<AskView> {
               borderRadius: BorderRadius.circular(Brand.radiusMd),
               borderSide: BorderSide.none,
             ),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.arrow_upward, color: Brand.purple),
-              onPressed: _ask,
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ⚠️ Hidden entirely where there is no recogniser, rather than shown disabled — ⭐ *a
+                // control that cannot work is worse than no control: it invites a tap and answers with
+                // nothing.*
+                if (_listening != Listening.unavailable)
+                  IconButton(
+                    tooltip: _listening == Listening.live ? 'Stop listening' : 'Ask out loud',
+                    icon: Icon(
+                      _listening == Listening.live ? Icons.stop_circle : Icons.mic_none,
+                      // ⭐ Orange while live, because it is the one state that must never be mistaken —
+                      // purple is this app's ordinary "yours", and listening is not ordinary.
+                      color: _listening == Listening.live ? Brand.orange : Brand.purple,
+                    ),
+                    onPressed: _dictate,
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_upward, color: Brand.purple),
+                  onPressed: _ask,
+                ),
+              ],
             ),
           ),
         ),

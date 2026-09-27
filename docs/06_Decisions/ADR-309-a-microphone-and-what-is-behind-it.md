@@ -1,7 +1,7 @@
 # ADR-309 — A microphone, and what is behind it
 
 **Date:** 2026-09-26
-**Status:** ⏳ **Gate — verified in code, not built.** Sequence agreed; one decision deferred with a £ in it.
+**Status:** ⏳ **Gate — item 1 built ([ADR-315](ADR-315-a-question-you-can-say.md)); 2-4 open; 5-7 await the host decision.**
 **From:** the owner's own question — *"Can we add a microphone to speak a question into Ask?"* — and a full
 conversational-Ask design brought back from ChatGPT for review.
 **Follows:** [ADR-307](ADR-307-twenty-questions-and-what-ask-does-with-them.md) (measured),
@@ -205,7 +205,7 @@ question; voice out fights the product.* If it ever arrives it suits only the on
 
 | # | what | LLM? | note |
 |---|---|---|---|
-| **1** | **Microphone into the existing text box** | no | one dependency; the owner's own question, and the cheapest thing here |
+| **1** ✅ | **Microphone into the existing text box** | no | ✅ **Built — [ADR-315](ADR-315-a-question-you-can-say.md).** The plugin was the afternoon; the work was that *a recogniser has never heard of Semenyo* — and a similarity threshold turned out to be **unusable**, because 87 pairs of real names are already ≥0.80 alike |
 | **2** | **Surface the gameweek briefing** | no | it exists, and it is better than the mockup — this is UI |
 | **3** | **Plumb context: *"Why?"*, *"and the next?"*** | no | exists since ADR-047; unreachable from the phone |
 | **4** | **Harden name resolution for dictation** | no | the real work in voice, and ADR-308 depends on it too |

@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ⭐ Asking a question out loud (ADR-315). Requested at the moment the microphone is first tapped,
+         never at launch — *a permission asked before it is needed is a permission denied.* -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- ⚠️ Android 11+ needs this to see that a recogniser exists at all; without it the plugin reports
+         "speech not available" on a phone that has it. -->
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService"/></intent>
+    </queries>
+
     <!--
       ⚠️⚠️ THE RELEASE BUILD NEEDS THIS AND FLUTTER'S TEMPLATE DOES NOT PROVIDE IT.
 

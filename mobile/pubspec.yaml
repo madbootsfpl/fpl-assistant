@@ -50,6 +50,12 @@ dependencies:
   shared_preferences: ^2.3.0
   url_launcher: ^6.3.2
 
+  # ⭐⭐ **The platform's own recogniser** (ADR-309/315) — iOS Speech, Android SpeechRecognizer, and the Web
+  # Speech API in a browser. ⚠️ Deliberately not Whisper or any hosted transcriber: this runs **on the
+  # device**, costs nothing, needs no server, and adds no key to manage — *the cheapest item on the list
+  # was the one the design had scheduled last.*
+  speech_to_text: ^7.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
