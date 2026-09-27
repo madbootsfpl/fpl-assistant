@@ -99,6 +99,15 @@ footer a{color:var(--purple-lt);text-decoration:none}
   .hero img{max-width:min(300px,64vw);max-height:26vh}
   .lede{margin-left:auto;margin-right:auto}
   .cta-row{justify-content:center}
+  /* ⚠️ The row centres its ONE child — a `.plat` wrapper — so the buttons inside it stayed hard left while
+     the tagline, the lede and "See how it works" were centred. ⭐ On a phone that reads as a broken column,
+     which is what "doesn't scale well" turned out to mean. */
+  .plat{justify-content:center}
+  /* ⭐ `.chip` is a 999px pill, which is right for the one line it was designed around. On a phone these
+     wrap to two or three, and a full radius on a multi-line box reads as a stretched lozenge — the curved
+     ends eat width the text needs. ⚠️ *A shape that only works at one line is a shape that only works on a
+     desktop.* */
+  .chip{border-radius:18px;padding:11px 16px}
   .cards{grid-template-columns:1fr}
 }
 </style>

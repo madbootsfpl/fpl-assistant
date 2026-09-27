@@ -102,3 +102,25 @@ def test_the_release_script_publishes_this_directory() -> None:
     script = (SITE.parent / "scripts" / "release_android.sh").read_text()
 
     assert 'cp site/index.html site/*.png "$SITE/"' in script
+
+
+def test_the_phone_layout_centres_the_buttons_with_everything_else():
+    """⚠️⚠️ **Half the hero was centred and half was not**, which is what *"doesn't scale well on the
+    iPhone"* turned out to mean — not type size, and not overflow (measured: at a true 390px viewport the
+    page's `scrollWidth` is 390 and nothing overhangs).
+
+    ⭐ The cause is one indirection: `.cta-row{justify-content:center}` centres its **only child**, a `.plat`
+    wrapper, and `.plat` itself defaulted to `flex-start` — so the two main buttons sat hard left under a
+    centred tagline while *"See how it works"*, which has no wrapper, sat centred. ⭐⭐ *Centring a container
+    is not centring its contents*, and the difference is invisible until the row wraps.
+    """
+    import re
+
+    page = (SITE / "index.html").read_text()
+    phone = re.search(r"@media\(max-width:760px\)\{(.*?)\n\}", page, re.S)
+    assert phone, "the phone breakpoint has moved — this guard is reading the wrong block"
+
+    block = phone.group(1)
+    assert re.search(r"\.plat\{[^}]*justify-content:\s*center", block), (
+        "the phone layout no longer centres .plat, so the hero buttons are left-aligned again"
+    )
