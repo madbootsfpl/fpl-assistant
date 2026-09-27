@@ -13,7 +13,7 @@ library;
 /// term key → (short label, explanation).
 const Map<String, (String, String)> glossary = {
   'bench_order': ('Bench order', 'The order FPL will substitute from if a starter plays no minutes: first, second, third, then your reserve keeper, who can only replace a keeper.'),
-  'ceiling': ('Ceiling', 'The highest this week\'s confidence could reach, which is your **captain\'s own number**. Lifting it means choosing a different captain, not a different week.'),
+  'ceiling': ('Ceiling', 'The highest this week\'s confidence can go — and it is **the same number as your captain\'s**, because the week turns on that one pick.\n\nSo the flagged players listed under the score are the gap: sorting them out moves you up towards the ceiling. Only choosing a different captain moves the ceiling itself.'),
   'confidence': ('Confidence', 'How **clear** this week\'s plan is, 1–99. It is driven by your captain and reduced by flagged players in your XI.\n\nIt is a documented heuristic, **not a probability**. Raising it does not make you more likely to be right — it means the week is less ambiguous.'),
   'defcon': ('Defensive contributions', 'Tackles, interceptions, clearances and blocks per 90 — the actions FPL now awards points for.'),
   'edge': ('Edge', 'What is going **for** you this week — a clear captain, an upgrade worth taking, points sitting on your bench.'),

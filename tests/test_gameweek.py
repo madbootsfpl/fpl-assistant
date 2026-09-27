@@ -299,7 +299,12 @@ def test_the_plan_says_when_banking_beats_spending():
     timing = bank_or_use([{"gain": 0.3}, {"gain": 3.0}], 0.3)
     assert timing["action"] == "bank"
     out = render_gameweek_plan(_plan(_tr(0.3), timing), "TST", horizon=1)
-    assert "Or bank it:" in out and "saves 3.0" in out
+    # ⚠️ The claim is that the **arithmetic is shown**, not that it is phrased a particular way — the old
+    # wording said "saves 3.0" and ADR-314 rewrote it because *three numbers with no units* was the thing
+    # the owner could not read. ⭐ Assert the number and what it is a number of.
+    assert "Or bank it:" in out
+    assert "3.0 pts" in out, "the value of banking is not shown"
+    assert "hit" in out, "…nor what that value comes from"
 
 
 def test_a_worthwhile_move_is_not_second_guessed():

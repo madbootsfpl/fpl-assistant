@@ -642,8 +642,13 @@ def confidence_levers(captain_score, flags) -> dict | None:
         "score": score,
         "ceiling": int(captain_score),
         "levers": levers,
-        "fixed": (f"your captain's own number ({int(captain_score)}/100); lifting it means a different "
-                  "captain, not a different week"),
+        # ⚠️⚠️ **Rewritten after the owner read it and could not use it** (ADR-314). It said *"your
+        # captain's own number (64/100); lifting it means a different captain, not a different week"* —
+        # which is true, and assumes the reader already knows that the ceiling IS the captain's score.
+        # ⭐ *A sentence that only makes sense to someone who already knows the thing it explains is not an
+        # explanation.* This says **why** the two numbers are the same, in the clause where they meet.
+        "fixed": (f"the same as your captain's confidence ({int(captain_score)}/100), because the week "
+                  "turns on that one pick"),
     }
 
 

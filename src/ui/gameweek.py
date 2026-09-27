@@ -208,7 +208,7 @@ def _levers_lines(levers) -> list:
     acts = [lv for lv in levers["levers"] if lv.get("worth")]
     noted = [lv for lv in levers["levers"] if not lv.get("worth")]
     if score >= ceiling:
-        out = [f"  Why {score}? Nothing is holding it down — the ceiling is {levers['fixed']}."]
+        out = [f"  Why {score}? Nothing is holding it down — {score} is {levers['fixed']}."]
         out += [f"    · No cost: {lv['what']}" for lv in noted]
         return out
     gap = ceiling - score
@@ -216,7 +216,11 @@ def _levers_lines(levers) -> list:
            f"{len(acts)} flagged player{'s' if len(acts) != 1 else ''}."]
     out += [f"    · Worth {lv['worth']}: {lv['what']}" for lv in acts]
     out += [f"    · No cost: {lv['what']}" for lv in noted]
-    out.append(f"    Ceiling this week is {ceiling} — {levers['fixed']}.")
+    # ⭐ **The bar, then how to reach it, then what moves the bar** — in that order, because the reader's
+    # question is *"how do I get to 80?"* and the honest answer has two halves: the flags close the gap,
+    # and nothing except the captain raises the number they are closing on.
+    out.append(f"    The most it can reach is {ceiling} — {levers['fixed']}. "
+               f"Clearing the flags above closes the gap; only a different captain raises the {ceiling}.")
     return out
 
 

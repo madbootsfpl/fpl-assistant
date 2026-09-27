@@ -58,27 +58,40 @@ def bank_or_use(moves, next_gw_gain=None, *, free: int = 1, hit_cost: int = HIT_
 
     Returns the decision, both sides of the comparison, and a plain-English reason. With no worthwhile move at
     all the answer is to bank — there is nothing to spend on.
+
+    ⚠️⚠️ **The reason never says what to do** (ADR-314). Every caller states the verdict itself — the app
+    prints `BANK` / `USE` as the headline, the CLI prefixes *"Or bank it:"* — so a reason that opened with
+    *"bank the transfer"* said it twice. ⭐ *The headline is the decision; this is the arithmetic that makes
+    it checkable.*
+
+    ⭐ And the arithmetic is now spelled rather than implied: the old wording read *"It saves 1.9 (the hit
+    avoided on a second move worth 2.4) and costs 2.8 by waiting a week"* — three numbers, no units, and a
+    parenthetical carrying the only clause that explained where the first one came from.
     """
     first = moves[0]["gain"] if moves else None
     second = moves[1]["gain"] if len(moves) > 1 else None
 
     if first is None or first <= 0:
         return {"action": "bank", "value": 0.0, "cost": 0.0, "second_gain": None,
-                "reason": "No move improves your squad right now — bank the transfer."}
+                "reason": "Nothing on the board improves your squad this week, so there is nothing "
+                          "worth spending it on."}
 
     if free >= 2:
         return {"action": "use", "value": 0.0, "cost": round(first, 2), "second_gain": second,
-                "reason": f"You already hold {free} free transfers — no reason to wait."}
+                "reason": f"You already hold {free} free transfers, and they do not stack any higher — "
+                          f"saving this one would gain you nothing."}
 
     cost = next_gw_gain if next_gw_gain is not None else 0.0
     value = min(second, hit_cost) if second and second > 0 else 0.0
     if value > cost:
         return {"action": "bank", "value": round(value, 2), "cost": round(cost, 2), "second_gain": second,
-                "reason": (f"It saves {value:.1f} (the hit avoided on a second move worth {second:.1f}) "
-                           f"and costs {cost:.1f} by waiting a week.")}
+                "reason": (f"Next week you would have two free transfers, so a second move costs no "
+                           f"−{hit_cost} hit — worth {value:.1f} pts. Against that, making the move above "
+                           f"a week later costs {cost:.1f}. Waiting comes out {value - cost:+.1f}.")}
     return {"action": "use", "value": round(value, 2), "cost": round(cost, 2), "second_gain": second,
-            "reason": (f"Waiting costs {cost:.1f} and saves only {value:.1f}" if value
-                       else "There's no second move worth banking for.")}
+            "reason": (f"Waiting would save {value:.1f} pts on a future hit, but making the move above a "
+                       f"week later costs {cost:.1f} — {cost - value:.1f} worse." if value
+                       else "There is no second move worth saving the transfer for.")}
 
 
 def transfer_timing(moves, *, free: int = 1, next_gw_gain=None, hit_cost: int = HIT_COST,

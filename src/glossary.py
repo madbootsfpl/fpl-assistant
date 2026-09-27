@@ -30,8 +30,10 @@ TERMS: dict[str, tuple[str, str]] = {
     ),
     "ceiling": (
         "Ceiling",
-        "The highest this week's confidence could reach, which is your **captain's own number**. Lifting "
-        "it means choosing a different captain, not a different week.",
+        "The highest this week's confidence can go — and it is **the same number as your captain's**, "
+        "because the week turns on that one pick.\n\nSo the flagged players listed under the score are the "
+        "gap: sorting them out moves you up towards the ceiling. Only choosing a different captain moves "
+        "the ceiling itself.",
     ),
     "edge": (
         "Edge",
