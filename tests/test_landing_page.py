@@ -13,6 +13,8 @@ import re
 import struct
 from pathlib import Path
 
+import pytest
+
 SITE = Path(__file__).resolve().parents[1] / "site"
 PAGE = (SITE / "index.html").read_text()
 
@@ -97,11 +99,21 @@ def test_both_platform_buttons_go_somewhere_real() -> None:
     )
 
 
-def test_the_release_script_publishes_this_directory() -> None:
-    """⭐ Otherwise the repo copy is a decoration and `$SITE` is still the original."""
-    script = (SITE.parent / "scripts" / "release_android.sh").read_text()
+@pytest.mark.parametrize("script", ["release_android.sh", "release_web.sh"])
+def test_the_release_scripts_publish_this_directory(script: str) -> None:
+    """⭐ Otherwise the repo copy is a decoration and `$SITE` is still the original.
 
-    assert 'cp site/index.html site/*.png "$SITE/"' in script
+    ⚠️⚠️⚠️ **Both, because both deploy the whole `$SITE` folder.** This guard named only the Android script,
+    and the web one had no copy step at all — so publishing a web build re-published whatever landing page
+    was sitting in `$SITE`, which on 2026-09-27 was **9 lines behind the repo**. ⭐⭐ *A guard that names one
+    script teaches everyone the other script is covered* — the same shape as the launcher-icon guard that
+    watched `mipmap-` while the web build shipped five Flutter icons.
+    """
+    text = (SITE.parent / "scripts" / script).read_text()
+
+    assert 'cp site/index.html site/*.png "$SITE/"' in text, (
+        f"{script} deploys $SITE without refreshing the landing page from the repo"
+    )
 
 
 def test_the_phone_layout_centres_the_buttons_with_everything_else():

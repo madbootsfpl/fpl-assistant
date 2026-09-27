@@ -80,6 +80,17 @@ self.addEventListener('activate', (event) => {
 });
 SW
 
+# ⭐⭐ **The landing page comes from the repo** (ADR-289) — and this script needs that step as much as the
+# Android one does, because **both deploy the whole `$SITE` folder.** ⚠️⚠️ Only `release_android.sh` had it,
+# so publishing a web build shipped whatever landing page happened to be sitting in `$SITE` — measured on
+# 2026-09-27, that copy was **9 lines behind the repo** and would have re-published a hero the repo had
+# already fixed. ⭐ *Whichever script ran last decided what the homepage said.*
+#
+# ⚠️ Copied, not synced: `app/`, `_headers` and `_redirects` live only in `$SITE`, and a `--delete` would
+# take the APKs with it.
+mkdir -p "$SITE"
+cp site/index.html site/*.png "$SITE/"
+
 rm -rf "$SITE/app/web"
 mkdir -p "$SITE/app/web"
 cp -R mobile/build/web/. "$SITE/app/web/"
