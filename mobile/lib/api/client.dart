@@ -373,7 +373,16 @@ class ServiceClient {
     await _post('squad/my-team', {
       'manager_id': managerId,
       'horizon': horizon,
-      'free_transfers': freeTransfers,
+      // ⭐⭐⭐ **Omitted, never sent as `null`** — and the difference is not cosmetic. An explicit
+      // `"free_transfers": null` is a *value* the body has to accept; leaving the key out asks the
+      // server for its default. ⚠️⚠️ **A server that has not been redeployed yet rejects the first and
+      // answers the second**, which is exactly what happened: the app shipped ahead of the API and every
+      // launch got `422 Input should be a valid integer, input: null` — ⭐ *absent and null look alike in
+      // Dart and are different facts on the wire.*
+      //
+      // ⭐ `?value` is this file's existing idiom for it (`manager_id`, `bench_weight`) — ⚠️ *a second
+      // spelling of a solved problem is how the first one stops being the rule.*
+      'free_transfers': ?freeTransfers,
       'draft_player_ids': draftPlayerIds,
       'draft_bench_ids': draftBenchIds,
     }),

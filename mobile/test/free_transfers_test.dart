@@ -15,6 +15,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:madboots/api/client.dart';
 import 'package:madboots/api/models.dart';
 import 'package:madboots/free_transfer_store.dart';
@@ -207,14 +209,47 @@ void main() {
   });
 
   group('the request can say nothing at all', () {
-    test('an unset count is omitted rather than guessed', () {
-      // ⚠️⚠️⚠️ The whole fix dies here if this sends `1`. The server can only derive the number for a
-      // client that admits it does not know — ⭐ *and `1` is indistinguishable from an answer.*
-      expect(
-        ServiceClient(baseUrl: 'http://x').myTeam,
-        isA<Function>(),
-        reason: 'signature guard: freeTransfers must be nullable',
+    /// The body the client actually puts on the wire.
+    Future<Map<String, dynamic>> bodyFor({int? free}) async {
+      late Map<String, dynamic> sent;
+      final client = ServiceClient(
+        baseUrl: 'http://test',
+        client: MockClient((request) async {
+          sent = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode(_raw()),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
       );
+      await client.myTeam(1, freeTransfers: free);
+      return sent;
+    }
+
+    test('an unset count is left out of the body, not sent as null', () async {
+      // 🔴🔴 **This is the bug that reached the owner's phone and the web app.** The client sent
+      // `"free_transfers": null` and the live API — not yet redeployed — answered every launch with
+      // `422 Input should be a valid integer, input: null`.
+      //
+      // ⭐⭐⭐ *Absent and null look alike in Dart and are different facts on the wire.* An explicit null
+      // is a **value the body must accept**; omitting the key **asks for the server's default** — and
+      // the old server rejects the first while answering the second. ⚠️ Verified against the live API
+      // at the time: `null` → 422, omitted → 200.
+      final body = await bodyFor();
+      expect(
+        body.containsKey('free_transfers'),
+        isFalse,
+        reason: 'an app that ships ahead of the API must degrade, not 422',
+      );
+    });
+
+    test('a stated count is still sent', () async {
+      expect((await bodyFor(free: 0))['free_transfers'], 0);
+      expect((await bodyFor(free: 3))['free_transfers'], 3);
+    });
+
+    test('the parsed answer carries the number and its source', () {
       final t = team(free: 5, source: 'history');
       expect(t.freeTransfers, 5);
       expect(t.freeTransfersSource, 'history');
