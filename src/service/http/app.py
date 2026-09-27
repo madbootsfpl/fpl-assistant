@@ -320,11 +320,19 @@ class MyTeamBody(BaseModel):
                     "change. Omit for the real team.")
     draft_bench_ids: list[int] = Field(default_factory=list,
                                        description="The draft's bench. Must be drawn from `draft_player_ids`.")
-    free_transfers: int = Field(1, ge=0, le=5,
-                                description="⚠️ **You must supply this — FPL does not publish it.** The "
-                                            "entry payload carries bank and value but free transfers sit "
-                                            "behind a login. It is echoed back so a header can show what "
-                                            "the answer assumed.")
+    # ⚠️⚠️⚠️ **This default was the reason the fix would not have reached the phone** (ADR-321). The
+    # dataclass had already learned that `None` means *"you work it out"*, but the **HTTP schema kept its
+    # own `1`** — so the in-process caller got the derived number and every request from the app got the
+    # hard-coded one. ⭐ *A default declared twice is a decision made once and obeyed in one place.*
+    # Caught by `test_my_team_returns_over_http_what_it_returns_in_process`, which exists for exactly this.
+    free_transfers: int | None = Field(None, ge=0, le=5,
+                                description="How many free transfers you hold. ⭐ **Omit it and the server "
+                                            "works it out** from the manager's own transfer history — FPL "
+                                            "does not publish the number, but it is derivable. Send one to "
+                                            "override that: moves made before the next deadline are not "
+                                            "visible until it passes. The number in force is echoed back "
+                                            "as `free_transfers`, with `free_transfers_source` saying "
+                                            "where it came from.")
 
 
 class ReplacementsBody(SquadBody):

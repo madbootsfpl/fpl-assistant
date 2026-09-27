@@ -262,7 +262,15 @@ class MyTeamRequest:
     # **not free transfers** — those sit behind a login. ADR-191 is the record of what happens when it is
     # guessed: the app advised a position the manager was not in. ⭐ A stated assumption can be corrected
     # where a silent one cannot, so it comes back in the answer.
-    free_transfers: int = 1
+    #
+    # ⭐⭐⭐ **`None` means "you work it out", and that is a different fact from the number 1** (ADR-321).
+    # This defaulted to `1`, so the server could not tell *"I hold one"* from *"nobody has said"* — and
+    # answered both with 1 even after ADR-318 made the number **derivable** from the manager's own
+    # transfer history. ⚠️ *A default that is also a valid answer is a guess the code can no longer
+    # identify as one* — precisely the reasoning `ManagerStore` already carries for the manager id, one
+    # field along: *"Null, not a default … the app cannot tell a guess from an answer once it has written
+    # one down."*
+    free_transfers: int | None = None
 
     # ⭐⭐ **A DRAFT: price this squad, not the one FPL holds.** The app lets a manager try a swap before
     # committing to it — and a phone that could only ever show the committed team could not answer *"what
@@ -280,7 +288,8 @@ class MyTeamRequest:
         _check_horizon(self.horizon)
         if not self.manager_id or self.manager_id < 1:
             raise ValueError("no manager id given")
-        if not 0 <= self.free_transfers <= 5:
+        # ⚠️ Range-checked only when stated. `None` is not an out-of-range number, it is the absence of one.
+        if self.free_transfers is not None and not 0 <= self.free_transfers <= 5:
             raise ValueError(f"free transfers {self.free_transfers} is outside 0-5")
         if self.draft_player_ids:
             if len(set(self.draft_player_ids)) != len(self.draft_player_ids):

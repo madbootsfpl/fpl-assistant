@@ -273,7 +273,7 @@ void _settingsOwnsItsState() {
     // ⚠️⚠️ **This is the bug the split introduced.** On a pushed route the parent's `freeTransfers` is
     // captured at push time, so a stepper reading it from the constructor tells the parent and redraws
     // nothing — the highlight stays put and the screen looks broken while working perfectly.
-    final told = <int>[];
+    final told = <int?>[];
     await tester.pumpWidget(
       wrap(
         SettingsView(

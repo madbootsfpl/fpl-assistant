@@ -89,7 +89,28 @@ SW
 # ⚠️ Copied, not synced: `app/`, `_headers` and `_redirects` live only in `$SITE`, and a `--delete` would
 # take the APKs with it.
 mkdir -p "$SITE"
-cp site/index.html site/*.png "$SITE/"
+cp site/index.html site/help.html site/help.css site/help.js site/*.png "$SITE/"
+
+# ⭐⭐ **The video hub's address, injected at deploy and never committed** (ADR-319). The owner curates
+# `maddie_videos` from the Supabase dashboard, so a new clip is a row and not a release — ⚠️ baking the
+# list into the page would have turned "edit a row" into "run a deploy", which is the opposite of the ask.
+#
+# ⚠️ The key is publishable (ADR-216 — that table is SELECT-only for `anon`), but *"safe to publish" and
+# "safe to commit" are different questions*, so it arrives from the environment or not at all. Without it
+# the page still renders and the video section says it is not configured.
+store_url="${MADBOOTS_STORE_URL:-}"
+if [ -z "$store_url" ] && [ -n "${FPL_STORE_URL:-}" ]; then
+  store_url="${FPL_STORE_URL%/*}"                 # .../rest/v1/squads -> .../rest/v1
+fi
+store_key="${MADBOOTS_STORE_KEY:-${FPL_STORE_KEY:-}}"
+if [ -n "$store_url" ] && [ -n "$store_key" ]; then
+  printf 'window.MADBOOTS_STORE = { url: %s, key: %s };\n' \
+    "\"$store_url\"" "\"$store_key\"" > "$SITE/help-config.js"
+  echo "  help: video hub configured"
+else
+  cp site/help-config.js "$SITE/help-config.js"
+  echo "  ⓘ  help: no store in the environment — the videos section will say so"
+fi
 
 rm -rf "$SITE/app/web"
 mkdir -p "$SITE/app/web"

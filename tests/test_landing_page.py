@@ -29,7 +29,13 @@ def test_every_referenced_file_exists() -> None:
 
     assert referenced, "the page references no local files at all"
     for name in referenced:
-        assert (SITE / name.lstrip("/")).exists(), f"{name} is referenced and not here"
+        target = SITE / name.lstrip("/")
+        # ⭐ Cloudflare Pages serves `help.html` at `/help`, so an extensionless link is a real file with
+        # its suffix left off — ⚠️ *the clean URL is the product of the host, not of the repo*, and a guard
+        # that only knows about filenames reports the site's own convention as a missing asset (ADR-319).
+        assert target.exists() or target.with_suffix(".html").exists(), (
+            f"{name} is referenced and not here"
+        )
 
 
 def test_the_explainer_video_is_the_current_one() -> None:
@@ -111,7 +117,11 @@ def test_the_release_scripts_publish_this_directory(script: str) -> None:
     """
     text = (SITE.parent / "scripts" / script).read_text()
 
-    assert 'cp site/index.html site/*.png "$SITE/"' in text, (
+    # ⚠️ **Matched as a copy of `site/index.html` into `$SITE`, not as one exact command line.** The web
+    # script's copy grew to carry the help page too (ADR-319), which broke a guard that pinned the literal —
+    # ⭐ *a guard written as a string match fails on the next true edit, and the cheapest way past it is to
+    # edit the guard*, which is how a real one stops being trusted.
+    assert re.search(r'cp\s+[^\n]*\bsite/index\.html\b[^\n]*"\$SITE/?"', text), (
         f"{script} deploys $SITE without refreshing the landing page from the repo"
     )
 

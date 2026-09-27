@@ -16,6 +16,13 @@ analytics.boot("Help")
 st.title("🧭 Help")
 st.markdown(brand.mark_html(badge_px=15, font_px=11), unsafe_allow_html=True)
 
+# ⭐⭐ **One address for help** (ADR-319). This page explains *these* screens and stays; the phone app's
+# walkthrough now lives at madboots.com/help, because ⚠️ *sending a phone user to a desktop web app to
+# read about the phone app is a detour they did not ask for.* The rules below come from `fpl_rules` on
+# both pages, so the halves that overlap cannot drift.
+st.caption("Using the **phone app**? Its walkthrough lives at "
+           "[madboots.com/help](https://madboots.com/help).")
+
 # US-448 (ADR-166) — 🎥 Maddie Explains folded in here as a second view rather than a second sidebar page.
 # Both answer *"how does this app work?"*; the only difference is text versus video, which is a preference,
 # not a topic. Two entries for one question is exactly the sidebar bloat the owner asked to reduce — and this

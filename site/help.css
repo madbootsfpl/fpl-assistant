@@ -1,0 +1,69 @@
+/* Help — shares the landing page's brand block (generated: see scripts/generate_site_palette.py). */
+:root{
+  --purple:#8b2fc9; --purple-lt:#b45cf0; --green:#86d91e; --orange:#ff6a00; --yellow:#ffc21e;
+  --ink:#17131f; --bg:#120e1a; --panel:#1d1730; --text:#efe9fb; --muted:#b7add0;
+  --line:rgba(180,150,240,.16);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --heavy:"Arial Black","Helvetica Neue",Impact,var(--sans);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+     font-size:16px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+     padding-top:18px;padding-bottom:18px}
+.brand{font-family:var(--heavy);font-style:italic;font-weight:900;font-size:1.15rem;
+       letter-spacing:-.01em;text-decoration:none}
+.brand.small{font-size:1rem}
+.brand .a{color:var(--purple-lt)} .brand .b{color:var(--orange)}
+.lk{color:var(--text);text-decoration:none;font-weight:700;font-size:.95rem}
+.lk:hover{color:var(--purple-lt)}
+
+h1{font-family:var(--heavy);font-style:italic;font-weight:900;font-size:clamp(2rem,7vw,2.6rem);
+   letter-spacing:-.01em;margin:.2em 0 .1em}
+h2{font-family:var(--heavy);font-style:italic;font-weight:900;font-size:clamp(1.4rem,4.6vw,1.8rem);
+   letter-spacing:-.01em;margin:2em 0 .5em;scroll-margin-top:16px}
+h3{font-size:1.06rem;margin:0 0 .4em;display:flex;align-items:baseline;gap:.55em}
+.lede{color:var(--muted);font-size:1.05rem;max-width:58ch;margin:0 0 1.6em}
+.note{color:var(--muted);font-size:.9rem;margin:-.2em 0 1.2em}
+
+/* ⭐ The steps are numbered because they ARE a sequence — you cannot read your week before your team is in. */
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 2em}
+.jump a{border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--muted);
+        text-decoration:none;font-size:.88rem}
+.jump a:hover{color:var(--text);border-color:var(--purple-lt)}
+
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+      padding:18px 20px;margin:0 0 12px}
+.step .n{display:inline-flex;align-items:center;justify-content:center;flex:none;
+         width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;
+         font-size:.82rem;font-weight:800;font-style:normal}
+.step ul{margin:.6em 0 0;padding-left:1.15em}
+.step li{margin:.45em 0;color:var(--muted)}
+.step b{color:var(--text)}
+
+.rule{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+      padding:2px 16px;margin:0 0 8px}
+.rule summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none}
+.rule summary::-webkit-details-marker{display:none}
+.rule summary::before{content:"+";color:var(--purple-lt);font-weight:900;margin-right:.6em}
+.rule[open] summary::before{content:"–"}
+.rule p,.rule li{color:var(--muted);font-size:.95rem}
+.rule ul{margin:.2em 0 1em;padding-left:1.15em}
+.rule p{margin:.1em 0 1em}
+
+.videos{display:grid;gap:14px}
+.video{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.video iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
+.video .cap{padding:12px 16px 14px}
+.video h3{font-size:1rem;margin:0 0 .2em}
+.video p{color:var(--muted);font-size:.9rem;margin:0}
+
+footer{border-top:1px solid var(--line);margin-top:3em;padding:20px 0 40px;color:var(--muted);
+       font-size:.85rem}
+footer .discl{max-width:60ch;font-size:.8rem}
+a{color:var(--purple-lt)}
+:focus-visible{outline:2px solid var(--purple-lt);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

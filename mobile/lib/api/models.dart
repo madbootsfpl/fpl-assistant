@@ -475,6 +475,7 @@ class MyTeam {
     required this.managerId,
     required this.squadName,
     this.freeTransfersImplied,
+    this.freeTransfersSource = 'default',
     required this.isDraft,
     required this.fplPlayerIds,
     required this.bank,
@@ -518,6 +519,7 @@ class MyTeam {
       freeTransfers: json['free_transfers'] as int? ?? 1,
       // ⭐ What FPL's own history implies you hold, beside what the caller asked for (ADR-318).
       freeTransfersImplied: (json['free_transfers_implied'] as num?)?.toInt(),
+      freeTransfersSource: json['free_transfers_source'] as String? ?? 'default',
       activeChip: squad['active_chip'] as String?,
       gameweek: json['gameweek'] as int?,
       deadlineLabel: deadline['label'] as String? ?? '',
@@ -595,6 +597,12 @@ class MyTeam {
   /// What the transfer history implies; null when it could not be checked.
   /// ⚠️ Moves made before the next deadline are invisible until it passes.
   final int? freeTransfersImplied;
+
+  /// Where [freeTransfers] came from: `you` · `history` · `default` (ADR-321).
+  ///
+  /// ⭐ *A number whose provenance is invisible is one the reader has to take on trust* — and this is the
+  /// number a tester already distrusted, having seen three of them and asked *"is that 1/3 used?"*
+  final String freeTransfersSource;
 
   /// ⭐⭐ **The server's word on whether this is the real team.** A client can forget to mention it; a field
   /// cannot — and an app that shows a plan as your squad is lying about something you can act on.
@@ -736,6 +744,7 @@ class MyTeam {
     managerId: managerId,
     squadName: squadName,
     freeTransfersImplied: freeTransfersImplied,
+    freeTransfersSource: freeTransfersSource,
     isDraft: isDraft,
     fplPlayerIds: fplPlayerIds,
     bank: bank,

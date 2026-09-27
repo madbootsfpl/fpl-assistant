@@ -41,9 +41,11 @@ class SettingsView extends StatefulWidget {
   final MyTeam team;
   final ServiceClient client;
   final int managerId;
-  final int freeTransfers;
+  /// The manager's override, or null while the server's derivation stands (ADR-321).
+  final int? freeTransfers;
   final ValueChanged<int> onManagerId;
-  final ValueChanged<int> onFreeTransfers;
+  /// `null` asks the app to go back to working it out from history.
+  final ValueChanged<int?> onFreeTransfers;
 
   /// Where the API is. ⭐ Runtime state, not a `const` — see [Server].
   final String baseUrl;
@@ -59,7 +61,7 @@ const String _adminKeyPref = 'madboots.admin_key';
 class _SettingsViewState extends State<SettingsView> {
   /// ⭐ Remembered so a reload does not ask again. Read once, on first build.
   String? _adminKey;
-  late int _freeTransfers = widget.freeTransfers;
+  late int? _freeTransfers = widget.freeTransfers;
 
   /// ⭐ Changing whose team this is **leaves the screen**. The facts below are this manager's, captured on
   /// the way in; staying here would show you one manager's name over another's bank balance.
@@ -102,9 +104,13 @@ class _SettingsViewState extends State<SettingsView> {
         _FreeTransfersRow(
           // ⭐⭐ **What FPL's history implies you hold** (a tester's *"how does FFH know?"*). The paid
           // tools log you in and read `transfers.limit`; this derives it from the transfers you have
-          // made. ⚠️ Shown **beside** the control and never instead of it: moves made in the current
-          // window are invisible until the deadline passes, so you may know something this does not.
+          // made. ⚠️ Moves made in the current window are invisible until the deadline passes, so you
+          // may still know something this does not — which is what the override is for.
           implied: widget.team.freeTransfersImplied,
+          // ⭐ The number actually in force, so the highlighted chip is never a different number from
+          // the one the pitch and the week's plan are using (ADR-321).
+          effective: widget.team.freeTransfers,
+          source: widget.team.freeTransfersSource,
           value: _freeTransfers,
           onChanged: (n) {
             setState(() => _freeTransfers = n);
@@ -173,7 +179,7 @@ class _SettingsViewState extends State<SettingsView> {
           'a bigger window.',
         ),
         const _Note(
-          'madboots.streamlit.app is still where the help and Maddie\'s videos live.',
+          'madboots.com/help has the walkthrough, the FPL rules and Maddie\'s videos.',
           muted: true,
         ),
 
@@ -344,15 +350,64 @@ class _ManagerIdRowState extends State<_ManagerIdRow> {
 }
 
 /// ⚠️⚠️ **The one number FPL will not tell us**, and it changes the advice (ADR-191/228).
+/// One selectable pill in the free-transfer row.
+///
+/// ⭐ Extracted because "Auto" and the digits must look and behave identically — ⚠️ *a second copy of a
+/// control is where the two quietly stop matching.*
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      height: 30,
+      // ⚠️ **Width by content, not a fixed 30.** "Auto" does not fit a square, and a clipped control
+      // reads as a rendering bug rather than a word.
+      constraints: const BoxConstraints(minWidth: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      margin: const EdgeInsets.only(left: 4),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected ? Brand.purple : Colors.white10,
+        borderRadius: BorderRadius.circular(Brand.radiusSm),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? Colors.white : Colors.white54,
+          fontSize: 12.5,
+        ),
+      ),
+    ),
+  );
+}
+
 class _FreeTransfersRow extends StatelessWidget {
   const _FreeTransfersRow({
     required this.value,
+    required this.effective,
+    required this.source,
     required this.onChanged,
     this.implied,
   });
 
-  final int value;
-  final ValueChanged<int> onChanged;
+  /// The manager's override, or null while the app works it out.
+  final int? value;
+
+  /// The number every other screen is using.
+  final int effective;
+
+  /// Where [effective] came from: `you` · `history` · `default` (ADR-321).
+  final String source;
+
+  /// `null` puts it back to automatic.
+  final ValueChanged<int?> onChanged;
 
   /// What the manager's own transfer history implies they hold, or null if it could not be checked.
   final int? implied;
@@ -363,35 +418,43 @@ class _FreeTransfersRow extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        // ⚠️⚠️ **The chips moved onto their own line when "Auto" joined them.** Label + seven pills
+        // overflowed by 30px on a phone — ⭐ *a seventh option is not a copy problem, it is one option
+        // more than the row was built for*, and squeezing "Auto" down to fit would have made the word
+        // unreadable to keep a layout that had already run out.
+        const Row(
           children: [
-            const Text(
+            Text(
               'Free transfers',
               style: TextStyle(color: Colors.white, fontSize: 14),
             ),
-            const HelpDot('free_transfers', size: 13),
-            const Spacer(),
+            HelpDot('free_transfers', size: 13),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // ⚠️ `Wrap`, not `Row`: it survives a larger text scale and a narrower phone without either
+        // clipping or shrinking the targets below a thumb.
+        Wrap(
+          spacing: 0,
+          runSpacing: 4,
+          children: [
+            // ⭐⭐ **"Auto" is a state, not the absence of one.** Without it, correcting the number once
+            // was a one-way door: the app would never trust the history again, including after the
+            // deadline that made the history right. ⚠️ It is also the *normal* state, so it comes first.
+            _Chip(
+              label: 'Auto',
+              selected: value == null,
+              onTap: () => onChanged(null),
+            ),
             for (var n = 0; n <= 5; n++)
-              GestureDetector(
+              _Chip(
+                label: '$n',
+                // ⚠️ **Selected on the override, never on the effective number.** Highlighting `2`
+                // because history says 2 would make "Auto" and "2" look like the same choice — ⭐ *and
+                // the difference between them is the whole point: one keeps updating, the other does
+                // not.*
+                selected: n == value,
                 onTap: () => onChanged(n),
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  margin: const EdgeInsets.only(left: 4),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: n == value ? Brand.purple : Colors.white10,
-                    borderRadius: BorderRadius.circular(Brand.radiusSm),
-                  ),
-                  child: Text(
-                    '$n',
-                    style: TextStyle(
-                      color: n == value ? Colors.white : Colors.white54,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ),
               ),
           ],
         ),
@@ -402,11 +465,23 @@ class _FreeTransfersRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 5),
           child: Text(
-            implied == null
-                ? 'FPL does not publish this directly, so the app asks. The week’s plan recommends this '
-                      'many moves.'
-                : 'Your transfer history says $implied. Moves you make before the next deadline are not '
-                      'visible until it passes — set it yourself if that is out of date.',
+            // ⭐⭐⭐ **It states the number in force and where it came from** (ADR-321). Three screens
+            // were showing three numbers and none of them said which week or which direction, so a
+            // tester asked *"is that 1/3 used?"* — ⚠️ *two numbers on one screen is a question, not an
+            // answer.*
+            switch (source) {
+              'you' =>
+                'Using your $effective — every screen plans on this. '
+                    '${implied == null ? '' : 'Your transfer history says $implied. '}'
+                    'Tap Auto to go back to working it out.',
+              'history' =>
+                'Worked out from your transfer history: you have $effective free '
+                    'transfer${effective == 1 ? '' : 's'} for the coming deadline. Moves you make before '
+                    'it are not visible until it passes — set the number yourself if that is out of date.',
+              _ =>
+                'FPL does not publish this directly and your history could not be read, so the app is '
+                    'assuming $effective. Set it yourself if that is wrong.',
+            },
             style: const TextStyle(
               color: Colors.white38,
               fontSize: 10.5,

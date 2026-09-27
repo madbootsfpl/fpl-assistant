@@ -363,7 +363,10 @@ class ServiceClient {
   Future<MyTeam> myTeam(
     int managerId, {
     int horizon = 1,
-    int freeTransfers = 1,
+    // ⭐ **Null means "you work it out"** (ADR-321) — the server derives it from the manager's own
+    // transfer history. ⚠️ Sending `1` by default made *"nobody has said"* indistinguishable from
+    // *"I hold one"*, and the server answered both the same way.
+    int? freeTransfers,
     List<int> draftPlayerIds = const [],
     List<int> draftBenchIds = const [],
   }) async => MyTeam.fromJson(

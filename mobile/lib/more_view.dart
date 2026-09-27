@@ -145,7 +145,7 @@ class MoreView extends StatelessWidget {
         // first trim took that with it. The guard caught it.
         why:
             'The written walkthrough and Maddie’s 90-second explainers. '
-            'Opens madboots.streamlit.app.',
+            'Opens madboots.com.',
         onTap: onOpenHelp,
       ),
       _Row(

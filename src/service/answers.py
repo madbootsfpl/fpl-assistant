@@ -730,6 +730,15 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
     # invents an order, and the first auto-sub proves it wrong.
     roles = {role: p["id"] for role, p in bench_order(benched, xp_by_id)} if benched else {}
 
+    # ⚠️ Fetched once and named, because the response reads it three times and ⭐ *a network call inside a
+    # dict literal is a call nobody can see.*
+    _history = _entry_history(request.manager_id)
+    _implied = (free_transfers_from_history(_history.get("current"), _history.get("chips"))
+                if _history else None)
+    # ⭐ The manager's word, then his history, then the oldest guess in the app. Each step is a fact the
+    # step below it does not have.
+    _free = request.free_transfers if request.free_transfers is not None else (_implied or 1)
+
     return {
         "manager_id": request.manager_id,
         "squad": {
@@ -751,18 +760,22 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # that nothing moved while the app was closed.
         "draft": drafting,
         "fpl_player_ids": fpl_ids,
-        # ⚠️ Echoed because FPL does not publish it and the client supplied it — ⭐ *a header that showed a
-        # number the manager never set would be the app inventing his position.*
-        "free_transfers": request.free_transfers,
-        # ⭐⭐ **What FPL's own history implies you hold** (ADR-318), answering a tester's *"how does FFH
-        # know how many transfers you have?"* — the paid tools log you in and read `transfers.limit`; this
-        # derives it. ⚠️ Offered beside the caller's number, never instead of it: transfers made **during
-        # the current window are invisible** until the deadline passes, so the manager may know something
-        # this does not. ⭐ *A derived number presented as fact is worse than a field.*
-        "free_transfers_implied": (
-            free_transfers_from_history(_history.get("current"), _history.get("chips"))
-            if (_history := _entry_history(request.manager_id)) else None
-        ),
+        # ⭐⭐⭐ **One number, and the server says where it came from** (ADR-321). Three surfaces were
+        # showing three different things — the pitch echoed whatever the client last sent, Settings
+        # printed the derived number in a caption it did not use, and the week's plan was computed from
+        # the echo. ⚠️ *Two numbers on one screen is a question, not an answer*, and the manager asked it:
+        # *"is that 1/3 used?"*
+        #
+        # ⭐ The precedence is the honest one, unchanged from ADR-318's reasoning: **what the manager said
+        # beats what history implies**, because transfers made during the current window are invisible
+        # until the deadline passes, so he may know something this does not. What changed is only the
+        # case ADR-318 could not express — **nobody has said anything** — which used to be answered with a
+        # hard-coded 1 and is now answered from his own history.
+        "free_transfers": _free, "free_transfers_implied": _implied,
+        # ⭐ Named so a surface can explain itself rather than assert. ⚠️ *A number whose provenance is
+        # invisible is one the reader has to take on trust, and this is the number he already distrusted.*
+        "free_transfers_source": ("you" if request.free_transfers is not None
+                                  else "history" if _implied is not None else "default"),
         "gameweek": gameweek,
         # ⚠️ The label carries the timezone and the countdown already (ADR-086) — re-deriving "in 18 days"
         # on the client would be a second clock, and the two would disagree by however long the app was open.

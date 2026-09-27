@@ -71,8 +71,10 @@ TERMS: dict[str, tuple[str, str]] = {
     ),
     "free_transfers": (
         "Free transfers",
-        "How many moves you can make without a points hit. **FPL does not publish this**, so the app has "
-        "to ask you for it — and the week's plan recommends this many moves.",
+        "How many moves you can make without a points hit. One arrives each gameweek and unused ones roll "
+        "over, up to five.\n\nThe app **works it out from your own transfer history** rather than asking "
+        "— ⚠️ but moves you make before the next deadline are not visible until it passes, so you can set "
+        "the number yourself when you know better. The week's plan recommends this many moves.",
     ),
     "exodus": (
         "Unexplained sell-off",

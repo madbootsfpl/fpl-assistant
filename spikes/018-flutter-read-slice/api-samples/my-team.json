@@ -338,7 +338,7 @@
     "GK": 1
   },
   "data": {
-    "age_minutes": 12734,
+    "age_minutes": 12868,
     "behind": false,
     "missing_gameweeks": [],
     "refreshed_at": "2026-09-18T22:07:24+00:00",
@@ -346,8 +346,8 @@
   },
   "deadline": {
     "at": "2026-10-10T10:00:00+00:00",
-    "countdown": "in 12 days, 15h",
-    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 12 days, 15h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
+    "countdown": "in 12 days, 13h",
+    "label": "\u23f3 GW6 deadline: Sat 10 Oct, 11:00 (UK) \u2014 in 12 days, 13h \u00b7 10 matches \u00b7 first kick-off Sat 12:30",
     "urgency": "calm",
     "when": "Sat 10 Oct, 11:00"
   },
@@ -713,8 +713,9 @@
     504,
     1
   ],
-  "free_transfers": 1,
+  "free_transfers": 5,
   "free_transfers_implied": 5,
+  "free_transfers_source": "history",
   "gameweek": 6,
   "kits": {
     "ARS": {
@@ -1001,7 +1002,7 @@
     }
   ],
   "signal_keys": [
-    "official:165:32210",
+    "official:165:61759",
     "headline:391:2026-09-17T14:42:54.374225+00:00",
     "headline:411:2026-09-22T21:44:59.535385+00:00",
     "headline:379:2026-09-22T21:44:59.535385+00:00",

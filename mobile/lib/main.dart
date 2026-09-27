@@ -23,6 +23,7 @@ import 'signals_view.dart';
 import 'draft.dart';
 import 'feedback_view.dart';
 import 'lab_view.dart';
+import 'free_transfer_store.dart';
 import 'manager_store.dart';
 import 'leagues_view.dart';
 import 'more_view.dart';
@@ -427,7 +428,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
   /// ⚠️ **It reports a failure rather than doing nothing.** A row that silently does not open is worse
   /// than one that is not there: the reader taps twice, concludes the app is broken, and is right.
   Future<void> _openHelp() async {
-    const url = 'https://madboots.streamlit.app/Help';
+    const url = 'https://madboots.com/help';
     final opened = await launchUrl(
       Uri.parse(url),
       mode: LaunchMode.externalApplication,
@@ -535,10 +536,18 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     });
   }
 
-  /// ⚠️⚠️ **FPL does not publish this, so the app has to ask** (ADR-191). It was `final int = 1` until
+  /// The manager's **override**, or null while the server's own derivation stands (ADR-321).
+  ///
+  /// ⚠️⚠️ **FPL does not publish this, so the app had to ask** (ADR-191). It was `final int = 1` until
   /// ADR-228 gave it a home in More — ⭐ *the app was advising a position the manager might not be in,
-  /// because there was nowhere to put a setting.* One is the common case, not the only one.
-  int _freeTransfers = 1;
+  /// because there was nowhere to put a setting.*
+  ///
+  /// ⚠️⚠️⚠️ Two things were then wrong with it at once. It **never persisted**, so it silently returned
+  /// to 1 on every launch; and it stayed `1` as a *default* after ADR-318 made the number derivable, so
+  /// the app asked a question it could already answer — ⭐ *and could not tell the answer from the
+  /// question, because the default was also a valid reply.* Null now means "nobody has said", and the
+  /// number on screen comes back from the server with a note saying where it came from.
+  int? _freeTransfers;
 
   @override
   void initState() {
@@ -546,6 +555,16 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
     // ⚠️ Loaded once and held: reading it per rebuild would make the badge flicker on every setState.
     _seen.load().then((keys) {
       if (mounted) setState(() => _seenKeys = keys);
+    });
+    // ⭐ The saved override, if he ever corrected the server. ⚠️ A reload only if there **is** one:
+    // re-fetching on every launch to arrive at the number already on screen is a wasted round trip.
+    FreeTransferStore().load().then((n) {
+      if (mounted && n != null) {
+        setState(() {
+          _freeTransfers = n;
+          _team = _load(_managerId);
+        });
+      }
     });
     // ⚠️ Fire-and-forget. A failed check is silent and the app behaves exactly as before.
     published().then((available) {
@@ -756,7 +775,10 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
       ),
       _Tab.more => MoreView(
         managerId: _managerId,
-        freeTransfers: _freeTransfers,
+        // ⭐ **The number in force, not the override** (ADR-321). This row exists to save a tap by stating
+        // the current value; passing the override showed `1` whenever nobody had set one, which is the
+        // one case where it is most likely to be wrong.
+        freeTransfers: team.freeTransfers,
         onOpenChips: () => _open(
           'Chips',
           ChipsView(client: _client, team: team, managerId: _managerId),
@@ -826,10 +848,25 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                 });
               }
             },
-            onFreeTransfers: (n) => setState(() {
-              _freeTransfers = n;
-              _team = _load(_managerId);
-            }),
+            // ⭐ `null` is *"go back to working it out"* — ⚠️ without a way back, correcting the number
+            // once would make the app distrust the history forever, including after the deadline that
+            // made the history right again.
+            onFreeTransfers: (n) async {
+              final store = FreeTransferStore();
+              // ⚠️ Written **before** the reload, so a crash mid-fetch still leaves the right answer
+              // behind — the same ordering ADR-279 settled for the manager id one row up.
+              if (n == null) {
+                await store.clear();
+              } else {
+                await store.save(n);
+              }
+              if (mounted) {
+                setState(() {
+                  _freeTransfers = n;
+                  _team = _load(_managerId);
+                });
+              }
+            },
           ),
         ),
       ),

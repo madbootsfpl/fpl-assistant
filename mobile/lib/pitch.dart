@@ -594,9 +594,20 @@ class _Header extends StatelessWidget {
                       : '£${team.value!.toStringAsFixed(1)}m',
                   label: 'Value',
                 ),
-                // ⭐ Shown as "n free" because the number is one the manager set, not one FPL published —
-                // the label is the honest bit.
-                _Stat(value: '${team.freeTransfers}', label: 'Transfers'),
+                // ⚠️⚠️⚠️ **The comment above this line used to claim it showed "n free", and the code
+                // showed a bare number under the word "Transfers"** — ⭐ *a comment describing an intent
+                // the code never carried out, which is worse than no comment, because it stops anyone
+                // re-reading the line.* A tester read `1` beside `Transfers` and asked **"is that 1/3
+                // used?"** — the honest reading of a count with no direction on it.
+                //
+                // ⭐⭐ Now the value says what it counts and the label says which week, because *a number
+                // on a dashboard has to answer "of what?" without being tapped.*
+                //
+                // ⚠️ **"Transfers this week" overflowed the row by 89px** and the test caught it before a
+                // phone did — the same shape as ADR-318's rank label, one row along. ⭐ *The value is
+                // where the meaning belongs anyway*: `2 free` answers "of what?" on its own, and the
+                // live pitch is the only page this stat appears on, so the week was never in doubt.
+                _Stat(value: '${team.freeTransfers} free', label: 'Transfers'),
               ],
             ],
           ),
@@ -606,6 +617,19 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// One number in the pitch header, with the word that says what it counts.
+///
+/// ⚠️⚠️ **The row it sits in has no slack, and every widening of a label has overflowed it.** ADR-318's
+/// rank label did it; *"Transfers this week"* did it again by 89px, and even `2 free` under a plain
+/// *"Transfers"* still overflowed by 9.8px on the **framed** live page inside the season walk, which is
+/// narrower than the plain one.
+///
+/// ⭐⭐ So the fix is structural rather than another round of shortening: four stats **share** the width
+/// and shrink to fit it. *Choosing copy that happens to fit the widest container is a guess that has to
+/// be re-made every time either the copy or the container changes* — and it was re-made wrong twice.
+///
+/// ⚠️ `scaleDown` only ever shrinks, so nothing grows to fill a gap and the type scale is unchanged
+/// wherever it already fitted.
 class _Stat extends StatelessWidget {
   const _Stat({required this.value, required this.label});
 
@@ -613,19 +637,34 @@ class _Stat extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        value,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) => Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
-      ),
-      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-    ],
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: const TextStyle(color: Colors.white54, fontSize: 10),
+          ),
+        ),
+      ],
+    ),
   );
 }
 
