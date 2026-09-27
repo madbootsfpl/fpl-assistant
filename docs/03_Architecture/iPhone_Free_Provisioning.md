@@ -6,6 +6,17 @@
 **Time:** about twenty minutes the first time, two minutes after that.
 **Cost:** £0.
 
+> ⭐⭐ **After the first time, this whole page is one command:**
+>
+> ```bash
+> scripts/release_ios.sh
+> ```
+>
+> It finds the phone, builds with the live API baked in, installs without attaching, and **asks the device**
+> whether the app is really there. ⚠️ The steps below are still the truth about *why* each part is needed —
+> and the ones you return to when something breaks — but you should not be running them by hand every
+> week. ⭐ *This page existing instead of a script is why the iPhone was left off two releases* (ADR-316).
+
 ---
 
 ## ⚠️ Read this first: what free provisioning does and does not give you

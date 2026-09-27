@@ -323,6 +323,10 @@ echo
 # tells you to do the thing the script just did is how a reader learns to stop reading them.*
 if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
   echo "  NEXT: commit the version bump. Testers already have it: https://madboots.com/app/"
+  # ⚠️⚠️ **Named here because the iPhone was left behind twice** (ADR-316). Android and web are one command
+  # each and the phone in the owner's pocket was a *document* — ⭐ *a release that reaches two of three
+  # platforms is not a release, it is two of them.*
+  echo "        …and the other two:  scripts/release_web.sh  ·  scripts/release_ios.sh"
 else
   echo "  NEXT: drag $SITE to Cloudflare Pages, then commit the version bump."
   echo "        testers go to https://madboots.com/app/"
