@@ -15,6 +15,24 @@
 # — which is the owner's to make, and would let `_headers` do this on its own.
 set -euo pipefail
 
+# ⭐⭐ **Read once from a file, not retyped every deploy.** Two web releases went out with the video hub
+# unconfigured because the values lived only in a shell that had since closed — ⚠️ *a setup step you must
+# remember is a setup step that gets skipped on the release you were in a hurry for.* Copy
+# `.env.release.example` to `.env.release` (gitignored) and fill it in; a real environment variable still
+# wins, so CI and a one-off `MADBOOTS_STORE_KEY=… ./release_web.sh` both keep working.
+if [ -f .env.release ]; then
+  # ⚠️ Read line by line rather than `set -a; . ./.env.release`, which would **overwrite** a variable the
+  # caller had deliberately exported — ⭐ *a file that silently beats the environment turns a one-off
+  # override into a puzzle.* Anything already set is left alone.
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key=${line%%=*}; val=${line#*=}
+    case "$key" in *[!A-Za-z0-9_]*) continue ;; esac       # ignore anything that is not a plain name
+    eval "current=\${$key-}"
+    [ -n "$current" ] || export "$key=$val"
+  done < .env.release
+fi
+
 SITE="${MADBOOTS_SITE:-$HOME/madboots-site}"
 API="${MADBOOTS_API:-https://madboots-api.onrender.com}"
 PROJECT="${MADBOOTS_PAGES_PROJECT:-madboots}"

@@ -101,6 +101,51 @@ def test_the_release_publishes_the_page_and_everything_it_loads() -> None:
     )
 
 
+def test_the_store_can_be_configured_once_instead_of_every_deploy() -> None:
+    """⚠️⚠️ **Two web releases went out with the video hub unconfigured**, because the values lived only in
+    a shell that had since closed — ⭐ *a setup step you have to remember is the one that gets skipped on
+    the release you were in a hurry for.*
+
+    ⚠️ The template must be committable and the real file must not: `.env.*` is ignored, `!.env.*.example`
+    is the exception — the same pairing `.env.staging` already uses. On a **public** repo the cost of
+    getting that backwards is a credential in the history.
+    """
+    script = RELEASE.read_text()
+    # ⚠️ **Matched on the code that reads the file, not on the filename.** The first version of this
+    # assertion said `".env.release" in script` and **survived** the read being deleted — the script still
+    # *mentions* `.env.release.example` in a comment. ⭐ *A guard that a comment can satisfy is watching
+    # the documentation, not the behaviour.*
+    assert re.search(r'\[\s*-f\s+\.env\.release\s*\]', script) \
+        and re.search(r'<\s*\.env\.release\b', script), (
+        "release_web.sh no longer reads .env.release, so the hub must be configured by hand every time"
+    )
+    example = ROOT / ".env.release.example"
+    assert example.exists(), "the template is gone — nobody can tell what to put in .env.release"
+    body = example.read_text()
+    for name in ("MADBOOTS_STORE_URL", "MADBOOTS_STORE_KEY"):
+        assert name in body, f"{name} is not in the template the script reads"
+    # ⭐ The one mistake that would matter: `service_role` bypasses RLS, and unlike Streamlit this file's
+    # values are served to browsers.
+    assert "service_role" in body, "the template does not warn which key must never be used here"
+
+
+def test_the_real_env_file_is_not_committable() -> None:
+    """⚠️⚠️⚠️ The repo is **public**. ⭐ *A template and a secret differing by one suffix is worth a test,
+    not a convention* — `.env.staging` was committable once for exactly this reason."""
+    import subprocess
+
+    def ignored(name: str) -> bool:
+        # ⚠️ `check-ignore -v` prints the matching rule and exits 0 for a **negation** too, so the exit
+        # code alone says "a rule matched", not "it is ignored" — ⭐ *the obvious reading of this command
+        # is the wrong one*, and I made exactly that mistake before writing this test.
+        out = subprocess.run(["git", "check-ignore", "-v", "--no-index", name],
+                             cwd=ROOT, capture_output=True, text=True).stdout
+        return bool(out) and not out.split("\t")[0].rsplit(":", 1)[-1].startswith("!")
+
+    assert ignored(".env.release"), "the real credentials file is committable on a PUBLIC repo"
+    assert not ignored(".env.release.example"), "the template is ignored, so nobody gets the instructions"
+
+
 def test_the_app_no_longer_sends_anyone_to_streamlit() -> None:
     """⭐ The point of the move: *one help destination*, on the domain the product is named after."""
     for name in ("main.dart", "more_view.dart", "settings_view.dart"):
