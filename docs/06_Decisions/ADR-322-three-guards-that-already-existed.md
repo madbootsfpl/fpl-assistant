@@ -118,7 +118,21 @@ ADR-310 left open.
 
 ⭐ **Pinned, not bounded.** `>=` on a deploy file is a floating version with extra characters: it still
 installs whatever is newest, which is precisely how PuLP 4 arrived. `Authlib>=1.3.2` was the one real
-lower-bound requirement (`st.login()` needs it) and it becomes an exact pin at the version that is running.
+lower-bound requirement (`st.login()` needs it) and becomes an exact pin at what the float already
+resolved to.
+
+⚠️ **It was also the one pin nothing here could exercise**, and the follow-up is worth recording because
+the answer was *not* "verify it later": checked with the owner the same day, there is **no `[auth]`
+section in the deployed app's secrets**. So `auth.is_configured()` is False, `st.login()` is never
+called, and Authlib is never imported — ⭐ proved rather than assumed, since it is not installed in the
+local venv at all and `import streamlit` plus all 2,995 tests run green without it entering
+`sys.modules`. The pin is inert, and stays only so that switching auth on later does not also pick a
+version at random.
+
+📌 **Its trigger is enabling `[auth]`, not "the next deploy"** — ⭐⭐ *an open action tied to the next
+deploy is one that silently expires, because no deploy ever announces itself as the one that was meant
+to check it.* This project has an ADR about exactly that shape (ADR-212's `"(tomorrow)"`, ADR-294's
+status line), so it is not left in that form here.
 
 ⚠️ **This is a deliberate trade for a maintenance cost**, and the cost is real: security updates now arrive
 only when someone bumps a file. Accepted because the alternative is the failure mode this project has

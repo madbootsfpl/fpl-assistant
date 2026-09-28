@@ -995,9 +995,11 @@ Kept so the reasoning isn't re-litigated:
   like one that passes. ✅ Exemption now scoped to the **clause**, verified by watching it object three times.
   ⭐⭐ **The pattern all three share: every guard already existed** — the Dart tests nobody ran, the pin in the
   wrong file, the test that exempted its subject. ⚠️ *Not a missing idea among them.*
-  ⚠️ **One pin is unverified:** `Authlib==1.8.0` — not installed locally, exercised only by Streamlit Cloud's
-  `st.login()`. 1.8.0 is what the old `>=1.3.2` resolves to today, so it changes nothing now; **confirm login
-  on the next Streamlit deploy.**
+  ✅ **The one unverified pin resolved to "nothing to verify"** (owner-checked 2026-09-28): there is no
+  `[auth]` section in the deployed app's Streamlit secrets, so Google-auth mode is off, `st.login()` is never
+  called and `Authlib==1.8.0` is never imported — proved by it not being installed locally while the whole
+  suite runs green. 📌 The trigger is **enabling `[auth]`**, not the next deploy; sign in once if that
+  ever happens. ⭐ *An open action tied to "the next deploy" silently expires; tied to a condition, it waits.*
 - ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
   external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
 
