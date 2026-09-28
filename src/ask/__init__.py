@@ -25,8 +25,16 @@ from src.ask import deciders as _deciders
 
 # ── the layers, and the public surface ─────────────────────────────────────────────────────────
 # ⭐ Re-exported so `from src.ask import route` — and every name six other modules and the test suite
-# already reach for — keeps meaning what it meant. ⚠️ The underscored ones were never really private: a
-# name another file imports is part of the surface whether or not it wears an underscore.
+# already reach for — keeps meaning what it meant.
+#
+# ⚠️⚠️ **Five of these lost their underscore** (ADR-325): `price_a_rebuild`, `decide_gameweek`, `match_team`,
+# `fixture_horizon` and `squad_name`. Those are the ones imported from **outside** this package —
+# `price_a_rebuild` by `src/cli.py`, the rest by the suite — and ⭐ *a name another file imports is part of
+# the surface whether or not it wears an underscore.* The underscore was accurate when they were private to
+# one 2,409-line module and misleading the moment anything else read them.
+#
+# ⚠️ The ones still underscored below are a **known wart, not a claim**: the suite reaches into them, and
+# untangling that is a bigger job than this split, recorded rather than quietly preserved.
 from src.ask.context import (
     AskResult,
     Context,
@@ -42,7 +50,6 @@ from src.ask.deciders import (
     _decide_chips,
     _decide_compare,
     _decide_fixtures,
-    _decide_gameweek,
     _decide_history,
     _decide_price,
     _decide_rules,
@@ -54,9 +61,10 @@ from src.ask.deciders import (
     _lens_pick,
     _lineup_change,
     _load_squad,
-    _price_a_rebuild,
     _squad_xp,
     _value_verdict,
+    decide_gameweek,
+    price_a_rebuild,
 )
 from src.ask.defaults import (
     _HORIZON,
@@ -75,18 +83,18 @@ from src.ask.intents import (
     _POS_WORDS,
     _archetype_counts,
     _bench_mode,
-    _fixture_horizon,
     _match_players,
-    _match_team,
     _named_gameweek,
     _shortlist_query,
     _squad_budget,
-    _squad_name,
     _transfer_count,
     captain_lens,
     chip_lens,
+    fixture_horizon,
+    match_team,
     route,
     scope_label,
+    squad_name,
 )
 from src.ask.narrate import (
     _FALLBACK,
@@ -341,13 +349,13 @@ __all__ = [
     "_HORIZON", "_INTENT_BLURB", "_INTENT_KEYWORDS", "_analyse_facts",
     "_archetype_counts", "_bench_mode", "_build_prompt", "_captain_facts",
     "_captain_versus", "_chips_facts", "_decide_analyse", "_decide_captain",
-    "_decide_chips", "_decide_compare", "_decide_fixtures", "_decide_gameweek",
+    "_decide_chips", "_decide_compare", "_decide_fixtures", "decide_gameweek",
     "_decide_history", "_decide_price", "_decide_rules", "_decide_shortlist",
-    "_decide_trends", "_decide_worth", "_dispatch", "_fixture_horizon",
+    "_decide_trends", "_decide_worth", "_dispatch", "fixture_horizon",
     "_gameweek_facts", "_known_squad_names", "_lens_pick", "_lineup_change",
-    "_load_squad", "_match_players", "_match_team", "_minutes_phrase",
-    "_named_gameweek", "_plan_facts", "_price_a_rebuild", "_shortlist_query",
-    "_squad_budget", "_squad_name", "_squad_xp", "_transfer_count",
+    "_load_squad", "_match_players", "match_team", "_minutes_phrase",
+    "_named_gameweek", "_plan_facts", "price_a_rebuild", "_shortlist_query",
+    "_squad_budget", "squad_name", "_squad_xp", "_transfer_count",
     "_transfer_facts", "_value_verdict", "answer", "assemble",
     "captain_lens", "chat_transcript", "chip_lens", "context_from_wire",
     "context_to_wire", "converse", "detect_followup", "is_reset",

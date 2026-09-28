@@ -62,10 +62,8 @@ from src.ask.intents import (
     _archetype_counts,
     _bench_mode,
     _chip_named,
-    _fixture_horizon,
     _looks_like_a_comparison,
     _match_players,
-    _match_team,
     _named_gameweek,
     _named_in,
     _shortlist_query,
@@ -73,6 +71,8 @@ from src.ask.intents import (
     _trends_query,
     captain_lens,
     chip_lens,
+    fixture_horizon,
+    match_team,
     scope_label,
 )
 from src.fpl_rules import CHIP_NAMES, chip_deadline, match_rules
@@ -501,7 +501,7 @@ def _decide_start_bench(store: Storage, squad_name: str | None, active_squad=Non
     }
 
 
-def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
+def decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
                      *, horizon=_HORIZON, question=None, free: int = 1, bank: float = 0.0) -> dict | None:
     """Analytics DECIDE a one-gameweek plan (ADR-070): captain · lineup · a transfer · flags.
 
@@ -587,7 +587,7 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     }
 
 
-def _price_a_rebuild(owned, players, xp_by_id, squad):
+def price_a_rebuild(owned, players, xp_by_id, squad):
     """`rebuild_value` for this squad, or **None** when it cannot be priced (ADR-185).
 
     The budget a wildcard has is the squad's selling value plus the bank. A player row without a `price` —
@@ -690,7 +690,7 @@ def _decide_chips(store: Storage, squad_name: str | None, active_squad=None,
     # ADR-185 — price the rebuild, so the wildcard can answer *whether* and not only *when*. The budget is
     # what this squad is actually worth: its selling value plus the bank, which is what a wildcard has to
     # spend. One extra solve (~0.08s, ADR-183).
-    rebuild = _price_a_rebuild(owned, players, xp_by_id, squad)
+    rebuild = price_a_rebuild(owned, players, xp_by_id, squad)
     advice = chip_advisor(owned, by_gameweek_by_id, gameweeks, rebuild=rebuild)
     if advice is None:
         return None
@@ -1168,9 +1168,9 @@ def _decide_fixtures(store: Storage, question: str, squad: str | None = None,
     upcoming = store.get_upcoming_fixtures()
     if not upcoming:
         return None
-    horizon = _fixture_horizon(question)
+    horizon = fixture_horizon(question)
     hardest = any(w in question.lower() for w in _HARDEST_WORDS)
-    match = _match_team(question, store.get_teams())
+    match = match_team(question, store.get_teams())
 
     if isinstance(match, list):                          # two+ teams named → clarify, don't guess
         return {"message": f"More than one team matches — did you mean {', '.join(match)}? "
@@ -1317,7 +1317,7 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "start_bench":
         return _decide_start_bench(store, squad, active_squad=active_squad)
     if intent == "gameweek":
-        return _decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon,
+        return decide_gameweek(store, squad, active_squad=active_squad, horizon=horizon,
                                 question=question, free=free, bank=bank)
     if intent == "chips":
         return _decide_chips(store, squad, active_squad=active_squad, horizon=horizon,

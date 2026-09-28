@@ -4615,12 +4615,12 @@ def test_the_captain_tab_and_the_weeks_answer_name_the_same_captain():
     ⚠️ And it compares the two surfaces rather than pinning either. A pinned name fails whenever the data
     moves and still says nothing about agreement, which is the actual requirement (ADR-041: *one xP recipe*).
     """
-    from src.ask import _decide_gameweek
+    from src.ask import decide_gameweek
     from src.storage import Storage
 
     store = Storage()
     try:
-        answer = _decide_gameweek(store, "RoboTS")
+        answer = decide_gameweek(store, "RoboTS")
     finally:
         store.close()
     if not answer or not answer.get("plan", {}).get("captain"):

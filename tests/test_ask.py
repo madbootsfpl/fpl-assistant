@@ -22,7 +22,6 @@ from src.ask import (
     _chips_facts,
     _decide_chips,
     _decide_compare,
-    _decide_gameweek,
     _decide_history,
     _decide_price,
     _decide_rules,
@@ -41,6 +40,7 @@ from src.ask import (
     _value_verdict,
     assemble,
     converse,
+    decide_gameweek,
     detect_followup,
     route,
     verify_grounding,
@@ -773,7 +773,7 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     )
     monkeypatch.setattr(ask.deciders, "gameweek_plan", lambda *a, **k: plan)
 
-    decision = _decide_gameweek(_FakeStore(), "TST")
+    decision = decide_gameweek(_FakeStore(), "TST")
     assert "This week — TST" in decision["detail"]
     assert "Haaland" in decision["subjects"] and "Palmer" in decision["subjects"]   # owned + the buy
     assert "over 5 GW" in decision["detail"]                                        # default horizon
@@ -787,7 +787,7 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
     assert res.trust == {"numbers": [], "names": []}                                 # every figure/name traces
 
     # US-238 (ADR-077): a chosen horizon flows through to the plan's transfer window
-    narrowed = _decide_gameweek(_FakeStore(), "TST", horizon=2)
+    narrowed = decide_gameweek(_FakeStore(), "TST", horizon=2)
     assert "over 2 GW" in narrowed["detail"]
 
 
@@ -1269,7 +1269,7 @@ def test_the_fallback_names_the_two_intents_that_were_hidden():
 # --- a named gameweek is answered for the week actually planned -------------------------------------
 
 def _gameweek_stubs(monkeypatch, gameweeks):
-    """The `_decide_gameweek` scaffolding, with the horizon's gameweeks under test."""
+    """The `decide_gameweek` scaffolding, with the horizon's gameweeks under test."""
     owned = [{"id": 1, "web_name": "Haaland"}, {"id": 2, "web_name": "Saka"}]
     plan = {
         "captain": {"web_name": "Haaland", "team": "MCI", "xp": 6.2, "venue": "H",
@@ -1294,7 +1294,7 @@ def test_a_named_gameweek_that_is_not_next_says_so(monkeypatch):
     between a useful answer and a confidently wrong one.
     """
     _gameweek_stubs(monkeypatch, [3, 4, 5, 6, 7])
-    decision = _decide_gameweek(_FakeStore(), "TST", question="what's the best strategy for GW9?")
+    decision = decide_gameweek(_FakeStore(), "TST", question="what's the best strategy for GW9?")
     scope = decision["facts"]["scope"]
     assert "GW9" in scope and "GW3" in scope
     assert scope in decision["detail"]          # ahead of the plan, not buried in the facts
@@ -1308,7 +1308,7 @@ def test_a_named_gameweek_that_IS_next_adds_no_note(monkeypatch):
     """
     _gameweek_stubs(monkeypatch, [3, 4, 5, 6, 7])
     for question in ("what's the best strategy for GW3?", "what should I do this week?", None):
-        decision = _decide_gameweek(_FakeStore(), "TST", question=question)
+        decision = decide_gameweek(_FakeStore(), "TST", question=question)
         assert "scope" not in decision["facts"], question
 
 

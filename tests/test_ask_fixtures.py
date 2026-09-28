@@ -8,7 +8,7 @@ tested elsewhere — here we test the mode selection, the hardest reversal, and 
 import types
 
 from src import ask
-from src.ask import _fixture_horizon, _match_team, _squad_name, route
+from src.ask import fixture_horizon, match_team, route, squad_name
 
 _TEAMS = [
     {"name": "Arsenal", "short_name": "ARS"},
@@ -39,23 +39,23 @@ def test_fixtures_is_last_so_specific_intents_still_win():
 # ---- team resolution (never a wrong guess) ----------------------------------
 
 def test_match_team_resolves_name_code_and_alias():
-    assert _match_team("when does Arsenal play?", _TEAMS) == "ARS"       # full name
-    assert _match_team("who does Man City play?", _TEAMS) == "MCI"       # multi-word name
-    assert _match_team("fixtures for LIV", _TEAMS) == "LIV"              # a typed code
-    assert _match_team("Tottenham schedule", _TEAMS) == "TOT"            # an alias
+    assert match_team("when does Arsenal play?", _TEAMS) == "ARS"       # full name
+    assert match_team("who does Man City play?", _TEAMS) == "MCI"       # multi-word name
+    assert match_team("fixtures for LIV", _TEAMS) == "LIV"              # a typed code
+    assert match_team("Tottenham schedule", _TEAMS) == "TOT"            # an alias
 
 
 def test_match_team_never_guesses():
-    assert _match_team("fixtures for the new gameweek", _TEAMS) is None  # 'new' ≠ the code NEW
-    assert _match_team("who has the best fixtures?", _TEAMS) is None     # no team → league mode
-    assert _match_team("Arsenal or Liverpool fixtures?", _TEAMS) == ["ARS", "LIV"]   # ambiguous
+    assert match_team("fixtures for the new gameweek", _TEAMS) is None  # 'new' ≠ the code NEW
+    assert match_team("who has the best fixtures?", _TEAMS) is None     # no team → league mode
+    assert match_team("Arsenal or Liverpool fixtures?", _TEAMS) == ["ARS", "LIV"]   # ambiguous
 
 
 def test_fixture_horizon_parses_next_n_or_defaults():
-    assert _fixture_horizon("best fixtures next 3") == 3
-    assert _fixture_horizon("fixtures over the next 8 gameweeks") == 8
-    assert _fixture_horizon("who has the best fixtures?") == 5           # default
-    assert _fixture_horizon("fixtures for the next 99 weeks") == 38      # capped to a season
+    assert fixture_horizon("best fixtures next 3") == 3
+    assert fixture_horizon("fixtures over the next 8 gameweeks") == 8
+    assert fixture_horizon("who has the best fixtures?") == 5           # default
+    assert fixture_horizon("fixtures for the next 99 weeks") == 38      # capped to a season
 
 
 # ---- the two decision modes -------------------------------------------------
@@ -105,10 +105,10 @@ def test_decide_fixtures_no_fixtures_returns_none():
 
 def test_squad_name_is_possessive_aware():
     # the gate bug: "TS's" is one token — must still resolve to the saved squad "TS"
-    assert _squad_name("which of TS's players have the best fixtures?", ["TS"]) == "TS"
-    assert _squad_name("TS's fixtures", ["TS"]) == "TS"
-    assert _squad_name("fixtures for TS", ["TS"]) == "TS"           # plain still works
-    assert _squad_name("who plays this weekend", ["TS"]) is None    # no squad → None
+    assert squad_name("which of TS's players have the best fixtures?", ["TS"]) == "TS"
+    assert squad_name("TS's fixtures", ["TS"]) == "TS"
+    assert squad_name("fixtures for TS", ["TS"]) == "TS"           # plain still works
+    assert squad_name("who plays this weekend", ["TS"]) is None    # no squad → None
 
 
 _SQUAD_FDR = [

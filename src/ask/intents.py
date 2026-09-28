@@ -121,7 +121,7 @@ _INTENT_KEYWORDS = {
                                      # `detail` above was rendered from, so a button applies what is displayed
 
 
-def _squad_name(question: str, known_squads) -> str | None:
+def squad_name(question: str, known_squads) -> str | None:
     """The saved-squad name mentioned anywhere in the question, if any.
 
     Matching against *known* names (not a preposition) is robust to phrasing — "for TS",
@@ -161,7 +161,7 @@ def route(question: str, known_squads=None) -> tuple[str | None, str | None]:
     """
     if known_squads is None:
         known_squads = SquadStore().names()
-    squad = _squad_name(question, known_squads)
+    squad = squad_name(question, known_squads)
     q = question.lower()
     for intent, keywords in _INTENT_KEYWORDS.items():
         if any(k in q for k in keywords):
@@ -405,7 +405,7 @@ _TEAM_ALIASES = {   # colloquial names the FPL `name` field doesn't carry
 }
 
 
-def _match_team(question: str, teams) -> str | list | None:
+def match_team(question: str, teams) -> str | list | None:
     """Resolve a team from a question (ADR-048): the code (str), None (→ league mode), or a list
     (ambiguous → clarify). Never a silent wrong guess.
 
@@ -428,7 +428,7 @@ def _match_team(question: str, teams) -> str | list | None:
     return next(iter(hits), None)
 
 
-def _fixture_horizon(question: str) -> int:
+def fixture_horizon(question: str) -> int:
     """The N in 'next N' / 'N gameweeks' (ADR-048); default 5, capped to a season."""
     m = re.search(r"next\s+(\d+)", question.lower()) or re.search(
         r"(\d+)\s*(?:game|gw|week|fixture)", question.lower())

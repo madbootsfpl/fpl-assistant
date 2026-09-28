@@ -726,8 +726,8 @@ def cmd_chips(args) -> None:
         gameweeks = ranked[0]["gameweeks"] if ranked else []
 
         # ADR-185 — the same rebuild valuation the web answer uses, so the two cannot disagree.
-        from src.ask import _price_a_rebuild
-        _rebuild = _price_a_rebuild(owned, players, {r["id"]: r["xp"] for r in ranked}, squad)
+        from src.ask import price_a_rebuild
+        _rebuild = price_a_rebuild(owned, players, {r["id"]: r["xp"] for r in ranked}, squad)
         advice = chip_advisor(owned, by_gameweek_by_id, gameweeks, rebuild=_rebuild)
         if advice is None:
             print("Not enough data to advise on chips yet — try after `refresh`.")
