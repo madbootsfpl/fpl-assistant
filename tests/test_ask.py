@@ -703,7 +703,7 @@ def test_analyse_decision_carries_the_squad_table_as_detail(monkeypatch):
     weight_by_id = {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0}
     squad = {"player_ids": [1, 2, 3, 4], "bench_ids": [1]}   # P1 benched → XI = 2,3,4
     monkeypatch.setattr(
-        ask, "_squad_xp",
+        ask.deciders, "_squad_xp",
         lambda store, name, active_squad=None: (squad, owned, owned, xp_by_id, by_gw, [1, 2, 3], weight_by_id),
     )
     decision = ask._decide_analyse(store=None, squad_name="TST")
@@ -767,11 +767,11 @@ def test_decide_gameweek_is_grounded_and_verified(monkeypatch):
         "flags": [],
     }
     monkeypatch.setattr(
-        ask, "_squad_xp",
+        ask.deciders, "_squad_xp",
         lambda store, name, active_squad=None, *, horizon=5: (
             {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {1: 6.2, 2: 3.1}, {}, [], {}),
     )
-    monkeypatch.setattr(ask, "gameweek_plan", lambda *a, **k: plan)
+    monkeypatch.setattr(ask.deciders, "gameweek_plan", lambda *a, **k: plan)
 
     decision = _decide_gameweek(_FakeStore(), "TST")
     assert "This week — TST" in decision["detail"]
@@ -818,11 +818,11 @@ def test_decide_chips_is_grounded_and_verified(monkeypatch):
         "wildcard": {"window": (3, 5), "gameweeks": [3, 4, 5], "avg_xi": 47.0},
     }
     monkeypatch.setattr(
-        ask, "_squad_xp",
+        ask.deciders, "_squad_xp",
         lambda store, name, active_squad=None, *, horizon=5: (
             {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {}, {}, [1, 2, 3, 4], {}),
     )
-    monkeypatch.setattr(ask, "chip_advisor", lambda *a, **k: advice)
+    monkeypatch.setattr(ask.deciders, "chip_advisor", lambda *a, **k: advice)
 
     decision = _decide_chips(_FakeStore(), "TST", horizon=8)
     assert "Chip strategy — TST" in decision["detail"]
@@ -1010,7 +1010,7 @@ def test_why_renarrates_the_same_facts_and_leaves_context():
 def test_next_advances_the_rank(monkeypatch):
     calls = []
     monkeypatch.setattr(
-        ask, "_dispatch",
+        ask.deciders, "_dispatch",
         lambda intent, store, q, squad, *, count=1, rank=0, active_squad=None: (
             calls.append((intent, rank)) or _canned(rank)),
     )
@@ -1021,7 +1021,7 @@ def test_next_advances_the_rank(monkeypatch):
 
 
 def test_next_past_the_end_keeps_the_rank(monkeypatch):
-    monkeypatch.setattr(ask, "_dispatch",
+    monkeypatch.setattr(ask.deciders, "_dispatch",
                         lambda *a, **k: {"message": "That's all I have."})
     store = types.SimpleNamespace(get_players=lambda: [])
     ctx = Context(intent="captain", squad="TS", question="captain for TS", rank=2,
@@ -1033,7 +1033,7 @@ def test_next_past_the_end_keeps_the_rank(monkeypatch):
 def test_whatabout_swaps_position_shortlist_only(monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        ask, "_dispatch",
+        ask.deciders, "_dispatch",
         lambda intent, store, q, squad, *, count=1, rank=0, active_squad=None: (
             seen.update(q=q, rank=rank) or _canned(rank, detail="d")),
     )
@@ -1058,7 +1058,7 @@ def test_converse_nudges_a_followup_with_no_context():
 def test_answer_one_shot_degrades_to_help_for_an_unrecognised_question(monkeypatch):
     # US-260 (ADR-085): an unrecognised question takes the free-form path (intent "chat"); with no model it
     # still degrades to the same help message — the honest fallback is unchanged.
-    monkeypatch.setattr(ask, "SquadStore", lambda: types.SimpleNamespace(names=lambda: []))
+    monkeypatch.setattr(ask.deciders, "SquadStore", lambda: types.SimpleNamespace(names=lambda: []))
     store = types.SimpleNamespace(get_players=lambda: [])
     result = ask.answer("what is the meaning of life", store=store, narrator=lambda p: None)
     assert result.intent == "chat" and "captaincy" in result.message
@@ -1148,7 +1148,7 @@ def test_ask_captain_defaults_to_the_loaded_squad_hyphen_and_bare(tmp_path, monk
     # Isolate the saved-squad store to an empty temp file, so ambient saved squads (RoboTS/TS) can't make
     # "my-team" resolve to a different saved squad — the routing then sees only the active squad.
     empty = str(tmp_path / "squads.json")
-    monkeypatch.setattr(ask_mod, "SquadStore", lambda path=empty: SquadStore(path))
+    monkeypatch.setattr(ask_mod.deciders, "SquadStore", lambda path=empty: SquadStore(path))
 
     store = Storage()
     try:
@@ -1279,11 +1279,11 @@ def _gameweek_stubs(monkeypatch, gameweeks):
         "flags": [],
     }
     monkeypatch.setattr(
-        ask, "_squad_xp",
+        ask.deciders, "_squad_xp",
         lambda store, name, active_squad=None, *, horizon=5: (
             {"player_ids": [1, 2], "bench_ids": []}, owned, owned, {1: 6.2, 2: 3.1}, {}, gameweeks, {}),
     )
-    monkeypatch.setattr(ask, "gameweek_plan", lambda *a, **k: plan)
+    monkeypatch.setattr(ask.deciders, "gameweek_plan", lambda *a, **k: plan)
 
 
 def test_a_named_gameweek_that_is_not_next_says_so(monkeypatch):

@@ -73,7 +73,10 @@ def test_ask_escapes_html_in_the_question():
 #: `test_core_list_covers_every_non_edge_package` below keeps this honest from now on.
 _CORE = [
     "src/analytics", "src/ui", "src/api", "src/models", "src/service",
-    "src/ask.py", "src/cli.py", "src/storage.py", "src/ingest.py",
+    #: ⭐ `src/ask` is a package as of ADR-325 (it was `src/ask.py`, one 2,409-line module). The entry
+    #: here is the directory, so every layer inside it is covered — ⚠️ *a list naming a file stops
+    #: covering the code the moment that file becomes a folder, and says nothing when it does.*
+    "src/ask", "src/cli.py", "src/storage.py", "src/ingest.py",
     "src/squads.py", "src/llm.py", "src/config.py", "src/relay.py",
     #: ⭐ Added when the test below first ran. `kits.py` and `glossary.py` had already been *moved out* of
     #: the Streamlit package precisely so the API could use them — and nothing then stopped them sliding

@@ -1,29 +1,22 @@
-"""The `ask` command's brain (ADR-034): route → analytics decide → humanise → narrate.
+"""One function per intent: store in, decision out. **The engine.**
 
-The discipline (proven in the Sprint 031 spike): **the analytics decide; the LLM only
-narrates.** A question is routed by *keyword* (the LLM never decides the route either); the
-analytics make the decision and emit **pre-humanised, self-describing facts**; a prompt
-tells the model to explain them and nothing else. The narrator is **injectable and optional**
-— if it returns None (Ollama absent), `answer` degrades to the decision + facts.
+⭐ `_dispatch` at the foot is the whole table — intent to decider, and the only place that mapping exists.
+Everything here calls the analytics; nothing here talks to the narrator or to the screen.
 
-This sprint (US-096) wires the `captain` intent; transfer + analyse follow in US-097.
+⚠️ **Reached as a module, not by name, where a test fakes it.** `_dispatch`, `_squad_xp` and the analytics
+this layer imports are all faked in the suite; binding them into a caller's globals would give each one as
+many patch points as it has importers (ADR-325).
 """
 
-import json
-import re
 import statistics
-from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
-from src import llm
 from src.analytics import (
     DIFFERENTIAL_OWN,
-    FULL_BUDGET,
     PRICE_DOWN,
     PRICE_UP,
     SQUAD_15,
     TREND_BYS,
-    WEEKLY_BENCH_WEIGHT,
     analyse_squad,
     archetype_bands,
     available_players,
@@ -55,7 +48,33 @@ from src.analytics import (
 from src.analytics.captain import _next_opponent
 from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
-from src.analytics.names import build_index, find_spoken_mentions
+from src.ask.defaults import _HORIZON
+from src.ask.facts import (
+    _analyse_facts,
+    _captain_facts,
+    _chips_facts,
+    _gameweek_facts,
+    _minutes_phrase,
+    _plan_facts,
+    _transfer_facts,
+)
+from src.ask.intents import (
+    _archetype_counts,
+    _bench_mode,
+    _chip_named,
+    _fixture_horizon,
+    _looks_like_a_comparison,
+    _match_players,
+    _match_team,
+    _named_gameweek,
+    _named_in,
+    _shortlist_query,
+    _squad_budget,
+    _trends_query,
+    captain_lens,
+    chip_lens,
+    scope_label,
+)
 from src.fpl_rules import CHIP_NAMES, chip_deadline, match_rules
 from src.squads import SquadStore
 from src.storage import Storage
@@ -76,7 +95,11 @@ from src.ui.startbench import render_start_bench
 from src.ui.transfer import render_transfer_plan
 from src.ui.trending import render_trending
 
-_HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
+# ⚠️⚠️ **Defined here, not in `defaults`, and that placement is load-bearing for a guard** (ADR-325).
+# Only the deciders use it — and `tests/test_tiebreak_wiring.py` resolves `**_TIE_BREAK` by finding
+# where the name is defined **in the same file**. Moving it one module away turned that guard into four
+# false positives. ⭐ *Its own docstring warned about this — "a guard that follows only the indirection
+# you happened to write is a guard against yourself"* — so the constant lives beside its only caller.
 
 # ⭐ **Stated rather than defaulted (ADR-209/220).** `ask` always ranks over `_HORIZON`, which is already the
 # window the tie-break band was sized against — so this changes nothing today. ⚠️ *That is exactly why it is
@@ -84,251 +107,6 @@ _HORIZON = 5   # transfer/analyse are multi-week decisions (captain is next-GW)
 # person to make this configurable would inherit a mismatch with nothing to warn them.
 # `horizon_xp` is None because the ranking window **is** the wider one — there is no longer view to consult.
 _TIE_BREAK = {"window": _HORIZON, "horizon_xp": None}
-
-# Squad-scoped intents that default to the loaded squad when none is named (ADR-090); `analyse` is the router's
-# fallback intent. Deliberately excludes fixtures/compare/worth/etc. so a *global* question isn't scoped.
-_SQUAD_DEFAULT_INTENTS = frozenset({"captain", "transfer", "analyse", "start_bench", "gameweek", "chips"})
-
-# An explicit "answer globally" cue — escapes the ADR-090 default (captaincy's global "best picks" mode).
-_EXPLICIT_GLOBAL = re.compile(r"\b(all players|everyone|best overall|from all|any player)\b", re.IGNORECASE)
-
-# Keyword → intent. Order matters (first match wins); the LLM decides none of this.
-_INTENT_KEYWORDS = {
-    # price predictor (ADR-092) FIRST among the price words: prediction-specific phrases ("who's about to
-    # rise?", "price risers") so they beat rules' explanatory "price rise"/"price change" and trends' bare
-    # "risers"/"fallers". A genuine rules question ("how do price rises work") carries none of these.
-    "price": ("about to rise", "about to fall", "about to go up", "about to go down", "about to drop",
-              "about to change price", "going to rise", "going to fall", "rise in price", "fall in price",
-              "drop in price", "price prediction", "price predictions", "price risers", "price fallers",
-              "who's rising", "who is rising", "who's going up", "predicted to rise", "predicted to fall",
-              "who will rise", "who will fall", "likely to rise", "likely to fall"),
-    # rules (ADR-085): question-shaped, general cues so a rules question ("how does bench boost work",
-    # "how do transfers work") beats the squad intents — WITHOUT stealing squad commands, which are imperative
-    # / squad-scoped ("fix my bench", "what transfer should I make") and match none of these.
-    # ⚠️⚠️⚠️ **The apostrophe-less forms, and they matter more than they look** (ADR-317 B). `what's a`
-    # was here and `whats a` was not, so *"whats a chip?"* fell past `rules` into `chips` and got a
-    # strategy. Worse, two others landed on engines that **act** rather than explain: *"whats a wildcard?"*
-    # reached `build_squad` and **built a squad**, *"explain the bench boost"* reached `start_bench`.
-    # ⭐⭐ *A definition question answered by a machine that does something is the most confidently wrong
-    # shape this router has* — and nobody types the apostrophe on a phone.
-    "rules": ("how does", "how do ", "how is a", "how are", "what is a", "what are the", "what's a",
-              # ⚠️⚠️⚠️ **"whats the" is NOT here, and it was.** It stole *"whats the best chip
-              # strategy?"* into `rules` — a strategy question answered with a definition. ⭐ *"a" and "an"
-              # announce a definition; "the" announces almost anything*, and the spot-check that missed it
-              # used "whats **my** best chip strategy" by luck.
-              "whats a", "whats an", "what're the",
-              "what does", "what happens", "how many points", "how much do", "the rules", "fpl rules",
-              "scoring", "clean sheet", "bonus point", "defensive contribution", "defcon", "price change",
-              "price rise", "price fall", "sell-on", "auto sub", "auto-sub", "autosub", "when is the deadline",
-              "double gameweek", "blank gameweek", "explain the rules",
-              # new topics (US-282) — specific phrases so they win over the squad intents without hijacking them
-              "yellow flag", "red flag", "chance of playing", "player flag", "before gameweek",
-              "before the season", "unlimited transfers before", "preseason transfer", "one chip per",
-              "two chips", "chips in one gameweek", "multiple chips", "bench points", "do bench players score",
-              "does my bench score", "how many wildcards", "two wildcards", "second wildcard", "wildcard reset",
-              "mini league", "mini-league", "classic league", "head to head", "head-to-head", "h2h",
-              "how do leagues", "overall rank", "gameweek rank", "world rank", "team value", "selling price",
-              "in the bank", "buy price", "squad value"),
-    # chips (ADR-082): distinctive chip phrases only, so they win before captain/bench/build without
-    # hijacking them. NOT bare "bench boost"/"wildcard" (they stay with build_squad — "build me a squad for a
-    # bench boost" must still build); NOT bare "captain"/"bench" (those stay their own intents).
-    "chips": ("chip strategy", "which chip", "what chip", "chips", " chip ", "chip?", "use a chip",
-              "triple captain", "free hit", "use my bench boost", "use my wildcard", "when to bench boost",
-              "when to wildcard", "play my bench boost", "play my wildcard",
-              # Timing phrasings (2026-08-30). Without these, "wildcard now or wait?" fell through to
-              # build_squad's bare "wildcard" and **built a squad** — a confidently wrong answer to a
-              # question about when, measured as the only harmful mis-route in a 30-question corpus.
-              # ⚠️⚠️ **The past tense was missing, and `build_squad` took it.** `chips` knew "use my
-              # wildcard" and not "used my wildcard", so *"have i used my wildcard?"* fell past it to a
-              # bare "wildcard" and **built a squad** — ⭐ *asking whether you spent a chip is not asking
-              # to spend it, and the difference is one letter* (ADR-317 A).
-              "have i used", "have i played", "did i use", "did i play", "chips have i",
-              "can i still play", "do i still have", "still have my", "already played my",
-              "wildcard now", "wildcard or wait", "wildcard this week", "wildcard yet",
-              "when should i wildcard", "hold my wildcard", "save my wildcard"),
-    # trends: its phrases ("most transferred") are distinctive, so they win before "transfer" (ADR-057).
-    "trends": ("trending", "most owned", "most picked", "most transferred", "most sold", "most bought",
-               "in form", "risers", "fallers", "bandwagon", "most popular"),
-    # worth (a single-player value verdict, ADR-061) before captain/transfer so "worth buying" isn't
-    # caught by "buy"; the phrases are value-specific, so "worth captaining" still falls to captain.
-    "worth": ("worth the money", "worth it", "good value", "value for money", "worth buying",
-              "worth the price", "worth the cost",
-              # The negative framing is just as common and matched nothing (2026-08-30).
-              "overpriced", "too expensive", "overrated"),
-    # history (US-296): a single-player season record — distinctive phrases so it wins for "X's history" /
-    # "how did X do last season" without stealing worth ("is X worth it") or the squad commands.
-    "history": ("history", "last season", "last year", "how did", "track record", "past seasons",
-                "season by season", "season record"),
-    "captain": ("captain", "armband"),
-    # "bring in" is how people actually phrase a transfer in — added 2026-08-30 after it fell through.
-    "transfer": ("transfer", "sell", "buy", "swap", "bring in", "get rid of", "move on"),
-    "analyse": ("analyse", "analyze", "health", "how is my", "how's my", "how good",
-                # "is my team any good?" — the natural phrasing, which "how good" misses (2026-08-30).
-                "team any good", "squad any good", "team look", "squad look"),
-    # build_squad before start_bench so "build me a squad for a bench boost" isn't caught by "bench".
-    "build_squad": ("build", "wildcard", "best squad", "best team", "best xi", "new squad",
-                    "new team", "pick a squad", "pick a team"),
-    "start_bench": ("start", "bench", "lineup", "line-up"),
-    # gameweek after the specific intents: a holistic "what should I do this week" routes here, but a
-    # pointed "who should I captain this week" still matches captain first (ADR-070). Phrase-based so
-    # "this week" only fires the weekly plan, not a stray word.
-    "gameweek": ("this week", "this gameweek", "gameweek plan", "gw plan", "weekly plan",
-                 "plan for the week", "plan for this week", "what should i do", "what do i do",
-                 "recommend my", "recommendation for my",
-                 # A **named** gameweek (2026-08-30). Every phrasing above assumes *this* week, so
-                 # "what's the best strategy for GW3?" matched nothing and fell to the fallback — even
-                 # though "what should I do in GW3?" already answered it. The owner hit exactly that.
-                 #
-                 # Each is "<planning word> for/at GW<n>", never a bare "for gw": `gameweek` is checked
-                 # BEFORE `shortlist`, so a loose "gw" would swallow "best midfielders for GW3". And a bare
-                 # "strategy" is deliberately still unroutable — it is a modifier, not a topic ("transfer
-                 # strategy" and "captaincy strategy" correctly reach their own intents, which are checked
-                 # first), so guessing an intent for it would trade an honest miss for a confident wrong
-                 # answer — the one failure the routing corpus measured as actually harmful.
-                 "strategy for gw", "strategy for gameweek", "strategy in gw", "strategy in gameweek",
-                 "plan for gw", "plan for gameweek", "approach gw", "approach gameweek",
-                 "approach to gw", "approach to gameweek", "approach for gw", "approach for gameweek"),
-    "shortlist": ("goalkeeper", "keeper", "defender", "midfielder", "forward", "striker",
-                  "best value", "best players", "differential", "differentials"),
-    "compare": ("compare", "versus", " vs ", "better", " or "),
-    # fixtures is last: its keywords are distinctive, and "play" is broad, so let every more
-    # specific intent match first (ADR-048).
-    "fixtures": ("fixture", "schedule", "opponent", "difficulty", "fdr", "play"),
-}
-
-_RULES = (
-    "Rules: do NOT rank or compare players, do NOT compute or invent any number, do NOT expand "
-    "or rename teams (use the codes exactly as written), do NOT merge separate facts, and do NOT "
-    "mention anything that is not in the facts. "
-    # ADR-168 §🔬 — the caveat rule. Measured on four answers: the narration walked every ✓ Edge bullet and
-    # silently dropped the ⚠ Risk ones, most damagingly on `transfer`, where it reframed "selling Hume
-    # (13.9 xP)" as "selling Hume frees £0.5m" — a risk rendered as a benefit — and never mentioned the
-    # 4%-owned warning at all. The facts always contained them; the prompt never asked for them.
-    #
-    # It is stated as an obligation with a fixed form because "mention the risk" was evidently not enough:
-    # both models had the risk and both were inconsistent about using it.
-    "If the facts contain a 'risk' entry, you MUST state it in the last sentence, beginning with "
-    "'The risk is' — as a risk, never reworded into a benefit. If 'risk' is absent or 'none noted', "
-    "add nothing."
-)
-
-# What each intent answers, in plain words — the single source of the "I can answer about…" message.
-#
-# **Derived, not hand-written** (2026-08-30). The old message was prose maintained by hand, and it had drifted
-# to advertise **8 of 15** intents: `chips`, `gameweek`, `price`, `rules`, `trends`, `history` and `fixtures`
-# were all reachable and none was mentioned. The owner asked *"what's th best strategy for GW3?"*, got the
-# fallback, and the two intents that would have answered — `gameweek` ("what should I do in GW3?") and
-# `chips` — were precisely the ones it omitted. A capability list that under-sells the product is the same
-# failure as one that over-sells it (ADR-168): the sentence stopped describing the code and nobody could see.
-#
-# `test_ask.py` pins every intent to a blurb in both directions, so a new intent cannot ship undescribed and
-# a deleted one cannot linger in the copy.
-_INTENT_BLURB = {
-    "captain": "captaincy",
-    "transfer": "transfers",
-    "gameweek": "a plan for the week",
-    "chips": "chip timing (wildcard, bench boost, triple captain, free hit)",
-    "analyse": "your squad's health",
-    "start_bench": "your lineup",
-    "build_squad": "building a squad",
-    "shortlist": "the best players in a position (incl. differentials)",
-    "worth": "whether a player is worth the money",
-    "compare": "comparing players",
-    "fixtures": "fixtures and difficulty",
-    "trends": "what the crowd is doing (most owned, most transferred, in form)",
-    "price": "price changes",
-    "history": "a player's past seasons",
-    "rules": "the FPL rules and scoring",
-}
-
-
-def _capabilities() -> str:
-    """The blurbs as one bullet per line.
-
-    A list, not a sentence: fifteen comma-separated clauses is a wall nobody reads to the end of, and this
-    text renders in **monospace** everywhere it appears (`st.code` on the web, plain stdout in the CLI), so a
-    bullet per line is both scannable and safe — markdown would render literally.
-    """
-    return "\n".join(f"  \u2022 {blurb}" for blurb in _INTENT_BLURB.values())
-
-
-_FALLBACK = (
-    "I can answer about:\n"
-    f"{_capabilities()}\n\n"
-    # One example per *shape* of question: squad-scoped, whole-gameweek, single-player. The middle one is the
-    # question that exposed the drift, so the next person who asks it finds the door rather than this message.
-    'Try: ask "who should I captain from <squad>?", ask "what should I do in GW3?", '
-    'or ask "is Haaland worth the money?".'
-)
-
-_NUDGE = (   # a follow-up ("why?", "and the next?") arrived before any question to build on (ADR-047)
-    "Ask a question first, then follow up — e.g. \"who should I captain from <squad>?\", "
-    'then "why?" or "and the second best?".'
-)
-
-
-@dataclass
-class AskResult:
-    question: str
-    intent: str | None
-    headline: str | None = None      # the analytics decision, one line
-    facts: dict | None = None        # the pre-humanised facts
-    explanation: str | None = None   # the LLM prose, or None when the model is unavailable
-    message: str | None = None       # for an unrecognised question or an empty result
-    detail: str | None = None        # a pre-rendered structured table (e.g. a plan; ADR-036)
-    trust: dict | None = None        # verify_grounding result when there's narration (ADR-037)
-    squad: dict | None = None        # a built squad (SquadStore shape) an edge can adopt (ADR-062)
-    plan: dict | None = None         # the gameweek plan an edge can ACT on (ADR-070/174) — same object the
-                                     # `detail` above was rendered from, so a button applies what is displayed
-
-
-def _squad_name(question: str, known_squads) -> str | None:
-    """The saved-squad name mentioned anywhere in the question, if any.
-
-    Matching against *known* names (not a preposition) is robust to phrasing — "for TS",
-    "from TS", "analyse TS" all work — and it won't mistake a stray word ("for the weekend")
-    for a squad, so captaincy's global mode still works. Possessive-aware (ADR-049): "TS's
-    players" resolves to "TS", so the natural squad-scoped phrasing routes.
-    """
-    tokens = set()
-    for raw in question.replace("?", "").split():
-        tokens.add(raw)
-        tokens.add(re.sub(r"['’]s$", "", raw).strip(".,!;:'’\""))   # "TS's" → "TS", "TS." → "TS"
-    return next((name for name in known_squads if name in tokens), None)
-
-
-# "GW3", "gw 3", "gameweek 3" — the number a question names, if any.
-_GW_IN_QUESTION = re.compile(r"\b(?:gw|gameweek)\s*(\d{1,2})\b")
-
-
-def _named_gameweek(question) -> int | None:
-    """The gameweek a question explicitly names, or None.
-
-    Exists because `gameweek` answers **the next gameweek, always** — it takes no GW argument and the captain
-    is next-GW by construction. Every phrasing it originally knew said so out loud ("this week", "what should
-    I do"), so the assumption was safe. Once it learned to match a *named* gameweek (2026-08-30), it could be
-    asked about GW3 while GW2 is next and would answer the wrong week under a "This week" header — a
-    confident answer to a question nobody asked, which is the failure this project treats as worse than a
-    miss. So the number is read back out and the mismatch is stated.
-    """
-    match = _GW_IN_QUESTION.search((question or "").lower())
-    return int(match.group(1)) if match else None
-
-
-def route(question: str, known_squads=None) -> tuple[str | None, str | None]:
-    """(intent, squad_name) from a question, by keyword. intent is None if unrecognised.
-
-    `known_squads` defaults to the saved squads; tests pass it explicitly (no I/O).
-    """
-    if known_squads is None:
-        known_squads = SquadStore().names()
-    squad = _squad_name(question, known_squads)
-    q = question.lower()
-    for intent, keywords in _INTENT_KEYWORDS.items():
-        if any(k in q for k in keywords):
-            return intent, squad
-    return None, squad
-
 
 # --- squad resolution: prefer the session active squad, else the saved SquadStore (Sprint 066) ------
 # The web edge loads a squad into the session (build/upload/import, ADR-054/055); `ask` must see it, not
@@ -347,195 +125,6 @@ def _known_squad_names(active_squad=None):
     if active_squad and active_squad.get("name") and active_squad["name"] not in names:
         return [active_squad["name"], *names]
     return names
-
-
-# ---- conversational follow-ups (ADR-047) ------------------------------------
-# A follow-up builds on the last turn. Detection is deterministic (the LLM never decides it) and
-# fires only on short, *subject-less* lines: every non-position word must be filler, so "why?" is a
-# follow-up but "why is Haaland good?" (carries a subject) stays a fresh question.
-
-_WHY_WORDS = {"why", "not", "explain", "how", "come", "reason", "because", "that", "this", "again",
-              "so", "is", "it", "the", "one", "them", "him", "her", "though", "really", "then"}
-_WHY_HINTS = ("why", "explain", "reason", "because", "come")
-_NEXT_WORDS = {"next", "second", "third", "2nd", "3rd", "who", "else", "another", "someone", "best",
-               "the", "one", "and", "option", "pick", "give", "me", "show", "other", "some", "are",
-               "there", "any"}
-_NEXT_HINTS = ("next", "second", "third", "2nd", "3rd", "else", "another")
-_WHATABOUT_WORDS = {"what", "about", "how", "and", "the", "a", "instead", "of", "some"}
-
-
-@dataclass
-class FollowUp:
-    kind: str                       # "why" | "next" | "whatabout"
-    position: str | None = None     # for "whatabout": the new position code (GK/DEF/MID/FWD)
-
-
-@dataclass
-class Context:
-    """The last successful turn, so a follow-up can build on it (ADR-047)."""
-    intent: str
-    squad: str | None = None
-    question: str = ""              # the (possibly rewritten) question that produced this turn
-    count: int = 1                  # transfer count
-    rank: int = 0                   # how many "next" steps in — the current pick / shortlist page
-    decision: dict | None = None    # the decision itself, so "why" can re-narrate its facts
-
-
-#: The parts of a `Context` that travel back to a stateless client (ADR-317 C).
-#:
-#: ⚠️⚠️⚠️ **`decision` is deliberately NOT among them.** It is the engine's own output, and a client that
-#: could hand it back could hand back anything — ⭐ *a server that trusts a decision it did not make has
-#: stopped being the thing that decides.* The decision is **recomputed** from these five fields instead,
-#: which costs one dispatch and buys the guarantee.
-CONTEXT_WIRE = ("intent", "squad", "question", "count", "rank")
-
-
-def context_to_wire(context: "Context | None") -> dict | None:
-    """A `Context` reduced to what a client may hold between turns."""
-    if context is None or not context.intent:
-        return None
-    return {field: getattr(context, field) for field in CONTEXT_WIRE}
-
-
-def context_from_wire(payload, store: Storage, *, active_squad=None, horizon=_HORIZON,
-                      free: int = 1, bank: float = 0.0, chip_status=None) -> "Context | None":
-    """Rebuild the last turn from what the client sent back, **re-deciding** rather than trusting it.
-
-    ⭐ Only *"why"* needs the decision at all — *"and the next?"* and *"what about defenders?"* re-dispatch
-    anyway — so the cost is one engine call on a follow-up, and never on a fresh question.
-
-    ⚠️ Returns None on anything malformed. *A follow-up that cannot be rebuilt is a fresh question*, which
-    is the same thing that happens at the start of a chat and needs no special case.
-    """
-    if not isinstance(payload, dict) or not payload.get("intent"):
-        return None
-    try:
-        context = Context(
-            intent=str(payload["intent"]),
-            squad=payload.get("squad") or None,
-            question=str(payload.get("question") or ""),
-            count=int(payload.get("count") or 1),
-            rank=int(payload.get("rank") or 0),
-        )
-        decision = _dispatch(context.intent, store, context.question, context.squad,
-                             count=context.count, rank=context.rank, active_squad=active_squad,
-                             horizon=horizon, free=free, bank=bank, chip_status=chip_status)
-    except (KeyError, TypeError, ValueError):
-        return None
-    return replace(context, decision=decision)
-
-
-def detect_followup(question: str) -> FollowUp | None:
-    """A follow-up (why / next / what-about), or None for a fresh question — by trigger only.
-
-    A line only counts as a follow-up when it is *subject-less*: apart from a position word (for
-    what-about), every token must be filler for that family. So "why?" / "and the second best?" /
-    "what about defenders?" match, but "why is Haaland good?" or "best defenders" do not.
-    """
-    toks = set(re.findall(r"[a-z0-9]+", question.lower()))
-    if not toks:
-        return None
-    # what about <position>: a position word (singular or plural), "about", and only filler else
-    pos = next((code for word, code in _POS_WORDS.items()
-                if word in toks or f"{word}s" in toks), None)
-    pos_forms = {form for word in _POS_WORDS for form in (word, f"{word}s")}
-    if pos and "about" in toks and (toks - pos_forms) <= _WHATABOUT_WORDS:
-        return FollowUp("whatabout", position=pos)
-    if toks <= _NEXT_WORDS and any(h in toks for h in _NEXT_HINTS):
-        return FollowUp("next")
-    if toks <= _WHY_WORDS and any(h in toks for h in _WHY_HINTS):
-        return FollowUp("why")
-    return None
-
-
-def _captain_facts(pick: dict, lens: str | None = None) -> dict:
-    """Pre-humanised, self-describing facts for one captain pick — nothing to decode."""
-    venue = "home against" if pick["venue"] == "H" else "away against"
-    facts = {
-        "player": f"{pick['web_name']} ({pick['team']})",
-        "expected_points_next_gameweek": pick["xp"],
-        "fixture": f"{venue} {pick['opponent']}",
-        "is_penalty_taker": pick["penalty_taker"],
-    }
-    # ⭐⭐ **A question about minutes has to be answered with minutes.** Naming the lens in the heading and
-    # then handing back the same four facts would be *the same failure in nicer clothing* — the reader
-    # asked whether his captain might be rested and would still be reading expected points.
-    if lens in {"rotation", "safest"}:
-        facts["expected_minutes_share"] = _minutes_phrase(pick)
-        facts["is_flagged_doubtful"] = bool(pick.get("doubtful"))
-        if pick.get("chance") is not None:
-            facts["fpl_chance_of_playing"] = f"{pick['chance']}%"
-    return facts
-
-
-def _minutes_phrase(pick: dict) -> str:
-    """xMins as a sentence — ⚠️ *0.82 is a number the model produced, not a thing a person can act on.*
-
-    ⭐ The bands are the ones the pitch already uses for a doubt (ADR-206): a flagged player is a
-    different kind of risk from a rotated one, and they must not read the same.
-    """
-    weight = pick.get("minutes_weight")
-    if weight is None:
-        return "not known"
-    if pick.get("doubtful"):
-        return f"{round(weight * 100)}% of a full game, and FPL has him flagged"
-    if weight >= 0.9:
-        return f"{round(weight * 100)}% of a full game — he starts"
-    if weight >= 0.7:
-        return f"{round(weight * 100)}% of a full game — usually starts"
-    return f"{round(weight * 100)}% of a full game — rotated"
-
-
-#: ⭐⭐⭐ **One captaincy engine, one intent** (ADR-308) — the owner's own instinct, and the right one:
-#: *six analytics functions would be six places for the definition of "best captain" to drift apart.*
-#:
-#: ⚠️⚠️ **These existed as questions long before they existed as answers.** Measured against the owner's
-#: list (ADR-307): *"who should be my **vice**-captain?"*, *"who is the **safest** captain?"* and *"who is
-#: the best **differential** captain?"* all returned the **same top pick**, confidently, because the
-#: router matched `captain` and dropped the word that made the question specific. ⭐ *A wrong answer
-#: wearing the shape of a right one* — and `src/ask.py` already carried the principle in its routing
-#: table, where a bare "strategy" is left unroutable on purpose.
-CAPTAIN_LENSES: dict[str, tuple[str, ...]] = {
-    # ⭐ Order is deliberately *not* load-bearing — `captain_lens` compares phrase **length**, so
-    # "vice-captain" beats "vice" wherever either sits. ⚠️ *A table whose correctness depends on its own
-    # line order is a table the next edit breaks silently.*
-    "vice": ("vice-captain", "vice captain", "vice", "second captain", "backup captain"),
-    "safest": ("safest", "safe captain", "most reliable", "least risky", "nailed on", "nailed-on"),
-    "differential": ("differential", "punt", "low owned", "low-owned", "under the radar"),
-    "rotation": ("rotation risk", "rotation", "be rested", "get rested", "start this week",
-                 "minutes risk"),
-}
-
-
-def scope_label(squad_name: str) -> str:
-    """How an answer names the squad it is about — ⭐ *the team's own name, and nothing else.*
-
-    ⚠️⚠️ It used to read **`squad 'yours'`**, and both halves were wrong. The placeholder was there because
-    the phone had no field to send a team name (fixed in `AskRequest`), and the `squad '…'` wrapper existed
-    to make a *placeholder* sound like a label — ⭐ *scaffolding for a stand-in, kept after the real thing
-    arrived.* With a real name it reads as a stutter: *"Captain pick (squad 'The 4-4-2 Towers')"*.
-
-    ⭐ Saved squads on the web read the same way — *"(Demo XI)"* — because a name is a name.
-    """
-    return squad_name
-
-
-def captain_lens(question: str) -> str | None:
-    """Which captaincy question was actually asked — or `None` for *"who should I captain?"*.
-
-    ⭐ The longest phrase wins, so a question naming two lenses gets the more specific one — *"is my
-    vice-captain a rotation risk"* is about the vice — rather than whichever the dict listed first.
-
-    ⚠️ Note "captain" itself is **not** in the table: routing to the captain intent happens upstream, and
-    this only ever chooses *which* captain question was asked.
-    """
-    low = f" {question.lower()} "
-    best, hit = None, 0
-    for lens, phrases in CAPTAIN_LENSES.items():
-        for phrase in phrases:
-            if phrase in low and len(phrase) > hit:
-                best, hit = lens, len(phrase)
-    return best
 
 
 def _lens_pick(picks: list, lens: str | None, owned_by: dict) -> tuple[int, str | None]:
@@ -581,27 +170,6 @@ def _lens_pick(picks: list, lens: str | None, owned_by: dict) -> tuple[int, str 
         # wants the same man, described honestly.
         return 0, None
     return 0, None
-
-
-#: ⭐ Phrasings that are asking *"which of these two?"* — the shape that makes a missing name a defect
-#: rather than a detail.
-_COMPARISON_WORDS = (" better ", " or ", " vs ", " versus ", " compared to ", " instead of ")
-
-
-def _looks_like_a_comparison(question: str) -> bool:
-    return any(word in f" {question.lower()} " for word in _COMPARISON_WORDS)
-
-
-def _named_in(question: str, players) -> list:
-    """The players a question names, in the order the engine ranks them — ⭐ *resolved, never regexed.*"""
-    index = build_index(players)
-    # ⭐⭐ **Spoken-tolerant** (ADR-315): exact matching first and unchanged, then one conservative pass over
-    # what it did not claim — because a phone's recogniser has never heard of Semenyo and returns *"semenio"*.
-    # ⚠️ Ask only: the same index feeds the buzz counter over thousands of Reddit sentences, where a fuzzy
-    # pass would credit players to ordinary words at scale.
-    hits = find_spoken_mentions(question.lower(), index)
-    by_id = {p["id"]: p for p in players}
-    return [by_id[pid] for pid in hits if pid in by_id]
 
 
 def _captain_versus(picks: list, named: list, players, scope: str, team_names: dict) -> dict:
@@ -772,54 +340,6 @@ _LENS_HEADING: dict[str | None, str] = {
 }
 
 
-def _transfer_count(question: str) -> int:
-    """The N in 'which N transfers …' (a digit right before 'transfer(s)'); else 1."""
-    tokens = question.lower().replace("?", "").split()
-    for i, tok in enumerate(tokens[:-1]):
-        if tok.isdigit() and tokens[i + 1].startswith("transfer"):
-            return max(1, int(tok))
-    return 1
-
-
-def _transfer_facts(move: dict) -> dict:
-    """Pre-humanised facts for one transfer move. The gain is the **XI improvement** (ADR-046) —
-    how much the swap lifts your best legal XI, not a raw player-xP delta."""
-    return {
-        "sell": f"{move['out']['web_name']} ({move['out']['team']}, xP {move['out']['xp']})",
-        "buy": f"{move['in']['web_name']} ({move['in']['team']}, xP {move['in']['xp']})",
-        "starting_XI_improvement_over_5_gameweeks": move["gain"],
-    }
-
-
-def _plan_facts(plan: list) -> dict:
-    """Self-describing facts for a coordinated transfer plan (ADR-035); gains are XI improvements."""
-    return {
-        "transfers": [
-            f"sell {m['out']['web_name']}, buy {m['in']['web_name']} (+{m['gain']} XI xP)"
-            for m in plan
-        ],
-        "total_starting_XI_improvement_over_5_gameweeks": round(sum(m["gain"] for m in plan), 1),
-    }
-
-
-def _analyse_facts(analysis: dict) -> dict:
-    """Self-describing facts for a squad summary — the fix for the probe's field-conflation.
-
-    `availability_problems` reads "none" or "N: names" so the model can't imply injuries that
-    aren't there; the weakest starters are a clearly separate list.
-    """
-    issues = analysis["issues"]
-    availability = (
-        "none" if not issues
-        else f"{len(issues)}: " + ", ".join(p["web_name"] for p in issues)
-    )
-    return {
-        "projected_starting_XI_points_over_5_gameweeks": analysis["projected_xp"],
-        "availability_problems": availability,
-        "weakest_starters": [f"{w['web_name']} (xP {w['xp']})" for w in analysis["weakest"]],
-    }
-
-
 def _squad_xp(store: Storage, squad_name: str, active_squad=None, *, horizon=_HORIZON):
     """Shared setup for transfer/analyse/gameweek: the squad's owned rows + xP (+ per-GW) over the horizon.
 
@@ -981,53 +501,6 @@ def _decide_start_bench(store: Storage, squad_name: str | None, active_squad=Non
     }
 
 
-def _gameweek_facts(plan: dict) -> dict:
-    """Self-describing facts for a gameweek plan (ADR-070) — every number present so the verifier
-    (ADR-037) can trace it, and each field reads plainly so the LLM can't conflate them."""
-    cap = plan["captain"]
-    captain = ("none — no eligible captain" if not cap else
-               f"{cap['web_name']} ({cap['team']}) — xP {cap['xp']} next GW, "
-               f"{'home against' if cap['venue'] == 'H' else 'away against'} {cap['opponent']}")
-
-    lu = plan["lineup"]
-    if not lu["has_declared_bench"]:
-        lineup = "no saved bench — the best legal XI is what's shown"
-    elif not lu["bring_in"] and not lu["drop"]:
-        lineup = "none — your current XI is already the best legal XI"
-    else:
-        lineup = (f"start {', '.join(p['web_name'] for p in lu['bring_in'])}; "
-                  f"bench {', '.join(p['web_name'] for p in lu['drop'])}")
-
-    tr = plan["transfer"]
-    transfer = ("none — no positive-gain upgrade" if not tr else
-                f"sell {tr['out']['web_name']} (xP {tr['out']['xp']}), "
-                f"buy {tr['in']['web_name']} (xP {tr['in']['xp']}), +{tr['gain']} starting-XI xP")
-
-    # ADR-136 — a dead slot is stated as its own fact, never merged into the line above. The two answer
-    # different questions, and the whole reason this exists is that "none — no positive-gain upgrade" was
-    # being said over a squad with a player who had left the league.
-    reps = plan.get("replacements") or []
-    dead = ("none — every player in your 15 can play" if not reps else
-            f"{len(reps)}: " + "; ".join(
-                f"{r['out']['web_name']} cannot play ({r['reason']}) — replace with "
-                f"{r['in']['web_name']} (£{r['in']['price']}, xP {r['in']['xp']} over the horizon)"
-                for r in reps))
-
-    flags = ("none" if not plan["flags"] else
-             f"{len(plan['flags'])}: " + ", ".join(
-                 f"{f['web_name']} ({f['reason']}"
-                 f"{'' if f['chance'] is None else f', {f['chance']}%'})"
-                 for f in plan["flags"]))
-
-    return {
-        "captain": captain,
-        "lineup_change": lineup,
-        "dead_slots_to_replace": dead,
-        "transfer_to_consider": transfer,
-        "flagged_players": flags,
-    }
-
-
 def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
                      *, horizon=_HORIZON, question=None, free: int = 1, bank: float = 0.0) -> dict | None:
     """Analytics DECIDE a one-gameweek plan (ADR-070): captain · lineup · a transfer · flags.
@@ -1114,37 +587,6 @@ def _decide_gameweek(store: Storage, squad_name: str | None, active_squad=None,
     }
 
 
-def _chips_facts(advice: dict) -> dict:
-    """Self-describing facts for the chip advice (ADR-082) — every number present so the verifier
-    (ADR-037) can trace it, and each field reads plainly so the LLM can't conflate the chips."""
-    tc = advice["triple_captain"]
-    p = tc["player"]
-    triple_captain = (
-        f"GW{tc['gameweek']}: "
-        + (f"{p['web_name']} ({p['team']})" if p else "no eligible starter")
-        + f" — xP {tc['player_xp']} that GW (the squad's highest single-GW ceiling)")
-
-    bb = advice["bench_boost"]
-    bench_boost = (f"GW{bb['gameweek']}: all 15 project {bb['squad_total']} xP, "
-                   f"of which the bench adds {bb['bench_points']}")
-
-    fh = advice["free_hit"]
-    free_hit = (f"GW{fh['gameweek']}: your best XI projects only {fh['xi_total']} xP "
-                f"— your weakest single week")
-
-    wc = advice["wildcard"]
-    a, b = wc["window"]
-    span = f"GW{a}" if a == b else f"GW{a} to GW{b}"
-    wildcard = (f"{span}: your weakest stretch (average XI {wc['avg_xi']} xP) — reset before it")
-
-    return {
-        "triple_captain": triple_captain,
-        "bench_boost": bench_boost,
-        "free_hit": free_hit,
-        "wildcard": wildcard,
-    }
-
-
 def _price_a_rebuild(owned, players, xp_by_id, squad):
     """`rebuild_value` for this squad, or **None** when it cannot be priced (ADR-185).
 
@@ -1159,48 +601,6 @@ def _price_a_rebuild(owned, players, xp_by_id, squad):
     except (KeyError, IndexError, TypeError):
         return None
     return rebuild_value(owned, players, xp_by_id, budget=budget)
-
-
-#: ⭐⭐⭐ **One chips engine, one intent** (ADR-317 A) — the shape ADR-308 gave captaincy, one intent along.
-#:
-#: ⚠️⚠️ **Four questions were getting one answer.** *"What chips have I played?"* is a **fact**, not a
-#: recommendation; *"before they expire"* is the same recommendation over a **shorter list**; *"can I still
-#: play my bench boost?"* is a **yes or no**. All three got the full four-chip strategy block, which is why
-#: the owner said it was not credible — ⭐ *the same answer to different questions is indistinguishable from
-#: not having listened.*
-CHIP_LENSES: dict[str, tuple[str, ...]] = {
-    "played": ("have i played", "have i used", "chips have i", "already played", "already used",
-               "which chips have", "what chips have", "did i play", "did i use"),
-    "holding": ("can i still play", "do i still have", "have i still got", "still have my",
-                "can i still use", "do i have my"),
-    "expiry": ("before they expire", "before it expires", "expire", "expiring", "run out", "left to use"),
-}
-
-
-def chip_lens(question: str) -> str | None:
-    """Which chip question was asked — or `None` for *"which chip should I use?"*.
-
-    ⭐ Longest phrase wins, the same rule `captain_lens` uses, so *"what chips have i played"* is a `played`
-    question rather than an `expiry` one because it names the more specific thing.
-    """
-    low = f" {question.lower()} "
-    best, hit = None, 0
-    for lens, phrases in CHIP_LENSES.items():
-        for phrase in phrases:
-            if phrase in low and len(phrase) > hit:
-                best, hit = lens, len(phrase)
-    return best
-
-
-def _chip_named(question: str) -> str | None:
-    """The FPL chip a question names, if it names one — for *"can I still play my bench boost?"*."""
-    low = question.lower()
-    for fpl in CHIP_NAMES:
-        spoken = {"bboost": ("bench boost", "benchboost"), "3xc": ("triple captain", "triple-captain"),
-                  "freehit": ("free hit", "freehit"), "wildcard": ("wildcard", "wild card")}[fpl]
-        if any(word in low for word in spoken):
-            return fpl
-    return None
 
 
 def _chip_state_answer(chip_status, squad_name: str, lens: str, question: str) -> dict:
@@ -1350,42 +750,6 @@ def _decide_rules(question: str) -> dict | None:
     }
 
 
-def _bounded(haystack: str, needle: str, start: int) -> bool:
-    """True if `needle` at `start` in `haystack` is bounded by non-letters (a whole name).
-
-    So "Isak" doesn't match inside "mistaken"; "b.fernandes" still matches (bounded by space/'?').
-    """
-    end = start + len(needle)
-    before = haystack[start - 1] if start > 0 else " "
-    after = haystack[end] if end < len(haystack) else " "
-    return not before.isalpha() and not after.isalpha()
-
-
-def _match_players(question: str, players) -> dict:
-    """Player web_names named in `question` → {web_name: [players]} in question order (ADR-039).
-
-    Bounded substring match; a name that is a substring of another matched name is dropped
-    (`Fernandes` ⊂ `B.Fernandes`); a web_name shared by >1 player yields a list (ambiguous).
-    """
-    ql = question.lower()
-    hits = []   # (position, web_name, player)
-    for p in players:
-        wn = (p["web_name"] or "").lower()
-        if not wn:
-            continue
-        i = ql.find(wn)
-        if i != -1 and _bounded(ql, wn, i):
-            hits.append((i, p["web_name"], p))
-
-    lower = {h[1].lower() for h in hits}
-    hits = [h for h in hits if not any(h[1].lower() != o and h[1].lower() in o for o in lower)]
-
-    matched: dict = {}
-    for _i, wn, p in sorted(hits, key=lambda h: h[0]):
-        matched.setdefault(wn, []).append(p)
-    return matched
-
-
 def _decide_compare(store: Storage, question: str) -> dict | None:
     """Analytics DECIDE the comparison (ADR-039): match the named players, rank by xMins-weighted xP.
 
@@ -1438,42 +802,6 @@ def _decide_compare(store: Storage, question: str) -> dict | None:
         "subjects": [r["web_name"] for r in rows],
         "task": f"in 2 short sentences, say why {best['web_name']} has the higher expected points",
     }
-
-
-def _squad_budget(question: str) -> float:
-    """The budget in a build-a-squad question — '£100m' / '85m' / '£90' — else the £100m default."""
-    m = re.search(r"£\s*(\d+(?:\.\d+)?)|\b(\d+(?:\.\d+)?)\s*m\b", question.lower())
-    return float(m.group(1) or m.group(2)) if m else FULL_BUDGET
-
-
-def _archetype_counts(question: str) -> tuple:
-    """(low_cost, premium, differential) counts from a build request (ADR-043); None when absent.
-
-    Matches a number a word or two before an archetype word — "3 low cost players", "1 premium",
-    "2 differentials". `differential` is parsed but not yet buildable (needs ownership data).
-    """
-    ql = question.lower()
-
-    def count(*words):
-        m = re.search(r"(\d+)\s+(?:\w+\s+){0,2}?(?:" + "|".join(words) + r")", ql)
-        return int(m.group(1)) if m else None
-
-    return (count("low cost", "low-cost", "budget", "cheap", "enabler"),
-            count("premium"), count("differential"))
-
-
-def _bench_mode(question: str) -> tuple:
-    """(bench_weight, is_bench_boost) from a build request (ADR-045).
-
-    "bench boost" → the max-15 (all 15 score); "rotation"/"weekly" → a bench-aware XI (w = 0.1,
-    a strong XI + a cheap playing bench); else the default.
-    """
-    ql = question.lower()
-    if "bench boost" in ql or "benchboost" in ql:
-        return None, True
-    if "rotation" in ql or "weekly" in ql:
-        return WEEKLY_BENCH_WEIGHT, False
-    return None, False
 
 
 def _decide_build_squad(store: Storage, question: str) -> dict | None:
@@ -1551,26 +879,7 @@ def _decide_build_squad(store: Storage, question: str) -> dict | None:
             "cost": result["total_cost"],
         },
     }
-
-
-_POS_WORDS = {"goalkeeper": "GK", "keeper": "GK", "defender": "DEF", "midfielder": "MID",
-              "forward": "FWD", "striker": "FWD"}
 _SHORTLIST_N = 8   # how many players a shortlist shows
-
-
-def _shortlist_query(question: str) -> tuple:
-    """(position, price_cap, by_value, differential) from a 'best <position> [under £X]' question.
-
-    `differential` (ADR-061) filters to low-owned players; cued by "differential(s)" / "off-template" /
-    "low-owned". Value ("value") ranks by xP/£m (ADR-042).
-    """
-    ql = question.lower()
-    position = next((code for word, code in _POS_WORDS.items() if re.search(rf"\b{word}s?\b", ql)),
-                    None)
-    m = re.search(r"under £?\s*(\d+(?:\.\d+)?)|£\s*(\d+(?:\.\d+)?)", ql)
-    cap = float(m.group(1) or m.group(2)) if m else None
-    differential = "differential" in ql or "off-template" in ql or "low-owned" in ql or "low owned" in ql
-    return position, cap, "value" in ql, differential
 
 
 def _decide_shortlist(store: Storage, question: str, rank: int = 0) -> dict | None:
@@ -1764,23 +1073,6 @@ def _decide_worth(store: Storage, question: str) -> dict | None:
 
 _TREND_N = 8   # how many players a trending board shows
 
-# (by, cues) in precedence order — the more specific "out" phrases before the broad "in"/"owned".
-_TREND_CUES = (
-    ("out", ("most transferred out", "most sold", "fallers", "transferred out", "sold")),
-    ("in", ("most transferred in", "trending", "risers", "bandwagon", "transferred in",
-            "most bought", "bought")),
-    ("form", ("in form", "in-form")),
-    ("owned", ("most owned", "most picked", "most popular", "owned", "picked", "popular")),
-)
-
-
-def _trends_query(question: str) -> tuple:
-    """(by, position) from a trends question — which board (`TREND_BYS`) + an optional position filter."""
-    ql = question.lower()
-    by = next((b for b, cues in _TREND_CUES if any(c in ql for c in cues)), "in")
-    position = next((code for word, code in _POS_WORDS.items() if re.search(rf"\b{word}s?\b", ql)), None)
-    return by, position
-
 
 def _decide_trends(store: Storage, question: str) -> dict | None:
     """Rank players by a free crowd metric (ownership / transfers / form) — a community lens, never xP.
@@ -1862,40 +1154,6 @@ def _decide_price(store: Storage, question: str) -> dict | None:
 
 _FIXTURES_N = 8   # how many teams the league FDR ranking shows
 _HARDEST_WORDS = ("hard", "tough", "difficult", "avoid", "worst", "nightmare")
-_TEAM_ALIASES = {   # colloquial names the FPL `name` field doesn't carry
-    "tottenham": "TOT", "spurs": "TOT", "man united": "MUN", "man utd": "MUN",
-    "manchester united": "MUN", "man city": "MCI", "manchester city": "MCI", "forest": "NFO",
-}
-
-
-def _match_team(question: str, teams) -> str | list | None:
-    """Resolve a team from a question (ADR-048): the code (str), None (→ league mode), or a list
-    (ambiguous → clarify). Never a silent wrong guess.
-
-    Matches the full `name` (a substring, so multi-word names like "Man City" work), the
-    `short_name` as a **case-sensitive** whole word (so a typed code "LIV"/"NEW" matches but the
-    common word "new" doesn't), and a small alias set.
-    """
-    ql = question.lower()
-    hits = set()
-    for t in teams:
-        if re.search(rf"\b{re.escape(t['short_name'])}\b", question):   # case-sensitive: "NEW" not "new"
-            hits.add(t["short_name"])
-        if t["name"].lower() in ql:
-            hits.add(t["short_name"])
-    for alias, code in _TEAM_ALIASES.items():
-        if re.search(rf"\b{re.escape(alias)}\b", ql):
-            hits.add(code)
-    if len(hits) > 1:
-        return sorted(hits)
-    return next(iter(hits), None)
-
-
-def _fixture_horizon(question: str) -> int:
-    """The N in 'next N' / 'N gameweeks' (ADR-048); default 5, capped to a season."""
-    m = re.search(r"next\s+(\d+)", question.lower()) or re.search(
-        r"(\d+)\s*(?:game|gw|week|fixture)", question.lower())
-    return max(1, min(int(m.group(1)), 38)) if m else 5
 
 
 def _decide_fixtures(store: Storage, question: str, squad: str | None = None,
@@ -2039,103 +1297,6 @@ def _decide_squad_team_fixtures(store: Storage, squad: str, upcoming, horizon: i
     }
 
 
-def _numbers(text: str) -> set:
-    """Number-like tokens in `text` (e.g. '7.4', '22')."""
-    return set(re.findall(r"\d+(?:\.\d+)?", text))
-
-
-def _significant_tokens(text: str) -> set:
-    """Lower-cased whole words of ≥4 letters — distinctive enough to match a player by.
-
-    Whole-word (not substring) so 'ward' never matches 'forward'; ≥4 letters so short
-    surnames ('Son', 'Sá') don't collide with common words. Keeps the name check quiet.
-    """
-    return {t.lower() for t in re.findall(r"[A-Za-z]{4,}", text)}
-
-
-def verify_grounding(text: str, facts: dict, *, known_names=(), subjects=()) -> dict:
-    """Flag numbers and player names in a narration not backed by the facts (ADR-037).
-
-    - **numbers:** every number in `text` should appear in `facts`; the rest are unverified.
-    - **names:** a **known** FPL player (from `known_names`) named in `text` who isn't a
-      `subject` of this answer is flagged. Conservative (≥4-letter whole-word tokens) to avoid
-      crying wolf. Returns ``{"numbers": [...], "names": [...]}`` — empty means it checks out.
-    """
-    if not text:
-        return {"numbers": [], "names": []}
-
-    # ensure_ascii=False so a '£' stays '£' — otherwise its £ escape injects stray digits
-    # (00, 3) that corrupt the number set and wrongly flag a grounded figure (e.g. £100.0m).
-    facts_numbers = _numbers(json.dumps(facts, ensure_ascii=False))
-    unverified_numbers = sorted(n for n in _numbers(text) if n not in facts_numbers)
-
-    words = _significant_tokens(text)
-    subject_tokens = set().union(*(_significant_tokens(s) for s in subjects)) if subjects else set()
-    unverified_names = sorted({
-        name for name in known_names
-        if (toks := _significant_tokens(name))          # a matchable (≥4-letter) name
-        and toks <= words                               # all its tokens appear in the text
-        and not (toks & subject_tokens)                 # …and it isn't a subject of the answer
-    })
-
-    return {"numbers": unverified_numbers, "names": unverified_names}
-
-
-def _build_prompt(decision: dict) -> str:
-    return (
-        f"You are an FPL assistant. The analytics have ALREADY made the decision. Your job: "
-        f"{decision['task']}, using ONLY the facts below.\n{_RULES}\n"
-        "Write only the explanation itself — no preamble, and do not restate the task.\n\n"
-        f"FACTS:\n{json.dumps(decision['facts'], indent=2, ensure_ascii=False)}"
-    )
-
-
-def _free_form_prompt(question: str) -> str:
-    """A scoped prompt for the free-form tail (ADR-085): general FPL rules/tactics only, and **never** a
-    specific player/pick recommendation (those come from the grounded tools + are verified)."""
-    return (
-        "You are a helpful Fantasy Premier League assistant. Answer this general FPL question in 2-4 short "
-        "sentences with rules or tactical guidance only. Do NOT recommend specific players, prices, or picks "
-        "— those come from the app's data tools. If it isn't about FPL, say you only help with FPL.\n\n"
-        f"QUESTION: {question}"
-    )
-
-
-def assemble(question: str, intent: str | None, decision: dict | None, narrator,
-             known_names=()) -> AskResult:
-    """Turn a decision into an AskResult — narrating, verifying, and degrading if needed.
-
-    Pure given `decision` + `narrator` (so it's unit-tested without a live model): a narrator
-    returning None (Ollama absent) yields a result with the decision + facts but no prose. When
-    there IS narration, it's verified against the facts (ADR-037) and the result carried in `trust`.
-    """
-    if intent is None:
-        return AskResult(question, None, message=_FALLBACK)
-    if decision is None:
-        return AskResult(question, intent,
-                         message="No result — run `refresh`, and check the squad name.")
-    if decision.get("message"):   # a soft, specific failure (e.g. compare: not found / ambiguous)
-        return AskResult(question, intent, message=decision["message"])
-    if decision.get("free_form"):   # a general FPL question — ungrounded, clearly labelled (ADR-085)
-        prose = narrator(_free_form_prompt(decision.get("question", question)))
-        if not prose:                                  # no model → the honest help message
-            return AskResult(question, intent, message=_FALLBACK)
-        return AskResult(question, intent, explanation=prose, trust={"free_form": True})
-    explanation = narrator(_build_prompt(decision))   # str, or None if unavailable
-    trust = None
-    if explanation:
-        trust = verify_grounding(
-            explanation, decision["facts"],
-            known_names=known_names, subjects=decision.get("subjects", ()),
-        )
-    return AskResult(
-        question, intent, headline=decision.get("headline"), facts=decision["facts"],
-        explanation=explanation, detail=decision.get("detail"), trust=trust,
-        squad=decision.get("squad"),   # a build answer carries the 15 an edge can adopt (ADR-062)
-        plan=decision.get("plan"),     # a gameweek answer carries the plan an edge can act on (ADR-174)
-    )
-
-
 def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
               *, count: int = 1, rank: int = 0, active_squad=None, horizon=_HORIZON,
               free: int = 1, bank: float = 0.0, chip_status=None) -> dict | None:
@@ -2180,230 +1341,3 @@ def _dispatch(intent: str, store: Storage, question: str, squad: str | None,
     if intent == "fixtures":
         return _decide_fixtures(store, question, squad, active_squad=active_squad)
     return _decide_analyse(store, squad, active_squad=active_squad)
-
-
-def _needs_squad(intent: str, squad: str | None) -> AskResult | None:
-    """The 'name a squad' prompt for the squad-scoped intents (or None if fine)."""
-    if intent in ("transfer", "analyse", "start_bench", "gameweek", "chips") and not squad:
-        verb = {"transfer": "what transfer", "analyse": "analyse",
-                "start_bench": "who should I start", "gameweek": "what should I do this week",
-                "chips": "which chip should I use"}[intent]
-        return AskResult("", intent, message=f'Name a saved squad, e.g. ask "{verb} for <squad>?"')
-    return None
-
-
-_PRONOUNS = ("he", "him", "his", "she", "her", "they", "them", "their")
-_PRONOUN_RE = re.compile(r"\b(" + "|".join(_PRONOUNS) + r")\b", re.IGNORECASE)
-
-
-def _resolve_pronoun(question: str, context: "Context | None") -> str:
-    """Rewrite a pronoun → the last turn's **sole** subject (ADR-080), so "is he worth it?" means the last
-    player. Only when the antecedent is unambiguous (exactly one subject); a no-op otherwise. Substitutes
-    the player's *name* for whatever pronoun the user typed (possessives → `name's`) — it never assigns a
-    pronoun to anyone."""
-    if context is None or not context.decision:
-        return question
-    subjects = context.decision.get("subjects") or []
-    if len(subjects) != 1:
-        return question
-    antecedent = subjects[0]
-
-    def _repl(m):
-        return f"{antecedent}'s" if m.group(0).lower() in ("his", "their") else antecedent
-
-    return _PRONOUN_RE.sub(_repl, question)
-
-
-def _fresh(question: str, context: "Context | None", store: Storage, narrator, active_squad=None,
-           horizon=_HORIZON, free: int = 1, bank: float = 0.0, chip_status=None):
-    """A fresh (non-follow-up) question: route → decide → assemble. Returns (result, new_context).
-
-    A successful answer becomes the new context; a fallback/soft-failure leaves the running
-    context untouched (so a later "why?" still refers to the last *good* turn). `active_squad` is the
-    session squad so "captain <its name>" / "analyse my team" use the loaded team (Sprint 066).
-    `horizon` (ADR-077) is threaded to the gameweek intent for the AI Tips view.
-    """
-    question = _resolve_pronoun(question, context)          # "is he worth it?" → the last player (ADR-080)
-    intent, squad = route(question, _known_squad_names(active_squad))
-    # Default squad questions to the loaded session squad (ADR-090): when a squad is active and none was named
-    # and the question isn't explicitly global, use it. This fixes "my-team" (hyphen) — no phrase-matching —
-    # and makes a bare "who should I captain?" scope to your team; an explicit-global cue escapes to all players
-    # (captaincy's global mode). Gated to the squad-scoped intents so a global fixtures/compare question isn't
-    # scoped. The CLI has no active_squad, so it stays global-by-default.
-    if not squad and intent in _SQUAD_DEFAULT_INTENTS and active_squad and active_squad.get("name") \
-            and not _EXPLICIT_GLOBAL.search(question):
-        squad = active_squad["name"]
-    if intent is None:   # nothing grounded matched → the labelled free-form tail (ADR-085), or the help text
-        return assemble(question, "chat", {"free_form": True, "question": question}, narrator), context
-    prompt = _needs_squad(intent, squad)
-    if prompt is not None:
-        return replace(prompt, question=question), context
-
-    count = _transfer_count(question)
-    decision = _dispatch(intent, store, question, squad, count=count, active_squad=active_squad,
-                         chip_status=chip_status,
-                         horizon=horizon, free=free, bank=bank)
-    known = [p["web_name"] for p in store.get_players()] if decision else ()
-    result = assemble(question, intent, decision, narrator, known_names=known)
-    new_context = context
-    if decision and "facts" in decision:
-        new_context = Context(intent=intent, squad=squad, question=question, count=count,
-                              rank=0, decision=decision)
-    return result, new_context
-
-
-def _why_detail(decision: dict, subject: str) -> str:
-    """The reasons behind a pick, from the facts the engine already computed (ADR-089).
-
-    ⭐ *An explanation that only exists when a language model is attached is not an explanation, it is a
-    flourish* — and every shipped surface runs without one.
-    """
-    facts = decision.get("facts") or {}
-    lines = [f"Why {subject}", ""]
-    for label, key in (("For", "why"), ("Against", "risk"), ("Confidence", "confidence")):
-        value = facts.get(key)
-        if not value:
-            continue
-        # ⭐ One reason per line: the engine joins them with "; " for a prompt, and a reader wants a list.
-        parts = [p.strip() for p in str(value).split(";")] if key != "confidence" else [str(value)]
-        lines.append(f"  {label}:")
-        lines += [f"    · {p}" for p in parts if p]
-        lines.append("")
-    if len(lines) <= 2:
-        # ⚠️ Nothing grounded to show — say so rather than printing a heading over an empty block.
-        return f"I do not have a recorded reason for {subject} beyond the numbers above."
-    return "\n".join(lines).rstrip()
-
-
-def _apply_followup(fu: FollowUp, context: "Context", store: Storage, narrator, active_squad=None):
-    """Resolve a follow-up against `context` → (result, new_context), or None if it can't apply
-    here (e.g. 'what about defenders?' after a captain pick → let it fall through to a fresh Q)."""
-    known = [p["web_name"] for p in store.get_players()]
-
-    if fu.kind == "why":
-        if not context.decision or "facts" not in context.decision:
-            return None
-        subject = (context.decision.get("subjects") or ["this pick"])[0]
-        detailed = {**context.decision,
-                    "task": f"explain in 3-4 short sentences, in more depth, why {subject} is the "
-                            "pick here — using ONLY the facts",
-                    # ⭐⭐⭐ **"Why?" has to say something new without a model, and it can** (ADR-317 C).
-                    # ⚠️⚠️ It used to re-narrate the same decision with a deeper `task`, which on a
-                    # deployment with no Ollama — *which is every deployment* (ADR-309) — produced the
-                    # **identical answer**. The owner's complaint, arriving through a different door: *the
-                    # same answer to a different question is indistinguishable from not having listened.*
-                    #
-                    # ⭐ The grounded reasons were already computed and sitting in `facts` (ADR-089):
-                    # `why`, `risk` and `confidence`. The prose was never where the explanation lived.
-                    "detail": _why_detail(context.decision, subject),
-                    "headline": f"Why {subject}?"}
-        return assemble(context.question, context.intent, detailed, narrator, known_names=known), context
-
-    if fu.kind == "next":
-        if context.intent not in ("captain", "transfer", "shortlist"):
-            return None
-        nrank = context.rank + 1
-        decision = _dispatch(context.intent, store, context.question, context.squad,
-                             count=context.count, rank=nrank, active_squad=active_squad)
-        if not decision or "facts" not in decision:       # past the end → show the soft message,
-            msg = (decision or {}).get("message", "That's all I have.")   # keep the current rank
-            return AskResult(context.question, context.intent, message=msg), context
-        result = assemble(context.question, context.intent, decision, narrator, known_names=known)
-        return result, replace(context, rank=nrank, decision=decision)
-
-    if fu.kind == "whatabout":                            # shortlist-only (ADR-047)
-        if context.intent != "shortlist":
-            return None
-        new_q = _swap_position(context.question, fu.position)
-        decision = _dispatch("shortlist", store, new_q, None)
-        result = assemble(new_q, "shortlist", decision, narrator, known_names=known)
-        keep = decision if (decision and "facts" in decision) else context.decision
-        return result, replace(context, question=new_q, rank=0, decision=keep)
-
-    return None
-
-
-def _swap_position(question: str, new_code: str) -> str:
-    """Rewrite a shortlist question to a new position, keeping the rest (price cap, value)."""
-    new_word = next(word for word, code in _POS_WORDS.items() if code == new_code)
-    for word in _POS_WORDS:                               # replace an existing position word…
-        rewritten, n = re.subn(rf"\b{word}s?\b", new_word, question, flags=re.IGNORECASE)
-        if n:
-            return rewritten
-    return f"{question} {new_word}"                       # …or, if none, name the position
-
-
-def converse(question: str, context: "Context | None", *, store: Storage,
-             narrator=llm.narrate, active_squad=None, horizon=_HORIZON, free: int = 1,
-             bank: float = 0.0, chip_status=None) -> tuple[AskResult, "Context | None"]:
-    """One conversational turn (ADR-047): a follow-up on `context`, else a fresh question.
-
-    Returns ``(result, new_context)``. `context` is None at the start of a chat; a follow-up with
-    no context yet returns a gentle nudge. The one-shot `answer` is `converse` with no context.
-    `active_squad` (the session squad) lets squad-scoped intents see the loaded team (Sprint 066).
-    """
-    fu = detect_followup(question)
-    if fu is not None:
-        if context is None:
-            return AskResult(question, None, message=_NUDGE), None
-        applied = _apply_followup(fu, context, store, narrator, active_squad)
-        if applied is not None:
-            return applied
-        # a detected follow-up that doesn't apply here → treat the line as a fresh question.
-    return _fresh(question, context, store, narrator, active_squad, horizon=horizon,
-                  free=free, bank=bank, chip_status=chip_status)
-
-
-def answer(question: str, *, store: Storage | None = None, narrator=llm.narrate,
-           active_squad=None, horizon=_HORIZON, free: int = 1, bank: float = 0.0, chip_status=None) -> AskResult:
-    """Route → analytics decide → narrate (or degrade). The narrator is injectable/optional.
-
-    The one-shot entry point: a single `converse` turn with no prior context (so a follow-up-only
-    line falls through to the normal fallback, exactly as before). `active_squad` (the session
-    squad, ADR-054/055) lets squad-scoped questions use the loaded team, not only saved squads.
-    `horizon` (ADR-077) sets the gameweek-plan window for the AI Tips view; defaults to `_HORIZON` (5)
-    so the CLI / Ask tab are unchanged.
-    """
-    own_store = store is None
-    store = store or Storage()
-    try:
-        result, _context = _fresh(question, None, store, narrator, active_squad, horizon=horizon,
-                                  chip_status=chip_status,
-                                  free=free, bank=bank)
-        return result
-    finally:
-        if own_store:
-            store.close()
-
-
-_EXIT_WORDS = {"quit", "exit", "q", "bye", "done"}
-_RESET_WORDS = {"forget", "reset", "start over", "new chat", "forget it"}
-
-
-def is_reset(text: str) -> bool:
-    """True when a line asks to forget the conversation (ADR-091) — so `ask`/`chat` can clear the context."""
-    return (text or "").strip().lower() in _RESET_WORDS
-
-
-def chat_transcript(lines, *, store: Storage, narrator=llm.narrate, active_squad=None, context=None):
-    """Thread a `Context` across `lines`, yielding `(AskResult, context)` per answered line (ADR-047).
-
-    The pure heart of the `chat` REPL: blank lines are skipped, an exit word stops the session, a
-    reset word ("forget") drops the context, and every other line is a conversational turn whose
-    context carries to the next. `context` seeds the thread so a **saved** context resumes a chat
-    (ADR-091). Kept free of I/O (input/print) so it's unit-tested with a list of lines; the caller
-    persists the yielded context.
-    """
-    for line in lines:
-        text = line.strip()
-        if text.lower() in _EXIT_WORDS:
-            return
-        if not text:
-            continue
-        if is_reset(text):
-            context = None
-            yield AskResult(text, None, message="Okay — I've forgotten the last turn. Ask me anything."), None
-            continue
-        result, context = converse(text, context, store=store, narrator=narrator,
-                                   active_squad=active_squad)
-        yield result, context

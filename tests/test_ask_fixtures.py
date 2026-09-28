@@ -68,7 +68,7 @@ def _store():
 
 
 def test_decide_fixtures_team_schedule_mode(monkeypatch):
-    monkeypatch.setattr(ask, "team_schedule", lambda up, team, source="fpl": [
+    monkeypatch.setattr(ask.deciders, "team_schedule", lambda up, team, source="fpl": [
         {"event": 1, "opponent": "COV", "venue": "H", "difficulty": 2},
         {"event": 2, "opponent": "AVL", "venue": "A", "difficulty": 4},
     ])
@@ -84,7 +84,7 @@ def test_decide_fixtures_league_ranking_easiest_then_hardest(monkeypatch):
         {"team": "LIV", "games": 5, "avg_difficulty": 2.6, "opponents": ["NEW", "NFO"]},
         {"team": "BOU", "games": 5, "avg_difficulty": 3.6, "opponents": ["MCI", "EVE"]},
     ]
-    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(rows))
+    monkeypatch.setattr(ask.deciders, "team_fdr", lambda up, next_n=5, source="fpl": list(rows))
     easiest = ask._decide_fixtures(_store(), "who has the best fixtures over the next 5?")
     assert easiest["subjects"][0] == "LIV" and "easiest" in easiest["facts"]["ranking"]
     hardest = ask._decide_fixtures(_store(), "which teams have the hardest fixtures?")
@@ -131,8 +131,8 @@ def _squad_store(get_players=None):
 
 
 def test_decide_fixtures_squad_mode_ranks_players_by_their_team(monkeypatch):
-    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
-    monkeypatch.setattr(ask, "SquadStore",
+    monkeypatch.setattr(ask.deciders, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask.deciders, "SquadStore",
                         lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [1, 2, 3]}))
     d = ask._decide_fixtures(_squad_store(), "which of TS's players have the best fixtures?", "TS")
     assert d["subjects"][:2] == ["Salah", "VVD"]        # both LIV (2.6) ahead of BOU (3.6)
@@ -142,8 +142,8 @@ def test_decide_fixtures_squad_mode_ranks_players_by_their_team(monkeypatch):
 
 
 def test_decide_fixtures_squad_mode_hardest_reverses(monkeypatch):
-    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
-    monkeypatch.setattr(ask, "SquadStore",
+    monkeypatch.setattr(ask.deciders, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask.deciders, "SquadStore",
                         lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [1, 2, 3]}))
     d = ask._decide_fixtures(_squad_store(), "which of TS's players have the hardest fixtures?", "TS")
     assert d["subjects"][0] == "Semenyo"                # BOU 3.6 first when hardest
@@ -151,15 +151,15 @@ def test_decide_fixtures_squad_mode_hardest_reverses(monkeypatch):
 
 def test_decide_fixtures_a_named_team_beats_a_squad(monkeypatch):
     # precedence: a specific team → its schedule, even with a squad also named
-    monkeypatch.setattr(ask, "team_schedule", lambda up, team, source="fpl": [
+    monkeypatch.setattr(ask.deciders, "team_schedule", lambda up, team, source="fpl": [
         {"event": 1, "opponent": "COV", "venue": "H", "difficulty": 2}])
     d = ask._decide_fixtures(_squad_store(get_players=[]), "Arsenal fixtures for TS", "TS")
     assert d["subjects"] == ["ARS"]                     # schedule mode, not squad mode
 
 
 def test_decide_fixtures_squad_with_no_current_players(monkeypatch):
-    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
-    monkeypatch.setattr(ask, "SquadStore",
+    monkeypatch.setattr(ask.deciders, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask.deciders, "SquadStore",
                         lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [99]}))
     d = ask._decide_fixtures(_squad_store(), "fixtures for TS", "TS")   # id 99 not in players
     assert "no current players" in d["message"]
@@ -168,8 +168,8 @@ def test_decide_fixtures_squad_with_no_current_players(monkeypatch):
 # ---- team-level squad fixtures (ADR-067) ------------------------------------
 
 def _patch_squad(monkeypatch):
-    monkeypatch.setattr(ask, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
-    monkeypatch.setattr(ask, "SquadStore",
+    monkeypatch.setattr(ask.deciders, "team_fdr", lambda up, next_n=5, source="fpl": list(_SQUAD_FDR))
+    monkeypatch.setattr(ask.deciders, "SquadStore",
                         lambda: types.SimpleNamespace(load=lambda name: {"player_ids": [1, 2, 3]}))
 
 
