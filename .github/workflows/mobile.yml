@@ -1,0 +1,55 @@
+name: Mobile
+
+# The Dart half of the suite, finally wired (ADR-322, closing ADR-221's deferred action).
+#
+# ⭐⭐ ADR-221 shipped the Flutter models with a note against its own decision: *"the Dart half runs locally
+# and not in CI — a test nobody runs is not a guard, so wiring `flutter test` into the workflow belongs with
+# creating the real app."* The real app now exists and ships itself to nine testers (ADR-290), so the
+# condition that justified waiting has arrived.
+#
+# ⭐ It costs 18 seconds of work: `flutter analyze` 3.2s, `flutter test` 481 tests in 15s. That it had never
+# run automatically was never a question of expense.
+
+on:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile.yml"
+  workflow_dispatch:        # a manual "check the app now" button
+
+# ⚠️ Path-filtered on purpose: the Dart suite has nothing to say about a Python commit, and a job that runs
+# on everything is a job people learn to scroll past.
+
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⚠️⚠️ **Pinned, for the same reason PuLP is** (ADR-310, ADR-322). A floating toolchain makes "the
+      # tests broke" and "Flutter changed" the same red tick, and telling them apart costs a morning.
+      # 3.47.5 is the version the shipped APKs are built with.
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true       # ~1 min per run instead of a full toolchain download
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      # ⚠️ Fatal on warnings (the default). The tree is clean at 3.47.5 — ADR-322 removed the dead
+      # `formatter: exclude:` block from analysis_options.yaml that was the one warning making this exit 1.
+      - name: Analyze (flutter analyze)
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Tests (flutter test)
+        working-directory: mobile
+        run: flutter test

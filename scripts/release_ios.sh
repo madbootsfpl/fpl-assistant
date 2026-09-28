@@ -42,6 +42,18 @@ fi
 version=$(grep '^version:' mobile/pubspec.yaml | awk '{print $2}')
 echo "  installing $version on $device"
 
+# ── 1b. gate ──────────────────────────────────────────────────────────────────────────────────────
+# ⭐ Same gate as the Android script, same reason (ADR-322, closing ADR-221): the Dart suite's one chance to
+# stop a build is before it, because afterwards the app is on the phone.
+#
+# ⚠️ After the device lookup on purpose — a missing cable is the commonest failure and costs nothing to
+# detect, so it is worth finding before spending 18 seconds on tests that were going to pass.
+echo "  checking…"
+(cd mobile && flutter analyze >/tmp/release_ios_check.log 2>&1) \
+  || { echo "  ANALYZE FAILED — see /tmp/release_ios_check.log"; exit 1; }
+(cd mobile && flutter test >>/tmp/release_ios_check.log 2>&1) \
+  || { echo "  TESTS FAILED — see /tmp/release_ios_check.log"; exit 1; }
+
 # ── 2. build ──────────────────────────────────────────────────────────────────────────────────────
 # ⚠️⚠️ **The API address is baked in at BUILD time** — `flutter install` has no `--dart-define`, and a
 # build without this points at `localhost`, which on a phone **is the phone**. ⭐ Every screen would fail

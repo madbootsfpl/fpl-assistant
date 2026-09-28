@@ -16,6 +16,22 @@ cd "$(dirname "$0")/.."
 SITE="${MADBOOTS_SITE:-$HOME/madboots-site}"
 API="${MADBOOTS_API:-https://madboots-api.onrender.com}"
 
+# ── 0. gate ───────────────────────────────────────────────────────────────────────────────────────
+# ⭐⭐ **The last place a test can still stop this.** ADR-290 made cutting a release the same act as
+# shipping it, so there is no review step afterwards in which a failure could be caught — by the time this
+# script finishes, the APK is on `madboots.com/app/` and nine phones are being offered it.
+#
+# ⚠️⚠️ **Before the bump, not after.** A failure here must leave the tree exactly as it was; gating after
+# step 1 would abort with `pubspec.yaml` already incremented, so the next run would bump twice and the
+# version history would carry a build number that never shipped.
+#
+# ⭐ 18 seconds: analyze ~3s, 481 tests ~15s (ADR-322, closing ADR-221).
+echo "  checking…"
+(cd mobile && flutter analyze >/tmp/release_check.log 2>&1) \
+  || { echo "  ANALYZE FAILED — see /tmp/release_check.log"; exit 1; }
+(cd mobile && flutter test >>/tmp/release_check.log 2>&1) \
+  || { echo "  TESTS FAILED — see /tmp/release_check.log"; exit 1; }
+
 # ── 1. bump ───────────────────────────────────────────────────────────────────────────────────────
 current=$(grep '^version:' mobile/pubspec.yaml | awk '{print $2}')
 name="${current%%+*}"; build="${current##*+}"

@@ -9,18 +9,20 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
-# ⚠️⚠️ **`lib/brand.dart` is GENERATED and must not be formatted** (ADR-242).
+# ⚠️⚠️ **`lib/brand.dart` and `lib/glossary.dart` are GENERATED and must not be reformatted.**
 #
-# It is written by `scripts/generate_brand_dart.py` from the web app's `brand.py` — one source of truth
-# for the colours and the wording (ADR-103/114). `tests/test_brand_dart.py` compares the committed file
-# against a fresh generation, byte for byte.
+# They are written by `scripts/generate_brand_dart.py` / `generate_glossary_dart.py` from the web app's
+# `brand.py` — one source of truth for the colours and the wording (ADR-103/114). `dart format` rewraps the
+# long string constants, which fails the byte-for-byte comparison in `tests/test_brand_dart.py`;
+# regenerating un-wraps them, which `dart format` then rewraps. **A loop with no stable state** — and the
+# visible symptom is a test failing for a file nobody edited.
 #
-# ⭐⭐ Without this exclusion the two tools fight: `dart format` rewraps the long string constants, which
-# fails the test; regenerating un-wraps them, which `dart format` then rewraps. **A loop with no stable
-# state** — and the visible symptom is a test failing for a file nobody edited.
-formatter:
-  exclude:
-    - lib/brand.dart
+# ⭐⭐ **The exclusion lives in the generated file, not here** (ADR-322). A `formatter: exclude:` block sat
+# at this spot and did nothing: the analyzer rejects the key outright — *"The option 'exclude' isn't
+# supported by 'formatter'"* — which was the single warning making `flutter analyze` **exit 1** and the
+# reason the CI gate could not be switched on. What works is the verbatim `// dart format off` marker the
+# generators emit as line 4, pinned by `tests/test_brand_dart.py`. ⭐ *The guard was already correct; the
+# dead config beside it only looked like the guard.*
 
 analyzer:
   exclude:
