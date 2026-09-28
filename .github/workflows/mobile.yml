@@ -28,7 +28,7 @@ jobs:
   mobile:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # ⚠️⚠️ **Pinned, for the same reason PuLP is** (ADR-310, ADR-322). A floating toolchain makes "the
       # tests broke" and "Flutter changed" the same red tick, and telling them apart costs a morning.
