@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,995 Python tests · 481 Dart tests · 323 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**3,005 Python tests · 481 Dart tests · 325 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 ⚠️ *Counted 2026-09-28. The Dart half is listed separately because until ADR-322 it was not in CI at all — ⭐ a total that silently included 481 tests nothing ran was the more flattering number.*
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
@@ -1011,6 +1011,17 @@ Kept so the reasoning isn't re-litigated:
   `squad/build` genuinely calls the solver. 📏 Measured rather than repeated: the files' long-standing
   **71 MB** was unsourced and ~2× the truth. ✅ Guarded by reusing the existing import-graph test — `pulp`
   joined its `banned` tuple — plus `SOLVER_FILES` pinning both directions.
+- ✅ **ADR-324/325 — the two 2,400-line modules split along seams they already had** (2026-09-28).
+  `service/answers.py` → seven families by **subject** (largest now **868** lines), `ask.py` → six layers by
+  **stage** (largest **1,343**). ⭐⭐ Measured, not designed: a dependency map put each private helper with its
+  one family, and `ask`'s shape was decided by **only 228 of 2,409 lines being public**. ✅ All 43 + 77
+  definitions moved **verbatim** — AST-cut, asserted byte-for-byte, diffed against HEAD. 🔴 Three things a
+  re-exporting barrel could not hide: the flat module's import namespace was a **test seam** (a package
+  forwards reads, never writes); `league()`/`player()` **shadowed their own modules**; and the injection I
+  missed was in `spikes/`, not `tests/`, where it would have regenerated a committed API sample from a **real
+  network call**. 🔴 Plus one nobody would guess: `test_tiebreak_wiring` resolves `**_TIE_BREAK` **in-file**,
+  so moving that constant made a real guard report four false positives. ⚠️ *Honest limit: the biggest module
+  got smaller, not small.*
 - ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
   external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
 

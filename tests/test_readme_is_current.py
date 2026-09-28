@@ -37,7 +37,11 @@ def test_the_test_count_is_roughly_right():
                          cwd=ROOT, capture_output=True, text=True, timeout=600).stdout
     m = re.search(r"(\d+) tests? collected", out)
     assert m, f"could not read a collection count from pytest:\n{out[-500:]}"
-    actual, claimed = int(m.group(1)), _claimed(r"([\d,]+) tests · CI green")
+    # ⚠️ **`Python tests`, not `tests`** (ADR-324/325). The README stated one figure for both suites;
+    # since ADR-322 put the Dart half in CI it names them separately, and ⭐ *a total that silently
+    # included 481 tests nothing ran was the more flattering number.* This checks the half that
+    # `pytest --collect-only` can actually count.
+    actual, claimed = int(m.group(1)), _claimed(r"([\d,]+) Python tests")
     assert abs(claimed - actual) / actual < 0.15, (
         f"README claims {claimed:,} tests, pytest collects {actual:,} "
         f"({abs(claimed-actual)/actual:.0%} out). Update the line in README.md.")
