@@ -641,3 +641,16 @@ nothing about the second.*
 - **What the pipeline must not lose:** [ADR-210](./ADR-210-a-threshold-reads-the-distribution-it-describes.md) · [ADR-203](./ADR-203-availability-is-recorded-as-it-passes.md)
 - **The path it replaces:** ADR-053 / ADR-056 — the committed snapshot
 - **The security work alongside it:** `docs/SUPABASE_RLS.md` (Phase 1.5)
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ This ADR's **Status** cell in `ADR-000-index.md` had grown to **14,266 characters** against a mean of
+53 — an essay in a column meant to hold a state. Its content was already here; what was not is the date
+the exit criterion falls due, which the Roadmap carries and this file did not.
+
+* 📅 **Exit criterion:** two weeks with no manual `reseed` *needed*, including a deadline and a live
+  gameweek. Live since **2026-09-19**, so it is met **on or after 2026-10-03** if nothing needed a hand.
+  ⚠️ *Needed*, not *permitted* — needing one is the failure signal, not a rule broken.
+
