@@ -106,3 +106,13 @@ than doing something, which is the safe direction, but it is a surface that did 
 
 **Open:** Chips is the last unbuilt tab. Item **1b** — normalising the four player shapes — is now
 overdue; this change worked around it in one place rather than fixing it.
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR, which was compressed to one
+line. ⚠️ *An index is a finding aid; when it becomes the only copy of a finding, compressing it is
+data loss.*
+
+* ✅ Guarded by `tests/test_service_endpoints.py`.

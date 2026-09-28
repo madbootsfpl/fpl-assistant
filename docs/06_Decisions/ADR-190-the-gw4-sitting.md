@@ -217,3 +217,13 @@ asking a question the instrument cannot answer.** Both checks are needed, and th
 - **The sampling discipline:** [ADR-183](./ADR-183-the-same-build-twice.md) — one sample of a varying
   process is not a measurement; two seeds, every time
 - **The measurement:** `spikes/190-gw4-sitting/constants.py`
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR, which was compressed to one
+line. ⚠️ *An index is a finding aid; when it becomes the only copy of a finding, compressing it is
+data loss.*
+
+* 📊 The check that changes the reading — **are the terms even live?** Measured as ρ(rank at 0, rank at w): **form 0.987** and **clean sheet 0.981** genuinely re-rank the board; **DefCon 0.99977** and **set-piece 0.99998** do not.
