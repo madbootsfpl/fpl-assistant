@@ -5,9 +5,17 @@
 # pyarrow 244 MB, streamlit 67 MB, numpy 62 MB, altair 19 MB** — none of which the API imports. Installing
 # them into an image that renders nothing is the same waste `requirements-pipeline.txt` was written to stop.
 #
-# ⚠️ **`pulp` stays, and it is not optional.** `src.analytics.__init__` imports the optimiser, so dropping
-# it fails at **import**, not at use — the same trap the pipeline's file records. It is 71 MB of the 193,
-# and the CBC binary it bundles is what `squad/build` actually runs.
+# ⚠️ **`pulp` stays — but for a different reason than this file used to give** (ADR-323). It said dropping it
+# *"fails at import, not at use"*; that stopped being true when the module-scope `import pulp` moved inside
+# `optimizer.select_squad`. The API now imports perfectly well without it.
+#
+# ⭐ It stays because this service **calls** the solver: `squad/build` runs `select_squad`, and the bundled
+# CBC binary is what solves it. So the API keeps it and the **pipeline no longer does** — ⭐⭐ *the dependency
+# is now where the work is, rather than wherever the import graph happened to reach.*
+#
+# 📏 **Measured 2026-09-28:** PuLP 3.3.2 is **16 MB to download, 36 MB installed** (34 MB of it the CBC
+# binaries in `pulp/solverdir`). ⚠️ This file used to say *"71 MB of the 193"* — unsourced, and ~2× the
+# real figure. The 193 MB total for the image is left as it was, having not been re-measured here.
 #
 # ⚠️ **If the API ever needs something new, it goes HERE as well as in requirements.txt.** A module that
 # imports cleanly in local dev and not in the image fails on deploy, in front of whoever is waiting.

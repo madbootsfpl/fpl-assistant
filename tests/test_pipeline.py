@@ -513,14 +513,20 @@ def test_the_pipeline_does_not_import_the_apps_heavy_dependencies():
     that imports Streamlit would work perfectly in the app and on a developer machine, and fail only on the
     runner — on a schedule, with nobody watching. So this asserts the import graph rather than trusting it.
 
-    `pulp` is deliberately absent from the list: `app.py pipeline` goes through `src.cli`, which imports
-    `src.analytics`, whose `__init__` imports the optimiser. It is on the path whether the pipeline uses it
-    or not, so it stays in the requirements — measured, not assumed.
+    ⭐⭐ **`pulp` is now IN the list, and that is the point of ADR-323.** It used to be excluded with a note
+    saying the optimiser was on the path *"whether the pipeline uses it or not"* — true at the time, because
+    `src/analytics/optimizer.py` imported PuLP at module scope and `src/analytics/__init__.py` re-exports from
+    it. So the solver — measured 2026-09-28 at **16 MB to download, 36 MB installed** — went onto the runner
+    24× a day for a job that never solves. Moving that one import inside
+    `select_squad` — the only function in the package that needs it — removed the coupling, and putting `pulp`
+    here is what stops it coming back. ⭐ *The guard against a regression is the same mechanism that proved the
+    fix.*
     """
     import subprocess
     import sys
 
-    banned = ("streamlit", "fastapi", "uvicorn", "jinja2", "pandas", "pyarrow", "altair", "authlib")
+    banned = ("streamlit", "fastapi", "uvicorn", "jinja2", "pandas", "pyarrow", "altair", "authlib",
+              "pulp")   # pulp joined the list in ADR-323 — see the docstring above
     # A subprocess, because this test process has the whole app imported already.
     # ⚠️ **Import everything the COMMAND touches, not just the entry module.** The first version imported
     # only `src.cli` and a mutation adding `import streamlit` to `src/pipeline.py` survived — because
@@ -549,8 +555,23 @@ def test_the_pipeline_requirements_cover_what_it_imports():
 
     root = _Path(__file__).resolve().parents[1]
     pipeline_reqs = (root / "requirements-pipeline.txt").read_text().lower()
-    for needed in ("requests", "psycopg", "pulp"):
+    for needed in ("requests", "psycopg"):
         assert needed in pipeline_reqs, f"{needed} is on the pipeline's import path and must be installed"
+    # ⭐ And `pulp` must NOT be here any more (ADR-323): the solver left the pipeline's import path when
+    # `import pulp` moved inside `optimizer.select_squad`, so installing it would be 16 MB of download and
+    # 36 MB on disk per run for a dependency nothing reaches. ⚠️ *The absence is the assertion* — a "tidy-up" restoring it to match the
+    # app's file would silently undo the saving.
+    # ⚠️ Checked against the *package lines*, not the file's text — the comment above them explains at length
+    # why pulp was removed, and a substring search on the whole file matches that prose instead of a
+    # requirement. ⭐ *A test that greps a file with comments in it is testing the comments.*
+    installed = [line.split("#")[0].strip().lower()
+                 for line in (root / "requirements-pipeline.txt").read_text().splitlines()
+                 if line.split("#")[0].strip() and not line.strip().startswith(("#", "-"))]
+    assert not [s for s in installed if s.startswith("pulp")], (
+        f"pulp is back in requirements-pipeline.txt ({installed}). The pipeline does not import it — the "
+        "banned-list test above proves that — so installing it costs 16 MB of download and 36 MB on disk "
+        "per cold run for nothing."
+    )
     # ⭐ And `-e .` must NOT be here: the pipeline runs `python app.py` from the repo root, so the root is
     # already on sys.path. An editable install only costs a setuptools build on every cold run. The app's
     # requirements still need it — Community Cloud puts the *script's* folder on the path, not the root.

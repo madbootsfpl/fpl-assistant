@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,995 Python tests · 481 Dart tests · 322 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,995 Python tests · 481 Dart tests · 323 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 ⚠️ *Counted 2026-09-28. The Dart half is listed separately because until ADR-322 it was not in CI at all — ⭐ a total that silently included 481 tests nothing ran was the more flattering number.*
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
@@ -1000,6 +1000,17 @@ Kept so the reasoning isn't re-litigated:
   called and `Authlib==1.8.0` is never imported — proved by it not being installed locally while the whole
   suite runs green. 📌 The trigger is **enabling `[auth]`**, not the next deploy; sign in once if that
   ever happens. ⭐ *An open action tied to "the next deploy" silently expires; tied to a condition, it waits.*
+- ✅ **ADR-323 — the import at the top of the file** (2026-09-28). ADR-322 left this open; it took two lines.
+  `optimizer.py` opened with `import pulp` at module scope, and since `analytics/__init__.py` re-exports from
+  it, **everything touching `src.analytics` loaded a solver** — the scheduled pipeline included, which never
+  solves. 🔴 Both deploy files called it permanent, the pipeline's concluding that a fix *"would mean moving
+  `deadline.py` out of the analytics package, a bigger change than this is worth"*. ⭐⭐⭐ Right observation,
+  wrong conclusion: all 13 `pulp` call sites sit inside **one function**. ⭐⭐ *An import at the top of a file is
+  a dependency for every caller of every function in it.* ✅ `pulp` dropped from `requirements-pipeline.txt`
+  (16 MB download / 36 MB on disk, 24× a day); kept in `requirements-api.txt` with its reason corrected, since
+  `squad/build` genuinely calls the solver. 📏 Measured rather than repeated: the files' long-standing
+  **71 MB** was unsourced and ~2× the truth. ✅ Guarded by reusing the existing import-graph test — `pulp`
+  joined its `banned` tuple — plus `SOLVER_FILES` pinning both directions.
 - ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
   external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
 

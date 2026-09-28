@@ -4,10 +4,29 @@
 # it installing Streamlit and its stack (pandas, pyarrow, altair) for a job that renders nothing. At 96 ticks
 # a day that is hours of runner time for no purpose — free on a public repo, but waste is waste.
 #
-# ⚠️ **`pulp` stays, and it is not optional.** `app.py pipeline` goes through `src.cli`, which imports
-# `src.analytics`, whose `__init__` imports the optimiser. Dropping it fails at import, not at use — measured,
-# not assumed. Removing that dependency would mean moving `deadline.py` out of the analytics package, which
-# is a bigger change than this is worth.
+# ✅ **`pulp` is GONE from this file, and the coupling that required it is gone too** (ADR-323).
+#
+# It used to read *"`pulp` stays, and it is not optional"*, because `app.py pipeline` goes through `src.cli` →
+# `src.analytics`, whose `__init__` re-exports the optimiser — so an integer-programming solver was installed
+# 24× a day for a job that never solves anything.
+#
+# 📏 **Measured 2026-09-28, because the old note guessed:** PuLP 3.3.2 is **16 MB to download, 36 MB
+# installed** — 34 MB of that the bundled CBC binaries in `pulp/solverdir`. ⚠️ Both this file and
+# `requirements-api.txt` claimed **71 MB**; nothing recorded where that came from and it is ~2× the real
+# figure. The wheel is `py3-none-any`, so the number is the same on the runner as here. ⭐ *A saving worth
+# making is worth measuring — an inflated one invites someone to re-check it and find the whole note
+# unreliable.* The note concluded that removing it meant moving
+# `deadline.py` out of the analytics package, "a bigger change than this is worth".
+#
+# ⭐⭐ **It was a two-line change, in the other direction.** Every `pulp` call in the package sits inside one
+# function, `optimizer.select_squad`; the module-scope `import pulp` was the entire coupling. Moved inside
+# that function, exactly as `src/db.py` does with `psycopg`. ⭐ *An import at the top of a file is a
+# dependency for every caller of every function in it* — and the fix was in the file nobody re-read, not in
+# the package layout.
+#
+# ⚠️ Guarded, not just done: `pulp` is now in the **banned** list of
+# `test_pipeline.py::test_the_scheduled_command_imports_nothing_it_does_not_install`, which walks the import
+# graph the command actually walks. Put `import pulp` back at module scope and that test fails.
 #
 # ⚠️ **If the pipeline ever needs something new, it goes HERE as well as in requirements.txt.** A module that
 # imports cleanly in the app and not on the runner fails at 3am, on a schedule, with nobody watching.
@@ -23,4 +42,3 @@
 # schedule **with nobody watching**, which is the worst possible place for a dependency to change by itself.
 requests==2.34.2   # the FPL client
 psycopg[binary]==3.3.6   # Postgres — the pipeline's destination
-pulp==3.3.2   # not used by the pipeline, but on its import path (see above)

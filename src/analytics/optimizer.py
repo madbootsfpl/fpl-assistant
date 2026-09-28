@@ -3,11 +3,15 @@
 Instead of computing an answer step by step, we *describe* the problem — an objective
 and a set of constraints — and let an integer-programming solver (PuLP) find the
 provably best starting XI. This is the one module that depends on PuLP.
+
+⭐⭐ **And the dependency is on `select_squad`, not on importing this file** (ADR-323). `import pulp` used to
+sit at module scope, and because `src/analytics/__init__.py` re-exports from here, *anything* that touched
+`src.analytics` — the CLI, the scheduled pipeline, `deadline.py` — dragged in a 71 MB integer-programming
+solver it never called. The import now lives inside the one function that solves, mirroring
+`src/db.py`'s `import psycopg` (*"imported here so the CLI runs without it installed"*).
 """
 
 import warnings
-
-import pulp
 
 from src.analytics.minutes import UNAVAILABLE
 from src.analytics.minutes import is_unavailable as _minutes_is_unavailable
@@ -184,6 +188,12 @@ def select_squad(
     # `PULP_CBC_CMD` — `COIN_CMD` needs an *external* CBC (`pip install pulp[cbc]`) which isn't present
     # (locally or on the read-only Cloud), so we keep the bundled solver and silence *only* its
     # deprecation notice — any other future deprecation still surfaces.
+    # ⚠️ **Imported here, not at module scope** (ADR-323): this is the only function in the package that
+    # needs the solver, and a module-scope import put PuLP on the import path of everything that merely
+    # touches `src.analytics`. ⭐ *An import at the top of a file is a dependency for every caller of every
+    # function in it.* Cheap to repeat — after the first call it is a `sys.modules` lookup.
+    import pulp
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*PULP_CBC_CMD.*", category=DeprecationWarning)
 

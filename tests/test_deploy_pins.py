@@ -53,17 +53,42 @@ def test_every_requirement_is_pinned_exactly(name):
     )
 
 
+# Which files are *expected* to install the solver, and why — ADR-323 moved the pipeline out of this set.
+# ⭐ Stated as data rather than left implicit, so "should this file have pulp?" has one answer in one place.
+SOLVER_FILES = {
+    "requirements.txt": "the app runs squad builds in-process",
+    "requirements-api.txt": "squad/build calls select_squad",
+}
+
+
 @pytest.mark.parametrize("name", sorted(DEPLOY_FILES))
-def test_the_solver_is_pinned_wherever_it_is_installed(name):
-    """⚠️ `pulp` by name, because it is the one that already broke and the one that is *least* obviously
-    needed — both other files carry a comment apologising for it (`src.analytics.__init__` imports the
-    optimiser, so it is on the import path even where nothing solves). ⭐ *A dependency nobody thinks they
-    use is the one whose pin gets dropped in a tidy-up.*"""
+def test_the_solver_is_pinned_where_it_is_used_and_absent_where_it_is_not(name):
+    """⚠️ `pulp` by name, because it is the one that already broke (ADR-310) **and** the one that spent months
+    installed somewhere nothing called it (ADR-323).
+
+    ⭐⭐ Both halves are asserted, because the two failures are opposite and a test for one hides the other:
+    a **missing pin** is a deploy that installs PuLP 4 and stops solving; a **reappearing pulp** in the
+    pipeline's file is 16 MB downloaded and 36 MB unpacked, 24× a day, for an import that no longer
+    happens. *A dependency nobody
+    thinks they use is the one whose pin gets dropped in a tidy-up — and also the one that gets added back to
+    make two files "match".*
+    """
     specs = [spec for _, spec in _requirements(name) if spec.lower().startswith("pulp")]
-    assert specs, f"{name} no longer installs pulp — if that is deliberate, ADR-310's note needs revisiting"
+
+    if name not in SOLVER_FILES:
+        assert not specs, (
+            f"{name} installs pulp again ({specs}). ADR-323 removed it: the solver left that import path when "
+            "`import pulp` moved inside `optimizer.select_squad`, and nothing this file installs reaches it."
+        )
+        return
+
+    assert specs, (
+        f"{name} no longer installs pulp, but {SOLVER_FILES[name]} — so it needs the solver. If that has "
+        "genuinely changed, move it out of SOLVER_FILES above rather than deleting this assertion."
+    )
     assert any(spec.replace(" ", "").lower() == "pulp==3.3.2" for spec in specs), (
-        f"{name} does not pin pulp==3.3.2. PuLP 4.0.0 removes `PULP_CBC_CMD`, which `optimizer.py:276` "
-        "calls at solve time — squad builds, gameweek plans and My Squad all stop answering."
+        f"{name} does not pin pulp==3.3.2. PuLP 4.0.0 removes `PULP_CBC_CMD`, which `select_squad` calls at "
+        "solve time — squad builds, gameweek plans and My Squad all stop answering."
     )
 
 
