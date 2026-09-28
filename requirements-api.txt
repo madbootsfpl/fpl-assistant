@@ -16,8 +16,22 @@
 # so the root is already on `sys.path`, and an editable install triggers a setuptools build on every cold
 # image rebuild for no benefit.
 
-fastapi               # the read-only JSON edge over the analytics
-uvicorn               # the ASGI server the container runs
-requests              # the FPL client — `my-team` fetches a manager's picks live
-psycopg[binary]       # Postgres — reads what the pipeline publishes (ADR-211)
-pulp                  # not called by most endpoints, but on the import path (see above)
+# ⚠️⚠️ **Every version is PINNED, and that is the point of this file** (ADR-322, completing ADR-310).
+#
+# ADR-310 spent **24 days of red CI** on eight causes, the largest being unpinned `pulp`: PuLP 4.0.0
+# (2026-09-25) removes `PULP_CBC_CMD`, which was **277 failures from one cause**. It pinned `pulp==3.3.2`
+# — in `requirements.txt`, whose comment says *"Render installs this same file"*. 🔴 **Render does not
+# install that file. The `Dockerfile` installs THIS one**, and the pin was missing here for three days.
+#
+# ⭐⭐ *A fix applied to the file you were reading rather than the file that ships is worse than no fix,
+# because the comment explaining it reads as protection.*
+#
+# ⭐ **Pinned, not bounded.** `>=` on a deploy file is a floating version with extra characters — it still
+# installs whatever is newest, which is exactly how PuLP 4 arrived. The cost is real and accepted: upgrades
+# now happen when someone edits this file, never by surprise in front of nine testers.
+
+fastapi==0.141.1      # the read-only JSON edge over the analytics
+uvicorn==0.52.1       # the ASGI server the container runs
+requests==2.34.2      # the FPL client — `my-team` fetches a manager's picks live
+psycopg[binary]==3.3.6   # Postgres — reads what the pipeline publishes (ADR-211)
+pulp==3.3.2           # not called by most endpoints, but on the import path (see above)

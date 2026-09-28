@@ -17,6 +17,10 @@
 # (ADR-053). The pipeline runs `python app.py` **from the repo root**, so the root is already on sys.path —
 # and an editable install triggers a setuptools build on every cold run for no benefit. Verified in a clean
 # venv: `app.py pipeline` works without it.
-requests              # the FPL client
-psycopg[binary]       # Postgres — the pipeline's destination
-pulp                  # not used by the pipeline, but on its import path (see above)
+
+# ⚠️⚠️ **PINNED, like the API's file and for the same reason** (ADR-322, completing ADR-310). Unpinned `pulp`
+# is what put 277 failures into CI when PuLP 4.0.0 landed on 2026-09-25; these runs happen 24× a day on a
+# schedule **with nobody watching**, which is the worst possible place for a dependency to change by itself.
+requests==2.34.2   # the FPL client
+psycopg[binary]==3.3.6   # Postgres — the pipeline's destination
+pulp==3.3.2   # not used by the pipeline, but on its import path (see above)
