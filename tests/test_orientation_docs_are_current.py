@@ -47,12 +47,26 @@ def test_nothing_calls_the_mobile_app_unbuilt() -> None:
         r"planned[^.\n]{0,30}mobile app",
         re.I,
     )
+    # ⭐ A line that marks it done may quote the old claim to explain the drift, so those are exempt —
+    # ⚠️⚠️ **but per CLAUSE, not per line, which is how this guard was defeated for a week.** The exemption
+    # was `if "✅" in line`, and `PROJECT_STATUS`'s **Current Phase** field is a 742-character paragraph
+    # carrying ✅ against *the pipeline* and *Supabase* — so the whole line was skipped, including the
+    # `**Next:** the Flutter mobile app` at the end of it (found 2026-09-28, ADR-322).
+    #
+    # ⭐⭐ *An escape hatch scoped more widely than the claim it excuses exempts the thing it was written to
+    # catch* — and it fails silently, because a guard that skips looks exactly like a guard that passed.
+    exempt = ("✅", "~~", "*This", "said", "read ")
     for name in ORIENTING:
         for line in _text(name).splitlines():
-            # ⭐ A line that marks it done may quote the old claim to explain the drift.
-            if "✅" in line or "*This" in line or "said" in line:
-                continue
-            assert not unbuilt.search(line), f"{name} still calls the mobile app unbuilt:\n  {line[:150]}"
+            for match in unbuilt.finditer(line):
+                # The clause around the match: the regex never spans a `.`, so the nearest full stops on
+                # either side bound it the same way.
+                start = line.rfind(".", 0, match.start()) + 1
+                end = line.find(".", match.end())
+                clause = line[start:end if end != -1 else len(line)]
+                assert any(mark in clause for mark in exempt), (
+                    f"{name} still calls the mobile app unbuilt:\n  …{clause.strip()[:160]}"
+                )
 
 
 def test_the_live_fields_are_not_a_season_behind() -> None:

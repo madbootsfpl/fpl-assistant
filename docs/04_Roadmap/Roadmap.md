@@ -16,7 +16,8 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**2,606 tests · 281 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**2,995 Python tests · 481 Dart tests · 322 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+⚠️ *Counted 2026-09-28. The Dart half is listed separately because until ADR-322 it was not in CI at all — ⭐ a total that silently included 481 tests nothing ran was the more flattering number.*
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
 page knowing three things:
@@ -972,6 +973,31 @@ Kept so the reasoning isn't re-litigated:
 - ⬜ **Deferred auth polish** — a confirm dialog on Log out; a signed/opaque "remember me" token instead of the
   raw value (deferred as over-engineering for a hobby beta; revisit only if the raw cookie value becomes a
   concern).
+- ✅ **ADR-322 — three guards that already existed** (2026-09-28, from a health check).
+  🔴 **481 Dart tests across 45 files had never run automatically** — no workflow mentioned Flutter and both
+  release scripts went straight to `flutter build`. ADR-221 had already deferred this *"until the real app
+  exists"*; it exists. Now `mobile.yml` (Flutter **pinned** to 3.47.5, path-filtered to `mobile/**`) plus the
+  same gate ahead of the build — and ahead of the **version bump** — in `release_android.sh` and
+  `release_ios.sh`. ⭐ *It costs 18 seconds: analyze 3.2s, 481 tests 15s.*
+  🔴🔴 **And ADR-310's `pulp` pin was in the wrong file.** The `Dockerfile` installs `requirements-api.txt`,
+  not `requirements.txt` — so `pulp`, `fastapi`, `uvicorn`, `requests` and `psycopg` were all still floating in
+  the image the phone calls, three days after PuLP 4.0.0 shipped the break that cost 24 days of red CI.
+  All three requirements files are now fully pinned (5/5 · 3/3 · 16/16), ⭐ **pinned not bounded**.
+  ✅ Guarded by `test_mobile_gate.py` + `test_deploy_pins.py`, verified by six mutations — one of which
+  asserts the `Dockerfile` still installs the file the pins are checked in, *the assumption that failed last
+  time.*
+  🔴🔴🔴 **And the staleness guard was skipping its own subject.** `PROJECT_STATUS`'s first line still
+  said *"Next: the Flutter mobile app"* four lines above *"THE APP IS SHIPPED"* — and fixing it raised why
+  ADR-294/295's test never fired: `test_nothing_calls_the_mobile_app_unbuilt` skipped **any line containing a `✅`**, and
+  `Current Phase` is a 742-character paragraph carrying three — so **the guard written for that sentence had
+  been exempting that sentence all along.** ⭐⭐⭐ *An escape hatch scoped more widely than the claim it
+  excuses exempts the thing it was written to catch*, and it fails silently: a guard that skips looks exactly
+  like one that passes. ✅ Exemption now scoped to the **clause**, verified by watching it object three times.
+  ⭐⭐ **The pattern all three share: every guard already existed** — the Dart tests nobody ran, the pin in the
+  wrong file, the test that exempted its subject. ⚠️ *Not a missing idea among them.*
+  ⚠️ **One pin is unverified:** `Authlib==1.8.0` — not installed locally, exercised only by Streamlit Cloud's
+  `st.login()`. 1.8.0 is what the old `>=1.3.2` resolves to today, so it changes nothing now; **confirm login
+  on the next Streamlit deploy.**
 - ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
   external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
 
