@@ -663,6 +663,26 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
     move = plan.get("transfer")
     tr_ex = explain_transfer(move, players_by_id.get((move.get("in") or {}).get("id"), {}), horizon) \
         if move else None
+
+    # ⚠️⚠️ **One explanation per move, keyed by the buy** (ADR-327). A coordinated plan holds several moves
+    # in `transfers`, and only the primary one was ever explained — so a client with four cards to fill had
+    # one set of reasons and painted it on all of them. A tester saw four swaps whose headlines differed and
+    # whose bodies were identical, down to *"Selling M.Sangaré"* on the card that sells Konsa.
+    #
+    # ⭐⭐ *The explanation was right about the move it was given; nothing was wrong except how many times it
+    # was used* — which is why no test of `explain_transfer` could have caught it.
+    #
+    # ⭐ Keyed by the incoming player's id rather than by position: a list would make the client's card and
+    # its reasons agree only as long as both are ordered the same way, and that is not a property either
+    # side states.
+    per_move = {}
+    for m in (plan.get("transfers") or ([move] if move else [])):
+        buy_id = (m.get("in") or {}).get("id")
+        if buy_id is None:
+            continue
+        one = explain_transfer(m, players_by_id.get(buy_id, {}), horizon)
+        if one:
+            per_move[str(buy_id)] = one
     lineup = _lineup_reasons(plan.get("lineup") or {}, xp_by_id)
 
     # Overall — captain-driven, flagged players are the week's risk.
@@ -686,7 +706,8 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
 
     score = gameweek_confidence(cap_ex.confidence if cap_ex else None, len(starting_flags(flags)))
     overall = Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
-    return {"captain": cap_ex, "transfer": tr_ex, "lineup": lineup, "overall": overall,
+    return {"captain": cap_ex, "transfer": tr_ex, "transfers": per_move,
+            "lineup": lineup, "overall": overall,
             # ADR-198 — the same sum, run backwards: what is holding the week's number down, and which of it
             # you can actually act on. Computed here because both inputs are already in scope.
             "levers": confidence_levers(cap_ex.confidence if cap_ex else None, flags)}

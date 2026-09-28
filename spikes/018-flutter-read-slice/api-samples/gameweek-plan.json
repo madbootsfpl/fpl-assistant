@@ -120,6 +120,22 @@
         "Selling Gakpo (3.7 xP)",
         "Differential (5% owned)"
       ]
+    },
+    "transfers": {
+      "286": {
+        "band": "High",
+        "confidence": 95,
+        "reasons": [
+          "+2.3 to your starting XI over 1 GW",
+          "Higher projected points (6.3 vs 3.7)",
+          "Frees \u00a32.1m",
+          "In form (7.0)"
+        ],
+        "risks": [
+          "Selling Gakpo (3.7 xP)",
+          "Differential (5% owned)"
+        ]
+      }
     }
   },
   "flags": [

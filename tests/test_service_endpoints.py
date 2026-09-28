@@ -705,14 +705,15 @@ def test_an_unstated_number_is_worked_out_from_the_manager_s_own_history(store, 
     beside it — ⚠️ *two numbers on one screen is a question, not an answer*, and a tester asked it:
     **"is that 1/3 used?"**"""
     monkeypatch.setattr(svc_squad, "fetch_manager_team", lambda entry_id, players: (team, ""))
-    # ⭐ Four played gameweeks, one spent: 1 at GW1, +1 each of GW2-4, −1 in GW3, +1 for the week ahead.
+    # ⭐ Four played gameweeks, one spent (ADR-327): GW1 earns nothing, +1 each of GW2-4, −1 in GW3, +1 for
+    # the week ahead = 3. ⚠️ This read 4 until the GW1 transfer FPL never issues was removed.
     _history(monkeypatch, current=[{"event": 1, "event_transfers": 0},
                                    {"event": 2, "event_transfers": 0},
                                    {"event": 3, "event_transfers": 1},
                                    {"event": 4, "event_transfers": 0}])
 
     answer = svc.my_team(MyTeamRequest(manager_id=1), store=store)
-    assert answer["free_transfers"] == 4, "the server knew the number and reported a guess"
+    assert answer["free_transfers"] == 3, "the server knew the number and reported a guess"
     assert answer["free_transfers_source"] == "history"
 
 
@@ -727,8 +728,9 @@ def test_what_the_manager_says_beats_what_his_history_implies(store, team, monke
     answer = svc.my_team(MyTeamRequest(manager_id=1, free_transfers=0), store=store)
     assert answer["free_transfers"] == 0, "the manager was overruled by his own history"
     assert answer["free_transfers_source"] == "you"
-    # ⭐ Still reported, so a screen can say "you said 0, your history says 3" rather than pick one.
-    assert answer["free_transfers_implied"] == 3
+    # ⭐ Still reported, so a screen can say "you said 0, your history says 2" rather than pick one.
+    # (Two: GW2 earns the first, the week ahead the second — ADR-327.)
+    assert answer["free_transfers_implied"] == 2
 
 
 def test_zero_is_a_number_the_manager_can_state(store, team, monkeypatch):

@@ -328,7 +328,14 @@ def free_transfers_from_history(rows, chips=None, *, cap: int = FT_CAP) -> int:
         return 1
     by_event = {c.get("event"): c.get("name") for c in (chips or [])}
 
-    held = 1                                        # ⭐ GW1 opens with one
+    # ⚠️⚠️ **Zero, not one — FPL grants no free transfer for GW1** (ADR-327). Your first arrives *after* the
+    # GW1 deadline, for GW2; before it the squad is unlimited to edit, which is not a transfer you can bank.
+    # Opening at 1 added a transfer the game never gave, and the `+ 1` at the foot of this function then
+    # counted the week ahead a second time — reported by a tester on manager 1467290, whose own history
+    # (0·1·1·0·0 moves, Bench Boost in GW2) FPL scores at **3** and this scored at **4**.
+    #
+    # ⭐ *An off-by-one in a bankable resource does not look like a bug; it looks like the app being generous.*
+    held = 0
     for row in played:
         event = row.get("event")
         if event and event > 1:

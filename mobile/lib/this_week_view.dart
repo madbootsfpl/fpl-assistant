@@ -85,6 +85,9 @@ class _ThisWeekViewState extends State<ThisWeekView> {
       final overall = explanation?['overall'] as Map<String, dynamic>?;
       final levers = explanation?['levers'] as Map<String, dynamic>?;
       final lineupWhy = (explanation?['lineup'] as List?) ?? const [];
+      // ⭐ One explanation per move, keyed by the buy's id (ADR-327).
+      final perMove =
+          (explanation?['transfers'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
 
       return ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
@@ -133,12 +136,27 @@ class _ThisWeekViewState extends State<ThisWeekView> {
               detail: 'Nothing worth doing with the transfer you hold.',
             )
           else
+            // ⚠️⚠️ **Each card takes its OWN explanation** (ADR-327). This read
+            // `explanation['transfer']` — the plan's *primary* move — for every card in the loop, so four
+            // swaps with four different headlines carried one identical body, down to *"Selling
+            // M.Sangaré"* on the card selling Konsa. ⭐⭐ *The headline used the loop variable and the
+            // reasons did not, which is invisible until a plan has more than one move in it.*
+            //
+            // ⭐ Looked up by the incoming player's id, never by position: matching card to reasons by
+            // index would hold only while both lists stay in the same order, which neither side promises.
             for (final m in moves)
               _Card(
                 label: 'Transfer',
                 headline: '${m['out']['web_name']} → ${m['in']['web_name']}',
                 detail: '+${(m['gain'] as num).toStringAsFixed(1)} xP',
-                explanation: explanation?['transfer'] as Map<String, dynamic>?,
+                explanation:
+                    (perMove['${m['in']['id']}'] as Map<String, dynamic>?) ??
+                    // ⚠️ Only for a single-move plan from a server that predates `transfers`; with several
+                    // moves this would be the reuse the fix removes, so it is deliberately not a fallback
+                    // when there is more than one.
+                    (moves.length == 1
+                        ? (explanation?['transfer'] as Map<String, dynamic>?)
+                        : null),
               ),
           // ⚠️ **Shown whether or not there is a move to make.** "Hold" is a recommendation too, and
           // ⭐ *the reader most likely to want the alternatives is the one who was just told to do

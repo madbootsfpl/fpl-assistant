@@ -31,7 +31,8 @@ def test_they_do_not_roll_past_the_cap() -> None:
 
 
 def test_spending_them_spends_them() -> None:
-    # GW1 opens with 1 and it is spent; GW2 earns one; GW3 earns one and spends it → 1 for GW4.
+    # ⚠️ GW1 earns nothing (ADR-327) and a move made then costs points, not a bank; GW2 and GW3 each earn
+    # one and GW3 spends its own → one banked, plus the week ahead = 2.
     assert free_transfers_from_history(weeks((1, 1), (2, 0), (3, 1))) == 2
 
 
@@ -50,7 +51,11 @@ def test_a_chip_week_leaves_the_bank_alone(chip) -> None:
     banked = free_transfers_from_history(weeks((1, 0), (2, 9)), played)
     spent = free_transfers_from_history(weeks((1, 0), (2, 9)))
 
-    assert banked == 3, "the chip week ate the saved transfers"
+    # ⚠️ **Two, not three** (ADR-327). GW2 is the first week that earns a transfer; the chip then spends
+    # none of it, so one is banked and the week ahead brings the second. The old value of 3 counted a GW1
+    # transfer FPL never issued — ⭐ *this test was written against the implementation, so it agreed with
+    # the bug and kept agreeing.*
+    assert banked == 2, "the chip week ate the saved transfers"
     assert spent == 1, "…and without the chip, nine moves should have emptied them"
 
 
@@ -101,3 +106,25 @@ def test_settings_shows_which_build_this_is() -> None:
                 / "mobile/lib/settings_view.dart").read_text()
 
     assert "kAppBuild" in settings and "kAppVersion" in settings
+
+
+def test_the_number_matches_fpls_own_for_the_manager_who_reported_it() -> None:
+    """🔴 **The bug, as a tester met it** (ADR-327): *"calculated 4 transfers for manager ID 1467290, there
+    are only 3 available."*
+
+    ⭐ His real shape, taken from `/entry/1467290/history/` on 2026-09-28: five played gameweeks, moves of
+    0·1·1·0·0, Bench Boost in GW2. FPL showed **3**; this function said **4**.
+
+    ⚠️ Bench Boost is in the history deliberately — it is **not** in `FT_FREE_CHIPS`, because it does not
+    make transfers free, and a fix that quietly widened that set would pass this test for the wrong reason.
+    """
+    history = weeks((1, 0), (2, 1), (3, 1), (4, 0), (5, 0))
+    assert free_transfers_from_history(history, [{"event": 2, "name": "bboost"}]) == 3
+
+
+def test_the_first_gameweek_does_not_issue_one() -> None:
+    """⭐ The root cause, stated on its own so it cannot regress silently. FPL's first free transfer arrives
+    **after** the GW1 deadline, for GW2 — before that the squad is unlimited to edit, which is not a
+    transfer anyone can bank."""
+    assert free_transfers_from_history(weeks((1, 0))) == 1, "GW1 played, none spent → one for GW2"
+    assert free_transfers_from_history(weeks((1, 0), (2, 0))) == 2, "…and two for GW3"

@@ -255,10 +255,20 @@ def _explained(plan: dict, data, horizon: int) -> dict | None:
         found = explain_gameweek(plan, {p["id"]: p for p in data.players}, xp_by_id, horizon=horizon)
         if not found:
             return None
-        return {
-            key: (asdict(value) if hasattr(value, "__dataclass_fields__") else value)
-            for key, value in found.items()
-        }
+        def flat(value):
+            """⚠️ **Recursive now** (ADR-327): `transfers` is a dict of one `Explanation` per move, and a
+            flattener that only looked at the top level would hand the client dataclass objects it cannot
+            serialise. ⭐ *The shape grew a level and the converter did not, which fails at the wire rather
+            than here.*"""
+            if hasattr(value, "__dataclass_fields__"):
+                return asdict(value)
+            if isinstance(value, dict):
+                return {k: flat(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [flat(v) for v in value]
+            return value
+
+        return {key: flat(value) for key, value in found.items()}
     except Exception:                                    # noqa: BLE001 — commentary, never the decision
         return None
 
