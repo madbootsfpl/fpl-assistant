@@ -19,6 +19,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 ORIENTING = [
     "CLAUDE.md",
@@ -172,3 +174,49 @@ def test_nobody_has_started_writing_to_it_again() -> None:
         f"a row dated {newest} was added to a log retired on {retired_on}. Feedback belongs in an ADR "
         f"(docs/06_Decisions/), not here."
     )
+
+
+# ---- size, because the prose guards all passed while the file grew to 84.5 KB (ADR-326) ------------
+
+#: What each orienting document may weigh, and what a single "current" field may. ⚠️⚠️ **Not a style rule.**
+#: Every test above checks a claim against the repo, and every one of them passed while `PROJECT_STATUS.md`
+#: reached **84,531 bytes** — 86% of it a 69-entry sprint log inside one line — because ⭐⭐⭐ *no individual
+#: sentence in it was false. The failure was a document too long to re-read, which is a property of the whole
+#: and invisible to any test of the parts.*
+#:
+#: ⭐ The numbers are ceilings with room, not targets: roughly 3x what the files hold today, so ordinary
+#: editing never trips them and a log quietly accumulating does.
+CEILINGS = {
+    "docs/00_Project/PROJECT_STATUS.md": 20_000,
+    "docs/06_Decisions/ADR-000-index.md": 250_000,
+    "CLAUDE.md": 12_000,
+}
+FIELD_CEILING = 900
+
+
+@pytest.mark.parametrize("name", sorted(CEILINGS))
+def test_an_orienting_document_stays_readable(name) -> None:
+    """⚠️ If this fails, the fix is to **move** content, not to raise the number. The index's reasoning belongs
+    in the ADR; a status file's history belongs in `Status_Log_Archive.md` or a sprint doc."""
+    size = (ROOT / name).stat().st_size
+    assert size <= CEILINGS[name], (
+        f"{name} is {size:,} bytes, over its {CEILINGS[name]:,} ceiling. Something is accumulating in a file "
+        f"that is read before anything else. Move it out (ADR-326) rather than raising this."
+    )
+
+
+def test_no_current_field_has_become_an_essay() -> None:
+    """⭐ The fields named *current* are the ones a reader scans first and the ones that rot fastest — ADR-294's
+    stale clause sat at the end of a 742-character paragraph, unread.
+
+    ⚠️ `Tests:` is exempt and deliberately so: it is a facts line, not a narrative, and it names the CI jobs.
+    """
+    status = (ROOT / "docs/00_Project/PROJECT_STATUS.md").read_text().splitlines()
+    fields = ("Current Phase:", "Current Sprint:", "Current Story:", "Next Milestone:", "Current Version:")
+    for line in status:
+        if line.startswith(fields):
+            assert len(line) <= FIELD_CEILING, (
+                f"'{line.split(':')[0]}' is {len(line)} characters, over {FIELD_CEILING}. Put the reasoning in "
+                f"the ADR it cites — a status line that restates its ADR is the copy that goes stale."
+            )
+

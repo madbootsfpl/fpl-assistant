@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**3,005 Python tests · 481 Dart tests · 325 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**3,005 Python tests · 481 Dart tests · 326 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 ⚠️ *Counted 2026-09-28. The Dart half is listed separately because until ADR-322 it was not in CI at all — ⭐ a total that silently included 481 tests nothing ran was the more flattering number.*
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
@@ -1022,6 +1022,15 @@ Kept so the reasoning isn't re-litigated:
   network call**. 🔴 Plus one nobody would guess: `test_tiebreak_wiring` resolves `**_TIE_BREAK` **in-file**,
   so moving that constant made a real guard report four false positives. ⚠️ *Honest limit: the biggest module
   got smaller, not small.*
+- ✅ **ADR-326 — the document that orients you** (2026-09-28). The ADR index was **509 KB** and
+  `PROJECT_STATUS.md` **84.5 KB**, 86% of the latter a 69-entry sprint log inside a single line. Now **92 KB**
+  and **5 KB**. ⭐⭐ *A running log appended to a status field stops being a status and becomes an archive
+  nobody retired.* 🔴 Seven facts existed nowhere but the index and moved into their ADRs first — all seven from
+  the longest rows. 🔴 And the status file was lying: its `Web UI:` line described *"7 tabs"* and a *Squads* tab
+  ADR-105 split, wrong for weeks because nobody read to the end of a 2,528-character line. ✅ Guarded by **size**
+  now, per document and per field, because every prose guard passed the whole time it was growing.
+  ⚠️ **This file is the third orienting document and is still 105 KB** — a forward plan rather than a log, so it
+  was left, but it grew 5 KB this session too.
 - ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
   external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
 
