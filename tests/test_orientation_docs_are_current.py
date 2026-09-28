@@ -115,3 +115,46 @@ def test_the_orientation_docs_are_tracked() -> None:
     )
     for name in ORIENTING:
         assert name in tracked, f"{name} is not tracked"
+
+
+# ---- a retired log stays retired (2026-09-28) -----------------------------------------------------
+
+RETIRED_LOG = ROOT / "docs" / "00_Project" / "Feedback_Log.md"
+
+
+def test_the_feedback_log_still_says_it_is_retired() -> None:
+    """⭐⭐ **A log nobody writes to any more reads as "nothing was reported".**
+
+    `Feedback_Log.md` stopped being written to after **2026-08-28** while feedback kept arriving — a whole
+    month of September reports went into ADRs and never appeared here, so an audit of open work would have
+    concluded testers had gone quiet in August. ⚠️ *Silence in a record is indistinguishable from silence
+    in the world*, which is the failure a retirement notice exists to prevent.
+
+    It was retired rather than backfilled because the ADR index already carries the quote, the
+    measurement, the decision and the tests — ⭐ *two places recording the same thing is how one of them
+    becomes wrong.*
+    """
+    head = RETIRED_LOG.read_text()[:2000]
+    assert "RETIRED" in head, (
+        "the feedback log no longer announces that it is retired — a reader will take its August silence "
+        "as the last word on tester feedback"
+    )
+    assert "ADR-000-index" in head, "the retirement notice does not say where feedback is recorded instead"
+
+
+def test_nobody_has_started_writing_to_it_again() -> None:
+    """⚠️ Retiring a file is a decision that only holds while nothing appends to it. ⭐ *A row added under
+    a RETIRED header is worse than the original problem*: it makes the file look alive again while still
+    missing everything that went to the ADRs.
+
+    Dates in the table are `| YYYY-MM-DD |`; none may fall on or after the retirement.
+    """
+    retired_on = datetime.date(2026, 9, 28)
+    dates = [datetime.date.fromisoformat(d)
+             for d in re.findall(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|", RETIRED_LOG.read_text(), re.M)]
+    assert dates, "the historical rows are gone — retiring this file was meant to keep them"
+    newest = max(dates)
+    assert newest < retired_on, (
+        f"a row dated {newest} was added to a log retired on {retired_on}. Feedback belongs in an ADR "
+        f"(docs/06_Decisions/), not here."
+    )

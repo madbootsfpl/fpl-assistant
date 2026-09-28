@@ -1,8 +1,28 @@
-# Tester Feedback Log
+# Tester Feedback Log — 🗄 RETIRED 2026-09-28
 
-A running log of tester feedback on the live app, triaged into the **Sprint 060** backlog. Raw reports
-come in via GitHub Issues (https://github.com/madbootsfpl/fpl-assistant/issues); this table is the
-**triaged** view — one row per distinct item, newest first.
+> ⚠️⚠️ **This file is history, not a live log. Do not add rows to it.**
+>
+> **Where tester feedback is recorded now:** the [ADR index](../06_Decisions/ADR-000-index.md), one row
+> per decision, with the reporter's own words quoted in the ADR it produced. The live status line is
+> [PROJECT_STATUS.md](PROJECT_STATUS.md); the forward plan is the [Roadmap](../04_Roadmap/Roadmap.md).
+
+**Why it was retired.** It stopped being written to after **2026-08-28** while feedback kept arriving —
+a month of September reports (the 31-question Ask audit, the four chip questions, the build number, the
+rank arrows, the free-transfer confusion) went straight into ADRs and never appeared here. ⭐⭐ *A log
+that is silently no longer written to is worse than no log, because it reads as "nothing was reported"
+rather than "nobody wrote it down."* Someone auditing open work would have concluded feedback had dried
+up in August.
+
+**Retired rather than backfilled, deliberately.** The ADR index already does this job and does it
+better: it carries the quote, the measurement, the decision, the code that changed and the tests that
+hold it, and — unlike a triage table — it cannot go stale without the work also not happening. ⚠️
+*Two places to record the same thing is how one of them becomes wrong*, and this is the one that did.
+
+**What stays true below.** Every row is a real report with a real resolution, and the ADRs that cite
+this file (ADR-062, 064, 134, 136, 140, 141, 147 and others) still point at rows that exist. The
+severity key and the table are kept verbatim for that reason.
+
+---
 
 **Severity:** 🔴 broken/blocking · 🟠 confusing/wrong · 🟡 polish/nice-to-have · 💡 idea
 
@@ -98,13 +118,17 @@ come in via GitHub Issues (https://github.com/madbootsfpl/fpl-assistant/issues);
 
 ---
 
-## How this feeds Sprint 060
+## 🗄 How this used to feed Sprint 060 — kept for the record, no longer the process
 
-1. A report arrives (GitHub issue or direct note).
-2. Add a **triaged row** here (dedupe against existing rows; group similar reports).
-3. At Sprint 060 planning, promote the **🔴/🟠** items (and any high-value 💡) into the sprint backlog.
+1. ~~A report arrives (GitHub issue or direct note).~~
+2. ~~Add a **triaged row** here (dedupe against existing rows; group similar reports).~~
+3. ~~At Sprint 060 planning, promote the **🔴/🟠** items (and any high-value 💡) into the sprint backlog.~~
 
-## Themes to watch (pre-seeded from the Sprint 058/059 retros)
+⭐ **The process that replaced it, without anyone deciding to:** a report arrives, it is measured, and it
+becomes an **ADR** — gated if it needs a decision, built if it does not. That is the loop the last month
+of work actually ran on, and it is written down in `CLAUDE.md` under *Working Rhythm*.
+
+## 🗄 Themes to watch (pre-seeded from the Sprint 058/059 retros) — resolved long ago
 
 - **Squad resets on refresh** until downloaded — the most likely confusion; the guide pre-empts it. If
   testers still trip on it, it argues for **Path 2** (server-side persistence).
