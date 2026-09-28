@@ -270,3 +270,14 @@ inside the system — the same shape as ADR-188, four ADRs later.
 - **What it does NOT reopen:** [ADR-187](./ADR-187-reopen-multi-gameweek-planning.md) — planning *across*
   gameweeks, measured and closed. This is *within* one.
 - **Found by:** the owner's two-team A/B, reading a recommendation against his actual bank and transfer count
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR. The index rows were compressed
+to one line each, so anything the file did not already say had to come here first. ⚠️ *An index is a
+finding aid; when it becomes the only copy of a finding, compressing it is data loss.*
+
+* ⭐⭐ **A primitive can be correct everywhere and still be missing from the one place people read** — the week's answer was the single caller still on the older sibling, and the comment beside it explaining why it asked for two moves read as care rather than as a gap.
+* **The cliff now competes**, measured on a real squad: it shows at **1 transfer (+2.6 uplift)** and vanishes at 2, because the second move is worth **+9.3** — compared over the cliff's own 5-GW window, never the page's, or it would repeat ADR-186's original mistake exactly.

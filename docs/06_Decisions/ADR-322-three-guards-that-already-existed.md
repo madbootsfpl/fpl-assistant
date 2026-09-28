@@ -207,3 +207,13 @@ reason `pulp` is on the pipeline's import path at all (its own requirements file
 stopping at Sprint270 while the status file reads Sprint 308; `docs/01_Journal/` last written 2026-08-05
 though Documentation Rules lists it as must-update; and 7.0 MB of markdown against 1.8 MB of Python, with a
 498 KB ADR index.
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR. The index rows were compressed
+to one line each, so anything the file did not already say had to come here first. ⚠️ *An index is a
+finding aid; when it becomes the only copy of a finding, compressing it is data loss.*
+
+* ⚠️ The Android gate sits ahead of the **version bump** as well as the build: aborting after step 1 would leave `pubspec.yaml` incremented with nothing shipped, so the next run would bump twice.

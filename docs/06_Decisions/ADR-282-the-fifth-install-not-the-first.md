@@ -209,3 +209,13 @@ settings.
 **It goes live when the site folder is deployed to Cloudflare Pages.** Until then the app asks for a
 manifest that 404s, gets `null`, and says nothing — which is the designed behaviour, and the reason this
 could be shipped before the site was.
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR. The index rows were compressed
+to one line each, so anything the file did not already say had to come here first. ⚠️ *An index is a
+finding aid; when it becomes the only copy of a finding, compressing it is data loss.*
+
+* ✅ **13 Dart + 4 Python tests**, the last holding a shell script and a Dart file to one manifest shape they share no language with; **12/12 mutations killed**.

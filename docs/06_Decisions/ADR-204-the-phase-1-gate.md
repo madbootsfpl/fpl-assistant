@@ -161,3 +161,13 @@ decision waiting on evidence rather than on effort. ADR-192 has a better-aimed s
 - [ADR-192](./ADR-192-no-opinion-is-not-full-confidence.md) — the concern, re-aimed
 - [ADR-190](./ADR-190-the-gw4-sitting.md) — why the flattering secondary is recorded and not used
 - `spikes/204-board-wide-minutes/` — `blend.py` · `blend_on_points.py` · `hit_rate_error.py` · `does_it_fix_192.py`
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR. The index rows were compressed
+to one line each, so anything the file did not already say had to come here first. ⚠️ *An index is a
+finding aid; when it becomes the only copy of a finding, compressing it is data loss.*
+
+* 📉 The first read **clears the gate**: board MAE **24.5 → 20.9 (−14.5%)**, start calls 73.5% → 78.8%.

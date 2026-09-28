@@ -235,3 +235,13 @@ ADR-209 wrote that sentence nine days ago about a constant three functions away 
 - **One recipe at every call site:** [ADR-181](./ADR-181-one-recipe-means-every-caller.md)
 - **Sweep for the claim, don't list the places:** [ADR-184](./ADR-184-sweep-for-the-claim.md)
 - **The same mistake, nine days earlier:** [ADR-209](./ADR-209-the-longer-view-breaks-the-tie.md)
+
+---
+
+## Also recorded — moved out of the ADR index (2026-09-28)
+
+⭐ These lines lived **only** in `ADR-000-index.md`'s row for this ADR. The index rows were compressed
+to one line each, so anything the file did not already say had to come here first. ⚠️ *An index is a
+finding aid; when it becomes the only copy of a finding, compressing it is data loss.*
+
+* ⚠️ **A bug caught before it ran:** `next_deadline` indexes its rows because every other caller hands it `sqlite3.Row`s, while `refresh` holds `Fixture` dataclasses, which are not subscriptable — so the test uses the dataclass the refresh actually passes.
