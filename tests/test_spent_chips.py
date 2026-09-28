@@ -85,7 +85,7 @@ def test_ask_marks_a_spent_chip_end_to_end(monkeypatch) -> None:
     from src.storage import Storage
 
     monkeypatch.setattr(
-        answers, "_chip_status",
+        answers.common, "_chip_status",
         lambda manager_id, gameweek: PLAYED if manager_id else UNKNOWN,
     )
 

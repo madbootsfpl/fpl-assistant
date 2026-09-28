@@ -73,12 +73,12 @@ def test_my_team_sends_the_run_its_numbers_even_at_horizon_one(store, squad):
 
     picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
              "captain_id": squad[0], "vice_captain_id": squad[1]}
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (picks, "")
     try:
         out = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
     # ⭐ The card still draws three. `run` is what the CARD shows; `run_xp` is how far the DATA reaches,
     # and ADR-298 pushed the second apart from the first so the swipe forward has five weeks to read.
@@ -101,18 +101,18 @@ def test_a_wide_request_does_not_pay_for_a_second_pass(store, squad):
     picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
              "captain_id": squad[0], "vice_captain_id": squad[1]}
     calls = []
-    real_analysis, real_fetch = answers.analysis, answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    real_analysis, real_fetch = answers.squad.analysis, answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (picks, "")
 
     def counting(req, *, store=None):
         calls.append(req.horizon)
         return real_analysis(req, store=store)
 
-    answers.analysis = counting
+    answers.squad.analysis = counting
     try:
         service.my_team(service.MyTeamRequest(manager_id=1, horizon=SWIPE), store=store)
     finally:
-        answers.analysis, answers.fetch_manager_team = real_analysis, real_fetch
+        answers.squad.analysis, answers.squad.fetch_manager_team = real_analysis, real_fetch
     assert calls == [SWIPE], f"expected one analysis pass, got {calls}"
 
 
@@ -126,18 +126,18 @@ def test_a_three_week_request_still_pays_for_the_second_pass(store, squad):
     picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
              "captain_id": squad[0], "vice_captain_id": squad[1]}
     calls = []
-    real_analysis, real_fetch = answers.analysis, answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    real_analysis, real_fetch = answers.squad.analysis, answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (picks, "")
 
     def counting(req, *, store=None):
         calls.append(req.horizon)
         return real_analysis(req, store=store)
 
-    answers.analysis = counting
+    answers.squad.analysis = counting
     try:
         service.my_team(service.MyTeamRequest(manager_id=1, horizon=RUN), store=store)
     finally:
-        answers.analysis, answers.fetch_manager_team = real_analysis, real_fetch
+        answers.squad.analysis, answers.squad.fetch_manager_team = real_analysis, real_fetch
     assert calls == [RUN, SWIPE], f"expected a headline pass then a wide pass, got {calls}"
 
 
@@ -148,12 +148,12 @@ def test_every_club_carries_a_fixture_for_every_week_the_swipe_can_reach(store, 
 
     picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
              "captain_id": squad[0], "vice_captain_id": squad[1]}
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (picks, "")
     try:
         out = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
     assert out["fixtures"], "a squad with no clubs cannot be drawn"
     for club, cells in out["fixtures"].items():
@@ -216,12 +216,12 @@ def test_the_window_is_one_week_wider_than_the_swipe_goes_forward(store, squad):
 
     picks = {"name": "Test XI", "player_ids": squad, "bench_ids": squad[-4:],
              "captain_id": squad[0], "vice_captain_id": squad[1]}
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (picks, "")
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (picks, "")
     try:
         out = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
     live = out["gameweek"]
     assert live is not None, "a squad with no gameweek cannot be walked"

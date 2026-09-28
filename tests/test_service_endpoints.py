@@ -36,6 +36,11 @@ from src.service import (
 )
 from src.service import answers as svc
 from src.service import inputs as service_inputs
+
+# ⚠️ **The fakes name the module that resolves them** (ADR-324): `answers` split into families, so
+# patching the package rebinds a name nothing looks up. ⭐ *A test that fakes a dependency has to
+# say whose dependency it is* — `svc` still calls the handlers, `svc_squad` is where they live.
+from src.service.answers import squad as svc_squad
 from src.service.http import app
 from src.storage import Storage
 
@@ -83,8 +88,8 @@ def test_the_transfer_search_is_told_which_window_it_is_ranking(store, monkeypat
     different player, which is why this asserts the call and not the result.
     """
     seen = {}
-    real = svc.suggest_transfers
-    monkeypatch.setattr(svc, "suggest_transfers",
+    real = svc_squad.suggest_transfers
+    monkeypatch.setattr(svc_squad, "suggest_transfers",
                         lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
 
     svc.transfers(TransfersRequest(player_ids=_squad(store), horizon=1, bank=2.0), store=store)
@@ -100,7 +105,7 @@ def test_a_near_tie_gets_the_longer_view_to_break_it(store, monkeypatch):
     the first tie-break key a constant and quietly hands the decision to the next one.
     """
     seen = {}
-    real = svc.suggest_transfers
+    real = svc_squad.suggest_transfers
 
     def _spy(*args, **kwargs):
         # ⚠️ **Positional args captured too, and that is not tidiness.** `xp_by_id` is the third positional
@@ -111,7 +116,7 @@ def test_a_near_tie_gets_the_longer_view_to_break_it(store, monkeypatch):
         seen.update(kwargs)
         return real(*args, **kwargs)
 
-    monkeypatch.setattr(svc, "suggest_transfers", _spy)
+    monkeypatch.setattr(svc_squad, "suggest_transfers", _spy)
 
     svc.transfers(TransfersRequest(player_ids=_squad(store), horizon=1), store=store)
     wider = seen["horizon_xp"]
@@ -126,8 +131,8 @@ def test_at_the_wide_horizon_there_is_no_wider_view_to_consult(store, monkeypatc
     """⭐ The symmetry worth pinning: at five gameweeks the longer view *is* the ranking, so supplying it
     would be asking the same number to break its own tie."""
     seen = {}
-    real = svc.suggest_transfers
-    monkeypatch.setattr(svc, "suggest_transfers",
+    real = svc_squad.suggest_transfers
+    monkeypatch.setattr(svc_squad, "suggest_transfers",
                         lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
 
     result = svc.transfers(TransfersRequest(player_ids=_squad(store), horizon=5), store=store)
@@ -137,8 +142,8 @@ def test_at_the_wide_horizon_there_is_no_wider_view_to_consult(store, monkeypatc
 
 def test_a_departure_reaches_the_transfer_ranking(store, monkeypatch):
     seen = {}
-    real = svc.suggest_transfers
-    monkeypatch.setattr(svc, "suggest_transfers",
+    real = svc_squad.suggest_transfers
+    monkeypatch.setattr(svc_squad, "suggest_transfers",
                         lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
     picked = _squad(store)
 
@@ -178,8 +183,8 @@ def test_the_captain_reads_minutes_from_this_seasons_history(store, monkeypatch)
     'what should I do this week' and captaincy."* Every other caller passed the per-gameweek minutes weight;
     the captain tab never did, so two surfaces answered one question from two models."""
     seen = {}
-    real = svc.captain_picks
-    monkeypatch.setattr(svc, "captain_picks",
+    real = svc_squad.captain_picks
+    monkeypatch.setattr(svc_squad, "captain_picks",
                         lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
 
     svc.captain(CaptainRequest(player_ids=_squad(store)), store=store)
@@ -309,8 +314,8 @@ def test_a_departure_re_ranks_the_route(store, monkeypatch):
     """⚠️ The CLI never passed `reported_out` here. Without it a manager is routed *through* a player the
     rest of the app knows is leaving — ADR-155's species, one function along."""
     seen = {}
-    real = svc.route_to_player
-    monkeypatch.setattr(svc, "route_to_player",
+    real = svc_squad.route_to_player
+    monkeypatch.setattr(svc_squad, "route_to_player",
                         lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
     picked = _squad(store)
     target = next(p["id"] for p in store.get_players() if p["id"] not in picked)
@@ -362,8 +367,8 @@ def test_the_build_optimises_the_horizon_it_was_asked_for(store, monkeypatch):
     just optimises last season's total points instead. ⭐ *Every structural assertion in this file passes
     against a squad chosen on the wrong objective*, which is why this asserts the objective itself."""
     seen = {}
-    real = svc.select_squad
-    monkeypatch.setattr(svc, "select_squad", lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
+    real = svc_squad.select_squad
+    monkeypatch.setattr(svc_squad, "select_squad", lambda *a, **kw: (seen.update(kw), real(*a, **kw))[1])
 
     svc.build(BuildRequest(budget=100.0, horizon=1), store=store)
     one = seen["scores"]
@@ -522,7 +527,7 @@ def team(store, monkeypatch):
     picked = _squad(store)
     squad = {"name": "RoboTS", "player_ids": picked, "bench_ids": picked[-4:],
              "captain_id": picked[0], "vice_captain_id": picked[1]}
-    monkeypatch.setattr(svc, "fetch_manager_team", lambda entry_id, players: (squad, ""))
+    monkeypatch.setattr(svc_squad, "fetch_manager_team", lambda entry_id, players: (squad, ""))
     return squad
 
 
@@ -597,7 +602,7 @@ def test_a_team_that_is_not_public_yet_says_so(store, monkeypatch):
     in yet are three different problems, and a client cannot tell them apart from a bare 400. ⚠️ The fetch
     never raises — it returns `(None, message)` — so swallowing the message loses the only diagnosis there
     is."""
-    monkeypatch.setattr(svc, "fetch_manager_team",
+    monkeypatch.setattr(svc_squad, "fetch_manager_team",
                         lambda entry_id, players: (None, "That team isn't public yet — it locks in at GW1."))
     with pytest.raises(ValueError, match="isn't public yet"):
         svc.my_team(MyTeamRequest(manager_id=123), store=store)
@@ -664,7 +669,7 @@ def test_my_team_carries_the_money_and_the_assumption(store, team, monkeypatch):
     """⭐ Bank and value come from FPL; free transfers do not exist in any public payload, so the client
     states it and the server echoes it back. ⚠️ A header showing a number the manager never set would be
     the app inventing his position (ADR-191)."""
-    monkeypatch.setattr(svc, "fetch_manager_team",
+    monkeypatch.setattr(svc_squad, "fetch_manager_team",
                         lambda entry_id, players: ({**team, "bank": 1.3, "value": 99.5,
                                                     "cost": 98.2, "active_chip": None}, ""))
     answer = svc.my_team(MyTeamRequest(manager_id=1, free_transfers=2), store=store)
@@ -690,7 +695,7 @@ def test_saying_nothing_is_not_the_same_as_saying_one():
 
 
 def _history(monkeypatch, *, current, chips=()):
-    monkeypatch.setattr(svc, "_entry_history",
+    monkeypatch.setattr(svc.common, "_entry_history",
                         lambda manager_id: {"current": list(current), "chips": list(chips)})
 
 
@@ -699,7 +704,7 @@ def test_an_unstated_number_is_worked_out_from_the_manager_s_own_history(store, 
     echoed whatever the client last sent, while the number the server had derived sat unused in a caption
     beside it — ⚠️ *two numbers on one screen is a question, not an answer*, and a tester asked it:
     **"is that 1/3 used?"**"""
-    monkeypatch.setattr(svc, "fetch_manager_team", lambda entry_id, players: (team, ""))
+    monkeypatch.setattr(svc_squad, "fetch_manager_team", lambda entry_id, players: (team, ""))
     # ⭐ Four played gameweeks, one spent: 1 at GW1, +1 each of GW2-4, −1 in GW3, +1 for the week ahead.
     _history(monkeypatch, current=[{"event": 1, "event_transfers": 0},
                                    {"event": 2, "event_transfers": 0},
@@ -715,7 +720,7 @@ def test_what_the_manager_says_beats_what_his_history_implies(store, team, monke
     """⚠️⚠️ **The precedence is the honest one and it did not change.** Moves made during the current
     window are invisible until the deadline passes, so ⭐ *he may know something the derivation cannot* —
     which is the entire reason the override still exists."""
-    monkeypatch.setattr(svc, "fetch_manager_team", lambda entry_id, players: (team, ""))
+    monkeypatch.setattr(svc_squad, "fetch_manager_team", lambda entry_id, players: (team, ""))
     _history(monkeypatch, current=[{"event": 1, "event_transfers": 0},
                                    {"event": 2, "event_transfers": 0}])
 
@@ -730,7 +735,7 @@ def test_zero_is_a_number_the_manager_can_state(store, team, monkeypatch):
     """⚠️⚠️ **The falsy trap, pinned.** `request.free_transfers or implied` reads 0 as "unset" — ⭐ *and
     zero is the one value where being overruled costs points*, because the plan would recommend a move
     that is really a −4."""
-    monkeypatch.setattr(svc, "fetch_manager_team", lambda entry_id, players: (team, ""))
+    monkeypatch.setattr(svc_squad, "fetch_manager_team", lambda entry_id, players: (team, ""))
     _history(monkeypatch, current=[{"event": 1, "event_transfers": 0}])
     assert svc.my_team(MyTeamRequest(manager_id=1, free_transfers=0), store=store)["free_transfers"] == 0
 
@@ -739,8 +744,8 @@ def test_a_history_that_cannot_be_read_falls_back_and_says_so(store, team, monke
     """⭐ Three sources, each a fact the one below it does not have. ⚠️ *"We could not check" is not "you
     hold one"* — the number is still offered, because a pitch with a blank there is unusable, but the
     caption stops claiming it came from anywhere."""
-    monkeypatch.setattr(svc, "fetch_manager_team", lambda entry_id, players: (team, ""))
-    monkeypatch.setattr(svc, "_entry_history", lambda manager_id: None)
+    monkeypatch.setattr(svc_squad, "fetch_manager_team", lambda entry_id, players: (team, ""))
+    monkeypatch.setattr(svc.common, "_entry_history", lambda manager_id: None)
 
     answer = svc.my_team(MyTeamRequest(manager_id=1), store=store)
     assert answer["free_transfers"] == 1
@@ -841,7 +846,7 @@ def test_a_draft_prices_a_squad_fpl_does_not_hold(store, team, monkeypatch):
 def test_a_draft_keeps_fpls_money_and_deadline(store, team, monkeypatch):
     """⚠️ **A draft that invented its own bank would let a manager plan a move he cannot afford**, and one
     that invented its own deadline would price the wrong gameweek. Only the players change."""
-    monkeypatch.setattr(svc, "fetch_manager_team",
+    monkeypatch.setattr(svc_squad, "fetch_manager_team",
                         lambda entry_id, players: ({**team, "bank": 2.5, "value": 101.0}, ""))
     picked = list(team["player_ids"])
     drafted = [next(p["id"] for p in store.get_players() if p["id"] not in picked)
@@ -1331,7 +1336,7 @@ def test_a_spent_chip_is_marked_unavailable(store, monkeypatch):
     """
     from src.service import answers
 
-    monkeypatch.setattr(answers, "_chip_status",
+    monkeypatch.setattr(answers.common, "_chip_status",
                         lambda manager_id, gw: {"wildcard": {"available": False, "played_in": 4},
                                                 "bboost": {"available": True, "played_in": None},
                                                 "3xc": {"available": True, "played_in": None},
@@ -1351,7 +1356,7 @@ def test_a_spent_chip_keeps_its_timing_advice(store, monkeypatch):
     recommendation simply stops being an instruction."""
     from src.service import answers
 
-    monkeypatch.setattr(answers, "_chip_status",
+    monkeypatch.setattr(answers.common, "_chip_status",
                         lambda manager_id, gw: {"wildcard": {"available": False, "played_in": 2},
                                                 "bboost": {"available": None, "played_in": None},
                                                 "3xc": {"available": None, "played_in": None},

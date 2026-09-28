@@ -40,12 +40,12 @@ def owned(store):
 def as_manager(store, ids, bench_ids):
     squad = {"name": "Test XI", "player_ids": ids, "bench_ids": bench_ids,
              "captain_id": ids[0], "vice_captain_id": ids[1]}
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (squad, "")
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (squad, "")
     try:
         return service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
 
 def test_the_two_screens_field_the_same_eleven(store, owned):

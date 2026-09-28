@@ -219,12 +219,16 @@ def _my_team(store, ids):
 
     squad = {"name": "Sample XI", "player_ids": ids, "bench_ids": ids[-4:],
              "captain_id": ids[0], "vice_captain_id": ids[1]}
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (squad, "")
+    # ⚠️ **`answers.squad`, not `answers`** (ADR-324). `answers` became a package, and `my_team` resolves
+    # `fetch_manager_team` in the module it lives in — patching the package rebinds a name nothing reads,
+    # so the stub silently did nothing and this sample was regenerated from a **real network call**.
+    # ⭐ *A stub that fails open is worse than one that raises: the output still looks like a sample.*
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (squad, "")
     try:
         return service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
 
 def main() -> None:

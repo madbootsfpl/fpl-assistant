@@ -26,7 +26,7 @@ UNKNOWN = {name: {"available": None, "played_in": None} for name in PLAYED}
 @pytest.fixture
 def ask(monkeypatch):
     """Ask, against the committed fixture, with a known chip history."""
-    monkeypatch.setattr(answers, "_chip_status",
+    monkeypatch.setattr(answers.common, "_chip_status",
                         lambda manager_id, gameweek: PLAYED if manager_id else UNKNOWN)
     store = Storage()
     ids = [p["id"] for p in store.get_players()[:15]]

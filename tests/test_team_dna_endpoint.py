@@ -131,7 +131,7 @@ def test_an_unranked_axis_stays_unranked(monkeypatch, store):
     *"worst in the league at it"* — a different and wrong claim, and the phone draws exactly that bar."""
     from src.service import answers
 
-    monkeypatch.setattr(answers, "team_dna_all",
+    monkeypatch.setattr(answers.profiles, "team_dna_all",
                         lambda *a, **k: {"ARS": _club("ARS", "Arsenal", 80, percentile=None)})
     out = service.team_dna(service.TeamDnaRequest(horizon=1), store=store)
     assert out["teams"][0]["axes"][0]["percentile"] is None
@@ -151,7 +151,7 @@ def test_tied_clubs_are_ordered_by_name_whatever_order_they_arrive_in(monkeypatc
 
     order = []
     for arrival in (forwards, backwards):
-        monkeypatch.setattr(answers, "team_dna_all", lambda *a, **k: arrival)
+        monkeypatch.setattr(answers.profiles, "team_dna_all", lambda *a, **k: arrival)
         out = service.team_dna(service.TeamDnaRequest(horizon=1), store=store)
         order.append([t["name"] for t in out["teams"]])
 

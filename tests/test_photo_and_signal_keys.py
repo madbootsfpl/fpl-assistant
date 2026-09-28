@@ -67,14 +67,14 @@ def test_the_named_cards_carry_a_face_and_the_pitch_does_not(store, squad):
     assert card["photo"].startswith("https://")
     assert dna["photo"] == card["photo"]
 
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (
         {"name": "X", "player_ids": squad, "bench_ids": squad[-4:],
          "captain_id": squad[0], "vice_captain_id": squad[1]}, "")
     try:
         team = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
     assert "photo" not in team, "the pitch payload carries a mugshot — ADR-084 says the kit, not the face"
     for player in team["analysis"]["xi"]:
         assert "photo" not in player
@@ -97,14 +97,14 @@ def test_my_team_carries_the_signal_keys_not_the_signals(store, squad):
     ⚠️ Sending the signals themselves would put a full sweep's worth of player summaries on the one screen
     that has to be fastest.
     """
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (
         {"name": "X", "player_ids": squad, "bench_ids": squad[-4:],
          "captain_id": squad[0], "vice_captain_id": squad[1]}, "")
     try:
         team = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
     keys = team["signal_keys"]
     assert isinstance(keys, list)
@@ -117,14 +117,14 @@ def test_the_keys_are_the_same_ones_the_signals_screen_uses(store, squad):
     screen renders them; if the pitch sent a differently-built key, the badge would never clear. ⭐ *Two
     generators for one identity is a badge that lies forever and never errors.*
     """
-    real = answers.fetch_manager_team
-    answers.fetch_manager_team = lambda entry_id, players: (
+    real = answers.squad.fetch_manager_team
+    answers.squad.fetch_manager_team = lambda entry_id, players: (
         {"name": "X", "player_ids": squad, "bench_ids": squad[-4:],
          "captain_id": squad[0], "vice_captain_id": squad[1]}, "")
     try:
         team = service.my_team(service.MyTeamRequest(manager_id=1, horizon=1), store=store)
     finally:
-        answers.fetch_manager_team = real
+        answers.squad.fetch_manager_team = real
 
     screen = service.signals(service.SignalsRequest(player_ids=squad, horizon=1), store=store)
     assert set(team["signal_keys"]) == {s["key"] for s in screen["signals"]}
@@ -139,7 +139,11 @@ def test_the_device_owns_what_is_new_and_the_server_does_not():
     main = (ROOT / "mobile" / "lib" / "main.dart").read_text()
     assert "_seenKeys" in main, "the device no longer keeps its own memory of what it has shown"
 
-    answers_src = (ROOT / "src" / "service" / "answers.py").read_text()
+    # ⚠️ Read across the whole package, not one file (ADR-324 split `answers.py` into families). ⭐ *An
+    # absence asserted against one file stops being an absence the moment the code can live in another.*
+    answers_src = "\n".join(f.read_text()
+                            for f in sorted((ROOT / "src" / "service" / "answers").glob("*.py")))
+    assert answers_src, "the answers package is empty — this guard is reading the wrong place"
     assert not re.search(r'"(new_signals|unseen|signal_count)"', answers_src), (
         "the service is claiming to know what the reader has already seen"
     )
