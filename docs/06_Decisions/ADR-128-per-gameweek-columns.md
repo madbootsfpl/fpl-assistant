@@ -119,3 +119,12 @@ both covered by tests).
   into 5 buckets and still reads 0 for a club yet to kick off — a weak signal that *looks* like a real one,
   which is the failure mode this project keeps choosing against. Last season gives 10 distinct values and
   covers every club with history.
+
+---
+
+## Also recorded — moved out of the Roadmap (2026-09-28)
+
+⭐ These lived only in `docs/04_Roadmap/Roadmap.md`'s delivered entry for this ADR, which ADR-326
+condensed into the trail. ⚠️ *A forward plan is not a place to keep the only copy of a measurement.*
+
+* 📊 **Re-run after this ADR widened the table** (2026-08-24): **609 players**, **2,051 season rows** and **609 per-gameweek rows**, now **27 columns**.

@@ -1,6 +1,7 @@
 # ADR-326 — The document that orients you
 
-*The ADR index at 509 KB and PROJECT_STATUS at 84.5 KB, both loaded before anything is read.*
+*The ADR index at 509 KB, PROJECT_STATUS at 84.5 KB and the Roadmap at 103 KB — all three loaded before
+anything is read.*
 
 **Date:** 2026-09-28
 **Status:** Accepted
@@ -16,8 +17,9 @@ ADR-294 named the failure and ADR-295 wrote tests for it. Neither addressed the 
 
 | | was | now |
 |---|---|---|
-| `ADR-000-index.md` | **509,085** bytes | **91,729** |
+| `ADR-000-index.md` | **509,085** bytes | **93,775** |
 | `PROJECT_STATUS.md` | **84,531** bytes | **5,158** |
+| `Roadmap.md` | **103,448** bytes | **53,117** |
 
 🔴 **And this session added 18 KB to them before noticing.** Two enormous index rows and a 3,272-character
 sprint line — written by me, into the files I had just diagnosed. ⭐⭐ *The habit that produces the problem is
@@ -88,14 +90,47 @@ the file grew to 84.5 KB, because *no individual sentence in it was false*. ⭐�
 claim; it was a document too long to re-read, which is a property of the whole and invisible to any test of
 the parts.*
 
+### 4. The Roadmap was carrying its own history
+
+The third orienting document, and the one I expected to leave alone: it is a *forward plan*, not a log, and its
+own header says it was **"re-cut into a single forward-looking page."**
+
+⚠️⚠️ **46% of it was delivered work.** 56 items carrying ✅ or a strikethrough, holding **47,579 characters**, in
+sections whose headings promise the opposite — 26 of the 32 items under *📊 Analysis & decision features* were
+finished, in a 28 KB section. Meanwhile `✅ Delivered — the condensed trail`, which exists precisely for this,
+was **3 KB**.
+
+⭐⭐ *A forward plan carrying its own history is the same fault as a status field carrying a log, and harder to
+see: history accumulating in a plan looks exactly like the plan growing.*
+
+All 56 moved into the trail as themed one-liners citing their ADRs, plus nine resolved table rows from *Needs
+you* and *Blocked on gameweeks*. ⚠️ **Strikethrough, not ✅, is what marks a row resolved** — *"Produce the video
+series — 10 to shoot"* carries a ✅ for the one section that is shot and is very much still open. A ✅-based sweep
+would have deleted it.
+
+**Two more things the file was getting wrong**, both found by reading it rather than by any test:
+
+* 🔴 **`🥇 Next up (agreed 2026-08-24)` was three finished items.** A section named *next* that had been entirely
+  past for a month. Delivered to the trail; the section is gone, because *what is next* lives in
+  `PROJECT_STATUS.md` and a second copy is the one that drifts.
+* ⚠️ Its *Blocked on gameweeks* gate opened with a **struck-through** paragraph that the live note below it
+  explained — *"the gate has moved"*, with the "from what" crossed out above. Folded into one sentence that
+  reads on its own. ⭐ *A correction that needs the mistake still visible has not finished being written.*
+
+`🧭 Interface & information architecture` was removed: every item in it was delivered.
+
+**Two orphans**, preserved first as everywhere else: ADR-128's re-run counts (609 players, 2,051 season rows)
+and ADR-141's reason for ordering leagues (FPL's automatic ones are **100,000× bigger** and would bury the
+private ones), plus the `history --backfill` measurements that cited no ADR at all and now live in the trail.
+
 ## Consequences
 
-**Good:** the two documents CLAUDE.md loads are 97 KB rather than 594 KB. Nothing was deleted — seven facts
-and 69 log entries were relocated and can be found from where they used to be.
+**Good:** the three documents CLAUDE.md loads are **152 KB rather than 697 KB**. Nothing was deleted — nine
+facts, 69 log entries and 65 delivered items were relocated and are findable from where they used to be.
 
 **Costs:** the index no longer answers *"why?"* without opening a file. That is the trade, taken on purpose:
 one click against a table nobody could read.
 
-⚠️ **Open:** `docs/04_Roadmap/Roadmap.md` is still **105 KB** and is the third orienting document. It is a
-forward plan rather than a log, so it did not get the same treatment — but it grew 5 KB this session too, and
-the ceiling added here does not yet cover it at its current size.
+⚠️ **Open:** `docs/05_Sprints/` holds 422 files for 310 sprints and stops at Sprint270 while the status file
+reads 310 — not touched here, and a different question (whether that record is still kept at all) from whether
+these three were readable.

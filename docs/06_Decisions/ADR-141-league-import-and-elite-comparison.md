@@ -223,3 +223,13 @@ degradations are built (a failed manager lookup says "check the id"; a partial s
 50"* and computes over what it has) but they have only been exercised against a healthy API. **The first real
 signal will be a tester reporting a slow or empty Leagues page during a deadline-day spike** — which is
 exactly when FPL is busiest and when someone is most likely to look.
+
+---
+
+## Also recorded — moved out of the Roadmap (2026-09-28)
+
+⭐ These lived only in `docs/04_Roadmap/Roadmap.md`'s delivered entry for this ADR, which ADR-326
+condensed into the trail. ⚠️ *A forward plan is not a place to keep the only copy of a measurement.*
+
+* ⚖️ **Private leagues are listed first** because FPL's automatic club/region/Overall leagues are **100,000× bigger** and would bury them — the lookup is by *manager* id, since nobody knows their league id and `/entry/{id}/` already lists them.
+* 📊 Among the top 50 managers, the **captain split was 21/8/7**.

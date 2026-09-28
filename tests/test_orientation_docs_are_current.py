@@ -190,6 +190,11 @@ CEILINGS = {
     "docs/00_Project/PROJECT_STATUS.md": 20_000,
     "docs/06_Decisions/ADR-000-index.md": 250_000,
     "CLAUDE.md": 12_000,
+    # ⚠️ A tighter multiple than the others, on purpose: a forward plan legitimately grows as work is
+    # agreed, so it needs room — but **46% of it was delivered work** when ADR-326 looked, 56 items sitting in
+    # sections meant to say what is next. ⭐ *History accumulating in a plan looks exactly like the plan
+    # growing*, which is why this one is watched at all.
+    "docs/04_Roadmap/Roadmap.md": 85_000,
 }
 FIELD_CEILING = 900
 

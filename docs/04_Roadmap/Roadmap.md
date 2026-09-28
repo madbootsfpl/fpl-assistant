@@ -10,7 +10,7 @@ Previous consolidations: 2026-08-05 (Sprint 050), kept current through Sprint 17
 
 ---
 
-## Where we are — 2026-09-21, GW5 played
+## Where we are — 2026-09-28, GW5 played
 
 A mature FPL assistant: an analytics + optimisation core, a decision-support suite, a grounded
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
@@ -80,21 +80,14 @@ outlived its problem. **Assume this list is stale before you assume the work is 
 
 ## 🔒 Blocked on gameweeks — nothing to do but wait
 
-~~Every item here has the same gate: **`player_history` holds 1 played round** (GW2 was in flight on 29 Aug),
-**0 of 620 players have 900 minutes**, and `calibrate` refuses with *"have 1, need ≥4"*.~~
-
-⚠️ **Re-audited 2026-09-13 and the gate has moved: `player_history` holds 4 played rounds and `calibrate`
-runs.** The 900-minute items are unchanged (**0 of 657** clear it — that is a ~GW10 bar, not a GW4 one), but
+⚠️ **Re-audited 2026-09-13 and the gate has moved.** It read *one* played round on 29 Aug, with `calibrate`
+refusing (*"have 1, need ≥4"*); it now holds **4 played rounds and `calibrate` runs.** The 900-minute items are unchanged (**0 of 657** clear it — that is a ~GW10 bar, not a GW4 one), but
 **the weight sitting is no longer blocked; it is due.** Two different gates were sharing one heading, and the
 one that lifted first is the one nobody would notice lifting.
 
 | item | unblocks at | note |
 |---|---|---|
-| ~~`FORM_WEIGHT` · `SET_PIECE_WEIGHT` · `DEFCON_MAGNIFIER_WEIGHT`~~ ✅ **GW4 SITTING HELD 2026-09-13 (ADR-190) — nothing ships.** Form re-sweeps at GW6 (it is the only one that both re-ranks the board and points the right way). **Set-piece and DefCon are unmeasurable by a whole-board rank metric**, permanently — set-piece reaches **9 of 657** players by design (ADR-096's `hist`-tier exclusion) and that 9 is fixed for the season. 🚫 **Set-piece CLOSED + REMOVED 2026-09-13 (Sprint 254)** — weight, param, branch, output field, explain clause, sweep entry and `setpieces.py` all deleted; **657 players, 0 projections changed**. The **duty is still shown** (⚽ glyphs, Scout). DefCon stays dormant at 0 pending GW6 | ~~GW4~~ done | criteria pre-registered in **GW1_RUNBOOK §B0** — four numeric bars, a stopping rule, and expected results recorded so a surprise is legible. ✅ **The harness itself was dry-run and repaired 2026-09-02** (§Pre-flight): it never printed the `n` criterion 1 is written in, and reported *"no clear signal"* for runs that evaluated nothing. Both fixed **before** there was a curve to look at. ⚠️ **2026-09-13: 4 of 4 gameweeks are in and the first honest attempt is DUE.** It has **not been run for these three** — the only GW4 sweep so far is ADR-188's fourth weight, `clean_sheet`, run out of order because its machinery was being built (**0 of 4 criteria**, ρ descending; ADR-188 §📉). §B0's stopping rule allows **one attempt per checkpoint**, so this is a sitting to take deliberately, not to drift into |
-| ~~**Cold-start xMins forced to 1.0**~~ | ✅ **DONE 2026-09-02 (ADR-173)** | ⚠️ **new, measured 2026-09-01.** A no-history player is modelled as a nailed 90-minute starter: **Mendy projects on 60 minutes a game, Yalcouyé on 38.** ADR-172 fixed the *rate* half of this pair; this is the *minutes* half, stacked on top, and it wants its own gate because fixing both at once would leave neither measurable |
 | In-season xMins share (ADR-125) — **the blend** | GW4-6 | ✅ **The Kinsky bug is CLOSED (ADR-173, 2026-09-02): 0.50 → 2.60 xP.** Reported 2026-08-18, open for 15 days — a role-change cold-start whose xMins was stuck at **0.18** from last season's 630 backup minutes while he was playing every minute. What remains gated here is the *blend* ADR-125 designed (weight in-season minutes against history by evidence). ADR-173 took the unambiguous cases instead — a player who has appeared in **every** completed gameweek — and left the ambiguous ones exactly where they were, so the sample-size objection this was deferred on is still intact and still waiting. |
-| ~~**Calafiori — the mirror image**~~ | ✅ **DONE 2026-09-02 (ADR-173)** — 2.00 → 4.50 | ⚠️ **new.** Baseline **5.29 pp90**, projects **2.00 xP**, because xMins is **0.43** from last season's injury-hit 1,697 minutes while `FORM_WEIGHT` is 0 — so nothing can see he has started both games. **A second Kinsky**, from the opposite direction to ADR-172's over-projection |
-| ~~Re-measure the 6 single-GW constants~~ ✅ **DONE 2026-09-13 (ADR-190)** — `CLEAR` **1.0 → 1.3** shipped (+30%, pre-registered); `WHISKER` + both concentration quartiles held. ⚠️ **`EXODUS_PRESSURE` cannot be re-measured as the rule instructs** — no per-round transfer history exists, so *"≥4 gameweeks"* yields a second single-week sample. ✅ **CLOSED 2026-09-18 (ADR-210)** — a **live percentile** replaces the fixed constant, and the reason the re-measure could not run is now recorded as a mechanism rather than as variance: the counters **reset at each deadline and accumulate across the week**, so −8,000 flagged **2 of 190** one day after a deadline and **50 of 188** five days later. `player_transfer_flow` now records the quantity with its **phase**, so the instruction becomes executable at the GW8 review | done | exodus p10 · ownership floor · captain-margin + concentration quartiles. Ship the new value if it moves ≥20%. **These gate whether a message appears at all**, so a quartile measured on one gameweek is a feature that fires on everyone or no one. Same sitting, same data, cheaper than the sweeps. |
 | Market goals → attack/defence strength (**ADR-005 unblocked**) | ~GW10 | derive our own from per-fixture `xg`/`xgc`; **ranked above the weight tuning** — those tune terms we have, this adds one we lack |
 | Scout's boards get current data | ~GW10 | 3 of 5 need 900 minutes and read **last season** until then |
 | Ceiling / differential captaincy | GW4-6 | needs a variance distribution — the same wall the win-probability sim hit |
@@ -114,18 +107,11 @@ uncommitted-files row said 4 when it is 6.
 wrong the day it was written, and nothing re-reads a row that says someone else is the holdup. Re-audit this
 list on sight, not on suspicion.
 
-
 | item | why it matters |
 |---|---|
-| ~~**Deploy madboots.com**~~ | ✅ **DONE — owner deployed 2026-08-31.** The Cloudflare Pages drag-and-drop is done and the live site now carries the current copy; `~/madboots-site/index.html` and the live page are back in step. Next edit to that file re-opens the same manual step (it is outside the repo — see the ADR-103 changeover, parked below). |
-| ~~🚨 **Re-record the Maddie intro**~~ | ✅ **DONE — owner updated it 2026-09-02.** The live clip no longer claims *"AI clarifies the data"*, the clause ADR-168 removed because Cloud has no model. The site edit batched with it (the tagline now matching `brand.MANTRA`, and a meta description rewritten so the mantra survives Google's ~155-character cut) ships in the same deploy. |
 | **Produce the video series** — **10** to shoot | ✅ **§0 (the Maddie intro) IS shot** — re-recorded and live 2026-09-02. What remains is **§§1, 2, 4-9, G, H = 10 scripts**, all current as of 2026-09-01 and none of them true before that (they described a nav that had moved three times). §8b (Ask) is retired, not pending. Suggested order in §3 — which is the roadmap table, **not a script**, and was being counted as one. ⚠️ **§G Scout must wait until ~GW10** or keep its voiceover off "this season": four of its five boards need 900 minutes and **0 of 651 players** clear that bar. Record **both CTA tails** (acquisition + in-app) in the same session. |
-| ~~🔄 **Run `python app.py history --backfill`**~~ | ✅ **DONE 2026-09-01** — 626 players, 2071 season rows, **1236 per-GW rows** (was 609), no failures; GW1 **and** GW2 now carry scorelines and the per-GW sums match the aggregate. Reseeded and pushed (`2980ce9`). **The xMins data blocker is cleared** — what defers that work now is sample size alone (owner's call: hold for GW4-6). ⚠️ **ClubElo has been 502 since 2026-09-01** and last-known Elo is kept each time (the values persist on `teams.elo`; Arsenal still reads 2063.8). **Blast radius checked 2026-09-02 and it is one CLI flag:** `fdr --type elo`. No web surface requests it — the FDR page and `decision_xp` both pin `source="fpl"` — so nothing a deployed user sees depends on it. Worth a re-run if it recovers; not worth flagging again until something asks for Elo. |
-| ~~**Squad Lab icon**~~ | ✅ **ALREADY DONE — 2026-08-12, commit `0898efc`** *("Squad Lab: lab-motif icon (🧪)")*. The header has read **🧪 Squad Lab** for three weeks; `🥾` appears nowhere in `src/`. ⚠️ **It never needed the art it was listed as blocked on** — 🧪 is an emoji, not a PNG — so this sat on *"Needs you"* for **21 days** waiting for something nobody had to make. Found 2026-09-02 when the owner asked to build it. |
 | **Use the Admin ▸ Ask experiment** a few times | its decision point is the GW4-6 sitting; *"I never opened it"* is a valid answer |
 | The **3** uncommitted files in your tree | 2 sprint lesson docs (Sprint57, Sprint62) + `spikes/015-soccerdata/compare_npxg.py`, kept out of every commit deliberately. **Was 6** — `Sprint61_Lessons_Learnt.md` and the two `.jpeg`s it embeds were committed 2026-09-02, because the images were the owner's own design references and untracked, so git held no copy and the doc's links pointed at files on one machine. ⚠️ An earlier version of this row called them *"mentioned nowhere"* — inferred from filenames that look like camera output, never grepped for. |
-| ~~⚠️ **Resolve the community archive's licence**~~ | ✅ **RESOLVED 2026-09-17 by reading the file — ADR-205.** The repo **is MIT-licensed**; GitHub reports `NOASSERTION` only because two sentences about data ownership are appended to the template, which breaks its auto-detector. ⭐⭐ **I READ A DETECTOR'S FAILURE TO CLASSIFY AS THE AUTHOR'S FAILURE TO GRANT** — `NOASSERTION` means *"this tool could not determine a licence"*, not *"no licence was asserted"*, and the word looks like it means the second thing. It blocked Phase 1 for **a month** and cost **one HTTP request** to dissolve. The real question — Vaastav cannot license data he does not own — splits cleanly: **FPL-derived files are the same source the live app already calls every refresh** (the archive changes the *age* of the data, not its provenance), and **Understat is quarantined in `data/<season>/understat/`** and simply not imported. ⚠️ The obvious leak was tested, not assumed: `expected_*` appears only from **2022-23**, exactly when FPL's own API began serving expected stats — *the column that would have been the leak is the column that proves there isn't one.* **Nothing to ask anyone.** ⚠️ What remains is **FPL's own terms**, which already apply to the live app and are a question about the project's posture under AGPL + donations, not about this dependency |
-
 
 ## 🟢 Buildable now — nothing blocking
 
@@ -133,25 +119,6 @@ list on sight, not on suspicion.
 
 ⭐ Listed so none of it reads as finished. None is blocked; each is a decision or a slice of work.
 
-- ✅ **Distribution — done 2026-09-24, self-hosted (ADR-282).** `madboots.com/app/` serves the APK, a
-  `version.json` beside it, and an install page; the app checks that manifest at start-up and shows a
-  banner only when a newer build exists. ⭐ Chosen over Firebase App Distribution, which wanted an
-  account per tester and a service-account secret to solve what a JSON file beside the APK solves.
-  ⚠️ `versionCode` is now bumped by `scripts/release_android.sh`, with tests that fail if the three
-  version numbers drift — *the step that must happen every time and is invisible when skipped.*
-  📌 **Still open: iOS.** TestFlight needs the £79/yr account, and the owner is the only iPhone tester,
-  so it costs nothing to wait.
-- ✅ **Swipe through the season on My Team** (ADR-298, gated **and built** 2026-09-25) — swipe right to
-  GW1 for the squad as it was with real points and match events; swipe left to **GW+5**, not GW38. ⭐
-  Backwards was nearly free: the weekly data was **already stored** and a settled gameweek caches forever —
-  ⚠️ *keyed on `played`, not on the gameweek number, so a week still being played is re-fetched every time
-  it is looked at.* Forward was capped deliberately — *a number the model cannot stand behind does more
-  damage on the main screen than anywhere else.*
-  ⚠️⚠️ **The cap shipped one week short and a surviving mutant found it.** The service sent 5 weeks while
-  the app walked 5 pages *past* the live one, so the last forward page was fifteen dashes under a confident
-  `0.0 Predicted`. ⭐ *A window includes the week you are standing on* — there is a `SWIPE = WIDE + 1`
-  constant for it now and `tests/test_forward_limit_agrees.py` reads the Dart and the Python halves
-  together, because neither suite can see the other's number.
 - 🔴 **GitHub runs 7% of the scheduled pipeline ticks** *(measured 2026-09-25)*. `data.yml` declares
   `*/15 * * * *` and fired **5 times in 24 hours** — 47 in seven days against 672 implied. `backfill.yml`
   declares hourly and manages roughly one run in five hours. ⚠️⚠️ So *"the data refreshes itself"*
@@ -168,19 +135,6 @@ list on sight, not on suspicion.
   than a default.** Rate limits are what stand there today — `/squad/build` 20/min is the one that matters,
   being the only endpoint whose CPU a stranger controls. ⭐ Watch the **slowest 5% on `/squad/build`** in the
   platform panel, not the user count. Belongs with accounts (ADR-259), still parked.
-- ✅ **The tablet's portrait pitch — done 2026-09-24 (ADR-285).** The green was never the problem; the
-  pitch already filled 91% of the screen and drew a phone-sized card on it. Now scaled by **proportion**
-  — a phone's card is 18% of its screen width, and a tablet's is too. ⭐ *A tablet is not a phone with
-  more room for whitespace; it is the same design, larger.* Phone layout unchanged, gated at 600pt.
-- ✅ **Mini-league sub-tabs — done 2026-09-24 (ADR-287).** Transfers, Rank, Chips and Awards. ⭐ Three of
-  the four were **already being fetched**: the captain split spends a request per manager and that
-  payload carries the chip, the overall rank, the transfer count, the hit and the bench points.
-  📌 Not done: transfer **detail** (who moved — a second N-call pass) and season-long awards.
-- ✅ **The Lab's other two modes — already done in ADR-272 (confirmed 2026-09-25, ADR-294).** This line
-  was written while `LabMode` existed and the screen did not use it, and the commit it cites is the one
-  that wired it up. ⚠️ *A roadmap entry outlives the work it describes unless something closes it.*
-  ⭐ What was genuinely missing were tests: the enum was pinned and the **screen's use of it was not**, so
-  hardcoding the Wildcard's horizon and budget passed all 341 tests. Six now read the request.
 
 ### 📱 Who is actually testing the mobile app? — **answered 2026-09-24 as LOAD, not people (ADR-280)**
 
@@ -218,7 +172,6 @@ is already parked. Named so it is not rediscovered.
 
 </details>
 
-
 *(**Sprint 61's design notes audited 2026-09-02** — the two screenshots the owner attached four days ago were
 read and checked against the app. **📅 Fixtures: fully shipped**, and better than the reference in one respect
 — the ticker is a badge × gameweek grid with a **difficulty digit** beside the colour, which the mockup is
@@ -229,7 +182,6 @@ manager-ID import had been discarding. **Deliberately not built:** whole-card co
 readable number for a hue on the surface ADR-135 taught us not to over-density. **Still open:** bank + free
 transfers on the My Squad strip — we hold both numbers, but that strip was cut 5 → 3 once already (US-404) for
 slivering on mobile, so it wants a gate, not enthusiasm.)*
-
 
 *(**US-435 — the merged golden page — shipped 2026-08-31**, ADR-171. That was the last open item of the
 17-item UX review; the review is now fully closed. New follow-up from building it: **`llm.narrate` never sets
@@ -250,7 +202,6 @@ rather than assumed: **Maddie reads at ~119 wpm**, not the ~150 the drafts assum
 - **Multi-GW transfer-path planner** ◑ — the timing arithmetic shipped (ADR-132); the *path search* was declined on evidence and would need a real branching market to be worth revisiting.
 - **Player-card advanced stats** (Key Passes, Shots in the Box) and **shot maps / event data** — both need an external source; FPL does not carry them. A source decision, not a build.
 - **Reddit aggregate sentiment** — needs the Reddit API + a Cloud secret. RSS gives a *count*, not sentiment.
-- **LLM intent classifier for Ask** ⏸️ — **tested 2026-08-30 and largely declined** (ADR-168 §🧪). A 30-question corpus found **one** harmful mis-route, fixed by **four keywords** → 24/25 routable, 0 missed. And a model cannot run on Cloud at all, so it would only help the owner-only Admin surface. Revisit only with real tester questions that keywords cannot fix — `tests/test_route_corpus.py` is the evidence. ⏳ **Re-examined 2026-09-26 (ADR-309)** when a conversational-Ask design proposed exactly this, and the decision **stands** — ⚠️ the revisit condition is *still unmet*: ADR-307's 31 questions came from **the owner**, not testers, and ADR-308 answered its captaincy row with **vocabulary and a lens, i.e. keywords again**. ⭐⭐ *Three consecutive times the phrase table has been the cheaper answer.* ✅ Agreed shape when it does arrive: **behind** the table as a fallback, seeing only what returns *"I could not understand that"* — never in front of it, because ⚠️⚠️ **an LLM router never returns "I don't know"** and would convert honest misses into the confident wrong answers ADR-307 counted 21 times.
 - **Pundit / video NLP** — research-heavy; the ADR-151 extraction pipeline is the obvious base.
 - **Session/cookie auth** for `/my-team/{id}/` · **source versioning** · **cache TTLs** · **auth polish** — infrastructure, no user pull yet.
 - **PuLP 4.0 migration** ◑ — variables migrated, `PULP_CBC_CMD` deliberately kept.
@@ -275,7 +226,6 @@ Each was measured, and the number is in the ADR so the question does not reopen 
 - **MADBOOTS rebrand infra changeover** (ADR-103) — repo transfer + domain, to do all together. The site source lives at `~/madboots-site`, which is the strongest argument for folding it into the repo.
 
 ---
-
 
 **GW1 (2026-08-21) has been played and the season is live.** The data-hardening flip is done: per-GW history is
 backfilled (609 players), and the season-to-date surfaces that reset at rollover now fall back to last season
@@ -339,6 +289,64 @@ showing nothing (ADR-126) · in-season xMins **deferred** with its trap recorded
 
 ---
 
+**Decision surfaces, from the rival-feature review onward.** Squad Risk Monitor and squad-grade DNA (ADR-130) ·
+the pool-wide **value frontier** (ADR-138) · a forward gameweek planner, *"a plan, not a panic"* (ADR-131) ·
+player clashes (ADR-141/145) · captain margin (ADR-144) · **league import and elite comparison** (ADR-141/161/162)
+· transfer advice that names the dead slot (ADR-046/136) · pricing the rebuild (ADR-185) · the competitive layer
+(ADR-082/141/161/177) · one 📡 **Signals** page (ADR-146/150) with *"my squad only"* reaching Community Signals
+(ADR-149) · price arrows using the colour channel (ADR-140) · a loaded league persisting across sessions and
+devices (ADR-106/142/147/148).
+
+**Where the advice was wrong, and the rules that came out of it.** Two defenders at one club are one bet twice
+(ADR-145/189) · a defender plays for a team (ADR-186/188) · **spend the transfers you hold** (ADR-035/186/187/191)
+· bank to afford, not only to stack (ADR-186) · one recipe means every caller (ADR-041/151/173/181) · the same
+build twice is the same squad (ADR-183) · name the two halves (ADR-182) · Squad Lab's three build modes were
+really two (ADR-137) · sweep for the claim, not the places you remember (ADR-168/184). ⭐ **Multi-gameweek
+planning was measured and closed** (ADR-132/185/186/187) — the search space was empty.
+
+**Shape and interaction.** *Plan in the Lab, play on the pitch* (ADR-132/161/178) and *one week on the pitch,
+every week in the Lab* (ADR-133/178/179) · the player-actions panel (ADR-108) · My Squad v2, tap-the-pitch
+(ADR-108/133) · actions on the entity as a density change (ADR-133/135/158) · the card opens on a **tap**, not a
+hover (ADR-133/139) · the Fixtures IA restructure (ADR-134) · the accent belongs to the theme (ADR-114/180) · the
+🧪 Squad Lab icon (`0898efc` — ⚠️ its *"needs the art"* blocker was never real; 🧪 is an emoji) · homepage copy,
+audited 2026-08-27 against `docs/08_Marketing/Homepage_Copy.md`.
+
+**Data hardening, delivered.** Per-gameweek history ingestion (ADR-128) · rolling 3-/6-GW form windows and trend
+views (ADR-159) · a per-season price sparkline (ADR-160) · the price-change predictor (ADR-092).
+
+**The ML track, through its gate.** Phase 0a retention (ADR-201) · Phase 0b the baseline (ADR-202) ·
+**availability recorded as it passes** (ADR-202/203) · 📌 **Phase 1's gate was run and the answer was "not
+yet"** (ADR-173/204/205) — re-decided after GW8, on or after 2026-10-26.
+
+**Mobile, and the platform under it.** Self-hosted Android distribution (ADR-282) · swipe through the season
+(ADR-298) · the tablet's portrait pitch (ADR-285) · mini-league sub-tabs (ADR-287) · the Lab's other two modes,
+which were already built (ADR-272/294) · ⭐ the **LLM intent classifier declined on measurement**
+(ADR-168/307/308/309).
+
+**Auth, ops and the guards.** Cross-device persistence, Google auth, remember-me, analytics, the beta gate and
+self-service unsubscribe (ADR-087/094/099/100/106/122) · the admin tester-activity roster (ADR-120) · ⭐ **three
+guards that already existed** — 481 Dart tests nothing ran, a PuLP pin in a file the deploy does not install, a
+staleness test skipping its own subject (ADR-221/294/310/322) · the solver imported where it is called rather
+than everywhere (ADR-322/323) · the two 2,400-line modules split along seams they already had (ADR-324/325) · and
+the three orienting documents cut from **697 KB to 152 KB** — the ADR index (509→94 KB),
+`PROJECT_STATUS.md` (84.5→5 KB, 86% of it a sprint log inside one line) and **this file** (103→53 KB, 46%
+of which was delivered work sitting in sections meant to say what is next), all three now guarded by a
+size ceiling because every prose guard passed the whole time they grew (ADR-105/326).
+
+**The 2026-08-24 "next up", all three delivered.** Player DNA sparklines + W-D-L form dots and Team DNA's real
+clean-sheet rate and team form (ADR-128) · the `_percentile` **midrank fix** (ADR-127) — a goalkeeper had read
+*Goal Threat 96th percentile on a raw 0.00*, because a pool of ties was ranked as if it were ordered.
+
+**Owner actions, closed.** `madboots.com` deployed **2026-08-31** (⚠️ the next edit to that file re-opens the
+same manual step — it is outside the repo) · the Maddie intro re-recorded **2026-09-02**, dropping the *"AI
+clarifies the data"* claim ADR-168 removed · the community archive's licence **resolved by reading the file**
+(ADR-205) · the 🧪 Squad Lab icon, which had sat on this list for **21 days blocked on art nobody had to make**.
+📊 **`history --backfill` run 2026-09-01:** 626 players, **2,071 season rows**, **1,236 per-GW rows** (was 609),
+no failures; GW1 and GW2 carry scorelines and the per-GW sums match the aggregate; reseeded and pushed
+(`2980ce9`). ⚠️ ClubElo had been 502 since 2026-09-01 and last-known Elo persists on `teams.elo` (Arsenal reads
+2063.8); blast radius is **one CLI flag**, `fdr --type elo` — the FDR page and `decision_xp` both pin
+`source="fpl"`, so nothing a deployed user sees depends on it.
+
 ## 🎯 The end state — what MadBoots is trying to be
 
 **A tool that tells you what to do and shows its working — and admits what it doesn't know.**
@@ -387,27 +395,12 @@ projection barely moves, the card says so rather than letting a 3% wobble read a
 
 ---
 
-## 🥇 Next up (agreed 2026-08-24)
-
-1. ✅ **Player DNA — real sparklines + W-D-L form dots.** Done (ADR-128, Sprint 179). Dots live now; the
-   sparklines draw from GW2, by design — a line through one point is not a trend.
-2. ✅ **Team DNA — real clean-sheet rate + team form.** Done (ADR-128, Sprint 179). Falls back to the labelled
-   proxy per team, so a club yet to kick off keeps the estimate instead of reading 0%.
-3. ✅ **`_percentile` midrank fix.** Done (ADR-127, Sprint 178) — shipped as the classic percentile rank. It counts peers "at or below", so in an all-tied pool a zero lands in the
-   90s — **A.Becker, a goalkeeper, reads Goal Threat 96th percentile on a raw 0.00**. Pre-existing (ADR-118),
-   exposed when the DNA fallback made percentiles visible again. Fix = `(below + 0.5 × equal) / n`, which puts
-   an all-tied pool at 50. **Shifts every percentile in Player and Team DNA → needs its own ADR.**
-
----
-
 ## ⏳ Data Hardening — gated on ~GW4-6
 
 Prep is done and dormant (Sprint 069, ADR-060); the harness is built (Sprint 138, ADR-101) and the flip is
 scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own countdown — currently
 *"have 1, need ≥4"*. **The harness recommends; the owner commits.** One weight at a time (ADR-101).
 
-- ✅ **Per-GW history ingestion** — done 2026-08-24; re-run after ADR-128 widened the table (609 players,
-  2051 season rows + 609 per-GW rows, now 27 columns).
 - ⏳ **`FORM_WEIGHT` calibration** — the main season signal; first of the three.
 - ⏳ **`SET_PIECE_WEIGHT` calibration** (ADR-096) — then revisit the tier guard against observed returns.
 - ⏳ **`DEFCON_MAGNIFIER_WEIGHT` calibration** (ADR-097).
@@ -422,23 +415,6 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
    threshold, same data. ⚠ Whoever builds it must not infer "played" from a per-GW row's presence — **FPL
    writes the row when the fixture is scheduled, not played**, so a naive minutes share zeroes two whole clubs
    for the two days their gameweek is in flight.
-- ✅ **Rolling 3-/6-GW form windows + trend views** — built (ADR-159, Sprint 214, 2026-08-27). `form_windows`
-   runs `form_rate` twice (last 3 vs last 6) and reports both rates, the signed gap and a direction, on the
-   Performance trend card. **`direction` is None unless the long window covers strictly more PLAYED gameweeks
-   than the short one** — at GW1 the two windows are the same match for all 548 players, and a 0.0 gap drawn
-   as "level" is a confident arrow on no evidence. Same rule catches injury returns after GW4. **No
-   significant-change threshold** (no distribution to set one on — a GW4-6 calibration job if wanted), and the
-   caption says **"not in xP"** while `FORM_WEIGHT` is 0. ⚠️ Verified against synthetic gameweeks only; the
-   populated state appears ~GW4.
-- ✅ **Per-season price sparkline** — built (ADR-160, Sprint 215, 2026-08-27) as a **price journey** on the
-   trend card: price now · the move since the season started (`cost_change_start`, exact from day one) · a
-   sparkline once there are two points. **Today's live price is the final point on purpose** — `value` is only
-   written when a gameweek is played but prices move nightly, so Watkins reads £8.0m at GW1 and £7.9m
-   everywhere else, and a chart ending on the stale number disagrees with the figure beside it. Only **9 of
-   616** players can draw a line yet, so the change carries it now and the line carries it later; an unmoved
-   price says "unchanged" rather than drawing a flat segment.
-- ✅ **Price-change predictor** — shipped (Sprint 112, ADR-092) and live: 10 🔺 / 9 🔻 flags on GW1 data.
-   *(This page listed it as not-started for months; corrected here.)*
 - ◑ **Attack/Defence FDR split** (ADR-005) — **decided 2026-08-28: derive our own** (owner ask; see the
    Backlog's *"Market goal projections"* entry). Still blocked at source — `strength_attack_home` and friends
    are **0 after GW1** and FPL never populates them — but the *"much bigger piece of work"* that clause pointed
@@ -459,61 +435,7 @@ scripted in the **[GW1_RUNBOOK](../GW1_RUNBOOK.md)**. `calibrate` prints its own
 **The thread the owner explicitly did not want lost.** Testers keep describing Fantasy Football Hub's
 interaction: *"FFH pops a menu on **clicking** a player — full card · substitute · captain."*
 
-- ✅ **The panel** (ADR-108, Sprint 149) — one selection → card + 👑 captain + 🔁 substitute. Shipped as the
-  achievable shape: **click-to-select → an actions panel**, because a static `st.markdown` pitch cannot fire a
-  click callback (established the hard way in S139/142). Explicitly built as **a foundation, not a stopgap**.
-- ✅ **My Squad v2 — tap-the-pitch** — **shipped** (ADR-133, Sprint 185). Both of the deferral's grounds were
-  tested by spike 185 and neither held: a pre-built PyPI component means no build toolchain, and keeping the
-  dropdown means the selection path keeps its coverage. ✅ Cloud-verified 2026-08-25. *(original entry:)* A
-  custom **Streamlit JS component** so **tapping a shirt** returns the player id → opens the *same* ADR-108
-  panel. **~90% is already built** — only the selection *input* changes, dropdown → tap.
-  - **Why it was deferred:** it introduces a **front-end build toolchain** to a pure-Python project, and the
-    component can't be AppTested — so the golden page loses its coverage. It was also nine days from GW1.
-  - **Needs its own spike + ADR**, comparing: a **full custom React component** vs a **lightweight
-    click-detector reusing `pitch.py`'s existing HTML with per-kit ids** — plus a **Community Cloud deploy
-    check**. The lightweight path could more than halve the cost.
-  - **Trigger:** feedback-driven. Ship the panel, watch the testers; if *"I want to tap the shirt"* stays the
-    top ask, that's the green light.
-- ↩️ **Actions on the entity — a density change** (ADR-135, Sprint 189) — **built, hit its number
-  (6-7 widgets → 3), REVERTED the same day.** The tap-to-select half (ADR-133) stays and works; the action
-  **menu** on the shirt is gone. Cause: every tap is a full Streamlit rerun with a `decision_xp` recompute, so
-  a two-tap flow cost two round-trips — a floating menu advertises client-side responsiveness we cannot
-  deliver, and it collided with the neighbouring cards' hover popovers. **Widget count was a bad proxy for
-  clutter**; three fast controls beat one slow menu. Read ADR-135 §Outcome before re-opening this.
-  ✅ The league-scan rows inherit **selection** — built (ADR-158, Sprint 213, 2026-08-27). A row tap selects
-  that club and writes the same state the dropdown writes, so the DNA card below is reused unchanged; the
-  picker stays permanently, and the caption offers the gesture only when the component is live. **No menu** —
-  that half stayed reverted. The identical Health strip taps too (same renderer). This item's guard rail was
-  written *by* ADR-135's reversal, which is the whole lesson: a reverted sprint is only wasted if it leaves no
-  rule behind.
-- ✅ **The player card opens on a TAP, not a hover** (ADR-139, Sprint 193, 2026-08-25) — *owner,
-  2026-08-25.* Reading the code changed the fix: the panel **already** rendered the full card for whoever is
-  selected, and ADR-133's tap already drove that with the teal outline — so the behaviour existed and the
-  hover popover was a second, compact, floating copy on a worse trigger (it fires on whatever the cursor is
-  over, not on what is selected, which is how one player's stats appeared beside another's selection). The
-  rule shipped is **hover exists only where tapping doesn't**: suppressed when `clickable=True`, kept on Squad
-  Lab's build preview and on the ADR-133 fallback, which gets it back for free. The card also moved **above**
-  the Boot Battle controls — the half that actually delivers the ask. Exposed a test that had asserted nothing
-  since ADR-133; see the ADR.
 - 🅾️ **Drag-and-drop to reorder the bench** (ADR-084) — rejected; the ⬆/⬇ controls do the job without JS.
-
----
-
-## 🧭 Interface & information architecture
-
-- ✅ **Fixtures IA restructure** — built (ADR-134, Sprint 187). Team DNA leads, opening on a **league-wide
-  scan** of all 20 clubs (which resolved the scan-vs-drill tension rather than trading it off); ticker second;
-  🎯 Radar moved to a Players view.
-- ✅ **Squad Lab icon → a lab motif** — done **2026-08-12** (`0898efc`). The header reads **🧪 Squad Lab**. The *"needs the art"* note was wrong from the start: an emoji needs no PNG, and the entry
-  outlived its problem by three weeks because nobody re-read it.
-- ⚠️ **Homepage copy** — audited 2026-08-27 (`docs/08_Marketing/Homepage_Copy.md`). **The stale line this item
-  named was already fixed** in the 2026-08-18 site audit: the page now says *"Sign in with Google — your squad
-  saves to your account and syncs across your devices"*, which is accurate. **This entry had outlived its own
-  problem.** What IS stale is the *"What's inside"* grid: it predates **🏆 Leagues · 📡 Signals · 📈 Trending**
-  and the **Fixtures → Team DNA** / **Squad optimiser → Squad Lab** renames. A paste-ready replacement grid is
-  in the deck. ⚠ **Still blocked on the source** — the homepage lives on Cloudflare Pages, not in this repo, so
-  it must be applied by hand; owner to point at the file. ✅ **`hello@` and `info@madboots.com` both receive
-  email** — confirmed by the owner 2026-08-28.
 
 ---
 
@@ -521,23 +443,6 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 
 **Competitive-inspired (⭐ = the data already exists, near-term feasible):**
 
-- ⭐ ✅ **Squad Risk Monitor** — done (ADR-130, Sprint 182). *(fplanalyser)* — one row per owned player, sorted by **how much attention he
-  needs / how likely you are to regret holding him** — not how good he is. A **driver** (Minutes / Fixtures),
-  "% chance he doesn't reach 60", an attention rating. We hold everything needed (xMins → chance-under-60;
-  fixture difficulty). A sharp triage the Health tab lacks.
-- ⭐ ✅ **Squad-grade DNA** — done (ADR-130, Sprint 182). *(fplanalyser + our engine)* — aggregate the owned 15 into **one graded picture**:
-  overall grade + Attack / Defence / DefCon / Fixtures bars + a verdict headline + a grounded edge line
-  ("3 penalty takers = a deliberate edge"). A squad-level sibling of Team DNA; reuses the engine.
-  **Pairs with Squad Risk Monitor — both aggregate the owned 15 and would share plumbing.**
-- ✅ **Pool-wide value-frontier scatter** *(aceanalyst)* — **BUILT** (ADR-138, Sprint 192, 2026-08-25) as
-  **Players ▸ Value**. Justified by measurement, not by the rival: only **4 of 8** frontier players are also
-  top-8 by raw xP, and the best £4.5 player is **+11.9 xP** clear of the median £4.5 player — nearly what
-  £4.5 → £8.0 buys for £3.5m, and no ranked list showed those together. **MadBoots spin delivered:** a hover
-  verdict computed in `analytics.value` and unit-tested, not a dot to interpret. Two owner review rounds
-  changed it materially — the crowding was the **axis** (94% of players in 24% of the width), fixed by
-  plotting only decisions; and **a player who has not featured can no longer hold the frontier** (`yet_to_play`),
-  which swapped a backup keeper off it. ⬜ *Not built, deliberately:* the xGI × points and DefCon × points
-  axis pairs — different questions the stat boards already rank. A metric selector is the follow-on if asked.
 - ◑ **Multi-GW transfer-path planner** — the **timing arithmetic** shipped (ADR-132, Sprint 184: use it /
   bank it / take the hit); the **path search itself is declined on evidence** — the best sell was the same
   player in all six gameweeks and the market yielded one positive-gain move, so the tree had one branch. A
@@ -554,240 +459,8 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
   gameweeks, the one with the least at stake moves, and it says what that cost (0.0 xP median). *Third
   sequence/tree feature killed by a measurement here — our projections are smooth, and smooth projections make
   optimal ordering worthless.* *(A v0 chip-timing advisor shipped — Sprint 096, ADR-082.)*
-- ✅ **Forward GW planner — "a plan, not a panic"** — done (ADR-131, Sprint 183), but **built differently
-  from this line**: measured on our own data, the per-GW xP spread is ±3% while fixture exposure swings 2→7, so
-  it leads with exposure and states the xP range instead of naming a "problem week" out of noise. *(original
-  line, for the trail)* — per-GW projected-points-vs-your-average
-  bars + *"your problem week is GW6, five weeks out"* + N-hard-fixtures per GW + which players face them.
-  Extends the per-GW xP toggle into a multi-GW forward view. Bigger build; needs in-season data.
-- 🅾️/✅ **Player clashes** — the **framing rejected on evidence**, the real quantity underneath it **built**
-  (ADR-145, Sprint 199, 2026-08-26). Measured: clashes are **universal** (100% of 300 random squads, ~26 pairs
-  over 5 GWs; still 7.4 filtered to XI defensive-vs-attacker) so a list is wallpaper — and **a clash costs no
-  expected points**, because `decision_xp` already prices each player's own fixture. It changes the *joint*
-  distribution, not either marginal: same expected score, **lower variance** — which is good when protecting a
-  lead and bad when chasing (ADR-141's logic). Shipped **fixture concentration** instead: how much of a
-  gameweek's XI projection rides on one match (live spread: median 29% · p75 34% · p90 40% · max 64%), flagged
-  above p75, naming the match and the players. The clash survives as a **qualifier** — players on both sides
-  means their returns partly cancel.
-- ✅ **Captain margin** (ADR-144, Sprint 198, 2026-08-26) — shipped, and the measurement turned a cosmetic line
-  into one with an opinion. Across 300 random legal squads the lead over the runner-up is **p25 0.20 · median
-  0.60 · p75 1.00**, and **44% of squads separate their top two by under half a point** — so a medal plus
-  "Confidence 91/100" was implying certainty the data mostly doesn't support. The verdict thresholds **are
-  those quartiles**, so "a clear pick" means the top quarter of real leads. A whisker now says *"too close to
-  call; take the one you fancy"* — a decision tool's job includes knowing when it hasn't decided. The old
-  duplicate narrow-lead risk bullet was removed.
-- ✅ **Import a league — and compare against it** (ADR-141, Sprint 195, 2026-08-26) — *owner, 2026-08-25.*
-  Shipped as **🏆 Leagues**: a classic league by id, or the global Overall league as the **elite** preset (same
-  code, different id). **Justified by measurement:** across the top 50 managers in the world, Palmer sat at
-  **62% effective ownership against 11.9% global** — every other surface here calls that a differential; among
-  the people winning it is template, and global ownership cannot tell them apart. Also the captain split
-  (21/8/7) and that **47 of 50 played Bench Boost**. **The cost came in 5× below the estimate** that nearly
-  deferred it — the table is ONE call, and the insight layer needs the current gameweek only, not a history.
-  **Find a league by your MANAGER id** — nobody knows their league id, and `/entry/{id}/` already lists them (private leagues first; FPL's automatic club/region/Overall ones are 100,000× bigger and would bury them). Affordable because a completed gameweek's picks are **immutable**: cached with no expiry (17.5s first load,
-  0.0s after). Insight sits behind a button — *nothing that costs N calls happens because someone opened a
-  tab*. ✅ Both now shipped: **transfer flow** (ADR-162) and **H2H** (ADR-161). ⚠️ *"One more call per manager"*
-  turned out **half wrong** — `entry_history` rides on every picks payload this page already fetches, so
-  transfers made, hits taken, bench points and bank were **free**; only *which players* moved needed the extra
-  call. **Before deferring on cost, open the response you are already getting.**
-- ✅ **Transfer advice names the dead slot** (ADR-136, Sprint 190, 2026-08-25) — *owner, 2026-08-19.*
-  `suggest_transfers` ranks by starting-XI gain (ADR-046), so a departed player on the bench moved that number
-  by zero and the advice read *"hold"*. Now asked as a separate question: a slot that cannot score for the
-  whole horizon is named, with the **reason** (*"gone"* · *"out until 28 Nov"* · *"no return date"*) and the
-  best legal replacement. The design turns on telling a **permanent exit from a two-week injury** — 94 players
-  are unavailable and `decision_xp` scores all of them 0.00, so the only signal is FPL's news text, parsed
-  into *how many of your next N gameweeks he misses*. Doku (back 5 Sep) is held; Minteh (back 28 Nov) is not.
-  Surfaces: CLI · `ask` · web ▸ Transfer (one-click Replace). No `decision_xp` change.
-- ✅ **Price the rebuild** (ADR-185, Sprint 247, 2026-09-13) — **built.** The wildcard call went from
-  *"weakest stretch · Confidence 42/100 · Low"* to *"**worth +99.6 xP**… you keep only 3 of 15; £14.1m cannot
-  play · **Confidence 95/100 · High**"*. ⭐ *A recommendation that measures only WHEN will present itself as
-  an answer to WHETHER.*
-- ✅ **Two defenders, one bet** (ADR-189, Sprint 250, 2026-09-13) — the owner's second point, **declined as
-  a warning and shipped as a tie-break**. 38% of squads hold 2+ defensive assets from one club (so it
-  discriminates, unlike ADR-145's clashes at 100%), but correlation **never moves expected points** — it
-  multiplies that component's spread by √2, ~1.2 pts at worst against an XI spread of 11.6. The real defect
-  was that the ranking separated the two candidate sells by **1.7 xP** against a weekly sd of **3.51**.
-  ⭐ *A ranking that separates two options by less than its own noise is not ranking them — it is picking one.*
-- ✅ **A defender plays for a team** (ADR-188, Sprint 252, 2026-09-13) — **built dormant; the first sweep says
-  the weight should stay at 0.** — *owner, on an ADR-186 suggestion:*
-  **"that is a transfer I would not make… I have a cheap Arsenal fullback, likelihood of clean sheets
-  probably >50%."** ⭐ The app already knows: Team DNA shows **Arsenal 75%** clean-sheet potential against
-  **Sunderland 25%** — and a defender's xP is his own points-per-90 × minutes × *opponent* difficulty, with
-  no term for his own team's defence. The model preferred selling Konsa by **1.7 xP** while blind to a signal
-  worth **~10**. Proposes `CLEAN_SHEET_WEIGHT`, gated at 0 and swept at the **GW6** sitting against §B0's
-  four criteria, with a prediction recorded first. ⭐ *A number the app displays and does not use is a claim
-  it is making to the reader and not to itself.*
-  📉 **The exploratory GW4 read clears 0 of 4**: ρ **0.621 → 0.614, monotonically down** across 0→0.30, the
-  whole spread a *sixth of one SE*. The prediction's cautious half was right and for the reason it named — the
-  clean sheets are **already inside points-per-90**, so the term restates rather than adds. ⭐⭐ *A descending
-  curve and a flat curve do not say the same thing: flat is "no effect at this sample size" and gets re-asked;
-  descending is "it costs accuracy in proportion to how much you use", which more gameweeks will not fix.*
-  GW6 keeps the decision but inherits a **prior of zero with a mechanism**. **Likely end state: Option 3** —
-  the two clubs' clean-sheet rates as a **lens on the transfer screen**, which is where the owner's knowledge
-  actually enters, rather than a price.
-- ✅ **Spend the transfers you hold** (ADR-191 §1, Sprint 256, 2026-09-14) — **§1 built; §2/§3 gated.** — *owner, on an ADR-186 line:* **"I
-  have £1.0m in the bank, I have 2 free transfers… is this advice the best or most effective? Should we not be
-  triangulating number of available transfers, spending the money on the starting 11, looking at budget?"**
-  ✅ The half that was unfounded, checked first: the buy is **not** a 12th man — `xi_aware=True` means the gain
-  *is* the XI lift, and the recommended buy made the XI **60/60** runs. The fault is not which player, it is
-  **how many**. 📊 Measured (`spikes/191-two-transfers/`): one move +21.7/+22.2, two greedy +40.1/+40.6, two
-  planned +40.6/+40.9 — **the second transfer is worth roughly as much again as the first**, and
-  `gameweek.py` **already computes it and spends it on "bank or use"**. ⭐ *A number computed for one question
-  and discarded is invisible in a way a missing number is not.* Also: the app doesn't know you hold 2 FTs; the
-  cliff's *"wait"* is never weighed against *"use your second transfer"*; and the shortlist is a **menu, not a
-  plan** — its gains don't add. **§1 to build** (N moves priced sequentially, the cliff must compete).
-  **§2 joint pairs gated** — +0.4 mean but **+5.9 on RoboTS**, where greedy routed Ballard through the wrong
-  sale and blocked a better pair; ambiguous, wants a measurement on realistic squads. **§3 target-driven
-  planning gated** (*"what would it take to field Haaland?"*).
-  ✅ **Built:** the week's answer now plans as many moves as you hold, the gains add, the cliff competes (it
-  vanishes when a second transfer beats it), and `free`/`bank` reach that surface **at all** — both had been
-  hard-coded to 1 and £0.0m while the Transfer tab collected the real numbers. ⭐ *A primitive can be correct
-  everywhere and still be missing from the one place people read* — `suggest_transfer_plan` was right and had
-  four correct callers since ADR-035; the most-read surface was not one of them. ⚠️ Does **not** reopen ADR-187, which measured
-  planning *across* gameweeks — this is two free transfers *within* one.
-- ✅ **Bank to afford** (ADR-186, Sprint 248, 2026-09-13) — **built.** The week's answer now says
-  *"Worth saving for: **£1.5m more** makes this Watkins → Isak (+13.8 XI xP, +6.4 on the move above)"*, after
-  the immediate move and never instead of it. ⭐ *"Bank" meant a spare transfer everywhere in the code and
-  money to the user — a term that means one thing in the code and two to the user hides the half you did not
-  build.* Ships the arithmetic, refuses the forecast.
-- ✅ **Multi-gameweek planning — measured and CLOSED** (ADR-187, Sprint 251, 2026-09-13). Reopened on the
-  owner's feedback because ADR-132's decline was measured preseason on a model since corrected twice. Re-run
-  on 24 squads with both strategies given the same three transfers: **greedy captures 96% of the available
-  gain, planning adds 4%** — median **+0.0**, and **54% of squads see foresight change nothing at all**.
-  ADR-132's wording holds: *the gain moves; the decision does not.* Closed rather than deferred, with a
-  double/blank gameweek, chips, or a search beating +1.9 recorded as what would reopen it. — he runs one team
-  on MADBOOTS and one on his own judgement, and is **40 points ahead after four gameweeks**. All three of the
-  gaps he named check out. **ADR-185** — the wildcard advisor measures only *when your fixtures are worst* and
-  never asks what a rebuild is worth (**+102.3 xP**, 3/15 overlap, £14.1m that cannot play — reported at
-  *Confidence 42/100 · Low*). **ADR-186** — nothing in the codebase asks what a larger budget would afford;
-  **£1.5m is worth +6.4 xP** on his squad today. **ADR-187** — reopens ADR-132's decline of multi-GW planning,
-  whose *"tree with one branch"* was measured preseason on a model since corrected twice; re-run, there are
-  five branches and the ranking reorders with the horizon. ⭐ **A decline needs a re-measure date, the same as
-  a feature needs a review date.**
-- ✅ **Sweep for the claim** (ADR-184, Sprint 245, 2026-09-12) — *owner, reading the Lab:* **"note the model
-  note: 'the recommendation is data-driven; **AI explains the reasoning**'."** The claim ADR-168 retired in
-  August, still rendering from `MODEL_NOTE` on **six** surfaces, false for every tester. ⭐ Both earlier guards
-  checked the same two files rather than sweeping for the claim — **a guard against a claim must sweep for the
-  claim, not check the places you thought of**. The sweep now permits a mention only where the copy names the
-  condition (Help's local-run caveat earns its exemption by scoping, not by filename).
-- ✅ **The same build, twice, is the same squad** (ADR-183, Sprint 244, 2026-09-10) — *owner:* **"when
-  toggling between Build mode there are no changes to the team."** The reported bug hid a worse one: the
-  optimiser's objective has **exact ties** and CBC picked among them arbitrarily between processes, so **the
-  same build run twice returned different squads** (both scoring 401.400). The toggle looked dead because one
-  tied optimum happens to be the squad Strong XI picks. Fixed by breaking ties toward the **cheaper** squad —
-  measured to give up **0.000 xP**. ⭐ The ADR was **first written with the wrong diagnosis**, on a table
-  where every cell was one sample of a coin flip: **a measurement of a nondeterministic process is not a
-  measurement**.
-- ✅ **Name the two halves** (ADR-182, Sprint 243, 2026-09-09) — *owner, relaying testers:* **"they're asking
-  what this means; when you explain it it's OK, but that should not be necessary."** *"Shows its working"* is
-  a British schoolroom idiom, *"working"* is a noun almost nobody uses, and — decisively — **spoken aloud it
-  is identical to "shows it's working"**, which claims only that the app functions. It is the spoken close of
-  all ten videos. The owner's replacement, **"Analytics decide. Logic explains. You make the call."**,
-  ⭐ **names the two halves of the system in the order they run** (`decision_xp` decides, `explain.py`
-  explains) — a description of the architecture rather than a metaphor about it, which is why it cannot drift
-  the way *"The AI explains"* and *"shows its working"* both did. Also checked and rejected the return of
-  *"AI explains"*: no tester has ever seen AI output (Cloud has no Ollama; Ask is admin-gated).
-- ✅ **One recipe means every caller** (ADR-181, Sprint 242, 2026-09-07) — *owner:* **"different
-  recommendations from My Squad 'what should I do this week' and captaincy."** Two surfaces on one page named
-  different captains, because `render_captain` called `minutes_weight_from_history(history)` **without
-  `gw_history`** — it had been running the **pre-ADR-173 model** while every other caller ran the current one.
-  Invisible for four days because the argument is optional: omitting it silently prices a different player.
-  ⭐ **"One recipe" (ADR-041) is a claim about every call site, not about the function** — a sweep guard now
-  fails any single-argument call by filename. Same shape as ADR-151→156, and again found by the owner using
-  the product.
-- ✅ **The accent belongs to the theme** (ADR-180, Sprint 241, 2026-09-03) — *owner, in dark mode:* **"lots
-  of inconsistency with colours vs the style guide, should be purple."** He was right, and the cause was
-  structural: the purple was painted **one widget at a time** on five containers, so every control we had not
-  hand-styled fell back to Streamlit's red. ⭐ **Re-measured ADR-114 and its blocker is gone** — Streamlit 1.61
-  added **per-mode `[theme.light]`/`[theme.dark]` sections** that did not exist when it was written, so the
-  top-level theme message (which carries `base`) stays empty and nothing pins the viewer's Light/Dark/System
-  toggle. **Two config lines now do what five stylesheets did, in both themes.** ADR-114's *reasoning* is
-  preserved and its **finding is now a test**. Also: the Tool nav joins the primitive, `nav_css` keeps layout
-  and hands back colour, and the Lab's **eight always-inert constraints** fold into one expander with a count
-  so a set one cannot hide. ⏳ That the accent *renders* on Cloud is owner-verified; the one-line fallback is
-  recorded.
-- ✅ **One week on the pitch, every week in the Lab** (ADR-179, Sprint 240, 2026-09-03) — *owner.*
-  🔴 First, a **crash**: he reported the vice-captain missing in the Lab, and `render_pitch` had **no
-  `vice_captain_id` parameter at all** — so ADR-133's degrade path forwarded it into a function that could
-  not take it, and **My Squad raised instead of degrading** without the click-detector component. Shipped
-  alone. Then: **GW1–3 comes off My Squad** (two controls, since Cumulative/GW-only only rendered above a
-  horizon of 1) — closing ADR-178's gate; the **Lab pitch carries every glyph** with a grouped key, ownership
-  written as an ordered scale **💎 → ⭐ → 🟦 → 👑**; and the Lab's shirts show **3** per-gameweek figures while
-  its tables keep **5** — two surfaces, two caps, each from its own limit. 🧭 Corrects ADR-178, one day old:
-  *"the pitch is a team sheet, the table is a reference"* was **the justification generalised into a rule
-  about widget type** — the flags left My Squad because of what that page is *for*, and the Lab is for
-  something else.
-- ✅ **Plan in the Lab, play on the pitch** (ADR-178, Sprint 239, 2026-09-03) — *owner UX feedback.* Three
-  changes. The pitch carries **set-piece glyphs only** (⚽🚩🎯, no words) with **one key beneath it on both
-  pages** — every player used to carry at least one flag (the ownership tier always fires) and the six-flag
-  players were Palmer · Szoboszlai · Groß, so the clutter concentrated on the players a good squad owns;
-  set-pieces-only leaves **94% of shirts clean**. The Lab now **starts from a squad you already own**, and
-  every Lab table shows **a score per gameweek** rather than one total, because *a cumulative number hides a
-  blank* (5·5·5 and 15·0·0 read identically). ⚠️ Holds ADR-132's line: the Lab **reads** your squad, it does
-  not search a transfer path through it. The owner's counter-proposal at preview (*"just the emoji and a
-  key?"*) **made the change smaller** — the Lab already carried every flag in a table with words, so the
-  split was **pitch vs table**, not page vs page, which deleted the per-page flag mode from the design.
-  ⏳ **GW1–3 on My Squad stays gated**: the XI differs in **63.7%** of squads but the GW1–3 XI costs
-  **0.32 xP** in the week you play it, inside ADR-161's sd 3.51 — so both obvious arguments fail and it is a
-  judgement about page cost. And *there is nothing to move*: the Lab has offered 1-10 since US-374.
-- ✅ **Squad Lab's three build modes are really two** (ADR-137, Sprint 191, 2026-08-25) — *owner,
-  2026-08-19.* Measured before building, and it was worse than reported: "Bench Boost" produced the same
-  fifteen as "Balanced" **even when run with `bench_weight=1.0`**, because maximising the XI plus a
-  full-weight bench *is* maximising all 15 — it could never have been a distinct build. The two that exist
-  were also named backwards ("Balanced" was the max-15, £23.5m, strong-bench build). Now **All-round (strong
-  bench)** and **Strong XI (cheap bench)**, with Bench Boost answered as a caption where the question is
-  asked. Default unchanged, deliberately: the XI-first build is +7.2 XI xP but buys a bench with a 4.9-xP
-  near-dead slot — a real trade, now honestly labelled. No optimiser change.
-- ✅ **A loaded league persists between sessions and across devices** (ADR-147, Sprint 202, 2026-08-26) —
-  *owner, 2026-08-26.* New `prefs.py` on the proven per-user pattern (ADR-106/117): keyed by
-  `auth.user_key(email)`, **no new secret**, restored once per session, written only when a value changed.
-  **Remembers the manager id, not just the league** — a stored league restores one league, a stored manager id
-  restores the *list*. Signed out → session-only, i.e. today's behaviour. ⏳ Owner: create `user_prefs` (SQL
-  in the ADR, with all three RLS policies) — until then it degrades silently and **Admin ▸ 🔧 says so**, the
-  diagnostic shipping *with* the feature rather than after a day of NULLs (the ADR-142 lesson).
-  ✅ Follow-up **done same day** (ADR-148): `remove_me` now deletes `user_prefs`, and checking it found that
-  ADR-147's own SQL had **no `delete` policy** — so the delete would have been refused *silently*, telling
-  someone their data was gone while it was still there. SQL corrected in three places; `remove_me` now returns
-  a per-table status so the promise is checkable.
-- ✅ **"My squad only" reaches Community Signals** (ADR-149, Sprint 204, 2026-08-26) — *owner,
-  2026-08-26.* ⚠️ **My triage of this was wrong in both directions:** the four Trending *boards* have honoured
-  the shared filter since US-407b; the one surface that did **not** is the 💬 **Community Signals** tab — which
-  is exactly what the owner named, by its on-screen heading. Now filtered too, **after** the scan so the full
-  count stays visible (*"6 of 47 players mentioned match your filter"* — six alone says nothing), with an
-  empty result telling you how to get back out. *Lesson recorded: a triage note written from memory is a guess
-  wearing the clothes of a decision.*
-- ✅ **One 📡 Signals page** (ADR-150, Sprint 205, 2026-08-26) — *owner question, 2026-08-26.* Counting them
-  properly changed the answer: there were **four** lenses across two pages, not two — News already held
-  official news *and* media headlines, while Reddit's discussions and mention counts sat on Trending beside
-  ownership percentages. ADR-146's exodus was a fifth with **no browse surface at all**. The axis was never
-  *official vs unofficial* but **doing vs saying**: Trending = what the crowd is doing, in numbers; Signals =
-  what is being said, in words. Signals descends by **evidentiary strength** (official fact → our exodus
-  inference → named outlets → a mention count), each labelled — *a merged page must label its sources or the
-  merge becomes the misinformation*. 🐛 Gave the exodus a browse list and found ADR-146's threshold needed an
-  **ownership floor**: per-1%-owned divides by a small number, so 0.1%-owned players read as stampedes (17
-  players → 8). The floor is the population the p10 was measured on. ⚠️ `/News` → `/Signals` breaks bookmarks.
 - ⬜ **Ceiling / "differential" captaincy** — `captain` ranks by *mean* xP; add a variance/ceiling lens for when
   you need a differential rather than the safe pick.
-- ◑ **The competitive layer** *(fplapex)* — **partly shipped.** ✅ *Differentials vs your rivals* is live as
-  🏆 **Leagues** (ADR-141): league import by manager id, standings + movement, **effective ownership vs
-  global** (the number that decides differential-or-template), captain split and chip usage.
-  ✅ **Mini-league H2H — built** (ADR-161, Sprint 216, 2026-08-27): a rival picker on Leagues, and the gap
-  **decomposed** rather than totalled — the players you both start cancel, so the head-to-head is the
-  differential set priced by xP. Identical elevens with different captains are correctly *not* identical (the
-  captain's extra copy is its own differential).
-  🔧 **Corrected (ADR-177, Sprint 238, 2026-09-03)** — owner: *"you are showing MICKA at 59.9 and TS at 70, he
-  is above me in the league?"* He was, by 23 points. ADR-161 read FPL's `multiplier` at face value, which is
-  right for reconstructing what a squad **scored** and wrong for projecting the week **still to come**: a
-  spent Bench Boost was carried forward, pricing him on **15** players against a rival's **11**. The XI is now
-  derived from `position` + `is_captain` — **a no-op for an unchipped squad**, so it can only change a chipped
-  week. Free Hit reverts, so GW−1's picks are read instead. The card also now states the **season standing**
-  above the projection, because that is the comparison the owner was making. *Right reasoning, wrong question.*
-  ⏳ **Win-probability sim — GATED, recommended against** (ADR-161). Measured on GW1 returns: one starter's
-  points have **sd 3.51** (mean 3.99, median 2, max 17), so a 3-differential head-to-head has a gap **sd ≈ 8.6**
-  against typical projected margins of **2-5 points** — a probability would say *"roughly a coin flip"* every
-  week, in the format that invites the most trust, and would cost a whole new event simulator. **Owner's call
-  to reopen.** Reinforces the Crowd/Signals track rather than the solver one — it answers *"what do I need to do
-  to catch him?"*, which is a different question from *"what's the best squad?"*. **Mini-league position also
-  sharpens the chip advisor** (ADR-082): when to burn a Wildcard depends on whether you're chasing or defending.
 - ⬜ **DGW/BGW detection** — sharpens the chip advisor; in-season data.
 - ⬜ **Probabilistic xMins (the full ML model)** — per-fixture expected-minutes *probabilities* from schedule
   density, European congestion, rotation profiles. Needs in-season per-GW minutes to train, external
@@ -802,52 +475,6 @@ interaction: *"FFH pops a menu on **clicking** a player — full card · substit
 
 The plan the owner brought in (a LightGBM stack over FPL + understat features) was validated and **re-ordered
 before starting**: the model was not the first problem. Four phases, each with its own gate.
-
-- ✅ **Phase 0a — retention (ADR-201, done 2026-09-16).** `season` joined the `player_history` key. This was
-  moved to the front of the queue because the August rollover would have **silently overwritten** the only
-  per-match data we have, and FPL sells back the aggregate but never the detail (`player_history_past`:
-  **2,097 rows for twenty seasons**, one per player per season). ⭐ *A model can be built next winter; the
-  gameweek you failed to store cannot.*
-
-- ✅ **Phase 0b — the baseline (ADR-202, done 2026-09-16).** Walk-forward, rounds 1–4. **The number to beat:**
-  minutes MAE **24.0** on owned ≥1% · start/bench call **70.1%** · points ranking **ρ 0.605** · hit@20 **0.17**
-  · 1 SE **0.040**. Three findings that changed what comes next:
-  - ⭐⭐ **The minutes model is beaten by "same as last week"** (20.5 MAE, 77.3%) at every ownership cut — and
-    above 3% by the constant 90. The weak part is the **historical fallback** (32.1 MAE against the in-season
-    term's 20.0, same players), which it reaches for 35–52 times per round.
-  - ⭐⭐ **And replacing it would have been wrong.** On the points ranking the app actually produces, the
-    weight is worth **+0.117 ρ (2.9 SE)** over not having it — the largest effect measured this season.
-    *A term can be a bad predictor of its own quantity and still be a good feature.*
-  - ⭐⭐⭐ ***"Is a better minutes model worth building?"* answered "nothing", "huge" and "marginal"** depending
-    on the instrument. The settled reading: a **ceiling** of +0.206 ρ on what the app ranks, of which +0.061
-    is information rather than appearance-point arithmetic.
-
-- ⏳ **Phase 1 — the gate is RUN (ADR-204, 2026-09-17), and the answer is "not yet".** The candidate is
-  **shrinkage** — `share = (n·this_season + k·last_season)/(n+k)`, replacing ADR-173's all-or-nothing switch —
-  and it **clears the board-wide accuracy gate** (MAE 24.5 → 20.9, start calls 73.5% → 78.8%). Scored on the
-  ranking it gains **+0.4 SE against §B0's +1 SE bar**, so it is **not shipped**.
-  - ⭐⭐ **Recorded and not acted on:** hit@20 **0.17 → 0.26** (+2.1 SE) and top-20 mean return **4.11 → 4.94**
-    — *93% of the oracle's top-of-board gain on 8% of its ρ gain.* **Better minutes is worth far more at the
-    top of the board than across it**, and the top is the only part a recommendation reads.
-  - ⚠️ It is **worse on owned players**. ⭐ *"More accurate" is a claim about a population* — neither candidate
-    dominates.
-  - 📅 **The GW8 rule is pre-registered in ADR-204, written before the data exists.** If neither clause is met,
-    **Phase 1 is declined for the season.**
-  - ✅ **The 11-season community archive is CLEARED (ADR-205)** — the repo is **MIT**, and `NOASSERTION` was a
-    detector failing to classify, not an author failing to grant. Scoped to the FPL-derived files
-    (`gws/merged_gw.csv` + `player_idlist.csv`, **2016-17 → 2026-27**), whose columns are a near-exact match for
-    `player_history`. ⚠️ **Not identical to our own data**: the maintainer flags `xP` as scraped after the
-    gameweek on an undocumented cadence, pre-2022/23 seasons carry **no expected stats at all**, and
-    ⭐ *eleven seasons of data is not eleven seasons of the same game* — FPL's scoring rules changed across it.
-    Cross-check the overlap against our stored 2026/27 rows before trusting either.
-
-- ✅ **Availability is now recorded (ADR-203, done 2026-09-17).** ADR-202's one uncloseable leak — the model
-  scored with **today's** injury news applied retrospectively, 195 of 659 players flagged — is closed for every
-  future baseline. A **change log with intervals** (`observed_at` / `last_seen_at`), written on every refresh,
-  because ⭐ *a change log alone cannot tell "unchanged" from "not observed"*. ⚠️ **It fixes the future, not the
-  past**: rounds 1–4 have no observations and never will, ADR-202's numbers keep their asterisk permanently,
-  and the GW8 review must say which baseline it is quoting. **It starts filling on the owner's next
-  `python app.py refresh`.**
 
 - ⏳ **Phase 2 — points, only if minutes pays.** Deliberately last. If a learned minutes model cannot beat
   0b's baseline, a learned points model on the same data will not either, and we will have found that out for
@@ -892,7 +519,6 @@ else in this document.
 
 ---
 
-
 ## 🗣 Crowd, signals & the language layer
 
 Tiers 1 and 2 shipped (ADR-057/058/059/093) — crowd flags, a Trending page, an FPL news lens, manager-ID
@@ -927,15 +553,6 @@ import, Reddit RSS buzz, media headlines. Momentum boards are live now that GW1 
 
 ---
 
-- ✅ **Price arrows use the colour channel: green up, red down** (ADR-140, Sprint 194, 2026-08-25) —
-  *owner, 2026-08-25.* Confirmed the bug: 🔺/🔻 are **both red** (U+1F53A is literally "red triangle pointed
-  up"), so direction was carried twice and colour carried nothing. Not a one-character swap — no green
-  triangle exists in emoji, and an emoji's colour cannot be overridden. Shipped **one plain pair `▲`/`▼`**
-  (`PRICE_UP`/`PRICE_DOWN`, imported by the CLI too) that inherits colour, plus a **pandas Styler** for the
-  dataframe column and `:green[…]`/`:red[…]` markdown for captions. Dead ends recorded: `TextColumn` has no
-  colour, and `MarkdownColumn` renders only in a click-through overlay. The retrospective 💰↑/💸↓ pair stays
-  uncoloured on purpose — a Styler paints whole cells, and those share one with four other flags.
-  colour is the easy part.
 ## 🔬 Data sources we've evaluated and declined
 
 Kept so the reasoning isn't re-litigated:
@@ -955,17 +572,6 @@ Kept so the reasoning isn't re-litigated:
 
 ## 🛠 Infrastructure, ops & tech debt
 
-- ✅ Cross-device persistence (ADR-094) · Google auth (ADR-106) · "remember me" (ADR-099) · Log out ·
-  anonymous usage analytics (ADR-100) · beta gate + waitlist (ADR-087/102) · self-service unsubscribe (ADR-122).
-- ✅ **ADR-120 — Admin tester-activity roster + load watch** — built (Sprint 186). ⏳ Owner smoke outstanding
-  (`FPL_ADMIN_KEY` + the anon SELECT policy) before the numbers have been seen.
-- ✅ **OWNER ACTION — ADR-122's unsubscribe** — **done, owner-confirmed 2026-08-30**: the `beta_users` DELETE
-  policy is in place and *"remove me"* now removes the user from Supabase. With `beta_waitlist`, `squads` and
-  `player_watchlist` already RLS-off, **the whole *"remove me = we delete your rows"* promise is now kept.**
-  ⚠️ Owner-confirmed, not machine-verified — the check needs live Supabase credentials that exist only in
-  Streamlit secrets, so nothing here can assert it. Re-test after any Supabase policy change.
-- ✅ **OWNER ACTION — admin-read smoke** (ADR-100) — **done 2026-08-25** (*"ran it, admin says ok now"*). This
-   entry sat open for five days after it was completed; found by re-checking on 2026-08-30, not by remembering.
 - ⬜ **Session/cookie auth for user-specific data** (`/my-team/{id}/`) — unlocks a manager-ID fetch inside
   `analyse`/`transfer`. Native `st.login()` is the product-path upgrade above the current gate.
 - ⬜ **Source versioning** — formalise "version all external sources"; confidence scoring on fallback.
@@ -973,64 +579,6 @@ Kept so the reasoning isn't re-litigated:
 - ⬜ **Deferred auth polish** — a confirm dialog on Log out; a signed/opaque "remember me" token instead of the
   raw value (deferred as over-engineering for a hobby beta; revisit only if the raw cookie value becomes a
   concern).
-- ✅ **ADR-322 — three guards that already existed** (2026-09-28, from a health check).
-  🔴 **481 Dart tests across 45 files had never run automatically** — no workflow mentioned Flutter and both
-  release scripts went straight to `flutter build`. ADR-221 had already deferred this *"until the real app
-  exists"*; it exists. Now `mobile.yml` (Flutter **pinned** to 3.47.5, path-filtered to `mobile/**`) plus the
-  same gate ahead of the build — and ahead of the **version bump** — in `release_android.sh` and
-  `release_ios.sh`. ⭐ *It costs 18 seconds: analyze 3.2s, 481 tests 15s.*
-  🔴🔴 **And ADR-310's `pulp` pin was in the wrong file.** The `Dockerfile` installs `requirements-api.txt`,
-  not `requirements.txt` — so `pulp`, `fastapi`, `uvicorn`, `requests` and `psycopg` were all still floating in
-  the image the phone calls, three days after PuLP 4.0.0 shipped the break that cost 24 days of red CI.
-  All three requirements files are now fully pinned (5/5 · 3/3 · 16/16), ⭐ **pinned not bounded**.
-  ✅ Guarded by `test_mobile_gate.py` + `test_deploy_pins.py`, verified by six mutations — one of which
-  asserts the `Dockerfile` still installs the file the pins are checked in, *the assumption that failed last
-  time.*
-  🔴🔴🔴 **And the staleness guard was skipping its own subject.** `PROJECT_STATUS`'s first line still
-  said *"Next: the Flutter mobile app"* four lines above *"THE APP IS SHIPPED"* — and fixing it raised why
-  ADR-294/295's test never fired: `test_nothing_calls_the_mobile_app_unbuilt` skipped **any line containing a `✅`**, and
-  `Current Phase` is a 742-character paragraph carrying three — so **the guard written for that sentence had
-  been exempting that sentence all along.** ⭐⭐⭐ *An escape hatch scoped more widely than the claim it
-  excuses exempts the thing it was written to catch*, and it fails silently: a guard that skips looks exactly
-  like one that passes. ✅ Exemption now scoped to the **clause**, verified by watching it object three times.
-  ⭐⭐ **The pattern all three share: every guard already existed** — the Dart tests nobody ran, the pin in the
-  wrong file, the test that exempted its subject. ⚠️ *Not a missing idea among them.*
-  ✅ **The one unverified pin resolved to "nothing to verify"** (owner-checked 2026-09-28): there is no
-  `[auth]` section in the deployed app's Streamlit secrets, so Google-auth mode is off, `st.login()` is never
-  called and `Authlib==1.8.0` is never imported — proved by it not being installed locally while the whole
-  suite runs green. 📌 The trigger is **enabling `[auth]`**, not the next deploy; sign in once if that
-  ever happens. ⭐ *An open action tied to "the next deploy" silently expires; tied to a condition, it waits.*
-- ✅ **ADR-323 — the import at the top of the file** (2026-09-28). ADR-322 left this open; it took two lines.
-  `optimizer.py` opened with `import pulp` at module scope, and since `analytics/__init__.py` re-exports from
-  it, **everything touching `src.analytics` loaded a solver** — the scheduled pipeline included, which never
-  solves. 🔴 Both deploy files called it permanent, the pipeline's concluding that a fix *"would mean moving
-  `deadline.py` out of the analytics package, a bigger change than this is worth"*. ⭐⭐⭐ Right observation,
-  wrong conclusion: all 13 `pulp` call sites sit inside **one function**. ⭐⭐ *An import at the top of a file is
-  a dependency for every caller of every function in it.* ✅ `pulp` dropped from `requirements-pipeline.txt`
-  (16 MB download / 36 MB on disk, 24× a day); kept in `requirements-api.txt` with its reason corrected, since
-  `squad/build` genuinely calls the solver. 📏 Measured rather than repeated: the files' long-standing
-  **71 MB** was unsourced and ~2× the truth. ✅ Guarded by reusing the existing import-graph test — `pulp`
-  joined its `banned` tuple — plus `SOLVER_FILES` pinning both directions.
-- ✅ **ADR-324/325 — the two 2,400-line modules split along seams they already had** (2026-09-28).
-  `service/answers.py` → seven families by **subject** (largest now **868** lines), `ask.py` → six layers by
-  **stage** (largest **1,343**). ⭐⭐ Measured, not designed: a dependency map put each private helper with its
-  one family, and `ask`'s shape was decided by **only 228 of 2,409 lines being public**. ✅ All 43 + 77
-  definitions moved **verbatim** — AST-cut, asserted byte-for-byte, diffed against HEAD. 🔴 Three things a
-  re-exporting barrel could not hide: the flat module's import namespace was a **test seam** (a package
-  forwards reads, never writes); `league()`/`player()` **shadowed their own modules**; and the injection I
-  missed was in `spikes/`, not `tests/`, where it would have regenerated a committed API sample from a **real
-  network call**. 🔴 Plus one nobody would guess: `test_tiebreak_wiring` resolves `**_TIE_BREAK` **in-file**,
-  so moving that constant made a real guard report four false positives. ⚠️ *Honest limit: the biggest module
-  got smaller, not small.*
-- ✅ **ADR-326 — the document that orients you** (2026-09-28). The ADR index was **509 KB** and
-  `PROJECT_STATUS.md` **84.5 KB**, 86% of the latter a 69-entry sprint log inside a single line. Now **92 KB**
-  and **5 KB**. ⭐⭐ *A running log appended to a status field stops being a status and becomes an archive
-  nobody retired.* 🔴 Seven facts existed nowhere but the index and moved into their ADRs first — all seven from
-  the longest rows. 🔴 And the status file was lying: its `Web UI:` line described *"7 tabs"* and a *Squads* tab
-  ADR-105 split, wrong for weeks because nobody read to the end of a 2,528-character line. ✅ Guarded by **size**
-  now, per document and per field, because every prose guard passed the whole time it was growing.
-  ⚠️ **This file is the third orienting document and is still 105 KB** — a forward plan rather than a log, so it
-  was left, but it grew 5 KB this session too.
 - ◑ **PuLP 4.0 migration** (ADR-066) — variables migrated; `PULP_CBC_CMD` deliberately kept (COIN_CMD needs an
   external CBC that fails locally *and* on the read-only Cloud). Revisit only if we adopt `pulp[cbc]`.
 
