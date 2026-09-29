@@ -59,13 +59,14 @@ def test_a_release_with_nothing_to_say_says_nothing() -> None:
     # same function is the one that shows you were guessing rather than reading it.*
     assert manifest({"MADBOOTS_NOTES": "   \n\n  "})["notes"] == manifest()["notes"]
 
-    # The empty case is reached through the filter — a release of only invisible work.
-    keep = _subject_filter()
-    assert not any(keep.match(s) for s in [
+    # The empty case is reached through a release of only invisible work — now the ordinary case,
+    # because a note is opt-in (ADR-328) rather than derived from a prefix.
+    assert _notes_from([
+        "chore: release build 30",
         "docs: update the readme",
-        "chore: release 1.0.0+13",
         "test: cover the lab modes",
-    ])
+        "fix: something with no trailer on it",
+    ]) == []
 
     # And whatever HEAD happens to be, every entry is real, trimmed text — never a blank bullet.
     for note in manifest()["notes"]:
@@ -83,48 +84,89 @@ def test_an_override_is_capped_like_the_derived_ones() -> None:
     assert len(manifest({"MADBOOTS_NOTES": "\n".join(f"line {i}" for i in range(9))})["notes"]) == 3
 
 
-def _subject_filter() -> re.Pattern:
-    """The regex the generator sifts commit subjects with — ⚠️ pulled out and **exercised**, because a
-    substring check on the script matched `--grep=^chore: release`, which finds the range rather than
-    letting chore commits through. ⭐ *A test that reads the code instead of running it will believe
-    whatever the code says about itself.*"""
-    pattern = re.search(r'm = re\.match\(\s*r"([^"]+)"', _generator())
-    assert pattern, "the subject filter is no longer a literal regex"
-    return re.compile(pattern[1].replace("\\\\", "\\"))
+def _notes_from(commits: list[str], env: dict | None = None) -> list[str]:
+    """Run the real generator over a throwaway repo — ⭐ *a test that reads the code instead of running
+    it will believe whatever the code says about itself*, which is how the old subject filter kept
+    passing while it shipped three notes nobody could act on."""
+    import os
+
+    repo = Path(tempfile.mkdtemp())
+
+    def git(*a: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *a], capture_output=True, check=True)
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    for message in commits:
+        (repo / "f").write_text(message)
+        git("add", "-A")
+        git("commit", "-q", "-m", message)
+
+    out = repo / "version.json"
+    subprocess.run(
+        ["python3", "-c", _generator(), "1.0.0", "13", "2013", str(out)],
+        cwd=repo, check=True, env={**os.environ, **(env or {})},
+    )
+    return json.loads(out.read_text())["notes"]
 
 
-def test_only_changes_a_reader_could_notice() -> None:
-    """⭐ `docs:`, `test:` and `chore:` changed nothing they can see.
+def test_a_note_is_opt_in_and_written_for_the_reader() -> None:
+    """⭐⭐ **The trailer is the note** (ADR-328). Its author decides that a tester can see the change,
+    and writes the sentence they will read — rather than a rule guessing from a commit prefix."""
+    notes = _notes_from([
+        "chore: release build 30",
+        "fix: a free transfer for a gameweek FPL does not pay one for\n\n"
+        "Release-note: The transfer count now matches FPL",
+    ])
+    assert notes == ["The transfer count now matches FPL"]
 
-    ⚠️ *A note about work nobody can observe teaches people to skip the notes.*
+
+def test_a_fix_nobody_can_see_reaches_nobody() -> None:
+    """🔴 **The bug this replaced.** Build 31 told nine testers about *"scope the staleness exemption to
+    the clause it excuses"* — a docs test — and *"pin the deploy requirements"* — a requirements file.
+
+    ⚠️⚠️ Both carried `fix:`, which is why the old rule let them through: *the prefix says what kind of
+    change it is, never who can see it.* ⭐ The old filter's own comment promised "only what a reader of
+    the app would notice", and the regex under it could not keep that promise.
     """
-    keep = _subject_filter()
-
-    for subject in [
-        "feat(ADR-293): in landscape the bench sits beside the pitch",
-        "fix(ADR-291): a plan that contradicted itself",
-        "feat: something without an ADR",
-    ]:
-        assert keep.match(subject), f"a user-visible change was dropped: {subject}"
-
-    for subject in [
-        "docs(ADR-295): the orientation docs were a phase behind",
-        "chore: release 1.0.0+12",
-        "test(ADR-294): the Lab's modes were built",
-        "refactor: tidy the pitch",
-    ]:
-        assert not keep.match(subject), f"an invisible change reached the banner: {subject}"
+    notes = _notes_from([
+        "chore: release build 30",
+        "fix: scope the staleness exemption to the clause it excuses",
+        "fix: pin the deploy requirements, including the file Render actually installs",
+        "feat: something internal with no trailer",
+        "docs: tidy the index",
+    ])
+    assert notes == [], f"an invisible change reached the banner: {notes}"
 
 
 def test_the_adr_number_does_not_reach_the_reader() -> None:
-    """⚠️ `feat(ADR-293):` is how this project talks to itself. ⭐ *A tester reading "ADR-293" learns
-    that the note was not written for them*, and stops reading the next one."""
-    keep = _subject_filter()
-    m = keep.match("feat(ADR-293): in landscape the bench sits beside the pitch")
+    """⚠️ `fix(ADR-293):` is how this project talks to itself. ⭐ *A tester reading "ADR-293" learns the
+    note was not written for them*, and stops reading the next one. The trailer carries no prefix at all,
+    so the number cannot leak through it."""
+    notes = _notes_from([
+        "chore: release build 30",
+        "fix(ADR-293): in landscape the bench sits beside the pitch\n\n"
+        "Release-note: The bench sits beside the pitch in landscape",
+    ])
+    assert notes == ["The bench sits beside the pitch in landscape"]
+    assert not any("ADR" in n for n in notes)
 
-    text = m.group(2) or m.group(4)
-    assert text == "in landscape the bench sits beside the pitch"
-    assert "ADR" not in text
+
+def test_the_anchor_accepts_both_spellings_of_a_release_commit() -> None:
+    """🔴 **The convention slipped and nothing noticed** (ADR-328). Build 31's release commit reads
+    `release: 1.0.0+31`, not `chore: release`, so the next run would have anchored on build 30 and
+    re-reported a week-old list. ⭐ *An anchor that matches one spelling of a convention is an anchor
+    that moves the first time someone types it differently.*"""
+    notes = _notes_from([
+        "chore: release build 30",
+        "fix: old\n\nRelease-note: From before the last release",
+        "release: 1.0.0+31 — the transfer fixes reach the testers",
+        "fix: new\n\nRelease-note: From after the last release",
+    ])
+    assert notes == ["From after the last release"], (
+        "the range did not restart at the `release:`-spelled commit"
+    )
 
 
 def test_the_range_starts_at_the_last_release_not_a_guess() -> None:

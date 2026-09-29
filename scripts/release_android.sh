@@ -10,6 +10,17 @@
 #
 # Usage:   scripts/release_android.sh            # bump the build number, e.g. 1.0.0+3 -> 1.0.0+4
 #          scripts/release_android.sh 1.1.0      # …and set a new version name too
+#
+# ⭐⭐ **The update banner's bullets come from `Release-note:` trailers** (ADR-328). A change a tester can
+# SEE carries one, written in the words they will read:
+#
+#     fix: a free transfer for a gameweek FPL does not pay one for
+#
+#     Release-note: The transfer count now matches FPL
+#
+# ⚠️ No trailer, no bullet — and that is the point. The old rule took every `feat:`/`fix:` subject and
+# told nine testers about a docs test and a requirements file. Override the lot with
+# `MADBOOTS_NOTES="line one\nline two"` when a release deserves words chosen at release time.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -133,23 +144,41 @@ def notes() -> list[str]:
 
     # ⚠️ Since the **previous** release commit, not since a tag: this project does not tag, and a range
     # that guesses would silently report the wrong week's work.
+    #
+    # ⚠️⚠️ **Both spellings, because the convention slipped and nothing noticed** (ADR-328). Build 31's
+    # release commit reads `release: 1.0.0+31`, not `chore: release`, so the next run would have anchored
+    # on build 30 again and re-reported a week-old list. ⭐ *An anchor that matches one spelling of a
+    # convention is an anchor that moves the first time someone types it differently.*
     last = subprocess.run(
-        ["git", "log", "--format=%H", "--grep=^chore: release", "-n", "1"],
+        ["git", "log", "--format=%H", "--grep=^chore: release", "--grep=^release:",
+         "-E", "-n", "1"],
         capture_output=True, text=True).stdout.strip()
     rng = f"{last}..HEAD" if last else "HEAD"
-    subjects = subprocess.run(
-        ["git", "log", "--format=%s", rng], capture_output=True, text=True).stdout.splitlines()
 
+    # ⭐⭐ **Written for a tester, by the person who made the change** (ADR-328). The old rule took every
+    # `feat:`/`fix:` SUBJECT, on the assumption that prefix means user-visible. It does not: build 31 told
+    # nine testers about *"scope the staleness exemption to the clause it excuses"* (a docs test) and
+    # *"pin the deploy requirements"* (a requirements file), neither of which they can see, beside one real
+    # fix phrased as a git subject. ⚠️ *The prefix says what kind of change it is, never who can see it* —
+    # which is exactly the failure the old comment here warned about, committed by the rule beneath it.
+    #
+    # ⭐ So a note is opt-in and written in the user's voice, as a git trailer:
+    #
+    #     Release-note: The transfer count now matches FPL
+    #
+    # Absence is meaningful: a release with nothing a tester can observe gets no bullets, and the script
+    # says so rather than inventing three.
+    bodies = subprocess.run(
+        ["git", "log", "--format=%B%x00", rng], capture_output=True, text=True).stdout
     out = []
-    for s in subjects:
-        # ⭐ Only what a reader of the app would notice. `docs:`, `test:` and `chore:` changed nothing
-        # they can see, and *a note about work nobody can observe teaches people to skip the notes.*
-        m = re.match(r"^(feat|fix)\([^)]*\):\s*(.+)$|^(feat|fix):\s*(.+)$", s)
-        if not m:
-            continue
-        text = (m.group(2) or m.group(4)).strip()
-        out.append(text[0].upper() + text[1:])
+    for line in bodies.splitlines():
+        m = re.match(r"^\s*Release-note:\s*(.+?)\s*$", line, re.IGNORECASE)
+        if m:
+            text = m.group(1)
+            out.append(text[0].upper() + text[1:])
     return out
+
+picked = notes()[:MAX_NOTES]
 
 json.dump({
     "version": name,
@@ -159,8 +188,18 @@ json.dump({
     # ⚠️ **Capped once, here.** It was capped in both branches of `notes()` and again in the app's
     # banner; mutating any one left the others passing — ⭐ *a cap enforced in several places is a cap
     # that moves.* The client caps too, but that is a different job: this decides what is **published**.
-    "notes": notes()[:MAX_NOTES],
+    "notes": picked,
 }, open(out, "w"), indent=2, ensure_ascii=False)
+
+# ⚠️ Loud, because the banner is the only thing a tester reads before deciding to update, and an empty
+# one is indistinguishable from a release that had nothing to say (ADR-328).
+if not picked:
+    print("  \u26a0\ufe0f  no Release-note: trailers since the last release \u2014 the update banner will have no",
+          file=sys.stderr)
+    print("      bullets. If this release changes something a tester can SEE, either add a trailer",
+          file=sys.stderr)
+    print("      to the commit or re-run with MADBOOTS_NOTES=\"...\" (one note per line).",
+          file=sys.stderr)
 PY
 
 # ⚠️⚠️ **Cloudflare Pages does not know what a `.apk` is.** With no `Content-Type` it sends none at all,
