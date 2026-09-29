@@ -41,7 +41,12 @@ class Pitch3D {
   static const double lift = 0;
 
   /// How much stretched foreground to cut off the bottom of the pitch.
-  static const double crop = 110;
+  /// How much stretched foreground to cut off, **as a share of the board's height**.
+  ///
+  /// 🔴 It was a flat 110px, which is 22% of a portrait board and **37% of a landscape one** — so
+  /// landscape cropped away the half of the pitch the midfield and attack were standing on.
+  /// ⚠️ *A pixel budget tuned on one screen is a different design on another.*
+  static const double cropShare = 0.22;
   static const double lineA = 0.83;
   static const double tile = 215; // grass tile, px on the flat plane
   static const double shrink = 0.10; // how much a card shrinks with depth
@@ -75,7 +80,25 @@ class Pitch3D {
   /// that depth — ⭐ *the far end of a perspective pitch has almost no room in it, and a distance that
   /// reads as generous on a flat pitch is nothing once it recedes.* Computed rather than nudged: a card
   /// clears the goal line from 14m, so the keeper stands at 15 and the rest move down with him.
-  static const Map<String, double> rows = {'DEF': 44, 'MID': 68, 'FWD': 86};
+  /// Where each row stands, as a **fraction of the pitch on show** — not as metres.
+  ///
+  /// 🔴 **Metres broke landscape completely.** A wide, short board shows far less of the pitch's
+  /// length (58m against portrait's 87m), so rows fixed at 44/68/86m put two thirds of the team
+  /// past the near edge and off the screen. ⚠️ *A position in metres is a position on a pitch you
+  /// have decided how much of to show.*
+  /// Where each row sits, as a fraction of the **board's height on screen**.
+  ///
+  /// 🔴 **Third attempt, and the first that is not a chain of guesses.** Metres broke landscape — a
+  /// short board shows 58m where a tall one shows 87, so fixed metres put the attack off-screen.
+  /// Fractions of the plane broke both, because the plane runs past the bottom of the screen by
+  /// design. ⭐⭐ *Say where it goes on the screen and solve the pitch backwards*: the projection
+  /// inverts in closed form, so a row still stands on the grass and still scales with depth, but it
+  /// lands where the layout needs it whatever shape the board is.
+  static const Map<String, double> rows = {
+    'DEF': 0.40,
+    'MID': 0.62,
+    'FWD': 0.84,
+  };
 
   /// ⭐⭐ **Fill the board, or keep the touchlines — you cannot have both** at this tilt. The portion
   /// of pitch on show is 68m x 87m (aspect 0.78) and a portrait board is almost exactly that shape,
@@ -137,15 +160,24 @@ class Pitch3D {
 ({double pw, double ph, double ox, double oy, double m}) planeFor(Size box) {
   double pw, ph;
   if (Pitch3D.fillBoard) {
-    // Solve the projection for the plane whose far edge lands on the top of the board.
-    final t = Pitch3D.tilt * math.pi / 180;
     // ⭐⭐ `crop` lengthens the plane **downwards, past the bottom of the screen**, so the stretched
     // foreground is cut off — and because the projected height grows by exactly the same amount the
     // origin moves down, ⚠️ *the goal line does not shift at all.*
-    final h = math.max(80.0, box.height - Pitch3D.topGap + Pitch3D.crop);
+    final t = Pitch3D.tilt * math.pi / 180;
+    final h = math.max(
+      80.0,
+      box.height * (1 + Pitch3D.cropShare) - Pitch3D.topGap,
+    );
     final den = math.cos(t) * Pitch3D.dist - h * math.sin(t);
     ph = den > 1 ? h * Pitch3D.dist / den : h;
-    pw = ph * Pitch3D.width / (Pitch3D.shown * Pitch3D.length + Pitch3D.runOff);
+    // 🔴 **At least as wide as the board.** Derived from the height alone the plane came out 188px
+    // narrower than a landscape board, leaving the pitch a trapezoid floating in the middle of the
+    // screen. ⭐ *How much of the pitch you can show is a consequence of the screen's shape, not a
+    // number you get to pick* — so the width binds, and the length falls out of it below.
+    pw = math.max(
+      ph * Pitch3D.width / (Pitch3D.runOff + Pitch3D.shown * Pitch3D.length),
+      box.width,
+    );
   } else {
     pw = box.width * Pitch3D.zoom;
     ph = pw * (Pitch3D.shown * Pitch3D.length + Pitch3D.runOff) / Pitch3D.width;
@@ -154,7 +186,7 @@ class Pitch3D {
     pw: pw,
     ph: ph,
     ox: box.width / 2,
-    oy: box.height - Pitch3D.lift + Pitch3D.crop,
+    oy: box.height * (1 + Pitch3D.cropShare) - Pitch3D.lift,
     m: pw / Pitch3D.width,
   );
 }
@@ -203,6 +235,47 @@ double goalHeightFor(double goalW) => goalW * Pitch3D.goalHeight;
 ///
 /// ⭐⭐ **The keeper does not stand on the pitch.** He stands in the goal, which is the one place on
 /// this view with room to spare — and it hands a whole row back to the outfield.
+/// The metres of pitch beyond the goal line that this plane actually shows.
+///
+/// ⭐ Derived, because the board's shape decides it: a wide short screen shows less of the length.
+double shownMetres(
+  ({double pw, double ph, double ox, double oy, double m}) p,
+) => p.ph / p.m - Pitch3D.runOff;
+
+/// The point on the plane that lands at [screenY] — [project] run backwards.
+///
+/// ⭐ `y = ly·cos·d / (d − ly·sin)` solves for `ly` in one step, so a row can be asked for by where it
+/// should appear and still be a real position on the grass.
+double planeYAt(
+  ({double pw, double ph, double ox, double oy, double m}) p,
+  double screenY,
+) {
+  final t = Pitch3D.tilt * math.pi / 180;
+  final y = screenY - p.oy;
+  return y * Pitch3D.dist / (math.cos(t) * Pitch3D.dist + y * math.sin(t));
+}
+
+/// Where a row stands on the plane, given where it should sit on the board.
+double rowPlaneY(
+  ({double pw, double ph, double ox, double oy, double m}) p,
+  String position,
+  double boardHeight,
+) => planeYAt(p, (Pitch3D.rows[position] ?? 0.5) * boardHeight);
+
+/// The advertising band across the back of the run-off, in screen coordinates.
+///
+/// ⚠️⚠️ **Exposed so the wordmark can be a widget.** It was painted here with a `TextPainter` in one
+/// flat purple — ⭐⭐ *a seventh hand-built MADBOOTS, which is the exact thing ADR-312 exists to stop*
+/// (MAD in purple, BOOTS in orange, italic, tracking in em). The brand is one widget; a painter that
+/// cannot use it must not draw the brand.
+Rect hoardingBand(({double pw, double ph, double ox, double oy, double m}) p) {
+  final back = project(0, -p.ph);
+  final y = p.oy + back.y;
+  final half = p.pw * back.k / 2;
+  final h = half * 2 * Pitch3D.hoardHeight;
+  return Rect.fromLTRB(p.ox - half, y - h, p.ox + half, y);
+}
+
 double goalWidthFor(
   ({double pw, double ph, double ox, double oy, double m}) p,
 ) => p.pw * project(0, -p.ph + Pitch3D.runOff * p.m).k * Pitch3D.goalWidth;
@@ -217,7 +290,12 @@ double keeperCentre(
   double cardW,
 ) {
   final line = project(0, -p.ph + Pitch3D.runOff * p.m);
-  return p.oy + line.y - goalHeightFor(goalWidthFor(p)) / 2;
+  final mouth = p.oy + line.y - goalHeightFor(goalWidthFor(p)) / 2;
+  // ⚠️⚠️ **The SHIRT goes in the goal, not the card.** Centring the whole card on the mouth put the
+  // bottom of the jersey on the crossbar and the kit above it — the card is ~80pt tall and the kit is
+  // only its top 34pt, so its middle is nowhere near its shirt. ⭐ *Aligning a thing by its bounding
+  // box aligns the box, and nobody is looking at the box.*
+  return mouth + (40 - 17) * (cardW / 70);
 }
 
 class _Plane extends CustomPainter {
@@ -340,16 +418,7 @@ class _Plane extends CustomPainter {
     final h = goalHeightFor(w);
 
     // The hoardings stand on the back edge of the run-off, facing the camera.
-    final back = project(0, -p.ph);
-    final backY = p.oy + back.y;
-    final backHalf = p.pw * back.k / 2;
-    final hoard = backHalf * 2 * Pitch3D.hoardHeight;
-    final band = Rect.fromLTRB(
-      p.ox - backHalf,
-      backY - hoard,
-      p.ox + backHalf,
-      backY,
-    );
+    final band = hoardingBand(p);
     canvas.drawRect(band, Paint()..color = const Color(0xFF1D1730));
     canvas.drawRect(
       band,
@@ -357,31 +426,6 @@ class _Plane extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.10)
         ..style = PaintingStyle.stroke,
     );
-
-    // ⭐ The brand goes on the hoardings, which is where a ground puts it.
-    final label = TextPainter(
-      text: TextSpan(
-        text: 'MADBOOTS',
-        style: TextStyle(
-          color: const Color(0xFFB45CF0),
-          fontFamily: 'Roboto',
-          fontSize: hoard * 0.44,
-          fontWeight: FontWeight.w700,
-          letterSpacing: hoard * 0.10,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    canvas.save();
-    canvas.clipRect(band);
-    for (
-      var x = band.left + 10;
-      x < band.right;
-      x += label.width + hoard * 1.2
-    ) {
-      label.paint(canvas, Offset(x, band.center.dy - label.height / 2));
-    }
-    canvas.restore();
 
     // The goal, standing on the goal line.
     final line = project(0, -p.ph + Pitch3D.runOff * p.m);

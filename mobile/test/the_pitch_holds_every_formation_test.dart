@@ -19,6 +19,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:madboots/api/models.dart';
 import 'package:madboots/pitch.dart';
 import 'package:madboots/pitch_3d.dart';
+import 'package:madboots/pitch_markings.dart';
+import 'package:madboots/wordmark.dart';
 
 /// The sample squad, re-shaped. ⭐ Edits the JSON so the fifteen, the prices and the fixtures stay
 /// real and only the shape under test changes.
@@ -165,6 +167,101 @@ void main() {
     final w = Pitch3D.cardWidthFor(382, 5);
     expect(w * 5, lessThan(382), reason: 'five cards do not fit');
     expect((382 - w * 5) / 6, greaterThan(1), reason: 'five cards touch');
+  });
+
+  testWidgets('landscape falls back to the flat pitch', (tester) async {
+    // 🔴 **Reported: "landscape isn't working at all"** — and it could not, at any setting. A
+    // landscape phone leaves 281px of board and the perspective view has to stack a keeper in the
+    // goal plus three rows: 320px at the 70pt card that is already the floor. ⚠️ *39px short, with
+    // nothing left to give* — landscape is wide, so the card-width rule never binds and height is
+    // what runs out. ⭐ A design that does not fit is not a design that needs tuning.
+    await tester.binding.setSurfaceSize(const Size(780, 390));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 780,
+            height: 390,
+            child: PitchView(
+              team: teamShaped('4-4-2'),
+              mode: PitchMode.nextGw,
+              onMode: (_) {},
+              onTapPlayer: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(Pitch3D.on, isTrue, reason: 'the 3D pitch should still be enabled');
+    expect(
+      find.byType(TiltedPitch),
+      findsNothing,
+      reason: 'landscape drew the perspective pitch, which does not fit it',
+    );
+    expect(
+      find.byType(PitchLines),
+      findsOneWidget,
+      reason: 'no flat pitch either',
+    );
+    // And the whole eleven is on screen, which is the thing that was broken.
+    final prices = tester
+        .widgetList<Text>(find.byType(Text))
+        .where((t) => (t.data ?? '').startsWith('£'))
+        .map((t) => tester.getRect(find.byWidget(t)));
+    for (final r in prices) {
+      expect(
+        r.bottom,
+        lessThanOrEqualTo(390),
+        reason: 'a card at $r runs off the bottom',
+      );
+    }
+  });
+
+  testWidgets('the keeper stands in the goal, not above it', (tester) async {
+    // ⚠️⚠️ Reported: *"bottom of jersey starts on the cross bar."* The card was centred on the goal
+    // mouth, but a card is ~80pt tall and its kit is only the top 34 — ⭐ *aligning a thing by its
+    // bounding box aligns the box, and nobody is looking at the box.*
+    await tester.binding.setSurfaceSize(const Size(390, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 390,
+            height: 760,
+            child: PitchView(
+              team: teamShaped('4-4-2'),
+              mode: PitchMode.nextGw,
+              onMode: (_) {},
+              onTapPlayer: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // ⭐ The kit images cannot load in a widget test, so every shirt falls back to 👕 — which makes
+    // the jersey findable, and the jersey is exactly what the report was about.
+    // ⚠️ By element, not by widget: fifteen shirts are all `Text('👕')` and compare equal, so
+    // `find.byWidget` matches every one of them at once.
+    final shirts = find.text('👕').evaluate().map((e) {
+      final box = e.renderObject! as RenderBox;
+      return box.localToGlobal(Offset.zero) & box.size;
+    }).toList()..sort((a, b) => a.top.compareTo(b.top));
+    expect(shirts, isNotEmpty, reason: 'no shirts drawn');
+
+    final hoardings = tester.getRect(find.byType(Wordmark).first);
+    expect(
+      shirts.first.top,
+      greaterThan(hoardings.bottom),
+      reason:
+          'the keeper\'s jersey starts at ${shirts.first.top} and the hoardings end at '
+          '${hoardings.bottom} — he is up in the advertising',
+    );
   });
 
   test('the revert switch is real', () {

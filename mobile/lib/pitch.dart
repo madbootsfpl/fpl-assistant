@@ -179,7 +179,14 @@ class PitchBoard<T> extends StatelessWidget {
         // ── SPIKE (Pitch3D.on) ─────────────────────────────────────────────────────────────────
         // The eleven stand ON the plane: each row is a distance in metres from the far goal line,
         // projected by the same arithmetic the canvas's Matrix4 performs.
-        if (Pitch3D.on) {
+        // 🔴 **Portrait only, and that is arithmetic rather than preference.** A landscape phone
+        // leaves 281px of board, and the perspective view has to stack a keeper in the goal plus
+        // three rows — 320px at the 70pt card that is already the floor. It is **39px short and
+        // there is nothing left to give**: landscape is wide, so the card-width rule never binds,
+        // and height is what runs out. ⭐⭐ *A design that does not fit is not a design that needs
+        // tuning.* Sideways falls through to the flat pitch, which ADR-293 and ADR-330 built for
+        // exactly this shape — ⭐ and that keeps the 2D path shipping rather than merely tested.
+        if (Pitch3D.on && !sideways) {
           final board = LayoutBuilder(
             builder: (context, box) {
               final size = Size(box.maxWidth, box.maxHeight);
@@ -194,7 +201,7 @@ class PitchBoard<T> extends StatelessWidget {
               for (final row in _rows) {
                 final line = byRow[row]!;
                 if (line.isEmpty) continue;
-                final ly = -pl.ph + (Pitch3D.rows[row] ?? 0) * pl.m;
+                final ly = rowPlaneY(pl, row, size.height);
                 final scale = 1 - Pitch3D.shrink * (1 - project(0, ly).k);
                 // ⭐⭐ The keeper is placed in the goal mouth, not on the pitch (ADR spike):
                 // the one place on a perspective view with room going spare.
@@ -232,25 +239,40 @@ class PitchBoard<T> extends StatelessWidget {
                   );
                 }
               }
+              // ⭐⭐ **The brand is a widget, not something a painter draws.** ADR-312 made one
+              // `Wordmark` because six hand-built copies disagreed; painting a seventh on the
+              // hoardings put MADBOOTS up in a single flat purple, upright, with the wrong tracking.
+              final band = hoardingBand(pl);
+              final advert = Positioned.fromRect(
+                rect: band,
+                child: ClipRect(
+                  child: OverflowBox(
+                    maxWidth: double.infinity,
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < 5; i++)
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: band.height * 0.55,
+                            ),
+                            child: Wordmark(size: band.height * 0.52),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
               return Stack(
                 children: [
                   const Positioned.fill(child: TiltedPitch()),
+                  advert,
                   ...men,
                 ],
               );
             },
           );
-          if (sideways) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: board),
-                Center(
-                  child: FittedBox(fit: BoxFit.scaleDown, child: benchPanel),
-                ),
-              ],
-            );
-          }
           return Column(
             children: [
               Expanded(child: board),
