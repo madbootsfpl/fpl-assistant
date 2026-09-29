@@ -9,7 +9,11 @@
 /// it against and wrong on every other one.*
 library;
 
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madboots/pitch_markings.dart';
 
@@ -44,7 +48,108 @@ Future<List<({Offset centre, double radius, bool isArc})>> circlesAt(
   return found;
 }
 
+CustomPainter painterIn(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(find.byType(CustomPaint))
+    .map((w) => w.painter)
+    .whereType<CustomPainter>()
+    .first;
+
+Future<void> pumpPitch(WidgetTester tester) => tester.pumpWidget(
+  const MaterialApp(
+    home: Scaffold(
+      body: SizedBox(
+        width: 390,
+        height: 760,
+        child: PitchMarkings(child: SizedBox.expand()),
+      ),
+    ),
+  ),
+);
+
+/// The colour the painter actually puts on the middle of the pitch.
+Future<({int r, int g, int b, int a})> centrePixel(
+  WidgetTester tester,
+  CustomPainter painter,
+) async {
+  const size = Size(390, 760);
+  final recorder = ui.PictureRecorder();
+  painter.paint(Canvas(recorder), size);
+  // ⚠️ `runAsync`: rasterising is real work and the test binding's fake clock will not do it.
+  final bytes = await tester.runAsync(() async {
+    final image = await recorder.endRecording().toImage(390, 760);
+    return image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  });
+  // A point off the halfway line and outside the centre circle, so no marking is sampled.
+  const x = 80, y = 250;
+  final o = (y * 390 + x) * 4;
+  return (
+    r: bytes!.getUint8(o),
+    g: bytes.getUint8(o + 1),
+    b: bytes.getUint8(o + 2),
+    a: bytes.getUint8(o + 3),
+  );
+}
+
 void main() {
+  // ⚠️ The decoded turf is cached for the life of the process, so one test resolving it would otherwise
+  // decide what the next one sees.
+  setUp(resetTurfForTest);
+
+  group('the turf (ADR-329)', () {
+    testWidgets('the pitch is green before the turf arrives', (tester) async {
+      // ⭐⭐ **The asset is late by definition** — it is decoded off a future, and the first frame is drawn
+      // before it lands. ⚠️ *A pitch that waits for its image is a pitch that flashes empty*, and on a
+      // cold start that blank is the first thing anyone sees.
+      //
+      // ⚠️⚠️ **This asserted that *something* filled the pitch, and passed with the background deleted.**
+      // The top light is itself a full-size rect, so a spy counting rectangles saw it and was satisfied.
+      // ⭐ *A test that watches the calls cannot tell a background from a film laid over one* — so this
+      // one reads the pixel.
+      await pumpPitch(tester);
+
+      final pixel = await centrePixel(tester, painterIn(tester));
+
+      expect(pixel.a, 255, reason: 'the cold pitch is see-through');
+      expect(
+        pixel.g,
+        greaterThan(math.max(pixel.r, pixel.b)),
+        reason: 'the cold pitch is not green: $pixel',
+      );
+    });
+
+    testWidgets('the painter repaints once the turf lands', (tester) async {
+      // 🔴 **`shouldRepaint` returned a flat `false` for the whole of this widget's life**, which was right
+      // while it drew nothing but geometry. ⭐ *A painter that never repaints cannot show an image it did
+      // not have when it was built* — so the grass would decode, be handed over, and never appear.
+      await pumpPitch(tester);
+      final cold = painterIn(tester);
+
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 500)),
+      );
+      await tester.pump();
+      final warm = painterIn(tester);
+
+      expect(
+        warm.shouldRepaint(cold),
+        isTrue,
+        reason: 'the turf arrived and the pitch did not redraw',
+      );
+    });
+
+    test('the turf is declared, and is the size the tiling assumes', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      // ⚠️ Declared in `pubspec.yaml`, not merely present on disk: an undeclared asset is missing at
+      // runtime and the failure is a silent fallback to the gradient.
+      final data = await rootBundle.load('assets/pitch-grass.webp');
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final image = (await codec.getNextFrame()).image;
+
+      expect(image.width, image.height, reason: 'the tile must be square to repeat');
+      expect(image.width, 512);
+    });
+  });
+
   testWidgets('the D never reaches the centre circle, at any shape', (
     tester,
   ) async {

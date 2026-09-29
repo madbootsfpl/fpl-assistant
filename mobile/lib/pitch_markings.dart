@@ -1,54 +1,104 @@
-/// The pitch the players stand on (ADR-223).
+/// The pitch the players stand on (ADR-223), on real turf (ADR-329).
 ///
-/// ⭐ **Painted, not an image.** Markings drawn as vectors scale to any phone without a second asset, cost
-/// nothing to download, and — the part that matters — the lines can be positioned *relative to the card
-/// rows*, so a five-defender formation and a three-defender one both look like a football pitch rather
-/// than like a background someone laid players on top of.
+/// ⭐ **Markings painted, not an image.** Drawn as vectors they scale to any phone without a second
+/// asset, and — the part that matters — the lines can be positioned *relative to the card rows*, so a
+/// five-defender formation and a three-defender one both look like a football pitch rather than like a
+/// background someone laid players on top of.
 ///
-/// ⚠️ **Deliberately faint.** The markings are orientation, not content: the eye must land on the xP number
-/// first. ADR-135 is this project's record of what happens when a surface is over-densified, and a pitch
-/// drawn at full contrast competes with every card on it.
+/// ⭐⭐ **The grass, by contrast, *is* an image**, and that is the whole point of ADR-329: a gradient can
+/// say "green", and only a photograph says "grass". ⚠️ It is the one thing here a vector cannot do, so it
+/// is the one thing that earns an asset.
+///
+/// ⚠️ **The markings are orientation, not content**: the eye must land on the xP number first. ADR-135 is
+/// this project's record of what happens when a surface is over-densified.
 library;
 
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-class PitchMarkings extends StatelessWidget {
+/// The turf, decoded once for the life of the app.
+///
+/// ⚠️ **A `Future`, held statically, not an image held statically.** Every pitch in the app asks for the
+/// same one, and the second asker must join the first request rather than start a second decode —
+/// ⭐ *a cache keyed on "have I finished yet" races with itself; one keyed on the request does not.*
+Future<ui.Image>? _turfRequest;
+
+Future<ui.Image> _turf() => _turfRequest ??= () async {
+  final data = await rootBundle.load('assets/pitch-grass.webp');
+  final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+  return (await codec.getNextFrame()).image;
+}();
+
+/// ⚠️ Visible for tests that need the pitch drawn without waiting on an asset.
+@visibleForTesting
+void resetTurfForTest() => _turfRequest = null;
+
+class PitchMarkings extends StatefulWidget {
   const PitchMarkings({required this.child, super.key});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      // ⭐ Banded rather than flat — a mown-stripe gradient reads as grass at a glance, and it is two
-      // colours rather than an image.
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF419462), Color(0xFF34754E)],
-      ),
-    ),
-    child: CustomPaint(
-      painter: _Markings(),
-      // ⚠️ `isComplex` off and no animation: this repaints only when the pitch resizes.
-      child: child,
-    ),
+  State<PitchMarkings> createState() => _PitchMarkingsState();
+}
+
+class _PitchMarkingsState extends State<PitchMarkings> {
+  ui.Image? _grass;
+
+  @override
+  void initState() {
+    super.initState();
+    // ⭐⭐ **The pitch draws immediately and the turf arrives late.** Until it does, `_Markings` paints the
+    // gradient this widget shipped with — ⚠️ *a pitch that waits for an image is a pitch that flashes
+    // empty*, and on a cold start that is the first thing anyone sees.
+    _turf().then((image) {
+      if (mounted) setState(() => _grass = image);
+    }).catchError((Object _) {
+      // A missing or corrupt asset must not take the pitch down: the gradient is a complete answer.
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _Markings(_grass),
+    // ⚠️ `isComplex` off and no animation: this repaints only when the pitch resizes, or once, when the
+    // turf lands.
+    child: widget.child,
   );
 }
 
 class _Markings extends CustomPainter {
-  /// White at 22% — visible as geometry, never as a thing to read.
+  _Markings(this.grass);
+
+  /// Null until the asset decodes, and after any failure to.
+  final ui.Image? grass;
+
+  /// ⚠️⚠️ **0.42, where this was 0.22 for most of the app's life** (ADR-329). Not a change of mind about
+  /// how loud the markings should be: at 0.22 they were tuned against a flat two-stop gradient, and a
+  /// photograph of grass has texture of its own at roughly that contrast. ⭐ *A line drawn faintly over a
+  /// flat colour reads as a line; the same line over noise reads as more noise.*
   static final Paint _line = Paint()
-    ..color = Colors.white.withValues(alpha: 0.22)
+    ..color = Colors.white.withValues(alpha: 0.42)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.4;
 
-  static final Paint _spot = Paint()
-    ..color = Colors.white.withValues(alpha: 0.22);
-  static final Paint _stripe = Paint()
-    ..color = Colors.white.withValues(alpha: 0.035);
+  static final Paint _spot = Paint()..color = Colors.white.withValues(alpha: 0.42);
+  static final Paint _stripe = Paint()..color = Colors.white.withValues(alpha: 0.035);
+
+  /// The pitch under the turf, and the whole pitch when there is no turf.
+  static const Color _base = Color(0xFF146B30);
+
+  /// One mown band is `height / _bands`, and every other one is painted.
+  static const int _bands = 6;
+
+  /// How big one tile of the turf is drawn, in logical pixels.
+  ///
+  /// ⭐ Chosen on the phone and left alone on the tablet: the blades are a real size, so scaling the tile
+  /// with the screen would make a tablet's grass look like a lawn seen from lower down.
+  static const double _tile = 180;
 
   /// The penalty arc, **computed rather than guessed**.
   ///
@@ -86,15 +136,85 @@ class _Markings extends CustomPainter {
     }
   }
 
+  /// The grass, then the two lighting layers that sit **under** the markings.
+  ///
+  /// ⭐ Lifted whole from the owner's own mockup, vignette and top light included. *The photograph alone
+  /// looks like wallpaper; it is the lighting over it that makes it a place with a middle and edges.*
+  void _paintTurf(Canvas canvas, double w, double h) {
+    final full = Rect.fromLTWH(0, 0, w, h);
+
+    if (grass == null) {
+      // ⚠️ The gradient the pitch shipped with, kept as the answer for a cold frame or a failed decode.
+      canvas.drawRect(
+        full,
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF419462), Color(0xFF34754E)],
+          ).createShader(full),
+      );
+    } else {
+      canvas.drawRect(full, Paint()..color = _base);
+      final scale = _tile / grass!.width;
+      canvas.drawRect(
+        full,
+        Paint()
+          ..shader = ImageShader(
+            grass!,
+            TileMode.repeated,
+            TileMode.repeated,
+            Matrix4.diagonal3Values(scale, scale, 1).storage,
+            filterQuality: FilterQuality.low,
+          ),
+      );
+    }
+
+    // Vignette: an ellipse as wide as the pitch and 85% as tall, centred a little above the middle.
+    // ⚠️ Drawn through a scaled canvas rather than as a circular gradient — *a radial gradient given one
+    // radius cannot be an ellipse*, and the shape is what keeps the darkening off the corners only.
+    final rx = w, ry = h * 0.85;
+    canvas.save();
+    canvas.translate(w * 0.5, h * 0.35);
+    canvas.scale(1, ry / rx);
+    canvas.drawRect(
+      Rect.fromLTRB(-w * 2, -h * 2 / (ry / rx), w * 2, h * 2 / (ry / rx)),
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [
+            Color(0x00001405),
+            Color(0x00001405),
+            Color(0x40001405),
+            Color(0x8C000F05),
+          ],
+          stops: [0, 0.45, 0.75, 1],
+        ).createShader(Rect.fromCircle(center: Offset.zero, radius: rx)),
+    );
+    canvas.restore();
+
+    // Top light — ⭐ dimmed to 0.65 of the mockup's, on the owner's own reading of it.
+    canvas.drawRect(
+      full,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x0AFFFFFF), Color(0x00FFFFFF), Color(0x00000000), Color(0x19000000)],
+          stops: [0, 0.3, 0.7, 1],
+        ).createShader(full),
+    );
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
+    _paintTurf(canvas, w, h);
+
     // Mown stripes, horizontal so they read as depth rather than as columns fighting the card grid.
-    const bands = 8;
-    for (var i = 0; i < bands; i += 2) {
-      canvas.drawRect(Rect.fromLTWH(0, h / bands * i, w, h / bands), _stripe);
+    for (var i = 0; i < _bands; i += 2) {
+      canvas.drawRect(Rect.fromLTWH(0, h / _bands * i, w, h / _bands), _stripe);
     }
 
     const inset = 6.0;
@@ -107,7 +227,7 @@ class _Markings extends CustomPainter {
     // centre circle is 9.15 m on a 68 m pitch, and clamping to a share of the *shorter* axis keeps it a
     // circle that fits rather than one that swallows the midfield on a narrow phone.
     final midY = field.center.dy;
-    final radius = math.min(w * 0.125, h * 0.11);
+    final radius = math.min(w * 0.13, h * 0.11);
     canvas.drawLine(Offset(field.left, midY), Offset(field.right, midY), _line);
     canvas.drawCircle(Offset(field.center.dx, midY), radius, _line);
     canvas.drawCircle(Offset(field.center.dx, midY), 1.8, _spot);
@@ -149,6 +269,8 @@ class _Markings extends CustomPainter {
     }
   }
 
+  /// ⚠️ Repaints once, when the turf lands. *A painter that never repaints cannot show an image it did
+  /// not have when it was built.*
   @override
-  bool shouldRepaint(covariant _Markings oldDelegate) => false;
+  bool shouldRepaint(covariant _Markings oldDelegate) => oldDelegate.grass != grass;
 }

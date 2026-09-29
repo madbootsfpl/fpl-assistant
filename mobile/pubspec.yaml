@@ -82,6 +82,10 @@ flutter:
   # mark on the home screen and the mark in the header cannot drift apart.
   assets:
     - assets/madboots-badge.png
+    # ⭐ The turf (ADR-329). A seamless 512px photograph, WebP q92 — 69 KB against the
+    # PNG's 439 KB. ⚠️ Not lower: q75 smooths the blades until the tile's own seam
+    # becomes the sharpest edge in it, which tiles as a visible grid.
+    - assets/pitch-grass.webp
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
