@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import 'api/models.dart';
 import 'brand.dart';
+import 'pitch_3d.dart';
 import 'pitch_markings.dart';
 import 'wordmark.dart';
 
@@ -174,6 +175,94 @@ class PitchBoard<T> extends StatelessWidget {
             ),
           ),
         );
+
+        // ── SPIKE (Pitch3D.on) ─────────────────────────────────────────────────────────────────
+        // The eleven stand ON the plane: each row is a distance in metres from the far goal line,
+        // projected by the same arithmetic the canvas's Matrix4 performs.
+        if (Pitch3D.on) {
+          final board = LayoutBuilder(
+            builder: (context, box) {
+              final size = Size(box.maxWidth, box.maxHeight);
+              final pl = planeFor(size);
+              // ⭐ One width for the whole pitch, set by the most crowded row.
+              final widest = byRow.values.fold<int>(
+                0,
+                (a, r) => r.length > a ? r.length : a,
+              );
+              Pitch3D.cardW = Pitch3D.cardWidthFor(size.width - 8, widest);
+              final men = <Widget>[];
+              for (final row in _rows) {
+                final line = byRow[row]!;
+                if (line.isEmpty) continue;
+                final ly = -pl.ph + (Pitch3D.rows[row] ?? 0) * pl.m;
+                final scale = 1 - Pitch3D.shrink * (1 - project(0, ly).k);
+                // ⭐⭐ The keeper is placed in the goal mouth, not on the pitch (ADR spike):
+                // the one place on a perspective view with room going spare.
+                final isKeeper = row == 'GK';
+                final q = project(0, ly);
+                // ⚠️⚠️ **Across the screen, not across the pitch.** Spread in pitch metres the cards
+                // ran off both edges and collided in the middle — the pitch is 1.41x the screen, so
+                // 82% of *it* is wider than the phone. ⭐ *Depth is a pitch measurement; legibility is
+                // a screen one*, so a row takes its y from the plane and its x from the box.
+                final avail = size.width - 8;
+                final cw = Pitch3D.cardW * scale;
+                final gap = (avail - line.length * cw) / (line.length + 1);
+                for (var i = 0; i < line.length; i++) {
+                  men.add(
+                    Positioned(
+                      left:
+                          4 +
+                          gap * (i + 1) +
+                          cw * (i + 0.5) -
+                          Pitch3D.cardW / 2,
+                      top: isKeeper
+                          ? keeperCentre(pl, Pitch3D.cardW)
+                          : pl.oy + q.y,
+                      child: FractionalTranslation(
+                        translation: const Offset(0, -0.5),
+                        child: SizedBox(
+                          width: Pitch3D.cardW,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: card(line[i], Pitch3D.cardW),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              }
+              return Stack(
+                children: [
+                  const Positioned.fill(child: TiltedPitch()),
+                  ...men,
+                ],
+              );
+            },
+          );
+          if (sideways) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: board),
+                Center(
+                  child: FittedBox(fit: BoxFit.scaleDown, child: benchPanel),
+                ),
+              ],
+            );
+          }
+          return Column(
+            children: [
+              Expanded(child: board),
+              benchPanel,
+              if (footer != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                  child: footer!,
+                ),
+            ],
+          );
+        }
 
         final pitch = Column(
           children: [
