@@ -71,7 +71,7 @@ class PastGameweek extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(Brand.radiusMd),
             ),
-            child: PitchMarkings(
+            child: PitchTurf(
               child: ResultPitch(
                 result: result,
                 // ⭐ The week that was played — the sheet opens on the result, not on a projection.

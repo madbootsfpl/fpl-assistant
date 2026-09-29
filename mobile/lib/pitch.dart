@@ -184,25 +184,32 @@ class PitchBoard<T> extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                child: Column(
-                  children: [
-                    // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.** With
-                    // `spaceEvenly` the rows demanded their intrinsic height and overflowed by 4px on a
-                    // 760pt screen once the footer was added — and a smaller phone, or a stale-data
-                    // banner, would clip a whole row of shirts. ⭐ *A pitch that must be given enough
-                    // room is not a pitch that fills the room it is given.*
-                    for (final row in _rows)
-                      if (byRow[row]!.isNotEmpty)
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              for (final p in byRow[row]!) card(p, cardWidth),
-                            ],
+                // ⭐⭐⭐ **The markings go here, around the eleven — not around the board** (ADR-330).
+                // 🔴 Wrapped around the whole board they centred on a box that includes the bench, so the
+                // halfway line fell **53px right of the team in landscape and 132px below it in
+                // portrait**. The grass still runs behind everything (ADR-253); only the paint stops.
+                // ⚠️ *On a real pitch the grass runs past the touchline and the paint does not.*
+                child: PitchLines(
+                  child: Column(
+                    children: [
+                      // ⚠️⚠️ **Each row `Expanded`, so the four divide whatever height there is.** With
+                      // `spaceEvenly` the rows demanded their intrinsic height and overflowed by 4px on a
+                      // 760pt screen once the footer was added — and a smaller phone, or a stale-data
+                      // banner, would clip a whole row of shirts. ⭐ *A pitch that must be given enough
+                      // room is not a pitch that fills the room it is given.*
+                      for (final row in _rows)
+                        if (byRow[row]!.isNotEmpty)
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                for (final p in byRow[row]!) card(p, cardWidth),
+                              ],
+                            ),
                           ),
-                        ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -346,7 +353,7 @@ class PitchView extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(Brand.radiusMd),
             ),
-            child: PitchMarkings(
+            child: PitchTurf(
               // ⭐⭐ **One measurement, used by the eleven and the bench.** Scoped to the rows alone it
               // left a tablet drawing big shirts above a 70pt bench — ⚠️ *a fix that stops at the edge
               // of the thing that was reported is a fix that creates the next report.*

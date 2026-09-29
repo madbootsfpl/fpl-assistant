@@ -29,7 +29,7 @@ Future<List<({Offset centre, double radius, bool isArc})>> circlesAt(
           child: SizedBox(
             width: size.width,
             height: size.height,
-            child: const PitchMarkings(child: SizedBox.expand()),
+            child: const PitchLines(child: SizedBox.expand()),
           ),
         ),
       ),
@@ -60,7 +60,7 @@ Future<void> pumpPitch(WidgetTester tester) => tester.pumpWidget(
       body: SizedBox(
         width: 390,
         height: 760,
-        child: PitchMarkings(child: SizedBox.expand()),
+        child: PitchTurf(child: SizedBox.expand()),
       ),
     ),
   ),

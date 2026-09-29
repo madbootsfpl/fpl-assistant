@@ -53,7 +53,7 @@ void main() {
     );
     expect(tester.takeException(), isNull);
 
-    final pitch = tester.getSize(find.byType(PitchMarkings));
+    final pitch = tester.getSize(find.byType(PitchTurf));
     // ⚠️ **A proportion, not a pixel count.** Pinning 640 would fail on the next phone; the claim is that
     // the pitch is the screen, and a screen where the main subject gets less than half is not.
     expect(
@@ -79,7 +79,7 @@ void main() {
       ),
     );
 
-    final green = tester.getRect(find.byType(PitchMarkings));
+    final green = tester.getRect(find.byType(PitchTurf));
     final bench = tester.getRect(find.text('BENCH'));
     // ⭐ Integrated and still plainly separate — the thing the owner asked for. A bench *below* the green
     // reads as a different screen that happens to be nearby.
@@ -100,7 +100,7 @@ void main() {
         ),
       ),
     );
-    final green = tester.getRect(find.byType(PitchMarkings));
+    final green = tester.getRect(find.byType(PitchTurf));
     final footer = tester.getRect(find.text('FOOTER'));
     expect(footer.bottom, lessThanOrEqualTo(green.bottom));
   });
@@ -136,7 +136,7 @@ void main() {
         ),
       ),
     );
-    final green = tester.getRect(find.byType(PitchMarkings));
+    final green = tester.getRect(find.byType(PitchTurf));
     final mark = tester.getRect(find.textContaining('MAD').first);
     // ⭐ Inside the green: present, and costing no row of its own.
     expect(mark.top, greaterThan(green.top));

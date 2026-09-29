@@ -11,6 +11,15 @@
 ///
 /// ⚠️ **The markings are orientation, not content**: the eye must land on the xP number first. ADR-135 is
 /// this project's record of what happens when a surface is over-densified.
+///
+/// ⭐⭐⭐ **The grass and the lines are two widgets, and that is the whole of ADR-330.** [PitchTurf] fills
+/// whatever box it is given — the green runs behind the bench, which is ADR-253 and still right. [PitchLines]
+/// is laid out over **the playing area only**, because that is where the team stands.
+///
+/// 🔴 They were one widget, so the markings centred on the box *including* the bench while the players
+/// centred on the box *without* it: **53px out in landscape, 132px in portrait.** ⚠️ *On a real pitch the
+/// grass runs past the touchline and the paint does not* — one widget could not say that, so it said
+/// something false in both orientations.
 library;
 
 import 'dart:math' as math;
@@ -36,16 +45,17 @@ Future<ui.Image> _turf() => _turfRequest ??= () async {
 @visibleForTesting
 void resetTurfForTest() => _turfRequest = null;
 
-class PitchMarkings extends StatefulWidget {
-  const PitchMarkings({required this.child, super.key});
+/// The grass. ⭐ Fills its box completely — it is the surface, not the pitch.
+class PitchTurf extends StatefulWidget {
+  const PitchTurf({required this.child, super.key});
 
   final Widget child;
 
   @override
-  State<PitchMarkings> createState() => _PitchMarkingsState();
+  State<PitchTurf> createState() => _PitchTurfState();
 }
 
-class _PitchMarkingsState extends State<PitchMarkings> {
+class _PitchTurfState extends State<PitchTurf> {
   ui.Image? _grass;
 
   @override
@@ -54,39 +64,32 @@ class _PitchMarkingsState extends State<PitchMarkings> {
     // ⭐⭐ **The pitch draws immediately and the turf arrives late.** Until it does, `_Markings` paints the
     // gradient this widget shipped with — ⚠️ *a pitch that waits for an image is a pitch that flashes
     // empty*, and on a cold start that is the first thing anyone sees.
-    _turf().then((image) {
-      if (mounted) setState(() => _grass = image);
-    }).catchError((Object _) {
-      // A missing or corrupt asset must not take the pitch down: the gradient is a complete answer.
-    });
+    _turf()
+        .then((image) {
+          if (mounted) setState(() => _grass = image);
+        })
+        .catchError((Object _) {
+          // A missing or corrupt asset must not take the pitch down: the gradient is a complete answer.
+        });
   }
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    painter: _Markings(_grass),
+    painter: _Turf(_grass),
     // ⚠️ `isComplex` off and no animation: this repaints only when the pitch resizes, or once, when the
     // turf lands.
     child: widget.child,
   );
 }
 
-class _Markings extends CustomPainter {
-  _Markings(this.grass);
+class _Turf extends CustomPainter {
+  _Turf(this.grass);
 
   /// Null until the asset decodes, and after any failure to.
   final ui.Image? grass;
 
-  /// ⚠️⚠️ **0.42, where this was 0.22 for most of the app's life** (ADR-329). Not a change of mind about
-  /// how loud the markings should be: at 0.22 they were tuned against a flat two-stop gradient, and a
-  /// photograph of grass has texture of its own at roughly that contrast. ⭐ *A line drawn faintly over a
-  /// flat colour reads as a line; the same line over noise reads as more noise.*
-  static final Paint _line = Paint()
-    ..color = Colors.white.withValues(alpha: 0.42)
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.4;
-
-  static final Paint _spot = Paint()..color = Colors.white.withValues(alpha: 0.42);
-  static final Paint _stripe = Paint()..color = Colors.white.withValues(alpha: 0.035);
+  static final Paint _stripe = Paint()
+    ..color = Colors.white.withValues(alpha: 0.035);
 
   /// The pitch under the turf, and the whole pitch when there is no turf.
   static const Color _base = Color(0xFF146B30);
@@ -99,42 +102,6 @@ class _Markings extends CustomPainter {
   /// ⭐ Chosen on the phone and left alone on the tablet: the blades are a real size, so scaling the tile
   /// with the screen would make a tablet's grass look like a lawn seen from lower down.
   static const double _tile = 180;
-
-  /// The penalty arc, **computed rather than guessed**.
-  ///
-  /// ⚠️⚠️ **This is the bug the owner saw as "distortion".** The first version passed literal start and
-  /// sweep angles — `0.46`, `2.22` — chosen because they looked about right on one screen size. They are
-  /// not a property of the drawing; they are a property of the *phone it was drawn on*, so on any other
-  /// aspect ratio the D swept most of a circle and cut through the cards.
-  ///
-  /// ⭐ The real rule: an arc of radius [r] about the penalty spot, showing **only the part outside the
-  /// penalty area**. Where the arc crosses the box edge is `asin((edge − spot) / r)` — so the angles fall
-  /// out of the geometry and are correct at every size.
-  static void _penaltyArc(
-    Canvas canvas,
-    Offset spot,
-    double r,
-    double edgeY, {
-    required bool bulgeDown,
-  }) {
-    final ratio = (edgeY - spot.dy) / r;
-    // |ratio| >= 1 means the box edge lies beyond the arc entirely — nothing to draw, and drawing anyway is
-    // how a stray curve appears across the pitch.
-    if (ratio.abs() >= 1) return;
-    final crossing = math.asin(ratio);
-    final rect = Rect.fromCircle(center: spot, radius: r);
-    if (bulgeDown) {
-      canvas.drawArc(rect, crossing, math.pi - 2 * crossing, false, _line);
-    } else {
-      canvas.drawArc(
-        rect,
-        math.pi - crossing,
-        math.pi + 2 * crossing,
-        false,
-        _line,
-      );
-    }
-  }
 
   /// The grass, then the two lighting layers that sit **under** the markings.
   ///
@@ -199,7 +166,12 @@ class _Markings extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0x0AFFFFFF), Color(0x00FFFFFF), Color(0x00000000), Color(0x19000000)],
+          colors: [
+            Color(0x0AFFFFFF),
+            Color(0x00FFFFFF),
+            Color(0x00000000),
+            Color(0x19000000),
+          ],
           stops: [0, 0.3, 0.7, 1],
         ).createShader(full),
     );
@@ -207,15 +179,97 @@ class _Markings extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    _paintTurf(canvas, w, h);
+    _paintTurf(canvas, size.width, size.height);
 
     // Mown stripes, horizontal so they read as depth rather than as columns fighting the card grid.
+    // ⭐ They belong to the grass, not to the pitch: a mower does not stop at the touchline.
     for (var i = 0; i < _bands; i += 2) {
-      canvas.drawRect(Rect.fromLTWH(0, h / _bands * i, w, h / _bands), _stripe);
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          size.height / _bands * i,
+          size.width,
+          size.height / _bands,
+        ),
+        _stripe,
+      );
     }
+  }
+
+  /// ⚠️ Repaints once, when the turf lands. *A painter that never repaints cannot show an image it did
+  /// not have when it was built.*
+  @override
+  bool shouldRepaint(covariant _Turf oldDelegate) => oldDelegate.grass != grass;
+}
+
+/// The white markings, laid out over **the playing area** — never over the bench.
+///
+/// ⭐⭐ *The grass runs past the touchline; the paint does not.* [PitchBoard] gives this the same box the
+/// eleven divide between them, so the halfway line falls through the middle of the team rather than
+/// through the middle of the screen.
+class PitchLines extends StatelessWidget {
+  const PitchLines({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _Lines(), child: child);
+}
+
+class _Lines extends CustomPainter {
+  /// ⚠️⚠️ **0.42, where this was 0.22 for most of the app's life** (ADR-329). Not a change of mind about
+  /// how loud the markings should be: at 0.22 they were tuned against a flat two-stop gradient, and a
+  /// photograph of grass has texture of its own at roughly that contrast. ⭐ *A line drawn faintly over a
+  /// flat colour reads as a line; the same line over noise reads as more noise.*
+  static final Paint _line = Paint()
+    ..color = Colors.white.withValues(alpha: 0.42)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.4;
+
+  static final Paint _spot = Paint()
+    ..color = Colors.white.withValues(alpha: 0.42);
+
+  /// The penalty arc, **computed rather than guessed**.
+  ///
+  /// ⚠️⚠️ **This is the bug the owner saw as "distortion".** The first version passed literal start and
+  /// sweep angles — `0.46`, `2.22` — chosen because they looked about right on one screen size. They are
+  /// not a property of the drawing; they are a property of the *phone it was drawn on*, so on any other
+  /// aspect ratio the D swept most of a circle and cut through the cards.
+  ///
+  /// ⭐ The real rule: an arc of radius [r] about the penalty spot, showing **only the part outside the
+  /// penalty area**. Where the arc crosses the box edge is `asin((edge − spot) / r)` — so the angles fall
+  /// out of the geometry and are correct at every size.
+  static void _penaltyArc(
+    Canvas canvas,
+    Offset spot,
+    double r,
+    double edgeY, {
+    required bool bulgeDown,
+  }) {
+    final ratio = (edgeY - spot.dy) / r;
+    // |ratio| >= 1 means the box edge lies beyond the arc entirely — nothing to draw, and drawing anyway is
+    // how a stray curve appears across the pitch.
+    if (ratio.abs() >= 1) return;
+    final crossing = math.asin(ratio);
+    final rect = Rect.fromCircle(center: spot, radius: r);
+    if (bulgeDown) {
+      canvas.drawArc(rect, crossing, math.pi - 2 * crossing, false, _line);
+    } else {
+      canvas.drawArc(
+        rect,
+        math.pi - crossing,
+        math.pi + 2 * crossing,
+        false,
+        _line,
+      );
+    }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
 
     const inset = 6.0;
     final field = Rect.fromLTWH(inset, inset, w - inset * 2, h - inset * 2);
@@ -269,8 +323,6 @@ class _Markings extends CustomPainter {
     }
   }
 
-  /// ⚠️ Repaints once, when the turf lands. *A painter that never repaints cannot show an image it did
-  /// not have when it was built.*
   @override
-  bool shouldRepaint(covariant _Markings oldDelegate) => oldDelegate.grass != grass;
+  bool shouldRepaint(covariant _Lines oldDelegate) => false;
 }

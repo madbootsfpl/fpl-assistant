@@ -135,7 +135,7 @@ void main() {
     await tester.pumpWidget(screen(PastGameweek(result: week())));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.byType(PitchMarkings), findsOneWidget);
+    expect(find.byType(PitchTurf), findsOneWidget);
     expect(find.byType(ResultPitch), findsOneWidget);
     // ⚠️ And it is the *same* board the live pitch uses — not a second copy of the layout.
     expect(find.byType(PitchBoard<GameweekPlayer>), findsOneWidget);
