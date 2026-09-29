@@ -228,7 +228,10 @@ void _bankMayBeUnknown() {
       tester,
       sent: sent,
       team: sampleTeam(name: 'The 4-4-2 Towers'),
-      reply: {'headline': 'Captain pick (The 4-4-2 Towers): Haaland', 'intent': 'captain'},
+      reply: {
+        'headline': 'Captain pick (The 4-4-2 Towers): Haaland',
+        'intent': 'captain',
+      },
     );
 
     await tester.enterText(find.byType(TextField), 'who should I captain?');

@@ -23,11 +23,9 @@ import 'package:madboots/this_week_view.dart';
 
 MyTeam _team() => MyTeam.fromJson(
   jsonDecode(
-        File(
-          '../spikes/018-flutter-read-slice/api-samples/my-team.json',
-        ).readAsStringSync(),
-      )
-      as Map<String, dynamic>,
+    File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
+        .readAsStringSync(),
+  ) as Map<String, dynamic>,
 );
 
 Map<String, dynamic> _move(

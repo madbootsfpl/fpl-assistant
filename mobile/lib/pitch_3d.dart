@@ -14,19 +14,21 @@ import 'package:flutter/services.dart';
 
 /// Spike-grade knobs: mutable statics, so a render can sweep them. Real code would not do this.
 class Pitch3D {
-  /// 🔴🔴 **THE REVERT SWITCH.** Set this to `false` and the app draws the flat 2D grass pitch that
-  /// shipped in build 33 — `PitchTurf` and `PitchLines` are still there, still tested, and still
-  /// correct. Nothing else has to change and no history has to be rewritten.
+  /// 🔴🔴 **OFF. The perspective pitch was tried and reverted** (ADR-333). The app draws the flat 2D
+  /// grass pitch — `PitchTurf` and `PitchLines` — which is where the turf (ADR-329), the tuned
+  /// markings and the centring fix (ADR-330) all live and all still ship.
   ///
-  /// ⭐ *A new look that cannot be turned off is a new look you have to be sure about.* This one can,
-  /// which is why it could ship at all. The 2D path is kept alive by its own tests
-  /// (`pitch_markings_test.dart`, `the_pitch_is_centred_on_the_team_test.dart`), so it cannot rot
-  /// quietly while it waits.
+  /// ⚠️⚠️ **It was not a tuning problem.** This layout positions rows at fixed fractions of the board,
+  /// so a card has to fit the gap and nothing makes it. The flat pitch divides its space with
+  /// `Expanded`, which works for any card height including ones that do not exist yet — and the
+  /// season card is 111px against the live card's 80, so it overlapped by construction.
   ///
-  /// ⚠️ It is also `const`-free on purpose: a test can flip it, which is how both paths stay covered.
+  /// ⭐⭐⭐ *A layout that has to be told about its content will be wrong about content nobody told it
+  /// about* — three surfaces broke that I had never rendered, each behind a green suite.
   ///
-  /// The build that last shipped without any of this is tagged **`pitch-2d`**.
-  static bool on = true;
+  /// Set to `true` to see it again. The last build that shipped it is **1.0.0+35**; the last without
+  /// it is tagged **`pitch-2d`**.
+  static bool on = false;
 
   // The owner's own numbers, tuned in the preview.
   static const double tilt = 39; // degrees

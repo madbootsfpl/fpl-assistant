@@ -145,7 +145,11 @@ void main() {
       final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
       final image = (await codec.getNextFrame()).image;
 
-      expect(image.width, image.height, reason: 'the tile must be square to repeat');
+      expect(
+        image.width,
+        image.height,
+        reason: 'the tile must be square to repeat',
+      );
       expect(image.width, 512);
     });
   });

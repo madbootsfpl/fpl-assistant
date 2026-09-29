@@ -84,6 +84,12 @@ const formations = ['4-4-2', '5-4-1', '3-5-2', '3-4-3', '5-3-2'];
 const screens = {'390x760': Size(390, 760), '360x640': Size(360, 640)};
 
 void main() {
+  // ⚠️ **These pin code that is retained but switched off** (ADR-333). The perspective pitch is not
+  // what the app draws any more; it is kept because the ADRs describe it and the owner may want
+  // another run at it. ⭐ *Retained code with no tests is not retained, it is abandoned in place.*
+  setUp(() => Pitch3D.on = true);
+  tearDown(() => Pitch3D.on = false);
+
   for (final shape in formations) {
     testWidgets('$shape: no card overlaps another', (tester) async {
       final cards = await cardsFor(tester, shape, const Size(390, 760));
@@ -195,7 +201,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(Pitch3D.on, isTrue, reason: 'the 3D pitch should still be enabled');
+    expect(Pitch3D.on, isTrue, reason: 'this test enables it deliberately');
     expect(
       find.byType(TiltedPitch),
       findsNothing,

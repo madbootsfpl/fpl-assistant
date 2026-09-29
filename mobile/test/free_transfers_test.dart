@@ -24,12 +24,10 @@ import 'package:madboots/pitch.dart';
 import 'package:madboots/settings_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Map<String, dynamic> _raw() =>
-    jsonDecode(
-          File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
-              .readAsStringSync(),
-        )
-        as Map<String, dynamic>;
+Map<String, dynamic> _raw() => jsonDecode(
+  File('../spikes/018-flutter-read-slice/api-samples/my-team.json')
+      .readAsStringSync(),
+) as Map<String, dynamic>;
 
 MyTeam team({int free = 2, String source = 'history', int? implied = 2}) {
   final raw = _raw();
@@ -39,9 +37,7 @@ MyTeam team({int free = 2, String source = 'history', int? implied = 2}) {
   return MyTeam.fromJson(raw);
 }
 
-Widget wrap(Widget child) => MaterialApp(
-  home: Scaffold(body: child),
-);
+Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 void main() {
   group('the number survives the app closing', () {
@@ -107,7 +103,8 @@ void main() {
       expect(
         find.text('2 free'),
         findsOneWidget,
-        reason: 'a bare number under "Transfers" reads as "2 used" just as well',
+        reason:
+            'a bare number under "Transfers" reads as "2 used" just as well',
       );
       expect(find.text('Transfers'), findsOneWidget);
     });
@@ -150,21 +147,14 @@ void main() {
     });
 
     testWidgets('it says when the manager overruled it', (tester) async {
-      await open(
-        tester,
-        t: team(free: 1, source: 'you', implied: 4),
-        value: 1,
-      );
+      await open(tester, t: team(free: 1, source: 'you', implied: 4), value: 1);
       expect(find.textContaining('Using your 1'), findsOneWidget);
       // ⭐ Both numbers, so the screen can be checked rather than believed.
       expect(find.textContaining('history says 4'), findsOneWidget);
     });
 
     testWidgets('it admits when it could not check', (tester) async {
-      await open(
-        tester,
-        t: team(free: 1, source: 'default', implied: null),
-      );
+      await open(tester, t: team(free: 1, source: 'default', implied: null));
       expect(find.textContaining('could not be read'), findsOneWidget);
     });
 
@@ -200,11 +190,9 @@ void main() {
       );
       await tester.tap(find.text('Auto'));
       await tester.pump();
-      expect(
-        told,
-        [null],
-        reason: 'null is what puts the number back under the server',
-      );
+      expect(told, [
+        null,
+      ], reason: 'null is what puts the number back under the server');
     });
   });
 

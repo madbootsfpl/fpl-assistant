@@ -338,22 +338,26 @@ void main() {
     // problem: the bonus and saves pips are circles too, so *a goal and a bonus point were the same
     // shape.* ⭐ Matching the painter asks the question the test means — **is this a football?** — rather
     // than a question about the box it happens to sit in.
-    expect(_painted(tester, 'Ball'), 2, reason: 'two goals should draw two footballs');
+    expect(
+      _painted(tester, 'Ball'),
+      2,
+      reason: 'two goals should draw two footballs',
+    );
 
     // One assist → one boot.
     // ⚠️ A drawn boot, not an icon: Material has no football boot and the nearest was a ball
     // outline — the one shape it must not be, on a strip whose first icon is a ball.
-    expect(_painted(tester, 'Boot'), 1, reason: 'one assist should draw one boot');
+    expect(
+      _painted(tester, 'Boot'),
+      1,
+      reason: 'one assist should draw one boot',
+    );
     // One clean sheet → one shield.
     expect(find.byIcon(Icons.shield), findsOneWidget);
     // ⭐ Bonus in its own coloured circle, which is how FPL itself prints it.
     final bonus = tester
         .widgetList<Container>(find.byType(Container))
-        .where(
-          (c) =>
-              (c.decoration as BoxDecoration?)?.color ==
-              Brand.bonus,
-        )
+        .where((c) => (c.decoration as BoxDecoration?)?.color == Brand.bonus)
         .length;
     expect(bonus, 1, reason: 'the bonus pip is missing');
     expect(find.text('3'), findsWidgets, reason: 'the bonus count');
@@ -392,7 +396,9 @@ void main() {
     expect(find.textContaining('ARS (H)'), findsWidgets);
   });
 
-  testWidgets('a goal and a bonus point are not the same shape', (tester) async {
+  testWidgets('a goal and a bonus point are not the same shape', (
+    tester,
+  ) async {
     // ⚠️⚠️⚠️ **They were.** The goal was a plain white circle and the bonus is a coloured circle with a
     // number in it, so on a 13pt strip the two events differed only by a digit nobody reads at that size —
     // ⭐ *an icon that has to be told apart from the icon beside it is doing less work than the word it
@@ -400,38 +406,74 @@ void main() {
     //
     // ⭐⭐ ADR-313 gives the goal a **pattern**: a centre panel and three rim marks, the fewest that say
     // football rather than circle at this size.
-    final scored = week(squad: [
-      man(id: 1, name: 'Scorer', position: 'FWD', goals: 1),
-      man(id: 2, name: 'Bonus', position: 'FWD', bonus: 3),
-    ]);
+    final scored = week(
+      squad: [
+        man(id: 1, name: 'Scorer', position: 'FWD', goals: 1),
+        man(id: 2, name: 'Bonus', position: 'FWD', bonus: 3),
+      ],
+    );
     await tester.pumpWidget(screen(PastGameweek(result: scored)));
     await tester.pumpAndSettle();
 
-    expect(_painted(tester, 'Ball'), 1, reason: 'the goal is not drawn as a football');
+    expect(
+      _painted(tester, 'Ball'),
+      1,
+      reason: 'the goal is not drawn as a football',
+    );
     // ⚠️ `findsWidgets`, not `findsOneWidget`: the card prints the **points** too, and a three-point
     // bonus on a three-point card puts the same digit on screen twice. ⭐ *A test that counts a string
     // is counting everything that happens to be spelled that way.*
     expect(find.text('3'), findsWidgets, reason: 'the bonus count');
     // ⭐ The distinctness that matters: the bonus sits on its own amber pip, not the event disc.
-    expect(_badges(tester, Brand.bonus), 1, reason: 'the bonus is not on its own pip');
-    expect(_badges(tester, Brand.eventDisc), 1, reason: 'only the goal should take an event disc');
+    expect(
+      _badges(tester, Brand.bonus),
+      1,
+      reason: 'the bonus is not on its own pip',
+    );
+    expect(
+      _badges(tester, Brand.eventDisc),
+      1,
+      reason: 'only the goal should take an event disc',
+    );
   });
 
-  testWidgets('every event glyph takes its colour from brand.py', (tester) async {
+  testWidgets('every event glyph takes its colour from brand.py', (
+    tester,
+  ) async {
     // ⚠️ The strip carried **four hard-coded hexes** — mint, steel blue, amber — retyped on the surface
     // furthest from `brand.py`. ⭐ ADR-312's rule, applied one component along: *consume these, do not
     // re-type hexes.*
-    final full = week(squad: [
-      man(id: 1, name: 'All', position: 'MID', goals: 1, assists: 1, bonus: 2, cleanSheet: true),
-    ]);
+    final full = week(
+      squad: [
+        man(
+          id: 1,
+          name: 'All',
+          position: 'MID',
+          goals: 1,
+          assists: 1,
+          bonus: 2,
+          cleanSheet: true,
+        ),
+      ],
+    );
     await tester.pumpWidget(screen(PastGameweek(result: full)));
     await tester.pumpAndSettle();
 
-    expect(_badges(tester, Brand.eventDisc), 3,
-        reason: 'goal, assist and clean sheet each sit on the brand event disc');
-    expect(tester.widgetList<Icon>(find.byIcon(Icons.shield)).single.color, Brand.cleanSheet,
-        reason: 'the clean-sheet shield is not the brand colour');
-    expect(_badges(tester, Brand.bonus), 1, reason: 'the bonus pip is not the brand amber');
+    expect(
+      _badges(tester, Brand.eventDisc),
+      3,
+      reason: 'goal, assist and clean sheet each sit on the brand event disc',
+    );
+    expect(
+      tester.widgetList<Icon>(find.byIcon(Icons.shield)).single.color,
+      Brand.cleanSheet,
+      reason: 'the clean-sheet shield is not the brand colour',
+    );
+    expect(
+      _badges(tester, Brand.bonus),
+      1,
+      reason: 'the bonus pip is not the brand amber',
+    );
   });
 }
 

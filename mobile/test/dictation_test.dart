@@ -63,7 +63,9 @@ Future<void> pump(WidgetTester tester, FakeMic mic) async {
         body: AskView(
           client: ServiceClient(
             baseUrl: 'http://x',
-            client: MockClient((_) async => http.Response('{"headline":"ok"}', 200)),
+            client: MockClient(
+              (_) async => http.Response('{"headline":"ok"}', 200),
+            ),
           ),
           team: sampleTeam(),
           dictation: mic,
@@ -75,13 +77,17 @@ Future<void> pump(WidgetTester tester, FakeMic mic) async {
 }
 
 void main() {
-  testWidgets('a microphone is offered when the device has one', (tester) async {
+  testWidgets('a microphone is offered when the device has one', (
+    tester,
+  ) async {
     await pump(tester, FakeMic());
 
     expect(find.byIcon(Icons.mic_none), findsOneWidget);
   });
 
-  testWidgets('no microphone, no button — and the keyboard still works', (tester) async {
+  testWidgets('no microphone, no button — and the keyboard still works', (
+    tester,
+  ) async {
     // ⚠️⚠️ **Hidden, not disabled.** ⭐ *A control that cannot work is worse than no control: it invites a
     // tap and answers with nothing.* The field must remain the ordinary way in.
     await pump(tester, FakeMic(canListen: false));
@@ -91,7 +97,11 @@ void main() {
 
     expect(find.byIcon(Icons.mic_none), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_upward), findsOneWidget, reason: 'send is still there');
+    expect(
+      find.byIcon(Icons.arrow_upward),
+      findsOneWidget,
+      reason: 'send is still there',
+    );
   });
 
   testWidgets('listening looks unmistakably different', (tester) async {
@@ -125,7 +135,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('who should i captain'), findsOneWidget);
-    expect(find.byIcon(Icons.mic_none), findsOneWidget, reason: 'listening ended, so the mic resets');
+    expect(
+      find.byIcon(Icons.mic_none),
+      findsOneWidget,
+      reason: 'listening ended, so the mic resets',
+    );
   });
 
   testWidgets('tapping again stops it', (tester) async {
@@ -151,9 +165,15 @@ void main() {
     await tester.tap(find.byIcon(Icons.mic_none));
     await tester.pumpAndSettle();
 
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SizedBox())),
+    );
     await tester.pumpAndSettle();
 
-    expect(mic.stops, greaterThanOrEqualTo(1), reason: 'dispose did not stop it');
+    expect(
+      mic.stops,
+      greaterThanOrEqualTo(1),
+      reason: 'dispose did not stop it',
+    );
   });
 }

@@ -15,7 +15,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madboots/api/models.dart';
 import 'package:madboots/pitch.dart';
-import 'package:madboots/pitch_3d.dart';
 import 'package:madboots/pitch_markings.dart';
 
 MyTeam sampleTeam() => MyTeam.fromJson(
@@ -38,10 +37,7 @@ Widget screen(Widget child) => MaterialApp(
 );
 
 void main() {
-  // 🔴 **These pin the 2D pitch, which is now the revert path** (ADR-331). `Pitch3D.on = false` is the
-  // one switch back to what build 33 shipped, and a switch nothing tests is a switch nobody can trust.
-  setUp(() => Pitch3D.on = false);
-  tearDown(() => Pitch3D.on = true);
+  // ⭐ The flat pitch is what the app draws again (ADR-333); these need nothing switched.
 
   _landscape();
   _scaling();
