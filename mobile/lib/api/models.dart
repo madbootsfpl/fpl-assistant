@@ -50,6 +50,7 @@ class PlayerSummary {
     required this.minutesWeight,
     required this.leaving,
     required this.byGameweek,
+    this.priceDirection = 'stable',
   });
 
   factory PlayerSummary.fromJson(Map<String, dynamic> json) => PlayerSummary(
@@ -64,6 +65,33 @@ class PlayerSummary {
     minutesWeight: (json['minutes_weight'] as num?)?.toDouble() ?? 1.0,
     leaving: json['leaving'] as Map<String, dynamic>?,
     byGameweek: _gameweeks(json['by_gameweek']),
+  );
+
+  /// `rise` · `fall` · `stable` — the price forecast (ADR-092, recalibrated ADR-334).
+  ///
+  /// ⚠️ Defaults to `stable`: a player parsed from an answer that carries no directions says *no
+  /// opinion* rather than breaking. ⭐ Only the board joins it on; my-team says the same thing in
+  /// `prices`, and two spellings of one fact is how they drift.
+  final String priceDirection;
+
+  bool get rising => priceDirection == 'rise';
+  bool get falling => priceDirection == 'fall';
+
+  /// ⭐ The direction arrives beside the list, not inside the player (ADR-227/336), so it is joined on
+  /// after parsing rather than read from the row.
+  PlayerSummary withPriceDirection(String direction) => PlayerSummary(
+    id: id,
+    name: name,
+    team: team,
+    position: position,
+    price: price,
+    xp: xp,
+    status: status,
+    chance: chance,
+    minutesWeight: minutesWeight,
+    leaving: leaving,
+    byGameweek: byGameweek,
+    priceDirection: direction,
   );
 
   final int id;

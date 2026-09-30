@@ -66,6 +66,15 @@ class _PlayersViewState extends State<PlayersView> {
   /// meant typing his name into a search box that already knows who you own.
   bool _mineOnly = false;
 
+  /// ⭐⭐ **`'rise'` or `'fall'`, or nothing** (ADR-336). Mobile had no price movement at all — price was a
+  /// max-price filter and nothing else — so someone told *"he may rise if you wait"* on a transfer card
+  /// had nowhere to go and check.
+  ///
+  /// ⚠️ A **filter**, not a board. A risers leaderboard is a different thing competing with this page for
+  /// the same job; ⭐ *the cheapest version of a feature is the one that reuses the screen people already
+  /// know.*
+  String? _priceDirection;
+
   @override
   void dispose() {
     _search.dispose();
@@ -80,6 +89,9 @@ class _PlayersViewState extends State<PlayersView> {
       if (_mineOnly && !widget.owned.contains(p.id)) return false;
       if (_minXp != null && p.xp < _minXp!) return false;
       if (_club != null && p.team != _club) return false;
+      if (_priceDirection != null && p.priceDirection != _priceDirection) {
+        return false;
+      }
       if (term.isEmpty) return true;
       // ⭐ Name **or** club: "ars" should find Arsenal's players, which is how a manager actually looks.
       return p.name.toLowerCase().contains(term) ||
@@ -95,6 +107,8 @@ class _PlayersViewState extends State<PlayersView> {
       if (_maxPrice != null) 'under £${_maxPrice!.toStringAsFixed(1)}m',
       if (_mineOnly) 'your squad',
       if (_minXp != null) '${_minXp!.toStringAsFixed(0)}+ xP',
+      if (_priceDirection == 'rise') 'rising',
+      if (_priceDirection == 'fall') 'falling',
       ?_club,
     ];
   }
@@ -253,12 +267,23 @@ class _PlayersViewState extends State<PlayersView> {
                     on: true,
                     onTap: () => setState(() => _club = null),
                   ),
+                if (_priceDirection != null)
+                  // ⚠️ **'Movement', not 'Price'.** The max-price filter beside it is already labelled
+                  // Price, and two chips both reading `Price: …` would be two questions wearing one name.
+                  _ValueChip(
+                    label: 'Movement',
+                    value: _priceDirection == 'rise' ? 'rising' : 'falling',
+                    on: true,
+                    onTap: () => setState(() => _priceDirection = null),
+                  ),
                 _AddFilter(
                   clubs: _clubsIn(all),
                   hasXp: _minXp != null,
                   hasClub: _club != null,
+                  hasPrice: _priceDirection != null,
                   onXp: (v) => setState(() => _minXp = v),
                   onClub: (c) => setState(() => _club = c),
+                  onPrice: (d) => setState(() => _priceDirection = d),
                 ),
                 _ValueChip(
                   label: 'Price',
@@ -1011,15 +1036,19 @@ class _AddFilter extends StatelessWidget {
     required this.clubs,
     required this.hasXp,
     required this.hasClub,
+    required this.hasPrice,
     required this.onXp,
     required this.onClub,
+    required this.onPrice,
   });
 
   final List<String> clubs;
   final bool hasXp;
   final bool hasClub;
+  final bool hasPrice;
   final ValueChanged<double> onXp;
   final ValueChanged<String> onClub;
+  final ValueChanged<String> onPrice;
 
   @override
   Widget build(BuildContext context) {
@@ -1085,6 +1114,29 @@ class _AddFilter extends StatelessWidget {
                 if (picked != null) onXp(picked);
               },
             ),
+          if (!hasPrice) ...[
+            _Option(
+              icon: Icons.arrow_upward,
+              title: 'Rising in price',
+              // ⚠️ *"Under buying pressure"*, not *"will rise"*. The rule is right about 40% of the
+              // time (ADR-334) — ⭐ a title that promised the outcome would be wrong more often than the
+              // waiting it advises against.
+              why: 'Under buying pressure — may go up',
+              onTap: () {
+                Navigator.of(sheet).pop();
+                onPrice('rise');
+              },
+            ),
+            _Option(
+              icon: Icons.arrow_downward,
+              title: 'Falling in price',
+              why: 'Under selling pressure — may go down',
+              onTap: () {
+                Navigator.of(sheet).pop();
+                onPrice('fall');
+              },
+            ),
+          ],
           if (!hasClub)
             _Option(
               icon: Icons.shield_outlined,

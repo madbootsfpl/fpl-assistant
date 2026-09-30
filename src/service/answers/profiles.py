@@ -104,19 +104,36 @@ def players(request: PlayersRequest, *, store: Storage | None = None) -> dict:
             store.close()
 
     by_id = {p["id"]: p for p in data.players}
-    rows = [
-        player_summary(by_id[r["id"]], data.xp_by_id,
-                       {r["id"]: r["by_gameweek"] for r in data.ranked},
-                       {r["id"]: r["minutes_weight"] for r in data.ranked})
-        for r in data.ranked
-        if r["id"] in by_id and not is_unavailable(by_id[r["id"]])
-    ]
+
+    # ⭐⭐ **Bound over `data.players` — every player, not the rows being returned** (ADR-215). A percentile
+    # taken over the list on screen manufactures a top 5% *inside every filter*, so filtering to one club
+    # would find a riser at that club every week of the season. ⚠️ *The population is a decision, and it is
+    # made once, here.*
+    from src.analytics import price_detector
+    predict = price_detector(data.players)
+
+    rows = []
+    for r in data.ranked:
+        if r["id"] not in by_id or is_unavailable(by_id[r["id"]]):
+            continue
+        rows.append(player_summary(by_id[r["id"]], data.xp_by_id,
+                                   {r["id"]: r["by_gameweek"] for r in data.ranked},
+                                   {r["id"]: r["minutes_weight"] for r in data.ranked}))
+    shown = rows[:request.limit]
     return {
         "horizon": request.horizon,
         "gameweeks": data.ranked[0]["gameweeks"] if data.ranked else [],
         # ⭐ Stated so a client can say "667 of 720" rather than implying the list is everyone.
         "total": len(rows),
-        "players": rows[:request.limit],
+        "players": shown,
+        # ⚠️⚠️ **A sidecar map, not a field on the player** — and the first attempt was the field.
+        # `tests/test_player_shape.py` caught it: ADR-227 says every player in every answer is the same
+        # shape, built by `player_summary`, because four shapes once drifted far enough that one of them
+        # shipped 45 database columns to a phone. ⭐ *A rule about "every call site" only stays true if
+        # adding a field to one of them fails.*
+        #
+        # ⭐ my-team had already solved this the same way, in `prices`. Two answers, one habit.
+        "price_directions": {str(r["id"]): predict(by_id[r["id"]]) for r in shown},
     }
 
 #: ⭐ Six fixtures on the DNA page, where the pitch card shows three (`RUN`). A club's *run* is a longer

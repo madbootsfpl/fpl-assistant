@@ -312,9 +312,18 @@ class ServiceClient {
   /// ⚠️ Not under `/squad/` — this is the market, not your team.
   Future<List<PlayerSummary>> players({int horizon = 5}) async {
     final body = await _post('players', {'horizon': horizon, 'limit': 1000});
-    return ((body['players'] as List?) ?? [])
-        .map((p) => PlayerSummary.fromJson(p as Map<String, dynamic>))
-        .toList();
+    // ⚠️⚠️ **The direction arrives in a sidecar map, not on the player** (ADR-336). ADR-227 keeps every
+    // player in every answer the same shape — built by `player_summary` — because four shapes once
+    // drifted far enough that one of them shipped 45 database columns to a phone. ⭐ *The endpoint that
+    // wants an extra fact carries it beside the list, the way my-team carries `prices`.*
+    final directions = ((body['price_directions'] as Map?) ?? {}).map(
+      (k, v) => MapEntry(int.parse(k as String), v as String),
+    );
+    return ((body['players'] as List?) ?? []).map((p) {
+      final row = p as Map<String, dynamic>;
+      return PlayerSummary.fromJson(row)
+          .withPriceDirection(directions[row['id'] as int] ?? 'stable');
+    }).toList();
   }
 
   /// One player's fingerprint, ranked **within his position** (ADR-250).
