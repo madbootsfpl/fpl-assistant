@@ -672,6 +672,22 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
             "changed_this_gameweek": round((row.get("cost_change_event") or 0) / 10, 1),
         }
 
+    # ⭐⭐ **One line for the squad, because fifteen arrows is a reading exercise and a number is a
+    # decision** (ADR-335). It leans on falls deliberately: the rule catches **72%** of them against 24%
+    # of rises (ADR-334), so *"three of yours are about to drop"* is the claim it can actually support.
+    #
+    # ⚠️ `at_risk_value` is what those players are worth, not what they would lose — a price change is
+    # £0.1m each. ⭐ *The number that makes you look is the exposure; the number that matters is small,
+    # and saying the small one first is how a feature gets ignored.*
+    falling = [p for p in owned if prices[p["id"]]["direction"] == "fall"]
+    rising = [p for p in owned if prices[p["id"]]["direction"] == "rise"]
+    squad_price = {
+        "changed_this_gameweek": round(sum(v["changed_this_gameweek"] for v in prices.values()), 1),
+        "falling": len(falling),
+        "rising": len(rising),
+        "at_risk_value": round(sum((p["price"] or 0) for p in falling), 1),
+    }
+
     xp_by_id = {p["id"]: p["xp"] for p in answer["xi"] + answer["bench"]}
     suggested = _suggested_lineup(owned, bench_ids, xp_by_id, leaving)
     benched = [by_id[i] for i in bench_ids if i in by_id]
@@ -737,6 +753,7 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
         # ⚠️ Keyed by player id, which JSON turns into a string — the client parses it back. Unlike kits
         # and fixtures there is no club-level answer here: two Arsenal players move in price separately.
         "prices": prices,
+        "squad_price": squad_price,
         # ⭐ How many fixtures each club's list holds, so a client sizes its row rather than guessing.
         "run": RUN,
         # ⭐ Null when your XI is already the best one — see `_suggested_lineup`.

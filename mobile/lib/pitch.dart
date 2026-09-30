@@ -454,6 +454,10 @@ class PitchView extends StatelessWidget {
         _Header(team: team, gameweek: gameweek),
         // ⚠️ See `gameweek` — a forward page has nothing the other two readings could mean.
         if (!isForward) _ModeBar(mode: mode, onMode: onMode),
+        // ⭐ Only in PRICE mode. A squad-value line above the fixtures view would be a number competing
+        // with the thing the reader came for.
+        if (!isForward && mode == PitchMode.price)
+          _SquadPriceLine(team.squadPrice),
         // ⭐⭐⭐ **One green area, from the mode bar to the bottom** (ADR-253). The pitch was 747px of a
         // 1932px screen with the bench floating on the dark background below it and 140px of dead space
         // under that. The competitor gives its pitch **twice** the room by letting the green run behind
@@ -1189,10 +1193,20 @@ class _Price extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
+        // ⭐⭐ **What his price actually DID, which the app already knew and discarded.** `PriceMove` has
+        // parsed `changedThisGameweek` since the endpoint shipped and nothing ever rendered it.
+        //
+        // ⚠️⚠️ **Plain, deliberately.** The arrow above is a forecast — right about 40% of the time
+        // (ADR-334) — and this is a fact. They were about to share one visual language, and
+        // ⭐ *an estimate that looks like a fact is worse than no estimate*, because a reader cannot
+        // discount what they cannot tell apart. The guess keeps the colour; the fact gets plain text.
         Text(
-          // ⭐ The evidence, not a forecast: what the crowd actually did this week.
           m == null
               ? '—'
+              : m.changedThisGameweek != 0
+              ? '${m.changedThisGameweek > 0 ? '+' : ''}'
+                    '${m.changedThisGameweek.toStringAsFixed(1)} this week'
+              // ⭐ Falls back to the crowd evidence when the price has not moved yet.
               : '${m.netTransfers >= 0 ? '+' : ''}${_compact(m.netTransfers)}',
           style: const TextStyle(color: Colors.white60, fontSize: 8.5),
         ),
@@ -1299,4 +1313,61 @@ class _Flag extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// The squad's price story in one line (ADR-335).
+///
+/// ⭐⭐ **Fifteen arrows is a reading exercise; one number is a decision.** It leads with falls because
+/// that is the half the predictor can support — it catches **72%** of them against 24% of rises
+/// (ADR-334), so *"one of yours is about to drop"* is a claim with evidence behind it and
+/// *"four are about to rise"* is barely one.
+class _SquadPriceLine extends StatelessWidget {
+  const _SquadPriceLine(this.price);
+
+  final SquadPrice price;
+
+  @override
+  Widget build(BuildContext context) {
+    final moved = price.changedThisGameweek;
+    final parts = <InlineSpan>[
+      // ⚠️ The fact, plain. See `_Price`: the forecast keeps the colour so the two cannot be confused.
+      TextSpan(
+        text: moved == 0
+            ? 'Squad value unchanged this week'
+            : 'Squad ${moved > 0 ? '+' : ''}£${moved.toStringAsFixed(1)}m this week',
+        style: const TextStyle(color: Colors.white70),
+      ),
+    ];
+    if (price.falling > 0) {
+      parts.add(
+        TextSpan(
+          // ⚠️ £ is what they are WORTH, not what they would lose — a change is £0.1m each. Saying the
+          // small number first is how a feature gets ignored; saying only the big one is how it misleads.
+          text:
+              '  ·  ${price.falling} under selling pressure '
+              '(£${price.atRiskValue.toStringAsFixed(1)}m)',
+          style: const TextStyle(color: Brand.bad, fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+    if (price.rising > 0) {
+      parts.add(
+        TextSpan(
+          text: '  ·  ${price.rising} rising',
+          style: const TextStyle(
+            color: Brand.green,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+      child: Text.rich(
+        TextSpan(children: parts),
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 11),
+      ),
+    );
+  }
 }

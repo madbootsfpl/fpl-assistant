@@ -405,7 +405,12 @@ def _decide_transfer(store: Storage, squad_name: str | None, count: int = 1,
     m = moves[rank]
     ordinal = f" #{rank + 1}" if rank else ""
     # Explainability (ADR-089): grounded Why/Risk/Confidence for the swap, from the buy's full row.
-    explanation = explain_transfer(m, {p["id"]: p for p in players}.get(m["in"]["id"], {}), horizon=_HORIZON)
+    _by_id = {p["id"]: p for p in players}
+    # ⭐ Same rule as `explain_gameweek`: the cuts come from the whole board, bound once (ADR-215).
+    from src.analytics.price import price_thresholds
+    explanation = explain_transfer(m, _by_id.get(m["in"]["id"], {}), horizon=_HORIZON,
+                                   cuts=price_thresholds(players),
+                                   out_row=_by_id.get((m.get("out") or {}).get("id"), {}))
     facts = _transfer_facts(m)
     if explanation is not None:
         facts["confidence"] = f"{explanation.confidence}/100 ({explanation.band})"

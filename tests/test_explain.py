@@ -498,3 +498,113 @@ def test_the_two_gated_thresholds_were_measured_on_a_real_shaped_population():
     # ⭐ *A number that never varies is not a confidence, it is a constant with a gauge drawn round it.*
     assert rebuild_confidence(0.42 * 300, 300) < 95, "a typical real squad must no longer max the gauge"
     assert rebuild_confidence(0.60 * 300, 300) >= 95, "…and a genuinely exceptional one still should"
+
+
+# ── price timing on the transfer card (ADR-335) ──────────────────────────────────────────────────────
+def _board(n=60, *, net=None):
+    """A board big enough for a real percentile, with a **spread** of pressure.
+
+    ⚠️⚠️ My first fixture gave one player all the pressure and everyone else zero — and produced no note at
+    all, because the 95th percentile of fifty-nine zeros is zero and `price_thresholds` refuses a rise cut
+    that is not positive. ⭐ *A distribution always has a top 5%; only the sign can say there is nothing to
+    be a lot of* (ADR-215). So the board has to look like a real week.
+    """
+    rows = []
+    for i in range(1, n + 1):
+        # ⚠️ Half being bought and half being sold. A board that is *all* buying has a positive 25th
+        # percentile, so `price_thresholds` returns no fall cut at all — correct, and it silently made
+        # the fall test unfallible. ⭐ *A fixture that cannot produce the answer is not a fixture.*
+        flow = (i - n // 2) * 1_000          # ⚠️ not `net` — that is the parameter, and shadowing it
+        rows.append({                        #     overwrote the overrides before they were read
+            "id": i, "web_name": f"P{i}", "selected_by": 10.0,
+            "transfers_in_event": max(flow, 0), "transfers_out_event": max(-flow, 0),
+        })
+    for pid, value in (net or {}).items():
+        row = rows[pid - 1]
+        row["transfers_in_event"] = max(value, 0)
+        row["transfers_out_event"] = max(-value, 0)
+    return rows
+
+
+def test_a_buy_under_buying_pressure_says_it_may_cost_more():
+    """⭐⭐ **The whole point of ADR-335**: the price note lands on the decision, not on a page."""
+    from src.analytics.price import price_thresholds
+
+    board = _board(net={7: 900_000})
+    cuts = price_thresholds(board)
+    by_id = {r["id"]: r for r in board}
+    move = {"in": {"id": 7, "web_name": "P7", "xp": 6.0, "price": 7.0},
+            "out": {"id": 3, "web_name": "P3", "xp": 4.0, "price": 7.0}, "gain": 2.0}
+
+    ex = explain_transfer(move, by_id[7], cuts=cuts, out_row=by_id[3])
+
+    assert any("may cost £0.1m more if you wait" in r for r in ex.reasons), ex.reasons
+
+
+def test_a_sell_under_selling_pressure_says_you_are_ahead_of_the_drop():
+    from src.analytics.price import price_thresholds
+
+    board = _board(net={3: -900_000})                    # P3 is being dumped
+    board_by_id = {r["id"]: r for r in board}
+    cuts = price_thresholds(board)
+    move = {"in": {"id": 7, "web_name": "P7", "xp": 6.0, "price": 7.0},
+            "out": {"id": 3, "web_name": "P3", "xp": 4.0, "price": 7.0}, "gain": 2.0}
+
+    ex = explain_transfer(move, board_by_id[7], cuts=cuts, out_row=board_by_id[3])
+
+    assert any("drop on P3" in r for r in ex.reasons), ex.reasons
+
+
+def test_without_cuts_the_card_says_nothing_about_price_timing():
+    """⚠️⚠️ **Absent means silent, never a default.** A caller that cannot supply the whole board cannot
+    have trustworthy cuts — ⭐ *and no note is a better answer than one taken over fifteen players*, which
+    is the percentile bug ADR-215 removed."""
+    move = {"in": {"id": 7, "web_name": "P7", "xp": 6.0, "price": 7.0},
+            "out": {"id": 3, "web_name": "P3", "xp": 4.0, "price": 7.0}, "gain": 2.0}
+
+    ex = explain_transfer(move, {"id": 7, "selected_by": 10.0, "transfers_in_event": 900_000,
+                                 "transfers_out_event": 0})
+
+    assert not any("wait" in r or "drop" in r for r in ex.reasons + ex.risks), ex.reasons + ex.risks
+
+
+def test_a_squad_sized_board_produces_no_price_note_rather_than_a_wrong_one():
+    """🔴 The failure this has to be immune to (ADR-215): a percentile over fifteen players manufactures a
+    top 5% *inside the squad*, so two of your own would be 'rising' every week forever.
+
+    ⭐ `price_thresholds` already refuses below twenty, so passing a squad yields `(None, None)` and the
+    note disappears. *The guard that makes a wrong percentile impossible is the same one that makes a
+    missing note harmless* — asserted here so nobody 'fixes' the refusal.
+    """
+    from src.analytics.price import price_thresholds
+
+    squad = _board(15, net={7: 900_000})
+    cuts = price_thresholds(squad)
+    assert cuts.rise is None and cuts.fall is None, "a fifteen-player squad produced cut points"
+
+    by_id = {r["id"]: r for r in squad}
+    move = {"in": {"id": 7, "web_name": "P7", "xp": 6.0, "price": 7.0},
+            "out": {"id": 3, "web_name": "P3", "xp": 4.0, "price": 7.0}, "gain": 2.0}
+    ex = explain_transfer(move, by_id[7], cuts=cuts, out_row=by_id[3])
+
+    assert not any("wait" in r for r in ex.reasons), ex.reasons
+
+
+def test_the_price_note_comes_after_the_football():
+    """⭐ It is about *when*, not *whether* — the weakest reason on the card, and a reader should meet it
+    after the points. ⚠️ A timing nudge above 'higher projected points' would be the app selling urgency."""
+    from src.analytics.price import price_thresholds
+
+    board = _board(net={7: 900_000})
+    by_id = {r["id"]: r for r in board}
+    move = {"in": {"id": 7, "web_name": "P7", "xp": 6.0, "price": 7.0},
+            "out": {"id": 3, "web_name": "P3", "xp": 4.0, "price": 7.0}, "gain": 2.0}
+
+    ex = explain_transfer(move, by_id[7], cuts=price_thresholds(board), out_row=by_id[3])
+
+    # ⚠️ Both sides can fire at once — a rising buy and a falling sell — so this is the property, not a
+    # guess about which note lands last.
+    timing = [i for i, r in enumerate(ex.reasons) if "£0.1m" in r]
+    football = [i for i, r in enumerate(ex.reasons) if "£0.1m" not in r]
+    assert timing, f"no price note at all: {ex.reasons}"
+    assert min(timing) > max(football), f"price timing is not after the football: {ex.reasons}"

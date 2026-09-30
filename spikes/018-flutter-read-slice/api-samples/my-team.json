@@ -779,17 +779,17 @@
     },
     "165": {
       "changed_this_gameweek": -0.1,
-      "direction": "stable",
+      "direction": "fall",
       "net_transfers": -281131
     },
     "229": {
       "changed_this_gameweek": 0.0,
-      "direction": "stable",
+      "direction": "rise",
       "net_transfers": 157715
     },
     "330": {
       "changed_this_gameweek": 0.0,
-      "direction": "stable",
+      "direction": "rise",
       "net_transfers": 77765
     },
     "367": {
@@ -1040,6 +1040,12 @@
     ],
     "value": null,
     "vice_captain_id": 229
+  },
+  "squad_price": {
+    "at_risk_value": 7.7,
+    "changed_this_gameweek": 0.2,
+    "falling": 1,
+    "rising": 4
   },
   "suggested_lineup": {
     "bench": [

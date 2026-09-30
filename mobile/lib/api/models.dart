@@ -465,6 +465,38 @@ class PriceMove {
   bool get falling => direction == 'fall';
 }
 
+/// One line for the whole squad (ADR-335).
+///
+/// ⭐⭐ **Fifteen arrows is a reading exercise; a number is a decision.** It leans on falls on purpose:
+/// the predictor catches 72% of them against 24% of rises (ADR-334), so *"three of yours are about to
+/// drop"* is the claim it can actually support.
+class SquadPrice {
+  SquadPrice({
+    required this.changedThisGameweek,
+    required this.falling,
+    required this.rising,
+    required this.atRiskValue,
+  });
+
+  factory SquadPrice.fromJson(Map<String, dynamic> json) => SquadPrice(
+    changedThisGameweek:
+        (json['changed_this_gameweek'] as num?)?.toDouble() ?? 0.0,
+    falling: json['falling'] as int? ?? 0,
+    rising: json['rising'] as int? ?? 0,
+    atRiskValue: (json['at_risk_value'] as num?)?.toDouble() ?? 0.0,
+  );
+
+  /// What the squad's value has already done this gameweek, in £m. A fact.
+  final double changedThisGameweek;
+
+  /// How many are under selling / buying pressure. An estimate.
+  final int falling;
+  final int rising;
+
+  /// ⚠️ What the falling players are **worth**, not what they would lose — a change is £0.1m each.
+  final double atRiskValue;
+}
+
 /// `POST /api/v1/squad/my-team` — everything the landing pitch draws, in one call.
 ///
 /// ⭐⭐ **One call because the pitch needs ten things `analysis` does not return.** Fetching them
@@ -492,6 +524,7 @@ class MyTeam {
     required this.kits,
     required this.fixtures,
     required this.prices,
+    required this.squadPrice,
     required this.run,
     required this.runXp,
     required this.suggestedLineup,
@@ -519,7 +552,8 @@ class MyTeam {
       freeTransfers: json['free_transfers'] as int? ?? 1,
       // ⭐ What FPL's own history implies you hold, beside what the caller asked for (ADR-318).
       freeTransfersImplied: (json['free_transfers_implied'] as num?)?.toInt(),
-      freeTransfersSource: json['free_transfers_source'] as String? ?? 'default',
+      freeTransfersSource:
+          json['free_transfers_source'] as String? ?? 'default',
       activeChip: squad['active_chip'] as String?,
       gameweek: json['gameweek'] as int?,
       deadlineLabel: deadline['label'] as String? ?? '',
@@ -548,6 +582,9 @@ class MyTeam {
       ),
       // ⚠️ Keyed by player id, which crosses as a string — parsed back here, once, so nothing downstream
       // sorts or compares it as text.
+      squadPrice: SquadPrice.fromJson(
+        (json['squad_price'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
       prices: ((json['prices'] as Map?) ?? {}).map(
         (id, move) => MapEntry(
           int.parse('$id'),
@@ -647,6 +684,9 @@ class MyTeam {
   final Map<String, List<Fixture>> fixtures;
 
   final Map<int, PriceMove> prices;
+
+  /// The squad's price story in one line (ADR-335).
+  final SquadPrice squadPrice;
 
   /// How many fixtures each club's list holds.
   final int run;
@@ -761,6 +801,7 @@ class MyTeam {
     kits: kits,
     fixtures: fixtures,
     prices: prices,
+    squadPrice: squadPrice,
     run: run,
     runXp: runXp,
     suggestedLineup: suggestedLineup,

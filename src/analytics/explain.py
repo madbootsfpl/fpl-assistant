@@ -177,10 +177,43 @@ def transfer_confidence(gain, *, doubtful_in=False, chance_in=None) -> int:
     return max(1, min(99, round(score)))
 
 
-def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
+# ⭐⭐⭐ **Price belongs next to the decision, not on a page of its own** (ADR-335). The predictor is
+# ~40% right about rises and catches 72% of falls (ADR-334) — numbers that are weak for a dashboard and
+# ample here, because *being wrong costs £0.1m, not a bad transfer*. And it reaches someone who would
+# never open a price tab, at the one moment the timing matters.
+#
+# ⚠️ All four cases, because the direction of the news depends on which side of the swap it lands:
+#
+# | | buy | sell |
+# |---|---|---|
+# | **rising** | act now, he may cost more | ⚠ you are selling into a rise |
+# | **falling** | ⚠ wait and he may be cheaper | act now, before the drop |
+#
+# ⚠️ *"May"*, always. One change is £0.1m and the rule is right about a third of the time — a line that
+# said "will" would be wrong more often than the thing it is advising against.
+_PRICE_STEP = 0.1
+
+
+def _price_timing(direction: str | None, *, buying: bool, name: str) -> tuple[str | None, str | None]:
+    """`(reason, risk)` for one side of a swap — at most one of the two, and usually neither."""
+    step = f"£{_PRICE_STEP:.1f}m"
+    if direction == "rise":
+        return ((f"Rising — may cost {step} more if you wait", None) if buying
+                else (None, f"{name} is rising — selling forfeits that"))
+    if direction == "fall":
+        return ((None, f"Falling — waiting may save you {step}") if buying
+                else (f"Ahead of a likely {step} drop on {name}", None))
+    return (None, None)
+
+
+def explain_transfer(move, in_row, horizon: int = 5, *, cuts=None, out_row=None) -> Explanation | None:
     """Explain a single transfer (ADR-089): grounded ✓ reasons + ⚠ risks + a confidence. `move` is a
     `suggest_transfers` dict (`out`/`in` summaries + `gain`, the XI improvement); `in_row` is the buy's full
-    player row (ownership / set-pieces / status the summary doesn't carry). None if there's no move."""
+    player row (ownership / set-pieces / status the summary doesn't carry). None if there's no move.
+
+    `cuts` and `out_row` add the price-timing line (ADR-335). ⚠️ Both optional and **absent means silent**,
+    never a default: a caller without the whole board cannot have trustworthy cuts, and no note is a better
+    answer than one taken over fifteen players (ADR-215)."""
     if not move:
         return None
     buy, sell = move["in"], move["out"]
@@ -223,6 +256,20 @@ def explain_transfer(move, in_row, horizon: int = 5) -> Explanation | None:
         risks.append(own_risk)
     if gain is not None and gain < 1.0:
         risks.append(f"Marginal gain (+{gain})")
+
+    # Price timing, last, because it is about *when* rather than *whether* — the weakest kind of reason
+    # on the card and the one a reader should meet after the football.
+    if cuts is not None:
+        from src.analytics.price import price_prediction
+        for row, buying, who in ((in_row, True, buy.get("web_name")),
+                                 (out_row, False, sell.get("web_name"))):
+            if not row:
+                continue
+            reason, risk = _price_timing(price_prediction(row, cuts), buying=buying, name=who or "him")
+            if reason:
+                reasons.append(reason)
+            if risk:
+                risks.append(risk)
 
     score = transfer_confidence(gain, doubtful_in=doubtful, chance_in=_get(in_row, "chance"))
     return Explanation(reasons=reasons, risks=risks, confidence=score, band=confidence_band(score))
@@ -660,8 +707,18 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
         return None
     cap_ex = explain_captain(plan.get("captain_ranked") or ([plan["captain"]] if plan.get("captain") else []),
                              players_by_id)
+    # ⭐ **The cuts are bound once, here, from the whole board** — the shape ADR-215 argued for, and the
+    # reason `explain_transfer` will not compute them for itself. ⚠️ `players_by_id` is every player (both
+    # callers pass `data.players` / the loaded board); if one ever passed a squad, `price_thresholds`
+    # returns `(None, None)` below twenty and the notes simply do not appear. ⭐ *The guard that makes a
+    # wrong percentile impossible is the same one that makes a missing note harmless.*
+    from src.analytics.price import price_thresholds
+    cuts = price_thresholds(list(players_by_id.values()))
+
     move = plan.get("transfer")
-    tr_ex = explain_transfer(move, players_by_id.get((move.get("in") or {}).get("id"), {}), horizon) \
+    tr_ex = explain_transfer(move, players_by_id.get((move.get("in") or {}).get("id"), {}), horizon,
+                             cuts=cuts,
+                             out_row=players_by_id.get((move.get("out") or {}).get("id"), {})) \
         if move else None
 
     # ⚠️⚠️ **One explanation per move, keyed by the buy** (ADR-327). A coordinated plan holds several moves
@@ -680,7 +737,8 @@ def explain_gameweek(plan, players_by_id, xp_by_id, *, horizon=5) -> dict | None
         buy_id = (m.get("in") or {}).get("id")
         if buy_id is None:
             continue
-        one = explain_transfer(m, players_by_id.get(buy_id, {}), horizon)
+        one = explain_transfer(m, players_by_id.get(buy_id, {}), horizon, cuts=cuts,
+                               out_row=players_by_id.get((m.get("out") or {}).get("id"), {}))
         if one:
             per_move[str(buy_id)] = one
     lineup = _lineup_reasons(plan.get("lineup") or {}, xp_by_id)
