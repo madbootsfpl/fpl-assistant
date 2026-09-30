@@ -52,9 +52,33 @@ from src.analytics.gw_form import stat_series
 # | GW3→4 | 2.8% | **15.3%** |
 #
 # About seven times more players fall than rise, because a bad week empties a bandwagon faster than a good
-# one fills it. The percentiles below are those observed rates, not a taste.
-PRICE_RISE_PERCENTILE = 98.0     # the top ~2% of buying pressure
-PRICE_FALL_PERCENTILE = 15.0     # the worst ~15% of selling pressure
+# one fills it.
+#
+# ⚠️⚠️ **Those observed rates were used AS the percentiles, and that was the wrong idea** (ADR-334).
+# Matching the cut to the base rate calls exactly as many moves as actually happen — which is only correct
+# if the signal is perfect. It is not: measured over 3,216 player-gameweeks it is right about **a third** of
+# the rises it names. So a bar set at the event's own rate spends its whole budget on the very top of the
+# distribution and never reaches most of what moves.
+#
+# ⭐⭐⭐ *The percentile belongs to the signal's discriminating power, not to the event's base rate.*
+#
+# Backtested (`spikes/210-price-backtest/`, every player, GW1-5, scored against what the price actually did
+# the following week). The shipped pair was **dominated**, not narrowly beaten:
+#
+# | | calls | precision | recall |
+# |---|---|---|---|
+# | rise @ 98th — was | 12 | 33.3% | 8.0% |
+# | **rise @ 95th — now** | 30 | **40.0%** | **24.0%** |
+# | fall @ 15th — was | 85 | 50.6% | 43.4% |
+# | **fall @ 25th — now** | 141 | 50.4% | **71.7%** |
+#
+# Rises get better precision *and* three times the recall. Falls hold precision and catch 1.65× as many.
+#
+# ⚠️ **In-sample, over five gameweeks**, so the exact percentile is not to be trusted far — the safe part is
+# that the old point was worse on *both* axes, which no amount of tuning noise explains. Re-measure when the
+# season is longer; the definition stays and the number moves, as it did in ADR-210 and ADR-215.
+PRICE_RISE_PERCENTILE = 95.0     # the top ~5% of buying pressure
+PRICE_FALL_PERCENTILE = 25.0     # the worst ~25% of selling pressure
 
 # Below this there is no distribution to take a percentile of — the same reasoning, and the same number, as
 # `MIN_EXODUS_POPULATION`.

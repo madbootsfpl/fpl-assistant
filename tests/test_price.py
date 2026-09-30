@@ -264,7 +264,42 @@ def test_on_the_real_board_the_rule_actually_fires():
     rises, falls = verdicts.count("rise"), verdicts.count("fall")
     assert rises, "no player on the whole board is predicted to rise — the rule is unreachable again"
     assert falls, "no player on the whole board is predicted to fall"
-    # ⭐ Measured from `player_history`: about 2% of prices rise and ~15% fall per gameweek. Loose bounds —
-    # this is a smoke alarm for "the rule is dead" or "the rule flags everyone", not a calibration check.
+    # ⭐ Loose bounds — a smoke alarm for "the rule is dead" or "the rule flags everyone", never a
+    # calibration check. ⚠️ **And deliberately wider than the base rates** (~2% rise, ~15% fall): the cuts
+    # are set by what the signal can discriminate, not by how often the event happens (ADR-334).
     assert 0.001 < rises / len(eligible) < 0.15, f"{rises}/{len(eligible)} rising is not a top-2% rule"
     assert 0.02 < falls / len(eligible) < 0.40, f"{falls}/{len(eligible)} falling is out of band"
+
+
+def test_the_cut_points_are_the_backtested_ones():
+    """⚠️⚠️ **Nothing pinned these, and they were wrong for a season** (ADR-215) and then merely
+    suboptimal for another (ADR-334).
+
+    They are measured, not chosen: `spikes/210-price-backtest/` scores the real rule over every player
+    across GW1-5 against what the price actually did the week after. The pair below beat the previous one
+    on **both** precision and recall, which is why it is not a taste.
+
+    ⭐ *A constant with a measurement behind it should be hard to change by accident and easy to change on
+    purpose* — so this fails loudly and names where to re-run the evidence.
+    """
+    from src.analytics.price import PRICE_FALL_PERCENTILE, PRICE_RISE_PERCENTILE
+
+    assert (PRICE_RISE_PERCENTILE, PRICE_FALL_PERCENTILE) == (95.0, 25.0), (
+        "the price cut points moved. They are backtested, not picked — re-run "
+        "spikes/210-price-backtest/score.py and record the new numbers in an ADR before changing them."
+    )
+
+
+def test_the_rise_cut_is_looser_than_the_rate_rises_happen():
+    """⭐⭐⭐ **The correction ADR-334 is about**, stated as a property rather than a number.
+
+    Rises happen to ~2% of players a week. Setting the cut at the 98th percentile calls exactly that many
+    — which is right only if the signal is perfect, and it is right about a third of the time. ⚠️ *A bar set
+    at the event's own rate spends its whole budget on the very top of the distribution and never reaches
+    most of what moves.*
+    """
+    from src.analytics.price import PRICE_RISE_PERCENTILE
+
+    assert PRICE_RISE_PERCENTILE < 98.0, (
+        "the rise cut is back at the base rate — that assumes a perfect signal (ADR-334)"
+    )
