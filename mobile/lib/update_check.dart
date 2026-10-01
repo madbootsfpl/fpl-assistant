@@ -98,6 +98,21 @@ const int kMaxNotes = 3;
 /// ⚠️ `kIsWeb` first: `Platform` throws in a browser, so the order of these two is load-bearing.
 bool get selfHostedUpdates => !kIsWeb && Platform.isAndroid;
 
+/// ⭐⭐ **The web app can update itself, and it is the only platform where that is trivially true** —
+/// it reloads (ADR-339).
+///
+/// 🔴 It was lumped in with iOS and silenced. The reasoning above is right about iOS and wrong about a
+/// browser: *"a notice is a promise that tapping it will help"* — and on web, refreshing **is** the
+/// help. ⚠️ So a web reader could sit on a build from any point in the past with nothing to say so,
+/// which is exactly what happened: the owner saw a bank that went negative (the server had deployed)
+/// and did not go red (his tab had not), and reported it as a bug.
+///
+/// ⭐ *An app that cannot tell you it is stale makes every stale symptom look like a defect.*
+bool get webUpdates => kIsWeb;
+
+/// Either route — a manifest worth fetching at all.
+bool get checksForUpdates => selfHostedUpdates || webUpdates;
+
 /// The published build, or `null` if it could not be read.
 ///
 /// ⭐ Null on **every** failure — offline, a typo'd URL, a half-deployed site serving HTML. ⚠️ *A
@@ -106,6 +121,7 @@ Future<Available?> published({
   http.Client? client,
   Duration timeout = const Duration(seconds: 4),
   bool? selfHosted,
+  bool? onWeb,
 }) async {
   // ⚠️⚠️ **The platform gate lives here, not at the call site.** Every future caller of this function
   // inherits it — ⭐ *a rule enforced where the decision is made cannot be forgotten by the next person
@@ -114,7 +130,13 @@ Future<Available?> published({
   // ⭐ Overridable so it can be **tested on either platform**: the bug shipped precisely because the
   // iOS path could not be exercised from a Mac test run. *A guard no test can reach is a guard that is
   // not there.*
-  if (!(selfHosted ?? selfHostedUpdates)) return null;
+  // ⚠️⚠️ **Both routes are overridable, and that is not convenience.** `kIsWeb` is a compile-time
+  // constant, so a Mac test run can never reach the web branch — ⭐ *a guard no test can reach is a
+  // guard that is not there*, which is the sentence this file already carried about iOS, and the reason
+  // that bug shipped. Repeating it on the web path would be the same mistake with the same excuse.
+  if (!((selfHosted ?? selfHostedUpdates) || (onWeb ?? webUpdates))) {
+    return null;
+  }
   final own = client == null;
   final c = client ?? http.Client();
   try {

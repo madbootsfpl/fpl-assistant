@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**3,034 Python tests · 531 Dart tests · 338 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**3,034 Python tests · 537 Dart tests · 339 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 ⚠️ *Counted 2026-09-28. The Dart half is listed separately because until ADR-322 it was not in CI at all — ⭐ a total that silently included 481 tests nothing ran was the more flattering number.*
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this

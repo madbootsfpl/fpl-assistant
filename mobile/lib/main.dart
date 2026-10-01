@@ -5,6 +5,7 @@
 /// dependency.
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -682,7 +683,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
             // ⭐ **First, and only when it applies.** A newer build usually means the thing a tester is
             // about to report has already been fixed — ⚠️ *and a stale install is the one problem the
             // app itself is best placed to notice.*
-            if (_update != null) _UpdateBanner(available: _update!),
+            if (_update != null) UpdateBanner(available: _update!),
             if (team.data.behind) _StaleBanner(data: team.data),
             // ⚠️⚠️ **Being told beats going to look** — the argument ADR-228 made for a badge and then
             // parked, because it was assumed to cost a round trip. ⭐ It does not: `my-team` carries the
@@ -1226,19 +1227,26 @@ class _SincePlan extends StatelessWidget {
 /// ⚠️ **Dismissible by ignoring it, not by dismissing it.** There is no ✕: the banner is gone the moment
 /// the new build is installed, and ⭐ *a warning you can silence without fixing anything is a warning
 /// that gets silenced.* It is one slim strip, and only when a newer build actually exists.
-class _UpdateBanner extends StatelessWidget {
-  const _UpdateBanner({required this.available});
+/// ⭐ **Public so a test can build the web variant.** `kIsWeb` is a compile-time constant, so the only
+/// way to exercise that branch from a Mac run is to hand the widget the answer — ⚠️ *and the alternative
+/// is the untestable branch that shipped an APK to iPhones* (ADR-282, ADR-339).
+class UpdateBanner extends StatelessWidget {
+  const UpdateBanner({required this.available, this.onWeb, super.key});
 
   final Available available;
 
+  /// ⭐ Overridable for the same reason `published` takes one: `kIsWeb` cannot be reached from a VM
+  /// test, and an untestable branch is how the iOS banner shipped offering an iPhone an APK (ADR-282).
+  final bool? onWeb;
+
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: () => launchUrl(
-      Uri.parse(available.url),
-      mode: LaunchMode.externalApplication,
-    ),
-    behavior: HitTestBehavior.opaque,
-    child: Container(
+  Widget build(BuildContext context) {
+    // ⭐⭐ **No tap on the web, because there is nothing to tap through to** (ADR-339). The manifest
+    // describes an **APK**, and a browser offered one does the one thing nobody wanted: downloads it.
+    // ⚠️ *A notice is a promise that tapping it will help* — the same sentence that correctly silenced
+    // this banner on iOS. On web the help is a refresh, which the reader does, not the app.
+    final web = onWeb ?? kIsWeb;
+    final body = Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
@@ -1259,7 +1267,8 @@ class _UpdateBanner extends StatelessWidget {
                   // ⭐ Says what it is for, not just that it exists — *"there is an update" invites "so
                   // what?"; "what you are about to report may already be fixed" does not.*
                   'Build ${available.build} is out — yours is $kAppBuild. '
-                  'Tap to update; what you are about to report may already be fixed.',
+                  '${web ? 'Refresh the page to get it' : 'Tap to update'}; '
+                  'what you are about to report may already be fixed.',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11.5,
@@ -1292,9 +1301,21 @@ class _UpdateBanner extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, size: 16, color: Brand.orange),
+          // ⭐ The chevron is an affordance, so it goes where the tap goes — nowhere, on the web.
+          if (!web)
+            const Icon(Icons.chevron_right, size: 16, color: Brand.orange),
         ],
       ),
-    ),
-  );
+    );
+
+    if (web) return body;
+    return GestureDetector(
+      onTap: () => launchUrl(
+        Uri.parse(available.url),
+        mode: LaunchMode.externalApplication,
+      ),
+      behavior: HitTestBehavior.opaque,
+      child: body,
+    );
+  }
 }
