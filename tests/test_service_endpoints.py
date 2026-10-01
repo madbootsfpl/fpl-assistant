@@ -845,17 +845,30 @@ def test_a_draft_prices_a_squad_fpl_does_not_hold(store, team, monkeypatch):
     assert picked[0] not in [p["id"] for p in draft["analysis"]["xi"] + draft["analysis"]["bench"]]
 
 
-def test_a_draft_keeps_fpls_money_and_deadline(store, team, monkeypatch):
-    """⚠️ **A draft that invented its own bank would let a manager plan a move he cannot afford**, and one
-    that invented its own deadline would price the wrong gameweek. Only the players change."""
+def test_a_draft_keeps_fpls_name_and_deadline_but_prices_its_own_fifteen(store, team, monkeypatch):
+    """⚠️⚠️ **This test asserted the bug, and its docstring argued for it** (ADR-337).
+
+    It read: *"a draft that invented its own bank would let a manager plan a move he cannot afford"* —
+    and holding FPL's bank is precisely what did. A tester planned five changes and watched *"£1.0m In
+    the bank"* sit still through all of them. ⭐ *A test written from the same sentence as the code cannot
+    disagree with it*, which is why this passed for as long as the bug lived.
+
+    What was right in it stays: **name and deadline are FPL's**. A draft that invented its own deadline
+    would price the wrong gameweek.
+    """
     monkeypatch.setattr(svc_squad, "fetch_manager_team",
                         lambda entry_id, players: ({**team, "bank": 2.5, "value": 101.0}, ""))
     picked = list(team["player_ids"])
-    drafted = [next(p["id"] for p in store.get_players() if p["id"] not in picked)
-               if i == picked[0] else i for i in picked]
+    arrival = next(p for p in store.get_players() if p["id"] not in picked)
+    out = next(p for p in store.get_players() if p["id"] == picked[0])
+    drafted = [arrival["id"] if i == picked[0] else i for i in picked]
     answer = svc.my_team(MyTeamRequest(manager_id=1, draft_player_ids=drafted), store=store)
 
-    assert answer["squad"]["bank"] == 2.5
+    spend = round((arrival["price"] or 0) - (out["price"] or 0), 1)
+    assert answer["squad"]["bank"] == pytest.approx(round(2.5 - spend, 1), abs=0.05), (
+        "the bank ignored the swap — the figure that is supposed to stop you cannot, if it never moves"
+    )
+    assert answer["squad"]["bank_is_estimated"] is True
     assert answer["squad"]["name"] == team["name"]
     assert answer["deadline"]["label"]
 

@@ -560,13 +560,34 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
             raise ValueError(message)
 
         fpl_ids = list(squad["player_ids"])
-        # ⭐⭐ **The draft replaces the fifteen and nothing else.** Name, bank, deadline and armbands still
-        # come from FPL — a draft that invented its own bank would let a manager plan a move he cannot pay
-        # for, and one that invented its own deadline would price the wrong gameweek.
+        # ⭐⭐ **The draft replaces the fifteen, and the bank follows the fifteen.** Name, deadline and
+        # armbands still come from FPL.
+        #
+        # ⚠️⚠️⚠️ **This comment used to say the opposite, and the reasoning was inverted** (ADR-337): *"a
+        # draft that invented its own bank would let a manager plan a move he cannot pay for."* Holding
+        # FPL's bank is **precisely** what did that. A tester planned five changes and watched
+        # *"£1.0m In the bank"* sit still through every one of them — ⭐ *the figure that is supposed to
+        # stop you cannot stop you if it never moves.*
         drafting = bool(request.draft_player_ids)
         owned_ids = list(request.draft_player_ids) if drafting else fpl_ids
         bench_ids = (list(request.draft_bench_ids) if drafting
                      else list(squad.get("bench_ids") or []))
+
+        # ⚠️⚠️ **At today's prices, which is the convention this codebase already uses** — `replacements`
+        # has always budgeted with `out["price"] + bank` (ADR-226). It is not exact: FPL pays back only
+        # **half** of a player's rise since you bought him, and the public API publishes no selling price
+        # (`entry/{id}/event/{gw}/picks/` carries only the squad's aggregate `bank` and `value`).
+        #
+        # ⭐⭐ So the estimate errs **optimistic** — it can say you have money you will not get — and the
+        # client has to say so. *An estimate that flatters the reader about money is the one kind that
+        # has to admit it.*
+        _priced = {p["id"]: (p["price"] or 0) for p in players}
+        def _cost_of(ids) -> float:
+            return round(sum(_priced.get(i, 0) for i in ids), 1)
+
+        planned_bank = squad.get("bank")
+        if drafting and planned_bank is not None:
+            planned_bank = round(planned_bank - (_cost_of(owned_ids) - _cost_of(fpl_ids)), 1)
         answer = analysis(SquadRequest(player_ids=owned_ids, bench_ids=bench_ids,
                                        horizon=request.horizon), store=store)
 
@@ -714,9 +735,15 @@ def my_team(request: MyTeamRequest, *, store: Storage | None = None) -> dict:
             "vice_captain_id": squad.get("vice_captain_id"),
             # ⭐ FPL's own numbers, not ours. `cost` is what the fifteen price at today; `value` is what FPL
             # says the team is worth **including** the bank, which is why the two differ.
-            "bank": squad.get("bank"),
+            "bank": planned_bank,
+            # ⭐ **Unchanged by a draft, and that is correct, not an oversight.** FPL's `value` includes
+            # the bank, so a transfer only moves money between the two — ⚠️ *the total is invariant.* The
+            # tester was right that the bank was broken and right that value looked frozen; only one of
+            # them was a bug.
             "value": squad.get("value"),
-            "cost": squad.get("cost"),
+            "cost": _cost_of(owned_ids) if drafting else squad.get("cost"),
+            # ⭐ So the client can say "estimated" rather than implying FPL agrees (see `planned_bank`).
+            "bank_is_estimated": drafting and squad.get("bank") is not None,
             "active_chip": squad.get("active_chip"),
         },
         # ⭐⭐ **The server says whether this is the real team.** A client can forget to mention it; a field

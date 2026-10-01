@@ -704,11 +704,23 @@ class _Header extends StatelessWidget {
               if (gameweek == null) ...[
                 // ⚠️ FPL's bank, or an em dash — ⭐ *never £0.0m*, which is a real position and would read as
                 // one. `—` says "not known"; zero says "you are skint".
+                // ⚠️⚠️ **It moves while you plan, and it did not** (ADR-337). A tester made five changes
+                // and watched this sit at £1.0m throughout — ⭐ *the figure that is supposed to stop you
+                // cannot stop you if it never moves.*
                 _Stat(
                   value: team.bank == null
                       ? '—'
                       : '£${team.bank!.toStringAsFixed(1)}m',
-                  label: 'In the bank',
+                  // ⭐ Red the moment it goes negative, which is the only state that changes a decision.
+                  tone: (team.bank ?? 0) < 0 ? Brand.bad : null,
+                  label: team.bankIsEstimated
+                      // ⚠️ *"Est."*, because FPL pays back only half of a player's rise since you bought
+                      // him and the public API publishes no selling price — so this errs **optimistic**.
+                      // ⭐ An estimate that flatters the reader about money has to admit it.
+                      ? ((team.bank ?? 0) < 0
+                            ? 'Over budget (est.)'
+                            : 'In the bank (est.)')
+                      : 'In the bank',
                 ),
                 _Stat(
                   value: team.value == null
@@ -753,10 +765,14 @@ class _Header extends StatelessWidget {
 /// ⚠️ `scaleDown` only ever shrinks, so nothing grows to fill a gap and the type scale is unchanged
 /// wherever it already fitted.
 class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
+  const _Stat({required this.value, required this.label, this.tone});
 
   final String value;
   final String label;
+
+  /// ⭐ Colour only where a number can be *wrong for you* — an overdrawn bank. Everything else stays
+  /// white, so the one coloured figure on the row means something.
+  final Color? tone;
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -769,8 +785,8 @@ class _Stat extends StatelessWidget {
           child: Text(
             value,
             maxLines: 1,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tone ?? Colors.white,
               fontSize: 17,
               fontWeight: FontWeight.w700,
             ),

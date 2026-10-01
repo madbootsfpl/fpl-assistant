@@ -539,6 +539,7 @@ class MyTeam {
     required this.isDraft,
     required this.fplPlayerIds,
     required this.bank,
+    this.bankIsEstimated = false,
     required this.value,
     required this.freeTransfers,
     required this.activeChip,
@@ -576,6 +577,7 @@ class MyTeam {
       isDraft: json['draft'] as bool? ?? false,
       fplPlayerIds: ((json['fpl_player_ids'] as List?) ?? const []).cast<int>(),
       bank: (squad['bank'] as num?)?.toDouble(),
+      bankIsEstimated: squad['bank_is_estimated'] as bool? ?? false,
       value: (squad['value'] as num?)?.toDouble(),
       freeTransfers: json['free_transfers'] as int? ?? 1,
       // ⭐ What FPL's own history implies you hold, beside what the caller asked for (ADR-318).
@@ -681,6 +683,12 @@ class MyTeam {
   /// bank"* is not, and showing the second as the first tells the affordability maths every transfer is
   /// unaffordable.
   final double? bank;
+
+  /// ⚠️⚠️ **True while you are planning.** The bank then reflects your drafted fifteen rather than the
+  /// one FPL holds — and it is an **estimate**: FPL pays back only half of a player's rise since you
+  /// bought him, and the public API publishes no selling price. ⭐ *It errs optimistic, so the screen has
+  /// to say so* — an estimate that flatters the reader about money is the one kind that must admit it.
+  final bool bankIsEstimated;
 
   /// FPL's team value — ⭐ **includes the bank**, which is why it exceeds what the fifteen cost.
   final double? value;
@@ -816,6 +824,7 @@ class MyTeam {
     isDraft: isDraft,
     fplPlayerIds: fplPlayerIds,
     bank: bank,
+    bankIsEstimated: bankIsEstimated,
     value: value,
     freeTransfers: freeTransfers,
     activeChip: activeChip,

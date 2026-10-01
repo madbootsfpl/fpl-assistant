@@ -1012,6 +1012,7 @@
   "squad": {
     "active_chip": null,
     "bank": null,
+    "bank_is_estimated": false,
     "bench_ids": [
       12,
       367,
