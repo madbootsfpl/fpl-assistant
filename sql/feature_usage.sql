@@ -122,3 +122,138 @@ group by 1, 2
 having count(distinct page) > 1
 order by 1 desc, distinct_features desc
 limit 100;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+--  FOLLOW-UPS (2026-10-01) — written after the first run of this file against live data
+-- ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+--
+-- The first run found three endpoints returning real HTTP errors to testers: `squad/replacements` 19.0%,
+-- `squad/signals` 14.7%, `squad/my-team` 5.2% — roughly 41 failed calls in front of nine people in eight
+-- days, against 0.0% on every Streamlit page.
+--
+-- ⚠️⚠️ **THE ROWS YOU ARE READING TODAY CANNOT SAY *WHICH* ERROR, AND NEWER ONES CAN.**
+--
+-- `usage.record()` stored `ok` as a bare boolean — `ok=response.status_code < 400` — and threw the code
+-- away, two lines below a log string that *formats the same code*. ⭐⭐ *The one field that would make a
+-- 19% failure rate diagnosable was already in the function and discarded.* A 422 (impossible input), a
+-- 429 (rate limited), a 502 (Reddit refused us) and a 500 (our bug) all read identically, and those four
+-- need four different responses — one of which is "nothing, that is an upstream having a bad day".
+--
+-- ✅ **Fixed 2026-10-01 (ADR-343):** `meta ->> 'status'` now carries the HTTP code.
+--
+-- 🔴 **So there is a date in this data.** Rows written before that deploy have **no** `status` key — not
+-- null, absent. ⚠️ *A query that filters on `status` silently drops every row from before the fix*, which
+-- would make a long-standing failure look like it started the day the column did. Query 6 therefore still
+-- keys on `ok` and reports `status` beside it, and query 8 says plainly how much of the window it covers.
+
+
+-- ── 6. The failures: when, which build, and is it already fixed? ──────────────────────────────────────
+-- ⭐ **Read the `version` column first.** If a page's failures stop at a build boundary, the bug shipped
+-- fixed and these numbers are history being averaged into the present. If they run across every build,
+-- it is live and nine people are still hitting it.
+
+select
+  page,
+  version,
+  date_trunc('day', ts)::date                                       as day,
+  count(*)                                                          as calls,
+  count(*) filter (where ok is false)                               as failed,
+  round(100.0 * count(*) filter (where ok is false) / count(*), 1)  as pct_failed,
+  count(distinct anon_id) filter (where ok is false)                as installs_hit,
+  -- ⭐ Absent for rows older than ADR-343. A blank here means "before the fix", never "no error".
+  string_agg(distinct meta ->> 'status', ', ') filter (where ok is false) as codes
+from public.events
+where event = 'api'
+  and page not in ('/api/v1/health', '/health')
+  and ts > now() - interval '90 days'
+group by 1, 2, 3
+having count(*) filter (where ok is false) > 0
+order by page, version, day;
+
+
+-- ── 6b. Is it everyone, or one tester with one odd squad? ─────────────────────────────────────────────
+-- ⚠️ A failure rate averaged over installs hides the difference between *a broken endpoint* and *one
+-- manager id that breaks it* — ⭐ and those need completely different fixes.
+
+select
+  page,
+  count(distinct anon_id)                                              as installs_calling,
+  count(distinct anon_id) filter (where ok is false)                   as installs_failing,
+  count(*)                                                             as calls,
+  count(*) filter (where ok is false)                                  as failed,
+  round(100.0 * count(*) filter (where ok is false) / count(*), 1)     as pct_failed
+from public.events
+where event = 'api'
+  and page not in ('/api/v1/health', '/health')
+  and ts > now() - interval '90 days'
+group by 1
+having count(*) filter (where ok is false) > 0
+order by pct_failed desc;
+
+
+-- ── 7. Streamlit before and after the phone app (2026-09-24) ──────────────────────────────────────────
+-- ⭐⭐ The decisive question for *"does Streamlit stay?"*. The totals in query 2 are cumulative since
+-- 2026-08-09 and cannot answer it: a page with 827 uses and a `last_used` of 2026-09-23 is not a page in
+-- use, it is a page that was.
+--
+-- ⚠️⚠️ **Per-day rates, not totals.** The two periods are different lengths, and comparing their sums
+-- would say Streamlit collapsed no matter what happened. 🔴 And `installs` is NOT people on this side —
+-- the `fpl_anon` cookie over-mints (see the header), so read the events column and treat the id column as
+-- a shape, never a headcount.
+
+with periods as (
+  select
+    page,
+    case when ts < timestamptz '2026-09-24' then 'before the app' else 'after the app' end as period,
+    count(*)                                        as events,
+    count(distinct date_trunc('day', ts))           as active_days,
+    count(distinct anon_id)                         as ids,
+    max(ts)::date                                   as last_used
+  from public.events
+  where event = 'page_viewed'
+    and page is not null
+    and ts > now() - interval '120 days'
+  group by 1, 2
+)
+select
+  page,
+  period,
+  events,
+  active_days,
+  round(events::numeric / nullif(active_days, 0), 1)  as events_per_active_day,
+  ids,
+  last_used
+from periods
+order by page, period desc;
+
+
+-- ── 8. Which error, now that the rows can say ─────────────────────────────────────────────────────────
+-- ⭐ The query that was impossible before ADR-343 — and the one that decides what to do about a failing
+-- endpoint, because the answer is different for every code:
+--
+--   4xx | **422** the caller sent something the server cannot accept — our bug or a stale client
+--       | **429** the rate limit did its job — not a fault, unless honest use is hitting it
+--   5xx | **500** ours, and the only one that is unambiguously a defect
+--       | **502/503/504** an upstream refused or timed out (Reddit blocks datacentre IPs at times)
+--
+-- ⚠️⚠️ **Read `covered_pct` before reading anything else.** It is the share of failures in the window that
+-- carry a code at all. Low means most of this window predates the fix, and the breakdown describes the
+-- recent tail rather than the problem.
+
+select
+  page,
+  coalesce(meta ->> 'status', '(before ADR-343)')                    as status,
+  count(*)                                                           as failures,
+  count(distinct anon_id)                                            as installs_hit,
+  min(ts)::date                                                      as first_seen,
+  max(ts)::date                                                      as last_seen,
+  round(100.0 * count(*) filter (where meta ? 'status')
+        / nullif(sum(count(*)) over (partition by page), 0), 1)      as covered_pct
+from public.events
+where event = 'api'
+  and ok is false
+  and page not in ('/api/v1/health', '/health')
+  and ts > now() - interval '90 days'
+group by 1, 2
+order by page, failures desc;

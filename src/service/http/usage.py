@@ -114,8 +114,19 @@ def _post(url: str, key: str, payload: dict) -> None:
 
 
 def record(*, path: str, platform: str, version: str, install: str,
-           duration_ms: int, ok: bool) -> None:
-    """Record one request. ⭐ Returns immediately; the write happens on a daemon thread."""
+           duration_ms: int, ok: bool, status: int | None = None) -> None:
+    """Record one request. ⭐ Returns immediately; the write happens on a daemon thread.
+
+    ⭐⭐ **`status` exists because `ok` could not answer the first question anyone asked of it** (ADR-343).
+    The usage query of 2026-10-01 found three endpoints returning real errors to testers — 19.0%, 14.7%,
+    5.2% — and no way to tell *which* errors: a 422 (the caller sent something impossible), a 429 (they hit
+    the limit), a 502 (Reddit refused us) and a 500 (our bug) all reduced to `ok=False`. ⚠️ *Those four need
+    four different responses, and one of them is "nothing, that is an upstream having a bad day".*
+
+    ⚠️ Additive, deliberately. `ok` stays exactly as it was — `admin.summarise()` reads it, and so does
+    every row already written. ⭐ *A column that rewrites what history means is not an improvement to
+    history.* Old rows simply have no `status`, which is true and queryable.
+    """
     try:
         if not is_enabled():
             return
@@ -133,7 +144,11 @@ def record(*, path: str, platform: str, version: str, install: str,
             "page": path,
             "duration_ms": duration_ms,
             "ok": ok,
-            "meta": {"platform": platform or "unknown"},
+            # ⭐ `status` rides in `meta` rather than a new column: the table is shared with the web app,
+            # which has no HTTP status to report, and a column that is null for half the rows invites the
+            # question of what null means. Absent is clearer than null here.
+            "meta": {"platform": platform or "unknown",
+                     **({"status": int(status)} if status is not None else {})},
         }
         threading.Thread(target=_post, args=(url, key, payload), daemon=True).start()
     except Exception:
@@ -176,6 +191,9 @@ def usage_middleware():
                 install=request.headers.get("X-Madboots-Install", ""),
                 duration_ms=int((time.monotonic() - started) * 1000),
                 ok=response.status_code < 400,
+                # ⚠️ Both from one value, so they cannot disagree — the reason `ok` was kept rather
+                # than derived at read time.
+                status=response.status_code,
             )
         except Exception:
             pass        # ⭐ A request that succeeded must not fail because counting it did.

@@ -284,3 +284,57 @@ def test_a_404_is_recorded_as_failing_not_as_success(monkeypatch):
     monkeypatch.setattr(usage, "_last", "never")
     usage._post("https://example.invalid/rest/v1/events", "k", {})
     assert usage._last.startswith("failing"), "a 404 was counted as a successful write"
+
+
+# ── the status code (ADR-343) ────────────────────────────────────────────────────────────────────
+
+def test_a_failure_records_which_failure_it_was(captured):
+    """🔴 **The gap the first usage query hit.** Three endpoints were returning real HTTP errors to
+    testers and the table could not say which: a 422, a 429, a 502 and a 500 all read as `ok=False`.
+    ⭐ *Those need four different responses, and one of them is "nothing — that is an upstream having a
+    bad day".*
+    """
+    usage.record(path="/api/v1/squad/signals", platform="ios", version="1.0.0+40",
+                 install="abc", duration_ms=900, ok=False, status=502)
+    row = captured[0]
+    assert row["ok"] is False
+    assert row["meta"]["status"] == 502, "the row says it failed but not how"
+
+
+def test_the_middleware_passes_the_real_status_code(captured, monkeypatch):
+    """⭐ The code was already computed in the middleware and discarded one line later. This is the line
+    that stops it being discarded, so it is the line worth pinning."""
+    import asyncio
+
+    class _Response:
+        status_code = 429
+
+    async def _call_next(_request):
+        return _Response()
+
+    class _Request:
+        url = type("U", (), {"path": "/api/v1/players"})()
+        headers = {"X-Madboots-Platform": "android", "X-Madboots-Version": "1.0.0+40",
+                   "X-Madboots-Install": "zzz"}
+
+    asyncio.run(usage.usage_middleware()(_Request(), _call_next))
+    assert captured, "the middleware recorded nothing"
+    assert captured[0]["meta"]["status"] == 429
+    assert captured[0]["ok"] is False
+
+
+def test_status_is_absent_rather_than_null_when_nobody_has_one(captured):
+    """⚠️ The web app shares this table and has no HTTP status to report. ⭐ *A key that is null for half
+    the rows invites the question of what null means*; absent answers it."""
+    usage.record(path="/api/v1/players", platform="ios", version="1.0.0",
+                 install="abc", duration_ms=10, ok=True)
+    assert "status" not in captured[0]["meta"]
+
+
+def test_the_status_code_is_not_a_personal_field(captured):
+    """⭐ Restating the ADR-280 promise against the new key — an HTTP status says what the server did,
+    never who asked."""
+    usage.record(path="/api/v1/squad/my-team", platform="ios", version="1.0.0",
+                 install="abc", duration_ms=10, ok=False, status=422)
+    forbidden = {"manager_id", "email", "ip", "ip_address", "player_ids", "squad", "name"}
+    assert not (forbidden & set(captured[0]["meta"]))
