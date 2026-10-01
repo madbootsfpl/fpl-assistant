@@ -354,7 +354,18 @@ HTML
 # says how to turn publishing on — ⭐ *a release tool that refuses to run without a secret is a release
 # tool you stop running.*
 PROJECT="${MADBOOTS_PAGES_PROJECT:-madboots}"
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+# ⚠️⚠️ **The staging gate** (ADR-340). With `MADBOOTS_STAGE_ONLY=1` everything above still runs — the
+# gate, the bump, the build, the staged folder — and **nothing reaches the internet**. The owner tries it
+# on his phone first and runs `scripts/release_ship.sh` when he is happy.
+#
+# ⚠️ It has to be honoured HERE, in both scripts, because each one deploys the **whole** `$SITE` folder:
+# gating only the Android one would mean a later web deploy published the staged `version.json` anyway,
+# and the nine testers would be prompted by a release nobody had decided to make.
+if [ -n "${MADBOOTS_STAGE_ONLY:-}" ]; then
+  echo
+  echo "  ⏸  STAGED, NOT LIVE — nothing was published."
+  echo "     Try it, then:  scripts/release_ship.sh"
+elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
   echo
   echo "  publishing to Cloudflare Pages (project: $PROJECT)…"
   # ⚠️ `--commit-dirty` because `$SITE` is a build output and is **never** a git worktree; without it
@@ -381,7 +392,12 @@ ls -lh "$SITE/app" | awk 'NR>1 {printf "    %-18s %s\n", $9, $5}'
 echo
 # ⚠️ Says what is actually left, which depends on whether it published. ⭐ *A closing instruction that
 # tells you to do the thing the script just did is how a reader learns to stop reading them.*
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+if [ -n "${MADBOOTS_STAGE_ONLY:-}" ]; then
+  # ⭐ *A closing instruction that tells you to do the thing the script just did is how a reader learns
+  # to stop reading them* — and the inverse matters more here: this one must not say "testers already
+  # have it" when they do not.
+  echo "  NEXT: open it on the phone. Nothing is live until scripts/release_ship.sh."
+elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
   echo "  NEXT: commit the version bump. Testers already have it: https://madboots.com/app/"
   # ⚠️⚠️ **Named here because the iPhone was left behind twice** (ADR-316). Android and web are one command
   # each and the phone in the owner's pocket was a *document* — ⭐ *a release that reaches two of three

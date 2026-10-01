@@ -169,7 +169,18 @@ mkdir -p "$SITE/app/web"
 cp -R mobile/build/web/. "$SITE/app/web/"
 echo "  staged $(du -sh "$SITE/app/web" | cut -f1) in $SITE/app/web"
 
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+# ⚠️⚠️ **The staging gate** (ADR-340). With `MADBOOTS_STAGE_ONLY=1` everything above still runs — the
+# gate, the bump, the build, the staged folder — and **nothing reaches the internet**. The owner tries it
+# on his phone first and runs `scripts/release_ship.sh` when he is happy.
+#
+# ⚠️ It has to be honoured HERE, in both scripts, because each one deploys the **whole** `$SITE` folder:
+# gating only the Android one would mean a later web deploy published the staged `version.json` anyway,
+# and the nine testers would be prompted by a release nobody had decided to make.
+if [ -n "${MADBOOTS_STAGE_ONLY:-}" ]; then
+  echo
+  echo "  ⏸  STAGED, NOT LIVE — nothing was published."
+  echo "     Try it, then:  scripts/release_ship.sh"
+elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
   # ⚠️ Deploys the whole site, like the Android script — `$SITE` is one folder and Pages takes all of it.
   npx --yes wrangler@4 pages deploy "$SITE" \
       --project-name="$PROJECT" --branch=main --commit-dirty=true 2>&1 | tail -4
