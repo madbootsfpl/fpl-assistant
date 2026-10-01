@@ -31,6 +31,7 @@ from src.service.requests import (
     MAX_FEEDBACK,
     MAX_HORIZON,
     MAX_PLAN,
+    MIN_BANK,
 )
 
 app = FastAPI(
@@ -122,7 +123,7 @@ class SquadBody(BaseModel):
 
 
 class TransfersBody(SquadBody):
-    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    bank: float = Field(0.0, ge=MIN_BANK, description="Money available, in £m.")
     count: int = Field(1, ge=1, le=MAX_PLAN,
                        description="Moves to plan together. Above 1 they share the bank, so the gains add "
                                    "up — a plan, not a menu of alternatives.")
@@ -134,7 +135,7 @@ class CaptainBody(SquadBody):
 
 
 class GameweekBody(SquadBody):
-    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    bank: float = Field(0.0, ge=MIN_BANK, description="Money available, in £m.")
     free: int = Field(1, ge=0, le=5,
                       description="Free transfers held. The plan recommends this many moves, so sending the "
                                   "wrong number advises a position the manager is not in.")
@@ -142,7 +143,7 @@ class GameweekBody(SquadBody):
 
 class RouteBody(SquadBody):
     target_id: int = Field(..., description="The player you want to field, by FPL element id.")
-    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    bank: float = Field(0.0, ge=MIN_BANK, description="Money available, in £m.")
 
 
 class CompareBody(BaseModel):
@@ -230,7 +231,7 @@ class TickerBody(BaseModel):
 
 
 class ChipsBody(SquadBody):
-    bank: float = Field(0.0, ge=0, description="Money available, in £m — a wildcard is priced against it.")
+    bank: float = Field(0.0, ge=MIN_BANK, description="Money available, in £m — a wildcard is priced against it.")
     manager_id: int | None = Field(
         None, ge=1,
         description="⭐ **Supply it and the answer knows which chips you have already spent.** Without it "
@@ -266,7 +267,7 @@ class AskBody(BaseModel):
                                                "you have already played. Optional: without it the advice "
                                                "stands but says it could not check.")
     free: int = Field(1, ge=0, le=5, description="Free transfers available.")
-    bank: float = Field(0.0, ge=0, description="Money in the bank, in millions.")
+    bank: float = Field(0.0, ge=MIN_BANK, description="Money in the bank, in millions.")
     horizon: int = Field(5, ge=1, le=8, description="The planning window for plan-shaped answers.")
 
 
@@ -337,7 +338,7 @@ class MyTeamBody(BaseModel):
 
 class ReplacementsBody(SquadBody):
     out_id: int = Field(..., description="The owned player you want to replace.")
-    bank: float = Field(0.0, ge=0, description="Money available, in £m.")
+    bank: float = Field(0.0, ge=MIN_BANK, description="Money available, in £m.")
     limit: int = Field(40, ge=1, le=200, description="How many candidates to return.")
 
 

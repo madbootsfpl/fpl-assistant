@@ -22,11 +22,25 @@ def _check_horizon(horizon: int) -> None:
         raise ValueError(f"horizon {horizon} is outside 1-{MAX_HORIZON}")
 
 
+#: How far overdrawn a request may claim to be. ⭐ A bound rather than zero, because a plan that spends
+#: £9m it does not have is a real screen the app now draws — and a typo of −900 still is not.
+MIN_BANK = -50.0
+
+
 def _check_money(name: str, amount: float) -> None:
-    # ⚠️ A negative bank is not a rounding artefact — it silently makes every transfer unaffordable, and the
-    # answer comes back as "no moves found", which reads as a settled squad rather than a bad request.
-    if amount < 0:
-        raise ValueError(f"{name} cannot be negative")
+    """⚠️⚠️ **A negative bank used to be rejected outright, and that became wrong the day the app could
+    produce one** (ADR-338).
+
+    The old reasoning: *"a negative bank is not a rounding artefact — it silently makes every transfer
+    unaffordable, and the answer comes back as 'no moves found', which reads as a settled squad rather
+    than a bad request."* True when only a broken client could send one. ⭐ **Since ADR-337 the bank
+    follows the planned fifteen**, so a manager who plans Haaland in before selling anyone *is* at
+    −£8.6m, and the app asked the server about it and was told off in Pydantic.
+
+    ⭐⭐ *A guard written against an impossible input becomes a wall the day the input becomes real.*
+    """
+    if amount < MIN_BANK:
+        raise ValueError(f"{name} cannot be below £{MIN_BANK:.0f}m")
 
 
 @dataclass(frozen=True)

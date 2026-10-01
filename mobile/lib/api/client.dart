@@ -55,7 +55,33 @@ String errorDetail(int status, String body) {
   try {
     final decoded = jsonDecode(body);
     final detail = decoded is Map ? decoded['detail'] : decoded;
-    if (detail != null && '$detail'.trim().isNotEmpty) return '$detail';
+
+    // ⚠️⚠️ **A 422's `detail` is a LIST of validation objects, and this printed it raw.** A tester with
+    // an over-budget plan was shown
+    // `[{type: greater_than_equal, loc: [body, bank], msg: …, ctx: {ge: 0.0}}]` where a sentence
+    // belonged (ADR-338). ⭐ *An error the reader cannot act on is the same as no error, except it also
+    // says the app is broken.*
+    if (detail is List && detail.isNotEmpty) {
+      final said = detail
+          .whereType<Map>()
+          .map((e) {
+            final where = (e['loc'] as List?)?.whereType<String>().where(
+              (l) => l != 'body',
+            );
+            final msg = '${e['msg'] ?? 'is not valid'}';
+            return (where == null || where.isEmpty)
+                ? msg
+                : '${where.join('.')} — $msg';
+          })
+          .where((m) => m.trim().isNotEmpty)
+          .join('\n');
+      if (said.isNotEmpty) return 'The service refused that:\n$said';
+    }
+    // ⚠️ Never a List here: an empty one stringifies to "[]", which is the same fault as printing the
+    // whole payload — ⭐ *machinery shown to a reader, just less of it.*
+    if (detail != null && detail is! List && '$detail'.trim().isNotEmpty) {
+      return '$detail';
+    }
   } catch (_) {
     // not JSON — fall through and say something true about it instead.
   }

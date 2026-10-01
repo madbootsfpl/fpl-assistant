@@ -389,12 +389,13 @@ def test_a_player_both_forced_in_and_ruled_out_is_refused(store):
 # ---- validation -------------------------------------------------------------------------
 
 @pytest.mark.parametrize("request_, expected", [
-    (TransfersRequest(player_ids=[1], bank=-1.0), "bank cannot be negative"),
+    # ⚠️ A small overdraft is a real screen now (ADR-337/338); only an absurd one is a bad request.
+    (TransfersRequest(player_ids=[1], bank=-900.0), "bank cannot be below"),
     (TransfersRequest(player_ids=[1], count=4), "count 4 is outside"),
     (TransfersRequest(player_ids=[1], limit=0), "limit must be at least 1"),
     (CaptainRequest(player_ids=[1], limit=0), "limit must be at least 1"),
     (GameweekRequest(player_ids=[1], free=9), "free transfers 9 is outside"),
-    (GameweekRequest(player_ids=[1], bank=-0.1), "bank cannot be negative"),
+    (GameweekRequest(player_ids=[1], bank=-900.0), "bank cannot be below"),
     (RouteRequest(player_ids=[1]), "no target player given"),
     (BuildRequest(budget=0), "budget must be positive"),
 ])
@@ -448,7 +449,8 @@ def test_build_returns_over_http_what_it_returns_in_process(client, store):
 
 
 @pytest.mark.parametrize("path, body", [
-    ("transfers", {"player_ids": [1], "bank": -1}),
+    # ⚠️ -1 is a legal overdraft since ADR-338; -900 is still a typo.
+    ("transfers", {"player_ids": [1], "bank": -900}),
     ("transfers", {"player_ids": [1], "count": 9}),
     ("captain", {"player_ids": []}),
     ("gameweek-plan", {"player_ids": [1], "free": 99}),
@@ -993,7 +995,7 @@ def test_the_club_cap_survives_the_relaxed_budget(store):
 @pytest.mark.parametrize("request_, expected", [
     (ReplacementsRequest(player_ids=[1, 2]), "no player to replace"),
     (ReplacementsRequest(player_ids=[1, 2], out_id=99), "not in this squad"),
-    (ReplacementsRequest(player_ids=[1, 2], out_id=1, bank=-1), "bank cannot be negative"),
+    (ReplacementsRequest(player_ids=[1, 2], out_id=1, bank=-900), "bank cannot be below"),
 ])
 def test_a_replacement_request_that_cannot_be_answered_is_refused(request_, expected):
     """⚠️ Searching against a player you do not own returns a perfectly plausible list — ⭐ *a wrong answer
