@@ -85,3 +85,18 @@ def test_staging_sets_the_flag_for_every_publisher_it_calls():
         assert f"scripts/{name}" in body, f"release_stage.sh does not run {name}"
     # ⭐ And the iPhone install is NOT gated — it is the whole point.
     assert "scripts/release_ios.sh" in body
+
+
+def test_a_failed_phone_install_does_not_read_as_a_failed_stage():
+    """⚠️⚠️ **The first real run proved this.** The phone was off the Wi-Fi, the script exited 1 after a
+    bare *"no iPhone found"*, and everything above it had already worked.
+
+    ⭐ *A script that reports its last step as its outcome invites you to redo the ones that succeeded* —
+    and redoing this one burns a build number for nothing.
+    """
+    body = read("release_stage.sh")
+    assert "if ! scripts/release_ios.sh; then" in body, (
+        "a failed install aborts the script with no explanation"
+    )
+    assert "IS STAGED" in body
+    assert "do NOT re-run" in body

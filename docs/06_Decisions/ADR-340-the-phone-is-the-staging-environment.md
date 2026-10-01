@@ -61,6 +61,18 @@ The mitigation is noise, not discipline: `release_stage.sh` ends with a banner s
 and `release_ship.sh` prints the build number and its release notes **before** deploying, because staging
 can run several times and the build on disk is not necessarily the one anyone tested.
 
+## The first run found one thing
+
+⚠️ The phone was off the Wi-Fi. Everything above it had worked — APK built, web built, `version.json`
+written locally — and the script exited 1 after a bare *"no iPhone found"*. ⭐ *A script that reports
+its last step as its outcome invites you to redo the ones that succeeded*, and redoing this one burns a
+build number for nothing. A failed install now says so and names the one command to retry.
+
+⭐ The gate itself was verified live: testers on **39**, staged **40**, and `madboots-40.apk` not
+published. ⚠️ Worth knowing for anyone checking by hand — Cloudflare Pages answers a missing file with
+**HTTP 200 and the index page**, wearing whatever content-type the name implies, so a status code is not
+evidence that something shipped.
+
 ## Consequences
 
 **Good:** every one of the last three incidents would have been caught on the phone, free.

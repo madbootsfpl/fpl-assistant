@@ -31,10 +31,25 @@ scripts/release_android.sh
 echo
 scripts/release_web.sh
 echo
-# ⚠️ Last, and not gated: this is the whole point of staging, and it touches one phone.
-scripts/release_ios.sh
-
 version=$(grep '^version:' mobile/pubspec.yaml | awk '{print $2}')
+
+# ⚠️⚠️ **A failed install must not read as a failed stage**, and the first run of this script proved why:
+# the phone was off the Wi-Fi, the script exited 1 after a bare *"no iPhone found"*, and everything above
+# it had already worked. ⭐ *A script that reports its last step as its outcome invites you to redo the
+# ones that succeeded* — and redoing this one burns a build number for nothing.
+#
+# ⚠️ Last, and not gated: this is the whole point of staging, and it touches one phone.
+if ! scripts/release_ios.sh; then
+  echo
+  echo "═══════════════════════════════════════════════════════════════════"
+  echo "  $version IS STAGED — the APK and the web build are ready."
+  echo "  Only the phone install failed, and nothing is live either way."
+  echo
+  echo "  Unlock the phone on the same Wi-Fi, then:  scripts/release_ios.sh"
+  echo "  (do NOT re-run release_stage.sh — it would bump the build for nothing)"
+  echo "═══════════════════════════════════════════════════════════════════"
+  exit 1
+fi
 echo
 echo "═══════════════════════════════════════════════════════════════════"
 echo "  $version is on the phone. It is NOT live."
