@@ -42,3 +42,17 @@
 # schedule **with nobody watching**, which is the worst possible place for a dependency to change by itself.
 requests==2.34.2   # the FPL client
 psycopg[binary]==3.3.6   # Postgres — the pipeline's destination
+
+# ── Transitive dependencies, pinned (ADR-341) ─────────────────────────────────────────────────────────
+# ⭐ Same reason as `requirements-api.txt`: the direct pins above did not describe what gets installed.
+# ⚠️⚠️ **It matters more here than anywhere.** This file runs on a schedule, 24x a day, with nobody
+# watching — ⭐ *the worst possible place for a dependency to change by itself*, which is exactly the
+# sentence the `pulp` pin above was written for. It applied to the transitive tree all along.
+#
+# 📌 Regenerate deliberately (comment this block out first, or you re-freeze what you are refreshing):
+#     python3 -m venv /tmp/r && /tmp/r/bin/pip install -r requirements-pipeline.txt && /tmp/r/bin/pip freeze
+certifi==2026.7.22
+charset-normalizer==3.5.2
+idna==3.20
+psycopg-binary==3.3.6
+urllib3==2.8.0        # ⚠️ 2.8.0 or later: 2.7.0 and earlier carry CVE-2026-97687/97688/97689

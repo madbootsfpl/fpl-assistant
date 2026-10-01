@@ -73,13 +73,27 @@ def caller(request: Request, *, trust_proxy: bool = True) -> str:
     return request.client.host if request.client else "unknown"
 
 
+#: How often the stale-bucket sweep runs, and the size that brings it forward (ADR-342).
+#: ⭐ Time-based so an idle service does no work, size-based so a burst cannot outrun the clock.
+SWEEP_SECONDS: int = 60
+MAX_BUCKETS: int = 10_000
+
+
 class RateLimiter:
     """A sliding window per (caller, path-rule). ⭐ Sliding, not fixed: a fixed window lets twice the limit
-    through across a boundary, which is the bug every naïve counter ships with."""
+    through across a boundary, which is the bug every naïve counter ships with.
+
+    ⚠️⚠️ **The bucket table is swept, because nothing else removes an entry** (ADR-342). Expired
+    timestamps were popped from each deque, but the deque itself stayed in the dict forever — and the
+    key starts with `caller()`, which reads the left-most `X-Forwarded-For` value. ⭐⭐ *A caller sending
+    a fresh forged header per request therefore got a brand-new bucket every time: unbounded memory, and
+    no rate limit either, since a new bucket is an empty one.*
+    """
 
     def __init__(self, *, now=time.monotonic):
         self._hits: dict[tuple[str, str], deque[float]] = defaultdict(deque)
         self._now = now
+        self._last_sweep: float = now()
 
     def check(self, key: str, path: str) -> tuple[bool, int]:
         """`(allowed, retry_after_seconds)`."""
@@ -95,7 +109,25 @@ class RateLimiter:
         if len(hits) >= allowance:
             return False, max(1, int(window - (now - hits[0])) + 1)
         hits.append(now)
+        self._sweep(now)
         return True, 0
+
+    def _sweep(self, now: float) -> None:
+        """Drop buckets that can no longer affect anyone's limit.
+
+        ⭐⭐ **Behaviour-preserving by construction.** A bucket is removed only when its newest hit is
+        already older than its own window — which is exactly the state in which the next `check` would
+        drain it to empty anyway. ⚠️ *A sweep that could drop a live bucket would be a way to reset
+        somebody else's limit*, so a table still over `MAX_BUCKETS` after sweeping is left alone: that is
+        real concurrent traffic, and forgetting it would turn a memory fix into a rate-limit bypass.
+        """
+        if now - self._last_sweep < SWEEP_SECONDS and len(self._hits) < MAX_BUCKETS:
+            return
+        self._last_sweep = now
+        stale = [k for k, hits in self._hits.items()
+                 if not hits or now - hits[-1] >= limit_for(k[1])[1]]
+        for key in stale:
+            del self._hits[key]
 
     def forget(self) -> None:
         """Drop everything — ⚠️ for tests. Production never calls it: the window does the forgetting."""

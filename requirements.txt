@@ -31,18 +31,28 @@ streamlit-cookies-controller==0.0.4   # "remember me" — persist a passed acces
                       # (ADR-099/Sprint 132). Only used behind the guarded src/web_streamlit/remember.py seam,
                       # which no-ops if it's missing — so the gate/CLI/CI never depend on it. PINNED like streamlit.
 Authlib==1.8.0        # required by st.login() / OIDC — Streamlit ships auth as an optional extra, so it must be
-                      # declared explicitly (ADR-106). Only exercised when [auth] is configured (Google-auth mode).
-                      # ⚠️⚠️ **Declared for a mode that is currently OFF, and therefore never loaded** (ADR-322,
-                      # checked with the owner 2026-09-28: there is **no `[auth]` section** in the deployed app's
-                      # Streamlit secrets). `auth.is_configured()` is False, so `st.login()` is never called and
-                      # Authlib is never imported — **proved rather than assumed**: it is not installed in the local
-                      # venv at all, and `import streamlit` plus the whole 2,995-test suite run green without it
-                      # ever entering `sys.modules`.
-                      # ⭐ So 1.8.0 is inert today. It is pinned anyway because the float already resolved here, and
-                      # an unpinned line is a version that changes by itself the moment someone does switch auth on.
-                      # 📌 **The trigger is enabling `[auth]`, not the next deploy** — if you add that section,
-                      # sign in once before trusting it; this pin has never been exercised. ⭐ *An open action tied
-                      # to "the next deploy" is one that silently expires; tied to a condition, it waits.*
+                      # declared explicitly (ADR-106). Exercised whenever [auth] is configured (Google-auth mode).
+                      # 🔴 **LIVE IN PRODUCTION, and this comment used to say the opposite** (corrected 2026-10-01).
+                      # `[auth]` **is** set on `madboots.streamlit.app` — owner-confirmed: you sign in with Google,
+                      # and admitted testers live in `beta_users` in Supabase. So `auth.is_configured()` is True,
+                      # `st.login()` runs, and Authlib is imported on every sign-in.
+                      #
+                      # ⭐⭐ **What the old note got wrong is worth keeping, because this file has now done it twice.**
+                      # It asserted *"no `[auth]` section in the deployed app's secrets"* and called that **"proved
+                      # rather than assumed"** — but what it actually proved was that Authlib is absent from the
+                      # **local venv** and never enters `sys.modules` in the **local test run**. ⚠️⚠️ *The proof was
+                      # about this machine; the claim was about production.* ADR-322's own finding, in this same
+                      # file, was *"a fix applied to the file you were reading rather than the file that ships"* —
+                      # ⭐ **same file, same class of error, four days apart.** The word "proved" is what let it stand.
+                      #
+                      # ⚠️ **The one real risk here: production is this package's ONLY execution environment.**
+                      # It is not installed in the local venv, and CI never loads it either — `tests/test_auth.py`
+                      # and `tests/test_access.py` monkeypatch `is_configured`, so the real `st.login()` path is
+                      # never walked. ⭐ *A bad Authlib bump fails first in front of a tester, because there is
+                      # nowhere earlier for it to fail.*
+                      #
+                      # 📌 **So: pinned, and the pin is load-bearing.** Changing it is not a version bump you can
+                      # check with a green suite — sign in to the deploy once, by hand, before trusting it.
 #   FastAPI (frozen, a lean HTTP reference, ADR-050) — run: `python -m src.web`
 fastapi==0.141.1      # the read-only FastAPI edge over the analytics
 uvicorn==0.52.1       # local dev server (127.0.0.1)
@@ -64,3 +74,77 @@ pyyaml==6.0.3         # a test parses .github/workflows/data.yml and puts its co
                       # leans on someone else's dependency fails for an unrelated reason one day.
 pre-commit==4.6.2     # optional local hooks (.pre-commit-config.yaml); run `pre-commit install`
 st-click-detector==0.1.3   # ADR-133 — tap a shirt on the pitch to select a player (pre-built frontend, no npm)
+
+# ── Transitive dependencies, pinned (ADR-341) ─────────────────────────────────────────────────────────
+# ⭐⭐ **Every direct pin above was meticulous, and the file was still not reproducible.** Nothing named
+# what pip resolves *underneath* them, so Community Cloud installed whatever was newest on the day it
+# rebuilt — and this file's own header says it rebuilds whenever the file changes.
+#
+# ⚠️ It is how **urllib3 2.7.0** got here: three CVEs (CVE-2026-97687/97688/97689), none reachable in this
+# codebase (it streams no responses and uses no proxy), but ⭐ *nobody chose it.*
+#
+# 🔴🔴 **GENERATE THIS ON LINUX. A macOS freeze is missing a package and does not say so.**
+# Resolved on macOS this list is 54 long; on Linux it is 55 — the extra is `watchdog`, which Streamlit
+# declares for non-Windows platforms. ⭐⭐ *Pinning the macOS list would have left exactly one package
+# floating on the deploy, which is the hole this block exists to close, reopened and invisible.*
+# ⚠️ Verified identical on Python **3.13 and 3.14** (both CI matrix legs) with the OS held constant.
+#
+# 📌 Regenerate deliberately (comment this block out first, or you re-freeze what you are refreshing):
+#     docker run --rm -v "$PWD:/w" python:3.13-slim sh -c \
+#       'grep -vE "^\s*(#|-e|$)" /w/requirements.txt | sed "s/#.*//" > /tmp/d.txt
+#        pip install -q -r /tmp/d.txt && pip freeze'
+MarkupSafe==3.0.3
+Pygments==2.21.0
+altair==6.3.0
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+attrs==26.1.0
+blinker==1.9.0
+certifi==2026.7.22
+cffi==2.1.1
+cfgv==3.5.0
+charset-normalizer==3.5.2
+click==8.5.0
+cryptography==50.0.2
+distlib==0.4.3
+filelock==4.0.8
+h11==0.16.0
+httpcore==1.0.9
+httptools==0.8.0
+identify==2.6.20
+idna==3.20
+iniconfig==2.3.0
+itsdangerous==2.2.0
+joserfc==1.7.5
+jsonschema-specifications==2025.9.1
+jsonschema==4.26.0
+narwhals==2.26.0
+nodeenv==1.11.0
+numpy==2.5.3
+packaging==26.3
+pandas==3.0.6
+platformdirs==4.12.2
+pluggy==1.6.0
+protobuf==7.36.2
+psycopg-binary==3.3.6
+pyarrow==24.0.0
+pycparser==3.0
+pydantic==2.13.5
+pydantic_core==2.46.5
+pydeck==0.9.3
+python-dateutil==2.9.0.post0
+python-discovery==1.6.1
+python-multipart==0.0.32
+referencing==0.37.0
+rpds-py==2026.6.3
+six==1.17.0
+starlette==1.3.1
+tenacity==9.1.4
+toml==0.10.2
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+urllib3==2.8.0
+virtualenv==21.14.2
+watchdog==6.0.0
+websockets==16.1.1

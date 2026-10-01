@@ -202,3 +202,72 @@ def client():
     with TestClient(api) as c:
         yield c
     api.state.limiter.forget()
+
+
+# ── the bucket table is bounded (ADR-342) ────────────────────────────────────────────────────────
+
+def test_a_forged_caller_header_cannot_grow_the_table_forever():
+    """🔴 **The finding this sweep exists for.** `caller()` returns the left-most `X-Forwarded-For`
+    value, which the module's own docstring calls *"trivially spoofed"*. Every distinct value opened a
+    bucket, and nothing ever removed one — ⭐ *so the ceiling on the limiter's memory was the process's.*
+
+    ⭐⭐ **The property is that the table does not grow with the number of callers**, not that it hits some
+    particular size. A sweep runs at most once a `SWEEP_SECONDS`, so a bounded amount of already-stale
+    rubbish is always waiting for the next one — ⚠️ *asserting an exact size would be testing the sweep
+    interval, which is a tuning number, rather than boundedness, which is the fix.*
+    """
+    def table_size_after(callers):
+        clock = _Clock()
+        limiter = RateLimiter(now=clock)
+        for i in range(callers):
+            limiter.check(f"forged-{i}", "/api/v1/players")
+            clock.t += 1
+        return len(limiter._hits)
+
+    small, large = table_size_after(2_000), table_size_after(40_000)
+    assert large <= small * 1.5, (
+        f"20x the callers gave {large} buckets against {small} — the table still tracks caller count"
+    )
+    assert large < 1_000, f"{large} buckets retained from 40,000 one-shot callers"
+
+
+def test_the_sweep_never_drops_a_bucket_that_is_still_limiting():
+    """⚠️⚠️ **The invariant that makes the sweep safe.** A sweep that could forget a live bucket would
+    not be a memory fix — it would be a way to reset somebody else's limit by flooding the table.
+    """
+    clock = _Clock()
+    limiter = RateLimiter(now=clock)
+    allowance, window = LIMITS["/feedback"]
+
+    for _ in range(allowance):                      # spend the whole hourly allowance
+        assert limiter.check("victim", "/api/v1/feedback")[0]
+
+    # ⚠️ The flood must stay INSIDE the victim's window, or the limit expires for honest reasons and the
+    # test proves nothing. Advance well short of it while still forcing many sweeps.
+    for i in range(20_000):
+        limiter.check(f"flood-{i}", "/api/v1/players")
+        clock.t += (window / 2) / 20_000
+
+    assert clock.t - 1000.0 < window, "the flood outran the victim's window — the test is wrong, not the code"
+    ok, retry = limiter.check("victim", "/api/v1/feedback")
+    assert not ok, "the flood reset the victim's limit — the sweep dropped a live bucket"
+    assert retry > 0
+
+
+def test_sweeping_does_not_change_what_the_limiter_allows():
+    """⭐ The sweep is bookkeeping. The same calls in the same order must get the same answers."""
+    def run(sweep_seconds):
+        import src.service.http.limits as mod
+        original, mod.SWEEP_SECONDS = mod.SWEEP_SECONDS, sweep_seconds
+        try:
+            clock = _Clock()
+            limiter = RateLimiter(now=clock)
+            answers = []
+            for i in range(200):
+                answers.append(limiter.check(f"caller-{i % 7}", "/api/v1/squad/build")[0])
+                clock.t += 0.5
+            return answers
+        finally:
+            mod.SWEEP_SECONDS = original
+
+    assert run(60) == run(10**9), "sweeping changed the limiter's decisions"

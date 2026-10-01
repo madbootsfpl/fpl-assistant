@@ -43,3 +43,31 @@ uvicorn==0.52.1       # the ASGI server the container runs
 requests==2.34.2      # the FPL client — `my-team` fetches a manager's picks live
 psycopg[binary]==3.3.6   # Postgres — reads what the pipeline publishes (ADR-211)
 pulp==3.3.2           # not called by most endpoints, but on the import path (see above)
+
+# ── Transitive dependencies, pinned (ADR-341) ─────────────────────────────────────────────────────────
+# ⭐⭐ **The direct pins above made this file look reproducible, and it was not.** Nothing named the
+# packages pip resolves *underneath* them, so what shipped was decided by the clock at image-build time:
+# two images built from the identical file a week apart could carry different code.
+#
+# ⚠️ That is not theoretical — it is how **urllib3 2.7.0** arrived. The 2026-10-01 review found three CVEs
+# in it (CVE-2026-97687/97688/97689), none reachable here (this codebase streams no responses and uses no
+# proxy), but ⭐ *nobody chose that version, and nobody would have chosen the next one either.*
+#
+# 📌 **Regenerate deliberately, never casually** — the same rule as the direct pins:
+#     python3 -m venv /tmp/r && /tmp/r/bin/pip install -r requirements-api.txt && /tmp/r/bin/pip freeze
+# ⚠️ Comment out this block first, or you will re-freeze the pins you are trying to refresh.
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.7.22
+charset-normalizer==3.5.2
+click==8.5.0
+h11==0.16.0
+idna==3.20
+psycopg-binary==3.3.6
+pydantic==2.13.5
+pydantic_core==2.46.5
+starlette==1.7.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+urllib3==2.8.0        # ⚠️ 2.8.0 or later: 2.7.0 and earlier carry CVE-2026-97687/97688/97689

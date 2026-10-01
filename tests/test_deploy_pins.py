@@ -104,3 +104,62 @@ def test_the_dockerfile_still_installs_the_file_this_test_guards():
         "the Dockerfile no longer installs requirements-api.txt, so the pins this suite checks are not the "
         "pins the deployed image gets — re-point DEPLOY_FILES above at whatever it installs now"
     )
+
+
+# ── the tree, not just its roots (ADR-341) ───────────────────────────────────────────────────────
+
+#: A direct dependency → packages pip will install underneath it. ⭐ Not exhaustive: these are the
+#: *anchors*, chosen because each is a well-known sub-tree that cannot be absent if the parent is present.
+TREE_ANCHORS: dict[str, set[str]] = {
+    "requests": {"urllib3", "certifi", "idna", "charset-normalizer"},
+    "fastapi": {"starlette", "pydantic", "pydantic-core", "anyio", "typing-extensions"},
+    "uvicorn": {"click", "h11"},
+    "streamlit": {"altair", "numpy", "pandas", "pyarrow", "packaging"},
+}
+
+
+def _pinned_names(name: str) -> dict[str, str]:
+    """`{normalised package name: version}` for one deploy file."""
+    out = {}
+    for _, line in _requirements(name):
+        pkg, _, version = line.partition("==")
+        out[pkg.split("[")[0].strip().lower().replace("_", "-")] = version.strip()
+    return out
+
+
+@pytest.mark.parametrize("name", sorted(DEPLOY_FILES))
+def test_the_transitive_tree_is_named_not_just_the_direct_dependencies(name):
+    """⭐⭐ **A file of pinned direct dependencies is not a reproducible install.**
+
+    Pinning only what you import leaves pip to choose everything underneath, so two installs from the
+    identical file resolve differently on different days — which is how **urllib3 2.7.0** arrived here
+    with three CVEs that nobody evaluated, because nobody chose the version.
+
+    ⚠️ The anchors below are a *sample*, not the tree. This test cannot prove completeness offline; what
+    it stops is the regression — someone bumping a direct pin and dropping the generated block with it.
+    """
+    pinned = _pinned_names(name)
+    for parent, children in TREE_ANCHORS.items():
+        if parent not in pinned:
+            continue
+        missing = sorted(children - pinned.keys())
+        assert not missing, (
+            f"{name} pins {parent} but not what it installs underneath: {missing} "
+            f"— regenerate the transitive block ({DEPLOY_FILES[name]})"
+        )
+
+
+@pytest.mark.parametrize("name", sorted(DEPLOY_FILES))
+def test_urllib3_is_past_the_streaming_cves(name):
+    """🔴 CVE-2026-97687 / 97688 / 97689, all fixed in **2.8.0**.
+
+    ⭐ None are reachable in this codebase — two need response streaming and one needs an HTTPS proxy, and
+    there is neither (`git grep -E "stream=True|iter_content|read_chunked|proxies="` finds nothing). ⚠️ The
+    pin is held anyway because *"not reachable today"* is a statement about today's code, and the next
+    person to add a streaming download will not read this file first.
+    """
+    version = _pinned_names(name).get("urllib3")
+    if version is None:
+        return                                   # not every file pulls requests
+    parts = tuple(int(p) for p in version.split(".")[:2])
+    assert parts >= (2, 8), f"{name} pins urllib3=={version}; 2.8.0 is the first without the three CVEs"
