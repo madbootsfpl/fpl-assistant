@@ -26,12 +26,27 @@ page knowing three things:
    as though the only user is the author.
 2. **The data refreshes itself** (ADR-211). Squad data is in **Postgres**; a scheduled GitHub Action keeps it
    current. Any entry that assumes a manual `reseed` before a deadline is describing the old world.
-   ✅ *Exit criterion **measured 2026-10-08** (due 2026-10-03): since 2026-09-19 the pipeline ran **100
-   times with zero failures**, and **no production reseed was committed** — the three `data/seed.db`
-   commits in the window are the SQLite **test fixture**, which is all `reseed` rebuilds now (ADR-211).
-   ⚠️ **But 5 of those 100 runs were manual `workflow_dispatch`**, so whether *"nothing needed a hand"*
-   holds depends on why they were run — a forced refresh is not the same as a rescue, and the run list
-   cannot tell them apart. ⭐ The measurement is done; **the verdict is the owner's.**
+   ✅ **MET — closed 2026-10-08** (due 2026-10-03). Since 2026-09-19: **107 runs, zero failures**, and no
+   production reseed — the three `data/seed.db` commits in the window are the SQLite **test fixture**,
+   which is all `reseed` rebuilds now (ADR-211). The 5 manual `workflow_dispatch` runs were **forced
+   refreshes, not rescues**: all five fall inside **one hour on 2026-09-20** (16:05, 16:26, 16:32, 16:38,
+   17:06), each following a gap of 0.09–0.53 h — ⭐ *five runs in an hour after the pipeline had just
+   succeeded is somebody iterating, not somebody rescuing.* Owner confirmed.
+
+   🔴 **But the criterion measured the wrong thing, and closing it surfaced that.** It asked *"did it
+   need a hand?"* — no — and never asked *"did it run?"* Against a declared **hourly** cron the 102
+   scheduled runs have a **median gap of 4.7 h and a worst of 9.0 h**, with **99 of 101 gaps over two
+   hours**: roughly **a fifth of the declared cadence**.
+
+   ⚠️⚠️ And the holes are not random. The longest daytime gaps repeat the same shape — *Sat 26 Sep
+   07:41→15:51 (8.2 h)*, *Wed 07 Oct 08:10→16:06*, *Thu 08 Oct 08:26→16:08*, *Thu 01 Oct 08:20→16:00* —
+   a consistent morning-into-afternoon blind spot. ⭐⭐ **A Saturday 11:00 UK deadline sits inside it**,
+   which is the single hour of the week the data most needs to be current.
+
+   📌 Nothing failed, so nothing reported it. `data.yml` already names the fix and parks it — *"driving
+   the tick from something that keeps time and using GitHub as the worker — a decision with a token in
+   it, deliberately not taken here."* ⭐ *This is the evidence that would reopen that decision; it is not
+   taken here either.*
    ⚠️ *Dated on 2026-09-21 because "two weeks" with no anchor cannot expire; it just keeps sounding
    current — the same rot ADR-212 found in a "(tomorrow)" that had been true in August.*
 3. ✅ **Mobile shipped** — the first phase driven by user feedback rather than by what was next in the
