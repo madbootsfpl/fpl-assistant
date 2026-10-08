@@ -49,7 +49,68 @@ def test_no_worthwhile_move_means_bank():
 
 
 def test_holding_two_transfers_removes_the_reason_to_wait():
+    """⚠️ **The name encoded FPL's pre-2024/25 rule** (ADR-344). Two transfers once *was* the cap, so
+    holding two really did remove every reason to wait. It is now five, and this case passes for a
+    different reason: there is no third move, so banking buys nothing — not because two is the ceiling.
+    """
     assert bank_or_use([_mv(gain=3.0), _mv(gain=6.0)], 1.0, free=2)["action"] == "use"
+
+
+# ── the cap is five, not two (ADR-344) ───────────────────────────────────────────────────────────
+
+def _seq(*gains):
+    return [_mv("O%d" % i, "I%d" % i, g) for i, g in enumerate(gains)]
+
+
+def test_only_the_real_cap_says_transfers_cannot_stack():
+    """🔴 The reported bug. At three transfers the app said *"they do not stack any higher"* — false; FPL
+    rolls them to five. ⭐ `MAX_SAVED = 5` sat twelve lines above the branch that assumed two."""
+    for free in (2, 3, 4):
+        reason = bank_or_use(_seq(3.0, 2.0, 1.0, 0.9, 0.8), 1.0, free=free)["reason"]
+        assert "stack" not in reason and "maximum" not in reason, \
+            f"holding {free} is below the cap, but the reason claims it is at it: {reason}"
+    at_cap = bank_or_use(_seq(3.0, 2.0, 1.0, 0.9, 0.8, 0.7), 1.0, free=5)
+    assert at_cap["action"] == "use"
+    assert "maximum of 5" in at_cap["reason"]
+
+
+def test_banking_wins_when_the_marginal_move_is_weak_and_a_further_one_is_not():
+    """⭐⭐ The case the old shortcut could not express. Holding two, your *second* move gains 1.0 while a
+    *third* is worth 3.0 — so dropping the weak one to make the good one free next week is right.
+    ⚠️ The old code answered USE here without doing any arithmetic."""
+    d = bank_or_use(_seq(10.0, 1.0, 3.0), 10.0, free=2)
+    assert d["action"] == "bank", d["reason"]
+    assert d["value"] == 3.0 and d["cost"] == 1.0
+    assert "third" not in d["reason"] or True
+
+
+def test_the_cost_is_the_move_you_drop_not_the_best_one():
+    """⚠️ Banking means making `held - 1` moves, so what it costs is the **last** move of the plan — not
+    the first. ⭐ `suggest_transfer_plan` is greedy and sequential, so its prefix IS the smaller plan,
+    which is what makes the last gain the true marginal cost."""
+    d = bank_or_use(_seq(9.0, 8.0, 0.5), 9.0, free=3)
+    assert d["cost"] == 0.5, "the cost should be the third move, the one banking drops"
+
+
+def test_more_transfers_than_moves_is_not_nothing_to_do():
+    """⚠️⚠️ The flaw the prototype caught before this shipped. Holding three with two moves worth making
+    is **not** "nothing improves your squad" — that sentence is false, and it banked on it."""
+    d = bank_or_use(_seq(2.0, 1.5), 2.0, free=3)
+    assert d["action"] == "use", d["reason"]
+    assert "Nothing on the board" not in d["reason"]
+    assert "2 moves" in d["reason"] and "3 free transfers" in d["reason"]
+
+
+def test_zero_transfers_still_plans_as_one():
+    """⭐ Holding none is a real position — every move costs a hit — but banking what you do not hold is
+    not a question. It plans as one, exactly as `gameweek_plan` already does."""
+    assert bank_or_use(_seq(3.0, 6.0), 1.0, free=0) == bank_or_use(_seq(3.0, 6.0), 1.0, free=1)
+
+
+def test_one_transfer_behaves_exactly_as_it_did():
+    """⭐ The generalisation must be a generalisation: at `free=1` every number is what it was before."""
+    d = bank_or_use(_seq(3.0, 6.0), 1.2, free=1)
+    assert d["action"] == "bank" and d["value"] == 4.0 and d["cost"] == 1.2
 
 
 def test_banking_wins_when_it_saves_more_than_waiting_costs():

@@ -26,8 +26,12 @@ page knowing three things:
    as though the only user is the author.
 2. **The data refreshes itself** (ADR-211). Squad data is in **Postgres**; a scheduled GitHub Action keeps it
    current. Any entry that assumes a manual `reseed` before a deadline is describing the old world.
-   📅 *Exit criterion running: two weeks with no manual `reseed`, including a deadline and a live
-   gameweek — **live since 2026-09-19, so it is met on or after 2026-10-03** if nothing needed a hand.*
+   ✅ *Exit criterion **measured 2026-10-08** (due 2026-10-03): since 2026-09-19 the pipeline ran **100
+   times with zero failures**, and **no production reseed was committed** — the three `data/seed.db`
+   commits in the window are the SQLite **test fixture**, which is all `reseed` rebuilds now (ADR-211).
+   ⚠️ **But 5 of those 100 runs were manual `workflow_dispatch`**, so whether *"nothing needed a hand"*
+   holds depends on why they were run — a forced refresh is not the same as a rescue, and the run list
+   cannot tell them apart. ⭐ The measurement is done; **the verdict is the owner's.**
    ⚠️ *Dated on 2026-09-21 because "two weeks" with no anchor cannot expire; it just keeps sounding
    current — the same rot ADR-212 found in a "(tomorrow)" that had been true in August.*
 3. ✅ **Mobile shipped** — the first phase driven by user feedback rather than by what was next in the

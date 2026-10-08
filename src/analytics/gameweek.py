@@ -13,7 +13,7 @@ from src.analytics.captain import captain_picks
 from src.analytics.headlines import event_phrase, leavers, reported_leaving
 from src.analytics.optimizer import best_legal_xi, is_unavailable
 from src.analytics.transfer import TIE_NOISE_WINDOW, replace_dead, suggest_transfer_plan, suggest_transfers
-from src.analytics.transfer_timing import affordability_cliff, bank_or_use
+from src.analytics.transfer_timing import MAX_SAVED, affordability_cliff, bank_or_use
 
 # FPL status codes → a human word for a flag (mirrors the CLI's availability messages, ADR-023).
 # "d" (doubtful) is handled separately — it's a warning, not an unavailability.
@@ -163,7 +163,13 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
     # and the longer view it already prints is never allowed to choose.
     moves = suggest_transfer_plan(owned, market, xp_by_id, window=horizon, horizon_xp=horizon_xp,
                                   bench_ids=bench_ids, bank=bank,
-                                  count=max(held, 2), reported_out=reported_out)
+                                  # ADR-344 — one move BEYOND what he would make, because that is what
+                                  # banking buys. `max(held, 2)` could not see it: at three transfers it
+                                  # returned three moves and the timing question is about the fourth.
+                                  # ⚠️ Not asked for at the cap — nothing can be banked there, so the
+                                  # extra move is work with no question behind it.
+                                  count=max(held + (1 if held < MAX_SAVED else 0), 2),
+                                  reported_out=reported_out)
     # What we actually advise him to do this week: as many moves as he holds transfers for.
     transfers = moves[:held]
     transfer = transfers[0] if transfers else None

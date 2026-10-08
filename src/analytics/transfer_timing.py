@@ -19,6 +19,11 @@ HIT_COST = 4          # FPL: every transfer beyond your free ones costs 4 points
 MAX_SAVED = 5         # free transfers roll over, up to five banked
 
 
+def _ordinal(n: int) -> str:
+    """`2` → `"second"`. Only ever used for 1-5, which is the whole range FPL allows."""
+    return {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth"}.get(n, f"{n}th")
+
+
 def free_transfer_run(start: int, gameweeks: int, *, made_per_gw=None, max_saved: int = MAX_SAVED) -> list[int]:
     """How many free transfers you hold at each of the next `gameweeks`, given what you spend.
 
@@ -45,7 +50,8 @@ def hit_is_worth_it(gain, *, hit_cost: int = HIT_COST) -> bool:
     return gain is not None and gain > hit_cost
 
 
-def bank_or_use(moves, next_gw_gain=None, *, free: int = 1, hit_cost: int = HIT_COST) -> dict:
+def bank_or_use(moves, next_gw_gain=None, *, free: int = 1, hit_cost: int = HIT_COST,
+                max_saved: int = MAX_SAVED) -> dict:
     """Whether to spend this week's free transfer now or bank it, with the arithmetic that decides.
 
     Banking buys one thing — a second free transfer next week — which is only worth having if there is a
@@ -68,30 +74,60 @@ def bank_or_use(moves, next_gw_gain=None, *, free: int = 1, hit_cost: int = HIT_
     avoided on a second move worth 2.4) and costs 2.8 by waiting a week"* — three numbers, no units, and a
     parenthetical carrying the only clause that explained where the first one came from.
     """
-    first = moves[0]["gain"] if moves else None
-    second = moves[1]["gain"] if len(moves) > 1 else None
+    # ⭐ `held` is what the arithmetic plans against. Holding **zero** is a real position — every move then
+    # costs a hit — but banking a transfer you do not have is not a question, so it plans as one, exactly
+    # as `gameweek_plan` already does. The caller still reports the true `free`.
+    held = max(int(free), 1)
+    worthwhile = [m for m in moves if m["gain"] > 0]
 
-    if first is None or first <= 0:
+    if not worthwhile:
         return {"action": "bank", "value": 0.0, "cost": 0.0, "second_gain": None,
                 "reason": "Nothing on the board improves your squad this week, so there is nothing "
                           "worth spending it on."}
 
-    if free >= 2:
-        return {"action": "use", "value": 0.0, "cost": round(first, 2), "second_gain": second,
-                "reason": f"You already hold {free} free transfers, and they do not stack any higher — "
-                          f"saving this one would gain you nothing."}
+    # ⚠️⚠️ **At the cap, and only at the cap, banking is literally impossible** (ADR-344). This branch read
+    # `free >= 2` — FPL's rule until 2024/25 — while `MAX_SAVED = 5` sat twelve lines above it and
+    # `free_transfer_run` used it correctly. ⭐ *The file disagreed with itself, and the half that spoke to
+    # the manager was the half that was wrong.*
+    if held >= max_saved:
+        return {"action": "use", "value": 0.0, "cost": round(worthwhile[0]["gain"], 2),
+                "second_gain": None,
+                "reason": f"You hold the maximum of {max_saved} free transfers, so this one cannot be "
+                          f"banked any higher — saving it would gain you nothing."}
 
-    cost = next_gw_gain if next_gw_gain is not None else 0.0
-    value = min(second, hit_cost) if second and second > 0 else 0.0
+    # ⚠️ Fewer moves worth making than transfers held: you are not transfer-constrained at all, and a
+    # banked transfer buys a move that does not exist. ⭐ *Not the same as "nothing improves your squad"* —
+    # that sentence is false here, and the first draft of this fix shipped it.
+    if len(worthwhile) < held:
+        n = len(worthwhile)
+        return {"action": "use", "value": 0.0, "cost": 0.0, "second_gain": None,
+                "reason": f"Only {n} move{'s' if n != 1 else ''} on the board {'are' if n != 1 else 'is'} "
+                          f"worth making and you hold {held} free transfers, so banking one buys nothing."}
+
+    # ⭐⭐ **The marginal move, not the first.** Banking means making `held - 1` moves now instead of
+    # `held`, so what it costs is the move you drop — the last of the plan — and what it buys is one extra
+    # free move next week, which is the first move that would otherwise cost a hit.
+    # ⚠️ `suggest_transfer_plan` is greedy and sequential (ADR-035/191), so its prefix *is* the
+    # `held - 1` plan — which is what makes the last move's gain the true marginal cost rather than an
+    # approximation of one.
+    marginal = moves[held - 1]["gain"]
+    extra = moves[held]["gain"] if len(moves) > held else None
+
+    # ⭐ `next_gw_gain` still wins when given: it is the top move priced in the week you would delay it
+    # into, which is a better figure than this week's gain — but it only describes move 1.
+    cost = next_gw_gain if (next_gw_gain is not None and held == 1) else marginal
+    value = min(extra, hit_cost) if extra and extra > 0 else 0.0
+    nth = "" if held == 1 else f" the {_ordinal(held)}"
     if value > cost:
-        return {"action": "bank", "value": round(value, 2), "cost": round(cost, 2), "second_gain": second,
-                "reason": (f"Next week you would have two free transfers, so a second move costs no "
-                           f"−{hit_cost} hit — worth {value:.1f} pts. Against that, making the move above "
-                           f"a week later costs {cost:.1f}. Waiting comes out {value - cost:+.1f}.")}
-    return {"action": "use", "value": round(value, 2), "cost": round(cost, 2), "second_gain": second,
-            "reason": (f"Waiting would save {value:.1f} pts on a future hit, but making the move above a "
-                       f"week later costs {cost:.1f} — {cost - value:.1f} worse." if value
-                       else "There is no second move worth saving the transfer for.")}
+        return {"action": "bank", "value": round(value, 2), "cost": round(cost, 2), "second_gain": extra,
+                "reason": (f"Next week you would hold {held + 1} free transfers, so one more move costs no "
+                           f"−{hit_cost} hit — worth {value:.1f} pts. Against that, making{nth or ' the'} "
+                           f"move a week later costs {cost:.1f}. Waiting comes out {value - cost:+.1f}.")}
+    return {"action": "use", "value": round(value, 2), "cost": round(cost, 2), "second_gain": extra,
+            "reason": (f"Waiting would save {value:.1f} pts on a future hit, but making{nth or ' the'} move "
+                       f"a week later costs {cost:.1f} — {cost - value:.1f} worse." if value
+                       else f"There is no further move worth saving{' a' if held > 1 else ' the'} "
+                            f"transfer for.")}
 
 
 def transfer_timing(moves, *, free: int = 1, next_gw_gain=None, hit_cost: int = HIT_COST,
@@ -110,8 +146,13 @@ def transfer_timing(moves, *, free: int = 1, next_gw_gain=None, hit_cost: int = 
     if dead:
         return _dead_first(dead, moves, free=free, hit_cost=hit_cost, horizon=horizon)
     decision = bank_or_use(moves, next_gw_gain, free=free, hit_cost=hit_cost)
-    second = moves[1] if len(moves) > 1 else None
-    take_hit = bool(second) and free < 2 and hit_is_worth_it(second["gain"], hit_cost=hit_cost)
+    # ⭐⭐ **The hit question is about the first move that would COST a hit** (ADR-344) — which is the one
+    # after your free ones, not always the second. Holding three transfers, moves 1-3 are free and move 4
+    # is where the −4 starts. ⚠️ This read `moves[1]` with a `free < 2` guard: true as far as it went, and
+    # it went no further — at three transfers it simply never asked the question.
+    held = max(int(free), 1)
+    second = moves[held] if len(moves) > held else None
+    take_hit = bool(second) and hit_is_worth_it(second["gain"], hit_cost=hit_cost)
     return {
         "moves": list(moves), "free": free, "horizon": horizon,
         "decision": decision, "take_hit": take_hit,
@@ -153,15 +194,20 @@ def _hit_verdict(second, take_hit, free, hit_cost, banking=False, moves=()) -> s
     """
     if not moves:
         return "Nothing is worth transferring in, so there's no hit to consider."
+    held = max(int(free), 1)
     if second is None:
-        return "Only one move is worth making, so there's no hit to consider."
-    if free >= 2:
-        return f"A second move is free — you hold {free} transfers."
+        return (f"Only {len(moves)} move{'s' if len(moves) != 1 else ''} "
+                f"{'are' if len(moves) != 1 else 'is'} worth making and you hold {held} free "
+                f"transfer{'s' if held != 1 else ''}, so there's no hit to consider."
+                if held > 1 else "Only one move is worth making, so there's no hit to consider.")
+    # ⭐ `second` is now the first move beyond the free ones (ADR-344), so the label follows the number
+    # rather than always saying "a second move".
+    which = "A second move" if held == 1 else f"A {_ordinal(held + 1)} move"
     if banking:
-        return (f"A second move ({second['out']['web_name']} → {second['in']['web_name']}) gains "
+        return (f"{which} ({second['out']['web_name']} → {second['in']['web_name']}) gains "
                 f"{second['gain']:.1f} — banking makes it free instead of a {hit_cost}-point hit.")
     if take_hit:
-        return (f"A second move ({second['out']['web_name']} → {second['in']['web_name']}) gains "
+        return (f"{which} ({second['out']['web_name']} → {second['in']['web_name']}) gains "
                 f"{second['gain']:.1f}, more than the {hit_cost}-point hit it costs.")
     return (f"Don't take a hit: the next-best move gains {second['gain']:.1f}, less than the {hit_cost} "
             "points it costs.")
