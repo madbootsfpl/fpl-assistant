@@ -1,5 +1,15 @@
 # Architecture — v0.1 (Agreed)
 
+> ### ⭐ External intelligence is evidence, not authority (ADR-345)
+>
+> MadBoots may use AI to collect, interpret, classify and summarise external information, but production
+> analytics consume only **validated, timestamped, provenance-backed** features. The analytics layer stays
+> deterministic and must not depend on a particular AI provider or agent framework.
+>
+> ⭐ Already how this works — `headlines.py` (ADR-151) lets a local model *propose* an event and a
+> deterministic vocabulary rule *veto* it, so a hallucinating model produces fewer events, never wrong
+> ones. Written down here so the next proposal starts from it.
+
 **Status:** Agreed
 **Version:** 0.1
 **Last updated:** 2026-07-31
