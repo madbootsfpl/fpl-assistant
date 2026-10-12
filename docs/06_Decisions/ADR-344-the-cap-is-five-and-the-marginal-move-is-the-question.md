@@ -79,6 +79,8 @@ the gate doing the thing the gate is for.
 
 ## What changed for a manager
 
+✅ **Owner-confirmed on his own team, 2026-10-12** — the third part of the Definition of Done, and the first human eyes on it: the probe below only ever ran against the demo squad.
+
 **Verified on the demo squad at every count 0–5: no verdict changed.** Every move on that board gains
 7.3–12.4 against a 4-point hit, so USE wins regardless. What changed is that the reasons became true.
 
