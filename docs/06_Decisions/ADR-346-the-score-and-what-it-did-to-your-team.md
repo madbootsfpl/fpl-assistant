@@ -278,3 +278,37 @@ The impact total was first asserted against the committed sample, whose one scor
 one with the other **survived**. ⭐ *A test whose data cannot distinguish the bug from the fix is a test
 that passes for the wrong reason.* Rewritten against a hand-built body with two scorers, where the total
 matches neither alone.
+
+
+---
+
+## 🔴 The first rendering was wrong, and the screenshot said why (2026-10-16)
+
+Build 42 on the phone produced a card that was **duplicated and truncated**, and the owner's two sentences
+named both causes precisely: *"its duplicated"* and *"having 'your player' adds no value if thats all we
+show."*
+
+| fault | why it was wrong |
+|---|---|
+| **Every name tagged `· Your player`** | ⭐⭐ True of **everything in the block**, so it said nothing — and it cost the width that truncated the names themselves: *"João Pedro · Your pl…"*, *"B.Fernandes · Your …"*. ⚠️ *A label true of everything on screen is not a label.* |
+| **Names listed twice** | Under the clubs, then again in *"Your fantasy impact"*. Arsenal drew *Raya · Gabriel · Konsa* and then *Calvert-Lewin · Raya · Gabriel · Konsa*. Same facts, no new one. |
+| **Per-player points missing** | The card showed **11 pts** for four players and never said which earned it — ⭐ *the one number a reader wants when three of his are in the same match.* |
+| **`1 pts`** | Noticed by every reader, fixed by none. |
+| **`did not play` in green** | Green reads as good news. |
+
+### The layout, chosen by the owner from three
+
+⭐ **Compact — names only.** Crest and club on the outside, score between with its status beneath, your
+players' **names** under their own club, and **one total** at the foot. Goals ride along as `⚽` because
+they are the one event compact enough to earn the width; nothing else does.
+
+A match with none of yours is **just a scoreline** — no divider, no total, no *"none of yours"*. ⚠️ *A card
+that explains its own emptiness spends four lines saying nothing happened.*
+
+📌 **Not chosen, and worth remembering why:** a per-player scorecard showing each man's own points. It
+answers *"which of my four earned the 11?"*, which this layout cannot — the trade the owner made is density
+over attribution, and if that question starts being asked, that is the design waiting.
+
+### ⭐ Three mutants, each caught
+
+The `· Your player` tag restored · `pts` at one point · the total drawn for a match with nobody in it.

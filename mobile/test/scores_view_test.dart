@@ -210,7 +210,6 @@ void main() {
       },
     );
     expect(find.text('your players not in yet'), findsOneWidget);
-    expect(find.text('none of yours'), findsNothing);
 
     await pumpScores(
       tester,
@@ -223,7 +222,6 @@ void main() {
       },
     );
     expect(find.text('your players not in yet'), findsNothing);
-    expect(find.text('none of yours'), findsOneWidget);
   });
 
   testWidgets('your player sits under the club he played for', (tester) async {
@@ -241,7 +239,7 @@ void main() {
     );
 
     for (final a in both.yours) {
-      final line = find.textContaining('${a.player!.name} · Your player');
+      final line = find.textContaining(a.player!.name);
       expect(line, findsWidgets, reason: '${a.player!.name} is not named');
 
       // ⚠️ Horizontal position is what attaches him to a club: home is drawn left of the scoreline,
@@ -327,7 +325,6 @@ void main() {
       },
     );
 
-    expect(find.text('Your fantasy impact'), findsOneWidget);
     expect(
       find.text('19 pts'),
       findsOneWidget,
@@ -337,7 +334,119 @@ void main() {
     // ⭐ "in this match", never "gameweek total": `player_history` is keyed by fixture, so these points
     // were earned here — ⚠️ *the mock-up this came from footnoted the opposite because its source could
     // not make that claim.*
-    expect(find.text('in this match'), findsOneWidget);
+    expect(find.text('this match'), findsOneWidget);
+  });
+
+  testWidgets('a name appears once, and carries no "Your player" tag', (
+    tester,
+  ) async {
+    // 🔴 **The two faults the owner reported, pinned.** The card listed your players under the clubs and
+    // again in a "Your fantasy impact" row — the same names, no new fact — and tagged each one
+    // "· Your player", which is true of everything in the block and so says nothing. ⭐⭐ *Together they
+    // cost the width that truncated the names themselves:* "João Pedro · Your pl…".
+    await pumpScores(tester);
+    final week = GameweekScores.fromJson(sampleJson());
+    final m = week.matches.firstWhere((x) => x.yours.isNotEmpty);
+
+    expect(find.textContaining('Your player'), findsNothing);
+    for (final a in m.yours) {
+      expect(
+        find.textContaining(a.player!.name),
+        findsOneWidget,
+        reason: '${a.player!.name} is drawn more than once',
+      );
+    }
+  });
+
+  testWidgets('a match with none of yours is just a scoreline', (tester) async {
+    // ⭐ No divider, no total, no "none of yours" — ⚠️ *a card that explains its own emptiness is a card
+    // spending four lines to say nothing happened.*
+    await pumpScores(
+      tester,
+      key: 'empty',
+      body: {
+        'gameweek': 6,
+        'live': false,
+        'yours_known': true,
+        'clubs': {
+          'AVL': {'name': 'Aston Villa', 'badge': ''},
+          'BRE': {'name': 'Brentford', 'badge': ''},
+        },
+        'matches': [
+          {
+            'fixture': 1,
+            'home': 'AVL',
+            'away': 'BRE',
+            'home_score': 2,
+            'away_score': 2,
+            'minutes': 90,
+            'started': true,
+            'finished': true,
+            'status': 'Full time',
+            'kickoff_time': '2026-10-10T11:30:00Z',
+            'yours': <dynamic>[],
+          },
+        ],
+      },
+    );
+    expect(find.text('2 – 2'), findsOneWidget);
+    expect(find.text('none of yours'), findsNothing);
+    expect(find.textContaining('this match'), findsNothing);
+  });
+
+  testWidgets('one point is a point, not "1 pts"', (tester) async {
+    Map<String, dynamic> player(String name, String team) => {
+      'id': 1,
+      'web_name': name,
+      'team': team,
+      'position': 'DEF',
+      'price': 4.5,
+      'xp': 2.0,
+      'status': 'a',
+      'chance': null,
+      'minutes_weight': 1.0,
+      'leaving': null,
+      'by_gameweek': <String, dynamic>{},
+    };
+    await pumpScores(
+      tester,
+      key: 'onept',
+      body: {
+        'gameweek': 6,
+        'live': false,
+        'yours_known': true,
+        'clubs': {
+          'HUL': {'name': 'Hull City', 'badge': ''},
+          'EVE': {'name': 'Everton', 'badge': ''},
+        },
+        'matches': [
+          {
+            'fixture': 1,
+            'home': 'HUL',
+            'away': 'EVE',
+            'home_score': 2,
+            'away_score': 2,
+            'minutes': 90,
+            'started': true,
+            'finished': true,
+            'status': 'Full time',
+            'kickoff_time': '2026-10-10T11:30:00Z',
+            'yours': [
+              {
+                'player': player('Egan', 'HUL'),
+                'minutes': 12,
+                'goals': 0,
+                'assists': 0,
+                'points': 1,
+                'bonus': 0,
+              },
+            ],
+          },
+        ],
+      },
+    );
+    expect(find.text('1 pt'), findsOneWidget);
+    expect(find.text('1 pts'), findsNothing);
   });
 
   testWidgets(

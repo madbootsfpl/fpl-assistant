@@ -96,8 +96,7 @@ class _ScoresViewState extends State<ScoresView> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
           children: [
             _Heading(week: week),
-            for (final m in week.matches)
-              _MatchCard(match: m, week: week, yoursKnown: week.yoursKnown),
+            for (final m in week.matches) _MatchCard(match: m, week: week),
           ],
         ),
       );
@@ -147,21 +146,14 @@ class _Heading extends StatelessWidget {
 }
 
 class _MatchCard extends StatelessWidget {
-  const _MatchCard({
-    required this.match,
-    required this.week,
-    required this.yoursKnown,
-  });
+  const _MatchCard({required this.match, required this.week});
 
   final MatchScore match;
   final GameweekScores week;
-  final bool yoursKnown;
 
   @override
   Widget build(BuildContext context) {
     final mine = match.yours;
-    // ⭐ Which side your players were on, so each can sit under his own club rather than in a list
-    // below both — ⚠️ *a name under a scoreline does not say who he was playing for.*
     final home = [
       for (final a in mine)
         if (a.player?.team == match.home) a,
@@ -183,7 +175,7 @@ class _MatchCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _Side(
@@ -202,17 +194,14 @@ class _MatchCard extends StatelessWidget {
               ),
             ],
           ),
+          // ⚠️⚠️ **Nothing is said twice.** The first version listed your players under the clubs and
+          // again in a "Your fantasy impact" row — ⭐ *the same names, no new fact, and the repetition is
+          // what pushed every name into an ellipsis.* The names live upstairs; only the total is here.
           if (mine.isNotEmpty) ...[
-            const SizedBox(height: 11),
+            const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0x14FFFFFF)),
-            const SizedBox(height: 9),
-            _Impact(appearances: mine, points: points),
-          ] else if (yoursKnown && match.started) ...[
             const SizedBox(height: 8),
-            const Text(
-              'none of yours',
-              style: TextStyle(color: Colors.white24, fontSize: 11),
-            ),
+            _Total(points: points),
           ],
         ],
       ),
@@ -220,7 +209,11 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
-/// One club of a fixture — crest, name, and any of your players who were in it.
+/// One club of a fixture — crest, name, and your players' **names**, nothing more.
+///
+/// ⭐⭐ **No "Your player" tag.** Every name in this block is already yours, so the words said nothing and
+/// cost the width that truncated the names themselves. ⚠️ *A label that is true of everything on screen
+/// is not a label.*
 class _Side extends StatelessWidget {
   const _Side({
     required this.club,
@@ -232,17 +225,22 @@ class _Side extends StatelessWidget {
   final List<MatchAppearance> appearances;
   final bool alignEnd;
 
+  /// `João Pedro ⚽⚽ · Raya` — goals as the one event compact enough to earn its place.
+  String get _names => [
+    for (final a in appearances)
+      '${a.player?.name ?? 'Your player'}${'⚽' * a.goals}',
+  ].join(' · ');
+
   @override
   Widget build(BuildContext context) {
     final crest = club.badge.isEmpty
-        ? const SizedBox(width: 26, height: 26)
+        ? const SizedBox(width: 24, height: 24)
         : Image.network(
             club.badge,
-            width: 26,
-            height: 26,
-            // ⚠️ A crest that fails to load must leave a hole, not an exception — ⭐ *a broken image is
-            // not a broken screen.*
-            errorBuilder: (_, _, _) => const SizedBox(width: 26, height: 26),
+            width: 24,
+            height: 24,
+            // ⚠️ A crest that fails to load leaves a hole, not an exception.
+            errorBuilder: (_, _, _) => const SizedBox(width: 24, height: 24),
           );
     final text = Column(
       crossAxisAlignment: alignEnd
@@ -252,21 +250,30 @@ class _Side extends StatelessWidget {
         Text(
           club.name,
           textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: Brand.darkText,
             fontSize: 14.5,
             fontWeight: FontWeight.w600,
           ),
         ),
-        for (final a in appearances)
-          _YourLine(appearance: a, alignEnd: alignEnd),
+        if (appearances.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            // ⭐ Wraps rather than truncates: three names on one side is normal, and an ellipsis there
+            // hides the very thing the card is for.
+            child: Text(
+              _names,
+              textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+              style: const TextStyle(color: Brand.darkMuted, fontSize: 11.5),
+            ),
+          ),
       ],
     );
     final children = alignEnd
         ? [Flexible(child: text), const SizedBox(width: 8), crest]
         : [crest, const SizedBox(width: 8), Flexible(child: text)];
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: alignEnd
           ? MainAxisAlignment.end
           : MainAxisAlignment.start,
@@ -275,78 +282,39 @@ class _Side extends StatelessWidget {
   }
 }
 
-/// What this match did to your team — the line nothing else on a phone can print.
-class _Impact extends StatelessWidget {
-  const _Impact({required this.appearances, required this.points});
+/// What the match was worth to you. ⭐ One number, because the names are already above it.
+class _Total extends StatelessWidget {
+  const _Total({required this.points});
 
-  final List<MatchAppearance> appearances;
   final int points;
 
   @override
   Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisAlignment: MainAxisAlignment.end,
+    crossAxisAlignment: CrossAxisAlignment.baseline,
+    textBaseline: TextBaseline.alphabetic,
     children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Your fantasy impact',
-              style: TextStyle(
-                color: Brand.darkText,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              [for (final a in appearances) _summarise(a)].join(' · '),
-              style: const TextStyle(color: Brand.darkMuted, fontSize: 11.5),
-            ),
-          ],
+      Text(
+        // ⚠️ `pt` at one. "1 pts" is the kind of thing a reader notices and nobody fixes.
+        '$points ${points == 1 ? 'pt' : 'pts'}',
+        style: const TextStyle(
+          color: Color(0xFF6FD79A),
+          fontSize: 15.5,
+          fontWeight: FontWeight.w800,
+          fontFeatures: [FontFeature.tabularFigures()],
         ),
       ),
-      const SizedBox(width: 10),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            '$points pts',
-            style: const TextStyle(
-              color: Color(0xFF6FD79A),
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-          // ⭐⭐ **"this match", not "the gameweek".** The mock-up it came from footnoted that gameweek
-          // points are not necessarily points earned in that match — ⚠️ true of a gameweek total, and
-          // this is not one: `player_history` is keyed by **fixture**, so these points were earned here.
-          const Text(
-            'in this match',
-            style: TextStyle(color: Colors.white38, fontSize: 10),
-          ),
-        ],
+      const SizedBox(width: 5),
+      // ⭐ "this match", never "gameweek total": `player_history` is keyed by fixture, so it was earned
+      // here — the mock-up this came from footnoted the opposite because its source could not say so.
+      const Text(
+        'this match',
+        style: TextStyle(color: Colors.white38, fontSize: 11),
       ),
     ],
   );
-
-  static String _summarise(MatchAppearance a) {
-    final name = a.player?.name ?? 'Your player';
-    final bits = [
-      if (a.goals > 0) '${a.goals} goal${a.goals == 1 ? '' : 's'}',
-      if (a.assists > 0) '${a.assists} assist${a.assists == 1 ? '' : 's'}',
-      if (a.bonus > 0) '+${a.bonus} bonus',
-      if (a.minutes == 0) 'did not play',
-    ];
-    return bits.isEmpty ? name : '$name · ${bits.join(', ')}';
-  }
 }
 
-/// The score, or the kick-off time when there is not one yet, with the server's status word under it.
-///
-/// ⚠️⚠️ **Never prints a zero for a match that has not started.** `0-0` and *"no score yet"* are opposite
-/// facts, and `started` is the only field that distinguishes them.
 class _Scoreline extends StatelessWidget {
   const _Scoreline({required this.match});
 
@@ -395,54 +363,6 @@ class _Scoreline extends StatelessWidget {
     final h = at.hour.toString().padLeft(2, '0');
     final m = at.minute.toString().padLeft(2, '0');
     return '$h:$m';
-  }
-}
-
-/// One of your players, under the club he actually played for.
-class _YourLine extends StatelessWidget {
-  const _YourLine({required this.appearance, required this.alignEnd});
-
-  final MatchAppearance appearance;
-  final bool alignEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = appearance.player?.name ?? 'Your player';
-    final events = [
-      if (appearance.goals > 0)
-        '⚽ ${appearance.goals} goal${appearance.goals == 1 ? '' : 's'}',
-      if (appearance.assists > 0)
-        '${appearance.assists} assist${appearance.assists == 1 ? '' : 's'}',
-      // ⭐ Minutes only when they are the story: a man who played the whole game needs no note, one who
-      // came on for nine minutes does. ⚠️ *A line stating the unremarkable buries the remarkable.*
-      if (appearance.minutes == 0)
-        'did not play'
-      else if (appearance.minutes < 60)
-        "${appearance.minutes}'",
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Column(
-        crossAxisAlignment: alignEnd
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$name · Your player',
-            textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Brand.darkMuted, fontSize: 11.5),
-          ),
-          if (events.isNotEmpty)
-            Text(
-              events.join(' · '),
-              textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF6FD79A), fontSize: 11.5),
-            ),
-        ],
-      ),
-    );
   }
 }
 
