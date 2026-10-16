@@ -622,12 +622,30 @@ def test_my_team_requests_that_cannot_be_answered_are_refused(request_, expected
 
 
 def test_my_team_returns_over_http_what_it_returns_in_process(client, store, team, monkeypatch):
+    """⚠️⚠️ **The deadline label is a live countdown, so it is compared for presence and not for value.**
+
+    It reads *"in 22h 0m"*, recomputed per call — three distinct values inside eighty seconds, measured.
+    Two payloads built milliseconds apart almost always agree and disagree the moment the minute rolls
+    between them. 🔴 *This went red on one CI leg of three, passed on the other two, and would not
+    reproduce locally*, which is what a clock in an equality assertion looks like from the outside.
+
+    ⭐ What the test is for is the **wiring** — that the HTTP edge returns what the service returns. A
+    countdown differing by a minute is not a wiring difference, so it is normalised out rather than the
+    assertion being weakened: both sides must still *have* a label, and everything else must match
+    exactly.
+    """
     import src.service as service
 
     over_http = client.post("/api/v1/squad/my-team",
                             json={"manager_id": 2885974, "horizon": 1}).json()
-    in_process = service.my_team(MyTeamRequest(manager_id=2885974, horizon=1), store=store)
-    assert over_http == json.loads(json.dumps(in_process))
+    in_process = json.loads(json.dumps(
+        service.my_team(MyTeamRequest(manager_id=2885974, horizon=1), store=store)))
+
+    for payload in (over_http, in_process):
+        assert payload["deadline"]["label"], "the label must be there, whatever it currently reads"
+        payload["deadline"] = {**payload["deadline"], "label": "<countdown>"}
+
+    assert over_http == in_process
 
 
 # ---- the money FPL does publish, and the number it does not ------------------------------
