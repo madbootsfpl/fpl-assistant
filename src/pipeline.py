@@ -261,12 +261,22 @@ def run(store: Storage, *, now=None, force: bool = False, client=None, elo_clien
         return {"ran": True, "ok": False, "reason": f"board rejected: {bad}",
                 "counts": counts, "board": None, "team_dna": None}
 
+    # ⭐ **Highlights last, and never fatal** (ADR-347). It reaches twenty *other people's* feeds, so a
+    # failure there must not touch a refresh that has already succeeded — ⚠️ *the data is the job; a link
+    # to a video is a decoration on it.* Costs nothing on a week with no outstanding fixtures: the query
+    # comes back empty and no feed is fetched.
+    try:
+        from src.api import highlights
+        clips = highlights.fill(store)
+    except Exception:            # noqa: BLE001 - a decoration must not fail the tick
+        clips = 0
+
     store.set_data_status(refreshed_at=stamp, attempted_at=stamp,
                           event=upcoming[0] if upcoming else None, ok=True, note=None)
     # ⚠️ **The board count is its own key, not folded into `counts`.** `ingest.refresh` returns a 4-tuple
     # that `describe()` unpacks positionally — appending to it would break the line a person actually reads.
     return {"ran": True, "ok": True, "reason": why, "counts": counts,
-            "board": published, "team_dna": team_dna}
+            "board": published, "team_dna": team_dna, "clips": clips}
 
 
 def describe(outcome: dict) -> str:
@@ -286,6 +296,10 @@ def describe(outcome: dict) -> str:
         dna = outcome.get("team_dna") or {}
         tdna = (f", Team DNA skipped ({dna['skipped']})" if dna.get("skipped")
                 else f", Team DNA {dna.get('rows', 0)} teams")
+        # ⭐ Named only when it found something — ⚠️ *"0 highlights" on every tick of a quiet Tuesday is
+        # noise in the one line a person actually reads.*
+        clips = outcome.get("clips") or 0
+        tdna += f", {clips} highlight{'' if clips == 1 else 's'}" if clips else ""
         return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo{xp}{tdna} "
                 f"({outcome['reason']}).")
     return f"REFUSED — {outcome['reason']}. The last good data still stands."

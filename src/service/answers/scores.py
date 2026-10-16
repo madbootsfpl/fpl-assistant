@@ -183,6 +183,10 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 # judgement every surface has to make, and ⚠️ *three clients making it separately is three
                 # chances to disagree about whether a match is over.*
                 "status": _status(f),
+                # ⭐ The club's own highlights video when one has been matched to **this** scoreline
+                # (ADR-347), null otherwise. ⚠️ *Null is the normal case for a match that has just
+                # finished* — the clubs take hours — so a client must draw the card without it.
+                "highlights": f["highlights_url"],
                 "yours": _yours({f["id"]}, squad, by_code, players),
             })
         # ⭐ `yours_known` is about the gameweek, not one match: history lands for the whole week at once.

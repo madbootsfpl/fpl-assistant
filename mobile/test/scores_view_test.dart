@@ -450,6 +450,51 @@ void main() {
   });
 
   testWidgets(
+    'a highlights link says where it goes, and only when there is one',
+    (tester) async {
+      // ⚠️⚠️ **It names YouTube.** `test_help_link.py` exists in this repo because *tapping a row and
+      // landing in another app is a surprise unless it was announced* — ⭐ a button labelled only
+      // "Highlights" makes the reader find out by doing it.
+      Map<String, dynamic> match({String? highlights}) => {
+        'fixture': 1,
+        'home': 'CHE',
+        'away': 'BOU',
+        'home_score': 5,
+        'away_score': 1,
+        'minutes': 90,
+        'started': true,
+        'finished': true,
+        'status': 'Full time',
+        'kickoff_time': '2026-10-10T11:30:00Z',
+        'highlights': highlights,
+        'yours': <dynamic>[],
+      };
+      Map<String, dynamic> week(Map<String, dynamic> m) => {
+        'gameweek': 6,
+        'live': false,
+        'yours_known': true,
+        'clubs': {
+          'CHE': {'name': 'Chelsea', 'badge': ''},
+          'BOU': {'name': 'Bournemouth', 'badge': ''},
+        },
+        'matches': [m],
+      };
+
+      await pumpScores(
+        tester,
+        key: 'clip',
+        body: week(match(highlights: 'https://youtu.be/x')),
+      );
+      expect(find.text('Highlights on YouTube'), findsOneWidget);
+
+      // ⭐ Most matches have no clip for hours after full time, and a button that never becomes available
+      // is worse than no button.
+      await pumpScores(tester, key: 'noclip', body: week(match()));
+      expect(find.text('Highlights on YouTube'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'a season with no matches says so instead of drawing an empty list',
     (tester) async {
       await pumpScores(

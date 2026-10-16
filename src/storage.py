@@ -52,6 +52,7 @@ _MIGRATIONS = {
         "team_a_score": "INTEGER",
         "minutes": "INTEGER",
         "started": "INTEGER",
+        "highlights_url": "TEXT",
     },
     "xp_board": {
         "defcon_xp": "REAL",
@@ -419,7 +420,9 @@ CREATE TABLE IF NOT EXISTS fixtures (
     team_h_score      INTEGER,
     team_a_score      INTEGER,
     minutes           INTEGER,
-    started           INTEGER
+    started           INTEGER,
+    -- ADR-347 — the club's own highlights video, once a title has been matched to this exact scoreline.
+    highlights_url    TEXT
 )
 """
 
@@ -1342,6 +1345,25 @@ class Storage:
             ORDER BY f.event, f.id
         """
         return self.conn.execute(sql, params).fetchall()
+
+    def set_highlights(self, fixture_id: int, url: str) -> None:
+        """Record a club's highlights video for one fixture (ADR-347).
+
+        ⚠️ **Written here rather than through `save_fixtures`**, which rebuilds a row from FPL's payload
+        and has never heard of highlights — ⭐ *a refresh would blank the link on every tick.*
+        """
+        with self.conn:
+            self.conn.execute(
+                "UPDATE fixtures SET highlights_url = ? WHERE id = ?", (url, fixture_id))
+
+    def fixtures_wanting_highlights(self) -> list:
+        """Finished fixtures with a score and no link yet — the only ones worth looking for.
+
+        ⭐ A found link never changes, so this list shrinks to nothing and the feeds stop being fetched.
+        """
+        return self.conn.execute(
+            "SELECT * FROM fixtures WHERE finished = 1 AND highlights_url IS NULL "
+            "AND team_h_score IS NOT NULL ORDER BY kickoff_time DESC").fetchall()
 
     def get_all_fixtures(self) -> list:
         """Every stored fixture, in kickoff order — **including ones already played** (ADR-211 2c).

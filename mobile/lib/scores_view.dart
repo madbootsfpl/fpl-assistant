@@ -14,6 +14,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api/client.dart';
 import 'api/models.dart';
@@ -197,11 +198,24 @@ class _MatchCard extends StatelessWidget {
           // ⚠️⚠️ **Nothing is said twice.** The first version listed your players under the clubs and
           // again in a "Your fantasy impact" row — ⭐ *the same names, no new fact, and the repetition is
           // what pushed every name into an ellipsis.* The names live upstairs; only the total is here.
-          if (mine.isNotEmpty) ...[
+          if (mine.isNotEmpty || match.highlights != null) ...[
             const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0x14FFFFFF)),
             const SizedBox(height: 8),
-            _Total(points: points),
+            // ⚠️⚠️ **Each on its own line, after two attempts at sharing one.** Side by side, the total
+            // overflowed the card by 27 px; constrained with `Flexible` the link was squeezed to 114 px
+            // for 267 px of words. ⭐ *A row that needs a compromise from both children is a row with one
+            // child too many* — and the label cannot shrink, because naming the destination is the point.
+            if (mine.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: _Total(points: points),
+              ),
+            if (match.highlights != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _Highlights(url: match.highlights!),
+              ),
           ],
         ],
       ),
@@ -283,6 +297,51 @@ class _Side extends StatelessWidget {
 }
 
 /// What the match was worth to you. ⭐ One number, because the names are already above it.
+/// A link to the club's own highlights video (ADR-347).
+///
+/// ⚠️⚠️ **It says where it goes.** `test_help_link.py` exists in this repo because *tapping a row and
+/// landing in another app is a surprise unless it was announced* — so the label names YouTube rather than
+/// saying "Highlights" and hoping.
+///
+/// ⭐ Drawn only when a link exists. Most matches have none for a few hours after full time, and a greyed
+/// button that never becomes available is worse than no button.
+class _Highlights extends StatelessWidget {
+  const _Highlights({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () async {
+      final ok = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      ).catchError((_) => false);
+      if (ok || !context.mounted) return;
+      // ⚠️ Reports a failure rather than doing nothing — ⭐ *a tap that silently does nothing teaches the
+      // reader the app is broken, and they are right.*
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open the video')));
+    },
+    borderRadius: BorderRadius.circular(8),
+    child: const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.play_circle_outline, size: 15, color: Brand.madOnDark),
+          SizedBox(width: 5),
+          Text(
+            'Highlights on YouTube',
+            style: TextStyle(color: Brand.madOnDark, fontSize: 11.5),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _Total extends StatelessWidget {
   const _Total({required this.points});
 
@@ -290,6 +349,10 @@ class _Total extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
+    // ⚠️⚠️ **`min`, because this Row now lives inside another Row.** Without it this one expands to fill
+    // and overflows the card by 27 px beside the highlights link — ⭐ *a widget that was fine as a
+    // Column's only child is not automatically fine as a Row's second one.*
+    mainAxisSize: MainAxisSize.min,
     mainAxisAlignment: MainAxisAlignment.end,
     crossAxisAlignment: CrossAxisAlignment.baseline,
     textBaseline: TextBaseline.alphabetic,

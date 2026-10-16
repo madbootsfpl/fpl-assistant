@@ -1488,6 +1488,7 @@ class MatchScore {
     required this.finished,
     required this.kickoffTime,
     required this.status,
+    required this.highlights,
     required this.yours,
   });
 
@@ -1502,6 +1503,7 @@ class MatchScore {
     finished: json['finished'] as bool? ?? false,
     kickoffTime: json['kickoff_time'] as String?,
     status: json['status'] as String? ?? '',
+    highlights: json['highlights'] as String?,
     yours: [
       for (final y in (json['yours'] as List? ?? []))
         MatchAppearance.fromJson(y as Map<String, dynamic>),
@@ -1521,6 +1523,11 @@ class MatchScore {
   /// ⭐ *"Full time"*, a minute, or empty — decided by the server so three clients cannot disagree about
   /// whether a match is over.
   final String status;
+
+  /// ⭐ The club's own highlights video, matched to **this** scoreline (ADR-347) — null until a club has
+  /// posted one. ⚠️ *Null is the normal case for a match that has just finished*, so the card must draw
+  /// without it rather than treat it as missing data.
+  final String? highlights;
 
   /// Your players who featured. ⚠️ Empty does **not** mean none — see [GameweekScores.yoursKnown].
   final List<MatchAppearance> yours;
