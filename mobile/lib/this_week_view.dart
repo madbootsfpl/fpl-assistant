@@ -80,6 +80,15 @@ class _ThisWeekViewState extends State<ThisWeekView> {
       final timing = (plan['timing'] as Map<String, dynamic>?) ?? const {};
       final bringIn = (lineup['bring_in'] as List?) ?? const [];
       final drop = (lineup['drop'] as List?) ?? const [];
+      // ⚠️⚠️ **`bring_in` and `drop` are two set differences, not two halves of a swap list** (ADR-351).
+      // Zipping them here printed *"▲ Leno ▼ Barry"* — a goalkeeper for an outfielder, which FPL does not
+      // allow — and *"▲ Guéhi ▼ Pickford"* the other way round. ⭐ *The XI was legal and the sentence
+      // describing it was not*, which is the worse half, because the sentence is what people act on.
+      // The server pairs them now; the lists stay for a payload that predates it.
+      final swaps = (lineup['swaps'] as List?) ?? const [];
+      // ⭐ The heading counts the lines it is about to print. It counted `bring_in` while the lines came
+      // from `swaps`, so a change the server declined to pair would have been announced and not shown.
+      final changes = swaps.isNotEmpty ? swaps.length : bringIn.length;
 
       final explanation = plan['explanation'] as Map<String, dynamic>?;
       final overall = explanation?['overall'] as Map<String, dynamic>?;
@@ -116,11 +125,19 @@ class _ThisWeekViewState extends State<ThisWeekView> {
           else
             _Card(
               label: 'Lineup',
-              headline:
-                  '${bringIn.length} change${bringIn.length == 1 ? '' : 's'}',
+              headline: '$changes change${changes == 1 ? '' : 's'}',
               detail: [
-                for (var i = 0; i < bringIn.length && i < drop.length; i++)
-                  '▲ ${bringIn[i]['web_name']}   ▼ ${drop[i]['web_name']}',
+                if (swaps.isNotEmpty)
+                  for (final s in swaps)
+                    '▲ ${s['in']['web_name']}   ▼ ${s['out']['web_name']}'
+                else ...[
+                  // ⭐ No pairing offered, so none is invented — the shape the CLI and `ask` have always
+                  // used, and the honest fallback for an older payload.
+                  if (bringIn.isNotEmpty)
+                    '▲ Start ${[for (final p in bringIn) p['web_name']].join(', ')}',
+                  if (drop.isNotEmpty)
+                    '▼ Bench ${[for (final p in drop) p['web_name']].join(', ')}',
+                ],
                 // ⭐ The engine's own sentence for each swap — *"higher projected xP: 4.8 vs 3.3"* —
                 // so a reader can check the call rather than take it.
                 ...lineupWhy.map((r) => '$r'),

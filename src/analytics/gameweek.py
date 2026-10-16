@@ -58,6 +58,57 @@ def auto_sub_cover(player, bench, xp_by_id):
     return {"name": best["web_name"], "xp": round(xp_by_id.get(best["id"], 0.0), 1)}
 
 
+def lineup_swaps(bring_in: list, drop: list) -> list[dict]:
+    """Pair the players coming into the XI with the ones going out (ADR-351).
+
+    🔴🔴 **`bring_in` and `drop` are two set differences, not two halves of a list of swaps**, and every
+    consumer that zipped them invented the pairing. The owner read *"▲ Leno ▼ Barry"* — a **goalkeeper for
+    an outfielder**, which FPL does not allow — and *"▲ Guéhi ▼ Pickford"* the other way round.
+
+    ⭐ The XI itself was legal; `best_legal_xi` produced it. ⚠️⚠️ *The advice was sound and the sentence
+    describing it was not*, which is the worse of the two failures because it is the sentence people act
+    on. The sets were even sorted **by player id**, so the pairing was not just arbitrary but meaningless.
+
+    ⭐⭐ **A keeper can only replace a keeper**, so that pair is forced. The rest is one-for-one and
+    constrained only by the formation staying legal, so the remainder is paired within position where it
+    can be — not because FPL requires it, but because *"Guéhi for Virgil"* reads as a decision and
+    *"Guéhi for Pickford"* reads as a mistake.
+    """
+    def position_of(player):
+        """⚠️ **A dict or a `sqlite3.Row`** — the two shapes player rows arrive in, and `Row` has no
+        `.get`. ⭐ *Streamlit passes Rows straight from the store*, so a `.get` here raised on the one
+        surface that does not go through JSON. Same convention as `kits._get`."""
+        try:
+            return player["position"]
+        except (KeyError, IndexError, TypeError):
+            return None
+
+    def take(pool, position=None):
+        for i, p in enumerate(pool):
+            if position is None or position_of(p) == position:
+                return pool.pop(i)
+        return None
+
+    incoming, outgoing, swaps = list(bring_in), list(drop), []
+    while incoming:
+        nxt = incoming.pop(0)
+        same = take(outgoing, position_of(nxt))
+        if same is not None:
+            swaps.append({"in": nxt, "out": same})
+            continue
+        # ⚠️⚠️ **A keeper never falls back.** Everything else may cross positions, because a legal XI can
+        # change shape — a defender in for a midfielder is a real substitution. ⭐ A goalkeeper is the one
+        # FPL constrains absolutely, so with no keeper going out there is **no pair to make**, and saying
+        # so is the whole point of this function.
+        if position_of(nxt) == "GK":
+            continue
+        other = take(outgoing)
+        if other is None:
+            break
+        swaps.append({"in": nxt, "out": other})
+    return swaps
+
+
 def gameweek_plan(owned, market, upcoming, xp_by_id, *,
                   baseline_by_code=None, minutes_weight=None, history_by_code=None,
                   bench_ids=(), bank: float = 0.0, horizon: int = 5, today=None, events_by_id=None,
@@ -136,6 +187,9 @@ def gameweek_plan(owned, market, upcoming, xp_by_id, *,
         "drop": [by_id[i] for i in declared_xi - optimal if i in by_id],
         "has_declared_bench": bool(declared_bench),
     }
+    # ⭐ Paired here, once, so the CLI, `ask`, the web app and the phone cannot disagree about who
+    # replaces whom (ADR-351).
+    lineup["swaps"] = lineup_swaps(lineup["bring_in"], lineup["drop"])
 
     # Transfer — the single best positive-gain, self-funding upgrade (ADR-030/046).
     # ADR-173 — **two moves, not one.** The second is never shown; it exists so `bank_or_use` can answer the
