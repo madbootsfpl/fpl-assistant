@@ -15,15 +15,28 @@ PROJECT="${MADBOOTS_PAGES_PROJECT:-madboots}"
 # ⭐⭐ **Says what is about to happen before it happens.** `release_stage.sh` can run several times before anyone
 # ships, so the build on disk is not necessarily the one you remember testing — ⚠️ *a publish step that
 # does not name what it publishes is a publish step you cannot check.*
+# ⚠️⚠️ **`MADBOOTS_NOTES` works HERE too, and it did not used to** (ADR-348). The notes are written into
+# `version.json` at **stage** time by `release_android.sh`, so the override documented as "overriding
+# everything" was unreachable from the command that actually publishes. ⭐⭐ *ADR-340 split one command in
+# two and the escape hatch stayed with the half that builds, not the half you reach for when you read the
+# bullets and find them wrong* — which is the only moment anybody wants it.
 python3 - "$SITE/app/version.json" <<'PY'
-import json, pathlib, sys
+import json, os, pathlib, sys
 m = pathlib.Path(sys.argv[1])
 if not m.exists():
     sys.exit("  ✗ no version.json staged — run scripts/release_stage.sh first")
 d = json.loads(m.read_text())
+
+override = [ln.strip() for ln in (os.environ.get("MADBOOTS_NOTES") or "").splitlines() if ln.strip()]
+if override:
+    d["notes"] = override
+    m.write_text(json.dumps(d, indent=2) + "\n")
+
 print(f"  about to publish build {d['build']}  ({d.get('url','')})")
 for n in d.get("notes") or []:
     print(f"    · {n}")
+if override:
+    print("    ⓘ  notes replaced by MADBOOTS_NOTES")
 if not d.get("notes"):
     print("    (no release notes — the banner will have no bullets)")
 PY

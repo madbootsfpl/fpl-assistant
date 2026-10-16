@@ -173,3 +173,58 @@ def test_the_range_starts_at_the_last_release_not_a_guess() -> None:
     """⚠️ This project does not tag. ⭐ *A range that guesses would silently report the wrong week's
     work* — and silently is the problem, because the notes would still look plausible."""
     assert "--grep=^chore: release" in _generator()
+
+
+# ── the override has to be reachable from the command that publishes (ADR-348) ───────────────────
+
+SHIP = ROOT / "scripts" / "release_ship.sh"
+
+
+def _ship_preamble() -> str:
+    body = re.search(r"python3 - \"\$SITE/app/version\.json\" <<'PY'\n(.*?)\nPY",
+                     SHIP.read_text(), re.S)
+    assert body, "release_ship.sh no longer reads version.json in python"
+    return body[1]
+
+
+def _ship(staged: dict, env: dict | None = None) -> dict:
+    """Run the ship script's preamble over a staged manifest and return what it leaves behind."""
+    import os
+    out = Path(tempfile.mkdtemp()) / "version.json"
+    out.write_text(json.dumps(staged))
+    subprocess.run(["python3", "-c", _ship_preamble(), str(out)],
+                   cwd=ROOT, check=True, capture_output=True,
+                   env={**os.environ, **(env or {})})
+    return json.loads(out.read_text())
+
+
+STAGED = {"version": "1.0.0", "build": 44, "versionCode": 2044,
+          "url": "https://madboots.com/app/madboots-44.apk",
+          "notes": ["Scores is tidier", "players named once", "on their own side"]}
+
+
+def test_the_override_reaches_the_command_that_actually_publishes() -> None:
+    """🔴🔴 **The gap this closes, found by shipping build 44 with wrong notes.**
+
+    Notes are written into `version.json` at **stage** time, so `MADBOOTS_NOTES` — documented as
+    *"overriding everything"* — did nothing when set on `release_ship.sh`. ⭐⭐ *ADR-340 split one command
+    in two and the escape hatch stayed with the half that builds, not the half you reach for the moment
+    you read the bullets and find them wrong* — which is the only moment anybody wants it.
+    """
+    got = _ship(STAGED, {"MADBOOTS_NOTES": "Scores — this week's matches\nLinks to club highlights"})
+    assert got["notes"] == ["Scores — this week's matches", "Links to club highlights"]
+
+
+def test_shipping_without_an_override_leaves_the_staged_notes_alone() -> None:
+    """⚠️ The staged notes are the default and must survive an ordinary ship untouched."""
+    import os
+    assert _ship(STAGED, {k: v for k, v in os.environ.items() if k != "MADBOOTS_NOTES"}
+                 | {"MADBOOTS_NOTES": ""})["notes"] == STAGED["notes"]
+
+
+def test_the_override_never_disturbs_the_build_it_is_shipping() -> None:
+    """⭐ It rewrites the words and nothing else — ⚠️ *a manifest whose `url` no longer matches its `build`
+    prompts nine people to download a file that is not there.*"""
+    got = _ship(STAGED, {"MADBOOTS_NOTES": "One line"})
+    assert {k: got[k] for k in ("version", "build", "versionCode", "url")} == \
+           {k: STAGED[k] for k in ("version", "build", "versionCode", "url")}
