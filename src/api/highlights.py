@@ -17,8 +17,11 @@ safe*: three guesses resolved to `ANIME VERSE`, `WEW` and a Nottingham Forest **
 channel is exactly where an unlicensed re-upload lives. ⭐ *An allow-list of official channels is what keeps
 this a link to the rights-holder rather than to whoever uploaded it first.*
 
-📌 **Two clubs are missing** — Nott'm Forest and Spurs — because neither could be resolved to an official
-channel from here. Their matches simply have no link until somebody adds them.
+📌 **All twenty clubs are on the list.** Nott'm Forest and Spurs were the last two, and the reason they
+were missing turned out to be about this machine rather than about them: youtube.com/@handle answers an EU
+consent wall from Ireland, so the handle resolver could not see any channel. ⭐ *A blocked lookup reads
+exactly like an absent one*, and "could not be resolved" quietly became "does not exist" in the note that
+recorded it.
 """
 
 import re
@@ -50,7 +53,22 @@ CHANNELS: dict[str, str] = {
     "MUN": "UC6yW44UGJJBvYTlfC7CRg2Q",
     "NEW": "UCywGl_BPp9QhD0uAcP2HsJw",
     "SUN": "UCrw-7k6yJc0EMJdf-0BAkoQ",
-    # 📌 NFO and TOT: no official channel established. Their matches get no link.
+    # ── named by a source that is not YouTube, then verified against the feed's own contents ───────
+    # ⭐⭐ **The handle pages are unreachable from here**: youtube.com/@NFFC answers with the EU consent
+    # wall (this project is operated from Ireland), so the resolver that found the six above cannot see
+    # these two at all. ⚠️ *A blocked lookup reads exactly like a club that has no channel* — which is
+    # what "could not be resolved from here" meant, and it was never a statement about the clubs.
+    #
+    # ⭐ So each id came from a source that names it outright, and neither is trusted on its own:
+    #   NFO — linked from **nottinghamforest.co.uk** itself (`youtube.com/user/NFFCTube`), whose feed
+    #         reports `author` *"Nottingham Forest FC"*.
+    #   TOT — **Wikidata** P2397 on *Tottenham Hotspur F.C.*, whose feed reports `author`
+    #         *"Tottenham Hotspur"*.
+    # ⚠️⚠️ Both were then read: each feed carries this season's own matches in the exact
+    # `Club n-n Club | … Highlights` shape the parser needs, which is the check that matters — ⭐ *a club
+    # that cannot be parsed is on the list for nothing, and only its contents can say.*
+    "NFO": "UCyAxjuAr8f_BFDGCO3Htbxw",
+    "TOT": "UCEg25rdRZXg32iwai6N6l0w",
 }
 
 FEED = "https://www.youtube.com/feeds/videos.xml?channel_id={cid}"
@@ -66,12 +84,47 @@ FEED_ITEMS = 15
 #: deliberately loose and the **score** is what makes the match strict.
 TITLE = re.compile(r"([A-Za-z .'&]+?)\s+(\d+)\s*-\s*(\d+)\s+([A-Za-z .'&]+?)\s*(?:\||$)")
 
+#: ⚠️⚠️ **A club's archive series publishes an old match with a real scoreline in the title**, and
+#: Forest's is branded *Classic Highlights*:
+#:
+#:     Special Radosław Majewski Hat-Trick! 🪄 | Crystal Palace 0-3 Nottingham Forest | Classic Highlights
+#:
+#: 🔴 That parses, names two Premier League clubs, and says *highlights* — so it would be taken by the
+#: **preferred** branch the moment a current fixture happens to end 0-3 at Selhurst. ⭐⭐ *The score check
+#: was supposed to make a wrong link impossible, and an old match between the same two clubs is exactly
+#: the case it cannot see* — the scoreline is right, and the match is twelve years old.
+#:
+#: 📌 Deliberately the one phrase actually observed, across all twenty feeds, rather than a list of words
+#: that might mean "old". ⚠️ *Excluding the word "classic" alone would drop a genuine package captioned
+#: "A CLASSIC AT THE CITY GROUND"* — a wrong link traded for a missing one, which is the trade ADR-347
+#: made in the other direction and had to undo. The real discriminator is the upload **date** against
+#: kickoff, which this module already parses and throws away; see ADR-352.
+ARCHIVE = re.compile(r"classic highlights", re.I)
+
+
+#: FPL's spelling → the club's own, for the one club where **neither name contains the other**.
+#:
+#: 🔴 **A right channel is worth nothing behind a name that cannot match.** Forest's own videos say
+#: *Nottingham Forest* and FPL says *Nott'm Forest*; containment fails both ways, so every Forest match
+#: resolved to no link even once the channel was on the list. ⭐ *The symptom of a missing alias and the
+#: symptom of a missing channel are the same symptom* — no link — which is why this hid behind that.
+#:
+#: ⚠️⚠️ **One entry, from evidence, not a spelling table.** Every club spelling observed across all
+#: twenty feeds was checked against every FPL name: `Nott'm Forest` is the only FPL name nothing matched.
+#: The other misses are *Fenerbahce*, *LASK*, *PSG*, *Cobham Next Gen* — European and academy opponents
+#: that **must** keep failing. ⭐ *A matcher loosened until Forest fits is a matcher that fits PSG too.*
+ALIASES = {"nott'm forest": "nottingham forest"}
+
+
+def _canon(name: str) -> str:
+    return ALIASES.get(name.lower().strip(), name.lower().strip())
+
 
 def _looks_like(a: str, b: str) -> bool:
     """Is this title's club name the same club? ⭐ Containment either way, because a club writes itself
     *Leeds United* where FPL says *Leeds* — ⚠️ and never a fuzzy ratio, which would let *Man City* match
     *Man Utd* on a bad day."""
-    a, b = a.lower().strip(), b.lower().strip()
+    a, b = _canon(a), _canon(b)
     return bool(a) and bool(b) and (a in b or b in a)
 
 
@@ -118,6 +171,8 @@ def match_fixture(entries, home: str, away: str, home_score: int, away_score: in
     """
     fallback = None
     for title, url in entries:
+        if ARCHIVE.search(title or ""):
+            continue
         parsed = parse_title(title)
         if not parsed:
             continue
@@ -155,19 +210,28 @@ def fill(store, *, client=None, limit: int = 20) -> int:
         home, away = clubs.get(f["team_h"]), clubs.get(f["team_a"])
         if not home or not away:
             continue
+        # ⭐⭐ **Both clubs' entries, judged together.** 🔴 This used to take the first club that
+        # returned anything, and the first club is the home one: for *Crystal Palace 3-1 Nott'm Forest*,
+        # Palace's feed offered *"DUGOUT CAM 🎥 | Crystal Palace 3-1 Nottingham Forest"* and Forest's
+        # offered the actual *Extended Highlights* — and the dugout camera won, because it was asked
+        # first and the loop stopped as soon as something answered.
+        #
+        # ⚠️⚠️ *The preference for a title that says "highlights" only ever applied within one club's
+        # feed*, so it could not see the better answer sitting in the other one. ⭐ Concatenating first
+        # makes the preference mean what it says. Still one fetch per club — `feeds` caches.
+        entries = []
         for side in (home, away):
             short = side["short_name"]
             if short not in feeds:
                 feeds[short] = videos(short, client=client)
-            url = match_fixture(feeds[short], home["name"], away["name"],
-                                f["team_h_score"], f["team_a_score"])
-            if url and url != f["highlights_url"]:
-                # ⭐ Only a *change* is written and counted. A recent fixture is re-examined every tick,
-                # and ⚠️ *reporting "1 highlight" each time for the same video would be a number that
-                # never settles.*
-                store.set_highlights(f["id"], url)
-                added += 1
-                break           # ⭐ Either club's upload answers the same question.
-            if url:
-                break
+            entries += feeds[short]
+
+        url = match_fixture(entries, home["name"], away["name"],
+                            f["team_h_score"], f["team_a_score"])
+        if url and url != f["highlights_url"]:
+            # ⭐ Only a *change* is written and counted. A recent fixture is re-examined every tick,
+            # and ⚠️ *reporting "1 highlight" each time for the same video would be a number that
+            # never settles.*
+            store.set_highlights(f["id"], url)
+            added += 1
     return added

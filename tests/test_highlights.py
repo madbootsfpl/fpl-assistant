@@ -141,13 +141,32 @@ def test_a_club_not_on_the_allow_list_is_never_fetched_at_all():
     assert highlights.videos("NOT-A-CLUB", client=spy) == []
     assert spy.urls == [], f"a club off the list was fetched anyway: {spy.urls}"
 
-    # 📌 The two clubs whose official channel could not be established from here.
-    assert "NFO" not in highlights.CHANNELS and "TOT" not in highlights.CHANNELS
-
 
 def test_every_channel_id_looks_like_one():
     for short, cid in highlights.CHANNELS.items():
         assert cid.startswith("UC") and len(cid) == 24, f"{short} has a malformed channel id"
+
+
+def test_no_two_clubs_share_a_channel():
+    """⚠️ A copy-paste between two rows of a hand-written dict is silent: both clubs would resolve, both
+    would parse, and one of them would quietly answer with the other's matches. ⭐ *The score check cannot
+    catch it, because the wrong club's feed is a perfectly valid feed.*"""
+    seen = {}
+    for short, cid in highlights.CHANNELS.items():
+        assert cid not in seen, f"{short} and {seen[cid]} share channel id {cid}"
+        seen[cid] = short
+
+
+def test_all_twenty_clubs_are_covered():
+    """📌 Nott'm Forest and Spurs were the last two missing, and the reason was **this machine**:
+    youtube.com/@handle answers the EU consent wall from Ireland, so the handle resolver saw no channel
+    for anyone. ⭐ *A blocked lookup reads exactly like an absent one* — the note recording it said "no
+    official channel established", which is a claim about the clubs that the evidence never supported.
+
+    ⚠️ Twenty is the size of the Premier League, so a missing club is a club whose matches silently get no
+    link rather than an error anybody sees.
+    """
+    assert len(highlights.CHANNELS) == 20, sorted(highlights.CHANNELS)
 
 
 # ── filling fixtures ─────────────────────────────────────────────────────────────────────────────
@@ -236,3 +255,82 @@ def test_a_feed_that_fails_leaves_the_fixture_waiting(store_with_a_played_match)
     assert highlights.fill(store, client=_Broken()) == 0
     row = store.conn.execute("SELECT highlights_url FROM fixtures WHERE id = ?", (fixture_id,)).fetchone()
     assert row["highlights_url"] is None
+
+
+# ── the club's own spelling of itself (ADR-352) ──────────────────────────────────────────────────
+
+def test_forest_matches_the_name_forest_uses():
+    """🔴 **A right channel behind a name that cannot match is worth nothing.** FPL writes *Nott'm
+    Forest*; the club writes *Nottingham Forest*. ⚠️ Containment fails **both** ways, so every Forest
+    fixture resolved to no link even with the official channel on the list — ⭐ *and "no link" is also
+    what a missing channel looks like, which is where this hid.*"""
+    entries = [("Crystal Palace 3-1 Nottingham Forest | Premier League Highlights 📺", "u")]
+    assert highlights.match_fixture(entries, "Crystal Palace", "Nott'm Forest", 3, 1) == "u"
+
+
+def test_the_alias_does_not_loosen_anything_else():
+    """⚠️⚠️ **The temptation was a fuzzy ratio, and this is why it was refused.** Across all twenty feeds
+    the spellings that match no FPL club are *Fenerbahce*, *LASK*, *PSG*, *Lille*, *Cobham Next Gen* —
+    European and academy opponents that **must** keep failing. ⭐ *A matcher loosened until Forest fits
+    is a matcher that fits PSG too.*"""
+    assert highlights._looks_like("Nottingham Forest", "Nott'm Forest")
+    for other in ["PSG", "Fenerbahce", "LASK", "Lille", "Cobham Next Gen", "Exeter City"]:
+        assert not highlights._looks_like(other, "Nott'm Forest")
+    # ⭐ The pair the original comment named, still safe.
+    assert not highlights._looks_like("Man City", "Man Utd")
+
+
+def test_an_archive_match_is_never_the_link_even_though_it_says_highlights():
+    """🔴🔴 **The one case the score check cannot see.** Forest's archive series is branded *Classic
+    Highlights* and carries a real scoreline, so it parses, names two Premier League clubs, and says
+    *highlights* — ⚠️ *it would be taken by the preferred branch* the moment a current fixture ends 0-3
+    at Selhurst. ⭐ The score is right and the match is twelve years old."""
+    archive = ("Special Radosław Majewski Hat-Trick! 🪄 | Crystal Palace 0-3 Nottingham Forest | "
+               "Classic Highlights 🎬")
+    assert highlights.parse_title(archive), "the premise: this really does parse"
+    assert highlights.match_fixture([(archive, "old")], "Crystal Palace", "Nott'm Forest", 0, 3) is None
+
+    # ⭐ And it does not block the real one sitting beside it in the same feed.
+    real = "Crystal Palace 0-3 Nottingham Forest | Premier League Highlights"
+    assert highlights.match_fixture(
+        [(archive, "old"), (real, "new")], "Crystal Palace", "Nott'm Forest", 0, 3) == "new"
+
+
+def test_the_other_clubs_highlights_beat_this_clubs_dugout_cam(store_with_a_played_match):
+    """🔴 **First club asked used to win, and the first club is the home one.** For *Crystal Palace 3-1
+    Nott'm Forest*, Palace posted *"DUGOUT CAM 🎥 | Crystal Palace 3-1 Nottingham Forest"* and Forest
+    posted the actual *Extended Highlights* — ⚠️⚠️ *the preference for a title saying "highlights" only
+    ever applied within one club's feed*, so it could not see the better answer in the other one.
+
+    ⭐ This is the ADR-347 failure again — the right match, the wrong video — and the fix is to judge
+    both clubs' entries together rather than to stop at the first that answers.
+    """
+    store, fixture_id = store_with_a_played_match
+    clubs = {t["short_name"]: t["id"] for t in store.get_teams()}
+    with store.conn:
+        store.conn.execute(
+            "UPDATE fixtures SET team_h = ?, team_a = ?, team_h_score = 3, team_a_score = 1 WHERE id = ?",
+            (clubs["CRY"], clubs["NFO"], fixture_id))
+
+    feeds = _Feeds({
+        "CRY": [("DUGOUT CAM 🎥 | Crystal Palace 3-1 Nottingham Forest", "https://youtu.be/dugout")],
+        "NFO": [("Crystal Palace 3-1 Nottingham Forest | Premier League | Extended Highlights 🎬",
+                 "https://youtu.be/real")],
+    })
+
+    assert highlights.fill(store, client=feeds) == 1
+    row = store.conn.execute("SELECT highlights_url FROM fixtures WHERE id = ?", (fixture_id,)).fetchone()
+    assert row["highlights_url"] == "https://youtu.be/real", "the dugout camera was stored as highlights"
+
+
+def test_a_thriller_called_a_classic_is_still_a_highlights_package():
+    """⚠️⚠️ **The guard is one observed phrase and not a list of words meaning "old", and this is the
+    reason.** A club captioning a 3-3 *"A CLASSIC AT THE CITY GROUND"* has posted a genuine package —
+    ⭐ *excluding the bare word would trade a wrong link for a missing one*, which is the trade ADR-347
+    made in the other direction and had to undo.
+
+    🔴 Without this the guard could be widened to `classic` and nothing would notice: the mutation
+    survived, and a guard nothing stops from growing is a guard that eventually eats real links.
+    """
+    real = "A CLASSIC AT THE CITY GROUND 🔥 | Nott'm Forest 3-3 Spurs | Premier League Highlights"
+    assert highlights.match_fixture([(real, "u")], "Nott'm Forest", "Spurs", 3, 3) == "u"
