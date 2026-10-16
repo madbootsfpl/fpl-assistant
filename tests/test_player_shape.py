@@ -102,7 +102,8 @@ def _players_in(value, path="", found=None):
 #: What `_answers` exercises. ⭐ Named separately so the completeness test can read it without running
 #: every endpoint, which would make a missing-coverage failure hide behind an unrelated error.
 COVERED = {"analysis", "trending", "league", "gameweek_result", "head_to_head", "chips", "compare", "transfers", "captain", "gameweek", "route", "build",
-           "replacements", "players", "player", "player_dna", "signals", "chatter", "ask_question"}
+           "replacements", "players", "player", "player_dna", "signals", "chatter", "ask_question",
+           "gameweek_scores"}
 
 
 class _FakeReddit:
@@ -172,6 +173,13 @@ def _gameweek_result(store, ids):
         fpl_client.FplClient = real
 
 
+def _played_gameweek(store) -> int:
+    """A gameweek the snapshot has history for — otherwise `yours` is empty and the sweep sees no rows."""
+    row = store.conn.execute(
+        "SELECT round FROM player_history GROUP BY round ORDER BY COUNT(*) DESC LIMIT 1").fetchone()
+    return row["round"] if row else 1
+
+
 def _answers(store):
     ids = _squad(store)
     dearest = max((p for p in store.get_players() if p["id"] not in set(ids)),
@@ -199,6 +207,11 @@ def _answers(store):
         # the internet would be a sweep somebody eventually deletes.
         "league": _league(store, ids),
         "gameweek_result": _gameweek_result(store, ids),
+        # ⭐ ADR-346. Its `yours` block carries a `player_summary` with the week beside it — the first
+        # version was a flat dict of id + stats, which is the second-player-shape mistake `gameweek_result`
+        # already records making, and this sweep caught it the same way.
+        "gameweek_scores": service.gameweek_scores(
+            service.GameweekScoresRequest(player_ids=ids, gameweek=_played_gameweek(store)), store=store),
         "head_to_head": _h2h(store, ids),
         "compare": _compare_two(store),
         "player": service.player(

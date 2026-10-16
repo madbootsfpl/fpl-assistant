@@ -65,6 +65,7 @@ from src.service.answers.profiles import (
     players,
     team_dna,
 )
+from src.service.answers.scores import gameweek_scores
 from src.service.answers.squad import (
     _age_minutes,
     _data_freshness,
@@ -99,6 +100,7 @@ from src.service.requests import (
     FeedbackRequest,
     GameweekRequest,
     GameweekResultRequest,
+    GameweekScoresRequest,
     HeadToHeadRequest,
     LeagueRequest,
     LeaguesRequest,
@@ -119,7 +121,8 @@ from src.service.requests import (
 __all__ = [
     # the contract — one name per endpoint, the list `src/service/__init__.py` re-exports
     "analysis", "transfers", "captain", "gameweek", "route", "build", "my_team", "replacements",
-    "chips", "leagues", "league", "gameweek_result", "head_to_head", "player", "players",
+    "chips", "leagues", "league", "gameweek_result",
+    "gameweek_scores", "head_to_head", "player", "players",
     "compare", "player_dna", "team_dna", "trending", "ticker", "signals", "ask_question",
     "chatter", "feedback",
     # constants callers and tests read
@@ -128,7 +131,8 @@ __all__ = [
     # the request classes — the contract's input half (ADR-219), re-exported as the single module did
     "DEFAULT_HORIZON", "MAX_HORIZON", "AskRequest", "BuildRequest", "CaptainRequest",
     "ChatterRequest", "ChipsRequest", "CompareRequest", "FeedbackRequest", "GameweekRequest",
-    "GameweekResultRequest", "HeadToHeadRequest", "LeagueRequest", "LeaguesRequest",
+    "GameweekResultRequest",
+    "GameweekScoresRequest", "HeadToHeadRequest", "LeagueRequest", "LeaguesRequest",
     "MyTeamRequest", "PlayerDnaRequest", "PlayerRequest", "PlayersRequest", "ReplacementsRequest",
     "RouteRequest", "SignalsRequest", "SquadRequest", "TeamDnaRequest", "TickerRequest",
     "TransfersRequest", "TrendingRequest",

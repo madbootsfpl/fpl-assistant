@@ -239,6 +239,29 @@ class ChatterRequest:
             raise ValueError(f"limit {self.limit} is outside 1-25")
 
 
+@dataclass(frozen=True)
+class GameweekScoresRequest:
+    """*"What's the score?"* — the matches of one gameweek, and which of my players are in them (ADR-346).
+
+    ⭐ **`player_ids` is optional here, unlike every other squad-shaped request.** The scores are a fact
+    about the league, not about a manager — a reader with no squad loaded still gets the board, and the
+    `yours` block is simply empty. ⚠️ *A screen that refuses to draw without a squad is a screen that
+    breaks on first launch.*
+
+    `gameweek` of 0 means **the one worth showing**: in progress if any match is live, else the most
+    recently played.
+    """
+
+    player_ids: list[int] = field(default_factory=list)
+    gameweek: int = 0
+
+    def validate(self) -> None:
+        if len(set(self.player_ids)) != len(self.player_ids):
+            raise ValueError("duplicate player ids")
+        if not 0 <= self.gameweek <= 38:
+            raise ValueError(f"gameweek {self.gameweek} is outside 0-38")
+
+
 @dataclass
 class GameweekResultRequest:
     """*"What happened in gameweek N?"* — a week that has been **played** (ADR-298).

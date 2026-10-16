@@ -288,6 +288,22 @@ class ChatterBody(BaseModel):
                                    "and become a directory.")
 
 
+class GameweekScoresBody(BaseModel):
+    """⭐ The matches of a gameweek, with the caller's own players beside each one (ADR-346).
+
+    ⚠️ **`player_ids` is optional here and required everywhere else**, deliberately: a scoreline is a fact
+    about the league, so a reader with no squad loaded still gets the board and an empty `yours`. *A
+    screen that refuses to draw without a squad is a screen that breaks on first launch.*
+    """
+
+    player_ids: list[int] = Field(default_factory=list,
+                                  description="The caller's squad, for the `yours` block. Optional — "
+                                              "without it the scores still come back.")
+    gameweek: int = Field(0, ge=0, le=38,
+                          description="0 means the gameweek worth showing: one in progress if there is "
+                                      "one, else the most recently played.")
+
+
 class GameweekResultBody(BaseModel):
     """⚠️ **A manager and a gameweek that has been played** (ADR-298).
 
@@ -701,6 +717,24 @@ def squad_gameweek(body: GameweekResultBody) -> dict:
     ⭐ A week that has not happened answers `played: false` with an empty squad rather than an error.
     """
     return _answer(service.gameweek_result, service.GameweekResultRequest(**body.model_dump()))
+
+
+@app.post("/api/v1/gameweek/scores")
+def gameweek_scores(body: GameweekScoresBody) -> dict:
+    """What's the score — every match of a gameweek, and which of your players are in them.
+
+    ⭐⭐ **The `yours` block is the reason this exists.** A scoreline is a commodity; *"CHE 5-1 BOU — your
+    João Pedro scored twice"* is not, and the data for it was already here.
+
+    ⚠️ **`yours_known` matters more than it looks.** Scores are filled by the refresh and player history by
+    the backfill, so for a window after full time the score is known and nobody's week is. An empty
+    `yours` with `yours_known: false` means *we do not know yet* — ⭐ *which is the opposite of "none of
+    your players played", and an empty list cannot tell them apart.*
+
+    ⚠️ A finished match is served entirely from the database. FPL is only called when a match in that
+    gameweek is actually in flight, and then behind a 60-second cache.
+    """
+    return _answer(service.gameweek_scores, service.GameweekScoresRequest(**body.model_dump()))
 
 
 @app.post("/api/v1/admin/usage")

@@ -46,6 +46,13 @@ _MIGRATIONS = {
     # Spike 017 — the board became a faithful stand-in for `decision_xp` so the app could stop downloading
     # 1.9 MB of history to recompute it. These three post-date the table's first version (ADR-213), and the
     # committed test snapshot already carries one, so they migrate rather than appear.
+    # ADR-346 — the score columns, added after `fixtures` shipped. The committed snapshot predates them.
+    "fixtures": {
+        "team_h_score": "INTEGER",
+        "team_a_score": "INTEGER",
+        "minutes": "INTEGER",
+        "started": "INTEGER",
+    },
     "xp_board": {
         "defcon_xp": "REAL",
         "clean_sheet_xp": "REAL",
@@ -407,7 +414,12 @@ CREATE TABLE IF NOT EXISTS fixtures (
     team_h_difficulty INTEGER,
     team_a_difficulty INTEGER,
     finished          INTEGER,
-    kickoff_time      TEXT
+    kickoff_time      TEXT,
+    -- ADR-346 — nullable, because a fixture that has not kicked off has no score and 0-0 is a real one.
+    team_h_score      INTEGER,
+    team_a_score      INTEGER,
+    minutes           INTEGER,
+    started           INTEGER
 )
 """
 
@@ -568,8 +580,9 @@ ON CONFLICT(element_code, season, fixture) DO UPDATE SET
 
 UPSERT_FIXTURE = """
 INSERT INTO fixtures
-    (id, event, team_h, team_a, team_h_difficulty, team_a_difficulty, finished, kickoff_time)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    (id, event, team_h, team_a, team_h_difficulty, team_a_difficulty, finished, kickoff_time,
+     team_h_score, team_a_score, minutes, started)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     event             = excluded.event,
     team_h            = excluded.team_h,
@@ -577,7 +590,11 @@ ON CONFLICT(id) DO UPDATE SET
     team_h_difficulty = excluded.team_h_difficulty,
     team_a_difficulty = excluded.team_a_difficulty,
     finished          = excluded.finished,
-    kickoff_time      = excluded.kickoff_time
+    kickoff_time      = excluded.kickoff_time,
+    team_h_score      = excluded.team_h_score,
+    team_a_score      = excluded.team_a_score,
+    minutes           = excluded.minutes,
+    started           = excluded.started
 """
 
 
@@ -1205,7 +1222,9 @@ class Storage:
     def save_fixtures(self, fixtures: list[Fixture]) -> None:
         rows = [
             (f.id, f.event, f.team_h, f.team_a, f.team_h_difficulty,
-             f.team_a_difficulty, int(f.finished), f.kickoff_time)
+             f.team_a_difficulty, int(f.finished), f.kickoff_time,
+             f.team_h_score, f.team_a_score, f.minutes,
+             None if f.started is None else int(f.started))
             for f in fixtures
         ]
         with self.conn:

@@ -14,7 +14,7 @@ import src.service.answers as answers
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "src" / "service" / "answers"
-FAMILIES = ("common", "squad", "mini_leagues", "profiles", "market", "language", "meta")
+FAMILIES = ("common", "squad", "mini_leagues", "profiles", "market", "language", "meta", "scores")
 
 
 @pytest.mark.parametrize("family", FAMILIES)

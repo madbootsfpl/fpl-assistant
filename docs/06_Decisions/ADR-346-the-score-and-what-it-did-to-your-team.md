@@ -1,7 +1,7 @@
 # ADR-346 — The score, and what it did to your team
 
 **Date:** 2026-10-16
-**Status:** 📌 **Proposed — a gate, not a build.** Nothing here is implemented.
+**Status:** ✅ **Accepted — the service half is built** (2026-10-16). ⏳ The Flutter screen is not; see *What shipped* below.
 **Raised by:** a tester — *"in the More tab, a live score from the current or last match or gameweek, and
 when available a highlights clip of the goals, like a YouTube link, similar to flashscore.com"*
 **Builds on:** ADR-298 (a played gameweek never changes), ADR-256 (the rate limit), ADR-211 (the pipeline)
@@ -139,3 +139,43 @@ untested. ⭐ **And it needs the stored fixture to match titles against, which i
 
 Highlights · notifications · live player points (FPL's `event/{gw}/live` is a different and larger
 feature) · anything touching `decision_xp`.
+
+
+---
+
+## What shipped (2026-10-16)
+
+**The service half, entirely.** `POST /api/v1/gameweek/scores` → `{gameweek, live, yours_known, matches[]}`,
+with `fixtures` gaining `team_h_score`, `team_a_score`, `minutes` and `started` (nullable, migrated onto
+existing databases). 13 new tests, five mutants each caught by the test that names the behaviour.
+
+⏳ **The Flutter screen is not built.** The tester asked for this *in the More tab*, and that is client work
+this ADR's contract section never specified. The server is ready for it.
+
+### 🔴 Two things the design missed, both found by running it against the real database
+
+**1. Scores arrive before player history does.** `fixtures` is filled by the refresh; `player_history` by
+the separate backfill. Against the live database GW6 had **ten scores and no history** — so `yours` was
+empty for every match, which reads as *"none of your players featured"* when the truth is *"we do not know
+yet"*. ⭐⭐ *An empty list cannot tell those apart, and they are opposite facts.* Hence `yours_known`, which
+is not in the proposal above because nobody thought of it until the data did.
+
+**2. `finished` does not imply `started` in a database that predates `started`.** Every fixture stored
+before this change has `started` NULL and `finished` already set, so a played match read as *"not started
+but finished"* and `_which_gameweek` found no playable week at all. ⭐ Derived in code rather than
+backfilled: cheaper, and it cannot drift.
+
+### ⚠️ And one mistake this project had already written down
+
+`yours` was first a flat dict of `id` + stats — ⭐ **the exact second-player-shape mistake
+`gameweek_result` records making** (ADR-227), caught by `test_player_shape.py` the same way and within
+minutes. It now carries a `player_summary` with the week beside it.
+
+### 📌 Unrelated fragility found on the way, not fixed here
+
+Running `ingest.refresh` against the local `data/fpl.db` turned **ten unrelated tests red** — the bank
+suite, three API-contract samples, spent chips. That file is **gitignored**, and on SQLite
+`_wants_the_snapshot` hands it to any test that opens the default store. ⚠️⚠️ *So those tests pass or fail
+according to when the developer last ran a refresh, and CI — which has no `fpl.db` — can never see it.*
+Restoring the file from the committed snapshot made all ten green again. ⭐ *A test that reads a gitignored
+file is a test whose result belongs to one machine.* Worth its own gate; not taken here.

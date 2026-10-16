@@ -10,6 +10,19 @@
 > deterministic vocabulary rule *veto* it, so a hallucinating model produces fewer events, never wrong
 > ones. Written down here so the next proposal starts from it.
 
+> ### ⭐ `POST /api/v1/gameweek/scores` — match scores, and your players in them (ADR-346)
+>
+> Every match of a gameweek with `home_score` / `away_score` / `minutes` / `started` / `finished`, plus a
+> `yours` block carrying a `player_summary` and that player's week.
+>
+> ⚠️ **`yours_known` is the field to read before rendering an empty `yours`.** Scores are filled by the
+> refresh and player history by the backfill, so after full time the score is known and nobody's week is —
+> and *"none of your players featured"* and *"we do not know yet"* are opposite facts that an empty list
+> cannot distinguish.
+>
+> ⭐ A finished match is served from `fixtures` forever; FPL is called only when a match in that gameweek
+> is in flight, behind a 60-second cache. **Not a pipeline feature** — see Roadmap §2 on its cadence.
+
 **Status:** Agreed
 **Version:** 0.1
 **Last updated:** 2026-07-31
