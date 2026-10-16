@@ -100,20 +100,36 @@ def videos(short_name: str, *, client=None) -> list[tuple[str, str]]:
 
 
 def match_fixture(entries, home: str, away: str, home_score: int, away_score: int) -> str | None:
-    """The URL whose title names **this** fixture, or None.
+    """The URL whose title names **this** fixture, preferring one that says it is highlights.
 
     ⭐⭐ Both clubs **and both scores** must agree. ⚠️ *A title naming the right two clubs with the wrong
-    score is a different match between them* — a cup tie, a women's fixture, last season — and accepting
-    it would put the wrong video behind a correct-looking scoreline.
+    score is a different match between them* — a cup tie, a youth fixture, last season — and accepting it
+    would put the wrong video behind a correct-looking scoreline.
+
+    🔴 **Matching the fixture is not the same as matching the video, and the first version only did the
+    first.** Arsenal 2-1 Leeds resolved to *"FRIMMY AND MO GILLIGAN'S PITCHSIDE REACTIONS | Alternative
+    Commentary"* — the right match, on the right official channel, and not the highlights. ⭐ *A reader
+    who taps "Highlights" and gets comedians has been told something untrue by the label.*
+
+    ⚠️ So it is a **preference, not a requirement**: seven of eight real links said *highlights* and the
+    eighth did not — *"Aston Villa 2-2 Brentford | Yarmoliuk and Ajer net on the road!"* is a genuine
+    highlights package whose title never uses the word. ⭐ Requiring it would trade a wrong video for a
+    missing one; preferring it fixes the first without causing the second.
     """
+    fallback = None
     for title, url in entries:
         parsed = parse_title(title)
         if not parsed:
             continue
         h, hs, aws, a = parsed
-        if (hs, aws) == (home_score, away_score) and _looks_like(h, home) and _looks_like(a, away):
+        if (hs, aws) != (home_score, away_score):
+            continue
+        if not (_looks_like(h, home) and _looks_like(a, away)):
+            continue
+        if "highlight" in title.lower():
             return url
-    return None
+        fallback = fallback or url
+    return fallback
 
 
 def fill(store, *, client=None, limit: int = 20) -> int:
@@ -145,8 +161,13 @@ def fill(store, *, client=None, limit: int = 20) -> int:
                 feeds[short] = videos(short, client=client)
             url = match_fixture(feeds[short], home["name"], away["name"],
                                 f["team_h_score"], f["team_a_score"])
-            if url:
+            if url and url != f["highlights_url"]:
+                # ⭐ Only a *change* is written and counted. A recent fixture is re-examined every tick,
+                # and ⚠️ *reporting "1 highlight" each time for the same video would be a number that
+                # never settles.*
                 store.set_highlights(f["id"], url)
                 added += 1
                 break           # ⭐ Either club's upload answers the same question.
+            if url:
+                break
     return added

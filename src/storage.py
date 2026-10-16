@@ -1356,14 +1356,23 @@ class Storage:
             self.conn.execute(
                 "UPDATE fixtures SET highlights_url = ? WHERE id = ?", (url, fixture_id))
 
-    def fixtures_wanting_highlights(self) -> list:
-        """Finished fixtures with a score and no link yet — the only ones worth looking for.
+    def fixtures_wanting_highlights(self, *, recent_days: int = 3, now=None) -> list:
+        """Finished fixtures worth looking a video up for.
 
-        ⭐ A found link never changes, so this list shrinks to nothing and the feeds stop being fetched.
+        Two kinds: those with **no link yet**, and those played in the last `recent_days` **whatever they
+        have** — ⭐ because a club posts a reaction video before its highlights package, and whichever
+        existed when the pipeline happened to run is what got stored.
+
+        🔴 *Arsenal 2-1 Leeds resolved to "Alternative Commentary" on the live data*: the right match, the
+        right official channel, and not the highlights. ⚠️⚠️ **A link that is never re-checked is a wrong
+        link kept for ever** — so a short window lets a better one replace it, and then it closes.
         """
+        from datetime import UTC, datetime, timedelta
+        cutoff = ((now or datetime.now(UTC)) - timedelta(days=recent_days)).isoformat()
         return self.conn.execute(
-            "SELECT * FROM fixtures WHERE finished = 1 AND highlights_url IS NULL "
-            "AND team_h_score IS NOT NULL ORDER BY kickoff_time DESC").fetchall()
+            "SELECT * FROM fixtures WHERE finished = 1 AND team_h_score IS NOT NULL "
+            "AND (highlights_url IS NULL OR kickoff_time > ?) ORDER BY kickoff_time DESC",
+            (cutoff,)).fetchall()
 
     def get_all_fixtures(self) -> list:
         """Every stored fixture, in kickoff order — **including ones already played** (ADR-211 2c).

@@ -97,6 +97,34 @@ removed the allow-list check entirely**: an unknown club got a made-up channel i
 the double now records calls and the test reads the record. It is the rights-critical behaviour in the
 whole feature, and the first version of its test could not see it.
 
+## 🔴 Found by opening the links, not by testing them (2026-10-16)
+
+The first production run found **8 of 10** GW6 matches — and the two misses were exactly MUN v TOT and
+CRY v NFO, the two clubs with no channel. ⭐ *Every gap explained by the allow-list, none by the matcher.*
+
+⚠️⚠️ **Then I opened them.** Seven were the highlights. The eighth, Arsenal 2-1 Leeds, was
+*"FRIMMY AND MO GILLIGAN'S PITCHSIDE REACTIONS 🤣 | Alternative Commentary"* — the right match, on
+Arsenal's own official channel, and **not the highlights**.
+
+⭐⭐ **Matching the fixture is not matching the video, and the first version only did the first.** A reader
+who taps *"Highlights"* and gets comedians has been told something untrue by the label.
+
+**Fixed as a preference, not a requirement.** Seven of eight real titles said *highlights*; the eighth —
+*"Aston Villa 2-2 Brentford | Yarmoliuk and Ajer net on the road!"* — is a genuine package whose title
+never uses the word. ⭐ *Requiring it would trade a wrong video for a missing one.* So a highlights-titled
+match wins, and anything else is kept as a fallback.
+
+### And the wrong link would have been permanent
+
+🔴 `fixtures_wanting_highlights` returned only fixtures with **no link**, so once the reaction video was
+stored nothing would ever have looked again. ⚠️ *A link that is never re-checked is a wrong link kept for
+ever* — and this is not a freak case: a club posts a reaction clip before its highlights package, and
+whichever existed when the pipeline happened to run is what got stored.
+
+Now a fixture played in the **last three days** is re-examined whatever it holds, and only a *change* is
+written. ⭐ It converges and then the window closes — re-checking every played fixture for ever would fetch
+twenty feeds a tick to change nothing.
+
 ## Still open
 
 ⏳ **New Zealand is untested.** A YouTube link resolves per viewer's territory and cannot be checked from

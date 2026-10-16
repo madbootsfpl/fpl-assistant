@@ -99,6 +99,26 @@ def test_man_city_is_not_man_utd():
     assert highlights.match_fixture(entries, "Liverpool", "Man Utd", 0, 3) is None
 
 
+def test_the_highlights_video_wins_over_another_about_the_same_match():
+    """🔴 **Matching the fixture is not matching the video, and the first version only did the first.**
+    Arsenal 2-1 Leeds resolved live to *"FRIMMY AND MO GILLIGAN'S PITCHSIDE REACTIONS | Alternative
+    Commentary"* — the right match, the right official channel, and not the highlights. ⭐ *A reader who
+    taps "Highlights" and gets comedians has been told something untrue by the label.*
+    """
+    entries = [
+        ("FRIMMY AND MO GILLIGAN'S REACTIONS | Alternative Commentary | Arsenal 2-1 Leeds United", "chat"),
+        ("Arsenal 2-1 Leeds United | Premier League highlights", "real"),
+    ]
+    assert highlights.match_fixture(entries, "Arsenal", "Leeds", 2, 1) == "real"
+
+
+def test_a_highlights_package_that_never_says_the_word_is_still_taken():
+    """⚠️ A **preference, not a requirement**: seven of eight real links said *highlights* and the eighth
+    did not. ⭐ *Requiring the word would trade a wrong video for a missing one.*"""
+    entries = [("Aston Villa 2-2 Brentford | Yarmoliuk and Ajer net on the road! | Premier League", "u")]
+    assert highlights.match_fixture(entries, "Aston Villa", "Brentford", 2, 2) == "u"
+
+
 # ── the allow-list ───────────────────────────────────────────────────────────────────────────────
 
 def test_a_club_not_on_the_allow_list_is_never_fetched_at_all():
@@ -171,6 +191,39 @@ def test_either_club_can_be_the_one_that_posted(store_with_a_played_match):
     store, _ = store_with_a_played_match
     feeds = _Feeds({"BOU": [("Chelsea 5-1 Bournemouth | HIGHLIGHTS", "https://youtu.be/away")]})
     assert highlights.fill(store, client=feeds) == 1
+
+
+def test_a_recent_fixture_can_have_a_worse_link_replaced(store_with_a_played_match):
+    """🔴 **A link that is never re-checked is a wrong link kept for ever.** Live, Arsenal 2-1 Leeds
+    resolved to *"Alternative Commentary"* — right match, right channel, wrong video — and with the
+    original rule nothing would ever have looked again. ⭐ A short window lets the real package replace
+    it, then closes."""
+    store, fixture_id = store_with_a_played_match
+    from datetime import UTC, datetime
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET highlights_url = ?, kickoff_time = ? WHERE id = ?",
+                           ("https://youtu.be/reaction", datetime.now(UTC).isoformat(), fixture_id))
+
+    feeds = _Feeds({"CHE": [("Chelsea 5-1 Bournemouth | HIGHLIGHTS", "https://youtu.be/real")]})
+    assert highlights.fill(store, client=feeds) == 1
+    row = store.conn.execute("SELECT highlights_url FROM fixtures WHERE id = ?", (fixture_id,)).fetchone()
+    assert row["highlights_url"] == "https://youtu.be/real"
+
+    # ⭐ And it settles: the same video found again is not a change, so the count stops moving.
+    assert highlights.fill(store, client=feeds) == 0
+
+
+def test_an_old_fixture_is_left_alone_once_it_has_a_link(store_with_a_played_match):
+    """⚠️ The window closes. ⭐ *Re-checking every played fixture for ever would fetch twenty feeds a tick
+    to change nothing.*"""
+    store, fixture_id = store_with_a_played_match
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET highlights_url = ?, kickoff_time = ? WHERE id = ?",
+                           ("https://youtu.be/old", "2026-08-01T14:00:00Z", fixture_id))
+
+    feeds = _Feeds({"CHE": [("Chelsea 5-1 Bournemouth | HIGHLIGHTS", "https://youtu.be/new")]})
+    assert highlights.fill(store, client=feeds) == 0
+    assert feeds.asked == [], "an old fixture with a link must not be looked up again"
 
 
 def test_a_feed_that_fails_leaves_the_fixture_waiting(store_with_a_played_match):
