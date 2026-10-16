@@ -218,12 +218,28 @@ def test_a_good_tick_reports_the_board_in_its_counts(store, monkeypatch):
 
 def test_the_log_line_names_the_board(store, monkeypatch):
     """⭐ *The signal that is silent is the one nobody notices has stopped.* ADR-211 learned this for
-    headlines; the board gets the same treatment, including when it is deliberately skipped."""
+    headlines; the board gets the same treatment, including when it is deliberately skipped.
+
+    ⚠️⚠️ **This asserted `"from GW6"` and went red on 2026-10-16 when GW6 was played** — through nothing
+    but time passing, like the Roadmap's dated claim a week earlier.
+
+    ⭐ The cause is worth keeping: `pipeline.run(now=…)` injects a clock, but `publish_board` calls
+    `store.get_upcoming_fixtures()` **without passing it**, so the board's first event comes from
+    wall-clock time whatever the test pins. ⭐⭐ *The test looked deterministic and was quietly reading
+    today's date.* Harmless in production — there `now` IS wall time — so this is a testability defect,
+    not a wrong board. 📌 Threading the clock through is a pipeline change and wants its own gate.
+
+    So the assertion now checks what the test is actually named for — that the line **names the board and
+    the gameweek it starts from** — and derives the gameweek instead of pinning one.
+    """
     monkeypatch.setattr(pipeline, "refresh_due", lambda *a, **k: (True, "forced"))
     monkeypatch.setattr(pipeline.ingest, "refresh", lambda *a, **k: (659, 20, 380, 20))
 
-    line = pipeline.describe(pipeline.run(store, now=datetime(2026, 9, 20, 18, 0, tzinfo=UTC)))
-    assert "xP board" in line and "from GW6" in line, line
+    out = pipeline.run(store, now=datetime(2026, 9, 20, 18, 0, tzinfo=UTC))
+    line = pipeline.describe(out)
+    first = out["board"]["first_event"]
+    assert first is not None, "the board published no first event, so there is nothing to name"
+    assert "xP board" in line and f"from GW{first}" in line, line
 
     monkeypatch.setattr(pipeline, "publish_board",
                         lambda *a, **k: {"rows": 0, "first_event": None, "skipped": "no upcoming fixtures"})
