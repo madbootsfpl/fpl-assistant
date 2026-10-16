@@ -302,6 +302,11 @@ class GameweekScoresBody(BaseModel):
     gameweek: int = Field(0, ge=0, le=38,
                           description="0 means the gameweek worth showing: one in progress if there is "
                                       "one, else the most recently played.")
+    manager_id: int = Field(0, ge=0,
+                            description="Required for a gameweek that has already been played. "
+                                        "`player_ids` is the squad you hold now, and a past week was "
+                                        "played by a different one — without this, `yours` is empty and "
+                                        "`yours_known` is false rather than wrong.")
 
 
 class GameweekResultBody(BaseModel):

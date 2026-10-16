@@ -41,9 +41,11 @@ class SettingsView extends StatefulWidget {
   final MyTeam team;
   final ServiceClient client;
   final int managerId;
+
   /// The manager's override, or null while the server's derivation stands (ADR-321).
   final int? freeTransfers;
   final ValueChanged<int> onManagerId;
+
   /// `null` asks the app to go back to working it out from history.
   final ValueChanged<int?> onFreeTransfers;
 
@@ -355,7 +357,11 @@ class _ManagerIdRowState extends State<_ManagerIdRow> {
 /// ⭐ Extracted because "Auto" and the digits must look and behave identically — ⚠️ *a second copy of a
 /// control is where the two quietly stop matching.*
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.selected, required this.onTap});
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;

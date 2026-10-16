@@ -24,6 +24,7 @@ class ScoresView extends StatefulWidget {
   const ScoresView({
     required this.client,
     this.playerIds = const [],
+    this.managerId = 0,
     super.key,
   });
 
@@ -35,6 +36,11 @@ class ScoresView extends StatefulWidget {
   /// has loaded is a screen that is blank at the moment someone opens it to check a score.*
   final List<int> playerIds;
 
+  /// ⚠️⚠️ **Required for a week already played.** [playerIds] is the squad held *now*; a past gameweek was
+  /// played by a different one, and joining one to the other invents a past — ⭐ *the owner saw Calafiori
+  /// and Haaland credited with points in a week he held Gabriel and Calvert-Lewin.*
+  final int managerId;
+
   @override
   State<ScoresView> createState() => _ScoresViewState();
 }
@@ -42,8 +48,10 @@ class ScoresView extends StatefulWidget {
 class _ScoresViewState extends State<ScoresView> {
   late Future<GameweekScores> _future = _load();
 
-  Future<GameweekScores> _load() =>
-      widget.client.gameweekScores(playerIds: widget.playerIds);
+  Future<GameweekScores> _load() => widget.client.gameweekScores(
+    playerIds: widget.playerIds,
+    managerId: widget.managerId,
+  );
 
   @override
   Widget build(BuildContext context) => FutureBuilder<GameweekScores>(

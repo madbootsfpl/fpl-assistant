@@ -335,15 +335,21 @@ class ServiceClient {
   /// ⭐ **`playerIds` is optional**, unlike every other squad-shaped call: a scoreline is a fact about the
   /// league, so the board still draws before a squad has loaded.
   ///
+  /// ⚠️⚠️ **`managerId` is what makes a played week truthful.** `playerIds` is the squad you hold *now*,
+  /// and last week was played by a different one — ⭐ *only FPL knows whose team a player was in.* Without
+  /// it a past week names nobody rather than naming the wrong people.
+  ///
   /// ⚠️ `gameweek: 0` asks the server for the one worth showing — in flight if there is one, else the most
   /// recently played. ⭐ *The client does not get to decide which week is current; the fixtures do.*
   Future<GameweekScores> gameweekScores({
     List<int> playerIds = const [],
     int gameweek = 0,
+    int managerId = 0,
   }) async => GameweekScores.fromJson(
     await _post('gameweek/scores', {
       'player_ids': playerIds,
       'gameweek': gameweek,
+      'manager_id': managerId,
     }),
   );
 

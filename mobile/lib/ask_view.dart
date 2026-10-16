@@ -134,14 +134,16 @@ class _AskViewState extends State<AskView> {
     // ⭐⭐ **Remember what this turn was about**, so the next question can follow it (ADR-317 C).
     // ⚠️ Cleared on failure rather than kept: *"why?" about a question that errored is a follow-up to
     // nothing*, and the nudge the server sends back is a better answer than a stale one.
-    unawaited(pending.then(
-      (a) {
-        if (mounted) _context = a.context;
-      },
-      onError: (Object _, StackTrace _) {
-        if (mounted) _context = null;
-      },
-    ));
+    unawaited(
+      pending.then(
+        (a) {
+          if (mounted) _context = a.context;
+        },
+        onError: (Object _, StackTrace _) {
+          if (mounted) _context = null;
+        },
+      ),
+    );
     // ⚠️ A block body, not an arrow: `=> _answer = pending` **returns** the assignment, and Flutter
     // refuses a `setState` callback that returns a Future — *the arrow is shorter and says something
     // different.*
@@ -180,12 +182,18 @@ class _AskViewState extends State<AskView> {
                 // nothing.*
                 if (_listening != Listening.unavailable)
                   IconButton(
-                    tooltip: _listening == Listening.live ? 'Stop listening' : 'Ask out loud',
+                    tooltip: _listening == Listening.live
+                        ? 'Stop listening'
+                        : 'Ask out loud',
                     icon: Icon(
-                      _listening == Listening.live ? Icons.stop_circle : Icons.mic_none,
+                      _listening == Listening.live
+                          ? Icons.stop_circle
+                          : Icons.mic_none,
                       // ⭐ Orange while live, because it is the one state that must never be mistaken —
                       // purple is this app's ordinary "yours", and listening is not ordinary.
-                      color: _listening == Listening.live ? Brand.orange : Brand.purple,
+                      color: _listening == Listening.live
+                          ? Brand.orange
+                          : Brand.purple,
                     ),
                     onPressed: _dictate,
                   ),

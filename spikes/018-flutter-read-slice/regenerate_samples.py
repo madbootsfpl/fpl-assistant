@@ -38,6 +38,24 @@ def legal_squad(store, size=15):
     return picked
 
 
+def _scores(store, ids):
+    """The scores answer for a played gameweek, with FPL's picks **stubbed**.
+
+    ⚠️ A played week asks FPL whose team it was (ADR-350), and a sample regenerated from the internet is
+    not reproducible — ⭐ *the contract test would then pass or fail on someone else's uptime*, which is
+    the same reason `_my_team` stubs its fetch.
+    """
+    gw = _played_gameweek(store)
+
+    class _Picks:
+        def get_entry_picks(self, entry, gameweek):
+            return {"picks": [{"element": i} for i in ids]}
+
+    return service.gameweek_scores(
+        service.GameweekScoresRequest(player_ids=ids, manager_id=2885974, gameweek=gw),
+        store=store, client=_Picks())
+
+
 def _played_gameweek(store) -> int:
     """A gameweek the snapshot actually has history for, so `yours` is not empty in the sample."""
     row = store.conn.execute(
@@ -73,9 +91,11 @@ def responses(store) -> dict:
         # ⭐ Scores, with the squad so `yours` is populated (ADR-346). ⚠️ **A played gameweek, chosen by
         # the data rather than named** — the snapshot's coverage moves with every refresh, and a
         # hard-coded week would make this sample empty the first time it did.
-        "gameweek-scores": service.gameweek_scores(
-            service.GameweekScoresRequest(player_ids=ids, gameweek=_played_gameweek(store)),
-            store=store),
+        # ⚠️ **A live week, not a played one** (ADR-350). A played week asks FPL whose team it was, and a
+        # sample regenerated from the internet is not reproducible — ⭐ the contract test would then pass
+        # or fail on someone else's uptime. Marking the week unfinished exercises the same shape with the
+        # caller's own squad, which is what a played week does anyway once the picks come back.
+        "gameweek-scores": _scores(store, ids),
         "my-team": _my_team(store, ids),
         # ⭐ The whole ranked board, because that is literally what the endpoint returns and the app
         # downloads it in one go (ADR-236). A trimmed sample would hide the only thing worth knowing

@@ -16,12 +16,7 @@ import 'package:flutter/material.dart';
 import 'brand.dart';
 
 class Wordmark extends StatelessWidget {
-  const Wordmark({
-    this.size = 15,
-    this.onDark = true,
-    this.weight,
-    super.key,
-  });
+  const Wordmark({this.size = 15, this.onDark = true, this.weight, super.key});
 
   /// Font size in logical pixels.
   final double size;
@@ -54,9 +49,14 @@ class Wordmark extends StatelessWidget {
         children: [
           TextSpan(
             text: 'MAD',
-            style: TextStyle(color: onDark ? Brand.madOnDark : Brand.madOnLight),
+            style: TextStyle(
+              color: onDark ? Brand.madOnDark : Brand.madOnLight,
+            ),
           ),
-          const TextSpan(text: 'BOOTS', style: TextStyle(color: Brand.orange)),
+          const TextSpan(
+            text: 'BOOTS',
+            style: TextStyle(color: Brand.orange),
+          ),
         ],
       ),
       style: style,

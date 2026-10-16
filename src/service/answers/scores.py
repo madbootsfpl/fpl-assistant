@@ -118,6 +118,35 @@ def _yours(rows, squad, by_code, players) -> list:
     return out
 
 
+def _squad_that_week(request, gameweek: int, played: bool, players, *, client=None):
+    """The ids that were actually in this manager's team **that** gameweek.
+
+    🔴🔴 **The squad a caller holds today is not the squad that played last week**, and joining one to the
+    other invents a past. The owner saw *Calafiori* and *Haaland* credited with points in GW6, a week he
+    held *Gabriel* and *Calvert-Lewin* — ⚠️⚠️ *and the card totalled them, so the number looked
+    authoritative and was fiction.*
+
+    ⭐ For a **played** week only FPL knows, so it is asked — one request per manager per gameweek, and a
+    played week never changes, so the answer can be cached for ever (ADR-298's economics).
+
+    ⚠️⚠️ **A failed fetch returns nothing, never the current squad.** ⭐ *A wrong attribution is worse
+    than none*, and falling back would restore the exact bug this exists to fix, silently.
+
+    For a week still in play the caller's own squad is right: FPL locks picks at the deadline and
+    `my-team` returns that locked side.
+    """
+    if not played:
+        return [i for i in request.player_ids if i in players]
+    if not request.manager_id:
+        return []
+    try:
+        from src.api.client import FplApiError, FplClient
+        picks = (client or FplClient()).get_entry_picks(request.manager_id, gameweek)
+    except (FplApiError, Exception):   # noqa: B014 - every failure degrades the same way
+        return []
+    return [p["element"] for p in (picks.get("picks") or []) if p.get("element") in players]
+
+
 def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = None,
                     client=None) -> dict:
     """Every match of a gameweek, with the manager's own players beside each one."""
@@ -154,7 +183,11 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                     }
 
         players = {p["id"]: p for p in store.get_players()}
-        squad = {(players[i]["code"], i) for i in request.player_ids if i in players}
+        # ⭐ "Played" means every match of the week is over — the point at which the caller's current
+        # squad stops being the one that earned these points.
+        played = bool(stored) and all(f["finished"] for f in stored.values())
+        ids = _squad_that_week(request, gameweek, played, players, client=client)
+        squad = {(players[i]["code"], i) for i in ids}
         by_code = store.get_gw_history_by_code() if squad else {}
 
         # ⚠️⚠️ **Scores arrive before the player history does, and an empty `yours` lies about it.**
@@ -163,6 +196,8 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         # match" and "we do not know yet" look identical in an empty list and mean opposite things*, which
         # is the shape of mistake ADR-298 and ADR-146 are both about.
         # 🔴 Found by running this against the real database, where GW6 had ten scores and no history.
+        # ⚠️ Also false when the week is played and the squad could not be established — ⭐ *an empty
+        # `yours` that claims to be known is the lie this whole helper exists to stop.*
         yours_known = bool(squad) and any(
             r["round"] == gameweek for rows in by_code.values() for r in rows
         )

@@ -138,15 +138,84 @@ def test_an_empty_yours_says_whether_it_knows(store):
     assert all(m["yours"] == [] for m in out["matches"])
 
 
-def test_a_week_with_history_reports_its_players(store):
+class _Picks:
+    """FPL's picks for a past gameweek — the only source that knows whose team a player was in."""
+
+    def __init__(self, ids): self.ids, self.asked = ids, []
+
+    def get_entry_picks(self, entry, gameweek):
+        self.asked.append((entry, gameweek))
+        return {"picks": [{"element": i} for i in self.ids]}
+
+
+def _week_with_history(store):
     gw = store.conn.execute(
         "SELECT round FROM player_history GROUP BY round ORDER BY COUNT(*) DESC LIMIT 1").fetchone()["round"]
     codes = [r["element_code"] for r in store.conn.execute(
         "SELECT DISTINCT element_code FROM player_history WHERE round = ? LIMIT 12", (gw,)).fetchall()]
     ids = [p["id"] for p in store.get_players() if p["code"] in set(codes)]
-    assert ids, "the snapshot must carry players with history for this to mean anything"
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET finished = 1, started = 1 WHERE event = ?", (gw,))
+    return gw, ids
 
-    out = gameweek_scores(GameweekScoresRequest(player_ids=ids, gameweek=gw), store=store)
+
+def test_a_played_week_uses_the_squad_that_actually_played_it(store):
+    """🔴🔴 **The bug the owner found.** He saw *Calafiori* and *Haaland* credited with points in GW6, a
+    week he held *Gabriel* and *Calvert-Lewin* — ⚠️⚠️ *and the card totalled them, so a fiction carried a
+    confident number.* The squad a caller holds today is not the squad that played last week.
+    """
+    gw, real = _week_with_history(store)
+    # What he holds now — deliberately nothing to do with that week.
+    now = [p["id"] for p in store.get_players() if p["id"] not in set(real)][:15]
+    picks = _Picks(real)
+
+    out = gameweek_scores(
+        GameweekScoresRequest(player_ids=now, manager_id=2885974, gameweek=gw),
+        store=store, client=picks)
+
+    assert picks.asked == [(2885974, gw)], "FPL was not asked whose team it was"
+    named = {a["player"]["id"] for m in out["matches"] for a in m["yours"]}
+    assert named, "nobody was named at all"
+    assert named <= set(real), "a player he did not own that week was credited"
+    assert not (named & set(now) - set(real)), "today's squad leaked into a played week"
+
+
+def test_a_played_week_with_no_manager_names_nobody(store):
+    """⚠️ **Never falls back to the current squad.** ⭐ *A wrong attribution is worse than none*, and a
+    fallback would restore the exact bug this exists to fix, silently."""
+    gw, real = _week_with_history(store)
+    out = gameweek_scores(
+        GameweekScoresRequest(player_ids=real, gameweek=gw), store=store, client=_Picks(real))
+    assert out["yours_known"] is False
+    assert all(m["yours"] == [] for m in out["matches"])
+
+
+def test_a_failed_picks_fetch_names_nobody_rather_than_guessing(store):
+    gw, real = _week_with_history(store)
+
+    class _Broken:
+        def get_entry_picks(self, entry, gameweek): raise RuntimeError("FPL is down")
+
+    out = gameweek_scores(
+        GameweekScoresRequest(player_ids=real, manager_id=1, gameweek=gw), store=store, client=_Broken())
+    assert out["yours_known"] is False
+    assert all(m["yours"] == [] for m in out["matches"])
+
+
+def test_a_week_still_in_play_uses_the_squad_the_caller_holds(store):
+    """⭐ FPL locks picks at the deadline, so for a week in progress the caller's own side is the right
+    one — ⚠️ *and asking FPL for picks it has not published yet would answer nothing.*"""
+    gw, real = _week_with_history(store)
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET finished = 0, started = 1 WHERE event = ?", (gw,))
+
+    class _NeverAsked:
+        def get_entry_picks(self, entry, gameweek):
+            raise AssertionError("a live week must not ask FPL for picks")
+
+    out = gameweek_scores(
+        GameweekScoresRequest(player_ids=real, manager_id=1, gameweek=gw),
+        store=store, client=_NeverAsked())
     assert out["yours_known"] is True
     assert sum(len(m["yours"]) for m in out["matches"]) > 0
 

@@ -283,7 +283,10 @@ class _Disc extends StatelessWidget {
     width: size,
     height: size,
     alignment: Alignment.center,
-    decoration: const BoxDecoration(color: Brand.eventDisc, shape: BoxShape.circle),
+    decoration: const BoxDecoration(
+      color: Brand.eventDisc,
+      shape: BoxShape.circle,
+    ),
     child: child,
   );
 }
@@ -294,7 +297,11 @@ class _Ball extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _Disc(
-    child: SizedBox(width: 9, height: 9, child: CustomPaint(painter: _BallPainter())),
+    child: SizedBox(
+      width: 9,
+      height: 9,
+      child: CustomPaint(painter: _BallPainter()),
+    ),
   );
 }
 
@@ -305,7 +312,8 @@ class _BallPainter extends CustomPainter {
   const _BallPainter();
 
   /// The glyph is drawn in a 24×24 space and scaled, so the proportions hold at any size.
-  static Offset _p(Size s, double x, double y) => Offset(s.width * x / 24, s.height * y / 24);
+  static Offset _p(Size s, double x, double y) =>
+      Offset(s.width * x / 24, s.height * y / 24);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -331,12 +339,30 @@ class _BallPainter extends CustomPainter {
     // ⚠️ Three **short** marks at the rim, not spokes to the centre: long ones read as a propeller, which
     // is what the first attempt looked like at this size.
     for (final corners in const [
-      [[10.4, 1.1], [13.6, 1.1], [13.1, 4.5], [10.9, 4.5]],
-      [[20.9, 9.4], [21.9, 12.5], [19.2, 13.9], [18.3, 11.8]],
-      [[3.1, 9.4], [2.1, 12.5], [4.8, 13.9], [5.7, 11.8]],
+      [
+        [10.4, 1.1],
+        [13.6, 1.1],
+        [13.1, 4.5],
+        [10.9, 4.5],
+      ],
+      [
+        [20.9, 9.4],
+        [21.9, 12.5],
+        [19.2, 13.9],
+        [18.3, 11.8],
+      ],
+      [
+        [3.1, 9.4],
+        [2.1, 12.5],
+        [4.8, 13.9],
+        [5.7, 11.8],
+      ],
     ]) {
-      final path = Path()..moveTo(_p(size, corners[0][0], corners[0][1]).dx,
-                                  _p(size, corners[0][0], corners[0][1]).dy);
+      final path = Path()
+        ..moveTo(
+          _p(size, corners[0][0], corners[0][1]).dx,
+          _p(size, corners[0][0], corners[0][1]).dy,
+        );
       for (final c in corners.skip(1)) {
         path.lineTo(_p(size, c[0], c[1]).dx, _p(size, c[0], c[1]).dy);
       }
@@ -361,7 +387,11 @@ class _Boot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _Disc(
-    child: SizedBox(width: 9, height: 8, child: CustomPaint(painter: _BootPainter())),
+    child: SizedBox(
+      width: 9,
+      height: 8,
+      child: CustomPaint(painter: _BootPainter()),
+    ),
   );
 }
 

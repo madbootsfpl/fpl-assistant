@@ -255,11 +255,18 @@ class GameweekScoresRequest:
     player_ids: list[int] = field(default_factory=list)
     gameweek: int = 0
 
+    #: ⚠️⚠️ **Required for a week that has already been played** (ADR-350). `player_ids` is the squad the
+    #: caller holds *now*, and a gameweek in the past was played by a different one — ⭐ *only FPL knows
+    #: whose team a player was in last week*, which is the same reason `gameweek_result` names a manager.
+    manager_id: int = 0
+
     def validate(self) -> None:
         if len(set(self.player_ids)) != len(self.player_ids):
             raise ValueError("duplicate player ids")
         if not 0 <= self.gameweek <= 38:
             raise ValueError(f"gameweek {self.gameweek} is outside 0-38")
+        if self.manager_id < 0:
+            raise ValueError("manager id cannot be negative")
 
 
 @dataclass

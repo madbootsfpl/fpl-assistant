@@ -87,7 +87,8 @@ class _ThisWeekViewState extends State<ThisWeekView> {
       final lineupWhy = (explanation?['lineup'] as List?) ?? const [];
       // ⭐ One explanation per move, keyed by the buy's id (ADR-327).
       final perMove =
-          (explanation?['transfers'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+          (explanation?['transfers'] as Map<String, dynamic>?) ??
+          const <String, dynamic>{};
 
       return ListView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),

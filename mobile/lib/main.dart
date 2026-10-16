@@ -806,6 +806,8 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           // your bench still scored, and *a screen that hides it is answering a different question*.
           ScoresView(
             client: _client,
+            // ⚠️ The manager, not just the squad: a played week was played by a different fifteen.
+            managerId: _managerId,
             playerIds: [
               for (final p in [...team.analysis.xi, ...team.analysis.bench])
                 p.id,
