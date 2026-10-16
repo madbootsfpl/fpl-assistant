@@ -97,7 +97,7 @@ class _ScoresViewState extends State<ScoresView> {
           children: [
             _Heading(week: week),
             for (final m in week.matches)
-              _MatchCard(match: m, yoursKnown: week.yoursKnown),
+              _MatchCard(match: m, week: week, yoursKnown: week.yoursKnown),
           ],
         ),
       );
@@ -147,67 +147,203 @@ class _Heading extends StatelessWidget {
 }
 
 class _MatchCard extends StatelessWidget {
-  const _MatchCard({required this.match, required this.yoursKnown});
+  const _MatchCard({
+    required this.match,
+    required this.week,
+    required this.yoursKnown,
+  });
 
   final MatchScore match;
+  final GameweekScores week;
   final bool yoursKnown;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
-    decoration: BoxDecoration(
-      color: Brand.darkPanel,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final mine = match.yours;
+    // ⭐ Which side your players were on, so each can sit under his own club rather than in a list
+    // below both — ⚠️ *a name under a scoreline does not say who he was playing for.*
+    final home = [
+      for (final a in mine)
+        if (a.player?.team == match.home) a,
+    ];
+    final away = [
+      for (final a in mine)
+        if (a.player?.team == match.away) a,
+    ];
+    final points = mine.fold<int>(0, (sum, a) => sum + a.points);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Brand.darkPanel,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _Side(
+                  club: week.club(match.home),
+                  appearances: home,
+                  alignEnd: false,
+                ),
+              ),
+              _Scoreline(match: match),
+              Expanded(
+                child: _Side(
+                  club: week.club(match.away),
+                  appearances: away,
+                  alignEnd: true,
+                ),
+              ),
+            ],
+          ),
+          if (mine.isNotEmpty) ...[
+            const SizedBox(height: 11),
+            const Divider(height: 1, color: Color(0x14FFFFFF)),
+            const SizedBox(height: 9),
+            _Impact(appearances: mine, points: points),
+          ] else if (yoursKnown && match.started) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'none of yours',
+              style: TextStyle(color: Colors.white24, fontSize: 11),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One club of a fixture — crest, name, and any of your players who were in it.
+class _Side extends StatelessWidget {
+  const _Side({
+    required this.club,
+    required this.appearances,
+    required this.alignEnd,
+  });
+
+  final Club club;
+  final List<MatchAppearance> appearances;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final crest = club.badge.isEmpty
+        ? const SizedBox(width: 26, height: 26)
+        : Image.network(
+            club.badge,
+            width: 26,
+            height: 26,
+            // ⚠️ A crest that fails to load must leave a hole, not an exception — ⭐ *a broken image is
+            // not a broken screen.*
+            errorBuilder: (_, _, _) => const SizedBox(width: 26, height: 26),
+          );
+    final text = Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
-        Row(
+        Text(
+          club.name,
+          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Brand.darkText,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        for (final a in appearances)
+          _YourLine(appearance: a, alignEnd: alignEnd),
+      ],
+    );
+    final children = alignEnd
+        ? [Flexible(child: text), const SizedBox(width: 8), crest]
+        : [crest, const SizedBox(width: 8), Flexible(child: text)];
+    return Row(
+      mainAxisAlignment: alignEnd
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
+      children: children,
+    );
+  }
+}
+
+/// What this match did to your team — the line nothing else on a phone can print.
+class _Impact extends StatelessWidget {
+  const _Impact({required this.appearances, required this.points});
+
+  final List<MatchAppearance> appearances;
+  final int points;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                match.home,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Brand.darkText,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
+            const Text(
+              'Your fantasy impact',
+              style: TextStyle(
+                color: Brand.darkText,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: _Scoreline(match: match),
-            ),
-            Expanded(
-              child: Text(
-                match.away,
-                style: const TextStyle(
-                  color: Brand.darkText,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            const SizedBox(height: 2),
+            Text(
+              [for (final a in appearances) _summarise(a)].join(' · '),
+              style: const TextStyle(color: Brand.darkMuted, fontSize: 11.5),
             ),
           ],
         ),
-        if (match.yours.isNotEmpty) ...[
-          const SizedBox(height: 9),
-          for (final a in match.yours) _YourLine(appearance: a),
-        ] else if (yoursKnown && match.started) ...[
-          const SizedBox(height: 7),
+      ),
+      const SizedBox(width: 10),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '$points pts',
+            style: const TextStyle(
+              color: Color(0xFF6FD79A),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          // ⭐⭐ **"this match", not "the gameweek".** The mock-up it came from footnoted that gameweek
+          // points are not necessarily points earned in that match — ⚠️ true of a gameweek total, and
+          // this is not one: `player_history` is keyed by **fixture**, so these points were earned here.
           const Text(
-            'none of yours',
-            style: TextStyle(color: Colors.white24, fontSize: 11),
+            'in this match',
+            style: TextStyle(color: Colors.white38, fontSize: 10),
           ),
         ],
-      ],
-    ),
+      ),
+    ],
   );
+
+  static String _summarise(MatchAppearance a) {
+    final name = a.player?.name ?? 'Your player';
+    final bits = [
+      if (a.goals > 0) '${a.goals} goal${a.goals == 1 ? '' : 's'}',
+      if (a.assists > 0) '${a.assists} assist${a.assists == 1 ? '' : 's'}',
+      if (a.bonus > 0) '+${a.bonus} bonus',
+      if (a.minutes == 0) 'did not play',
+    ];
+    return bits.isEmpty ? name : '$name · ${bits.join(', ')}';
+  }
 }
 
-/// The score, or the kick-off time when there is not one yet.
+/// The score, or the kick-off time when there is not one yet, with the server's status word under it.
 ///
 /// ⚠️⚠️ **Never prints a zero for a match that has not started.** `0-0` and *"no score yet"* are opposite
 /// facts, and `started` is the only field that distinguishes them.
@@ -217,33 +353,38 @@ class _Scoreline extends StatelessWidget {
   final MatchScore match;
 
   @override
-  Widget build(BuildContext context) {
-    if (!match.started || !match.hasScore) {
-      return Text(
-        _kickoff(match.kickoffTime) ?? 'v',
-        style: const TextStyle(color: Colors.white38, fontSize: 12.5),
-      );
-    }
-    return Column(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '${match.homeScore}–${match.awayScore}',
-          style: const TextStyle(
-            color: Brand.darkText,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-        if (!match.finished && match.minutes != null)
+        if (!match.started || !match.hasScore)
           Text(
-            "${match.minutes}'",
-            style: const TextStyle(color: Color(0xFFE05A4E), fontSize: 10.5),
+            _kickoff(match.kickoffTime) ?? 'v',
+            style: const TextStyle(color: Colors.white38, fontSize: 13),
+          )
+        else
+          Text(
+            '${match.homeScore} – ${match.awayScore}',
+            style: const TextStyle(
+              color: Brand.darkText,
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        if (match.status.isNotEmpty)
+          Text(
+            match.status,
+            style: TextStyle(
+              // ⭐ A match still running is the one thing on this card worth a colour.
+              color: match.finished ? Colors.white38 : const Color(0xFFE05A4E),
+              fontSize: 10.5,
+            ),
           ),
       ],
-    );
-  }
+    ),
+  );
 
   /// `2026-10-10T11:30:00Z` → `11:30`. ⚠️ Null rather than a guess when it cannot be read — ⭐ *a made-up
   /// kick-off time is worse than none, because a reader would plan around it.*
@@ -257,56 +398,48 @@ class _Scoreline extends StatelessWidget {
   }
 }
 
+/// One of your players, under the club he actually played for.
 class _YourLine extends StatelessWidget {
-  const _YourLine({required this.appearance});
+  const _YourLine({required this.appearance, required this.alignEnd});
 
   final MatchAppearance appearance;
+  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
     final name = appearance.player?.name ?? 'Your player';
-    final bits = <String>[
+    final events = [
       if (appearance.goals > 0)
-        '${appearance.goals} goal${appearance.goals == 1 ? '' : 's'}',
+        '⚽ ${appearance.goals} goal${appearance.goals == 1 ? '' : 's'}',
       if (appearance.assists > 0)
         '${appearance.assists} assist${appearance.assists == 1 ? '' : 's'}',
-      if (appearance.bonus > 0) '+${appearance.bonus} bonus',
       // ⭐ Minutes only when they are the story: a man who played the whole game needs no note, one who
-      // came on for nine minutes does. ⚠️ *A line that states the unremarkable buries the remarkable.*
+      // came on for nine minutes does. ⚠️ *A line stating the unremarkable buries the remarkable.*
       if (appearance.minutes == 0)
         'did not play'
       else if (appearance.minutes < 60)
         "${appearance.minutes}'",
     ];
     return Padding(
-      padding: const EdgeInsets.only(top: 3),
-      child: Row(
+      padding: const EdgeInsets.only(top: 2),
+      child: Column(
+        crossAxisAlignment: alignEnd
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 3,
-            height: 13,
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Brand.madOnDark,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              bits.isEmpty ? name : '$name — ${bits.join(', ')}',
-              style: const TextStyle(color: Brand.darkMuted, fontSize: 12.5),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
           Text(
-            '${appearance.points} pts',
-            style: const TextStyle(
-              color: Brand.darkText,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
+            '$name · Your player',
+            textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Brand.darkMuted, fontSize: 11.5),
           ),
+          if (events.isNotEmpty)
+            Text(
+              events.join(' · '),
+              textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF6FD79A), fontSize: 11.5),
+            ),
         ],
       ),
     );

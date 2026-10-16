@@ -228,3 +228,53 @@ show a score at all. ⚠️ **But `player_history` already knew them**: it store
 `team_a_score` on every appearance row. Backfilled from there — **50 fixtures, including a genuine
 `LEE 0-0 CRY`**, which is precisely the case the screen exists to distinguish. ⭐ *The fixture now agrees
 with itself, and the sample shows the feature rather than its type signature.*
+
+
+---
+
+## The layout the owner asked for (2026-10-16)
+
+Two reports from the staged build, and they were different kinds of thing.
+
+### 🔴 "It doesn't give the actual score"
+
+**True, and not a screen bug.** The live API returned `null` for every score. The cause is the one the
+architecture review measured and could not then justify caring about:
+
+⭐⭐ **The scheduled pipeline had not run since the code that writes scores shipped.** Last run 08:46 on
+`c51dec5`; the service landed ~11:30; it was 13:30. That five-hour hole is exactly the **08:00–16:00 blind
+spot** recorded in Roadmap §2 — ⚠️ *measured a week earlier with no evidence it cost anything, and here is
+the evidence.* A manual `workflow_dispatch` filled it and the scores appeared: `ARS 2-1 LEE`,
+`CHE 5-1 BOU`, `SUN 0-2 BHA`.
+
+📌 **Nothing in this ADR fixes that.** It is a cadence problem with its own open decision, and this is the
+first thing it has visibly broken.
+
+### ⭐ The layout
+
+The owner's mock-up put the two clubs on the outside with crests and full names, the score between them
+with a status word beneath, **each of your players under the club he actually played for**, and a *"Your
+fantasy impact"* total at the foot.
+
+⭐⭐ **The side-split is the part that earns the redesign.** A name under a scoreline does not say who he
+was playing *for*; a name under a crest does — and a pinned widget test now asserts it by **horizontal
+position** relative to the score, because that is what the reader is actually using to decide.
+
+Server changes: a `clubs` **sidecar map** (short name → name + badge, carried once rather than per match,
+the shape `my-team` uses for `kits`) and a `status` string. ⭐ *"Full time" / a minute / nothing is one
+judgement, and three clients making it separately is three chances to disagree about whether a match is
+over.*
+
+### ⚠️ One place the mock-up was more cautious than it needed to be
+
+It footnoted *"gameweek points are not necessarily points earned in this individual match"* — true of a
+gameweek total, and **this is not one**: `player_history` is keyed by **fixture** (ADR-129), so the number
+shown was earned in that match. The card says **"in this match"** and means it.
+
+### 🔴 And a test that passed for the wrong reason
+
+The impact total was first asserted against the committed sample, whose one scoring match holds **9 pts and
+0 pts** — so *"the first player's points"* and *"the sum"* are the same number, and a mutation replacing
+one with the other **survived**. ⭐ *A test whose data cannot distinguish the bug from the fix is a test
+that passes for the wrong reason.* Rewritten against a hand-built body with two scorers, where the total
+matches neither alone.

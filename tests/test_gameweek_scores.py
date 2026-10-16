@@ -118,7 +118,8 @@ def test_with_nothing_played_the_answer_is_empty_rather_than_an_error(store):
     for f in store.get_all_fixtures():
         _set(store, f["id"], started=0, finished=0, team_h_score=None, team_a_score=None)
     out = gameweek_scores(GameweekScoresRequest(), store=store)
-    assert out == {"gameweek": None, "live": False, "yours_known": False, "matches": []}
+    assert out == {"gameweek": None, "live": False, "yours_known": False,
+                   "clubs": {}, "matches": []}
 
 
 # ── the join, and what it must not claim ─────────────────────────────────────────────────────────

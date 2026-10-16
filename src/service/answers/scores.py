@@ -20,6 +20,7 @@ must not be handed a number that cannot.
 import time
 
 from src.analytics import player_summary
+from src.kits import badge_url
 from src.service.inputs import opened
 from src.service.requests import GameweekScoresRequest
 from src.storage import Storage
@@ -65,6 +66,15 @@ def _started(f) -> bool:
     week at all. ⭐ *A derived truth is cheaper than a backfill and cannot drift out of date.*
     """
     return bool(f["started"]) or bool(f["finished"])
+
+
+def _status(f) -> str:
+    """What to print under the score. ⚠️ Never invents a time it does not have."""
+    if f["finished"]:
+        return "Full time"
+    if _started(f):
+        return f"{f['minutes']}'" if f["minutes"] is not None else "Live"
+    return ""
 
 
 def _which_gameweek(fixtures: list) -> int | None:
@@ -114,12 +124,18 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
     request.validate()
     store, ours = opened(store)
     try:
-        clubs = {t["id"]: t["short_name"] for t in store.get_teams()}
+        teams = list(store.get_teams())
+        clubs = {t["id"]: t["short_name"] for t in teams}
+        # ⭐ A **sidecar map**, not a field repeated on every match — the same shape `my-team` uses for
+        # `kits` (ADR-227). Twenty clubs, each named once, however many matches reference them.
+        club_rows = {t["short_name"]: {"name": t["name"], "badge": badge_url(t["code"])}
+                     for t in teams}
         all_fixtures = [dict(f) for f in store.get_all_fixtures()]
         gameweek = request.gameweek or _which_gameweek(all_fixtures)
         if gameweek is None:
             # ⭐ A season that has not started is a fact, not a failure.
-            return {"gameweek": None, "live": False, "yours_known": False, "matches": []}
+            return {"gameweek": None, "live": False, "yours_known": False,
+                "clubs": {}, "matches": []}
 
         stored = {f["id"]: f for f in all_fixtures if f["event"] == gameweek}
 
@@ -163,11 +179,15 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 "started": _started(f),
                 "finished": bool(f["finished"]),
                 "kickoff_time": f["kickoff_time"],
+                # ⭐ Decided here, not in each client: "Full time" / "63'" / a kick-off time is the same
+                # judgement every surface has to make, and ⚠️ *three clients making it separately is three
+                # chances to disagree about whether a match is over.*
+                "status": _status(f),
                 "yours": _yours({f["id"]}, squad, by_code, players),
             })
         # ⭐ `yours_known` is about the gameweek, not one match: history lands for the whole week at once.
-        return {"gameweek": gameweek, "live": in_flight,
-                "yours_known": yours_known, "matches": matches}
+        return {"gameweek": gameweek, "live": in_flight, "yours_known": yours_known,
+                "clubs": club_rows, "matches": matches}
     finally:
         if ours:
             store.close()

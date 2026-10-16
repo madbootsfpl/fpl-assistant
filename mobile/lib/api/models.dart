@@ -1487,6 +1487,7 @@ class MatchScore {
     required this.started,
     required this.finished,
     required this.kickoffTime,
+    required this.status,
     required this.yours,
   });
 
@@ -1500,6 +1501,7 @@ class MatchScore {
     started: json['started'] as bool? ?? false,
     finished: json['finished'] as bool? ?? false,
     kickoffTime: json['kickoff_time'] as String?,
+    status: json['status'] as String? ?? '',
     yours: [
       for (final y in (json['yours'] as List? ?? []))
         MatchAppearance.fromJson(y as Map<String, dynamic>),
@@ -1515,6 +1517,10 @@ class MatchScore {
   final bool started;
   final bool finished;
   final String? kickoffTime;
+
+  /// ⭐ *"Full time"*, a minute, or empty — decided by the server so three clients cannot disagree about
+  /// whether a match is over.
+  final String status;
 
   /// Your players who featured. ⚠️ Empty does **not** mean none — see [GameweekScores.yoursKnown].
   final List<MatchAppearance> yours;
@@ -1563,6 +1569,7 @@ class GameweekScores {
     required this.gameweek,
     required this.live,
     required this.yoursKnown,
+    required this.clubs,
     required this.matches,
   });
 
@@ -1570,6 +1577,10 @@ class GameweekScores {
     gameweek: (json['gameweek'] as num?)?.toInt(),
     live: json['live'] as bool? ?? false,
     yoursKnown: json['yours_known'] as bool? ?? false,
+    clubs: {
+      for (final e in (json['clubs'] as Map? ?? {}).entries)
+        e.key as String: Club.fromJson(e.value as Map<String, dynamic>),
+    },
     matches: [
       for (final m in (json['matches'] as List? ?? []))
         MatchScore.fromJson(m as Map<String, dynamic>),
@@ -1587,7 +1598,27 @@ class GameweekScores {
   /// not know yet" are opposite facts and an empty list cannot tell them apart.*
   final bool yoursKnown;
 
+  /// ⭐ Short name → club, carried **once** rather than repeated on every match (ADR-227's sidecar
+  /// shape, as `my-team` does with `kits`).
+  final Map<String, Club> clubs;
+
   final List<MatchScore> matches;
+
+  /// The club behind a short name, or a stand-in carrying the code itself — ⚠️ *never a guess at a name.*
+  Club club(String short) => clubs[short] ?? Club(name: short, badge: '');
+}
+
+/// A club as the scores screen draws it (ADR-346).
+class Club {
+  Club({required this.name, required this.badge});
+
+  factory Club.fromJson(Map<String, dynamic> json) => Club(
+    name: json['name'] as String? ?? '',
+    badge: json['badge'] as String? ?? '',
+  );
+
+  final String name;
+  final String badge;
 }
 
 class FixtureTicker {

@@ -81,11 +81,13 @@ void main() {
     final week = GameweekScores.fromJson(sampleJson());
     final played = week.matches.firstWhere((m) => m.hasScore);
 
-    expect(find.text(played.home), findsWidgets);
-    expect(find.text(played.away), findsWidgets);
+    // ⭐ The card names clubs in full now — "Brentford", not "BRE". The short code is the key into the
+    // `clubs` sidecar, never what a reader sees.
+    expect(find.text(week.club(played.home).name), findsWidgets);
+    expect(find.text(week.club(played.away).name), findsWidgets);
     // ⚠️ An en dash, not a hyphen — the glyph the screen actually draws.
     expect(
-      find.text('${played.homeScore}–${played.awayScore}'),
+      find.text('${played.homeScore} – ${played.awayScore}'),
       // ⚠️ `findsWidgets`: two matches in one gameweek can share a scoreline, and the sample
       // has two 3–0s. ⭐ *A uniqueness the data never owed the test.*
       findsWidgets,
@@ -111,6 +113,7 @@ void main() {
     // renderer that defaults a missing score to zero — and they are opposite facts.
     final body = {
       'gameweek': 7,
+      'clubs': <String, dynamic>{},
       'live': false,
       'yours_known': true,
       'matches': [
@@ -142,7 +145,7 @@ void main() {
     };
     await pumpScores(tester, body: body);
 
-    expect(find.text('0–0'), findsOneWidget);
+    expect(find.text('0 – 0'), findsOneWidget);
     // ⭐ The unplayed match shows a kick-off time, never a score. ⚠️ Local time, so the digits depend on
     // the machine — the assertion is that a clock is drawn at all, not what it reads.
     expect(find.textContaining(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget);
@@ -163,6 +166,9 @@ void main() {
           'minutes': 63,
           'started': true,
           'finished': false,
+          // ⚠️ `status` comes from the server now (ADR-346) — three clients deriving "is it over?"
+          // separately is three chances to disagree. A body without it shows no clock, correctly.
+          'status': "63'",
           'kickoff_time': '2026-10-17T11:30:00Z',
           'yours': <dynamic>[],
         },
@@ -171,7 +177,7 @@ void main() {
     await pumpScores(tester, body: body);
 
     expect(find.text('LIVE'), findsOneWidget);
-    expect(find.text('1–2'), findsOneWidget);
+    expect(find.text('1 – 2'), findsOneWidget);
     expect(find.text("63'"), findsOneWidget);
   });
 
@@ -197,6 +203,7 @@ void main() {
       key: 'unknown',
       body: {
         'gameweek': 6,
+        'clubs': <String, dynamic>{},
         'live': false,
         'yours_known': false,
         'matches': [match],
@@ -217,6 +224,120 @@ void main() {
     );
     expect(find.text('your players not in yet'), findsNothing);
     expect(find.text('none of yours'), findsOneWidget);
+  });
+
+  testWidgets('your player sits under the club he played for', (tester) async {
+    // ⭐⭐ **The point of the layout the owner asked for.** A name under a scoreline does not say who he
+    // was playing *for*; a name under a crest does. The sample has one of yours on each side of
+    // Brentford–Chelsea, which is the case that looks fine under either arrangement and only reads
+    // correctly under this one.
+    await pumpScores(tester);
+    final week = GameweekScores.fromJson(sampleJson());
+    final both = week.matches.firstWhere(
+      (m) =>
+          m.yours.any((a) => a.player?.team == m.home) &&
+          m.yours.any((a) => a.player?.team == m.away),
+      orElse: () => week.matches.firstWhere((m) => m.yours.isNotEmpty),
+    );
+
+    for (final a in both.yours) {
+      final line = find.textContaining('${a.player!.name} · Your player');
+      expect(line, findsWidgets, reason: '${a.player!.name} is not named');
+
+      // ⚠️ Horizontal position is what attaches him to a club: home is drawn left of the scoreline,
+      // away right of it.
+      final x = tester.getCenter(line.first).dx;
+      final score = tester
+          .getCenter(find.textContaining(RegExp(r'^\d+ – \d+$')).first)
+          .dx;
+      final atHome = a.player!.team == both.home;
+      expect(
+        atHome ? x < score : x > score,
+        isTrue,
+        reason:
+            '${a.player!.name} plays for ${a.player!.team} but is drawn on the '
+            'wrong side of ${both.home}-${both.away}',
+      );
+    }
+  });
+
+  testWidgets('the card totals what the match did to your team', (
+    tester,
+  ) async {
+    // ⚠️⚠️ **A hand-built body, because the sample cannot catch the bug.** Its one scoring match has
+    // 9 pts and 0 pts, so "the first player's points" and "the sum" are the same number — ⭐ *a mutation
+    // that replaced the sum with the first survived the version of this test that used the sample.*
+    // Two scorers, both non-zero, and the total matches neither on its own.
+    Map<String, dynamic> player(String name, String team) => {
+      'id': name.hashCode,
+      'web_name': name,
+      'team': team,
+      'position': 'MID',
+      'price': 7.0,
+      'xp': 4.0,
+      'status': 'a',
+      'chance': null,
+      'minutes_weight': 1.0,
+      'leaving': null,
+      'by_gameweek': <String, dynamic>{},
+    };
+    await pumpScores(
+      tester,
+      key: 'impact',
+      body: {
+        'gameweek': 6,
+        'live': false,
+        'yours_known': true,
+        'clubs': {
+          'CHE': {'name': 'Chelsea', 'badge': ''},
+          'BOU': {'name': 'Bournemouth', 'badge': ''},
+        },
+        'matches': [
+          {
+            'fixture': 1,
+            'home': 'CHE',
+            'away': 'BOU',
+            'home_score': 5,
+            'away_score': 1,
+            'minutes': 90,
+            'started': true,
+            'finished': true,
+            'status': 'Full time',
+            'kickoff_time': '2026-10-10T11:30:00Z',
+            'yours': [
+              {
+                'player': player('João Pedro', 'CHE'),
+                'minutes': 90,
+                'goals': 2,
+                'assists': 0,
+                'points': 13,
+                'bonus': 3,
+              },
+              {
+                'player': player('Semenyo', 'BOU'),
+                'minutes': 90,
+                'goals': 1,
+                'assists': 0,
+                'points': 6,
+                'bonus': 0,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    expect(find.text('Your fantasy impact'), findsOneWidget);
+    expect(
+      find.text('19 pts'),
+      findsOneWidget,
+      reason: '13 + 6, not either alone',
+    );
+    expect(find.text('13 pts'), findsNothing);
+    // ⭐ "in this match", never "gameweek total": `player_history` is keyed by fixture, so these points
+    // were earned here — ⚠️ *the mock-up this came from footnoted the opposite because its source could
+    // not make that claim.*
+    expect(find.text('in this match'), findsOneWidget);
   });
 
   testWidgets(
