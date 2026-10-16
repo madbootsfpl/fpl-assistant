@@ -330,6 +330,23 @@ class ServiceClient {
   Future<FixtureTicker> ticker({int nextN = 6}) async =>
       FixtureTicker.fromJson(await _post('ticker', {'next_n': nextN}));
 
+  /// This gameweek's scores, with your own players beside each match (ADR-346).
+  ///
+  /// ⭐ **`playerIds` is optional**, unlike every other squad-shaped call: a scoreline is a fact about the
+  /// league, so the board still draws before a squad has loaded.
+  ///
+  /// ⚠️ `gameweek: 0` asks the server for the one worth showing — in flight if there is one, else the most
+  /// recently played. ⭐ *The client does not get to decide which week is current; the fixtures do.*
+  Future<GameweekScores> gameweekScores({
+    List<int> playerIds = const [],
+    int gameweek = 0,
+  }) async => GameweekScores.fromJson(
+    await _post('gameweek/scores', {
+      'player_ids': playerIds,
+      'gameweek': gameweek,
+    }),
+  );
+
   /// Every available player, ranked by xP.
   ///
   /// ⭐ Fetched **once** and filtered on the device: the whole market is ~110 KB, and searching 481 rows

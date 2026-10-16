@@ -1471,6 +1471,125 @@ class TickerCell {
   }
 }
 
+/// One match of a gameweek, with the players of yours who were in it (ADR-346).
+///
+/// ⚠️⚠️ **`homeScore` is nullable and that is the whole point.** A goalless draw is `0`; a match that has
+/// not kicked off is `null`. ⭐ *Defaulting a missing score to zero makes those two indistinguishable on
+/// the one screen built to tell them apart* — so `started` is what decides which to draw, never the score.
+class MatchScore {
+  MatchScore({
+    required this.fixture,
+    required this.home,
+    required this.away,
+    required this.homeScore,
+    required this.awayScore,
+    required this.minutes,
+    required this.started,
+    required this.finished,
+    required this.kickoffTime,
+    required this.yours,
+  });
+
+  factory MatchScore.fromJson(Map<String, dynamic> json) => MatchScore(
+    fixture: json['fixture'] as int? ?? 0,
+    home: json['home'] as String? ?? '???',
+    away: json['away'] as String? ?? '???',
+    homeScore: (json['home_score'] as num?)?.toInt(),
+    awayScore: (json['away_score'] as num?)?.toInt(),
+    minutes: (json['minutes'] as num?)?.toInt(),
+    started: json['started'] as bool? ?? false,
+    finished: json['finished'] as bool? ?? false,
+    kickoffTime: json['kickoff_time'] as String?,
+    yours: [
+      for (final y in (json['yours'] as List? ?? []))
+        MatchAppearance.fromJson(y as Map<String, dynamic>),
+    ],
+  );
+
+  final int fixture;
+  final String home;
+  final String away;
+  final int? homeScore;
+  final int? awayScore;
+  final int? minutes;
+  final bool started;
+  final bool finished;
+  final String? kickoffTime;
+
+  /// Your players who featured. ⚠️ Empty does **not** mean none — see [GameweekScores.yoursKnown].
+  final List<MatchAppearance> yours;
+
+  /// ⭐ `true` once there is a score to print. A match in flight has one; an unplayed one does not.
+  bool get hasScore => homeScore != null && awayScore != null;
+}
+
+/// One of your players in one match — the player, and what he did (ADR-346).
+///
+/// ⭐ **The player is a [PlayerSummary] and the week sits beside him** (ADR-227). A flat dict of id and
+/// stats was the first shape and the wrong one, for the same reason it was wrong in `gameweek_result`.
+class MatchAppearance {
+  MatchAppearance({
+    required this.player,
+    required this.minutes,
+    required this.goals,
+    required this.assists,
+    required this.points,
+    required this.bonus,
+  });
+
+  factory MatchAppearance.fromJson(Map<String, dynamic> json) =>
+      MatchAppearance(
+        player: json['player'] == null
+            ? null
+            : PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
+        minutes: (json['minutes'] as num?)?.toInt() ?? 0,
+        goals: (json['goals'] as num?)?.toInt() ?? 0,
+        assists: (json['assists'] as num?)?.toInt() ?? 0,
+        points: (json['points'] as num?)?.toInt() ?? 0,
+        bonus: (json['bonus'] as num?)?.toInt() ?? 0,
+      );
+
+  final PlayerSummary? player;
+  final int minutes;
+  final int goals;
+  final int assists;
+  final int points;
+  final int bonus;
+}
+
+/// A gameweek's matches (ADR-346).
+class GameweekScores {
+  GameweekScores({
+    required this.gameweek,
+    required this.live,
+    required this.yoursKnown,
+    required this.matches,
+  });
+
+  factory GameweekScores.fromJson(Map<String, dynamic> json) => GameweekScores(
+    gameweek: (json['gameweek'] as num?)?.toInt(),
+    live: json['live'] as bool? ?? false,
+    yoursKnown: json['yours_known'] as bool? ?? false,
+    matches: [
+      for (final m in (json['matches'] as List? ?? []))
+        MatchScore.fromJson(m as Map<String, dynamic>),
+    ],
+  );
+
+  /// Null before a ball has been kicked all season.
+  final int? gameweek;
+
+  /// ⭐ True while a match in this week is in flight — the screen says so rather than implying it.
+  final bool live;
+
+  /// ⚠️⚠️ **Whether an empty `yours` means anything.** Scores are published before player history is, so
+  /// after full time the score is known and nobody's week is. ⭐ *"None of your players played" and "we do
+  /// not know yet" are opposite facts and an empty list cannot tell them apart.*
+  final bool yoursKnown;
+
+  final List<MatchScore> matches;
+}
+
 class FixtureTicker {
   FixtureTicker({required this.gameweeks, required this.rows});
 

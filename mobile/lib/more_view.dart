@@ -31,6 +31,7 @@ class MoreView extends StatelessWidget {
     required this.onOpenAsk,
     required this.onOpenLeagues,
     required this.onOpenTicker,
+    required this.onOpenScores,
     required this.onOpenFeedback,
     required this.onOpenHelp,
     super.key,
@@ -48,6 +49,12 @@ class MoreView extends StatelessWidget {
   /// the app's first **exploration** surface — the audit put those on the web, so it is worth watching
   /// whether it pulls the phone the wrong way.
   final VoidCallback onOpenTeamDna;
+
+  /// ⭐ The scores, and your own players in them (ADR-346). Second, behind Ask: ⚠️ **ADR-302 put Ask
+  /// first deliberately** and a new row does not get to quietly undo that. ⭐ It leads the remaining game
+  /// rows because it is the only one here with a reason to be opened *during* something — *everything
+  /// else in More can wait until Tuesday; a match cannot.*
+  final VoidCallback onOpenScores;
 
   /// ⭐ Beside Team DNA, because they answer the two halves of the same question: *what kind of player is
   /// he* and *what kind of side is he in.*
@@ -87,6 +94,14 @@ class MoreView extends StatelessWidget {
         name: 'Ask',
         why: 'Captaincy, transfers, a plan for the week, chips, the rules — in your own words.',
         onTap: onOpenAsk,
+      ),
+      _Row(
+        icon: Icons.scoreboard_outlined,
+        name: 'Scores',
+        // ⭐ Says what it adds over any livescore app. ⚠️ *"Live scores" describes a commodity; nobody
+        // installs an FPL assistant for one.*
+        why: 'This week’s matches — and which of your players are in them, and what they did.',
+        onTap: onOpenScores,
       ),
       _Row(
         icon: Icons.emoji_events_outlined,

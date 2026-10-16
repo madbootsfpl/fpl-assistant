@@ -117,7 +117,8 @@ def incompatible(sample, live, path=""):
 
 
 ENDPOINTS = ["analysis", "transfers", "captain", "gameweek-plan", "route", "build", "my-team",
-             "players", "player", "compare", "ticker", "trending", "leagues", "league", "h2h", "worth-a-look", "worth-noticing", "player-dna"]
+             "players", "player", "compare", "ticker", "trending", "leagues", "league", "h2h", "worth-a-look", "worth-noticing", "player-dna",
+             "gameweek-scores"]
 
 
 @pytest.fixture(scope="module")

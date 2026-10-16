@@ -70,6 +70,7 @@ void _moreIsADirectory() {
         onOpenLab: () {},
         onOpenAsk: () {},
         onOpenLeagues: () {},
+        onOpenScores: () {},
         onOpenTicker: () {},
         onOpenFeedback: () {},
         onOpenHelp: () {},
@@ -128,6 +129,9 @@ void _moreIsADirectory() {
         // commonest state a manager is in on a Friday night.* The owner's chosen order (ADR-284) is
         // otherwise untouched: game things, then app things.
         'Ask',
+        // ⭐ ADR-346. Behind Ask, which ADR-302 placed first on purpose, and ahead of the rest of
+        // the game rows: ⚠️ *it is the only entry here you would open while a match is still on.*
+        'Scores',
         'Mini-leagues',
         'Fixture Difficulty Rating',
         'Team DNA',
@@ -185,6 +189,7 @@ void _moreIsADirectory() {
             onOpenSettings: () => opened.add('Settings'),
             onOpenLab: () => opened.add('Squad Lab'),
             onOpenLeagues: () => opened.add('Mini-leagues'),
+            onOpenScores: () => opened.add('Scores'),
             onOpenTicker: () => opened.add('Fixture Difficulty Rating'),
             onOpenFeedback: () => opened.add('Tell us something'),
             onOpenHelp: () => opened.add('Help & videos'),

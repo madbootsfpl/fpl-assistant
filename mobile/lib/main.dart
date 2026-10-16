@@ -19,6 +19,7 @@ import 'players_view.dart';
 import 'season_view.dart';
 import 'seen_store.dart';
 import 'server.dart';
+import 'scores_view.dart';
 import 'settings_view.dart';
 import 'signals_view.dart';
 import 'draft.dart';
@@ -798,6 +799,18 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
         onOpenLeagues: () => _open(
           'Mini-leagues',
           LeaguesView(client: _client, managerId: _managerId),
+        ),
+        onOpenScores: () => _open(
+          'Scores',
+          // ⭐ The squad goes in so each match can name your own players. ⚠️ Bench included: a man on
+          // your bench still scored, and *a screen that hides it is answering a different question*.
+          ScoresView(
+            client: _client,
+            playerIds: [
+              for (final p in [...team.analysis.xi, ...team.analysis.bench])
+                p.id,
+            ],
+          ),
         ),
         onOpenTicker: () => _open(
           'Fixture Difficulty Rating',

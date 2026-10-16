@@ -100,6 +100,7 @@ void main() {
             onOpenLab: () {},
             onOpenAsk: () {},
             onOpenLeagues: () {},
+            onOpenScores: () {},
             onOpenTicker: () {},
             onOpenFeedback: () {},
             onOpenHelp: () {},

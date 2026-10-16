@@ -38,6 +38,13 @@ def legal_squad(store, size=15):
     return picked
 
 
+def _played_gameweek(store) -> int:
+    """A gameweek the snapshot actually has history for, so `yours` is not empty in the sample."""
+    row = store.conn.execute(
+        "SELECT round FROM player_history GROUP BY round ORDER BY COUNT(*) DESC LIMIT 1").fetchone()
+    return row["round"] if row else 1
+
+
 def responses(store) -> dict:
     """One answer per endpoint, from the same squad, so a reader can follow a player across them."""
     ids = legal_squad(store)
@@ -63,6 +70,12 @@ def responses(store) -> dict:
         # manager's picks; a sample regenerated from the internet is not reproducible, and the contract test
         # that compares against it would pass or fail on someone else's uptime. ⭐ The *composition* is what
         # the sample documents — the fetch has its own coverage.
+        # ⭐ Scores, with the squad so `yours` is populated (ADR-346). ⚠️ **A played gameweek, chosen by
+        # the data rather than named** — the snapshot's coverage moves with every refresh, and a
+        # hard-coded week would make this sample empty the first time it did.
+        "gameweek-scores": service.gameweek_scores(
+            service.GameweekScoresRequest(player_ids=ids, gameweek=_played_gameweek(store)),
+            store=store),
         "my-team": _my_team(store, ids),
         # ⭐ The whole ranked board, because that is literally what the endpoint returns and the app
         # downloads it in one go (ADR-236). A trimmed sample would hide the only thing worth knowing

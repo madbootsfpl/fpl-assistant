@@ -1,7 +1,7 @@
 # ADR-346 — The score, and what it did to your team
 
 **Date:** 2026-10-16
-**Status:** ✅ **Accepted — the service half is built** (2026-10-16). ⏳ The Flutter screen is not; see *What shipped* below.
+**Status:** ✅ **Accepted and built** — service 2026-10-16, Flutter screen 2026-10-16.
 **Raised by:** a tester — *"in the More tab, a live score from the current or last match or gameweek, and
 when available a highlights clip of the goals, like a YouTube link, similar to flashscore.com"*
 **Builds on:** ADR-298 (a played gameweek never changes), ADR-256 (the rate limit), ADR-211 (the pipeline)
@@ -149,8 +149,10 @@ feature) · anything touching `decision_xp`.
 with `fixtures` gaining `team_h_score`, `team_a_score`, `minutes` and `started` (nullable, migrated onto
 existing databases). 13 new tests, five mutants each caught by the test that names the behaviour.
 
-⏳ **The Flutter screen is not built.** The tester asked for this *in the More tab*, and that is client work
-this ADR's contract section never specified. The server is ready for it.
+✅ **The Flutter screen too** — `lib/scores_view.dart`, reached from **More → Scores**, 7 widget tests
+against the committed sample. ⚠️ Placed **second, behind Ask**: ADR-302 put Ask first on purpose and a new
+row does not get to undo that quietly. It leads the remaining game rows because it is the only entry in
+More you would open while a match is still on.
 
 ### 🔴 Two things the design missed, both found by running it against the real database
 
@@ -198,3 +200,31 @@ app and caught on the one that had not*, which is the only place it could have b
 **Fixed by bringing the snapshot up to the schema deliberately**, once, rather than letting every test run
 do it by accident — the same move as the earlier *"refresh the committed seed so it agrees with itself"*.
 Verified schema-only: eleven tables, **no row-count change anywhere**, and zero fixtures carrying a score.
+
+
+---
+
+## The screen (2026-10-16)
+
+⭐ Both ambiguous pairs are resolved **in the widget**, not left to the reader: a score is drawn only when
+`started`, so `0–0` and a kick-off time can never be confused; and the heading says *"your players not in
+yet"* when `yoursKnown` is false, where an empty card would have claimed nobody featured.
+
+### 🔴 Three defects the widget tests caught
+
+1. **The heading row overflowed at 472 px** with the LIVE chip and the *not-in-yet* note together — a
+   yellow-and-black stripe on a narrow phone, in front of a tester. Now `Flexible` with an ellipsis.
+2. **A second `pumpWidget` reuses the existing `State`**, so a `late _future` never re-runs and the screen
+   keeps showing the first body. ⭐⭐ *A test that pumps twice and asserts on the second was asserting on
+   the first* — it passed for the wrong reason until a distinct key forced a fresh State.
+3. **Two matches in one gameweek can share a scoreline.** The sample has two 3–0s and the assertion
+   demanded exactly one — ⭐ *a uniqueness the data never owed the test.*
+
+### ⭐ The sample had to be made real first
+
+`spikes/018-flutter-read-slice/api-samples/gameweek-scores.json` was generated with every score `null`,
+because the committed snapshot's `fixtures` carry none — so the one example a Dart author reads could not
+show a score at all. ⚠️ **But `player_history` already knew them**: it stores `team_h_score` /
+`team_a_score` on every appearance row. Backfilled from there — **50 fixtures, including a genuine
+`LEE 0-0 CRY`**, which is precisely the case the screen exists to distinguish. ⭐ *The fixture now agrees
+with itself, and the sample shows the feature rather than its type signature.*
