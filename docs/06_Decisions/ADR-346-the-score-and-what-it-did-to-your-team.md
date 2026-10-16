@@ -179,3 +179,22 @@ suite, three API-contract samples, spent chips. That file is **gitignored**, and
 according to when the developer last ran a refresh, and CI — which has no `fpl.db` — can never see it.*
 Restoring the file from the committed snapshot made all ten green again. ⭐ *A test that reads a gitignored
 file is a test whose result belongs to one machine.* Worth its own gate; not taken here.
+
+
+### 🔴 And a third, which only CI could see (2026-10-16)
+
+The first CI run went red with **all 3,078 tests passing**. The failure was a session guard:
+
+> *🔴 The test suite modified `data/seed.db`, which is committed to git.*
+
+⭐⭐ **Adding a column means opening the committed snapshot now rewrites it.** `_migrate` runs
+`ALTER TABLE fixtures ADD COLUMN …` on any database lacking the new columns, and the snapshot lacked them.
+
+⚠️⚠️ **It could not fail locally, for a reason worth keeping.** A developer machine has
+`data/fpl.db` — gitignored — so the migration landed there, invisibly. CI has no such file, so the same
+code reached `seed.db`, which is in git. ⭐ *The same change was harmless on every machine that had run the
+app and caught on the one that had not*, which is the only place it could have been caught.
+
+**Fixed by bringing the snapshot up to the schema deliberately**, once, rather than letting every test run
+do it by accident — the same move as the earlier *"refresh the committed seed so it agrees with itself"*.
+Verified schema-only: eleven tables, **no row-count change anywhere**, and zero fixtures carrying a score.
