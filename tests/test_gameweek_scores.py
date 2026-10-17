@@ -114,10 +114,18 @@ def test_a_gameweek_in_flight_wins_over_a_finished_one(store):
 
 
 def test_with_nothing_played_the_answer_is_empty_rather_than_an_error(store):
-    """⭐ A season that has not started is a fact, not a failure."""
+    """⭐ A season that has not started is a fact, not a failure.
+
+    ⚠️ **The clock is pinned, and it has to be** (ADR-354): the seed holds a whole season, so "nothing
+    played" is only true on a date before any of it. ⭐ *Clearing the flags used to be enough; now the
+    kick-off times mean what they say*, and a test reading the real clock would start passing and failing
+    by the calendar.
+    """
+    from datetime import UTC, datetime
     for f in store.get_all_fixtures():
         _set(store, f["id"], started=0, finished=0, team_h_score=None, team_a_score=None)
-    out = gameweek_scores(GameweekScoresRequest(), store=store)
+    out = gameweek_scores(GameweekScoresRequest(), store=store,
+                          now=datetime(2026, 8, 1, tzinfo=UTC))
     assert out == {"gameweek": None, "live": False, "yours_known": False,
                    "clubs": {}, "matches": []}
 
@@ -302,3 +310,99 @@ def test_the_endpoint_answers_without_a_squad(store):
 
 def test_the_endpoint_refuses_an_impossible_gameweek(store):
     assert TestClient(app).post("/api/v1/gameweek/scores", json={"gameweek": 99}).status_code == 422
+
+
+# ── the live gate reads the clock, not a flag (ADR-354) ──────────────────────────────────────────
+
+_KO = "2026-10-17T11:30:00Z"
+
+
+def _gw7_as_stored(store, gw):
+    """GW7 exactly as the database holds it before any refresh: known fixtures, nothing started."""
+    for f in store.get_all_fixtures():
+        _set(store, f["id"], started=0, finished=0, team_h_score=None, team_a_score=None)
+    for f in [x for x in store.get_all_fixtures() if x["event"] == gw]:
+        store.conn.execute("UPDATE fixtures SET kickoff_time = ? WHERE id = ?", (_KO, f["id"]))
+    store.conn.commit()
+
+
+def test_a_match_that_has_kicked_off_goes_live_before_the_pipeline_says_so(store):
+    """🔴🔴 **The bug, in production, during GW7.** At 12:32 UTC — an hour after EVE-CHE kicked off — the
+    endpoint answered `gameweek=6, live=False`: last week's finished results, on a matchday.
+
+    ⭐⭐ `in_flight` read `started`, which only the **hourly pipeline** writes, so the live path was gated
+    behind the very process it was designed not to depend on. ⚠️ *The fetch did not go near the pipeline
+    and the decision to fetch did*, and the module's docstring claimed the first while meaning the second.
+    """
+    from datetime import UTC, datetime
+    gw = 7
+    _gw7_as_stored(store, gw)
+
+    class _Live:
+        """FPL's own feed, which knows perfectly well that the match is on."""
+        def __init__(self): self.asked = 0
+        def get_fixtures(self):
+            self.asked += 1
+            return [{"id": f["id"], "event": gw, "team_h_score": 1, "team_a_score": 0,
+                     "minutes": 62, "started": True, "finished": False}
+                    for f in store.get_all_fixtures() if f["event"] == gw]
+
+    live = _Live()
+    out = gameweek_scores(GameweekScoresRequest(), store=store, client=live,
+                          now=datetime(2026, 10, 17, 12, 32, tzinfo=UTC))
+
+    assert out["gameweek"] == gw, "the screen was still on last week"
+    assert out["live"] is True
+    assert live.asked == 1, "FPL was never asked"
+    assert out["matches"][0]["status"] == "62'"
+
+
+def test_before_kick_off_nothing_is_fetched(store):
+    """⭐ The economy the gate was for: a week that has not begun makes **no** upstream call."""
+    from datetime import UTC, datetime
+    _gw7_as_stored(store, 7)
+
+    class _Boom:
+        def get_fixtures(self): raise AssertionError("FPL was asked before kick-off")
+
+    out = gameweek_scores(GameweekScoresRequest(), store=store, client=_Boom(),
+                          now=datetime(2026, 10, 17, 11, 29, tzinfo=UTC))
+    assert out["live"] is False
+
+
+def test_a_fixture_the_feed_never_finished_does_not_poll_for_ever(store):
+    """⚠️⚠️ **An unbounded "since kick-off" is a condition that becomes permanently true.** A postponed or
+    abandoned match keeps `finished = 0`, and the first version of this gate would have held the screen on
+    that dead week and polled FPL about it indefinitely. 🔴 Two existing tests went red against the seed —
+    whose fixtures are months old — which is how it was caught."""
+    from datetime import UTC, datetime
+    _gw7_as_stored(store, 7)
+
+    class _Boom:
+        def get_fixtures(self): raise AssertionError("still polling a match from last month")
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=7), store=store, client=_Boom(),
+                          now=datetime(2026, 11, 20, tzinfo=UTC))
+    assert out["live"] is False
+
+
+def test_the_window_outlasts_the_pipeline_not_the_match(store):
+    """⭐⭐ 24h is sized against **the refresh**, not the 90 minutes. A game is over ~2h after kick-off but
+    `finished` only flips when the pipeline next runs, and the observed gaps reach five hours — ⚠️ *closing
+    the window first would replace a live score with "not started"*, which is worse than either truth."""
+    from datetime import UTC, datetime
+    gw = 7
+    _gw7_as_stored(store, gw)
+
+    class _Live:
+        def get_fixtures(self):
+            return [{"id": f["id"], "event": gw, "team_h_score": 2, "team_a_score": 1,
+                     "minutes": 90, "started": True, "finished": True}
+                    for f in store.get_all_fixtures() if f["event"] == gw]
+
+    # five hours after kick-off: the match is over, the pipeline has not run, the DB still says nothing
+    out = gameweek_scores(GameweekScoresRequest(), store=store, client=_Live(),
+                          now=datetime(2026, 10, 17, 16, 30, tzinfo=UTC))
+    assert out["gameweek"] == gw
+    assert out["matches"][0]["status"] == "Full time"
+    assert (out["matches"][0]["home_score"], out["matches"][0]["away_score"]) == (2, 1)

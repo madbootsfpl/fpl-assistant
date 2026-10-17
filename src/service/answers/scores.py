@@ -30,6 +30,15 @@ from src.storage import Storage
 #: request a minute against an undocumented API that can block a noisy client.
 LIVE_CACHE_SECONDS = 60
 
+#: How long after kick-off a match may still be treated as in progress (ADR-354).
+#:
+#: ⭐⭐ Generous on purpose, because it has to outlast **the pipeline**, not the match. A game is over
+#: ~2h after kick-off, but `finished` in the database only flips when the refresh next runs — and the
+#: observed gaps reach five hours. ⚠️ *Closing this window before the pipeline catches up would replace a
+#: live score with "not started"*, which is worse than either truth. Inside it, FPL's own `finished` is
+#: read live and the screen says Full time regardless.
+LIVE_WINDOW_HOURS = 24
+
 _live_cache: dict[int, tuple[float, list]] = {}
 
 
@@ -77,14 +86,45 @@ def _status(f) -> str:
     return ""
 
 
-def _which_gameweek(fixtures: list) -> int | None:
+def _kicked_off(f, now=None) -> bool:
+    """Has this match's kick-off time passed? (ADR-354)
+
+    🔴🔴 **The live path was gated on a flag the hourly pipeline writes.** `started` only becomes 1 when
+    the refresh next runs, so at 15:00 on a Saturday the database still said *not started*, `in_flight`
+    was False, and the screen served **last week** — ⭐⭐ *the fetch did not depend on the pipeline and the
+    decision to fetch did.*
+
+    ⚠️⚠️ The kick-off time is **already stored, weeks in advance**: the fixture is known before the match
+    and only its score evolves. ⭐ *A clock we already have beats a flag somebody has to write.*
+
+    ⚠️ **Bounded at the far end, and the first version was not.** Kick-off alone made every old fixture
+    the feed never finished — a postponement, an abandonment — count as in progress for ever, polling FPL
+    and holding the screen on a dead week. 🔴 Caught by two tests going red against the seed, whose
+    fixtures are months past; ⭐ *an unbounded "since" is a condition that becomes permanently true.*
+    """
+    from datetime import UTC, datetime, timedelta
+    ko = f.get("kickoff_time") if hasattr(f, "get") else f["kickoff_time"]
+    if not ko:
+        return False
+    try:
+        when = datetime.fromisoformat(str(ko).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return when <= (now or datetime.now(UTC)) < when + timedelta(hours=LIVE_WINDOW_HOURS)
+
+
+def _playing(f, now=None) -> bool:
+    """A match this gameweek is in progress — by the clock, or because the feed already said so."""
+    return (_started(f) or _kicked_off(f, now)) and not f["finished"]
+
+
+def _which_gameweek(fixtures: list, now=None) -> int | None:
     """The gameweek worth showing: one with a match in progress, else the most recently played.
 
     ⭐ *"Current or last"* was the tester's own phrasing, and it is two questions with one answer — the
     live week while there is one, the finished week the rest of the time.
     """
-    live = [f["event"] for f in fixtures
-            if f["event"] and _started(f) and not f["finished"]]
+    live = [f["event"] for f in fixtures if f["event"] and _playing(f, now)]
     if live:
         return min(live)
     played = [f["event"] for f in fixtures if f["event"] and _started(f)]
@@ -148,8 +188,13 @@ def _squad_that_week(request, gameweek: int, played: bool, players, *, client=No
 
 
 def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = None,
-                    client=None) -> dict:
-    """Every match of a gameweek, with the manager's own players beside each one."""
+                    client=None, now=None) -> dict:
+    """Every match of a gameweek, with the manager's own players beside each one.
+
+    ⚠️ `now` is injectable because this answer became **clock-dependent** when the live gate moved off a
+    stored flag (ADR-354). ⭐ *A test that reads the real clock passes on the day it was written* — this
+    repo has watched that happen (`test_xp_board` pinned to "from GW6" went red the week GW6 was played).
+    """
     request.validate()
     store, ours = opened(store)
     try:
@@ -160,7 +205,7 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         club_rows = {t["short_name"]: {"name": t["name"], "badge": badge_url(t["code"])}
                      for t in teams}
         all_fixtures = [dict(f) for f in store.get_all_fixtures()]
-        gameweek = request.gameweek or _which_gameweek(all_fixtures)
+        gameweek = request.gameweek or _which_gameweek(all_fixtures, now)
         if gameweek is None:
             # ⭐ A season that has not started is a fact, not a failure.
             return {"gameweek": None, "live": False, "yours_known": False,
@@ -170,7 +215,9 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
 
         # ⭐ Only reach upstream when something is actually in flight. A finished week is served entirely
         # from the database, which is the whole point of storing it.
-        in_flight = any(_started(f) and not f["finished"] for f in stored.values())
+        # ⚠️ By the clock, not by a stored flag — see `_kicked_off`. ⭐ A week whose matches are all over
+        # still makes **no** upstream call, which is the economy this gate was for.
+        in_flight = any(_playing(f, now) for f in stored.values())
         if in_flight:
             for raw in _live_fixtures(gameweek, client=client):
                 if raw.get("id") in stored:
