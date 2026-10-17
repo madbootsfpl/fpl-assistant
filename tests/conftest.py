@@ -28,6 +28,39 @@ def pytest_configure(config):
         "real_llm: this test exercises src/llm.py itself, so it opts out of the model stub below",
     )
 
+    # ⭐⭐ **The same lesson as the model stub above, one layer down: the database** (ADR-355).
+    #
+    # `config.DB_PATH` is `data/fpl.db` when that file exists and `data/seed.db` when it does not — so the
+    # suite read **a gitignored, machine-specific file** on any developer's machine and the committed seed
+    # on CI. 81 bare `Storage()` calls, two databases, no signal. ⚠️⚠️ *It does not fail, it disagrees*,
+    # and a disagreement reads as a wrong diagnosis rather than a wrong setup.
+    #
+    # 🔴 It has bitten three times: a local `refresh` turned ten unrelated tests red; a contract failure was
+    # called local-only when it was not; and one test here still *branched* on which database it got, so
+    # half of it had never run on CI.
+    #
+    # 📌 `FPL_DATABASE_URL` is honoured, because the Postgres job sets a DSN on purpose. The live **file**
+    # is what is never read.
+    _pin_the_database()
+
+
+def _pin_the_database():
+    from src import config as fpl_config
+    fpl_config.DB_PATH = fpl_config.DATABASE_URL or fpl_config.SEED_DB_PATH
+
+
+@pytest.fixture(autouse=True)
+def _seed_database_only():
+    """Re-pin before **every** test, not once at startup.
+
+    🔴 **A one-shot pin does not survive a module reload, and one test does exactly that.**
+    `test_postgres_cutover` calls `importlib.reload(config)` to prove the DSN is read at import — which
+    recomputes `DB_PATH` from the filesystem and silently handed `data/fpl.db` to every test that ran
+    afterwards. ⭐⭐ *The guard caught it on its first full run, which is the only reason this is a fixture
+    and not a bug shipped inside the fix for the same bug.*
+    """
+    _pin_the_database()
+
 
 @pytest.fixture(autouse=True)
 def _no_language_model(request, monkeypatch):
@@ -69,3 +102,4 @@ def _no_language_model(request, monkeypatch):
             for name, value in list(obj.__kwdefaults__.items()):
                 if value in real:
                     monkeypatch.setitem(obj.__kwdefaults__, name, stub)
+

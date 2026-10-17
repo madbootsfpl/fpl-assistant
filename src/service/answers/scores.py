@@ -77,9 +77,35 @@ def _started(f) -> bool:
     return bool(f["started"]) or bool(f["finished"])
 
 
+def _over(f) -> bool:
+    """Is the football finished? (ADR-356)
+
+    ⚠️⚠️ **FPL has two "finished" flags and they mean different things.** `finished_provisional` is the
+    referee: it flips at the whistle. `finished` is the accountant: it waits until **bonus points are
+    confirmed** for the whole gameweek, which is hours later and sometimes the next day.
+
+    🔴 Reading only `finished`, a match that ended at 13:20 still reported `minutes = 90` and printed
+    **"90'"** all afternoon — ⭐ *a match that is over, captioned as if it were still being played.*
+
+    ⭐ The project already knew this. ADR-123 refuses `finished` for the fixture horizon for exactly this
+    reason — *"FPL holds that flag back until a gameweek's bonus points are confirmed"* — and that
+    reasoning sat in one module and never reached the card.
+    """
+    return bool(f["finished"]) or bool(_get(f, "finished_provisional"))
+
+
+def _get(f, key):
+    """⚠️ Rows arrive as `sqlite3.Row` (no `.get`) and as dicts, and this key is on neither when it has not
+    been merged — so the lookup has to tolerate all three. ⭐ The `kits._get` convention."""
+    try:
+        return f[key]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 def _status(f) -> str:
     """What to print under the score. ⚠️ Never invents a time it does not have."""
-    if f["finished"]:
+    if _over(f):
         return "Full time"
     if _started(f):
         return f"{f['minutes']}'" if f["minutes"] is not None else "Live"
@@ -227,6 +253,10 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                         "minutes": raw.get("minutes"),
                         "started": raw.get("started"),
                         "finished": raw.get("finished"),
+                        # ⭐ The referee's flag, read live and **not stored** (ADR-356). A column would be a
+                        # schema migration — the step that has bitten twice — to buy a better degrade in a
+                        # case that already degrades to exactly today's behaviour.
+                        "finished_provisional": raw.get("finished_provisional"),
                     }
 
         players = {p["id"]: p for p in store.get_players()}

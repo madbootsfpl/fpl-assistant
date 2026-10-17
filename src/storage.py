@@ -645,8 +645,17 @@ class Storage:
     the argument every call site already passes.
     """
 
-    def __init__(self, db_path: str = config.DB_PATH, *, ensure_schema: bool | None = None):
-        """Open `db_path` — a SQLite file or a Postgres DSN.
+    def __init__(self, db_path: str | None = None, *, ensure_schema: bool | None = None):
+        """Open `db_path` — a SQLite file or a Postgres DSN. Omitted, it is `config.DB_PATH` **now**.
+
+        ⚠️⚠️ **Read at call time, deliberately** (ADR-355). This was `db_path: str = config.DB_PATH`, and a
+        default argument is evaluated **once, when the `def` runs at import** — so every caller got
+        whichever database existed when the module first loaded, and patching `config.DB_PATH` afterwards
+        did nothing. ⭐ *A test already documented that as a fact to work around rather than a bug to fix*
+        (`test_service_squad.py`: "the seam has to be the name the service module actually calls").
+
+        ⭐⭐ It is the same trap `conftest` names for the language model — *"a default argument holds a
+        reference to the original and never consults the module again"* — one layer down, in the database.
 
         `ensure_schema` decides whether this connection may **create** tables. It defaults to *yes* for SQLite
         (the local cache has to bootstrap itself) and *no* for Postgres (the pipeline owns that schema, see the
@@ -654,6 +663,9 @@ class Storage:
         is worth stating out loud.
         """
         global _FALLBACK_REASON
+
+        if db_path is None:
+            db_path = config.DB_PATH
 
         # ⭐ **A configured Postgres that cannot be used falls back to the seed — visibly.** Two failures are
         # worth telling apart and both end here: the server is unreachable, or it is reachable and holds no

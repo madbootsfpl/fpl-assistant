@@ -406,3 +406,69 @@ def test_the_window_outlasts_the_pipeline_not_the_match(store):
     assert out["gameweek"] == gw
     assert out["matches"][0]["status"] == "Full time"
     assert (out["matches"][0]["home_score"], out["matches"][0]["away_score"]) == (2, 1)
+
+
+# ── the referee and the accountant (ADR-356) ─────────────────────────────────────────────────────
+
+def test_full_time_is_the_whistle_not_the_bonus_points(store):
+    """🔴 **A match that ended at 13:20 printed "90'" all afternoon.** FPL has two finished flags:
+    `finished_provisional` flips at the whistle, `finished` waits until **bonus is confirmed** for the
+    whole gameweek — hours later, sometimes the next day. Reading only the second, the card captioned a
+    finished match as if it were still being played.
+
+    ⭐ ADR-123 already refuses `finished` for the fixture horizon for this exact reason. The reasoning sat
+    in one module and never reached the card.
+    """
+    from datetime import UTC, datetime
+    gw = 7
+    _gw7_as_stored(store, gw)
+
+    class _Live:
+        """FPL at 13:25: the whistle has gone, the bonus has not landed."""
+        def get_fixtures(self):
+            return [{"id": f["id"], "event": gw, "team_h_score": 0, "team_a_score": 2,
+                     "minutes": 90, "started": True,
+                     "finished": False, "finished_provisional": True}
+                    for f in store.get_all_fixtures() if f["event"] == gw]
+
+    out = gameweek_scores(GameweekScoresRequest(), store=store, client=_Live(),
+                          now=datetime(2026, 10, 17, 13, 25, tzinfo=UTC))
+    m = out["matches"][0]
+    assert m["status"] == "Full time", "a finished match is still being described as in play"
+    # ⚠️ And `finished` still means settled — the payload does not start claiming the bonus is in.
+    assert m["finished"] is False
+
+
+def test_a_match_actually_in_play_still_shows_the_minute(store):
+    """⚠️ The guard on the other side: ⭐ *a fix that captions everything "Full time" passes the test
+    above and breaks the feature.*"""
+    from datetime import UTC, datetime
+    gw = 7
+    _gw7_as_stored(store, gw)
+
+    class _Live:
+        def get_fixtures(self):
+            return [{"id": f["id"], "event": gw, "team_h_score": 0, "team_a_score": 1,
+                     "minutes": 62, "started": True,
+                     "finished": False, "finished_provisional": False}
+                    for f in store.get_all_fixtures() if f["event"] == gw]
+
+    out = gameweek_scores(GameweekScoresRequest(), store=store, client=_Live(),
+                          now=datetime(2026, 10, 17, 12, 32, tzinfo=UTC))
+    assert out["matches"][0]["status"] == "62'"
+
+
+def test_a_stored_row_without_the_column_behaves_as_it_always_did(store):
+    """⚠️⚠️ **The flag is read live and never stored** (ADR-356), so every database row lacks the key —
+    and `sqlite3.Row` raises `IndexError` for a missing one where a dict returns None. ⭐ *The degrade is
+    exactly today's behaviour*, which is what makes not storing it affordable."""
+    from datetime import UTC, datetime
+    gw = 6
+    for f in store.get_all_fixtures():
+        _set(store, f["id"], started=0, finished=0, team_h_score=None, team_a_score=None)
+    for f in [x for x in store.get_all_fixtures() if x["event"] == gw]:
+        _set(store, f["id"], started=1, finished=1, team_h_score=1, team_a_score=0)
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw), store=store,
+                          now=datetime(2026, 10, 17, 18, 0, tzinfo=UTC))
+    assert out["matches"][0]["status"] == "Full time"

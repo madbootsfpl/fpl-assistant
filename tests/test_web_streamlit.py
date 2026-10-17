@@ -2746,10 +2746,13 @@ def test_cloud_shows_a_snapshot_note_local_does_not(monkeypatch):
     at = _run(_APP)
     assert any("snapshot" in c.value for c in at.caption)             # cloud → the snapshot note
 
-    if config.DB_PATH != config.SEED_DB_PATH:                         # a live cache locally
-        monkeypatch.setenv("FPL_LOCAL", "1")
-        at2 = _run(_APP)
-        assert not any("snapshot" in c.value for c in at2.caption)    # local → no snapshot note
+    # ⚠️⚠️ **This used to read `if config.DB_PATH != config.SEED_DB_PATH:`** — so the local half ran only on
+    # a machine that happened to have `data/fpl.db`, and **never on CI** (ADR-355). ⭐ *A test that asks
+    # which database it got is a test with two behaviours and one name.* The condition is now arranged.
+    monkeypatch.setattr(config, "DB_PATH", config.LIVE_DB_PATH)       # stand in for a live cache
+    monkeypatch.setenv("FPL_LOCAL", "1")
+    at2 = _run(_APP)
+    assert not any("snapshot" in c.value for c in at2.caption)        # local → no snapshot note
 
 
 def test_refresh_button_is_gated_by_local_mode(monkeypatch):
@@ -2760,10 +2763,11 @@ def test_refresh_button_is_gated_by_local_mode(monkeypatch):
     at = _run(_APP)
     assert "🔄 Refresh data" not in [b.label for b in at.button]      # never on the read-only cloud
 
-    if config.DB_PATH != config.SEED_DB_PATH:                         # a live cache locally
-        monkeypatch.setenv("FPL_LOCAL", "1")
-        at2 = _run(_APP)
-        assert "🔄 Refresh data" in [b.label for b in at2.button]     # local run → the refresh button
+    # ⚠️ Arranged rather than discovered, for the same reason as above (ADR-355).
+    monkeypatch.setattr(config, "DB_PATH", config.LIVE_DB_PATH)       # stand in for a live cache
+    monkeypatch.setenv("FPL_LOCAL", "1")
+    at2 = _run(_APP)
+    assert "🔄 Refresh data" in [b.label for b in at2.button]         # local run → the refresh button
 
 
 def test_is_local_requires_flag_and_a_non_seed_db(monkeypatch):
