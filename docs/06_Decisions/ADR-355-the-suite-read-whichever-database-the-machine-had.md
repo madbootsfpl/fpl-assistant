@@ -67,5 +67,13 @@ recomputes `DB_PATH` from the filesystem and silently handed `data/fpl.db` to **
 after it**. ⭐⭐ *The fix for this bug shipped with the same bug inside it, for about ten minutes*, and
 only the guard said so. The pin is an autouse fixture now, re-applied before every test.
 
+🔴 **And the guard's own first version only worked on SQLite.** It read `PRAGMA database_list` to see
+which file had been opened — but CI's Postgres job runs this same suite with `db.connect` patched to hand
+back Postgres *whatever path it is given*, so the assertion blew up there and nowhere else. ⭐⭐ *A test
+that inspects the connection is testing the harness*; the claim was always about the **path asked for**,
+so it now spies on the argument and opens nothing. ⚠️ Three attempts at one guard — in the wrong file,
+then surviving a reload, then backend-specific — ⭐ *which is itself the argument for the guard: nothing
+else in the suite could tell me any of that.*
+
 📌 Not changed: the application's own resolution. ⭐ A developer running the CLI should still get their
 live cache — that is what it is for. This is about what the **tests** read.

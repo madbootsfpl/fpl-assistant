@@ -14,6 +14,8 @@ rather than in `conftest.py` because pytest does not collect tests from a confte
 of this guard passed when run by name and never ran with the suite.
 """
 
+import pytest
+
 from src import config
 from src.storage import Storage
 
@@ -34,16 +36,28 @@ def test_a_bare_store_reads_the_config_when_it_is_asked_not_when_it_was_imported
 
     ⭐⭐ The same trap `conftest` spells out for the language model, one layer down. ⚠️ *A pin that cannot
     reach the constructor is decoration*, and the suite would look pinned while reading whatever it liked.
+
+    ⚠️ It asserts the **path asked for**, not the database opened. 🔴 The first version read
+    `PRAGMA database_list`, which is SQLite-only, and CI's Postgres job runs this same suite with
+    `db.connect` patched to hand back Postgres whatever path it is given — ⭐ *a test that inspects the
+    connection is testing the harness; the claim here is about the argument.*
     """
-    import shutil
+    from src import db
 
-    elsewhere = tmp_path / "somewhere-else.db"
-    shutil.copy(config.SEED_DB_PATH, elsewhere)
-    monkeypatch.setattr(config, "DB_PATH", str(elsewhere))
+    class _Stop(Exception):
+        """Far enough: the path has been chosen, and no database needs opening to prove it."""
 
-    store = Storage()
-    try:
-        opened = [row[2] for row in store.conn.execute("PRAGMA database_list")]
-    finally:
-        store.close()
-    assert str(elsewhere) in opened, f"Storage ignored the patched config and opened {opened}"
+    seen = []
+
+    def spy(target):
+        seen.append(target)
+        raise _Stop
+
+    monkeypatch.setattr(db, "connect", spy)
+    monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "somewhere-else.db"))
+
+    with pytest.raises(_Stop):
+        Storage()
+    assert seen == [str(tmp_path / "somewhere-else.db")], (
+        f"Storage ignored the patched config and asked for {seen}"
+    )
