@@ -20,6 +20,19 @@ The scores card read only `finished`. So between the whistle and the bonus, a ma
 `minutes = 90, finished = false` and the card printed **"90'"** — ⭐⭐ *a match that is over, captioned as
 though it were still being played*, for the rest of the afternoon.
 
+### Measured, on the day
+
+The gap was sampled live through GW7's first match, Everton 0-2 Chelsea:
+
+```
+13:24  min=90  finished=0  provisional=0      still playing
+13:37  min=90  finished=0  provisional=1   ←  the whistle
+15:13  min=90  finished=0  provisional=1      ninety-six minutes later, still unsettled
+```
+
+⚠️ **Ninety-six minutes and counting** — not a corner case measured in seconds. ⭐ *The window this ADR
+exists for is longer than the match that opens it*, and for all of it the old card said `"90'"`.
+
 ## ⭐⭐ The project already knew, in a different module
 
 ADR-123 refuses `finished` for the fixture horizon for exactly this reason:
