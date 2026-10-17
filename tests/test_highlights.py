@@ -37,6 +37,12 @@ def store_with_a_played_match(tmp_path, monkeypatch):
     yield store, fixture_id
     store.close()
 
+# ⭐ Feed entries are `parse_feed`'s own dicts (ADR-353) — `published` is what the upload window reads,
+# and `None` means "the feed did not say", which the window permits by design.
+def _e(title, url, published=None):
+    return {"title": title, "link": url, "published": published}
+
+
 # ── reading a title ──────────────────────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("title, expected", [
@@ -68,8 +74,8 @@ def test_a_title_with_no_scoreline_yields_nothing(title):
 # ── accepting a video for a fixture ──────────────────────────────────────────────────────────────
 
 def test_the_right_video_is_found():
-    entries = [("Reading 0-2 Cobham Next Gen | HIGHLIGHTS | EFL Trophy", "u0"),
-               ("Chelsea 5-1 Bournemouth | HIGHLIGHTS | Premier League", "u1")]
+    entries = [_e("Reading 0-2 Cobham Next Gen | HIGHLIGHTS | EFL Trophy", "u0"),
+               _e("Chelsea 5-1 Bournemouth | HIGHLIGHTS | Premier League", "u1")]
     assert highlights.match_fixture(entries, "Chelsea", "Bournemouth", 5, 1) == "u1"
 
 
@@ -77,25 +83,25 @@ def test_the_same_two_clubs_with_a_different_score_is_a_different_match():
     """🔴 **The check that makes this safe.** Two clubs meet more than once — a cup tie, a youth fixture,
     last season. ⭐⭐ *A title naming the right clubs with the wrong score is the wrong video behind a
     correct-looking scoreline*, which is worse than showing nothing."""
-    entries = [("Chelsea 2-0 Bournemouth | U18 HIGHLIGHTS | 2026/27", "wrong")]
+    entries = [_e("Chelsea 2-0 Bournemouth | U18 HIGHLIGHTS | 2026/27", "wrong")]
     assert highlights.match_fixture(entries, "Chelsea", "Bournemouth", 5, 1) is None
 
 
 def test_the_clubs_must_be_the_right_way_round():
     """⚠️ `Leeds 1-0 Arsenal` is not `Arsenal 1-0 Leeds`. ⭐ Home and away decide what the score means."""
-    entries = [("Leeds United 2-1 Arsenal | Premier League highlights", "u")]
+    entries = [_e("Leeds United 2-1 Arsenal | Premier League highlights", "u")]
     assert highlights.match_fixture(entries, "Arsenal", "Leeds", 2, 1) is None
 
 
 def test_a_club_names_itself_more_fully_than_fpl_does():
     """⭐ FPL says *Leeds*; the club says *Leeds United*. Containment either way, ⚠️ never a fuzzy score —
     which would let *Man City* match *Man Utd* on a bad day."""
-    entries = [("Arsenal 2-1 Leeds United | Premier League highlights", "u")]
+    entries = [_e("Arsenal 2-1 Leeds United | Premier League highlights", "u")]
     assert highlights.match_fixture(entries, "Arsenal", "Leeds", 2, 1) == "u"
 
 
 def test_man_city_is_not_man_utd():
-    entries = [("Liverpool 0-3 Man City | Premier League highlights", "u")]
+    entries = [_e("Liverpool 0-3 Man City | Premier League highlights", "u")]
     assert highlights.match_fixture(entries, "Liverpool", "Man Utd", 0, 3) is None
 
 
@@ -106,8 +112,8 @@ def test_the_highlights_video_wins_over_another_about_the_same_match():
     taps "Highlights" and gets comedians has been told something untrue by the label.*
     """
     entries = [
-        ("FRIMMY AND MO GILLIGAN'S REACTIONS | Alternative Commentary | Arsenal 2-1 Leeds United", "chat"),
-        ("Arsenal 2-1 Leeds United | Premier League highlights", "real"),
+        _e("FRIMMY AND MO GILLIGAN'S REACTIONS | Alternative Commentary | Arsenal 2-1 Leeds United", "chat"),
+        _e("Arsenal 2-1 Leeds United | Premier League highlights", "real"),
     ]
     assert highlights.match_fixture(entries, "Arsenal", "Leeds", 2, 1) == "real"
 
@@ -115,7 +121,7 @@ def test_the_highlights_video_wins_over_another_about_the_same_match():
 def test_a_highlights_package_that_never_says_the_word_is_still_taken():
     """⚠️ A **preference, not a requirement**: seven of eight real links said *highlights* and the eighth
     did not. ⭐ *Requiring the word would trade a wrong video for a missing one.*"""
-    entries = [("Aston Villa 2-2 Brentford | Yarmoliuk and Ajer net on the road! | Premier League", "u")]
+    entries = [_e("Aston Villa 2-2 Brentford | Yarmoliuk and Ajer net on the road! | Premier League", "u")]
     assert highlights.match_fixture(entries, "Aston Villa", "Brentford", 2, 2) == "u"
 
 
@@ -182,10 +188,15 @@ class _Feeds:
         self.asked.append(short)
         # ⚠️ `<title>` as well as `<media:title>` — a real YouTube feed carries both, and `parse_feed`
         # reads the Atom one. ⭐ *A double that omits what the parser actually uses tests the double.*
+        # ⚠️ `<published>` as well, because `fill` now judges the upload date against kick-off (ADR-353)
+        # — ⭐ *a double that omits the field the code under test reads is a double that tests nothing.*
+        # A row may give it or not; a club with no date exercises the degrade path.
         items = "".join(
             f"<entry><title>{t}</title><media:title>{t}</media:title>"
-            f'<link rel="alternate" href="{u}"/></entry>'
-            for t, u in self.by_club.get(short, []))
+            + (f"<published>{e[2]}</published>" if len(e) > 2 and e[2] else "")
+            + f'<link rel="alternate" href="{u}"/></entry>'
+            for e in self.by_club.get(short, [])
+            for t, u in [(e[0], e[1])])
         return ('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom" '
                 f'xmlns:media="http://search.yahoo.com/mrss/">{items}</feed>')
 
@@ -264,7 +275,7 @@ def test_forest_matches_the_name_forest_uses():
     Forest*; the club writes *Nottingham Forest*. ⚠️ Containment fails **both** ways, so every Forest
     fixture resolved to no link even with the official channel on the list — ⭐ *and "no link" is also
     what a missing channel looks like, which is where this hid.*"""
-    entries = [("Crystal Palace 3-1 Nottingham Forest | Premier League Highlights 📺", "u")]
+    entries = [_e("Crystal Palace 3-1 Nottingham Forest | Premier League Highlights 📺", "u")]
     assert highlights.match_fixture(entries, "Crystal Palace", "Nott'm Forest", 3, 1) == "u"
 
 
@@ -288,12 +299,12 @@ def test_an_archive_match_is_never_the_link_even_though_it_says_highlights():
     archive = ("Special Radosław Majewski Hat-Trick! 🪄 | Crystal Palace 0-3 Nottingham Forest | "
                "Classic Highlights 🎬")
     assert highlights.parse_title(archive), "the premise: this really does parse"
-    assert highlights.match_fixture([(archive, "old")], "Crystal Palace", "Nott'm Forest", 0, 3) is None
+    assert highlights.match_fixture([_e(archive, "old")], "Crystal Palace", "Nott'm Forest", 0, 3) is None
 
     # ⭐ And it does not block the real one sitting beside it in the same feed.
     real = "Crystal Palace 0-3 Nottingham Forest | Premier League Highlights"
     assert highlights.match_fixture(
-        [(archive, "old"), (real, "new")], "Crystal Palace", "Nott'm Forest", 0, 3) == "new"
+        [_e(archive, "old"), _e(real, "new")], "Crystal Palace", "Nott'm Forest", 0, 3) == "new"
 
 
 def test_the_other_clubs_highlights_beat_this_clubs_dugout_cam(store_with_a_played_match):
@@ -333,4 +344,91 @@ def test_a_thriller_called_a_classic_is_still_a_highlights_package():
     survived, and a guard nothing stops from growing is a guard that eventually eats real links.
     """
     real = "A CLASSIC AT THE CITY GROUND 🔥 | Nott'm Forest 3-3 Spurs | Premier League Highlights"
-    assert highlights.match_fixture([(real, "u")], "Nott'm Forest", "Spurs", 3, 3) == "u"
+    assert highlights.match_fixture([_e(real, "u")], "Nott'm Forest", "Spurs", 3, 3) == "u"
+
+
+# ── the upload window (ADR-353) ──────────────────────────────────────────────────────────────────
+
+_KO = "2026-10-10T11:30:00Z"
+
+
+def _at(hours):
+    """A feed timestamp `hours` after kick-off."""
+    from datetime import datetime, timedelta
+    return (datetime.fromisoformat(_KO.replace("Z", "+00:00")) + timedelta(hours=hours)).isoformat()
+
+
+@pytest.mark.parametrize("hours, taken", [
+    (4.2, True),     # ⭐ the fastest package measured — Coventry 4-1 Newcastle
+    (9.5, True),     # Arsenal 2-1 Leeds, the one that had to be cleared by hand
+    (34.0, True),    # ⚠️ the slowest measured — an Extended cut the next evening
+    (71.9, True),    # just inside
+    (72.1, False),   # just outside
+    (-0.1, False),   # ⭐⭐ before kick-off, which no real package ever was
+    (-9000, False),  # an archive upload of a match played a year earlier
+])
+def test_only_a_video_published_while_the_match_was_news(hours, taken):
+    """⭐⭐ **The strongest thing a title cannot fake.** Across 30 finished fixtures every genuine package
+    landed between **+4.2h and +34.0h** after kick-off and *nothing was ever published before it*, so the
+    window is measured rather than chosen — and 72h is better than twice the slowest.
+    """
+    e = [_e("Arsenal 2-1 Leeds United | Premier League highlights", "u", _at(hours))]
+    assert highlights.match_fixture(e, "Arsenal", "Leeds", 2, 1, kickoff=_KO) == ("u" if taken else None)
+
+
+def test_the_window_retires_the_archive_guard_on_its_own_terms():
+    """🔴 ADR-352 excluded Forest's *Classic Highlights* by its title, which only worked because that one
+    series is branded that way. ⭐ The date catches **any** archive upload, however it is captioned —
+    here one with no telltale word at all."""
+    archive = "Majewski's Hat-Trick 🪄 | Crystal Palace 0-3 Nottingham Forest | Premier League Highlights"
+    old = [_e(archive, "old", "2014-01-01T17:00:00+00:00")]
+    assert highlights.match_fixture(old, "Crystal Palace", "Nott'm Forest", 0, 3, kickoff=_KO) is None
+    # ⚠️ And the same title inside the window is a real package — the date is doing the work, not the words.
+    now = [_e(archive, "new", _at(8))]
+    assert highlights.match_fixture(now, "Crystal Palace", "Nott'm Forest", 0, 3, kickoff=_KO) == "new"
+
+
+@pytest.mark.parametrize("published, kickoff", [
+    (None, _KO),            # a feed that carries no dates
+    (_at(8), None),         # a fixture with no kick-off stored
+    ("not a date", _KO),    # ⚠️ and a date this cannot read
+])
+def test_what_it_cannot_date_it_does_not_reject(published, kickoff):
+    """⚠️⚠️ **Unknown is permitted, deliberately.** ⭐ *A guard that turns missing data into missing links
+    is worse than the hazard it closes* — with no date the module degrades to exactly the behaviour that
+    shipped before the window, rather than going silent."""
+    e = [_e("Arsenal 2-1 Leeds United | Premier League highlights", "u", published)]
+    assert highlights.match_fixture(e, "Arsenal", "Leeds", 2, 1, kickoff=kickoff) == "u"
+
+
+def test_an_rss_style_date_is_read_too():
+    """⚠️ `parse_feed` serves **both** RSS and Atom and hands back whichever stamp the feed used. ⭐ YouTube
+    sends ISO-8601 today; a reader that assumed so would fail silently — as permitting everything — the
+    day it did not."""
+    e = [_e("Arsenal 2-1 Leeds United | Premier League highlights", "u", "Sat, 10 Oct 2026 21:00:00 +0000")]
+    assert highlights.match_fixture(e, "Arsenal", "Leeds", 2, 1, kickoff=_KO) == "u"
+    stale = [_e("Arsenal 2-1 Leeds United | Premier League highlights", "u",
+                "Sat, 10 Oct 2020 21:00:00 +0000")]
+    assert highlights.match_fixture(stale, "Arsenal", "Leeds", 2, 1, kickoff=_KO) is None
+
+
+def test_fill_rejects_a_video_uploaded_outside_the_window(store_with_a_played_match):
+    """⭐ End to end: the store's own `kickoff_time` reaches the matcher. 🔴 Before ADR-353 `fill` never
+    passed it, so the window existed and nothing used it — ⚠️ *a check wired to nothing passes every test
+    written about the check itself.*"""
+    from datetime import UTC, datetime, timedelta
+    store, fixture_id = store_with_a_played_match
+    ko = datetime(2026, 10, 10, 11, 30, tzinfo=UTC)
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET kickoff_time = ? WHERE id = ?",
+                           (ko.isoformat(), fixture_id))
+
+    stale = _Feeds({"CHE": [("Chelsea 5-1 Bournemouth | HIGHLIGHTS", "https://youtu.be/old",
+                             (ko - timedelta(days=400)).isoformat())]})
+    assert highlights.fill(store, client=stale) == 0, "an archive upload was stored as this week's video"
+
+    fresh = _Feeds({"CHE": [("Chelsea 5-1 Bournemouth | HIGHLIGHTS", "https://youtu.be/new",
+                             (ko + timedelta(hours=8)).isoformat())]})
+    assert highlights.fill(store, client=fresh) == 1
+    row = store.conn.execute("SELECT highlights_url FROM fixtures WHERE id = ?", (fixture_id,)).fetchone()
+    assert row["highlights_url"] == "https://youtu.be/new"

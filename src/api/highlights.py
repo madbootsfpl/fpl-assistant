@@ -101,6 +101,53 @@ TITLE = re.compile(r"([A-Za-z .'&]+?)\s+(\d+)\s*-\s*(\d+)\s+([A-Za-z .'&]+?)\s*(
 #: kickoff, which this module already parses and throws away; see ADR-352.
 ARCHIVE = re.compile(r"classic highlights", re.I)
 
+#: How long after kick-off a club may still be uploading **this match's** highlights (ADR-353).
+#:
+#: ⭐⭐ **Measured, not chosen.** Across 30 finished fixtures and every feed entry that matched one, the
+#: genuine packages landed between **+4.2h and +34.0h** after kick-off, and *nothing was ever published
+#: before kick-off*:
+#:
+#:     +4.2h  Coventry City 4-1 Newcastle United | Premier League Highlights
+#:     +9.5h  Arsenal 2-1 Leeds United | Premier League highlights
+#:    +34.0h  Crystal Palace 3-1 Nottingham Forest | … | Extended Highlights   ← the slowest
+#:    +53.0h  DUGOUT CAM 🎥 | Crystal Palace 3-1 Nottingham Forest             ← not a package
+#:
+#: 72h is better than twice the slowest observed package. ⭐ It is also the re-check window
+#: (`fixtures_wanting_highlights`), and the two mean the same thing: *how long a match is still news*.
+UPLOAD_WINDOW_HOURS = 72
+
+
+def _when(stamp: str | None):
+    """A feed timestamp as a datetime, or None. ⚠️ Atom gives ISO-8601 and RSS gives RFC-822, and
+    `parse_feed` hands back whichever the feed used — ⭐ *so this reads both rather than assuming the one
+    YouTube happens to send.*"""
+    if not stamp:
+        return None
+    from datetime import datetime
+    try:
+        return datetime.fromisoformat(stamp.strip().replace("Z", "+00:00"))
+    except ValueError:
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+        return parsedate_to_datetime(stamp.strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _in_window(published: str | None, kickoff: str | None) -> bool:
+    """Was this video uploaded while the match was still news?
+
+    ⚠️⚠️ **Unknown is permitted, and deliberately so.** A feed without dates, or a fixture without a
+    kick-off, degrades to the behaviour that shipped before this check rather than losing every link —
+    ⭐ *a guard that turns missing data into missing links is worse than the hazard it closes.*
+    """
+    when, ko = _when(published), _when(kickoff)
+    if when is None or ko is None:
+        return True
+    hours = (when - ko).total_seconds() / 3600
+    return 0 <= hours <= UPLOAD_WINDOW_HOURS
+
 
 #: FPL's spelling → the club's own, for the one club where **neither name contains the other**.
 #:
@@ -136,8 +183,8 @@ def parse_title(title: str):
     return m.group(1).strip(), int(m.group(2)), int(m.group(3)), m.group(4).strip()
 
 
-def videos(short_name: str, *, client=None) -> list[tuple[str, str]]:
-    """`[(title, url)]` from one club's channel feed. ⚠️ Empty on any failure — never raises."""
+def videos(short_name: str, *, client=None) -> list[dict]:
+    """`[{title, link, published}]` from one club's channel feed. ⚠️ Empty on any failure — never raises."""
     cid = CHANNELS.get(short_name)
     if not cid:
         return []
@@ -147,12 +194,15 @@ def videos(short_name: str, *, client=None) -> list[tuple[str, str]]:
         # ⚠️ **The whole feed, not `MEDIA_FEED_LIMIT`.** That default is sized for the headlines ticker,
         # where five recent items is the point. Here every discarded entry is a match that silently has
         # no highlight — ⭐ *and YouTube only serves fifteen, so there is nothing to protect against.*
-        return [(e.get("title", ""), e.get("link", "")) for e in parse_feed(raw, limit=FEED_ITEMS)]
+        # ⭐ `parse_feed`'s own `{title, link, published}` — it has always returned the date and this
+        # line used to drop it on the floor, which is why the window below could not be written.
+        return parse_feed(raw, limit=FEED_ITEMS)
     except (FeedError, Exception):   # noqa: B014 - every failure degrades the same way
         return []
 
 
-def match_fixture(entries, home: str, away: str, home_score: int, away_score: int) -> str | None:
+def match_fixture(entries, home: str, away: str, home_score: int, away_score: int,
+                  *, kickoff: str | None = None) -> str | None:
     """The URL whose title names **this** fixture, preferring one that says it is highlights.
 
     ⭐⭐ Both clubs **and both scores** must agree. ⚠️ *A title naming the right two clubs with the wrong
@@ -170,7 +220,15 @@ def match_fixture(entries, home: str, away: str, home_score: int, away_score: in
     missing one; preferring it fixes the first without causing the second.
     """
     fallback = None
-    for title, url in entries:
+    for entry in entries:
+        title, url = entry.get("title", ""), entry.get("link", "")
+        # ⭐⭐ **Published while the match was still news.** The strongest thing a title cannot fake: an
+        # archive upload of an old match with a real scoreline is published years away from the kick-off
+        # it names, so it never reaches the score check at all (ADR-353).
+        if not _in_window(entry.get("published"), kickoff):
+            continue
+        # ⚠️ Kept beside the window, not replaced by it: this is what still guards a feed that carries no
+        # dates, where `_in_window` permits everything by design.
         if ARCHIVE.search(title or ""):
             continue
         parsed = parse_title(title)
@@ -227,7 +285,7 @@ def fill(store, *, client=None, limit: int = 20) -> int:
             entries += feeds[short]
 
         url = match_fixture(entries, home["name"], away["name"],
-                            f["team_h_score"], f["team_a_score"])
+                            f["team_h_score"], f["team_a_score"], kickoff=f["kickoff_time"])
         if url and url != f["highlights_url"]:
             # ⭐ Only a *change* is written and counted. A recent fixture is re-examined every tick,
             # and ⚠️ *reporting "1 highlight" each time for the same video would be a number that
