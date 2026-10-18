@@ -1,7 +1,7 @@
 # ADR-358 — The match timeline we cannot build
 
 **Date:** 2026-10-18
-**Status:** Parked — *a decision recorded, not work deferred*
+**Status:** Parked → **resumed by [ADR-360](./ADR-360-the-scores-screen-grows-a-season.md)**, which gates it together with gameweek navigation
 **Raised by:** tester feedback — more match stats, *"like flashscore"*
 **Owner's call:** *"park the stats slice and gate it properly"*
 
