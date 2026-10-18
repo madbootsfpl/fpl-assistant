@@ -753,3 +753,77 @@ def test_a_played_week_without_a_manager_id_names_nobody(store):
     out = gameweek_scores(GameweekScoresRequest(gameweek=gw, player_ids=_squad(store)), store=store,
                           now=datetime(2026, 10, 18, 13, 0, tzinfo=UTC))
     assert out["squad"] == []
+
+
+# ── a finished match is not finished points (ADR-363) ────────────────────────────────────────────
+
+def _one_match(store, gw, *, started, finished, stats=None, hours_ago=3):
+    """The gameweek reduced to one fixture in a known state, with FPL's payload beside it."""
+    from datetime import UTC, datetime, timedelta
+    # ⚠️⚠️ **The live payload is cached for sixty seconds**, and a test that builds two states of the same
+    # gameweek gets the first one twice — ⭐ *which reads exactly like the code ignoring the second*. The
+    # autouse fixture clears between tests; this clears between calls.
+    mod.forget_live()
+    now = datetime(2026, 10, 18, 19, 0, tzinfo=UTC)
+    with store.conn:
+        store.conn.execute("DELETE FROM player_history WHERE round = ?", (gw,))
+        store.conn.execute(
+            "UPDATE fixtures SET started = ?, finished = ?, team_h_score = 1, team_a_score = 0, "
+            "kickoff_time = ? WHERE event = ?",
+            (started, finished, (now - timedelta(hours=hours_ago)).isoformat(), gw))
+    fixtures = [f for f in store.get_all_fixtures() if f["event"] == gw]
+
+    class _Live:
+        def get_fixtures(self):
+            return [{
+                "id": f["id"], "event": gw, "team_h_score": 1, "team_a_score": 0,
+                "minutes": 90 if started else 0, "started": bool(started),
+                "finished": bool(finished),
+                "finished_provisional": bool(started) and bool(stats is not None),
+                "stats": stats or [],
+            } for f in fixtures]
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw), store=store, client=_Live(), now=now)
+    return out["matches"][0]
+
+
+_BPS_ONLY = [{"identifier": "bps", "h": [{"element": 1, "value": 30}], "a": []}]
+_AWARDED = _BPS_ONLY + [{"identifier": "bonus", "h": [{"element": 1, "value": 3}], "a": []}]
+
+
+def test_a_match_in_play_has_bonus_still_moving(store):
+    """⭐ Stage one: BPS moves with the match and nothing has been awarded."""
+    m = _one_match(store, 6, started=1, finished=0, stats=None, hours_ago=1)
+    assert m["bonus_status"] == mod.BONUS_LIVE
+
+
+def test_full_time_with_no_award_yet_is_pending(store):
+    """⭐⭐ Stage two — **the state the card could not say before.** The whistle has gone, the score is
+    final, and the 3-2-1 has not been given out."""
+    m = _one_match(store, 6, started=1, finished=0, stats=_BPS_ONLY)
+    assert m["status"] == "Full time", "the football is over"
+    assert m["bonus_status"] == mod.BONUS_PENDING, "and the points are not"
+
+
+def test_an_awarded_but_unlocked_gameweek_is_provisional(store):
+    """⭐⭐ Stage three: the bonus block fills per match, **hours before** `finished` does. Measured on
+    GW7 — 32 hours after the first kick-off every match had its 3-2-1 and not one was `finished`."""
+    m = _one_match(store, 6, started=1, finished=0, stats=_AWARDED, hours_ago=20)
+    assert m["bonus_status"] == mod.BONUS_PROVISIONAL
+
+
+def test_a_locked_gameweek_is_final(store):
+    """⭐ Stage four. `finished` flips with the **gameweek**, not the match — GW6 carried
+    `data_checked = true` and ten finished fixtures where GW7 had neither, so it stands in for the lock
+    and no `bootstrap-static` call is needed."""
+    m = _one_match(store, 6, started=1, finished=1, stats=_AWARDED, hours_ago=200)
+    assert m["bonus_status"] == mod.BONUS_FINAL
+
+
+def test_bonus_status_is_not_read_off_the_scoreline(store):
+    """⚠️⚠️ **The whole point of a separate field.** A match reads *Full time* for a day and a half while
+    its points are still open — ⭐ *folding that into `finished` is what hid it.*"""
+    pending = _one_match(store, 6, started=1, finished=0, stats=_BPS_ONLY)
+    provisional = _one_match(store, 6, started=1, finished=0, stats=_AWARDED, hours_ago=20)
+    assert pending["status"] == provisional["status"] == "Full time"
+    assert pending["bonus_status"] != provisional["bonus_status"]

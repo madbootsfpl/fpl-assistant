@@ -230,6 +230,46 @@ def _events(rows, by_code, named) -> dict:
     return out
 
 
+#: Where a match's **fantasy** points stand, which is not where the football stands (ADR-363).
+#:
+#: ⭐⭐ *A finished match does not mean finished fantasy points.* The owner's framing, and the whole reason
+#: this is a field of its own rather than something read off `finished`.
+#:
+#: Measured on GW6 and GW7 rather than assumed:
+#:
+#: * `finished_provisional` flips at the **whistle** — 13:37 for Everton–Chelsea, ADR-356.
+#: * the **bonus** block fills per match, hours later, while `finished` is still false: 32 hours after
+#:   GW7's first kick-off every match had its 3-2-1 and not one was `finished`.
+#: * `finished` flips with the **gameweek**: GW6 had `data_checked = true` and ten finished fixtures;
+#:   GW7 had neither. ⭐ So it stands in for the lock, and no `bootstrap-static` call is needed for it.
+BONUS_LIVE = "live"              # the match is on; BPS moves with it
+BONUS_PENDING = "pending"        # full time, and the 3-2-1 has not been awarded
+BONUS_PROVISIONAL = "provisional"  # awarded, and still open to a post-match correction
+BONUS_FINAL = "final"            # the gameweek is locked
+
+
+def _bonus_status(f, stats) -> str:
+    """Which of the four states this match's bonus is in.
+
+    ⚠️⚠️ **Deliberately independent of the scoreline's state.** A match can read *Full time* for a day
+    and a half while its points are still open — that gap is the thing this field exists to show, and
+    folding it into `finished` is what hid it.
+    """
+    if not _started(f):
+        return BONUS_PENDING
+    # ⭐ The gameweek lock, read from the fixture rather than from `bootstrap-static` — see the note above.
+    if f["finished"]:
+        return BONUS_FINAL
+    if not _over(f):
+        return BONUS_LIVE
+    awarded = any(
+        (block.get("h") or block.get("a"))
+        for block in (stats or ())
+        if block.get("identifier") == "bonus"
+    )
+    return BONUS_PROVISIONAL if awarded else BONUS_PENDING
+
+
 def _by_identifier(stats) -> dict:
     """FPL's `stats` list → `{identifier: {player_id: value}}`, both sides merged.
 
@@ -504,6 +544,8 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 # the fallback for the week the backfill has not reached.
                 "events": _match_events(f, per_fixture, live_rows, by_code_player, players, named),
                 "bonus_race": _match_bonus(f, per_fixture, live_rows, by_code_player, players, named),
+                # ⭐⭐ Where the **points** stand, which is not where the football stands (ADR-363).
+                "bonus_status": _bonus_status(f, (live_rows.get(f["id"]) or {}).get("stats")),
                 # ⭐ Played: what your players did. Not yet played: which of them are involved (ADR-360).
                 "yours": (_yours({f["id"]}, squad, by_code, players) if _started(f)
                           else _lining_up(f, ids, players)),

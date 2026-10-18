@@ -675,6 +675,10 @@ class _Dropdown extends StatelessWidget {
           Row(
             children: [
               const _Label(text: 'BONUS RACE', colour: Brand.bonus),
+              if (match.bonusNote != null) ...[
+                const SizedBox(width: 8),
+                _BonusState(note: match.bonusNote!, status: match.bonusStatus),
+              ],
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -698,6 +702,44 @@ class _Dropdown extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Where this match's **points** stand (ADR-363) — never where the football stands.
+///
+/// ⭐⭐ The owner's principle: *a finished match does not mean finished fantasy points.* A match reads
+/// Full time for a day and a half while its bonus is still open, so the two states get two labels.
+/// ⚠️ Nothing is drawn once the week is locked: *a label on every state is a label nobody reads.*
+class _BonusState extends StatelessWidget {
+  const _BonusState({required this.note, required this.status});
+
+  final String note;
+  final String status;
+
+  Color get _colour => switch (status) {
+    // ⭐ A match still running is the one state worth the live colour the scoreline already uses.
+    'live' => const Color(0xFFE05A4E),
+    _ => Brand.bonus,
+  };
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: _colour.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        note,
+        style: TextStyle(
+          color: _colour,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+  );
 }
 
 class _Label extends StatelessWidget {

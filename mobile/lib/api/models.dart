@@ -1492,6 +1492,7 @@ class MatchScore {
     required this.yours,
     required this.events,
     required this.bonusRace,
+    required this.bonusStatus,
   });
 
   factory MatchScore.fromJson(Map<String, dynamic> json) => MatchScore(
@@ -1517,6 +1518,7 @@ class MatchScore {
       for (final b in (json['bonus_race'] as List? ?? []))
         BonusEntry.fromJson(b as Map<String, dynamic>),
     ],
+    bonusStatus: json['bonus_status'] as String? ?? 'pending',
   );
 
   final int fixture;
@@ -1548,6 +1550,21 @@ class MatchScore {
   /// ⚠️ Ordered by BPS rather than by the award, because while the award is provisional (ADR-356 measured
   /// ninety-six minutes) the order is the story and the bonus column is still empty.
   final List<BonusEntry> bonusRace;
+
+  /// ⭐⭐ **Where the points stand, which is not where the football stands** (ADR-363): `live`, `pending`,
+  /// `provisional` or `final`. *A finished match does not mean finished fantasy points* — a match reads
+  /// Full time for a day and a half while its bonus is still open, and ⚠️ *folding that into `finished`
+  /// is what hid it.*
+  final String bonusStatus;
+
+  /// ⭐ What to print beside the bonus race, or null once the week is locked and there is nothing to warn
+  /// about — ⚠️ *a label on every state is a label nobody reads.*
+  String? get bonusNote => switch (bonusStatus) {
+    'live' => 'live',
+    'pending' => 'bonus to come',
+    'provisional' => 'provisional',
+    _ => null,
+  };
 
   /// ⭐ `true` once there is a score to print. A match in flight has one; an unplayed one does not.
   bool get hasScore => homeScore != null && awayScore != null;

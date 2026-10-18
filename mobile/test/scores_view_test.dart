@@ -541,4 +541,57 @@ void main() {
       );
     });
   });
+
+  group('a finished match is not finished points (ADR-363)', () {
+    Future<void> pumpWithStatus(
+      WidgetTester tester,
+      String status,
+      String key,
+    ) async {
+      final body = sampleJson();
+      for (final m in (body['matches'] as List).cast<Map<String, dynamic>>()) {
+        m['bonus_status'] = status;
+      }
+      await pumpScores(tester, body: body, key: key);
+      await tester.tap(find.byIcon(Icons.expand_more).first);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('full time with no award yet says the bonus is still to come', (
+      tester,
+    ) async {
+      // ⭐⭐ The state the card could not say before: the whistle has gone, the score is final, and the
+      // 3-2-1 has not been given out.
+      await pumpWithStatus(tester, 'pending', 'pending');
+      expect(find.text('bonus to come'), findsOneWidget);
+      expect(
+        find.text('Full time'),
+        findsWidgets,
+        reason: 'the football is over either way',
+      );
+    });
+
+    testWidgets('an awarded but unlocked week says provisional', (
+      tester,
+    ) async {
+      await pumpWithStatus(tester, 'provisional', 'prov');
+      expect(find.text('provisional'), findsOneWidget);
+    });
+
+    testWidgets('a match still running says live', (tester) async {
+      await pumpWithStatus(tester, 'live', 'livebonus');
+      expect(find.text('live'), findsOneWidget);
+    });
+
+    testWidgets('a locked week says nothing at all', (tester) async {
+      // ⚠️ *A label on every state is a label nobody reads* — once the week is settled there is nothing
+      // to warn about, so the chip goes.
+      await pumpWithStatus(tester, 'final', 'finalbonus');
+      expect(find.text('provisional'), findsNothing);
+      expect(find.text('bonus to come'), findsNothing);
+      expect(find.text('live'), findsNothing);
+      // ⭐ and the race itself is still there
+      expect(find.text('BONUS RACE'), findsOneWidget);
+    });
+  });
 }
