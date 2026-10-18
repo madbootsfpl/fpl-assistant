@@ -72,441 +72,372 @@ void main() {
       isTrue,
       reason: 'the `yours` line is the feature — a sample without one tests nothing',
     );
-  });
-
-  testWidgets('a real scoreline renders with the clubs either side', (
-    tester,
-  ) async {
-    await pumpScores(tester);
-    final week = GameweekScores.fromJson(sampleJson());
-    final played = week.matches.firstWhere((m) => m.hasScore);
-
-    // ⭐ The card names clubs in full now — "Brentford", not "BRE". The short code is the key into the
-    // `clubs` sidecar, never what a reader sees.
-    expect(find.text(week.club(played.home).name), findsWidgets);
-    expect(find.text(week.club(played.away).name), findsWidgets);
-    // ⚠️ An en dash, not a hyphen — the glyph the screen actually draws.
+    // ⭐ ADR-360's additions, asserted here so a sample regenerated without them fails loudly rather
+    // than quietly rendering an empty dropdown.
     expect(
-      find.text('${played.homeScore} – ${played.awayScore}'),
-      // ⚠️ `findsWidgets`: two matches in one gameweek can share a scoreline, and the sample
-      // has two 3–0s. ⭐ *A uniqueness the data never owed the test.*
-      findsWidgets,
+      week.people,
+      isNotEmpty,
+      reason: 'no `people` sidecar — every name would draw as a dash',
     );
+    expect(week.matches.any((m) => m.events.goals.isNotEmpty), isTrue);
+    expect(week.matches.any((m) => m.events.cards.isNotEmpty), isTrue);
+    expect(week.matches.any((m) => m.bonusRace.isNotEmpty), isTrue);
   });
 
-  testWidgets('your player is named beside the match, with his points', (
+  testWidgets('the scoreline carries both clubs and the state', (tester) async {
+    await pumpScores(tester);
+    expect(find.text('3 – 0'), findsWidgets);
+    expect(find.text('BRE'), findsOneWidget);
+    expect(find.text('CHE'), findsOneWidget);
+    expect(find.text('Full time'), findsWidgets);
+  });
+
+  testWidgets(
+    'the scorers are on the closed card, so the result reads at a glance',
+    (tester) async {
+      // ⭐⭐ This is A-the-summary from the owner's chosen combination: the score, the state and who
+      // scored, with nothing to tap for the result itself.
+      await pumpScores(tester);
+      expect(find.text('Carvalho'), findsOneWidget);
+      expect(find.text('Anthony'), findsOneWidget);
+      expect(find.text('Thiago'), findsWidgets);
+    },
+  );
+
+  testWidgets('assists are listed, and never attached to a goal', (
+    tester,
+  ) async {
+    // ⚠️⚠️ **FPL links a goal to no assist.** Brentford scored three and two men assisted; which set up
+    // which is not in the data. ⭐⭐ *Pairing two sorted lists is the ADR-351 mistake*, so no rendered
+    // string may contain a scorer and an assister together.
+    await pumpScores(tester);
+    expect(find.text('Schuster'), findsOneWidget);
+    expect(find.text('Schade'), findsOneWidget);
+
+    final texts = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data ?? '')
+        .toList();
+    for (final line in texts) {
+      final pairing = line.contains('Carvalho') && line.contains('Schuster');
+      expect(
+        pairing,
+        isFalse,
+        reason: 'a goal was printed as if it had an assist: "$line"',
+      );
+    }
+  });
+
+  testWidgets('the dropdown is shut until it is asked for', (tester) async {
+    await pumpScores(tester);
+    // ⭐ Cards, the bonus race and the per-player lines all live behind the chevron.
+    expect(find.text('CARDS'), findsNothing);
+    expect(find.text('BONUS RACE'), findsNothing);
+    expect(find.text('This match'), findsNothing);
+    expect(find.byIcon(Icons.expand_more), findsWidgets);
+  });
+
+  testWidgets('tapping a match opens one dropdown with everything else in it', (
     tester,
   ) async {
     await pumpScores(tester);
-    final week = GameweekScores.fromJson(sampleJson());
-    final withYours = week.matches.firstWhere((m) => m.yours.isNotEmpty);
-    final mine = withYours.yours.first;
+    await tester.tap(find.byIcon(Icons.expand_more).first);
+    await tester.pumpAndSettle();
 
-    expect(find.textContaining(mine.player!.name), findsWidgets);
-    expect(find.text('${mine.points} pts'), findsWidgets);
+    expect(find.text('CARDS'), findsOneWidget);
+    expect(find.text('YOUR PLAYERS'), findsOneWidget);
+    expect(find.text('This match'), findsOneWidget);
+    expect(find.text('BONUS RACE'), findsOneWidget);
+    // ⚠️ One card open, not all ten: ⭐ *a tap that expands the whole list is a different gesture.*
+    expect(find.byIcon(Icons.expand_less), findsOneWidget);
+  });
+
+  testWidgets('nothing is said twice between the summary and the dropdown', (
+    tester,
+  ) async {
+    // 🔴 The owner's verdict on the first rebuild of this screen was *"its duplicated and not well laid
+    // out"*. ⭐ The scorers belong to the summary; the dropdown holds only what the summary does not say.
+    await pumpScores(tester);
+    await tester.tap(find.byIcon(Icons.expand_more).first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Carvalho'),
+      findsOneWidget,
+      reason: 'the scorer is printed in both halves',
+    );
   });
 
   testWidgets('a goalless draw prints 0–0 and not a kick-off time', (
     tester,
   ) async {
-    // 🔴 **The pair this screen exists to keep apart.** Both matches below are "nothing happened" to a
-    // renderer that defaults a missing score to zero — and they are opposite facts.
-    final body = {
-      'gameweek': 7,
-      'clubs': <String, dynamic>{},
-      'live': false,
-      'yours_known': true,
-      'matches': [
-        {
-          'fixture': 1,
-          'home': 'LEE',
-          'away': 'CRY',
-          'home_score': 0,
-          'away_score': 0,
-          'minutes': 90,
-          'started': true,
-          'finished': true,
-          'kickoff_time': '2026-10-17T11:30:00Z',
-          'yours': <dynamic>[],
-        },
-        {
-          'fixture': 2,
-          'home': 'ARS',
-          'away': 'TOT',
-          'home_score': null,
-          'away_score': null,
-          'minutes': null,
-          'started': false,
-          'finished': false,
-          'kickoff_time': '2026-10-17T14:00:00Z',
-          'yours': <dynamic>[],
-        },
-      ],
-    };
-    await pumpScores(tester, body: body);
+    final body = sampleJson();
+    final m = (body['matches'] as List).first as Map<String, dynamic>;
+    m['home_score'] = 0;
+    m['away_score'] = 0;
+    m['started'] = true;
+    m['finished'] = true;
+    m['status'] = 'Full time';
+    await pumpScores(tester, body: body, key: 'goalless');
 
-    expect(find.text('0 – 0'), findsOneWidget);
-    // ⭐ The unplayed match shows a kick-off time, never a score. ⚠️ Local time, so the digits depend on
-    // the machine — the assertion is that a clock is drawn at all, not what it reads.
-    expect(find.textContaining(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget);
+    // ⚠️ `findsWidgets`: the sample holds another goalless match of its own, and ⭐ *a count that depends
+    // on the rest of the fixture breaks the day the fixture is regenerated.*
+    expect(find.text('0 – 0'), findsWidgets);
+  });
+
+  testWidgets('a match that has not kicked off shows when it will', (
+    tester,
+  ) async {
+    final body = sampleJson();
+    for (final m in (body['matches'] as List).cast<Map<String, dynamic>>()) {
+      m['home_score'] = null;
+      m['away_score'] = null;
+      m['started'] = false;
+      m['finished'] = false;
+      m['status'] = '';
+      m['events'] = {'goals': [], 'assists': [], 'cards': []};
+      m['bonus_race'] = [];
+    }
+    await pumpScores(tester, body: body, key: 'future');
+
+    // ⚠️⚠️ **Never `0 – 0`** — ⭐ *a goalless draw and a match not yet played are opposite facts.*
+    expect(find.text('0 – 0'), findsNothing);
+    expect(find.text('v'), findsWidgets);
+  });
+
+  testWidgets('a future week names who of yours is involved', (tester) async {
+    // ⭐ `yours` is built from history, which does not exist before a match, so the server falls back to
+    // team membership and sends the counters as null (ADR-360).
+    final body = sampleJson();
+    final m = (body['matches'] as List).first as Map<String, dynamic>;
+    m['home_score'] = null;
+    m['away_score'] = null;
+    m['started'] = false;
+    m['status'] = '';
+    m['events'] = {'goals': [], 'assists': [], 'cards': []};
+    m['bonus_race'] = [];
+    m['yours'] = [
+      {
+        'player': {
+          'id': 1,
+          'web_name': 'Petrovic',
+          'team': 'BRE',
+          'position': 'GK',
+          'price': 4.5,
+          'xp': 3.0,
+          'status': 'a',
+          'chance': null,
+          'minutes_weight': 1.0,
+          'leaving': null,
+          'by_gameweek': <String, dynamic>{},
+        },
+        'minutes': null,
+        'goals': null,
+        'assists': null,
+        'points': null,
+        'bonus': null,
+      },
+    ];
+    await pumpScores(tester, body: body, key: 'lining');
+
+    expect(find.textContaining('Yours: Petrovic'), findsOneWidget);
+    // ⚠️ No points: ⭐ *a nil return and a match not yet played must not look alike.*
+    expect(find.text('0 pts'), findsNothing);
   });
 
   testWidgets('a live match says so, and shows the clock', (tester) async {
-    final body = {
-      'gameweek': 7,
-      'live': true,
-      'yours_known': false,
-      'matches': [
-        {
-          'fixture': 1,
-          'home': 'MUN',
-          'away': 'LIV',
-          'home_score': 1,
-          'away_score': 2,
-          'minutes': 63,
-          'started': true,
-          'finished': false,
-          // ⚠️ `status` comes from the server now (ADR-346) — three clients deriving "is it over?"
-          // separately is three chances to disagree. A body without it shows no clock, correctly.
-          'status': "63'",
-          'kickoff_time': '2026-10-17T11:30:00Z',
-          'yours': <dynamic>[],
-        },
-      ],
-    };
-    await pumpScores(tester, body: body);
+    final body = sampleJson();
+    body['live'] = true;
+    final m = (body['matches'] as List).first as Map<String, dynamic>;
+    m['started'] = true;
+    m['finished'] = false;
+    m['status'] = "63'";
+    await pumpScores(tester, body: body, key: 'live');
 
     expect(find.text('LIVE'), findsOneWidget);
-    expect(find.text('1 – 2'), findsOneWidget);
     expect(find.text("63'"), findsOneWidget);
   });
 
   testWidgets('an unknown `yours` says so rather than claiming nobody played', (
     tester,
   ) async {
-    // ⚠️⚠️ The second pair. Scores publish before player history does, so an empty `yours` after full
-    // time means *we do not know yet* — ⭐ *which is the opposite of "none of your players featured".*
-    final match = {
-      'fixture': 1,
-      'home': 'CHE',
-      'away': 'BOU',
-      'home_score': 5,
-      'away_score': 1,
-      'minutes': 90,
-      'started': true,
-      'finished': true,
-      'kickoff_time': '2026-10-10T11:30:00Z',
-      'yours': <dynamic>[],
-    };
-    await pumpScores(
-      tester,
-      key: 'unknown',
-      body: {
-        'gameweek': 6,
-        'clubs': <String, dynamic>{},
-        'live': false,
-        'yours_known': false,
-        'matches': [match],
-      },
-    );
+    final body = sampleJson();
+    body['yours_known'] = false;
+    await pumpScores(tester, body: body, key: 'unknown');
+
     expect(find.text('your players not in yet'), findsOneWidget);
-
-    await pumpScores(
-      tester,
-      key: 'known',
-      body: {
-        'gameweek': 6,
-        'live': false,
-        'yours_known': true,
-        'matches': [match],
-      },
-    );
-    expect(find.text('your players not in yet'), findsNothing);
-  });
-
-  testWidgets('your player sits under the club he played for', (tester) async {
-    // ⭐⭐ **The point of the layout the owner asked for.** A name under a scoreline does not say who he
-    // was playing *for*; a name under a crest does. The sample has one of yours on each side of
-    // Brentford–Chelsea, which is the case that looks fine under either arrangement and only reads
-    // correctly under this one.
-    await pumpScores(tester);
-    final week = GameweekScores.fromJson(sampleJson());
-    final both = week.matches.firstWhere(
-      (m) =>
-          m.yours.any((a) => a.player?.team == m.home) &&
-          m.yours.any((a) => a.player?.team == m.away),
-      orElse: () => week.matches.firstWhere((m) => m.yours.isNotEmpty),
-    );
-
-    for (final a in both.yours) {
-      final line = find.textContaining(a.player!.name);
-      expect(line, findsWidgets, reason: '${a.player!.name} is not named');
-
-      // ⚠️ Horizontal position is what attaches him to a club: home is drawn left of the scoreline,
-      // away right of it.
-      final x = tester.getCenter(line.first).dx;
-      final score = tester
-          .getCenter(find.textContaining(RegExp(r'^\d+ – \d+$')).first)
-          .dx;
-      final atHome = a.player!.team == both.home;
-      expect(
-        atHome ? x < score : x > score,
-        isTrue,
-        reason:
-            '${a.player!.name} plays for ${a.player!.team} but is drawn on the '
-            'wrong side of ${both.home}-${both.away}',
-      );
-    }
-  });
-
-  testWidgets('the card totals what the match did to your team', (
-    tester,
-  ) async {
-    // ⚠️⚠️ **A hand-built body, because the sample cannot catch the bug.** Its one scoring match has
-    // 9 pts and 0 pts, so "the first player's points" and "the sum" are the same number — ⭐ *a mutation
-    // that replaced the sum with the first survived the version of this test that used the sample.*
-    // Two scorers, both non-zero, and the total matches neither on its own.
-    Map<String, dynamic> player(String name, String team) => {
-      'id': name.hashCode,
-      'web_name': name,
-      'team': team,
-      'position': 'MID',
-      'price': 7.0,
-      'xp': 4.0,
-      'status': 'a',
-      'chance': null,
-      'minutes_weight': 1.0,
-      'leaving': null,
-      'by_gameweek': <String, dynamic>{},
-    };
-    await pumpScores(
-      tester,
-      key: 'impact',
-      body: {
-        'gameweek': 6,
-        'live': false,
-        'yours_known': true,
-        'clubs': {
-          'CHE': {'name': 'Chelsea', 'badge': ''},
-          'BOU': {'name': 'Bournemouth', 'badge': ''},
-        },
-        'matches': [
-          {
-            'fixture': 1,
-            'home': 'CHE',
-            'away': 'BOU',
-            'home_score': 5,
-            'away_score': 1,
-            'minutes': 90,
-            'started': true,
-            'finished': true,
-            'status': 'Full time',
-            'kickoff_time': '2026-10-10T11:30:00Z',
-            'yours': [
-              {
-                'player': player('João Pedro', 'CHE'),
-                'minutes': 90,
-                'goals': 2,
-                'assists': 0,
-                'points': 13,
-                'bonus': 3,
-              },
-              {
-                'player': player('Semenyo', 'BOU'),
-                'minutes': 90,
-                'goals': 1,
-                'assists': 0,
-                'points': 6,
-                'bonus': 0,
-              },
-            ],
-          },
-        ],
-      },
-    );
-
-    expect(
-      find.text('19 pts'),
-      findsOneWidget,
-      reason: '13 + 6, not either alone',
-    );
-    expect(find.text('13 pts'), findsNothing);
-    // ⭐ "in this match", never "gameweek total": `player_history` is keyed by fixture, so these points
-    // were earned here — ⚠️ *the mock-up this came from footnoted the opposite because its source could
-    // not make that claim.*
-    expect(find.text('this match'), findsOneWidget);
-  });
-
-  testWidgets('a name appears once, and carries no "Your player" tag', (
-    tester,
-  ) async {
-    // 🔴 **The two faults the owner reported, pinned.** The card listed your players under the clubs and
-    // again in a "Your fantasy impact" row — the same names, no new fact — and tagged each one
-    // "· Your player", which is true of everything in the block and so says nothing. ⭐⭐ *Together they
-    // cost the width that truncated the names themselves:* "João Pedro · Your pl…".
-    await pumpScores(tester);
-    final week = GameweekScores.fromJson(sampleJson());
-    final m = week.matches.firstWhere((x) => x.yours.isNotEmpty);
-
-    expect(find.textContaining('Your player'), findsNothing);
-    for (final a in m.yours) {
-      expect(
-        find.textContaining(a.player!.name),
-        findsOneWidget,
-        reason: '${a.player!.name} is drawn more than once',
-      );
-    }
-  });
-
-  testWidgets('a match with none of yours is just a scoreline', (tester) async {
-    // ⭐ No divider, no total, no "none of yours" — ⚠️ *a card that explains its own emptiness is a card
-    // spending four lines to say nothing happened.*
-    await pumpScores(
-      tester,
-      key: 'empty',
-      body: {
-        'gameweek': 6,
-        'live': false,
-        'yours_known': true,
-        'clubs': {
-          'AVL': {'name': 'Aston Villa', 'badge': ''},
-          'BRE': {'name': 'Brentford', 'badge': ''},
-        },
-        'matches': [
-          {
-            'fixture': 1,
-            'home': 'AVL',
-            'away': 'BRE',
-            'home_score': 2,
-            'away_score': 2,
-            'minutes': 90,
-            'started': true,
-            'finished': true,
-            'status': 'Full time',
-            'kickoff_time': '2026-10-10T11:30:00Z',
-            'yours': <dynamic>[],
-          },
-        ],
-      },
-    );
-    expect(find.text('2 – 2'), findsOneWidget);
-    expect(find.text('none of yours'), findsNothing);
-    expect(find.textContaining('this match'), findsNothing);
   });
 
   testWidgets('one point is a point, not "1 pts"', (tester) async {
-    Map<String, dynamic> player(String name, String team) => {
-      'id': 1,
-      'web_name': name,
-      'team': team,
-      'position': 'DEF',
-      'price': 4.5,
-      'xp': 2.0,
-      'status': 'a',
-      'chance': null,
-      'minutes_weight': 1.0,
-      'leaving': null,
-      'by_gameweek': <String, dynamic>{},
-    };
-    await pumpScores(
-      tester,
-      key: 'onept',
-      body: {
-        'gameweek': 6,
-        'live': false,
-        'yours_known': true,
-        'clubs': {
-          'HUL': {'name': 'Hull City', 'badge': ''},
-          'EVE': {'name': 'Everton', 'badge': ''},
-        },
-        'matches': [
-          {
-            'fixture': 1,
-            'home': 'HUL',
-            'away': 'EVE',
-            'home_score': 2,
-            'away_score': 2,
-            'minutes': 90,
-            'started': true,
-            'finished': true,
-            'status': 'Full time',
-            'kickoff_time': '2026-10-10T11:30:00Z',
-            'yours': [
-              {
-                'player': player('Egan', 'HUL'),
-                'minutes': 12,
-                'goals': 0,
-                'assists': 0,
-                'points': 1,
-                'bonus': 0,
-              },
-            ],
-          },
-        ],
-      },
-    );
+    final body = sampleJson();
+    for (final m in (body['matches'] as List).cast<Map<String, dynamic>>()) {
+      final yours = (m['yours'] as List).cast<Map<String, dynamic>>();
+      for (var i = 0; i < yours.length; i++) {
+        yours[i]['points'] = i == 0 ? 1 : 0;
+      }
+    }
+    await pumpScores(tester, body: body, key: 'onept');
+    await tester.tap(find.byIcon(Icons.expand_more).first);
+    await tester.pumpAndSettle();
+
     expect(find.text('1 pt'), findsOneWidget);
     expect(find.text('1 pts'), findsNothing);
   });
 
-  testWidgets(
-    'a highlights link says where it goes, and only when there is one',
-    (tester) async {
-      // ⚠️⚠️ **It names YouTube.** `test_help_link.py` exists in this repo because *tapping a row and
-      // landing in another app is a surprise unless it was announced* — ⭐ a button labelled only
-      // "Highlights" makes the reader find out by doing it.
-      Map<String, dynamic> match({String? highlights}) => {
-        'fixture': 1,
-        'home': 'CHE',
-        'away': 'BOU',
-        'home_score': 5,
-        'away_score': 1,
-        'minutes': 90,
-        'started': true,
-        'finished': true,
-        'status': 'Full time',
-        'kickoff_time': '2026-10-10T11:30:00Z',
-        'highlights': highlights,
-        'yours': <dynamic>[],
-      };
-      Map<String, dynamic> week(Map<String, dynamic> m) => {
-        'gameweek': 6,
-        'live': false,
-        'yours_known': true,
-        'clubs': {
-          'CHE': {'name': 'Chelsea', 'badge': ''},
-          'BOU': {'name': 'Bournemouth', 'badge': ''},
-        },
-        'matches': [m],
-      };
+  testWidgets('a sending off is drawn red, a booking yellow', (tester) async {
+    await pumpScores(tester);
+    // EVE-IPS carries the sample's one red card.
+    final chevrons = find.byIcon(Icons.expand_more);
+    await tester.tap(chevrons.at(3));
+    await tester.pumpAndSettle();
 
-      await pumpScores(
-        tester,
-        key: 'clip',
-        body: week(match(highlights: 'https://youtu.be/x')),
+    expect(find.text('Fatawu'), findsWidgets);
+  });
+
+  group('the week bar (ADR-360)', () {
+    testWidgets('it names the week and offers both directions', (tester) async {
+      await pumpScores(tester);
+      expect(find.text('Gameweek 5'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    });
+
+    testWidgets('it asks the server for the week it moved to', (tester) async {
+      // ⭐ The bar is the whole feature: a label that changes without re-fetching is decoration.
+      final asked = <int>[];
+      tester.view.physicalSize = const Size(500, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ScoresView(
+              client: ServiceClient(
+                baseUrl: 'http://x',
+                client: MockClient((req) async {
+                  final sent = jsonDecode(req.body) as Map<String, dynamic>;
+                  asked.add((sent['gameweek'] as num).toInt());
+                  return http.Response(
+                    jsonEncode(sampleJson()),
+                    200,
+                    headers: const {'content-type': 'application/json'},
+                  );
+                }),
+              ),
+            ),
+          ),
+        ),
       );
-      expect(find.text('Highlights on YouTube'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(asked, [
+        0,
+      ], reason: 'the first load must let the server choose the week');
 
-      // ⭐ Most matches have no clip for hours after full time, and a button that never becomes available
-      // is worse than no button.
-      await pumpScores(tester, key: 'noclip', body: week(match()));
-      expect(find.text('Highlights on YouTube'), findsNothing);
-    },
-  );
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+      expect(asked, [
+        0,
+        4,
+      ], reason: 'going back did not ask for the previous week');
+    });
+
+    testWidgets('it will not go back past the first week', (tester) async {
+      final body = sampleJson();
+      body['gameweek'] = 1;
+      await pumpScores(tester, body: body, key: 'first');
+
+      final back = tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byIcon(Icons.chevron_left),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(back.onPressed, isNull, reason: 'there is no gameweek zero');
+    });
+
+    testWidgets('forward stops at the house horizon, not at GW38', (
+      tester,
+    ) async {
+      // ⚠️⚠️ **All 380 fixtures are scheduled**, so forwards could run thirty-one weeks — but *"which of
+      // your players are in it"* uses the squad held today. ⭐ Five is the number `analyse`, `board`,
+      // `dead_slot` and `explain` already use.
+      //
+      // ⚠️ The server is mocked to **echo the week it was asked for**: the anchor comes from the first
+      // answer, so a mock that always replies "gameweek 5" can never walk the bar anywhere — ⭐ *the
+      // first version of this test set the week in the body and proved nothing.*
+      tester.view.physicalSize = const Size(500, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ScoresView(
+              client: ServiceClient(
+                baseUrl: 'http://x',
+                client: MockClient((req) async {
+                  final sent = jsonDecode(req.body) as Map<String, dynamic>;
+                  final asked = (sent['gameweek'] as num).toInt();
+                  final body = sampleJson();
+                  if (asked > 0) body['gameweek'] = asked;
+                  return http.Response(
+                    jsonEncode(body),
+                    200,
+                    headers: const {'content-type': 'application/json'},
+                  );
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Gameweek 5'), findsOneWidget);
+
+      IconButton forward() => tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byIcon(Icons.chevron_right),
+          matching: find.byType(IconButton),
+        ),
+      );
+
+      for (var i = 0; i < kForwardWeeks; i++) {
+        expect(
+          forward().onPressed,
+          isNotNull,
+          reason: 'stopped short at step $i',
+        );
+        await tester.tap(find.byIcon(Icons.chevron_right));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('Gameweek ${5 + kForwardWeeks}'), findsOneWidget);
+      expect(
+        forward().onPressed,
+        isNull,
+        reason: 'the bar ran past the horizon it anchored on',
+      );
+    });
+  });
+
+  testWidgets('an early week says why it has no highlights', (tester) async {
+    // 🔴 GW1–GW5 pre-date ADR-357 and their videos are gone for good. ⚠️ *A silent gap reads as a bug.*
+    final body = sampleJson();
+    body['gameweek'] = 3;
+    await pumpScores(tester, body: body, key: 'early');
+
+    expect(find.textContaining('No highlights this far back'), findsOneWidget);
+  });
 
   testWidgets(
-    'a season with no matches says so instead of drawing an empty list',
+    'a recent week does not apologise for highlights it may still get',
     (tester) async {
-      await pumpScores(
-        tester,
-        body: {
-          'gameweek': null,
-          'live': false,
-          'yours_known': false,
-          'matches': <dynamic>[],
-        },
-      );
-      expect(find.text('No matches yet.'), findsOneWidget);
+      final body = sampleJson();
+      body['gameweek'] = kFirstWeekWithHighlights;
+      await pumpScores(tester, body: body, key: 'recent');
+
+      expect(find.textContaining('No highlights this far back'), findsNothing);
     },
   );
 }

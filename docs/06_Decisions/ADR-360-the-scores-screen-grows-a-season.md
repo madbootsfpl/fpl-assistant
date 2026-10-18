@@ -1,7 +1,7 @@
 # ADR-360 — The Scores screen grows a season
 
 **Date:** 2026-10-18
-**Status:** ✅ **Agreed 2026-10-18 — building.** The server is done; the screen is not (see *State of the build*).
+**Status:** ✅ **Agreed and built, 2026-10-18.** Server and screen; not yet released to testers.
 **Supersedes the parking in:** ADR-358
 **Mockup:** `https://claude.ai/artifact/5WB1oNori2ZmGkBY2NQYx9` (real GW7 data throughout)
 
@@ -139,8 +139,28 @@ and costs about 2 KB — it can go the next time that field changes shape for an
 a gameweek, **126 KB** — because the id was added before checking whether he had done anything.
 ⭐ *That is the ADR-227 payload sin inside the change that cites it.*
 
-**Not built yet:** the card itself (summary + one dropdown) and the week bar. The new fields are parsed
-by the client and not yet drawn, so the screen is exactly as it shipped.
+**The screen, now built:**
+
+* the summary carries the scoreline, the state, the scorers and the assists — assists on their **own row**
+  so both sides start on the same line however many goals each scored;
+* one dropdown behind the chevron: cards · your players · *this match* · the bonus race · the video, with
+  its YouTube still. ⭐ Nothing appears in both halves.
+* the week bar: back to GW1, forward five. ⚠️ The anchor is taken from the **first** answer only —
+  re-anchoring each load would let the forward limit walk itself one week at a time.
+* the drawn ball replaces `'⚽' * goals`, which was a **string**; it is a `Row` now.
+
+**21 widget tests, six mutants each caught** — including *"the dropdown is always open"*, which passes the
+headline test and deletes the feature.
+
+🔴 **A test that proved nothing:** the first horizon test set `gameweek` in the response body, but the
+anchor comes from the first answer, so the bar could never walk anywhere. ⭐ *It asserted a disabled button
+that was disabled for the wrong reason.* The mock now echoes the week it is asked for and the test taps
+forward five times.
+
+📌 **A consequence worth naming:** your non-scoring players are now **behind the tap**. ADR-346 calls the
+join *"the whole reason this is not a livescore app"*, and the collapsed card shows it only through the
+dots beside scorers. That follows from the agreed design — A's summary, B and C in the dropdown — but it
+is a real change in what the screen says at a glance.
 
 ## Definition of done
 
