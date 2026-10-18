@@ -404,7 +404,7 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         if gameweek is None:
             # ⭐ A season that has not started is a fact, not a failure.
             return {"gameweek": None, "live": False, "yours_known": False,
-                    "clubs": {}, "people": {}, "matches": []}
+                    "clubs": {}, "people": {}, "squad": [], "matches": []}
 
         stored = {f["id"]: f for f in all_fixtures if f["event"] == gameweek}
 
@@ -511,6 +511,12 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         # ⭐ `yours_known` is about the gameweek, not one match: history lands for the whole week at once.
         return {"gameweek": gameweek, "live": in_flight, "yours_known": yours_known,
                 "clubs": club_rows,
+                # ⭐⭐ **Whose team it was THAT week** (ADR-362), so the card can mark a scorer as yours
+                # before `player_history` lands and `yours` can be built. 🔴 Without it GW7 showed no
+                # dots at all: the dots were derived from `yours`, which waits for the backfill.
+                # ⚠️⚠️ Not the caller's squad echoed back — for a played week this is FPL's own answer
+                # (ADR-350), because *the squad held today did not play last Saturday.*
+                "squad": sorted(ids),
                 # ⚠️ Keys are strings because JSON has no integer keys — the client looks up by `str(id)`.
                 "people": {str(i): player_summary(players[i], {}, {}, {})
                            for i in sorted(named) if i in players},

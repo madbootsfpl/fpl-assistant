@@ -440,4 +440,105 @@ void main() {
       expect(find.textContaining('No highlights this far back'), findsNothing);
     },
   );
+
+  group('the owner\'s build-46 notes (ADR-362)', () {
+    testWidgets('a scorer of yours is dotted even before the backfill lands', (
+      tester,
+    ) async {
+      // 🔴 **GW7 had no dots at all.** They were derived from `yours`, which waits for `player_history`,
+      // and the week being played has none — ⭐ *the dot marked the data source, not the squad.*
+      final body = sampleJson();
+      final first = (body['matches'] as List).first as Map<String, dynamic>;
+      final scorer =
+          ((first['events'] as Map)['goals'] as List).first
+              as Map<String, dynamic>;
+      body['squad'] = [scorer['player']];
+      for (final m in (body['matches'] as List).cast<Map<String, dynamic>>()) {
+        m['yours'] = <dynamic>[];
+      }
+      await pumpScores(tester, body: body, key: 'dots');
+
+      // ⭐ The dot is drawn beside the scorer; with `yours` empty there is nothing else it could be.
+      expect(find.byType(ScoresView), findsOneWidget);
+      final dots = find.byWidgetPredicate((w) {
+        if (w is! Container) return false;
+        final d = w.decoration;
+        return d is BoxDecoration &&
+            d.shape == BoxShape.circle &&
+            d.color == const Color(0xFFB45CF0);
+      });
+      expect(
+        dots,
+        findsWidgets,
+        reason: 'no purple dot was drawn for a squad member who scored',
+      );
+    });
+
+    testWidgets('nobody in the squad means nobody is dotted', (tester) async {
+      // ⚠️ The guard on the other side: ⭐ *a dot on every name marks nothing at all.*
+      final body = sampleJson();
+      body['squad'] = <dynamic>[];
+      for (final m in (body['matches'] as List).cast<Map<String, dynamic>>()) {
+        m['yours'] = <dynamic>[];
+      }
+      await pumpScores(tester, body: body, key: 'nodots');
+
+      final dots = find.byWidgetPredicate((w) {
+        if (w is! Container) return false;
+        final d = w.decoration;
+        return d is BoxDecoration &&
+            d.shape == BoxShape.circle &&
+            d.color == const Color(0xFFB45CF0);
+      });
+      expect(dots, findsNothing);
+    });
+
+    testWidgets('the bonus race says its right-hand column is BPS', (
+      tester,
+    ) async {
+      // ⚠️ The owner: *"dont know what the Bonus Race scores on the right hand mean, eg Neto 64?"*
+      // ⭐ *A number with no unit is a number the reader has to guess at.*
+      await pumpScores(tester);
+      await tester.tap(find.byIcon(Icons.expand_more).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('BPS'), findsOneWidget);
+    });
+
+    testWidgets('cards are split by club, like the scoreline above them', (
+      tester,
+    ) async {
+      // ⭐ One run of chips makes the reader match each name to a club from memory — the work this card
+      // exists to save.
+      //
+      // ⚠️⚠️ **Counted, not shaped.** The first version looked for a `Wrap` inside a `Row` and passed
+      // happily with **every card in both columns** — ⭐ *a layout assertion that cannot tell right from
+      // doubled.* Each booking belongs to one side, so the chips must equal the cards.
+      final body = sampleJson();
+      final first = (body['matches'] as List).first as Map<String, dynamic>;
+      final cards = ((first['events'] as Map)['cards'] as List).length;
+      expect(
+        cards,
+        greaterThan(1),
+        reason: 'a one-card match cannot show a split',
+      );
+
+      await pumpScores(tester);
+      await tester.tap(find.byIcon(Icons.expand_more).first);
+      await tester.pumpAndSettle();
+
+      final chips = tester.widgetList<Container>(find.byType(Container)).where((
+        c,
+      ) {
+        final d = c.decoration;
+        if (d is! BoxDecoration) return false;
+        return d.borderRadius == BorderRadius.circular(6);
+      }).length;
+      expect(
+        chips,
+        cards,
+        reason: 'the cards were doubled across both columns, not split between them',
+      );
+    });
+  });
 }

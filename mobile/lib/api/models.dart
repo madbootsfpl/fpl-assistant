@@ -1689,6 +1689,7 @@ class GameweekScores {
     required this.yoursKnown,
     required this.clubs,
     required this.people,
+    required this.squad,
     required this.matches,
   });
 
@@ -1706,6 +1707,7 @@ class GameweekScores {
           e.value as Map<String, dynamic>,
         ),
     },
+    squad: {for (final i in (json['squad'] as List? ?? [])) (i as num).toInt()},
     matches: [
       for (final m in (json['matches'] as List? ?? []))
         MatchScore.fromJson(m as Map<String, dynamic>),
@@ -1730,6 +1732,11 @@ class GameweekScores {
   /// ⭐ Every player named anywhere in the answer, **once** — the same sidecar shape as [clubs]
   /// (ADR-227). ⚠️ Keyed by id because JSON has no integer keys; the server sends them as strings.
   final Map<int, PlayerSummary> people;
+
+  /// ⭐⭐ **Whose team it was that week** (ADR-362) — what the purple dot is drawn from. 🔴 The dot used
+  /// to come from `yours`, which waits for the backfill, so the week being played had none at all.
+  /// ⚠️ For a settled week this is FPL's own answer, not the squad held today (ADR-350).
+  final Set<int> squad;
 
   final List<MatchScore> matches;
 

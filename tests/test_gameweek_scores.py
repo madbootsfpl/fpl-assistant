@@ -127,7 +127,7 @@ def test_with_nothing_played_the_answer_is_empty_rather_than_an_error(store):
     out = gameweek_scores(GameweekScoresRequest(), store=store,
                           now=datetime(2026, 8, 1, tzinfo=UTC))
     assert out == {"gameweek": None, "live": False, "yours_known": False,
-                   "clubs": {}, "people": {}, "matches": []}
+                   "clubs": {}, "people": {}, "squad": [], "matches": []}
 
 
 # ── the join, and what it must not claim ─────────────────────────────────────────────────────────
@@ -713,3 +713,43 @@ def test_a_week_that_has_its_history_asks_upstream_for_nothing(store):
                           now=datetime(2026, 10, 18, 13, 0, tzinfo=UTC))
     assert spy.asked == 0, "FPL was asked about a week whose history is already stored"
     assert any(m["events"]["goals"] for m in out["matches"])
+
+
+def test_the_answer_names_whose_team_it_was_that_week(store):
+    """🔴 **GW7 showed no purple dots at all.** The card marked a scorer as yours from `yours`, which is
+    built from `player_history` — and the current week has none until the backfill reaches it (ADR-361).
+    ⭐⭐ So the squad travels in its own right.
+
+    ⚠️⚠️ **Not the caller's list echoed back.** For a played week this is FPL's own answer (ADR-350),
+    because *the squad held today did not play last Saturday* — echoing the request would re-create
+    exactly the bug that ADR records."""
+    from datetime import UTC, datetime, timedelta
+    gw, now = 5, datetime(2026, 10, 18, 13, 0, tzinfo=UTC)
+    # ⚠️ A week still in play — GW7's real state, with Monday's match to come. ⭐ For a week already
+    # settled the answer is FPL's, and the test below covers the refusal when it cannot be asked.
+    with store.conn:
+        store.conn.execute(
+            "UPDATE fixtures SET started = 1, finished = 1, kickoff_time = ? WHERE event = ?",
+            ((now - timedelta(days=1)).isoformat(), gw))
+        store.conn.execute(
+            "UPDATE fixtures SET started = 0, finished = 0, kickoff_time = ? "
+            "WHERE id = (SELECT MIN(id) FROM fixtures WHERE event = ?)",
+            ((now + timedelta(days=1)).isoformat(), gw))
+
+    ids = _squad(store)
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw, player_ids=ids), store=store, now=now)
+    assert out["squad"], "nothing to draw a dot from"
+    assert set(out["squad"]) <= set(ids)
+
+
+def test_a_played_week_without_a_manager_id_names_nobody(store):
+    """⭐ The same refusal as `yours` (ADR-350): with no way to ask FPL whose team it was, the answer is
+    **nobody**, never the squad held today. ⚠️ *A dot on the wrong player is a wrong attribution with a
+    confident colour.*"""
+    from datetime import UTC, datetime
+    gw = 5
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET started = 1, finished = 1 WHERE event = ?", (gw,))
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw, player_ids=_squad(store)), store=store,
+                          now=datetime(2026, 10, 18, 13, 0, tzinfo=UTC))
+    assert out["squad"] == []

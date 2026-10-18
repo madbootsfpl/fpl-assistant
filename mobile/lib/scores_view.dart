@@ -274,10 +274,9 @@ class _MatchCardState extends State<_MatchCard> {
 
   @override
   Widget build(BuildContext context) {
-    final mine = <int>{
-      for (final y in m.yours)
-        if (y.player != null) y.player!.id,
-    };
+    // 🔴 **The dots came from `yours`, which waits for the backfill** — so the week being played had
+    // none at all (ADR-362). ⭐ The server now names the squad in its own right, for exactly this.
+    final mine = week.squad;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -625,12 +624,28 @@ class _Dropdown extends StatelessWidget {
       children: [
         if (match.events.cards.isNotEmpty) ...[
           const _Label(text: 'CARDS'),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
+          // ⭐ Split home and away, the way the scoreline above is split — ⚠️ *one run of chips makes the
+          // reader match each name to a club from memory*, which is the work the card exists to save.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final c in match.events.cards)
-                _CardChip(name: week.nameOf(c.player), red: c.isRed),
+              Expanded(
+                child: _Cards(
+                  match: match,
+                  week: week,
+                  short: match.home,
+                  end: true,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Cards(
+                  match: match,
+                  week: week,
+                  short: match.away,
+                  end: false,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -654,7 +669,27 @@ class _Dropdown extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         if (match.bonusRace.isNotEmpty) ...[
-          const _Label(text: 'BONUS RACE', colour: Brand.bonus),
+          // ⚠️ **The right-hand number needed a name.** The owner, on build 46: *"dont know what the
+          // Bonus Race scores on the right hand mean, eg Neto 64?"* — ⭐ *a number with no unit is a
+          // number the reader has to guess at*, and BPS is not a thing anyone should have to infer.
+          Row(
+            children: [
+              const _Label(text: 'BONUS RACE', colour: Brand.bonus),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'BPS',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.30),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.07,
+                  ),
+                ),
+              ),
+            ],
+          ),
           for (final b in match.bonusRace)
             _BonusLine(entry: b, week: week, mine: mine),
           const SizedBox(height: 12),
@@ -725,6 +760,39 @@ class _CardChip extends StatelessWidget {
 }
 
 /// One of yours, what he did, and what it was worth.
+/// One side's cards, so a name sits under the club it belongs to.
+class _Cards extends StatelessWidget {
+  const _Cards({
+    required this.match,
+    required this.week,
+    required this.short,
+    required this.end,
+  });
+
+  final MatchScore match;
+  final GameweekScores week;
+  final String short;
+  final bool end;
+
+  @override
+  Widget build(BuildContext context) {
+    final theirs = [
+      for (final c in match.events.cards)
+        if (week.person(c.player)?.team == short) c,
+    ];
+    if (theirs.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      alignment: end ? WrapAlignment.end : WrapAlignment.start,
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final c in theirs)
+          _CardChip(name: week.nameOf(c.player), red: c.isRed),
+      ],
+    );
+  }
+}
+
 class _YourLine extends StatelessWidget {
   const _YourLine({required this.entry});
 
