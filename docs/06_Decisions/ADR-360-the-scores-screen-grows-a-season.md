@@ -73,6 +73,23 @@ not exist before a match. For an unplayed fixture it comes from **player → tea
 ⚠️ And it is the squad *as it stands today*, which a transfer will change — the card should say so rather
 than imply a locked team.
 
+### ⭐ How far forward? Measured: the whole season is there, and that is not the answer
+
+All **380 fixtures carry a gameweek and a kick-off time**, GW1 to GW38 — zero unscheduled, zero flagged
+provisional today. So forwards is not "the next week", it is **thirty-one gameweeks**.
+
+⚠️⚠️ **The fixtures stay meaningful at any distance; the join does not.** *"Which of your players are in
+it"* uses the squad you hold **today**, and by GW20 that is a guess dressed as a fact — the same shape of
+mistake as ADR-350, which credited a past week to a squad that had since changed.
+
+**Decision: forward navigation stops at the house horizon — five gameweeks.** ⭐ Not a new number:
+`analyse`, `board`, `dead_slot` and `explain` all already default to `horizon: int = 5`. Beyond that, team
+-level fixture browsing is what **FDR already is**, and it is genuinely the right screen for it.
+
+📌 `provisional_start_time` exists on every fixture and is zero everywhere today, but TV picks do move
+kick-offs. The store does not carry that field, so a time can change under a reader with nothing marking
+it — ⚠️ at three to five weeks out that is the normal case, not the edge case.
+
 ## Risks, named rather than discovered
 
 🔴 **GW1–GW5 will never have highlights.** The clubs' feeds hold fifteen entries and had moved on before
