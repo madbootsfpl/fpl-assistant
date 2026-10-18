@@ -230,6 +230,70 @@ def _events(rows, by_code, named) -> dict:
     return out
 
 
+def _by_identifier(stats) -> dict:
+    """FPL's `stats` list → `{identifier: {player_id: value}}`, both sides merged.
+
+    ⭐ The fixture payload keys these by player **id**, where `player_history` keys by **code** — the one
+    difference between the two sources of the same facts.
+    """
+    out: dict[str, dict[int, int]] = {}
+    for block in stats or ():
+        name = block.get("identifier")
+        if not name:
+            continue
+        merged = out.setdefault(name, {})
+        for side in ("h", "a"):
+            for row in block.get(side) or ():
+                merged[row.get("element")] = row.get("value") or 0
+    return out
+
+
+def _events_from_stats(stats, players, named) -> dict:
+    """The same card, built from the **live fixture payload** instead of stored history (ADR-361).
+
+    🔴🔴 **The current gameweek had no history at all.** `backfill_due` fetches a round only once every
+    one of its fixtures is complete — one request per player makes it deliberately rare (ADR-211 2d) — so
+    GW7's Saturday matches carried no goals, no cards and no bonus race until the **Monday night match**
+    settled the week. ⚠️⚠️ *The week people care most about was the one week the card was blank.*
+
+    ⭐⭐ And the data was already in hand: `/fixtures/` carries a `stats` block per match, and this module
+    already fetches it. The fix is to read what was being thrown away.
+    """
+    by_id = _by_identifier(stats)
+    out = {"goals": [], "assists": [], "cards": []}
+    for key, bucket in (("goals_scored", "goals"), ("assists", "assists")):
+        for pid, value in (by_id.get(key) or {}).items():
+            if value and pid in players:
+                named.add(pid)
+                out[bucket].append({"player": pid, "count": value})
+    reds = by_id.get("red_cards") or {}
+    for pid, value in reds.items():
+        if value and pid in players:
+            named.add(pid)
+            out["cards"].append({"player": pid, "colour": "red"})
+    for pid, value in (by_id.get("yellow_cards") or {}).items():
+        # ⭐ Red wins: a second yellow is recorded as both, and the dismissal is the fact.
+        if value and pid in players and not reds.get(pid):
+            named.add(pid)
+            out["cards"].append({"player": pid, "colour": "yellow"})
+    return out
+
+
+def _bonus_race_from_stats(stats, players, named) -> list:
+    """The bonus race from the live payload — same shape, same ordering by BPS."""
+    by_id = _by_identifier(stats)
+    bps = by_id.get("bps") or {}
+    bonus = by_id.get("bonus") or {}
+    ranked = sorted(bps.items(), key=lambda kv: kv[1], reverse=True)[:BONUS_RACE]
+    out = []
+    for pid, value in ranked:
+        if pid not in players:
+            continue
+        named.add(pid)
+        out.append({"player": pid, "bonus": bonus.get(pid, 0), "bps": value})
+    return out
+
+
 def _bonus_race(rows, by_code, named) -> list:
     """The top `BONUS_RACE` by BPS, with the bonus each has been awarded so far.
 
@@ -264,6 +328,29 @@ def _lining_up(fixture, squad_ids, players) -> list:
             out.append({"player": player_summary(row, {}, {}, {}), "minutes": None, "goals": None,
                         "assists": None, "points": None, "bonus": None})
     return out
+
+
+def _match_events(f, per_fixture, live_rows, by_code, players, named) -> dict:
+    """Events for one match, from history where it exists and from the live payload where it does not."""
+    if not _started(f):
+        return {"goals": [], "assists": [], "cards": []}
+    rows = per_fixture.get(f["id"])
+    if rows:
+        return _events(rows, by_code, named)
+    raw = live_rows.get(f["id"])
+    return (_events_from_stats(raw.get("stats"), players, named) if raw
+            else {"goals": [], "assists": [], "cards": []})
+
+
+def _match_bonus(f, per_fixture, live_rows, by_code, players, named) -> list:
+    """The bonus race for one match, from whichever source has it."""
+    if not _started(f):
+        return []
+    rows = per_fixture.get(f["id"])
+    if rows:
+        return _bonus_race(rows, by_code, named)
+    raw = live_rows.get(f["id"])
+    return _bonus_race_from_stats(raw.get("stats"), players, named) if raw else []
 
 
 def _squad_that_week(request, gameweek: int, played: bool, players, *, client=None):
@@ -326,9 +413,11 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         # ⚠️ By the clock, not by a stored flag — see `_kicked_off`. ⭐ A week whose matches are all over
         # still makes **no** upstream call, which is the economy this gate was for.
         in_flight = any(_playing(f, now) for f in stored.values())
+        live_rows: dict[int, dict] = {}
         if in_flight:
             for raw in _live_fixtures(gameweek, client=client):
                 if raw.get("id") in stored:
+                    live_rows[raw["id"]] = raw
                     stored[raw["id"]] |= {
                         "team_h_score": raw.get("team_h_score"),
                         "team_a_score": raw.get("team_a_score"),
@@ -350,6 +439,20 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         per_fixture: dict[int, list] = {}
         for row in store.history_for_fixtures(stored):
             per_fixture.setdefault(row["fixture"], []).append(row)
+
+        # 🔴🔴 **A played fixture with no stored history is the CURRENT gameweek** (ADR-361): the backfill
+        # waits for every fixture of a round to finish before spending one request per player (ADR-211 2d),
+        # so until the Monday night match settles the week, Saturday's cards carry nothing at all.
+        # ⚠️⚠️ *The week people care most about was the one week the card was blank.*
+        #
+        # ⭐ The fixture payload already carries a `stats` block per match and this module already fetches
+        # it when something is in flight. Fetch it here too when a played match has no history — a week
+        # that HAS its history (every past gameweek) asks for nothing.
+        starved = [f for f in stored.values() if _started(f) and not per_fixture.get(f["id"])]
+        if starved and not live_rows:
+            for raw in _live_fixtures(gameweek, client=client):
+                if raw.get("id") in stored:
+                    live_rows[raw["id"]] = raw
 
         # ⭐ Every player named anywhere in the answer, once — the sidecar `clubs` already uses (ADR-227).
         # ⚠️ *A scorer, an assister and a bonus-race entry are often the same man*, and repeating his
@@ -397,10 +500,10 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 # ⭐ Everyone's events, so the card can say what happened rather than only what *you* got.
                 # ⚠️ An unplayed fixture has rows (ADR-125) but no football: the match gates them, not the
                 # rows, so a future week reports nothing rather than eleven nil returns.
-                "events": (_events(per_fixture.get(f["id"], ()), by_code_player, named)
-                           if _started(f) else {"goals": [], "assists": [], "cards": []}),
-                "bonus_race": (_bonus_race(per_fixture.get(f["id"], ()), by_code_player, named)
-                               if _started(f) else []),
+                # ⭐ Stored history first — it is local, complete and never moves. The live payload is
+                # the fallback for the week the backfill has not reached.
+                "events": _match_events(f, per_fixture, live_rows, by_code_player, players, named),
+                "bonus_race": _match_bonus(f, per_fixture, live_rows, by_code_player, players, named),
                 # ⭐ Played: what your players did. Not yet played: which of them are involved (ADR-360).
                 "yours": (_yours({f["id"]}, squad, by_code, players) if _started(f)
                           else _lining_up(f, ids, players)),

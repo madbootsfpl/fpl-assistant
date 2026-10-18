@@ -607,3 +607,109 @@ def test_a_player_is_only_involved_in_his_own_clubs_fixture(store):
     # ⭐ And nobody is listed twice across the week: a player has one fixture in a normal gameweek.
     listed = [y["player"]["id"] for m in out["matches"] for y in m["yours"]]
     assert len(listed) == len(set(listed)), "a player was involved in two matches"
+
+
+# ── the current gameweek, before the backfill reaches it (ADR-361) ───────────────────────────────
+
+def test_a_played_match_with_no_stored_history_reads_the_live_payload(store):
+    """🔴🔴 **The current gameweek was blank, and it is the one that matters.** `backfill_due` fetches a
+    round's history only once **every** fixture in it is complete — one request per player makes that
+    deliberately rare (ADR-211 2d) — so GW7's Saturday matches carried no goals, no cards and no bonus
+    race until the Monday night match settled the week.
+
+    ⭐⭐ The data was already in hand: `/fixtures/` carries a `stats` block per match, and this module
+    already fetched it. ⚠️ *The fix was to stop throwing it away.*
+    """
+    from datetime import UTC, datetime, timedelta
+    gw = 6
+    now = datetime(2026, 10, 18, 13, 0, tzinfo=UTC)
+    # ⚠️⚠️ **Finished, and kicked off two days ago.** The first version of this test left the matches
+    # unfinished three hours old, so `_playing` was true, the ordinary live fetch ran, and the fallback
+    # was never reached — ⭐ *the mutation deleting the fallback passed it.* GW7's Saturday matches were
+    # finished and outside the live window; that is the state to reproduce.
+    ko = (now - timedelta(days=2)).isoformat()
+    with store.conn:
+        # the week is in the database; its history is not — exactly the live gameweek's state
+        store.conn.execute("DELETE FROM player_history WHERE round = ?", (gw,))
+        store.conn.execute(
+            "UPDATE fixtures SET started = 1, finished = 1, team_h_score = 2, team_a_score = 1, "
+            "kickoff_time = ? WHERE event = ?", (ko, gw))
+    fixtures = [f for f in store.get_all_fixtures() if f["event"] == gw]
+    ids = [p["id"] for p in store.get_players()][:4]
+
+    class _Live:
+        """FPL's own payload, carrying the stats the backfill has not yet stored."""
+        def get_fixtures(self):
+            return [{
+                "id": f["id"], "event": gw, "team_h_score": 2, "team_a_score": 1,
+                "minutes": 90, "started": True, "finished": True, "finished_provisional": True,
+                "stats": [
+                    {"identifier": "goals_scored", "h": [{"element": ids[0], "value": 2}], "a": []},
+                    {"identifier": "assists", "h": [], "a": [{"element": ids[1], "value": 1}]},
+                    {"identifier": "yellow_cards", "h": [{"element": ids[2], "value": 1}], "a": []},
+                    {"identifier": "red_cards", "h": [], "a": [{"element": ids[3], "value": 1}]},
+                    {"identifier": "bonus", "h": [{"element": ids[0], "value": 3}], "a": []},
+                    {"identifier": "bps", "h": [{"element": ids[0], "value": 44}],
+                     "a": [{"element": ids[1], "value": 31}]},
+                ],
+            } for f in fixtures]
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw), store=store, client=_Live(), now=now)
+    m = out["matches"][0]
+
+    assert m["events"]["goals"] == [{"player": ids[0], "count": 2}]
+    assert m["events"]["assists"] == [{"player": ids[1], "count": 1}]
+    assert m["bonus_race"][0] == {"player": ids[0], "bonus": 3, "bps": 44}
+    # ⭐ The sidecar is filled from this path too, or every name would draw as a dash.
+    assert str(ids[0]) in out["people"]
+
+
+def test_a_second_yellow_is_a_red_in_the_live_payload_too(store):
+    """⚠️ The live payload records a dismissal as **both** a yellow and a red, exactly as history does.
+    ⭐ *A rule that holds in one source and not the other is half a rule.*"""
+    from datetime import UTC, datetime, timedelta
+    gw = 6
+    now = datetime(2026, 10, 18, 13, 0, tzinfo=UTC)
+    with store.conn:
+        store.conn.execute("DELETE FROM player_history WHERE round = ?", (gw,))
+        store.conn.execute(
+            "UPDATE fixtures SET started = 1, finished = 0, team_h_score = 1, team_a_score = 0, "
+            "kickoff_time = ? WHERE event = ?", ((now - timedelta(hours=3)).isoformat(), gw))
+    fixtures = [f for f in store.get_all_fixtures() if f["event"] == gw]
+    sent_off = store.get_players()[0]["id"]
+
+    class _Live:
+        def get_fixtures(self):
+            return [{
+                "id": f["id"], "event": gw, "team_h_score": 1, "team_a_score": 0,
+                "minutes": 90, "started": True, "finished": False,
+                "stats": [
+                    {"identifier": "yellow_cards", "h": [{"element": sent_off, "value": 1}], "a": []},
+                    {"identifier": "red_cards", "h": [{"element": sent_off, "value": 1}], "a": []},
+                ],
+            } for f in fixtures]
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw), store=store, client=_Live(), now=now)
+    cards = out["matches"][0]["events"]["cards"]
+    assert cards == [{"player": sent_off, "colour": "red"}], cards
+
+
+def test_a_week_that_has_its_history_asks_upstream_for_nothing(store):
+    """⭐ The economy: every past gameweek is complete in the database, so the fallback must never fire
+    for one. ⚠️ *A fallback that always runs is not a fallback, it is a second fetch.*"""
+    from datetime import UTC, datetime
+
+    # ⚠️⚠️ **A double that RAISES proves nothing here**: `_live_fixtures` catches every exception and
+    # degrades, by design — so the first version of this test passed even with the fallback firing on
+    # every request. ⭐ *A spy that records is the only kind this module cannot swallow.*
+    class _Spy:
+        def __init__(self): self.asked = 0
+        def get_fixtures(self):
+            self.asked += 1
+            return []
+
+    spy = _Spy()
+    out = gameweek_scores(GameweekScoresRequest(gameweek=5), store=store, client=spy,
+                          now=datetime(2026, 10, 18, 13, 0, tzinfo=UTC))
+    assert spy.asked == 0, "FPL was asked about a week whose history is already stored"
+    assert any(m["events"]["goals"] for m in out["matches"])
