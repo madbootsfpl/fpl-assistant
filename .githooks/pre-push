@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Catch the cheap mistakes before they reach master (ADR-359).
+#
+# ⭐⭐ **CI runs AFTER the push and nothing gates it** — master has no branch protection, so a red build
+# is a smoke alarm, not a lock on the door. 18 of the last 100 runs went red; every one was fixed within
+# minutes, and every one sent an email first.
+#
+# ⚠️⚠️ **This is a net, not a gate.** It runs in ~10 seconds, so it cannot run the full suite (five
+# minutes) and makes no claim to. It catches the classes that are cheap to catch:
+#   * lint
+#   * the docs/orientation guards — ⭐ the single largest avoidable category, and the one that caught me
+#     out most recently: an ADR note ran a status line past its ceiling
+#   * any test file changed in the commits being pushed
+#
+# 📌 What it CANNOT catch, stated so nobody mistakes green here for green there: anything Postgres-only
+# (CI runs a third job against a real Postgres 17), anything the rest of the suite covers, and anything
+# time-dependent that happens to pass right now.
+#
+# Install:  git config core.hooksPath .githooks
+# Skip:     git push --no-verify     ⭐ deliberately easy — a hook you cannot skip is a hook you remove.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+PY=./venv/bin/python
+[ -x "$PY" ] || PY=python3
+RUFF=./venv/bin/ruff
+[ -x "$RUFF" ] || RUFF=ruff
+
+fail=0
+step() {  # step <label> <command...>
+  local label="$1"; shift
+  if "$@" >/tmp/prepush.$$ 2>&1; then
+    echo "  ✅ $label"
+  else
+    echo "  ❌ $label"
+    tail -15 /tmp/prepush.$$ | sed 's/^/     /'
+    fail=1
+  fi
+  rm -f /tmp/prepush.$$
+}
+
+echo "pre-push: the ten-second net (full suite still has to run separately)"
+
+step "ruff" "$RUFF" check .
+step "docs + orientation guards" "$PY" -m pytest -q -p no:cacheprovider \
+     -k "doc or adr or readme or status or orientation"
+
+# ⭐ Tests changed in what is actually being pushed. `@{push}` is the upstream this branch pushes to;
+# ⚠️ on a brand-new branch it does not resolve, so fall back to the last commit rather than the whole
+# history — *a hook that diffs against nothing runs the entire suite and gets switched off.*
+base=$(git rev-parse --quiet --verify '@{push}' 2>/dev/null || git rev-parse HEAD~1 2>/dev/null)
+if [ -n "${base:-}" ]; then
+  changed=$(git diff --name-only "$base"..HEAD -- 'tests/*.py' | tr '\n' ' ')
+  if [ -n "${changed// }" ]; then
+    step "changed tests: ${changed}" "$PY" -m pytest -q -p no:cacheprovider $changed
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo
+  echo "  push blocked. Fix, or: git push --no-verify"
+  exit 1
+fi
+echo "  → pushing (this is not a substitute for the full suite)"
+exit 0

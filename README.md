@@ -28,7 +28,7 @@ Two things changed underneath it this month, and both are worth knowing before y
 publishes itself (ADR-290). Nine testers are on it. ⚠️ *This section said "next: a mobile app" for three
 weeks after it existed* — see ADR-294 for why that is its own kind of bug.
 
-**358 ADRs · 3,164 Python tests · 554 Dart tests · CI green.**
+**359 ADRs · 3,167 Python tests · 554 Dart tests · CI green.**
 *(Counted 2026-10-16. The Dart half is listed separately because until ADR-322 it was not in CI at all — a total that silently included 481 tests nothing ran was the more flattering number.)*
 
 New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
@@ -151,7 +151,17 @@ across Python 3.13/3.14. To mirror it locally:
 pip install ruff pre-commit
 ruff check .            # lint (config in ruff.toml)
 pre-commit install      # optional: run the same checks on every git commit
+git config core.hooksPath .githooks   # the pre-push net (ADR-359) — one line, once per clone
 ```
+
+⚠️ **The pre-push hook is a net, not a gate** (ADR-359). ⭐⭐ CI runs *after* the push and `master` has
+no branch protection, so a red build is a smoke alarm rather than a lock on the door — 18 of 100 runs went
+red, each fixed within minutes and each one an email first. The hook spends **ten seconds** on the cheap
+classes: lint, the docs/orientation guards, and any test file changed in the commits being pushed.
+
+📌 It does **not** run the full suite (five minutes) and makes no claim to, so green here is not green on
+CI — in particular nothing Postgres-only is covered. `git push --no-verify` skips it, deliberately: *a
+hook you cannot skip is a hook you remove.*
 
 ## Commands
 
