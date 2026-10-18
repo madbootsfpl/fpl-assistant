@@ -827,3 +827,96 @@ def test_bonus_status_is_not_read_off_the_scoreline(store):
     provisional = _one_match(store, 6, started=1, finished=0, stats=_AWARDED, hours_ago=20)
     assert pending["status"] == provisional["status"] == "Full time"
     assert pending["bonus_status"] != provisional["bonus_status"]
+
+
+# ── your players, before the backfill reaches the week (ADR-364) ─────────────────────────────────
+
+def _live_week(store, gw, squad, *, points=9, fixture_of=None):
+    """A week whose fixtures are played and whose history has not landed, with FPL's live points."""
+    from datetime import UTC, datetime, timedelta
+    mod.forget_live()
+    mod.forget_live_elements()
+    now = datetime(2026, 10, 18, 19, 0, tzinfo=UTC)
+    with store.conn:
+        store.conn.execute("DELETE FROM player_history WHERE round = ?", (gw,))
+        store.conn.execute(
+            "UPDATE fixtures SET started = 1, finished = 0, team_h_score = 1, team_a_score = 0, "
+            "kickoff_time = ? WHERE event = ?", ((now - timedelta(days=2)).isoformat(), gw))
+    fixtures = [f for f in store.get_all_fixtures() if f["event"] == gw]
+    fid = fixture_of or fixtures[0]["id"]
+
+    class _Live:
+        def get_fixtures(self):
+            return [{"id": f["id"], "event": gw, "team_h_score": 1, "team_a_score": 0,
+                     "minutes": 90, "started": True, "finished": False,
+                     "finished_provisional": True, "stats": []} for f in fixtures]
+
+        def get_event_live(self, gameweek):
+            return {"elements": [{
+                "id": squad[0],
+                "stats": {"total_points": points},
+                # ⭐ FPL's own per-stat attribution, which is what makes the total FPL's and not ours.
+                "explain": [{"fixture": fid, "stats": [
+                    {"identifier": "minutes", "points": 2, "value": 90},
+                    {"identifier": "goals_scored", "points": 4, "value": 1},
+                    {"identifier": "bonus", "points": 3, "value": 3},
+                ]}],
+            }]}
+
+    return gameweek_scores(
+        GameweekScoresRequest(gameweek=gw, player_ids=squad), store=store, client=_Live(), now=now), fid
+
+
+def test_your_players_show_on_the_week_being_played(store):
+    """🔴 **The agreed card had a YOUR PLAYERS block and the week being played had none.** `yours` came
+    from `player_history`, which the backfill does not reach until a gameweek completes (ADR-361) — so the
+    block that makes this *"not a livescore app"* was missing on the only week anyone was watching.
+
+    ⭐⭐ The points are **FPL's**: `explain` carries a per-stat breakdown per fixture, and summing those is
+    reading FPL's arithmetic rather than applying the scoring rules here (ADR-299)."""
+    squad = _squad(store)
+    out, fid = _live_week(store, 6, squad)
+    m = next(x for x in out["matches"] if x["fixture"] == fid)
+
+    assert m["yours"], "the week being played still names none of your players"
+    mine = m["yours"][0]
+    assert mine["points"] == 9, "2 for minutes + 4 for the goal + 3 bonus, as FPL attributes it"
+    assert (mine["goals"], mine["bonus"], mine["minutes"]) == (1, 3, 90)
+
+
+def test_the_caption_agrees_with_the_card_beneath_it(store):
+    """⚠️⚠️ `yours_known` asked only the stored history, so the header said *"your players not in yet"*
+    over a card that was showing them — ⭐ *a caption contradicting the thing underneath it is worse than
+    the gap it was written for.*"""
+    out, _ = _live_week(store, 6, _squad(store))
+    assert out["yours_known"] is True
+
+
+def test_the_points_are_attributed_to_the_right_match(store):
+    """⭐ Per **fixture**, not per week: a double gameweek has two `explain` blocks and `total_points`
+    cannot say which match earned what. ⚠️ *A player credited to the wrong match is ADR-350 again.*"""
+    squad = _squad(store)
+    out, fid = _live_week(store, 6, squad)
+    carrying = [m["fixture"] for m in out["matches"] if m["yours"]]
+    assert carrying == [fid], f"his points landed on {carrying}, not only on {fid}"
+
+
+def test_a_week_with_its_history_never_asks_for_live_points(store):
+    """⭐ The economy, again: a settled week is complete in the database. ⚠️ *A fallback that always runs
+    is a second fetch.*"""
+    from datetime import UTC, datetime
+
+    class _Spy:
+        def __init__(self): self.asked = 0
+        def get_fixtures(self):
+            self.asked += 1
+            return []
+
+        def get_event_live(self, gameweek):
+            self.asked += 1
+            return {"elements": []}
+
+    spy = _Spy()
+    gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=_squad(store)), store=store,
+                    client=spy, now=datetime(2026, 10, 18, 19, 0, tzinfo=UTC))
+    assert spy.asked == 0

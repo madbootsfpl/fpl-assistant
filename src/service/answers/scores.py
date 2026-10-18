@@ -248,6 +248,74 @@ BONUS_PROVISIONAL = "provisional"  # awarded, and still open to a post-match cor
 BONUS_FINAL = "final"            # the gameweek is locked
 
 
+_live_elements_cache: dict[int, tuple[float, dict]] = {}
+
+
+def _live_elements(gameweek: int, *, client=None, now=time.monotonic) -> dict:
+    """`{player id: element}` from FPL's own live gameweek endpoint, cached like the fixtures (ADR-364).
+
+    ⭐⭐ **This is where the week's points live before the backfill stores them.** `event/{gw}/live/`
+    carries every player's `total_points` and an `explain` block per fixture — FPL's own attribution,
+    the thing ADR-299 added this endpoint for.
+
+    ⚠️ One call for all 659 players, so a fifteen-man squad costs one request, not fifteen.
+    ⚠️⚠️ Never fatal: an upstream failure yields nothing and `yours` simply stays empty, which
+    `yours_known` already describes honestly.
+    """
+    hit = _live_elements_cache.get(gameweek)
+    if hit and now() - hit[0] < LIVE_CACHE_SECONDS:
+        return hit[1]
+    try:
+        from src.api.client import FplClient
+        payload = (client or FplClient()).get_event_live(gameweek)
+        found = {e["id"]: e for e in (payload.get("elements") or []) if e.get("id")}
+    except Exception:          # noqa: BLE001 - every upstream failure degrades the same way
+        return hit[1] if hit else {}
+    _live_elements_cache[gameweek] = (now(), found)
+    return found
+
+
+def forget_live_elements() -> None:
+    """Drop the live-points cache. ⚠️ For tests — production lets the TTL do it."""
+    _live_elements_cache.clear()
+
+
+def _yours_live(fixture_id, squad_ids, elements, players, named) -> list:
+    """The manager's players in one fixture, from FPL's live attribution (ADR-364).
+
+    🔴 **The agreed card had a YOUR PLAYERS block and the week being played had none.** `yours` is built
+    from `player_history`, which the backfill does not reach until a gameweek completes (ADR-361) — so
+    the block that makes this *"not a livescore app"* was missing on the only week anybody was watching.
+
+    ⭐⭐ **The points are FPL's, not this app's.** `explain` carries a per-stat breakdown per fixture —
+    `minutes 90 → 2`, `bonus 3 → 3` — and summing those is reading FPL's arithmetic, not applying the
+    scoring rules here. ⚠️⚠️ *A hand-rolled table starts disagreeing the moment the game changes without
+    telling us* (ADR-299), which is why there is not one.
+
+    ⭐ Per **fixture**, not per week: a double gameweek has two `explain` blocks, and `total_points` cannot
+    say which match earned what.
+    """
+    out = []
+    for pid in squad_ids:
+        element = elements.get(pid)
+        if element is None or pid not in players:
+            continue
+        for block in element.get("explain") or ():
+            if block.get("fixture") != fixture_id:
+                continue
+            stats = {row.get("identifier"): row for row in (block.get("stats") or ())}
+            named.add(pid)
+            out.append({
+                "player": player_summary(players[pid], {}, {}, {}),
+                "minutes": (stats.get("minutes") or {}).get("value", 0),
+                "goals": (stats.get("goals_scored") or {}).get("value", 0),
+                "assists": (stats.get("assists") or {}).get("value", 0),
+                "points": sum(row.get("points") or 0 for row in (block.get("stats") or ())),
+                "bonus": (stats.get("bonus") or {}).get("value", 0),
+            })
+    return out
+
+
 def _bonus_status(f, stats) -> str:
     """Which of the four states this match's bonus is in.
 
@@ -382,6 +450,15 @@ def _match_events(f, per_fixture, live_rows, by_code, players, named) -> dict:
             else {"goals": [], "assists": [], "cards": []})
 
 
+def _match_yours(f, per_fixture, squad, by_code, elements, ids, players, named) -> list:
+    """Your players in one match, from whichever source can honestly describe them."""
+    if not _started(f):
+        return _lining_up(f, ids, players)
+    if per_fixture.get(f["id"]):
+        return _yours({f["id"]}, squad, by_code, players)
+    return _yours_live(f["id"], ids, elements, players, named)
+
+
 def _match_bonus(f, per_fixture, live_rows, by_code, players, named) -> list:
     """The bonus race for one match, from whichever source has it."""
     if not _started(f):
@@ -493,6 +570,9 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
             for raw in _live_fixtures(gameweek, client=client):
                 if raw.get("id") in stored:
                     live_rows[raw["id"]] = raw
+        # ⭐ And the week's points, for the same reason and on the same condition (ADR-364). A week whose
+        # history is stored never asks.
+        elements = _live_elements(gameweek, client=client) if starved else {}
 
         # ⭐ Every player named anywhere in the answer, once — the sidecar `clubs` already uses (ADR-227).
         # ⚠️ *A scorer, an assister and a bonus-race entry are often the same man*, and repeating his
@@ -513,8 +593,12 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         # 🔴 Found by running this against the real database, where GW6 had ten scores and no history.
         # ⚠️ Also false when the week is played and the squad could not be established — ⭐ *an empty
         # `yours` that claims to be known is the lie this whole helper exists to stop.*
-        yours_known = bool(squad) and any(
-            r["round"] == gameweek for rows in by_code.values() for r in rows
+        # ⚠️⚠️ **Either source counts** (ADR-364). This asked only the stored history, so the week being
+        # played said *"your players not in yet"* on a card that was, by then, showing them — ⭐ *a
+        # caption contradicting the thing underneath it is worse than the gap it was written for.*
+        yours_known = bool(squad) and (
+            any(r["round"] == gameweek for rows in by_code.values() for r in rows)
+            or any(i in elements for i in ids)
         )
 
         matches = []
@@ -547,8 +631,9 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 # ⭐⭐ Where the **points** stand, which is not where the football stands (ADR-363).
                 "bonus_status": _bonus_status(f, (live_rows.get(f["id"]) or {}).get("stats")),
                 # ⭐ Played: what your players did. Not yet played: which of them are involved (ADR-360).
-                "yours": (_yours({f["id"]}, squad, by_code, players) if _started(f)
-                          else _lining_up(f, ids, players)),
+                # ⭐ Stored history, then FPL's live attribution, then who is merely involved — each a
+                # weaker claim than the one before, and ⚠️ *never a points total this app worked out.*
+                "yours": _match_yours(f, per_fixture, squad, by_code, elements, ids, players, named),
             })
         # ⭐ `yours_known` is about the gameweek, not one match: history lands for the whole week at once.
         return {"gameweek": gameweek, "live": in_flight, "yours_known": yours_known,
