@@ -28,7 +28,13 @@ def store_with_a_played_match(tmp_path, monkeypatch):
     clubs = {t["short_name"]: t["id"] for t in store.get_teams()}
     with store.conn:
         # ⭐ One candidate only, so a test asserting "nothing else was fetched" means what it says.
-        store.conn.execute("UPDATE fixtures SET finished = 0, highlights_url = NULL")
+        # ⚠️⚠️ **The scores have to go too** (ADR-357). Clearing `finished` was enough while the lookup
+        # filtered on it; now that a *played* fixture is one whose kick-off has passed, every scored row
+        # in the seed qualifies — fifty of them — and `fill`'s limit of twenty never reached this one.
+        # ⭐ *A fixture that promises "one candidate" has to mean it under the query the code actually runs.*
+        store.conn.execute(
+            "UPDATE fixtures SET finished = 0, highlights_url = NULL, "
+            "team_h_score = NULL, team_a_score = NULL")
         store.conn.execute(
             "UPDATE fixtures SET finished = 1, started = 1, team_h_score = 5, team_a_score = 1, "
             "team_h = ?, team_a = ? WHERE id = (SELECT MIN(id) FROM fixtures)",
@@ -432,3 +438,60 @@ def test_fill_rejects_a_video_uploaded_outside_the_window(store_with_a_played_ma
     assert highlights.fill(store, client=fresh) == 1
     row = store.conn.execute("SELECT highlights_url FROM fixtures WHERE id = ?", (fixture_id,)).fetchone()
     assert row["highlights_url"] == "https://youtu.be/new"
+
+
+# ── played is not settled (ADR-357) ──────────────────────────────────────────────────────────────
+
+def _played_at(store, fixture_id, kickoff, *, finished=0):
+    with store.conn:
+        store.conn.execute(
+            "UPDATE fixtures SET finished = ?, started = 1, kickoff_time = ? WHERE id = ?",
+            (finished, kickoff, fixture_id))
+
+
+def test_a_match_fpl_has_not_settled_yet_still_gets_a_highlights_lookup(store_with_a_played_match):
+    """🔴🔴 **The bug, as a tester met it: nineteen hours, no highlights, and the video on Flashscore.**
+
+    FPL holds `finished` until the **whole gameweek's** bonus is settled. Nineteen hours after GW7's first
+    kick-off all five played matches still read `finished = false, data_checked = false` — so the lookup,
+    which filtered on `finished = 1`, **never looked at any of them**.
+
+    ⚠️⚠️ *By the time a gameweek settles — after the Monday night match — the clubs' fifteen-entry feeds
+    have moved on.* That is why GW1-GW5 can never be recovered, and it would have happened to every
+    gameweek from here.
+
+    ⭐⭐ Same mistake as the live gate (ADR-354) and the Full-time caption (ADR-356): a feature waiting on
+    a flag that arrives late. The clock is the thing that is already true.
+    """
+    from datetime import UTC, datetime, timedelta
+    store, fixture_id = store_with_a_played_match
+    now = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
+    # kicked off yesterday lunchtime; FPL still says not finished, exactly as it did
+    _played_at(store, fixture_id, (now - timedelta(hours=21)).isoformat(), finished=0)
+
+    wanting = [r["id"] for r in store.fixtures_wanting_highlights(now=now)]
+    assert fixture_id in wanting, "a match played yesterday is still not being looked up"
+
+
+def test_a_match_still_being_played_is_not_asked_about(store_with_a_played_match):
+    """⚠️ The other side: ⭐ *a fix that simply drops the condition asks YouTube for a highlights package
+    while the match is still on* — and would store whatever a club posted at half time."""
+    from datetime import UTC, datetime, timedelta
+    store, fixture_id = store_with_a_played_match
+    now = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
+    _played_at(store, fixture_id, (now - timedelta(minutes=50)).isoformat(), finished=0)
+
+    assert [r["id"] for r in store.fixtures_wanting_highlights(now=now)] == []
+
+
+def test_a_settled_match_still_qualifies_the_way_it_always_did(store_with_a_played_match):
+    """📌 `finished` is kept as an **alternative**, not replaced — ⭐ so this change is purely additive and
+    a settled fixture with no kick-off time stored does not quietly fall out."""
+    from datetime import UTC, datetime
+    store, fixture_id = store_with_a_played_match
+    now = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET finished = 1, kickoff_time = NULL WHERE id = ?",
+                           (fixture_id,))
+
+    assert fixture_id in [r["id"] for r in store.fixtures_wanting_highlights(now=now)]

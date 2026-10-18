@@ -1368,8 +1368,14 @@ class Storage:
             self.conn.execute(
                 "UPDATE fixtures SET highlights_url = ? WHERE id = ?", (url, fixture_id))
 
+    #: How long after kick-off a match has certainly been played (ADR-357). 90 minutes, a half-time and
+    #: stoppage is a shade over two hours — GW7's first match ran 11:30 to about 13:35 — so 2.5h clears it
+    #: with margin. ⚠️ Too short merely wastes a feed fetch on a match still in play; ⭐ *too long delays a
+    #: link into the window where YouTube has dropped it*, which is the failure this constant exists for.
+    PLAYED_AFTER_HOURS = 2.5
+
     def fixtures_wanting_highlights(self, *, recent_days: int = 3, now=None) -> list:
-        """Finished fixtures worth looking a video up for.
+        """Played fixtures worth looking a video up for.
 
         Two kinds: those with **no link yet**, and those played in the last `recent_days` **whatever they
         have** — ⭐ because a club posts a reaction video before its highlights package, and whichever
@@ -1378,13 +1384,28 @@ class Storage:
         🔴 *Arsenal 2-1 Leeds resolved to "Alternative Commentary" on the live data*: the right match, the
         right official channel, and not the highlights. ⚠️⚠️ **A link that is never re-checked is a wrong
         link kept for ever** — so a short window lets a better one replace it, and then it closes.
+
+        🔴🔴 **"Played" cannot mean `finished`** (ADR-357). FPL holds that flag until the **whole
+        gameweek's** bonus is settled: nineteen hours after GW7's first kick-off, all five played matches
+        still read `finished = false` with `data_checked = false`, so **nothing was ever looked up** and
+        the screen showed no highlights at all. ⚠️⚠️ *By the time a gameweek settles — after the Monday
+        night match — the clubs' fifteen-entry feeds have moved on*, which is why GW1-GW5 can never be
+        recovered.
+
+        ⭐⭐ So the clock decides, as it does for the live gate (ADR-354): a match that kicked off more than
+        `PLAYED_AFTER_HOURS` ago, and has a score, has been played. `finished` is kept as an alternative
+        rather than replaced — ⭐ *a settled match qualifies either way, and keeping it makes this purely
+        additive.*
         """
         from datetime import UTC, datetime, timedelta
-        cutoff = ((now or datetime.now(UTC)) - timedelta(days=recent_days)).isoformat()
+        at = now or datetime.now(UTC)
+        recent = (at - timedelta(days=recent_days)).isoformat()
+        played = (at - timedelta(hours=self.PLAYED_AFTER_HOURS)).isoformat()
         return self.conn.execute(
-            "SELECT * FROM fixtures WHERE finished = 1 AND team_h_score IS NOT NULL "
+            "SELECT * FROM fixtures WHERE team_h_score IS NOT NULL "
+            "AND (finished = 1 OR kickoff_time <= ?) "
             "AND (highlights_url IS NULL OR kickoff_time > ?) ORDER BY kickoff_time DESC",
-            (cutoff,)).fetchall()
+            (played, recent)).fetchall()
 
     def get_all_fixtures(self) -> list:
         """Every stored fixture, in kickoff order — **including ones already played** (ADR-211 2c).
